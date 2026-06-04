@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `ErrorBoundary`: 렌더링 에러를 fallback UI로 격리
+- `sonner` 기반 전역 API 에러 토스트: `ApiRequestError`의 `traceId`를 표시하고 클릭 복사 지원
+
 ## [1.1.0] - 2026-04-20
 
 ### Added

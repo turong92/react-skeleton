@@ -8,7 +8,8 @@ React + TypeScript + Vite 프론트엔드 스켈레톤. REST 백엔드와 통신
 src/
 ├── main.tsx          # 엔트리 (QueryClient + RouterProvider 세팅, 수정 거의 없음)
 ├── api/              # REST 클라이언트 + 공통 타입
-│   ├── client.ts     # fetch 래퍼 (X-Request-Id 자동 부착, 에러 파싱, 로깅)
+│   ├── client.ts     # fetch 래퍼 (traceparent 자동 부착, 에러 파싱, 로깅)
+│   ├── traceContext.ts # W3C traceId/spanId/traceparent 생성
 │   └── types.ts      # ApiError, ApiRequestError (백엔드 ApiError와 1:1 매칭)
 ├── routes/           # 페이지 컴포넌트 + 라우트 정의
 │   ├── index.tsx     # createBrowserRouter 정의 (여기서 path → page 매핑)
@@ -44,9 +45,10 @@ Kotlin + Spring Boot 백엔드와 REST (`/api/v1/*`) 통신:
 
 ### traceId 기반 디버깅
 
-- `api/client.ts` 가 요청마다 UUID 기반 `X-Request-Id` 헤더 자동 부착
-- 백엔드(`TraceIdFilter`)가 그 값을 로그 MDC 및 에러 응답 `traceId` 필드로 전파
-- 에러 시 콘솔에 traceId 출력됨 → AI에게 그 traceId 넘기면 서버 로그 grep으로 전체 흐름 파악
+- `api/client.ts` 가 요청마다 W3C `traceparent` 헤더 자동 부착
+- 같은 작업 전체를 하나로 묶고 싶으면 같은 `traceId`를 `api('/path', { traceId })`로 넘김
+- 백엔드(`TraceIdFilter`)가 traceId를 승계하고 현재 요청 spanId를 새로 생성
+- 에러 시 콘솔/토스트에 traceId와 spanId 출력됨 → traceId로 전체 플로우 grep, spanId로 특정 요청 단계 좁히기
 - TanStack Query DevTools (개발 모드에서만) 로 쿼리 상태 실시간 확인 가능
 
 ## 왜 Vite (Next.js 아님)

@@ -10,7 +10,7 @@ import { ApiRequestError } from '../api/types'
  */
 export function showApiError(error: unknown) {
   if (error instanceof ApiRequestError) {
-    const { title, detail, traceId } = error.apiError
+    const { title, detail, traceId, spanId } = error.apiError
     toast.error(title, {
       description: (
         <div>
@@ -25,6 +25,11 @@ export function showApiError(error: unknown) {
               title="클릭하여 복사"
             >
               traceId: {traceId}
+            </div>
+          )}
+          {spanId && (
+            <div style={{ marginTop: 4, fontSize: 12, fontFamily: 'monospace' }}>
+              spanId: {spanId}
             </div>
           )}
         </div>

@@ -32,6 +32,37 @@ export type FieldError = {
   message?: string
 }
 
+export type ApiMeta = {
+  traceId?: string
+  spanId?: string
+  timestamp: string
+}
+
+export type ApiValueResponse<T> = {
+  value: T
+  meta: ApiMeta
+}
+
+export type ApiListResponse<T> = {
+  values: T[]
+  meta: ApiMeta
+}
+
+export type ApiPageResponse<T> = {
+  values: T[]
+  pagination: PaginationMeta
+  meta: ApiMeta
+}
+
+export type PaginationMeta = {
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
+  hasNext: boolean
+  hasPrevious: boolean
+}
+
 /**
  * fetch 실패 시 throw되는 에러 래퍼.
  * 콘솔/토스트에 traceId/spanId를 쓰면 서버 로그에서 전체 플로우와 특정 요청 단계를 찾을 수 있음.

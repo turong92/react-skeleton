@@ -20,7 +20,7 @@ export function HomePage() {
     <section>
       <h1>react-skeleton ↔ backend</h1>
       <p>
-        <code>GET /api/v1/hello</code> via TanStack Query + Vite dev proxy → Kotlin 백엔드
+        <code>GET /api/v1/hello</code> via TanStack Query → Kotlin 백엔드
       </p>
 
       {isLoading && <p>Loading...</p>}

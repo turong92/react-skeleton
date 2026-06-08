@@ -20,7 +20,8 @@ pnpm lint
 
 ## 백엔드 연결
 
-- 개발 시 `/api/v1/*` 요청은 Vite dev 서버가 `http://localhost:8080` (Kotlin 백엔드)로 proxy
+- 개발 시 기본값은 `/api/v1/*` 요청을 Vite dev 서버가 `http://localhost:8080` (Kotlin 백엔드)로 proxy
+- CORS를 직접 검증하거나 다른 백엔드 포트에 붙일 때는 `VITE_API_BASE_URL=http://localhost:<port>/api/v1` 로 실행
 - 프로덕션에선 Caddy가 프론트 정적 번들 + `/api/v1/*` 백엔드 프록시를 같은 origin으로 합침 → **CORS 불필요**
 
 ## 구조
@@ -28,10 +29,18 @@ pnpm lint
 ```
 src/
 ├── api/
-│   └── client.ts       # 공통 fetch 래퍼 (baseURL = /api/v1)
+│   ├── client.ts       # 공통 fetch 래퍼 (baseURL = VITE_API_BASE_URL 또는 /api/v1)
+│   └── types.ts        # ApiError + ApiValue/List/PageResponse 표준 DTO 타입
 ├── main.tsx            # TanStack Query Provider 세팅
 └── App.tsx
 ```
+
+## API 응답 규칙
+
+- 단건: `api<T>('/path')` 또는 `apiValue<T>('/path')` → 백엔드 `{ value, meta }`에서 `value` 반환
+- 리스트: `apiList<T>('/path')` → 백엔드 `{ values, meta }`에서 `values` 반환
+- 페이지: `apiPage<T>('/path')` → 백엔드 `{ values, pagination, meta }` 전체 반환
+- 응답 메타까지 직접 다뤄야 하면 `apiEnvelope<TEnvelope>('/path')` 사용
 
 ## 사용법
 

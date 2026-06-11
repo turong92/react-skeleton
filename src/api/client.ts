@@ -1,9 +1,14 @@
 import {
+  type ApiBasicResponse,
+  type ApiCursorResponse,
+  type ApiHttpResponse,
   ApiRequestError,
   type ApiError,
   type ApiListResponse,
   type ApiPageResponse,
   type ApiValueResponse,
+  type BreakGlassIdentity,
+  type DevLoginIdentity,
 } from './types'
 import { createTraceContext, type TraceContext } from './traceContext'
 
@@ -13,6 +18,11 @@ const IS_DEV = import.meta.env.DEV
 
 export type ApiRequestInit = RequestInit & {
   traceId?: string
+  accessToken?: string | null
+  idempotencyKey?: string
+  devLogin?: DevLoginIdentity
+  breakGlass?: BreakGlassIdentity
+  json?: unknown
 }
 
 /**
@@ -28,6 +38,12 @@ export type ApiRequestInit = RequestInit & {
  */
 export async function api<T>(path: string, init?: ApiRequestInit): Promise<T> {
   return apiValue<T>(path, init)
+}
+
+export async function apiBasic(path: string, init?: ApiRequestInit): Promise<ApiBasicResponse> {
+  const envelope = await apiEnvelope<ApiBasicResponse>(path, init)
+  assertApiBasicResponse(envelope, path)
+  return envelope
 }
 
 export async function apiValue<T>(path: string, init?: ApiRequestInit): Promise<T> {
@@ -48,22 +64,56 @@ export async function apiPage<T>(path: string, init?: ApiRequestInit): Promise<A
   return envelope
 }
 
+export async function apiCursor<T>(
+  path: string,
+  init?: ApiRequestInit,
+): Promise<ApiCursorResponse<T>> {
+  const envelope = await apiEnvelope<ApiCursorResponse<T>>(path, init)
+  assertApiCursorResponse(envelope, path)
+  return envelope
+}
+
 export async function apiEnvelope<T>(path: string, init?: ApiRequestInit): Promise<T> {
-  const { traceId, headers, ...fetchInit } = init ?? {}
+  const response = await apiResponse<T>(path, init)
+  return response.envelope
+}
+
+export async function apiResponse<T = unknown>(
+  path: string,
+  init?: ApiRequestInit,
+): Promise<ApiHttpResponse<T>> {
+  const {
+    traceId,
+    accessToken,
+    idempotencyKey,
+    devLogin,
+    breakGlass,
+    json,
+    headers,
+    body,
+    ...fetchInit
+  } = init ?? {}
   const traceContext = createTraceContext(traceId)
-  const url = apiUrl(path)
+  const url = apiEndpoint(path)
   const started = performance.now()
+  const requestBody = json === undefined ? body : JSON.stringify(json)
 
   const res = await fetch(url, {
     ...fetchInit,
-    headers: {
-      'Content-Type': 'application/json',
-      ...headers,
-      traceparent: traceContext.traceparent,
-    },
+    body: requestBody,
+    headers: buildHeaders({
+      headers,
+      traceContext,
+      accessToken,
+      idempotencyKey,
+      devLogin,
+      breakGlass,
+      hasJsonBody: requestBody !== undefined || json !== undefined,
+    }),
   })
 
   const durationMs = Math.round(performance.now() - started)
+  const responseHeaders = normalizeHeaders(res.headers)
 
   if (!res.ok) {
     const apiError = (await safeReadApiError(res)) ?? fallbackError(res, path)
@@ -78,7 +128,12 @@ export async function apiEnvelope<T>(path: string, init?: ApiRequestInit): Promi
 
   const data = await readJson<T>(res)
   if (IS_DEV) logSuccess(url, fetchInit.method ?? 'GET', traceContext, durationMs, data)
-  return data
+  return {
+    status: res.status,
+    headers: responseHeaders,
+    envelope: data,
+    trace: responseTrace(data, responseHeaders, traceContext),
+  }
 }
 
 function normalizeBaseUrl(value: unknown): string {
@@ -86,8 +141,67 @@ function normalizeBaseUrl(value: unknown): string {
   return (raw || DEFAULT_BASE_URL).replace(/\/+$/, '')
 }
 
-function apiUrl(path: string): string {
+export function apiEndpoint(path: string): string {
   return `${API_BASE_URL}/${path.replace(/^\/+/, '')}`
+}
+
+function buildHeaders({
+  headers,
+  traceContext,
+  accessToken,
+  idempotencyKey,
+  devLogin,
+  breakGlass,
+  hasJsonBody,
+}: {
+  headers?: HeadersInit
+  traceContext: TraceContext
+  accessToken?: string | null
+  idempotencyKey?: string
+  devLogin?: DevLoginIdentity
+  breakGlass?: BreakGlassIdentity
+  hasJsonBody: boolean
+}): Headers {
+  const result = new Headers(headers)
+
+  if (hasJsonBody && !result.has('Content-Type')) {
+    result.set('Content-Type', 'application/json')
+  }
+
+  result.set('traceparent', traceContext.traceparent)
+  result.set('X-Trace-Id', traceContext.traceId)
+
+  if (accessToken) {
+    result.set(
+      'Authorization',
+      accessToken.startsWith('Bearer ') ? accessToken : `Bearer ${accessToken}`,
+    )
+  }
+
+  if (idempotencyKey) {
+    result.set('Idempotency-Key', idempotencyKey)
+  }
+
+  if (devLogin?.accountId) result.set('X-Dev-Account-Id', devLogin.accountId)
+  if (devLogin?.username) result.set('X-Dev-Username', devLogin.username)
+  if (devLogin?.email) result.set('X-Dev-Email', devLogin.email)
+
+  if (breakGlass) {
+    result.set('X-Break-Glass-Account-Id', breakGlass.accountId)
+    result.set('X-Break-Glass-Reason', breakGlass.reason)
+    result.set('X-Break-Glass-Secret', breakGlass.secret)
+  }
+
+  return result
+}
+
+function assertApiBasicResponse(
+  value: ApiBasicResponse,
+  path: string,
+): asserts value is ApiBasicResponse {
+  if (!isRecord(value) || !isRecord(value.meta)) {
+    throw new Error(`Expected ApiBasicResponse from ${path}`)
+  }
 }
 
 function assertApiValueResponse<T>(
@@ -122,6 +236,20 @@ function assertApiPageResponse<T>(
   }
 }
 
+function assertApiCursorResponse<T>(
+  value: ApiCursorResponse<T>,
+  path: string,
+): asserts value is ApiCursorResponse<T> {
+  if (
+    !isRecord(value) ||
+    !Array.isArray(value.values) ||
+    !isRecord(value.cursor) ||
+    !isRecord(value.meta)
+  ) {
+    throw new Error(`Expected ApiCursorResponse from ${path}`)
+  }
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
@@ -137,6 +265,30 @@ async function safeReadApiError(res: Response): Promise<ApiError | null> {
 async function readJson<T>(res: Response): Promise<T> {
   const text = await res.text()
   return (text ? JSON.parse(text) : undefined) as T
+}
+
+function normalizeHeaders(headers: Headers): Record<string, string> {
+  const normalized: Record<string, string> = {}
+  headers.forEach((value, key) => {
+    normalized[key.toLowerCase()] = value
+  })
+  return normalized
+}
+
+function responseTrace(data: unknown, headers: Record<string, string>, traceContext: TraceContext) {
+  const meta = isRecord(data) && isRecord(data.meta) ? data.meta : undefined
+  const traceId = stringOrUndefined(headers['x-trace-id']) ?? stringOrUndefined(meta?.traceId)
+  const spanId = stringOrUndefined(headers['x-span-id']) ?? stringOrUndefined(meta?.spanId)
+  const traceparent = stringOrUndefined(headers.traceparent) ?? traceContext.traceparent
+  return {
+    traceId,
+    spanId,
+    traceparent,
+  }
+}
+
+function stringOrUndefined(value: unknown): string | undefined {
+  return typeof value === 'string' && value.length > 0 ? value : undefined
 }
 
 function fallbackError(res: Response, path: string): ApiError {

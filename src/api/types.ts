@@ -38,6 +38,10 @@ export type ApiMeta = {
   timestamp: string
 }
 
+export type ApiBasicResponse = {
+  meta: ApiMeta
+}
+
 export type ApiValueResponse<T> = {
   value: T
   meta: ApiMeta
@@ -54,6 +58,19 @@ export type ApiPageResponse<T> = {
   meta: ApiMeta
 }
 
+export type ApiCursorResponse<T> = {
+  values: T[]
+  cursor: CursorMeta
+  meta: ApiMeta
+}
+
+export type ApiEnvelope<T> =
+  | ApiBasicResponse
+  | ApiValueResponse<T>
+  | ApiListResponse<T>
+  | ApiPageResponse<T>
+  | ApiCursorResponse<T>
+
 export type PaginationMeta = {
   page: number
   size: number
@@ -61,6 +78,50 @@ export type PaginationMeta = {
   totalPages: number
   hasNext: boolean
   hasPrevious: boolean
+}
+
+export type CursorMeta = {
+  nextCursor?: string | null
+  hasNext: boolean
+}
+
+export type ApiTransportTrace = {
+  traceId?: string
+  spanId?: string
+  traceparent?: string
+}
+
+export type ApiHttpResponse<TEnvelope> = {
+  status: number
+  headers: Record<string, string>
+  envelope: TEnvelope
+  trace: ApiTransportTrace
+}
+
+export type DevLoginIdentity = {
+  accountId?: string
+  username?: string
+  email?: string
+}
+
+export type BreakGlassIdentity = {
+  accountId: string
+  reason: string
+  secret: string
+}
+
+export type AuthPrincipal = {
+  accountId: string
+  username: string
+  email: string
+  roles: string[]
+}
+
+export type AuthTokenResponse = {
+  accessToken: string
+  tokenType: string
+  expiresAt: string
+  principal: AuthPrincipal
 }
 
 /**

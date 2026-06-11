@@ -9,6 +9,9 @@ import { router } from './routes'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { showApiError } from './lib/showApiError'
 
+const ENABLE_QUERY_DEVTOOLS =
+  import.meta.env.DEV && import.meta.env.VITE_REACT_QUERY_DEVTOOLS === 'true'
+
 // 모든 쿼리/뮤테이션 에러를 자동으로 토스트로 노출 (컴포넌트 코드 덜 쓰게)
 // 특정 쿼리에서 override 하고 싶으면 해당 useQuery 의 onError 등에서 e.preventDefault() 대신 별도 처리
 const queryClient = new QueryClient({
@@ -26,7 +29,7 @@ createRoot(document.getElementById('root')!).render(
       <QueryClientProvider client={queryClient}>
         <RouterProvider router={router} />
         <Toaster position="top-right" richColors />
-        {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
+        {ENABLE_QUERY_DEVTOOLS && <ReactQueryDevtools initialIsOpen={false} />}
       </QueryClientProvider>
     </ErrorBoundary>
   </StrictMode>,

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Activity,
   Bell,
@@ -17,7 +17,7 @@ import {
   ShieldCheck,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { apiEndpoint, apiResponse } from '../api/client'
+import { apiEndpoint, apiResponse, type ApiRequestInit } from '../api/client'
 import { createTraceContext, createTraceId } from '../api/traceContext'
 import {
   ApiRequestError,
@@ -25,10 +25,31 @@ import {
   type ApiPageResponse,
   type ApiValueResponse,
 } from '../api/types'
-import type { AuthPrincipal, AuthTokenResponse, DevLoginIdentity } from '../api/types'
+import type { AuthPrincipal, AuthTokenResponse } from '../api/types'
+import {
+  applyAuthHeaders,
+  decodeTokenPrincipal,
+  parseDevIdentity,
+} from '../modules/auth/authSession'
+import { readSseStream, type SseEvent } from '../modules/notifications/sseStream'
+import {
+  ActionButton,
+  ExchangeLog,
+  PrincipalStrip,
+  SectionTitle,
+} from '../modules/workbench/components'
+import { WORKBENCH_MODULES } from '../modules/workbench/moduleCatalog'
+import type { Exchange, SseStatus } from '../modules/workbench/workbenchTypes'
+import {
+  formatJson,
+  headersToObject,
+  messageOf,
+  newIdempotencyKey,
+  nowMs,
+  redactHeaders,
+  summarizeRequest,
+} from '../modules/workbench/workbenchUtils'
 import { showApiError } from '../lib/showApiError'
-
-type ApiResponseInit = Parameters<typeof apiResponse>[1]
 
 type HelloResponse = {
   message: string
@@ -44,72 +65,6 @@ type ExampleJobResponse = {
   jobId: string
   status: string
 }
-
-type Exchange = {
-  id: string
-  at: string
-  label: string
-  method: string
-  path: string
-  status?: number
-  durationMs: number
-  traceId?: string
-  spanId?: string
-  request: unknown
-  response?: unknown
-  error?: unknown
-}
-
-type SseStatus = 'idle' | 'connecting' | 'open' | 'error'
-
-type SseEvent = {
-  id: string
-  name: string
-  data: unknown
-}
-
-const MODULES = [
-  {
-    title: 'platform',
-    status: 'wired',
-    details: ['Response.ok', 'traceparent', 'Swagger', 'Problem Details'],
-  },
-  {
-    title: 'auth',
-    status: 'wired',
-    details: ['JWT', 'dev login', 'break-glass', 'stateless'],
-  },
-  {
-    title: 'web',
-    status: 'wired',
-    details: ['CORS', 'public endpoints', 'rate limit', 'headers'],
-  },
-  {
-    title: 'notification',
-    status: 'split',
-    details: ['SSE', 'WebSocket', 'Slack alert'],
-  },
-  {
-    title: 'redis',
-    status: 'split',
-    details: ['cache', 'rate-limit', 'lock retry'],
-  },
-  {
-    title: 'storage',
-    status: 'split',
-    details: ['core contract', 'S3 presign'],
-  },
-  {
-    title: 'event',
-    status: 'split',
-    details: ['Spring event', 'Kafka bridge', 'trace headers'],
-  },
-  {
-    title: 'payment',
-    status: 'split',
-    details: ['router', 'Toss', 'Stripe'],
-  },
-]
 
 export function HomePage() {
   const [flowTraceId, setFlowTraceId] = useState(createTraceId)
@@ -139,9 +94,9 @@ export function HomePage() {
 
   async function runJsonExchange<TEnvelope>(
     label: string,
-    method: string,
+    method: ApiRequestInit['method'],
     path: string,
-    init?: ApiResponseInit,
+    init?: ApiRequestInit,
   ): Promise<ApiHttpResponse<TEnvelope> | null> {
     const started = nowMs()
     setBusyAction(label)
@@ -153,7 +108,7 @@ export function HomePage() {
       })
       pushExchange({
         label,
-        method,
+        method: method ?? 'GET',
         path,
         status: response.status,
         durationMs: Math.round(nowMs() - started),
@@ -167,7 +122,7 @@ export function HomePage() {
       showApiError(error)
       pushExchange({
         label,
-        method,
+        method: method ?? 'GET',
         path,
         status: error instanceof ApiRequestError ? error.apiError.status : undefined,
         durationMs: Math.round(nowMs() - started),
@@ -322,7 +277,7 @@ export function HomePage() {
     setSseStatus('idle')
   }
 
-  function authOptions() {
+  function authOptions(): ApiRequestInit {
     return accessToken ? { accessToken } : { devLogin }
   }
 
@@ -537,7 +492,7 @@ export function HomePage() {
       <section className="module-section" aria-label="module map">
         <SectionTitle icon={<Database size={18} />} title="Module map" />
         <div className="module-grid">
-          {MODULES.map((module) => (
+          {WORKBENCH_MODULES.map((module) => (
             <article className="module-card" key={module.title}>
               <div>
                 <strong>{module.title}</strong>
@@ -565,233 +520,6 @@ export function HomePage() {
       </section>
     </div>
   )
-}
-
-function SectionTitle({ icon, title }: { icon: ReactNode; title: string }) {
-  return (
-    <div className="section-title">
-      {icon}
-      <h2>{title}</h2>
-    </div>
-  )
-}
-
-function ActionButton({
-  label,
-  icon,
-  busy,
-  disabled,
-  onClick,
-}: {
-  label: string
-  icon: ReactNode
-  busy?: boolean
-  disabled?: boolean
-  onClick: () => void | Promise<void>
-}) {
-  return (
-    <button
-      type="button"
-      className="action-button"
-      disabled={disabled || busy}
-      onClick={onClick}
-      title={label}
-    >
-      {busy ? <RefreshCcw size={16} className="spin" /> : icon}
-      <span>{label}</span>
-    </button>
-  )
-}
-
-function PrincipalStrip({ principal }: { principal: AuthPrincipal | null }) {
-  if (!principal) {
-    return <div className="principal-strip">no bearer principal</div>
-  }
-  return (
-    <div className="principal-strip">
-      <strong>{principal.accountId}</strong>
-      <span>{principal.email}</span>
-      <span>{principal.roles.join(', ')}</span>
-    </div>
-  )
-}
-
-function ExchangeLog({ exchange }: { exchange: Exchange }) {
-  return (
-    <article className="exchange-item">
-      <header>
-        <div>
-          <strong>{exchange.label}</strong>
-          <code>
-            {exchange.method} {exchange.path}
-          </code>
-        </div>
-        <span data-ok={exchange.status !== undefined && exchange.status < 400}>
-          {exchange.status ?? 'ERR'} · {exchange.durationMs}ms
-        </span>
-      </header>
-      <div className="trace-row">
-        <code>traceId={exchange.traceId ?? '-'}</code>
-        <code>spanId={exchange.spanId ?? '-'}</code>
-        <button
-          type="button"
-          className="icon-button"
-          title="copy exchange"
-          onClick={() => copy(formatJson(exchange))}
-        >
-          <Copy size={14} />
-        </button>
-      </div>
-      <div className="json-grid">
-        <pre>{formatJson({ request: exchange.request })}</pre>
-        <pre>
-          {formatJson(exchange.error ? { error: exchange.error } : { response: exchange.response })}
-        </pre>
-      </div>
-    </article>
-  )
-}
-
-function parseDevIdentity(value: string): DevLoginIdentity {
-  if (value.includes('@')) return { email: value }
-  if (value.startsWith('acc_')) return { accountId: value }
-  return { username: value }
-}
-
-function applyAuthHeaders(headers: Headers, accessToken: string, devLogin: DevLoginIdentity) {
-  if (accessToken) {
-    headers.set(
-      'Authorization',
-      accessToken.startsWith('Bearer ') ? accessToken : `Bearer ${accessToken}`,
-    )
-    return
-  }
-  if (devLogin.accountId) headers.set('X-Dev-Account-Id', devLogin.accountId)
-  if (devLogin.username) headers.set('X-Dev-Username', devLogin.username)
-  if (devLogin.email) headers.set('X-Dev-Email', devLogin.email)
-}
-
-async function readSseStream(
-  body: ReadableStream<Uint8Array>,
-  signal: AbortSignal,
-  onEvent: (event: SseEvent) => void,
-) {
-  const reader = body.getReader()
-  const decoder = new TextDecoder()
-  let buffer = ''
-
-  while (!signal.aborted) {
-    const { value, done } = await reader.read()
-    if (done) break
-    buffer += decoder.decode(value, { stream: true })
-    const blocks = buffer.split('\n\n')
-    buffer = blocks.pop() ?? ''
-    blocks
-      .map(parseSseBlock)
-      .filter((event): event is SseEvent => event !== null)
-      .forEach(onEvent)
-  }
-}
-
-function parseSseBlock(block: string): SseEvent | null {
-  const lines = block.split('\n')
-  const id =
-    lines
-      .find((line) => line.startsWith('id:'))
-      ?.slice(3)
-      .trim() ?? crypto.randomUUID()
-  const name =
-    lines
-      .find((line) => line.startsWith('event:'))
-      ?.slice(6)
-      .trim() ?? 'message'
-  const data = lines
-    .filter((line) => line.startsWith('data:'))
-    .map((line) => line.slice(5).trim())
-    .join('\n')
-  if (!data) return null
-  return {
-    id,
-    name,
-    data: parseJson(data),
-  }
-}
-
-function summarizeRequest(init: ApiResponseInit) {
-  return {
-    headers: redactHeaders({
-      Authorization: init?.accessToken ? 'Bearer ...' : undefined,
-      'Idempotency-Key': init?.idempotencyKey,
-      'X-Dev-Account-Id': init?.devLogin?.accountId,
-      'X-Dev-Username': init?.devLogin?.username,
-      'X-Dev-Email': init?.devLogin?.email,
-      'X-Break-Glass-Account-Id': init?.breakGlass?.accountId,
-      'X-Break-Glass-Reason': init?.breakGlass?.reason,
-      'X-Break-Glass-Secret': init?.breakGlass?.secret,
-    }),
-    body: init?.json,
-  }
-}
-
-function redactHeaders(headers: Record<string, string | undefined>) {
-  return Object.fromEntries(
-    Object.entries(headers)
-      .filter((entry): entry is [string, string] => Boolean(entry[1]))
-      .map(([key, value]) => [key, key.toLowerCase().includes('secret') ? '[REDACTED]' : value]),
-  )
-}
-
-function headersToObject(headers: Headers): Record<string, string> {
-  const result: Record<string, string> = {}
-  headers.forEach((value, key) => {
-    result[key] = value
-  })
-  return result
-}
-
-function decodeTokenPrincipal(token: string): AuthPrincipal | null {
-  const payload = token.split('.')[1]
-  if (!payload) return null
-  try {
-    const json = JSON.parse(atob(payload.replaceAll('-', '+').replaceAll('_', '/'))) as {
-      sub?: string
-      username?: string
-      email?: string
-      roles?: string[]
-    }
-    return {
-      accountId: json.sub ?? '-',
-      username: json.username ?? '-',
-      email: json.email ?? '-',
-      roles: json.roles ?? [],
-    }
-  } catch {
-    return null
-  }
-}
-
-function parseJson(value: string): unknown {
-  try {
-    return JSON.parse(value)
-  } catch {
-    return value
-  }
-}
-
-function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : String(error)
-}
-
-function formatJson(value: unknown): string {
-  return JSON.stringify(value, null, 2)
-}
-
-function newIdempotencyKey(): string {
-  return `fe-${crypto.randomUUID()}`
-}
-
-function nowMs(): number {
-  return performance.now()
 }
 
 async function copy(value: string) {

@@ -374,14 +374,29 @@ select:focus {
   background: var(--teal-soft);
 }
 
+.realtime-meter span[data-status='connecting'] {
+  color: var(--amber);
+  background: var(--amber-soft);
+}
+
 .realtime-meter span[data-status='error'] {
   color: var(--red);
   background: var(--red-soft);
 }
 
+.realtime-grid,
 .event-stack {
   display: grid;
   gap: 8px;
+}
+
+.stream-card {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fbfcfb;
 }
 
 .event-stack pre {
@@ -396,6 +411,32 @@ select:focus {
   padding: 18px;
   display: grid;
   gap: 14px;
+}
+
+.module-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.module-toolbar > span {
+  min-width: 92px;
+  height: 26px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--code-bg);
+  color: var(--amber);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.module-toolbar > span[data-source='backend'] {
+  color: var(--teal);
+  background: var(--teal-soft);
 }
 
 .module-grid {
@@ -428,6 +469,14 @@ select:focus {
   font-size: 12px;
   font-weight: 800;
   text-transform: uppercase;
+}
+
+.module-card span[data-status='active'] {
+  color: var(--teal);
+}
+
+.module-card span[data-status='missing'] {
+  color: var(--red);
 }
 
 .module-card ul {

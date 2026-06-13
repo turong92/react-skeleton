@@ -1,10 +1,11 @@
 import type { WorkbenchModule } from './workbenchTypes'
+import type { SkeletonModuleResponse, SkeletonModuleStatus } from './skeletonWorkbenchClient'
 
-export const WORKBENCH_MODULES: WorkbenchModule[] = [
+export const FALLBACK_WORKBENCH_MODULES: WorkbenchModule[] = [
   {
     title: 'platform',
     status: 'wired',
-    details: ['Response.ok', 'traceparent', 'Swagger', 'Problem Details'],
+    details: ['Response.ok', 'traceparent', 'Swagger', 'External HTTP'],
   },
   {
     title: 'auth',
@@ -27,9 +28,14 @@ export const WORKBENCH_MODULES: WorkbenchModule[] = [
     details: ['cache', 'rate-limit', 'lock retry'],
   },
   {
+    title: 'persistence',
+    status: 'split',
+    details: ['JPA audit', 'JDBC audit', 'partial update', 'fetch graph'],
+  },
+  {
     title: 'storage',
     status: 'split',
-    details: ['core contract', 'S3 presign'],
+    details: ['object storage', 'S3 presign', 'copy/list', 'public URL'],
   },
   {
     title: 'event',
@@ -42,3 +48,28 @@ export const WORKBENCH_MODULES: WorkbenchModule[] = [
     details: ['router', 'Toss', 'Stripe'],
   },
 ]
+
+export function toWorkbenchModules(modules: SkeletonModuleResponse[]): WorkbenchModule[] {
+  return modules.map((module) => ({
+    title: module.id,
+    status: toWorkbenchStatus(module.status),
+    group: module.group,
+    details: [
+      module.configPrefix,
+      ...(module.beans.length > 0 ? [`beans: ${module.beans.length}`] : []),
+      ...module.requiredInfrastructure.map((item) => `infra: ${item}`),
+      ...(module.note ? [module.note] : []),
+    ],
+  }))
+}
+
+function toWorkbenchStatus(status: SkeletonModuleStatus): WorkbenchModule['status'] {
+  switch (status) {
+    case 'ACTIVE':
+      return 'active'
+    case 'DISABLED':
+      return 'disabled'
+    case 'MISSING':
+      return 'missing'
+  }
+}

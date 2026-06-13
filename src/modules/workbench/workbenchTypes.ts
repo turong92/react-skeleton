@@ -15,8 +15,11 @@ export type Exchange = {
 
 export type SseStatus = 'idle' | 'connecting' | 'open' | 'error'
 
+export type WebSocketStatus = 'idle' | 'connecting' | 'open' | 'error'
+
 export type WorkbenchModule = {
   title: string
-  status: 'wired' | 'split'
+  status: 'wired' | 'split' | 'active' | 'disabled' | 'missing'
+  group?: string
   details: string[]
 }

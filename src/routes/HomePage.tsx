@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   CircleStop,
   Copy,
+  CreditCard,
   Database,
   FileJson,
   KeyRound,
@@ -17,11 +18,12 @@ import {
   ShieldCheck,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { apiEndpoint, apiResponse, type ApiRequestInit } from '../api/client'
+import { API_BASE_URL, apiEndpoint, apiResponse, type ApiRequestInit } from '../api/client'
 import { createTraceContext, createTraceId } from '../api/traceContext'
 import {
   ApiRequestError,
   type ApiHttpResponse,
+  type ApiListResponse,
   type ApiPageResponse,
   type ApiValueResponse,
 } from '../api/types'
@@ -31,15 +33,37 @@ import {
   decodeTokenPrincipal,
   parseDevIdentity,
 } from '../modules/auth/authSession'
+import {
+  createNotificationConnectFrame,
+  createNotificationSubscribeFrames,
+  parseNotificationMessage,
+  type NotificationStompMessage,
+} from '../modules/notifications/notificationStompSession'
 import { readSseStream, type SseEvent } from '../modules/notifications/sseStream'
+import {
+  encodeStompFrame,
+  parseStompFrames,
+  websocketUrlFromApiBase,
+} from '../modules/notifications/stompFrames'
 import {
   ActionButton,
   ExchangeLog,
   PrincipalStrip,
   SectionTitle,
 } from '../modules/workbench/components'
-import { WORKBENCH_MODULES } from '../modules/workbench/moduleCatalog'
-import type { Exchange, SseStatus } from '../modules/workbench/workbenchTypes'
+import {
+  FALLBACK_WORKBENCH_MODULES,
+  toWorkbenchModules,
+} from '../modules/workbench/moduleCatalog'
+import {
+  skeletonWorkbenchClient,
+  type SkeletonModuleResponse,
+  type SkeletonNotificationPublishResponse,
+  type SkeletonPaymentRouteResponse,
+  type SkeletonRedisKeyResponse,
+  type SkeletonStorageValidationResponse,
+} from '../modules/workbench/skeletonWorkbenchClient'
+import type { Exchange, SseStatus, WebSocketStatus } from '../modules/workbench/workbenchTypes'
 import {
   formatJson,
   headersToObject,
@@ -77,11 +101,18 @@ export function HomePage() {
   const [breakGlassSecret, setBreakGlassSecret] = useState('')
   const [breakGlassReason, setBreakGlassReason] = useState('production support')
   const [breakGlassAccountId, setBreakGlassAccountId] = useState('acc_admin')
+  const [workbenchModules, setWorkbenchModules] = useState(FALLBACK_WORKBENCH_MODULES)
+  const [moduleCatalogSource, setModuleCatalogSource] = useState<'fallback' | 'backend'>('fallback')
   const [exchanges, setExchanges] = useState<Exchange[]>([])
   const [busyAction, setBusyAction] = useState<string | null>(null)
   const [sseStatus, setSseStatus] = useState<SseStatus>('idle')
   const [sseEvents, setSseEvents] = useState<SseEvent[]>([])
+  const [webSocketStatus, setWebSocketStatus] = useState<WebSocketStatus>('idle')
+  const [webSocketEvents, setWebSocketEvents] = useState<NotificationStompMessage[]>([])
   const sseAbortRef = useRef<AbortController | null>(null)
+  const webSocketRef = useRef<WebSocket | null>(null)
+  const webSocketBufferRef = useRef('')
+  const webSocketClosingRef = useRef(false)
 
   const devLogin = useMemo(() => parseDevIdentity(devIdentity), [devIdentity])
   const activePrincipal = useMemo(() => decodeTokenPrincipal(accessToken), [accessToken])
@@ -89,8 +120,28 @@ export function HomePage() {
   useEffect(() => {
     return () => {
       sseAbortRef.current?.abort()
+      webSocketClosingRef.current = true
+      webSocketRef.current?.close()
     }
   }, [])
+
+  useEffect(() => {
+    const loadModuleCatalog = async () => {
+      try {
+        const modules = await skeletonWorkbenchClient.listModules({
+          traceId: flowTraceId,
+          ...(accessToken ? { accessToken } : { devLogin }),
+        })
+        setWorkbenchModules(toWorkbenchModules(modules))
+        setModuleCatalogSource('backend')
+      } catch {
+        setWorkbenchModules(FALLBACK_WORKBENCH_MODULES)
+        setModuleCatalogSource('fallback')
+      }
+    }
+
+    void loadModuleCatalog()
+  }, [accessToken, devLogin, flowTraceId])
 
   async function runJsonExchange<TEnvelope>(
     label: string,
@@ -218,6 +269,72 @@ export function HomePage() {
     )
   }
 
+  async function logModuleCatalog() {
+    const response = await runJsonExchange<ApiListResponse<SkeletonModuleResponse>>(
+      'skeleton.modules',
+      'GET',
+      '/skeleton/modules',
+      authOptions(),
+    )
+    if (response) {
+      setWorkbenchModules(toWorkbenchModules(response.envelope.values))
+      setModuleCatalogSource('backend')
+    }
+  }
+
+  async function callRedisKeySmoke() {
+    await runJsonExchange<ApiValueResponse<SkeletonRedisKeyResponse>>(
+      'skeleton.redis-key',
+      'GET',
+      '/skeleton/redis/key?value=orders:1',
+      authOptions(),
+    )
+  }
+
+  async function callStorageValidationSmoke() {
+    await runJsonExchange<ApiValueResponse<SkeletonStorageValidationResponse>>(
+      'skeleton.storage-validate',
+      'POST',
+      '/skeleton/storage/validate',
+      {
+        ...authOptions(),
+        json: {
+          fileName: 'avatar.png',
+          contentType: 'image/png',
+          sizeBytes: 12,
+        },
+      },
+    )
+  }
+
+  async function callNotificationSmoke() {
+    await runJsonExchange<ApiValueResponse<SkeletonNotificationPublishResponse>>(
+      'skeleton.notification',
+      'POST',
+      '/skeleton/notifications',
+      {
+        ...authOptions(),
+        json: {
+          topic: 'demo',
+          type: 'frontend-smoke',
+          severity: 'INFO',
+          title: 'Frontend smoke',
+          message: 'React skeleton workbench ping',
+          payload: { source: 'react-skeleton' },
+        },
+      },
+    )
+  }
+
+  async function callPaymentRouteSmoke() {
+    await runJsonExchange<ApiValueResponse<SkeletonPaymentRouteResponse>>(
+      'skeleton.payment-route',
+      'GET',
+      '/skeleton/payments/route?amount=1000&currency=KRW&country=KR',
+      authOptions(),
+    )
+  }
+
   async function startSse() {
     sseAbortRef.current?.abort()
     const abortController = new AbortController()
@@ -277,6 +394,136 @@ export function HomePage() {
     setSseStatus('idle')
   }
 
+  function startWebSocket() {
+    stopWebSocket()
+    const webSocketUrl = websocketUrlFromApiBase(API_BASE_URL, '/ws/notifications')
+    const connectFrame = createNotificationConnectFrame(webSocketUrl, {
+      accessToken,
+      devLogin,
+    })
+    const traceContext = createTraceContext(flowTraceId)
+    const started = nowMs()
+    webSocketClosingRef.current = false
+    webSocketBufferRef.current = ''
+    setWebSocketStatus('connecting')
+    setWebSocketEvents([])
+
+    try {
+      const socket = new WebSocket(webSocketUrl, ['v12.stomp'])
+      webSocketRef.current = socket
+
+      socket.onopen = () => {
+        socket.send(
+          encodeStompFrame({
+            ...connectFrame,
+            headers: {
+              ...connectFrame.headers,
+              traceparent: traceContext.traceparent,
+              'X-Trace-Id': traceContext.traceId,
+            },
+          }),
+        )
+        pushExchange({
+          label: 'notifications.websocket',
+          method: 'GET',
+          path: '/ws/notifications',
+          status: 101,
+          durationMs: Math.round(nowMs() - started),
+          traceId: traceContext.traceId,
+          request: {
+            url: webSocketUrl,
+            headers: summarizeStompHeaders(connectFrame.headers),
+          },
+          response: { protocol: 'stomp.v12', phase: 'socket-open' },
+        })
+      }
+
+      socket.onmessage = (event) => {
+        if (typeof event.data !== 'string') return
+        const parsed = parseStompFrames(webSocketBufferRef.current + event.data)
+        webSocketBufferRef.current = parsed.remaining
+        parsed.frames.forEach((frame) => {
+          if (frame.command === 'CONNECTED') {
+            setWebSocketStatus('open')
+            createNotificationSubscribeFrames('demo').forEach((subscribeFrame) => {
+              socket.send(encodeStompFrame(subscribeFrame))
+            })
+            return
+          }
+          if (frame.command === 'ERROR') {
+            setWebSocketStatus('error')
+            toast.error('websocket error')
+            pushExchange({
+              label: 'notifications.websocket.error',
+              method: 'MESSAGE',
+              path: frame.headers.message ?? '/ws/notifications',
+              status: undefined,
+              durationMs: Math.round(nowMs() - started),
+              traceId: traceContext.traceId,
+              request: { destination: frame.headers.destination },
+              error: frame.body || frame.headers.message || frame.headers['content-type'],
+            })
+            return
+          }
+          const notification = parseNotificationMessage(frame)
+          if (notification) {
+            setWebSocketEvents((current) => [notification, ...current].slice(0, 8))
+          }
+        })
+      }
+
+      socket.onerror = () => {
+        setWebSocketStatus('error')
+        toast.error('websocket connection failed')
+      }
+
+      socket.onclose = () => {
+        if (webSocketRef.current === socket) {
+          webSocketRef.current = null
+        }
+        webSocketBufferRef.current = ''
+        if (!webSocketClosingRef.current) {
+          setWebSocketStatus('idle')
+        }
+      }
+    } catch (error) {
+      setWebSocketStatus('error')
+      showApiError(error)
+    }
+  }
+
+  function stopWebSocket() {
+    const socket = webSocketRef.current
+    webSocketClosingRef.current = true
+    if (socket?.readyState === WebSocket.OPEN) {
+      socket.send(encodeStompFrame({ command: 'DISCONNECT', headers: { receipt: 'disconnect' } }))
+    }
+    socket?.close()
+    webSocketRef.current = null
+    webSocketBufferRef.current = ''
+    setWebSocketStatus('idle')
+  }
+
+  async function callWebSocketNotificationSmoke() {
+    const userId = activePrincipal?.accountId ?? devLogin.accountId ?? 'acc_user'
+    await runJsonExchange<ApiValueResponse<SkeletonNotificationPublishResponse>>(
+      'skeleton.websocket-notification',
+      'POST',
+      '/skeleton/notifications',
+      {
+        ...authOptions(),
+        json: {
+          topic: 'demo',
+          type: 'frontend-websocket-smoke',
+          severity: 'INFO',
+          title: 'WebSocket smoke',
+          message: 'React skeleton WebSocket ping',
+          payload: { source: 'react-skeleton', userId },
+        },
+      },
+    )
+  }
+
   function authOptions(): ApiRequestInit {
     return accessToken ? { accessToken } : { devLogin }
   }
@@ -292,6 +539,20 @@ export function HomePage() {
         ...current,
       ].slice(0, 10),
     )
+  }
+
+  function summarizeStompHeaders(
+    headers: Record<string, string | number | undefined> | undefined,
+  ): Record<string, string> {
+    return redactHeaders({
+      Authorization: headers?.Authorization ? 'Bearer ...' : undefined,
+      'X-Dev-Account-Id': stringHeader(headers?.['X-Dev-Account-Id']),
+      'X-Dev-Username': stringHeader(headers?.['X-Dev-Username']),
+      'X-Dev-Email': stringHeader(headers?.['X-Dev-Email']),
+      'accept-version': stringHeader(headers?.['accept-version']),
+      'heart-beat': stringHeader(headers?.['heart-beat']),
+      host: stringHeader(headers?.host),
+    })
   }
 
   return (
@@ -458,45 +719,123 @@ export function HomePage() {
 
         <div className="command-panel">
           <SectionTitle icon={<Bell size={18} />} title="Realtime" />
-          <div className="realtime-meter">
-            <span data-status={sseStatus}>{sseStatus}</span>
-            <code>/notifications/sse?topic=demo</code>
-          </div>
-          <div className="button-row">
-            <ActionButton
-              label="stream"
-              icon={<Play size={16} />}
-              disabled={sseStatus === 'connecting' || sseStatus === 'open'}
-              busy={sseStatus === 'connecting'}
-              onClick={startSse}
-            />
-            <ActionButton
-              label="stop"
-              icon={<CircleStop size={16} />}
-              disabled={sseStatus === 'idle'}
-              onClick={stopSse}
-            />
-          </div>
-          <div className="event-stack">
-            {sseEvents.length === 0 ? (
-              <code>no events</code>
-            ) : (
-              sseEvents.map((event) => (
-                <pre key={event.id}>{formatJson({ event: event.name, data: event.data })}</pre>
-              ))
-            )}
+          <div className="realtime-grid">
+            <div className="stream-card">
+              <div className="realtime-meter">
+                <span data-status={sseStatus}>{sseStatus}</span>
+                <code>/notifications/sse?topic=demo</code>
+              </div>
+              <div className="button-row">
+                <ActionButton
+                  label="sse"
+                  icon={<Play size={16} />}
+                  disabled={sseStatus === 'connecting' || sseStatus === 'open'}
+                  busy={sseStatus === 'connecting'}
+                  onClick={startSse}
+                />
+                <ActionButton
+                  label="stop"
+                  icon={<CircleStop size={16} />}
+                  disabled={sseStatus === 'idle'}
+                  onClick={stopSse}
+                />
+              </div>
+              <div className="event-stack">
+                {sseEvents.length === 0 ? (
+                  <code>no sse events</code>
+                ) : (
+                  sseEvents.map((event) => (
+                    <pre key={event.id}>{formatJson({ event: event.name, data: event.data })}</pre>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="stream-card">
+              <div className="realtime-meter">
+                <span data-status={webSocketStatus}>{webSocketStatus}</span>
+                <code>/ws/notifications</code>
+              </div>
+              <div className="button-row">
+                <ActionButton
+                  label="ws"
+                  icon={<Play size={16} />}
+                  disabled={webSocketStatus === 'connecting' || webSocketStatus === 'open'}
+                  busy={webSocketStatus === 'connecting'}
+                  onClick={startWebSocket}
+                />
+                <ActionButton
+                  label="stop"
+                  icon={<CircleStop size={16} />}
+                  disabled={webSocketStatus === 'idle'}
+                  onClick={stopWebSocket}
+                />
+                <ActionButton
+                  label="publish"
+                  icon={<Bell size={16} />}
+                  busy={busyAction === 'skeleton.websocket-notification'}
+                  onClick={callWebSocketNotificationSmoke}
+                />
+              </div>
+              <div className="event-stack">
+                {webSocketEvents.length === 0 ? (
+                  <code>no websocket events</code>
+                ) : (
+                  webSocketEvents.map((event, index) => (
+                    <pre key={`${event.destination ?? 'message'}-${index}`}>
+                      {formatJson(event)}
+                    </pre>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       <section className="module-section" aria-label="module map">
         <SectionTitle icon={<Database size={18} />} title="Module map" />
+        <div className="module-toolbar">
+          <span data-source={moduleCatalogSource}>{moduleCatalogSource}</span>
+          <div className="button-row">
+            <ActionButton
+              label="refresh"
+              icon={<RefreshCcw size={16} />}
+              busy={busyAction === 'skeleton.modules'}
+              onClick={logModuleCatalog}
+            />
+            <ActionButton
+              label="redis key"
+              icon={<Database size={16} />}
+              busy={busyAction === 'skeleton.redis-key'}
+              onClick={callRedisKeySmoke}
+            />
+            <ActionButton
+              label="storage"
+              icon={<FileJson size={16} />}
+              busy={busyAction === 'skeleton.storage-validate'}
+              onClick={callStorageValidationSmoke}
+            />
+            <ActionButton
+              label="notify"
+              icon={<Bell size={16} />}
+              busy={busyAction === 'skeleton.notification'}
+              onClick={callNotificationSmoke}
+            />
+            <ActionButton
+              label="payment"
+              icon={<CreditCard size={16} />}
+              busy={busyAction === 'skeleton.payment-route'}
+              onClick={callPaymentRouteSmoke}
+            />
+          </div>
+        </div>
         <div className="module-grid">
-          {WORKBENCH_MODULES.map((module) => (
+          {workbenchModules.map((module) => (
             <article className="module-card" key={module.title}>
               <div>
                 <strong>{module.title}</strong>
-                <span>{module.status}</span>
+                <span data-status={module.status}>{module.status}</span>
               </div>
               <ul>
                 {module.details.map((detail) => (
@@ -525,4 +864,8 @@ export function HomePage() {
 async function copy(value: string) {
   await navigator.clipboard.writeText(value)
   toast.success('copied')
+}
+
+function stringHeader(value: string | number | undefined): string | undefined {
+  return value === undefined ? undefined : String(value)
 }

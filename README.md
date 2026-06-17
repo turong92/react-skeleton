@@ -54,7 +54,7 @@ src/
 ├── modules/
 │   ├── auth/           # dev-login, token principal, auth header helpers
 │   ├── http/           # axios 기반 SkeletonHttpClient
-│   ├── notifications/  # SSE stream parser/reader
+│   ├── notifications/  # SSE stream + STOMP/WebSocket helpers
 │   └── workbench/      # 워크벤치 UI 조립 부품/모듈 manifest
 ├── main.tsx            # TanStack Query Provider 세팅
 └── routes/HomePage.tsx # 스켈레톤 워크벤치

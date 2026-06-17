@@ -29,11 +29,15 @@ pnpm test
 - 프로덕션에선 Caddy가 프론트 정적 번들 + `/api/v1/*` 백엔드 프록시를 같은 origin으로 합침 → **CORS 불필요**
 - `VITE_API_TIMEOUT_MS`, `VITE_API_RETRY_ATTEMPTS`, `VITE_API_RETRY_DELAY_MS`로 axios timeout/retry 기본값을 조정
 
+WebSocket URL은 `VITE_API_BASE_URL`에서 자동 파생된다. 예를 들어 `VITE_API_BASE_URL=http://localhost:18080/api/v1`이면 WebSocket은 `ws://localhost:18080/ws/notifications`로 연결한다.
+
 ## 워크벤치
 
 - `GET /hello`, `GET /examples/items`, `POST /examples/items`, `POST /examples/jobs` 호출
 - `POST /auth/login`, `GET /auth/me` bearer/dev-login/break-glass 호출
-- `GET /notifications/sse` fetch streaming 연결
+- `GET /notifications/sse?topic=demo` fetch streaming 연결
+- `/ws/notifications` STOMP WebSocket 연결. WebSocket 인증을 켠 백엔드는 `auth.login`으로 받은 bearer token이 필요하고 dev-login 헤더는 REST/SSE 전용으로 취급
+- `POST /skeleton/notifications` publish 후 SSE/WebSocket 이벤트 수신 확인
 - 모든 JSON 호출에 `traceparent`, `X-Trace-Id` 자동 부착
 - `accessToken`, `Idempotency-Key`, `X-Dev-*`, `X-Break-Glass-*` 헤더 옵션 표준화
 - 요청/응답/status/header trace를 화면 로그로 확인

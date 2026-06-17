@@ -33,11 +33,12 @@ export type SkeletonStorageValidationErrorResponse = {
   message: string
 }
 
-export type SkeletonNotificationSeverity = 'DEBUG' | 'INFO' | 'WARN' | 'ERROR'
+export type SkeletonNotificationSeverity = 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR'
 
 export type SkeletonNotificationPublishRequest = {
   topic: string
   type: string
+  recipientIds?: string[]
   severity: SkeletonNotificationSeverity
   title?: string | null
   message?: string | null
@@ -48,6 +49,7 @@ export type SkeletonNotificationPublishResponse = {
   eventId: string
   topic: string
   type: string
+  recipientIds: string[]
   deliveredSubscribers: number
 }
 

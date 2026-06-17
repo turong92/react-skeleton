@@ -343,6 +343,7 @@ export function HomePage() {
   }
 
   async function callNotificationSmoke() {
+    const recipientId = notificationRecipientId()
     await runJsonExchange<ApiValueResponse<SkeletonNotificationPublishResponse>>(
       'skeleton.notification',
       'POST',
@@ -352,6 +353,7 @@ export function HomePage() {
         json: {
           topic: 'demo',
           type: 'frontend-smoke',
+          recipientIds: [recipientId],
           severity: 'INFO',
           title: 'Frontend smoke',
           message: 'React skeleton workbench ping',
@@ -659,7 +661,7 @@ export function HomePage() {
   }
 
   async function callWebSocketNotificationSmoke() {
-    const userId = activePrincipal?.accountId ?? 'acc_user'
+    const recipientId = notificationRecipientId()
     await runJsonExchange<ApiValueResponse<SkeletonNotificationPublishResponse>>(
       'skeleton.websocket-notification',
       'POST',
@@ -672,7 +674,8 @@ export function HomePage() {
           severity: 'INFO',
           title: 'WebSocket smoke',
           message: 'React skeleton WebSocket ping',
-          payload: { source: 'react-skeleton', userId },
+          recipientIds: [recipientId],
+          payload: { source: 'react-skeleton', userId: recipientId },
         },
       },
     )
@@ -680,6 +683,10 @@ export function HomePage() {
 
   function authOptions(): ApiRequestInit {
     return accessToken ? { accessToken } : { devLogin }
+  }
+
+  function notificationRecipientId(): string {
+    return activePrincipal?.accountId ?? devLogin.accountId ?? 'acc_user'
   }
 
   function pushExchange(exchange: Omit<Exchange, 'id' | 'at'>) {

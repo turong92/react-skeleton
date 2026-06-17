@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  canConnectNotificationWebSocket,
   createNotificationConnectFrame,
   createNotificationSubscribeFrames,
   parseNotificationMessage,
@@ -23,7 +24,7 @@ describe('notificationStompSession', () => {
     })
   })
 
-  it('falls back to dev login STOMP headers when access token is absent', () => {
+  it('does not translate dev login values into websocket authentication headers', () => {
     expect(
       createNotificationConnectFrame('wss://api.example.com/ws/notifications', {
         accessToken: '',
@@ -32,13 +33,18 @@ describe('notificationStompSession', () => {
     ).toEqual({
       command: 'CONNECT',
       headers: {
-        'X-Dev-Account-Id': 'acc_user',
-        'X-Dev-Email': 'user@example.com',
         'accept-version': '1.2',
         'heart-beat': '10000,10000',
         host: 'api.example.com',
       },
     })
+  })
+
+  it('requires a non-empty bearer token for the standard websocket smoke flow', () => {
+    expect(canConnectNotificationWebSocket('')).toBe(false)
+    expect(canConnectNotificationWebSocket('   ')).toBe(false)
+    expect(canConnectNotificationWebSocket('token-1')).toBe(true)
+    expect(canConnectNotificationWebSocket('Bearer token-1')).toBe(true)
   })
 
   it('creates topic and user notification subscriptions', () => {

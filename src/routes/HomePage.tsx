@@ -34,6 +34,7 @@ import {
   parseDevIdentity,
 } from '../modules/auth/authSession'
 import {
+  canConnectNotificationWebSocket,
   createNotificationConnectFrame,
   createNotificationSubscribeFrames,
   parseNotificationMessage,
@@ -396,10 +397,33 @@ export function HomePage() {
 
   function startWebSocket() {
     stopWebSocket()
+    if (!canConnectNotificationWebSocket(accessToken)) {
+      const traceContext = createTraceContext(flowTraceId)
+      setWebSocketStatus('error')
+      toast.error('websocket requires bearer token')
+      pushExchange({
+        label: 'notifications.websocket.blocked',
+        method: 'CONNECT',
+        path: '/ws/notifications',
+        status: undefined,
+        durationMs: 0,
+        traceId: traceContext.traceId,
+        request: {
+          headers: {
+            traceparent: traceContext.traceparent,
+            'X-Trace-Id': traceContext.traceId,
+          },
+        },
+        error: {
+          code: 'MISSING_WEBSOCKET_TOKEN',
+          message: 'Run auth.login before opening the WebSocket smoke connection.',
+        },
+      })
+      return
+    }
     const webSocketUrl = websocketUrlFromApiBase(API_BASE_URL, '/ws/notifications')
     const connectFrame = createNotificationConnectFrame(webSocketUrl, {
       accessToken,
-      devLogin,
     })
     const traceContext = createTraceContext(flowTraceId)
     const started = nowMs()
@@ -505,7 +529,7 @@ export function HomePage() {
   }
 
   async function callWebSocketNotificationSmoke() {
-    const userId = activePrincipal?.accountId ?? devLogin.accountId ?? 'acc_user'
+    const userId = activePrincipal?.accountId ?? 'acc_user'
     await runJsonExchange<ApiValueResponse<SkeletonNotificationPublishResponse>>(
       'skeleton.websocket-notification',
       'POST',
@@ -773,6 +797,7 @@ export function HomePage() {
                 <ActionButton
                   label="publish"
                   icon={<Bell size={16} />}
+                  disabled={webSocketStatus !== 'open'}
                   busy={busyAction === 'skeleton.websocket-notification'}
                   onClick={callWebSocketNotificationSmoke}
                 />

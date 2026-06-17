@@ -3,7 +3,7 @@ import type { ParsedStompFrame, StompFrame } from './stompFrames'
 
 export type NotificationStompAuth = {
   accessToken: string
-  devLogin: DevLoginIdentity
+  devLogin?: DevLoginIdentity
 }
 
 export type NotificationStompMessage = {
@@ -61,18 +61,17 @@ export function parseNotificationMessage(
   }
 }
 
+export function canConnectNotificationWebSocket(accessToken: string): boolean {
+  return accessToken.trim().length > 0
+}
+
 function authHeaders(auth: NotificationStompAuth): Record<string, string> {
-  if (auth.accessToken) {
-    return {
-      Authorization: auth.accessToken.startsWith('Bearer ')
-        ? auth.accessToken
-        : `Bearer ${auth.accessToken}`,
-    }
+  const accessToken = auth.accessToken.trim()
+  if (!accessToken) {
+    return {}
   }
   return {
-    ...(auth.devLogin.accountId ? { 'X-Dev-Account-Id': auth.devLogin.accountId } : {}),
-    ...(auth.devLogin.username ? { 'X-Dev-Username': auth.devLogin.username } : {}),
-    ...(auth.devLogin.email ? { 'X-Dev-Email': auth.devLogin.email } : {}),
+    Authorization: accessToken.startsWith('Bearer ') ? accessToken : `Bearer ${accessToken}`,
   }
 }
 

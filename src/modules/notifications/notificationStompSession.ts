@@ -11,6 +11,11 @@ export type NotificationStompMessage = {
   value: unknown
 }
 
+export type NotificationStompTraceHeaders = {
+  traceparent: string
+  'X-Trace-Id': string
+}
+
 const TOPIC_PREFIX = '/topic/notifications'
 const USER_DESTINATION = '/user/queue/notifications'
 
@@ -29,7 +34,10 @@ export function createNotificationConnectFrame(
   }
 }
 
-export function createNotificationSubscribeFrames(topic: string): StompFrame[] {
+export function createNotificationSubscribeFrames(
+  topic: string,
+  traceHeaders?: NotificationStompTraceHeaders,
+): StompFrame[] {
   const normalizedTopic = normalizeTopic(topic)
   return [
     {
@@ -38,6 +46,7 @@ export function createNotificationSubscribeFrames(topic: string): StompFrame[] {
         ack: 'auto',
         destination: `${TOPIC_PREFIX}/${normalizedTopic}`,
         id: `notifications-topic-${subscriptionId(normalizedTopic)}`,
+        ...traceHeaders,
       },
     },
     {
@@ -46,9 +55,22 @@ export function createNotificationSubscribeFrames(topic: string): StompFrame[] {
         ack: 'auto',
         destination: USER_DESTINATION,
         id: 'notifications-user',
+        ...traceHeaders,
       },
     },
   ]
+}
+
+export function createNotificationDisconnectFrame(
+  traceHeaders?: NotificationStompTraceHeaders,
+): StompFrame {
+  return {
+    command: 'DISCONNECT',
+    headers: {
+      receipt: 'disconnect',
+      ...traceHeaders,
+    },
+  }
 }
 
 export function parseNotificationMessage(

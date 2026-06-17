@@ -36,9 +36,11 @@ import {
 import {
   canConnectNotificationWebSocket,
   createNotificationConnectFrame,
+  createNotificationDisconnectFrame,
   createNotificationSubscribeFrames,
   parseNotificationMessage,
   type NotificationStompMessage,
+  type NotificationStompTraceHeaders,
 } from '../modules/notifications/notificationStompSession'
 import { readSseStream, type SseEvent } from '../modules/notifications/sseStream'
 import {
@@ -72,6 +74,7 @@ import {
   newIdempotencyKey,
   nowMs,
   redactHeaders,
+  redactSensitiveData,
   summarizeRequest,
 } from '../modules/workbench/workbenchUtils'
 import { showApiError } from '../lib/showApiError'
@@ -114,6 +117,7 @@ export function HomePage() {
   const webSocketRef = useRef<WebSocket | null>(null)
   const webSocketBufferRef = useRef('')
   const webSocketClosingRef = useRef(false)
+  const webSocketTraceHeadersRef = useRef<NotificationStompTraceHeaders | null>(null)
 
   const devLogin = useMemo(() => parseDevIdentity(devIdentity), [devIdentity])
   const activePrincipal = useMemo(() => decodeTokenPrincipal(accessToken), [accessToken])
@@ -426,9 +430,14 @@ export function HomePage() {
       accessToken,
     })
     const traceContext = createTraceContext(flowTraceId)
+    const traceHeaders = {
+      traceparent: traceContext.traceparent,
+      'X-Trace-Id': traceContext.traceId,
+    }
     const started = nowMs()
     webSocketClosingRef.current = false
     webSocketBufferRef.current = ''
+    webSocketTraceHeadersRef.current = traceHeaders
     setWebSocketStatus('connecting')
     setWebSocketEvents([])
 
@@ -437,14 +446,14 @@ export function HomePage() {
       webSocketRef.current = socket
 
       socket.onopen = () => {
+        const headers = {
+          ...connectFrame.headers,
+          ...traceHeaders,
+        }
         socket.send(
           encodeStompFrame({
             ...connectFrame,
-            headers: {
-              ...connectFrame.headers,
-              traceparent: traceContext.traceparent,
-              'X-Trace-Id': traceContext.traceId,
-            },
+            headers,
           }),
         )
         pushExchange({
@@ -456,7 +465,7 @@ export function HomePage() {
           traceId: traceContext.traceId,
           request: {
             url: webSocketUrl,
-            headers: summarizeStompHeaders(connectFrame.headers),
+            headers: summarizeStompHeaders(headers),
           },
           response: { protocol: 'stomp.v12', phase: 'socket-open' },
         })
@@ -469,7 +478,7 @@ export function HomePage() {
         parsed.frames.forEach((frame) => {
           if (frame.command === 'CONNECTED') {
             setWebSocketStatus('open')
-            createNotificationSubscribeFrames('demo').forEach((subscribeFrame) => {
+            createNotificationSubscribeFrames('demo', traceHeaders).forEach((subscribeFrame) => {
               socket.send(encodeStompFrame(subscribeFrame))
             })
             return
@@ -504,6 +513,7 @@ export function HomePage() {
       socket.onclose = () => {
         if (webSocketRef.current === socket) {
           webSocketRef.current = null
+          webSocketTraceHeadersRef.current = null
         }
         webSocketBufferRef.current = ''
         if (!webSocketClosingRef.current) {
@@ -520,11 +530,12 @@ export function HomePage() {
     const socket = webSocketRef.current
     webSocketClosingRef.current = true
     if (socket?.readyState === WebSocket.OPEN) {
-      socket.send(encodeStompFrame({ command: 'DISCONNECT', headers: { receipt: 'disconnect' } }))
+      socket.send(encodeStompFrame(createNotificationDisconnectFrame(webSocketTraceHeadersRef.current ?? undefined)))
     }
     socket?.close()
     webSocketRef.current = null
     webSocketBufferRef.current = ''
+    webSocketTraceHeadersRef.current = null
     setWebSocketStatus('idle')
   }
 
@@ -559,6 +570,9 @@ export function HomePage() {
           ...exchange,
           id: crypto.randomUUID(),
           at: new Date().toISOString(),
+          request: redactSensitiveData(exchange.request),
+          response: redactSensitiveData(exchange.response),
+          error: redactSensitiveData(exchange.error),
         },
         ...current,
       ].slice(0, 10),
@@ -575,6 +589,8 @@ export function HomePage() {
       'X-Dev-Email': stringHeader(headers?.['X-Dev-Email']),
       'accept-version': stringHeader(headers?.['accept-version']),
       'heart-beat': stringHeader(headers?.['heart-beat']),
+      traceparent: stringHeader(headers?.traceparent),
+      'X-Trace-Id': stringHeader(headers?.['X-Trace-Id']),
       host: stringHeader(headers?.host),
     })
   }

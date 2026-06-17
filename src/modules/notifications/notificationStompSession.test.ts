@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   canConnectNotificationWebSocket,
   createNotificationConnectFrame,
+  createNotificationDisconnectFrame,
   createNotificationSubscribeFrames,
   parseNotificationMessage,
 } from './notificationStompSession'
@@ -66,6 +67,52 @@ describe('notificationStompSession', () => {
         },
       },
     ])
+  })
+
+  it('adds trace headers to every notification subscription when provided', () => {
+    expect(
+      createNotificationSubscribeFrames('demo', {
+        traceparent: '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01',
+        'X-Trace-Id': '4bf92f3577b34da6a3ce929d0e0e4736',
+      }),
+    ).toEqual([
+      {
+        command: 'SUBSCRIBE',
+        headers: {
+          ack: 'auto',
+          destination: '/topic/notifications/demo',
+          id: 'notifications-topic-demo',
+          traceparent: '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01',
+          'X-Trace-Id': '4bf92f3577b34da6a3ce929d0e0e4736',
+        },
+      },
+      {
+        command: 'SUBSCRIBE',
+        headers: {
+          ack: 'auto',
+          destination: '/user/queue/notifications',
+          id: 'notifications-user',
+          traceparent: '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01',
+          'X-Trace-Id': '4bf92f3577b34da6a3ce929d0e0e4736',
+        },
+      },
+    ])
+  })
+
+  it('adds trace headers to disconnect frames when provided', () => {
+    expect(
+      createNotificationDisconnectFrame({
+        traceparent: '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01',
+        'X-Trace-Id': '4bf92f3577b34da6a3ce929d0e0e4736',
+      }),
+    ).toEqual({
+      command: 'DISCONNECT',
+      headers: {
+        receipt: 'disconnect',
+        traceparent: '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01',
+        'X-Trace-Id': '4bf92f3577b34da6a3ce929d0e0e4736',
+      },
+    })
   })
 
   it('parses JSON notification message frames', () => {

@@ -13,9 +13,9 @@ export type Exchange = {
   error?: unknown
 }
 
-export type SseStatus = 'idle' | 'connecting' | 'open' | 'error'
+export type SseStatus = 'idle' | 'connecting' | 'reconnecting' | 'open' | 'error'
 
-export type WebSocketStatus = 'idle' | 'connecting' | 'open' | 'error'
+export type WebSocketStatus = 'idle' | 'connecting' | 'reconnecting' | 'open' | 'error'
 
 export type WorkbenchModule = {
   title: string

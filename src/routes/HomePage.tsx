@@ -42,6 +42,10 @@ import {
   type NotificationStompMessage,
   type NotificationStompTraceHeaders,
 } from '../modules/notifications/notificationStompSession'
+import {
+  nextNotificationReconnectDelay,
+  shouldRetryNotificationReconnect,
+} from '../modules/notifications/notificationReconnectPolicy'
 import { readSseStream, type SseEvent } from '../modules/notifications/sseStream'
 import {
   encodeStompFrame,
@@ -114,9 +118,15 @@ export function HomePage() {
   const [webSocketStatus, setWebSocketStatus] = useState<WebSocketStatus>('idle')
   const [webSocketEvents, setWebSocketEvents] = useState<NotificationStompMessage[]>([])
   const sseAbortRef = useRef<AbortController | null>(null)
+  const sseManualStopRef = useRef(false)
+  const sseReconnectAttemptRef = useRef(0)
+  const sseReconnectTimerRef = useRef<number | null>(null)
   const webSocketRef = useRef<WebSocket | null>(null)
   const webSocketBufferRef = useRef('')
   const webSocketClosingRef = useRef(false)
+  const webSocketManualStopRef = useRef(false)
+  const webSocketReconnectAttemptRef = useRef(0)
+  const webSocketReconnectTimerRef = useRef<number | null>(null)
   const webSocketTraceHeadersRef = useRef<NotificationStompTraceHeaders | null>(null)
 
   const devLogin = useMemo(() => parseDevIdentity(devIdentity), [devIdentity])
@@ -124,9 +134,29 @@ export function HomePage() {
 
   useEffect(() => {
     return () => {
+      if (sseReconnectTimerRef.current !== null) {
+        window.clearTimeout(sseReconnectTimerRef.current)
+        sseReconnectTimerRef.current = null
+      }
+      if (webSocketReconnectTimerRef.current !== null) {
+        window.clearTimeout(webSocketReconnectTimerRef.current)
+        webSocketReconnectTimerRef.current = null
+      }
+      sseManualStopRef.current = true
+      webSocketManualStopRef.current = true
       sseAbortRef.current?.abort()
       webSocketClosingRef.current = true
-      webSocketRef.current?.close()
+      const socket = webSocketRef.current
+      if (socket) {
+        socket.onopen = null
+        socket.onmessage = null
+        socket.onerror = null
+        socket.onclose = null
+        socket.close()
+      }
+      webSocketRef.current = null
+      webSocketBufferRef.current = ''
+      webSocketTraceHeadersRef.current = null
     }
   }, [])
 
@@ -340,7 +370,10 @@ export function HomePage() {
     )
   }
 
-  async function startSse() {
+  async function startSse(attempt = 0) {
+    clearSseReconnectTimer()
+    sseManualStopRef.current = false
+    sseReconnectAttemptRef.current = attempt
     sseAbortRef.current?.abort()
     const abortController = new AbortController()
     const traceContext = createTraceContext(flowTraceId)
@@ -351,9 +384,12 @@ export function HomePage() {
     })
     applyAuthHeaders(headers, accessToken, devLogin)
     sseAbortRef.current = abortController
-    setSseStatus('connecting')
-    setSseEvents([])
+    setSseStatus(attempt > 0 ? 'reconnecting' : 'connecting')
+    if (attempt === 0) {
+      setSseEvents([])
+    }
     const started = nowMs()
+    let shouldReconnect = false
 
     try {
       const response = await fetch(apiEndpoint('/notifications/sse?topic=demo'), {
@@ -374,33 +410,71 @@ export function HomePage() {
 
       if (!response.ok || !response.body) {
         setSseStatus('error')
+        shouldReconnect = true
         return
       }
 
+      sseReconnectAttemptRef.current = 0
       setSseStatus('open')
       await readSseStream(response.body, abortController.signal, (event) => {
         setSseEvents((current) => [event, ...current].slice(0, 8))
       })
+      if (!abortController.signal.aborted) {
+        shouldReconnect = true
+      }
     } catch (error) {
       if (!abortController.signal.aborted) {
         setSseStatus('error')
         showApiError(error)
+        shouldReconnect = true
       }
     } finally {
-      if (sseAbortRef.current === abortController) {
+      const isCurrentConnection = sseAbortRef.current === abortController
+      if (isCurrentConnection) {
         sseAbortRef.current = null
+      }
+      if (isCurrentConnection && shouldReconnect) {
+        scheduleSseReconnect(sseReconnectAttemptRef.current + 1)
       }
     }
   }
 
   function stopSse() {
+    sseManualStopRef.current = true
+    clearSseReconnectTimer()
     sseAbortRef.current?.abort()
     sseAbortRef.current = null
+    sseReconnectAttemptRef.current = 0
     setSseStatus('idle')
   }
 
-  function startWebSocket() {
-    stopWebSocket()
+  function scheduleSseReconnect(attempt: number) {
+    if (sseManualStopRef.current) return
+    if (!shouldRetryNotificationReconnect(attempt)) {
+      setSseStatus('error')
+      return
+    }
+
+    clearSseReconnectTimer()
+    sseReconnectAttemptRef.current = attempt
+    setSseStatus('reconnecting')
+    const delay = nextNotificationReconnectDelay(attempt)
+    sseReconnectTimerRef.current = window.setTimeout(() => {
+      sseReconnectTimerRef.current = null
+      void startSse(attempt)
+    }, delay)
+  }
+
+  function clearSseReconnectTimer() {
+    if (sseReconnectTimerRef.current === null) return
+    window.clearTimeout(sseReconnectTimerRef.current)
+    sseReconnectTimerRef.current = null
+  }
+
+  function startWebSocket(attempt = 0) {
+    clearWebSocketReconnectTimer()
+    webSocketManualStopRef.current = false
+    closeWebSocketConnection(true)
     if (!canConnectNotificationWebSocket(accessToken)) {
       const traceContext = createTraceContext(flowTraceId)
       setWebSocketStatus('error')
@@ -425,6 +499,7 @@ export function HomePage() {
       })
       return
     }
+    webSocketReconnectAttemptRef.current = attempt
     const webSocketUrl = websocketUrlFromApiBase(API_BASE_URL, '/ws/notifications')
     const connectFrame = createNotificationConnectFrame(webSocketUrl, {
       accessToken,
@@ -438,8 +513,10 @@ export function HomePage() {
     webSocketClosingRef.current = false
     webSocketBufferRef.current = ''
     webSocketTraceHeadersRef.current = traceHeaders
-    setWebSocketStatus('connecting')
-    setWebSocketEvents([])
+    setWebSocketStatus(attempt > 0 ? 'reconnecting' : 'connecting')
+    if (attempt === 0) {
+      setWebSocketEvents([])
+    }
 
     try {
       const socket = new WebSocket(webSocketUrl, ['v12.stomp'])
@@ -477,6 +554,7 @@ export function HomePage() {
         webSocketBufferRef.current = parsed.remaining
         parsed.frames.forEach((frame) => {
           if (frame.command === 'CONNECTED') {
+            webSocketReconnectAttemptRef.current = 0
             setWebSocketStatus('open')
             createNotificationSubscribeFrames('demo', traceHeaders).forEach((subscribeFrame) => {
               socket.send(encodeStompFrame(subscribeFrame))
@@ -516,27 +594,68 @@ export function HomePage() {
           webSocketTraceHeadersRef.current = null
         }
         webSocketBufferRef.current = ''
-        if (!webSocketClosingRef.current) {
-          setWebSocketStatus('idle')
+        if (!webSocketClosingRef.current && !webSocketManualStopRef.current) {
+          scheduleWebSocketReconnect(webSocketReconnectAttemptRef.current + 1)
         }
       }
     } catch (error) {
       setWebSocketStatus('error')
       showApiError(error)
+      scheduleWebSocketReconnect(webSocketReconnectAttemptRef.current + 1)
     }
   }
 
   function stopWebSocket() {
+    webSocketManualStopRef.current = true
+    clearWebSocketReconnectTimer()
+    closeWebSocketConnection(true)
+    webSocketReconnectAttemptRef.current = 0
+    setWebSocketStatus('idle')
+  }
+
+  function scheduleWebSocketReconnect(attempt: number) {
+    if (webSocketManualStopRef.current) return
+    if (!shouldRetryNotificationReconnect(attempt)) {
+      setWebSocketStatus('error')
+      return
+    }
+
+    clearWebSocketReconnectTimer()
+    webSocketReconnectAttemptRef.current = attempt
+    setWebSocketStatus('reconnecting')
+    const delay = nextNotificationReconnectDelay(attempt)
+    webSocketReconnectTimerRef.current = window.setTimeout(() => {
+      webSocketReconnectTimerRef.current = null
+      startWebSocket(attempt)
+    }, delay)
+  }
+
+  function clearWebSocketReconnectTimer() {
+    if (webSocketReconnectTimerRef.current === null) return
+    window.clearTimeout(webSocketReconnectTimerRef.current)
+    webSocketReconnectTimerRef.current = null
+  }
+
+  function closeWebSocketConnection(sendDisconnect: boolean) {
     const socket = webSocketRef.current
     webSocketClosingRef.current = true
-    if (socket?.readyState === WebSocket.OPEN) {
-      socket.send(encodeStompFrame(createNotificationDisconnectFrame(webSocketTraceHeadersRef.current ?? undefined)))
+    if (sendDisconnect && socket?.readyState === WebSocket.OPEN) {
+      socket.send(
+        encodeStompFrame(
+          createNotificationDisconnectFrame(webSocketTraceHeadersRef.current ?? undefined),
+        ),
+      )
     }
-    socket?.close()
+    if (socket) {
+      socket.onopen = null
+      socket.onmessage = null
+      socket.onerror = null
+      socket.onclose = null
+      socket.close()
+    }
     webSocketRef.current = null
     webSocketBufferRef.current = ''
     webSocketTraceHeadersRef.current = null
-    setWebSocketStatus('idle')
   }
 
   async function callWebSocketNotificationSmoke() {
@@ -594,6 +713,10 @@ export function HomePage() {
       host: stringHeader(headers?.host),
     })
   }
+
+  const sseBusy = sseStatus === 'connecting' || sseStatus === 'reconnecting'
+  const webSocketBusy =
+    webSocketStatus === 'connecting' || webSocketStatus === 'reconnecting'
 
   return (
     <div className="workbench">
@@ -769,8 +892,8 @@ export function HomePage() {
                 <ActionButton
                   label="sse"
                   icon={<Play size={16} />}
-                  disabled={sseStatus === 'connecting' || sseStatus === 'open'}
-                  busy={sseStatus === 'connecting'}
+                  disabled={sseStatus !== 'idle' && sseStatus !== 'error'}
+                  busy={sseBusy}
                   onClick={startSse}
                 />
                 <ActionButton
@@ -800,8 +923,8 @@ export function HomePage() {
                 <ActionButton
                   label="ws"
                   icon={<Play size={16} />}
-                  disabled={webSocketStatus === 'connecting' || webSocketStatus === 'open'}
-                  busy={webSocketStatus === 'connecting'}
+                  disabled={webSocketStatus !== 'idle' && webSocketStatus !== 'error'}
+                  busy={webSocketBusy}
                   onClick={startWebSocket}
                 />
                 <ActionButton

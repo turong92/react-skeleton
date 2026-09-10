@@ -19,7 +19,8 @@ src/
 │   └── RootLayout.tsx
 ├── components/       # 재사용 UI 조각 (필요 시 추가)
 ├── hooks/            # 커스텀 훅 (필요 시 추가)
-├── lib/              # 유틸/헬퍼 (필요 시 추가)
+├── lib/              # 유틸/헬퍼
+│   └── time/         # 글로벌 시간 (백엔드 modules:time 짝): formatInstant / formatDate(변환 없음) / formatDual / toZonedMoment / serverClock / 국가→시간대
 └── index.css         # 전역 CSS (최소한으로 사용)
 ```
 
@@ -37,6 +38,7 @@ src/
 - **공통 fetch는 `src/api/client.ts` 래퍼 사용**: baseURL 은 `VITE_API_BASE_URL` 또는 `/api/v1`
 - **응답 DTO 표준화**: 단건은 `api<T>()`, 리스트는 `apiList<T>()`, 페이지는 `apiPage<T>()`, 메타까지 필요하면 `apiEnvelope<TEnvelope>()`
 - **CSS Modules 우선**: 전역 CSS는 `src/index.css` 에만. 필요해지면 Tailwind/shadcn 추가 검토
+- **시각 3종** (`src/lib/time`): ISO `...Z` 는 `formatInstant`, `YYYY-MM-DD` 는 `formatDate`(시간대 변환 금지), `ZonedMoment {local, zone, at}` 는 `formatDual`(이벤트 시간대 + 내 시간대). `new Date('YYYY-MM-DD')` 금지. 카운트다운은 `serverClock.now()`. API 클라이언트가 `X-Time-Zone` 을 자동으로 보낸다
 
 ## 백엔드와의 통신
 

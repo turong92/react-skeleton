@@ -12,7 +12,12 @@ import type {
   ApiValueResponse,
 } from './types'
 
+import { createServerClock, userTimeZone } from '../lib/time'
+
 const DEFAULT_BASE_URL = '/api/v1'
+
+/** 서버 시각 보정 (응답 Date 헤더). 카운트다운·마감 판정은 `serverClock.now()` 로 */
+export const serverClock = createServerClock()
 
 export const API_BASE_URL = normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL)
 export type ApiRequestInit = SkeletonHttpRequest
@@ -89,6 +94,20 @@ function createDefaultApiHttpClient(): SkeletonHttpClient {
       attempts: numberFromEnv(import.meta.env.VITE_API_RETRY_ATTEMPTS) ?? 0,
       delayMs: numberFromEnv(import.meta.env.VITE_API_RETRY_DELAY_MS) ?? 150,
     },
+    // 기기 시간대를 보내 백엔드 modules:time 이 같은 시간대로 문구를 만들게
+    requestInterceptors: [
+      (config) => ({
+        ...config,
+        headers: { ...(config.headers ?? {}), 'X-Time-Zone': userTimeZone() },
+      }),
+    ],
+    // 응답 Date 헤더로 서버 시각 보정
+    responseInterceptors: [
+      (response) => {
+        serverClock.observeDateHeader(response.headers?.date as string | undefined)
+        return response
+      },
+    ],
   })
 }
 

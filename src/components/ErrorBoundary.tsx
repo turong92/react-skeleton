@@ -37,14 +37,14 @@ export class ErrorBoundary extends Component<Props, State> {
 
     return (
       <div style={{ padding: '2rem', textAlign: 'center' }}>
-        <h2 style={{ color: '#c0392b' }}>문제가 발생했습니다</h2>
+        <h2 style={{ color: 'var(--red)' }}>문제가 발생했습니다</h2>
         <pre
           style={{
             display: 'inline-block',
             textAlign: 'left',
             padding: '1rem',
-            background: '#fee',
-            border: '1px solid #fcc',
+            background: 'var(--red-soft)',
+            border: '1px solid var(--red-border)',
             borderRadius: 4,
             maxWidth: 800,
             whiteSpace: 'pre-wrap',

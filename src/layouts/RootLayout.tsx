@@ -1,5 +1,6 @@
 import { Link, Outlet } from 'react-router-dom'
 import { API_BASE_URL, apiEndpoint } from '../api/client'
+import { ThemeToggle } from '../components/ThemeToggle'
 
 export function RootLayout() {
   return (
@@ -17,6 +18,7 @@ export function RootLayout() {
           <a href={apiEndpoint('/docs/ui')} target="_blank" rel="noreferrer">
             Swagger
           </a>
+          <ThemeToggle />
         </nav>
       </header>
       <main className="app-main">

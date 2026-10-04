@@ -9,6 +9,8 @@
     "lint": "eslint .",
     "test": "vitest run --pool forks",
     "typecheck": "tsc --noEmit",
+    "tokens": "node design/tokens/build.mjs",
+    "tokens:check": "node design/tokens/build.mjs --check",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "preview": "vite preview"

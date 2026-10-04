@@ -20,8 +20,14 @@ src/
 ├── components/       # 재사용 UI 조각 (필요 시 추가)
 ├── hooks/            # 커스텀 훅 (필요 시 추가)
 ├── lib/              # 유틸/헬퍼
+│   ├── theme.ts      # 테마 선택(system·light·dark) — <html data-theme> + localStorage, useTheme 훅
 │   └── time/         # 글로벌 시간 (백엔드 modules:time 짝): formatInstant / formatDate(변환 없음) / formatDual / toZonedMoment / serverClock / 국가→시간대
-└── index.css         # 전역 CSS (최소한으로 사용)
+├── styles/
+│   └── tokens.css    # 생성물(손대지 않음) — design/tokens/tokens.json 에서 `pnpm tokens`
+└── index.css         # 전역 CSS (최소한으로 사용, 색은 토큰만)
+
+design/tokens/        # tokens.json(정본) + build.mjs(생성기) — docs/design-tokens.md 참고
+docs/design-tokens.md # 토큰 층 · 이름 · 추가법 + 생성된 표
 ```
 
 **경계 책임:**
@@ -37,6 +43,7 @@ src/
 - **서버 상태는 TanStack Query로 일원화**: `useQuery`/`useMutation`. raw fetch 금지
 - **공통 fetch는 `src/api/client.ts` 래퍼 사용**: baseURL 은 `VITE_API_BASE_URL` 또는 `/api/v1`
 - **응답 DTO 표준화**: 단건은 `api<T>()`, 리스트는 `apiList<T>()`, 페이지는 `apiPage<T>()`, 메타까지 필요하면 `apiEnvelope<TEnvelope>()`
+- **디자인 토큰**: 색 · 그림자 · 서체 값은 `design/tokens/tokens.json` 에서만 정한다. 층은 둘 — 원시 `--p-*`(화면 CSS 에서 직접 사용 금지) → 의미 `--bg` `--text` …. 화면 CSS · 인라인 style 은 의미 토큰(`var(--…)`)만 쓴다(날 색 금지). 생성물 `src/styles/tokens.css` · `docs/design-tokens.md` 표 구역은 손으로 고치지 않고 `pnpm tokens`, CI 는 `pnpm tokens:check`. 라이트/다크는 `<html data-theme>`(`src/lib/theme.ts`), 글자/바탕 짝은 `src/styles/contrast.test.ts` 에 등록해 AA 를 지킨다. 부품(component) 층은 필요해질 때 추가(`docs/design-tokens.md`)
 - **CSS Modules 우선**: 전역 CSS는 `src/index.css` 에만. 필요해지면 Tailwind/shadcn 추가 검토
 - **시각 3종** (`src/lib/time`): ISO `...Z` 는 `formatInstant`, `YYYY-MM-DD` 는 `formatDate`(시간대 변환 금지), `ZonedMoment {local, zone, at}` 는 `formatDual`(이벤트 시간대 + 내 시간대). `new Date('YYYY-MM-DD')` 금지. 카운트다운은 `serverClock.now()`. API 클라이언트가 `X-Time-Zone` 을 자동으로 보낸다
 

@@ -10,7 +10,8 @@ React + TypeScript + Vite 프론트엔드 스켈레톤. Kotlin modular skeleton 
 - TanStack Query 5 (서버 상태)
 - lucide-react (워크벤치 액션 아이콘)
 - ESLint + Prettier
-- Vitest (API 클라이언트 계약 테스트)
+- Vitest (API 클라이언트 계약 · 디자인 토큰 · 테마 테스트)
+- 디자인 토큰 (`design/tokens/tokens.json` → CSS 변수, 라이트 + 다크)
 
 ## 빠른 시작
 
@@ -20,6 +21,8 @@ pnpm dev          # http://localhost:5173
 pnpm build        # dist/ 에 정적 번들
 pnpm lint
 pnpm test
+pnpm tokens        # design/tokens/tokens.json → src/styles/tokens.css 생성
+pnpm tokens:check  # 생성물이 정본과 같은지 확인 (CI)
 ```
 
 ## 백엔드 연결
@@ -56,9 +59,19 @@ src/
 │   ├── http/           # axios 기반 SkeletonHttpClient
 │   ├── notifications/  # SSE stream + STOMP/WebSocket helpers
 │   └── workbench/      # 워크벤치 UI 조립 부품/모듈 manifest
+├── lib/theme.ts        # 테마 선택(system · light · dark) — <html data-theme> + localStorage
+├── styles/tokens.css   # 생성물(손대지 않음) — design/tokens/tokens.json 에서
 ├── main.tsx            # TanStack Query Provider 세팅
 └── routes/HomePage.tsx # 스켈레톤 워크벤치
 ```
+
+## 디자인 토큰 · 테마
+
+- 색 · 그림자 · 서체는 `design/tokens/tokens.json` 한 곳에서 정하고 `pnpm tokens` 가 `src/styles/tokens.css` 를 만든다. 층은 둘: 원시(`--p-*`, 화면 CSS 에서 직접 쓰지 않음) → 의미(`--bg` · `--text` · `--teal` …).
+- 화면 CSS · 인라인 style 에는 색 날값을 쓰지 않고 `var(--bg)` 처럼 의미 토큰만 쓴다(테스트가 막는다).
+- 라이트 + 다크. `<html data-theme="light|dark">`, 없거나 `system` 이면 OS 설정을 따른다. 레이아웃 헤더의 토글이 `src/lib/theme.ts` 로 고르고 `localStorage` 에 저장한다.
+- 이 스켈레톤에서 시작한 프로젝트는 `tokens.json` 의 값만 바꿔 자기 색을 입힌다. 모든 글자/바탕 짝이 두 테마에서 WCAG AA 인지는 `pnpm test` 가 잰다.
+- 규칙 · 토큰/테마 추가법 · 생성된 표: [`docs/design-tokens.md`](docs/design-tokens.md), 정본 · 생성기: [`design/README.md`](design/README.md)
 
 ## 모듈화 규칙
 

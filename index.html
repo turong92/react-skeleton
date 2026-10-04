@@ -5,6 +5,14 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>react-skeleton</title>
+    <script>
+      // 첫 칠 전에 저장한 테마를 단다(깜빡임 방지). 키 · 값은 src/lib/theme.ts 와 같다 — theme.test.ts 가 대조
+      try {
+        var theme = localStorage.getItem('theme')
+        if (theme === 'light' || theme === 'dark' || theme === 'system')
+          document.documentElement.dataset.theme = theme
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

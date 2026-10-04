@@ -73,9 +73,7 @@ export function createNotificationDisconnectFrame(
   }
 }
 
-export function parseNotificationMessage(
-  frame: ParsedStompFrame,
-): NotificationStompMessage | null {
+export function parseNotificationMessage(frame: ParsedStompFrame): NotificationStompMessage | null {
   if (frame.command !== 'MESSAGE') return null
   return {
     destination: frame.headers.destination,

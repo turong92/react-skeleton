@@ -20,6 +20,7 @@ import {
   type BreakGlassIdentity,
   type DevLoginIdentity,
 } from '../../api/types'
+import { ClientErrorCodes } from '../../api/errorCodes'
 import { createTraceContext, type TraceContext } from '../../api/traceContext'
 
 export type SkeletonHttpRetryOptions = {
@@ -292,7 +293,7 @@ function apiRequestErrorFromResponse(
   const apiError = isApiError(response.data)
     ? response.data
     : {
-        type: 'about:blank',
+        code: ClientErrorCodes.HTTP_ERROR,
         title: response.statusText || 'Request failed',
         status: response.status,
         detail: `Failed to reach ${path}`,
@@ -314,7 +315,7 @@ function apiRequestErrorFromTransport(
   const message = error instanceof Error ? error.message : String(error)
   return new ApiRequestError(
     {
-      type: 'about:blank',
+      code: ClientErrorCodes.NETWORK_ERROR,
       title: 'Network error',
       status: 0,
       detail: `Failed to reach ${path}: ${message}`,
@@ -363,7 +364,12 @@ function toInternalConfig(config: AxiosRequestConfig): InternalAxiosRequestConfi
 }
 
 function isApiError(value: unknown): value is ApiError {
-  return isRecord(value) && typeof value.title === 'string' && typeof value.status === 'number'
+  return (
+    isRecord(value) &&
+    typeof value.code === 'string' &&
+    typeof value.title === 'string' &&
+    typeof value.status === 'number'
+  )
 }
 
 function assertBasic(value: ApiBasicResponse, path: string): asserts value is ApiBasicResponse {

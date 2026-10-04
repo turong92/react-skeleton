@@ -123,7 +123,7 @@ const paymentClient = createSkeletonHttpClient({
 이 레포는 **GitHub Template**. 새 프로젝트 시작:
 
 1. GitHub 레포 페이지 → **Use this template**
-2. 또는 `gh repo create <name> --template sumin/react-skeleton --private`
+2. 또는 `gh repo create <name> --template turong92/react-skeleton --private`
 
 ## Vite → Next.js 전환 고려 시
 

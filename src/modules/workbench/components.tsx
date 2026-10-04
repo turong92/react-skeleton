@@ -48,7 +48,7 @@ export function PrincipalStrip({ principal }: { principal: AuthPrincipal | null 
   return (
     <div className="principal-strip">
       <strong>{principal.accountId}</strong>
-      <span>{principal.email}</span>
+      <span>{principal.email ?? '-'}</span>
       <span>{principal.roles.join(', ')}</span>
     </div>
   )

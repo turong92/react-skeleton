@@ -1,10 +1,11 @@
 /**
- * 백엔드 `ApiError` (RFC 7807 Problem Details 변형) 과 1:1 매칭.
+ * 백엔드 `ApiError`(kotlin-skeleton `modules/platform` common/ApiError.kt) 와 필드·널 허용 1:1.
  *
+ * Kotlin 의 `String? = null` 은 JSON 에서 키가 없거나 `null` 일 수 있어 `?: T | null` 로 맞춘다.
  * 에러 응답 body 예:
  * ```json
  * {
- *   "type": "about:blank",
+ *   "code": "COMMON.VALIDATION_FAILED",
  *   "title": "Validation failed",
  *   "status": 400,
  *   "detail": "email format invalid",
@@ -16,20 +17,22 @@
  * ```
  */
 export type ApiError = {
-  type: string
+  code: string
   title: string
   status: number
-  detail?: string
-  traceId?: string
-  spanId?: string
+  detail?: string | null
+  traceId?: string | null
+  spanId?: string | null
   timestamp: string
-  errors?: FieldError[]
+  errors?: FieldError[] | null
+  data?: unknown
 }
 
+/** 백엔드 `ApiError.FieldError` */
 export type FieldError = {
   field: string
   code: string
-  message?: string
+  message?: string | null
 }
 
 export type ApiMeta = {
@@ -110,13 +113,15 @@ export type BreakGlassIdentity = {
   secret: string
 }
 
+/** 백엔드 `CurrentPrincipal`(auth 모듈). `roles` 는 `Set<String>` 이라 JSON 배열 */
 export type AuthPrincipal = {
   accountId: string
-  username: string
-  email: string
+  username?: string | null
+  email?: string | null
   roles: string[]
 }
 
+/** 백엔드 `AuthTokenResponse`. `expiresAt` 은 `Instant` → ISO 문자열 */
 export type AuthTokenResponse = {
   accessToken: string
   tokenType: string
@@ -125,7 +130,7 @@ export type AuthTokenResponse = {
 }
 
 /**
- * fetch 실패 시 throw되는 에러 래퍼.
+ * HTTP 4xx/5xx 또는 전송 실패 시 throw되는 에러 래퍼 (`apiError.code` 로 분기: `isErrorCode`).
  * 콘솔/토스트에 traceId/spanId를 쓰면 서버 로그에서 전체 플로우와 특정 요청 단계를 찾을 수 있음.
  */
 export class ApiRequestError extends Error {

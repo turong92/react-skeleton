@@ -1,5 +1,7 @@
 import type { ApiRequestInit } from '../../api/client'
 
+export { newIdempotencyKey } from '../http/idempotencyKey'
+
 export function summarizeRequest(init: ApiRequestInit | undefined) {
   return {
     headers: redactHeaders({
@@ -53,10 +55,6 @@ export function messageOf(error: unknown): string {
 
 export function formatJson(value: unknown): string {
   return JSON.stringify(value, null, 2)
-}
-
-export function newIdempotencyKey(): string {
-  return `fe-${crypto.randomUUID()}`
 }
 
 export function nowMs(): number {

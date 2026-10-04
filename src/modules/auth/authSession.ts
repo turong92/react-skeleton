@@ -36,8 +36,8 @@ export function decodeTokenPrincipal(token: string): AuthPrincipal | null {
     }
     return {
       accountId: json.sub ?? '-',
-      username: json.username ?? '-',
-      email: json.email ?? '-',
+      username: json.username ?? null,
+      email: json.email ?? null,
       roles: json.roles ?? [],
     }
   } catch {

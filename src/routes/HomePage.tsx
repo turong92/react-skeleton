@@ -58,10 +58,7 @@ import {
   PrincipalStrip,
   SectionTitle,
 } from '../modules/workbench/components'
-import {
-  FALLBACK_WORKBENCH_MODULES,
-  toWorkbenchModules,
-} from '../modules/workbench/moduleCatalog'
+import { FALLBACK_WORKBENCH_MODULES, toWorkbenchModules } from '../modules/workbench/moduleCatalog'
 import {
   skeletonWorkbenchClient,
   type SkeletonModuleResponse,
@@ -722,8 +719,7 @@ export function HomePage() {
   }
 
   const sseBusy = sseStatus === 'connecting' || sseStatus === 'reconnecting'
-  const webSocketBusy =
-    webSocketStatus === 'connecting' || webSocketStatus === 'reconnecting'
+  const webSocketBusy = webSocketStatus === 'connecting' || webSocketStatus === 'reconnecting'
 
   return (
     <div className="workbench">

@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `ApiError` 타입을 백엔드 `ApiError` 와 1:1 로 맞춤: `type` 제거, `code` 추가, `data` 추가, `detail`/`traceId`/`spanId`/`errors`/`FieldError.message` 는 `?: T | null`. `AuthPrincipal.username`/`email` 도 백엔드처럼 nullable(`decodeTokenPrincipal` 는 빠진 claim 을 `'-'` 대신 `null` 로 돌려줌)
+- 응답을 못 해석한 4xx/5xx 는 `CLIENT.HTTP_ERROR`, 네트워크 실패는 `CLIENT.NETWORK_ERROR` 코드로 `ApiRequestError` 가 됨. body 에 `code` 가 없으면 ApiError 로 보지 않고 `CLIENT.HTTP_ERROR` 로 처리
+- `pnpm typecheck` 가 `tsc -b --noEmit` 으로 app + node 설정을 실제로 검사(전엔 `files: []` 라 아무것도 검사하지 않음). CI 가 lint · tokens:check · typecheck · test · format:check · build 를 실행
+- `newIdempotencyKey()` 를 `modules/workbench/workbenchUtils` 에서 `modules/http/idempotencyKey` 로 이동(워크벤치 import 는 re-export 로 유지)
+- `package.json` version 을 CHANGELOG/태그에 맞춰 1.1.0 으로
+
+### Added
+
+- `src/api/errorCodes.ts`: 백엔드 Kotlin 에 정의된 에러 코드 상수 `ErrorCodes`(Platform · Auth · AuthSocial · Payment), 클라이언트 합성 코드 `ClientErrorCodes`, 분기 헬퍼 `isErrorCode(error, code | codes[])`
+- HTTP 클라이언트 4xx/5xx · 전송 실패 경로 테스트, `isErrorCode` · `newIdempotencyKey` · nullable principal 테스트
+
+### Fixed
+
+- `pnpm format:check` 실패 4개 파일 포맷(동작 변경 없음)
+- CLAUDE.md(`client.ts` 는 axios · `hooks/` 없음 · `modules/` 누락) 와 README 템플릿 명령(`turong92/react-skeleton`) 을 실제와 맞춤
+
 ### Added
 
 - 디자인 토큰 메커니즘 + 라이트/다크 테마: `design/tokens/tokens.json`(W3C Design Tokens 형식, `$extensions.skeleton`) → `design/tokens/build.mjs`(의존성 없음) → `src/styles/tokens.css` + `docs/design-tokens.md` 표 구역. 층은 원시 `--p-*` → 의미(`--bg`, `--text`, …) 둘. `pnpm tokens`(쓰기) · `pnpm tokens:check`(비교, 어긋나면 1, CI 에 추가). 테마는 `<html data-theme="light|dark">`, 없거나 `system` 이면 `prefers-color-scheme` 을 CSS 만으로 따름(`color-scheme` 포함)

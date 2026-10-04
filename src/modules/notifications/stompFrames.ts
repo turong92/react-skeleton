@@ -1,4 +1,11 @@
-export type StompCommand = 'CONNECT' | 'CONNECTED' | 'SUBSCRIBE' | 'SEND' | 'MESSAGE' | 'ERROR' | 'DISCONNECT'
+export type StompCommand =
+  | 'CONNECT'
+  | 'CONNECTED'
+  | 'SUBSCRIBE'
+  | 'SEND'
+  | 'MESSAGE'
+  | 'ERROR'
+  | 'DISCONNECT'
 
 export type StompFrame = {
   command: StompCommand | string
@@ -17,9 +24,10 @@ export function encodeStompFrame(frame: StompFrame): string {
     .filter(([, value]) => value !== undefined)
     .map(([name, value]) => `${escapeHeader(name)}:${escapeHeader(String(value))}`)
     .join('\n')
-  const body = frame.body === undefined || typeof frame.body === 'string'
-    ? frame.body ?? ''
-    : JSON.stringify(frame.body)
+  const body =
+    frame.body === undefined || typeof frame.body === 'string'
+      ? (frame.body ?? '')
+      : JSON.stringify(frame.body)
   return `${frame.command}\n${headers}\n\n${body}\u0000`
 }
 
@@ -59,16 +67,14 @@ function parseStompFrame(rawFrame: string): ParsedStompFrame | null {
   return {
     command,
     headers: Object.fromEntries(
-      headerLines
-        .filter(Boolean)
-        .map((line) => {
-          const separatorIndex = line.indexOf(':')
-          if (separatorIndex < 0) return [unescapeHeader(line), '']
-          return [
-            unescapeHeader(line.slice(0, separatorIndex)),
-            unescapeHeader(line.slice(separatorIndex + 1)),
-          ]
-        }),
+      headerLines.filter(Boolean).map((line) => {
+        const separatorIndex = line.indexOf(':')
+        if (separatorIndex < 0) return [unescapeHeader(line), '']
+        return [
+          unescapeHeader(line.slice(0, separatorIndex)),
+          unescapeHeader(line.slice(separatorIndex + 1)),
+        ]
+      }),
     ),
     body,
   }
@@ -80,15 +86,9 @@ function normalizeEndpoint(endpointPath: string): string {
 }
 
 function escapeHeader(value: string): string {
-  return value
-    .replaceAll('\\', '\\\\')
-    .replaceAll('\n', '\\n')
-    .replaceAll(':', '\\c')
+  return value.replaceAll('\\', '\\\\').replaceAll('\n', '\\n').replaceAll(':', '\\c')
 }
 
 function unescapeHeader(value: string): string {
-  return value
-    .replaceAll('\\c', ':')
-    .replaceAll('\\n', '\n')
-    .replaceAll('\\\\', '\\')
+  return value.replaceAll('\\c', ':').replaceAll('\\n', '\n').replaceAll('\\\\', '\\')
 }

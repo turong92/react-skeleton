@@ -1,0 +1,61 @@
+import { describe, expect, it } from 'vitest'
+import { ErrorCodes, isErrorCode } from './errorCodes'
+import { ApiRequestError, type ApiError } from './types'
+
+function requestError(overrides: Partial<ApiError> = {}) {
+  const apiError: ApiError = {
+    code: 'AUTH.INVALID_CREDENTIALS',
+    title: 'Invalid credentials',
+    status: 401,
+    timestamp: '2026-06-12T00:00:00Z',
+    ...overrides,
+  }
+  return new ApiRequestError(apiError, 'trace', 'span', 'traceparent')
+}
+
+describe('isErrorCode', () => {
+  it('matches the backend code carried by an ApiRequestError', () => {
+    expect(isErrorCode(requestError(), ErrorCodes.AUTH_INVALID_CREDENTIALS)).toBe(true)
+  })
+
+  it('does not match a different code', () => {
+    expect(isErrorCode(requestError(), ErrorCodes.COMMON_FORBIDDEN)).toBe(false)
+  })
+
+  it('matches when any of several codes fit', () => {
+    expect(
+      isErrorCode(requestError({ code: 'COMMON.FORBIDDEN', status: 403 }), [
+        ErrorCodes.COMMON_UNAUTHORIZED,
+        ErrorCodes.COMMON_FORBIDDEN,
+      ]),
+    ).toBe(true)
+  })
+
+  it('is false for errors that are not ApiRequestError', () => {
+    expect(
+      isErrorCode(new Error('AUTH.INVALID_CREDENTIALS'), ErrorCodes.AUTH_INVALID_CREDENTIALS),
+    ).toBe(false)
+    expect(isErrorCode(undefined, ErrorCodes.AUTH_INVALID_CREDENTIALS)).toBe(false)
+    expect(
+      isErrorCode({ apiError: { code: 'AUTH.INVALID_CREDENTIALS' } }, 'AUTH.INVALID_CREDENTIALS'),
+    ).toBe(false)
+  })
+})
+
+describe('ErrorCodes', () => {
+  it('mirrors the codes the Kotlin skeleton defines', () => {
+    expect(ErrorCodes.COMMON_VALIDATION_FAILED).toBe('COMMON.VALIDATION_FAILED')
+    expect(ErrorCodes.COMMON_INTERNAL_SERVER_ERROR).toBe('COMMON.INTERNAL_SERVER_ERROR')
+    expect(ErrorCodes.AUTH_INVALID_CREDENTIALS).toBe('AUTH.INVALID_CREDENTIALS')
+    expect(ErrorCodes.AUTH_SOCIAL_INVALID_AUTHORIZATION_CODE).toBe(
+      'AUTH_SOCIAL.INVALID_AUTHORIZATION_CODE',
+    )
+    expect(ErrorCodes.PAYMENT_PROVIDER_ERROR).toBe('PAYMENT.PROVIDER_ERROR')
+  })
+
+  it('has unique values, each shaped DOMAIN.REASON', () => {
+    const values = Object.values(ErrorCodes)
+    expect(new Set(values).size).toBe(values.length)
+    values.forEach((value) => expect(value).toMatch(/^[A-Z_]+\.[A-Z_]+$/))
+  })
+})

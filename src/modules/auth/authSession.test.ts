@@ -28,4 +28,18 @@ describe('authSession', () => {
       roles: ['USER', 'ADMIN'],
     })
   })
+
+  it('keeps username and email null when the token omits them, as the backend principal does', () => {
+    const payload = btoa(JSON.stringify({ sub: 'acc_1' }))
+      .replaceAll('+', '-')
+      .replaceAll('/', '_')
+      .replaceAll('=', '')
+
+    expect(decodeTokenPrincipal(`header.${payload}.signature`)).toEqual({
+      accountId: 'acc_1',
+      username: null,
+      email: null,
+      roles: [],
+    })
+  })
 })

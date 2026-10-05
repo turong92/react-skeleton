@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — `@skeleton/i18n` · `@skeleton/ui` 설정/오류 부품 5개 + `LanguageMenu` · SSE 클라이언트 하드닝 (2026-10-06)
+
+Ovation 웹의 일반화할 수 있는 아이디어를 스켈레톤 규칙(토큰 · prop 문구 · 스토리 + play · SSR 안전)에 맞게 다시 만들었다 — 파일을 옮기지 않았고 Ovation 이름 · 저장 키 · 문구는 없다.
+
+- **`@skeleton/i18n`**(새 패키지, 외부 의존 `intl-messageformat` · `@formatjs/icu-messageformat-parser`): `createI18n({ catalogs, defaultLocale, storageKey })` — ICU 메시지(`t` · `tIn` · 요소가 낀 `tRich`), 언어 감지(저장한 선택 → `navigator.languages`(전체 태그 → 주 태그) → 기본)와 저장, 지연 사전(`en: () => import('./en')`, 도착한 뒤에 바뀜 · 늦게 부른 호출이 이김), 서버 렌더 안전(만들 때 브라우저 API 를 읽지 않는다, 첫 렌더는 기본 언어, `init()` 은 브라우저에서 명시적으로), 없는 키는 기본 언어 문구 → 키(+`onMissingKey`). `I18nProvider` · `useT()` · `detectLocale`. 테스트 도구 `@skeleton/i18n/testing` 의 `catalogProblems(catalogs, { defaultLocale })`(같은 키 · ICU 로 읽힘 · 인자 일치 · ICU 문법 옆 ASCII 아포스트로피 · 빈 문구)를 앱이 자기 테스트에서 부른다. 부품(`@skeleton/*`)은 i18n 을 모르고 라벨은 계속 prop — 앱이 번역해 넘기는 법은 `packages/i18n/README.md`. 스토리 `Packages/i18n`
+- **`@skeleton/ui`**: `LanguageMenu`(i18n 라이브러리를 모르는 순수 부품이라 ui 에 둔다 — 자기 말로 쓴 선택지 · `lang` 속성), `RowMenu`(WAI-ARIA 메뉴 버튼: ↑↓ Home End · Esc · 바깥 클릭 · 포커스 돌려주기 · 위로 열기), `SwitchRow`(줄 전체가 라벨인 설정 스위치 · `busy`), `SectionCard`(접이식 절) + `SectionIndex`(절 목차 · 포커스 이동 · 현재 절), `ErrorReference`(참조 번호 + 복사 · `role="status"`). 스토리 + `play` + 카탈로그 + SSR fixture. 설정 Pattern 이 목차 · `SwitchRow` · 접이식 기기 목록 + `RowMenu` · 저장 실패 시 참조 번호를 보인다
+- **`showApiError`**: 참조 번호(traceId)를 **돌려준다** — 상태에 담아 `<ErrorReference reference=… />` 로 그리면 토스트가 사라진 뒤에도 남는다. 토스트의 traceId 는 클릭 전용 `div` 가 아니라 키보드로 닿는 복사 버튼이 되었다(`messages.copy` 추가)
+- **`@skeleton/realtime` `createSseClient`**: 탭이 숨겨지면 끊고(`paused`) 보이면 곧바로 잇는다 · `idleTimeoutMs`(기본 꺼짐 — 서버 심장박동 주기보다 길게 줄 때만) · 401 · 403 · 404 는 `off` 로 영구 중지 · 429 · 503 은 `busyDelayMs`(30초) 뒤에, `Retry-After` 가 더 길면 그만큼(상한 `maxRetryAfterMs`) · `onOpen({ reconnect })`. `RealtimeStatus` 에 `paused` · `off` 가 더해졌다(SSE 만 낸다)
+- **`apps/sample`**: 글자를 `src/strings.ts` 에서 `src/i18n/ko.ts` + `en.ts`(지연)로 옮겼다 — 헤더에 언어 메뉴, 언어를 바꾸면 그 자리에서 다시 그리고 `notes:ui-locale` 에 저장. 카탈로그 짝 맞춤 테스트. 불러오기 실패 카드에 참조 번호 + 복사. `scripts/new-project.sh --packages i18n` 이 되고(샘플이 쓰므로 `--with-sample` 은 자동), `test-new-project.sh` 조합 2 가 i18n 을 포함한다
+- **바뀐 동작(호환 주의)**: 503 은 더는 빠른 재시도가 아니라 느린 재시도(`createSseClient`) · `showApiError` 토스트의 traceId 마크업이 바뀌었다(`traceId: <id>` 한 글자열 → 이름 · 번호 · 복사 버튼)
+
 ### Added — 참조 앱 `apps/sample`(Notes) · `@skeleton/ui` 5부품 · Dashboard Pattern · 브라우저 e2e (2026-10-05)
 
 "이 스켈레톤으로 이런 제품이 나온다"를 한 화면 흐름으로 보이는 작은 실제 앱. 로그인 → 대시보드(현황 · 최근 노트 · 안 읽은 알림) → 목록(검색 · 필터 · 쪽 · 빈/로딩/오류) → 상세(탭 · 삭제 확인) → 만들기/수정(백엔드 400 을 칸별로) → 첨부 업로드(진행률) → 알림 종 + 실시간 → 설정(테마 · 계정) → 로그아웃. 백엔드 짝은 kotlin-skeleton `apps/sample`(`/api/v1/notes`).

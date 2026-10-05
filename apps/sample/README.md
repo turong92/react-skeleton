@@ -33,7 +33,7 @@ scripts/dev-sample.sh        # DB · 로컬 S3 → 백엔드 :8080 → 이 앱 :
 
 ```
 src/
-├── strings.ts            # 화면의 모든 글자(한국어) 한 곳 — 컴포넌트는 strings.xxx 만 읽는다
+├── i18n/                 # 화면의 모든 글자: ko.ts(기본 · 키 타입의 출처) · en.ts(지연 로딩) · index.ts(i18n 인스턴스 · useT) · catalogs.test.ts(짝 맞춤) — 컴포넌트는 `t('section.key')` 만 읽는다
 ├── api/ auth/ app/       # starter 에서 복사한 배선(환경변수 · 토큰 · 401 · QueryClient 에러 토스트)
 ├── notes/                # 노트 조각: types · notesApi(HTTP 한 곳) · queries(TanStack Query 훅) · formErrors · listParams
 ├── notifications/        # 받은편지함 API 인스턴스 · 실시간(SSE) 훅
@@ -44,13 +44,13 @@ src/
 e2e/                      # Playwright(+vitest) — 진짜 백엔드 · 브라우저
 ```
 
-새 기능을 이 모양으로 더하려면: `notes/` 를 복사해 `types` → `xxxApi.ts`(HTTP) → `queries.ts`(훅 · 키 · 무효화) 순으로, 화면은 가장 가까운 Pattern 을 복사해 `routes/` 에, 글자는 `strings.ts` 에. (백엔드 쪽 같은 조각: kotlin-skeleton `docs/sample.md`.)
+새 기능을 이 모양으로 더하려면: `notes/` 를 복사해 `types` → `xxxApi.ts`(HTTP) → `queries.ts`(훅 · 키 · 무효화) 순으로, 화면은 가장 가까운 Pattern 을 복사해 `routes/` 에, 글자는 `i18n/ko.ts` · `en.ts` 에(키를 더하면 두 파일 모두 — 빠지면 컴파일 오류, 인자가 어긋나면 `catalogs.test.ts`). (백엔드 쪽 같은 조각: kotlin-skeleton `docs/sample.md`.)
 
 ## 지키는 규칙 (ESLint · 테스트가 막는다)
 
 - 화면은 `@skeleton/ui` 부품 + 의미 토큰만 — 날 `<button>` `<input>` `<select>` `<textarea>` `<dialog>` · 날 색 · 간격 없음. 모양 CSS 는 CSS Modules 에서 `var(--space-*)` 등으로
 - 서버 상태는 TanStack Query. HTTP 는 `notes/notesApi.ts` 등 한 곳, 화면은 훅만
-- 글자는 `strings.ts`, 패키지 부품의 문구는 prop 으로 화면이 골라 넘긴다
+- 글자는 `i18n/*.ts`(한국어 · 영어, 헤더의 언어 메뉴로 바꾼다), 패키지 부품의 문구는 prop 으로 화면이 `t()` 로 골라 넘긴다 — 언어를 바꾸면 그 자리에서 다시 그린다(새로고침 없음). 선택한 언어는 `notes:ui-locale` 에 저장된다
 - 새 부품이 필요하면 앱에 만들지 않고 `@skeleton/ui` 에 스토리 + `play` 와 함께 더한다(이 앱을 위해 `PageHeader` · `Badge` · `Progress` · `FilePicker` · `Stat` 를 그렇게 더했다)
 
 ## 테스트

@@ -1,6 +1,6 @@
 # react-skeleton — Claude Code 컨텍스트
 
-React + TypeScript + Vite 프론트엔드 스켈레톤. pnpm 워크스페이스 — 캡슐화된 패키지 11개 + 앱 4개(SPA 스타터 · SSR 스타터 · 스토리집 · 워크벤치). REST 백엔드(kotlin-skeleton)와 통신하는 SPA 출발점이고, 백엔드 `modules/` 처럼 프로젝트가 필요한 패키지만 한 줄씩 골라 쓴다.
+React + TypeScript + Vite 프론트엔드 스켈레톤. pnpm 워크스페이스 — 캡슐화된 패키지 12개 + 앱 4개(SPA 스타터 · SSR 스타터 · 스토리집 · 워크벤치). REST 백엔드(kotlin-skeleton)와 통신하는 SPA 출발점이고, 백엔드 `modules/` 처럼 프로젝트가 필요한 패키지만 한 줄씩 골라 쓴다.
 
 <!-- storybook-guide:start -->
 
@@ -50,7 +50,8 @@ apps/
 packages/                     # 서로를 이름으로만 부른다. 각자 package.json(exports=src/index.ts) · 테스트 · README
 ├── api-client/               # createApiClient(config) · ApiRequestError · ErrorCodes/isErrorCode · createTraceContext · newIdempotencyKey · apiConfigFromEnv
 ├── auth/                     # createTokenStore · createAuthApi · createAuthSession · AuthProvider/useAuth/RequireAuth · createSocialLoginFlow(소셜 로그인 도우미) · dev-login/break-glass 헤더 · 401 훅
-├── realtime/                 # createSseClient · createStompNotificationClient · useSseClient · useNotificationSocket · 재연결 정책
+├── realtime/                 # createSseClient(탭 숨김 일시정지 · 유휴 감시 · 401/403/404 중지 · 429/503 느린 재시도 · onOpen) · createStompNotificationClient · useSseClient · useNotificationSocket · 재연결 정책
+├── i18n/                     # createI18n(ICU · 감지 · 저장 · 지연 사전) · I18nProvider/useT · detectLocale · @skeleton/i18n/testing(catalogProblems) — 부품은 i18n 을 모르고 라벨은 prop, 앱이 번역해 넘긴다
 ├── notifications/            # createNotificationsApi(목록 · 읽음 · 모두 읽음) · useNotifications/useUnreadCount/useMarkRead · useNotificationIngest(실시간 → 캐시) · NotificationBell/List
 ├── storage/                  # createStorageApi · createUploader(검증 → presign → 직접 PUT, 멀티파트) · useUpload · validateFile
 ├── payment/                  # PaymentContracts 타입 · createPaymentApi(경로는 앱이 준다) · confirmRequestFromTossRedirect — 일부러 얇다
@@ -137,7 +138,7 @@ PoC 기동 속도 + AI 친화성. 정적 번들 출력이라 호스팅 자유도
 1. **계약을 먼저** — 백엔드 DTO 와 같은 모양을 `src/<기능>/types.ts` 에. 코드는 백엔드 enum 에 있는 것만(앱 전용이면 그 폴더 안에, 패키지 `ErrorCodes` 가 아니라)
 2. **HTTP 한 곳** — `src/<기능>/<기능>Api.ts`(`createXxxApi(client)`: 경로 · 메서드 · 본문). 테스트는 가짜 클라이언트로 경로 · 메서드 · 헤더(`Idempotency-Key`)를 잰다(`notesApi.test.ts`)
 3. **쿼리 훅** — `src/<기능>/queries.ts`: 키는 한 뿌리, 쿼리 정의(키 + 함수)는 훅과 따로, 변경 훅은 성공하면 뿌리를 무효화(`notes/queries.ts`)
-4. **화면은 Pattern 복사** — 목록 · 상세 · 폼 · 설정 · 대시보드 중 가장 가까운 Patterns 스토리를 `src/routes/` 로 복사해 문구 · 데이터만 연결. 글자는 `src/strings.ts` 한 곳. 백엔드 400 의 칸별 오류는 `formErrors.ts` 로 같은 칸에(`Form page` 의 `errors` 상태)
+4. **화면은 Pattern 복사** — 목록 · 상세 · 폼 · 설정 · 대시보드 중 가장 가까운 Patterns 스토리를 `src/routes/` 로 복사해 문구 · 데이터만 연결. 글자는 `src/i18n/ko.ts`(기본 언어 · 키 타입의 출처) + `en.ts` 에 ICU 메시지로 두고 컴포넌트는 `const { t } = useT()` 로 읽는다(`@skeleton/i18n`). 백엔드 400 의 칸별 오류는 `formErrors.ts` 로 같은 칸에(`Form page` 의 `errors` 상태)
 5. **부품이 모자라면 앱에 만들지 않는다** — `@skeleton/ui` 에 스토리 + `play` 와 함께 더하고 `docs/ui-catalog.md` · `tests/support/ssrFixtures.ts` 한 줄(Notes 를 위해 `PageHeader` · `Badge` · `Progress` · `FilePicker` · `Stat` 를 그렇게 더했다)
 6. **여정 하나는 e2e 로** — `apps/sample/e2e/`(Playwright + vitest, 진짜 백엔드). 새 기능이 사용자 여정을 바꾸면 `journey.e2e.ts` 에 단계를 더한다. 실행 `pnpm e2e:sample`, 한 줄 로컬 실행은 백엔드 레포의 `scripts/dev-sample.sh`
 <!-- sample:end -->

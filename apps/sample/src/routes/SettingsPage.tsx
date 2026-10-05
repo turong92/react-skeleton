@@ -3,13 +3,12 @@ import { setTheme, THEMES, useTheme, type Theme } from '@skeleton/theme'
 import { Button, Card, Field, PageHeader, Select } from '@skeleton/ui'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { strings } from '../strings'
+import { useT } from '../i18n'
 import styles from './SettingsPage.module.css'
-
-const t = strings.settings
 
 /** Patterns/Settings page — 즉시 적용(테마) 한 카드 · 읽기 전용 계정 카드 · 세션(로그아웃). 서버에 저장할 설정은 아직 없어 저장 폼은 두지 않았다 */
 export function SettingsPage() {
+  const { t } = useT()
   const { principal, logout } = useAuth()
   const theme = useTheme()
   const navigate = useNavigate()
@@ -23,9 +22,9 @@ export function SettingsPage() {
 
   return (
     <div className={styles.page}>
-      <PageHeader title={t.title} description={t.subtitle} />
-      <Card title={t.appearance}>
-        <Field label={t.theme} hint={t.themeHint}>
+      <PageHeader title={t('settings.title')} description={t('settings.subtitle')} />
+      <Card title={t('settings.appearance')}>
+        <Field label={t('settings.theme')} hint={t('settings.themeHint')}>
           {(control) => (
             <Select
               {...control}
@@ -34,34 +33,34 @@ export function SettingsPage() {
             >
               {THEMES.map((name) => (
                 <option key={name} value={name}>
-                  {t.themes[name]}
+                  {t(`settings.themes.${name}`)}
                 </option>
               ))}
             </Select>
           )}
         </Field>
       </Card>
-      <Card title={t.account}>
+      <Card title={t('settings.account')}>
         <dl className={styles.list}>
           <div>
-            <dt>{t.email}</dt>
-            <dd>{principal?.email ?? strings.common.none}</dd>
+            <dt>{t('settings.email')}</dt>
+            <dd>{principal?.email ?? t('common.none')}</dd>
           </div>
           <div>
-            <dt>{t.accountId}</dt>
-            <dd>{principal?.accountId ?? strings.common.none}</dd>
+            <dt>{t('settings.accountId')}</dt>
+            <dd>{principal?.accountId ?? t('common.none')}</dd>
           </div>
           <div>
-            <dt>{t.roles}</dt>
-            <dd>{principal?.roles.join(', ') || strings.common.none}</dd>
+            <dt>{t('settings.roles')}</dt>
+            <dd>{principal?.roles.join(', ') || t('common.none')}</dd>
           </div>
         </dl>
       </Card>
-      <Card title={t.session}>
+      <Card title={t('settings.session')}>
         <div className={styles.session}>
-          <p>{t.sessionHint}</p>
+          <p>{t('settings.sessionHint')}</p>
           <Button variant="secondary" onClick={signOut}>
-            {strings.header.signOut}
+            {t('header.signOut')}
           </Button>
         </div>
       </Card>

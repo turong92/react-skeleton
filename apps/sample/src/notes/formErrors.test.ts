@@ -1,5 +1,6 @@
 import { ApiRequestError, ErrorCodes } from '@skeleton/api-client'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
+import { i18n } from '../i18n'
 import { fieldErrorsOf, isValidationFailure } from './formErrors'
 
 const validation = (errors: Array<{ field: string; code: string; message?: string }>) =>
@@ -50,5 +51,23 @@ describe('isValidationFailure', () => {
   it('is true only for COMMON.VALIDATION_FAILED', () => {
     expect(isValidationFailure(validation([]))).toBe(true)
     expect(isValidationFailure(new Error('x'))).toBe(false)
+  })
+})
+
+describe('fieldErrorsOf — in the chosen language', () => {
+  afterEach(() => i18n.setLocale('ko', { remember: false }))
+
+  it('gives the English sentence once the language is English, with the generic one for an unknown code', async () => {
+    await i18n.setLocale('en', { remember: false })
+    const errors = fieldErrorsOf(
+      validation([
+        { field: 'title', code: 'NotBlank' },
+        { field: 'status', code: 'SomethingNew' },
+      ]),
+    )
+    expect(errors).toEqual({
+      title: 'Please enter a value.',
+      status: 'Please check this value.',
+    })
   })
 })

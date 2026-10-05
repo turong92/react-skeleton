@@ -15,6 +15,7 @@
   "dependencies": {
     "@skeleton/api-client": "workspace:*",
     "@skeleton/auth": "workspace:*",
+    "@skeleton/i18n": "workspace:*",
     "@skeleton/notifications": "workspace:*",
     "@skeleton/realtime": "workspace:*",
     "@skeleton/storage": "workspace:*",

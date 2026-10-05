@@ -101,6 +101,9 @@ importers:
       '@skeleton/auth':
         specifier: workspace:*
         version: link:../../packages/auth
+      '@skeleton/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
       '@skeleton/notifications':
         specifier: workspace:*
         version: link:../../packages/notifications

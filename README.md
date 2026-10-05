@@ -12,7 +12,8 @@ apps/
 packages/
 ├── api-client/          # REST 클라이언트 — envelope · ApiError · 에러 코드 · traceparent · 멱등 키 · 서버 시각 연결점
 ├── auth/                # 토큰 저장소 · login/me/socialLogin · 소셜 로그인 도우미 · dev-login/break-glass 헤더 · 401 훅 · AuthProvider · RequireAuth
-├── realtime/            # SSE(fetch streaming) · STOMP WebSocket 클라이언트 · 재연결 정책 · React 훅
+├── realtime/            # SSE(fetch streaming · 탭 숨김 일시정지 · 유휴 감시 · 401/403/404 중지 · 429/503 느린 재시도) · STOMP WebSocket 클라이언트 · 재연결 정책 · React 훅
+├── i18n/                # 화면 문구 — ICU 메시지 · createI18n(감지 · 저장 · 지연 사전) · I18nProvider/useT · 카탈로그 짝 맞춤 테스트 도구
 ├── notifications/       # 알림 받은편지함 클라이언트 · TanStack Query 훅 · 안 읽은 수(실시간 갱신) · NotificationBell/List
 ├── storage/             # 프리사인 업로드 — 검증 · presign · 직접 PUT(진행률 · 취소) · 멀티파트 · useUpload
 ├── payment/             # 결제 계약 타입 + 얇은 호출 + 토스 리다이렉트 변환 (모듈이 HTTP 를 열지 않아 일부러 얇다)
@@ -74,7 +75,7 @@ scripts/new-project.sh ~/work/ovation ovation --with-sample                     
 - 고른 패키지는 **폴더만** 복사된다. 쓰기 시작할 때 앱 `package.json` 에 한 줄(`"@skeleton/<이름>": "workspace:*"`)을 더한다 — 안 쓰는 의존을 선언하면 루트 `pnpm test` 가 막는다(선언한 의존 = 실제 import).
 - `--with-sample`: 참조 앱 `apps/sample`(Notes — 백엔드 kotlin-skeleton 의 `apps/sample` 과 짝)을 이름 그대로 `apps/<name>` 옆에 남긴다. 기본은 떼고 찍는다(그 앱이 쓰는 패키지 · 샘플 전용 루트 스크립트 · CI e2e 잡도 함께 빠진다). `--ssr` · `--without-storybook` · `--scope` 와 함께 쓸 수 있다. 이름 `sample` 은 예약.
 - `--ssr`: `apps/starter` 대신 `apps/starter-ssr` 가 `apps/<name>` 이 된다(이름은 `src/appName.ts` 한 줄). 스토리집은 기본으로 따라온다 — `apps/storybook` · 남는 패키지의 스토리 · Patterns · `docs/ui-catalog.md` · CLAUDE.md 의 에이전트 안내 · 스토리 테스트 · CI `stories` 잡(**참조가 프로젝트와 함께 간다**). `--without-storybook` 이면 이 전부를 깨끗이 뗀다.
-- 검증: `scripts/test-new-project.sh --quick`(인자 검증 · 닫힘 · 구조 · 이름/스코프 · 남는 흔적, 수 초 — `pnpm test` 가 부른다), `--full`(다섯 조합 `기본값` · `--packages realtime,notifications,storage` · `--scope @acme --packages payment` · `--ssr --without-storybook`(서버를 띄우는 통합 테스트 포함) · `--with-sample` 을 찍어 각각 install · lint · typecheck · test · build — 조합 2 는 `storybook:build` · `test:stories` 도, CI 의 `new-project` 워크플로).
+- 검증: `scripts/test-new-project.sh --quick`(인자 검증 · 닫힘 · 구조 · 이름/스코프 · 남는 흔적, 수 초 — `pnpm test` 가 부른다), `--full`(다섯 조합 `기본값` · `--packages realtime,notifications,storage,i18n` · `--scope @acme --packages payment` · `--ssr --without-storybook`(서버를 띄우는 통합 테스트 포함) · `--with-sample` 을 찍어 각각 install · lint · typecheck · test · build — 조합 2 는 `storybook:build` · `test:stories` 도, CI 의 `new-project` 워크플로).
 
 폴더 복사로 직접 가져가도 된다: 패키지는 각자 `package.json` · 테스트 · README 를 가진 자족 단위이고 서로는 이름으로만 이어져 있다. 이때 `pnpm-workspace.yaml` · 루트 `tsconfig.base.json` · `eslint.config.js` 도 가져온다.
 
@@ -91,6 +92,7 @@ scripts/new-project.sh ~/work/ovation ovation --with-sample                     
 | `storage`           | api-client             | `storage`(업로드 HTTP `/api/v1/storage/*` 를 모듈이 연다) + `storage-s3`                             | `createUploader({ api: createStorageApi(apiClient) })` → `useUpload(uploader)`                                                                               |
 | `payment`           | api-client             | `payment` + `payment-toss` · `payment-stripe`. HTTP 는 앱                                            | `createPaymentApi(apiClient, { paths: { confirm } })` · `confirmRequestFromTossRedirect(location.search, { currency })`                                      |
 | `captcha-turnstile` | —                      | `captcha-turnstile`(`TurnstileVerifier`). HTTP 는 앱                                                 | `<Turnstile siteKey {...useTurnstileToken().widgetProps} />` · `attachTurnstileToken(body, token)`                                                           |
+| `i18n`              | —                      | — (화면 전용)                                                                                        | `createI18n({ catalogs, defaultLocale, storageKey })` + 시작할 때 `await i18n.init()` + `useT()` · `<LanguageMenu>`(ui) · 테스트 `catalogProblems`           |
 | `time`              | —                      | `time`                                                                                               | `formatInstant(iso)` · `formatDual(zoned)` · `createServerClock()`                                                                                           |
 | `theme`             | —                      | —                                                                                                    | `plugins: [themePrePaint()]` + 시작할 때 `initTheme()` + `<ThemeToggle />` + `<ThemedToaster />`                                                             |
 | `tokens`            | —                      | —                                                                                                    | `import '@skeleton/tokens/tokens.css'` (색 · 간격 · 모서리 · 글자 크기는 `tokens.json` 에서)                                                                 |

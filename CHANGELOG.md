@@ -7,6 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Migration — 단일 Vite 앱 → pnpm 워크스페이스 (앱 2 + 패키지 7)
+
+기존 프로젝트(이 스켈레톤에서 시작한 레포)가 이 변경을 가져올 때의 옮김표. 백엔드 `modules/` 처럼 프로젝트가 필요한 패키지만 한 줄(`"@skeleton/<이름>": "workspace:*"`)로 골라 쓴다.
+
+| 예전 위치                                                                           | 지금 위치                                                                                                                                                                            |
+| ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 앱 전체(`src/` · `index.html` · `vite.config.ts` · `public/`)                       | `apps/workbench/`(데모 그대로) · `apps/starter/`(복사해 가는 출발점)                                                                                                                 |
+| `src/api/{types,errorCodes,traceContext}.ts` · `src/modules/http/*`                 | `@skeleton/api-client` — `createSkeletonHttpClient({ baseURL })` → `createApiClient({ baseUrl })`                                                                                    |
+| `src/api/client.ts`(`api` · `apiList` … 전역 함수 + `import.meta.env`)              | 앱의 `src/api/` (패키지는 `import.meta.env` 도 싱글턴도 없다). 환경변수는 `apiConfigFromEnv(import.meta.env)`                                                                        |
+| `accessToken` · `devLogin` · `breakGlass` 요청 옵션                                 | `headers` + `@skeleton/auth` 의 `requestAuthHeaders(...)` / `getAuthHeaders` · `skipAuth`. (워크벤치는 요청 옵션 그대로 받는 얇은 어댑터를 `apps/workbench/src/api/client.ts` 에 둠) |
+| `src/modules/auth/authSession.ts`                                                   | `@skeleton/auth`(`parseDevIdentity` · `applyAuthHeaders` · `decodeTokenPrincipal` 그대로)                                                                                            |
+| `src/modules/notifications/*` + HomePage 안의 SSE/STOMP 코드                        | `@skeleton/realtime`                                                                                                                                                                 |
+| `src/lib/time/*`                                                                    | `@skeleton/time`                                                                                                                                                                     |
+| `src/lib/theme.ts` · `ThemeToggle` · `ThemedToaster` · `index.html` 인라인 스크립트 | `@skeleton/theme`(스크립트는 `@skeleton/theme/vite` 의 `themePrePaint()` 플러그인이 `<head>` 에 넣는다)                                                                              |
+| `design/tokens/*` · `src/styles/tokens.css`                                         | `packages/tokens/{tokens.json,build.mjs,tokens.css}` — `pnpm tokens` · `pnpm tokens:check` 는 루트에서 그대로                                                                        |
+| `src/index.css`                                                                     | `@skeleton/ui/base.css`(리셋 + 요소 타이포) + `apps/workbench/src/workbench.css`(워크벤치 전용)                                                                                      |
+| `src/components/ErrorBoundary.tsx` · `src/lib/showApiError.tsx`                     | `@skeleton/ui` — 문구는 prop(기본 영어). 워크벤치는 한국어 문구를 넘긴다                                                                                                             |
+| `src/styles/{contrast,usage}.test.ts` · `src/test/*`                                | 루트 `tests/` (두 앱 + 모든 패키지를 훑음) · 도구는 `@skeleton/tokens`                                                                                                               |
+| `.env` · `.env.example`                                                             | 각 앱 폴더(`apps/*/.env`) — Vite 가 앱 폴더에서 읽는다                                                                                                                               |
+
+- 루트 명령은 그대로: `pnpm lint` · `tokens:check` · `typecheck` · `test` · `format:check` · `build`(이제 워크스페이스 전체). 새로: `pnpm dev`(= starter) · `pnpm dev:workbench`.
+- CI 의 Node 를 24 로(`vite.config.ts` 가 `@skeleton/theme/vite` 의 `.ts` 를 Node 로 직접 읽는다 — 22.18+ 도 가능).
+
+### Added
+
+- `pnpm-workspace.yaml`(`apps/*` · `packages/*`) · `tsconfig.base.json` · 단일 `eslint.config.js`(경계 규칙: `@skeleton/*/src/**` 딥 임포트 금지, 패키지/앱이 앱 코드 import 금지)
+- 패키지 7개(`@skeleton/api-client` `auth` `realtime` `time` `theme` `tokens` `ui`) — 각자 `package.json`(`exports` = `src/index.ts`, 소스 수준 해석, 빌드 단계 없음) · 옆 테스트 · `README.md`
+- `@skeleton/api-client`: `createApiClient(config)`(baseUrl · timeoutMs · retry · `getAuthHeaders` · `getTimeZone` · `onResponseDate`(서버 시각 연결점) · `onError` · `debug`), `apiConfigFromEnv`, 요청 옵션 `skipAuth`
+- `@skeleton/auth`: 토큰 저장소(메모리 + 주입하는 storage) · `createAuthApi`(`login` · `me` · `socialLogin(provider, authorizationCode, redirectUri)` — 백엔드 `/auth/login` · `/auth/me` · `/auth/social/{provider}/login`) · `createAuthSession` · `AuthProvider`/`useAuth` · `<RequireAuth>` · dev-login/break-glass 헤더 helper · `createAuthHeadersProvider` · `createUnauthorizedHandler`(401 연결점)
+- `@skeleton/realtime`: `createSseClient`(fetch streaming) · `createStompNotificationClient`(WebSocket + STOMP 프레임, 재연결 정책) · `useSseClient` · `useNotificationSocket`
+- `@skeleton/ui`: `Button` `Input` `Field` `Select` `Card` `Dialog` `Spinner` `AppShell`(CSS Modules, 의미 토큰만, 문구는 prop)
+- `@skeleton/tokens`: 출력 경로가 옵션(`build({ root, source, cssOut, docOut })` · `--source` `--css` `--doc`), 문서 표 생성은 `docOut` 을 줄 때만
+- `apps/starter`: 라우터(홈 · 로그인 · `RequireAuth` 아래 `/account` · 404) · `AppShell` + `ThemeToggle` · `VITE_*` 환경변수 배선 · `QueryClient` + 에러 토스트 · `GET /hello` 예시 훅
+- 루트 `tests/`: 선언한 `@skeleton/*` 의존 = 소스 import(= 패키지를 지울 수 있다) · `starter` 가 워크벤치에 의존하지 않음 · 외부 import 선언 · 패키지의 `import.meta.env` 금지 · ESLint 경계 규칙 · 토큰 사용 검사가 두 앱 + 모든 패키지를 덮음
+- 모든 앱 · 패키지에 `typecheck` 스크립트(루트 `pnpm typecheck` 가 전부 돈다)
+
+### Changed
+
+- 워크벤치의 SSE/WebSocket 연결을 `@skeleton/realtime` 훅으로 교체(UI · 호출 엔드포인트 동일). 화면 로그 변환은 `apps/workbench/src/modules/workbench/realtimeExchanges.ts` 로 분리(테스트 추가)
+- 패키지 tsconfig 는 `types: []` — 패키지에서 `import.meta.env` 를 쓰면 타입 에러
+
+### Fixed
+
+- SSE · WebSocket 시작 버튼이 클릭 이벤트를 `attempt` 인자로 받던 문제: 수동 시작 때 이벤트 목록이 비워지지 않고, 첫 재연결 지연이 `NaN`(즉시)이던 것을 설계대로(목록 비움 · 1s 지수 백오프)로. 상태는 바뀔 때만 보고
+- `createQueryClient`(starter): 캐시 `onError` 가 넘기는 추가 인자(query · mutation …)가 토스트 핸들러로 새지 않게 에러만 전달
+
+> 아래 `Changed` · `Added` · `Fixed` 는 워크스페이스 전환 이전부터 쌓여 있던 Unreleased 항목이다.
+
 ### Changed
 
 - `ApiError` 타입을 백엔드 `ApiError` 와 1:1 로 맞춤: `type` 제거, `code` 추가, `data` 추가, `detail`/`traceId`/`spanId`/`errors`/`FieldError.message` 는 `?: T | null`. `AuthPrincipal.username`/`email` 도 백엔드처럼 nullable(`decodeTokenPrincipal` 는 빠진 claim 을 `'-'` 대신 `null` 로 돌려줌)

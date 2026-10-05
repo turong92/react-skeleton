@@ -1,9 +1,9 @@
 # 디자인 토큰
 
-색 · 그림자 · 서체는 **`design/tokens/tokens.json` 한 곳**에서 정하고, 생성기가 `src/styles/tokens.css` 를 만든다. 스켈레톤은 **메커니즘**(토큰 정본 + 생성기 + 라이트/다크 + 테스트)만 주고, 취향(색 값)은 이 스켈레톤에서 시작한 프로젝트가 `tokens.json` 값을 바꿔 정한다.
+색 · 그림자 · 서체는 **`packages/tokens/tokens.json` 한 곳**에서 정하고, 생성기가 `packages/tokens/tokens.css` 를 만든다(패키지 `@skeleton/tokens`). 스켈레톤은 **메커니즘**(토큰 정본 + 생성기 + 라이트/다크 + 테스트)만 주고, 취향(색 값)은 이 스켈레톤에서 시작한 프로젝트가 `tokens.json` 값을 바꿔 정한다. 앱은 `import '@skeleton/tokens/tokens.css'` 로 불러온다.
 
 ```bash
-pnpm tokens         # tokens.json → src/styles/tokens.css + 이 문서의 표 구역을 다시 쓴다
+pnpm tokens         # tokens.json → packages/tokens/tokens.css + 이 문서의 표 구역을 다시 쓴다
 pnpm tokens:check   # 쓰지 않고 비교 — 생성물이 어긋났으면 종료 코드 1 (CI 가 돌린다)
 ```
 
@@ -24,20 +24,20 @@ pnpm tokens:check   # 쓰지 않고 비교 — 생성물이 어긋났으면 종�
 스켈레톤에는 없다. 프로젝트가 버튼 · 카드 같은 부품을 여러 화면에서 같은 모양으로 그리게 되면:
 
 1. `tokens.json` 에 `component.<부품>.<이름>` 묶음을 더한다(예: `component.button.primary-bg` → `{semantic.surface.inverse}`). 값은 **의미 토큰만** 참조한다.
-2. `design/tokens/build.mjs` 의 `layerOf` · `cssNameOf` 에 `component` 를 더한다(`--<부품>-<이름>`), `renderCss` 에 의미 블록 뒤 부품 블록을 낸다. 다크는 의미 토큰을 따라가므로 부품에는 테마 값을 두지 않는다.
-3. 테스트(`tokens.test.ts`)의 「층은 둘」 검사를 셋으로 고친다.
+2. `packages/tokens/build.mjs` 의 `layerOf` · `cssNameOf` 에 `component` 를 더한다(`--<부품>-<이름>`), `renderCss` 에 의미 블록 뒤 부품 블록을 낸다. 다크는 의미 토큰을 따라가므로 부품에는 테마 값을 두지 않는다.
+3. 테스트(`packages/tokens/src/tokens.test.ts`)의 「층은 둘」 검사를 셋으로 고친다.
 
 ## 테마
 
 - `<html data-theme="light|dark">` 로 고른다. `data-theme` 가 없거나 `system` 이면 OS 설정(`prefers-color-scheme`)을 **CSS 만으로** 따라간다(새로 고침 불필요).
 - 생성 CSS 의 블록: 기본 테마 `:root` · 다른 테마 `html[data-theme='<이름>']` · 시스템 `@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) }`. 시스템 블록은 다크 블록과 같은 선언이다(테스트가 대조).
 - 테마마다 `color-scheme` 이 걸려 폼 컨트롤 · 스크롤 막대도 따라간다.
-- 고른 값은 `src/lib/theme.ts` 가 `localStorage` 에 저장하고 `<html data-theme>` 에 단다(레이아웃의 토글 버튼이 `setTheme` 을 부른다). 첫 칠 전에는 `index.html` 의 인라인 스크립트가 같은 키로 먼저 단다(깜빡임 방지).
-- 대비: `src/styles/contrast.test.ts` 가 앱이 실제로 쓰는 글자/바탕 짝을 **모든 테마**에서 WCAG AA(본문 4.5:1 · 큰 글자 / UI 경계 3:1)로 잰다. 화면에 새 짝이 생기면 거기에 한 줄 더한다.
+- 고른 값은 `packages/theme/src/theme.ts`(`@skeleton/theme`)가 `localStorage` 에 저장하고 `<html data-theme>` 에 단다(레이아웃의 토글 버튼이 `setTheme` 을 부른다). 첫 칠 전에는 `PRE_PAINT_SCRIPT` 가 같은 키 상수로 먼저 단다 — 각 앱의 `vite.config.ts` 가 `themePrePaint()` 플러그인으로 `<head>` 에 인라인한다(깜빡임 방지).
+- 대비: 루트 `tests/contrast.test.ts` 가 두 앱과 패키지가 실제로 쓰는 글자/바탕 짝을 **모든 테마**에서 WCAG AA(본문 4.5:1 · 큰 글자 / UI 경계 3:1)로 잰다. 화면에 새 짝이 생기면 거기에 한 줄 더한다.
 
 ## 확장 키
 
-정본의 확장은 `$extensions.skeleton` 이다(생성기 `build.mjs` 맨 위 `EXT`). 프로젝트가 이름을 바꾸려면 `build.mjs` 의 `EXT` 와 `tokens.json` 의 키를 함께 바꾼다(테스트는 키 이름에 기대지 않는다).
+정본의 확장은 `$extensions.skeleton` 이다(생성기 `packages/tokens/build.mjs` 맨 위 `EXT`). 프로젝트가 이름을 바꾸려면 `build.mjs` 의 `EXT` 와 `tokens.json` 의 키를 함께 바꾼다(테스트는 키 이름에 기대지 않는다).
 
 | 위치 | 키 | 뜻 |
 |---|---|---|
@@ -49,15 +49,15 @@ pnpm tokens:check   # 쓰지 않고 비교 — 생성물이 어긋났으면 종�
 
 1. 필요하면 원시 값을 `color` · `shadow` 같은 묶음에 더한다(`$value` 와 `$description`).
 2. `semantic.<절>.<이름>` 을 더한다: `$value` 는 라이트 참조, 다크 값은 `$extensions.skeleton.dark`. 색 의미 토큰은 다크 값이 없으면 테스트가 막는다(원시를 직접 가리키는 경우).
-3. `pnpm tokens` → 화면 CSS 에서 `var(--이름)` 으로 쓴다. 날 색 · `--p-*` 직접 사용 · 정의 없는 `var()` 는 `usage.test.ts` 가 막는다.
-4. 글자색이면 `contrast.test.ts` 에 어떤 바탕 위에 쓰는지 짝을 더한다.
+3. `pnpm tokens` → 화면 CSS 에서 `var(--이름)` 으로 쓴다. 날 색 · `--p-*` 직접 사용 · 정의 없는 `var()` 는 루트 `tests/usage.test.ts` 가 막는다(두 앱 + 모든 패키지).
+4. 글자색이면 `tests/contrast.test.ts` 에 어떤 바탕 위에 쓰는지 짝을 더한다.
 
 ## 테마 하나 더하기 (예: sepia)
 
 1. `tokens.json` 맨 위 `themes` 에 한 줄 더한다: `{ "name": "sepia", "title": "sepia", "colorScheme": "light" }`.
 2. 의미 토큰마다 `$extensions.skeleton.sepia` 값을 단다(바꿀 것만 — 없으면 기본 값이 쓰인다). 필요한 원시 단계도 더한다.
 3. `pnpm tokens`. 생성 CSS 에 `html[data-theme='sepia']` 블록이 생기고 문서 표에 칸이 늘어난다.
-4. `src/lib/theme.ts` 의 `THEMES` 에 이름을 더한다(`theme.test.ts` 가 정본 목록과 어긋나면 막는다), 대비 테스트의 테마 목록에 sepia 를 더한다.
+4. `packages/theme/src/themeNames.ts` 의 `THEMES` 에 이름을 더한다(`tests/theme.names.test.ts` 가 정본 목록과 어긋나면 막는다), 대비 테스트의 테마 목록에 sepia 를 더한다.
 
 ## 프로젝트가 색을 바꾸려면
 
@@ -68,7 +68,7 @@ pnpm tokens:check   # 쓰지 않고 비교 — 생성물이 어긋났으면 종�
 아래는 생성 구역이다 — 손으로 고치지 않는다(`pnpm tokens`).
 
 <!-- tokens:start -->
-<!-- generated region — do not edit by hand. source design/tokens/tokens.json, run `pnpm tokens` -->
+<!-- generated region — do not edit by hand. source tokens.json, run `pnpm tokens` -->
 
 ### Surface
 
@@ -99,7 +99,7 @@ pnpm tokens:check   # 쓰지 않고 비교 — 생성물이 어긋났으면 종�
 | `--border` | `#d8dfda` | `#2b3631` | `--p-neutral-300` · dark `--p-night-500` | 옅은 선 |
 | `--border-strong` | `#b9c4bd` | `#3d4a44` | `--p-neutral-400` · dark `--p-night-400` | 진한 선 · 입력 · 빈 칸 점선 |
 
-선은 장식이라 대비 검사 대상이 아니다. 입력칸 경계처럼 반드시 보여야 하는 곳이 생기면 contrast.test.ts 에 짝을 더한다.
+선은 장식이라 대비 검사 대상이 아니다. 입력칸 경계처럼 반드시 보여야 하는 곳이 생기면 tests/contrast.test.ts 에 짝을 더한다.
 
 ### Accent and status
 

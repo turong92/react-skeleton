@@ -1,0 +1,66 @@
+.button {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-weight: 650;
+  line-height: 1;
+}
+
+.button[data-size='sm'] {
+  min-height: 30px;
+  padding: 0 10px;
+  font-size: 13px;
+}
+
+.button[data-size='lg'] {
+  min-height: 46px;
+  padding: 0 20px;
+}
+
+.button[data-variant='primary'] {
+  border-color: var(--inverse);
+  background: var(--inverse);
+  color: var(--on-inverse);
+}
+
+.button[data-variant='primary']:hover:not(:disabled) {
+  border-color: var(--teal);
+  background: var(--teal);
+  color: var(--on-inverse);
+}
+
+.button[data-variant='secondary'] {
+  border-color: var(--border-strong);
+  background: var(--surface);
+  color: var(--text-strong);
+}
+
+.button[data-variant='secondary']:hover:not(:disabled) {
+  border-color: var(--teal);
+  color: var(--teal);
+}
+
+.button[data-variant='ghost'] {
+  background: transparent;
+  color: var(--text);
+}
+
+.button[data-variant='ghost']:hover:not(:disabled) {
+  color: var(--teal);
+}
+
+.button[data-variant='danger'] {
+  border-color: var(--red-border);
+  background: var(--red-soft);
+  color: var(--text-strong);
+}
+
+.button:focus-visible {
+  outline: 3px solid var(--teal-soft);
+  border-color: var(--teal);
+}

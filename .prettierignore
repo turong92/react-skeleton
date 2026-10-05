@@ -1,3 +1,5 @@
-# 생성물 — design/tokens/build.mjs 가 쓴다(pnpm tokens). 손으로도 prettier 로도 고치지 않는다
-src/styles/tokens.css
+# 생성물 — packages/tokens/build.mjs 가 쓴다(pnpm tokens). 손으로도 prettier 로도 고치지 않는다
+packages/tokens/tokens.css
 docs/design-tokens.md
+dist
+pnpm-lock.yaml

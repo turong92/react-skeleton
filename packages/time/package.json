@@ -1,0 +1,18 @@
+{
+  "name": "@skeleton/time",
+  "version": "1.1.0",
+  "private": true,
+  "type": "module",
+  "description": "글로벌 시간 처리(백엔드 modules:time 짝) — 시각 3종 포맷 · 서버 시각 보정 · 국가→시간대",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "types": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run --pool forks",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  }
+}

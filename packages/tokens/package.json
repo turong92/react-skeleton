@@ -1,0 +1,26 @@
+{
+  "name": "@skeleton/tokens",
+  "version": "1.1.0",
+  "private": true,
+  "type": "module",
+  "description": "디자인 토큰 정본(tokens.json) + 생성기(build.mjs) + 생성물(tokens.css, 라이트/다크)",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./tokens.css": "./tokens.css",
+    "./tokens.json": "./tokens.json",
+    "./build": {
+      "types": "./build.d.mts",
+      "default": "./build.mjs"
+    }
+  },
+  "types": "./src/index.ts",
+  "scripts": {
+    "tokens": "node build.mjs --doc ../../docs/design-tokens.md",
+    "tokens:check": "node build.mjs --check --doc ../../docs/design-tokens.md",
+    "test": "vitest run --pool forks",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  }
+}

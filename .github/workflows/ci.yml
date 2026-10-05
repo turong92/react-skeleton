@@ -14,9 +14,11 @@ jobs:
           version: 10
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          # 24: vite.config.ts 가 @skeleton/theme/vite 의 .ts 소스를 Node 로 직접 읽는다(타입 제거 — 22.18+ 도 가능)
+          node-version: '24'
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
+      # 아래 명령은 모두 워크스페이스 전체(apps/* · packages/*)에 돈다
       - run: pnpm lint
       - run: pnpm tokens:check
       - run: pnpm typecheck

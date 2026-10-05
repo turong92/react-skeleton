@@ -1,0 +1,31 @@
+{
+  "name": "@skeleton/ui",
+  "version": "1.1.0",
+  "private": true,
+  "type": "module",
+  "description": "중립 UI — base.css(리셋 + 요소 타이포) · Button · Input · Field · Select · Card · Dialog · Spinner · AppShell · ErrorBoundary · showApiError. 의미 토큰만 쓴다(@skeleton/tokens 의 tokens.css 필요)",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./base.css": "./src/base.css"
+  },
+  "types": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run --pool forks",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@skeleton/api-client": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "sonner": "^2.0.0"
+  },
+  "devDependencies": {
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "sonner": "^2.0.7"
+  }
+}

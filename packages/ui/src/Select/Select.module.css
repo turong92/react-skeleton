@@ -1,0 +1,18 @@
+.select {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text-strong);
+  padding: 0 10px;
+}
+
+.select:focus {
+  border-color: var(--teal);
+  outline: 3px solid var(--teal-soft);
+}
+
+.select[aria-invalid='true'] {
+  border-color: var(--red);
+}

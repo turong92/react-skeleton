@@ -1,0 +1,24 @@
+.fallback {
+  padding: 2rem;
+  text-align: center;
+}
+
+.title {
+  color: var(--red);
+}
+
+.message {
+  display: inline-block;
+  max-width: 800px;
+  margin: 12px 0 0;
+  padding: 1rem;
+  border: 1px solid var(--red-border);
+  border-radius: 4px;
+  background: var(--red-soft);
+  text-align: left;
+  word-break: break-word;
+}
+
+.actions {
+  margin-top: 1rem;
+}

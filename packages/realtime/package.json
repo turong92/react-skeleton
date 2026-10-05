@@ -1,0 +1,28 @@
+{
+  "name": "@skeleton/realtime",
+  "version": "1.1.0",
+  "private": true,
+  "type": "module",
+  "description": "실시간 알림 클라이언트 — SSE(fetch streaming) · STOMP over WebSocket · 재연결 정책 · React 훅 (백엔드 notification-sse / notification-websocket 짝)",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "types": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run --pool forks",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@skeleton/api-client": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
+  }
+}

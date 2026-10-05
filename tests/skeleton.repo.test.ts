@@ -20,7 +20,7 @@ const dirs = (kind: 'app' | 'package') =>
     .sort()
 
 describe('the skeleton repo', () => {
-  it('has the five apps and the eleven packages', () => {
+  it('has the five apps and the twelve packages', () => {
     expect(dirs('app')).toEqual([
       'apps/sample',
       'apps/starter',
@@ -31,6 +31,7 @@ describe('the skeleton repo', () => {
     expect(dirs('package')).toEqual([
       'packages/api-client',
       'packages/auth',
+      'packages/board',
       'packages/captcha-turnstile',
       'packages/notifications',
       'packages/payment',
@@ -57,7 +58,12 @@ describe('the skeleton repo', () => {
       dep.startsWith('@skeleton/'),
     )
     expect(declared.sort()).toEqual(
-      expect.arrayContaining(['@skeleton/notifications', '@skeleton/storage', '@skeleton/ui']),
+      expect.arrayContaining([
+        '@skeleton/board',
+        '@skeleton/notifications',
+        '@skeleton/storage',
+        '@skeleton/ui',
+      ]),
     )
   })
 
@@ -77,6 +83,7 @@ describe('the skeleton repo', () => {
       .sort()
     expect(withStories).toEqual([
       'packages/auth',
+      'packages/board',
       'packages/captcha-turnstile',
       'packages/notifications',
       'packages/storage',
@@ -115,6 +122,7 @@ describe('the skeleton repo', () => {
         'packages/ui',
         'packages/theme',
         'packages/notifications',
+        'packages/board',
       ]),
     )
   })

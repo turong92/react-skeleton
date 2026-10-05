@@ -69,6 +69,7 @@ export function RootLayout() {
               {strings.nav.dashboard}
             </NavLink>
             <NavLink to="/notes">{strings.nav.notes}</NavLink>
+            <NavLink to="/board">{strings.nav.board}</NavLink>
             <NavLink to="/settings">{strings.nav.settings}</NavLink>
           </>
         )

@@ -12,19 +12,34 @@ const guarded = (path: string) =>
   chain(path).some((route) => isValidElement(route.element) && route.element.type === RequireAuth)
 
 describe('routes', () => {
-  it('has every screen of the journey: dashboard, list, create, detail, edit, settings, login, 404', () => {
+  it('has every screen of the journey: dashboard, notes, board, settings, login, 404', () => {
     expect(leaf('/')?.path).toBe('/')
     expect(leaf('/notes')?.path).toBe('/notes')
     expect(leaf('/notes/new')?.path).toBe('/notes/new')
     expect(leaf('/notes/abc')?.path).toBe('/notes/:id')
     expect(leaf('/notes/abc/edit')?.path).toBe('/notes/:id/edit')
     expect(leaf('/settings')?.path).toBe('/settings')
+    expect(leaf('/board')?.path).toBe('/board')
+    expect(leaf('/board/new')?.path).toBe('/board/new')
+    expect(leaf('/board/p1')?.path).toBe('/board/:id')
+    expect(leaf('/board/p1/edit')?.path).toBe('/board/:id/edit')
     expect(leaf('/login')?.path).toBe('/login')
     expect(leaf('/nope/nope')?.path).toBe('*')
   })
 
   it('everything except login and the 404 sits under the auth guard', () => {
-    for (const path of ['/', '/notes', '/notes/new', '/notes/abc', '/notes/abc/edit', '/settings'])
+    for (const path of [
+      '/',
+      '/notes',
+      '/notes/new',
+      '/notes/abc',
+      '/notes/abc/edit',
+      '/board',
+      '/board/new',
+      '/board/abc',
+      '/board/abc/edit',
+      '/settings',
+    ])
       expect(guarded(path), path).toBe(true)
     for (const path of ['/login', '/nope']) expect(guarded(path), path).toBe(false)
   })

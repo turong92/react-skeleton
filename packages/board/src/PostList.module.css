@@ -1,0 +1,53 @@
+.list {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-md);
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.titleCell {
+  display: grid;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.titleLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  overflow-wrap: anywhere;
+}
+
+.excerpt {
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+  overflow-wrap: anywhere;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.error {
+  display: grid;
+  gap: var(--space-md);
+}

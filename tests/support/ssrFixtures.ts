@@ -51,6 +51,57 @@ export const fakeUploader = () => ({
     multipart: false,
   }),
 })
+/** 게시판 api — 서버 렌더에서는 아무것도 부르지 않는다(쿼리는 브라우저에서 가져온다) */
+const fakeBoardApi = () =>
+  new Proxy(
+    {},
+    {
+      get: () => async () => {
+        throw new Error('unused in the server render')
+      },
+    },
+  )
+const boardConfig = {
+  reactionTypes: ['LIKE', 'EMPATHY'],
+  reactionMode: 'SINGLE',
+  maxCommentDepth: 2,
+  titleMaxLength: 80,
+  bodyMaxLength: 2000,
+  commentMaxLength: 300,
+  maxPageSize: 50,
+  canModerate: false,
+}
+const boardPost = {
+  id: 'p1',
+  boardCode: 'free',
+  authorId: 'u1',
+  title: 'Hello board',
+  excerpt: 'first',
+  status: 'PUBLISHED',
+  pinned: true,
+  viewCount: 3,
+  commentCount: 1,
+  reactionCounts: { LIKE: 2 },
+  myReactions: ['LIKE'],
+  attachmentCount: 0,
+  createdAt: '2026-01-01T00:00:00Z',
+  updatedAt: '2026-01-01T00:00:00Z',
+}
+const boardComment = {
+  id: 'c1',
+  postId: 'p1',
+  parentId: null,
+  rootId: 'c1',
+  depth: 0,
+  authorId: 'u1',
+  body: 'First comment',
+  status: 'PUBLISHED',
+  reactionCounts: {},
+  myReactions: [],
+  replyCount: 1,
+  createdAt: '2026-01-01T00:00:00Z',
+  updatedAt: '2026-01-01T00:00:00Z',
+}
 export function fakeSession({ mod }: FixtureContext) {
   const auth = mod('auth')
   const unused = async () => {
@@ -116,6 +167,54 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
   'auth#RequireAuth': () => ({ children: 'secret' }),
   'notifications#NotificationBell': () => ({ api: fakeNotificationsApi() }),
   'notifications#NotificationList': () => ({ items: [notification] }),
+  'board#ReactionBar': () => ({
+    types: ['LIKE', 'EMPATHY'],
+    counts: { LIKE: 2 },
+    mine: ['LIKE'],
+    onToggle: noop,
+    labels: { EMPATHY: '공감' },
+    icons: { LIKE: '👍' },
+  }),
+  'board#PostList': () => ({
+    posts: [boardPost],
+    page: 0,
+    totalPages: 2,
+    onPageChange: noop,
+    sort: 'latest',
+    onSortChange: noop,
+    query: '',
+    onSearch: noop,
+  }),
+  'board#PostDetail': () => ({
+    post: { ...boardPost, body: 'Body', attachments: [] },
+    onEdit: noop,
+  }),
+  'board#PostEditor': () => ({
+    limits: { titleMaxLength: 80, bodyMaxLength: 2000 },
+    onSubmit: noop,
+  }),
+  'board#CommentThread': () => ({
+    thread: {
+      ...boardComment,
+      replies: [{ ...boardComment, id: 'c2', parentId: 'c1', depth: 1, body: 'A reply' }],
+    },
+    maxDepth: 2,
+    commentMaxLength: 300,
+    reactionTypes: ['LIKE'],
+    onReply: noop,
+  }),
+  'board#BoardComments': () => ({
+    api: fakeBoardApi(),
+    boardCode: 'free',
+    postId: 'p1',
+    config: boardConfig,
+  }),
+  'board#PostReactionBar': () => ({
+    api: fakeBoardApi(),
+    boardCode: 'free',
+    post: boardPost,
+    config: boardConfig,
+  }),
   'captcha-turnstile#Turnstile': () => ({ siteKey: 'site-key', onToken: noop }),
 }
 
@@ -130,6 +229,21 @@ export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
   'notifications#useMarkRead': () => [fakeNotificationsApi()],
   'notifications#useMarkAllRead': () => [fakeNotificationsApi()],
   'notifications#useNotificationIngest': () => [],
+  'board#useBoardConfig': () => [fakeBoardApi()],
+  'board#useBoards': () => [fakeBoardApi()],
+  'board#useBoard': () => [fakeBoardApi(), 'free'],
+  'board#usePosts': () => [fakeBoardApi(), 'free'],
+  'board#usePost': () => [fakeBoardApi(), 'free', 'p1'],
+  'board#useComments': () => [fakeBoardApi(), 'free', 'p1'],
+  'board#useCreatePost': () => [fakeBoardApi(), 'free'],
+  'board#useUpdatePost': () => [fakeBoardApi(), 'free', 'p1'],
+  'board#useModeratePost': () => [fakeBoardApi(), 'free', 'p1'],
+  'board#useRemovePost': () => [fakeBoardApi(), 'free'],
+  'board#useCreateComment': () => [fakeBoardApi(), 'free', 'p1'],
+  'board#useUpdateComment': () => [fakeBoardApi(), 'free', 'p1'],
+  'board#useRemoveComment': () => [fakeBoardApi(), 'free', 'p1'],
+  'board#useModerateComment': () => [fakeBoardApi(), 'free', 'p1'],
+  'board#useReaction': () => [fakeBoardApi(), 'free', 'SINGLE'],
   'realtime#useSseClient': () => [{ url: '/api/v1/notifications/sse' }],
   'realtime#useNotificationSocket': () => [
     { url: 'ws://localhost/ws', topic: 'demo', getAccessToken: () => null },

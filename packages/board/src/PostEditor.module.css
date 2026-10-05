@@ -1,0 +1,16 @@
+.form {
+  display: grid;
+  gap: var(--space-lg);
+  max-width: 40rem;
+}
+
+.failure {
+  margin: 0;
+  color: var(--red);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}

@@ -1,0 +1,17 @@
+.body {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.threads {
+  display: grid;
+  gap: var(--space-xl);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.error {
+  display: grid;
+  gap: var(--space-md);
+}

@@ -3,7 +3,7 @@
 #
 #   scripts/test-new-project.sh            # 빠른 검사 (기본, 수 초): 인자 검증 · 패키지 닫힘 · 구조 · 이름/스코프 바꾸기 · 남는 흔적
 #   scripts/test-new-project.sh --quick    # 위와 같다 (`pnpm test` 가 부른다)
-#   scripts/test-new-project.sh --full     # 위 + 다섯 조합을 임시 디렉토리에 찍어 각각 pnpm install · lint · typecheck · test · build (네트워크 필요, 순차, 수 분)
+#   scripts/test-new-project.sh --full     # 위 + 여섯 조합을 임시 디렉토리에 찍어 각각 pnpm install · lint · typecheck · test · build (네트워크 필요, 순차, 수 분)
 #
 # --full 은 CI 의 별도 워크플로(.github/workflows/new-project.yml)가 돈다. 조합:
 #   1. 기본값만 (스토리집 포함)
@@ -11,6 +11,7 @@
 #   3. --scope @acme --packages payment
 #   4. --ssr --without-storybook  (서버 렌더 스타터 — 앱의 통합 테스트가 빌드한 서버를 띄워 본다 — 와 스토리집을 뗀 모양)
 #   5. --with-sample  (참조 앱 apps/sample 을 함께 — install · lint · typecheck · test · build 가 샘플까지 돈다. e2e 는 백엔드가 필요해 돌리지 않는다)
+#   6. --packages board  (게시판 — ui · api-client · time 으로 닫힌다. + `pnpm test:stories` — 게시판 스토리를 진짜 브라우저에서)
 # macOS bash 3.2 와 GNU bash 에서 돈다. 임시 디렉토리는 끝나면 지운다 (KEEP=1 이면 남긴다).
 set -euo pipefail
 
@@ -152,13 +153,13 @@ check "CI 워크플로(ci.yml)는 남는다" test -f "$A/.github/workflows/ci.ym
 check "eslint 의 앱 이름 막기에 새 앱 이름이 더해진다" grep -q "'acme-app/\*\*'" "$A/eslint.config.js"
 check "pnpm-workspace.yaml 은 apps/* · packages/* 글롭 그대로" bash -c "grep -q 'apps/\*' '$A/pnpm-workspace.yaml' && grep -q 'packages/\*' '$A/pnpm-workspace.yaml'"
 [ -z "$(dangling_deps "$A" @skeleton)" ] && pass "선언된 @skeleton 의존이 모두 남아 있는 패키지를 가리킨다" || fail "끊어진 의존: $(dangling_deps "$A" @skeleton)"
-check "지운 패키지(notifications · storage · payment · realtime · captcha-turnstile)를 가리키는 줄이 코드 · 설정에 없다" bash -c "
-  ! grep -rIE '@skeleton/(notifications|storage|payment|realtime|captcha-turnstile)' '$A/apps' '$A/tests' '$A/eslint.config.js' '$A/package.json' '$A/tsconfig.json' '$A/tsconfig.base.json' '$A/.github' '$A/packages' --include='*.ts' --include='*.tsx' --include='*.json' --include='*.js' --include='*.yml' --exclude-dir=node_modules"
+check "지운 패키지(notifications · storage · payment · realtime · captcha-turnstile · board)를 가리키는 줄이 코드 · 설정에 없다" bash -c "
+  ! grep -rIE '@skeleton/(notifications|storage|payment|realtime|captcha-turnstile|board)' '$A/apps' '$A/tests' '$A/eslint.config.js' '$A/package.json' '$A/tsconfig.json' '$A/tsconfig.base.json' '$A/.github' '$A/packages' --include='*.ts' --include='*.tsx' --include='*.json' --include='*.js' --include='*.yml' --exclude-dir=node_modules"
 check "README · CLAUDE · CHANGELOG 는 새 프로젝트용으로 다시 쓰인다" bash -c "head -1 '$A/README.md' | grep -q '# acme-app' && head -1 '$A/CLAUDE.md' | grep -q 'acme-app' && grep -q 'Unreleased' '$A/CHANGELOG.md' && ! grep -q 'Migration —' '$A/CHANGELOG.md'"
 check "README 에 남은 패키지 표와 다음 단계 명령이 있다" bash -c "grep -q '@skeleton/ui' '$A/README.md' && grep -q 'pnpm install' '$A/README.md'"
 STORIES="$(cd "$A" && find packages apps -name '*.stories.tsx' -not -path '*/node_modules/*' | sort | tr '\n' ' ')"
 check "남은 패키지(ui · theme · auth · time)의 스토리가 따라온다" bash -c "test -f '$A/packages/ui/src/Button/Button.stories.tsx' && test -f '$A/packages/theme/src/ThemeToggle.stories.tsx' && test -f '$A/packages/auth/src/RequireAuth.stories.tsx' && test -f '$A/packages/time/src/formats.stories.tsx'"
-check "지운 패키지(notifications · storage · captcha-turnstile)의 스토리는 없다" bash -c "! echo '$STORIES' | grep -qE 'notifications|storage|captcha-turnstile'"
+check "지운 패키지(notifications · storage · captcha-turnstile · board)의 스토리는 없다" bash -c "! echo '$STORIES' | grep -qE 'notifications|storage|captcha-turnstile|packages/board'"
 check "Patterns 7개(대시보드 · 목록 · 폼 · 상세 · 로그인 · 403 · 설정)와 토큰 문서가 따라온다" bash -c "ls '$A/apps/storybook/src/patterns/' | grep -c stories | grep -q '^7$' && test -f '$A/apps/storybook/src/tokens/Tokens.stories.tsx'"
 check "docs/ui-catalog.md 는 남은 스토리만 적는다 (적힌 경로가 모두 있다)" bash -c "test -f '$A/docs/ui-catalog.md' && grep -oE '\`(packages|apps)/[^\` ]+\.stories\.tsx\`' '$A/docs/ui-catalog.md' | tr -d '\`' | while read -r f; do test -f '$A/'\$f || { echo missing \$f; exit 1; }; done"
 check "CLAUDE.md 에 에이전트 안내(스토리 먼저 · Patterns 목록)가 따라온다" bash -c "grep -q 'Storybook' '$A/CLAUDE.md' && grep -q 'apps/storybook/src/patterns/ListPage.stories.tsx' '$A/CLAUDE.md' && grep -q 'ui-catalog.md' '$A/CLAUDE.md'"
@@ -178,6 +179,17 @@ want="api-client auth notifications realtime storage theme time tokens ui"
 [ -z "$(dangling_deps "$B" @skeleton)" ] && pass "끊어진 의존 없음" || fail "끊어진 의존: $(dangling_deps "$B" @skeleton)"
 echo "$LAST_OUTPUT" | grep -q 'notifications' && pass "출력에 고른 패키지가 나온다" || fail "출력에 notifications 가 없다"
 check "고른 패키지의 스토리가 따라오고 카탈로그에 적힌다" bash -c "test -f '$B/packages/notifications/src/NotificationBell.stories.tsx' && test -f '$B/packages/storage/src/useUpload.stories.tsx' && grep -q 'NotificationBell.stories.tsx' '$B/docs/ui-catalog.md' && ! grep -q 'Turnstile.stories.tsx' '$B/docs/ui-catalog.md'"
+
+echo "== 4b. --packages board (게시판 — 보이는 부품 + 서버와 이은 부품 + 가짜 서버가 있는 패키지)"
+BD="$TMP/bd"
+expect_exit 0 "게시판을 찍는다" stamp "$BD" --packages board
+want="api-client auth board theme time tokens ui"
+[ "$(listing "$BD/packages")" = "$want" ] && pass "board 는 ui · api-client · time 으로 닫힌다 ($want)" || fail "packages: [$(listing "$BD/packages")]"
+[ -z "$(dangling_deps "$BD" @skeleton)" ] && pass "끊어진 의존 없음" || fail "끊어진 의존: $(dangling_deps "$BD" @skeleton)"
+[ "$(json "$BD/packages/board/package.json" 'Object.keys(p.dependencies).filter(d => d.startsWith("@skeleton/")).sort().join(" ")')" = "@skeleton/api-client @skeleton/time @skeleton/ui" ] && pass "board 의 @skeleton 의존은 api-client · time · ui 뿐" || fail "board 의존이 바뀌었다"
+check "board 의 스토리 · 가짜 서버가 따라오고 카탈로그에 적힌다" bash -c "test -f '$BD/packages/board/src/ReactionBar.stories.tsx' && test -f '$BD/packages/board/src/stories/fakeBoard.ts' && grep -q 'ReactionBar.stories.tsx' '$BD/docs/ui-catalog.md' && ! grep -q 'NotificationBell.stories.tsx' '$BD/docs/ui-catalog.md'"
+check "tests/support/ssrFixtures.ts 의 board 줄은 남는다(패키지가 있으니) — 다른 패키지의 줄은 이 폴더에 없어도 괜찮다" bash -c "grep -q \"'board#ReactionBar'\" '$BD/tests/support/ssrFixtures.ts'"
+check "스토리가 쓰는 board 는 앱의 의존 줄을 늘리지 않는다 (쓰기 시작할 때 한 줄)" bash -c "! grep -q '@skeleton/board' '$BD/apps/acme-app/package.json'"
 
 echo "== 5. --scope @acme --packages payment"
 C="$TMP/c"
@@ -237,7 +249,7 @@ WS="$TMP/ws"
 expect_exit 0 "샘플을 함께 찍는다" stamp "$WS" --with-sample
 check "apps/sample 이 이름 그대로 apps/acme-app 옆에 남는다" bash -c "test -f '$WS/apps/sample/package.json' && test -d '$WS/apps/acme-app' && test -d '$WS/apps/storybook'"
 [ "$(json "$WS/apps/sample/package.json" 'p.name')" = "sample" ] && pass "샘플 앱 이름은 그대로 sample" || fail "샘플 앱 이름"
-want="api-client auth notifications realtime storage theme time tokens ui"
+want="api-client auth board notifications realtime storage theme time tokens ui"
 [ "$(listing "$WS/packages")" = "$want" ] && pass "샘플이 쓰는 패키지가 따라온다 ($want)" || fail "packages: [$(listing "$WS/packages")]"
 [ -z "$(dangling_deps "$WS" @skeleton)" ] && pass "끊어진 의존 없음" || fail "끊어진 의존: $(dangling_deps "$WS" @skeleton)"
 check "eslint 의 앱 이름 막기에 sample 과 새 앱 이름이 모두 있다" bash -c "grep -q \"'sample/\*\*'\" '$WS/eslint.config.js' && grep -q \"'acme-app/\*\*'\" '$WS/eslint.config.js'"
@@ -294,6 +306,7 @@ if [ "$MODE" = "--full" ]; then
   verify_composition "$C" "3-scope-payment"
   verify_composition "$SRS" "4-ssr-without-storybook"
   verify_composition "$WS" "5-with-sample"
+  verify_composition "$BD" "6-board" stories
 fi
 
 echo

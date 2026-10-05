@@ -14,6 +14,7 @@ packages/
 ├── auth/                # 토큰 저장소 · login/me/socialLogin · 소셜 로그인 도우미 · dev-login/break-glass 헤더 · 401 훅 · AuthProvider · RequireAuth
 ├── realtime/            # SSE(fetch streaming) · STOMP WebSocket 클라이언트 · 재연결 정책 · React 훅
 ├── notifications/       # 알림 받은편지함 클라이언트 · TanStack Query 훅 · 안 읽은 수(실시간 갱신) · NotificationBell/List
+├── board/               # 게시판 — 글 · 대댓글 · 타입이 있는 반응(좋아요 · 공감 … 서버가 알려 주는 코드, 문구 · 아이콘은 맵 prop) · 낙관적 반응 · PostList/PostDetail/PostEditor/CommentThread/ReactionBar
 ├── storage/             # 프리사인 업로드 — 검증 · presign · 직접 PUT(진행률 · 취소) · 멀티파트 · useUpload
 ├── payment/             # 결제 계약 타입 + 얇은 호출 + 토스 리다이렉트 변환 (모듈이 HTTP 를 열지 않아 일부러 얇다)
 ├── captcha-turnstile/   # Cloudflare Turnstile 로더 · <Turnstile> · 토큰 붙이기
@@ -61,6 +62,7 @@ scripts/new-project.sh <target-dir> <name> [--packages a,b,c] [--ssr] [--without
 
 scripts/new-project.sh ~/work/ovation ovation                                      # 스타터 + 스타터가 쓰는 패키지
 scripts/new-project.sh ~/work/ovation ovation --packages realtime,notifications,storage
+scripts/new-project.sh ~/work/ovation ovation --packages board                     # 게시판(→ ui · api-client · time 으로 닫힌다)
 scripts/new-project.sh ~/work/ovation ovation --scope @ovation --packages payment  # 패키지 스코프도 바꾼다
 scripts/new-project.sh ~/work/ovation ovation --ssr                                 # 서버 렌더 스타터(스토리집은 기본으로 따라온다)
 scripts/new-project.sh ~/work/ovation ovation --without-storybook                   # 스토리집 · 스토리 · 에이전트 안내 없이
@@ -74,7 +76,7 @@ scripts/new-project.sh ~/work/ovation ovation --with-sample                     
 - 고른 패키지는 **폴더만** 복사된다. 쓰기 시작할 때 앱 `package.json` 에 한 줄(`"@skeleton/<이름>": "workspace:*"`)을 더한다 — 안 쓰는 의존을 선언하면 루트 `pnpm test` 가 막는다(선언한 의존 = 실제 import).
 - `--with-sample`: 참조 앱 `apps/sample`(Notes — 백엔드 kotlin-skeleton 의 `apps/sample` 과 짝)을 이름 그대로 `apps/<name>` 옆에 남긴다. 기본은 떼고 찍는다(그 앱이 쓰는 패키지 · 샘플 전용 루트 스크립트 · CI e2e 잡도 함께 빠진다). `--ssr` · `--without-storybook` · `--scope` 와 함께 쓸 수 있다. 이름 `sample` 은 예약.
 - `--ssr`: `apps/starter` 대신 `apps/starter-ssr` 가 `apps/<name>` 이 된다(이름은 `src/appName.ts` 한 줄). 스토리집은 기본으로 따라온다 — `apps/storybook` · 남는 패키지의 스토리 · Patterns · `docs/ui-catalog.md` · CLAUDE.md 의 에이전트 안내 · 스토리 테스트 · CI `stories` 잡(**참조가 프로젝트와 함께 간다**). `--without-storybook` 이면 이 전부를 깨끗이 뗀다.
-- 검증: `scripts/test-new-project.sh --quick`(인자 검증 · 닫힘 · 구조 · 이름/스코프 · 남는 흔적, 수 초 — `pnpm test` 가 부른다), `--full`(다섯 조합 `기본값` · `--packages realtime,notifications,storage` · `--scope @acme --packages payment` · `--ssr --without-storybook`(서버를 띄우는 통합 테스트 포함) · `--with-sample` 을 찍어 각각 install · lint · typecheck · test · build — 조합 2 는 `storybook:build` · `test:stories` 도, CI 의 `new-project` 워크플로).
+- 검증: `scripts/test-new-project.sh --quick`(인자 검증 · 닫힘 · 구조 · 이름/스코프 · 남는 흔적, 수 초 — `pnpm test` 가 부른다), `--full`(여섯 조합 `기본값` · `--packages realtime,notifications,storage` · `--packages board` · `--scope @acme --packages payment` · `--ssr --without-storybook`(서버를 띄우는 통합 테스트 포함) · `--with-sample` 을 찍어 각각 install · lint · typecheck · test · build — 조합 2 는 `storybook:build` · `test:stories` 도, CI 의 `new-project` 워크플로).
 
 폴더 복사로 직접 가져가도 된다: 패키지는 각자 `package.json` · 테스트 · README 를 가진 자족 단위이고 서로는 이름으로만 이어져 있다. 이때 `pnpm-workspace.yaml` · 루트 `tsconfig.base.json` · `eslint.config.js` 도 가져온다.
 
@@ -88,6 +90,7 @@ scripts/new-project.sh ~/work/ovation ovation --with-sample                     
 | `auth`              | api-client             | `auth` · `auth-social*`                                                                              | `<AuthProvider session={createAuthSession({ api: createAuthApi(apiClient), store })}>` · `<RequireAuth />` · `createSocialLoginFlow({ providers, session })` |
 | `realtime`          | api-client             | `notification-sse` · `notification-websocket`                                                        | `useSseClient({ url, getAuthHeaders })` · `useNotificationSocket({ url, getAccessToken })`                                                                   |
 | `notifications`     | api-client · time · ui | `notification`(받은편지함 HTTP `/api/v1/notifications` 를 모듈이 연다) + `notification-jdbc`(저장소) | `createNotificationsApi(apiClient)` → `<NotificationBell api={api} />` · `useNotificationIngest()` 를 realtime 훅에 건다                                     |
+| `board`             | api-client · time · ui | `board`(글 · 댓글 · 반응 HTTP `/api/v1/boards` 를 모듈이 연다) + `board-jdbc`(저장소)                | `createBoardApi(apiClient)` → `usePosts` · `<PostList>` · `<BoardComments api … config>` · 반응 종류는 서버 설정, 문구는 `labels` 맵(공감 = 맵 한 줄)        |
 | `storage`           | api-client             | `storage`(업로드 HTTP `/api/v1/storage/*` 를 모듈이 연다) + `storage-s3`                             | `createUploader({ api: createStorageApi(apiClient) })` → `useUpload(uploader)`                                                                               |
 | `payment`           | api-client             | `payment` + `payment-toss` · `payment-stripe`. HTTP 는 앱                                            | `createPaymentApi(apiClient, { paths: { confirm } })` · `confirmRequestFromTossRedirect(location.search, { currency })`                                      |
 | `captcha-turnstile` | —                      | `captcha-turnstile`(`TurnstileVerifier`). HTTP 는 앱                                                 | `<Turnstile siteKey {...useTurnstileToken().widgetProps} />` · `attachTurnstileToken(body, token)`                                                           |
@@ -96,7 +99,7 @@ scripts/new-project.sh ~/work/ovation ovation --with-sample                     
 | `tokens`            | —                      | —                                                                                                    | `import '@skeleton/tokens/tokens.css'` (색 · 간격 · 모서리 · 글자 크기는 `tokens.json` 에서)                                                                 |
 | `ui`                | api-client             | —                                                                                                    | `import '@skeleton/ui/base.css'` + `<Button>` `<Field>` `<Input>` `<Textarea>` `<Checkbox>` `<Tabs>` `<Table>` `<Pagination>` …                              |
 
-`notifications` · `storage` 의 HTTP 엔드포인트는 백엔드 모듈이 연다(인증 필요) — 기본 경로가 그것이라 한 줄이면 되고, 앱이 다른 경로로 열었다면 `basePath` · `storageEndpoints('/files')` 로 바꾼다. 「HTTP 는 앱」인 패키지(`payment` · `captcha-turnstile`)는 백엔드 모듈이 서비스 계약만 주고 엔드포인트를 열지 않아 **경로를 앱이 알려 준다**(기본 경로 없음 — 없는 엔드포인트를 가정하지 않는다). 자세한 API 표 · 어느 파일의 어느 계약인지 · 테스트가 재지 않는 것은 각 `packages/<이름>/README.md`. `ui` · `theme` 의 색은 `tokens` 의 `tokens.css` 가 로드되어야 나온다(JS import 의존은 아니라 `package.json` 에 적지 않는다 — `main.tsx` 맨 앞에서 한 번 import).
+`notifications` · `storage` · `board` 의 HTTP 엔드포인트는 백엔드 모듈이 연다(인증 필요) — 기본 경로가 그것이라 한 줄이면 되고, 앱이 다른 경로로 열었다면 `basePath` · `storageEndpoints('/files')` 로 바꾼다. 「HTTP 는 앱」인 패키지(`payment` · `captcha-turnstile`)는 백엔드 모듈이 서비스 계약만 주고 엔드포인트를 열지 않아 **경로를 앱이 알려 준다**(기본 경로 없음 — 없는 엔드포인트를 가정하지 않는다). 자세한 API 표 · 어느 파일의 어느 계약인지 · 테스트가 재지 않는 것은 각 `packages/<이름>/README.md`. `ui` · `theme` 의 색은 `tokens` 의 `tokens.css` 가 로드되어야 나온다(JS import 의존은 아니라 `package.json` 에 적지 않는다 — `main.tsx` 맨 앞에서 한 번 import).
 
 ## 앱
 

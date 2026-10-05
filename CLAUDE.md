@@ -1,6 +1,6 @@
 # react-skeleton — Claude Code 컨텍스트
 
-React + TypeScript + Vite 프론트엔드 스켈레톤. pnpm 워크스페이스 — 캡슐화된 패키지 11개 + 앱 4개(SPA 스타터 · SSR 스타터 · 스토리집 · 워크벤치). REST 백엔드(kotlin-skeleton)와 통신하는 SPA 출발점이고, 백엔드 `modules/` 처럼 프로젝트가 필요한 패키지만 한 줄씩 골라 쓴다.
+React + TypeScript + Vite 프론트엔드 스켈레톤. pnpm 워크스페이스 — 캡슐화된 패키지 12개 + 앱 4개(SPA 스타터 · SSR 스타터 · 스토리집 · 워크벤치). REST 백엔드(kotlin-skeleton)와 통신하는 SPA 출발점이고, 백엔드 `modules/` 처럼 프로젝트가 필요한 패키지만 한 줄씩 골라 쓴다.
 
 <!-- storybook-guide:start -->
 
@@ -44,7 +44,7 @@ apps/
 │   ├── src/entry-client.tsx  # initTheme → readSsrState → hydrateRoot(createClientApp) ; src/app/ AppProviders · AppRoutes(서버 · 브라우저 공유)
 │   ├── src/auth/             # createDeferredTokens(저장소 읽기를 하이드레이션 뒤로) · ClientRequireAuth(서버는 중립 자리 표시)
 │   └── src/routes/routes.tsx # 라우트마다 handle { title, description, robots, prefetch } ; Dockerfile(런타임에 node_modules 없음)
-├── sample/                   # 참조 앱 Notes(`new-project.sh --with-sample` 일 때만 따라간다): 로그인 → 대시보드 → 목록 → 상세 → 폼 → 첨부 업로드 → 알림 → 설정, Patterns 를 조립한 실제 제품 모양. 백엔드 짝은 kotlin-skeleton `apps/sample`
+├── sample/                   # 참조 앱 Notes(`new-project.sh --with-sample` 일 때만 따라간다): 로그인 → 대시보드 → 목록 → 상세 → 폼 → 첨부 업로드 → 알림 → 게시판(글 · 대댓글 · 공감 같은 반응) → 설정, Patterns 를 조립한 실제 제품 모양. 백엔드 짝은 kotlin-skeleton `apps/sample`
 ├── storybook/                # 스토리집(Storybook 10 · Vite): .storybook/(설정 · 라이트/다크 스위치 · a11y 실패 규칙) · src/patterns/(복사해서 시작하는 화면 틀 6개) · src/tokens/(토큰 문서). 부품 스토리는 부품 옆(packages/*/src/**/*.stories.tsx)
 └── workbench/                # 백엔드 확인용 시각적 테스트 벤치(HomePage · modules/workbench · workbench.css) + modules/demos(`/packages` 예제 화면: 새 패키지를 눌러 본다)
 packages/                     # 서로를 이름으로만 부른다. 각자 package.json(exports=src/index.ts) · 테스트 · README
@@ -52,6 +52,7 @@ packages/                     # 서로를 이름으로만 부른다. 각자 pack
 ├── auth/                     # createTokenStore · createAuthApi · createAuthSession · AuthProvider/useAuth/RequireAuth · createSocialLoginFlow(소셜 로그인 도우미) · dev-login/break-glass 헤더 · 401 훅
 ├── realtime/                 # createSseClient · createStompNotificationClient · useSseClient · useNotificationSocket · 재연결 정책
 ├── notifications/            # createNotificationsApi(목록 · 읽음 · 모두 읽음) · useNotifications/useUnreadCount/useMarkRead · useNotificationIngest(실시간 → 캐시) · NotificationBell/List
+├── board/                    # createBoardApi · useBoardConfig/usePosts/usePost/useComments/글·댓글 쓰기 · useReaction(낙관적 갱신 + 되돌리기) · nestThread · PostList/PostDetail/PostEditor/CommentThread/ReactionBar(+ 서버와 이은 BoardComments/PostReactionBar). 반응 종류는 서버가 알려 주는 코드, 문구 · 아이콘은 labels/icons 맵 prop
 ├── storage/                  # createStorageApi · createUploader(검증 → presign → 직접 PUT, 멀티파트) · useUpload · validateFile
 ├── payment/                  # PaymentContracts 타입 · createPaymentApi(경로는 앱이 준다) · confirmRequestFromTossRedirect — 일부러 얇다
 ├── captcha-turnstile/        # loadTurnstile · <Turnstile> · useTurnstileToken · attachTurnstileToken
@@ -77,14 +78,14 @@ docs/ui-catalog.md            # 부품 → 스토리 파일 → 언제 쓰는가
 
 `scripts/new-project.sh <target-dir> <name> [--packages a,b,c] [--ssr] [--without-storybook] [--with-workbench] [--with-sample] [--scope @acme]` — 레포를 복사해 `apps/starter`(`--ssr` 이면 `apps/starter-ssr`)를 `apps/<name>` 으로, `apps/storybook`(스토리집) · 남는 패키지의 스토리 · Patterns · 에이전트 안내 · `docs/ui-catalog.md` 는 기본으로 따라온다(**참조가 프로젝트와 함께 간다** — `--without-storybook` 이면 스토리 · 스토리집 · 그 도구 의존 · CI 잡을 모두 뗀다). **`apps/sample`(참조 앱 Notes)은 기본으로 떼고 `--with-sample` 일 때만 남긴다** — 그 앱이 쓰는 패키지가 따라오고, 샘플 전용 루트 스크립트(`dev:sample` · `e2e:sample`)와 `ci.yml` 의 `sample-e2e-job` 표식 사이 잡·CLAUDE.md 의 `sample` 표식 구역은 샘플을 떼면 함께 지워지고 가져가면 표식 줄만 걷힌다(이름 `sample` 은 예약). 패키지는 스타터가 쓰는 것 + 루트 도구(`theme` · `tokens`) + `--packages` 를 `@skeleton/*` 의존으로 닫은 집합만 남긴다(나머지 폴더 · `tests/skeleton.repo.test.ts` · new-project 도구는 지운다). 루트 `package.json` · eslint 앱 이름 막기 · README/CLAUDE/CHANGELOG 를 새 프로젝트용으로 바꾸고, `--scope` 면 `@skeleton` 을 모두 바꾼다. 고른 패키지는 폴더만 오고 앱 의존 한 줄은 쓰기 시작할 때 더한다(안 쓰는 의존은 루트 테스트가 막는다). 일꾼은 `scripts/new-project.d/stamp.mjs`.
 
-- 빠른 검사 `bash scripts/test-new-project.sh --quick`(`pnpm test` 가 부른다) · 조합 전체 `--full`(기본 · `--packages realtime,notifications,storage`(+ `storybook:build` · `test:stories`) · `--scope @acme --packages payment` · `--ssr --without-storybook` 를 찍어 각각 install · format · tokens:check · lint · typecheck · test · format:check · build — 네트워크, 수 분, 별도 워크플로 `.github/workflows/new-project.yml`).
+- 빠른 검사 `bash scripts/test-new-project.sh --quick`(`pnpm test` 가 부른다) · 조합 전체 `--full`(기본 · `--packages realtime,notifications,storage`(+ `storybook:build` · `test:stories`) · `--packages board`(+ `storybook:build` · `test:stories`) · `--with-sample` · `--scope @acme --packages payment` · `--ssr --without-storybook` 를 찍어 각각 install · format · tokens:check · lint · typecheck · test · format:check · build — 네트워크, 수 분, 별도 워크플로 `.github/workflows/new-project.yml`).
 - **패키지 · 앱을 더하거나 지우거나 이름을 바꾸면**: `tests/skeleton.repo.test.ts` 의 목록, 이 문서와 README 의 표, `stamp.mjs` 가 기대하는 문자열(`eslint.config.js` 의 `APP_NAMES` 목록 · `STORY_HINT` 줄 · `globalIgnores` 의 storybook-static 줄 · `ci.yml` 의 `stories-job` 표식 · CLAUDE.md 의 `storybook-guide` / `storybook` 표식 · `starter-ssr` 의 `src/appName.ts` · `Dockerfile` 의 `ARG APP` · `RootLayout.tsx` 의 `<strong>starter</strong>` · `index.html` 제목 · 루트 `test` 스크립트 꼴)을 함께 본다 — 어긋나면 `stamp.mjs` 가 조용히 넘기지 않고 멈춘다.
 
 ## 핵심 컨벤션
 
 - **패키지 안쪽 금지**: 다른 패키지는 이름(`@skeleton/<이름>`)과 `exports` 하위 경로(`/tokens.css` · `/vite` · `/base.css`)로만 쓴다. `@skeleton/*/src/**` · 폴더를 벗어나는 상대 import · 앱 import 는 ESLint(`eslint.config.js`) + `tests/workspace.test.ts` 가 막는다
 - **의존 선언 = 실제 import**: 앱 · 패키지가 `package.json` 에 적은 `@skeleton/*` 는 소스가 import 하는 것과 정확히 같아야 한다(`workspace:*`). 패키지를 새로 쓰면 앱 `package.json` 에 한 줄 더한다. `starter` 는 워크벤치에 의존하지 않는다. 패키지가 외부 라이브러리를 쓰면 `dependencies`(또는 `peerDependencies`)에 선언한다 — 이것도 테스트가 확인
-- **HTTP 엔드포인트: 모듈이 열면 그 경로가 기본값, 안 열면 경로를 설정으로**: 백엔드 모듈이 컨트롤러를 여는 패키지(`notifications` → `/notifications`, `storage` → `/storage/*`)는 그 경로가 기본값이고 `basePath` · `storageEndpoints(basePath)` 로 바꾼다(모듈이 막힌 앱이 자기 컨트롤러를 두는 경우). 모듈이 서비스 계약만 주는 경우(`payment` · `captcha-turnstile`)는 기본 경로를 가정하지 않는다. 모듈 수준 계약만 겨냥한다 — 어느 Kotlin 파일의 어느 DTO 인지는 패키지 README 에
+- **HTTP 엔드포인트: 모듈이 열면 그 경로가 기본값, 안 열면 경로를 설정으로**: 백엔드 모듈이 컨트롤러를 여는 패키지(`notifications` → `/notifications`, `storage` → `/storage/*`, `board` → `/boards`)는 그 경로가 기본값이고 `basePath` · `storageEndpoints(basePath)` 로 바꾼다(모듈이 막힌 앱이 자기 컨트롤러를 두는 경우). 모듈이 서비스 계약만 주는 경우(`payment` · `captcha-turnstile`)는 기본 경로를 가정하지 않는다. 모듈 수준 계약만 겨냥한다 — 어느 Kotlin 파일의 어느 DTO 인지는 패키지 README 에
 - **패키지를 만들거나 키울 때**: `package.json`(`exports` `.` = `{ types, default: ./src/index.ts }`, `test` · `typecheck` 스크립트) · `src/index.ts` barrel(공개 표면은 이것뿐) · 옆에 테스트 · `README.md`(API 표)를 갖춘다. 사용자에게 보이는 문구는 prop(기본 영어), 색은 의미 토큰만
 - **SSR 안전**: 패키지는 import 할 때 브라우저 전역(`window` · `document` · `localStorage`)을 읽거나 쓰지 않는다 — 부수 효과는 명시적 호출(`@skeleton/theme` 의 `initTheme()` 을 앱이 시작할 때 부른다), 브라우저 API 는 effect · 핸들러 안에서만. 새 컴포넌트 · 훅을 export 하면 `tests/support/ssrFixtures.ts` 에 최소 props 한 줄을 더한다(안 하면 `tests/ssr.safety.test.ts` 가 실패, 일부러 브라우저 전용이면 `BROWSER_ONLY` 에 이유와 함께). 서버 렌더 앱 규칙(하이드레이션 일치 · 모듈 전역 금지 · 토큰은 브라우저에만)은 `apps/starter-ssr/README.md`
 - **TypeScript strict**: `any` 금지. 필요하면 `unknown` + 타입 가드. 패키지 tsconfig 는 `types: []`(DOM 쓰는 UI 패키지만 `vite/client`)라 `import.meta.env` 를 쓰면 타입 에러

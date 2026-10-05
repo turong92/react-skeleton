@@ -1,0 +1,10 @@
+.form {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}

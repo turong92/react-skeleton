@@ -1,0 +1,14 @@
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.icon {
+  line-height: var(--line-height-tight);
+}
+
+.count {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.85;
+}

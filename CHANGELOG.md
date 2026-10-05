@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — `@skeleton/board`(게시판: 글 · 대댓글 · 타입이 있는 반응) + 샘플의 「게시판」 + 반응 종류를 서버 설정으로 늘리는 구조
+
+백엔드 `modules/board`(+ `board-jdbc`)의 HTTP 계약(`/api/v1/boards`)을 겨냥하는 12번째 패키지. 소유자의 방향: 좋아요/싫어요만이 아니라 「공감」 같은 반응을 코드 변경 없이 늘릴 수 있게 **반응 종류는 서버가 알려 주는 코드**이고 패키지는 종류를 열거하지 않는다.
+
+- `@skeleton/board` — `createBoardApi(client, { basePath = '/boards' })`(모든 엔드포인트, 만들기에 `Idempotency-Key`) · TanStack Query 훅(`useBoardConfig` · `usePosts` · `usePost` · `useComments` · 글/댓글 쓰기 · `useReaction`) · 키는 `board` 한 뿌리 · **반응은 낙관적 갱신 + 실패하면 되돌림**(SINGLE · PER_TYPE 모두 서버와 같게 셈, 서버 집계가 오면 그것이 이긴다) · `nestThread`(서버가 평평하게 준 자손 → 트리) · 컴포넌트 `ReactionBar`(`labels` · `icons` 맵 — 새 종류는 맵 한 줄) · `PostList` · `PostDetail` · `PostEditor` · `CommentThread`(깊은 답글 접기 `collapseFromDepth`, 지운/숨긴 자리 표시 문구 prop, 운영자 숨김) · 서버와 이은 `BoardComments` · `PostReactionBar`. 글자는 전부 prop(기본 영어), 색은 의미 토큰, SSR 안전
+- 스토리 7개(`play` + a11y) + 계약을 따르는 메모리 가짜 서버(`src/stories/fakeBoard.ts`, 자체 테스트) + 게시판 한 벌 조립 스토리(`BoardPage.stories.tsx`), 「공감」 스토리. `docs/ui-catalog.md` 에 줄 추가, `tests/support/ssrFixtures.ts` 에 컴포넌트 · 훅 줄 추가
+- `@skeleton/api-client`: `ErrorCodes.BOARD_*`(10개 — 백엔드 `BoardErrorCode` 와 같다)
+- `apps/sample`: 「게시판」 메뉴 · 화면 셋(`/board` 목록 · `/board/:id` 글 + 반응 + 댓글 · `/board/new` · `/board/:id/edit`) — 반응 라벨 맵 `{ LIKE: '좋아요', DISLIKE: '싫어요', EMPATHY: '공감' }`, 운영자(`config.canModerate`)의 고정 · 숨김. 브라우저 e2e `e2e/board.e2e.ts`(글 → 반응 바꾸기 → 댓글 → 대댓글 → 접힘 → 운영자 숨김)와 증거 스크립트 `e2e/walkthrough.board.shots.ts`
+- `scripts/new-project.sh --packages board`(→ `ui` · `api-client` · `time` 으로 닫힘), `--with-sample` 은 board 도 가져온다. `test-new-project.sh --full` 에 `--packages board` 조합(`storybook:build` · `test:stories` 포함) 추가
+
 ### Added — 참조 앱 `apps/sample`(Notes) · `@skeleton/ui` 5부품 · Dashboard Pattern · 브라우저 e2e (2026-10-05)
 
 "이 스켈레톤으로 이런 제품이 나온다"를 한 화면 흐름으로 보이는 작은 실제 앱. 로그인 → 대시보드(현황 · 최근 노트 · 안 읽은 알림) → 목록(검색 · 필터 · 쪽 · 빈/로딩/오류) → 상세(탭 · 삭제 확인) → 만들기/수정(백엔드 400 을 칸별로) → 첨부 업로드(진행률) → 알림 종 + 실시간 → 설정(테마 · 계정) → 로그아웃. 백엔드 짝은 kotlin-skeleton `apps/sample`(`/api/v1/notes`).

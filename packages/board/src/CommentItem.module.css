@@ -1,0 +1,44 @@
+.comment {
+  display: grid;
+  gap: var(--space-sm);
+  min-width: 0;
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-sm);
+}
+
+.time {
+  color: var(--text-muted);
+  font-size: var(--font-size-caption);
+}
+
+.body,
+.placeholder {
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.placeholder {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.replies {
+  display: grid;
+  gap: var(--space-md);
+  margin: 0;
+  padding: 0 0 0 var(--space-lg);
+  border-left: 2px solid var(--border);
+  list-style: none;
+}

@@ -53,6 +53,19 @@ describe('ErrorCodes', () => {
     expect(ErrorCodes.PAYMENT_PROVIDER_ERROR).toBe('PAYMENT.PROVIDER_ERROR')
   })
 
+  it('has the board module codes (modules/board BoardErrorCode)', () => {
+    expect(ErrorCodes.BOARD_NOT_FOUND).toBe('BOARD.NOT_FOUND')
+    expect(ErrorCodes.BOARD_POST_NOT_FOUND).toBe('BOARD.POST_NOT_FOUND')
+    expect(ErrorCodes.BOARD_COMMENT_NOT_FOUND).toBe('BOARD.COMMENT_NOT_FOUND')
+    expect(ErrorCodes.BOARD_FORBIDDEN).toBe('BOARD.FORBIDDEN')
+    expect(ErrorCodes.BOARD_REACTION_TYPE_INVALID).toBe('BOARD.REACTION_TYPE_INVALID')
+    expect(ErrorCodes.BOARD_COMMENT_TOO_DEEP).toBe('BOARD.COMMENT_TOO_DEEP')
+    expect(ErrorCodes.BOARD_CONTENT_INVALID).toBe('BOARD.CONTENT_INVALID')
+    expect(ErrorCodes.BOARD_POST_NOT_COMMENTABLE).toBe('BOARD.POST_NOT_COMMENTABLE')
+    expect(ErrorCodes.BOARD_CODE_TAKEN).toBe('BOARD.CODE_TAKEN')
+    expect(ErrorCodes.BOARD_RATE_LIMITED).toBe('BOARD.RATE_LIMITED')
+  })
+
   it('has unique values, each shaped DOMAIN.REASON', () => {
     const values = Object.values(ErrorCodes)
     expect(new Set(values).size).toBe(values.length)

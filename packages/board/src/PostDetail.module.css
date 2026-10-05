@@ -1,0 +1,35 @@
+.post {
+  display: grid;
+  gap: var(--space-lg);
+  min-width: 0;
+}
+
+.header {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.header h2 {
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+}
+
+.body {
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}

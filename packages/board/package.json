@@ -1,0 +1,33 @@
+{
+  "name": "@skeleton/board",
+  "version": "1.1.0",
+  "private": true,
+  "type": "module",
+  "description": "게시판 — 글 · 중첩 댓글(대댓글) · 타입이 있는 반응(좋아요 · 공감 …) 클라이언트 + TanStack Query 훅(반응은 낙관적 갱신) + PostList · PostDetail · PostEditor · CommentThread · ReactionBar. 반응 종류는 서버가 알려 주는 코드라 문구 · 아이콘은 prop 맵. 백엔드 modules/board 짝",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "types": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run --pool forks",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@skeleton/api-client": "workspace:*",
+    "@skeleton/time": "workspace:*",
+    "@skeleton/ui": "workspace:*"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "^5.0.0",
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@tanstack/react-query": "^5.99.2",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "sonner": "^2.0.7"
+  }
+}

@@ -1,0 +1,47 @@
+import { useMemo, useState } from 'react'
+import { defaultCommentLabels } from './commentLabels'
+import type { CommentOptions } from './commentThreadContext'
+import { nestThread } from './commentTree'
+import { CommentItem, type ThreadContext } from './CommentItem'
+import type { BoardId, CommentWithReplies } from './types'
+
+export type CommentThreadProps = CommentOptions & {
+  /** 서버가 준 최상위 댓글 + 모든 자손(평평하게) — 트리는 여기서 만든다 */
+  thread: CommentWithReplies
+}
+
+/**
+ * 댓글 한 줄기 — 중첩 답글 · 답글 칸 · 내 댓글 수정/삭제 · 운영자 숨김 · 반응 · 깊은 답글 접기.
+ * 열린 답글 칸 · 접힘 상태는 여기서 쥔다. 데이터 · 호출은 모른다 — 콜백(`onReply` …)을 주면 그 단추가 생긴다.
+ */
+export function CommentThread({ thread, ...options }: CommentThreadProps) {
+  const tree = useMemo(() => nestThread(thread), [thread])
+  const [replyingTo, setReplyingTo] = useState<BoardId | null>(null)
+  const [editing, setEditing] = useState<BoardId | null>(null)
+  const [expanded, setExpanded] = useState<ReadonlySet<BoardId>>(new Set())
+
+  const ctx: ThreadContext = {
+    ...options,
+    labels: { ...defaultCommentLabels, ...options.labels },
+    collapseFromDepth: options.collapseFromDepth ?? 2,
+    replyingTo,
+    editing,
+    expanded,
+    setReplyingTo: (id) => {
+      setReplyingTo(id)
+      setEditing(null)
+    },
+    setEditing: (id) => {
+      setEditing(id)
+      setReplyingTo(null)
+    },
+    expand: (id) => setExpanded((current) => new Set(current).add(id)),
+    toggleExpanded: (id) =>
+      setExpanded((current) => {
+        const next = new Set(current)
+        if (!next.delete(id)) next.add(id)
+        return next
+      }),
+  }
+  return <CommentItem node={tree} ctx={ctx} />
+}

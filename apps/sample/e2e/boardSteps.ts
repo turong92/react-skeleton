@@ -1,5 +1,5 @@
 import { expect as pwExpect, type Locator, type Page } from 'playwright/test'
-import { ko } from './helpers'
+import { dismissConsent, ko } from './helpers'
 
 /*
  * 게시판 여정(board.e2e.ts)과 증거 스크립트(walkthrough.board.shots.ts)가 같이 쓰는 단계 — 화면에서 사람이 하는 일 그대로.
@@ -36,6 +36,7 @@ type BoardConfigJson = {
 /** 로그인 화면에서 이메일 · 비밀번호로(체험 계정 채우기 버튼이 아니라) */
 export async function signInAs(page: Page, baseUrl: string, account: Account) {
   await page.goto(`${baseUrl}/login`)
+  await dismissConsent(page)
   await page.getByLabel(ko('login.email')).fill(account.email)
   await page.getByLabel(ko('login.password')).fill(account.password)
   await page.getByRole('button', { name: ko('login.submit'), exact: true }).click()

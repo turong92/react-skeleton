@@ -3,7 +3,7 @@
   "version": "1.1.0",
   "private": true,
   "type": "module",
-  "description": "중립 UI — base.css(리셋 + 요소 타이포) · Button · Input · Field · Select · Textarea · Checkbox · Switch · Tabs · Table · Pagination · EmptyState · Card · Dialog · Spinner · AppShell · PageHeader · Badge · Progress · FilePicker · Stat · SwitchRow · SectionCard · SectionIndex · RowMenu · ErrorReference · ErrorBoundary · showApiError · toastPromise. 의미 토큰만 쓴다(@skeleton/tokens 의 tokens.css 필요)",
+  "description": "중립 UI — base.css(리셋 + 요소 타이포) · Button · Input · Field · Select · Textarea · Checkbox · Switch · Tabs · Table · Pagination · EmptyState · Card · Dialog · Spinner · AppShell · PageHeader · Badge · Progress · FilePicker · Stat · SwitchRow · SectionCard · SectionIndex · RowMenu · Skeleton · Avatar · Breadcrumbs · Alert · CopyButton · Tooltip · Stepper · ConfirmDialog · InfiniteList · Combobox · DatePicker · DateRangePicker · MarkdownView · ErrorReference · ErrorBoundary · showApiError · toastPromise. 의미 토큰만 쓴다(@skeleton/tokens 의 tokens.css 필요)",
   "exports": {
     ".": {
       "types": "./src/index.ts",

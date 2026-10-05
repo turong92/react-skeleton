@@ -16,3 +16,6 @@ export type MessageKey = Parameters<typeof i18n.t>[0]
 
 /** 컴포넌트에서: `const { t } = useT()`. 언어를 바꾸면 이 훅을 쓰는 컴포넌트가 그 자리에서 다시 그린다 */
 export const useT = () => useTranslation<MessageKey>(i18n)
+
+/** 사전이 있는 언어(ko · en)로 좁힌다 — `useT().locale` 은 그냥 문자열이라, 언어별 데이터(가격 · 문서)를 고를 때 */
+export const languageOf = (locale: string): 'ko' | 'en' => (locale === 'ko' ? 'ko' : 'en')

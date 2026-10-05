@@ -1,0 +1,57 @@
+.link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 0 var(--space-lg);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.link:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}
+
+.link[data-variant='primary'] {
+  border-color: var(--inverse);
+  background: var(--inverse);
+  color: var(--on-inverse);
+}
+
+.link[data-variant='primary']:hover {
+  border-color: var(--teal);
+  background: var(--teal);
+}
+
+.link[data-variant='secondary'] {
+  border-color: var(--border-strong);
+  background: var(--surface);
+  color: var(--text-strong);
+}
+
+.link[data-variant='secondary']:hover {
+  border-color: var(--teal);
+  color: var(--teal);
+}
+
+.link[data-variant='ghost'] {
+  color: var(--text-strong);
+}
+
+.link[data-variant='ghost']:hover {
+  background: var(--surface-muted);
+}
+
+/* 어두운 면(CtaBand) 위 — 면의 색을 뒤집는다 */
+.link[data-variant='inverse'] {
+  border-color: var(--on-inverse);
+  background: var(--on-inverse);
+  color: var(--inverse);
+}
+
+.link[data-variant='inverse']:hover {
+  background: var(--surface-muted);
+}

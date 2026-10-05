@@ -3,7 +3,7 @@
 #
 #   scripts/test-new-project.sh            # 빠른 검사 (기본, 수 초): 인자 검증 · 패키지 닫힘 · 구조 · 이름/스코프 바꾸기 · 남는 흔적
 #   scripts/test-new-project.sh --quick    # 위와 같다 (`pnpm test` 가 부른다)
-#   scripts/test-new-project.sh --full     # 위 + 여섯 조합을 임시 디렉토리에 찍어 각각 pnpm install · lint · typecheck · test · build (네트워크 필요, 순차, 수 분)
+#   scripts/test-new-project.sh --full     # 위 + 일곱 조합을 임시 디렉토리에 찍어 각각 pnpm install · lint · typecheck · test · build (네트워크 필요, 순차, 수 분)
 #
 # --full 은 CI 의 별도 워크플로(.github/workflows/new-project.yml)가 돈다. 조합:
 #   1. 기본값만 (스토리집 포함)
@@ -12,6 +12,7 @@
 #   4. --ssr --without-storybook  (서버 렌더 스타터 — 앱의 통합 테스트가 빌드한 서버를 띄워 본다 — 와 스토리집을 뗀 모양)
 #   5. --with-sample  (참조 앱 apps/sample 을 함께 — install · lint · typecheck · test · build 가 샘플까지 돈다. e2e 는 백엔드가 필요해 돌리지 않는다)
 #   6. --packages board  (게시판 — ui · api-client · time 으로 닫힌다. + `pnpm test:stories` — 게시판 스토리를 진짜 브라우저에서)
+#   7. --packages seo,marketing  (공개 페이지 부품 + 머리 · 사이트맵 — ui · time 으로 닫힌다. + `pnpm test:stories` — 랜딩 · 요금제 · 약관 · 404 Patterns 와 동의 배너 스토리를 진짜 브라우저에서)
 # macOS bash 3.2 와 GNU bash 에서 돈다. 임시 디렉토리는 끝나면 지운다 (KEEP=1 이면 남긴다).
 set -euo pipefail
 
@@ -193,6 +194,22 @@ check "board 의 스토리 · 가짜 서버가 따라오고 카탈로그에 적�
 check "tests/support/ssrFixtures.ts 의 board 줄은 남는다(패키지가 있으니) — 다른 패키지의 줄은 이 폴더에 없어도 괜찮다" bash -c "grep -q \"'board#ReactionBar'\" '$BD/tests/support/ssrFixtures.ts'"
 check "스토리가 쓰는 board 는 앱의 의존 줄을 늘리지 않는다 (쓰기 시작할 때 한 줄)" bash -c "! grep -q '@skeleton/board' '$BD/apps/acme-app/package.json'"
 
+echo "== 4c. --packages seo,marketing (공개 페이지: 랜딩 · 요금제 · 약관 · 동의 배너 · 404 + 머리 · 사이트맵 — 앱이 없어도 패키지 · 스토리 · Patterns 가 닫힌다)"
+MK="$TMP/mk"
+expect_exit 0 "seo · marketing 을 찍는다" stamp "$MK" --packages seo,marketing
+want="api-client auth marketing seo theme time tokens ui"
+[ "$(listing "$MK/packages")" = "$want" ] && pass "marketing 은 ui · time 으로, seo 는 아무것도 없이 닫힌다 ($want)" || fail "packages: [$(listing "$MK/packages")]"
+[ -z "$(dangling_deps "$MK" @skeleton)" ] && pass "끊어진 의존 없음" || fail "끊어진 의존: $(dangling_deps "$MK" @skeleton)"
+[ "$(json "$MK/packages/marketing/package.json" 'Object.keys(p.dependencies).sort().join(" ")')" = "@skeleton/time @skeleton/ui" ] && pass "marketing 의 의존은 time · ui 뿐 (외부 의존 0)" || fail "marketing 의존: $(json "$MK/packages/marketing/package.json" 'Object.keys(p.dependencies).join(" ")')"
+[ "$(json "$MK/packages/seo/package.json" 'Object.keys(p.dependencies || {}).length')" = "0" ] && pass "seo 는 의존이 없다 (react 는 peer)" || fail "seo 의존"
+check "Patterns/Landing · Pricing · LegalDocument · NotFound 가 패키지와 함께 따라오고 카탈로그에 적힌다" bash -c "for f in Landing Pricing LegalDocument NotFound; do test -f '$MK/packages/marketing/src/patterns/'\$f.stories.tsx && grep -q \"patterns/\$f.stories.tsx\" '$MK/docs/ui-catalog.md' || exit 1; done"
+check "seo 의 스토리 · 마크다운 부품(MarkdownView — ui)도 카탈로그에 적힌다" bash -c "grep -q 'packages/seo/src/Seo.stories.tsx' '$MK/docs/ui-catalog.md' && grep -q 'MarkdownView.stories.tsx' '$MK/docs/ui-catalog.md'"
+check "고르지 않았으면(기본 조합) marketing · seo 의 스토리는 카탈로그에 없다" bash -c "! grep -qE 'packages/(marketing|seo)/' '$A/docs/ui-catalog.md'"
+check "앱의 의존 줄은 늘지 않는다 (쓰기 시작할 때 한 줄)" bash -c "! grep -qE '@skeleton/(marketing|seo)' '$MK/apps/acme-app/package.json'"
+SRK="$TMP/srk"
+expect_exit 0 "--ssr 는 seo 를 스스로 가져온다(첫 응답이 머리를 쓴다)" stamp "$SRK" --ssr
+[ "$(listing "$SRK/packages")" = "api-client auth seo theme time tokens ui" ] && pass "SSR 앱의 패키지에 seo 가 있다" || fail "ssr packages: [$(listing "$SRK/packages")]"
+
 echo "== 5. --scope @acme --packages payment"
 C="$TMP/c"
 expect_exit 0 "조합 3 을 찍는다" stamp "$C" --scope @acme --packages payment
@@ -251,8 +268,8 @@ WS="$TMP/ws"
 expect_exit 0 "샘플을 함께 찍는다" stamp "$WS" --with-sample
 check "apps/sample 이 이름 그대로 apps/acme-app 옆에 남는다" bash -c "test -f '$WS/apps/sample/package.json' && test -d '$WS/apps/acme-app' && test -d '$WS/apps/storybook'"
 [ "$(json "$WS/apps/sample/package.json" 'p.name')" = "sample" ] && pass "샘플 앱 이름은 그대로 sample" || fail "샘플 앱 이름"
-want="api-client auth board i18n notifications realtime storage theme time tokens ui"
-[ "$(listing "$WS/packages")" = "$want" ] && pass "샘플이 쓰는 패키지(i18n 포함)가 따라온다 ($want)" || fail "packages: [$(listing "$WS/packages")]"
+want="api-client auth board i18n marketing notifications realtime seo storage theme time tokens ui"
+[ "$(listing "$WS/packages")" = "$want" ] && pass "샘플이 쓰는 패키지(i18n · marketing · seo 포함)가 따라온다 ($want)" || fail "packages: [$(listing "$WS/packages")]"
 [ -z "$(dangling_deps "$WS" @skeleton)" ] && pass "끊어진 의존 없음" || fail "끊어진 의존: $(dangling_deps "$WS" @skeleton)"
 check "eslint 의 앱 이름 막기에 sample 과 새 앱 이름이 모두 있다" bash -c "grep -q \"'sample/\*\*'\" '$WS/eslint.config.js' && grep -q \"'acme-app/\*\*'\" '$WS/eslint.config.js'"
 check "새 앱 이름 acme-app 은 샘플과 별개다 (샘플은 acme-app 으로 바뀌지 않는다)" bash -c "! grep -rIl --exclude-dir=node_modules --exclude=pnpm-lock.yaml 'acme-app' '$WS/apps/sample'"
@@ -311,6 +328,7 @@ if [ "$MODE" = "--full" ]; then
   verify_composition "$SRS" "4-ssr-without-storybook"
   verify_composition "$WS" "5-with-sample"
   verify_composition "$BD" "6-board" stories
+  verify_composition "$MK" "7-seo-marketing" stories
 fi
 
 echo

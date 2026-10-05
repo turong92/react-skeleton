@@ -25,9 +25,17 @@ export async function launch(
   return { browser, context, page }
 }
 
-/** 화면 로그인(체험 계정 채우기 버튼 → 로그인) */
+/** 동의 배너가 떠 있으면 「모두 거부」 — 새 브라우저의 첫 방문은 배너가 화면 아래를 덮어 클릭을 가로챈다(사람도 한 번은 답해야 한다) */
+export async function dismissConsent(page: Page) {
+  const reject = page.getByRole('button', { name: ko('consent.rejectAll') })
+  if (await reject.isVisible()) await reject.click()
+}
+
+/** 화면 로그인 — 랜딩(`/`)에서 헤더의 「로그인」 링크로 들어가 체험 계정 채우기 → 로그인 */
 export async function signIn(page: Page, baseUrl: string) {
   await page.goto(baseUrl)
+  await dismissConsent(page)
+  await page.getByRole('link', { name: ko('header.signIn') }).click()
   await page.getByRole('button', { name: ko('login.demoFill') }).click()
   await page.getByRole('button', { name: ko('login.submit'), exact: true }).click()
   await page.getByRole('heading', { level: 1 }).first().waitFor()

@@ -59,4 +59,31 @@ describe('RootLayout (signed out)', () => {
     expect(html).toMatch(/<select[^>]*aria-label="Language"/)
     expect(html).toMatch(/<option value="en" lang="en" selected="">English<\/option>/)
   })
+
+  it('has a footer with the legal links and the cookie settings button, and draws no consent banner on the server', () => {
+    vi.stubGlobal('document', { documentElement: { dataset: {} } })
+    const html = renderToStaticMarkup(
+      <AuthProvider session={createAuthSession({ api, store: createTokenStore() })}>
+        <MemoryRouter>
+          <RootLayout />
+        </MemoryRouter>
+      </AuthProvider>,
+    )
+    expect(html).toMatch(/<footer[\s\S]*href="\/terms"[\s\S]*<\/footer>/)
+    expect(html).toMatch(/<footer[\s\S]*href="\/privacy"[\s\S]*<\/footer>/)
+    expect(html).toContain(i18n.t('footer.cookieSettings'))
+    expect(html).not.toContain(i18n.t('consent.title'))
+  })
+
+  it('a signed-out visitor has a sign-in link in the header', () => {
+    vi.stubGlobal('document', { documentElement: { dataset: {} } })
+    const html = renderToStaticMarkup(
+      <AuthProvider session={createAuthSession({ api, store: createTokenStore() })}>
+        <MemoryRouter>
+          <RootLayout />
+        </MemoryRouter>
+      </AuthProvider>,
+    )
+    expect(html).toMatch(new RegExp(`<a[^>]*href="/login"[^>]*>${i18n.t('header.signIn')}</a>`))
+  })
 })

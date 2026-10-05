@@ -39,6 +39,13 @@ const PAIRS: Pair[] = [
   // 반전 버튼(.action-button, 브랜드 마크) · 호버 때 강조색 바탕
   { fg: '--on-inverse', bg: '--inverse', min: BODY, use: 'inverse button / brand mark' },
   { fg: '--on-inverse', bg: '--teal', min: BODY, use: 'inverse button hover' },
+  {
+    fg: '--inverse',
+    bg: '--on-inverse',
+    min: BODY,
+    use: 'button on an inverse band (the inverse of the pair above)',
+  },
+  { fg: '--inverse', bg: '--surface-muted', min: BODY, use: 'button on an inverse band, hover' },
   { fg: '--on-inverse', bg: '--red', min: BODY, use: 'notification badge' },
   // UI 경계 · 포커스
   { fg: '--teal', bg: '--surface', min: UI, use: 'focus border' },

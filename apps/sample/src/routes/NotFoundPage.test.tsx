@@ -7,13 +7,14 @@ import { NotFoundPage } from './NotFoundPage'
 describe('NotFoundPage', () => {
   afterEach(() => i18n.setLocale('ko', { remember: false }))
 
-  it('is an EmptyState (h2 in the page outline) with a way back to the dashboard', () => {
+  it('is the 404 status page (the h1 of the page) with a way back home, and tells search engines not to index it', () => {
     const html = renderToStaticMarkup(
       <MemoryRouter>
         <NotFoundPage />
       </MemoryRouter>,
     )
-    expect(html).toMatch(/<h2[^>]*>/)
+    expect(html).toMatch(/<h1[^>]*>/)
+    expect(html).toContain('404')
     expect(html).toContain(i18n.t('notFound.title'))
     expect(html).toMatch(/<a[^>]*href="\/"/)
   })
@@ -26,6 +27,6 @@ describe('NotFoundPage', () => {
       </MemoryRouter>,
     )
     expect(html).toContain('Page not found')
-    expect(html).toContain('Go to the dashboard')
+    expect(html).toContain('Go home')
   })
 })

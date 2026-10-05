@@ -12,7 +12,7 @@ const guarded = (path: string) =>
   chain(path).some((route) => isValidElement(route.element) && route.element.type === RequireAuth)
 
 describe('routes', () => {
-  it('has every screen of the journey: dashboard, notes, board, settings, login, 404', () => {
+  it('has every screen of the journey: home (landing or dashboard), notes, board, settings, login, the legal pages, 404', () => {
     expect(leaf('/')?.path).toBe('/')
     expect(leaf('/notes')?.path).toBe('/notes')
     expect(leaf('/notes/new')?.path).toBe('/notes/new')
@@ -24,12 +24,13 @@ describe('routes', () => {
     expect(leaf('/board/p1')?.path).toBe('/board/:id')
     expect(leaf('/board/p1/edit')?.path).toBe('/board/:id/edit')
     expect(leaf('/login')?.path).toBe('/login')
+    expect(leaf('/terms')?.path).toBe('/terms')
+    expect(leaf('/privacy')?.path).toBe('/privacy')
     expect(leaf('/nope/nope')?.path).toBe('*')
   })
 
-  it('everything except login and the 404 sits under the auth guard', () => {
+  it('the signed-in screens sit under the auth guard; home, login, the legal pages and the 404 are public', () => {
     for (const path of [
-      '/',
       '/notes',
       '/notes/new',
       '/notes/abc',
@@ -41,6 +42,16 @@ describe('routes', () => {
       '/settings',
     ])
       expect(guarded(path), path).toBe(true)
-    for (const path of ['/login', '/nope']) expect(guarded(path), path).toBe(false)
+    for (const path of ['/', '/login', '/terms', '/privacy', '/nope'])
+      expect(guarded(path), path).toBe(false)
+  })
+
+  it('every route says how it appears to search engines (handle.seo): the landing and the legal pages are indexable; the login page, everything behind it and the 404 are not', () => {
+    const seoOf = (path: string) =>
+      (chain(path).at(-1)!.handle as { seo?: { indexable: boolean } } | undefined)?.seo
+    for (const path of ['/', '/terms', '/privacy']) expect(seoOf(path)?.indexable, path).toBe(true)
+    for (const path of ['/login', '/notes', '/notes/new', '/board', '/board/p1', '/settings'])
+      expect(seoOf(path)?.indexable, path).toBe(false)
+    expect(seoOf('/nope')?.indexable).toBe(false)
   })
 })

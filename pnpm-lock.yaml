@@ -107,12 +107,18 @@ importers:
       '@skeleton/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
+      '@skeleton/marketing':
+        specifier: workspace:*
+        version: link:../../packages/marketing
       '@skeleton/notifications':
         specifier: workspace:*
         version: link:../../packages/notifications
       '@skeleton/realtime':
         specifier: workspace:*
         version: link:../../packages/realtime
+      '@skeleton/seo':
+        specifier: workspace:*
+        version: link:../../packages/seo
       '@skeleton/storage':
         specifier: workspace:*
         version: link:../../packages/storage

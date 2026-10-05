@@ -1,6 +1,6 @@
 # react-skeleton — Claude Code 컨텍스트
 
-React + TypeScript + Vite 프론트엔드 스켈레톤. pnpm 워크스페이스 — 캡슐화된 패키지 12개 + 앱 4개(SPA 스타터 · SSR 스타터 · 스토리집 · 워크벤치). REST 백엔드(kotlin-skeleton)와 통신하는 SPA 출발점이고, 백엔드 `modules/` 처럼 프로젝트가 필요한 패키지만 한 줄씩 골라 쓴다.
+React + TypeScript + Vite 프론트엔드 스켈레톤. pnpm 워크스페이스 — 캡슐화된 패키지 15개 + 앱 5개(SPA 스타터 · SSR 스타터 · 참조 앱 샘플 · 스토리집 · 워크벤치). REST 백엔드(kotlin-skeleton)와 통신하는 SPA 출발점이고, 백엔드 `modules/` 처럼 프로젝트가 필요한 패키지만 한 줄씩 골라 쓴다.
 
 <!-- storybook-guide:start -->
 
@@ -9,7 +9,7 @@ React + TypeScript + Vite 프론트엔드 스켈레톤. pnpm 워크스페이스 
 화면을 짤 때마다 결과가 달라지지 않도록 **보고 따라 할 정본**이 있다 — Storybook(`pnpm storybook` → http://localhost:6006). 부품마다 스토리 하나가 「보이는 모습 · 정본 사용법 · 실행되는 테스트(`play`)」이고, 테스트가 돌기 때문에 낡지 않는다.
 
 1. **부품을 쓰기 전에** `docs/ui-catalog.md` 에서 그 부품의 스토리 파일을 찾아 읽고, 거기 있는 사용법(`Field` 안에 `Input`, `Table` 의 `empty` …)을 그대로 따른다. 카탈로그에 없는 부품은 만들기 전에 있는 것으로 되는지부터 본다.
-2. **새 화면은 `Patterns/…` 스토리에서 시작한다** — 가장 가까운 것을 복사해 문구 · 데이터 연결만 바꾼다(아래 표). 처음부터 짜지 않는다.
+2. **새 화면은 `Patterns/…` 스토리에서 시작한다** — 가장 가까운 것을 복사해 문구 · 데이터 연결만 바꾼다(아래 표). 처음부터 짜지 않는다. 패키지가 자기 Patterns 를 들고 올 수도 있다(예: 공개 페이지용 `@skeleton/marketing` 의 랜딩 · 요금제 · 약관 · 404 — `docs/ui-catalog.md` 의 Patterns 표가 정본).
 3. **날 요소 · 날값 금지** — `<button>` `<input>` `<select>` `<textarea>` `<dialog>` 대신 `@skeleton/ui` 의 `Button` `Input`(+`Field`) `Select` `Textarea` `Dialog`, 인라인 style 의 색 · 간격 · 모서리 날값 대신 의미 토큰(`var(--space-md)`). `apps/**` 에서 ESLint 가 메시지와 함께 막는다(`packages/ui` 안은 부품을 만드는 곳이라 제외).
 4. **부품을 더하거나 바꾸면 스토리를 더하거나 고치고 `play` 로 동작을 검증한다**(클릭 · 키보드 · 라벨 연결 · 상태). `pnpm test:stories`(진짜 브라우저)가 통과해야 한다 — 접근성(a11y) 위반도 실패다. 규칙을 끄려면 그 스토리 옆에 이유를 적는다.
 5. **스토리 파일을 더하거나 지우면** `docs/ui-catalog.md` 표에 한 줄을 더하거나 지운다(`tests/stories.test.ts` 가 어긋남을 막는다). `@skeleton/ui` 가 새로 export 하는 것은 `packages/ui/src/<폴더>/` 에 스토리(+`play` 하나 이상)가 있어야 한다.
@@ -38,13 +38,13 @@ apps/
 │   ├── src/hooks/useHello.ts # TanStack Query 예시(GET /hello)
 │   ├── src/layouts/RootLayout.tsx   # AppShell + ThemeToggle
 │   └── src/routes/           # routes.tsx(path → page) · index.tsx(router) · Home · Login · Account(RequireAuth 아래) · NotFound(EmptyState)
-├── starter-ssr/              # SSR 스타터(같은 페이지, 서버가 첫 응답을 그린다 — 워크벤치 코드 없음)
+├── starter-ssr/              # SSR 스타터(같은 페이지, 서버가 첫 응답을 그린다 — 머리(canonical · OG · robots)는 @skeleton/seo, SITE_URL 이 공개 주소, 빌드가 sitemap.xml · robots.txt — 워크벤치 코드 없음)
 │   ├── server/               # Node 서버: main.ts(개발=Vite 미들웨어 · 프로덕션=dist) · handler.ts(정적 · 상태 코드) · config.ts(env) · contract.ts
 │   ├── src/entry-server.tsx  # render(url,{api}) — 라우트 맞추기(404) → handle.prefetch → renderToString → head(title · 설명 · dehydrate 상태)
 │   ├── src/entry-client.tsx  # initTheme → readSsrState → hydrateRoot(createClientApp) ; src/app/ AppProviders · AppRoutes(서버 · 브라우저 공유)
 │   ├── src/auth/             # createDeferredTokens(저장소 읽기를 하이드레이션 뒤로) · ClientRequireAuth(서버는 중립 자리 표시)
 │   └── src/routes/routes.tsx # 라우트마다 handle { title, description, robots, prefetch } ; Dockerfile(런타임에 node_modules 없음)
-├── sample/                   # 참조 앱 Notes(`new-project.sh --with-sample` 일 때만 따라간다): 로그인 → 대시보드 → 목록 → 상세 → 폼 → 첨부 업로드 → 알림 → 게시판(글 · 대댓글 · 공감 같은 반응) → 설정, Patterns 를 조립한 실제 제품 모양. 백엔드 짝은 kotlin-skeleton `apps/sample`
+├── sample/                   # 참조 앱 Notes(`new-project.sh --with-sample` 일 때만 따라간다): 랜딩(로그아웃 상태의 `/` — 요금제 · FAQ · 동의 배너 · 푸터) → 약관 · 방침(템플릿) → 로그인 → 대시보드 → 목록 → 상세 → 폼 → 첨부 업로드 → 알림 → 게시판(글 · 대댓글 · 공감 같은 반응) → 설정 · 404, Patterns 를 조립한 실제 제품 모양(화면마다 `handle.seo`). 백엔드 짝은 kotlin-skeleton `apps/sample`
 ├── storybook/                # 스토리집(Storybook 10 · Vite): .storybook/(설정 · 라이트/다크 스위치 · a11y 실패 규칙) · src/patterns/(복사해서 시작하는 화면 틀 6개) · src/tokens/(토큰 문서). 부품 스토리는 부품 옆(packages/*/src/**/*.stories.tsx)
 └── workbench/                # 백엔드 확인용 시각적 테스트 벤치(HomePage · modules/workbench · workbench.css) + modules/demos(`/packages` 예제 화면: 새 패키지를 눌러 본다)
 packages/                     # 서로를 이름으로만 부른다. 각자 package.json(exports=src/index.ts) · 테스트 · README
@@ -57,10 +57,12 @@ packages/                     # 서로를 이름으로만 부른다. 각자 pack
 ├── storage/                  # createStorageApi · createUploader(검증 → presign → 직접 PUT, 멀티파트) · useUpload · validateFile
 ├── payment/                  # PaymentContracts 타입 · createPaymentApi(경로는 앱이 준다) · confirmRequestFromTossRedirect — 일부러 얇다
 ├── captcha-turnstile/        # loadTurnstile · <Turnstile> · useTurnstileToken · attachTurnstileToken
-├── time/                     # formatInstant/formatDate/formatDual · createServerClock · 국가→시간대
+├── seo/                      # buildHeadSpec(제목 템플릿 · 설명 · canonical · OG/Twitter · hreflang · JSON-LD) · renderHeadHtml(서버) · applyHead/useSeo/<Seo>(브라우저) · sitemapXml · robotsTxt · @skeleton/seo/vite 의 seoFiles(빌드가 sitemap.xml · robots.txt)
+├── marketing/                # Hero · FeatureGrid · FaqAccordion · Testimonial · CtaBand · SiteFooter · PricingTable(plans 데이터 · 월/연) · createConsentStore + ConsentBanner(추적 코드 없음) · LegalDocumentPage(판 바꾸기 · 템플릿 표시) · NotFoundPage/ServerErrorPage/MaintenancePage + src/patterns/ 의 Patterns/Landing · Pricing · LegalDocument · NotFound
+├── time/                     # formatInstant/formatDate/formatDual · todayInZone · createServerClock · 국가→시간대
 ├── theme/                    # theme.ts · ThemeToggle · ThemedToaster · PRE_PAINT_SCRIPT + @skeleton/theme/vite(themePrePaint)
 ├── tokens/                   # tokens.json(정본) · build.mjs(생성기) · tokens.css(생성물) · 테스트 도구(findRawColors · findRawLayout …)
-└── ui/                       # base.css · Button/Input/Field/Select/Textarea/Checkbox/Switch/Tabs/Table/Pagination/EmptyState/Card/Dialog/Spinner/AppShell · SwitchRow · SectionCard/SectionIndex · RowMenu · ErrorReference · ErrorBoundary · showApiError · toastPromise — 부품마다 옆에 *.stories.tsx(CSF3 + play)
+└── ui/                       # base.css · Button/Input/Field/Select/Textarea/Checkbox/Switch/Tabs/Table/Pagination/EmptyState/Card/Dialog/Spinner/AppShell · SwitchRow · SectionCard/SectionIndex · RowMenu(⋯ · 일반 드롭다운 `trigger` · `align`) · Skeleton · Avatar · Breadcrumbs · Alert · CopyButton · Tooltip · Stepper · Combobox(비동기) · DatePicker/DateRangePicker · InfiniteList · ConfirmDialog(문구 입력 확인) · MarkdownView(안전한 부분집합 · `{{키}}`) · ErrorReference · ErrorBoundary · showApiError · toastPromise — 부품마다 옆에 *.stories.tsx(CSF3 + play)
 scripts/                      # new-project.sh(새 프로젝트 찍기) · new-project.d/stamp.mjs(일꾼) · test-new-project.sh(--quick · --full)
 tests/                        # 워크스페이스 가로지르는 테스트: stories(모든 @skeleton/ui export 에 스토리 + play · 모든 Patterns 가 안내에 적힘 · 카탈로그 일치) · eslint.uiOnly(날 요소 · 인라인 날값 금지) · ssr.safety(모든 패키지가 window 없는 Node 에서 import · 모든 컴포넌트 · 훅이 서버에서 그려진다 — support/ssrFixtures.ts) · usage(날 색 · 날 간격/모서리/글자 크기 · --p-* · var 정의) · contrast(AA 짝) · tokens.wiring · theme.names · workspace(의존 규칙) · eslint.boundaries · skeleton.repo(이 레포의 앱 · 패키지 목록 — 찍을 때 지워진다)
 docs/design-tokens.md         # 토큰 층 · 이름 · 추가법 + 생성된 표
@@ -79,7 +81,7 @@ docs/ui-catalog.md            # 부품 → 스토리 파일 → 언제 쓰는가
 
 `scripts/new-project.sh <target-dir> <name> [--packages a,b,c] [--ssr] [--without-storybook] [--with-workbench] [--with-sample] [--scope @acme]` — 레포를 복사해 `apps/starter`(`--ssr` 이면 `apps/starter-ssr`)를 `apps/<name>` 으로, `apps/storybook`(스토리집) · 남는 패키지의 스토리 · Patterns · 에이전트 안내 · `docs/ui-catalog.md` 는 기본으로 따라온다(**참조가 프로젝트와 함께 간다** — `--without-storybook` 이면 스토리 · 스토리집 · 그 도구 의존 · CI 잡을 모두 뗀다). **`apps/sample`(참조 앱 Notes)은 기본으로 떼고 `--with-sample` 일 때만 남긴다** — 그 앱이 쓰는 패키지가 따라오고, 샘플 전용 루트 스크립트(`dev:sample` · `e2e:sample`)와 `ci.yml` 의 `sample-e2e-job` 표식 사이 잡·CLAUDE.md 의 `sample` 표식 구역은 샘플을 떼면 함께 지워지고 가져가면 표식 줄만 걷힌다(이름 `sample` 은 예약). 패키지는 스타터가 쓰는 것 + 루트 도구(`theme` · `tokens`) + `--packages` 를 `@skeleton/*` 의존으로 닫은 집합만 남긴다(나머지 폴더 · `tests/skeleton.repo.test.ts` · new-project 도구는 지운다). 루트 `package.json` · eslint 앱 이름 막기 · README/CLAUDE/CHANGELOG 를 새 프로젝트용으로 바꾸고, `--scope` 면 `@skeleton` 을 모두 바꾼다. 고른 패키지는 폴더만 오고 앱 의존 한 줄은 쓰기 시작할 때 더한다(안 쓰는 의존은 루트 테스트가 막는다). 일꾼은 `scripts/new-project.d/stamp.mjs`.
 
-- 빠른 검사 `bash scripts/test-new-project.sh --quick`(`pnpm test` 가 부른다) · 조합 전체 `--full`(기본 · `--packages realtime,notifications,storage`(+ `storybook:build` · `test:stories`) · `--packages board`(+ `storybook:build` · `test:stories`) · `--with-sample` · `--scope @acme --packages payment` · `--ssr --without-storybook` 를 찍어 각각 install · format · tokens:check · lint · typecheck · test · format:check · build — 네트워크, 수 분, 별도 워크플로 `.github/workflows/new-project.yml`).
+- 빠른 검사 `bash scripts/test-new-project.sh --quick`(`pnpm test` 가 부른다) · 조합 전체 `--full`(기본 · `--packages realtime,notifications,storage`(+ `storybook:build` · `test:stories`) · `--packages board`(+ `storybook:build` · `test:stories`) · `--packages seo,marketing`(+ `storybook:build` · `test:stories`) · `--with-sample` · `--scope @acme --packages payment` · `--ssr --without-storybook` 를 찍어 각각 install · format · tokens:check · lint · typecheck · test · format:check · build — 네트워크, 수 분, 별도 워크플로 `.github/workflows/new-project.yml`).
 - **패키지 · 앱을 더하거나 지우거나 이름을 바꾸면**: `tests/skeleton.repo.test.ts` 의 목록, 이 문서와 README 의 표, `stamp.mjs` 가 기대하는 문자열(`eslint.config.js` 의 `APP_NAMES` 목록 · `STORY_HINT` 줄 · `globalIgnores` 의 storybook-static 줄 · `ci.yml` 의 `stories-job` 표식 · CLAUDE.md 의 `storybook-guide` / `storybook` 표식 · `starter-ssr` 의 `src/appName.ts` · `Dockerfile` 의 `ARG APP` · `RootLayout.tsx` 의 `<strong>starter</strong>` · `index.html` 제목 · 루트 `test` 스크립트 꼴)을 함께 본다 — 어긋나면 `stamp.mjs` 가 조용히 넘기지 않고 멈춘다.
 
 ## 핵심 컨벤션

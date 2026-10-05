@@ -19,7 +19,9 @@ packages/
 ├── storage/             # 프리사인 업로드 — 검증 · presign · 직접 PUT(진행률 · 취소) · 멀티파트 · useUpload
 ├── payment/             # 결제 계약 타입 + 얇은 호출 + 토스 리다이렉트 변환 (모듈이 HTTP 를 열지 않아 일부러 얇다)
 ├── captcha-turnstile/   # Cloudflare Turnstile 로더 · <Turnstile> · 토큰 붙이기
-├── time/                # 글로벌 시간(시각 3종 포맷 · 서버 시각 보정 · 국가→시간대)
+├── seo/                 # 문서의 머리(제목 템플릿 · 설명 · canonical · OG/Twitter · JSON-LD · robots) — SPA(effect)와 SSR(문자열)이 같은 규칙 · 빌드 때 sitemap.xml · robots.txt(Vite 플러그인)
+├── marketing/           # 공개 페이지 조립 부품 — Hero · FeatureGrid · PricingTable(데이터로) · FaqAccordion · Testimonial · CtaBand · SiteFooter · 동의 배너(+ 저장소 · onChange) · LegalDocumentPage(판 바꾸기) · 404/500/점검 + Patterns 4개
+├── time/                # 글로벌 시간(시각 3종 포맷 · 서버 시각 보정 · 국가→시간대 · 오늘의 달력 날짜)
 ├── theme/               # system·light·dark 테마 · ThemeToggle · ThemedToaster · 첫 칠 전 스크립트(Vite 플러그인)
 ├── tokens/              # 디자인 토큰 정본(tokens.json: 색 · 간격 · 모서리 · 글자 크기) + 생성기 + tokens.css(라이트/다크) + 문서 표 생성
 └── ui/                  # base.css · Button · Input · Field · Select · Textarea · Checkbox · Switch · Tabs · Table · Pagination · EmptyState · Card · Dialog · Spinner · AppShell · ErrorBoundary · showApiError · toastPromise
@@ -96,10 +98,12 @@ scripts/new-project.sh ~/work/ovation ovation --with-sample                     
 | `payment`           | api-client             | `payment` + `payment-toss` · `payment-stripe`. HTTP 는 앱                                            | `createPaymentApi(apiClient, { paths: { confirm } })` · `confirmRequestFromTossRedirect(location.search, { currency })`                                      |
 | `captcha-turnstile` | —                      | `captcha-turnstile`(`TurnstileVerifier`). HTTP 는 앱                                                 | `<Turnstile siteKey {...useTurnstileToken().widgetProps} />` · `attachTurnstileToken(body, token)`                                                           |
 | `i18n`              | —                      | — (화면 전용)                                                                                        | `createI18n({ catalogs, defaultLocale, storageKey })` + 시작할 때 `await i18n.init()` + `useT()` · `<LanguageMenu>`(ui) · 테스트 `catalogProblems`           |
+| `seo`               | —                      | — (화면 전용)                                                                                        | `<SeoProvider defaults>` + 화면마다 `<Seo title canonical jsonLd />` · 서버 렌더는 `renderHeadHtml(buildHeadSpec(meta, defaults))` · 빌드 `seoFiles({ baseUrl, routes })` |
+| `marketing`         | time · ui              | — (화면 전용)                                                                                        | `<Hero>` `<FeatureGrid>` `<PricingTable plans …>` `<FaqAccordion>` `<SiteFooter>` · `createConsentStore()` + `<ConsentBanner>` · `<LegalDocumentPage versions …>` · `<NotFoundPage>` |
 | `time`              | —                      | `time`                                                                                               | `formatInstant(iso)` · `formatDual(zoned)` · `createServerClock()`                                                                                           |
 | `theme`             | —                      | —                                                                                                    | `plugins: [themePrePaint()]` + 시작할 때 `initTheme()` + `<ThemeToggle />` + `<ThemedToaster />`                                                             |
 | `tokens`            | —                      | —                                                                                                    | `import '@skeleton/tokens/tokens.css'` (색 · 간격 · 모서리 · 글자 크기는 `tokens.json` 에서)                                                                 |
-| `ui`                | api-client             | —                                                                                                    | `import '@skeleton/ui/base.css'` + `<Button>` `<Field>` `<Input>` `<Textarea>` `<Checkbox>` `<Tabs>` `<Table>` `<Pagination>` …                              |
+| `ui`                | api-client · time      | —                                                                                                    | `import '@skeleton/ui/base.css'` + `<Button>` `<Field>` `<Input>` `<Textarea>` `<Checkbox>` `<Tabs>` `<Table>` `<Pagination>` …                              |
 
 `notifications` · `storage` · `board` 의 HTTP 엔드포인트는 백엔드 모듈이 연다(인증 필요) — 기본 경로가 그것이라 한 줄이면 되고, 앱이 다른 경로로 열었다면 `basePath` · `storageEndpoints('/files')` 로 바꾼다. 「HTTP 는 앱」인 패키지(`payment` · `captcha-turnstile`)는 백엔드 모듈이 서비스 계약만 주고 엔드포인트를 열지 않아 **경로를 앱이 알려 준다**(기본 경로 없음 — 없는 엔드포인트를 가정하지 않는다). 자세한 API 표 · 어느 파일의 어느 계약인지 · 테스트가 재지 않는 것은 각 `packages/<이름>/README.md`. `ui` · `theme` 의 색은 `tokens` 의 `tokens.css` 가 로드되어야 나온다(JS import 의존은 아니라 `package.json` 에 적지 않는다 — `main.tsx` 맨 앞에서 한 번 import).
 

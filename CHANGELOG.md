@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — 「도메인만 바꿔 켜면 서비스 구색이 나온다」를 위한 프런트 부품: `@skeleton/seo` · `@skeleton/marketing` · `@skeleton/ui` 13개 (2026-10-06)
+
+백엔드 API 가 새로 필요 없는 조각만. 모든 부품은 스토리 + `play`(a11y 위반도 실패) · 카탈로그 한 줄 · SSR 서버 렌더 확인 · 라이트/다크를 갖췄고, 새 런타임 의존은 **0**(번들 영향은 아래).
+
+- **`@skeleton/ui`(새 부품)**: `Skeleton` · `Avatar` · `Breadcrumbs` · `Alert` · `CopyButton` · `Tooltip`(WAI-ARIA) · `Stepper` · `ConfirmDialog`(문구를 정확히 쳐야 켜지는 확인 선택 · 처음 포커스는 취소) · `InfiniteList`(끝에 닿으면 자동 + **언제나** 키보드 「더 보기」 버튼 · 실패하면 멈추고 다시 시도 · 버튼이 사라질 때 포커스 보존) · `Combobox`(WAI-ARIA 자동완성, 정적 목록 거르기 또는 비동기 `loadOptions(query, signal)` — 디바운스 · 중복 요청 취소 · **늦게 온 옛 응답은 버린다** · 악센트 · 한글 NFC/NFD 무시) · `DatePicker`/`DateRangePicker` · `MarkdownView`.
+  - `DatePicker` 는 **네이티브 `<input type="date">`** 위에 만들었다: 달력 팝업 · 키보드 · 모바일 선택기 · 지역화를 브라우저가 이미 접근성 있게 해 주고, 직접 만든 달력은 그 전부를 다시 만들어야 한다(번들 0). 보탠 것은 고른 날을 글로 읽어 주기(`@skeleton/time` 의 `formatDate` — 달력 날짜는 시간대로 옮기지 않는다)와 시간대에 맞는 「오늘」 버튼(`todayInZone`), `min`/`max`. 기간은 시작 ≤ 끝을 서로의 `min`/`max` 로 묶고 거꾸로 쳐 넣으면 끝칸에 오류.
+  - `MarkdownView`(법적 문서용 **안전한 부분집합**): 제목 · 문단 · 목록(한 단계 중첩) · 강조 · 코드 · 링크 · 표 · 구분선만. **`dangerouslySetInnerHTML` 이 없다** — 날 HTML · 이미지는 보이는 글자로 남는다. 링크는 `http(s)` · `mailto` · `tel` · `/경로` · `#앵커` 만(`java\tscript:` 같은 우회 · `//host` · `data:` 는 글자만 남김), 바깥 링크는 새 탭 + `rel="noopener noreferrer"` + 보이지 않는 「새 탭」 안내. `{{키}}` 는 `facts` 에서 **글자로만** 채운다(값에 마크다운 · HTML 이 있어도 구조가 되지 않고, 주소 안의 `{{키}}` 는 채운 뒤 다시 검사) — 못 채운 키는 노란 표시로 남아 빈 문서가 공개되지 않는다. 2000개 무작위 적대 입력 속성 시험(씨앗 고정 · 라이브러리 없음)이 허용 태그 · 속성 · href 를 지킨다(검증기를 일부러 풀어 보면 이 시험이 실패한다).
+  - `RowMenu` 는 일반 드롭다운으로도 쓴다 — `align`(start · end, 넘치면 반대쪽) 추가, 헤더 계정 메뉴(아바타 트리거 · 하나 고르기 묶음 · 위험 항목) 스토리. 별도 `DropdownMenu` 는 만들지 않았다(같은 일을 하는 두 번째 메뉴가 된다).
+  - `@skeleton/ui` 가 `@skeleton/time` 에 의존한다(날짜 입력). `@skeleton/time` 에 `todayInZone(zone, now?)` 추가.
+- **`@skeleton/seo`**(새 패키지, 의존 0): `buildHeadSpec`(제목 템플릿 · 설명 · canonical(절대 · 해시 제거) · `og:*` · `twitter:*` · hreflang · JSON-LD) 한 규칙을 서버는 `renderHeadHtml`(이스케이프된 글자), 브라우저는 `applyHead`/`useSeo`/`<Seo>`(`data-seo` 태그만 갈아 끼운다)로 쓴다. JSON-LD 직렬화는 `< > &` · U+2028/9 를 이스케이프해 값에 `</script>` 가 있어도 빠져나가지 못한다. `sitemapXml`(같은 호스트 · 중복 · 날짜 · 우선순위 · 5만 개 검사) · `robotsTxt`(줄을 늘리는 개행 값은 던진다 · `allowIndexing:false` 로 스테이징 전체 차단) · `@skeleton/seo/vite` 의 `seoFiles`(정적 빌드가 `sitemap.xml` · `robots.txt` 를 낸다 — 서버 번들 빌드에는 안 쓴다).
+  - **`apps/starter-ssr`**: 머리를 `@skeleton/seo` 로(canonical · OG/Twitter · robots), 라우트 `handle` 에 `image` · `jsonLd`, `SITE_URL`(공개 주소 — 없으면 canonical · `og:url` 을 **빼고** 추측하지 않는다 · 빌드의 sitemap.xml 에도), 브라우저는 서버가 알려 준 공개 주소로 라우트 전환 때 같은 머리를 쓴다. `applyDocumentMeta` 는 `applyHead` 로 대체. **`--ssr` 로 찍으면 `seo` 가 따라온다**(SPA 스타터는 아니다).
+- **`@skeleton/marketing`**(새 패키지, 의존 `ui` · `time`, 외부 의존 0): `Hero` · `FeatureGrid` · `Testimonial` · `CtaBand` · `SiteFooter` · `FaqAccordion`(네이티브 `<details>`) · `PricingTable`(요금제 **데이터** · 월/연 토글 + 절약 % · 강조 · 0원 · 맞춤 가격 · 통화 · 로케일 명시) · 동의(`createConsentStore` — `localStorage` · 구독 · `onChange` · 버전이 바뀌면 다시 묻기 · 필수 범주는 못 끈다 · 저장이 막혀도 동작 / `ConsentBanner` — 모두 거부 = 모두 허용과 같은 무게 · 서버에는 안 그린다 · **추적 코드 없음**) · `LegalDocumentPage`(판마다 마크다운 + 효력일 · 판 바꾸기 · 옛 판 안내 · 템플릿 표시) · `NotFoundPage` · `ServerErrorPage`(참조 번호) · `MaintenancePage`. Patterns 4개(`Patterns/Landing` · `Pricing` · `LegalDocument` · `NotFound`)는 패키지 옆 `src/patterns/` — 패키지와 함께 찍힌다.
+  - **ui 가 아니라 별도 패키지인 이유**: `ui` 는 어느 앱에나 가는 낱개 부품이고 이것은 한 페이지의 **구역**과 그 구역의 저장소다 — 로그인 뒤 앱에는 필요 없다. 별도라서 `--packages marketing` 으로 고른 프로젝트에만 따라간다.
+- **`apps/sample`**: 로그아웃 상태의 `/` 는 **랜딩**(로그인하면 대시보드, `HomeRoute`) · `/terms` · `/privacy` 는 **템플릿** 문서(ko · en 각 두 판, 파일에서 읽고 `?v=` 로 판 공유 · 맨 위 TEMPLATE 표시 · 사실은 `legal/facts.ts` — 모든 판이 TEMPLATE 를 말하고 안 채운 `{{키}}` 가 없는지 테스트가 지킨다) · 진짜 404 화면 · 푸터 · 동의 배너(분석 코드는 넣지 않았다) · 모든 라우트의 `handle.seo`(공개 3개는 노출, 로그인 · 로그인 뒤 · 404 는 `noindex, nofollow`) · 빌드가 `sitemap.xml` · `robots.txt`(`VITE_SITE_URL`). 화면 → Pattern 지도 · e2e 여정(랜딩 → 동의 → 약관 판 바꾸기 → 404 → 로그인)을 갱신했다.
+- **`new-project.sh`**: `--packages seo,marketing` 가 `ui` · `time` 으로 닫혀 찍힌다(고르지 않으면 카탈로그에도 없다). `test-new-project.sh` 에 빠른 점검 구역(4c)과 `--full` 의 일곱 번째 조합(`seo,marketing` + `storybook:build` · `test:stories`)을 더했다.
+- 바뀐 것(호환 주의): 샘플의 `/` 는 로그아웃 상태에서 로그인으로 리다이렉트하지 않고 랜딩을 그린다(e2e 의 `signIn` 은 랜딩의 「로그인」 링크로 들어간다). 샘플의 `notFound.home` 문구는 「대시보드로 가기」 → 「홈으로 가기」.
+
 ### Fixed — 빌드 · 테스트가 0% CPU 로 영원히 멈추던 rolldown 교착 (vite 8.0.9 → ^8.3.2) + 워치독 (2026-10-06)
 
 - **측정**(macOS arm64 · Node 24.19 · 깨끗한 복사본, 시도마다 60초 감시): 같은 명령을 반복해 멈춘 비율을 쟀다.

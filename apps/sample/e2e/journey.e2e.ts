@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, inject, it } from 'vitest'
 import { ko, launch, seedNotes, signIn } from './helpers'
 
 /*
- * 핵심 여정 — 로그인 → 빈 대시보드 → 만들기(검증 오류 → 성공) → 알림 → 첨부 업로드 → 내보내기 → 목록(검색 · 필터 · 쪽) → 수정 → 삭제 → 설정(테마) → 로그아웃.
+ * 핵심 여정 — 랜딩(로그아웃 상태의 `/` · 동의 배너 · 약관 · 404) → 로그인 → 빈 대시보드 → 만들기(검증 오류 → 성공) → 알림 → 첨부 업로드 → 내보내기 → 목록(검색 · 필터 · 쪽) → 수정 → 삭제 → 설정(테마) → 로그아웃.
  * 진짜 백엔드 · 진짜 브라우저. 한 흐름이라 단계가 앞 단계의 결과에 기댄다(앞이 실패하면 뒤는 의미 없다).
  */
 const baseUrl = inject('baseUrl')
@@ -24,8 +24,49 @@ const bell = () => page.getByRole('button', { name: /^알림/ })
 const heading = (name: string | RegExp, level = 1) => page.getByRole('heading', { level, name })
 
 describe('Notes — the main journey against the real backend', () => {
-  it('rejects a wrong password, then signs in with the demo account', async () => {
+  it('a signed-out visitor lands on the landing page, answers the consent banner (remembered), reads a legal page and a 404, then goes on to the login', async () => {
     await page.goto(baseUrl)
+    await pwExpect(heading(ko('landing.title'))).toBeVisible()
+    await pwExpect(page).toHaveTitle(new RegExp(ko('seo.landing.title')))
+    // 구조화된 머리: 공개 페이지는 canonical 이 아닌 robots 없음 · 랜딩의 FAQ 구조화 데이터
+    await pwExpect(page.locator('script[type="application/ld+json"]')).toHaveCount(1)
+    const banner = page.getByRole('region', { name: ko('consent.title') })
+    await pwExpect(banner).toBeVisible()
+    await page.getByRole('button', { name: ko('consent.rejectAll') }).click()
+    await pwExpect(banner).toHaveCount(0)
+    await page.reload()
+    await pwExpect(heading(ko('landing.title'))).toBeVisible()
+    await pwExpect(banner).toHaveCount(0) // 선택은 기억된다
+
+    // 요금제: 연 결제로 바꾸면 한 달 값 + 연 총액
+    await page.getByRole('button', { name: new RegExp(ko('landing.pricing.yearly')) }).click()
+    await pwExpect(page.getByText(/^연 .*결제$/).first()).toBeVisible()
+
+    // 약관(템플릿): 푸터 링크 → 템플릿 표시 → 옛 판
+    await page.getByRole('link', { name: ko('footer.terms') }).click()
+    await pwExpect(heading(ko('legal.terms.title'))).toBeVisible()
+    await pwExpect(page.getByRole('alert')).toContainText('템플릿')
+    await page.getByLabel(ko('legal.switcher')).selectOption('1.0')
+    await pwExpect(page).toHaveURL(/\?v=1\.0$/)
+    await pwExpect(page.getByText(ko('legal.older', { current: '2.0' }))).toBeVisible()
+    await pwExpect(page).toHaveTitle(new RegExp(ko('seo.terms.title')))
+
+    // 없는 주소: 404 화면 · 검색에서 뺀다
+    await page.goto(`${baseUrl}/no-such-page`)
+    await pwExpect(heading(ko('notFound.title'))).toBeVisible()
+    await pwExpect(page.locator('meta[name="robots"]')).toHaveAttribute(
+      'content',
+      'noindex, nofollow',
+    )
+
+    // 랜딩 → 로그인
+    await page.goto(baseUrl)
+    await page.getByRole('link', { name: ko('landing.primary') }).click()
+    await pwExpect(page).toHaveURL(/\/login$/)
+    await pwExpect(heading(ko('login.title'))).toBeVisible()
+  })
+
+  it('rejects a wrong password, then signs in with the demo account', async () => {
     await page.getByLabel(ko('login.email')).fill('user@example.com')
     await page.getByLabel(ko('login.password')).fill('not-the-password')
     await page.getByRole('button', { name: ko('login.submit'), exact: true }).click()

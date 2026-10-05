@@ -3,7 +3,7 @@ import { copyFileSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { expect as pwExpect, type Page } from 'playwright/test'
 import { describe, inject, it } from 'vitest'
-import { ko, launch, seedNotes } from './helpers'
+import { dismissConsent, ko, launch, seedNotes } from './helpers'
 
 /*
  * 소유자에게 보이는 증거 — 같은 서버 · 같은 여정을 사람이 보는 속도로 밟으며 스크린샷(라이트 10 + 다크 2 + 모바일 · 알림 덤)과 녹화(.webm → .mp4 · .gif)를 남긴다.
@@ -28,8 +28,17 @@ describe('walkthrough', () => {
     const pause = (ms = 700) => page.waitForTimeout(ms)
     const bell = () => page.getByRole('button', { name: /^알림/ })
     try {
-      // 1 로그인
+      // 0 랜딩(로그아웃 상태의 `/`) — 동의 배너가 떠 있는 첫 방문
       await page.goto(baseUrl)
+      await shot(
+        page,
+        '00-landing.png',
+        '로그인하지 않은 방문자의 첫 화면 — Patterns/Landing(@skeleton/marketing) + 아래 동의 배너(모두 거부 · 모두 허용이 같은 무게)',
+      )
+      await dismissConsent(page)
+      await page.getByRole('link', { name: ko('header.signIn') }).click()
+
+      // 1 로그인
       await page.getByRole('button', { name: ko('login.demoFill') }).click()
       await shot(
         page,

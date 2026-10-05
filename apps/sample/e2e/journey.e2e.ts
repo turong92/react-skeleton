@@ -61,7 +61,7 @@ describe('Notes — the main journey against the real backend', () => {
 
     // 랜딩 → 로그인
     await page.goto(baseUrl)
-    await page.getByRole('link', { name: ko('landing.primary') }).click()
+    await page.getByRole('link', { name: ko('landing.primary'), exact: true }).click()
     await pwExpect(page).toHaveURL(/\/login$/)
     await pwExpect(heading(ko('login.title'))).toBeVisible()
   })

@@ -35,7 +35,7 @@ export async function dismissConsent(page: Page) {
 export async function signIn(page: Page, baseUrl: string) {
   await page.goto(baseUrl)
   await dismissConsent(page)
-  await page.getByRole('link', { name: ko('header.signIn') }).click()
+  await page.getByRole('link', { name: ko('header.signIn'), exact: true }).click()
   await page.getByRole('button', { name: ko('login.demoFill') }).click()
   await page.getByRole('button', { name: ko('login.submit'), exact: true }).click()
   await page.getByRole('heading', { level: 1 }).first().waitFor()

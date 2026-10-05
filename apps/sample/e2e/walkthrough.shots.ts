@@ -36,7 +36,7 @@ describe('walkthrough', () => {
         '로그인하지 않은 방문자의 첫 화면 — Patterns/Landing(@skeleton/marketing) + 아래 동의 배너(모두 거부 · 모두 허용이 같은 무게)',
       )
       await dismissConsent(page)
-      await page.getByRole('link', { name: ko('header.signIn') }).click()
+      await page.getByRole('link', { name: ko('header.signIn'), exact: true }).click()
 
       // 1 로그인
       await page.getByRole('button', { name: ko('login.demoFill') }).click()

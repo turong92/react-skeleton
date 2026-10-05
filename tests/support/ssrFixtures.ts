@@ -242,6 +242,10 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
     value: { start: '2026-10-06', end: '2026-10-09' },
     onChange: noop,
   }),
+  'ui#MarkdownView': () => ({
+    source: '# Title\n\nHello {{name}} [link](https://example.com)',
+    facts: { name: 'Ada' },
+  }),
   'i18n#I18nProvider': (ctx) => ({ i18n: fakeI18n(ctx), children: 'inside' }),
   'theme#ThemeToggle': () => ({}),
   'theme#ThemedToaster': () => ({}),

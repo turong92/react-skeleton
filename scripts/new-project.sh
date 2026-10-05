@@ -6,7 +6,8 @@
 #   예) scripts/new-project.sh ~/work/ovation ovation
 #       scripts/new-project.sh ~/work/ovation ovation --packages realtime,notifications,storage
 #       scripts/new-project.sh ~/work/ovation ovation --scope @ovation --packages payment
-#       scripts/new-project.sh ~/work/ovation ovation --ssr                    # 서버 렌더 스타터(스토리집은 기본으로 따라온다)
+#       scripts/new-project.sh ~/work/ovation ovation --packages seo,marketing  # 공개 페이지(랜딩 · 요금제 · 약관 · 동의 배너 · 404)와 검색용 머리 · 사이트맵
+#       scripts/new-project.sh ~/work/ovation ovation --ssr                    # 서버 렌더 스타터(스토리집은 기본으로 따라온다 · 머리는 @skeleton/seo 가 따라온다)
 #       scripts/new-project.sh ~/work/ovation ovation --without-storybook      # 스토리집 · 스토리 · 에이전트 안내 없이
 #
 # 하는 일

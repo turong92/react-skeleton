@@ -9,7 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added — 「도메인만 바꿔 켜면 서비스 구색이 나온다」를 위한 프런트 부품: `@skeleton/seo` · `@skeleton/marketing` · `@skeleton/ui` 13개 (2026-10-06)
 
-백엔드 API 가 새로 필요 없는 조각만. 모든 부품은 스토리 + `play`(a11y 위반도 실패) · 카탈로그 한 줄 · SSR 서버 렌더 확인 · 라이트/다크를 갖췄고, 새 런타임 의존은 **0**(번들 영향은 아래).
+백엔드 API 가 새로 필요 없는 조각만. 모든 부품은 스토리 + `play`(a11y 위반도 실패) · 카탈로그 한 줄 · SSR 서버 렌더 확인 · 라이트/다크를 갖췄고, 새 런타임 의존은 **0**.
+
+- **번들 영향(측정, `vite build` gzip · 같은 머신 · 이전 HEAD bf7a108 대비)**: `apps/starter` JS 145.55 → 145.52 kB — **변화 없음**(안 쓰는 부품은 트리 셰이킹으로 빠지고 ui 가 time 에 의존해도 `DatePicker` 를 안 쓰면 들어오지 않는다). `apps/sample` JS 183.37 → 198.60 kB(+15.2) · CSS 6.03 → 8.00 kB(+2.0) · 영어 사전 3.27 → 4.80 kB(+1.5) — 랜딩 · 요금제 · 약관 템플릿 문서 8개 · 동의 배너 · SEO 가 들어온 값이다(`MarkdownView` 파서 · 문서 파일 포함).
 
 - **`@skeleton/ui`(새 부품)**: `Skeleton` · `Avatar` · `Breadcrumbs` · `Alert` · `CopyButton` · `Tooltip`(WAI-ARIA) · `Stepper` · `ConfirmDialog`(문구를 정확히 쳐야 켜지는 확인 선택 · 처음 포커스는 취소) · `InfiniteList`(끝에 닿으면 자동 + **언제나** 키보드 「더 보기」 버튼 · 실패하면 멈추고 다시 시도 · 버튼이 사라질 때 포커스 보존) · `Combobox`(WAI-ARIA 자동완성, 정적 목록 거르기 또는 비동기 `loadOptions(query, signal)` — 디바운스 · 중복 요청 취소 · **늦게 온 옛 응답은 버린다** · 악센트 · 한글 NFC/NFD 무시) · `DatePicker`/`DateRangePicker` · `MarkdownView`.
   - `DatePicker` 는 **네이티브 `<input type="date">`** 위에 만들었다: 달력 팝업 · 키보드 · 모바일 선택기 · 지역화를 브라우저가 이미 접근성 있게 해 주고, 직접 만든 달력은 그 전부를 다시 만들어야 한다(번들 0). 보탠 것은 고른 날을 글로 읽어 주기(`@skeleton/time` 의 `formatDate` — 달력 날짜는 시간대로 옮기지 않는다)와 시간대에 맞는 「오늘」 버튼(`todayInZone`), `min`/`max`. 기간은 시작 ≤ 끝을 서로의 `min`/`max` 로 묶고 거꾸로 쳐 넣으면 끝칸에 오류.

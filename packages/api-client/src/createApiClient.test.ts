@@ -250,6 +250,27 @@ describe('createApiClient envelopes', () => {
     await expect(client.value('/wrong')).rejects.toThrow('Expected ApiValueResponse from /wrong')
   })
 
+  it('noContent: a 204 (platform Response.noContent) has no body to validate — resolves with nothing; errors still throw', async () => {
+    const calls: string[] = []
+    const client = createApiClient({
+      baseUrl: '/api/v1',
+      adapter: async (config) => {
+        calls.push(`${config.method} ${config.url}`)
+        return config.url === '/gone'
+          ? responseOf(config, {
+              status: 404,
+              data: { code: 'X.NOT_FOUND', title: 'nf', status: 404, timestamp: 't' },
+            })
+          : responseOf(config, { status: 204, data: '' })
+      },
+    })
+    await expect(client.noContent('/notes/n1', { method: 'DELETE' })).resolves.toBeUndefined()
+    await expect(client.noContent('/gone', { method: 'DELETE' })).rejects.toBeInstanceOf(
+      ApiRequestError,
+    )
+    expect(calls).toEqual(['delete /notes/n1', 'delete /gone'])
+  })
+
   it('builds absolute endpoints from the base url', () => {
     const client = createApiClient({ baseUrl: 'https://api.example.com/api/v1/' })
     expect(client.endpoint('/docs/ui')).toBe('https://api.example.com/api/v1/docs/ui')

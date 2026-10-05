@@ -1,0 +1,17 @@
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  color: var(--text-strong);
+}
+
+.mark {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  background: var(--teal-soft);
+  color: var(--teal);
+  font-weight: 700;
+}

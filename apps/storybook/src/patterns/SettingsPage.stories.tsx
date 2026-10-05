@@ -1,4 +1,4 @@
-import { Button, Card, Dialog, Field, Input, Select, Switch } from '@skeleton/ui'
+import { Button, Card, Dialog, Field, Input, PageHeader, Select, Switch } from '@skeleton/ui'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState, type FormEvent } from 'react'
 import { expect, fn, screen, waitFor } from 'storybook/test'
@@ -38,7 +38,7 @@ function SettingsPage({ profile, onToggle, onSave, onDeleteAccount }: Props) {
 
   return (
     <div style={stack}>
-      <h1>Settings</h1>
+      <PageHeader title="Settings" />
       <Card title="Notifications">
         <div style={stack}>
           <Switch

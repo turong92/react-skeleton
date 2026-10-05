@@ -1,0 +1,5 @@
+.body {
+  display: grid;
+  gap: var(--space-md);
+  color: var(--text-muted);
+}

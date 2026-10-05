@@ -1,0 +1,62 @@
+# apps/sample — Notes (참조 제품)
+
+"이 스켈레톤으로 이런 제품이 나온다"를 보여 주는 **작지만 실제 같은** 앱. 로그인한 사람이 **노트와 첨부 파일**을 관리한다.
+새 부업 프로젝트를 시작하거나(`scripts/new-project.sh --with-sample`), 새 기능의 **정본 예시**(화면 조각 하나)로 따라 쓴다 — 에이전트도 같다(루트 `CLAUDE.md` 「새 기능의 정본 예시」).
+백엔드 짝은 kotlin-skeleton 의 `apps/sample`(`/api/v1/notes` · 받은편지함 · 업로드 · 내보내기 잡). 기본 `new-project.sh` 는 이 앱을 넣지 않는다.
+
+## 한 줄로 돌려 보기
+
+```bash
+# 백엔드 레포(kotlin-skeleton)에서 — 이 레포와 나란히 있어야 한다(기본 ../react-skeleton)
+scripts/dev-sample.sh        # DB · 로컬 S3 → 백엔드 :8080 → 이 앱 :5173.  로그인: user@example.com / password
+```
+
+이 레포에서 프론트만: `pnpm dev:sample`(백엔드는 `API_PROXY_TARGET=http://localhost:8080`, 기본값). 브라우저 e2e: `pnpm e2e:sample` — 백엔드까지 스스로 올렸다 내린다(Docker · JDK 필요, 아래 「테스트」).
+
+## 화면 → Pattern 지도
+
+| 화면 (경로)           | 파일                                 | 어느 Pattern 에서 왔나                                                                           | 어떻게 조립했나                                                                                                                                                                                                                                                                     |
+| --------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 로그인 (`/login`)     | `src/routes/LoginPage.tsx`           | **Patterns/Login page**                                                                          | 이메일 · 비밀번호 · 제출 중 · 잘못된 계정 정보를 폼 한 줄 오류로. `useAuth().login` 을 넘기고 `AUTH_INVALID_CREDENTIALS` 만 이 화면 문구로, 나머지는 전역 토스트. 체험 계정 채우기 버튼은 이 샘플만의 편의                                                                          |
+| 대시보드 (`/`)        | `src/routes/DashboardPage.tsx`       | **Patterns/Dashboard page**                                                                      | `PageHeader` + `Stat` 4개(링크로 목록의 필터 주소) + 「최근 노트」 `Table`(`Badge` 상태 · 빈 · 로딩 · 오류 다시 시도) + 안 읽은 알림(`NotificationList`). 값은 `GET /notes/summary` · `GET /notes?size=5` · 받은편지함                                                              |
+| 목록 (`/notes`)       | `src/routes/NotesPage.tsx`           | **Patterns/List page**                                                                           | 표 + `Pagination` + 빈 상태 두 가지(처음 · 검색 결과 없음) + 로딩 + 오류. 검색 · 상태 · 고정 필터와 쪽은 **주소의 검색 인자**(`listParams.ts`)에 두어 새로고침 · 뒤로가기 · 링크 공유가 된다                                                                                        |
+| 상세 (`/notes/:id`)   | `src/routes/NoteDetailPage.tsx`      | **Patterns/Detail page**                                                                         | 제목 + 액션 · `Tabs`(내용 / 첨부 파일) · 위험 구역(삭제는 `Dialog` 확인) · 로딩 · 없음(`NOTES.NOT_FOUND`). 「내보내기」는 잡을 대기열에 넣고 토스트, 끝나면 알림으로 도착                                                                                                           |
+| 만들기 · 수정         | `src/routes/NoteFormPage.tsx`        | **Patterns/Form page**                                                                           | 제출 때 검증(첫 오류 칸으로 포커스) · **백엔드 400 의 칸별 오류를 같은 칸에**(`notes/formErrors.ts`) · 제출 중 · 실패해도 입력 유지 · 만들기는 요청 내용마다 `Idempotency-Key` 하나(`notes/idempotencyKey.ts` — 두 번 눌러도 노트 하나, 400 을 고쳐 다시 보내도 409 가 나지 않는다) |
+| 첨부 업로드 (상세 탭) | `src/components/AttachmentPanel.tsx` | Detail page 의 탭 안 + `packages/storage` 의 **`useUpload` 스토리**(Pattern 은 없다 — 아래 메모) | `FilePicker`(날 `<input type=file>` 금지) → `useUpload(uploader)` → `Progress` 진행률 · 취소 · 거절 사유(`storage/uploadMessage.ts`). 올린 키를 `PUT /notes/{id}` 로 노트에 저장                                                                                                    |
+| 알림 종 · 받은편지함  | `src/layouts/RootLayout.tsx`         | `NotificationBell` 스토리(부품)                                                                  | 헤더 `actions` 에 종. 실시간(`notification-sse`)은 `useLiveNotifications` 가 받은편지함 캐시를 갱신하고 토스트                                                                                                                                                                      |
+| 설정 (`/settings`)    | `src/routes/SettingsPage.tsx`        | **Patterns/Settings page**                                                                       | 즉시 적용 카드(테마 `Select` → `setTheme`) + 읽기 전용 계정 카드 + 로그아웃. 서버에 저장할 설정이 아직 없어 저장 폼 · 위험 구역은 두지 않았다(없는 기능을 흉내 내지 않는다)                                                                                                         |
+| 404                   | `src/routes/NotFoundPage.tsx`        | `EmptyState` 스토리                                                                              | 갈 곳을 준다                                                                                                                                                                                                                                                                        |
+
+메모: 업로드는 화면 한 장이 아니라 **상세 화면의 한 구역**이라 별도 Pattern 이 없다. 필요하면 `FilePicker` + `useUpload` + `Progress` 세 스토리를 따라 짜면 된다.
+
+## 구조 (화면 조각 하나 = 이 폴더들)
+
+```
+src/
+├── strings.ts            # 화면의 모든 글자(한국어) 한 곳 — 컴포넌트는 strings.xxx 만 읽는다
+├── api/ auth/ app/       # starter 에서 복사한 배선(환경변수 · 토큰 · 401 · QueryClient 에러 토스트)
+├── notes/                # 노트 조각: types · notesApi(HTTP 한 곳) · queries(TanStack Query 훅) · formErrors · listParams
+├── notifications/        # 받은편지함 API 인스턴스 · 실시간(SSE) 훅
+├── storage/              # 업로더 인스턴스(규칙은 백엔드와 같게) · 업로드 오류 → 문구
+├── components/           # 이 앱 전용 조각(LoadError · NoteStatusBadge · AttachmentPanel)
+├── layouts/RootLayout    # AppShell + 메뉴 + 알림 종 + 테마 토글 + 로그아웃
+└── routes/               # 화면 = Pattern 조립 + 쿼리 훅 호출. routes.tsx 가 path → page
+e2e/                      # Playwright(+vitest) — 진짜 백엔드 · 브라우저
+```
+
+새 기능을 이 모양으로 더하려면: `notes/` 를 복사해 `types` → `xxxApi.ts`(HTTP) → `queries.ts`(훅 · 키 · 무효화) 순으로, 화면은 가장 가까운 Pattern 을 복사해 `routes/` 에, 글자는 `strings.ts` 에. (백엔드 쪽 같은 조각: kotlin-skeleton `docs/sample.md`.)
+
+## 지키는 규칙 (ESLint · 테스트가 막는다)
+
+- 화면은 `@skeleton/ui` 부품 + 의미 토큰만 — 날 `<button>` `<input>` `<select>` `<textarea>` `<dialog>` · 날 색 · 간격 없음. 모양 CSS 는 CSS Modules 에서 `var(--space-*)` 등으로
+- 서버 상태는 TanStack Query. HTTP 는 `notes/notesApi.ts` 등 한 곳, 화면은 훅만
+- 글자는 `strings.ts`, 패키지 부품의 문구는 prop 으로 화면이 골라 넘긴다
+- 새 부품이 필요하면 앱에 만들지 않고 `@skeleton/ui` 에 스토리 + `play` 와 함께 더한다(이 앱을 위해 `PageHeader` · `Badge` · `Progress` · `FilePicker` · `Stat` 를 그렇게 더했다)
+
+## 테스트
+
+| 무엇                                                                     | 명령                                                                       | 비고                                                                                                                                                                                                                                                                 |
+| ------------------------------------------------------------------------ | -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 단위(API 호출 모양 · 쿼리 키 · 폼 오류 매핑 · 주소 인자 · 라우트 가드 …) | `pnpm --filter sample test`                                                | 빠르다                                                                                                                                                                                                                                                               |
+| 브라우저 e2e(핵심 여정)                                                  | `pnpm e2e:sample`                                                          | Playwright chromium + 진짜 백엔드. `e2e/globalSetup.ts` 가 kotlin-skeleton 의 `scripts/sample-e2e-backend.sh` 로 컨테이너 · 백엔드를 올리고(빈 포트) Vite 를 띄운 뒤 끝나면 내린다. `SAMPLE_API_DIR`(기본 `../kotlin-skeleton`), 이미 떠 있는 백엔드는 `E2E_API_URL` |
+| 증거 스크린샷 · 녹화                                                     | `E2E_WALKTHROUGH=1 SAMPLE_EVIDENCE_DIR=… pnpm --filter sample walkthrough` | `e2e/walkthrough.shots.ts` — 여정 순서로 라이트 · 다크 스크린샷과 `.webm` 을 남긴다                                                                                                                                                                                  |

@@ -93,6 +93,55 @@ importers:
         specifier: ^4.1.8
         version: 4.1.8(@types/node@24.12.2)(@vitest/browser-playwright@4.1.8)(vite@8.0.9(@types/node@24.12.2)(esbuild@0.28.2))
 
+  apps/sample:
+    dependencies:
+      '@skeleton/api-client':
+        specifier: workspace:*
+        version: link:../../packages/api-client
+      '@skeleton/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
+      '@skeleton/notifications':
+        specifier: workspace:*
+        version: link:../../packages/notifications
+      '@skeleton/realtime':
+        specifier: workspace:*
+        version: link:../../packages/realtime
+      '@skeleton/storage':
+        specifier: workspace:*
+        version: link:../../packages/storage
+      '@skeleton/theme':
+        specifier: workspace:*
+        version: link:../../packages/theme
+      '@skeleton/time':
+        specifier: workspace:*
+        version: link:../../packages/time
+      '@skeleton/tokens':
+        specifier: workspace:*
+        version: link:../../packages/tokens
+      '@skeleton/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      '@tanstack/react-query':
+        specifier: ^5.99.2
+        version: 5.104.1(react@19.3.0)
+      react:
+        specifier: ^19.2.5
+        version: 19.3.0
+      react-dom:
+        specifier: ^19.2.5
+        version: 19.3.0(react@19.3.0)
+      react-router-dom:
+        specifier: ^7.14.1
+        version: 7.18.4(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      sonner:
+        specifier: ^2.0.7
+        version: 2.0.8(@types/react@19.2.14)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+    devDependencies:
+      playwright:
+        specifier: ^1.63.0
+        version: 1.63.0
+
   apps/starter:
     dependencies:
       '@skeleton/api-client':

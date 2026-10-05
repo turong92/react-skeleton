@@ -1,4 +1,4 @@
-import { Button, Card, Dialog, EmptyState, Spinner, Tabs } from '@skeleton/ui'
+import { Button, Card, Dialog, EmptyState, PageHeader, Spinner, Tabs } from '@skeleton/ui'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
 import { expect, fn, screen, waitFor } from 'storybook/test'
@@ -15,7 +15,6 @@ type DetailState =
   | { status: 'ready'; project: Project }
 
 const stack = { display: 'grid', gap: 'var(--space-lg)' } as const
-const toolbar = { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } as const
 
 function ProjectDetailPage({
   state,
@@ -40,12 +39,14 @@ function ProjectDetailPage({
   const { project } = state
   return (
     <div style={stack}>
-      <div style={toolbar}>
-        <h1>{project.name}</h1>
-        <Button variant="secondary" onClick={onBack}>
-          Back to projects
-        </Button>
-      </div>
+      <PageHeader
+        title={project.name}
+        actions={
+          <Button variant="secondary" onClick={onBack}>
+            Back to projects
+          </Button>
+        }
+      />
       <Tabs
         aria-label="Project sections"
         items={[

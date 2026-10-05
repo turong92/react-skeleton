@@ -1,0 +1,42 @@
+.page {
+  display: grid;
+  gap: var(--space-xl);
+}
+
+.toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto;
+  gap: var(--space-lg);
+  align-items: end;
+  padding: var(--space-lg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.titleCell {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.titleCell a {
+  color: var(--text-strong);
+  font-weight: 600;
+}
+
+.titleCell a:hover {
+  color: var(--teal);
+}
+
+@media (max-width: 720px) {
+  .toolbar {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+  }
+}
+
+.nowrap {
+  white-space: nowrap;
+}

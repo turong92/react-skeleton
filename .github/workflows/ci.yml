@@ -54,3 +54,45 @@ jobs:
       - run: pnpm test:stories
         timeout-minutes: 8
   # stories-job:end
+
+  # sample-e2e-job:start
+  # 참조 앱(apps/sample)의 핵심 여정 — 진짜 백엔드(kotlin-skeleton apps/sample + PostgreSQL + 로컬 S3 컨테이너) · 진짜 브라우저. 단위 테스트 잡과 따로라 서로 기다리지 않는다
+  sample-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30 # 그레이들 첫 빌드 · 컨테이너 · rolldown(rc) 교착에 매달리지 않게 끊는다
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: react-skeleton
+      - uses: actions/checkout@v4
+        with:
+          repository: turong92/kotlin-skeleton
+          path: kotlin-skeleton
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+          cache-dependency-path: react-skeleton/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+        working-directory: react-skeleton
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('react-skeleton/pnpm-lock.yaml') }}
+      - run: pnpm exec playwright install --with-deps chromium
+        working-directory: react-skeleton
+      - run: pnpm e2e:sample
+        working-directory: react-skeleton
+        timeout-minutes: 20
+        env:
+          SAMPLE_API_DIR: ${{ github.workspace }}/kotlin-skeleton
+  # sample-e2e-job:end

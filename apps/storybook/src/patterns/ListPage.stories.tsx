@@ -1,5 +1,6 @@
 import {
   Button,
+  PageHeader,
   Card,
   EmptyState,
   Pagination,
@@ -29,7 +30,6 @@ const columns: TableColumn<Project>[] = [
 ]
 
 const stack = { display: 'grid', gap: 'var(--space-lg)' } as const
-const toolbar = { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } as const
 
 function ProjectsPage(props: {
   state: ListState
@@ -41,10 +41,7 @@ function ProjectsPage(props: {
   const create = <Button onClick={onCreate}>Create project</Button>
   return (
     <div style={stack}>
-      <div style={toolbar}>
-        <h1>Projects</h1>
-        {create}
-      </div>
+      <PageHeader title="Projects" actions={create} />
       {state.status === 'loading' && <Spinner label="Loading projects" />}
       {state.status === 'error' && (
         <Card title="Could not load projects">

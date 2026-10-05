@@ -40,4 +40,14 @@ describe('Dialog', () => {
     )
     expect(html).not.toContain(' open=""')
   })
+  it('does not use <header> / <footer>: inside a dialog they become banner / contentinfo landmarks that are not top-level (axe landmark-*-is-top-level)', () => {
+    const html = renderToStaticMarkup(
+      <Dialog open onClose={() => {}} title="T" footer={<button>OK</button>}>
+        body
+      </Dialog>,
+    )
+    expect(html).not.toMatch(/<(header|footer)\b/)
+    expect(html).toContain('<h2')
+    expect(html).toContain('OK')
+  })
 })

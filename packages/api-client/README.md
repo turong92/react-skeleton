@@ -33,7 +33,7 @@ const hello = await apiClient.value<{ message: string }>('/hello')
 | `debug`                                                                          | true 면 요청마다 콘솔 그룹 로그                                                           |
 | `adapter` · `requestInterceptors` · `responseInterceptors` · `errorInterceptors` | axios 확장점(테스트 · 커스텀)                                                             |
 
-반환: `value<T>` `list<T>` `page<T>` `cursor<T>` `basic` `envelope` `response`(status · headers · trace 까지) `endpoint(path)` `axios`.
+반환: `value<T>` `list<T>` `page<T>` `cursor<T>` `basic`(본문은 `{ meta }`) `noContent`(204 — 본문 없는 삭제 · 명령) `envelope` `response`(status · headers · trace 까지) `endpoint(path)` `axios`.
 요청 옵션: `method` `traceId` `idempotencyKey` `headers` `params` `json` `data` `timeoutMs` `signal` `skipAuth`.
 
 ## 그 밖의 export

@@ -1,7 +1,7 @@
 // scripts/new-project.sh 의 일꾼(node 만 쓴다). 직접 부르지 않는다 — 인자 검증은 셸이 한다.
-//   node stamp.mjs plan  <srcRoot> <withWorkbench 0|1> <requestedCsv> [ssr 0|1]                                   → 남길 패키지(`keep <p>`)와 이유(`why <p> …`)
+//   node stamp.mjs plan  <srcRoot> <withWorkbench 0|1> <requestedCsv> [ssr 0|1] [withSample 0|1]                                 → 남길 패키지(`keep <p>`)와 이유(`why <p> …`)
 //   node stamp.mjs copy  <srcRoot> <target>                                                                      → 군더더기 빼고 복사
-//   node stamp.mjs apply <target> <name> <scope> <withWorkbench 0|1> <keepCsv> [ssr 0|1] [withStorybook 0|1]     → 가지치기 · 이름 · 스코프 · 문서
+//   node stamp.mjs apply <target> <name> <scope> <withWorkbench 0|1> <keepCsv> [ssr 0|1] [withStorybook 0|1] [withSample 0|1] → 가지치기 · 이름 · 스코프 · 문서
 import {
   cpSync,
   existsSync,
@@ -34,7 +34,7 @@ const skeletonDeps = (pkg) =>
 const nameOf = (dep) => dep.slice(SCOPE.length + 1)
 
 // ------------------------------------------------------------------------------------------------ plan
-function plan(root, withWorkbench, requested, ssr = '0') {
+function plan(root, withWorkbench, requested, ssr = '0', withSample = '0') {
   const packages = subdirs(join(root, 'packages')).filter((dir) =>
     existsSync(join(root, 'packages', dir, 'package.json')),
   )
@@ -58,6 +58,9 @@ function plan(root, withWorkbench, requested, ssr = '0') {
   if (withWorkbench === '1')
     for (const dep of skeletonDeps(readJson(join(root, 'apps', 'workbench', 'package.json'))))
       want(nameOf(dep), 'needed by the workbench app')
+  if (withSample === '1')
+    for (const dep of skeletonDeps(readJson(join(root, 'apps', 'sample', 'package.json'))))
+      want(nameOf(dep), 'needed by the sample app')
   for (const pkg of requested.split(',').filter(Boolean)) want(pkg, 'requested')
   for (let i = 0; i < queue.length; i += 1) {
     const pkg = queue[i]
@@ -189,11 +192,41 @@ function removeStorybook(target) {
   replaceOnce(eslintFile, ", '**/storybook-static'", '')
 }
 
-function apply(target, name, scope, withWorkbench, keepCsv, ssrFlag = '0', withStorybook = '1') {
+// ------------------------------------------------------------------------------------------------ 샘플
+const SAMPLE_SCRIPTS = ['dev:sample', 'e2e:sample']
+const SAMPLE_JOB = /[ \t]*# sample-e2e-job:start\n[\s\S]*?[ \t]*# sample-e2e-job:end\n?/
+const SAMPLE_JOB_MARKERS = /[ \t]*# sample-e2e-job:(?:start|end)\n/g
+
+/** 샘플을 안 가져가면: 앱 폴더 · 샘플 전용 루트 스크립트 · CI 의 e2e 잡(표식 사이)을 뗀다. 가져가면 표식 줄만 걷는다 */
+function stampSample(target, withSample) {
+  const rootFile = join(target, 'package.json')
+  const root = readJson(rootFile)
+  const ci = join(target, '.github', 'workflows', 'ci.yml')
+  if (withSample) {
+    if (existsSync(ci)) writeFileSync(ci, read(ci).replace(SAMPLE_JOB_MARKERS, ''))
+    return
+  }
+  rmSync(join(target, 'apps', 'sample'), { recursive: true, force: true })
+  for (const key of SAMPLE_SCRIPTS) delete root.scripts[key]
+  writeJson(rootFile, root)
+  if (existsSync(ci)) writeFileSync(ci, read(ci).replace(SAMPLE_JOB, ''))
+}
+
+function apply(
+  target,
+  name,
+  scope,
+  withWorkbench,
+  keepCsv,
+  ssrFlag = '0',
+  withStorybook = '1',
+  withSampleFlag = '0',
+) {
   const keep = new Set(keepCsv.split(',').filter(Boolean))
   const workbench = withWorkbench === '1'
   const storybook = withStorybook === '1'
   const ssr = ssrFlag === '1'
+  const sample = withSampleFlag === '1'
   const source = ssr ? 'starter-ssr' : 'starter' // 새 앱이 될 스타터
   const app = join(target, 'apps', name)
 
@@ -201,6 +234,7 @@ function apply(target, name, scope, withWorkbench, keepCsv, ssrFlag = '0', withS
   for (const pkg of subdirs(join(target, 'packages')))
     if (!keep.has(pkg)) rmSync(join(target, 'packages', pkg), { recursive: true, force: true })
   if (!workbench) rmSync(join(target, 'apps', 'workbench'), { recursive: true, force: true })
+  stampSample(target, sample)
   if (storybook) trimCatalog(target)
   else removeStorybook(target)
   rmSync(join(target, 'apps', ssr ? 'starter' : 'starter-ssr'), { recursive: true, force: true })
@@ -260,7 +294,13 @@ function apply(target, name, scope, withWorkbench, keepCsv, ssrFlag = '0', withS
     fail('the root scripts still mention new-project after stripping — update stamp.mjs')
   writeJson(rootFile, root)
   // 패키지가 앱을 이름으로 부르지 못하게 막는 목록(eslint.config.js 의 APP_NAMES) — 새 앱 이름을 더한다. 줄바꿈은 `pnpm format` 이 맞춘다
-  const SPEC_NAMES = ['workbench', 'storybook-app', 'starter', 'starter-ssr']
+  const SPEC_NAMES = [
+    'workbench',
+    'storybook-app',
+    'starter',
+    'starter-ssr',
+    ...(sample ? ['sample'] : []),
+  ]
   const names = SPEC_NAMES.includes(name) ? SPEC_NAMES : [...SPEC_NAMES, name]
   const eslintFile = join(target, 'eslint.config.js')
   const eslintText = read(eslintFile)
@@ -287,10 +327,10 @@ function apply(target, name, scope, withWorkbench, keepCsv, ssrFlag = '0', withS
     }
 
   // 5. 문서 다시 쓰기
-  writeDocs(target, name, scope, { workbench, storybook, ssr })
+  writeDocs(target, name, scope, { workbench, storybook, ssr, sample })
 }
 
-function writeDocs(target, name, scope, { workbench, storybook, ssr }) {
+function writeDocs(target, name, scope, { workbench, storybook, ssr, sample }) {
   const source = readJson(join(target, 'package.json'))
   const pkgs = subdirs(join(target, 'packages')).map((dir) => ({
     dir,
@@ -309,7 +349,7 @@ function writeDocs(target, name, scope, { workbench, storybook, ssr }) {
     join(target, 'README.md'),
     `# ${name}
 
-react-skeleton(pnpm 워크스페이스)에서 \`scripts/new-project.sh\` 로 찍어 낸 프로젝트. 앱은 \`apps/${name}\`${ssr ? '(서버가 첫 응답을 그리는 서버 렌더 앱)' : ''}${workbench ? ' · 백엔드 확인용 \`apps/workbench\`' : ''}${storybook ? ' · 부품 · 화면 틀 · 토큰을 보고 테스트하는 스토리집 \`apps/storybook\`' : ''}, 패키지는 \`packages/*\`(스코프 \`${scope}\`).
+react-skeleton(pnpm 워크스페이스)에서 \`scripts/new-project.sh\` 로 찍어 낸 프로젝트. 앱은 \`apps/${name}\`${ssr ? '(서버가 첫 응답을 그리는 서버 렌더 앱)' : ''}${workbench ? ' · 백엔드 확인용 \`apps/workbench\`' : ''}${storybook ? ' · 부품 · 화면 틀 · 토큰을 보고 테스트하는 스토리집 \`apps/storybook\`' : ''}${sample ? ' · 새 기능을 만들 때 보고 따라 하는 참조 앱 \`apps/sample\`(Notes — 백엔드 kotlin-skeleton 의 \`apps/sample\` 과 짝, README 에 화면마다 어느 Pattern 으로 짰는지)' : ''}, 패키지는 \`packages/*\`(스코프 \`${scope}\`).
 
 ## 시작
 
@@ -341,7 +381,11 @@ ${ssr ? `\n## 서버 렌더\n\n\`apps/${name}\` 는 서버가 첫 응답을 그�
     /<!-- storybook-guide:start -->\n([\s\S]*?)<!-- storybook-guide:end -->/,
   )?.[1]
   if (storybook && !guide) fail('CLAUDE.md has no storybook-guide block — update stamp.mjs')
-  const original = markerBlocks(sourceClaude, storybook, 'storybook')
+  const original = markerBlocks(
+    markerBlocks(sourceClaude, storybook, 'storybook'),
+    sample,
+    'sample',
+  )
   const at = original.indexOf('## 핵심 컨벤션')
   if (at < 0) fail('CLAUDE.md has no "## 핵심 컨벤션" section — update stamp.mjs')
   const structure = [
@@ -350,6 +394,11 @@ ${ssr ? `\n## 서버 렌더\n\n\`apps/${name}\` 는 서버가 첫 응답을 그�
       ? `└── ${name}/        # 서버 렌더 앱 — server/(Node 서버 · 정적 파일 · 상태 코드) · src/entry-server.tsx · src/entry-client.tsx · 라우트별 handle(제목 · 설명 · prefetch) (starter-ssr 에서 이름만 바뀌었다)`
       : `└── ${name}/        # 앱 — 라우터 · AppShell · API 클라이언트 배선 · 보호 라우트 (starter 에서 이름만 바뀌었다)`,
     ...(workbench ? ['└── workbench/     # 백엔드 확인용 시각적 테스트 벤치(복사 대상 아님)'] : []),
+    ...(sample
+      ? [
+          '└── sample/        # 참조 앱(Notes) — 로그인 · 대시보드 · 목록 · 상세 · 폼 · 첨부 · 알림 · 설정. 새 기능은 이 앱의 한 조각을 따라 한다(apps/sample/README.md)',
+        ]
+      : []),
     ...(storybook
       ? [
           '└── storybook/     # 스토리집 — 설정(.storybook/) · Patterns(복사해서 시작하는 화면 틀) · 토큰 문서. 부품 스토리는 packages/*/src/**/*.stories.tsx',

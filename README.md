@@ -6,6 +6,7 @@ React + TypeScript + Vite 프론트엔드 스켈레톤 — **pnpm 워크스페�
 apps/
 ├── starter/       # SPA 스타터 — 새 프로젝트가 복사해 가는 앱: 라우터 · AppShell · 테마 토글 · API 클라이언트 배선 · 예시 쿼리 · 보호 라우트 (일부러 비어 있다)
 ├── starter-ssr/   # SSR 스타터 — 같은 페이지를 서버가 첫 응답으로 그려 보내고 브라우저가 이어받는다(plain Vite SSR + Node 서버 · Dockerfile)
+├── sample/        # 참조 앱 Notes — Patterns 로 조립한 작지만 실제 같은 제품(로그인 → 대시보드 → 목록 → 상세 → 폼 → 첨부 업로드 → 알림 → 설정). 백엔드 kotlin-skeleton `apps/sample` 과 짝, 새 기능의 정본 예시. 기본 `new-project.sh` 에는 안 따라간다(`--with-sample`)
 ├── storybook/     # 스토리집(Storybook) — 설정 · Patterns(복사해서 시작하는 화면 틀) · 토큰 문서. 부품 스토리는 부품 옆(packages/*/src/**/*.stories.tsx). 기본으로 찍힌다(--without-storybook)
 └── workbench/     # 백엔드 확인용 워크벤치(예전 데모 그대로) + `/packages` 예제 화면. 시각적 테스트 벤치이지 복사 대상이 아니다
 packages/
@@ -36,6 +37,7 @@ pnpm dev              # starter  http://localhost:5173
 pnpm dev:ssr          # starter-ssr  http://localhost:3000 (Node 서버 + Vite)
 pnpm storybook        # 스토리집  http://localhost:6006 (백엔드 불필요)
 pnpm dev:workbench    # workbench (백엔드 :8080 필요)
+pnpm dev:sample       # 참조 앱 Notes (백엔드 apps/sample :8080 필요 — 한 줄 풀스택은 백엔드 레포 scripts/dev-sample.sh)
 pnpm lint
 pnpm typecheck        # 모든 앱 · 패키지 + 루트 테스트
 pnpm test             # 모든 앱 · 패키지 + 루트 tests/ + new-project 빠른 검사 (빠른 단위 테스트 — 스토리는 안 돈다)
@@ -55,13 +57,14 @@ Node 24(또는 22.18+), pnpm 10.
 백엔드 `scripts/new-project.sh` 처럼, 프론트도 **한 줄로 찍어 낸다**:
 
 ```bash
-scripts/new-project.sh <target-dir> <name> [--packages a,b,c] [--ssr] [--without-storybook] [--with-workbench] [--scope @acme]
+scripts/new-project.sh <target-dir> <name> [--packages a,b,c] [--ssr] [--without-storybook] [--with-workbench] [--with-sample] [--scope @acme]
 
 scripts/new-project.sh ~/work/ovation ovation                                      # 스타터 + 스타터가 쓰는 패키지
 scripts/new-project.sh ~/work/ovation ovation --packages realtime,notifications,storage
 scripts/new-project.sh ~/work/ovation ovation --scope @ovation --packages payment  # 패키지 스코프도 바꾼다
 scripts/new-project.sh ~/work/ovation ovation --ssr                                 # 서버 렌더 스타터(스토리집은 기본으로 따라온다)
 scripts/new-project.sh ~/work/ovation ovation --without-storybook                   # 스토리집 · 스토리 · 에이전트 안내 없이
+scripts/new-project.sh ~/work/ovation ovation --with-sample                         # 참조 앱 apps/sample(Notes)도 함께 — 기본은 뗀다
 ```
 
 - 이 레포를 복사해(`node_modules` · `dist` · `.git` 제외) `apps/starter` 를 `apps/<name>` 으로 바꾼다(package.json 이름 · `index.html` 제목 · 헤더 브랜드 · `.env.example`). `apps/workbench` 는 `--with-workbench` 일 때만(그러면 모든 패키지가 따라온다).
@@ -69,8 +72,9 @@ scripts/new-project.sh ~/work/ovation ovation --without-storybook               
 - 루트 `package.json`(이름 · `dev`) · eslint 의 앱 이름 막기 · 문서(README · CLAUDE · CHANGELOG)를 새 프로젝트용으로 다시 쓰고, `--scope` 가 있으면 모든 `@skeleton/` 을 바꾼다. `pnpm-workspace.yaml` 은 `apps/*` · `packages/*` 글롭이라 그대로.
 - 끝나면 다음 단계를 출력한다: `pnpm install --no-frozen-lockfile`(잠금 파일은 스켈레톤의 것 — 맞춰서 고친다) → `pnpm format`(스코프 · 이름으로 줄바꿈이 달라질 수 있다) → `pnpm dev`.
 - 고른 패키지는 **폴더만** 복사된다. 쓰기 시작할 때 앱 `package.json` 에 한 줄(`"@skeleton/<이름>": "workspace:*"`)을 더한다 — 안 쓰는 의존을 선언하면 루트 `pnpm test` 가 막는다(선언한 의존 = 실제 import).
+- `--with-sample`: 참조 앱 `apps/sample`(Notes — 백엔드 kotlin-skeleton 의 `apps/sample` 과 짝)을 이름 그대로 `apps/<name>` 옆에 남긴다. 기본은 떼고 찍는다(그 앱이 쓰는 패키지 · 샘플 전용 루트 스크립트 · CI e2e 잡도 함께 빠진다). `--ssr` · `--without-storybook` · `--scope` 와 함께 쓸 수 있다. 이름 `sample` 은 예약.
 - `--ssr`: `apps/starter` 대신 `apps/starter-ssr` 가 `apps/<name>` 이 된다(이름은 `src/appName.ts` 한 줄). 스토리집은 기본으로 따라온다 — `apps/storybook` · 남는 패키지의 스토리 · Patterns · `docs/ui-catalog.md` · CLAUDE.md 의 에이전트 안내 · 스토리 테스트 · CI `stories` 잡(**참조가 프로젝트와 함께 간다**). `--without-storybook` 이면 이 전부를 깨끗이 뗀다.
-- 검증: `scripts/test-new-project.sh --quick`(인자 검증 · 닫힘 · 구조 · 이름/스코프 · 남는 흔적, 수 초 — `pnpm test` 가 부른다), `--full`(네 조합 `기본값` · `--packages realtime,notifications,storage` · `--scope @acme --packages payment` · `--ssr --without-storybook`(서버를 띄우는 통합 테스트 포함)를 찍어 각각 install · lint · typecheck · test · build — 조합 2 는 `storybook:build` · `test:stories` 도, CI 의 `new-project` 워크플로).
+- 검증: `scripts/test-new-project.sh --quick`(인자 검증 · 닫힘 · 구조 · 이름/스코프 · 남는 흔적, 수 초 — `pnpm test` 가 부른다), `--full`(다섯 조합 `기본값` · `--packages realtime,notifications,storage` · `--scope @acme --packages payment` · `--ssr --without-storybook`(서버를 띄우는 통합 테스트 포함) · `--with-sample` 을 찍어 각각 install · lint · typecheck · test · build — 조합 2 는 `storybook:build` · `test:stories` 도, CI 의 `new-project` 워크플로).
 
 폴더 복사로 직접 가져가도 된다: 패키지는 각자 `package.json` · 테스트 · README 를 가진 자족 단위이고 서로는 이름으로만 이어져 있다. 이때 `pnpm-workspace.yaml` · 루트 `tsconfig.base.json` · `eslint.config.js` 도 가져온다.
 
@@ -96,12 +100,13 @@ scripts/new-project.sh ~/work/ovation ovation --without-storybook               
 
 ## 앱
 
-| 앱            | 무엇                                    | 언제                                                               | 실행                                                                       |
-| ------------- | --------------------------------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------- |
-| `starter`     | SPA 출발점(빈 껍데기)                   | 로그인 뒤 앱 · 대시보드 · 내부 도구. **기본값**                    | `pnpm dev`                                                                 |
-| `starter-ssr` | 서버 렌더 출발점                        | 검색 노출(SEO) · 링크 미리보기 · 첫 화면 속도가 필요한 공개 페이지 | `pnpm dev:ssr` · `pnpm --filter starter-ssr build && … start` · Dockerfile |
-| `storybook`   | 스토리집 — 부품 · 화면 틀 · 토큰의 정본 | 화면을 짜기 전에 부품 사용법을 볼 때 · 에이전트가 따라 할 기준     | `pnpm storybook` · `pnpm test:stories`                                     |
-| `workbench`   | 백엔드 확인용 시각적 테스트 벤치        | 백엔드 모듈을 눌러 볼 때                                           | `pnpm dev:workbench`                                                       |
+| 앱            | 무엇                                                                     | 언제                                                                                 | 실행                                                                                                                 |
+| ------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| `starter`     | SPA 출발점(빈 껍데기)                                                    | 로그인 뒤 앱 · 대시보드 · 내부 도구. **기본값**                                      | `pnpm dev`                                                                                                           |
+| `starter-ssr` | 서버 렌더 출발점                                                         | 검색 노출(SEO) · 링크 미리보기 · 첫 화면 속도가 필요한 공개 페이지                   | `pnpm dev:ssr` · `pnpm --filter starter-ssr build && … start` · Dockerfile                                           |
+| `storybook`   | 스토리집 — 부품 · 화면 틀 · 토큰의 정본                                  | 화면을 짜기 전에 부품 사용법을 볼 때 · 에이전트가 따라 할 기준                       | `pnpm storybook` · `pnpm test:stories`                                                                               |
+| `workbench`   | 백엔드 확인용 시각적 테스트 벤치                                         | 백엔드 모듈을 눌러 볼 때                                                             | `pnpm dev:workbench`                                                                                                 |
+| `sample`      | 참조 앱 Notes(화면 → Pattern 지도 · 조립 메모는 `apps/sample/README.md`) | 「이 스켈레톤으로 이런 제품이 나온다」를 보고 싶을 때 · 새 기능을 짤 때 따라 할 정본 | `pnpm dev:sample` · `pnpm e2e:sample`(진짜 백엔드 + 브라우저) · 한 줄 풀스택은 백엔드 레포의 `scripts/dev-sample.sh` |
 
 SPA vs SSR: 둘은 같은 패키지 · 같은 페이지다. SPA 는 정적 파일로 호스팅하고 서버가 없다. SSR 은 Node 프로세스 1개를 운영하고(렌더 규칙 · 느린 백엔드 대비 시간 제한), 대신 첫 응답에 내용 · 제목 · 설명이 이미 들어 있다. 필요가 실제로 생긴 앱만 SSR 로 시작한다 — `scripts/new-project.sh <dir> <name> --ssr`.
 

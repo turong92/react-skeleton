@@ -166,6 +166,24 @@ describe('findProblems', () => {
     ])
   })
 
+  it('e2e files (an e2e/ folder) are test-side too: a browser driver from devDependencies is enough, not a runtime dependency', () => {
+    const fine = ws({
+      kind: 'app',
+      name: 'sample',
+      devDependencies: { playwright: '^1.63.0' },
+      files: { 'e2e/helpers.ts': "import { chromium } from 'playwright'" },
+    })
+    expect(findProblems(fine)).toEqual([])
+    const undeclared = ws({
+      kind: 'app',
+      name: 'sample',
+      files: { 'e2e/helpers.ts': "import { chromium } from 'playwright'" },
+    })
+    expect(findProblems(undeclared)).toEqual([
+      expect.stringContaining('sample imports playwright but does not declare it'),
+    ])
+  })
+
   it('the starter app must not depend on, or import, the workbench app', () => {
     const broken = ws(
       { kind: 'app', name: 'workbench' },

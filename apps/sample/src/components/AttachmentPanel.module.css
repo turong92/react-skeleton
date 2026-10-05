@@ -1,0 +1,43 @@
+.body {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.current {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-alt);
+}
+
+.file {
+  display: grid;
+  gap: var(--space-xs);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.label {
+  color: var(--text-muted);
+  font-size: var(--font-size-caption);
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.none {
+  color: var(--text-muted);
+}
+
+.progress {
+  display: grid;
+  gap: var(--space-sm);
+  justify-items: start;
+}

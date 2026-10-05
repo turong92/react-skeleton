@@ -1,7 +1,9 @@
+/* 컨테이너 쿼리 — 뷰포트가 아니라 셸 자신의 너비를 본다(좁은 틀 안에서도 같은 모양) */
 .shell {
   min-height: 100svh;
   display: flex;
   flex-direction: column;
+  container: shell / inline-size;
 }
 
 .header {
@@ -29,9 +31,33 @@
 .nav {
   display: flex;
   align-items: center;
-  gap: var(--space-lg);
+  gap: var(--space-xs);
   flex: 1;
   min-width: 0;
+}
+
+.nav a {
+  padding: var(--space-xs) var(--space-md);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.nav a:hover {
+  color: var(--text-strong);
+}
+
+.nav a[aria-current='page'] {
+  background: var(--teal-wash);
+  color: var(--text-strong);
+}
+
+.header a:focus-visible {
+  outline: 3px solid var(--teal-soft);
+  outline-offset: 1px;
+  border-radius: var(--radius-md);
+  box-shadow: 0 0 0 1px var(--teal);
 }
 
 .actions {
@@ -51,4 +77,36 @@
   padding: var(--space-lg) var(--space-2xl);
   border-top: 1px solid var(--border);
   color: var(--text-muted);
+}
+
+@container shell (max-width: 640px) {
+  .header {
+    flex-wrap: wrap;
+    gap: var(--space-xs) var(--space-md);
+    padding: var(--space-sm) var(--space-lg);
+  }
+
+  .brand {
+    order: 1;
+    flex: 1;
+  }
+
+  .actions {
+    order: 2;
+  }
+
+  .nav {
+    order: 3;
+    flex: 1 0 100%;
+    overflow-x: auto;
+    padding-bottom: var(--space-xs);
+  }
+
+  .main {
+    padding: var(--space-lg);
+  }
+
+  .footer {
+    padding: var(--space-lg);
+  }
 }

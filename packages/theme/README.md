@@ -21,7 +21,7 @@ initTheme()           // 앱 시작 때 한 번(main.tsx · entry-client.tsx) �
 | `initTheme` · `getServerTheme`                                                              | 저장한 선택을 읽어 `<html>` 에 단다(명시 호출) · 서버 렌더 · 하이드레이션 첫 그림의 값(항상 `system`) |
 | `getTheme` · `setTheme` · `subscribeTheme` · `useTheme`                                     | 고른 테마(localStorage 에 저장, 막혀도 이번 탭에는 적용)                                              |
 | `readStoredTheme` · `applyTheme` · `nextTheme` · `isTheme` · `THEMES` · `THEME_STORAGE_KEY` | 보조                                                                                                  |
-| `ThemeToggle({ label?, title? })` · `ThemedToaster`                                         | 부품                                                                                                  |
+| `ThemeToggle({ label?, title? })` · `ThemedToaster({ position? })`                          | 부품                                                                                                  |
 | `PRE_PAINT_SCRIPT`                                                                          | 첫 칠 전 스크립트 문자열(Vite 가 아니면 `index.html` 에 직접 인라인)                                  |
 | `@skeleton/theme/vite` → `themePrePaint()`                                                  | 위 스크립트를 `<head-prepend>` 에 넣는 Vite 플러그인(Node 22.18+ 가 `.ts` 를 직접 읽는다)             |
 

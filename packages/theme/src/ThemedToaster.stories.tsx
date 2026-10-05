@@ -12,7 +12,10 @@ const meta = {
   parameters: { a11y: { test: 'error' } },
   beforeEach: () => {
     setTheme('dark')
-    return () => setTheme('system')
+    return () => {
+      setTheme('system')
+      toast.dismiss() // 다음 스토리에 토스트가 남지 않게
+    }
   },
   render: () => (
     <>
@@ -31,6 +34,24 @@ export const FollowsTheTheme: Story = {
     await expect(document.querySelector('[data-sonner-toaster]')).toHaveAttribute(
       'data-sonner-theme',
       'dark',
+    )
+  },
+}
+
+/** 헤더에 액션이 있는 앱은 토스트가 그것을 덮지 않게 아래쪽으로 둔다 */
+export const PositionIsAProp: Story = {
+  render: () => (
+    <>
+      <Button onClick={() => toast.success('Saved below')}>Notify</Button>
+      <ThemedToaster position="bottom-right" />
+    </>
+  ),
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole('button', { name: 'Notify' }))
+    await expect(await screen.findByText('Saved below')).toBeInTheDocument()
+    await expect(document.querySelector('[data-sonner-toaster]')).toHaveAttribute(
+      'data-y-position',
+      'bottom',
     )
   },
 }

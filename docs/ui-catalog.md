@@ -25,6 +25,11 @@
 | `Dialog`        | `packages/ui/src/Dialog/Dialog.stories.tsx`               | 모달 — 삭제 확인 · 간단한 입력. 열림 상태는 부모가 쥔다                   |
 | `Spinner`       | `packages/ui/src/Spinner/Spinner.stories.tsx`             | 화면 · 구역을 기다리는 중 표시                                            |
 | `AppShell`      | `packages/ui/src/AppShell/AppShell.stories.tsx`           | 앱의 헤더 · 본문 · 푸터 틀 — 루트 레이아웃에서 한 번                      |
+| `PageHeader`    | `packages/ui/src/PageHeader/PageHeader.stories.tsx`       | 모든 화면의 첫 줄 — `h1` · 설명 · 오른쪽 액션 · 돌아가기 자리             |
+| `Badge`         | `packages/ui/src/Badge/Badge.stories.tsx`                 | 상태 알약(글자로 뜻을 전하고 색은 거든다)                                 |
+| `Progress`      | `packages/ui/src/Progress/Progress.stories.tsx`           | 진행률 막대(0~1) · 끝을 모르는 진행                                       |
+| `FilePicker`    | `packages/ui/src/FilePicker/FilePicker.stories.tsx`       | 파일 고르기(끌어다 놓기 + 버튼) — 날 `<input type="file">` 대신           |
+| `Stat`          | `packages/ui/src/Stat/Stat.stories.tsx`                   | 대시보드의 숫자 한 칸(라벨 · 큰 숫자 · 설명)                              |
 | `ErrorBoundary` | `packages/ui/src/ErrorBoundary/ErrorBoundary.stories.tsx` | 렌더링 오류를 잡아 대체 화면을 보인다(앱 루트 + 위험한 구역)              |
 | `showApiError`  | `packages/ui/src/showApiError/showApiError.stories.tsx`   | API 오류 토스트(제목 · 상세 · traceId) — 보통 QueryClient `onError` 한 곳 |
 | `toastPromise`  | `packages/ui/src/toast/toastPromise.stories.tsx`          | 약속 하나를 「로딩 → 성공/실패」 토스트 하나로                            |
@@ -46,14 +51,15 @@
 
 `@skeleton/ui` 만으로 짠 한 파일짜리 화면. 가장 가까운 것을 복사해 문구 · 데이터 연결만 바꾼다(숨은 도우미 파일 없음).
 
-| 화면      | 스토리                                                  | 언제 복사하는가                                            |
-| --------- | ------------------------------------------------------- | ---------------------------------------------------------- |
-| 목록      | `apps/storybook/src/patterns/ListPage.stories.tsx`      | 표 + 쪽 이동 + 빈 상태 + 로딩 + 오류(다시 시도)            |
-| 폼        | `apps/storybook/src/patterns/FormPage.stories.tsx`      | 입력 · 검증 오류(첫 오류로 포커스) · 제출 중 · 성공 · 실패 |
-| 상세      | `apps/storybook/src/patterns/DetailPage.stories.tsx`    | 제목 + 탭 + 위험 구역(삭제 확인) · 로딩 · 없음             |
-| 로그인    | `apps/storybook/src/patterns/LoginPage.stories.tsx`     | 이메일 · 비밀번호 · 제출 중 · 잘못된 계정 정보             |
-| 권한 없음 | `apps/storybook/src/patterns/ForbiddenPage.stories.tsx` | 403 — 이유를 말하고 갈 곳을 준다                           |
-| 설정      | `apps/storybook/src/patterns/SettingsPage.stories.tsx`  | 즉시 적용 스위치 + 저장 폼 + 위험 구역                     |
+| 화면      | 스토리                                                  | 언제 복사하는가                                                     |
+| --------- | ------------------------------------------------------- | ------------------------------------------------------------------- |
+| 대시보드  | `apps/storybook/src/patterns/DashboardPage.stories.tsx` | 숫자 4칸 + 최근 항목 표 + 알림 카드 · 로딩 · 오류 · 첫 사용 빈 상태 |
+| 목록      | `apps/storybook/src/patterns/ListPage.stories.tsx`      | 표 + 쪽 이동 + 빈 상태 + 로딩 + 오류(다시 시도)                     |
+| 폼        | `apps/storybook/src/patterns/FormPage.stories.tsx`      | 입력 · 검증 오류(첫 오류로 포커스) · 제출 중 · 성공 · 실패          |
+| 상세      | `apps/storybook/src/patterns/DetailPage.stories.tsx`    | 제목 + 탭 + 위험 구역(삭제 확인) · 로딩 · 없음                      |
+| 로그인    | `apps/storybook/src/patterns/LoginPage.stories.tsx`     | 이메일 · 비밀번호 · 제출 중 · 잘못된 계정 정보                      |
+| 권한 없음 | `apps/storybook/src/patterns/ForbiddenPage.stories.tsx` | 403 — 이유를 말하고 갈 곳을 준다                                    |
+| 설정      | `apps/storybook/src/patterns/SettingsPage.stories.tsx`  | 즉시 적용 스위치 + 저장 폼 + 위험 구역                              |
 
 ## 디자인 토큰
 

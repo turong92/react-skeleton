@@ -82,6 +82,8 @@ export type ApiClient = {
   ): Promise<ApiHttpResponse<TEnvelope>>
   envelope<TEnvelope>(path: string, request?: ApiRequest): Promise<TEnvelope>
   basic(path: string, request?: ApiRequest): Promise<ApiBasicResponse>
+  /** 본문이 없는 성공(204 — 백엔드 `Response.noContent()`: 삭제 · 토글 · 명령 완료). 실패는 그대로 `ApiRequestError` 로 던진다 */
+  noContent(path: string, request?: ApiRequest): Promise<void>
   value<T>(path: string, request?: ApiRequest): Promise<T>
   list<T>(path: string, request?: ApiRequest): Promise<T[]>
   page<T>(path: string, request?: ApiRequest): Promise<ApiPageResponse<T>>
@@ -175,6 +177,9 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
       const result = await envelope<ApiBasicResponse>(path, request)
       assertBasic(result, path)
       return result
+    },
+    noContent: async (path, request) => {
+      await response(path, request)
     },
     value: async <T>(path: string, request?: ApiRequest) => {
       const result = await envelope<ApiValueResponse<T>>(path, request)

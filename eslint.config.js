@@ -34,6 +34,8 @@ const APP_NAMES = {
     'starter/**',
     'starter-ssr',
     'starter-ssr/**',
+    'sample',
+    'sample/**',
   ],
   message: 'Packages must not import apps.',
 }

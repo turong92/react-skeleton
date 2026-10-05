@@ -1,0 +1,30 @@
+.page {
+  display: grid;
+  gap: var(--space-xl);
+  max-width: 40rem;
+}
+
+.list {
+  display: grid;
+  gap: var(--space-md);
+  margin: 0;
+}
+
+.list dt {
+  color: var(--text-muted);
+  font-size: var(--font-size-caption);
+}
+
+.list dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.session {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  color: var(--text-muted);
+}

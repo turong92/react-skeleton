@@ -3,13 +3,14 @@
 #
 #   scripts/test-new-project.sh            # 빠른 검사 (기본, 수 초): 인자 검증 · 패키지 닫힘 · 구조 · 이름/스코프 바꾸기 · 남는 흔적
 #   scripts/test-new-project.sh --quick    # 위와 같다 (`pnpm test` 가 부른다)
-#   scripts/test-new-project.sh --full     # 위 + 네 조합을 임시 디렉토리에 찍어 각각 pnpm install · lint · typecheck · test · build (네트워크 필요, 순차, 수 분)
+#   scripts/test-new-project.sh --full     # 위 + 다섯 조합을 임시 디렉토리에 찍어 각각 pnpm install · lint · typecheck · test · build (네트워크 필요, 순차, 수 분)
 #
 # --full 은 CI 의 별도 워크플로(.github/workflows/new-project.yml)가 돈다. 조합:
 #   1. 기본값만 (스토리집 포함)
 #   2. --packages realtime,notifications,storage  (+ `pnpm test:stories` — 진짜 브라우저에서 스토리를 돌린다. Playwright chromium 이 필요하다)
 #   3. --scope @acme --packages payment
 #   4. --ssr --without-storybook  (서버 렌더 스타터 — 앱의 통합 테스트가 빌드한 서버를 띄워 본다 — 와 스토리집을 뗀 모양)
+#   5. --with-sample  (참조 앱 apps/sample 을 함께 — install · lint · typecheck · test · build 가 샘플까지 돈다. e2e 는 백엔드가 필요해 돌리지 않는다)
 # macOS bash 3.2 와 GNU bash 에서 돈다. 임시 디렉토리는 끝나면 지운다 (KEEP=1 이면 남긴다).
 set -euo pipefail
 
@@ -79,6 +80,7 @@ expect_exit 2 "대상 디렉토리가 이미 있으면 exit 2" bash "$SCRIPT" "$
 expect_exit 2 "이름은 소문자 · 숫자 · 하이픈" bash "$SCRIPT" "$TMP/x2" "Acme App"
 expect_exit 2 "이름 workbench 는 예약 (apps/workbench 와 겹친다)" bash "$SCRIPT" "$TMP/x3" workbench
 expect_exit 2 "이름 storybook 도 예약 (apps/storybook 와 겹친다)" bash "$SCRIPT" "$TMP/x3b" storybook
+expect_exit 2 "이름 sample 도 예약 (apps/sample 과 겹친다)" bash "$SCRIPT" "$TMP/x3d" sample
 expect_exit 2 "--with-showcase 는 없어졌다 — 스토리집(기본으로 따라온다)이 대신한다고 알려 준다" bash "$SCRIPT" "$TMP/x3c" acme-app --with-showcase
 echo "$LAST_OUTPUT" | grep -qi "storybook" && pass "--with-showcase 오류가 스토리집을 가리킨다" || fail "--with-showcase 오류 메시지: $LAST_OUTPUT"
 expect_exit 2 "--scope 는 @이름 꼴" bash "$SCRIPT" "$TMP/x4" acme-app --scope acme
@@ -111,6 +113,12 @@ plan_keep() { node "$HELPER" plan "$FAKE" 0 "$1" | sed -n 's/^keep //p' | tr '\n
 node "$HELPER" plan "$FAKE" 0 d | grep -q '^why d requested' && pass "고른 이유가 출력된다" || fail "고른 이유가 없다"
 [ "$(node "$HELPER" plan "$FAKE" 0 '' | grep -c '^why c ')" = 1 ] && node "$HELPER" plan "$FAKE" 0 '' | grep -q '^why c needed by b' && pass "닫힘으로 따라온 것은 누가 불렀는지 출력된다" || fail "닫힘 이유가 없다"
 [ "$(plan_keep 'e')" = "a b c e theme tokens" ] && pass "--packages e 도 닫힘 안에서 정렬되어 나온다" || fail "plan e: [$(plan_keep 'e')]"
+mkdir -p "$FAKE/apps/sample" "$FAKE/packages/f"
+echo '{"name":"sample","dependencies":{"@skeleton/e":"workspace:*","@skeleton/f":"workspace:*"}}' > "$FAKE/apps/sample/package.json"
+echo '{"name":"@skeleton/f","dependencies":{"@skeleton/c":"workspace:*"}}' > "$FAKE/packages/f/package.json"
+[ "$(plan_keep '')" = "a b c theme tokens" ] && pass "apps/sample 이 있어도 기본 plan 은 그 의존(e · f)을 세지 않는다" || fail "plan 기본(샘플 있음): [$(plan_keep '')]"
+[ "$(node "$HELPER" plan "$FAKE" 0 '' 0 1 | sed -n 's/^keep //p' | tr '\n' ' ' | sed 's/ $//')" = "a b c e f theme tokens" ] && pass "--with-sample 은 apps/sample 이 쓰는 패키지(e · f)와 그 닫힘을 더한다" || fail "plan sample"
+node "$HELPER" plan "$FAKE" 0 '' 0 1 | grep -q '^why e needed by the sample app' && pass "샘플이 부른 이유가 출력된다" || fail "샘플 이유가 없다"
 mkdir -p "$FAKE/apps/starter-ssr"
 echo '{"name":"starter-ssr","dependencies":{"@skeleton/d":"workspace:*"}}' > "$FAKE/apps/starter-ssr/package.json"
 [ "$(node "$HELPER" plan "$FAKE" 0 '' 1 | sed -n 's/^keep //p' | tr '\n' ' ' | sed 's/ $//')" = "c d theme tokens" ] && pass "--ssr 는 apps/starter-ssr 가 쓰는 것을 센다 (apps/starter 가 아니라) — d 와 d 의 의존 c" || fail "plan ssr"
@@ -122,6 +130,10 @@ MARKER="$TMP/marker"; touch "$MARKER"; sleep 1
 A="$TMP/a"
 expect_exit 0 "기본 조합을 찍는다" stamp "$A"
 check "프로젝트 앱 apps/acme-app + 스토리집 apps/storybook 만 남는다 (apps/starter · apps/workbench · apps/starter-ssr 없음)" bash -c "test -d '$A/apps/acme-app' && test -d '$A/apps/storybook' && test ! -e '$A/apps/starter' && test ! -e '$A/apps/workbench' && test ! -e '$A/apps/starter-ssr'"
+check "기본으로는 apps/sample 이 따라오지 않는다 (참조 앱은 --with-sample 일 때만)" test ! -e "$A/apps/sample"
+[ "$(json "$A/package.json" '["dev:sample", "e2e:sample"].every((k) => p.scripts[k] === undefined)')" = "true" ] && pass "샘플 전용 루트 스크립트(dev:sample · e2e:sample)도 없다" || fail "샘플 스크립트가 남았다"
+check "샘플의 흔적(apps/sample · dev:sample · e2e:sample · sample-e2e-job)이 문서 · 설정 · CI 에 없다 (잠금 파일 제외)" bash -c "! grep -rIE --exclude-dir=node_modules --exclude=pnpm-lock.yaml 'apps/sample|dev:sample|e2e:sample|sample-e2e-job|--with-sample' '$A'"
+check "eslint 의 앱 이름 막기에 sample 이 없다 (앱이 없으니)" bash -c "! grep -q \"'sample'\" '$A/eslint.config.js'"
 [ "$(json "$A/apps/acme-app/package.json" 'p.name')" = "acme-app" ] && pass "앱 package.json 이름" || fail "앱 package.json 이름"
 check "index.html 제목" grep -q '<title>acme-app</title>' "$A/apps/acme-app/index.html"
 check "헤더 브랜드 글자" grep -q '<strong>acme-app</strong>' "$A/apps/acme-app/src/layouts/RootLayout.tsx"
@@ -147,7 +159,7 @@ check "README 에 남은 패키지 표와 다음 단계 명령이 있다" bash -
 STORIES="$(cd "$A" && find packages apps -name '*.stories.tsx' -not -path '*/node_modules/*' | sort | tr '\n' ' ')"
 check "남은 패키지(ui · theme · auth · time)의 스토리가 따라온다" bash -c "test -f '$A/packages/ui/src/Button/Button.stories.tsx' && test -f '$A/packages/theme/src/ThemeToggle.stories.tsx' && test -f '$A/packages/auth/src/RequireAuth.stories.tsx' && test -f '$A/packages/time/src/formats.stories.tsx'"
 check "지운 패키지(notifications · storage · captcha-turnstile)의 스토리는 없다" bash -c "! echo '$STORIES' | grep -qE 'notifications|storage|captcha-turnstile'"
-check "Patterns 6개(목록 · 폼 · 상세 · 로그인 · 403 · 설정)와 토큰 문서가 따라온다" bash -c "ls '$A/apps/storybook/src/patterns/' | grep -c stories | grep -q '^6$' && test -f '$A/apps/storybook/src/tokens/Tokens.stories.tsx'"
+check "Patterns 7개(대시보드 · 목록 · 폼 · 상세 · 로그인 · 403 · 설정)와 토큰 문서가 따라온다" bash -c "ls '$A/apps/storybook/src/patterns/' | grep -c stories | grep -q '^7$' && test -f '$A/apps/storybook/src/tokens/Tokens.stories.tsx'"
 check "docs/ui-catalog.md 는 남은 스토리만 적는다 (적힌 경로가 모두 있다)" bash -c "test -f '$A/docs/ui-catalog.md' && grep -oE '\`(packages|apps)/[^\` ]+\.stories\.tsx\`' '$A/docs/ui-catalog.md' | tr -d '\`' | while read -r f; do test -f '$A/'\$f || { echo missing \$f; exit 1; }; done"
 check "CLAUDE.md 에 에이전트 안내(스토리 먼저 · Patterns 목록)가 따라온다" bash -c "grep -q 'Storybook' '$A/CLAUDE.md' && grep -q 'apps/storybook/src/patterns/ListPage.stories.tsx' '$A/CLAUDE.md' && grep -q 'ui-catalog.md' '$A/CLAUDE.md'"
 check "날 요소 · 인라인 값 막는 ESLint 규칙과 그 테스트가 따라온다" bash -c "grep -q 'UI_ONLY' '$A/eslint.config.js' && test -f '$A/tests/eslint.uiOnly.test.ts' && test -f '$A/tests/stories.test.ts'"
@@ -220,8 +232,47 @@ SRS="$TMP/srs"
 expect_exit 0 "--ssr --without-storybook 도 찍힌다" stamp "$SRS" --ssr --without-storybook
 check "서버 렌더 앱만 남는다 (apps/acme-app) — 스토리집 없이" bash -c "test -f '$SRS/apps/acme-app/server/main.ts' && test ! -e '$SRS/apps/storybook' && test ! -e '$SRS/apps/starter-ssr'"
 
+echo "== 9. --with-sample (참조 앱 apps/sample 을 함께 가져간다)"
+WS="$TMP/ws"
+expect_exit 0 "샘플을 함께 찍는다" stamp "$WS" --with-sample
+check "apps/sample 이 이름 그대로 apps/acme-app 옆에 남는다" bash -c "test -f '$WS/apps/sample/package.json' && test -d '$WS/apps/acme-app' && test -d '$WS/apps/storybook'"
+[ "$(json "$WS/apps/sample/package.json" 'p.name')" = "sample" ] && pass "샘플 앱 이름은 그대로 sample" || fail "샘플 앱 이름"
+want="api-client auth notifications realtime storage theme time tokens ui"
+[ "$(listing "$WS/packages")" = "$want" ] && pass "샘플이 쓰는 패키지가 따라온다 ($want)" || fail "packages: [$(listing "$WS/packages")]"
+[ -z "$(dangling_deps "$WS" @skeleton)" ] && pass "끊어진 의존 없음" || fail "끊어진 의존: $(dangling_deps "$WS" @skeleton)"
+check "eslint 의 앱 이름 막기에 sample 과 새 앱 이름이 모두 있다" bash -c "grep -q \"'sample/\*\*'\" '$WS/eslint.config.js' && grep -q \"'acme-app/\*\*'\" '$WS/eslint.config.js'"
+check "새 앱 이름 acme-app 은 샘플과 별개다 (샘플은 acme-app 으로 바뀌지 않는다)" bash -c "! grep -rIl --exclude-dir=node_modules --exclude=pnpm-lock.yaml 'acme-app' '$WS/apps/sample'"
+check "CLAUDE.md · README 가 샘플 앱을 한 줄로 안내한다" bash -c "grep -q 'apps/sample' '$WS/CLAUDE.md' && grep -q 'apps/sample' '$WS/README.md'"
+check "표식 주석(sample:start/end · sample-e2e-job)은 남지 않는다" bash -c "! grep -rIE --exclude-dir=node_modules --exclude=pnpm-lock.yaml 'sample:(start|end)|sample-e2e-job' '$WS'"
+WSS="$TMP/wss"
+expect_exit 0 "--with-sample --ssr --without-storybook --scope @acme 도 함께 찍힌다" stamp "$WSS" --with-sample --ssr --without-storybook --scope @acme
+check "SSR 앱 + 샘플 (스토리집 없이), 스코프가 샘플에도 적용된다" bash -c "test -f '$WSS/apps/acme-app/server/main.ts' && test -f '$WSS/apps/sample/package.json' && test ! -e '$WSS/apps/storybook' && grep -q '@acme/ui' '$WSS/apps/sample/package.json'"
+[ -z "$(dangling_deps "$WSS" @acme)" ] && pass "끊어진 의존 없음" || fail "끊어진 의존: $(dangling_deps "$WSS" @acme)"
+
+# 샘플에 딸린 도구(루트 스크립트 · CI 잡 · 문서 표식)를 가려내는 일꾼을 가짜로 심은 복사본으로 확인한다 — 샘플 도구가 실제로 들어오기 전에도, 이후 바뀌어도 맞는지 본다
+SEED="$TMP/seed"
+node "$HELPER" copy "$SRC" "$SEED"
+node -e '
+  const fs = require("fs"), path = require("path")
+  const root = process.argv[1]
+  const pj = path.join(root, "package.json"); const p = JSON.parse(fs.readFileSync(pj, "utf8"))
+  p.scripts["dev:sample"] = "pnpm --filter sample dev"; p.scripts["e2e:sample"] = "pnpm --filter sample e2e"
+  fs.writeFileSync(pj, JSON.stringify(p, null, 2) + "\n")
+  const ci = path.join(root, ".github/workflows/ci.yml"); let t = fs.readFileSync(ci, "utf8")
+  if (!t.includes("sample-e2e-job:start")) t = t.trimEnd() + "\n\n  # sample-e2e-job:start\n  sample-e2e:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo e2e\n  # sample-e2e-job:end\n"
+  fs.writeFileSync(ci, t)
+' "$SEED"
+SEEDKEEP() { node "$HELPER" plan "$SEED" 0 '' 0 "$1" | sed -n 's/^keep //p' | tr '\n' ',' | sed 's/,$//'; }
+SEED0="$TMP/seed0"; SEED1="$TMP/seed1"
+cp -R "$SEED" "$SEED0"; cp -R "$SEED" "$SEED1"
+node "$HELPER" apply "$SEED0" acme-app @skeleton 0 "$(SEEDKEEP 0)" 0 1 0
+node "$HELPER" apply "$SEED1" acme-app @skeleton 0 "$(SEEDKEEP 1)" 0 1 1
+[ "$(json "$SEED0/package.json" '["dev:sample", "e2e:sample"].every((k) => p.scripts[k] === undefined)')" = "true" ] && ! grep -q 'sample' "$SEED0/.github/workflows/ci.yml" && test ! -e "$SEED0/apps/sample" && pass "샘플 없이 찍으면 심은 루트 스크립트 · CI 잡(sample-e2e-job)이 떨어진다" || fail "샘플 도구가 남았다"
+[ "$(json "$SEED1/package.json" '["dev:sample", "e2e:sample"].every((k) => typeof p.scripts[k] === "string")')" = "true" ] && grep -q 'sample-e2e:' "$SEED1/.github/workflows/ci.yml" && ! grep -q 'sample-e2e-job' "$SEED1/.github/workflows/ci.yml" && pass "--with-sample 이면 스크립트 · CI 잡이 남고 표식 줄만 걷힌다" || fail "샘플 도구가 사라졌거나 표식이 남았다"
+check "ci.yml 은 두 경우 모두 올바른 YAML 들여쓰기 그대로다 (stories 잡이 온전)" bash -c "grep -q '^  stories:' '$SEED0/.github/workflows/ci.yml' && grep -q '^  stories:' '$SEED1/.github/workflows/ci.yml'"
+
 if [ "$MODE" = "--full" ]; then
-  echo "== 9. 조합마다 pnpm install · format · lint · typecheck · test · build (순차)"
+  echo "== 10. 조합마다 pnpm install · format · lint · typecheck · test · build (순차)"
   verify_composition() { # verify_composition <dir> <이름> [stories] — stories 면 test:stories(진짜 브라우저)도 돈다
     local dir="$1" name="$2" with_stories="${3:-}" started ended step
     local steps=("install --no-frozen-lockfile --prefer-offline" "format" "tokens:check" "lint" "typecheck" "test" "format:check" "build")
@@ -242,6 +293,7 @@ if [ "$MODE" = "--full" ]; then
   verify_composition "$B" "2-packages" stories
   verify_composition "$C" "3-scope-payment"
   verify_composition "$SRS" "4-ssr-without-storybook"
+  verify_composition "$WS" "5-with-sample"
 fi
 
 echo

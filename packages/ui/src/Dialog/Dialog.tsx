@@ -33,14 +33,14 @@ export function Dialog({
 
   return (
     <dialog ref={ref} className={styles.dialog} aria-labelledby={titleId} onClose={onClose}>
-      <header className={styles.header}>
+      <div className={styles.header}>
         <h2 id={titleId}>{title}</h2>
         <button type="button" className={styles.close} aria-label={closeLabel} onClick={onClose}>
           ×
         </button>
-      </header>
+      </div>
       <div className={styles.body}>{children}</div>
-      {footer && <footer className={styles.footer}>{footer}</footer>}
+      {footer && <div className={styles.footer}>{footer}</div>}
     </dialog>
   )
 }

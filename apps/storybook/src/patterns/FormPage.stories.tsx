@@ -1,4 +1,4 @@
-import { Button, Card, Checkbox, Field, Input, Select, Textarea } from '@skeleton/ui'
+import { Button, Card, Checkbox, Field, Input, PageHeader, Select, Textarea } from '@skeleton/ui'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState, type FormEvent } from 'react'
 import { expect, fn, waitFor } from 'storybook/test'
@@ -55,7 +55,7 @@ function NewProjectPage({ onSubmit }: { onSubmit: (values: Values) => Promise<vo
 
   return (
     <div style={stack}>
-      <h1>New project</h1>
+      <PageHeader title="New project" />
       {status === 'success' && (
         <Card>
           <p role="status">Project created.</p>

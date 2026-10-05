@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — 참조 앱 `apps/sample`(Notes) · `@skeleton/ui` 5부품 · Dashboard Pattern · 브라우저 e2e (2026-10-05)
+
+"이 스켈레톤으로 이런 제품이 나온다"를 한 화면 흐름으로 보이는 작은 실제 앱. 로그인 → 대시보드(현황 · 최근 노트 · 안 읽은 알림) → 목록(검색 · 필터 · 쪽 · 빈/로딩/오류) → 상세(탭 · 삭제 확인) → 만들기/수정(백엔드 400 을 칸별로) → 첨부 업로드(진행률) → 알림 종 + 실시간 → 설정(테마 · 계정) → 로그아웃. 백엔드 짝은 kotlin-skeleton `apps/sample`(`/api/v1/notes`).
+
+- `apps/sample` — Patterns 를 조립한 화면(화면 → Pattern 지도와 조립 메모는 `apps/sample/README.md`), 글자는 `src/strings.ts` 한 곳, 서버 상태는 TanStack Query(`notes/queries.ts`), HTTP 는 `notes/notesApi.ts` 한 곳, 목록 조건은 주소 검색 인자(`listParams.ts`), 만들기는 요청 내용마다 `Idempotency-Key`(같은 내용 재전송은 같은 키, 고쳐 보내면 새 키 — 서버는 같은 키 다른 본문에 409). 단위 테스트(API 모양 · 쿼리 키 · 폼 오류 매핑 · 업로드 문구 · 주소 인자 · 라우트 가드)
+- 브라우저 e2e `pnpm e2e:sample`(Playwright + vitest, 새 의존 없음) — `e2e/globalSetup.ts` 가 kotlin-skeleton `scripts/sample-e2e-backend.sh` 로 DB · 로컬 S3 · 백엔드를 빈 포트에 올리고 Vite 를 띄운 뒤 끝나면 모두 내린다. CI `sample-e2e` 잡(타임아웃 30분). `E2E_WALKTHROUGH=1 pnpm --filter sample walkthrough` 는 여정 스크린샷 · 녹화
+- `@skeleton/ui` 새 부품: `PageHeader` · `Badge` · `Progress` · `FilePicker`(날 `<input type=file>` 이 금지라) · `Stat` — 스토리 + `play` + SSR fixture. `AppShell` 이 현재 링크(`aria-current="page"`)를 칠하고 좁은 화면(≤640px)에서 메뉴가 둘째 줄로 내려간다(컨테이너 쿼리, props 불변). `Button` 라벨이 줄바꿈하지 않는다. `Dialog` 의 머리 · 바닥은 `<header>` · `<footer>` 가 아니라 `<div>`(대화상자 안에서는 최상위가 아닌 banner · contentinfo 랜드마크가 되어 axe 가 지적했다)
+- 새 Pattern `Patterns/Dashboard page`(숫자 4칸 + 최근 항목 표 + 알림 카드 · 로딩 · 오류 · 첫 사용). 목록 · 상세 · 폼 · 설정 Pattern 이 `PageHeader` 로 시작한다
+- `@skeleton/api-client`: `client.noContent(path, request)` — 204(백엔드 `Response.noContent()`: 삭제 · 명령 완료)는 본문이 없어 `basic` 이 검증에 실패했다. `@skeleton/theme`: `ThemedToaster({ position })`(기본 `top-right` 그대로, 헤더 액션을 덮지 않게 `bottom-right`)
+- `scripts/new-project.sh`: 샘플은 **기본으로 넣지 않는다**, `--with-sample` 이면 남긴다(이름 `sample` 예약). 루트 스크립트 `dev:sample` · `e2e:sample`, CLAUDE.md 「새 기능의 정본 예시」
+
 ### Changed — 백엔드 모듈이 받은편지함 · 업로드 HTTP 를 연다: 기본 경로가 생겼다 · 풀스택 한 줄 실행 (2026-10-05)
 
 새 프로젝트 드릴(스켈레톤 두 개로 찍어 브라우저에서 알림 · 업로드 · 잡 · 시간 · 인증을 눌러 봄)에서 앱이 직접 써야 했던 컨트롤러(받은편지함 142줄 · presign 70줄)를 kotlin-skeleton 모듈로 옮겼고, 패키지는 그 경로를 기본으로 한다.

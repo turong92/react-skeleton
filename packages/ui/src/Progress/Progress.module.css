@@ -1,0 +1,66 @@
+.root {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.bar {
+  flex: 1;
+  min-width: 0;
+  height: var(--space-sm);
+  appearance: none;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--border);
+  overflow: hidden;
+  accent-color: var(--teal);
+}
+
+.bar::-webkit-progress-bar {
+  background: var(--border);
+}
+
+.bar::-webkit-progress-value {
+  background: var(--teal);
+  border-radius: var(--radius-full);
+  transition: width 0.2s ease;
+}
+
+.bar::-moz-progress-bar {
+  background: var(--teal);
+  border-radius: var(--radius-full);
+}
+
+.bar:indeterminate {
+  background: linear-gradient(90deg, var(--border) 0%, var(--teal) 50%, var(--border) 100%);
+  background-size: 200% 100%;
+  animation: slide 1.4s linear infinite;
+}
+
+.text {
+  min-width: 4ch;
+  text-align: end;
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes slide {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar:indeterminate {
+    animation: none;
+    background: var(--teal-wash);
+  }
+
+  .bar::-webkit-progress-value {
+    transition: none;
+  }
+}

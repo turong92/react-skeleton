@@ -14,14 +14,15 @@ React + TypeScript + Vite 프론트엔드 스켈레톤. pnpm 워크스페이스 
 4. **부품을 더하거나 바꾸면 스토리를 더하거나 고치고 `play` 로 동작을 검증한다**(클릭 · 키보드 · 라벨 연결 · 상태). `pnpm test:stories`(진짜 브라우저)가 통과해야 한다 — 접근성(a11y) 위반도 실패다. 규칙을 끄려면 그 스토리 옆에 이유를 적는다.
 5. **스토리 파일을 더하거나 지우면** `docs/ui-catalog.md` 표에 한 줄을 더하거나 지운다(`tests/stories.test.ts` 가 어긋남을 막는다). `@skeleton/ui` 가 새로 export 하는 것은 `packages/ui/src/<폴더>/` 에 스토리(+`play` 하나 이상)가 있어야 한다.
 
-| Patterns  | 파일                                                    | 복사하는 때                                    |
-| --------- | ------------------------------------------------------- | ---------------------------------------------- |
-| 목록      | `apps/storybook/src/patterns/ListPage.stories.tsx`      | 표 + 쪽 이동 + 빈 상태 + 로딩 + 오류           |
-| 폼        | `apps/storybook/src/patterns/FormPage.stories.tsx`      | 입력 · 검증 오류 · 제출 중 · 성공 · 실패       |
-| 상세      | `apps/storybook/src/patterns/DetailPage.stories.tsx`    | 제목 + 탭 + 위험 구역(삭제 확인) · 로딩 · 없음 |
-| 로그인    | `apps/storybook/src/patterns/LoginPage.stories.tsx`     | 이메일 · 비밀번호 · 제출 중 · 잘못된 계정 정보 |
-| 권한 없음 | `apps/storybook/src/patterns/ForbiddenPage.stories.tsx` | 403 화면                                       |
-| 설정      | `apps/storybook/src/patterns/SettingsPage.stories.tsx`  | 즉시 적용 스위치 + 저장 폼 + 위험 구역         |
+| Patterns  | 파일                                                    | 복사하는 때                                                 |
+| --------- | ------------------------------------------------------- | ----------------------------------------------------------- |
+| 대시보드  | `apps/storybook/src/patterns/DashboardPage.stories.tsx` | 숫자 4칸 + 최근 항목 표 + 알림 카드 · 로딩 · 오류 · 첫 사용 |
+| 목록      | `apps/storybook/src/patterns/ListPage.stories.tsx`      | 표 + 쪽 이동 + 빈 상태 + 로딩 + 오류                        |
+| 폼        | `apps/storybook/src/patterns/FormPage.stories.tsx`      | 입력 · 검증 오류 · 제출 중 · 성공 · 실패                    |
+| 상세      | `apps/storybook/src/patterns/DetailPage.stories.tsx`    | 제목 + 탭 + 위험 구역(삭제 확인) · 로딩 · 없음              |
+| 로그인    | `apps/storybook/src/patterns/LoginPage.stories.tsx`     | 이메일 · 비밀번호 · 제출 중 · 잘못된 계정 정보              |
+| 권한 없음 | `apps/storybook/src/patterns/ForbiddenPage.stories.tsx` | 403 화면                                                    |
+| 설정      | `apps/storybook/src/patterns/SettingsPage.stories.tsx`  | 즉시 적용 스위치 + 저장 폼 + 위험 구역                      |
 
 <!-- storybook-guide:end -->
 
@@ -43,6 +44,7 @@ apps/
 │   ├── src/entry-client.tsx  # initTheme → readSsrState → hydrateRoot(createClientApp) ; src/app/ AppProviders · AppRoutes(서버 · 브라우저 공유)
 │   ├── src/auth/             # createDeferredTokens(저장소 읽기를 하이드레이션 뒤로) · ClientRequireAuth(서버는 중립 자리 표시)
 │   └── src/routes/routes.tsx # 라우트마다 handle { title, description, robots, prefetch } ; Dockerfile(런타임에 node_modules 없음)
+├── sample/                   # 참조 앱 Notes(`new-project.sh --with-sample` 일 때만 따라간다): 로그인 → 대시보드 → 목록 → 상세 → 폼 → 첨부 업로드 → 알림 → 설정, Patterns 를 조립한 실제 제품 모양. 백엔드 짝은 kotlin-skeleton `apps/sample`
 ├── storybook/                # 스토리집(Storybook 10 · Vite): .storybook/(설정 · 라이트/다크 스위치 · a11y 실패 규칙) · src/patterns/(복사해서 시작하는 화면 틀 6개) · src/tokens/(토큰 문서). 부품 스토리는 부품 옆(packages/*/src/**/*.stories.tsx)
 └── workbench/                # 백엔드 확인용 시각적 테스트 벤치(HomePage · modules/workbench · workbench.css) + modules/demos(`/packages` 예제 화면: 새 패키지를 눌러 본다)
 packages/                     # 서로를 이름으로만 부른다. 각자 package.json(exports=src/index.ts) · 테스트 · README
@@ -73,7 +75,7 @@ docs/ui-catalog.md            # 부품 → 스토리 파일 → 언제 쓰는가
 
 ## 새 프로젝트 찍기 (이 스켈레톤 레포에서 — 찍은 프로젝트에는 이 절이 없다)
 
-`scripts/new-project.sh <target-dir> <name> [--packages a,b,c] [--ssr] [--without-storybook] [--with-workbench] [--scope @acme]` — 레포를 복사해 `apps/starter`(`--ssr` 이면 `apps/starter-ssr`)를 `apps/<name>` 으로, `apps/storybook`(스토리집) · 남는 패키지의 스토리 · Patterns · 에이전트 안내 · `docs/ui-catalog.md` 는 기본으로 따라온다(**참조가 프로젝트와 함께 간다** — `--without-storybook` 이면 스토리 · 스토리집 · 그 도구 의존 · CI 잡을 모두 뗀다). 패키지는 스타터가 쓰는 것 + 루트 도구(`theme` · `tokens`) + `--packages` 를 `@skeleton/*` 의존으로 닫은 집합만 남긴다(나머지 폴더 · `tests/skeleton.repo.test.ts` · new-project 도구는 지운다). 루트 `package.json` · eslint 앱 이름 막기 · README/CLAUDE/CHANGELOG 를 새 프로젝트용으로 바꾸고, `--scope` 면 `@skeleton` 을 모두 바꾼다. 고른 패키지는 폴더만 오고 앱 의존 한 줄은 쓰기 시작할 때 더한다(안 쓰는 의존은 루트 테스트가 막는다). 일꾼은 `scripts/new-project.d/stamp.mjs`.
+`scripts/new-project.sh <target-dir> <name> [--packages a,b,c] [--ssr] [--without-storybook] [--with-workbench] [--with-sample] [--scope @acme]` — 레포를 복사해 `apps/starter`(`--ssr` 이면 `apps/starter-ssr`)를 `apps/<name>` 으로, `apps/storybook`(스토리집) · 남는 패키지의 스토리 · Patterns · 에이전트 안내 · `docs/ui-catalog.md` 는 기본으로 따라온다(**참조가 프로젝트와 함께 간다** — `--without-storybook` 이면 스토리 · 스토리집 · 그 도구 의존 · CI 잡을 모두 뗀다). **`apps/sample`(참조 앱 Notes)은 기본으로 떼고 `--with-sample` 일 때만 남긴다** — 그 앱이 쓰는 패키지가 따라오고, 샘플 전용 루트 스크립트(`dev:sample` · `e2e:sample`)와 `ci.yml` 의 `sample-e2e-job` 표식 사이 잡·CLAUDE.md 의 `sample` 표식 구역은 샘플을 떼면 함께 지워지고 가져가면 표식 줄만 걷힌다(이름 `sample` 은 예약). 패키지는 스타터가 쓰는 것 + 루트 도구(`theme` · `tokens`) + `--packages` 를 `@skeleton/*` 의존으로 닫은 집합만 남긴다(나머지 폴더 · `tests/skeleton.repo.test.ts` · new-project 도구는 지운다). 루트 `package.json` · eslint 앱 이름 막기 · README/CLAUDE/CHANGELOG 를 새 프로젝트용으로 바꾸고, `--scope` 면 `@skeleton` 을 모두 바꾼다. 고른 패키지는 폴더만 오고 앱 의존 한 줄은 쓰기 시작할 때 더한다(안 쓰는 의존은 루트 테스트가 막는다). 일꾼은 `scripts/new-project.d/stamp.mjs`.
 
 - 빠른 검사 `bash scripts/test-new-project.sh --quick`(`pnpm test` 가 부른다) · 조합 전체 `--full`(기본 · `--packages realtime,notifications,storage`(+ `storybook:build` · `test:stories`) · `--scope @acme --packages payment` · `--ssr --without-storybook` 를 찍어 각각 install · format · tokens:check · lint · typecheck · test · format:check · build — 네트워크, 수 분, 별도 워크플로 `.github/workflows/new-project.yml`).
 - **패키지 · 앱을 더하거나 지우거나 이름을 바꾸면**: `tests/skeleton.repo.test.ts` 의 목록, 이 문서와 README 의 표, `stamp.mjs` 가 기대하는 문자열(`eslint.config.js` 의 `APP_NAMES` 목록 · `STORY_HINT` 줄 · `globalIgnores` 의 storybook-static 줄 · `ci.yml` 의 `stories-job` 표식 · CLAUDE.md 의 `storybook-guide` / `storybook` 표식 · `starter-ssr` 의 `src/appName.ts` · `Dockerfile` 의 `ARG APP` · `RootLayout.tsx` 의 `<strong>starter</strong>` · `index.html` 제목 · 루트 `test` 스크립트 꼴)을 함께 본다 — 어긋나면 `stamp.mjs` 가 조용히 넘기지 않고 멈춘다.
@@ -123,6 +125,22 @@ Kotlin + Spring Boot 백엔드와 REST (`/api/v1/*`) 통신:
 ## 왜 Vite (Next.js 아님)
 
 PoC 기동 속도 + AI 친화성. 정적 번들 출력이라 호스팅 자유도 높음. SSR/SEO 가 필요한 앱은 프레임워크로 옮기지 않고 같은 스택 위의 `apps/starter-ssr`(plain Vite SSR — Node 서버 + 하이드레이션, 새 런타임 의존 없음)로 시작한다(`new-project.sh --ssr`). 스트리밍 · 서버 컴포넌트 · 파일 라우팅이 필요해지면 그때 프레임워크를 검토한다.
+
+<!-- sample:start -->
+
+## 새 기능의 정본 예시 — `apps/sample` (Notes)
+
+새 기능(화면 + API 연결)을 짜기 전에 `apps/sample/README.md` 의 「화면 → Pattern 지도」를 읽고 **가장 가까운 화면을 따라 한다**. 이 앱은 Patterns · `@skeleton/ui` 만으로 조립한 완성품이라 「이 스켈레톤으로 이만큼 나온다」의 기준이기도 하다. 백엔드의 같은 조각은 kotlin-skeleton `apps/sample` + `docs/sample.md`(마이그레이션 → 엔티티 · 저장소 → 서비스 → 컨트롤러 · DTO → 알림 · 잡 → 테스트).
+
+프론트 한 조각(`notes` 기준)을 더하는 순서:
+
+1. **계약을 먼저** — 백엔드 DTO 와 같은 모양을 `src/<기능>/types.ts` 에. 코드는 백엔드 enum 에 있는 것만(앱 전용이면 그 폴더 안에, 패키지 `ErrorCodes` 가 아니라)
+2. **HTTP 한 곳** — `src/<기능>/<기능>Api.ts`(`createXxxApi(client)`: 경로 · 메서드 · 본문). 테스트는 가짜 클라이언트로 경로 · 메서드 · 헤더(`Idempotency-Key`)를 잰다(`notesApi.test.ts`)
+3. **쿼리 훅** — `src/<기능>/queries.ts`: 키는 한 뿌리, 쿼리 정의(키 + 함수)는 훅과 따로, 변경 훅은 성공하면 뿌리를 무효화(`notes/queries.ts`)
+4. **화면은 Pattern 복사** — 목록 · 상세 · 폼 · 설정 · 대시보드 중 가장 가까운 Patterns 스토리를 `src/routes/` 로 복사해 문구 · 데이터만 연결. 글자는 `src/strings.ts` 한 곳. 백엔드 400 의 칸별 오류는 `formErrors.ts` 로 같은 칸에(`Form page` 의 `errors` 상태)
+5. **부품이 모자라면 앱에 만들지 않는다** — `@skeleton/ui` 에 스토리 + `play` 와 함께 더하고 `docs/ui-catalog.md` · `tests/support/ssrFixtures.ts` 한 줄(Notes 를 위해 `PageHeader` · `Badge` · `Progress` · `FilePicker` · `Stat` 를 그렇게 더했다)
+6. **여정 하나는 e2e 로** — `apps/sample/e2e/`(Playwright + vitest, 진짜 백엔드). 새 기능이 사용자 여정을 바꾸면 `journey.e2e.ts` 에 단계를 더한다. 실행 `pnpm e2e:sample`, 한 줄 로컬 실행은 백엔드 레포의 `scripts/dev-sample.sh`
+<!-- sample:end -->
 
 ## 새 페이지 추가 시 (앱 안)
 

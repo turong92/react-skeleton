@@ -20,8 +20,9 @@ const dirs = (kind: 'app' | 'package') =>
     .sort()
 
 describe('the skeleton repo', () => {
-  it('has the four apps and the eleven packages', () => {
+  it('has the five apps and the eleven packages', () => {
     expect(dirs('app')).toEqual([
+      'apps/sample',
       'apps/starter',
       'apps/starter-ssr',
       'apps/storybook',
@@ -46,6 +47,18 @@ describe('the skeleton repo', () => {
     const starter = workspaces.find((w) => w.dir === 'apps/starter')!
     expect(JSON.stringify(starter.packageJson)).not.toContain('workbench')
     for (const file of starter.files) expect(file.text, file.path).not.toMatch(/workbench/i)
+  })
+
+  it('the sample (the reference product) is an app of its own: no workbench code, and its packages are the ones the stamp adds with --with-sample', () => {
+    const sample = workspaces.find((w) => w.dir === 'apps/sample')!
+    expect(JSON.stringify(sample.packageJson)).not.toContain('workbench')
+    for (const file of sample.files) expect(file.text, file.path).not.toMatch(/workbench/i)
+    const declared = Object.keys(sample.packageJson.dependencies ?? {}).filter((dep) =>
+      dep.startsWith('@skeleton/'),
+    )
+    expect(declared.sort()).toEqual(
+      expect.arrayContaining(['@skeleton/notifications', '@skeleton/storage', '@skeleton/ui']),
+    )
   })
 
   it('the SPA starter and the SSR starter need the same packages (new-project --ssr swaps one for the other)', () => {
@@ -79,6 +92,7 @@ describe('the skeleton repo', () => {
       .filter((f) => f.path.endsWith('.stories.tsx'))
       .map((f) => f.path)
     expect(stories.sort()).toEqual([
+      'src/patterns/DashboardPage.stories.tsx',
       'src/patterns/DetailPage.stories.tsx',
       'src/patterns/ForbiddenPage.stories.tsx',
       'src/patterns/FormPage.stories.tsx',
@@ -97,6 +111,7 @@ describe('the skeleton repo', () => {
         'apps/starter',
         'apps/starter-ssr',
         'apps/storybook',
+        'apps/sample',
         'packages/ui',
         'packages/theme',
         'packages/notifications',

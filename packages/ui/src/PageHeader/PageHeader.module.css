@@ -1,0 +1,43 @@
+.header {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.back {
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+}
+
+.back a:hover {
+  color: var(--teal);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-md) var(--space-lg);
+}
+
+.text {
+  display: grid;
+  gap: var(--space-xs);
+  min-width: 0;
+  flex: 1 1 16rem;
+}
+
+.text h1 {
+  overflow-wrap: anywhere;
+}
+
+.description {
+  color: var(--text-muted);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+}

@@ -8,6 +8,7 @@
   border: 1px solid transparent;
   border-radius: var(--radius-md);
   font-weight: 650;
+  white-space: nowrap;
   line-height: 1;
 }
 

@@ -37,9 +37,9 @@ const TOOLCHAIN = new Set([
 const BUILTINS = new Set(builtinModules)
 const IMPORT = /(?:\bfrom\s*|\bimport\s*\(\s*|\bimport\s+|@import\s+(?:url\()?)['"]([^'"\n]+)['"]/g
 
-/** 테스트 쪽 파일 — 단위 테스트 · `test/` 폴더 · 스토리(`*.stories.tsx`, 가짜가 사는 `stories/`). 런타임 의존이 아니라 devDependencies 로 충분하다 */
+/** 테스트 쪽 파일 — 단위 테스트 · `test/` 폴더 · 스토리(`*.stories.tsx`, 가짜가 사는 `stories/`) · 브라우저 e2e(`e2e/`). 런타임 의존이 아니라 devDependencies 로 충분하다 */
 const isTestFile = (path: string) =>
-  /\.(test|stories)\.[cm]?[jt]sx?$/.test(path) || /(^|\/)(test|stories)\//.test(path)
+  /\.(test|stories)\.[cm]?[jt]sx?$/.test(path) || /(^|\/)(test|stories|e2e)\//.test(path)
 
 function stripComments(text: string): string {
   return text

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # 새 프로젝트 한 줄 찍어내기: 복사 → 필요한 패키지만 남기기 → 앱 이름 바꾸기 → (선택) 스코프 바꾸기 → 문서 다시 쓰기.
 #
-#   scripts/new-project.sh <target-dir> <name> [--packages a,b,c] [--ssr] [--without-storybook] [--with-workbench] [--scope @acme]
+#   scripts/new-project.sh <target-dir> <name> [--packages a,b,c] [--ssr] [--without-storybook] [--with-workbench] [--with-sample] [--scope @acme]
 #
 #   예) scripts/new-project.sh ~/work/ovation ovation
 #       scripts/new-project.sh ~/work/ovation ovation --packages realtime,notifications,storage
@@ -15,6 +15,8 @@
 #      --ssr 이면 apps/starter-ssr(서버가 첫 응답을 그리는 스타터)가 대신 apps/<name> 이 되고 apps/starter 는 지운다
 #      (이름은 src/appName.ts 한 줄 · Dockerfile 의 ARG APP).
 #      apps/workbench 는 --with-workbench 일 때만 남긴다(그러면 그 앱이 쓰는 패키지가 전부 따라온다).
+#      apps/sample(참조 앱 Notes: 로그인 · 대시보드 · 목록 · 상세 · 폼 · 첨부 · 알림 · 설정)은 기본으로 떼고 --with-sample 일 때만 남긴다
+#      (그 앱이 쓰는 패키지가 따라오고, 샘플 전용 루트 스크립트 dev:sample · e2e:sample · CI 의 e2e 잡도 함께 남는다).
 #      apps/storybook(스토리집: 설정 · Patterns · 토큰 문서)은 기본으로 남는다 — 남는 패키지의 스토리(*.stories.tsx · 가짜) · docs/ui-catalog.md ·
 #      CLAUDE.md 의 에이전트 안내 · 스토리 테스트(tests/stories.test.ts) · 스토리집 도구 · CI 의 stories 잡이 함께 간다(참조가 프로젝트와 함께 간다).
 #      --without-storybook 이면 이 전부를 뗀다(날 요소를 막는 ESLint 규칙은 부품이 남아 있으니 그대로).
@@ -35,14 +37,15 @@ HELPER="$SRC/scripts/new-project.d/stamp.mjs"
 
 usage() {
   cat <<'EOF2'
-usage: scripts/new-project.sh <target-dir> <name> [--packages a,b,c] [--ssr] [--without-storybook] [--with-workbench] [--scope @acme]
+usage: scripts/new-project.sh <target-dir> <name> [--packages a,b,c] [--ssr] [--without-storybook] [--with-workbench] [--with-sample] [--scope @acme]
 
   <target-dir>      새로 만들 디렉토리 (이미 있으면 거부, 소스 레포 안이면 거부)
-  <name>            앱 이름 = apps/<name> (소문자 · 숫자 · 하이픈, `workbench` · `storybook` 은 예약)
+  <name>            앱 이름 = apps/<name> (소문자 · 숫자 · 하이픈, `workbench` · `storybook` · `sample` 은 예약)
   --packages        스타터에 더할 패키지, 쉼표로 구분 (예: realtime,notifications,storage)
   --ssr             앱을 서버 렌더 스타터(apps/starter-ssr: Node 서버 + 하이드레이션)로 — 기본은 SPA 스타터(apps/starter)
   --without-storybook  스토리집(apps/storybook) · 스토리 · 에이전트 안내 · 카탈로그를 떼고 찍는다 — 기본은 모두 따라온다
   --with-workbench  apps/workbench(백엔드 확인용 시각적 테스트 벤치)도 남긴다 — 모든 패키지가 남는다
+  --with-sample     참조 앱 apps/sample(Notes)도 남긴다 — 백엔드 kotlin-skeleton 의 apps/sample 과 짝. 기본은 떼고 찍는다
   --scope           패키지 스코프를 바꾼다 (예: @acme → @acme/ui). 기본 @skeleton
 EOF2
 }
@@ -61,6 +64,7 @@ POSITIONAL=()
 PACKAGES_ARG=""
 SCOPE="@skeleton"
 WITH_WORKBENCH=0
+WITH_SAMPLE=0
 WITH_STORYBOOK=1
 SSR=0
 while [ $# -gt 0 ]; do
@@ -70,6 +74,7 @@ while [ $# -gt 0 ]; do
     --scope) [ $# -ge 2 ] && [ "${2#--}" = "$2" ] || die_usage "--scope needs a value"; SCOPE="$2"; shift 2 ;;
     --scope=*) SCOPE="${1#--scope=}"; shift ;;
     --with-workbench) WITH_WORKBENCH=1; shift ;;
+    --with-sample) WITH_SAMPLE=1; shift ;;
     --without-storybook) WITH_STORYBOOK=0; shift ;;
     --with-showcase) die_usage "--with-showcase is gone: the showcase moved into Storybook (apps/storybook), which every project keeps by default — use --without-storybook to drop it" ;;
     --ssr) SSR=1; shift ;;
@@ -83,6 +88,7 @@ TARGET_ARG="${POSITIONAL[0]}"; NAME="${POSITIONAL[1]}"
 
 echo "$NAME" | grep -Eq '^[a-z][a-z0-9-]*$' || die_usage "name must be lower-case letters, digits, hyphens: $NAME"
 [ "$NAME" != workbench ] || die_usage "the name 'workbench' is reserved (apps/workbench)"
+[ "$NAME" != sample ] || die_usage "the name 'sample' is reserved (apps/sample)"
 [ "$NAME" != storybook ] || die_usage "the name 'storybook' is reserved (apps/storybook)"
 [ "$NAME" != storybook-app ] || die_usage "the name 'storybook-app' is reserved (the package name of apps/storybook)"
 echo "$SCOPE" | grep -Eq '^@[a-z][a-z0-9-]*$' || die_usage "scope must look like @acme: $SCOPE"
@@ -116,17 +122,17 @@ case "$TARGET/" in "$SRC"/*) die_usage "target must be outside the skeleton repo
 command -v node >/dev/null || { echo "x node is required" >&2; exit 1; }
 
 # ---------------------------------------------------------------------------------------------------- 계획
-PLAN="$(node "$HELPER" plan "$SRC" "$WITH_WORKBENCH" "$REQUESTED" "$SSR")" || { echo "$PLAN" >&2; exit 2; }
+PLAN="$(node "$HELPER" plan "$SRC" "$WITH_WORKBENCH" "$REQUESTED" "$SSR" "$WITH_SAMPLE")" || { echo "$PLAN" >&2; exit 2; }
 KEEP="$(printf '%s\n' "$PLAN" | sed -n 's/^keep //p' | tr '\n' ',' | sed 's/,$//')"
 echo "== plan"
 printf '%s\n' "$PLAN" | sed -n 's/^why /   /p'
-echo "   app: apps/$NAME (from apps/$([ "$SSR" = 1 ] && echo starter-ssr || echo starter))$([ "$WITH_WORKBENCH" = 1 ] && echo ' + apps/workbench')$([ "$WITH_STORYBOOK" = 1 ] && echo ' + apps/storybook (stories, patterns, guide)')"
+echo "   app: apps/$NAME (from apps/$([ "$SSR" = 1 ] && echo starter-ssr || echo starter))$([ "$WITH_WORKBENCH" = 1 ] && echo ' + apps/workbench')$([ "$WITH_SAMPLE" = 1 ] && echo ' + apps/sample (reference app)')$([ "$WITH_STORYBOOK" = 1 ] && echo ' + apps/storybook (stories, patterns, guide)')"
 
 # ---------------------------------------------------------------------------------------------------- 복사 · 변환
 echo "== copy → $TARGET"
 node "$HELPER" copy "$SRC" "$TARGET"
 echo "== transform"
-node "$HELPER" apply "$TARGET" "$NAME" "$SCOPE" "$WITH_WORKBENCH" "$KEEP" "$SSR" "$WITH_STORYBOOK"
+node "$HELPER" apply "$TARGET" "$NAME" "$SCOPE" "$WITH_WORKBENCH" "$KEEP" "$SSR" "$WITH_STORYBOOK" "$WITH_SAMPLE"
 
 # ---------------------------------------------------------------------------------------------------- 안내
 cat <<EOF2

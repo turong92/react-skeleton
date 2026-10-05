@@ -22,6 +22,7 @@ jobs:
       # 아래 명령은 모두 워크스페이스 전체(apps/* · packages/*)에 돈다
       - run: pnpm lint
       - run: pnpm tokens:check
+      - run: pnpm capabilities:check
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm format:check

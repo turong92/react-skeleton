@@ -18,6 +18,8 @@
     "typecheck": "pnpm -r typecheck && tsc -p tsconfig.json",
     "tokens": "pnpm --filter @skeleton/tokens tokens",
     "tokens:check": "pnpm --filter @skeleton/tokens tokens:check",
+    "capabilities": "node scripts/build-capabilities.mjs",
+    "capabilities:check": "node scripts/build-capabilities.mjs --check",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

@@ -1,0 +1,313 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "capabilities.schema.json",
+  "title": "capabilities.json — 스켈레톤이 준비해 둔 기능의 카탈로그",
+  "description": "LLM · 사람이 「새 프로젝트에 X, Y, Z 가 필요하다」를 받았을 때 무엇이 이미 있는지 찾는 단일 정본. docs/capabilities.md · llms.txt 는 여기서 생성된다(pnpm capabilities). 검증은 tests/capabilities.test.ts. 짝 레포(kotlin-skeleton)의 카탈로그와는 backend.modules[] ↔ 그쪽 module, 그쪽 frontend.capabilities[] ↔ 여기 id 로 만난다.",
+  "type": "object",
+  "required": ["schemaVersion", "mode", "name", "scope", "version", "summary", "capabilities"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 1 },
+    "mode": {
+      "enum": ["skeleton", "project"],
+      "description": "skeleton = 이 스켈레톤 레포의 전체 카탈로그, project = new-project.sh 로 찍은 프로젝트에 따라가는 걸러낸 카탈로그."
+    },
+    "name": { "type": "string", "minLength": 1, "description": "레포(프로젝트) 이름." },
+    "scope": {
+      "type": "string",
+      "pattern": "^@[a-z][a-z0-9-]*$",
+      "description": "패키지 스코프(@skeleton, --scope 로 바뀐다)."
+    },
+    "version": { "type": "string", "minLength": 1 },
+    "summary": { "type": "string", "minLength": 1 },
+    "newProject": {
+      "type": "object",
+      "description": "(skeleton) 이 레포와 짝 레포의 new-project.sh 인터페이스 — 레시피가 이것만 믿고 명령을 만든다.",
+      "required": ["react", "kotlin"],
+      "additionalProperties": false,
+      "properties": {
+        "react": { "$ref": "#/$defs/newProjectScript" },
+        "kotlin": { "$ref": "#/$defs/newProjectScript" }
+      }
+    },
+    "skeleton": {
+      "type": "object",
+      "description": "(project) 이 프로젝트를 찍어 낸 스켈레톤 — 여기에 없는 기능은 거기서 찾는다.",
+      "required": ["name", "version", "pointer"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "version": { "type": "string" },
+        "pointer": { "type": "string" }
+      }
+    },
+    "capabilities": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/entry" } },
+    "decisions": {
+      "type": "array",
+      "description": "(skeleton) 「필요한 것 → 고를 것」 표의 행. 명령 조각은 capabilities 의 stampFlag · backend 에서 계산한다(손으로 적지 않는다).",
+      "items": { "$ref": "#/$defs/decision" }
+    },
+    "examples": {
+      "type": "array",
+      "description": "(skeleton) docs/new-project-recipe.md 의 작업 예. 레시피의 명령은 여기서 계산한 것과 같아야 한다(테스트).",
+      "items": { "$ref": "#/$defs/example" }
+    },
+    "guides": {
+      "type": "array",
+      "description": "llms.txt · docs/capabilities.md 가 가리키는 읽을 문서(레포 루트 기준 경로 + 한 줄).",
+      "items": {
+        "type": "object",
+        "required": ["path", "summary"],
+        "additionalProperties": false,
+        "properties": { "path": { "type": "string" }, "summary": { "type": "string" } }
+      }
+    },
+    "omitted": {
+      "type": "array",
+      "description": "(project) 스켈레톤에는 있지만 이 프로젝트에 따라오지 않은 것.",
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "summary", "stampFlag"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "kind": { "enum": ["package", "app", "pattern", "script"] },
+          "summary": { "type": "string" },
+          "stampFlag": { "type": ["string", "null"] }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "newProjectScript": {
+      "type": "object",
+      "required": ["script", "usage"],
+      "additionalProperties": false,
+      "properties": {
+        "script": { "type": "string", "description": "레포 루트 기준 경로." },
+        "usage": { "type": "string", "description": "문서화된 인터페이스 한 줄(--help 의 usage)." },
+        "positional": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "위치 인자 이름 순서."
+        },
+        "flags": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "받는 옵션 이름(--로 시작)."
+        },
+        "starterModules": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "(kotlin) 스타터(apps/api)에 이미 들어 있는 모듈 — --modules 조각에서 뺀다."
+        }
+      }
+    },
+    "entry": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "summary",
+        "package",
+        "path",
+        "status",
+        "stampFlag",
+        "needs",
+        "backend",
+        "entryPoints",
+        "stories",
+        "patterns",
+        "docs",
+        "notFor",
+        "keywords"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "유일. 패키지는 폴더 이름(board), 앱은 app-<폴더>, 스크립트는 script-<이름>, 패턴은 자기 이름."
+        },
+        "kind": {
+          "enum": ["package", "app", "pattern", "script"],
+          "description": "package = packages/<x> 한 개 · app = apps/<x> 한 개 · pattern = 패키지 안의 한 기능/화면 틀(다른 항목의 한 조각) · script = scripts/ 의 도구."
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1,
+          "description": "한 문장 — 이것으로 사용자가 얻는 것."
+        },
+        "package": {
+          "type": ["string", "null"],
+          "description": "package · app = 그 package.json 의 name, pattern = 그것이 들어 있는 패키지의 이름, script = null."
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "description": "레포 루트 기준. package · app = 폴더, 나머지 = 대표 파일."
+        },
+        "status": {
+          "enum": ["stable", "experimental", "template-only"],
+          "description": "stable = 쓰고 테스트가 지킨다 · experimental = 계약이 바뀔 수 있다 · template-only = 틀(자리표시 · 예시)이라 내용은 프로젝트가 채운다."
+        },
+        "stampFlag": { "$ref": "#/$defs/stampFlag" },
+        "needs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string" },
+          "description": "함께 있어야 쓸 수 있는 다른 항목의 id. package 는 package.json 의 런타임 @scope 의존과 정확히 같다(테스트)."
+        },
+        "backend": {
+          "description": "짝 백엔드(kotlin-skeleton). 프런트만이면 null.",
+          "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/backend" }]
+        },
+        "entryPoints": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string" },
+          "description": "package · pattern = 패키지가 export 하는 이름(하위 경로는 `@skeleton/seo/vite#seoFiles`), app · script = 레포 루트 기준 파일. 몇 개만 — 전부 아니다."
+        },
+        "stories": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string" },
+          "description": "부품 스토리 파일(보고 따라 하는 정본 사용법)."
+        },
+        "patterns": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string" },
+          "description": "복사해 시작하는 화면 틀(Patterns/…) 스토리 파일."
+        },
+        "docs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string" },
+          "description": "읽을 문서(레포 루트 기준)."
+        },
+        "notFor": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" },
+          "description": "이럴 때는 쓰지 않는다 — 대신 무엇을."
+        },
+        "keywords": {
+          "type": "object",
+          "required": ["ko", "en"],
+          "additionalProperties": false,
+          "description": "주인이 입으로 하는 말 — 한국어 · 영어 둘 다 비어 있으면 안 된다.",
+          "properties": {
+            "ko": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": { "type": "string", "minLength": 1 }
+            },
+            "en": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    },
+    "stampFlag": {
+      "type": "object",
+      "required": ["flag", "included"],
+      "additionalProperties": false,
+      "properties": {
+        "flag": {
+          "type": ["string", "null"],
+          "description": "scripts/new-project.sh 에 이대로 적는 조각(예: `--packages board`). 항상 들어가면 null."
+        },
+        "included": {
+          "enum": ["always", "default", "flag", "never", "selected"],
+          "description": "always = 모든 프로젝트에 · default = 기본으로(optOut 으로 뺀다) · flag = flag 를 줘야 · never = 프로젝트에 안 따라간다(스켈레톤 도구) · selected = (project 모드) 찍을 때 골라 이미 들어 있다."
+        },
+        "autoIncludes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string" },
+          "description": "패키지: flag 로 의존이 닫힐 때 함께 오는 다른 패키지 전부(이미 기본 포함인 ui · time … 도 적는다). 앱 flag: 그 flag 가 기본 스탬프에 더하는 패키지. stamp.mjs plan 과 정확히 같다(테스트)."
+        },
+        "alsoVia": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string" },
+          "description": "다른 flag(--ssr · --with-sample · --with-workbench)로도 따라오는 경우 그 flag."
+        },
+        "optOut": { "type": ["string", "null"], "description": "default 를 빼는 flag." }
+      }
+    },
+    "backend": {
+      "type": "object",
+      "required": ["modules", "basePaths"],
+      "additionalProperties": false,
+      "properties": {
+        "modules": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string" },
+          "description": "kotlin-skeleton `--modules` 에 적는 모듈(필수). 키: 그쪽 카탈로그의 module."
+        },
+        "oneOfModules": {
+          "type": "array",
+          "items": { "type": "array", "minItems": 2, "items": { "type": "string" } },
+          "description": "묶음마다 하나 이상 고른다(예: 소셜 제공자 google | kakao | naver). 레시피는 첫 번째를 기본으로 쓴다."
+        },
+        "optionalModules": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string" },
+          "description": "있으면 기능이 더 켜지는 모듈(예: 게시판 + notification = 댓글 알림)."
+        },
+        "basePaths": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^/" },
+          "description": "백엔드가 여는 HTTP · 소켓 경로. 모듈이 HTTP 를 열지 않으면 빈 배열(앱이 컨트롤러를 둔다)."
+        },
+        "docs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "kotlin-skeleton 레포 안의 문서 경로(여기서는 존재를 검사하지 않는다)."
+        },
+        "app": { "type": "string", "description": "(앱 항목) 짝 백엔드 앱, 예: apps/sample." }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "required": ["need", "capabilities", "byHand"],
+      "additionalProperties": false,
+      "properties": {
+        "need": { "type": "string", "minLength": 1, "description": "주인이 하는 말 그대로." },
+        "capabilities": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "byHand": { "type": "string", "minLength": 1, "description": "그래도 손으로 써야 하는 것." }
+      }
+    },
+    "example": {
+      "type": "object",
+      "required": ["id", "title", "product", "capabilities", "extraFlags"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+        "title": { "type": "string" },
+        "product": { "type": "string", "description": "한 문단 제품 설명." },
+        "capabilities": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "extraFlags": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "capabilities 에서 계산되지 않는 new-project.sh 옵션(예: --scope)."
+        },
+        "kotlinExtraFlags": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "kotlin new-project.sh 의 추가 옵션(예: --db mysql)."
+        }
+      }
+    }
+  }
+}

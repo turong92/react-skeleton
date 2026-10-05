@@ -86,6 +86,10 @@ expect_exit 2 "알 수 없는 옵션은 exit 2" bash "$SCRIPT" "$TMP/x5" acme-ap
 expect_exit 2 "--packages 값이 없으면 exit 2" bash "$SCRIPT" "$TMP/x6" acme-app --packages
 expect_exit 2 "대상이 소스 레포 안이면 exit 2" bash "$SCRIPT" "$SRC/stamped-inside" acme-app
 [ ! -e "$SRC/stamped-inside" ] && pass "레포 안에는 아무것도 만들지 않는다" || { fail "레포 안에 만들었다"; rm -rf "$SRC/stamped-inside"; }
+# 레포 안에서 `../내-프로젝트` 로 부르는 것이 가장 흔한 첫 시도다 — 경로를 정리하지 않으면 "레포 안" 으로 오인된다
+REL="$(python3 -c 'import os,sys; print(os.path.relpath(sys.argv[1], sys.argv[2]))' "$TMP/relative-target" "$SRC")"
+expect_exit 0 "레포 안에서 ../ 로 레포 밖($REL)을 가리키면 찍힌다" bash -c "cd '$SRC' && bash scripts/new-project.sh '$REL' rel-app"
+check "상대 경로 대상이 실제 레포 밖에 만들어졌다" test -f "$TMP/relative-target/package.json"
 expect_exit 0 "--help 는 사용법과 exit 0" bash "$SCRIPT" --help
 
 echo "== 2. 패키지 닫힘 (가짜 워크스페이스로 plan)"

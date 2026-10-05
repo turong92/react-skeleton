@@ -18,8 +18,7 @@ export type NotificationsApi = {
 export type NotificationsApiOptions = {
   /**
    * 받은편지함 컨트롤러의 경로(기본 `/notifications`, `/api/v1` 은 클라이언트의 baseUrl).
-   * 백엔드 `modules/notification` 은 저장소(`NotificationInboxRepository`)만 주고 HTTP 는 앱이 연다 —
-   * kotlin-skeleton 은 `apps/workbench` 의 `NotificationInboxController` 가 이 경로다. 내 앱이 다른 경로면 여기서 바꾼다.
+   * 백엔드 `modules/notification` 의 `NotificationInboxController` 가 이 경로를 연다 — 앱이 자기 컨트롤러를 다른 경로로 열었다면 여기서 바꾼다.
    */
   basePath?: string
 }

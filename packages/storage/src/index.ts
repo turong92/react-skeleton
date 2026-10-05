@@ -2,7 +2,13 @@ export { StorageValidationError, UploadAbortedError, UploadHttpError } from './e
 export type { StorageValidationIssue } from './errors'
 export { validateFile } from './validateFile'
 export type { StorageFileRules } from './validateFile'
-export { createStorageApi, publicUrlFromBase, publicUrlFromEndpoint } from './storageApi'
+export {
+  createStorageApi,
+  publicUrlFromBase,
+  publicUrlFromDownload,
+  publicUrlFromEndpoint,
+  storageEndpoints,
+} from './storageApi'
 export type {
   CompletedPart,
   MultipartApi,

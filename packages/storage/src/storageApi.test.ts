@@ -1,6 +1,12 @@
 import type { ApiRequest } from '@skeleton/api-client'
 import { describe, expect, it } from 'vitest'
-import { createStorageApi, publicUrlFromBase, publicUrlFromEndpoint } from './storageApi'
+import {
+  createStorageApi,
+  publicUrlFromBase,
+  publicUrlFromDownload,
+  publicUrlFromEndpoint,
+  storageEndpoints,
+} from './storageApi'
 
 type Call = { path: string; request?: ApiRequest }
 
@@ -146,5 +152,60 @@ describe('public URL resolvers', () => {
     expect(await publicUrlFromEndpoint(client, '/files/public-url')('k')).toBe('https://cdn.test/k')
     expect(calls[0]).toEqual({ path: '/files/public-url', request: { params: { key: 'k' } } })
     expect(await publicUrlFromEndpoint(client, '/missing')('k')).toBeNull()
+  })
+})
+
+describe('default endpoints (kotlin-skeleton modules/storage opens /api/v1/storage/*)', () => {
+  it('storageEndpoints() names every path the backend module opens, relative to the client baseUrl', () => {
+    expect(storageEndpoints()).toEqual({
+      presign: '/storage/presign',
+      validate: '/storage/validate',
+      download: '/storage/presign-download',
+      multipart: {
+        start: '/storage/multipart/start',
+        part: '/storage/multipart/part',
+        complete: '/storage/multipart/complete',
+        abort: '/storage/multipart/abort',
+      },
+    })
+  })
+
+  it('storageEndpoints(basePath) re-roots them for an app that mounted the controller elsewhere', () => {
+    expect(storageEndpoints('/files/').presign).toBe('/files/presign')
+    expect(storageEndpoints('/files').multipart.abort).toBe('/files/multipart/abort')
+  })
+
+  it('createStorageApi(client) with no endpoints uses the defaults: presign, validate, download and multipart exist', async () => {
+    const { client, calls } = fakeClient((path) =>
+      path.endsWith('/presign-download')
+        ? { key: 'uploads/u/cat.png', method: 'GET', url: 'https://s3.test/get?sig=1' }
+        : { key: 'uploads/u/cat.png', url: 'https://s3.test/put?sig=1' },
+    )
+    const api = createStorageApi(client)
+    await api.presignUpload(candidate)
+    expect(calls[0]?.path).toBe('/storage/presign')
+    expect(api.validate).toBeTypeOf('function')
+    expect(api.multipart).toBeDefined()
+    expect(await api.presignDownload?.('uploads/u/cat.png')).toBe('https://s3.test/get?sig=1')
+    expect(calls[1]).toEqual({
+      path: '/storage/presign-download',
+      request: { method: 'POST', json: { key: 'uploads/u/cat.png' } },
+    })
+  })
+
+  it('publicUrlFromDownload turns a key into a short-lived download URL (private buckets have no public URL)', async () => {
+    const { client } = fakeClient(() => ({
+      key: 'k',
+      method: 'GET',
+      url: 'https://s3.test/get?sig=2',
+    }))
+    const resolve = publicUrlFromDownload(createStorageApi(client))
+    expect(await resolve('uploads/u/cat.png')).toBe('https://s3.test/get?sig=2')
+  })
+
+  it('publicUrlFromDownload names the missing endpoint when the api has no download path', () => {
+    const { client } = fakeClient(() => ({}))
+    const api = createStorageApi(client, { presign: '/files/presign' })
+    expect(() => publicUrlFromDownload(api)).toThrow(/download/)
   })
 })

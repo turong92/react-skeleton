@@ -78,21 +78,21 @@ scripts/new-project.sh ~/work/ovation ovation --without-storybook               
 
 ### 패키지 ↔ 백엔드 모듈 ↔ 한 줄 사용
 
-| 패키지              | 의존하는 `@skeleton/*` | 짝인 백엔드(kotlin-skeleton)                                                       | 한 줄 사용                                                                                                                                                   |
-| ------------------- | ---------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `api-client`        | —                      | `platform`(envelope · `ApiError` · traceparent)                                    | `createApiClient({ ...apiConfigFromEnv(import.meta.env), getAuthHeaders, onError })`                                                                         |
-| `auth`              | api-client             | `auth` · `auth-social*`                                                            | `<AuthProvider session={createAuthSession({ api: createAuthApi(apiClient), store })}>` · `<RequireAuth />` · `createSocialLoginFlow({ providers, session })` |
-| `realtime`          | api-client             | `notification-sse` · `notification-websocket`                                      | `useSseClient({ url, getAuthHeaders })` · `useNotificationSocket({ url, getAccessToken })`                                                                   |
-| `notifications`     | api-client · time · ui | `notification` + `notification-jdbc`(저장소). HTTP 는 앱(워크벤치 컨트롤러가 데모) | `createNotificationsApi(apiClient)` → `<NotificationBell api={api} />` · `useNotificationIngest()` 를 realtime 훅에 건다                                     |
-| `storage`           | api-client             | `storage` + `storage-s3`(`PresignedStorage`). HTTP 는 앱                           | `createUploader({ api: createStorageApi(apiClient, { presign: '/files/presign' }) })` → `useUpload(uploader)`                                                |
-| `payment`           | api-client             | `payment` + `payment-toss` · `payment-stripe`. HTTP 는 앱                          | `createPaymentApi(apiClient, { paths: { confirm } })` · `confirmRequestFromTossRedirect(location.search, { currency })`                                      |
-| `captcha-turnstile` | —                      | `captcha-turnstile`(`TurnstileVerifier`). HTTP 는 앱                               | `<Turnstile siteKey {...useTurnstileToken().widgetProps} />` · `attachTurnstileToken(body, token)`                                                           |
-| `time`              | —                      | `time`                                                                             | `formatInstant(iso)` · `formatDual(zoned)` · `createServerClock()`                                                                                           |
-| `theme`             | —                      | —                                                                                  | `plugins: [themePrePaint()]` + 시작할 때 `initTheme()` + `<ThemeToggle />` + `<ThemedToaster />`                                                             |
-| `tokens`            | —                      | —                                                                                  | `import '@skeleton/tokens/tokens.css'` (색 · 간격 · 모서리 · 글자 크기는 `tokens.json` 에서)                                                                 |
-| `ui`                | api-client             | —                                                                                  | `import '@skeleton/ui/base.css'` + `<Button>` `<Field>` `<Input>` `<Textarea>` `<Checkbox>` `<Tabs>` `<Table>` `<Pagination>` …                              |
+| 패키지              | 의존하는 `@skeleton/*` | 짝인 백엔드(kotlin-skeleton)                                                                         | 한 줄 사용                                                                                                                                                   |
+| ------------------- | ---------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `api-client`        | —                      | `platform`(envelope · `ApiError` · traceparent)                                                      | `createApiClient({ ...apiConfigFromEnv(import.meta.env), getAuthHeaders, onError })`                                                                         |
+| `auth`              | api-client             | `auth` · `auth-social*`                                                                              | `<AuthProvider session={createAuthSession({ api: createAuthApi(apiClient), store })}>` · `<RequireAuth />` · `createSocialLoginFlow({ providers, session })` |
+| `realtime`          | api-client             | `notification-sse` · `notification-websocket`                                                        | `useSseClient({ url, getAuthHeaders })` · `useNotificationSocket({ url, getAccessToken })`                                                                   |
+| `notifications`     | api-client · time · ui | `notification`(받은편지함 HTTP `/api/v1/notifications` 를 모듈이 연다) + `notification-jdbc`(저장소) | `createNotificationsApi(apiClient)` → `<NotificationBell api={api} />` · `useNotificationIngest()` 를 realtime 훅에 건다                                     |
+| `storage`           | api-client             | `storage`(업로드 HTTP `/api/v1/storage/*` 를 모듈이 연다) + `storage-s3`                             | `createUploader({ api: createStorageApi(apiClient) })` → `useUpload(uploader)`                                                                               |
+| `payment`           | api-client             | `payment` + `payment-toss` · `payment-stripe`. HTTP 는 앱                                            | `createPaymentApi(apiClient, { paths: { confirm } })` · `confirmRequestFromTossRedirect(location.search, { currency })`                                      |
+| `captcha-turnstile` | —                      | `captcha-turnstile`(`TurnstileVerifier`). HTTP 는 앱                                                 | `<Turnstile siteKey {...useTurnstileToken().widgetProps} />` · `attachTurnstileToken(body, token)`                                                           |
+| `time`              | —                      | `time`                                                                                               | `formatInstant(iso)` · `formatDual(zoned)` · `createServerClock()`                                                                                           |
+| `theme`             | —                      | —                                                                                                    | `plugins: [themePrePaint()]` + 시작할 때 `initTheme()` + `<ThemeToggle />` + `<ThemedToaster />`                                                             |
+| `tokens`            | —                      | —                                                                                                    | `import '@skeleton/tokens/tokens.css'` (색 · 간격 · 모서리 · 글자 크기는 `tokens.json` 에서)                                                                 |
+| `ui`                | api-client             | —                                                                                                    | `import '@skeleton/ui/base.css'` + `<Button>` `<Field>` `<Input>` `<Textarea>` `<Checkbox>` `<Tabs>` `<Table>` `<Pagination>` …                              |
 
-「HTTP 는 앱」인 패키지는 백엔드 모듈이 서비스 계약만 주고 엔드포인트를 열지 않아 **경로를 앱이 알려 준다**(기본 경로 없음 — 없는 엔드포인트를 가정하지 않는다). 자세한 API 표 · 어느 파일의 어느 계약인지 · 테스트가 재지 않는 것은 각 `packages/<이름>/README.md`. `ui` · `theme` 의 색은 `tokens` 의 `tokens.css` 가 로드되어야 나온다(JS import 의존은 아니라 `package.json` 에 적지 않는다 — `main.tsx` 맨 앞에서 한 번 import).
+`notifications` · `storage` 의 HTTP 엔드포인트는 백엔드 모듈이 연다(인증 필요) — 기본 경로가 그것이라 한 줄이면 되고, 앱이 다른 경로로 열었다면 `basePath` · `storageEndpoints('/files')` 로 바꾼다. 「HTTP 는 앱」인 패키지(`payment` · `captcha-turnstile`)는 백엔드 모듈이 서비스 계약만 주고 엔드포인트를 열지 않아 **경로를 앱이 알려 준다**(기본 경로 없음 — 없는 엔드포인트를 가정하지 않는다). 자세한 API 표 · 어느 파일의 어느 계약인지 · 테스트가 재지 않는 것은 각 `packages/<이름>/README.md`. `ui` · `theme` 의 색은 `tokens` 의 `tokens.css` 가 로드되어야 나온다(JS import 의존은 아니라 `package.json` 에 적지 않는다 — `main.tsx` 맨 앞에서 한 번 import).
 
 ## 앱
 
@@ -153,11 +153,28 @@ pnpm storybook:build  # 정적 빌드(apps/storybook/storybook-static)
 ## 백엔드 연결
 
 - 개발 시 기본값은 `/api/v1/*` 요청을 Vite dev 서버가 `http://localhost:8080` (Kotlin 백엔드)로 proxy(각 앱 `vite.config.ts`)
-- CORS 를 직접 검증하거나 다른 백엔드 포트에 붙일 때는 `VITE_API_BASE_URL=http://localhost:<port>/api/v1` 로 실행
+- 백엔드를 다른 포트로 띄웠다면 `API_PROXY_TARGET=http://localhost:<port> pnpm dev`(Vite proxy 의 목적지, 기본 8080 — CORS 가 필요 없다)
+- CORS 를 직접 검증할 때는 `VITE_API_BASE_URL=http://localhost:<port>/api/v1` 로 실행
 - 프로덕션에선 Caddy 가 프론트 정적 번들 + `/api/v1/*` 백엔드 프록시를 같은 origin 으로 합침 → **CORS 불필요**
 - `VITE_API_TIMEOUT_MS`, `VITE_API_RETRY_ATTEMPTS`, `VITE_API_RETRY_DELAY_MS` 로 timeout/retry 기본값을 조정
 
 WebSocket URL 은 `VITE_API_BASE_URL` 에서 자동 파생된다. 예: `VITE_API_BASE_URL=http://localhost:18080/api/v1` → `ws://localhost:18080/ws/notifications`.
+
+### 백엔드와 나란히 — 풀스택 한 줄 실행
+
+백엔드(kotlin-skeleton 에서 찍은 프로젝트)와 프론트를 **같은 작업 폴더에 `api` · `web` 으로** 둔다. 백엔드의 `scripts/dev.sh` 가 DB(+ 로컬 S3) 컨테이너 → 백엔드 → 옆의 `../web` 의 `pnpm dev` 를 한 번에 띄우고 Ctrl-C 로 같이 내린다.
+
+```
+~/work/ovation/
+├── api/    # kotlin-skeleton/scripts/new-project.sh 로 찍은 것
+└── web/    # react-skeleton/scripts/new-project.sh 로 찍은 것
+```
+
+```bash
+cd ~/work/ovation/api && scripts/dev.sh   # http://localhost:5173 (프론트) · :8080 (백엔드)
+```
+
+시드 사용자 `user@example.com` / `password` 로 로그인한다. 프론트 폴더가 다른 곳이면 `WEB_DIR=…`, 프론트 없이는 `WEB_DIR= scripts/dev.sh`.
 
 ## API 응답 규칙
 

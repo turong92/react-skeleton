@@ -82,7 +82,7 @@ docs/ui-catalog.md            # 부품 → 스토리 파일 → 언제 쓰는가
 
 - **패키지 안쪽 금지**: 다른 패키지는 이름(`@skeleton/<이름>`)과 `exports` 하위 경로(`/tokens.css` · `/vite` · `/base.css`)로만 쓴다. `@skeleton/*/src/**` · 폴더를 벗어나는 상대 import · 앱 import 는 ESLint(`eslint.config.js`) + `tests/workspace.test.ts` 가 막는다
 - **의존 선언 = 실제 import**: 앱 · 패키지가 `package.json` 에 적은 `@skeleton/*` 는 소스가 import 하는 것과 정확히 같아야 한다(`workspace:*`). 패키지를 새로 쓰면 앱 `package.json` 에 한 줄 더한다. `starter` 는 워크벤치에 의존하지 않는다. 패키지가 외부 라이브러리를 쓰면 `dependencies`(또는 `peerDependencies`)에 선언한다 — 이것도 테스트가 확인
-- **HTTP 엔드포인트가 모듈에 없으면 경로를 설정으로**: 백엔드 모듈이 서비스 계약만 주고 컨트롤러를 앱이 여는 경우(`notification` 받은편지함 · `storage` · `payment` · `captcha-turnstile`) 패키지는 기본 경로를 가정하지 않거나(storage · payment) 데모 경로를 기본값으로 두고 README 에 그렇다고 적는다(notifications `basePath`). 모듈 수준 계약만 겨냥한다 — 어느 Kotlin 파일의 어느 DTO 인지는 패키지 README 에
+- **HTTP 엔드포인트: 모듈이 열면 그 경로가 기본값, 안 열면 경로를 설정으로**: 백엔드 모듈이 컨트롤러를 여는 패키지(`notifications` → `/notifications`, `storage` → `/storage/*`)는 그 경로가 기본값이고 `basePath` · `storageEndpoints(basePath)` 로 바꾼다(모듈이 막힌 앱이 자기 컨트롤러를 두는 경우). 모듈이 서비스 계약만 주는 경우(`payment` · `captcha-turnstile`)는 기본 경로를 가정하지 않는다. 모듈 수준 계약만 겨냥한다 — 어느 Kotlin 파일의 어느 DTO 인지는 패키지 README 에
 - **패키지를 만들거나 키울 때**: `package.json`(`exports` `.` = `{ types, default: ./src/index.ts }`, `test` · `typecheck` 스크립트) · `src/index.ts` barrel(공개 표면은 이것뿐) · 옆에 테스트 · `README.md`(API 표)를 갖춘다. 사용자에게 보이는 문구는 prop(기본 영어), 색은 의미 토큰만
 - **SSR 안전**: 패키지는 import 할 때 브라우저 전역(`window` · `document` · `localStorage`)을 읽거나 쓰지 않는다 — 부수 효과는 명시적 호출(`@skeleton/theme` 의 `initTheme()` 을 앱이 시작할 때 부른다), 브라우저 API 는 effect · 핸들러 안에서만. 새 컴포넌트 · 훅을 export 하면 `tests/support/ssrFixtures.ts` 에 최소 props 한 줄을 더한다(안 하면 `tests/ssr.safety.test.ts` 가 실패, 일부러 브라우저 전용이면 `BROWSER_ONLY` 에 이유와 함께). 서버 렌더 앱 규칙(하이드레이션 일치 · 모듈 전역 금지 · 토큰은 브라우저에만)은 `apps/starter-ssr/README.md`
 - **TypeScript strict**: `any` 금지. 필요하면 `unknown` + 타입 가드. 패키지 tsconfig 는 `types: []`(DOM 쓰는 UI 패키지만 `vite/client`)라 `import.meta.env` 를 쓰면 타입 에러
@@ -101,7 +101,7 @@ docs/ui-catalog.md            # 부품 → 스토리 파일 → 언제 쓰는가
 
 Kotlin + Spring Boot 백엔드와 REST (`/api/v1/*`) 통신:
 
-- **개발 기본값**: Vite dev(5173) → 백엔드(8080) proxy (각 앱 `vite.config.ts`)
+- **개발 기본값**: Vite dev(5173) → 백엔드(8080) proxy (각 앱 `vite.config.ts`, 목적지는 `API_PROXY_TARGET`). 백엔드와는 같은 작업 폴더에 `api` · `web` 으로 나란히 두고 백엔드 `scripts/dev.sh` 가 둘을 한 번에 띄운다(README 「백엔드와 나란히」)
 - **개발 direct 검증**: `VITE_API_BASE_URL=http://localhost:<port>/api/v1` 로 다른 포트 백엔드에 직접 연결(앱 폴더 `.env`). 이때 백엔드 CORS를 켜야 한다.
 - **프로덕션**: Caddy가 같은 origin으로 프론트 정적 번들 + 백엔드 프록시 합침 → CORS 불필요
 

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — 백엔드 모듈이 받은편지함 · 업로드 HTTP 를 연다: 기본 경로가 생겼다 · 풀스택 한 줄 실행 (2026-10-05)
+
+새 프로젝트 드릴(스켈레톤 두 개로 찍어 브라우저에서 알림 · 업로드 · 잡 · 시간 · 인증을 눌러 봄)에서 앱이 직접 써야 했던 컨트롤러(받은편지함 142줄 · presign 70줄)를 kotlin-skeleton 모듈로 옮겼고, 패키지는 그 경로를 기본으로 한다.
+
+- `@skeleton/storage`: `storageEndpoints(basePath = '/storage')`(모듈의 `/api/v1/storage/*` 전부) · `createStorageApi(client)` 의 `endpoints` 기본값이 그것 — 한 줄로 presign · validate · download · multipart 가 모두 생긴다. 새 `download` 엔드포인트 → `api.presignDownload(key)` · `publicUrlFromDownload(api)`(비공개 버킷에 올린 파일을 짧은 수명 GET 주소로 연다). 기존 `endpoints` 를 직접 주는 호출은 그대로 동작한다
+- `@skeleton/notifications`: 기본 `basePath`(`/notifications`)는 그대로이고, 이제 그 경로를 워크벤치 데모가 아니라 백엔드 `modules/notification` 이 연다(README · 주석)
+- `@skeleton/api-client`: `ErrorCodes` 에 `STORAGE_FILE_REJECTED`(`data.errors` 에 사유) · `STORAGE_OBJECT_NOT_FOUND` · `STORAGE_UNAUTHENTICATED`
+- `scripts/new-project.sh`: 레포 안에서 `../내-프로젝트` 처럼 상대 경로로 부르면 "target must be outside the skeleton repo" 로 거부되던 것을 고쳤다(경로를 정리한 뒤 비교)
+- 앱(`starter` · `workbench`): Vite proxy 목적지를 `API_PROXY_TARGET` 으로 바꿀 수 있다(기본 `http://localhost:8080`)
+- README 「백엔드와 나란히」: 작업 폴더에 `api` · `web` 으로 두고 백엔드 `scripts/dev.sh` 로 DB · 로컬 S3 · 백엔드 · 이 프론트를 한 번에 띄운다. `new-project.sh` 의 안내도 같다
+
 ### Added — Storybook: 스토리가 부품의 정본(보이는 모습 · 정본 사용법 · 실행되는 테스트)
 
 - `apps/storybook`(Storybook 10 · `@storybook/react-vite` · Vite 8 에서 그대로 동작) — 설정 `.storybook/`(토큰 · `base.css` 로드, 도구 모음의 라이트/다크 스위치 = `<html data-theme>`, autodocs, a11y 위반이 실패인 `a11y: { test: 'error' }`), **Patterns** 6개(목록 · 폼 · 상세 · 로그인 · 403 · 설정 — `@skeleton/ui` 만으로 짠 복사용 한 파일 화면 틀, 도우미 파일 없음, 다크 변형 포함), 토큰 문서(`tokens.json` 에서 읽은 색 · 간격 · 모서리 · 글자 크기 · 그림자, 라이트 · 다크 나란히 — 쇼케이스의 토큰 페이지를 옮김)

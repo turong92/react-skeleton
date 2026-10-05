@@ -30,7 +30,7 @@
 # 소스 레포와 <target-dir> 밖에는 아무것도 쓰지 않는다. macOS bash 3.2 와 GNU 에서 돈다 (연관 배열 · mapfile 을 쓰지 않는다). node 가 필요하다.
 set -euo pipefail
 
-SRC="$(cd "$(dirname "$0")/.." && pwd)"
+SRC="$(cd "$(dirname "$0")/.." && pwd -P)"
 HELPER="$SRC/scripts/new-project.d/stamp.mjs"
 
 usage() {
@@ -103,6 +103,13 @@ fi
 
 case "$TARGET_ARG" in /*) TARGET="$TARGET_ARG" ;; *) TARGET="$PWD/$TARGET_ARG" ;; esac
 TARGET="${TARGET%/}"
+# `../내-프로젝트` · 심볼릭 링크를 정리한다 — 안 하면 레포 안에서 부른 `../x` 가 "레포 안" 으로 오인된다 (아직 없는 끝 구간은 그대로 붙인다)
+normalize_path() {
+  local p="$1" d b
+  d="$(dirname "$p")"; b="$(basename "$p")"
+  if [ -d "$d" ]; then printf '%s/%s' "$(cd "$d" && pwd -P)" "$b"; else printf '%s/%s' "$(normalize_path "$d")" "$b"; fi
+}
+[ -z "$TARGET" ] || TARGET="$(normalize_path "$TARGET")"
 [ -n "$TARGET" ] || die_usage "target must not be /"
 [ ! -e "$TARGET" ] || die_usage "target already exists: $TARGET"
 case "$TARGET/" in "$SRC"/*) die_usage "target must be outside the skeleton repo ($SRC): $TARGET" ;; esac
@@ -131,6 +138,8 @@ next steps:
   pnpm format                         # 이름 · 스코프를 바꾸면 줄바꿈이 달라질 수 있다 (한 번만)
   pnpm dev                            # apps/$NAME  $([ "$SSR" = 1 ] && echo http://localhost:3000 || echo http://localhost:5173)
   pnpm lint && pnpm typecheck && pnpm test && pnpm build$([ "$WITH_STORYBOOK" = 1 ] && printf '\n  pnpm storybook                      # 스토리집 http://localhost:6006 — 처음 한 번: pnpm exec playwright install chromium (test:stories 용)')
+백엔드(kotlin-skeleton 에서 찍은 것)는 나란히 둔다: <작업 폴더>/api · <작업 폴더>/web(= 여기). api 에서 scripts/dev.sh 가 DB · S3 · 백엔드와 이 프론트(pnpm dev)를 한 번에 띄운다.
+  Vite(5173)가 /api/v1 을 localhost:8080 으로 넘긴다 — 다른 포트면 API_PROXY_TARGET=http://localhost:<port> pnpm dev
 packages you keep but do not use yet: add one line to apps/$NAME/package.json when you start using it, e.g.
   "$SCOPE/<package>": "workspace:*"   # 그러면 pnpm install 을 다시. 안 쓰는 의존은 선언하지 않는다(루트 테스트가 막는다)
 EOF2

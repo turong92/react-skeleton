@@ -59,3 +59,11 @@ describe('ErrorCodes', () => {
     values.forEach((value) => expect(value).toMatch(/^[A-Z_]+\.[A-Z_]+$/))
   })
 })
+
+describe('storage error codes (kotlin-skeleton modules/storage StorageErrorCode)', () => {
+  it('names the codes the upload endpoints answer with', () => {
+    expect(ErrorCodes.STORAGE_FILE_REJECTED).toBe('STORAGE.FILE_REJECTED')
+    expect(ErrorCodes.STORAGE_OBJECT_NOT_FOUND).toBe('STORAGE.OBJECT_NOT_FOUND')
+    expect(ErrorCodes.STORAGE_UNAUTHENTICATED).toBe('STORAGE.UNAUTHENTICATED')
+  })
+})

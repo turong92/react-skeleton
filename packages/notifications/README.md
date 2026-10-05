@@ -5,11 +5,11 @@
 
 ## 어느 백엔드와 짝인가
 
-| 쓰는 것                   | 백엔드                                                                                                                                                                                                         |
-| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 받은편지함 저장소(재사용) | `modules/notification`(`NotificationInboxRepository`) + `notification-jdbc`(영속)                                                                                                                              |
-| **HTTP 엔드포인트**       | **모듈에 없다.** `apps/workbench` 의 `NotificationInboxController`(`GET /api/v1/notifications` · `PATCH …/{eventId}/read` · `PATCH …/read-all`) — 데모다. 내 앱이 같은 모양으로 열고, 경로가 다르면 `basePath` |
-| 실시간 이벤트             | `notification-sse`(`/api/v1/notifications/sse`) · `notification-websocket` → `@skeleton/realtime`                                                                                                              |
+| 쓰는 것                   | 백엔드                                                                                                                                                                                                                                                                                                                         |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 받은편지함 저장소(재사용) | `modules/notification`(`NotificationInboxRepository`) + `notification-jdbc`(영속)                                                                                                                                                                                                                                              |
+| **HTTP 엔드포인트**       | **`modules/notification` 이 연다**(서블릿 앱 + Spring Security — 인증 필수, 호출자 = `Authentication.name`): `GET /api/v1/notifications` · `PATCH …/{eventId}/read` · `PATCH …/read-all`. 기본 경로가 이 패키지의 기본값이다. 앱이 자기 컨트롤러를 두면(`skeleton.notification.inbox.enabled=false`) 경로가 다를 때 `basePath` |
+| 실시간 이벤트             | `notification-sse`(`/api/v1/notifications/sse`) · `notification-websocket` → `@skeleton/realtime`                                                                                                                                                                                                                              |
 
 `GET` 은 백엔드 `PageQuery`(`page` 0 부터 · `size` 1..100) + `unreadOnly` · `topic`, 응답은 페이지 envelope(`{ values, pagination, meta }`). 안 읽은 수는 **전용 엔드포인트가 없어서** `unreadOnly=true&size=1` 의 `pagination.totalElements` 로 센다.
 

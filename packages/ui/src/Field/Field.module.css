@@ -1,26 +1,26 @@
 .field {
   display: grid;
-  gap: 6px;
+  gap: var(--space-sm);
   min-width: 0;
 }
 
 .label {
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: var(--font-size-caption);
   font-weight: 700;
 }
 
 .required {
-  margin-left: 4px;
+  margin-left: var(--space-xs);
 }
 
 .hint {
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: var(--font-size-caption);
 }
 
 .error {
   color: var(--red);
-  font-size: 12px;
+  font-size: var(--font-size-caption);
   font-weight: 600;
 }

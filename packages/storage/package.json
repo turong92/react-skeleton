@@ -1,0 +1,28 @@
+{
+  "name": "@skeleton/storage",
+  "version": "1.1.0",
+  "private": true,
+  "type": "module",
+  "description": "프리사인 업로드 — 앱 백엔드에서 presigned URL 을 받아 브라우저가 직접 PUT(진행률 · 취소 · 멀티파트) + 파일 검증 + useUpload. 백엔드 modules/storage · storage-s3 의 PresignedStorage 짝(SDK 없음, HTTP 경로는 앱이 연다)",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "types": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run --pool forks",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@skeleton/api-client": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
+  }
+}

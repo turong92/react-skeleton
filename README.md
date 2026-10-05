@@ -5,15 +5,20 @@ React + TypeScript + Vite 프론트엔드 스켈레톤 — **pnpm 워크스페�
 ```
 apps/
 ├── starter/       # 새 프로젝트가 복사해 가는 앱 — 라우터 · AppShell · 테마 토글 · API 클라이언트 배선 · 예시 쿼리 · 보호 라우트
-└── workbench/     # 백엔드 확인용 워크벤치(예전 데모 그대로). 시각적 테스트 벤치이지 복사 대상이 아니다
+└── workbench/     # 백엔드 확인용 워크벤치(예전 데모 그대로) + `/packages` 예제 화면. 시각적 테스트 벤치이지 복사 대상이 아니다
 packages/
-├── api-client/    # REST 클라이언트 — envelope · ApiError · 에러 코드 · traceparent · 멱등 키 · 서버 시각 연결점
-├── auth/          # 토큰 저장소 · login/me/socialLogin · dev-login/break-glass 헤더 · 401 훅 · AuthProvider · RequireAuth
-├── realtime/      # SSE(fetch streaming) · STOMP WebSocket 클라이언트 · 재연결 정책 · React 훅
-├── time/          # 글로벌 시간(시각 3종 포맷 · 서버 시각 보정 · 국가→시간대)
-├── theme/         # system·light·dark 테마 · ThemeToggle · ThemedToaster · 첫 칠 전 스크립트(Vite 플러그인)
-├── tokens/        # 디자인 토큰 정본(tokens.json) + 생성기 + tokens.css(라이트/다크) + 문서 표 생성
-└── ui/            # base.css · Button · Input · Field · Select · Card · Dialog · Spinner · AppShell · ErrorBoundary · showApiError
+├── api-client/          # REST 클라이언트 — envelope · ApiError · 에러 코드 · traceparent · 멱등 키 · 서버 시각 연결점
+├── auth/                # 토큰 저장소 · login/me/socialLogin · 소셜 로그인 도우미 · dev-login/break-glass 헤더 · 401 훅 · AuthProvider · RequireAuth
+├── realtime/            # SSE(fetch streaming) · STOMP WebSocket 클라이언트 · 재연결 정책 · React 훅
+├── notifications/       # 알림 받은편지함 클라이언트 · TanStack Query 훅 · 안 읽은 수(실시간 갱신) · NotificationBell/List
+├── storage/             # 프리사인 업로드 — 검증 · presign · 직접 PUT(진행률 · 취소) · 멀티파트 · useUpload
+├── payment/             # 결제 계약 타입 + 얇은 호출 + 토스 리다이렉트 변환 (모듈이 HTTP 를 열지 않아 일부러 얇다)
+├── captcha-turnstile/   # Cloudflare Turnstile 로더 · <Turnstile> · 토큰 붙이기
+├── time/                # 글로벌 시간(시각 3종 포맷 · 서버 시각 보정 · 국가→시간대)
+├── theme/               # system·light·dark 테마 · ThemeToggle · ThemedToaster · 첫 칠 전 스크립트(Vite 플러그인)
+├── tokens/              # 디자인 토큰 정본(tokens.json: 색 · 간격 · 모서리 · 글자 크기) + 생성기 + tokens.css(라이트/다크) + 문서 표 생성
+└── ui/                  # base.css · Button · Input · Field · Select · Textarea · Checkbox · Switch · Tabs · Table · Pagination · EmptyState · Card · Dialog · Spinner · AppShell · ErrorBoundary · showApiError · toastPromise
+scripts/           # new-project.sh(새 프로젝트 찍기) · test-new-project.sh
 tests/             # 워크스페이스를 가로지르는 테스트(토큰 층 · 의존 규칙 · ESLint 경계)
 docs/design-tokens.md
 ```
@@ -28,35 +33,56 @@ pnpm dev              # starter  http://localhost:5173
 pnpm dev:workbench    # workbench (백엔드 :8080 필요)
 pnpm lint
 pnpm typecheck        # 모든 앱 · 패키지 + 루트 테스트
-pnpm test             # 모든 앱 · 패키지 + 루트 tests/
+pnpm test             # 모든 앱 · 패키지 + 루트 tests/ + new-project 빠른 검사
 pnpm format:check
 pnpm build            # 두 앱을 빌드(각 apps/*/dist)
 pnpm tokens           # packages/tokens/tokens.json → tokens.css + docs/design-tokens.md 표 구역
 pnpm tokens:check     # 생성물이 정본과 같은지 확인 (CI)
+bash scripts/test-new-project.sh --full   # 세 조합을 찍어 각각 install · lint · typecheck · test · build (네트워크 필요, 수 분 — 별도 CI 워크플로)
 ```
 
 Node 24(또는 22.18+), pnpm 10.
 
 ## 새 프로젝트 시작
 
-백엔드 `modules/` 를 한 줄로 가져다 쓰듯, 프론트도 **폴더를 복사하고 한 줄로 선언**한다.
+백엔드 `scripts/new-project.sh` 처럼, 프론트도 **한 줄로 찍어 낸다**:
 
-1. 이 레포(또는 GitHub Template)에서 `apps/starter` 와 **필요한 `packages/<이름>`** 만 새 레포로 복사한다. 패키지끼리의 의존은 이름으로만 이어져 있고(아래 표) 폴더 하나로 자족한다.
-2. 앱 `package.json` 에 쓸 패키지를 한 줄씩: `"@skeleton/<이름>": "workspace:*"`. `pnpm-workspace.yaml`(`apps/*`, `packages/*`) 과 루트 `tsconfig.base.json` · `eslint.config.js` 도 가져온다.
-3. 패키지 **내부는 고치지 않는다.** 바꾸고 싶은 것은 설정(옵션) · prop · `tokens.json` 값으로 바꾼다. 안쪽(`@skeleton/*/src/**`)으로 파고드는 import 는 ESLint 가 막는다.
-4. 앱 이름(`apps/starter/package.json` 의 `name`)과 `index.html` 제목을 바꾸고, 쓰지 않는 패키지는 폴더 · 의존 줄을 지운다 — 루트 `pnpm test` 가 「선언한 의존 = 실제 import」를 확인한다.
+```bash
+scripts/new-project.sh <target-dir> <name> [--packages a,b,c] [--with-workbench] [--scope @acme]
 
-| 패키지       | 의존하는 `@skeleton/*` | 한 줄 사용                                                                                                               |
-| ------------ | ---------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `api-client` | —                      | `createApiClient({ ...apiConfigFromEnv(import.meta.env), getAuthHeaders, onError })`                                     |
-| `auth`       | api-client             | `<AuthProvider session={createAuthSession({ api: createAuthApi(apiClient), store })}>` · `<RequireAuth />` · `useAuth()` |
-| `realtime`   | api-client             | `useSseClient({ url, getAuthHeaders })` · `useNotificationSocket({ url, getAccessToken })`                               |
-| `time`       | —                      | `formatInstant(iso)` · `formatDual(zoned)` · `createServerClock()`                                                       |
-| `theme`      | —                      | `plugins: [themePrePaint()]` + `<ThemeToggle />` + `<ThemedToaster />`                                                   |
-| `tokens`     | —                      | `import '@skeleton/tokens/tokens.css'` (색은 `tokens.json` 에서)                                                         |
-| `ui`         | api-client             | `import '@skeleton/ui/base.css'` + `<Button>` `<Field>` `<Input>` `<Card>` `<Dialog>` `<AppShell>` …                     |
+scripts/new-project.sh ~/work/ovation ovation                                      # 스타터 + 스타터가 쓰는 패키지
+scripts/new-project.sh ~/work/ovation ovation --packages realtime,notifications,storage
+scripts/new-project.sh ~/work/ovation ovation --scope @ovation --packages payment  # 패키지 스코프도 바꾼다
+```
 
-자세한 API 표는 각 `packages/<이름>/README.md`. `ui` · `theme` 의 색은 `tokens` 의 `tokens.css` 가 로드되어야 나온다(JS import 의존은 아니라 `package.json` 에 적지 않는다 — `main.tsx` 맨 앞에서 한 번 import).
+- 이 레포를 복사해(`node_modules` · `dist` · `.git` 제외) `apps/starter` 를 `apps/<name>` 으로 바꾼다(package.json 이름 · `index.html` 제목 · 헤더 브랜드 · `.env.example`). `apps/workbench` 는 `--with-workbench` 일 때만(그러면 모든 패키지가 따라온다).
+- 패키지 = 스타터가 쓰는 것 + 루트 도구(`theme` · `tokens`) + `--packages`, 패키지끼리의 의존으로 **닫은** 집합. 나머지 `packages/<p>` 와 그것을 보던 루트 테스트 항목은 지운다. 모르는 패키지 이름이면 유효한 목록과 함께 exit 2, 대상이 이미 있어도 exit 2(아무것도 만들지 않는다).
+- 루트 `package.json`(이름 · `dev`) · eslint 의 앱 이름 막기 · 문서(README · CLAUDE · CHANGELOG)를 새 프로젝트용으로 다시 쓰고, `--scope` 가 있으면 모든 `@skeleton/` 을 바꾼다. `pnpm-workspace.yaml` 은 `apps/*` · `packages/*` 글롭이라 그대로.
+- 끝나면 다음 단계를 출력한다: `pnpm install --no-frozen-lockfile`(잠금 파일은 스켈레톤의 것 — 맞춰서 고친다) → `pnpm format`(스코프 · 이름으로 줄바꿈이 달라질 수 있다) → `pnpm dev`.
+- 고른 패키지는 **폴더만** 복사된다. 쓰기 시작할 때 앱 `package.json` 에 한 줄(`"@skeleton/<이름>": "workspace:*"`)을 더한다 — 안 쓰는 의존을 선언하면 루트 `pnpm test` 가 막는다(선언한 의존 = 실제 import).
+- 검증: `scripts/test-new-project.sh --quick`(인자 검증 · 닫힘 · 구조 · 이름/스코프 · 남는 흔적, 수 초 — `pnpm test` 가 부른다), `--full`(세 조합 `기본값` · `--packages realtime,notifications,storage` · `--scope @acme --packages payment` 를 찍어 각각 install · lint · typecheck · test · build, CI 의 `new-project` 워크플로).
+
+폴더 복사로 직접 가져가도 된다: 패키지는 각자 `package.json` · 테스트 · README 를 가진 자족 단위이고 서로는 이름으로만 이어져 있다. 이때 `pnpm-workspace.yaml` · 루트 `tsconfig.base.json` · `eslint.config.js` 도 가져온다.
+
+**패키지 내부는 고치지 않는다.** 바꾸고 싶은 것은 설정(옵션) · prop · `tokens.json` 값으로 바꾼다. 안쪽(`@skeleton/*/src/**`)으로 파고드는 import 는 ESLint 가 막는다.
+
+### 패키지 ↔ 백엔드 모듈 ↔ 한 줄 사용
+
+| 패키지              | 의존하는 `@skeleton/*` | 짝인 백엔드(kotlin-skeleton)                                                       | 한 줄 사용                                                                                                                                                   |
+| ------------------- | ---------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `api-client`        | —                      | `platform`(envelope · `ApiError` · traceparent)                                    | `createApiClient({ ...apiConfigFromEnv(import.meta.env), getAuthHeaders, onError })`                                                                         |
+| `auth`              | api-client             | `auth` · `auth-social*`                                                            | `<AuthProvider session={createAuthSession({ api: createAuthApi(apiClient), store })}>` · `<RequireAuth />` · `createSocialLoginFlow({ providers, session })` |
+| `realtime`          | api-client             | `notification-sse` · `notification-websocket`                                      | `useSseClient({ url, getAuthHeaders })` · `useNotificationSocket({ url, getAccessToken })`                                                                   |
+| `notifications`     | api-client · time · ui | `notification` + `notification-jdbc`(저장소). HTTP 는 앱(워크벤치 컨트롤러가 데모) | `createNotificationsApi(apiClient)` → `<NotificationBell api={api} />` · `useNotificationIngest()` 를 realtime 훅에 건다                                     |
+| `storage`           | api-client             | `storage` + `storage-s3`(`PresignedStorage`). HTTP 는 앱                           | `createUploader({ api: createStorageApi(apiClient, { presign: '/files/presign' }) })` → `useUpload(uploader)`                                                |
+| `payment`           | api-client             | `payment` + `payment-toss` · `payment-stripe`. HTTP 는 앱                          | `createPaymentApi(apiClient, { paths: { confirm } })` · `confirmRequestFromTossRedirect(location.search, { currency })`                                      |
+| `captcha-turnstile` | —                      | `captcha-turnstile`(`TurnstileVerifier`). HTTP 는 앱                               | `<Turnstile siteKey {...useTurnstileToken().widgetProps} />` · `attachTurnstileToken(body, token)`                                                           |
+| `time`              | —                      | `time`                                                                             | `formatInstant(iso)` · `formatDual(zoned)` · `createServerClock()`                                                                                           |
+| `theme`             | —                      | —                                                                                  | `plugins: [themePrePaint()]` + `<ThemeToggle />` + `<ThemedToaster />`                                                                                       |
+| `tokens`            | —                      | —                                                                                  | `import '@skeleton/tokens/tokens.css'` (색 · 간격 · 모서리 · 글자 크기는 `tokens.json` 에서)                                                                 |
+| `ui`                | api-client             | —                                                                                  | `import '@skeleton/ui/base.css'` + `<Button>` `<Field>` `<Input>` `<Textarea>` `<Checkbox>` `<Tabs>` `<Table>` `<Pagination>` …                              |
+
+「HTTP 는 앱」인 패키지는 백엔드 모듈이 서비스 계약만 주고 엔드포인트를 열지 않아 **경로를 앱이 알려 준다**(기본 경로 없음 — 없는 엔드포인트를 가정하지 않는다). 자세한 API 표 · 어느 파일의 어느 계약인지 · 테스트가 재지 않는 것은 각 `packages/<이름>/README.md`. `ui` · `theme` 의 색은 `tokens` 의 `tokens.css` 가 로드되어야 나온다(JS import 의존은 아니라 `package.json` 에 적지 않는다 — `main.tsx` 맨 앞에서 한 번 import).
 
 ## 앱
 
@@ -78,6 +104,7 @@ Node 24(또는 22.18+), pnpm 10.
 - `GET /notifications/sse?topic=demo`(fetch streaming) · `/ws/notifications`(STOMP). WebSocket 인증을 켠 백엔드는 `auth.login` 으로 받은 bearer token 이 필요하고 dev-login 헤더는 REST/SSE 전용
 - `POST /skeleton/notifications` 로 publish 한 뒤 SSE/WebSocket 수신 확인, 요청/응답/status/header trace 를 화면 로그로
 - SSE · WebSocket 연결은 `@skeleton/realtime` 훅이 맡고, 화면 로그 변환은 `src/modules/workbench/realtimeExchanges.ts`
+- `/packages` — 새 패키지 예제 화면(탭 하나에 패키지 하나): `notifications`(받은편지함 + SSE 로 안 읽은 수) · `storage`(서버/클라이언트 검증) · `payment`(라우팅 확인) · `captcha-turnstile`(테스트 키) · `auth` 소셜 · `ui` 새 부품. `src/modules/demos/`
 
 ## 백엔드 연결
 
@@ -108,8 +135,8 @@ await apiClient.response<ApiValueResponse<OrderResponse>>('/orders', {
 
 ## 디자인 토큰 · 테마
 
-- 색 · 그림자 · 서체는 `packages/tokens/tokens.json` 한 곳에서 정하고 `pnpm tokens` 가 `tokens.css` 를 만든다. 층은 둘: 원시(`--p-*`, 화면 CSS 에서 직접 쓰지 않음) → 의미(`--bg` · `--text` · `--teal` …).
-- 화면 CSS · 인라인 style 에는 색 날값을 쓰지 않고 `var(--bg)` 처럼 의미 토큰만 쓴다 — 두 앱과 모든 패키지를 루트 `tests/` 가 막는다.
+- 색 · 그림자 · 서체 · **간격 · 모서리 · 글자 크기**는 `packages/tokens/tokens.json` 한 곳에서 정하고 `pnpm tokens` 가 `tokens.css` 를 만든다. 층은 둘: 원시(`--p-*`, 화면 CSS 에서 직접 쓰지 않음) → 의미(`--bg` · `--text` · `--teal` · `--space-md` · `--radius-md` · `--font-size-body` …).
+- 화면 CSS · 인라인 style 에는 색 날값을 쓰지 않고 `var(--bg)` 처럼 의미 토큰만 쓴다 — 두 앱과 모든 패키지를 루트 `tests/` 가 막는다. `padding` · `margin` · `gap` · `border-radius` · `font-size` 의 px/rem/em 날값도 같다(`--space-*` · `--radius-*` · `--font-size-*`). **예외는 `apps/workbench` CSS 뿐**(540줄 — 옮기려면 `tests/support/layoutExempt.ts` 를 비운다).
 - 라이트 + 다크. `<html data-theme="light|dark">`, 없거나 `system` 이면 OS 설정을 따른다. 토글은 `@skeleton/theme`, 저장은 `localStorage`.
 - 프로젝트는 `tokens.json` 의 값만 바꿔 자기 색을 입힌다. 모든 글자/바탕 짝이 두 테마에서 WCAG AA 인지는 `pnpm test` 가 잰다.
 - 규칙 · 토큰/테마 추가법 · 생성된 표: [`docs/design-tokens.md`](docs/design-tokens.md), 패키지 설명: [`packages/tokens/README.md`](packages/tokens/README.md)
@@ -118,7 +145,7 @@ await apiClient.response<ApiValueResponse<OrderResponse>>('/orders', {
 
 - 패키지는 서로를 **이름**(`@skeleton/<이름>`)으로만 부르고 barrel(`src/index.ts`)과 `exports` 에 적힌 하위 경로만 쓴다. `@skeleton/*/src/**` 딥 임포트 · 폴더를 벗어나는 상대 경로 · 앱 코드 import 는 ESLint(`eslint.config.js`) 와 `tests/workspace.test.ts` 가 막는다.
 - 패키지에는 `import.meta.env` 도 모듈 전역 싱글턴도 없다. 환경변수 읽기와 인스턴스 만들기는 앱이 한다.
-- 각 앱 · 패키지가 `package.json` 에 선언한 `@skeleton/*` 의존은 소스가 실제로 import 하는 것과 정확히 같아야 한다(= 지울 수 있다). `starter` 는 워크벤치 코드에 의존하지 않는다.
+- 각 앱 · 패키지가 `package.json` 에 선언한 `@skeleton/*` 의존은 소스가 실제로 import 하는 것과 정확히 같아야 한다(= 지울 수 있다). 워크벤치가 아닌 앱(`starter` 와 거기서 찍은 앱)은 워크벤치 코드에 의존하지 않는다.
 
 ## 새 프로젝트를 GitHub Template 으로
 
@@ -126,7 +153,7 @@ await apiClient.response<ApiValueResponse<OrderResponse>>('/orders', {
 
 1. GitHub 레포 페이지 → **Use this template**
 2. 또는 `gh repo create <name> --template turong92/react-skeleton --private`
-3. 위 「새 프로젝트 시작」 순서로 쓰지 않을 앱 · 패키지를 걷어 낸다.
+3. 쓰지 않을 앱 · 패키지는 `scripts/new-project.sh` 로 가려 찍거나(권장 — 위 「새 프로젝트 시작」), 폴더를 직접 지운다.
 
 ## Vite → Next.js 전환 고려 시
 

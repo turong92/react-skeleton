@@ -15,29 +15,15 @@ const packages = workspaces.filter((w) => w.kind === 'package')
 const apps = workspaces.filter((w) => w.kind === 'app')
 
 describe('the workspace', () => {
-  it('has the two apps and the seven packages', () => {
-    expect(apps.map((w) => w.dir).sort()).toEqual(['apps/starter', 'apps/workbench'])
-    expect(packages.map((w) => w.dir).sort()).toEqual([
-      'packages/api-client',
-      'packages/auth',
-      'packages/realtime',
-      'packages/theme',
-      'packages/time',
-      'packages/tokens',
-      'packages/ui',
-    ])
-  })
-
   it('every app and package declares exactly the @skeleton packages its source imports (removable)', () => {
     expect(findProblems(workspaces)).toEqual([])
   })
 
-  it('the starter app does not depend on workbench code', () => {
-    const starter = workspaces.find((w) => w.dir === 'apps/starter')!
-    const everything = JSON.stringify(starter.packageJson)
-    expect(everything).not.toContain('workbench')
-    for (const file of starter.files) {
-      expect(file.text, file.path).not.toMatch(/workbench/i)
+  it('an app that is not the workbench does not depend on workbench code (the starter is copied without it)', () => {
+    for (const app of apps.filter((w) => w.dir !== 'apps/workbench')) {
+      expect(JSON.stringify(app.packageJson), app.dir).not.toContain('workbench')
+      for (const file of app.files)
+        expect(file.text, `${app.dir}/${file.path}`).not.toMatch(/workbench/i)
     }
   })
 

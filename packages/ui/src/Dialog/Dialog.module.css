@@ -2,7 +2,7 @@
   width: min(480px, calc(100vw - 32px));
   padding: 0;
   border: 1px solid var(--border-strong);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: var(--surface);
   color: var(--text);
   box-shadow: var(--shadow);
@@ -16,8 +16,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 16px 20px;
+  gap: var(--space-md);
+  padding: var(--space-lg) var(--space-xl);
   border-bottom: 1px solid var(--border);
 }
 
@@ -25,19 +25,19 @@
   width: 30px;
   height: 30px;
   border: 1px solid var(--border-strong);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: var(--surface);
   color: var(--text-strong);
   line-height: 1;
 }
 
 .body {
-  padding: 20px;
+  padding: var(--space-xl);
 }
 
 .footer {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
-  padding: 12px 20px 16px;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-xl) var(--space-lg);
 }

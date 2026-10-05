@@ -2,10 +2,10 @@
   width: 100%;
   min-height: 38px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: var(--surface);
   color: var(--text-strong);
-  padding: 0 10px;
+  padding: 0 var(--space-md);
 }
 
 .input::placeholder {

@@ -1,5 +1,6 @@
 import { createBrowserRouter } from 'react-router-dom'
 import { RootLayout } from '../layouts/RootLayout'
+import { PackagesPage } from '../modules/demos/PackagesPage'
 import { HomePage } from './HomePage'
 import { NotFoundPage } from './NotFoundPage'
 
@@ -16,6 +17,7 @@ export const router = createBrowserRouter([
     element: <RootLayout />,
     children: [
       { path: '/', element: <HomePage /> },
+      { path: '/packages', element: <PackagesPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],
   },

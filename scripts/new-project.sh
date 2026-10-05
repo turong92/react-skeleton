@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+# 새 프로젝트 한 줄 찍어내기: 복사 → 필요한 패키지만 남기기 → 앱 이름 바꾸기 → (선택) 스코프 바꾸기 → 문서 다시 쓰기.
+#
+#   scripts/new-project.sh <target-dir> <name> [--packages a,b,c] [--with-workbench] [--scope @acme]
+#
+#   예) scripts/new-project.sh ~/work/ovation ovation
+#       scripts/new-project.sh ~/work/ovation ovation --packages realtime,notifications,storage
+#       scripts/new-project.sh ~/work/ovation ovation --scope @ovation --packages payment
+#
+# 하는 일
+#   1. 이 레포를 <target-dir> 로 복사한다 (node_modules · dist · .git · .claude · .superpowers · .env · *.local 제외).
+#   2. apps/starter 를 apps/<name> 으로 바꾼다 (package.json 이름 · index.html 제목 · 헤더 브랜드 · .env.example 첫 줄).
+#      apps/workbench 는 --with-workbench 일 때만 남긴다 (그러면 워크벤치가 쓰는 패키지가 전부 따라온다).
+#   3. 패키지 = 스타터가 쓰는 것 + 루트 도구(theme · tokens) + --packages, 패키지끼리의 @skeleton/* 의존으로 닫는다.
+#      나머지 packages/<p> 는 지운다. 이 목록을 보고 있던 루트 테스트(tests/skeleton.repo.test.ts)도 지운다.
+#      고른 패키지는 폴더만 복사된다 — 앱 package.json 에 `"@skeleton/<p>": "workspace:*"` 한 줄은 쓰기 시작할 때 더한다
+#      (안 쓰는 의존을 선언하면 루트 테스트 「선언한 의존 = 실제 import」가 막는다).
+#   4. 루트 package.json(이름 · dev 스크립트 · test 에서 이 도구 빼기) · eslint 앱 이름 막기 · 문서(README · CLAUDE · CHANGELOG)를 새 프로젝트용으로 바꾼다.
+#   5. --scope 가 있으면 모든 텍스트 파일의 @skeleton/ 을 <scope>/ 로 바꾼다.
+#   6. new-project 도구(이 스크립트 · 테스트 · 워크플로)는 따라오지 않는다. pnpm-lock.yaml 은 복사본 그대로다 — `pnpm install --no-frozen-lockfile` 이 맞춘다.
+#
+# 종료 코드: 0 성공 / 1 도중 실패(대상이 남는다) / 2 인자 오류(아무것도 만들지 않는다).
+# 소스 레포와 <target-dir> 밖에는 아무것도 쓰지 않는다. macOS bash 3.2 와 GNU 에서 돈다 (연관 배열 · mapfile 을 쓰지 않는다). node 가 필요하다.
+set -euo pipefail
+
+SRC="$(cd "$(dirname "$0")/.." && pwd)"
+HELPER="$SRC/scripts/new-project.d/stamp.mjs"
+
+usage() {
+  cat <<'EOF2'
+usage: scripts/new-project.sh <target-dir> <name> [--packages a,b,c] [--with-workbench] [--scope @acme]
+
+  <target-dir>      새로 만들 디렉토리 (이미 있으면 거부, 소스 레포 안이면 거부)
+  <name>            앱 이름 = apps/<name> (소문자 · 숫자 · 하이픈, `workbench` 는 예약)
+  --packages        스타터에 더할 패키지, 쉼표로 구분 (예: realtime,notifications,storage)
+  --with-workbench  apps/workbench(백엔드 확인용 시각적 테스트 벤치)도 남긴다 — 모든 패키지가 남는다
+  --scope           패키지 스코프를 바꾼다 (예: @acme → @acme/ui). 기본 @skeleton
+EOF2
+}
+
+die_usage() { echo "x $*" >&2; echo >&2; usage >&2; exit 2; }
+valid_packages() { # 소스 레포의 패키지 이름들 (정렬)
+  local d
+  for d in "$SRC"/packages/*/; do
+    [ -f "$d/package.json" ] && basename "$d"
+  done | sort
+}
+die_listing() { echo "x $*" >&2; echo "valid packages: $(valid_packages | tr '\n' ' ')" >&2; exit 2; }
+
+# ---------------------------------------------------------------------------------------------------- 인자
+POSITIONAL=()
+PACKAGES_ARG=""
+SCOPE="@skeleton"
+WITH_WORKBENCH=0
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --packages) [ $# -ge 2 ] && [ "${2#--}" = "$2" ] || die_usage "--packages needs a value"; PACKAGES_ARG="$2"; shift 2 ;;
+    --packages=*) PACKAGES_ARG="${1#--packages=}"; shift ;;
+    --scope) [ $# -ge 2 ] && [ "${2#--}" = "$2" ] || die_usage "--scope needs a value"; SCOPE="$2"; shift 2 ;;
+    --scope=*) SCOPE="${1#--scope=}"; shift ;;
+    --with-workbench) WITH_WORKBENCH=1; shift ;;
+    -h|--help) usage; exit 0 ;;
+    --*) die_usage "unknown option: $1" ;;
+    *) POSITIONAL+=("$1"); shift ;;
+  esac
+done
+[ "${#POSITIONAL[@]}" -eq 2 ] || die_usage "expected 2 arguments (<target-dir> <name>), got ${#POSITIONAL[@]}"
+TARGET_ARG="${POSITIONAL[0]}"; NAME="${POSITIONAL[1]}"
+
+echo "$NAME" | grep -Eq '^[a-z][a-z0-9-]*$' || die_usage "name must be lower-case letters, digits, hyphens: $NAME"
+[ "$NAME" != workbench ] || die_usage "the name 'workbench' is reserved (apps/workbench)"
+echo "$SCOPE" | grep -Eq '^@[a-z][a-z0-9-]*$' || die_usage "scope must look like @acme: $SCOPE"
+
+ALL_PACKAGES="$(valid_packages)"
+REQUESTED=""   # 요청 순서 유지, 중복 제거
+if [ -n "$PACKAGES_ARG" ]; then
+  while IFS= read -r p; do
+    p="$(echo "$p" | tr -d '[:space:]')"
+    [ -n "$p" ] || continue
+    printf '%s\n' "$ALL_PACKAGES" | grep -Fxq -- "$p" || die_listing "unknown package: $p"
+    printf '%s\n' "$REQUESTED" | grep -Fxq -- "$p" || REQUESTED="${REQUESTED:+$REQUESTED,}$p"
+  done <<EOF2
+$(printf '%s' "$PACKAGES_ARG" | tr ',' '\n')
+EOF2
+fi
+
+case "$TARGET_ARG" in /*) TARGET="$TARGET_ARG" ;; *) TARGET="$PWD/$TARGET_ARG" ;; esac
+TARGET="${TARGET%/}"
+[ -n "$TARGET" ] || die_usage "target must not be /"
+[ ! -e "$TARGET" ] || die_usage "target already exists: $TARGET"
+case "$TARGET/" in "$SRC"/*) die_usage "target must be outside the skeleton repo ($SRC): $TARGET" ;; esac
+command -v node >/dev/null || { echo "x node is required" >&2; exit 1; }
+
+# ---------------------------------------------------------------------------------------------------- 계획
+PLAN="$(node "$HELPER" plan "$SRC" "$WITH_WORKBENCH" "$REQUESTED")" || { echo "$PLAN" >&2; exit 2; }
+KEEP="$(printf '%s\n' "$PLAN" | sed -n 's/^keep //p' | tr '\n' ',' | sed 's/,$//')"
+echo "== plan"
+printf '%s\n' "$PLAN" | sed -n 's/^why /   /p'
+echo "   app: apps/$NAME (from apps/starter)$([ "$WITH_WORKBENCH" = 1 ] && echo ' + apps/workbench')"
+
+# ---------------------------------------------------------------------------------------------------- 복사 · 변환
+echo "== copy → $TARGET"
+node "$HELPER" copy "$SRC" "$TARGET"
+echo "== transform"
+node "$HELPER" apply "$TARGET" "$NAME" "$SCOPE" "$WITH_WORKBENCH" "$KEEP"
+
+# ---------------------------------------------------------------------------------------------------- 안내
+cat <<EOF2
+
+done: $TARGET
+next steps:
+  cd $TARGET
+  pnpm install --no-frozen-lockfile   # pnpm-lock.yaml 은 스켈레톤의 것 — 이름 · 스코프에 맞춰 고쳐진다. 결과를 커밋한다
+  pnpm format                         # 이름 · 스코프를 바꾸면 줄바꿈이 달라질 수 있다 (한 번만)
+  pnpm dev                            # apps/$NAME  http://localhost:5173
+  pnpm lint && pnpm typecheck && pnpm test && pnpm build
+packages you keep but do not use yet: add one line to apps/$NAME/package.json when you start using it, e.g.
+  "$SCOPE/<package>": "workspace:*"   # 그러면 pnpm install 을 다시. 안 쓰는 의존은 선언하지 않는다(루트 테스트가 막는다)
+EOF2

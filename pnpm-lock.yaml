@@ -109,9 +109,21 @@ importers:
       '@skeleton/auth':
         specifier: workspace:*
         version: link:../../packages/auth
+      '@skeleton/captcha-turnstile':
+        specifier: workspace:*
+        version: link:../../packages/captcha-turnstile
+      '@skeleton/notifications':
+        specifier: workspace:*
+        version: link:../../packages/notifications
+      '@skeleton/payment':
+        specifier: workspace:*
+        version: link:../../packages/payment
       '@skeleton/realtime':
         specifier: workspace:*
         version: link:../../packages/realtime
+      '@skeleton/storage':
+        specifier: workspace:*
+        version: link:../../packages/storage
       '@skeleton/theme':
         specifier: workspace:*
         version: link:../../packages/theme
@@ -168,7 +180,60 @@ importers:
         specifier: ^7.14.1
         version: 7.18.4(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
 
+  packages/captcha-turnstile:
+    devDependencies:
+      react:
+        specifier: ^19.2.5
+        version: 19.3.0
+      react-dom:
+        specifier: ^19.2.5
+        version: 19.3.0(react@19.3.0)
+
+  packages/notifications:
+    dependencies:
+      '@skeleton/api-client':
+        specifier: workspace:*
+        version: link:../api-client
+      '@skeleton/time':
+        specifier: workspace:*
+        version: link:../time
+      '@skeleton/ui':
+        specifier: workspace:*
+        version: link:../ui
+    devDependencies:
+      '@tanstack/react-query':
+        specifier: ^5.99.2
+        version: 5.104.1(react@19.3.0)
+      react:
+        specifier: ^19.2.5
+        version: 19.3.0
+      react-dom:
+        specifier: ^19.2.5
+        version: 19.3.0(react@19.3.0)
+      sonner:
+        specifier: ^2.0.7
+        version: 2.0.8(@types/react@19.2.14)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+
+  packages/payment:
+    dependencies:
+      '@skeleton/api-client':
+        specifier: workspace:*
+        version: link:../api-client
+
   packages/realtime:
+    dependencies:
+      '@skeleton/api-client':
+        specifier: workspace:*
+        version: link:../api-client
+    devDependencies:
+      react:
+        specifier: ^19.2.5
+        version: 19.3.0
+      react-dom:
+        specifier: ^19.2.5
+        version: 19.3.0(react@19.3.0)
+
+  packages/storage:
     dependencies:
       '@skeleton/api-client':
         specifier: workspace:*

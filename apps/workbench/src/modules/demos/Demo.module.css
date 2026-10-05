@@ -1,0 +1,16 @@
+.stack {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-md);
+}
+
+.note {
+  color: var(--text-muted);
+  font-size: var(--font-size-caption);
+}

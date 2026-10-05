@@ -1,10 +1,10 @@
 .trace {
-  margin-top: 4px;
-  font-size: 12px;
+  margin-top: var(--space-xs);
+  font-size: var(--font-size-caption);
   font-family: var(--mono);
 }
 
 .copy {
-  margin-top: 8px;
+  margin-top: var(--space-sm);
   cursor: copy;
 }

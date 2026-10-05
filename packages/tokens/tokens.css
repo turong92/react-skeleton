@@ -45,6 +45,26 @@
   --p-shadow-raised-dark: 0 18px 45px rgba(0, 0, 0, 0.45);
   --p-font-family-sans: 'Avenir Next', 'IBM Plex Sans KR', 'Noto Sans KR', ui-sans-serif, system-ui, sans-serif;
   --p-font-family-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, ui-monospace, monospace;
+  --p-space-1: 4px;
+  --p-space-2: 8px;
+  --p-space-3: 12px;
+  --p-space-4: 16px;
+  --p-space-5: 20px;
+  --p-space-6: 24px;
+  --p-space-8: 32px;
+  --p-radius-1: 4px;
+  --p-radius-2: 6px;
+  --p-radius-3: 8px;
+  --p-radius-full: 9999px;
+  --p-font-size-1: 12px;
+  --p-font-size-2: 13px;
+  --p-font-size-3: 15px;
+  --p-font-size-4: 16px;
+  --p-font-size-5: 20px;
+  --p-font-size-6: 28px;
+  --p-line-height-tight: 1.2;
+  --p-line-height-snug: 1.35;
+  --p-line-height-normal: 1.5;
 }
 
 /* semantic — the names screen CSS uses. light (default): data-theme absent or "light".
@@ -88,6 +108,32 @@
   /* Font */
   --sans: var(--p-font-family-sans);
   --mono: var(--p-font-family-mono);
+
+  /* Spacing */
+  --space-xs: var(--p-space-1);
+  --space-sm: var(--p-space-2);
+  --space-md: var(--p-space-3);
+  --space-lg: var(--p-space-4);
+  --space-xl: var(--p-space-5);
+  --space-2xl: var(--p-space-6);
+  --space-3xl: var(--p-space-8);
+
+  /* Radius */
+  --radius-sm: var(--p-radius-1);
+  --radius-md: var(--p-radius-2);
+  --radius-lg: var(--p-radius-3);
+  --radius-full: var(--p-radius-full);
+
+  /* Type scale */
+  --font-size-caption: var(--p-font-size-1);
+  --font-size-small: var(--p-font-size-2);
+  --font-size-body: var(--p-font-size-3);
+  --font-size-subheading: var(--p-font-size-4);
+  --font-size-heading: var(--p-font-size-5);
+  --font-size-title: var(--p-font-size-6);
+  --line-height-tight: var(--p-line-height-tight);
+  --line-height-snug: var(--p-line-height-snug);
+  --line-height-normal: var(--p-line-height-normal);
 }
 
 /* dark — <html data-theme="dark"> */

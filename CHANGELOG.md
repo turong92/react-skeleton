@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — 프론트 조각 보강 · 프로젝트 찍기
+
+- **새 패키지 4개** (각자 `package.json` · 테스트 · README, 서로는 이름으로만):
+  - `@skeleton/notifications` — 받은편지함 클라이언트(`GET /notifications` 페이지 · `PATCH …/{eventId}/read` · `PATCH …/read-all`, 경로는 `basePath`) · TanStack Query 훅 · 안 읽은 수(= `unreadOnly&size=1` 의 `totalElements`) · `useNotificationIngest` 로 `@skeleton/realtime` 이벤트를 캐시에 반영(중복 id 한 번만) · `NotificationBell`/`NotificationList`
+  - `@skeleton/storage` — 프리사인 업로드: 클라이언트 검증(백엔드 `StorageFileValidator` 와 같은 규칙 · 코드) → presign → XHR 직접 PUT(진행률 · 취소) → 키(+ 공개 주소), 큰 파일 멀티파트(조각 presign · 동시성 · ETag · 실패/취소 시 abort) · `useUpload`. 백엔드 모듈이 HTTP 를 열지 않아 경로는 `endpoints` 로 받는다(기본 경로 없음)
+  - `@skeleton/payment` — `PaymentContracts` 타입 · `createPaymentApi`(준 경로만) · `confirmRequestFromTossRedirect` · `isPaymentError`. 모듈 계약이 얇아 결제 흐름은 만들지 않았다(README 에 한계)
+  - `@skeleton/captcha-turnstile` — `loadTurnstile`(한 번만 · 재시도) · `<Turnstile>` · `useTurnstileToken` · `attachTurnstileToken`(`cf-turnstile-response`)
+- `@skeleton/auth`: 소셜 로그인 도우미 — `buildAuthorizeUrl`(google · kakao · naver 프리셋) · `createSocialLoginFlow`(state 보관 · 검증 · 한 번만 → `socialLogin(provider, code, redirectUri)`) · `parseSocialCallback` · `useSocialLoginCallback`
+- `@skeleton/ui`: `Textarea` `Checkbox` `Switch` `Tabs`(WAI-ARIA · roving tabindex · 화살표/Home/End) `Table` `Pagination`(0 기반 `PaginationMeta`) `EmptyState` · `toastPromise`(로딩 → 성공/실패가 한 토스트에서)
+- `@skeleton/tokens`: 간격(`--space-xs…3xl`) · 모서리(`--radius-sm…full`) · 글자 크기/줄 높이(`--font-size-caption…title` · `--line-height-*`) 토큰(원시 → 의미) + 테스트 도구 `findRawLayout`
+- `scripts/new-project.sh <target-dir> <name> [--packages a,b,c] [--with-workbench] [--scope @acme]` — 복사 → 필요한 패키지만(스타터가 쓰는 것 + `--packages` 의 의존 닫힘) → `apps/starter` 를 `apps/<name>` 으로 → 루트 `package.json` · eslint · 문서 → (선택) 스코프 바꾸기. `scripts/test-new-project.sh --quick`(`pnpm test` 가 부름) · `--full`(세 조합을 찍어 install · lint · typecheck · test · build — `.github/workflows/new-project.yml`)
+- `apps/workbench`: `/packages` 예제 화면(`src/modules/demos`) · `apps/starter` 404 페이지는 `EmptyState`
+- 루트 테스트: 간격 · 모서리 · 글자 크기 날값 금지(`tests/usage.test.ts`), 이 레포의 앱 · 패키지 목록은 `tests/skeleton.repo.test.ts` 로 분리(찍을 때 지워진다) — 일반 규칙(`workspace` · `usage` · `contrast`)은 이름을 하드코딩하지 않는다
+
+### Changed
+
+- `@skeleton/ui` · `theme` · starter 의 CSS 는 간격 · 모서리 · 글자 크기에 토큰만 쓴다. 4px 격자에 없던 6 · 10 · 14px 은 가까운 단계로 맞췄다(안쪽 여백이 최대 2px 달라짐), 제목 `line-height` 1.15 · 1.2 · 1.25 → 1.2(`tight`), `code` · `pre` 1.35 · 1.45 → 1.35(`snug`). 예외: `apps/workbench` CSS(토큰으로 옮기려면 540줄 — `tests/support/layoutExempt.ts` 가 명시한다)
+- 루트 `pnpm test` 가 `scripts/test-new-project.sh --quick` 도 돈다
+
 ### Migration — 단일 Vite 앱 → pnpm 워크스페이스 (앱 2 + 패키지 7)
 
 기존 프로젝트(이 스켈레톤에서 시작한 레포)가 이 변경을 가져올 때의 옮김표. 백엔드 `modules/` 처럼 프로젝트가 필요한 패키지만 한 줄(`"@skeleton/<이름>": "workspace:*"`)로 골라 쓴다.

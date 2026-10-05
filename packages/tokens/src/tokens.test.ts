@@ -152,3 +152,75 @@ describe('theme blocks in tokens.css', () => {
     expect(lum(hex('--surface'))).toBeGreaterThan(lum(hex('--bg')))
   })
 })
+
+describe('spacing, radius and type scales (primitive → semantic)', () => {
+  const light = themeVars(out.css, 'light')
+  const resolved = (name: string) => expandVars(light, light.get(name) ?? `missing ${name}`)
+  const semantic = out.tokens.filter((t) => t.layer === 'semantic')
+  const semanticNames = (group: string) =>
+    semantic.filter((t) => t.group === `semantic.${group}`).map((t) => t.cssName)
+
+  it('spacing is a 4px grid: semantic names reference the --p-space-* primitives', () => {
+    expect(semanticNames('spacing')).toEqual([
+      '--space-xs',
+      '--space-sm',
+      '--space-md',
+      '--space-lg',
+      '--space-xl',
+      '--space-2xl',
+      '--space-3xl',
+    ])
+    expect(
+      ['--space-xs', '--space-sm', '--space-md', '--space-lg', '--space-xl'].map(resolved),
+    ).toEqual(['4px', '8px', '12px', '16px', '20px'])
+    expect(resolved('--space-3xl')).toBe('32px')
+    expect(light.get('--space-md')).toBe('var(--p-space-3)')
+  })
+
+  it('radius has sm / md / lg and a pill that stays round on any size', () => {
+    expect(semanticNames('radius')).toEqual([
+      '--radius-sm',
+      '--radius-md',
+      '--radius-lg',
+      '--radius-full',
+    ])
+    expect(['--radius-sm', '--radius-md', '--radius-lg'].map(resolved)).toEqual([
+      '4px',
+      '6px',
+      '8px',
+    ])
+    expect(resolved('--radius-full')).toBe('9999px')
+  })
+
+  it('the type scale names roles (caption … title) and has line heights', () => {
+    expect(semanticNames('type')).toEqual([
+      '--font-size-caption',
+      '--font-size-small',
+      '--font-size-body',
+      '--font-size-subheading',
+      '--font-size-heading',
+      '--font-size-title',
+      '--line-height-tight',
+      '--line-height-snug',
+      '--line-height-normal',
+    ])
+    expect(resolved('--font-size-body')).toBe('15px')
+    expect(resolved('--font-size-title')).toBe('28px')
+    expect(resolved('--line-height-normal')).toBe('1.5')
+  })
+
+  it('themes do not touch them: dark declares none of these (they are theme-independent)', () => {
+    const dark = themeVars(out.css, 'dark')
+    for (const name of ['--space-md', '--radius-md', '--font-size-body']) {
+      expect(light.get(name), name).toBeDefined()
+      expect(dark.get(name), name).toBe(light.get(name))
+    }
+  })
+
+  it('semantic layout tokens reference primitives, never raw lengths', () => {
+    for (const t of semantic.filter((t) =>
+      /^--(space|radius|font-size|line-height)-/.test(t.cssName),
+    ))
+      expect(t.raw, t.path).toMatch(/^\{[\w.-]+\}$/)
+  })
+})

@@ -9,8 +9,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 24px;
-  padding: 0 24px;
+  gap: var(--space-2xl);
+  padding: 0 var(--space-2xl);
   border-bottom: 1px solid var(--border);
   background: var(--header-bg);
   color: var(--text);
@@ -22,14 +22,14 @@
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-md);
   min-width: 0;
 }
 
 .nav {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--space-lg);
   flex: 1;
   min-width: 0;
 }
@@ -37,18 +37,18 @@
 .actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-md);
 }
 
 .main {
   flex: 1;
   width: min(1120px, 100%);
   margin: 0 auto;
-  padding: 24px;
+  padding: var(--space-2xl);
 }
 
 .footer {
-  padding: 16px 24px;
+  padding: var(--space-lg) var(--space-2xl);
   border-top: 1px solid var(--border);
   color: var(--text-muted);
 }

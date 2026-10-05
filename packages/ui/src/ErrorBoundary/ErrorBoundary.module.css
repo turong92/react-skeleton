@@ -1,5 +1,5 @@
 .fallback {
-  padding: 2rem;
+  padding: var(--space-3xl);
   text-align: center;
 }
 
@@ -10,15 +10,15 @@
 .message {
   display: inline-block;
   max-width: 800px;
-  margin: 12px 0 0;
-  padding: 1rem;
+  margin: var(--space-md) 0 0;
+  padding: var(--space-lg);
   border: 1px solid var(--red-border);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: var(--red-soft);
   text-align: left;
   word-break: break-word;
 }
 
 .actions {
-  margin-top: 1rem;
+  margin-top: var(--space-lg);
 }

@@ -14,6 +14,7 @@ export function RootLayout() {
           </span>
         </Link>
         <nav className="header-actions" aria-label="backend links">
+          <Link to="/packages">packages</Link>
           <code>{API_BASE_URL}</code>
           <a href={apiEndpoint('/docs/ui')} target="_blank" rel="noreferrer">
             Swagger

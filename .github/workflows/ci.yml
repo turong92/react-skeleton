@@ -7,6 +7,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 15 # rolldown(rc) 가 드물게 교착으로 멈춘다 — 매달리지 않게 끊는다
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

@@ -1,6 +1,6 @@
 # 디자인 토큰
 
-색 · 그림자 · 서체는 **`packages/tokens/tokens.json` 한 곳**에서 정하고, 생성기가 `packages/tokens/tokens.css` 를 만든다(패키지 `@skeleton/tokens`). 스켈레톤은 **메커니즘**(토큰 정본 + 생성기 + 라이트/다크 + 테스트)만 주고, 취향(색 값)은 이 스켈레톤에서 시작한 프로젝트가 `tokens.json` 값을 바꿔 정한다. 앱은 `import '@skeleton/tokens/tokens.css'` 로 불러온다.
+색 · 그림자 · 서체 · 간격 · 모서리 · 글자 크기는 **`packages/tokens/tokens.json` 한 곳**에서 정하고, 생성기가 `packages/tokens/tokens.css` 를 만든다(패키지 `@skeleton/tokens`). 스켈레톤은 **메커니즘**(토큰 정본 + 생성기 + 라이트/다크 + 테스트)만 주고, 취향(색 값)은 이 스켈레톤에서 시작한 프로젝트가 `tokens.json` 값을 바꿔 정한다. 앱은 `import '@skeleton/tokens/tokens.css'` 로 불러온다.
 
 ```bash
 pnpm tokens         # tokens.json → packages/tokens/tokens.css + 이 문서의 표 구역을 다시 쓴다
@@ -11,7 +11,7 @@ pnpm tokens:check   # 쓰지 않고 비교 — 생성물이 어긋났으면 종�
 
 | 층 | CSS 이름 | 정본 위치 | 규칙 |
 |---|---|---|---|
-| 원시(primitive) | `--p-*` (`color.neutral.50` → `--p-neutral-50`, `shadow.raised-dark` → `--p-shadow-raised-dark`) | `color` · `shadow` · `font-family` 묶음 | 값만 가진다. 다른 토큰을 참조하지 않는다. **화면 CSS · 컴포넌트가 직접 쓰지 않는다** |
+| 원시(primitive) | `--p-*` (`color.neutral.50` → `--p-neutral-50`, `space.3` → `--p-space-3`, `shadow.raised-dark` → `--p-shadow-raised-dark`) | `color` · `shadow` · `font-family` · `space` · `radius` · `font-size` · `line-height` 묶음 | 값만 가진다. 다른 토큰을 참조하지 않는다. **화면 CSS · 컴포넌트가 직접 쓰지 않는다** |
 | 의미(semantic) | `--<이름>` (`semantic.surface.bg` → `--bg`) | `semantic.<절>.<이름>` | 원시(또는 다른 의미 토큰)를 `{경로}` 로 **참조만** 한다. 색 날값 금지. 화면이 쓰는 이름은 이쪽이다 |
 
 - 참조는 CSS 에서 `var(--…)` 로 남는다. 그래서 다크 블록이 `--bg` 만 덮어도 `--bg` 를 참조하는 다른 의미 토큰이 같이 따라간다.
@@ -26,6 +26,21 @@ pnpm tokens:check   # 쓰지 않고 비교 — 생성물이 어긋났으면 종�
 1. `tokens.json` 에 `component.<부품>.<이름>` 묶음을 더한다(예: `component.button.primary-bg` → `{semantic.surface.inverse}`). 값은 **의미 토큰만** 참조한다.
 2. `packages/tokens/build.mjs` 의 `layerOf` · `cssNameOf` 에 `component` 를 더한다(`--<부품>-<이름>`), `renderCss` 에 의미 블록 뒤 부품 블록을 낸다. 다크는 의미 토큰을 따라가므로 부품에는 테마 값을 두지 않는다.
 3. 테스트(`packages/tokens/src/tokens.test.ts`)의 「층은 둘」 검사를 셋으로 고친다.
+
+## 간격 · 모서리 · 글자 크기
+
+색과 같은 두 층이다 — 원시 단계(`space.1…8` = 4 · 8 · 12 · 16 · 20 · 24 · 32px 의 **4px 격자**, `radius.1…3` · `full`, `font-size.1…6`, `line-height.tight|snug|normal`)를 의미 이름이 참조한다. 의미 토큰은 **테마와 무관**하다(라이트/다크 값이 같다).
+
+| 의미 토큰 | 쓰임 |
+|---|---|
+| `--space-xs` … `--space-3xl` | `padding` · `margin` · `gap` (4 · 8 · 12 · 16 · 20 · 24 · 32px) |
+| `--radius-sm` · `-md` · `-lg` · `-full` | `border-radius` (4 · 6 · 8px · 알약/원) |
+| `--font-size-caption` · `-small` · `-body` · `-subheading` · `-heading` · `-title` | `font-size` (12 · 13 · 15 · 16 · 20 · 28px — `h3` · `h2` · `h1` 이 subheading · heading · title) |
+| `--line-height-tight` · `-snug` · `-normal` | `line-height` (1.2 · 1.35 · 1.5) |
+
+- 화면 CSS · 인라인 style 에서 `padding` · `margin` · `gap` · `border-radius` · `font-size` 에 px/rem/em 날값을 쓰지 않는다(0 · `auto` · `%` · `var()` 는 된다). 두 앱과 모든 패키지를 루트 `tests/usage.test.ts` 가 `findRawLayout`(`@skeleton/tokens`)으로 막는다. **예외: `apps/workbench` CSS**(토큰 이전부터 쌓인 540줄 — 옮기면 `tests/support/layoutExempt.ts` 를 비운다).
+- 4px 격자에 없던 옛 값(6 · 10 · 14px)은 가까운 단계로 맞췄다(컴포넌트 안쪽 여백이 최대 2px 달라졌다). 서체 **두께**는 토큰이 아니다(컴포넌트 CSS 에 있다). `width` · `height` · `border` 굵기 · `outline` 은 검사 대상이 아니다.
+- 단계를 더하려면 `tokens.json` 에 원시 값과 `semantic.spacing|radius|type` 항목을 더하고 `pnpm tokens`.
 
 ## 테마
 
@@ -127,6 +142,47 @@ pnpm tokens:check   # 쓰지 않고 비교 — 생성물이 어긋났으면 종�
 | `--sans` | `'Avenir Next', 'IBM Plex Sans KR', 'Noto Sans KR', ui-sans-serif, system-ui, sans-serif` | = | `--p-font-family-sans` | 본문 서체 |
 | `--mono` | `'JetBrains Mono', 'SFMono-Regular', Consolas, ui-monospace, monospace` | = | `--p-font-family-mono` | 고정폭 서체 |
 
+### Spacing
+
+| token | light | dark | reference | purpose |
+|---|---|---|---|---|
+| `--space-xs` | `4px` | = | `--p-space-1` | 아이콘 옆 · 촘촘한 줄 간격 |
+| `--space-sm` | `8px` | = | `--p-space-2` | 입력 · 버튼 안 간격, 작은 gap |
+| `--space-md` | `12px` | = | `--p-space-3` | 기본 gap · 헤더 안 간격 |
+| `--space-lg` | `16px` | = | `--p-space-4` | 묶음 사이 · 푸터 여백 |
+| `--space-xl` | `20px` | = | `--p-space-5` | 카드 · 대화상자 안쪽 여백 |
+| `--space-2xl` | `24px` | = | `--p-space-6` | 화면 가장자리 여백 |
+| `--space-3xl` | `32px` | = | `--p-space-8` | 큰 구획 사이 |
+
+4px 격자. 컴포넌트의 padding · margin · gap 은 이 이름만 쓴다(날 px 는 루트 tests/usage.test.ts 가 막는다).
+
+### Radius
+
+| token | light | dark | reference | purpose |
+|---|---|---|---|---|
+| `--radius-sm` | `4px` | = | `--p-radius-1` | code · 오류 상자 |
+| `--radius-md` | `6px` | = | `--p-radius-2` | 입력 · 버튼 · 카드 · 대화상자 |
+| `--radius-lg` | `8px` | = | `--p-radius-3` | 큰 면 · 팝오버 |
+| `--radius-full` | `9999px` | = | `--p-radius-full` | 알약 · 스피너 · 스위치 |
+
+모서리 둥글기.
+
+### Type scale
+
+| token | light | dark | reference | purpose |
+|---|---|---|---|---|
+| `--font-size-caption` | `12px` | = | `--p-font-size-1` | 캡션 · 도움말 · 라벨 |
+| `--font-size-small` | `13px` | = | `--p-font-size-2` | 작은 버튼 · 보조 글 |
+| `--font-size-body` | `15px` | = | `--p-font-size-3` | 본문(기본) |
+| `--font-size-subheading` | `16px` | = | `--p-font-size-4` | h3 |
+| `--font-size-heading` | `20px` | = | `--p-font-size-5` | h2 |
+| `--font-size-title` | `28px` | = | `--p-font-size-6` | h1 |
+| `--line-height-tight` | `1.2` | = | `--p-line-height-tight` | 제목 |
+| `--line-height-snug` | `1.35` | = | `--p-line-height-snug` | code · pre |
+| `--line-height-normal` | `1.5` | = | `--p-line-height-normal` | 본문 |
+
+역할 이름 — 글자 크기와 줄 높이. 서체 두께는 이 스켈레톤이 토큰으로 정하지 않는다(컴포넌트 CSS 에 있다).
+
 ### Primitive palette (`--p-*`)
 
 Values the semantic tokens reference. Never use these directly in screen CSS or components.
@@ -176,4 +232,24 @@ Values the semantic tokens reference. Never use these directly in screen CSS or 
 | `--p-shadow-raised-dark` | `0 18px 45px rgba(0, 0, 0, 0.45)` | 다크 떠 있는 면 |
 | `--p-font-family-sans` | `'Avenir Next', 'IBM Plex Sans KR', 'Noto Sans KR', ui-sans-serif, system-ui, sans-serif` | 본문 서체 |
 | `--p-font-family-mono` | `'JetBrains Mono', 'SFMono-Regular', Consolas, ui-monospace, monospace` | 고정폭 서체 |
+| `--p-space-1` | `4px` | 촘촘한 간격 |
+| `--p-space-2` | `8px` | 기본 작은 간격 |
+| `--p-space-3` | `12px` | 기본 간격 |
+| `--p-space-4` | `16px` | 넉넉한 간격 |
+| `--p-space-5` | `20px` | 카드 안쪽 여백 |
+| `--p-space-6` | `24px` | 화면 여백 |
+| `--p-space-8` | `32px` | 큰 구획 |
+| `--p-radius-1` | `4px` | 작은 조각(code · 오류 상자) |
+| `--p-radius-2` | `6px` | 입력 · 버튼 · 카드 |
+| `--p-radius-3` | `8px` | 큰 면 · 팝오버 |
+| `--p-radius-full` | `9999px` | 알약 · 원 — 어떤 크기에서도 끝이 둥글다 |
+| `--p-font-size-1` | `12px` | 캡션 · 도움말 |
+| `--p-font-size-2` | `13px` | 작은 글자 |
+| `--p-font-size-3` | `15px` | 본문 |
+| `--p-font-size-4` | `16px` | 소제목 |
+| `--p-font-size-5` | `20px` | 제목 |
+| `--p-font-size-6` | `28px` | 큰 제목 |
+| `--p-line-height-tight` | `1.2` | 제목 |
+| `--p-line-height-snug` | `1.35` | 코드 · 촘촘한 글 |
+| `--p-line-height-normal` | `1.5` | 본문 |
 <!-- tokens:end -->

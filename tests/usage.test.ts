@@ -1,5 +1,6 @@
-import { findRawColors } from '@skeleton/tokens'
+import { findRawColors, findRawLayout } from '@skeleton/tokens'
 import { describe, expect, it } from 'vitest'
+import { LAYOUT_EXEMPT } from './support/layoutExempt'
 import { loadWorkspaces } from './support/loadWorkspaces'
 
 /*
@@ -16,17 +17,9 @@ const screenTsx = all.filter((f) => f.file.endsWith('.tsx') && !f.file.endsWith(
 const generatedText = all.find((f) => f.file === GENERATED)!.text
 
 describe('screen code', () => {
-  it('there is screen CSS and TSX to check, in both apps and in the packages that draw UI', () => {
-    const covered = new Set([...screenCss, ...screenTsx].map((f) => f.ws))
-    expect([...covered]).toEqual(
-      expect.arrayContaining([
-        'apps/workbench',
-        'apps/starter',
-        'packages/ui',
-        'packages/theme',
-        'packages/auth',
-      ]),
-    )
+  it('there is screen CSS and TSX to check (the scanner is not looking at an empty list)', () => {
+    expect(screenCss.length).toBeGreaterThan(0)
+    expect(screenTsx.length).toBeGreaterThan(0)
   })
 
   it.each(screenCss.map((f) => [f.file, f.text]))('%s has no raw colour values', (_, text) => {
@@ -55,4 +48,19 @@ describe('screen code', () => {
       .map(([n, f]) => `${n} (${f})`)
     expect(undefinedVars).toEqual([])
   })
+})
+
+/*
+ * 간격 · 모서리 · 글자 크기도 날값(px · rem · em)을 쓰지 않고 의미 토큰(--space-* · --radius-* · --font-size-*)만 쓴다.
+ * 예외 앱 목록은 tests/support/layoutExempt.ts(이 레포에서는 워크벤치뿐 — tests/skeleton.repo.test.ts 가 확인한다).
+ */
+const layoutScope = [...screenCss, ...screenTsx].filter((f) => !LAYOUT_EXEMPT.includes(f.ws))
+
+describe('layout values come from tokens', () => {
+  it.each(layoutScope.map((f) => [f.file, f.text]))(
+    '%s has no raw padding / margin / gap / radius / font-size lengths',
+    (_, text) => {
+      expect(findRawLayout(text)).toEqual([])
+    },
+  )
 })

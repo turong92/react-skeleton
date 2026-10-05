@@ -1,0 +1,21 @@
+{
+  "name": "@skeleton/payment",
+  "version": "1.1.0",
+  "private": true,
+  "type": "module",
+  "description": "결제 계약 타입 + 얇은 호출(provider 라우팅 조회 · confirm/cancel/refund) + 토스 리다이렉트 → confirm 요청. 백엔드 modules/payment(payment-toss · payment-stripe) 짝 — 모듈은 HTTP 를 열지 않아 경로는 앱이 알려 준다",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "types": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run --pool forks",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@skeleton/api-client": "workspace:*"
+  }
+}

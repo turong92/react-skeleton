@@ -3,7 +3,7 @@
  * 레이아웃 · 화면 고유 모양은 여기에 두지 않는다 — 앱 CSS 나 부품(CSS Modules)이 맡는다.
  */
 :root {
-  font: 15px/1.5 var(--sans);
+  font: var(--font-size-body)/var(--line-height-normal) var(--sans);
   letter-spacing: 0;
   color: var(--text);
   background: var(--bg);
@@ -63,31 +63,31 @@ h3 {
 }
 
 h1 {
-  font-size: 28px;
-  line-height: 1.15;
+  font-size: var(--font-size-title);
+  line-height: var(--line-height-tight);
   font-weight: 700;
 }
 
 h2 {
-  font-size: 20px;
-  line-height: 1.2;
+  font-size: var(--font-size-heading);
+  line-height: var(--line-height-tight);
   font-weight: 700;
 }
 
 h3 {
-  font-size: 16px;
-  line-height: 1.25;
+  font-size: var(--font-size-subheading);
+  line-height: var(--line-height-tight);
   font-weight: 700;
 }
 
 code {
   font-family: var(--mono);
-  font-size: 12px;
-  line-height: 1.35;
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-snug);
   color: var(--text-strong);
   background: var(--code-bg);
-  border-radius: 4px;
-  padding: 3px 6px;
+  border-radius: var(--radius-sm);
+  padding: var(--space-xs) var(--space-sm);
   overflow-wrap: anywhere;
 }
 
@@ -95,6 +95,6 @@ pre {
   margin: 0;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  font: 12px/1.45 var(--mono);
+  font: var(--font-size-caption)/var(--line-height-snug) var(--mono);
   color: var(--text-strong);
 }

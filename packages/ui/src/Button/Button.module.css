@@ -3,23 +3,23 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 0 14px;
+  gap: var(--space-sm);
+  padding: 0 var(--space-md);
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   font-weight: 650;
   line-height: 1;
 }
 
 .button[data-size='sm'] {
   min-height: 30px;
-  padding: 0 10px;
-  font-size: 13px;
+  padding: 0 var(--space-md);
+  font-size: var(--font-size-small);
 }
 
 .button[data-size='lg'] {
   min-height: 46px;
-  padding: 0 20px;
+  padding: 0 var(--space-xl);
 }
 
 .button[data-variant='primary'] {

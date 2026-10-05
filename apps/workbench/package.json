@@ -13,7 +13,11 @@
   "dependencies": {
     "@skeleton/api-client": "workspace:*",
     "@skeleton/auth": "workspace:*",
+    "@skeleton/captcha-turnstile": "workspace:*",
+    "@skeleton/notifications": "workspace:*",
+    "@skeleton/payment": "workspace:*",
     "@skeleton/realtime": "workspace:*",
+    "@skeleton/storage": "workspace:*",
     "@skeleton/theme": "workspace:*",
     "@skeleton/time": "workspace:*",
     "@skeleton/tokens": "workspace:*",

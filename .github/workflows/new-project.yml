@@ -1,0 +1,43 @@
+name: new-project
+# scripts/new-project.sh 로 세 조합을 찍어 각각 pnpm install · format · tokens:check · lint · typecheck · test · format:check · build (네트워크 필요, 순차)
+on:
+  push:
+    branches: [main]
+    paths:
+      [
+        'scripts/**',
+        'apps/**',
+        'packages/**/package.json',
+        'package.json',
+        'pnpm-workspace.yaml',
+        'eslint.config.js',
+        'tests/**',
+        '.github/workflows/new-project.yml',
+      ]
+  pull_request:
+    paths:
+      [
+        'scripts/**',
+        'apps/**',
+        'packages/**/package.json',
+        'package.json',
+        'pnpm-workspace.yaml',
+        'eslint.config.js',
+        'tests/**',
+        '.github/workflows/new-project.yml',
+      ]
+
+jobs:
+  stamp-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+      - run: bash scripts/test-new-project.sh --full

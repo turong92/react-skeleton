@@ -31,3 +31,19 @@ export { useAuth } from './useAuth'
 export type { AuthContextValue } from './authContext'
 export { RequireAuth } from './RequireAuth'
 export type { RequireAuthProps } from './RequireAuth'
+export {
+  buildAuthorizeUrl,
+  createSocialLoginFlow,
+  parseSocialCallback,
+  SOCIAL_AUTHORIZE_PRESETS,
+  SocialLoginCallbackError,
+} from './social'
+export type {
+  SocialCallback,
+  SocialLoginCallbackFailure,
+  SocialLoginFlow,
+  SocialLoginFlowOptions,
+  SocialProviderConfig,
+} from './social'
+export { useSocialLoginCallback } from './useSocialLoginCallback'
+export type { SocialCallbackState } from './useSocialLoginCallback'

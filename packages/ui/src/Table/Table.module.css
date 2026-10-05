@@ -1,0 +1,56 @@
+.scroll {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.scroll:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--text);
+}
+
+.caption {
+  padding: var(--space-md) var(--space-lg);
+  color: var(--text-strong);
+  font-weight: 700;
+  text-align: left;
+}
+
+.table th,
+.table td {
+  padding: var(--space-md) var(--space-lg);
+  border-top: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.table thead th {
+  color: var(--text-muted);
+  font-size: var(--font-size-caption);
+  font-weight: 700;
+  background: var(--surface-alt);
+}
+
+.table tbody th {
+  color: var(--text-strong);
+  font-weight: 650;
+}
+
+.table [data-align='end'] {
+  text-align: right;
+}
+
+.table [data-align='center'] {
+  text-align: center;
+}
+
+.empty {
+  text-align: center;
+}

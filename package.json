@@ -8,7 +8,7 @@
     "dev:workbench": "pnpm --filter workbench dev",
     "build": "pnpm -r build",
     "lint": "eslint .",
-    "test": "pnpm -r test && vitest run --pool forks --config vitest.root.config.ts",
+    "test": "pnpm -r test && vitest run --pool forks --config vitest.root.config.ts && bash scripts/test-new-project.sh --quick",
     "typecheck": "pnpm -r typecheck && tsc -p tsconfig.json",
     "tokens": "pnpm --filter @skeleton/tokens tokens",
     "tokens:check": "pnpm --filter @skeleton/tokens tokens:check",

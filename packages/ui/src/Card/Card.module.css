@@ -1,9 +1,9 @@
 .card {
   display: grid;
-  gap: 14px;
-  padding: 20px;
+  gap: var(--space-md);
+  padding: var(--space-xl);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: var(--surface);
   color: var(--text);
   box-shadow: var(--shadow);
@@ -13,5 +13,5 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-md);
 }

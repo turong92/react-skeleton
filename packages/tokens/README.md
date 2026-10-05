@@ -1,6 +1,6 @@
 # @skeleton/tokens
 
-디자인 토큰의 **정본 + 생성기 + 생성물**. 스켈레톤은 메커니즘만 주고, 색 · 서체 취향은 이 스켈레톤에서 시작한 프로젝트가 정한다.
+디자인 토큰의 **정본 + 생성기 + 생성물**. 스켈레톤은 메커니즘만 주고, 색 · 서체 · 간격 · 모서리 · 글자 크기 취향은 이 스켈레톤에서 시작한 프로젝트가 정한다.
 
 ```
 packages/tokens/
@@ -24,12 +24,12 @@ pnpm tokens:check   # 쓰지 않고 비교, 어긋나면 종료 코드 1 (CI). �
 
 ## 공개 표면
 
-| export                         | 뜻                                                                                                           |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------ |
-| `@skeleton/tokens/tokens.css`  | 생성된 스타일시트(`:root` 라이트 · `html[data-theme='dark']` · 시스템 다크)                                  |
-| `@skeleton/tokens/tokens.json` | 정본                                                                                                         |
-| `@skeleton/tokens/build`       | `build(options)` · `check(options)` · `main(argv)` · `resolveTokens(json)`                                   |
-| `@skeleton/tokens`             | 테스트 도구: `themeVars` · `expandVars` · `parseColor` · `over` · `contrast` · `findRawColors` · `cssBlocks` |
+| export                         | 뜻                                                                                                                             |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| `@skeleton/tokens/tokens.css`  | 생성된 스타일시트(`:root` 라이트 · `html[data-theme='dark']` · 시스템 다크)                                                    |
+| `@skeleton/tokens/tokens.json` | 정본                                                                                                                           |
+| `@skeleton/tokens/build`       | `build(options)` · `check(options)` · `main(argv)` · `resolveTokens(json)`                                                     |
+| `@skeleton/tokens`             | 테스트 도구: `themeVars` · `expandVars` · `parseColor` · `over` · `contrast` · `findRawColors` · `findRawLayout` · `cssBlocks` |
 
 ### 경로는 옵션이다
 
@@ -39,7 +39,7 @@ pnpm tokens:check   # 쓰지 않고 비교, 어긋나면 종료 코드 1 (CI). �
 ## 지키는 것 (테스트)
 
 - 생성물이 정본과 같다 · 정본 형식 · 층은 둘(`--p-*` 원시 → 의미) · 의미 토큰은 참조만 · 생성기 CLI(`packages/tokens/src`)
-- 날 색 금지 · `--p-*` 직접 사용 금지 · 쓰는 `var(--x)` 는 모두 정의됨 · 글자/바탕 짝 WCAG AA — 두 앱과 모든 패키지의 CSS · TSX 를 훑는다(루트 `tests/`)
+- 날 색 금지 · 간격/모서리/글자 크기 날값(px · rem · em) 금지(`findRawLayout`, 워크벤치 CSS 만 예외) · `--p-*` 직접 사용 금지 · 쓰는 `var(--x)` 는 모두 정의됨 · 글자/바탕 짝 WCAG AA — 두 앱과 모든 패키지의 CSS · TSX 를 훑는다(루트 `tests/`)
 
 규칙 · 토큰/테마 추가법 · 생성된 표: [`docs/design-tokens.md`](../../docs/design-tokens.md)
 확장 키는 중립 이름 `$extensions.skeleton`. 바꾸려면 `build.mjs` 의 `EXT` 와 `tokens.json` 을 함께.

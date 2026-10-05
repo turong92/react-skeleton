@@ -6,6 +6,7 @@ import {
   formatRelative,
   offsetMinutes,
   toZonedMoment,
+  todayInZone,
   zoneLabel,
 } from './format'
 import { createServerClock } from './server-clock'
@@ -86,5 +87,18 @@ describe('country → zones', () => {
     expect(defaultZoneOf('US')).toBe('America/New_York')
     expect(zonesOf('US')).toContain('America/Los_Angeles')
     expect(zonesOf('XX')).toEqual([])
+  })
+})
+
+describe('todayInZone', () => {
+  it('오늘의 달력 날짜(YYYY-MM-DD)를 그 시간대에서 — 같은 순간이라도 시간대가 다르면 날이 다르다', () => {
+    const now = new Date('2026-10-05T16:00:00Z')
+    expect(todayInZone('Asia/Seoul', now)).toBe('2026-10-06')
+    expect(todayInZone('America/Sao_Paulo', now)).toBe('2026-10-05')
+    expect(todayInZone('UTC', now)).toBe('2026-10-05')
+  })
+  it('날짜 경계: 자정 1초 전과 후', () => {
+    expect(todayInZone('Asia/Seoul', new Date('2026-10-05T14:59:59Z'))).toBe('2026-10-05')
+    expect(todayInZone('Asia/Seoul', new Date('2026-10-05T15:00:00Z'))).toBe('2026-10-06')
   })
 })

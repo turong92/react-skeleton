@@ -1,0 +1,38 @@
+.root {
+  display: grid;
+  gap: var(--space-xs);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.echo {
+  min-height: 1.25em;
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+}
+
+.fieldset {
+  display: grid;
+  gap: var(--space-sm);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.legend {
+  padding: 0;
+  margin-bottom: var(--space-xs);
+  color: var(--text-strong);
+  font-weight: 650;
+}
+
+.pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--space-md);
+}

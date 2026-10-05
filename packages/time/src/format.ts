@@ -145,3 +145,18 @@ export function formatRelative(iso: string, opts: { now?: Date; locale?: string 
   if (abs < 86400 * 365) return rtf.format(Math.round(diffSec / (86400 * 30)), 'month')
   return rtf.format(Math.round(diffSec / (86400 * 365)), 'year')
 }
+
+/**
+ * 지금(`now`)이 그 시간대에서 며칠인가 — 달력 날짜 `YYYY-MM-DD`. 같은 순간이라도 시간대가 다르면 날이 다르다(서울 아침 = 상파울루 전날 저녁).
+ * 「오늘 이전은 못 고른다」 같은 날짜 입력 제한에 쓴다.
+ */
+export function todayInZone(zone: string, now: Date = new Date()): string {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: zone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(now)
+  const get = (type: string) => parts.find((part) => part.type === type)?.value ?? ''
+  return `${get('year')}-${get('month')}-${get('day')}`
+}

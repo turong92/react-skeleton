@@ -4,6 +4,7 @@ export {
   formatInstant,
   formatRelative,
   offsetMinutes,
+  todayInZone,
   toZonedMoment,
   userLocale,
   userTimeZone,

@@ -473,6 +473,9 @@ importers:
       '@skeleton/api-client':
         specifier: workspace:*
         version: link:../api-client
+      '@skeleton/time':
+        specifier: workspace:*
+        version: link:../time
     devDependencies:
       react:
         specifier: ^19.2.5

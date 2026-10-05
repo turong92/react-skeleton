@@ -12,6 +12,14 @@ import { InfiniteList } from './InfiniteList'
 const meta = {
   title: 'UI/InfiniteList',
   component: InfiniteList<number>,
+  // 각 스토리는 자기 `render` 로 짠다(데이터는 가짜 쪽 불러오기) — 필수 props 만 채운 기본값
+  args: {
+    items: [],
+    getKey: String,
+    renderItem: () => null,
+    hasMore: false,
+    onLoadMore: () => undefined,
+  },
 } satisfies Meta<typeof InfiniteList<number>>
 export default meta
 type Story = StoryObj<typeof meta>

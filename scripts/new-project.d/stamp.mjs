@@ -14,6 +14,8 @@ import {
   writeFileSync,
 } from 'node:fs'
 import { basename, join } from 'node:path'
+import { projectCatalog } from '../capabilities.d/project.mjs'
+import { renderCapabilitiesMd, renderLlmsTxt } from '../capabilities.d/render.mjs'
 
 const SCOPE = '@skeleton'
 const fail = (message, code = 1) => {
@@ -244,6 +246,10 @@ function apply(
     'scripts/new-project.d',
     '.github/workflows/new-project.yml',
     'tests/skeleton.repo.test.ts',
+    // 카탈로그 가드 중 스켈레톤 전용(stampFlag = new-project.sh 의 동작 · 레시피 명령) — 스크립트가 없는 프로젝트에는 맞지 않는다
+    'tests/capabilities.skeleton.test.ts',
+    'scripts/capabilities.d/stampCheck.mjs',
+    'docs/new-project-recipe.md',
   ])
     rmSync(join(target, path), { recursive: true, force: true })
   if (existsSync(join(target, 'scripts')) && readdirSync(join(target, 'scripts')).length === 0)
@@ -369,6 +375,10 @@ ${table}
 
 패키지는 **내부를 고치지 않는다** — 바꾸고 싶은 것은 설정 · prop · \`tokens.json\` 값으로 바꾼다. 서로는 이름(\`${scope}/<이름>\`)으로만 부른다(ESLint · \`pnpm test\` 가 막는다).
 ${unused.length ? `\n폴더는 있지만 앱이 아직 쓰지 않는 패키지: ${unused.map((n) => `\`${n}\``).join(' · ')}. 쓰기 시작할 때 \`apps/${name}/package.json\` 에 한 줄 — \`"${scope}/<이름>": "workspace:*"\` — 을 더하고 \`pnpm install\`. 안 쓰는 패키지를 의존으로 선언하면 \`pnpm test\` 가 막고, 필요 없으면 \`packages/<이름>\` 폴더를 지운다.\n` : ''}
+## 기능 카탈로그
+
+이 프로젝트에 무엇이 들어 있는지는 \`capabilities.json\`(정본 — 스키마 \`docs/capabilities.schema.json\`) · \`docs/capabilities.md\` · \`llms.txt\` 에 있다 — 스켈레톤의 카탈로그에서 **고른 것만** 걸러 왔고, 여기에 없는 기능은 스켈레톤의 \`capabilities.json\` 에서 찾는다. 폴더가 바뀌면 \`pnpm capabilities\`(생성) · \`pnpm capabilities:check\`(검사).
+
 ## 백엔드
 
 kotlin-skeleton 계열 REST 백엔드(\`/api/v1\`)와 통신한다. 개발에서는 Vite 가 \`/api/v1\` 을 \`http://localhost:8080\` 으로 프록시하고, 다른 포트는 앱 폴더 \`.env\` 의 \`VITE_API_BASE_URL\`. 패키지별로 어느 백엔드 모듈과 짝인지는 각 \`packages/<이름>/README.md\`.
@@ -412,6 +422,10 @@ ${ssr ? `\n## 서버 렌더\n\n\`apps/${name}\` 는 서버가 첫 응답을 그�
     `# ${name} — Claude Code 컨텍스트
 
 react-skeleton 에서 찍어 낸 pnpm 워크스페이스(React + TypeScript + Vite). 앱 \`apps/${name}\`, 패키지 ${pkgs.length}개(스코프 \`${scope}\`).
+
+## 만들기 전에 — 기능 카탈로그부터 (에이전트 필독)
+
+무엇이든 새로 만들기 전에 \`llms.txt\` → \`capabilities.json\`(이 프로젝트에 **들어 있는** 기능: 한 줄 요약 · 진입점 · 따라 할 스토리 · 짝 백엔드 · 쓰지 않는 경우 · 한국어/영어 키워드)을 읽고, 이미 있는 패키지 · 부품 · Patterns 를 쓴다. 표 \`docs/capabilities.md\`. 카탈로그에 없는 기능은 이 프로젝트에 없다 — 스켈레톤(\`react-skeleton\`)의 \`capabilities.json\` 에 있는지 먼저 보고 그 패키지 폴더를 가져온다(앱 \`package.json\` 에 \`"${scope}/<이름>": "workspace:*"\` 한 줄). 패키지 · 앱을 더하거나 지우면 \`capabilities.json\` 항목을 함께 고치고 \`pnpm capabilities\`(\`tests/capabilities.test.ts\` 가 어긋남을 막는다).
 ${storybook ? `\n${guide}` : ''}
 ## 디렉토리 구조 (AI 참조용)
 
@@ -442,6 +456,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - react-skeleton ${readJson(join(target, 'packages', 'tokens', 'package.json')).version} 에서 \`scripts/new-project.sh\` 로 시작 — 앱 \`apps/${name}\`, 패키지 ${pkgs.map((p) => p.dir).join(' · ')}
 `,
   )
+  // 카탈로그: 스켈레톤의 것에서 고른 것만 — JSON(정본) · 표(docs/capabilities.md) · 색인(llms.txt)
+  const catalogFile = join(target, 'capabilities.json')
+  if (existsSync(catalogFile)) {
+    const filtered = projectCatalog(readJson(catalogFile), {
+      root: target,
+      projectName: name,
+      appFrom: ssr ? 'starter-ssr' : 'starter',
+      appTo: name,
+      scope,
+    })
+    writeJson(catalogFile, filtered)
+    writeFileSync(join(target, 'docs', 'capabilities.md'), renderCapabilitiesMd(filtered))
+    writeFileSync(join(target, 'llms.txt'), renderLlmsTxt(filtered))
+  }
   void source
 }
 

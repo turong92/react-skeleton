@@ -1,11 +1,13 @@
 name: new-project
-# scripts/new-project.sh 로 세 조합을 찍어 각각 pnpm install · format · tokens:check · lint · typecheck · test · format:check · build (네트워크 필요, 순차)
+# scripts/new-project.sh 로 세 조합을 찍어 각각 pnpm install · format · tokens:check · capabilities:check · lint · typecheck · test · format:check · build (네트워크 필요, 순차)
 on:
   push:
     branches: [main]
     paths:
       [
         'scripts/**',
+        'capabilities.json',
+        'docs/new-project-recipe.md',
         'apps/**',
         'packages/**/package.json',
         'package.json',
@@ -18,6 +20,8 @@ on:
     paths:
       [
         'scripts/**',
+        'capabilities.json',
+        'docs/new-project-recipe.md',
         'apps/**',
         'packages/**/package.json',
         'package.json',

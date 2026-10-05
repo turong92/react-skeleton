@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — LLM 이 읽는 기능 카탈로그: 「무슨 기능이 준비됐는지」를 보고 세팅을 시킨다 (2026-10-06)
+
+- **`capabilities.json`(정본) · `docs/capabilities.schema.json`**: 패키지 15 · 앱 5 · 패턴 8 · 스크립트 4 = 32개 항목. 항목마다 `id` · `summary`(한 문장) · `kind` · `package`/`path` · `status`(stable · experimental · template-only) · `stampFlag`(`new-project.sh` 조각 · 자동으로 따라오는 패키지 · `--ssr`/`--with-sample` 로도 오는지 · 빼는 옵션) · `needs` · `backend`(짝 kotlin-skeleton 모듈 · 택일 묶음 · 선택 모듈 · 기본 경로, 프런트만이면 `null`) · `entryPoints` · `stories` · `patterns` · `docs` · `notFor` · 한국어/영어 `keywords`. 최상위에 「필요한 것 → 고를 것」 행(`decisions` 23)과 레시피 작업 예(`examples` 3), 두 레포의 `new-project.sh` 인터페이스(`newProject`).
+- **생성물**: `docs/capabilities.md`(결정표 + 전체 목록 + 항목 상세) · `llms.txt`(짧은 색인). `scripts/build-capabilities.mjs` 가 만들고(`pnpm capabilities`) `--check`(`pnpm capabilities:check`, CI `build` 잡)가 어긋남을 잡는다. 명령 조각은 손으로 적지 않고 `stampFlag`/`backend` 에서 계산한다.
+- **가드**(`tests/capabilities.test.ts` · `tests/capabilities.skeleton.test.ts`): 모든 `packages/*` · `apps/*` 에 항목이 있고(없으면 어떤 객체를 더하라고 출력하며 실패) 항목마다 폴더가 있다 · `package` 이름이 package.json 과 같다 · 나열한 export 가 패키지 `src/index.ts`(하위 경로 포함)에 있다 · 스토리 · 패턴 · 문서 · 파일 경로가 있다 · `needs` = package.json 의 런타임 `@skeleton/*` 의존 · `stampFlag` 가 `new-project.sh`(`stamp.mjs plan`)의 실제 동작과 같다(옵션 · 패키지 이름 · 닫힘 · `alsoVia`) · 한국어/영어 키워드가 둘 다 있다 · 생성물이 최신이다 · 스키마(작은 검사기). kotlin-skeleton 이 옆에 있으면 `backend` 모듈 이름이 그쪽 색인에 있는지도 본다.
+- **`docs/new-project-recipe.md`**: 제품 한 문단 → 결정표 → 두 레포의 `new-project.sh` 명령 → 설정 → 실행(`scripts/dev.sh`) → 화면마다 복사할 Pattern → 검증 → 배포, 작업 예 3개(커뮤니티 · 유료 SaaS · SSR 콘텐츠 사이트). 예의 명령은 카탈로그에서 계산한 것과 같아야 하고(테스트), `test-new-project.sh` 가 적힌 그대로 찍어(`--quick`) 돌린다(`--full`).
+- **카탈로그가 따라간다**: `new-project.sh` 가 고른 것만 남긴 `capabilities.json`(`mode: project` — 앱 항목은 새 이름 · 없어진 파일 경로는 걷고 · 빠진 것은 `omitted`)와 `docs/capabilities.md` · `llms.txt`, CLAUDE.md/README 의 「먼저 읽는다」 안내를 프로젝트에 쓴다. 생성 · 가드는 따라가고 스켈레톤 전용 가드 · 레시피는 지운다. `test-new-project.sh` 에 구역 11(카탈로그) · 12(레시피 예)와 `--full` 의 `capabilities:check` 단계 · 레시피 예 세 조합을 더했다.
+- CLAUDE.md: 「만들기 전에 — 무엇이 이미 있는지부터」(`llms.txt` → `capabilities.json` 을 먼저 읽는다). 패키지 · 앱을 더하면 카탈로그 항목도 더한다.
+
 ### Added — 「도메인만 바꿔 켜면 서비스 구색이 나온다」를 위한 프런트 부품: `@skeleton/seo` · `@skeleton/marketing` · `@skeleton/ui` 13개 (2026-10-06)
 
 백엔드 API 가 새로 필요 없는 조각만. 모든 부품은 스토리 + `play`(a11y 위반도 실패) · 카탈로그 한 줄 · SSR 서버 렌더 확인 · 라이트/다크를 갖췄고, 새 런타임 의존은 **0**.

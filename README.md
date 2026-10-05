@@ -33,6 +33,12 @@ docs/ui-catalog.md  # 부품 → 스토리 파일 → 언제 쓰는가(스토리
 
 **스켈레톤은 메커니즘을 주고 취향은 주지 않는다.** 색 값 · 문구 · 레이아웃 취향은 프로젝트가 정한다(부품의 문구는 prop, 색은 `tokens.json`).
 
+## 무엇이 준비돼 있는가 (사람 · LLM 이 먼저 보는 곳)
+
+- `llms.txt` — 짧은 색인(LLM 이 여기서 시작). `capabilities.json` — **기능 카탈로그 정본**: 패키지 · 앱 · 화면 틀 · 도구마다 한 줄 요약 · `new-project.sh` 로 켜는 법 · 짝 백엔드 모듈 · 진입점 · 쓰지 않는 경우 · 한국어/영어 키워드(스키마 `docs/capabilities.schema.json`).
+- `docs/capabilities.md` — 「필요한 것 → 고를 것」 결정표(로그인 · 게시판 · 결제 · 다국어 · 랜딩 · 약관 · 알림 · 파일 업로드 … → 패키지 → 명령 조각 → 손으로 써야 하는 것). `docs/new-project-recipe.md` — 제품 한 문단에서 돌아가는 프로젝트까지의 레시피와 작업 예 3개.
+- 생성물은 `pnpm capabilities`, 검사는 `pnpm capabilities:check`(CI). 찍은 프로젝트에는 고른 것만 걸러서 따라간다.
+
 ## 빠른 시작
 
 ```bash
@@ -51,6 +57,8 @@ pnpm format:check
 pnpm build            # 앱을 빌드(각 apps/*/dist) — 스토리집은 storybook:build
 pnpm tokens           # packages/tokens/tokens.json → tokens.css + docs/design-tokens.md 표 구역
 pnpm tokens:check     # 생성물이 정본과 같은지 확인 (CI)
+pnpm capabilities       # capabilities.json → docs/capabilities.md · llms.txt 생성 + 카탈로그 가드
+pnpm capabilities:check # 생성물 · 카탈로그가 레포와 같은지 확인 (CI)
 bash scripts/test-new-project.sh --full   # 네 조합을 찍어 각각 install · lint · typecheck · test · build (+ 한 조합은 test:stories) (네트워크 필요, 수 분 — 별도 CI 워크플로)
 ```
 

@@ -3,7 +3,7 @@
 #
 #   scripts/test-new-project.sh            # 빠른 검사 (기본, 수 초): 인자 검증 · 패키지 닫힘 · 구조 · 이름/스코프 바꾸기 · 남는 흔적
 #   scripts/test-new-project.sh --quick    # 위와 같다 (`pnpm test` 가 부른다)
-#   scripts/test-new-project.sh --full     # 위 + 일곱 조합을 임시 디렉토리에 찍어 각각 pnpm install · lint · typecheck · test · build (네트워크 필요, 순차, 수 분)
+#   scripts/test-new-project.sh --full     # 위 + 일곱 조합과 레시피(docs/new-project-recipe.md)의 작업 예 명령을 임시 디렉토리에 찍어 각각 pnpm install · lint · typecheck · test · build (네트워크 필요, 순차, 수 분)
 #
 # --full 은 CI 의 별도 워크플로(.github/workflows/new-project.yml)가 돈다. 조합:
 #   1. 기본값만 (스토리집 포함)
@@ -13,6 +13,7 @@
 #   5. --with-sample  (참조 앱 apps/sample 을 함께 — install · lint · typecheck · test · build 가 샘플까지 돈다. e2e 는 백엔드가 필요해 돌리지 않는다)
 #   6. --packages board  (게시판 — ui · api-client · time 으로 닫힌다. + `pnpm test:stories` — 게시판 스토리를 진짜 브라우저에서)
 #   7. --packages seo,marketing  (공개 페이지 부품 + 머리 · 사이트맵 — ui · time 으로 닫힌다. + `pnpm test:stories` — 랜딩 · 요금제 · 약관 · 404 Patterns 와 동의 배너 스토리를 진짜 브라우저에서)
+#   8~. docs/new-project-recipe.md 의 작업 예(`<!-- react-stamp: … -->` 블록의 명령) — 레시피가 낡을 수 없게 적힌 그대로 찍는다(첫 예는 + `pnpm test:stories`)
 # macOS bash 3.2 와 GNU bash 에서 돈다. 임시 디렉토리는 끝나면 지운다 (KEEP=1 이면 남긴다).
 set -euo pipefail
 
@@ -134,7 +135,7 @@ expect_exit 0 "기본 조합을 찍는다" stamp "$A"
 check "프로젝트 앱 apps/acme-app + 스토리집 apps/storybook 만 남는다 (apps/starter · apps/workbench · apps/starter-ssr 없음)" bash -c "test -d '$A/apps/acme-app' && test -d '$A/apps/storybook' && test ! -e '$A/apps/starter' && test ! -e '$A/apps/workbench' && test ! -e '$A/apps/starter-ssr'"
 check "기본으로는 apps/sample 이 따라오지 않는다 (참조 앱은 --with-sample 일 때만)" test ! -e "$A/apps/sample"
 [ "$(json "$A/package.json" '["dev:sample", "e2e:sample"].every((k) => p.scripts[k] === undefined)')" = "true" ] && pass "샘플 전용 루트 스크립트(dev:sample · e2e:sample)도 없다" || fail "샘플 스크립트가 남았다"
-check "샘플의 흔적(apps/sample · dev:sample · e2e:sample · sample-e2e-job)이 문서 · 설정 · CI 에 없다 (잠금 파일 제외)" bash -c "! grep -rIE --exclude-dir=node_modules --exclude=pnpm-lock.yaml 'apps/sample|dev:sample|e2e:sample|sample-e2e-job|--with-sample' '$A'"
+check "샘플의 흔적(apps/sample · dev:sample · e2e:sample · sample-e2e-job)이 문서 · 설정 · CI 에 없다 (잠금 파일 · 카탈로그와 그 도구는 제외 — 카탈로그는 빠진 기능을 이름과 켜는 법으로 안내한다)" bash -c "! grep -rIE --exclude-dir=node_modules --exclude-dir=capabilities.d --exclude=pnpm-lock.yaml --exclude=capabilities.json --exclude=capabilities.md --exclude=capabilities.schema.json 'apps/sample|dev:sample|e2e:sample|sample-e2e-job|--with-sample' '$A'"
 check "eslint 의 앱 이름 막기에 sample 이 없다 (앱이 없으니)" bash -c "! grep -q \"'sample'\" '$A/eslint.config.js'"
 [ "$(json "$A/apps/acme-app/package.json" 'p.name')" = "acme-app" ] && pass "앱 package.json 이름" || fail "앱 package.json 이름"
 check "index.html 제목" grep -q '<title>acme-app</title>' "$A/apps/acme-app/index.html"
@@ -252,7 +253,7 @@ check "앱은 apps/acme-app 하나(+ 스토리집) — 서버 렌더 앱(server/
 [ "$(json "$SR/apps/acme-app/package.json" 'Object.keys(p.scripts).filter((k) => ["dev", "build", "start"].includes(k)).join(" ")')" = "dev build start" ] && pass "pnpm --filter acme-app dev · build · start 가 있다" || fail "SSR 스크립트"
 check "앱 이름이 문서 제목 · 헤더 · Dockerfile · .env.example 에 들어간다 (src/appName.ts 한 줄)" bash -c "grep -q \"APP_NAME = 'acme-app'\" '$SR/apps/acme-app/src/appName.ts' && grep -q 'ARG APP=acme-app' '$SR/apps/acme-app/Dockerfile' && head -1 '$SR/apps/acme-app/.env.example' | grep -q 'acme-app'"
 [ "$(json "$SR/package.json" 'p.scripts.dev')" = "pnpm --filter acme-app dev" ] && pass "pnpm dev 가 SSR 앱을 가리킨다" || fail "SSR dev 스크립트: $(json "$SR/package.json" 'p.scripts.dev')"
-check "스켈레톤 전용 앱 이름(starter-ssr)이 코드 · 문서에 남지 않는다 (잠금 파일 · 예약 이름 목록(eslint.config.js) · 「~에서 이름만 바뀌었다」(CLAUDE.md) 제외)" bash -c "! grep -rIl --exclude-dir=node_modules --exclude=pnpm-lock.yaml --exclude=eslint.config.js --exclude=CLAUDE.md 'starter-ssr' '$SR'"
+check "스켈레톤 전용 앱 이름(starter-ssr)이 코드 · 문서에 남지 않는다 (잠금 파일 · 예약 이름 목록(eslint.config.js) · 「~에서 이름만 바뀌었다」(CLAUDE.md) · 카탈로그 도구(scripts/capabilities.d) 제외)" bash -c "! grep -rIl --exclude-dir=node_modules --exclude-dir=capabilities.d --exclude=pnpm-lock.yaml --exclude=eslint.config.js --exclude=CLAUDE.md 'starter-ssr' '$SR'"
 check "eslint 의 앱 이름 막기에 새 앱 이름이 더해진다" grep -q "'acme-app/\*\*'" "$SR/eslint.config.js"
 want="api-client auth seo theme time tokens ui"
 [ "$(listing "$SR/packages")" = "$want" ] && pass "패키지는 SSR 스타터가 쓰는 것 + 도구만 남는다 ($want)" || fail "packages: [$(listing "$SR/packages")]"
@@ -302,11 +303,45 @@ node "$HELPER" apply "$SEED1" acme-app @skeleton 0 "$(SEEDKEEP 1)" 0 1 1
 [ "$(json "$SEED1/package.json" '["dev:sample", "e2e:sample"].every((k) => typeof p.scripts[k] === "string")')" = "true" ] && grep -q 'sample-e2e:' "$SEED1/.github/workflows/ci.yml" && ! grep -q 'sample-e2e-job' "$SEED1/.github/workflows/ci.yml" && pass "--with-sample 이면 스크립트 · CI 잡이 남고 표식 줄만 걷힌다" || fail "샘플 도구가 사라졌거나 표식이 남았다"
 check "ci.yml 은 두 경우 모두 올바른 YAML 들여쓰기 그대로다 (stories 잡이 온전)" bash -c "grep -q '^  stories:' '$SEED0/.github/workflows/ci.yml' && grep -q '^  stories:' '$SEED1/.github/workflows/ci.yml'"
 
+echo "== 11. 카탈로그가 따라간다 (capabilities.json · docs/capabilities.md · llms.txt — 고른 것만 + 스켈레톤으로 가는 길)"
+cat_ids() { json "$1/capabilities.json" 'p.capabilities.map((e) => e.id).join(" ")'; }
+for d in "$A" "$BD" "$NS" "$SR" "$WS" "$C"; do
+  check "$(basename "$d"): capabilities.json · docs/capabilities.md · llms.txt 가 있고 capabilities:check 가 통과한다" bash -c "test -f '$d/capabilities.json' && test -f '$d/docs/capabilities.md' && test -f '$d/llms.txt' && test -f '$d/docs/capabilities.schema.json' && cd '$d' && node scripts/build-capabilities.mjs --check"
+done
+[ "$(json "$A/capabilities.json" 'p.mode + " " + p.skeleton.name')" = "project react-skeleton" ] && pass "찍힌 카탈로그는 project 모드이고 스켈레톤을 가리킨다" || fail "mode/skeleton: $(json "$A/capabilities.json" 'p.mode + " " + JSON.stringify(p.skeleton)')"
+case " $(cat_ids "$A") " in *" app-acme-app "*) pass "앱 항목이 새 이름으로 바뀐다 (app-acme-app)";; *) fail "앱 항목: $(cat_ids "$A")";; esac
+case " $(cat_ids "$A") " in *" board "*|*" script-new-project "*|*" app-starter "*) fail "기본 조합에 없어야 할 항목: $(cat_ids "$A")";; *) pass "고르지 않은 것(board)과 스켈레톤 도구(script-new-project)와 안 쓴 스타터는 없다";; esac
+[ "$(json "$A/capabilities.json" 'p.omitted.some((o) => o.id === "board" && o.stampFlag === "--packages board")')" = "true" ] && pass "빠진 것은 omitted 에 켜는 법과 함께 적힌다 (board)" || fail "omitted 에 board 없음"
+case " $(cat_ids "$BD") " in *" board "*) pass "--packages board 면 board 항목이 따라온다";; *) fail "board 항목 없음: $(cat_ids "$BD")";; esac
+case " $(cat_ids "$SR") " in *" app-acme-app "*) pass "--ssr 의 앱 항목도 app-acme-app (starter-ssr 가 아니라)";; *) fail "ssr 앱 항목: $(cat_ids "$SR")";; esac
+case " $(cat_ids "$WS") " in *" app-sample "*) pass "--with-sample 이면 app-sample 이 따라온다";; *) fail "app-sample 없음: $(cat_ids "$WS")";; esac
+case " $(cat_ids "$NS") " in *" app-storybook "*) fail "스토리집 없이 찍었는데 app-storybook 이 있다";; *) pass "--without-storybook 이면 app-storybook 항목이 없다";; esac
+[ "$(json "$C/capabilities.json" 'p.scope')" = "@acme" ] && pass "--scope 가 카탈로그에도 적용된다 (@acme)" || fail "scope: $(json "$C/capabilities.json" 'p.scope')"
+check "CLAUDE.md · README 가 카탈로그를 먼저 읽으라고 안내한다" bash -c "grep -q 'llms.txt' '$A/CLAUDE.md' && grep -q 'capabilities.json' '$A/CLAUDE.md' && grep -q 'capabilities.json' '$A/README.md'"
+check "스켈레톤 전용(레시피 · stampCheck · new-project 전용 테스트)은 따라오지 않는다 · 일반 가드 테스트는 따라온다" bash -c "test ! -e '$A/docs/new-project-recipe.md' && test ! -e '$A/scripts/capabilities.d/stampCheck.mjs' && test ! -e '$A/tests/capabilities.skeleton.test.ts' && test -f '$A/tests/capabilities.test.ts' && test -f '$A/scripts/build-capabilities.mjs'"
+check "package.json 에 capabilities · capabilities:check 스크립트가 있다" bash -c "node -e \"const s=JSON.parse(require('fs').readFileSync('$A/package.json','utf8')).scripts;process.exit(s.capabilities&&s['capabilities:check']?0:1)\""
+
+echo "== 12. 레시피(docs/new-project-recipe.md)의 작업 예 명령을 그대로 찍는다"
+RECIPE_IDS=""
+while IFS="$(printf '\t')" read -r rid rargs; do
+  [ -n "$rid" ] || continue
+  RD="$TMP/recipe-$rid"
+  # shellcheck disable=SC2086
+  expect_exit 0 "레시피 예 $rid: new-project.sh <target> acme-app $rargs" bash "$SCRIPT" "$RD" acme-app $rargs
+  rscope="@skeleton"; case "$rargs" in *"--scope @acme"*) rscope="@acme";; esac
+  [ -z "$(dangling_deps "$RD" "$rscope")" ] && pass "레시피 예 $rid: 끊어진 의존 없음" || fail "레시피 예 $rid 끊어진 의존: $(dangling_deps "$RD" "$rscope")"
+  check "레시피 예 $rid: 카탈로그 검사가 통과한다" bash -c "cd '$RD' && node scripts/build-capabilities.mjs --check"
+  RECIPE_IDS="$RECIPE_IDS $rid"
+done <<EOF2
+$(node "$SRC/scripts/capabilities.d/stampCheck.mjs" recipe-args "$SRC")
+EOF2
+[ "$(printf '%s\n' $RECIPE_IDS | grep -c .)" -ge 3 ] && pass "레시피의 작업 예가 3개 이상이다 ($RECIPE_IDS)" || fail "레시피 작업 예: [$RECIPE_IDS]"
+
 if [ "$MODE" = "--full" ]; then
   echo "== 10. 조합마다 pnpm install · format · lint · typecheck · test · build (순차)"
   verify_composition() { # verify_composition <dir> <이름> [stories] — stories 면 test:stories(진짜 브라우저)도 돈다
     local dir="$1" name="$2" with_stories="${3:-}" started ended step idle
-    local steps=("install --no-frozen-lockfile --prefer-offline" "format" "tokens:check" "lint" "typecheck" "test" "format:check" "build")
+    local steps=("install --no-frozen-lockfile --prefer-offline" "format" "tokens:check" "capabilities:check" "lint" "typecheck" "test" "format:check" "build")
     if [ -n "$with_stories" ]; then steps+=("storybook:build" "exec playwright install ${CI:+--with-deps }chromium" "test:stories"); fi
     started="$(date +%s)"
     for step in "${steps[@]}"; do
@@ -329,6 +364,11 @@ if [ "$MODE" = "--full" ]; then
   verify_composition "$WS" "5-with-sample"
   verify_composition "$BD" "6-board" stories
   verify_composition "$MK" "7-seo-marketing" stories
+  first=1
+  for rid in $RECIPE_IDS; do # 레시피의 작업 예 — 적힌 그대로 찍은 것을 정말 돌려 본다(첫 예는 스토리까지)
+    if [ "$first" = 1 ]; then verify_composition "$TMP/recipe-$rid" "recipe-$rid" stories; else verify_composition "$TMP/recipe-$rid" "recipe-$rid"; fi
+    first=0
+  done
 fi
 
 echo

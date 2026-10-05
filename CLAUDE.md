@@ -2,6 +2,14 @@
 
 React + TypeScript + Vite 프론트엔드 스켈레톤. pnpm 워크스페이스 — 캡슐화된 패키지 15개 + 앱 5개(SPA 스타터 · SSR 스타터 · 참조 앱 샘플 · 스토리집 · 워크벤치). REST 백엔드(kotlin-skeleton)와 통신하는 SPA 출발점이고, 백엔드 `modules/` 처럼 프로젝트가 필요한 패키지만 한 줄씩 골라 쓴다.
 
+## 만들기 전에 — 무엇이 이미 있는지부터 (에이전트 필독)
+
+새 기능 · 화면 · 프로젝트 세팅을 받으면 **무엇이든 만들기 전에** `llms.txt` → `capabilities.json` 을 읽는다. 이 스켈레톤이 준비해 둔 것(패키지 · 앱 · 화면 틀 · 도구)을 한 항목씩 — 한 줄 요약 · 켜는 법(`new-project.sh` 조각과 자동으로 따라오는 의존) · 짝 백엔드(kotlin-skeleton 모듈 · 경로) · 진입점 · 따라 할 스토리 · **쓰지 않는 경우** · 한국어/영어 키워드 — 적은 단일 정본이고, 「X 가 필요하다」는 말은 `docs/capabilities.md` 의 「필요한 것 → 고를 것」 표에서 찾는다. 새 프로젝트를 시키면 `docs/new-project-recipe.md`(제품 한 문단 → 고를 것 → 두 레포의 `new-project.sh` 명령 → 설정 → 실행 → 복사할 Pattern → 검증 → 배포, 작업 예 3개)를 그대로 따른다.
+
+- `capabilities.json` 이 정본(스키마 `docs/capabilities.schema.json`), `docs/capabilities.md` · `llms.txt` 는 거기서 생성한다 — 손으로 고치지 않고 `pnpm capabilities`, CI 는 `pnpm capabilities:check`.
+- **패키지 · 앱을 더하면** `capabilities.json` 에 항목을 더한다(안 하면 `tests/capabilities.test.ts` 가 무엇을 더하라고 알려 주며 실패한다). 패키지의 export · 스토리 · 문서 경로 · `stampFlag`(`new-project.sh` 가 실제로 하는 일) · `needs`(= package.json 의 런타임 `@skeleton/*` 의존) · 한국어/영어 키워드가 어긋나도 막힌다. 짝 백엔드는 `backend`(kotlin-skeleton 모듈 이름 · 기본 경로)에, 프런트만이면 `null`.
+- 카탈로그에 없는 기능을 만들어야 하면 먼저 `docs/ui-catalog.md` · Patterns 에 있는 것으로 되는지 본다.
+
 <!-- storybook-guide:start -->
 
 ## UI 를 만들기 전에 (에이전트 필독 — 스토리가 정본이다)
@@ -63,10 +71,11 @@ packages/                     # 서로를 이름으로만 부른다. 각자 pack
 ├── theme/                    # theme.ts · ThemeToggle · ThemedToaster · PRE_PAINT_SCRIPT + @skeleton/theme/vite(themePrePaint)
 ├── tokens/                   # tokens.json(정본) · build.mjs(생성기) · tokens.css(생성물) · 테스트 도구(findRawColors · findRawLayout …)
 └── ui/                       # base.css · Button/Input/Field/Select/Textarea/Checkbox/Switch/Tabs/Table/Pagination/EmptyState/Card/Dialog/Spinner/AppShell · SwitchRow · SectionCard/SectionIndex · RowMenu(⋯ · 일반 드롭다운 `trigger` · `align`) · Skeleton · Avatar · Breadcrumbs · Alert · CopyButton · Tooltip · Stepper · Combobox(비동기) · DatePicker/DateRangePicker · InfiniteList · ConfirmDialog(문구 입력 확인) · MarkdownView(안전한 부분집합 · `{{키}}`) · ErrorReference · ErrorBoundary · showApiError · toastPromise — 부품마다 옆에 *.stories.tsx(CSF3 + play)
-scripts/                      # new-project.sh(새 프로젝트 찍기) · new-project.d/stamp.mjs(일꾼) · test-new-project.sh(--quick · --full)
+scripts/                      # new-project.sh(새 프로젝트 찍기) · new-project.d/stamp.mjs(일꾼) · test-new-project.sh(--quick · --full) · build-capabilities.mjs + capabilities.d/(카탈로그 생성 · 가드)
 tests/                        # 워크스페이스 가로지르는 테스트: stories(모든 @skeleton/ui export 에 스토리 + play · 모든 Patterns 가 안내에 적힘 · 카탈로그 일치) · eslint.uiOnly(날 요소 · 인라인 날값 금지) · ssr.safety(모든 패키지가 window 없는 Node 에서 import · 모든 컴포넌트 · 훅이 서버에서 그려진다 — support/ssrFixtures.ts) · usage(날 색 · 날 간격/모서리/글자 크기 · --p-* · var 정의) · contrast(AA 짝) · tokens.wiring · theme.names · workspace(의존 규칙) · eslint.boundaries · skeleton.repo(이 레포의 앱 · 패키지 목록 — 찍을 때 지워진다)
 docs/design-tokens.md         # 토큰 층 · 이름 · 추가법 + 생성된 표
 docs/ui-catalog.md            # 부품 → 스토리 파일 → 언제 쓰는가(tests/stories.test.ts 가 스토리와의 일치를 지킨다)
+capabilities.json             # 기능 카탈로그 정본(LLM · 사람이 무엇이 준비됐는지 찾는다) — docs/capabilities.schema.json 이 모양, docs/capabilities.md · llms.txt 는 생성물, docs/new-project-recipe.md 는 세팅 레시피(tests/capabilities*.test.ts 가 지킨다)
 ```
 
 **경계 책임:**
@@ -81,8 +90,10 @@ docs/ui-catalog.md            # 부품 → 스토리 파일 → 언제 쓰는가
 
 `scripts/new-project.sh <target-dir> <name> [--packages a,b,c] [--ssr] [--without-storybook] [--with-workbench] [--with-sample] [--scope @acme]` — 레포를 복사해 `apps/starter`(`--ssr` 이면 `apps/starter-ssr`)를 `apps/<name>` 으로, `apps/storybook`(스토리집) · 남는 패키지의 스토리 · Patterns · 에이전트 안내 · `docs/ui-catalog.md` 는 기본으로 따라온다(**참조가 프로젝트와 함께 간다** — `--without-storybook` 이면 스토리 · 스토리집 · 그 도구 의존 · CI 잡을 모두 뗀다). **`apps/sample`(참조 앱 Notes)은 기본으로 떼고 `--with-sample` 일 때만 남긴다** — 그 앱이 쓰는 패키지가 따라오고, 샘플 전용 루트 스크립트(`dev:sample` · `e2e:sample`)와 `ci.yml` 의 `sample-e2e-job` 표식 사이 잡·CLAUDE.md 의 `sample` 표식 구역은 샘플을 떼면 함께 지워지고 가져가면 표식 줄만 걷힌다(이름 `sample` 은 예약). 패키지는 스타터가 쓰는 것 + 루트 도구(`theme` · `tokens`) + `--packages` 를 `@skeleton/*` 의존으로 닫은 집합만 남긴다(나머지 폴더 · `tests/skeleton.repo.test.ts` · new-project 도구는 지운다). 루트 `package.json` · eslint 앱 이름 막기 · README/CLAUDE/CHANGELOG 를 새 프로젝트용으로 바꾸고, `--scope` 면 `@skeleton` 을 모두 바꾼다. 고른 패키지는 폴더만 오고 앱 의존 한 줄은 쓰기 시작할 때 더한다(안 쓰는 의존은 루트 테스트가 막는다). 일꾼은 `scripts/new-project.d/stamp.mjs`.
 
+- **카탈로그가 따라간다**: 찍힌 프로젝트는 `capabilities.json` 을 **고른 것만 남긴** 모양(`mode: project` — 앱 항목은 새 이름 · 따라가지 않은 파일 경로는 걷는다 · 빠진 것은 `omitted` 에 이름 · 켜는 법 · 스켈레톤으로 가는 길)으로 갖고, `docs/capabilities.md` · `llms.txt` · CLAUDE.md/README 의 「먼저 읽는다」 안내가 함께 간다. 생성 · 가드(`scripts/build-capabilities.mjs`, `tests/capabilities.test.ts`)도 따라가고, `new-project.sh` 의 동작을 아는 가드(`tests/capabilities.skeleton.test.ts` · `stampCheck.mjs`)와 레시피는 스켈레톤에만 있다. 레시피의 작업 예 명령은 `test-new-project.sh --full` 이 적힌 그대로 찍어 돌린다.
+
 - 빠른 검사 `bash scripts/test-new-project.sh --quick`(`pnpm test` 가 부른다) · 조합 전체 `--full`(기본 · `--packages realtime,notifications,storage`(+ `storybook:build` · `test:stories`) · `--packages board`(+ `storybook:build` · `test:stories`) · `--packages seo,marketing`(+ `storybook:build` · `test:stories`) · `--with-sample` · `--scope @acme --packages payment` · `--ssr --without-storybook` 를 찍어 각각 install · format · tokens:check · lint · typecheck · test · format:check · build — 네트워크, 수 분, 별도 워크플로 `.github/workflows/new-project.yml`).
-- **패키지 · 앱을 더하거나 지우거나 이름을 바꾸면**: `tests/skeleton.repo.test.ts` 의 목록, 이 문서와 README 의 표, `stamp.mjs` 가 기대하는 문자열(`eslint.config.js` 의 `APP_NAMES` 목록 · `STORY_HINT` 줄 · `globalIgnores` 의 storybook-static 줄 · `ci.yml` 의 `stories-job` 표식 · CLAUDE.md 의 `storybook-guide` / `storybook` 표식 · `starter-ssr` 의 `src/appName.ts` · `Dockerfile` 의 `ARG APP` · `RootLayout.tsx` 의 `<strong>starter</strong>` · `index.html` 제목 · 루트 `test` 스크립트 꼴)을 함께 본다 — 어긋나면 `stamp.mjs` 가 조용히 넘기지 않고 멈춘다.
+- **패키지 · 앱을 더하거나 지우거나 이름을 바꾸면**: `capabilities.json` 의 항목(+ `pnpm capabilities`), `tests/skeleton.repo.test.ts` 의 목록, 이 문서와 README 의 표, `stamp.mjs` 가 기대하는 문자열(`eslint.config.js` 의 `APP_NAMES` 목록 · `STORY_HINT` 줄 · `globalIgnores` 의 storybook-static 줄 · `ci.yml` 의 `stories-job` 표식 · CLAUDE.md 의 `storybook-guide` / `storybook` 표식 · `starter-ssr` 의 `src/appName.ts` · `Dockerfile` 의 `ARG APP` · `RootLayout.tsx` 의 `<strong>starter</strong>` · `index.html` 제목 · 루트 `test` 스크립트 꼴)을 함께 본다 — 어긋나면 `stamp.mjs` 가 조용히 넘기지 않고 멈춘다.
 
 ## 핵심 컨벤션
 

@@ -99,7 +99,7 @@ describe('render("/account") — a protected page on the server', () => {
     expect(result.html).not.toContain('<a href="/login"')
     expect(api.value).not.toHaveBeenCalled()
     expect(result.head).toContain(`<title>계정 · ${APP_NAME}</title>`)
-    expect(result.head).toContain('<meta name="robots" content="noindex" />')
+    expect(result.head).toContain('<meta name="robots" content="noindex" data-seo />')
   })
 })
 
@@ -119,5 +119,35 @@ describe('render of an unknown path', () => {
     expect(result.status).toBe(200)
     expect(result.html).toContain('로그인')
     expect(result.head).toContain(`<title>로그인 · ${APP_NAME}</title>`)
+  })
+})
+
+describe('the head of every response (@skeleton/seo)', () => {
+  const siteUrl = 'https://app.example.com'
+
+  it('an indexable page carries canonical, Open Graph and Twitter tags built from its route handle and SITE_URL', async () => {
+    const { head } = await render('/login?next=%2Faccount', { api: backend(down), siteUrl })
+    expect(head).toContain('<link rel="canonical" href="https://app.example.com/login" data-seo />')
+    expect(head).toContain('<meta property="og:title" content="로그인" data-seo />')
+    expect(head).toContain(
+      '<meta property="og:url" content="https://app.example.com/login" data-seo />',
+    )
+    expect(head).toContain(`<meta property="og:site_name" content="${APP_NAME}" data-seo />`)
+    expect(head).toContain('<meta name="twitter:card" content="summary" data-seo />')
+    expect(head).toContain(`<meta name="app:site-url" content="${siteUrl}" />`)
+  })
+
+  it('a noindex page (account, 404) has no canonical at all', async () => {
+    expect((await render('/account', { api: backend(down), siteUrl })).head).not.toContain(
+      'canonical',
+    )
+    expect((await render('/nope', { api: backend(down), siteUrl })).head).not.toContain('canonical')
+  })
+
+  it('without SITE_URL there is no canonical or og:url (never a guessed address), but the title, description and og:title are there', async () => {
+    const { head } = await render('/login', { api: backend(down) })
+    expect(head).not.toContain('canonical')
+    expect(head).not.toContain('og:url')
+    expect(head).toContain('og:title')
   })
 })

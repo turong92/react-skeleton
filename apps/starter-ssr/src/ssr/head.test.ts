@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { buildHead, escapeHtml, readSsrState, serializeState, SSR_STATE_ID } from './head'
+import {
+  buildHead,
+  escapeHtml,
+  readSiteUrl,
+  readSsrState,
+  serializeState,
+  SITE_URL_META,
+  SSR_STATE_ID,
+} from './head'
 
 describe('escapeHtml', () => {
   it('escapes the five characters that can break out of text or an attribute', () => {
@@ -24,25 +32,35 @@ describe('serializeState — the dehydrated query cache inside the page', () => 
   })
 })
 
-describe('buildHead — title, description and the state for the client', () => {
-  it('has a title, a meta description and a JSON script with a known id; texts are escaped', () => {
-    const head = buildHead({
-      title: 'A & B <1>',
-      description: 'say "hi"',
-      state: { queries: [] },
-    })
+describe('buildHead — the seo head plus the state for the client', () => {
+  const spec = {
+    title: 'A & B <1>',
+    tags: [{ tag: 'meta' as const, attrs: { name: 'description', content: 'say "hi"' } }],
+  }
+
+  it('has the seo head (escaped), and a JSON script with a known id', () => {
+    const head = buildHead({ spec, state: { queries: [] } })
     expect(head).toContain('<title>A &amp; B &lt;1&gt;</title>')
-    expect(head).toContain('<meta name="description" content="say &quot;hi&quot;" />')
+    expect(head).toContain('<meta name="description" content="say &quot;hi&quot;" data-seo />')
     expect(head).toContain(
       `<script type="application/json" id="${SSR_STATE_ID}">{"queries":[]}</script>`,
     )
-    expect(head).not.toContain('robots')
   })
 
-  it('adds a robots meta only when a page asks for it (the account and 404 pages)', () => {
-    expect(buildHead({ title: 't', description: 'd', robots: 'noindex', state: {} })).toContain(
-      '<meta name="robots" content="noindex" />',
+  it('tells the browser the public address (so client-side navigation writes the same canonical) only when there is one', () => {
+    expect(buildHead({ spec, state: {} })).not.toContain(SITE_URL_META)
+    expect(buildHead({ spec, state: {}, siteUrl: 'https://notes.example.com' })).toContain(
+      `<meta name="${SITE_URL_META}" content="https://notes.example.com" />`,
     )
+  })
+})
+
+describe('readSiteUrl — the client side of the same contract', () => {
+  it('reads what buildHead wrote, and nothing when it is missing', () => {
+    expect(
+      readSiteUrl({ querySelector: () => ({ getAttribute: () => 'https://notes.example.com' }) }),
+    ).toBe('https://notes.example.com')
+    expect(readSiteUrl({ querySelector: () => null })).toBeUndefined()
   })
 })
 

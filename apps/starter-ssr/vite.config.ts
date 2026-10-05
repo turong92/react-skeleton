@@ -1,9 +1,15 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { seoFiles } from '@skeleton/seo/vite'
 import { themePrePaint } from '@skeleton/theme/vite'
 
 export default defineConfig({
-  plugins: [react(), themePrePaint()],
+  plugins: [
+    react(),
+    themePrePaint(),
+    // 빌드가 sitemap.xml · robots.txt 를 dist/client 에 낸다 — SITE_URL(공개 주소)이 없으면 robots.txt 만. 공개 페이지만 적는다(계정 · 로그인 뒤 화면은 넣지 않는다)
+    seoFiles({ baseUrl: process.env.SITE_URL, routes: ['/'] }),
+  ],
   // 서버 번들은 모든 의존을 안에 담는다 — 프로덕션 실행에 node_modules 가 필요 없다(Docker 런타임 이미지는 dist 와 server 만 복사)
   ssr: { noExternal: true },
   server: {

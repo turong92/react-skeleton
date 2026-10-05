@@ -12,6 +12,8 @@ export type ServerConfig = {
   apiTimeoutMs: number
   /** `vite build` 결과(`client/` · `server/`) 폴더 */
   distDir: string
+  /** 사이트의 공개 주소(`https://notes.example.com`) — canonical · `og:url` · 사이트맵의 바탕. 없으면 그 태그를 빼고 추측한 주소를 쓰지 않는다 */
+  siteUrl?: string
 }
 
 type Env = Record<string, string | undefined>
@@ -38,11 +40,17 @@ export function readServerConfig(env: Env): ServerConfig {
   )
   if (!/^https?:\/\//.test(apiBaseUrl))
     throw new Error(`API_BASE_URL must be an absolute http(s) url (got "${apiBaseUrl}")`)
+  const siteUrl = env.SITE_URL?.trim().replace(/\/+$/, '') || undefined
+  if (siteUrl !== undefined && !/^https?:\/\/[^\s/]+$/.test(siteUrl))
+    throw new Error(
+      `SITE_URL must be an absolute http(s) origin like https://example.com (got "${siteUrl}")`,
+    )
   return {
     host: env.HOST?.trim() || '127.0.0.1',
     port: integer(env, 'PORT', 3000, { min: 0, max: 65535 }),
     apiBaseUrl,
     apiTimeoutMs: integer(env, 'SSR_API_TIMEOUT_MS', 2000, { min: 1, max: 60_000 }),
     distDir: env.DIST_DIR?.trim() || join(dirname(fileURLToPath(import.meta.url)), '..', 'dist'),
+    siteUrl,
   }
 }

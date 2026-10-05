@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { seoFiles } from './vite'
 
-function run(options: Parameters<typeof seoFiles>[0]) {
+function run(options: Parameters<typeof seoFiles>[0], consumer?: 'client' | 'server') {
   const emitted: Array<{ fileName: string; source: string }> = []
   const warnings: string[] = []
   const plugin = seoFiles(options)
@@ -11,6 +11,7 @@ function run(options: Parameters<typeof seoFiles>[0]) {
       return 'id'
     },
     warn: (message: string) => void warnings.push(message),
+    environment: consumer ? { config: { consumer } } : undefined,
   })
   return { plugin, emitted, warnings }
 }
@@ -47,5 +48,14 @@ describe('seoFiles (Vite plugin)', () => {
       'User-agent: *\nDisallow: /\n',
     )
     expect(emitted.find((file) => file.fileName === 'sitemap.xml')).toBeDefined()
+  })
+
+  it('writes nothing for the server (SSR) build of the same app — the files belong next to the browser bundle only', () => {
+    const { emitted, warnings } = run(
+      { baseUrl: 'https://notes.example.com', routes: ['/'] },
+      'server',
+    )
+    expect(emitted).toEqual([])
+    expect(warnings).toEqual([])
   })
 })

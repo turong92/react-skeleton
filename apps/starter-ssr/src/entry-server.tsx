@@ -1,5 +1,6 @@
 import type { ApiClient } from '@skeleton/api-client'
 import { createAuthApi } from '@skeleton/auth'
+import { buildHeadSpec } from '@skeleton/seo'
 import { dehydrate } from '@tanstack/react-query'
 import { StrictMode } from 'react'
 import { renderToString } from 'react-dom/server'
@@ -11,7 +12,7 @@ import { AppRoutes } from './app/AppRoutes'
 import { QUERY_STALE_TIME_MS } from './app/constants'
 import { createQueryClient } from './app/createQueryClient'
 import { createAuth, createDeferredTokens } from './auth/createAuth'
-import { documentMeta, handleOf, routeMatches } from './routes/routeMeta'
+import { handleOf, routeMatches, seoDefaults, seoMetaOf } from './routes/routeMeta'
 import { routes } from './routes/routes'
 import { buildHead } from './ssr/head'
 
@@ -20,6 +21,8 @@ export type RenderOptions = {
   api: Pick<ApiClient, 'value'>
   /** 첫 데이터를 기다리는 최대 시간(기본 2000ms). 넘으면 데이터 없이 그린다 */
   prefetchTimeoutMs?: number
+  /** 사이트의 공개 주소(`SITE_URL`) — canonical · `og:url` 의 바탕. 없으면 그 태그는 빠진다 */
+  siteUrl?: string
 }
 
 /** 시간 안에 끝나는 것만 기다린다 — 끝나지 않아도 렌더는 계속된다 */
@@ -39,7 +42,7 @@ async function within(promise: Promise<unknown>, ms: number) {
  */
 export async function render(
   url: string,
-  { api, prefetchTimeoutMs = 2000 }: RenderOptions,
+  { api, prefetchTimeoutMs = 2000, siteUrl }: RenderOptions,
 ): Promise<RenderResult> {
   const { pathname } = new URL(url, 'http://localhost')
   const chain = routeMatches(routes, pathname)
@@ -61,17 +64,22 @@ export async function render(
       </AppProviders>
     </StrictMode>,
   )
-  const meta = documentMeta(chain)
+  const spec = buildHeadSpec(seoMetaOf(chain, pathname), seoDefaults(siteUrl))
   return {
     status,
     html,
-    title: meta.title,
-    head: buildHead({ ...meta, state: dehydrate(queryClient) }),
+    title: spec.title,
+    head: buildHead({ spec, state: dehydrate(queryClient), siteUrl }),
   }
 }
 
 /** Node 서버가 쓰는 꼴 — 설정(`readServerConfig`)에서 백엔드 클라이언트를 한 번 만들고 요청마다 `render` 를 부른다 */
-export function createRenderer(config: { apiBaseUrl: string; apiTimeoutMs: number }): Render {
+export function createRenderer(config: {
+  apiBaseUrl: string
+  apiTimeoutMs: number
+  siteUrl?: string
+}): Render {
   const api = createServerApiClient({ baseUrl: config.apiBaseUrl, timeoutMs: config.apiTimeoutMs })
-  return (url) => render(url, { api, prefetchTimeoutMs: config.apiTimeoutMs + 250 })
+  return (url) =>
+    render(url, { api, prefetchTimeoutMs: config.apiTimeoutMs + 250, siteUrl: config.siteUrl })
 }

@@ -237,7 +237,7 @@ check "앱 이름이 문서 제목 · 헤더 · Dockerfile · .env.example 에 �
 [ "$(json "$SR/package.json" 'p.scripts.dev')" = "pnpm --filter acme-app dev" ] && pass "pnpm dev 가 SSR 앱을 가리킨다" || fail "SSR dev 스크립트: $(json "$SR/package.json" 'p.scripts.dev')"
 check "스켈레톤 전용 앱 이름(starter-ssr)이 코드 · 문서에 남지 않는다 (잠금 파일 · 예약 이름 목록(eslint.config.js) · 「~에서 이름만 바뀌었다」(CLAUDE.md) 제외)" bash -c "! grep -rIl --exclude-dir=node_modules --exclude=pnpm-lock.yaml --exclude=eslint.config.js --exclude=CLAUDE.md 'starter-ssr' '$SR'"
 check "eslint 의 앱 이름 막기에 새 앱 이름이 더해진다" grep -q "'acme-app/\*\*'" "$SR/eslint.config.js"
-want="api-client auth theme time tokens ui"
+want="api-client auth seo theme time tokens ui"
 [ "$(listing "$SR/packages")" = "$want" ] && pass "패키지는 SSR 스타터가 쓰는 것 + 도구만 남는다 ($want)" || fail "packages: [$(listing "$SR/packages")]"
 [ -z "$(dangling_deps "$SR" @skeleton)" ] && pass "끊어진 의존 없음" || fail "끊어진 의존: $(dangling_deps "$SR" @skeleton)"
 check "README · CLAUDE 가 SSR 앱의 실행 · 배포 방법을 말한다" bash -c "grep -q 'pnpm --filter acme-app start' '$SR/README.md' && grep -q 'entry-server' '$SR/CLAUDE.md'"

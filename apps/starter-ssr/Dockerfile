@@ -7,6 +7,9 @@ ARG APP=starter-ssr
 
 FROM node:24-slim AS build
 ARG APP
+# 공개 주소 — 빌드가 sitemap.xml 을 쓴다(실행 때도 같은 SITE_URL 을 준다: canonical · og:url)
+ARG SITE_URL
+ENV SITE_URL=$SITE_URL
 RUN corepack enable && corepack prepare pnpm@10 --activate
 WORKDIR /repo
 COPY . .

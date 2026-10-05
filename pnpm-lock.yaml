@@ -198,6 +198,9 @@ importers:
       '@skeleton/auth':
         specifier: workspace:*
         version: link:../../packages/auth
+      '@skeleton/seo':
+        specifier: workspace:*
+        version: link:../../packages/seo
       '@skeleton/theme':
         specifier: workspace:*
         version: link:../../packages/theme

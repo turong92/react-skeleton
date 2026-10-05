@@ -3,7 +3,8 @@ import { matchRoutes } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import { APP_NAME } from '../appName'
 import { ClientRequireAuth } from '../auth/ClientRequireAuth'
-import { documentMeta, handleOf, routeMatches } from './routeMeta'
+import { buildHeadSpec } from '@skeleton/seo'
+import { handleOf, routeMatches, seoDefaults, seoMetaOf } from './routeMeta'
 import { routes } from './routes'
 
 const leaf = (path: string) => matchRoutes(routes, path)?.at(-1)?.route
@@ -30,20 +31,20 @@ describe('routes', () => {
 describe('route metadata — title, description and first-render data live next to the route', () => {
   it('every page has its own title and description', () => {
     const metas = ['/', '/login', '/account', '/nope'].map((path) =>
-      documentMeta(routeMatches(routes, path)),
+      seoMetaOf(routeMatches(routes, path), path),
     )
     for (const meta of metas) {
-      expect(meta.title.length).toBeGreaterThan(0)
-      expect(meta.description.length).toBeGreaterThan(0)
+      expect(meta.title?.length).toBeGreaterThan(0)
+      expect(meta.description?.length).toBeGreaterThan(0)
     }
     expect(new Set(metas.map((meta) => meta.title)).size).toBe(metas.length)
-    expect(metas[0].title).toBe(`홈 · ${APP_NAME}`)
+    expect(buildHeadSpec(metas[0], seoDefaults(undefined)).title).toBe(`홈 · ${APP_NAME}`)
   })
 
   it('the account page and the 404 page ask search engines not to index them; the home page does not', () => {
-    expect(documentMeta(routeMatches(routes, '/account')).robots).toBe('noindex')
-    expect(documentMeta(routeMatches(routes, '/nope')).robots).toBe('noindex')
-    expect(documentMeta(routeMatches(routes, '/')).robots).toBeUndefined()
+    expect(seoMetaOf(routeMatches(routes, '/account'), '/account').robots).toBe('noindex')
+    expect(seoMetaOf(routeMatches(routes, '/nope'), '/nope').robots).toBe('noindex')
+    expect(seoMetaOf(routeMatches(routes, '/'), '/').robots).toBeUndefined()
   })
 
   it('only the home page prefetches (the hello example) — the protected page fetches nothing on the server', () => {

@@ -23,7 +23,7 @@
 
 ## 서버 렌더에서
 
-서버(`apps/starter-ssr`)는 요청마다 `renderHeadHtml(buildHeadSpec(meta, defaults))` 로 머리를 쓰고, 브라우저는 하이드레이션 뒤 라우트가 바뀔 때 `applyHead` 로 이어 간다(같은 `data-seo` 표식이라 서버가 쓴 태그를 갈아 끼운다). 첫 응답에 canonical · OG 가 있어야 링크 미리보기 크롤러가 읽는다(그들은 JS 를 돌리지 않는다) — SPA 는 이 점에서 한계가 있다.
+서버 렌더 스타터 앱의 서버는 요청마다 `renderHeadHtml(buildHeadSpec(meta, defaults))` 로 머리를 쓰고, 브라우저는 하이드레이션 뒤 라우트가 바뀔 때 `applyHead` 로 이어 간다(같은 `data-seo` 표식이라 서버가 쓴 태그를 갈아 끼운다). 첫 응답에 canonical · OG 가 있어야 링크 미리보기 크롤러가 읽는다(그들은 JS 를 돌리지 않는다) — SPA 는 이 점에서 한계가 있다.
 
 ## 규칙
 

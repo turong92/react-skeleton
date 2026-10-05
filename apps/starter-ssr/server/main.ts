@@ -5,7 +5,7 @@
  *
  *   node server/main.ts            # 프로덕션 — `dist/` 가 있어야 한다
  *   node server/main.ts --dev      # 개발 — HMR 이 있는 Vite 개발 서버
- * 환경변수: HOST · PORT · API_BASE_URL · SSR_API_TIMEOUT_MS · DIST_DIR (server/config.ts)
+ * 환경변수: HOST · PORT · API_BASE_URL · SSR_API_TIMEOUT_MS · DIST_DIR · SITE_URL (server/config.ts)
  */
 import { readFile } from 'node:fs/promises'
 import { createServer, type Server } from 'node:http'
@@ -18,7 +18,7 @@ import { createHandler } from './handler.ts'
 
 type Created = { server: Server; close: () => Promise<void> }
 type ServerBundle = {
-  createRenderer: (config: Pick<ServerConfig, 'apiBaseUrl' | 'apiTimeoutMs'>) => Render
+  createRenderer: (config: Pick<ServerConfig, 'apiBaseUrl' | 'apiTimeoutMs' | 'siteUrl'>) => Render
 }
 
 const APP_ROOT = fileURLToPath(new URL('..', import.meta.url))

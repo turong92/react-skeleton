@@ -41,3 +41,20 @@ describe('readServerConfig — the env the Node server reads', () => {
     expect(() => readServerConfig({ API_BASE_URL: '/api/v1' })).toThrow(/API_BASE_URL/)
   })
 })
+
+describe('readServerConfig — SITE_URL (the public address that canonical links, og:url and the sitemap are built from)', () => {
+  it('is optional: without it there is no canonical (a wrong address is worse than none)', () => {
+    expect(readServerConfig({}).siteUrl).toBeUndefined()
+  })
+
+  it('is an absolute http(s) url, trailing slashes trimmed', () => {
+    expect(readServerConfig({ SITE_URL: 'https://notes.example.com///' }).siteUrl).toBe(
+      'https://notes.example.com',
+    )
+  })
+
+  it('refuses a value it cannot build links from', () => {
+    expect(() => readServerConfig({ SITE_URL: 'notes.example.com' })).toThrow(/SITE_URL/)
+    expect(() => readServerConfig({ SITE_URL: 'javascript:alert(1)' })).toThrow(/SITE_URL/)
+  })
+})

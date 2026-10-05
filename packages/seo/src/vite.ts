@@ -10,6 +10,8 @@ export type SeoFilesOptions = {
 }
 
 type Context = {
+  /** Vite 6+ — 서버(SSR) 번들 빌드를 알아본다. 없으면 브라우저 번들로 본다 */
+  environment?: { config?: { consumer?: string } }
   emitFile(file: { type: 'asset'; fileName: string; source: string }): unknown
   warn(message: string): void
 }
@@ -23,6 +25,8 @@ export function seoFiles({ baseUrl, routes, robots }: SeoFilesOptions) {
   return {
     name: 'skeleton-seo-files',
     generateBundle(this: Context) {
+      // 같은 앱의 서버(SSR) 번들 빌드에는 쓰지 않는다 — 두 파일은 브라우저 번들(정적 파일) 옆에 있어야 한다
+      if (this.environment?.config?.consumer === 'server') return
       if (baseUrl) {
         this.emitFile({
           type: 'asset',

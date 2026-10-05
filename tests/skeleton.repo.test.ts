@@ -69,12 +69,14 @@ describe('the skeleton repo', () => {
     )
   })
 
-  it('the SPA starter and the SSR starter need the same packages (new-project --ssr swaps one for the other)', () => {
+  it('the SPA starter and the SSR starter need the same packages, the SSR one adding @skeleton/seo (its first response writes the head: canonical, Open Graph — new-project --ssr swaps one for the other)', () => {
     const declared = (dir: string) =>
       Object.keys(workspaces.find((w) => w.dir === dir)!.packageJson.dependencies ?? {})
         .filter((dep) => dep.startsWith('@skeleton/'))
         .sort()
-    expect(declared('apps/starter-ssr')).toEqual(declared('apps/starter'))
+    expect(declared('apps/starter-ssr')).toEqual(
+      [...declared('apps/starter'), '@skeleton/seo'].sort(),
+    )
   })
 
   it('every package that ships a component or a flow has stories next to it (the storybook is the reference)', () => {

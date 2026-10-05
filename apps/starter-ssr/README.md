@@ -26,13 +26,14 @@ docker run --rm -p 3000:3000 -e API_BASE_URL=http://host.docker.internal:8080/ap
 
 루트에서는 `pnpm dev:ssr`. Node 24(또는 22.18+ — `server/*.ts` 를 타입 제거로 직접 읽는다).
 
-| 환경변수             | 기본                           | 뜻                                                                                   |
-| -------------------- | ------------------------------ | ------------------------------------------------------------------------------------ |
-| `HOST` · `PORT`      | `127.0.0.1` · `3000`           | 듣는 주소(컨테이너는 `0.0.0.0`). `PORT=0` 은 빈 포트                                 |
-| `API_BASE_URL`       | `http://localhost:8080/api/v1` | **서버 렌더가** 첫 데이터를 가져오는 백엔드(절대 주소)                               |
-| `SSR_API_TIMEOUT_MS` | `2000`                         | 서버 렌더 중 백엔드를 기다리는 최대 시간                                             |
-| `DIST_DIR`           | `./dist`                       | `vite build` 결과 폴더                                                               |
-| `VITE_API_*`         | —                              | **브라우저의** API 클라이언트(`apps/starter` 와 같다). 기본 같은 origin 의 `/api/v1` |
+| 환경변수             | 기본                           | 뜻                                                                                                        |
+| -------------------- | ------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| `HOST` · `PORT`      | `127.0.0.1` · `3000`           | 듣는 주소(컨테이너는 `0.0.0.0`). `PORT=0` 은 빈 포트                                                      |
+| `API_BASE_URL`       | `http://localhost:8080/api/v1` | **서버 렌더가** 첫 데이터를 가져오는 백엔드(절대 주소)                                                    |
+| `SSR_API_TIMEOUT_MS` | `2000`                         | 서버 렌더 중 백엔드를 기다리는 최대 시간                                                                  |
+| `DIST_DIR`           | `./dist`                       | `vite build` 결과 폴더                                                                                    |
+| `SITE_URL`           | —                              | 공개 주소(`https://example.com`) — canonical · `og:url` · `sitemap.xml`(빌드 때도). 없으면 그 태그를 뺀다 |
+| `VITE_API_*`         | —                              | **브라우저의** API 클라이언트(`apps/starter` 와 같다). 기본 같은 origin 의 `/api/v1`                      |
 
 브라우저는 같은 origin 의 `/api/v1` 을 부른다 — 프로덕션에서는 앞단(Caddy)이 `/api/v1` → 백엔드, 나머지 → 이 서버로 합친다(CORS 없음). 이 서버는 `/api/v1` 을 프록시하지 않는다(개발은 Vite 가 한다).
 
@@ -45,22 +46,22 @@ GET /            server/main.ts ─ createHandler(server/handler.ts)
                         1. 라우트 맞추기 → 없으면 status 404 (그 외 200)
                         2. 맞은 라우트의 handle.prefetch 로 첫 데이터(홈: GET /hello) — 시간 제한 · 실패해도 계속
                         3. renderToString(<AppProviders><StaticRouter><AppRoutes/>…)  ← 요청마다 새 QueryClient · 세션
-                        4. head = <title> · 설명 · (noindex) · dehydrate 한 쿼리 캐시(<script type="application/json">)
+                        4. head = 머리(@skeleton/seo: <title> · 설명 · canonical · OG/Twitter · robots · JSON-LD) · dehydrate 한 쿼리 캐시(<script type="application/json">)
                    템플릿(dist/client/index.html — <head> 맨 앞에 테마 스크립트)의 자리표시자에 채워 status 와 함께 응답
 브라우저          src/entry-client.tsx: initTheme() → 상태 읽기 → hydrate(queryClient) → hydrateRoot(…createClientApp…)
 ```
 
-| 파일                                                   | 하는 일                                                                                    |
-| ------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
-| `server/main.ts`                                       | 개발(Vite 미들웨어) · 프로덕션(`dist`) 서버, 종료 신호 처리                                |
-| `server/handler.ts`                                    | 정적 파일 · 렌더 응답 · 상태 코드 · `HEAD` · 405 · 400 · 500(오류 글자를 내보내지 않는다)  |
-| `server/config.ts`                                     | 환경변수 → 설정(못 쓰는 값은 던진다)                                                       |
-| `src/entry-server.tsx`                                 | `render(url, { api })`(테스트는 가짜 어댑터를 넘긴다) · `createRenderer(config)`           |
-| `src/entry-client.tsx` · `src/app/createClientApp.tsx` | 하이드레이션 · 브라우저 쪽 트리(서버와 같은 `AppProviders` · `AppRoutes`, 라우터만 다르다) |
-| `src/routes/routes.tsx`                                | path → page. 라우트마다 `handle`: **제목 · 설명**(필수) · `robots` · `prefetch`(첫 데이터) |
-| `src/ssr/head.ts`                                      | `<title>` · 설명 · 상태 스크립트(`</script>` 로 빠져나올 수 없게 직렬화)                   |
-| `src/api/` · `src/hooks/useHello.ts`                   | 요청마다 / 앱마다 만든 클라이언트를 컨텍스트로(`useApi`) — 모듈 전역 없음                  |
-| `Dockerfile`                                           | 빌드 → 런타임(`node_modules` 없이 `dist` + `server`)                                       |
+| 파일                                                   | 하는 일                                                                                                                                                                                                     |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `server/main.ts`                                       | 개발(Vite 미들웨어) · 프로덕션(`dist`) 서버, 종료 신호 처리                                                                                                                                                 |
+| `server/handler.ts`                                    | 정적 파일 · 렌더 응답 · 상태 코드 · `HEAD` · 405 · 400 · 500(오류 글자를 내보내지 않는다)                                                                                                                   |
+| `server/config.ts`                                     | 환경변수 → 설정(못 쓰는 값은 던진다)                                                                                                                                                                        |
+| `src/entry-server.tsx`                                 | `render(url, { api })`(테스트는 가짜 어댑터를 넘긴다) · `createRenderer(config)`                                                                                                                            |
+| `src/entry-client.tsx` · `src/app/createClientApp.tsx` | 하이드레이션 · 브라우저 쪽 트리(서버와 같은 `AppProviders` · `AppRoutes`, 라우터만 다르다)                                                                                                                  |
+| `src/routes/routes.tsx`                                | path → page. 라우트마다 `handle`: **제목 · 설명**(필수) · `robots` · `image` · `jsonLd` · `prefetch`(첫 데이터) — 머리는 `@skeleton/seo`(`buildHeadSpec` → 서버는 `renderHeadHtml`, 브라우저는 `applyHead`) |
+| `src/ssr/head.ts`                                      | `<title>` · 설명 · 상태 스크립트(`</script>` 로 빠져나올 수 없게 직렬화)                                                                                                                                    |
+| `src/api/` · `src/hooks/useHello.ts`                   | 요청마다 / 앱마다 만든 클라이언트를 컨텍스트로(`useApi`) — 모듈 전역 없음                                                                                                                                   |
+| `Dockerfile`                                           | 빌드 → 런타임(`node_modules` 없이 `dist` + `server`)                                                                                                                                                        |
 
 ## 첫 데이터와 하이드레이션
 

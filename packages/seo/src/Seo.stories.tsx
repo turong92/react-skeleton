@@ -7,7 +7,7 @@ import { Seo, SeoProvider } from './Seo'
 /**
  * 화면마다 문서의 머리(제목 · 설명 · canonical · Open Graph · Twitter · JSON-LD · robots)를 맞춘다 — `SeoProvider` 에 사이트 기본값을 한 번,
  * 화면마다 `<Seo title="…" />`. 아무것도 그리지 않고, 전에 만든 `data-seo` 태그만 갈아 끼운다(쌓이지 않는다). 서버 렌더 앱은 첫 응답의 머리를 서버가
- * `buildHeadSpec` + `renderHeadHtml` 로 쓴다(`apps/starter-ssr`). 아래 스토리는 이 문서의 진짜 `<head>` 를 읽어 확인한다.
+ * `buildHeadSpec` + `renderHeadHtml` 로 쓴다(서버 렌더 스타터 앱). 아래 스토리는 이 문서의 진짜 `<head>` 를 읽어 확인한다.
  */
 const meta = {
   title: 'Packages/Seo',

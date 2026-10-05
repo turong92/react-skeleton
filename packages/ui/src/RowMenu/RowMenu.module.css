@@ -50,6 +50,11 @@
   box-shadow: var(--shadow);
 }
 
+.menu[data-align='start'] {
+  inset-inline-start: 0;
+  inset-inline-end: auto;
+}
+
 .menu[data-placement='top'] {
   top: auto;
   bottom: calc(100% + var(--space-xs));

@@ -39,7 +39,7 @@ type OpenAt = 'first' | 'last'
 
 /**
  * 목록 줄의 ⋯ 메뉴 — WAI-ARIA 메뉴 버튼. 열면 첫 항목(↑ 로 열면 마지막)에 포커스, ↑↓ Home End 로 옮기고(끝에서 돈다)
- * Esc · 항목 고르기는 닫고 버튼으로 포커스, Tab 은 메뉴를 벗어나며 닫고(포커스는 다음 요소로), 바깥을 누르면 닫는다. 아래 자리가 모자라면 위로 연다(`data-placement="top"`).
+ * Esc · 항목 고르기는 닫고 버튼으로 포커스, Tab 은 메뉴를 벗어나며 닫고(포커스는 다음 요소로), 바깥을 누르면 닫는다. 아래 자리가 모자라면 위로(`data-placement="top"`), 끝 정렬이 화면 밖으로 넘치면 시작 정렬로(`data-align="start"`) 연다.
  */
 export function RowMenu({ label, items, disabled, trigger, className }: RowMenuProps) {
   const [openAt, setOpenAt] = useState<OpenAt | null>(null)
@@ -61,6 +61,9 @@ export function RowMenu({ label, items, disabled, trigger, className }: RowMenuP
     const below = window.innerHeight - anchor.bottom
     const needed = menu.getBoundingClientRect().height
     menu.dataset.placement = needed > below && anchor.top > below ? 'top' : 'bottom'
+    // 기본은 버튼의 끝에 맞춘 정렬 — 그쪽 화면 밖으로 넘치면 시작에 맞춘다(왼쪽 끝 버튼의 메뉴가 잘리지 않게)
+    const box = menu.getBoundingClientRect()
+    menu.dataset.align = box.left < 0 || box.right > window.innerWidth ? 'start' : 'end'
   }, [open])
 
   useEffect(() => {

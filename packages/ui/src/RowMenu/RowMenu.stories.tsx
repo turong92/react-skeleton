@@ -204,6 +204,30 @@ export const OpensUpwardWhenThereIsNoRoomBelow: Story = {
   },
 }
 
+export const StaysInsideTheViewportAtTheLeftEdge: Story = {
+  play: async ({ canvas, userEvent }) => {
+    // 이 스토리의 버튼은 화면 왼쪽 끝 — 오른쪽 끝 정렬 그대로면 메뉴가 왼쪽 밖으로 잘린다
+    await userEvent.click(trigger(canvas))
+    const rect = canvas.getByRole('menu').getBoundingClientRect()
+    await expect(rect.left).toBeGreaterThanOrEqual(0)
+    await expect(canvas.getByRole('menu')).toHaveAttribute('data-align', 'start')
+  },
+}
+
+export const KeepsEndAlignmentWhenThereIsRoomOnTheLeft: Story = {
+  render: (args) => (
+    <div style={{ display: 'flex', justifyContent: 'end' }}>
+      <RowMenu {...args} />
+    </div>
+  ),
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(trigger(canvas))
+    const menu = canvas.getByRole('menu')
+    await expect(menu).toHaveAttribute('data-align', 'end')
+    await expect(menu.getBoundingClientRect().right).toBeLessThanOrEqual(window.innerWidth)
+  },
+}
+
 export const Dark: Story = {
   globals: { theme: 'dark' },
   play: async ({ canvas, userEvent }) => {

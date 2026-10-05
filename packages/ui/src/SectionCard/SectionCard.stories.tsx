@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { useState } from 'react'
+import { useState, type ComponentProps } from 'react'
 import { expect, fn } from 'storybook/test'
 import { SectionCard } from './SectionCard'
 
@@ -86,16 +86,18 @@ export const KeyboardToggle: Story = {
   },
 }
 
+function ControlledCard(args: ComponentProps<typeof SectionCard>) {
+  const [expanded, setExpanded] = useState(false)
+  return (
+    <>
+      <SectionCard {...args} collapsible expanded={expanded} onToggle={setExpanded} />
+      <p>{expanded ? 'parent: open' : 'parent: closed'}</p>
+    </>
+  )
+}
+
 export const Controlled: Story = {
-  render: (args) => {
-    const [expanded, setExpanded] = useState(false)
-    return (
-      <>
-        <SectionCard {...args} collapsible expanded={expanded} onToggle={setExpanded} />
-        <p>{expanded ? 'parent: open' : 'parent: closed'}</p>
-      </>
-    )
-  },
+  render: (args) => <ControlledCard {...args} />,
   play: async ({ canvas, userEvent }) => {
     await expect(canvas.getByText('parent: closed')).toBeVisible()
     await userEvent.click(canvas.getByRole('button', { name: 'Profile' }))

@@ -1,5 +1,5 @@
-import { ApiRequestError } from '@skeleton/api-client'
 import { useEffect, useId, useRef, useState } from 'react'
+import { errorReferenceOf } from './errorReferenceOf'
 import styles from './ErrorReference.module.css'
 
 export type ErrorReferenceProps = {
@@ -16,12 +16,6 @@ export type ErrorReferenceProps = {
   /** 복사 버튼 말풍선(`title`) */
   copyHint?: string
   className?: string
-}
-
-/** 문의 · 로그 추적에 쓰는 참조 번호(traceId). API 오류가 아니면 undefined */
-export function errorReferenceOf(error: unknown): string | undefined {
-  if (!(error instanceof ApiRequestError)) return undefined
-  return error.apiError.traceId || error.traceId || undefined
 }
 
 const COPIED_VISIBLE_MS = 2_000

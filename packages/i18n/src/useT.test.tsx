@@ -1,7 +1,8 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { createI18n } from './createI18n'
-import { I18nProvider, useT } from './react'
+import { I18nProvider } from './I18nProvider'
+import { useT } from './useT'
 
 const ko = { greet: '안녕하세요, {name}님', bold: '<b>중요</b> 안내' }
 const en = { greet: 'Hello, {name}', bold: '<b>Important</b> notice' }

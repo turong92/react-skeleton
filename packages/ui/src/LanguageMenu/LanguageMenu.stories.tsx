@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { useState } from 'react'
+import { useState, type ComponentProps } from 'react'
 import { expect, fn } from 'storybook/test'
 import { LanguageMenu } from './LanguageMenu'
 
@@ -37,20 +37,22 @@ export const Default: Story = {
   },
 }
 
+function ControlledMenu(args: ComponentProps<typeof LanguageMenu>) {
+  const [value, setValue] = useState(args.value)
+  return (
+    <LanguageMenu
+      {...args}
+      value={value}
+      onChange={(next) => {
+        setValue(next)
+        args.onChange(next)
+      }}
+    />
+  )
+}
+
 export const PicksAnotherLanguage: Story = {
-  render: (args) => {
-    const [value, setValue] = useState(args.value)
-    return (
-      <LanguageMenu
-        {...args}
-        value={value}
-        onChange={(next) => {
-          setValue(next)
-          args.onChange(next)
-        }}
-      />
-    )
-  },
+  render: (args) => <ControlledMenu {...args} />,
   play: async ({ canvas, args, userEvent }) => {
     const menu = canvas.getByRole('combobox', { name: 'Language' })
     await userEvent.selectOptions(menu, 'ja')

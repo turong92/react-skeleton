@@ -1,7 +1,8 @@
 import { ApiRequestError } from '@skeleton/api-client'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
-import { ErrorReference, errorReferenceOf } from './ErrorReference'
+import { ErrorReference } from './ErrorReference'
+import { errorReferenceOf } from './errorReferenceOf'
 
 function apiError(traceId: string) {
   return new ApiRequestError(

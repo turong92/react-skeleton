@@ -1,6 +1,7 @@
 import { ApiRequestError } from '@skeleton/api-client'
 import { toast } from 'sonner'
-import { ErrorReference, errorReferenceOf } from '../ErrorReference/ErrorReference'
+import { ErrorReference } from '../ErrorReference/ErrorReference'
+import { errorReferenceOf } from '../ErrorReference/errorReferenceOf'
 import styles from './showApiError.module.css'
 
 export type ApiErrorMessages = {

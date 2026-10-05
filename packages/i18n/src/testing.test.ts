@@ -34,7 +34,9 @@ describe('catalogProblems', () => {
   })
 
   it('reports a key missing from a translation and a key the default does not have', async () => {
-    const { 'a.plain': _omit, ...withoutPlain } = good
+    const withoutPlain = Object.fromEntries(
+      Object.entries(good).filter(([key]) => key !== 'a.plain'),
+    )
     const problems = await run({ ...withoutPlain, 'a.extra': 'Extra' })
     expect(problems).toContain('en: missing key "a.plain" (present in ko)')
     expect(problems).toContain('en: extra key "a.extra" (not in ko)')

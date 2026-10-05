@@ -84,19 +84,21 @@ export const TranslatedMessages: Story = {
   },
 }
 
+function KeepTheNumber() {
+  const [reference, setReference] = useState<string>()
+  return (
+    <div style={{ display: 'grid', gap: 'var(--space-md)', justifyItems: 'start' }}>
+      <Button onClick={() => setReference(showApiError(apiError()))}>
+        Fail and keep the number
+      </Button>
+      {reference && <ErrorReference reference={reference} />}
+    </div>
+  )
+}
+
 /** 토스트는 사라진다 — `showApiError` 가 돌려준 참조 번호를 상태에 담아 화면에 남긴다(문의할 때 쓴다) */
 export const ReferenceOutlivesTheToast: Story = {
-  render: () => {
-    const [reference, setReference] = useState<string>()
-    return (
-      <div style={{ display: 'grid', gap: 'var(--space-md)', justifyItems: 'start' }}>
-        <Button onClick={() => setReference(showApiError(apiError()))}>
-          Fail and keep the number
-        </Button>
-        {reference && <ErrorReference reference={reference} />}
-      </div>
-    )
-  },
+  render: () => <KeepTheNumber />,
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(canvas.getByRole('button', { name: 'Fail and keep the number' }))
     await expect(await canvas.findByText('trace-abc123')).toBeVisible()

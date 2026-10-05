@@ -3,7 +3,8 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
 import { expect, waitFor } from 'storybook/test'
 import { createI18n } from './createI18n'
-import { I18nProvider, useT } from './react'
+import { I18nProvider } from './I18nProvider'
+import { useT } from './useT'
 
 /**
  * 앱 문구의 정본 사용법 — 사전(ICU 메시지)을 `createI18n` 에 주고 `I18nProvider` 로 건넨 뒤 `useT()` 로 읽는다.

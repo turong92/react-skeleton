@@ -385,6 +385,22 @@ importers:
         specifier: ^19.2.5
         version: 19.3.0(react@19.3.0)
 
+  packages/marketing:
+    dependencies:
+      '@skeleton/time':
+        specifier: workspace:*
+        version: link:../time
+      '@skeleton/ui':
+        specifier: workspace:*
+        version: link:../ui
+    devDependencies:
+      react:
+        specifier: ^19.2.5
+        version: 19.3.0
+      react-dom:
+        specifier: ^19.2.5
+        version: 19.3.0(react@19.3.0)
+
   packages/notifications:
     dependencies:
       '@skeleton/api-client':

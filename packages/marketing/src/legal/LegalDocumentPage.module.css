@@ -1,0 +1,20 @@
+.root {
+  display: grid;
+  gap: var(--space-xl);
+  max-width: 48rem;
+  margin-inline: auto;
+}
+
+.header {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.meta {
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+}
+
+.switcher {
+  max-width: 20rem;
+}

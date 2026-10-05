@@ -1,0 +1,29 @@
+{
+  "name": "@skeleton/marketing",
+  "version": "1.1.0",
+  "private": true,
+  "type": "module",
+  "description": "공개 페이지(랜딩) 조립 부품 — Hero · FeatureGrid · PricingTable(요금제 데이터로) · FaqAccordion · Testimonial · CtaBand · SiteFooter · 동의 배너(+ 클라이언트 저장소 · onChange) · LegalDocumentPage(버전 바꾸기) · 404/500/점검 페이지. @skeleton/ui 부품으로만 짜고 문구는 모두 prop, 추적 코드 없음",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "types": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run --pool forks",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@skeleton/time": "workspace:*",
+    "@skeleton/ui": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
+  }
+}

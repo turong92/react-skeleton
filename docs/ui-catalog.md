@@ -54,39 +54,48 @@
 
 ## 다른 패키지의 부품 · 흐름
 
-| 부품                           | 스토리                                                    | 언제 쓰는가                                                                                              |
-| ------------------------------ | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `I18nProvider` · `useT`        | `packages/i18n/src/I18nProvider.stories.tsx`              | 앱 문구(ICU 메시지) — 복수형 · 요소가 낀 문장 · 언어 바꾸기 · 지연 사전                                  |
-| `ThemeToggle`                  | `packages/theme/src/ThemeToggle.stories.tsx`              | system → light → dark 전환 버튼(헤더 `actions`)                                                          |
-| `ThemedToaster`                | `packages/theme/src/ThemedToaster.stories.tsx`            | 앱 루트에 한 번 — 토스트가 고른 테마를 따른다                                                            |
-| `NotificationBell`             | `packages/notifications/src/NotificationBell.stories.tsx` | 헤더의 종 + 안 읽은 수 + 받은편지함 대화상자                                                             |
-| `NotificationList`             | `packages/notifications/src/NotificationList.stories.tsx` | 받은편지함 목록만 따로(데이터는 호출하는 쪽이 준다)                                                      |
-| `ReactionBar`                  | `packages/board/src/ReactionBar.stories.tsx`              | 반응 줄 — 서버가 알려 준 종류를 그대로 그린다(공감 같은 새 종류는 `labels` · `icons` 맵만)               |
-| `PostList`                     | `packages/board/src/PostList.stories.tsx`                 | 게시판 글 목록 — 정렬 · 검색 · 쪽 · 고정 글 · 빈 상태 · 로딩 · 오류                                      |
-| `PostDetail`                   | `packages/board/src/PostDetail.stories.tsx`               | 글 한 건 — 제목 · 본문 · 반응 자리 · 주인의 수정/삭제 · 운영자의 숨김/고정                               |
-| `PostEditor`                   | `packages/board/src/PostEditor.stories.tsx`               | 글쓰기 · 고치기 폼 — 길이 한도 검증 · 제출 중 · 실패 · 서버의 칸별 오류                                  |
-| `CommentThread`                | `packages/board/src/CommentThread.stories.tsx`            | 댓글 한 줄기(대댓글 중첩) — 깊은 답글 접기 · 지운/숨긴 자리 표시 · 수정 · 삭제 · 숨김                    |
-| `BoardComments`                | `packages/board/src/BoardComments.stories.tsx`            | 서버와 이어진 댓글 영역 — 새 댓글 · 답글 · 삭제 확인 · 운영자 숨김 · 낙관적 반응                         |
-| `PostList` + `PostDetail` 조립 | `packages/board/src/BoardPage.stories.tsx`                | 게시판 한 벌(목록 → 글 → 글쓰기)을 훅으로 조립한 모양 — apps/sample 「게시판」의 원형                    |
-| `Turnstile`                    | `packages/captcha-turnstile/src/Turnstile.stories.tsx`    | 로그인 · 가입 폼의 캡차 — 토큰이 올 때까지 제출을 막는다                                                 |
-| `Seo` · `SeoProvider`          | `packages/seo/src/Seo.stories.tsx`                        | 화면마다 제목 · 설명 · canonical · OG · JSON-LD(브라우저의 머리를 맞춘다 — 서버 렌더는 `renderHeadHtml`) |
-| `RequireAuth`                  | `packages/auth/src/RequireAuth.stories.tsx`               | 로그인한 사람만 보는 라우트 가드(레이아웃 라우트)                                                        |
-| `useUpload`                    | `packages/storage/src/useUpload.stories.tsx`              | 파일 업로드 — 진행률 · 취소 · 검증 오류                                                                  |
-| `formatInstant` · `formatDual` | `packages/time/src/formats.stories.tsx`                   | 시각 3종(순간 · 달력 날짜 · 현지 + 내 시간대) 표시                                                       |
+| 부품                                                                               | 스토리                                                       | 언제 쓰는가                                                                                              |
+| ---------------------------------------------------------------------------------- | ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| `I18nProvider` · `useT`                                                            | `packages/i18n/src/I18nProvider.stories.tsx`                 | 앱 문구(ICU 메시지) — 복수형 · 요소가 낀 문장 · 언어 바꾸기 · 지연 사전                                  |
+| `ThemeToggle`                                                                      | `packages/theme/src/ThemeToggle.stories.tsx`                 | system → light → dark 전환 버튼(헤더 `actions`)                                                          |
+| `ThemedToaster`                                                                    | `packages/theme/src/ThemedToaster.stories.tsx`               | 앱 루트에 한 번 — 토스트가 고른 테마를 따른다                                                            |
+| `NotificationBell`                                                                 | `packages/notifications/src/NotificationBell.stories.tsx`    | 헤더의 종 + 안 읽은 수 + 받은편지함 대화상자                                                             |
+| `NotificationList`                                                                 | `packages/notifications/src/NotificationList.stories.tsx`    | 받은편지함 목록만 따로(데이터는 호출하는 쪽이 준다)                                                      |
+| `ReactionBar`                                                                      | `packages/board/src/ReactionBar.stories.tsx`                 | 반응 줄 — 서버가 알려 준 종류를 그대로 그린다(공감 같은 새 종류는 `labels` · `icons` 맵만)               |
+| `PostList`                                                                         | `packages/board/src/PostList.stories.tsx`                    | 게시판 글 목록 — 정렬 · 검색 · 쪽 · 고정 글 · 빈 상태 · 로딩 · 오류                                      |
+| `PostDetail`                                                                       | `packages/board/src/PostDetail.stories.tsx`                  | 글 한 건 — 제목 · 본문 · 반응 자리 · 주인의 수정/삭제 · 운영자의 숨김/고정                               |
+| `PostEditor`                                                                       | `packages/board/src/PostEditor.stories.tsx`                  | 글쓰기 · 고치기 폼 — 길이 한도 검증 · 제출 중 · 실패 · 서버의 칸별 오류                                  |
+| `CommentThread`                                                                    | `packages/board/src/CommentThread.stories.tsx`               | 댓글 한 줄기(대댓글 중첩) — 깊은 답글 접기 · 지운/숨긴 자리 표시 · 수정 · 삭제 · 숨김                    |
+| `BoardComments`                                                                    | `packages/board/src/BoardComments.stories.tsx`               | 서버와 이어진 댓글 영역 — 새 댓글 · 답글 · 삭제 확인 · 운영자 숨김 · 낙관적 반응                         |
+| `PostList` + `PostDetail` 조립                                                     | `packages/board/src/BoardPage.stories.tsx`                   | 게시판 한 벌(목록 → 글 → 글쓰기)을 훅으로 조립한 모양 — apps/sample 「게시판」의 원형                    |
+| `Turnstile`                                                                        | `packages/captcha-turnstile/src/Turnstile.stories.tsx`       | 로그인 · 가입 폼의 캡차 — 토큰이 올 때까지 제출을 막는다                                                 |
+| `Seo` · `SeoProvider`                                                              | `packages/seo/src/Seo.stories.tsx`                           | 화면마다 제목 · 설명 · canonical · OG · JSON-LD(브라우저의 머리를 맞춘다 — 서버 렌더는 `renderHeadHtml`) |
+| `Hero` · `FeatureGrid` · `FaqAccordion` · `Testimonial` · `CtaBand` · `SiteFooter` | `packages/marketing/src/sections/Sections.stories.tsx`       | 랜딩 페이지의 구역들(`@skeleton/marketing` — ui 부품으로만 짠다 · 글자는 모두 prop)                      |
+| `PricingTable`                                                                     | `packages/marketing/src/pricing/PricingTable.stories.tsx`    | 요금제 표(데이터로 · 월/연 토글 + 절약 % · 강조 요금제 · 0원 · 맞춤 가격 · 통화/로케일 명시)             |
+| `ConsentBanner` · `createConsentStore`                                             | `packages/marketing/src/consent/ConsentBanner.stories.tsx`   | 쿠키 · 동의 배너(거부 = 허용과 같은 무게 · 범주 선택 · 저장소 + `onChange` · 추적 코드 없음)             |
+| `LegalDocumentPage`                                                                | `packages/marketing/src/legal/LegalDocumentPage.stories.tsx` | 약관 · 방침 페이지(판마다 마크다운 + 효력일 · 판 바꾸기 · 템플릿 표시 · `{{키}}` 채우기)                 |
+| `NotFoundPage` · `ServerErrorPage` · `MaintenancePage`                             | `packages/marketing/src/status/StatusPage.stories.tsx`       | 404 · 500(참조 번호) · 점검 중(돌아올 시각)                                                              |
+| `RequireAuth`                                                                      | `packages/auth/src/RequireAuth.stories.tsx`                  | 로그인한 사람만 보는 라우트 가드(레이아웃 라우트)                                                        |
+| `useUpload`                                                                        | `packages/storage/src/useUpload.stories.tsx`                 | 파일 업로드 — 진행률 · 취소 · 검증 오류                                                                  |
+| `formatInstant` · `formatDual`                                                     | `packages/time/src/formats.stories.tsx`                      | 시각 3종(순간 · 달력 날짜 · 현지 + 내 시간대) 표시                                                       |
 
 ## Patterns — 복사해서 시작하는 화면 틀
 
 `@skeleton/ui` 만으로 짠 한 파일짜리 화면. 가장 가까운 것을 복사해 문구 · 데이터 연결만 바꾼다(숨은 도우미 파일 없음).
 
-| 화면      | 스토리                                                  | 언제 복사하는가                                                                |
-| --------- | ------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| 대시보드  | `apps/storybook/src/patterns/DashboardPage.stories.tsx` | 숫자 4칸 + 최근 항목 표 + 알림 카드 · 로딩 · 오류 · 첫 사용 빈 상태            |
-| 목록      | `apps/storybook/src/patterns/ListPage.stories.tsx`      | 표 + 쪽 이동 + 빈 상태 + 로딩 + 오류(다시 시도)                                |
-| 폼        | `apps/storybook/src/patterns/FormPage.stories.tsx`      | 입력 · 검증 오류(첫 오류로 포커스) · 제출 중 · 성공 · 실패                     |
-| 상세      | `apps/storybook/src/patterns/DetailPage.stories.tsx`    | 제목 + 탭 + 위험 구역(삭제 확인) · 로딩 · 없음                                 |
-| 로그인    | `apps/storybook/src/patterns/LoginPage.stories.tsx`     | 이메일 · 비밀번호 · 제출 중 · 잘못된 계정 정보                                 |
-| 권한 없음 | `apps/storybook/src/patterns/ForbiddenPage.stories.tsx` | 403 — 이유를 말하고 갈 곳을 준다                                               |
-| 설정      | `apps/storybook/src/patterns/SettingsPage.stories.tsx`  | 목차 + 즉시 적용 스위치 + 저장 폼(실패 시 참조 번호) + ⋯ 메뉴 목록 + 위험 구역 |
+| 화면      | 스토리                                                      | 언제 복사하는가                                                                                |
+| --------- | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| 대시보드  | `apps/storybook/src/patterns/DashboardPage.stories.tsx`     | 숫자 4칸 + 최근 항목 표 + 알림 카드 · 로딩 · 오류 · 첫 사용 빈 상태                            |
+| 목록      | `apps/storybook/src/patterns/ListPage.stories.tsx`          | 표 + 쪽 이동 + 빈 상태 + 로딩 + 오류(다시 시도)                                                |
+| 폼        | `apps/storybook/src/patterns/FormPage.stories.tsx`          | 입력 · 검증 오류(첫 오류로 포커스) · 제출 중 · 성공 · 실패                                     |
+| 상세      | `apps/storybook/src/patterns/DetailPage.stories.tsx`        | 제목 + 탭 + 위험 구역(삭제 확인) · 로딩 · 없음                                                 |
+| 로그인    | `apps/storybook/src/patterns/LoginPage.stories.tsx`         | 이메일 · 비밀번호 · 제출 중 · 잘못된 계정 정보                                                 |
+| 권한 없음 | `apps/storybook/src/patterns/ForbiddenPage.stories.tsx`     | 403 — 이유를 말하고 갈 곳을 준다                                                               |
+| 설정      | `apps/storybook/src/patterns/SettingsPage.stories.tsx`      | 목차 + 즉시 적용 스위치 + 저장 폼(실패 시 참조 번호) + ⋯ 메뉴 목록 + 위험 구역                 |
+| 랜딩      | `packages/marketing/src/patterns/Landing.stories.tsx`       | 공개 첫 화면 — Hero · 기능 · 한마디 · 요금제 · FAQ · 마지막 권유 · 푸터(`@skeleton/marketing`) |
+| 요금제    | `packages/marketing/src/patterns/Pricing.stories.tsx`       | 요금제 페이지 — 월/연 토글 · 강조 · 문의 · 결제 질문(`onSelect` 에서 결제로)                   |
+| 법적 문서 | `packages/marketing/src/patterns/LegalDocument.stories.tsx` | 약관 · 방침 — 판 바꾸기 · 효력일 · 템플릿 표시 · 사실 채우기                                   |
+| 404 · 500 | `packages/marketing/src/patterns/NotFound.stories.tsx`      | 없는 주소 · 서버 오류 · 점검 — 이유를 말하고 갈 곳을 준다                                      |
 
 ## 디자인 토큰
 

@@ -14,15 +14,15 @@ React + TypeScript + Vite 프론트엔드 스켈레톤. pnpm 워크스페이스 
 4. **부품을 더하거나 바꾸면 스토리를 더하거나 고치고 `play` 로 동작을 검증한다**(클릭 · 키보드 · 라벨 연결 · 상태). `pnpm test:stories`(진짜 브라우저)가 통과해야 한다 — 접근성(a11y) 위반도 실패다. 규칙을 끄려면 그 스토리 옆에 이유를 적는다.
 5. **스토리 파일을 더하거나 지우면** `docs/ui-catalog.md` 표에 한 줄을 더하거나 지운다(`tests/stories.test.ts` 가 어긋남을 막는다). `@skeleton/ui` 가 새로 export 하는 것은 `packages/ui/src/<폴더>/` 에 스토리(+`play` 하나 이상)가 있어야 한다.
 
-| Patterns  | 파일                                                    | 복사하는 때                                                 |
-| --------- | ------------------------------------------------------- | ----------------------------------------------------------- |
-| 대시보드  | `apps/storybook/src/patterns/DashboardPage.stories.tsx` | 숫자 4칸 + 최근 항목 표 + 알림 카드 · 로딩 · 오류 · 첫 사용 |
-| 목록      | `apps/storybook/src/patterns/ListPage.stories.tsx`      | 표 + 쪽 이동 + 빈 상태 + 로딩 + 오류                        |
-| 폼        | `apps/storybook/src/patterns/FormPage.stories.tsx`      | 입력 · 검증 오류 · 제출 중 · 성공 · 실패                    |
-| 상세      | `apps/storybook/src/patterns/DetailPage.stories.tsx`    | 제목 + 탭 + 위험 구역(삭제 확인) · 로딩 · 없음              |
-| 로그인    | `apps/storybook/src/patterns/LoginPage.stories.tsx`     | 이메일 · 비밀번호 · 제출 중 · 잘못된 계정 정보              |
-| 권한 없음 | `apps/storybook/src/patterns/ForbiddenPage.stories.tsx` | 403 화면                                                    |
-| 설정      | `apps/storybook/src/patterns/SettingsPage.stories.tsx`  | 즉시 적용 스위치 + 저장 폼 + 위험 구역                      |
+| Patterns  | 파일                                                    | 복사하는 때                                                               |
+| --------- | ------------------------------------------------------- | ------------------------------------------------------------------------- |
+| 대시보드  | `apps/storybook/src/patterns/DashboardPage.stories.tsx` | 숫자 4칸 + 최근 항목 표 + 알림 카드 · 로딩 · 오류 · 첫 사용               |
+| 목록      | `apps/storybook/src/patterns/ListPage.stories.tsx`      | 표 + 쪽 이동 + 빈 상태 + 로딩 + 오류                                      |
+| 폼        | `apps/storybook/src/patterns/FormPage.stories.tsx`      | 입력 · 검증 오류 · 제출 중 · 성공 · 실패                                  |
+| 상세      | `apps/storybook/src/patterns/DetailPage.stories.tsx`    | 제목 + 탭 + 위험 구역(삭제 확인) · 로딩 · 없음                            |
+| 로그인    | `apps/storybook/src/patterns/LoginPage.stories.tsx`     | 이메일 · 비밀번호 · 제출 중 · 잘못된 계정 정보                            |
+| 권한 없음 | `apps/storybook/src/patterns/ForbiddenPage.stories.tsx` | 403 화면                                                                  |
+| 설정      | `apps/storybook/src/patterns/SettingsPage.stories.tsx`  | 목차 + 즉시 적용 스위치 + 저장 폼(실패 시 참조 번호) + ⋯ 메뉴 + 위험 구역 |
 
 <!-- storybook-guide:end -->
 
@@ -58,7 +58,7 @@ packages/                     # 서로를 이름으로만 부른다. 각자 pack
 ├── time/                     # formatInstant/formatDate/formatDual · createServerClock · 국가→시간대
 ├── theme/                    # theme.ts · ThemeToggle · ThemedToaster · PRE_PAINT_SCRIPT + @skeleton/theme/vite(themePrePaint)
 ├── tokens/                   # tokens.json(정본) · build.mjs(생성기) · tokens.css(생성물) · 테스트 도구(findRawColors · findRawLayout …)
-└── ui/                       # base.css · Button/Input/Field/Select/Textarea/Checkbox/Switch/Tabs/Table/Pagination/EmptyState/Card/Dialog/Spinner/AppShell · ErrorBoundary · showApiError · toastPromise — 부품마다 옆에 *.stories.tsx(CSF3 + play)
+└── ui/                       # base.css · Button/Input/Field/Select/Textarea/Checkbox/Switch/Tabs/Table/Pagination/EmptyState/Card/Dialog/Spinner/AppShell · SwitchRow · SectionCard/SectionIndex · RowMenu · ErrorReference · ErrorBoundary · showApiError · toastPromise — 부품마다 옆에 *.stories.tsx(CSF3 + play)
 scripts/                      # new-project.sh(새 프로젝트 찍기) · new-project.d/stamp.mjs(일꾼) · test-new-project.sh(--quick · --full)
 tests/                        # 워크스페이스 가로지르는 테스트: stories(모든 @skeleton/ui export 에 스토리 + play · 모든 Patterns 가 안내에 적힘 · 카탈로그 일치) · eslint.uiOnly(날 요소 · 인라인 날값 금지) · ssr.safety(모든 패키지가 window 없는 Node 에서 import · 모든 컴포넌트 · 훅이 서버에서 그려진다 — support/ssrFixtures.ts) · usage(날 색 · 날 간격/모서리/글자 크기 · --p-* · var 정의) · contrast(AA 짝) · tokens.wiring · theme.names · workspace(의존 규칙) · eslint.boundaries · skeleton.repo(이 레포의 앱 · 패키지 목록 — 찍을 때 지워진다)
 docs/design-tokens.md         # 토큰 층 · 이름 · 추가법 + 생성된 표

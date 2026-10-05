@@ -1,8 +1,10 @@
 import { ApiRequestError } from '@skeleton/api-client'
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { useState } from 'react'
 import { Toaster } from 'sonner'
 import { expect, screen } from 'storybook/test'
 import { Button } from '../Button/Button'
+import { ErrorReference } from '../ErrorReference/ErrorReference'
 import { showApiError } from './showApiError'
 
 /**
@@ -46,7 +48,10 @@ export const ApiProblem: Story = {
     await userEvent.click(canvas.getByRole('button', { name: 'Fail the request' }))
     await expect(await screen.findByText('Validation failed')).toBeInTheDocument()
     await expect(screen.getByText('email format invalid')).toBeInTheDocument()
-    await expect(screen.getByText('traceId: trace-abc123')).toBeInTheDocument()
+    await expect(screen.getByText('trace-abc123')).toBeInTheDocument()
+    await expect(screen.getByRole('button', { name: 'Copy' })).toHaveAccessibleDescription(
+      'trace-abc123',
+    )
     await expect(screen.getByText('spanId: span-def456')).toBeInTheDocument()
   },
 }
@@ -66,7 +71,7 @@ export const TranslatedMessages: Story = {
     <Button
       onClick={() =>
         showApiError(apiError(), {
-          messages: { clickToCopy: '눌러서 복사', traceIdCopied: '복사했습니다' },
+          messages: { clickToCopy: '눌러서 복사', traceIdCopied: '복사했습니다', copy: '복사' },
         })
       }
     >
@@ -76,5 +81,25 @@ export const TranslatedMessages: Story = {
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(canvas.getByRole('button', { name: '실패시키기' }))
     await expect(await screen.findByTitle('눌러서 복사')).toBeInTheDocument()
+  },
+}
+
+/** 토스트는 사라진다 — `showApiError` 가 돌려준 참조 번호를 상태에 담아 화면에 남긴다(문의할 때 쓴다) */
+export const ReferenceOutlivesTheToast: Story = {
+  render: () => {
+    const [reference, setReference] = useState<string>()
+    return (
+      <div style={{ display: 'grid', gap: 'var(--space-md)', justifyItems: 'start' }}>
+        <Button onClick={() => setReference(showApiError(apiError()))}>
+          Fail and keep the number
+        </Button>
+        {reference && <ErrorReference reference={reference} />}
+      </div>
+    )
+  },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole('button', { name: 'Fail and keep the number' }))
+    await expect(await canvas.findByText('trace-abc123')).toBeVisible()
+    await expect(canvas.getByText('Reference')).toBeVisible()
   },
 }

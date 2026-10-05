@@ -1,0 +1,19 @@
+.root {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-muted);
+}
+
+.icon {
+  position: absolute;
+  inset-inline-start: var(--space-md);
+  pointer-events: none;
+}
+
+.select {
+  width: auto;
+  min-height: 30px;
+  padding-inline-start: calc(var(--space-md) + var(--space-xl));
+  font-size: var(--font-size-small);
+}

@@ -1,5 +1,9 @@
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright'
-import { strings } from '../src/strings'
+import { i18n, type MessageKey } from '../src/i18n'
+
+/** 화면 문구(한국어) — 브라우저가 `ko-KR` 로 뜨므로 앱이 한국어로 그린다. 어느 문구를 찾는지 사전의 키로 읽힌다 */
+export const ko = (key: MessageKey, values?: Record<string, string | number>) =>
+  i18n.tIn('ko', key, values)
 
 export const DEMO = { email: 'user@example.com', password: 'password' }
 
@@ -24,8 +28,8 @@ export async function launch(
 /** 화면 로그인(체험 계정 채우기 버튼 → 로그인) */
 export async function signIn(page: Page, baseUrl: string) {
   await page.goto(baseUrl)
-  await page.getByRole('button', { name: strings.login.demoFill }).click()
-  await page.getByRole('button', { name: strings.login.submit, exact: true }).click()
+  await page.getByRole('button', { name: ko('login.demoFill') }).click()
+  await page.getByRole('button', { name: ko('login.submit'), exact: true }).click()
   await page.getByRole('heading', { level: 1 }).first().waitFor()
 }
 

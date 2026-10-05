@@ -1,6 +1,11 @@
 export type { RealtimeStatus } from './types'
-export { createSseClient } from './createSseClient'
-export type { SseClient, SseClientOptions, SseResponseInfo } from './createSseClient'
+export { createSseClient, documentVisibility } from './createSseClient'
+export type {
+  SseClient,
+  SseClientOptions,
+  SseResponseInfo,
+  VisibilitySource,
+} from './createSseClient'
 export { parseSseBlock, readSseStream } from './sseStream'
 export type { SseEvent } from './sseStream'
 export { createStompNotificationClient } from './createStompNotificationClient'

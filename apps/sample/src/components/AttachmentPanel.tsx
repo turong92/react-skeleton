@@ -4,10 +4,8 @@ import { useUpdateNote } from '../notes/queries'
 import type { Note, NoteInput } from '../notes/types'
 import { ATTACHMENT_ACCEPT, storageApi, uploader } from '../storage/uploader'
 import { uploadErrorMessage } from '../storage/uploadMessage'
-import { strings } from '../strings'
+import { useT } from '../i18n'
 import styles from './AttachmentPanel.module.css'
-
-const t = strings.attachment
 
 const inputOf = (note: Note, attachment: Pick<NoteInput, 'attachmentKey' | 'attachmentName'>) => ({
   title: note.title,
@@ -22,6 +20,7 @@ const inputOf = (note: Note, attachment: Pick<NoteInput, 'attachmentKey' | 'atta
  * 파일 고르기는 `FilePicker`(날 `<input type=file>` 금지), 진행률은 `Progress`.
  */
 export function AttachmentPanel({ note }: { note: Note }) {
+  const { t } = useT()
   const update = useUpdateNote(note.id)
   const up = useUpload(uploader)
   const uploading = up.status === 'uploading'
@@ -52,12 +51,12 @@ export function AttachmentPanel({ note }: { note: Note }) {
   }
 
   return (
-    <Card title={t.title}>
+    <Card title={t('attachment.title')}>
       <div className={styles.body}>
         {note.attachmentKey ? (
           <div className={styles.current}>
             <div className={styles.file}>
-              <span className={styles.label}>{t.current}</span>
+              <span className={styles.label}>{t('attachment.current')}</span>
               <strong>{note.attachmentName ?? note.attachmentKey}</strong>
             </div>
             <div className={styles.actions}>
@@ -66,7 +65,7 @@ export function AttachmentPanel({ note }: { note: Note }) {
                 size="sm"
                 onClick={() => void download(note.attachmentKey!)}
               >
-                {t.download}
+                {t('attachment.download')}
               </Button>
               <Button
                 variant="ghost"
@@ -74,18 +73,18 @@ export function AttachmentPanel({ note }: { note: Note }) {
                 loading={update.isPending && !uploading}
                 onClick={() => void remove()}
               >
-                {t.remove}
+                {t('attachment.remove')}
               </Button>
             </div>
           </div>
         ) : (
-          <p className={styles.none}>{t.none}</p>
+          <p className={styles.none}>{t('attachment.none')}</p>
         )}
 
         <FilePicker
-          title={t.pickTitle}
-          hint={t.pickHint}
-          buttonLabel={t.pickButton}
+          title={t('attachment.pickTitle')}
+          hint={t('attachment.pickHint')}
+          buttonLabel={t('attachment.pickButton')}
           accept={ATTACHMENT_ACCEPT}
           disabled={uploading}
           error={errorMessage}
@@ -95,12 +94,12 @@ export function AttachmentPanel({ note }: { note: Note }) {
         {uploading && (
           <div className={styles.progress}>
             <Progress
-              label={t.progressLabel}
+              label={t('attachment.progressLabel')}
               value={up.progress}
               valueText={`${Math.round(up.progress * 100)}%`}
             />
             <Button variant="ghost" size="sm" onClick={up.abort}>
-              {t.cancel}
+              {t('attachment.cancel')}
             </Button>
           </div>
         )}

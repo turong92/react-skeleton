@@ -11,7 +11,7 @@ export type UseSseClientOptions = Omit<SseClientOptions, 'onEvent'> & {
 
 /**
  * `createSseClient` 를 컴포넌트 수명에 묶는다. 렌더마다 최신 옵션을 읽으므로 토큰 · traceId 가 바뀌어도 다음 (재)연결부터 따라간다.
- * `reconnect` · `fetch` 는 처음 값으로 고정된다. 마운트만으로는 연결하지 않는다 — `start()` 를 부른다. 언마운트하면 끊는다.
+ * `reconnect` · `fetch` · `idleTimeoutMs` · `busyDelayMs` · `maxRetryAfterMs` · `visibility` 는 처음 값으로 고정된다. 마운트만으로는 연결하지 않는다 — `start()` 를 부른다. 언마운트하면 끊는다.
  */
 export function useSseClient(options: UseSseClientOptions) {
   const optionsRef = useRef(options)
@@ -30,6 +30,11 @@ export function useSseClient(options: UseSseClientOptions) {
       traceId: () => resolve(latest().traceId),
       reconnect: options.reconnect,
       fetch: options.fetch,
+      idleTimeoutMs: options.idleTimeoutMs,
+      busyDelayMs: options.busyDelayMs,
+      maxRetryAfterMs: options.maxRetryAfterMs,
+      visibility: options.visibility,
+      onOpen: (info) => latest().onOpen?.(info),
       onEvent: (event) => {
         latest().onEvent?.(event)
         const limit = latest().maxEvents ?? 20

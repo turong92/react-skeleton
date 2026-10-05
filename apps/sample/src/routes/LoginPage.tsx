@@ -3,11 +3,12 @@ import { useAuth } from '@skeleton/auth'
 import { Button, Card, Field, Input } from '@skeleton/ui'
 import { useState, type FormEvent } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { strings } from '../strings'
+import { useT } from '../i18n'
 import styles from './LoginPage.module.css'
 
 /** Patterns/Login page 를 옮긴 화면 — 비밀번호 오류만 폼에 보이고 나머지 에러는 전역 토스트 */
 export function LoginPage() {
+  const { t } = useT()
   const { status, login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
@@ -36,17 +37,17 @@ export function LoginPage() {
   return (
     <div className={styles.center}>
       <div className={styles.intro}>
-        <h1>{strings.login.title}</h1>
-        <p>{strings.login.subtitle}</p>
+        <h1>{t('login.title')}</h1>
+        <p>{t('login.subtitle')}</p>
       </div>
       <Card>
-        <form className={styles.form} onSubmit={submit} aria-label={strings.login.title}>
+        <form className={styles.form} onSubmit={submit} aria-label={t('login.title')}>
           {failed && (
             <p role="alert" className={styles.failure}>
-              {strings.login.invalid}
+              {t('login.invalid')}
             </p>
           )}
-          <Field label={strings.login.email} required>
+          <Field label={t('login.email')} required>
             {(control) => (
               <Input
                 {...control}
@@ -57,7 +58,7 @@ export function LoginPage() {
               />
             )}
           </Field>
-          <Field label={strings.login.password} required>
+          <Field label={t('login.password')} required>
             {(control) => (
               <Input
                 {...control}
@@ -68,22 +69,22 @@ export function LoginPage() {
               />
             )}
           </Field>
-          <Button type="submit" loading={busy} loadingLabel={strings.login.submitting}>
-            {strings.login.submit}
+          <Button type="submit" loading={busy} loadingLabel={t('login.submitting')}>
+            {t('login.submit')}
           </Button>
         </form>
       </Card>
       <div className={styles.demo}>
-        <p>{strings.login.demoHint}</p>
+        <p>{t('login.demoHint')}</p>
         <Button
           variant="ghost"
           size="sm"
           onClick={() => {
-            setEmail(strings.login.demoEmail)
-            setPassword(strings.login.demoPassword)
+            setEmail(t('login.demoEmail'))
+            setPassword(t('login.demoPassword'))
           }}
         >
-          {strings.login.demoFill}
+          {t('login.demoFill')}
         </Button>
       </div>
     </div>

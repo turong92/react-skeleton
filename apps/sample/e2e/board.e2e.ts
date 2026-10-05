@@ -1,6 +1,5 @@
 import { expect as pwExpect, type Browser, type Page } from 'playwright/test'
 import { afterAll, beforeAll, describe, inject, it } from 'vitest'
-import { strings } from '../src/strings'
 import {
   USER,
   MODERATOR,
@@ -16,7 +15,7 @@ import {
   signOut,
   writePost,
 } from './boardSteps'
-import { launch } from './helpers'
+import { ko, launch } from './helpers'
 
 /*
  * 게시판 여정 — 로그인 → 글쓰기(검증 → 올리기) → 글에 반응(좋아요 → 공감으로 바꾸기, 새로고침해도 유지) → 댓글 → 대댓글 → 대대댓글(접힘) →
@@ -25,7 +24,6 @@ import { launch } from './helpers'
  */
 const baseUrl = inject('baseUrl')
 const apiUrl = inject('apiUrl')
-const t = strings.board
 
 let browser: Browser
 let page: Page
@@ -60,19 +58,19 @@ describe('Board — posts, nested comments and typed reactions against the real 
   })
 
   it('write form: an empty post is refused on the client, then it publishes and opens the post', async () => {
-    await page.getByRole('button', { name: t.write }).click()
-    await page.getByRole('button', { name: t.form.submitCreate }).click()
-    await pwExpect(page.getByText(t.form.titleRequired)).toBeVisible()
-    await pwExpect(page.getByText(t.form.bodyRequired)).toBeVisible()
-    await pwExpect(page.getByLabel(new RegExp(t.form.title))).toBeFocused()
-    await page.getByRole('button', { name: strings.common.cancel }).click()
+    await page.getByRole('button', { name: ko('board.write') }).click()
+    await page.getByRole('button', { name: ko('board.form.submitCreate') }).click()
+    await pwExpect(page.getByText(ko('board.form.titleRequired'))).toBeVisible()
+    await pwExpect(page.getByText(ko('board.form.bodyRequired'))).toBeVisible()
+    await pwExpect(page.getByLabel(new RegExp(ko('board.form.title')))).toBeFocused()
+    await page.getByRole('button', { name: ko('common.cancel') }).click()
     await writePost(page, TITLE, BODY)
     await pwExpect(page.getByText(BODY)).toBeVisible()
   })
 
   it('reacts to the post: 좋아요, then 공감 (an extra type the server reports) — counts follow and survive a reload', async () => {
     const post = article(page)
-    await pwExpect(post.getByRole('group', { name: t.reactions.group })).toBeVisible()
+    await pwExpect(post.getByRole('group', { name: ko('board.reactions.group') })).toBeVisible()
     await reaction(post, 'LIKE', 0).click()
     await pwExpect(reaction(post, 'LIKE', 1)).toHaveAttribute('aria-pressed', 'true')
     await reaction(post, 'EMPATHY', 0).click()
@@ -90,19 +88,21 @@ describe('Board — posts, nested comments and typed reactions against the real 
   })
 
   it('comments, replies to the comment, and replies to the reply — a reply of depth 2 sits behind "답글 N개 더 보기" after a reload', async () => {
-    await pwExpect(page.getByText(t.comments.empty)).toBeVisible()
+    await pwExpect(page.getByText(ko('board.comments.empty'))).toBeVisible()
     await postComment(page, FIRST)
     await replyTo(page, FIRST, REPLY)
     await replyTo(page, REPLY, DEEP) // 깊이 2 — 방금 단 답글은 펼쳐져 보인다
     // 최대 깊이(2)의 댓글에는 더 답할 수 없다
     await pwExpect(
-      commentOf(page, DEEP).getByRole('button', { name: new RegExp(`^${t.comments.reply}: `) }),
+      commentOf(page, DEEP).getByRole('button', {
+        name: new RegExp(`^${ko('board.comments.reply')}: `),
+      }),
     ).toHaveCount(0)
 
     await page.reload()
     await pwExpect(commentOf(page, REPLY)).toBeVisible()
     await pwExpect(page.getByText(DEEP)).toHaveCount(0)
-    await page.getByRole('button', { name: t.comments.showReplies(1) }).click()
+    await page.getByRole('button', { name: ko('board.comments.showReplies', { count: 1 }) }).click()
     await pwExpect(page.getByText(DEEP)).toBeVisible()
   })
 
@@ -113,7 +113,7 @@ describe('Board — posts, nested comments and typed reactions against the real 
     await reaction(first, 'EMPATHY', 0).click()
     await pwExpect(reaction(first, 'EMPATHY', 1)).toHaveAttribute('aria-pressed', 'true')
 
-    await page.getByRole('link', { name: `← ${t.back}` }).click()
+    await page.getByRole('link', { name: `← ${ko('board.back')}` }).click()
     const row = page.getByRole('row').filter({ hasText: TITLE })
     await pwExpect(row.getByRole('cell').nth(0)).toHaveText('3') // 댓글
     await pwExpect(row.getByRole('cell').nth(1)).toHaveText(single ? '1' : '2') // 반응(글의 공감 — PER_TYPE 이면 좋아요도 남아 있다)
@@ -121,26 +121,26 @@ describe('Board — posts, nested comments and typed reactions against the real 
 
   it('the author edits the post and deletes own comment after a confirmation', async () => {
     await openPost(page, TITLE)
-    await page.getByRole('button', { name: t.detail.edit, exact: true }).click()
-    await page.getByLabel(new RegExp(t.form.title)).fill(`${TITLE} (수정)`)
-    await page.getByRole('button', { name: t.form.submitEdit }).click()
+    await page.getByRole('button', { name: ko('board.detail.edit'), exact: true }).click()
+    await page.getByLabel(new RegExp(ko('board.form.title'))).fill(`${TITLE} (수정)`)
+    await page.getByRole('button', { name: ko('board.form.submitEdit') }).click()
     await page.getByRole('heading', { level: 2, name: `${TITLE} (수정)` }).waitFor()
-    await page.getByRole('button', { name: t.comments.showReplies(1) }).click() // 깊이 2 는 접혀 있다
+    await page.getByRole('button', { name: ko('board.comments.showReplies', { count: 1 }) }).click() // 깊이 2 는 접혀 있다
 
     await commentOf(page, DEEP)
-      .getByRole('button', { name: new RegExp(`^${t.comments.delete}: `) })
+      .getByRole('button', { name: new RegExp(`^${ko('board.comments.delete')}: `) })
       .first()
       .click()
-    const dialog = page.getByRole('dialog', { name: t.comments.confirmDeleteTitle })
-    await dialog.getByRole('button', { name: strings.common.cancel }).click()
+    const dialog = page.getByRole('dialog', { name: ko('board.comments.confirmDeleteTitle') })
+    await dialog.getByRole('button', { name: ko('common.cancel') }).click()
     await pwExpect(page.getByText(DEEP)).toBeVisible()
     await commentOf(page, DEEP)
-      .getByRole('button', { name: new RegExp(`^${t.comments.delete}: `) })
+      .getByRole('button', { name: new RegExp(`^${ko('board.comments.delete')}: `) })
       .first()
       .click()
-    await dialog.getByRole('button', { name: t.comments.confirmDelete }).click()
+    await dialog.getByRole('button', { name: ko('board.comments.confirmDelete') }).click()
     await pwExpect(page.getByText(DEEP)).toHaveCount(0)
-    await pwExpect(page.getByText(t.comments.deleted)).toBeVisible() // 지운 자리는 남는다
+    await pwExpect(page.getByText(ko('board.comments.deleted'))).toBeVisible() // 지운 자리는 남는다
     await signOut(page)
   })
 
@@ -148,22 +148,26 @@ describe('Board — posts, nested comments and typed reactions against the real 
     await signInAs(page, baseUrl, MODERATOR)
     await openBoard(page)
     await openPost(page, `${TITLE} (수정)`)
-    await article(page).getByRole('button', { name: t.detail.pin, exact: true }).click()
-    await pwExpect(article(page).getByText(t.list.pinned, { exact: true })).toBeVisible()
+    await article(page)
+      .getByRole('button', { name: ko('board.detail.pin'), exact: true })
+      .click()
+    await pwExpect(article(page).getByText(ko('board.list.pinned'), { exact: true })).toBeVisible()
 
     await commentOf(page, REPLY)
-      .getByRole('button', { name: new RegExp(`^${t.comments.hide}: `) })
+      .getByRole('button', { name: new RegExp(`^${ko('board.comments.hide')}: `) })
       .first()
       .click()
     await pwExpect(page.getByText(REPLY)).toHaveCount(0)
-    await pwExpect(page.getByText(t.comments.hidden)).toBeVisible()
-    await page.getByRole('button', { name: new RegExp(`^${t.comments.restore}: `) }).click()
+    await pwExpect(page.getByText(ko('board.comments.hidden'))).toBeVisible()
+    await page
+      .getByRole('button', { name: new RegExp(`^${ko('board.comments.restore')}: `) })
+      .click()
     await pwExpect(page.getByText(REPLY)).toBeVisible()
     await commentOf(page, REPLY)
-      .getByRole('button', { name: new RegExp(`^${t.comments.hide}: `) })
+      .getByRole('button', { name: new RegExp(`^${ko('board.comments.hide')}: `) })
       .first()
       .click()
-    await pwExpect(page.getByText(t.comments.hidden)).toBeVisible()
+    await pwExpect(page.getByText(ko('board.comments.hidden'))).toBeVisible()
     await signOut(page)
 
     await signInAs(page, baseUrl, USER)
@@ -171,13 +175,13 @@ describe('Board — posts, nested comments and typed reactions against the real 
     const first = page.getByRole('row').nth(1)
     await pwExpect(first).toContainText(`${TITLE} (수정)`) // 고정 글이 맨 위
     await openPost(page, `${TITLE} (수정)`)
-    await pwExpect(page.getByText(t.comments.hidden)).toBeVisible()
+    await pwExpect(page.getByText(ko('board.comments.hidden'))).toBeVisible()
     await pwExpect(page.getByText(REPLY)).toHaveCount(0)
     await pwExpect(
-      page.getByRole('button', { name: new RegExp(`^${t.comments.hide}: `) }),
+      page.getByRole('button', { name: new RegExp(`^${ko('board.comments.hide')}: `) }),
     ).toHaveCount(0)
     await pwExpect(
-      article(page).getByRole('button', { name: t.detail.pin, exact: true }),
+      article(page).getByRole('button', { name: ko('board.detail.pin'), exact: true }),
     ).toHaveCount(0)
   })
 })

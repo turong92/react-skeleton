@@ -102,6 +102,12 @@ const boardComment = {
   createdAt: '2026-01-01T00:00:00Z',
   updatedAt: '2026-01-01T00:00:00Z',
 }
+export const fakeI18n = ({ mod }: FixtureContext) =>
+  call(mod('i18n').createI18n, {
+    catalogs: { ko: { hello: '안녕' }, en: { hello: 'Hello' } },
+    defaultLocale: 'ko',
+    storageKey: 'ssr-fixture:locale',
+  })
 export function fakeSession({ mod }: FixtureContext) {
   const auth = mod('auth')
   const unused = async () => {
@@ -161,6 +167,34 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
   'ui#Progress': () => ({ label: 'Uploading', value: 0.5, valueText: '50%' }),
   'ui#FilePicker': () => ({ title: 'Attach a file', buttonLabel: 'Choose file', onFiles: noop }),
   'ui#Stat': () => ({ label: 'Notes', value: 3, hint: 'so far' }),
+  'ui#SwitchRow': () => ({
+    title: 'Email',
+    description: 'A weekly summary',
+    checked: true,
+    onChange: noop,
+  }),
+  'ui#SectionCard': () => ({
+    id: 'profile',
+    title: 'Profile',
+    collapsible: true,
+    children: 'body',
+  }),
+  'ui#SectionIndex': () => ({
+    label: 'On this page',
+    items: [{ id: 'profile', label: 'Profile' }],
+  }),
+  'ui#RowMenu': () => ({ label: 'More', items: [{ key: 'edit', label: 'Edit', onSelect: noop }] }),
+  'ui#ErrorReference': () => ({ reference: 'trace-1' }),
+  'ui#LanguageMenu': () => ({
+    label: 'Language',
+    value: 'en',
+    options: [
+      { value: 'ko', label: '한국어' },
+      { value: 'en', label: 'English' },
+    ],
+    onChange: noop,
+  }),
+  'i18n#I18nProvider': (ctx) => ({ i18n: fakeI18n(ctx), children: 'inside' }),
   'theme#ThemeToggle': () => ({}),
   'theme#ThemedToaster': () => ({}),
   'auth#AuthProvider': (ctx) => ({ session: fakeSession(ctx), children: 'inside' }),
@@ -244,6 +278,7 @@ export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
   'board#useRemoveComment': () => [fakeBoardApi(), 'free', 'p1'],
   'board#useModerateComment': () => [fakeBoardApi(), 'free', 'p1'],
   'board#useReaction': () => [fakeBoardApi(), 'free', 'SINGLE'],
+  'i18n#useT': (ctx) => [fakeI18n(ctx)],
   'realtime#useSseClient': () => [{ url: '/api/v1/notifications/sse' }],
   'realtime#useNotificationSocket': () => [
     { url: 'ws://localhost/ws', topic: 'demo', getAccessToken: () => null },

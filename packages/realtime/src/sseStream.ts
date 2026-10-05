@@ -8,6 +8,8 @@ export async function readSseStream(
   body: ReadableStream<Uint8Array>,
   signal: AbortSignal,
   onEvent: (event: SseEvent) => void,
+  /** 바이트가 올 때마다(심장박동 주석 포함) — 유휴 감시용 */
+  onChunk?: () => void,
 ) {
   const reader = body.getReader()
   const decoder = new TextDecoder()
@@ -16,6 +18,7 @@ export async function readSseStream(
   while (!signal.aborted) {
     const { value, done } = await reader.read()
     if (done) break
+    onChunk?.()
     buffer += decoder.decode(value, { stream: true })
     const blocks = buffer.split('\n\n')
     buffer = blocks.pop() ?? ''

@@ -8,36 +8,43 @@
 
 ## @skeleton/ui — 부품
 
-| 부품            | 스토리                                                    | 언제 쓰는가                                                               |
-| --------------- | --------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `Button`        | `packages/ui/src/Button/Button.stories.tsx`               | 모든 클릭 동작. 일하는 중에는 `loading`, 폼 제출만 `type="submit"`        |
-| `Input`         | `packages/ui/src/Input/Input.stories.tsx`                 | 한 줄 입력. 라벨이 필요하니 `Field` 안에서                                |
-| `Field`         | `packages/ui/src/Field/Field.stories.tsx`                 | 라벨 · 도움말 · 오류를 입력칸에 이어 주는 래퍼 — 입력칸은 항상 이 안에    |
-| `Select`        | `packages/ui/src/Select/Select.stories.tsx`               | 정해진 선택지 하나 고르기(`Field` 안에서)                                 |
-| `Textarea`      | `packages/ui/src/Textarea/Textarea.stories.tsx`           | 여러 줄 입력(`Field` 안에서)                                              |
-| `Checkbox`      | `packages/ui/src/Checkbox/Checkbox.stories.tsx`           | 폼에 모아 제출하는 예 · 아니오, 약관 동의, 전체 선택(indeterminate)       |
-| `Switch`        | `packages/ui/src/Switch/Switch.stories.tsx`               | 누르면 바로 적용되는 켜짐 · 꺼짐 설정                                     |
-| `Tabs`          | `packages/ui/src/Tabs/Tabs.stories.tsx`                   | 같은 화면 안의 구역 전환(화살표 · Home · End 키보드 지원)                 |
-| `Table`         | `packages/ui/src/Table/Table.stories.tsx`                 | 행 · 열 데이터. 빈 목록은 `empty` 에 `EmptyState`                         |
-| `Pagination`    | `packages/ui/src/Pagination/Pagination.stories.tsx`       | 쪽 이동(0 기반 `page` · `totalPages`)                                     |
-| `EmptyState`    | `packages/ui/src/EmptyState/EmptyState.stories.tsx`       | 비어 있는 목록 · 검색 결과 · 없는 페이지, 다음에 할 일을 `action` 으로    |
-| `Card`          | `packages/ui/src/Card/Card.stories.tsx`                   | 묶음 하나를 담는 면(제목 + 액션)                                          |
-| `Dialog`        | `packages/ui/src/Dialog/Dialog.stories.tsx`               | 모달 — 삭제 확인 · 간단한 입력. 열림 상태는 부모가 쥔다                   |
-| `Spinner`       | `packages/ui/src/Spinner/Spinner.stories.tsx`             | 화면 · 구역을 기다리는 중 표시                                            |
-| `AppShell`      | `packages/ui/src/AppShell/AppShell.stories.tsx`           | 앱의 헤더 · 본문 · 푸터 틀 — 루트 레이아웃에서 한 번                      |
-| `PageHeader`    | `packages/ui/src/PageHeader/PageHeader.stories.tsx`       | 모든 화면의 첫 줄 — `h1` · 설명 · 오른쪽 액션 · 돌아가기 자리             |
-| `Badge`         | `packages/ui/src/Badge/Badge.stories.tsx`                 | 상태 알약(글자로 뜻을 전하고 색은 거든다)                                 |
-| `Progress`      | `packages/ui/src/Progress/Progress.stories.tsx`           | 진행률 막대(0~1) · 끝을 모르는 진행                                       |
-| `FilePicker`    | `packages/ui/src/FilePicker/FilePicker.stories.tsx`       | 파일 고르기(끌어다 놓기 + 버튼) — 날 `<input type="file">` 대신           |
-| `Stat`          | `packages/ui/src/Stat/Stat.stories.tsx`                   | 대시보드의 숫자 한 칸(라벨 · 큰 숫자 · 설명)                              |
-| `ErrorBoundary` | `packages/ui/src/ErrorBoundary/ErrorBoundary.stories.tsx` | 렌더링 오류를 잡아 대체 화면을 보인다(앱 루트 + 위험한 구역)              |
-| `showApiError`  | `packages/ui/src/showApiError/showApiError.stories.tsx`   | API 오류 토스트(제목 · 상세 · traceId) — 보통 QueryClient `onError` 한 곳 |
-| `toastPromise`  | `packages/ui/src/toast/toastPromise.stories.tsx`          | 약속 하나를 「로딩 → 성공/실패」 토스트 하나로                            |
+| 부품             | 스토리                                                      | 언제 쓰는가                                                                    |
+| ---------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `Button`         | `packages/ui/src/Button/Button.stories.tsx`                 | 모든 클릭 동작. 일하는 중에는 `loading`, 폼 제출만 `type="submit"`             |
+| `Input`          | `packages/ui/src/Input/Input.stories.tsx`                   | 한 줄 입력. 라벨이 필요하니 `Field` 안에서                                     |
+| `Field`          | `packages/ui/src/Field/Field.stories.tsx`                   | 라벨 · 도움말 · 오류를 입력칸에 이어 주는 래퍼 — 입력칸은 항상 이 안에         |
+| `Select`         | `packages/ui/src/Select/Select.stories.tsx`                 | 정해진 선택지 하나 고르기(`Field` 안에서)                                      |
+| `LanguageMenu`   | `packages/ui/src/LanguageMenu/LanguageMenu.stories.tsx`     | 헤더의 화면 언어 메뉴(글자는 prop — `@skeleton/i18n` 의 `useT()` 와 잇는다)    |
+| `Textarea`       | `packages/ui/src/Textarea/Textarea.stories.tsx`             | 여러 줄 입력(`Field` 안에서)                                                   |
+| `Checkbox`       | `packages/ui/src/Checkbox/Checkbox.stories.tsx`             | 폼에 모아 제출하는 예 · 아니오, 약관 동의, 전체 선택(indeterminate)            |
+| `Switch`         | `packages/ui/src/Switch/Switch.stories.tsx`                 | 누르면 바로 적용되는 켜짐 · 꺼짐 설정                                          |
+| `SwitchRow`      | `packages/ui/src/SwitchRow/SwitchRow.stories.tsx`           | 설정 화면의 「제목 · 설명 … 스위치」 한 줄(줄 전체가 라벨 · 저장 중 `busy`)    |
+| `Tabs`           | `packages/ui/src/Tabs/Tabs.stories.tsx`                     | 같은 화면 안의 구역 전환(화살표 · Home · End 키보드 지원)                      |
+| `SectionCard`    | `packages/ui/src/SectionCard/SectionCard.stories.tsx`       | 설정 · 긴 폼의 한 절(앵커 `id` · 접기 · 접힌 요약)                             |
+| `SectionIndex`   | `packages/ui/src/SectionIndex/SectionIndex.stories.tsx`     | 긴 화면 위쪽의 절 목차(누르면 스크롤 + 제목 포커스 · 현재 절 표시)             |
+| `RowMenu`        | `packages/ui/src/RowMenu/RowMenu.stories.tsx`               | 목록 줄 · 카드 머리의 ⋯ 메뉴(메뉴 버튼 키보드 · 포커스 돌려주기 · 바깥 클릭)   |
+| `Table`          | `packages/ui/src/Table/Table.stories.tsx`                   | 행 · 열 데이터. 빈 목록은 `empty` 에 `EmptyState`                              |
+| `Pagination`     | `packages/ui/src/Pagination/Pagination.stories.tsx`         | 쪽 이동(0 기반 `page` · `totalPages`)                                          |
+| `EmptyState`     | `packages/ui/src/EmptyState/EmptyState.stories.tsx`         | 비어 있는 목록 · 검색 결과 · 없는 페이지, 다음에 할 일을 `action` 으로         |
+| `Card`           | `packages/ui/src/Card/Card.stories.tsx`                     | 묶음 하나를 담는 면(제목 + 액션)                                               |
+| `Dialog`         | `packages/ui/src/Dialog/Dialog.stories.tsx`                 | 모달 — 삭제 확인 · 간단한 입력. 열림 상태는 부모가 쥔다                        |
+| `Spinner`        | `packages/ui/src/Spinner/Spinner.stories.tsx`               | 화면 · 구역을 기다리는 중 표시                                                 |
+| `AppShell`       | `packages/ui/src/AppShell/AppShell.stories.tsx`             | 앱의 헤더 · 본문 · 푸터 틀 — 루트 레이아웃에서 한 번                           |
+| `PageHeader`     | `packages/ui/src/PageHeader/PageHeader.stories.tsx`         | 모든 화면의 첫 줄 — `h1` · 설명 · 오른쪽 액션 · 돌아가기 자리                  |
+| `Badge`          | `packages/ui/src/Badge/Badge.stories.tsx`                   | 상태 알약(글자로 뜻을 전하고 색은 거든다)                                      |
+| `Progress`       | `packages/ui/src/Progress/Progress.stories.tsx`             | 진행률 막대(0~1) · 끝을 모르는 진행                                            |
+| `FilePicker`     | `packages/ui/src/FilePicker/FilePicker.stories.tsx`         | 파일 고르기(끌어다 놓기 + 버튼) — 날 `<input type="file">` 대신                |
+| `Stat`           | `packages/ui/src/Stat/Stat.stories.tsx`                     | 대시보드의 숫자 한 칸(라벨 · 큰 숫자 · 설명)                                   |
+| `ErrorBoundary`  | `packages/ui/src/ErrorBoundary/ErrorBoundary.stories.tsx`   | 렌더링 오류를 잡아 대체 화면을 보인다(앱 루트 + 위험한 구역)                   |
+| `ErrorReference` | `packages/ui/src/ErrorReference/ErrorReference.stories.tsx` | 오류 화면 · 배너 아래 「참조 번호(traceId) + 복사」 — 토스트가 사라져도 남는다 |
+| `showApiError`   | `packages/ui/src/showApiError/showApiError.stories.tsx`     | API 오류 토스트(제목 · 상세 · traceId) — 보통 QueryClient `onError` 한 곳      |
+| `toastPromise`   | `packages/ui/src/toast/toastPromise.stories.tsx`            | 약속 하나를 「로딩 → 성공/실패」 토스트 하나로                                 |
 
 ## 다른 패키지의 부품 · 흐름
 
 | 부품                           | 스토리                                                    | 언제 쓰는가                                                                                |
 | ------------------------------ | --------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `I18nProvider` · `useT`        | `packages/i18n/src/I18nProvider.stories.tsx`              | 앱 문구(ICU 메시지) — 복수형 · 요소가 낀 문장 · 언어 바꾸기 · 지연 사전                    |
 | `ThemeToggle`                  | `packages/theme/src/ThemeToggle.stories.tsx`              | system → light → dark 전환 버튼(헤더 `actions`)                                            |
 | `ThemedToaster`                | `packages/theme/src/ThemedToaster.stories.tsx`            | 앱 루트에 한 번 — 토스트가 고른 테마를 따른다                                              |
 | `NotificationBell`             | `packages/notifications/src/NotificationBell.stories.tsx` | 헤더의 종 + 안 읽은 수 + 받은편지함 대화상자                                               |
@@ -58,15 +65,15 @@
 
 `@skeleton/ui` 만으로 짠 한 파일짜리 화면. 가장 가까운 것을 복사해 문구 · 데이터 연결만 바꾼다(숨은 도우미 파일 없음).
 
-| 화면      | 스토리                                                  | 언제 복사하는가                                                     |
-| --------- | ------------------------------------------------------- | ------------------------------------------------------------------- |
-| 대시보드  | `apps/storybook/src/patterns/DashboardPage.stories.tsx` | 숫자 4칸 + 최근 항목 표 + 알림 카드 · 로딩 · 오류 · 첫 사용 빈 상태 |
-| 목록      | `apps/storybook/src/patterns/ListPage.stories.tsx`      | 표 + 쪽 이동 + 빈 상태 + 로딩 + 오류(다시 시도)                     |
-| 폼        | `apps/storybook/src/patterns/FormPage.stories.tsx`      | 입력 · 검증 오류(첫 오류로 포커스) · 제출 중 · 성공 · 실패          |
-| 상세      | `apps/storybook/src/patterns/DetailPage.stories.tsx`    | 제목 + 탭 + 위험 구역(삭제 확인) · 로딩 · 없음                      |
-| 로그인    | `apps/storybook/src/patterns/LoginPage.stories.tsx`     | 이메일 · 비밀번호 · 제출 중 · 잘못된 계정 정보                      |
-| 권한 없음 | `apps/storybook/src/patterns/ForbiddenPage.stories.tsx` | 403 — 이유를 말하고 갈 곳을 준다                                    |
-| 설정      | `apps/storybook/src/patterns/SettingsPage.stories.tsx`  | 즉시 적용 스위치 + 저장 폼 + 위험 구역                              |
+| 화면      | 스토리                                                  | 언제 복사하는가                                                                |
+| --------- | ------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| 대시보드  | `apps/storybook/src/patterns/DashboardPage.stories.tsx` | 숫자 4칸 + 최근 항목 표 + 알림 카드 · 로딩 · 오류 · 첫 사용 빈 상태            |
+| 목록      | `apps/storybook/src/patterns/ListPage.stories.tsx`      | 표 + 쪽 이동 + 빈 상태 + 로딩 + 오류(다시 시도)                                |
+| 폼        | `apps/storybook/src/patterns/FormPage.stories.tsx`      | 입력 · 검증 오류(첫 오류로 포커스) · 제출 중 · 성공 · 실패                     |
+| 상세      | `apps/storybook/src/patterns/DetailPage.stories.tsx`    | 제목 + 탭 + 위험 구역(삭제 확인) · 로딩 · 없음                                 |
+| 로그인    | `apps/storybook/src/patterns/LoginPage.stories.tsx`     | 이메일 · 비밀번호 · 제출 중 · 잘못된 계정 정보                                 |
+| 권한 없음 | `apps/storybook/src/patterns/ForbiddenPage.stories.tsx` | 403 — 이유를 말하고 갈 곳을 준다                                               |
+| 설정      | `apps/storybook/src/patterns/SettingsPage.stories.tsx`  | 목차 + 즉시 적용 스위치 + 저장 폼(실패 시 참조 번호) + ⋯ 메뉴 목록 + 위험 구역 |
 
 ## 디자인 토큰
 

@@ -3,8 +3,3 @@
   font-size: var(--font-size-caption);
   font-family: var(--mono);
 }
-
-.copy {
-  margin-top: var(--space-sm);
-  cursor: copy;
-}

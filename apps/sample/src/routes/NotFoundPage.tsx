@@ -1,14 +1,15 @@
 import { EmptyState } from '@skeleton/ui'
 import { Link } from 'react-router-dom'
-import { strings } from '../strings'
+import { useT } from '../i18n'
 
 export function NotFoundPage() {
+  const { t } = useT()
   return (
     <EmptyState
       headingLevel={2}
-      title={strings.notFound.title}
-      description={strings.notFound.body}
-      action={<Link to="/">{strings.notFound.home}</Link>}
+      title={t('notFound.title')}
+      description={t('notFound.body')}
+      action={<Link to="/">{t('notFound.home')}</Link>}
     />
   )
 }

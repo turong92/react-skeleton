@@ -17,10 +17,8 @@ import { createKeyRing } from '../notes/idempotencyKey'
 import { fieldErrorsOf, isValidationFailure, type FieldErrors } from '../notes/formErrors'
 import { useCreateNote, useNote, useUpdateNote } from '../notes/queries'
 import { NOTE_STATUSES, type Note, type NoteInput, type NoteStatus } from '../notes/types'
-import { strings } from '../strings'
+import { useT } from '../i18n'
 import styles from './NoteFormPage.module.css'
-
-const t = strings.form
 
 type Values = { title: string; body: string; status: NoteStatus; pinned: boolean }
 type Status = 'idle' | 'pending' | 'failure'
@@ -42,6 +40,7 @@ function NoteForm({
   onSubmit: (values: Values) => Promise<void>
   onCancel: () => void
 }) {
+  const { t } = useT()
   const [values, setValues] = useState<Values>(initial)
   const [errors, setErrors] = useState<FieldErrors>({})
   const [status, setStatus] = useState<Status>('idle')
@@ -56,7 +55,7 @@ function NoteForm({
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const form = event.currentTarget
-    const found: FieldErrors = values.title.trim() ? {} : { title: t.titleRequired }
+    const found: FieldErrors = values.title.trim() ? {} : { title: t('form.titleRequired') }
     setErrors(found)
     if (Object.keys(found).length > 0) return focusFirst(form, found)
     setStatus('pending')
@@ -75,19 +74,19 @@ function NoteForm({
   }
 
   return (
-    <form onSubmit={submit} noValidate className={styles.form} aria-label={t.formLabel}>
+    <form onSubmit={submit} noValidate className={styles.form} aria-label={t('form.formLabel')}>
       {status === 'failure' && (
         <p role="alert" className={styles.failure}>
-          {t.failure}
+          {t('form.failure')}
         </p>
       )}
       <Card>
         <div className={styles.fields}>
           <Field
-            label={t.title}
+            label={t('form.title')}
             required
-            requiredMark={t.required}
-            hint={t.titleHint}
+            requiredMark={t('form.required')}
+            hint={t('form.titleHint')}
             error={errors.title}
           >
             {(control) => (
@@ -100,7 +99,7 @@ function NoteForm({
               />
             )}
           </Field>
-          <Field label={t.body} hint={t.bodyHint} error={errors.body}>
+          <Field label={t('form.body')} hint={t('form.bodyHint')} error={errors.body}>
             {(control) => (
               <Textarea
                 {...control}
@@ -112,7 +111,7 @@ function NoteForm({
             )}
           </Field>
           <div className={styles.row}>
-            <Field label={t.status} error={errors.status}>
+            <Field label={t('form.status')} error={errors.status}>
               {(control) => (
                 <Select
                   {...control}
@@ -122,7 +121,7 @@ function NoteForm({
                 >
                   {NOTE_STATUSES.map((value) => (
                     <option key={value} value={value}>
-                      {strings.status[value]}
+                      {t(`status.${value}`)}
                     </option>
                   ))}
                 </Select>
@@ -130,8 +129,8 @@ function NoteForm({
             </Field>
             <Checkbox
               name="pinned"
-              label={t.pinned}
-              description={t.pinnedHelp}
+              label={t('form.pinned')}
+              description={t('form.pinnedHelp')}
               checked={values.pinned}
               onChange={(event) => set('pinned', event.target.checked)}
             />
@@ -139,11 +138,11 @@ function NoteForm({
         </div>
       </Card>
       <div className={styles.actions}>
-        <Button type="submit" loading={status === 'pending'} loadingLabel={t.saving}>
+        <Button type="submit" loading={status === 'pending'} loadingLabel={t('form.saving')}>
           {submitLabel}
         </Button>
         <Button variant="ghost" onClick={onCancel}>
-          {strings.common.cancel}
+          {t('common.cancel')}
         </Button>
       </div>
     </form>
@@ -157,15 +156,16 @@ const inputOf = (values: Values, note?: Note): NoteInput => ({
 })
 
 function CreateNote() {
+  const { t } = useT()
   const navigate = useNavigate()
   const create = useCreateNote()
   const keyFor = useRef(createKeyRing(newIdempotencyKey))
   return (
     <>
-      <PageHeader title={t.createTitle} description={t.createSubtitle} />
+      <PageHeader title={t('form.createTitle')} description={t('form.createSubtitle')} />
       <NoteForm
         initial={EMPTY}
-        submitLabel={t.submitCreate}
+        submitLabel={t('form.submitCreate')}
         onCancel={() => navigate('/notes')}
         onSubmit={async (values) => {
           const note = await create.mutateAsync({
@@ -180,14 +180,15 @@ function CreateNote() {
 }
 
 function EditNote({ note }: { note: Note }) {
+  const { t } = useT()
   const navigate = useNavigate()
   const update = useUpdateNote(note.id)
   return (
     <>
-      <PageHeader title={t.editTitle} description={t.editSubtitle} />
+      <PageHeader title={t('form.editTitle')} description={t('form.editSubtitle')} />
       <NoteForm
         initial={{ title: note.title, body: note.body, status: note.status, pinned: note.pinned }}
-        submitLabel={t.submitEdit}
+        submitLabel={t('form.submitEdit')}
         onCancel={() => navigate(`/notes/${note.id}`)}
         onSubmit={async (values) => {
           await update.mutateAsync(inputOf(values, note))
@@ -199,15 +200,16 @@ function EditNote({ note }: { note: Note }) {
 }
 
 function EditNoteLoader({ id }: { id: string }) {
+  const { t } = useT()
   const note = useNote(id)
-  if (note.isPending) return <Spinner label={strings.common.loading} />
+  if (note.isPending) return <Spinner label={t('common.loading')} />
   if (note.isError || !note.data)
     return (
       <EmptyState
         headingLevel={2}
-        title={strings.detail.notFoundTitle}
-        description={strings.detail.notFoundBody}
-        action={<Link to="/notes">{strings.detail.back}</Link>}
+        title={t('detail.notFoundTitle')}
+        description={t('detail.notFoundBody')}
+        action={<Link to="/notes">{t('detail.back')}</Link>}
       />
     )
   return <EditNote note={note.data} />

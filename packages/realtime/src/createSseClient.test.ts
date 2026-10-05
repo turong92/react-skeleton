@@ -128,7 +128,7 @@ describe('createSseClient', () => {
 
   it('a non-2xx response is an error, then it retries', async () => {
     const { client, responses, calls, statuses } = setup()
-    responses.push(() => new Response('nope', { status: 503 }))
+    responses.push(() => new Response('nope', { status: 500 }))
     void client.start()
     await vi.advanceTimersByTimeAsync(0)
     expect(statuses).toEqual(['connecting', 'error', 'reconnecting'])
@@ -220,5 +220,244 @@ describe('createSseClient', () => {
     expect(calls[0].signal.aborted).toBe(true)
     expect(calls[1].signal.aborted).toBe(false)
     expect(client.getStatus()).toBe('open')
+  })
+})
+
+/** 탭 가시성을 손으로 돌리는 가짜 */
+function fakeVisibility(initiallyHidden = false) {
+  let hidden = initiallyHidden
+  const listeners = new Set<() => void>()
+  return {
+    source: {
+      hidden: () => hidden,
+      subscribe: (onChange: () => void) => {
+        listeners.add(onChange)
+        return () => listeners.delete(onChange)
+      },
+    },
+    set(next: boolean) {
+      hidden = next
+      listeners.forEach((listener) => listener())
+    },
+    listenerCount: () => listeners.size,
+  }
+}
+
+describe('createSseClient hardening — tab visibility', () => {
+  it('pauses (aborts, no retry) when the tab becomes hidden and reconnects immediately when visible again', async () => {
+    const vis = fakeVisibility()
+    const { client, calls, statuses } = setup({ visibility: vis.source })
+    void client.start()
+    await vi.advanceTimersByTimeAsync(0)
+    vis.set(true)
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(calls[0].signal.aborted).toBe(true)
+    expect(calls).toHaveLength(1)
+    expect(client.getStatus()).toBe('paused')
+    vis.set(false)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(calls).toHaveLength(2)
+    expect(client.getStatus()).toBe('open')
+    expect(statuses).toEqual(['connecting', 'open', 'paused', 'connecting', 'open'])
+  })
+
+  it('does not connect at all when started in a hidden tab, and connects when it shows', async () => {
+    const vis = fakeVisibility(true)
+    const { client, calls } = setup({ visibility: vis.source })
+    void client.start()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(calls).toHaveLength(0)
+    expect(client.getStatus()).toBe('paused')
+    vis.set(false)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(calls).toHaveLength(1)
+  })
+
+  it('cancels a pending retry while hidden instead of firing it', async () => {
+    const vis = fakeVisibility()
+    const { client, streams, calls } = setup({ visibility: vis.source })
+    void client.start()
+    await vi.advanceTimersByTimeAsync(0)
+    streams[0].end()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(client.getStatus()).toBe('reconnecting')
+    vis.set(true)
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(calls).toHaveLength(1)
+  })
+
+  it('stop() unsubscribes from visibility so a later show does nothing', async () => {
+    const vis = fakeVisibility()
+    const { client, calls } = setup({ visibility: vis.source })
+    void client.start()
+    await vi.advanceTimersByTimeAsync(0)
+    client.stop()
+    expect(vis.listenerCount()).toBe(0)
+    vis.set(true)
+    vis.set(false)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(calls).toHaveLength(1)
+    expect(client.getStatus()).toBe('idle')
+  })
+})
+
+describe('createSseClient hardening — idle timeout', () => {
+  it('drops and reconnects when no bytes (heartbeats included) arrive within idleTimeoutMs', async () => {
+    const { client, calls, statuses } = setup({ idleTimeoutMs: 5_000 })
+    void client.start()
+    await vi.advanceTimersByTimeAsync(0)
+    await vi.advanceTimersByTimeAsync(4_999)
+    expect(calls).toHaveLength(1)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(calls[0].signal.aborted).toBe(true)
+    expect(client.getStatus()).toBe('reconnecting')
+    await vi.advanceTimersByTimeAsync(1_000)
+    expect(calls).toHaveLength(2)
+    expect(statuses).toEqual(['connecting', 'open', 'reconnecting', 'open'])
+  })
+
+  it('a heartbeat comment keeps the connection alive', async () => {
+    const { client, calls, streams } = setup({ idleTimeoutMs: 5_000 })
+    void client.start()
+    await vi.advanceTimersByTimeAsync(0)
+    for (let i = 0; i < 4; i++) {
+      await vi.advanceTimersByTimeAsync(4_000)
+      streams[0].push(': keepalive\n\n')
+      await vi.advanceTimersByTimeAsync(0)
+    }
+    expect(calls).toHaveLength(1)
+    expect(client.getStatus()).toBe('open')
+  })
+
+  it('is off by default — a quiet stream is never dropped', async () => {
+    const { client, calls } = setup()
+    void client.start()
+    await vi.advanceTimersByTimeAsync(0)
+    await vi.advanceTimersByTimeAsync(10 * 60_000)
+    expect(calls).toHaveLength(1)
+    expect(client.getStatus()).toBe('open')
+  })
+})
+
+describe('createSseClient hardening — response classes', () => {
+  it.each([401, 403, 404])(
+    '%i stops permanently with status off and never retries',
+    async (code) => {
+      const { client, responses, calls, statuses, errors } = setup()
+      responses.push(() => new Response('no', { status: code }))
+      void client.start()
+      await vi.advanceTimersByTimeAsync(10 * 60_000)
+      expect(calls).toHaveLength(1)
+      expect(client.getStatus()).toBe('off')
+      expect(statuses).toEqual(['connecting', 'off'])
+      expect(errors).toEqual([])
+    },
+  )
+
+  it('start() again after off tries once more', async () => {
+    const { client, responses, calls } = setup()
+    responses.push(() => new Response('no', { status: 401 }))
+    void client.start()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(client.getStatus()).toBe('off')
+    void client.start()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(calls).toHaveLength(2)
+    expect(client.getStatus()).toBe('open')
+  })
+
+  it.each([429, 503])(
+    '%i retries slowly (busyDelayMs, default 30s) not at the fast backoff',
+    async (code) => {
+      const { client, responses, calls } = setup()
+      responses.push(() => new Response('busy', { status: code }))
+      void client.start()
+      await vi.advanceTimersByTimeAsync(1_000)
+      expect(calls).toHaveLength(1)
+      await vi.advanceTimersByTimeAsync(28_999)
+      expect(calls).toHaveLength(1)
+      await vi.advanceTimersByTimeAsync(1)
+      expect(calls).toHaveLength(2)
+    },
+  )
+
+  it('honours Retry-After seconds when longer than the slow default', async () => {
+    const { client, responses, calls } = setup()
+    responses.push(() => new Response('busy', { status: 429, headers: { 'Retry-After': '90' } }))
+    void client.start()
+    await vi.advanceTimersByTimeAsync(89_999)
+    expect(calls).toHaveLength(1)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(calls).toHaveLength(2)
+  })
+
+  it('honours a Retry-After HTTP date', async () => {
+    vi.setSystemTime(new Date('2026-01-01T00:00:00Z'))
+    const { client, responses, calls } = setup()
+    responses.push(
+      () =>
+        new Response('busy', {
+          status: 503,
+          headers: { 'Retry-After': 'Thu, 01 Jan 2026 00:02:00 GMT' },
+        }),
+    )
+    void client.start()
+    await vi.advanceTimersByTimeAsync(119_999)
+    expect(calls).toHaveLength(1)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(calls).toHaveLength(2)
+  })
+
+  it('caps an absurd Retry-After at maxRetryAfterMs and ignores garbage', async () => {
+    const { client, responses, calls } = setup({ maxRetryAfterMs: 120_000 })
+    responses.push(() => new Response('busy', { status: 429, headers: { 'Retry-After': '86400' } }))
+    void client.start()
+    await vi.advanceTimersByTimeAsync(120_000)
+    expect(calls).toHaveLength(2)
+    const second = setup()
+    second.responses.push(
+      () => new Response('busy', { status: 429, headers: { 'Retry-After': 'soon' } }),
+    )
+    void second.client.start()
+    await vi.advanceTimersByTimeAsync(30_000)
+    expect(second.calls).toHaveLength(2)
+  })
+})
+
+describe('createSseClient hardening — onOpen', () => {
+  it('reports reconnect=false on the first open and true on later ones', async () => {
+    const opens: boolean[] = []
+    const { client, streams } = setup({ onOpen: ({ reconnect }) => opens.push(reconnect) })
+    void client.start()
+    await vi.advanceTimersByTimeAsync(0)
+    streams[0].end()
+    await vi.advanceTimersByTimeAsync(1_000)
+    expect(opens).toEqual([false, true])
+  })
+
+  it('a pause and resume counts as a reconnect (events may have been missed)', async () => {
+    const vis = fakeVisibility()
+    const opens: boolean[] = []
+    const { client } = setup({
+      visibility: vis.source,
+      onOpen: ({ reconnect }) => opens.push(reconnect),
+    })
+    void client.start()
+    await vi.advanceTimersByTimeAsync(0)
+    vis.set(true)
+    vis.set(false)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(opens).toEqual([false, true])
+  })
+
+  it('stop() then start() is a fresh session (reconnect=false)', async () => {
+    const opens: boolean[] = []
+    const { client } = setup({ onOpen: ({ reconnect }) => opens.push(reconnect) })
+    void client.start()
+    await vi.advanceTimersByTimeAsync(0)
+    client.stop()
+    void client.start()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(opens).toEqual([false, false])
   })
 })

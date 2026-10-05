@@ -1,0 +1,84 @@
+.section {
+  display: grid;
+  gap: var(--space-lg);
+  padding: var(--space-xl);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+  /* 목차가 눌러 가져온 절이 고정 머리에 가리지 않게 */
+  scroll-margin-top: var(--space-xl);
+}
+
+.head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.heading {
+  display: grid;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.title:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.toggle:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.chevron {
+  flex: none;
+  color: var(--text-muted);
+  transition: transform 120ms ease;
+}
+
+.section[data-expanded='true'] .chevron {
+  transform: rotate(180deg);
+}
+
+.description,
+.summary {
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+}
+
+.aside {
+  flex: none;
+}
+
+.panel {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.panel[hidden] {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chevron {
+    transition: none;
+  }
+}

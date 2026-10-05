@@ -3,7 +3,6 @@ import { copyFileSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { expect as pwExpect, type Page } from 'playwright/test'
 import { describe, inject, it } from 'vitest'
-import { strings } from '../src/strings'
 import {
   MODERATOR,
   USER,
@@ -19,7 +18,7 @@ import {
   signOut,
   writePost,
 } from './boardSteps'
-import { launch } from './helpers'
+import { ko, launch } from './helpers'
 
 /*
  * 게시판 증거 — 같은 서버 · 같은 계정으로 글 목록 → 글 + 반응(좋아요 · 공감) → 댓글 · 대댓글 · 접힘 → 운영자의 숨김 → 다크 · 모바일을 사람이 보는 속도로 밟아
@@ -29,7 +28,6 @@ import { launch } from './helpers'
 const baseUrl = inject('baseUrl')
 const apiUrl = inject('apiUrl')
 const out = resolve(process.env.SAMPLE_EVIDENCE_DIR ?? 'evidence')
-const t = strings.board
 
 const captions: Array<[string, string]> = []
 async function shot(page: Page, file: string, caption: string, fullPage = false) {
@@ -53,7 +51,7 @@ describe('walkthrough — board', () => {
     try {
       await signInAs(page, baseUrl, USER)
       await openBoard(page)
-      await page.getByRole('table', { name: t.list.caption }).waitFor()
+      await page.getByRole('table', { name: ko('board.list.caption') }).waitFor()
       await shot(
         page,
         'b01-board-list.png',
@@ -75,14 +73,18 @@ describe('walkthrough — board', () => {
       await replyTo(page, '국밥 어디가 맛있나요?', '역 앞 골목 안쪽이요')
       await reaction(commentOf(page, '저는 국밥이 좋아요'), 'LIKE', 0).click()
       await page.reload()
-      await page.getByRole('button', { name: t.comments.showReplies(1) }).waitFor()
+      await page
+        .getByRole('button', { name: ko('board.comments.showReplies', { count: 1 }) })
+        .waitFor()
       await shot(
         page,
         'b03-comments-collapsed.png',
         '댓글 · 대댓글 — 깊이 2 의 답글은 「답글 N개 더 보기」 뒤에 접힌다(collapseFromDepth). 댓글에도 같은 반응 줄. CommentThread',
         true,
       )
-      await page.getByRole('button', { name: t.comments.showReplies(1) }).click()
+      await page
+        .getByRole('button', { name: ko('board.comments.showReplies', { count: 1 }) })
+        .click()
       await shot(
         page,
         'b04-comments-expanded.png',
@@ -104,10 +106,10 @@ describe('walkthrough — board', () => {
       await openBoard(page)
       await openPost(page, '점심 뭐 먹지')
       await commentOf(page, '국밥 어디가 맛있나요?')
-        .getByRole('button', { name: new RegExp(`^${t.comments.hide}: `) })
+        .getByRole('button', { name: new RegExp(`^${ko('board.comments.hide')}: `) })
         .first()
         .click()
-      await page.getByText(t.comments.hidden).waitFor()
+      await page.getByText(ko('board.comments.hidden')).waitFor()
       await shot(
         page,
         'b06-moderator.png',

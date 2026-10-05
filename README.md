@@ -12,7 +12,8 @@ apps/
 packages/
 ├── api-client/          # REST 클라이언트 — envelope · ApiError · 에러 코드 · traceparent · 멱등 키 · 서버 시각 연결점
 ├── auth/                # 토큰 저장소 · login/me/socialLogin · 소셜 로그인 도우미 · dev-login/break-glass 헤더 · 401 훅 · AuthProvider · RequireAuth
-├── realtime/            # SSE(fetch streaming) · STOMP WebSocket 클라이언트 · 재연결 정책 · React 훅
+├── realtime/            # SSE(fetch streaming · 탭 숨김 일시정지 · 유휴 감시 · 401/403/404 중지 · 429/503 느린 재시도) · STOMP WebSocket 클라이언트 · 재연결 정책 · React 훅
+├── i18n/                # 화면 문구 — ICU 메시지 · createI18n(감지 · 저장 · 지연 사전) · I18nProvider/useT · 카탈로그 짝 맞춤 테스트 도구
 ├── notifications/       # 알림 받은편지함 클라이언트 · TanStack Query 훅 · 안 읽은 수(실시간 갱신) · NotificationBell/List
 ├── board/               # 게시판 — 글 · 대댓글 · 타입이 있는 반응(좋아요 · 공감 … 서버가 알려 주는 코드, 문구 · 아이콘은 맵 prop) · 낙관적 반응 · PostList/PostDetail/PostEditor/CommentThread/ReactionBar
 ├── storage/             # 프리사인 업로드 — 검증 · presign · 직접 PUT(진행률 · 취소) · 멀티파트 · useUpload
@@ -94,6 +95,7 @@ scripts/new-project.sh ~/work/ovation ovation --with-sample                     
 | `storage`           | api-client             | `storage`(업로드 HTTP `/api/v1/storage/*` 를 모듈이 연다) + `storage-s3`                             | `createUploader({ api: createStorageApi(apiClient) })` → `useUpload(uploader)`                                                                               |
 | `payment`           | api-client             | `payment` + `payment-toss` · `payment-stripe`. HTTP 는 앱                                            | `createPaymentApi(apiClient, { paths: { confirm } })` · `confirmRequestFromTossRedirect(location.search, { currency })`                                      |
 | `captcha-turnstile` | —                      | `captcha-turnstile`(`TurnstileVerifier`). HTTP 는 앱                                                 | `<Turnstile siteKey {...useTurnstileToken().widgetProps} />` · `attachTurnstileToken(body, token)`                                                           |
+| `i18n`              | —                      | — (화면 전용)                                                                                        | `createI18n({ catalogs, defaultLocale, storageKey })` + 시작할 때 `await i18n.init()` + `useT()` · `<LanguageMenu>`(ui) · 테스트 `catalogProblems`           |
 | `time`              | —                      | `time`                                                                                               | `formatInstant(iso)` · `formatDual(zoned)` · `createServerClock()`                                                                                           |
 | `theme`             | —                      | —                                                                                                    | `plugins: [themePrePaint()]` + 시작할 때 `initTheme()` + `<ThemeToggle />` + `<ThemedToaster />`                                                             |
 | `tokens`            | —                      | —                                                                                                    | `import '@skeleton/tokens/tokens.css'` (색 · 간격 · 모서리 · 글자 크기는 `tokens.json` 에서)                                                                 |

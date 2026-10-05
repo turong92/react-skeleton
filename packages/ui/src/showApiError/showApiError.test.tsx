@@ -46,7 +46,8 @@ describe('showApiError', () => {
     expect(title).toBe('Validation failed')
     const body = renderToStaticMarkup(options.description)
     expect(body).toContain('email format invalid')
-    expect(body).toContain('traceId: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
+    expect(body).toContain('traceId')
+    expect(body).toContain('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
     expect(body).toContain('spanId: bbbbbbbbbbbbbbbb')
   })
 
@@ -75,5 +76,29 @@ describe('showApiError', () => {
     expect(renderToStaticMarkup(toastError.mock.calls[1][1].description)).toContain(
       'title="클릭하여 복사"',
     )
+  })
+
+  it('returns the reference (traceId) so the caller can keep showing it after the toast is gone', () => {
+    const error = new ApiRequestError(
+      { ...apiError().apiError, traceId: 'trace-keep' },
+      'trace-keep',
+      's',
+      'tp',
+    )
+    expect(showApiError(error)).toBe('trace-keep')
+    expect(showApiError(new Error('oops'))).toBeUndefined()
+    expect(showApiError('text')).toBeUndefined()
+  })
+
+  it('the traceId in the toast is a keyboard-reachable copy button, not a click-only div', () => {
+    const withTrace = new ApiRequestError(
+      { ...apiError().apiError, traceId: 'abc' },
+      'abc',
+      's',
+      'tp',
+    )
+    showApiError(withTrace, { messages: { copy: '복사', traceIdCopied: '복사했어요' } })
+    const body = renderToStaticMarkup(toastError.mock.calls[0][1].description)
+    expect(body).toMatch(/<button[^>]*type="button"[^>]*>복사<\/button>/)
   })
 })

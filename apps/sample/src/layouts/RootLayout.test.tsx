@@ -2,10 +2,13 @@ import { AuthProvider, createAuthSession, createTokenStore, type AuthApi } from 
 import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { strings } from '../strings'
+import { i18n } from '../i18n'
 import { RootLayout } from './RootLayout'
 
-afterEach(() => vi.unstubAllGlobals())
+afterEach(async () => {
+  vi.unstubAllGlobals()
+  await i18n.setLocale('ko', { remember: false })
+})
 
 const unused = async () => {
   throw new Error('unused')
@@ -22,10 +25,38 @@ describe('RootLayout (signed out)', () => {
         </MemoryRouter>
       </AuthProvider>,
     )
-    expect(html).toContain(strings.appName)
+    expect(html).toContain(i18n.t('appName'))
     expect(html).toMatch(/<header[\s\S]*aria-label="Theme: system"[\s\S]*<\/header>/)
-    expect(html).not.toContain(strings.nav.notes)
-    expect(html).not.toContain(strings.header.signOut)
+    expect(html).not.toContain(i18n.t('nav.notes'))
+    expect(html).not.toContain(i18n.t('header.signOut'))
     expect(html).toContain('<main')
+  })
+
+  it('has the language menu next to the theme toggle — named in the current language, options in their own', () => {
+    vi.stubGlobal('document', { documentElement: { dataset: {} } })
+    const html = renderToStaticMarkup(
+      <AuthProvider session={createAuthSession({ api, store: createTokenStore() })}>
+        <MemoryRouter>
+          <RootLayout />
+        </MemoryRouter>
+      </AuthProvider>,
+    )
+    expect(html).toMatch(/<select[^>]*aria-label="언어"/)
+    expect(html).toContain('>한국어</option>')
+    expect(html).toContain('>English</option>')
+  })
+
+  it('draws the whole header in English when the language is English', async () => {
+    vi.stubGlobal('document', { documentElement: { dataset: {} } })
+    await i18n.setLocale('en', { remember: false })
+    const html = renderToStaticMarkup(
+      <AuthProvider session={createAuthSession({ api, store: createTokenStore() })}>
+        <MemoryRouter>
+          <RootLayout />
+        </MemoryRouter>
+      </AuthProvider>,
+    )
+    expect(html).toMatch(/<select[^>]*aria-label="Language"/)
+    expect(html).toMatch(/<option value="en" lang="en" selected="">English<\/option>/)
   })
 })

@@ -1,0 +1,59 @@
+.index {
+  max-width: 100%;
+}
+
+.list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-height: 30px;
+  padding: 0 var(--space-md);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--text-strong);
+  font-size: var(--font-size-small);
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.link:hover {
+  border-color: var(--teal);
+  color: var(--teal);
+}
+
+.link[aria-current='location'] {
+  border-color: var(--teal);
+  background: var(--teal-soft);
+  color: var(--teal);
+}
+
+.link:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}
+
+.count {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* 폰: 줄 바꿈 대신 가로 스크롤 한 줄 — 페이지가 옆으로 넘치지 않는다 */
+@media (max-width: 40rem) {
+  .index {
+    overflow-x: auto;
+  }
+
+  .list {
+    flex-wrap: nowrap;
+  }
+}

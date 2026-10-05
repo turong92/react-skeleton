@@ -9,12 +9,11 @@ import { NoteStatusBadge } from '../components/NoteStatusBadge'
 import { useDeleteNote, useExportNote, useNote } from '../notes/queries'
 import { NoteErrorCodes, type Note } from '../notes/types'
 import { isErrorCode } from '@skeleton/api-client'
-import { strings } from '../strings'
+import { useT } from '../i18n'
 import styles from './NoteDetailPage.module.css'
 
-const t = strings.detail
-
 function NoteDetail({ note }: { note: Note }) {
+  const { t } = useT()
   const navigate = useNavigate()
   const remove = useDeleteNote()
   const exportNote = useExportNote()
@@ -28,56 +27,54 @@ function NoteDetail({ note }: { note: Note }) {
 
   async function startExport() {
     await exportNote.mutateAsync(note.id)
-    toast.success(t.exportStarted)
+    toast.success(t('detail.exportStarted'))
   }
 
   return (
     <div className={styles.page}>
       <PageHeader
-        back={<Link to="/notes">← {t.back}</Link>}
+        back={<Link to="/notes">← {t('detail.back')}</Link>}
         title={note.title}
-        description={`${t.updated} ${formatInstant(note.updatedAt)}`}
+        description={`${t('detail.updated')} ${formatInstant(note.updatedAt)}`}
         actions={
           <>
             <Button
               variant="secondary"
               loading={exportNote.isPending}
-              loadingLabel={t.exporting}
+              loadingLabel={t('detail.exporting')}
               onClick={() => void startExport()}
             >
-              {t.export}
+              {t('detail.export')}
             </Button>
-            <Button onClick={() => navigate(`/notes/${note.id}/edit`)}>
-              {strings.common.edit}
-            </Button>
+            <Button onClick={() => navigate(`/notes/${note.id}/edit`)}>{t('common.edit')}</Button>
           </>
         }
       />
       <div className={styles.badges}>
         <NoteStatusBadge status={note.status} />
-        {note.pinned && <Badge tone="info">{strings.notes.pinned}</Badge>}
+        {note.pinned && <Badge tone="info">{t('notes.pinned')}</Badge>}
       </div>
 
       <Tabs
-        aria-label={t.sections}
+        aria-label={t('detail.sections')}
         items={[
           {
             id: 'content',
-            label: t.tabContent,
+            label: t('detail.tabContent'),
             content: (
               <Card>
                 {note.body ? (
                   <p className={styles.body}>{note.body}</p>
                 ) : (
-                  <p className={styles.empty}>{t.bodyEmpty}</p>
+                  <p className={styles.empty}>{t('detail.bodyEmpty')}</p>
                 )}
                 <dl className={styles.meta}>
                   <div>
-                    <dt>{t.created}</dt>
+                    <dt>{t('detail.created')}</dt>
                     <dd>{formatInstant(note.createdAt)}</dd>
                   </div>
                   <div>
-                    <dt>{t.updated}</dt>
+                    <dt>{t('detail.updated')}</dt>
                     <dd>{formatInstant(note.updatedAt)}</dd>
                   </div>
                 </dl>
@@ -86,41 +83,41 @@ function NoteDetail({ note }: { note: Note }) {
           },
           {
             id: 'attachment',
-            label: t.tabAttachment,
+            label: t('detail.tabAttachment'),
             content: <AttachmentPanel note={note} />,
           },
         ]}
       />
 
-      <Card title={t.deleteSection}>
+      <Card title={t('detail.deleteSection')}>
         <div className={styles.danger}>
-          <p>{t.deleteHint}</p>
+          <p>{t('detail.deleteHint')}</p>
           <Button variant="danger" onClick={() => setConfirming(true)}>
-            {t.deleteButton}
+            {t('detail.deleteButton')}
           </Button>
         </div>
       </Card>
       <Dialog
         open={confirming}
         onClose={() => setConfirming(false)}
-        title={t.deleteTitle(note.title)}
-        closeLabel={strings.common.close}
+        title={t('detail.deleteTitle', { title: note.title })}
+        closeLabel={t('common.close')}
         footer={
           <>
             <Button variant="ghost" onClick={() => setConfirming(false)}>
-              {strings.common.cancel}
+              {t('common.cancel')}
             </Button>
             <Button
               variant="danger"
               loading={remove.isPending}
               onClick={() => void confirmDelete()}
             >
-              {t.deleteConfirm}
+              {t('detail.deleteConfirm')}
             </Button>
           </>
         }
       >
-        <p>{t.deleteBody}</p>
+        <p>{t('detail.deleteBody')}</p>
       </Dialog>
     </div>
   )
@@ -128,20 +125,21 @@ function NoteDetail({ note }: { note: Note }) {
 
 /** Patterns/Detail page — 제목 + 액션 · 탭(내용 / 첨부) · 위험 구역(삭제는 확인) · 로딩 · 없음 */
 export function NoteDetailPage() {
+  const { t } = useT()
   const { id = '' } = useParams()
   const note = useNote(id)
-  if (note.isPending) return <Spinner label={strings.common.loading} />
+  if (note.isPending) return <Spinner label={t('common.loading')} />
   if (note.isError) {
     if (isErrorCode(note.error, NoteErrorCodes.NOT_FOUND))
       return (
         <EmptyState
           headingLevel={2}
-          title={t.notFoundTitle}
-          description={t.notFoundBody}
-          action={<Link to="/notes">{t.back}</Link>}
+          title={t('detail.notFoundTitle')}
+          description={t('detail.notFoundBody')}
+          action={<Link to="/notes">{t('detail.back')}</Link>}
         />
       )
-    return <LoadError onRetry={() => void note.refetch()} />
+    return <LoadError error={note.error} onRetry={() => void note.refetch()} />
   }
   return <NoteDetail note={note.data} />
 }

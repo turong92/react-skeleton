@@ -3,8 +3,7 @@ import { copyFileSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { expect as pwExpect, type Page } from 'playwright/test'
 import { describe, inject, it } from 'vitest'
-import { strings } from '../src/strings'
-import { launch, seedNotes } from './helpers'
+import { ko, launch, seedNotes } from './helpers'
 
 /*
  * 소유자에게 보이는 증거 — 같은 서버 · 같은 여정을 사람이 보는 속도로 밟으며 스크린샷(라이트 10 + 다크 2 + 모바일 · 알림 덤)과 녹화(.webm → .mp4 · .gif)를 남긴다.
@@ -31,16 +30,16 @@ describe('walkthrough', () => {
     try {
       // 1 로그인
       await page.goto(baseUrl)
-      await page.getByRole('button', { name: strings.login.demoFill }).click()
+      await page.getByRole('button', { name: ko('login.demoFill') }).click()
       await shot(
         page,
         '01-login.png',
         '로그인 — 체험 계정을 채운 모습. Patterns/Login page + @skeleton/auth(JWT)',
       )
-      await page.getByRole('button', { name: strings.login.submit, exact: true }).click()
+      await page.getByRole('button', { name: ko('login.submit'), exact: true }).click()
 
       // 2 첫 대시보드(빈 상태)
-      await page.getByRole('heading', { name: strings.dashboard.emptyTitle }).waitFor()
+      await page.getByRole('heading', { name: ko('dashboard.emptyTitle') }).waitFor()
       await shot(
         page,
         '02-dashboard-empty.png',
@@ -48,13 +47,16 @@ describe('walkthrough', () => {
       )
 
       // 3 만들기 — 서버 검증 오류가 칸 아래에
-      await page.getByRole('button', { name: strings.dashboard.create }).first().click()
-      await page.getByLabel(new RegExp(strings.form.title)).fill('주간 회의 정리')
       await page
-        .getByLabel(strings.form.body)
+        .getByRole('button', { name: ko('dashboard.create') })
+        .first()
+        .click()
+      await page.getByLabel(new RegExp(ko('form.title'))).fill('주간 회의 정리')
+      await page
+        .getByLabel(ko('form.body'))
         .fill('회의 안건을 정리해 둡니다. '.repeat(400).slice(0, 5001))
-      await page.getByRole('button', { name: strings.form.submitCreate }).click()
-      await page.getByText(strings.validation.Size).waitFor()
+      await page.getByRole('button', { name: ko('form.submitCreate') }).click()
+      await page.getByText(ko('validation.Size')).waitFor()
       await shot(
         page,
         '03-form-validation.png',
@@ -63,13 +65,13 @@ describe('walkthrough', () => {
 
       // 4 만들기 성공 → 상세 + 토스트 + 종 배지(실시간)
       await page
-        .getByLabel(strings.form.body)
+        .getByLabel(ko('form.body'))
         .fill(
           '안건: 1) 일정 점검  2) 담당자 확정  3) 다음 주 목표 세우기\n\n메모: 금요일까지 초안 공유.',
         )
-      await page.getByLabel(strings.form.status).selectOption('ACTIVE')
-      await page.getByRole('checkbox', { name: new RegExp(strings.form.pinned) }).check()
-      await page.getByRole('button', { name: strings.form.submitCreate }).click()
+      await page.getByLabel(ko('form.status')).selectOption('ACTIVE')
+      await page.getByRole('checkbox', { name: new RegExp(ko('form.pinned')) }).check()
+      await page.getByRole('button', { name: ko('form.submitCreate') }).click()
       await page.getByRole('heading', { level: 1, name: '주간 회의 정리' }).waitFor()
       await pwExpect(bell()).toHaveAccessibleName(/안 읽은 알림 [1-9]/)
       await shot(
@@ -88,12 +90,15 @@ describe('walkthrough', () => {
       )
       await page
         .getByRole('dialog')
-        .getByRole('button', { name: strings.header.markAllRead })
+        .getByRole('button', { name: ko('header.markAllRead') })
         .click()
-      await page.getByRole('dialog').getByRole('button', { name: strings.common.close }).click()
+      await page
+        .getByRole('dialog')
+        .getByRole('button', { name: ko('common.close') })
+        .click()
 
       // 6 첨부 업로드(진행률) — 업로드를 느리게 해 진행 중 모습을 담는다
-      await page.getByRole('tab', { name: strings.detail.tabAttachment }).click()
+      await page.getByRole('tab', { name: ko('detail.tabAttachment') }).click()
       const cdp = await context.newCDPSession(page)
       await cdp.send('Network.enable')
       await cdp.send('Network.emulateNetworkConditions', {
@@ -130,7 +135,7 @@ describe('walkthrough', () => {
       )
 
       // 8 내보내기 → 잡 완료 알림(덤)
-      await page.getByRole('button', { name: strings.detail.export }).click()
+      await page.getByRole('button', { name: ko('detail.export') }).click()
       await pwExpect(bell()).toHaveAccessibleName(/안 읽은 알림 [1-9]/, { timeout: 30_000 })
       await bell().click()
       await page
@@ -143,7 +148,10 @@ describe('walkthrough', () => {
         '14-export-notification.png',
         '[덤] 「내보내기」는 job-queue-jdbc 에 잡을 넣고 202 로 돌려준다 — 잡이 끝나면 같은 받은편지함에 알림이 온다',
       )
-      await page.getByRole('dialog').getByRole('button', { name: strings.common.close }).click()
+      await page
+        .getByRole('dialog')
+        .getByRole('button', { name: ko('common.close') })
+        .click()
 
       // 9 목록 — 여러 개를 시드해 쪽 이동 · 고정 · 상태가 보이게
       await seedNotes(apiUrl, [
@@ -160,8 +168,8 @@ describe('walkthrough', () => {
         { title: '회의록 템플릿', status: 'ACTIVE' },
         { title: '여행 사진 정리', status: 'ARCHIVED' },
       ])
-      await page.getByRole('link', { name: strings.nav.notes, exact: true }).click()
-      await page.getByRole('table', { name: strings.notes.caption }).waitFor()
+      await page.getByRole('link', { name: ko('nav.notes'), exact: true }).click()
+      await page.getByRole('table', { name: ko('notes.caption') }).waitFor()
       // 시드한 노트마다 실시간 토스트가 뜨므로 모두 사라질 때까지 기다린다(실제 사용에서는 한 번에 하나)
       await page.waitForFunction(
         () => document.querySelectorAll('[data-sonner-toast]').length === 0,
@@ -175,22 +183,22 @@ describe('walkthrough', () => {
       )
 
       // 10 검색 + 필터
-      await page.getByRole('searchbox', { name: strings.notes.search }).fill('회의')
+      await page.getByRole('searchbox', { name: ko('notes.search') }).fill('회의')
       await pwExpect(
-        page.getByRole('table', { name: strings.notes.caption }).getByRole('row'),
+        page.getByRole('table', { name: ko('notes.caption') }).getByRole('row'),
       ).toHaveCount(3)
       await shot(
         page,
         '09-list-search.png',
         '검색어는 주소(?q=회의)에 남아 새로고침 · 링크 공유가 된다 — 결과 없음에는 「필터 지우기」. List page 의 빈 상태 변형',
       )
-      await page.getByRole('searchbox', { name: strings.notes.search }).fill('')
+      await page.getByRole('searchbox', { name: ko('notes.search') }).fill('')
       await pwExpect(
-        page.getByRole('table', { name: strings.notes.caption }).getByRole('row'),
+        page.getByRole('table', { name: ko('notes.caption') }).getByRole('row'),
       ).toHaveCount(11)
 
       // 11 대시보드(채워진) — 다크 두 장
-      await page.getByRole('link', { name: strings.nav.dashboard }).click()
+      await page.getByRole('link', { name: ko('nav.dashboard') }).click()
       await page.getByRole('heading', { name: /안녕하세요/ }).waitFor()
       await page.emulateMedia({ colorScheme: 'dark' })
       await shot(
@@ -208,8 +216,8 @@ describe('walkthrough', () => {
       await page.emulateMedia({ colorScheme: 'light' })
 
       // 12 설정
-      await page.getByRole('link', { name: strings.nav.settings }).click()
-      await page.getByRole('heading', { level: 1, name: strings.settings.title }).waitFor()
+      await page.getByRole('link', { name: ko('nav.settings') }).click()
+      await page.getByRole('heading', { level: 1, name: ko('settings.title') }).waitFor()
       await shot(
         page,
         '10-settings.png',
@@ -218,8 +226,8 @@ describe('walkthrough', () => {
 
       // 13 모바일(덤)
       await page.setViewportSize({ width: 390, height: 844 })
-      await page.getByRole('link', { name: strings.nav.notes, exact: true }).click()
-      await page.getByRole('table', { name: strings.notes.caption }).waitFor()
+      await page.getByRole('link', { name: ko('nav.notes'), exact: true }).click()
+      await page.getByRole('table', { name: ko('notes.caption') }).waitFor()
       await shot(
         page,
         '13-list-mobile.png',
@@ -228,8 +236,11 @@ describe('walkthrough', () => {
       await page.setViewportSize({ width: 1280, height: 800 })
 
       // 로그아웃
-      await page.getByRole('button', { name: strings.header.signOut }).first().click()
-      await page.getByRole('heading', { level: 1, name: strings.login.title }).waitFor()
+      await page
+        .getByRole('button', { name: ko('header.signOut') })
+        .first()
+        .click()
+      await page.getByRole('heading', { level: 1, name: ko('login.title') }).waitFor()
       await pause(900)
     } finally {
       const video = page.video()

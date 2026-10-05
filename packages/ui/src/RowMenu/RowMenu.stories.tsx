@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, waitFor } from 'storybook/test'
+import { Avatar } from '../Avatar/Avatar'
 import { RowMenu } from './RowMenu'
 
 /**
@@ -233,5 +234,41 @@ export const Dark: Story = {
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(trigger(canvas))
     await expect(canvas.getByRole('menu')).toBeVisible()
+  },
+}
+
+/** 줄 밖의 일반 드롭다운으로도 쓴다 — 헤더 계정 메뉴: 글자 + 아바타 트리거, 시작 정렬(`align`), 하나 고르기 묶음 + 구분선 + 위험 항목 */
+export const AccountMenuAlignedToTheStart: Story = {
+  args: {
+    label: 'Account menu',
+    align: 'start',
+    trigger: (
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
+        <Avatar name="Ada Lovelace" size="sm" alt="" />
+        Ada
+      </span>
+    ),
+    items: [
+      { key: 'profile', label: 'Profile', onSelect: fn() },
+      { key: 'ko', label: '한국어', onSelect: fn(), checked: true, separatorBefore: true },
+      { key: 'en', label: 'English', onSelect: fn(), checked: false },
+      { key: 'out', label: 'Sign out', onSelect: fn(), danger: true, separatorBefore: true },
+    ],
+  },
+  render: (args) => (
+    <div style={{ paddingInlineStart: 'var(--space-3xl)' }}>
+      <RowMenu {...args} />
+    </div>
+  ),
+  play: async ({ canvas, userEvent }) => {
+    const button = canvas.getByRole('button', { name: 'Account menu' })
+    await expect(button).toHaveTextContent('Ada')
+    await userEvent.click(button)
+    const menu = canvas.getByRole('menu', { name: 'Account menu' })
+    await expect(menu).toHaveAttribute('data-align', 'start')
+    await expect(
+      Math.abs(menu.getBoundingClientRect().left - button.getBoundingClientRect().left),
+    ).toBeLessThan(2)
+    await expect(canvas.getByRole('menuitemradio', { name: '한국어' })).toBeChecked()
   },
 }

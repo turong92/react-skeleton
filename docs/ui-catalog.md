@@ -8,44 +8,46 @@
 
 ## @skeleton/ui — 부품
 
-| 부품             | 스토리                                                      | 언제 쓰는가                                                                          |
-| ---------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `Button`         | `packages/ui/src/Button/Button.stories.tsx`                 | 모든 클릭 동작. 일하는 중에는 `loading`, 폼 제출만 `type="submit"`                   |
-| `Input`          | `packages/ui/src/Input/Input.stories.tsx`                   | 한 줄 입력. 라벨이 필요하니 `Field` 안에서                                           |
-| `Field`          | `packages/ui/src/Field/Field.stories.tsx`                   | 라벨 · 도움말 · 오류를 입력칸에 이어 주는 래퍼 — 입력칸은 항상 이 안에               |
-| `Select`         | `packages/ui/src/Select/Select.stories.tsx`                 | 정해진 선택지 하나 고르기(`Field` 안에서)                                            |
-| `LanguageMenu`   | `packages/ui/src/LanguageMenu/LanguageMenu.stories.tsx`     | 헤더의 화면 언어 메뉴(글자는 prop — `@skeleton/i18n` 의 `useT()` 와 잇는다)          |
-| `Textarea`       | `packages/ui/src/Textarea/Textarea.stories.tsx`             | 여러 줄 입력(`Field` 안에서)                                                         |
-| `Checkbox`       | `packages/ui/src/Checkbox/Checkbox.stories.tsx`             | 폼에 모아 제출하는 예 · 아니오, 약관 동의, 전체 선택(indeterminate)                  |
-| `Switch`         | `packages/ui/src/Switch/Switch.stories.tsx`                 | 누르면 바로 적용되는 켜짐 · 꺼짐 설정                                                |
-| `SwitchRow`      | `packages/ui/src/SwitchRow/SwitchRow.stories.tsx`           | 설정 화면의 「제목 · 설명 … 스위치」 한 줄(줄 전체가 라벨 · 저장 중 `busy`)          |
-| `Tabs`           | `packages/ui/src/Tabs/Tabs.stories.tsx`                     | 같은 화면 안의 구역 전환(화살표 · Home · End 키보드 지원)                            |
-| `SectionCard`    | `packages/ui/src/SectionCard/SectionCard.stories.tsx`       | 설정 · 긴 폼의 한 절(앵커 `id` · 접기 · 접힌 요약)                                   |
-| `SectionIndex`   | `packages/ui/src/SectionIndex/SectionIndex.stories.tsx`     | 긴 화면 위쪽의 절 목차(누르면 스크롤 + 제목 포커스 · 현재 절 표시)                   |
-| `RowMenu`        | `packages/ui/src/RowMenu/RowMenu.stories.tsx`               | 목록 줄 · 카드 머리의 ⋯ 메뉴(메뉴 버튼 키보드 · 포커스 돌려주기 · 바깥 클릭)         |
-| `Skeleton`       | `packages/ui/src/Skeleton/Skeleton.stories.tsx`             | 불러오는 동안 내용 자리의 모양을 잡는 자리표시(`Spinner` 대신 — 자리가 튀지 않는다)  |
-| `Avatar`         | `packages/ui/src/Avatar/Avatar.stories.tsx`                 | 사람 사진 · 머리글자 동그라미(같은 이름은 늘 같은 색 · 사진 실패 시 머리글자)        |
-| `Breadcrumbs`    | `packages/ui/src/Breadcrumbs/Breadcrumbs.stories.tsx`       | 상세 화면 위의 경로 표시(`nav` + 순서 목록 · 마지막은 현재 페이지)                   |
-| `Alert`          | `packages/ui/src/Alert/Alert.stories.tsx`                   | 문서 안에 박히는 안내 · 경고 띠(사라지지 않는다 · 위험 · 경고는 즉시 낭독)           |
-| `CopyButton`     | `packages/ui/src/CopyButton/CopyButton.stories.tsx`         | 링크 · 토큰 · 참조 번호를 클립보드로(결과는 낭독되고 잠시 뒤 되돌아온다)             |
-| `Stepper`        | `packages/ui/src/Stepper/Stepper.stories.tsx`               | 여러 단계 폼의 머리(순서 목록 · `aria-current="step"` · 끝낸 단계로 돌아가기)        |
-| `Tooltip`        | `packages/ui/src/Tooltip/Tooltip.stories.tsx`               | 짧은 이름의 아이콘 버튼에 보조 설명(포커스 · 호버 · Esc — 유일한 안내로 쓰지 않는다) |
-| `Table`          | `packages/ui/src/Table/Table.stories.tsx`                   | 행 · 열 데이터. 빈 목록은 `empty` 에 `EmptyState`                                    |
-| `Pagination`     | `packages/ui/src/Pagination/Pagination.stories.tsx`         | 쪽 이동(0 기반 `page` · `totalPages`)                                                |
-| `EmptyState`     | `packages/ui/src/EmptyState/EmptyState.stories.tsx`         | 비어 있는 목록 · 검색 결과 · 없는 페이지, 다음에 할 일을 `action` 으로               |
-| `Card`           | `packages/ui/src/Card/Card.stories.tsx`                     | 묶음 하나를 담는 면(제목 + 액션)                                                     |
-| `Dialog`         | `packages/ui/src/Dialog/Dialog.stories.tsx`                 | 모달 — 삭제 확인 · 간단한 입력. 열림 상태는 부모가 쥔다                              |
-| `Spinner`        | `packages/ui/src/Spinner/Spinner.stories.tsx`               | 화면 · 구역을 기다리는 중 표시                                                       |
-| `AppShell`       | `packages/ui/src/AppShell/AppShell.stories.tsx`             | 앱의 헤더 · 본문 · 푸터 틀 — 루트 레이아웃에서 한 번                                 |
-| `PageHeader`     | `packages/ui/src/PageHeader/PageHeader.stories.tsx`         | 모든 화면의 첫 줄 — `h1` · 설명 · 오른쪽 액션 · 돌아가기 자리                        |
-| `Badge`          | `packages/ui/src/Badge/Badge.stories.tsx`                   | 상태 알약(글자로 뜻을 전하고 색은 거든다)                                            |
-| `Progress`       | `packages/ui/src/Progress/Progress.stories.tsx`             | 진행률 막대(0~1) · 끝을 모르는 진행                                                  |
-| `FilePicker`     | `packages/ui/src/FilePicker/FilePicker.stories.tsx`         | 파일 고르기(끌어다 놓기 + 버튼) — 날 `<input type="file">` 대신                      |
-| `Stat`           | `packages/ui/src/Stat/Stat.stories.tsx`                     | 대시보드의 숫자 한 칸(라벨 · 큰 숫자 · 설명)                                         |
-| `ErrorBoundary`  | `packages/ui/src/ErrorBoundary/ErrorBoundary.stories.tsx`   | 렌더링 오류를 잡아 대체 화면을 보인다(앱 루트 + 위험한 구역)                         |
-| `ErrorReference` | `packages/ui/src/ErrorReference/ErrorReference.stories.tsx` | 오류 화면 · 배너 아래 「참조 번호(traceId) + 복사」 — 토스트가 사라져도 남는다       |
-| `showApiError`   | `packages/ui/src/showApiError/showApiError.stories.tsx`     | API 오류 토스트(제목 · 상세 · traceId) — 보통 QueryClient `onError` 한 곳            |
-| `toastPromise`   | `packages/ui/src/toast/toastPromise.stories.tsx`            | 약속 하나를 「로딩 → 성공/실패」 토스트 하나로                                       |
+| 부품             | 스토리                                                      | 언제 쓰는가                                                                                                                                  |
+| ---------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Button`         | `packages/ui/src/Button/Button.stories.tsx`                 | 모든 클릭 동작. 일하는 중에는 `loading`, 폼 제출만 `type="submit"`                                                                           |
+| `Input`          | `packages/ui/src/Input/Input.stories.tsx`                   | 한 줄 입력. 라벨이 필요하니 `Field` 안에서                                                                                                   |
+| `Field`          | `packages/ui/src/Field/Field.stories.tsx`                   | 라벨 · 도움말 · 오류를 입력칸에 이어 주는 래퍼 — 입력칸은 항상 이 안에                                                                       |
+| `Select`         | `packages/ui/src/Select/Select.stories.tsx`                 | 정해진 선택지 하나 고르기(`Field` 안에서)                                                                                                    |
+| `LanguageMenu`   | `packages/ui/src/LanguageMenu/LanguageMenu.stories.tsx`     | 헤더의 화면 언어 메뉴(글자는 prop — `@skeleton/i18n` 의 `useT()` 와 잇는다)                                                                  |
+| `Textarea`       | `packages/ui/src/Textarea/Textarea.stories.tsx`             | 여러 줄 입력(`Field` 안에서)                                                                                                                 |
+| `Checkbox`       | `packages/ui/src/Checkbox/Checkbox.stories.tsx`             | 폼에 모아 제출하는 예 · 아니오, 약관 동의, 전체 선택(indeterminate)                                                                          |
+| `Switch`         | `packages/ui/src/Switch/Switch.stories.tsx`                 | 누르면 바로 적용되는 켜짐 · 꺼짐 설정                                                                                                        |
+| `SwitchRow`      | `packages/ui/src/SwitchRow/SwitchRow.stories.tsx`           | 설정 화면의 「제목 · 설명 … 스위치」 한 줄(줄 전체가 라벨 · 저장 중 `busy`)                                                                  |
+| `Tabs`           | `packages/ui/src/Tabs/Tabs.stories.tsx`                     | 같은 화면 안의 구역 전환(화살표 · Home · End 키보드 지원)                                                                                    |
+| `SectionCard`    | `packages/ui/src/SectionCard/SectionCard.stories.tsx`       | 설정 · 긴 폼의 한 절(앵커 `id` · 접기 · 접힌 요약)                                                                                           |
+| `SectionIndex`   | `packages/ui/src/SectionIndex/SectionIndex.stories.tsx`     | 긴 화면 위쪽의 절 목차(누르면 스크롤 + 제목 포커스 · 현재 절 표시)                                                                           |
+| `RowMenu`        | `packages/ui/src/RowMenu/RowMenu.stories.tsx`               | 목록 줄 · 카드 머리의 ⋯ 메뉴, 그리고 헤더 계정 메뉴 같은 일반 드롭다운(`trigger` · `align` · 메뉴 버튼 키보드 · 포커스 돌려주기 · 바깥 클릭) |
+| `Skeleton`       | `packages/ui/src/Skeleton/Skeleton.stories.tsx`             | 불러오는 동안 내용 자리의 모양을 잡는 자리표시(`Spinner` 대신 — 자리가 튀지 않는다)                                                          |
+| `Avatar`         | `packages/ui/src/Avatar/Avatar.stories.tsx`                 | 사람 사진 · 머리글자 동그라미(같은 이름은 늘 같은 색 · 사진 실패 시 머리글자)                                                                |
+| `Breadcrumbs`    | `packages/ui/src/Breadcrumbs/Breadcrumbs.stories.tsx`       | 상세 화면 위의 경로 표시(`nav` + 순서 목록 · 마지막은 현재 페이지)                                                                           |
+| `Alert`          | `packages/ui/src/Alert/Alert.stories.tsx`                   | 문서 안에 박히는 안내 · 경고 띠(사라지지 않는다 · 위험 · 경고는 즉시 낭독)                                                                   |
+| `CopyButton`     | `packages/ui/src/CopyButton/CopyButton.stories.tsx`         | 링크 · 토큰 · 참조 번호를 클립보드로(결과는 낭독되고 잠시 뒤 되돌아온다)                                                                     |
+| `Stepper`        | `packages/ui/src/Stepper/Stepper.stories.tsx`               | 여러 단계 폼의 머리(순서 목록 · `aria-current="step"` · 끝낸 단계로 돌아가기)                                                                |
+| `Tooltip`        | `packages/ui/src/Tooltip/Tooltip.stories.tsx`               | 짧은 이름의 아이콘 버튼에 보조 설명(포커스 · 호버 · Esc — 유일한 안내로 쓰지 않는다)                                                         |
+| `ConfirmDialog`  | `packages/ui/src/ConfirmDialog/ConfirmDialog.stories.tsx`   | 되돌릴 수 없는 동작 앞의 확인 창(처음 포커스는 취소 · 문구를 쳐야 켜지는 확인 선택)                                                          |
+| `InfiniteList`   | `packages/ui/src/InfiniteList/InfiniteList.stories.tsx`     | 이어 보기 목록(끝에 닿으면 자동 + 언제나 키보드 「더 보기」 버튼 · 실패 시 다시 시도)                                                        |
+| `Table`          | `packages/ui/src/Table/Table.stories.tsx`                   | 행 · 열 데이터. 빈 목록은 `empty` 에 `EmptyState`                                                                                            |
+| `Pagination`     | `packages/ui/src/Pagination/Pagination.stories.tsx`         | 쪽 이동(0 기반 `page` · `totalPages`)                                                                                                        |
+| `EmptyState`     | `packages/ui/src/EmptyState/EmptyState.stories.tsx`         | 비어 있는 목록 · 검색 결과 · 없는 페이지, 다음에 할 일을 `action` 으로                                                                       |
+| `Card`           | `packages/ui/src/Card/Card.stories.tsx`                     | 묶음 하나를 담는 면(제목 + 액션)                                                                                                             |
+| `Dialog`         | `packages/ui/src/Dialog/Dialog.stories.tsx`                 | 모달 — 삭제 확인 · 간단한 입력. 열림 상태는 부모가 쥔다                                                                                      |
+| `Spinner`        | `packages/ui/src/Spinner/Spinner.stories.tsx`               | 화면 · 구역을 기다리는 중 표시                                                                                                               |
+| `AppShell`       | `packages/ui/src/AppShell/AppShell.stories.tsx`             | 앱의 헤더 · 본문 · 푸터 틀 — 루트 레이아웃에서 한 번                                                                                         |
+| `PageHeader`     | `packages/ui/src/PageHeader/PageHeader.stories.tsx`         | 모든 화면의 첫 줄 — `h1` · 설명 · 오른쪽 액션 · 돌아가기 자리                                                                                |
+| `Badge`          | `packages/ui/src/Badge/Badge.stories.tsx`                   | 상태 알약(글자로 뜻을 전하고 색은 거든다)                                                                                                    |
+| `Progress`       | `packages/ui/src/Progress/Progress.stories.tsx`             | 진행률 막대(0~1) · 끝을 모르는 진행                                                                                                          |
+| `FilePicker`     | `packages/ui/src/FilePicker/FilePicker.stories.tsx`         | 파일 고르기(끌어다 놓기 + 버튼) — 날 `<input type="file">` 대신                                                                              |
+| `Stat`           | `packages/ui/src/Stat/Stat.stories.tsx`                     | 대시보드의 숫자 한 칸(라벨 · 큰 숫자 · 설명)                                                                                                 |
+| `ErrorBoundary`  | `packages/ui/src/ErrorBoundary/ErrorBoundary.stories.tsx`   | 렌더링 오류를 잡아 대체 화면을 보인다(앱 루트 + 위험한 구역)                                                                                 |
+| `ErrorReference` | `packages/ui/src/ErrorReference/ErrorReference.stories.tsx` | 오류 화면 · 배너 아래 「참조 번호(traceId) + 복사」 — 토스트가 사라져도 남는다                                                               |
+| `showApiError`   | `packages/ui/src/showApiError/showApiError.stories.tsx`     | API 오류 토스트(제목 · 상세 · traceId) — 보통 QueryClient `onError` 한 곳                                                                    |
+| `toastPromise`   | `packages/ui/src/toast/toastPromise.stories.tsx`            | 약속 하나를 「로딩 → 성공/실패」 토스트 하나로                                                                                               |
 
 ## 다른 패키지의 부품 · 흐름
 

@@ -1,0 +1,14 @@
+.body {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.description {
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.form {
+  display: grid;
+  gap: var(--space-sm);
+}

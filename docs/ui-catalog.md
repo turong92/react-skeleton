@@ -54,24 +54,25 @@
 
 ## 다른 패키지의 부품 · 흐름
 
-| 부품                           | 스토리                                                    | 언제 쓰는가                                                                                |
-| ------------------------------ | --------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `I18nProvider` · `useT`        | `packages/i18n/src/I18nProvider.stories.tsx`              | 앱 문구(ICU 메시지) — 복수형 · 요소가 낀 문장 · 언어 바꾸기 · 지연 사전                    |
-| `ThemeToggle`                  | `packages/theme/src/ThemeToggle.stories.tsx`              | system → light → dark 전환 버튼(헤더 `actions`)                                            |
-| `ThemedToaster`                | `packages/theme/src/ThemedToaster.stories.tsx`            | 앱 루트에 한 번 — 토스트가 고른 테마를 따른다                                              |
-| `NotificationBell`             | `packages/notifications/src/NotificationBell.stories.tsx` | 헤더의 종 + 안 읽은 수 + 받은편지함 대화상자                                               |
-| `NotificationList`             | `packages/notifications/src/NotificationList.stories.tsx` | 받은편지함 목록만 따로(데이터는 호출하는 쪽이 준다)                                        |
-| `ReactionBar`                  | `packages/board/src/ReactionBar.stories.tsx`              | 반응 줄 — 서버가 알려 준 종류를 그대로 그린다(공감 같은 새 종류는 `labels` · `icons` 맵만) |
-| `PostList`                     | `packages/board/src/PostList.stories.tsx`                 | 게시판 글 목록 — 정렬 · 검색 · 쪽 · 고정 글 · 빈 상태 · 로딩 · 오류                        |
-| `PostDetail`                   | `packages/board/src/PostDetail.stories.tsx`               | 글 한 건 — 제목 · 본문 · 반응 자리 · 주인의 수정/삭제 · 운영자의 숨김/고정                 |
-| `PostEditor`                   | `packages/board/src/PostEditor.stories.tsx`               | 글쓰기 · 고치기 폼 — 길이 한도 검증 · 제출 중 · 실패 · 서버의 칸별 오류                    |
-| `CommentThread`                | `packages/board/src/CommentThread.stories.tsx`            | 댓글 한 줄기(대댓글 중첩) — 깊은 답글 접기 · 지운/숨긴 자리 표시 · 수정 · 삭제 · 숨김      |
-| `BoardComments`                | `packages/board/src/BoardComments.stories.tsx`            | 서버와 이어진 댓글 영역 — 새 댓글 · 답글 · 삭제 확인 · 운영자 숨김 · 낙관적 반응           |
-| `PostList` + `PostDetail` 조립 | `packages/board/src/BoardPage.stories.tsx`                | 게시판 한 벌(목록 → 글 → 글쓰기)을 훅으로 조립한 모양 — apps/sample 「게시판」의 원형      |
-| `Turnstile`                    | `packages/captcha-turnstile/src/Turnstile.stories.tsx`    | 로그인 · 가입 폼의 캡차 — 토큰이 올 때까지 제출을 막는다                                   |
-| `RequireAuth`                  | `packages/auth/src/RequireAuth.stories.tsx`               | 로그인한 사람만 보는 라우트 가드(레이아웃 라우트)                                          |
-| `useUpload`                    | `packages/storage/src/useUpload.stories.tsx`              | 파일 업로드 — 진행률 · 취소 · 검증 오류                                                    |
-| `formatInstant` · `formatDual` | `packages/time/src/formats.stories.tsx`                   | 시각 3종(순간 · 달력 날짜 · 현지 + 내 시간대) 표시                                         |
+| 부품                           | 스토리                                                    | 언제 쓰는가                                                                                              |
+| ------------------------------ | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `I18nProvider` · `useT`        | `packages/i18n/src/I18nProvider.stories.tsx`              | 앱 문구(ICU 메시지) — 복수형 · 요소가 낀 문장 · 언어 바꾸기 · 지연 사전                                  |
+| `ThemeToggle`                  | `packages/theme/src/ThemeToggle.stories.tsx`              | system → light → dark 전환 버튼(헤더 `actions`)                                                          |
+| `ThemedToaster`                | `packages/theme/src/ThemedToaster.stories.tsx`            | 앱 루트에 한 번 — 토스트가 고른 테마를 따른다                                                            |
+| `NotificationBell`             | `packages/notifications/src/NotificationBell.stories.tsx` | 헤더의 종 + 안 읽은 수 + 받은편지함 대화상자                                                             |
+| `NotificationList`             | `packages/notifications/src/NotificationList.stories.tsx` | 받은편지함 목록만 따로(데이터는 호출하는 쪽이 준다)                                                      |
+| `ReactionBar`                  | `packages/board/src/ReactionBar.stories.tsx`              | 반응 줄 — 서버가 알려 준 종류를 그대로 그린다(공감 같은 새 종류는 `labels` · `icons` 맵만)               |
+| `PostList`                     | `packages/board/src/PostList.stories.tsx`                 | 게시판 글 목록 — 정렬 · 검색 · 쪽 · 고정 글 · 빈 상태 · 로딩 · 오류                                      |
+| `PostDetail`                   | `packages/board/src/PostDetail.stories.tsx`               | 글 한 건 — 제목 · 본문 · 반응 자리 · 주인의 수정/삭제 · 운영자의 숨김/고정                               |
+| `PostEditor`                   | `packages/board/src/PostEditor.stories.tsx`               | 글쓰기 · 고치기 폼 — 길이 한도 검증 · 제출 중 · 실패 · 서버의 칸별 오류                                  |
+| `CommentThread`                | `packages/board/src/CommentThread.stories.tsx`            | 댓글 한 줄기(대댓글 중첩) — 깊은 답글 접기 · 지운/숨긴 자리 표시 · 수정 · 삭제 · 숨김                    |
+| `BoardComments`                | `packages/board/src/BoardComments.stories.tsx`            | 서버와 이어진 댓글 영역 — 새 댓글 · 답글 · 삭제 확인 · 운영자 숨김 · 낙관적 반응                         |
+| `PostList` + `PostDetail` 조립 | `packages/board/src/BoardPage.stories.tsx`                | 게시판 한 벌(목록 → 글 → 글쓰기)을 훅으로 조립한 모양 — apps/sample 「게시판」의 원형                    |
+| `Turnstile`                    | `packages/captcha-turnstile/src/Turnstile.stories.tsx`    | 로그인 · 가입 폼의 캡차 — 토큰이 올 때까지 제출을 막는다                                                 |
+| `Seo` · `SeoProvider`          | `packages/seo/src/Seo.stories.tsx`                        | 화면마다 제목 · 설명 · canonical · OG · JSON-LD(브라우저의 머리를 맞춘다 — 서버 렌더는 `renderHeadHtml`) |
+| `RequireAuth`                  | `packages/auth/src/RequireAuth.stories.tsx`               | 로그인한 사람만 보는 라우트 가드(레이아웃 라우트)                                                        |
+| `useUpload`                    | `packages/storage/src/useUpload.stories.tsx`              | 파일 업로드 — 진행률 · 취소 · 검증 오류                                                                  |
+| `formatInstant` · `formatDual` | `packages/time/src/formats.stories.tsx`                   | 시각 3종(순간 · 달력 날짜 · 현지 + 내 시간대) 표시                                                       |
 
 ## Patterns — 복사해서 시작하는 화면 틀
 

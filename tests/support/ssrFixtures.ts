@@ -246,6 +246,8 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
     source: '# Title\n\nHello {{name}} [link](https://example.com)',
     facts: { name: 'Ada' },
   }),
+  'seo#Seo': () => ({ title: 'Pricing', description: 'Plans', canonical: '/pricing' }),
+  'seo#SeoProvider': () => ({ defaults: { siteName: 'Notes' }, children: 'inside' }),
   'i18n#I18nProvider': (ctx) => ({ i18n: fakeI18n(ctx), children: 'inside' }),
   'theme#ThemeToggle': () => ({}),
   'theme#ThemedToaster': () => ({}),
@@ -330,6 +332,7 @@ export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
   'board#useRemoveComment': () => [fakeBoardApi(), 'free', 'p1'],
   'board#useModerateComment': () => [fakeBoardApi(), 'free', 'p1'],
   'board#useReaction': () => [fakeBoardApi(), 'free', 'SINGLE'],
+  'seo#useSeo': () => [{ title: 'Pricing' }, { siteName: 'Notes' }],
   'i18n#useT': (ctx) => [fakeI18n(ctx)],
   'realtime#useSseClient': () => [{ url: '/api/v1/notifications/sse' }],
   'realtime#useNotificationSocket': () => [

@@ -1,0 +1,29 @@
+{
+  "name": "@skeleton/seo",
+  "version": "1.1.0",
+  "private": true,
+  "type": "module",
+  "description": "검색 · 공유 미리보기용 문서 머리(head) — 제목 템플릿 · 설명 · canonical · Open Graph · Twitter · JSON-LD · robots, SPA(effect)와 SSR(문자열)이 같은 규칙으로, 빌드 때 sitemap.xml · robots.txt 를 만드는 Vite 플러그인",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./vite": {
+      "types": "./src/vite.ts",
+      "default": "./src/vite.ts"
+    }
+  },
+  "types": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run --pool forks",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
+  }
+}

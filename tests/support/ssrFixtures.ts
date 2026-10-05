@@ -51,6 +51,12 @@ export const fakeUploader = () => ({
     multipart: false,
   }),
 })
+export const fakeI18n = ({ mod }: FixtureContext) =>
+  call(mod('i18n').createI18n, {
+    catalogs: { ko: { hello: '안녕' }, en: { hello: 'Hello' } },
+    defaultLocale: 'ko',
+    storageKey: 'ssr-fixture:locale',
+  })
 export function fakeSession({ mod }: FixtureContext) {
   const auth = mod('auth')
   const unused = async () => {
@@ -128,6 +134,16 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
   }),
   'ui#RowMenu': () => ({ label: 'More', items: [{ key: 'edit', label: 'Edit', onSelect: noop }] }),
   'ui#ErrorReference': () => ({ reference: 'trace-1' }),
+  'ui#LanguageMenu': () => ({
+    label: 'Language',
+    value: 'en',
+    options: [
+      { value: 'ko', label: '한국어' },
+      { value: 'en', label: 'English' },
+    ],
+    onChange: noop,
+  }),
+  'i18n#I18nProvider': (ctx) => ({ i18n: fakeI18n(ctx), children: 'inside' }),
   'theme#ThemeToggle': () => ({}),
   'theme#ThemedToaster': () => ({}),
   'auth#AuthProvider': (ctx) => ({ session: fakeSession(ctx), children: 'inside' }),
@@ -148,6 +164,7 @@ export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
   'notifications#useMarkRead': () => [fakeNotificationsApi()],
   'notifications#useMarkAllRead': () => [fakeNotificationsApi()],
   'notifications#useNotificationIngest': () => [],
+  'i18n#useT': (ctx) => [fakeI18n(ctx)],
   'realtime#useSseClient': () => [{ url: '/api/v1/notifications/sse' }],
   'realtime#useNotificationSocket': () => [
     { url: 'ws://localhost/ws', topic: 'demo', getAccessToken: () => null },

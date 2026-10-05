@@ -14,6 +14,7 @@
 | `Input`          | `packages/ui/src/Input/Input.stories.tsx`                   | 한 줄 입력. 라벨이 필요하니 `Field` 안에서                                     |
 | `Field`          | `packages/ui/src/Field/Field.stories.tsx`                   | 라벨 · 도움말 · 오류를 입력칸에 이어 주는 래퍼 — 입력칸은 항상 이 안에         |
 | `Select`         | `packages/ui/src/Select/Select.stories.tsx`                 | 정해진 선택지 하나 고르기(`Field` 안에서)                                      |
+| `LanguageMenu`   | `packages/ui/src/LanguageMenu/LanguageMenu.stories.tsx`     | 헤더의 화면 언어 메뉴(글자는 prop — `@skeleton/i18n` 의 `useT()` 와 잇는다)    |
 | `Textarea`       | `packages/ui/src/Textarea/Textarea.stories.tsx`             | 여러 줄 입력(`Field` 안에서)                                                   |
 | `Checkbox`       | `packages/ui/src/Checkbox/Checkbox.stories.tsx`             | 폼에 모아 제출하는 예 · 아니오, 약관 동의, 전체 선택(indeterminate)            |
 | `Switch`         | `packages/ui/src/Switch/Switch.stories.tsx`                 | 누르면 바로 적용되는 켜짐 · 꺼짐 설정                                          |
@@ -41,16 +42,17 @@
 
 ## 다른 패키지의 부품 · 흐름
 
-| 부품                           | 스토리                                                    | 언제 쓰는가                                              |
-| ------------------------------ | --------------------------------------------------------- | -------------------------------------------------------- |
-| `ThemeToggle`                  | `packages/theme/src/ThemeToggle.stories.tsx`              | system → light → dark 전환 버튼(헤더 `actions`)          |
-| `ThemedToaster`                | `packages/theme/src/ThemedToaster.stories.tsx`            | 앱 루트에 한 번 — 토스트가 고른 테마를 따른다            |
-| `NotificationBell`             | `packages/notifications/src/NotificationBell.stories.tsx` | 헤더의 종 + 안 읽은 수 + 받은편지함 대화상자             |
-| `NotificationList`             | `packages/notifications/src/NotificationList.stories.tsx` | 받은편지함 목록만 따로(데이터는 호출하는 쪽이 준다)      |
-| `Turnstile`                    | `packages/captcha-turnstile/src/Turnstile.stories.tsx`    | 로그인 · 가입 폼의 캡차 — 토큰이 올 때까지 제출을 막는다 |
-| `RequireAuth`                  | `packages/auth/src/RequireAuth.stories.tsx`               | 로그인한 사람만 보는 라우트 가드(레이아웃 라우트)        |
-| `useUpload`                    | `packages/storage/src/useUpload.stories.tsx`              | 파일 업로드 — 진행률 · 취소 · 검증 오류                  |
-| `formatInstant` · `formatDual` | `packages/time/src/formats.stories.tsx`                   | 시각 3종(순간 · 달력 날짜 · 현지 + 내 시간대) 표시       |
+| 부품                           | 스토리                                                    | 언제 쓰는가                                                             |
+| ------------------------------ | --------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `I18nProvider` · `useT`        | `packages/i18n/src/I18nProvider.stories.tsx`              | 앱 문구(ICU 메시지) — 복수형 · 요소가 낀 문장 · 언어 바꾸기 · 지연 사전 |
+| `ThemeToggle`                  | `packages/theme/src/ThemeToggle.stories.tsx`              | system → light → dark 전환 버튼(헤더 `actions`)                         |
+| `ThemedToaster`                | `packages/theme/src/ThemedToaster.stories.tsx`            | 앱 루트에 한 번 — 토스트가 고른 테마를 따른다                           |
+| `NotificationBell`             | `packages/notifications/src/NotificationBell.stories.tsx` | 헤더의 종 + 안 읽은 수 + 받은편지함 대화상자                            |
+| `NotificationList`             | `packages/notifications/src/NotificationList.stories.tsx` | 받은편지함 목록만 따로(데이터는 호출하는 쪽이 준다)                     |
+| `Turnstile`                    | `packages/captcha-turnstile/src/Turnstile.stories.tsx`    | 로그인 · 가입 폼의 캡차 — 토큰이 올 때까지 제출을 막는다                |
+| `RequireAuth`                  | `packages/auth/src/RequireAuth.stories.tsx`               | 로그인한 사람만 보는 라우트 가드(레이아웃 라우트)                       |
+| `useUpload`                    | `packages/storage/src/useUpload.stories.tsx`              | 파일 업로드 — 진행률 · 취소 · 검증 오류                                 |
+| `formatInstant` · `formatDual` | `packages/time/src/formats.stories.tsx`                   | 시각 3종(순간 · 달력 날짜 · 현지 + 내 시간대) 표시                      |
 
 ## Patterns — 복사해서 시작하는 화면 틀
 

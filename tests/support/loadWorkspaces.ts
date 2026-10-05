@@ -6,7 +6,7 @@ import type { WorkspaceInput } from './workspaceRules'
 
 export const REPO = fileURLToPath(new URL('../../', import.meta.url))
 
-const SKIP = new Set(['node_modules', 'dist', '.tmp'])
+const SKIP = new Set(['node_modules', 'dist', 'storybook-static', '.tmp'])
 const SOURCE = /\.(?:[cm]?[jt]sx?|css|html)$/
 
 export function walk(dir: string): string[] {

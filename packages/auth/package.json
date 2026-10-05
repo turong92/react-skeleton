@@ -23,6 +23,7 @@
     "react-router-dom": "^7.0.0"
   },
   "devDependencies": {
+    "@skeleton/ui": "workspace:*",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-router-dom": "^7.14.1"

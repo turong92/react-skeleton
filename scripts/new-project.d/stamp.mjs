@@ -1,7 +1,7 @@
 // scripts/new-project.sh 의 일꾼(node 만 쓴다). 직접 부르지 않는다 — 인자 검증은 셸이 한다.
-//   node stamp.mjs plan  <srcRoot> <withWorkbench 0|1> <requestedCsv> [withShowcase 0|1] [ssr 0|1]   → 남길 패키지(`keep <p>`)와 이유(`why <p> …`)
-//   node stamp.mjs copy  <srcRoot> <target>                                                          → 군더더기 빼고 복사
-//   node stamp.mjs apply <target> <name> <scope> <withWorkbench 0|1> <keepCsv> [withShowcase 0|1] [ssr 0|1]   → 가지치기 · 이름 · 스코프 · 문서
+//   node stamp.mjs plan  <srcRoot> <withWorkbench 0|1> <requestedCsv> [ssr 0|1]                                   → 남길 패키지(`keep <p>`)와 이유(`why <p> …`)
+//   node stamp.mjs copy  <srcRoot> <target>                                                                      → 군더더기 빼고 복사
+//   node stamp.mjs apply <target> <name> <scope> <withWorkbench 0|1> <keepCsv> [ssr 0|1] [withStorybook 0|1]     → 가지치기 · 이름 · 스코프 · 문서
 import {
   cpSync,
   existsSync,
@@ -34,7 +34,7 @@ const skeletonDeps = (pkg) =>
 const nameOf = (dep) => dep.slice(SCOPE.length + 1)
 
 // ------------------------------------------------------------------------------------------------ plan
-function plan(root, withWorkbench, requested, withShowcase = '0', ssr = '0') {
+function plan(root, withWorkbench, requested, ssr = '0') {
   const packages = subdirs(join(root, 'packages')).filter((dir) =>
     existsSync(join(root, 'packages', dir, 'package.json')),
   )
@@ -58,9 +58,6 @@ function plan(root, withWorkbench, requested, withShowcase = '0', ssr = '0') {
   if (withWorkbench === '1')
     for (const dep of skeletonDeps(readJson(join(root, 'apps', 'workbench', 'package.json'))))
       want(nameOf(dep), 'needed by the workbench app')
-  if (withShowcase === '1')
-    for (const dep of skeletonDeps(readJson(join(root, 'apps', 'showcase', 'package.json'))))
-      want(nameOf(dep), 'needed by the showcase app')
   for (const pkg of requested.split(',').filter(Boolean)) want(pkg, 'requested')
   for (let i = 0; i < queue.length; i += 1) {
     const pkg = queue[i]
@@ -77,6 +74,7 @@ const SKIP_NAMES = new Set([
   'node_modules',
   'dist',
   'dist-ssr',
+  'storybook-static',
   '.git',
   '.claude',
   '.superpowers',
@@ -119,10 +117,82 @@ function replaceOnce(path, from, to) {
   writeFileSync(path, text.replace(from, to))
 }
 
-function apply(target, name, scope, withWorkbench, keepCsv, withShowcase = '0', ssrFlag = '0') {
+// ------------------------------------------------------------------------------------------------ 스토리집
+const STORY_FILE = /\.stories\.tsx$/
+const STORYBOOK_DEP = /^(?:storybook$|@storybook\/|@vitest\/browser|playwright$)/
+const markerBlocks = (text, keep, name) => {
+  // `<!-- name:start -->` … `<!-- name:end -->` — keep 이면 표식 줄만 걷고, 아니면 사이를 통째로 뺀다
+  const block = new RegExp(
+    `[ \\t]*<!-- ${name}:start -->\\n([\\s\\S]*?)[ \\t]*<!-- ${name}:end -->\\n?`,
+    'g',
+  )
+  return text.replace(block, (_, inner) => (keep ? inner : ''))
+}
+
+/** 스토리집을 켠 채로 찍을 때: 지운 패키지의 스토리 줄을 카탈로그에서 뺀다 */
+function trimCatalog(target) {
+  const file = join(target, 'docs', 'ui-catalog.md')
+  if (!existsSync(file))
+    fail('docs/ui-catalog.md is missing — the skeleton changed, update stamp.mjs')
+  const lines = read(file)
+    .split('\n')
+    .filter((line) => {
+      const story = line.match(/`((?:packages|apps)\/[^`\s]+\.stories\.tsx)`/)?.[1]
+      return !story || existsSync(join(target, story))
+    })
+  writeFileSync(file, lines.join('\n'))
+}
+
+/** --without-storybook: 스토리집 · 모든 스토리와 가짜 · 도구 의존 · 스크립트 · 전용 테스트 · 카탈로그 · CI 잡을 뗀다 */
+function removeStorybook(target) {
+  rmSync(join(target, 'apps', 'storybook'), { recursive: true, force: true })
+  for (const path of ['tests/stories.test.ts', 'docs/ui-catalog.md'])
+    rmSync(join(target, path), { recursive: true, force: true })
+  for (const dir of subdirs(join(target, 'packages'))) {
+    const root = join(target, 'packages', dir)
+    for (const file of walk(root)) if (STORY_FILE.test(file)) rmSync(file)
+    rmSync(join(root, 'src', 'stories'), { recursive: true, force: true })
+    // 스토리에서만 쓰던 @skeleton/ui devDependency 를 걷는다(다른 소스가 안 쓰면)
+    const manifest = join(root, 'package.json')
+    const json = readJson(manifest)
+    const ui = `${SCOPE}/ui`
+    if (json.devDependencies?.[ui] !== undefined) {
+      const stillUsed = walk(join(root, 'src')).some(
+        (file) => /\.[cm]?[jt]sx?$/.test(file) && read(file).includes(`'${ui}`),
+      )
+      if (!stillUsed) {
+        delete json.devDependencies[ui]
+        if (Object.keys(json.devDependencies).length === 0) delete json.devDependencies
+        writeJson(manifest, json)
+      }
+    }
+  }
+  const rootFile = join(target, 'package.json')
+  const root = readJson(rootFile)
+  for (const key of ['storybook', 'storybook:build', 'test:stories']) delete root.scripts[key]
+  for (const dep of Object.keys(root.devDependencies ?? {}))
+    if (STORYBOOK_DEP.test(dep)) delete root.devDependencies[dep]
+  writeJson(rootFile, root)
+  const ci = join(target, '.github', 'workflows', 'ci.yml')
+  const job = /[ \t]*# stories-job:start\n[\s\S]*?[ \t]*# stories-job:end\n?/
+  if (!job.test(read(ci)))
+    fail(
+      'ci.yml has no stories-job block — the skeleton changed, update scripts/new-project.d/stamp.mjs',
+    )
+  writeFileSync(ci, read(ci).replace(job, ''))
+  const eslintFile = join(target, 'eslint.config.js')
+  replaceOnce(
+    eslintFile,
+    "const STORY_HINT = ' — see its story for the canonical usage (docs/ui-catalog.md)'",
+    "const STORY_HINT = ''",
+  )
+  replaceOnce(eslintFile, ", '**/storybook-static'", '')
+}
+
+function apply(target, name, scope, withWorkbench, keepCsv, ssrFlag = '0', withStorybook = '1') {
   const keep = new Set(keepCsv.split(',').filter(Boolean))
   const workbench = withWorkbench === '1'
-  const showcase = withShowcase === '1'
+  const storybook = withStorybook === '1'
   const ssr = ssrFlag === '1'
   const source = ssr ? 'starter-ssr' : 'starter' // 새 앱이 될 스타터
   const app = join(target, 'apps', name)
@@ -131,7 +201,8 @@ function apply(target, name, scope, withWorkbench, keepCsv, withShowcase = '0', 
   for (const pkg of subdirs(join(target, 'packages')))
     if (!keep.has(pkg)) rmSync(join(target, 'packages', pkg), { recursive: true, force: true })
   if (!workbench) rmSync(join(target, 'apps', 'workbench'), { recursive: true, force: true })
-  if (!showcase) rmSync(join(target, 'apps', 'showcase'), { recursive: true, force: true })
+  if (storybook) trimCatalog(target)
+  else removeStorybook(target)
   rmSync(join(target, 'apps', ssr ? 'starter' : 'starter-ssr'), { recursive: true, force: true })
   for (const path of [
     'scripts/new-project.sh',
@@ -180,7 +251,6 @@ function apply(target, name, scope, withWorkbench, keepCsv, withShowcase = '0', 
   root.version = '0.1.0'
   root.scripts.dev = `pnpm --filter ${name} dev`
   if (!workbench) delete root.scripts['dev:workbench']
-  if (!showcase) delete root.scripts['dev:showcase']
   delete root.scripts['dev:ssr'] // 서버 렌더 스타터를 골랐으면 그것이 `dev` 이고, 아니면 앱이 없다
   root.scripts.test = root.scripts.test.replace(
     /\s*&&\s*bash scripts\/test-new-project\.sh[^&]*/,
@@ -190,7 +260,7 @@ function apply(target, name, scope, withWorkbench, keepCsv, withShowcase = '0', 
     fail('the root scripts still mention new-project after stripping — update stamp.mjs')
   writeJson(rootFile, root)
   // 패키지가 앱을 이름으로 부르지 못하게 막는 목록(eslint.config.js 의 APP_NAMES) — 새 앱 이름을 더한다. 줄바꿈은 `pnpm format` 이 맞춘다
-  const SPEC_NAMES = ['workbench', 'showcase', 'starter', 'starter-ssr']
+  const SPEC_NAMES = ['workbench', 'storybook-app', 'starter', 'starter-ssr']
   const names = SPEC_NAMES.includes(name) ? SPEC_NAMES : [...SPEC_NAMES, name]
   const eslintFile = join(target, 'eslint.config.js')
   const eslintText = read(eslintFile)
@@ -217,10 +287,10 @@ function apply(target, name, scope, withWorkbench, keepCsv, withShowcase = '0', 
     }
 
   // 5. 문서 다시 쓰기
-  writeDocs(target, name, scope, { workbench, showcase, ssr })
+  writeDocs(target, name, scope, { workbench, storybook, ssr })
 }
 
-function writeDocs(target, name, scope, { workbench, showcase, ssr }) {
+function writeDocs(target, name, scope, { workbench, storybook, ssr }) {
   const source = readJson(join(target, 'package.json'))
   const pkgs = subdirs(join(target, 'packages')).map((dir) => ({
     dir,
@@ -239,7 +309,7 @@ function writeDocs(target, name, scope, { workbench, showcase, ssr }) {
     join(target, 'README.md'),
     `# ${name}
 
-react-skeleton(pnpm 워크스페이스)에서 \`scripts/new-project.sh\` 로 찍어 낸 프로젝트. 앱은 \`apps/${name}\`${ssr ? '(서버가 첫 응답을 그리는 서버 렌더 앱)' : ''}${workbench ? ' · 백엔드 확인용 \`apps/workbench\`' : ''}${showcase ? ' · 모든 부품 · 패키지를 보는 갤러리 \`apps/showcase\`' : ''}, 패키지는 \`packages/*\`(스코프 \`${scope}\`).
+react-skeleton(pnpm 워크스페이스)에서 \`scripts/new-project.sh\` 로 찍어 낸 프로젝트. 앱은 \`apps/${name}\`${ssr ? '(서버가 첫 응답을 그리는 서버 렌더 앱)' : ''}${workbench ? ' · 백엔드 확인용 \`apps/workbench\`' : ''}${storybook ? ' · 부품 · 화면 틀 · 토큰을 보고 테스트하는 스토리집 \`apps/storybook\`' : ''}, 패키지는 \`packages/*\`(스코프 \`${scope}\`).
 
 ## 시작
 
@@ -247,7 +317,7 @@ react-skeleton(pnpm 워크스페이스)에서 \`scripts/new-project.sh\` 로 찍
 pnpm install --no-frozen-lockfile   # 처음 한 번 — pnpm-lock.yaml 이 이 워크스페이스에 맞춰진다. 결과를 커밋한다
 pnpm format                          # 처음 한 번 — 이름 · 스코프 바꾸기로 달라진 줄바꿈
 pnpm dev                             # apps/${name}  ${ssr ? 'http://localhost:3000 (Node 서버 + Vite · 서버 렌더가 부르는 백엔드는 API_BASE_URL, 브라우저의 /api/v1 은 :8080 으로 프록시)' : 'http://localhost:5173 (백엔드 :8080 으로 /api/v1 프록시)'}
-${showcase ? 'pnpm dev:showcase                    # apps/showcase  http://localhost:5173 (백엔드 없이 모든 부품 · 패키지 사용 예)\n' : ''}pnpm lint && pnpm typecheck && pnpm test && pnpm format:check && pnpm build
+${storybook ? 'pnpm storybook                       # 스토리집 http://localhost:6006 (백엔드 없이 모든 부품 · Patterns · 토큰)\npnpm test:stories                    # 스토리의 play · 접근성을 진짜 브라우저(headless)에서 — 처음 한 번 `pnpm exec playwright install chromium`\n' : ''}pnpm lint && pnpm typecheck && pnpm test && pnpm format:check && pnpm build
 pnpm tokens                          # packages/tokens/tokens.json → tokens.css
 ${ssr ? `pnpm --filter ${name} build && pnpm --filter ${name} start   # 프로덕션 서버(dist/ 를 낸다) — Dockerfile 은 apps/${name}/Dockerfile\n` : ''}\`\`\`
 
@@ -265,7 +335,13 @@ kotlin-skeleton 계열 REST 백엔드(\`/api/v1\`)와 통신한다. 개발에서
 ${ssr ? `\n## 서버 렌더\n\n\`apps/${name}\` 는 서버가 첫 응답을 그리고 브라우저가 이어받는다(plain Vite SSR — \`server/\` 의 Node 서버 · \`src/entry-server.tsx\` · \`src/entry-client.tsx\`). 자세한 규칙(데이터 · 인증 · 시간 · 배포)은 \`apps/${name}/README.md\`.\n` : ''}`,
   )
 
-  const original = existsSync(join(target, 'CLAUDE.md')) ? read(join(target, 'CLAUDE.md')) : ''
+  const sourceClaude = existsSync(join(target, 'CLAUDE.md')) ? read(join(target, 'CLAUDE.md')) : ''
+  // 에이전트 안내(스토리 먼저 · Patterns 표)는 스켈레톤 CLAUDE.md 의 표식 사이에서 그대로 옮긴다 — 스토리집을 뗀 프로젝트에는 없다
+  const guide = sourceClaude.match(
+    /<!-- storybook-guide:start -->\n([\s\S]*?)<!-- storybook-guide:end -->/,
+  )?.[1]
+  if (storybook && !guide) fail('CLAUDE.md has no storybook-guide block — update stamp.mjs')
+  const original = markerBlocks(sourceClaude, storybook, 'storybook')
   const at = original.indexOf('## 핵심 컨벤션')
   if (at < 0) fail('CLAUDE.md has no "## 핵심 컨벤션" section — update stamp.mjs')
   const structure = [
@@ -274,9 +350,9 @@ ${ssr ? `\n## 서버 렌더\n\n\`apps/${name}\` 는 서버가 첫 응답을 그�
       ? `└── ${name}/        # 서버 렌더 앱 — server/(Node 서버 · 정적 파일 · 상태 코드) · src/entry-server.tsx · src/entry-client.tsx · 라우트별 handle(제목 · 설명 · prefetch) (starter-ssr 에서 이름만 바뀌었다)`
       : `└── ${name}/        # 앱 — 라우터 · AppShell · API 클라이언트 배선 · 보호 라우트 (starter 에서 이름만 바뀌었다)`,
     ...(workbench ? ['└── workbench/     # 백엔드 확인용 시각적 테스트 벤치(복사 대상 아님)'] : []),
-    ...(showcase
+    ...(storybook
       ? [
-          '└── showcase/      # 모든 부품 · 토큰 · 패키지 사용 예 갤러리(백엔드 없이 · 복사 대상 아님)',
+          '└── storybook/     # 스토리집 — 설정(.storybook/) · Patterns(복사해서 시작하는 화면 틀) · 토큰 문서. 부품 스토리는 packages/*/src/**/*.stories.tsx',
         ]
       : []),
     `packages/`,
@@ -287,13 +363,13 @@ ${ssr ? `\n## 서버 렌더\n\n\`apps/${name}\` 는 서버가 첫 응답을 그�
     `# ${name} — Claude Code 컨텍스트
 
 react-skeleton 에서 찍어 낸 pnpm 워크스페이스(React + TypeScript + Vite). 앱 \`apps/${name}\`, 패키지 ${pkgs.length}개(스코프 \`${scope}\`).
-
+${storybook ? `\n${guide}` : ''}
 ## 디렉토리 구조 (AI 참조용)
 
 \`\`\`
 ${structure}
-tests/            # 워크스페이스 가로지르는 테스트: usage · contrast · tokens.wiring · theme.names · workspace(의존 규칙) · eslint.boundaries
-docs/design-tokens.md
+tests/            # 워크스페이스 가로지르는 테스트: ${storybook ? 'stories(모든 부품에 스토리 + play · 카탈로그 일치) · ' : ''}eslint.uiOnly(날 요소 · 인라인 날값 금지) · usage · contrast · tokens.wiring · theme.names · workspace(의존 규칙) · eslint.boundaries
+docs/design-tokens.md${storybook ? '\ndocs/ui-catalog.md   # 부품 → 스토리 → 언제 쓰는가' : ''}
 \`\`\`
 
 ${ssr ? ssrRules(name) : ''}${original

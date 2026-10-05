@@ -26,3 +26,31 @@ jobs:
       - run: pnpm test
       - run: pnpm format:check
       - run: pnpm build
+
+  # stories-job:start
+  # 스토리 = 테스트: 진짜 브라우저(Playwright chromium, headless)에서 모든 스토리의 play · 접근성을 돈다. 빠른 단위 테스트(build 잡)와 따로라 서로 기다리지 않는다
+  stories:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15 # rolldown(rc) 교착 · 브라우저 멈춤에 매달리지 않게 끊는다
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      # 브라우저 내려받기는 캐시되지만 OS 라이브러리(apt)는 매번 필요하다
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm storybook:build
+        timeout-minutes: 5
+      - run: pnpm test:stories
+        timeout-minutes: 8
+  # stories-job:end

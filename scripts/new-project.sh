@@ -1,20 +1,23 @@
 #!/usr/bin/env bash
 # 새 프로젝트 한 줄 찍어내기: 복사 → 필요한 패키지만 남기기 → 앱 이름 바꾸기 → (선택) 스코프 바꾸기 → 문서 다시 쓰기.
 #
-#   scripts/new-project.sh <target-dir> <name> [--packages a,b,c] [--ssr] [--with-showcase] [--with-workbench] [--scope @acme]
+#   scripts/new-project.sh <target-dir> <name> [--packages a,b,c] [--ssr] [--without-storybook] [--with-workbench] [--scope @acme]
 #
 #   예) scripts/new-project.sh ~/work/ovation ovation
 #       scripts/new-project.sh ~/work/ovation ovation --packages realtime,notifications,storage
 #       scripts/new-project.sh ~/work/ovation ovation --scope @ovation --packages payment
-#       scripts/new-project.sh ~/work/ovation ovation --ssr --with-showcase   # 서버 렌더 스타터 + 갤러리
+#       scripts/new-project.sh ~/work/ovation ovation --ssr                    # 서버 렌더 스타터(스토리집은 기본으로 따라온다)
+#       scripts/new-project.sh ~/work/ovation ovation --without-storybook      # 스토리집 · 스토리 · 에이전트 안내 없이
 #
 # 하는 일
 #   1. 이 레포를 <target-dir> 로 복사한다 (node_modules · dist · .git · .claude · .superpowers · .env · *.local 제외).
 #   2. apps/starter 를 apps/<name> 으로 바꾼다 (package.json 이름 · index.html 제목 · 헤더 브랜드 · .env.example 첫 줄).
 #      --ssr 이면 apps/starter-ssr(서버가 첫 응답을 그리는 스타터)가 대신 apps/<name> 이 되고 apps/starter 는 지운다
 #      (이름은 src/appName.ts 한 줄 · Dockerfile 의 ARG APP).
-#      apps/workbench 는 --with-workbench, apps/showcase(모든 부품 · 패키지 사용 예 갤러리)는 --with-showcase 일 때만 남긴다
-#      (그러면 그 앱이 쓰는 패키지가 전부 따라온다).
+#      apps/workbench 는 --with-workbench 일 때만 남긴다(그러면 그 앱이 쓰는 패키지가 전부 따라온다).
+#      apps/storybook(스토리집: 설정 · Patterns · 토큰 문서)은 기본으로 남는다 — 남는 패키지의 스토리(*.stories.tsx · 가짜) · docs/ui-catalog.md ·
+#      CLAUDE.md 의 에이전트 안내 · 스토리 테스트(tests/stories.test.ts) · 스토리집 도구 · CI 의 stories 잡이 함께 간다(참조가 프로젝트와 함께 간다).
+#      --without-storybook 이면 이 전부를 뗀다(날 요소를 막는 ESLint 규칙은 부품이 남아 있으니 그대로).
 #   3. 패키지 = 스타터가 쓰는 것 + 루트 도구(theme · tokens) + --packages, 패키지끼리의 @skeleton/* 의존으로 닫는다.
 #      나머지 packages/<p> 는 지운다. 이 목록을 보고 있던 루트 테스트(tests/skeleton.repo.test.ts)도 지운다.
 #      고른 패키지는 폴더만 복사된다 — 앱 package.json 에 `"@skeleton/<p>": "workspace:*"` 한 줄은 쓰기 시작할 때 더한다
@@ -32,13 +35,13 @@ HELPER="$SRC/scripts/new-project.d/stamp.mjs"
 
 usage() {
   cat <<'EOF2'
-usage: scripts/new-project.sh <target-dir> <name> [--packages a,b,c] [--ssr] [--with-showcase] [--with-workbench] [--scope @acme]
+usage: scripts/new-project.sh <target-dir> <name> [--packages a,b,c] [--ssr] [--without-storybook] [--with-workbench] [--scope @acme]
 
   <target-dir>      새로 만들 디렉토리 (이미 있으면 거부, 소스 레포 안이면 거부)
-  <name>            앱 이름 = apps/<name> (소문자 · 숫자 · 하이픈, `workbench` · `showcase` 는 예약)
+  <name>            앱 이름 = apps/<name> (소문자 · 숫자 · 하이픈, `workbench` · `storybook` 은 예약)
   --packages        스타터에 더할 패키지, 쉼표로 구분 (예: realtime,notifications,storage)
   --ssr             앱을 서버 렌더 스타터(apps/starter-ssr: Node 서버 + 하이드레이션)로 — 기본은 SPA 스타터(apps/starter)
-  --with-showcase   apps/showcase(모든 부품 · 토큰 · 패키지 사용 예 갤러리, 백엔드 없이)도 남긴다 — 모든 패키지가 남는다
+  --without-storybook  스토리집(apps/storybook) · 스토리 · 에이전트 안내 · 카탈로그를 떼고 찍는다 — 기본은 모두 따라온다
   --with-workbench  apps/workbench(백엔드 확인용 시각적 테스트 벤치)도 남긴다 — 모든 패키지가 남는다
   --scope           패키지 스코프를 바꾼다 (예: @acme → @acme/ui). 기본 @skeleton
 EOF2
@@ -58,7 +61,7 @@ POSITIONAL=()
 PACKAGES_ARG=""
 SCOPE="@skeleton"
 WITH_WORKBENCH=0
-WITH_SHOWCASE=0
+WITH_STORYBOOK=1
 SSR=0
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -67,7 +70,8 @@ while [ $# -gt 0 ]; do
     --scope) [ $# -ge 2 ] && [ "${2#--}" = "$2" ] || die_usage "--scope needs a value"; SCOPE="$2"; shift 2 ;;
     --scope=*) SCOPE="${1#--scope=}"; shift ;;
     --with-workbench) WITH_WORKBENCH=1; shift ;;
-    --with-showcase) WITH_SHOWCASE=1; shift ;;
+    --without-storybook) WITH_STORYBOOK=0; shift ;;
+    --with-showcase) die_usage "--with-showcase is gone: the showcase moved into Storybook (apps/storybook), which every project keeps by default — use --without-storybook to drop it" ;;
     --ssr) SSR=1; shift ;;
     -h|--help) usage; exit 0 ;;
     --*) die_usage "unknown option: $1" ;;
@@ -79,7 +83,8 @@ TARGET_ARG="${POSITIONAL[0]}"; NAME="${POSITIONAL[1]}"
 
 echo "$NAME" | grep -Eq '^[a-z][a-z0-9-]*$' || die_usage "name must be lower-case letters, digits, hyphens: $NAME"
 [ "$NAME" != workbench ] || die_usage "the name 'workbench' is reserved (apps/workbench)"
-[ "$NAME" != showcase ] || die_usage "the name 'showcase' is reserved (apps/showcase)"
+[ "$NAME" != storybook ] || die_usage "the name 'storybook' is reserved (apps/storybook)"
+[ "$NAME" != storybook-app ] || die_usage "the name 'storybook-app' is reserved (the package name of apps/storybook)"
 echo "$SCOPE" | grep -Eq '^@[a-z][a-z0-9-]*$' || die_usage "scope must look like @acme: $SCOPE"
 
 ALL_PACKAGES="$(valid_packages)"
@@ -88,8 +93,9 @@ if [ -n "$PACKAGES_ARG" ]; then
   while IFS= read -r p; do
     p="$(echo "$p" | tr -d '[:space:]')"
     [ -n "$p" ] || continue
-    printf '%s\n' "$ALL_PACKAGES" | grep -Fxq -- "$p" || die_listing "unknown package: $p"
-    printf '%s\n' "$REQUESTED" | grep -Fxq -- "$p" || REQUESTED="${REQUESTED:+$REQUESTED,}$p"
+    # (파이프 대신 here-string — `grep -q` 가 일찍 끝나면 printf 가 SIGPIPE 를 받고 pipefail 이 가끔 거짓 실패를 낸다)
+    grep -Fxq -- "$p" <<<"$ALL_PACKAGES" || die_listing "unknown package: $p"
+    grep -Fxq -- "$p" <<<"$(printf '%s' "$REQUESTED" | tr ',' '\n')" || REQUESTED="${REQUESTED:+$REQUESTED,}$p"
   done <<EOF2
 $(printf '%s' "$PACKAGES_ARG" | tr ',' '\n')
 EOF2
@@ -103,17 +109,17 @@ case "$TARGET/" in "$SRC"/*) die_usage "target must be outside the skeleton repo
 command -v node >/dev/null || { echo "x node is required" >&2; exit 1; }
 
 # ---------------------------------------------------------------------------------------------------- 계획
-PLAN="$(node "$HELPER" plan "$SRC" "$WITH_WORKBENCH" "$REQUESTED" "$WITH_SHOWCASE" "$SSR")" || { echo "$PLAN" >&2; exit 2; }
+PLAN="$(node "$HELPER" plan "$SRC" "$WITH_WORKBENCH" "$REQUESTED" "$SSR")" || { echo "$PLAN" >&2; exit 2; }
 KEEP="$(printf '%s\n' "$PLAN" | sed -n 's/^keep //p' | tr '\n' ',' | sed 's/,$//')"
 echo "== plan"
 printf '%s\n' "$PLAN" | sed -n 's/^why /   /p'
-echo "   app: apps/$NAME (from apps/$([ "$SSR" = 1 ] && echo starter-ssr || echo starter))$([ "$WITH_WORKBENCH" = 1 ] && echo ' + apps/workbench')$([ "$WITH_SHOWCASE" = 1 ] && echo ' + apps/showcase')"
+echo "   app: apps/$NAME (from apps/$([ "$SSR" = 1 ] && echo starter-ssr || echo starter))$([ "$WITH_WORKBENCH" = 1 ] && echo ' + apps/workbench')$([ "$WITH_STORYBOOK" = 1 ] && echo ' + apps/storybook (stories, patterns, guide)')"
 
 # ---------------------------------------------------------------------------------------------------- 복사 · 변환
 echo "== copy → $TARGET"
 node "$HELPER" copy "$SRC" "$TARGET"
 echo "== transform"
-node "$HELPER" apply "$TARGET" "$NAME" "$SCOPE" "$WITH_WORKBENCH" "$KEEP" "$WITH_SHOWCASE" "$SSR"
+node "$HELPER" apply "$TARGET" "$NAME" "$SCOPE" "$WITH_WORKBENCH" "$KEEP" "$SSR" "$WITH_STORYBOOK"
 
 # ---------------------------------------------------------------------------------------------------- 안내
 cat <<EOF2
@@ -124,7 +130,7 @@ next steps:
   pnpm install --no-frozen-lockfile   # pnpm-lock.yaml 은 스켈레톤의 것 — 이름 · 스코프에 맞춰 고쳐진다. 결과를 커밋한다
   pnpm format                         # 이름 · 스코프를 바꾸면 줄바꿈이 달라질 수 있다 (한 번만)
   pnpm dev                            # apps/$NAME  $([ "$SSR" = 1 ] && echo http://localhost:3000 || echo http://localhost:5173)
-  pnpm lint && pnpm typecheck && pnpm test && pnpm build
+  pnpm lint && pnpm typecheck && pnpm test && pnpm build$([ "$WITH_STORYBOOK" = 1 ] && printf '\n  pnpm storybook                      # 스토리집 http://localhost:6006 — 처음 한 번: pnpm exec playwright install chromium (test:stories 용)')
 packages you keep but do not use yet: add one line to apps/$NAME/package.json when you start using it, e.g.
   "$SCOPE/<package>": "workspace:*"   # 그러면 pnpm install 을 다시. 안 쓰는 의존은 선언하지 않는다(루트 테스트가 막는다)
 EOF2

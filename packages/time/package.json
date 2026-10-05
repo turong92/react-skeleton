@@ -14,5 +14,8 @@
   "scripts": {
     "test": "vitest run --pool forks",
     "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@skeleton/ui": "workspace:*"
   }
 }

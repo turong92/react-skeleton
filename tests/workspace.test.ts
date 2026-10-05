@@ -27,6 +27,12 @@ describe('the workspace', () => {
     }
   })
 
+  it('does not scan build output (dist, storybook-static) — a built storybook must not break the tests', () => {
+    for (const ws of workspaces)
+      for (const file of ws.files)
+        expect(file.path, `${ws.dir}/${file.path}`).not.toMatch(/(^|\/)(dist|storybook-static)\//)
+  })
+
   it('no package depends on an app, and apps depend on no other app', () => {
     const appNames = apps.map((w) => w.packageJson.name)
     for (const ws of workspaces) {
@@ -67,13 +73,46 @@ describe.each(packages.map((w) => [w.dir, w] as const))('%s is self-contained', 
   })
 })
 
-describe.each(apps.map((w) => [w.dir, w] as const))('%s', (dir, ws) => {
-  it('has its own typecheck, test and build scripts and runs the Vite theme pre-paint plugin', () => {
+describe.each(apps.filter((w) => w.dir !== 'apps/storybook').map((w) => [w.dir, w] as const))(
+  '%s',
+  (dir, ws) => {
+    it('has its own typecheck, test and build scripts and runs the Vite theme pre-paint plugin', () => {
+      const { scripts } = ws.packageJson as unknown as { scripts: Record<string, string> }
+      expect(scripts.typecheck).toBeTruthy()
+      expect(scripts.test).toBeTruthy()
+      expect(scripts.build).toContain('vite build')
+      const config = ws.files.find((file) => file.path === 'vite.config.ts')
+      expect(config?.text, `${dir}/vite.config.ts`).toContain('themePrePaint()')
+    })
+  },
+)
+
+/*
+ * apps/storybook 는 화면 앱이 아니라 스토리집이다 — 배포하는 것이 아니므로 `build` 가 아니라 `build-storybook`(그래서 `pnpm build` 가 안 돈다 —
+ * 정적 스토리집은 `pnpm storybook:build`)이고, 스토리를 진짜 브라우저에서 도는 `test-stories` 가 따로 있다. 설정 · 도구 모음 · a11y 규칙은 .storybook/ 에 있다.
+ */
+describe.each(apps.filter((w) => w.dir === 'apps/storybook').map((w) => [w.dir, w] as const))(
+  '%s',
+  (dir, ws) => {
     const { scripts } = ws.packageJson as unknown as { scripts: Record<string, string> }
-    expect(scripts.typecheck).toBeTruthy()
-    expect(scripts.test).toBeTruthy()
-    expect(scripts.build).toContain('vite build')
-    const config = ws.files.find((file) => file.path === 'vite.config.ts')
-    expect(config?.text, `${dir}/vite.config.ts`).toContain('themePrePaint()')
-  })
-})
+    it('has typecheck, unit test, storybook, build-storybook and test-stories scripts (and no `build`)', () => {
+      expect(scripts.typecheck).toBeTruthy()
+      expect(scripts.test).toBeTruthy()
+      expect(scripts.storybook).toContain('storybook dev')
+      expect(scripts['build-storybook']).toContain('storybook build')
+      expect(scripts['test-stories']).toContain('vitest')
+      expect(
+        scripts.build,
+        'a `build` script would make `pnpm build` build the storybook',
+      ).toBeUndefined()
+    })
+
+    it('loads the tokens and the base styles in every story, with the a11y addon failing the run', () => {
+      const preview = ws.files.find((file) => file.path === '.storybook/preview.tsx')?.text ?? ''
+      expect(preview, `${dir}/.storybook/preview.tsx`).toContain("'@skeleton/tokens/tokens.css'")
+      expect(preview).toContain("'@skeleton/ui/base.css'")
+      expect(preview).toMatch(/a11y:\s*\{\s*test:\s*'error'/)
+      expect(preview, 'light/dark toolbar switch on <html data-theme>').toContain("'data-theme'")
+    })
+  },
+)

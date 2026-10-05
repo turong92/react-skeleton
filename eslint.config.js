@@ -28,8 +28,8 @@ const APP_NAMES = {
   group: [
     'workbench',
     'workbench/**',
-    'showcase',
-    'showcase/**',
+    'storybook-app',
+    'storybook-app/**',
     'starter',
     'starter/**',
     'starter-ssr',
@@ -38,8 +38,35 @@ const APP_NAMES = {
   message: 'Packages must not import apps.',
 }
 
+/*
+ * 화면 코드는 @skeleton/ui 로 짠다 — 앱(apps/**)에서 날 <button> · <input> · <select> · <textarea> · <dialog> 와 인라인 style 의 색 · 간격 날값을 막는다.
+ * 부품 안쪽(packages/ui)과 다른 패키지는 이 규칙 밖이다.
+ * 예외 앱은 아래 UI_ONLY_EXEMPT 한 줄 — 이 레포에서는 워크벤치(날 요소 13곳 · 인라인 style 1곳이 토큰 · 부품 이전부터 쌓인 시각적 테스트 벤치의 모양이다).
+ */
+const UI_ONLY_EXEMPT = ['apps/workbench/**']
+const STORY_HINT = ' — see its story for the canonical usage (docs/ui-catalog.md)'
+const RAW_ELEMENT = (name, use) => ({
+  selector: `JSXOpeningElement[name.name='${name}']`,
+  message: `Raw <${name}> in app code: ${use} (from '@skeleton/ui')${STORY_HINT}.`,
+})
+const STYLE_KEYS =
+  'color|background|backgroundColor|borderColor|outlineColor|fill|stroke|boxShadow|margin|marginTop|marginRight|marginBottom|marginLeft|marginInline|marginBlock|padding|paddingTop|paddingRight|paddingBottom|paddingLeft|paddingInline|paddingBlock|gap|rowGap|columnGap|borderRadius|fontSize'
+const KEEP = '[\'"]?(var\\(|0[\'"]?$|auto|none|inherit|initial|unset|currentColor|transparent)'
+const UI_ONLY = [
+  RAW_ELEMENT('button', 'use <Button>'),
+  RAW_ELEMENT('input', 'use <Input> inside <Field> (or <Checkbox> / <Switch> for checkboxes)'),
+  RAW_ELEMENT('select', 'use <Select> inside <Field>'),
+  RAW_ELEMENT('textarea', 'use <Textarea> inside <Field>'),
+  RAW_ELEMENT('dialog', 'use <Dialog>'),
+  {
+    selector: `JSXAttribute[name.name='style'] ObjectExpression > Property[key.name=/^(${STYLE_KEYS})$/][value.type='Literal'][value.raw=/^(?!${KEEP})/]`,
+    message:
+      'Inline style colour / spacing literal: use a semantic token, e.g. style={{ color: "var(--text-muted)", padding: "var(--space-md)" }}, or a CSS module (docs/design-tokens.md).',
+  },
+]
+
 export default defineConfig([
-  globalIgnores(['**/dist', '**/node_modules']),
+  globalIgnores(['**/dist', '**/node_modules', '**/storybook-static']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
@@ -58,6 +85,11 @@ export default defineConfig([
     rules: {
       'no-restricted-imports': ['error', { patterns: [DEEP_IMPORT, APP_CODE, OTHER_PACKAGE_PATH] }],
     },
+  },
+  {
+    files: ['apps/**/*.{ts,tsx}'],
+    ignores: UI_ONLY_EXEMPT,
+    rules: { 'no-restricted-syntax': ['error', ...UI_ONLY] },
   },
   {
     files: ['packages/**/*.{ts,tsx}'],

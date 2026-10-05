@@ -143,6 +143,29 @@ describe('findProblems', () => {
     ])
   })
 
+  it('stories (*.stories.tsx and src/stories/) are test-side files: they may use devDependencies and the Storybook toolchain from the root', () => {
+    const fine = ws(
+      { name: '@skeleton/ui' },
+      {
+        name: '@skeleton/auth',
+        devDependencies: { '@skeleton/ui': WS },
+        files: {
+          'src/A.stories.tsx':
+            "import type { Meta } from '@storybook/react-vite'\nimport { expect } from 'storybook/test'\nimport { Button } from '@skeleton/ui'",
+          'src/stories/fakes.ts': "import '@skeleton/ui'",
+        },
+      },
+    )
+    expect(findProblems(fine)).toEqual([])
+    const undeclared = ws(
+      { name: '@skeleton/ui' },
+      { name: '@skeleton/auth', files: { 'src/A.stories.tsx': "import '@skeleton/ui'" } },
+    )
+    expect(findProblems(undeclared)).toEqual([
+      expect.stringContaining('@skeleton/auth imports @skeleton/ui but does not declare it'),
+    ])
+  })
+
   it('the starter app must not depend on, or import, the workbench app', () => {
     const broken = ws(
       { kind: 'app', name: 'workbench' },

@@ -7,10 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Storybook: 스토리가 부품의 정본(보이는 모습 · 정본 사용법 · 실행되는 테스트)
+
+- `apps/storybook`(Storybook 10 · `@storybook/react-vite` · Vite 8 에서 그대로 동작) — 설정 `.storybook/`(토큰 · `base.css` 로드, 도구 모음의 라이트/다크 스위치 = `<html data-theme>`, autodocs, a11y 위반이 실패인 `a11y: { test: 'error' }`), **Patterns** 6개(목록 · 폼 · 상세 · 로그인 · 403 · 설정 — `@skeleton/ui` 만으로 짠 복사용 한 파일 화면 틀, 도우미 파일 없음, 다크 변형 포함), 토큰 문서(`tokens.json` 에서 읽은 색 · 간격 · 모서리 · 글자 크기 · 그림자, 라이트 · 다크 나란히 — 쇼케이스의 토큰 페이지를 옮김)
+- 스토리는 부품 옆(`packages/*/src/**/*.stories.tsx`, CSF3 · `satisfies Meta`): `@skeleton/ui` 의 모든 export(상태별 + `play` — 클릭 · 키보드 · 포커스 링 · 라벨/오류 연결 · 탭 화살표 · 다이얼로그 Esc 와 포커스 복귀 · 쪽 이동 끝), `theme` · `notifications` · `captcha-turnstile` · `auth`(`RequireAuth`) · `storage`(`useUpload`) · `time`. 가짜(받은편지함 · Turnstile · 인증 · 업로드 전송)는 각 패키지의 `src/stories/`(쇼케이스의 `fakes/` 를 옮김)
+- 루트 스크립트 `storybook` · `storybook:build` · `test:stories`(진짜 브라우저 headless — Vitest 애드온 + Playwright chromium). `pnpm test` 는 그대로 빠른 단위 테스트. CI 에 `stories` 잡(브라우저 캐시 · 타임아웃)
+- ESLint(`apps/**`): 날 `<button>` · `<input>` · `<select>` · `<textarea>` · `<dialog>` 와 인라인 style 의 색 · 간격 · 모서리 · 글자 크기 날값을 막고, 메시지가 대신 쓸 `@skeleton/ui` 부품을 말한다. `packages/ui` 와 다른 패키지는 제외, `apps/workbench` 는 명시적 예외(`UI_ONLY_EXEMPT`)
+- 루트 테스트 `tests/stories.test.ts`(모든 `@skeleton/ui` export 에 스토리 + `play` · 모든 스토리가 CSF3 · 모든 Patterns 가 CLAUDE.md 안내에 적힘 + `@skeleton/ui` 만 import · `docs/ui-catalog.md` 일치) · `tests/eslint.uiOnly.test.ts`. 의존 규칙: 스토리(`*.stories.tsx` · `src/stories/`)는 테스트 쪽 파일로 세어 devDependencies · 루트 Storybook 도구로 충분
+- `docs/ui-catalog.md`(부품 → 스토리 → 언제 쓰는가) · CLAUDE.md 의 「UI 를 만들기 전에」(스토리 먼저 · Patterns 에서 시작 · 날 요소/값 금지 · 부품을 바꾸면 스토리 + play)
+- `scripts/new-project.sh`: 스토리집 · 남는 패키지의 스토리 · Patterns · 카탈로그 · 에이전트 안내 · CI 잡이 **기본으로 따라온다**, `--without-storybook` 이면 깨끗이 뗀다. `test-new-project.sh --full` 의 조합 2 가 `storybook:build` · `test:stories` 를 돈다
+
+### Changed
+
+- **`apps/showcase` 를 없앴다** — 부품 상태는 스토리로, 토큰 페이지는 `apps/storybook` 으로, 가짜는 각 패키지의 `src/stories/` 로 옮겼다(시간 포맷 표는 `time` 스토리로). api-client · payment · realtime 데모(컴포넌트가 없는 패키지)는 옮기지 않았다 — 각 패키지 README 가 있다. `pnpm dev:showcase` · `new-project.sh --with-showcase` 는 없어졌다(`--with-showcase` 는 안내와 함께 exit 2)
+- `auth` · `captcha-turnstile` · `storage` · `theme` · `time` 이 스토리에서 `@skeleton/ui` 를 쓰므로 devDependency 로 선언하고(`auth` · `captcha-turnstile` · `storage` · `time` 은 tsconfig `types: ["vite/client"]` — ui 의 CSS Modules 타입), 루트 devDependencies 에 Storybook · `@vitest/browser-playwright`(vitest 와 같은 버전) · `playwright`
+- 이름 `storybook` · `storybook-app` 은 앱 이름으로 예약
+
 ### Added — 서버 렌더 스타터 · 쇼케이스 · SSR 안전
 
 - `apps/starter-ssr` — 서버가 첫 응답을 그리고 브라우저가 이어받는 스타터(plain Vite SSR: `server/` Node 서버 · `src/entry-server.tsx` · `src/entry-client.tsx`, 새 런타임 의존 없음). 홈(`GET /hello` 를 서버가 시간 제한 안에 가져와 TanStack Query `dehydrate`/`hydrate` 로 넘김 — 백엔드가 죽으면 데이터 없이 200) · 로그인 · 보호 `/account`(토큰은 브라우저에만 — 서버는 중립 자리 표시, `createDeferredTokens`) · 404(실제 상태 코드), 라우트별 `<title>` · 설명(`handle`), 테마 스크립트가 `<head>` 맨 앞. `pnpm --filter starter-ssr dev|build|start`, Dockerfile(런타임에 node_modules 없음). 테스트: 서버 렌더 · 하이드레이션 마크업 일치 · 핸들러 · 빌드한 서버를 띄우는 통합 테스트
-- `apps/showcase` — 백엔드 없이 도는 갤러리: 모든 `@skeleton/ui` 부품의 상태 · import 줄, 실제 `tokens.json` 으로 그린 토큰(라이트 · 다크 나란히), 패키지별 사용 데모(가짜 전송). 기본으로는 찍히지 않는다
+- `apps/showcase` — (이후 Storybook 으로 대체되어 없어졌다 — 위 Unreleased 참고)
 - `scripts/new-project.sh --ssr`(`apps/starter-ssr` 를 앱으로) · `--with-showcase`(`apps/showcase` 유지). `scripts/test-new-project.sh --full` 에 `--ssr --with-showcase` 조합 추가
 - 루트 테스트 `tests/ssr.safety.test.ts` — 모든 패키지 entry 가 브라우저 전역 없는 Node 에서 import 되고(import 시점에 아무것도 건드리지 않음), export 한 모든 컴포넌트 · 훅이 서버에서 경고 없이 그려진다(목록은 `exports` 에서 만들어 새 export 를 잊을 수 없다)
 - `@skeleton/theme`: `initTheme()` · `getServerTheme()`

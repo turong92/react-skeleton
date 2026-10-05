@@ -23,11 +23,23 @@ export type ImportRef = { specifier: string; line: number }
 
 const SCOPE = '@skeleton/'
 /** 모든 앱 · 패키지가 루트에서 물려받는 도구 — 선언하지 않아도 된다 */
-const TOOLCHAIN = new Set(['vitest', 'vite', '@vitejs/plugin-react'])
+const TOOLCHAIN = new Set([
+  'vitest',
+  'vite',
+  '@vitejs/plugin-react',
+  // 스토리(*.stories.tsx · src/stories/)가 쓰는 Storybook
+  'storybook',
+  '@storybook/react-vite',
+  // 스토리 테스트 실행 설정(vitest.stories.config.ts)
+  '@storybook/addon-vitest',
+  '@vitest/browser-playwright',
+])
 const BUILTINS = new Set(builtinModules)
 const IMPORT = /(?:\bfrom\s*|\bimport\s*\(\s*|\bimport\s+|@import\s+(?:url\()?)['"]([^'"\n]+)['"]/g
 
-const isTestFile = (path: string) => /\.test\.[cm]?[jt]sx?$/.test(path) || /(^|\/)test\//.test(path)
+/** 테스트 쪽 파일 — 단위 테스트 · `test/` 폴더 · 스토리(`*.stories.tsx`, 가짜가 사는 `stories/`). 런타임 의존이 아니라 devDependencies 로 충분하다 */
+const isTestFile = (path: string) =>
+  /\.(test|stories)\.[cm]?[jt]sx?$/.test(path) || /(^|\/)(test|stories)\//.test(path)
 
 function stripComments(text: string): string {
   return text

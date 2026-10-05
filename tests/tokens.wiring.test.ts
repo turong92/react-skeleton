@@ -10,7 +10,8 @@ import { loadWorkspaces, REPO } from './support/loadWorkspaces'
  * (정본 ↔ tokens.css 일치는 packages/tokens 의 테스트, 표 구역 ↔ docs 는 여기)
  */
 const workspaces = loadWorkspaces()
-const apps = workspaces.filter((w) => w.kind === 'app')
+// 화면 앱만 — 스토리집은 .storybook/preview.tsx 에서 같은 순서로 불러온다(tests/workspace.test.ts 가 확인)
+const apps = workspaces.filter((w) => w.kind === 'app' && w.dir !== 'apps/storybook')
 const read = (path: string) => readFileSync(join(REPO, path), 'utf8')
 
 describe('docs/design-tokens.md', () => {

@@ -22,9 +22,9 @@ const dirs = (kind: 'app' | 'package') =>
 describe('the skeleton repo', () => {
   it('has the four apps and the eleven packages', () => {
     expect(dirs('app')).toEqual([
-      'apps/showcase',
       'apps/starter',
       'apps/starter-ssr',
+      'apps/storybook',
       'apps/workbench',
     ])
     expect(dirs('package')).toEqual([
@@ -56,13 +56,37 @@ describe('the skeleton repo', () => {
     expect(declared('apps/starter-ssr')).toEqual(declared('apps/starter'))
   })
 
-  it('the showcase uses every package (it is the place to see everything the skeleton ships)', () => {
-    const showcase = workspaces.find((w) => w.dir === 'apps/showcase')!
-    const used = Object.keys(showcase.packageJson.dependencies ?? {}).filter((dep) =>
-      dep.startsWith('@skeleton/'),
-    )
-    const all = dirs('package').map((dir) => `@skeleton/${dir.split('/')[1]}`)
-    expect(used.sort()).toEqual(all.sort())
+  it('every package that ships a component or a flow has stories next to it (the storybook is the reference)', () => {
+    const withStories = workspaces
+      .filter((w) => w.kind === 'package')
+      .filter((w) => w.files.some((f) => f.path.endsWith('.stories.tsx')))
+      .map((w) => w.dir)
+      .sort()
+    expect(withStories).toEqual([
+      'packages/auth',
+      'packages/captcha-turnstile',
+      'packages/notifications',
+      'packages/storage',
+      'packages/theme',
+      'packages/time',
+      'packages/ui',
+    ])
+  })
+
+  it('the storybook app holds the config, the patterns and the tokens page — not the component stories', () => {
+    const storybook = workspaces.find((w) => w.dir === 'apps/storybook')!
+    const stories = storybook.files
+      .filter((f) => f.path.endsWith('.stories.tsx'))
+      .map((f) => f.path)
+    expect(stories.sort()).toEqual([
+      'src/patterns/DetailPage.stories.tsx',
+      'src/patterns/ForbiddenPage.stories.tsx',
+      'src/patterns/FormPage.stories.tsx',
+      'src/patterns/ListPage.stories.tsx',
+      'src/patterns/LoginPage.stories.tsx',
+      'src/patterns/SettingsPage.stories.tsx',
+      'src/tokens/Tokens.stories.tsx',
+    ])
   })
 
   it('the scanners look at the apps and at the packages that draw UI', () => {
@@ -72,7 +96,7 @@ describe('the skeleton repo', () => {
         'apps/workbench',
         'apps/starter',
         'apps/starter-ssr',
-        'apps/showcase',
+        'apps/storybook',
         'packages/ui',
         'packages/theme',
         'packages/notifications',

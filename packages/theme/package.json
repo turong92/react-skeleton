@@ -25,6 +25,7 @@
     "sonner": "^2.0.0"
   },
   "devDependencies": {
+    "@skeleton/ui": "workspace:*",
     "lucide-react": "^1.17.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",

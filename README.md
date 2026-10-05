@@ -6,7 +6,7 @@ React + TypeScript + Vite 프론트엔드 스켈레톤 — **pnpm 워크스페�
 apps/
 ├── starter/       # SPA 스타터 — 새 프로젝트가 복사해 가는 앱: 라우터 · AppShell · 테마 토글 · API 클라이언트 배선 · 예시 쿼리 · 보호 라우트 (일부러 비어 있다)
 ├── starter-ssr/   # SSR 스타터 — 같은 페이지를 서버가 첫 응답으로 그려 보내고 브라우저가 이어받는다(plain Vite SSR + Node 서버 · Dockerfile)
-├── showcase/      # 갤러리 — 모든 UI 부품 · 토큰 · 패키지 사용 예를 백엔드 없이 눌러 본다(기본으로는 안 찍힌다: --with-showcase)
+├── storybook/     # 스토리집(Storybook) — 설정 · Patterns(복사해서 시작하는 화면 틀) · 토큰 문서. 부품 스토리는 부품 옆(packages/*/src/**/*.stories.tsx). 기본으로 찍힌다(--without-storybook)
 └── workbench/     # 백엔드 확인용 워크벤치(예전 데모 그대로) + `/packages` 예제 화면. 시각적 테스트 벤치이지 복사 대상이 아니다
 packages/
 ├── api-client/          # REST 클라이언트 — envelope · ApiError · 에러 코드 · traceparent · 멱등 키 · 서버 시각 연결점
@@ -23,6 +23,7 @@ packages/
 scripts/           # new-project.sh(새 프로젝트 찍기) · test-new-project.sh
 tests/             # 워크스페이스를 가로지르는 테스트(토큰 층 · 의존 규칙 · ESLint 경계)
 docs/design-tokens.md
+docs/ui-catalog.md  # 부품 → 스토리 파일 → 언제 쓰는가(스토리와 어긋나면 루트 테스트가 실패)
 ```
 
 **스켈레톤은 메커니즘을 주고 취향은 주지 않는다.** 색 값 · 문구 · 레이아웃 취향은 프로젝트가 정한다(부품의 문구는 prop, 색은 `tokens.json`).
@@ -33,16 +34,18 @@ docs/design-tokens.md
 pnpm install
 pnpm dev              # starter  http://localhost:5173
 pnpm dev:ssr          # starter-ssr  http://localhost:3000 (Node 서버 + Vite)
-pnpm dev:showcase     # showcase  http://localhost:5173 (백엔드 불필요)
+pnpm storybook        # 스토리집  http://localhost:6006 (백엔드 불필요)
 pnpm dev:workbench    # workbench (백엔드 :8080 필요)
 pnpm lint
 pnpm typecheck        # 모든 앱 · 패키지 + 루트 테스트
-pnpm test             # 모든 앱 · 패키지 + 루트 tests/ + new-project 빠른 검사
+pnpm test             # 모든 앱 · 패키지 + 루트 tests/ + new-project 빠른 검사 (빠른 단위 테스트 — 스토리는 안 돈다)
+pnpm test:stories     # 스토리의 play · 접근성을 진짜 브라우저(Playwright chromium, headless)에서 — 처음 한 번 pnpm exec playwright install chromium
+pnpm storybook:build  # 정적 스토리집(apps/storybook/storybook-static)
 pnpm format:check
-pnpm build            # 두 앱을 빌드(각 apps/*/dist)
+pnpm build            # 앱을 빌드(각 apps/*/dist) — 스토리집은 storybook:build
 pnpm tokens           # packages/tokens/tokens.json → tokens.css + docs/design-tokens.md 표 구역
 pnpm tokens:check     # 생성물이 정본과 같은지 확인 (CI)
-bash scripts/test-new-project.sh --full   # 세 조합을 찍어 각각 install · lint · typecheck · test · build (네트워크 필요, 수 분 — 별도 CI 워크플로)
+bash scripts/test-new-project.sh --full   # 네 조합을 찍어 각각 install · lint · typecheck · test · build (+ 한 조합은 test:stories) (네트워크 필요, 수 분 — 별도 CI 워크플로)
 ```
 
 Node 24(또는 22.18+), pnpm 10.
@@ -52,12 +55,13 @@ Node 24(또는 22.18+), pnpm 10.
 백엔드 `scripts/new-project.sh` 처럼, 프론트도 **한 줄로 찍어 낸다**:
 
 ```bash
-scripts/new-project.sh <target-dir> <name> [--packages a,b,c] [--ssr] [--with-showcase] [--with-workbench] [--scope @acme]
+scripts/new-project.sh <target-dir> <name> [--packages a,b,c] [--ssr] [--without-storybook] [--with-workbench] [--scope @acme]
 
 scripts/new-project.sh ~/work/ovation ovation                                      # 스타터 + 스타터가 쓰는 패키지
 scripts/new-project.sh ~/work/ovation ovation --packages realtime,notifications,storage
 scripts/new-project.sh ~/work/ovation ovation --scope @ovation --packages payment  # 패키지 스코프도 바꾼다
-scripts/new-project.sh ~/work/ovation ovation --ssr --with-showcase                 # 서버 렌더 스타터 + 갤러리
+scripts/new-project.sh ~/work/ovation ovation --ssr                                 # 서버 렌더 스타터(스토리집은 기본으로 따라온다)
+scripts/new-project.sh ~/work/ovation ovation --without-storybook                   # 스토리집 · 스토리 · 에이전트 안내 없이
 ```
 
 - 이 레포를 복사해(`node_modules` · `dist` · `.git` 제외) `apps/starter` 를 `apps/<name>` 으로 바꾼다(package.json 이름 · `index.html` 제목 · 헤더 브랜드 · `.env.example`). `apps/workbench` 는 `--with-workbench` 일 때만(그러면 모든 패키지가 따라온다).
@@ -65,8 +69,8 @@ scripts/new-project.sh ~/work/ovation ovation --ssr --with-showcase             
 - 루트 `package.json`(이름 · `dev`) · eslint 의 앱 이름 막기 · 문서(README · CLAUDE · CHANGELOG)를 새 프로젝트용으로 다시 쓰고, `--scope` 가 있으면 모든 `@skeleton/` 을 바꾼다. `pnpm-workspace.yaml` 은 `apps/*` · `packages/*` 글롭이라 그대로.
 - 끝나면 다음 단계를 출력한다: `pnpm install --no-frozen-lockfile`(잠금 파일은 스켈레톤의 것 — 맞춰서 고친다) → `pnpm format`(스코프 · 이름으로 줄바꿈이 달라질 수 있다) → `pnpm dev`.
 - 고른 패키지는 **폴더만** 복사된다. 쓰기 시작할 때 앱 `package.json` 에 한 줄(`"@skeleton/<이름>": "workspace:*"`)을 더한다 — 안 쓰는 의존을 선언하면 루트 `pnpm test` 가 막는다(선언한 의존 = 실제 import).
-- `--ssr`: `apps/starter` 대신 `apps/starter-ssr` 가 `apps/<name>` 이 된다(이름은 `src/appName.ts` 한 줄). `--with-showcase`: `apps/showcase` 도 남는다(모든 패키지가 따라온다).
-- 검증: `scripts/test-new-project.sh --quick`(인자 검증 · 닫힘 · 구조 · 이름/스코프 · 남는 흔적, 수 초 — `pnpm test` 가 부른다), `--full`(네 조합 `기본값` · `--packages realtime,notifications,storage` · `--scope @acme --packages payment` · `--ssr --with-showcase`(서버를 띄우는 통합 테스트 포함)를 찍어 각각 install · lint · typecheck · test · build, CI 의 `new-project` 워크플로).
+- `--ssr`: `apps/starter` 대신 `apps/starter-ssr` 가 `apps/<name>` 이 된다(이름은 `src/appName.ts` 한 줄). 스토리집은 기본으로 따라온다 — `apps/storybook` · 남는 패키지의 스토리 · Patterns · `docs/ui-catalog.md` · CLAUDE.md 의 에이전트 안내 · 스토리 테스트 · CI `stories` 잡(**참조가 프로젝트와 함께 간다**). `--without-storybook` 이면 이 전부를 깨끗이 뗀다.
+- 검증: `scripts/test-new-project.sh --quick`(인자 검증 · 닫힘 · 구조 · 이름/스코프 · 남는 흔적, 수 초 — `pnpm test` 가 부른다), `--full`(네 조합 `기본값` · `--packages realtime,notifications,storage` · `--scope @acme --packages payment` · `--ssr --without-storybook`(서버를 띄우는 통합 테스트 포함)를 찍어 각각 install · lint · typecheck · test · build — 조합 2 는 `storybook:build` · `test:stories` 도, CI 의 `new-project` 워크플로).
 
 폴더 복사로 직접 가져가도 된다: 패키지는 각자 `package.json` · 테스트 · README 를 가진 자족 단위이고 서로는 이름으로만 이어져 있다. 이때 `pnpm-workspace.yaml` · 루트 `tsconfig.base.json` · `eslint.config.js` 도 가져온다.
 
@@ -92,12 +96,12 @@ scripts/new-project.sh ~/work/ovation ovation --ssr --with-showcase             
 
 ## 앱
 
-| 앱            | 무엇                                  | 언제                                                               | 실행                                                                       |
-| ------------- | ------------------------------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------- |
-| `starter`     | SPA 출발점(빈 껍데기)                 | 로그인 뒤 앱 · 대시보드 · 내부 도구. **기본값**                    | `pnpm dev`                                                                 |
-| `starter-ssr` | 서버 렌더 출발점                      | 검색 노출(SEO) · 링크 미리보기 · 첫 화면 속도가 필요한 공개 페이지 | `pnpm dev:ssr` · `pnpm --filter starter-ssr build && … start` · Dockerfile |
-| `showcase`    | 스켈레톤이 주는 것 전부를 보는 갤러리 | 스타터가 비어 있어 기본 세트를 보고 싶을 때                        | `pnpm dev:showcase`                                                        |
-| `workbench`   | 백엔드 확인용 시각적 테스트 벤치      | 백엔드 모듈을 눌러 볼 때                                           | `pnpm dev:workbench`                                                       |
+| 앱            | 무엇                                    | 언제                                                               | 실행                                                                       |
+| ------------- | --------------------------------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------- |
+| `starter`     | SPA 출발점(빈 껍데기)                   | 로그인 뒤 앱 · 대시보드 · 내부 도구. **기본값**                    | `pnpm dev`                                                                 |
+| `starter-ssr` | 서버 렌더 출발점                        | 검색 노출(SEO) · 링크 미리보기 · 첫 화면 속도가 필요한 공개 페이지 | `pnpm dev:ssr` · `pnpm --filter starter-ssr build && … start` · Dockerfile |
+| `storybook`   | 스토리집 — 부품 · 화면 틀 · 토큰의 정본 | 화면을 짜기 전에 부품 사용법을 볼 때 · 에이전트가 따라 할 기준     | `pnpm storybook` · `pnpm test:stories`                                     |
+| `workbench`   | 백엔드 확인용 시각적 테스트 벤치        | 백엔드 모듈을 눌러 볼 때                                           | `pnpm dev:workbench`                                                       |
 
 SPA vs SSR: 둘은 같은 패키지 · 같은 페이지다. SPA 는 정적 파일로 호스팅하고 서버가 없다. SSR 은 Node 프로세스 1개를 운영하고(렌더 규칙 · 느린 백엔드 대비 시간 제한), 대신 첫 응답에 내용 · 제목 · 설명이 이미 들어 있다. 필요가 실제로 생긴 앱만 SSR 로 시작한다 — `scripts/new-project.sh <dir> <name> --ssr`.
 
@@ -109,9 +113,22 @@ SPA vs SSR: 둘은 같은 패키지 · 같은 페이지다. SPA 는 정적 파�
 - 상태 코드(200 · 404) · `<html lang>` · 라우트별 `<title>` · 설명, 테마 스크립트는 `<head>` 맨 앞(깜빡임 없음), 보호 라우트는 서버에서 중립 자리 표시.
 - `pnpm --filter starter-ssr dev|build|start`. 환경변수 `HOST` `PORT` `API_BASE_URL` `SSR_API_TIMEOUT_MS`.
 
-### `apps/showcase`
+### `apps/storybook` — 스토리가 부품의 정본이다
 
-백엔드 없이 도는 갤러리 — `/ui`(모든 부품 · 상태 · import 줄) · `/tokens`(실제 토큰, 라이트 · 다크 나란히) · `/packages/<이름>`(가짜 전송 위의 사용 예). [`apps/showcase/README.md`](apps/showcase/README.md).
+화면을 짤 때마다 결과가 달라지지 않도록, **보고 따라 할 정본**을 Storybook 으로 둔다. 부품마다 스토리 하나가 「보이는 모습 · 정본 사용법 · 실행되는 테스트」이고, 테스트가 돌기 때문에 낡지 않는다.
+
+```bash
+pnpm storybook        # http://localhost:6006 — 도구 모음에 라이트/다크 스위치(<html data-theme>), 컨트롤 · 문서(autodocs) · 접근성 패널
+pnpm test:stories     # 모든 스토리를 진짜 브라우저(headless chromium)에서 렌더하고 play(상호작용 테스트) + 접근성 검사 — 위반이면 실패
+pnpm storybook:build  # 정적 빌드(apps/storybook/storybook-static)
+```
+
+- **어디에 있나**: 부품 스토리는 부품 옆 — `packages/ui/src/Button/Button.stories.tsx`(CSF3, `satisfies Meta`). 다른 패키지의 컴포넌트(`ThemeToggle` · `NotificationBell` · `Turnstile` · `RequireAuth` · 업로드 …)도 그 패키지 안에, 그 스토리가 쓰는 가짜(받은편지함 · 전송 · 위젯)는 그 패키지의 `src/stories/`. `apps/storybook` 에는 설정(`.storybook/`) · **Patterns**(`@skeleton/ui` 만으로 짠 화면 틀 6개: 목록 · 폼 · 상세 · 로그인 · 403 · 설정 — 에이전트와 사람이 복사해 시작하는 템플릿) · 토큰 문서가 있다. 전체 색인: [`docs/ui-catalog.md`](docs/ui-catalog.md).
+- **스토리 = 테스트**: `play` 가 클릭 · 키보드(Tab 순서 · Enter/Space · 탭 화살표) · 포커스 링 · 라벨 연결 · 쪽 이동의 끝 같은 동작을 실제로 실행한다. 접근성(axe) 위반은 `pnpm test:stories` 를 실패시킨다(`.storybook/preview.tsx` 의 `a11y: { test: 'error' }` — 끄는 규칙은 스토리 옆에 이유와 함께). 합성 키 입력이 못 하는 브라우저 몫(`<dialog>` 의 Esc)은 `requestClose()` 로 같은 경로를 탄다.
+- **에이전트는 이렇게 쓴다**: 부품을 쓰기 전에 카탈로그에서 스토리를 열어 사용법을 그대로 따르고, 새 화면은 Patterns 에서 가장 가까운 것을 복사해 시작하고, 날 `<button>` · `<input>` · 인라인 색/간격 날값은 쓰지 않는다(`apps/**` 의 ESLint 규칙이 대신할 부품 이름과 함께 막는다 — 워크벤치만 예외). 부품을 더하거나 바꾸면 스토리와 `play` 를 더하거나 고친다. 규칙은 [`CLAUDE.md`](CLAUDE.md) 의 「UI 를 만들기 전에」.
+- **지키는 테스트**(`pnpm test`, 브라우저 불필요): 모든 `@skeleton/ui` export 에 스토리 + `play` 가 있고, 모든 Patterns 가 CLAUDE.md 안내에 적혀 있고 도우미 파일 없이 `@skeleton/ui` 만 import 하며, `docs/ui-catalog.md` 가 디스크의 스토리와 일치한다(`tests/stories.test.ts`).
+- **시각 스냅샷은 넣지 않았다**: 글꼴이 시스템 글꼴이라 macOS 와 Linux CI 에서 픽셀이 달라 기준 이미지가 흔들린다 — 같은 CI 이미지에서 만든 기준으로 따로 도입한다.
+- 스토리집은 `--without-storybook` 이 아니면 새 프로젝트에 그대로 따라간다.
 
 ### `apps/starter`
 

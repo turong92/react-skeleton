@@ -3,3 +3,4 @@ packages/tokens/tokens.css
 docs/design-tokens.md
 dist
 pnpm-lock.yaml
+storybook-static

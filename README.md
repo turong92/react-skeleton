@@ -218,6 +218,16 @@ await apiClient.response<ApiValueResponse<OrderResponse>>('/orders', {
 - 패키지에는 `import.meta.env` 도 모듈 전역 싱글턴도 없다. 환경변수 읽기와 인스턴스 만들기는 앱이 한다.
 - 각 앱 · 패키지가 `package.json` 에 선언한 `@skeleton/*` 의존은 소스가 실제로 import 하는 것과 정확히 같아야 한다(= 지울 수 있다). 워크벤치가 아닌 앱(`starter` 와 거기서 찍은 앱)은 워크벤치 코드에 의존하지 않는다.
 
+## 알려진 함정 — 빌드 · 테스트가 0% CPU 로 영원히 멈출 때
+
+Vite 8 은 번들러로 rolldown 을 쓴다. 초기 버전(vite 8.0.x · rolldown 1.0.0-rc.x)에는 macOS 에서 `vite build` · `vitest run` · 개발 서버 기동이 **드물게 교착**으로 멈추는 결함이 있었다 — 모든 rolldown 워커 스레드가 `_pthread_cond_wait` 에서 자고 CPU 0%, 출력 없음, 끝나지 않는다(`sample <pid>` 로 보인다). 이 레포에서 `pnpm build` 가 약 8%(5/65) 멈췄고 vite 8.3.2 · rolldown 1.2.12 로 올린 뒤 재현되지 않아 **`vite ^8.3.2` 아래로 내리지 않는다**(CHANGELOG 에 측정).
+
+그래도 같은 모양의 멈춤이 다시 생길 수 있어 가둬 둔다.
+
+- `scripts/with-watchdog.mjs [--wall 초] [--idle 초] [--retries n] -- <명령>` — 한 시도가 `--wall` 을 넘기거나, `--idle` 동안 출력도 CPU 도 없으면 프로세스 그룹째 죽이고 다시 돈다(끊긴 경우만 — 스스로 실패한 명령은 재시도하지 않고 종료 코드를 그대로 준다. 재시도가 다 끝나면 124). 의존성 없음. `test-new-project.sh --full` 의 단계들과 `pnpm e2e:sample` 이 이것을 거친다.
+- 손으로 돌릴 때: `node scripts/with-watchdog.mjs --wall 300 --retries 2 -- pnpm build`. macOS 에는 `timeout` 이 없다.
+- `e2e:sample` 의 Vite 서버는 30초 안에 응답이 없으면 죽이고 새로 띄운다(최대 3번).
+
 ## 새 프로젝트를 GitHub Template 으로
 
 이 레포는 **GitHub Template**. 새 프로젝트 시작:

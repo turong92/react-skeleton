@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "test": "vitest run --pool forks",
     "typecheck": "tsc -b --noEmit",
-    "e2e": "vitest run --config vitest.e2e.config.ts",
+    "e2e": "node ../../scripts/with-watchdog.mjs --wall 1800 --idle 600 --retries 1 -- vitest run --config vitest.e2e.config.ts",
     "walkthrough": "E2E_WALKTHROUGH=1 vitest run --config vitest.e2e.config.ts"
   },
   "dependencies": {

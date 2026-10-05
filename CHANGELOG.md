@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — 빌드 · 테스트가 0% CPU 로 영원히 멈추던 rolldown 교착 (vite 8.0.9 → ^8.3.2) + 워치독 (2026-10-06)
+
+- **측정**(macOS arm64 · Node 24.19 · 깨끗한 복사본, 시도마다 60초 감시): 같은 명령을 반복해 멈춘 비율을 쟀다.
+
+  | 구성                                                                         | `pnpm build`         | 루트 `vitest run --pool forks` |
+  | ---------------------------------------------------------------------------- | -------------------- | ------------------------------ |
+  | vite 8.0.9 · rolldown 1.0.0-rc.16 · vitest 4.1.8 (이전)                      | **5/65 멈춤 (7.7%)** | **2/175 (1.1%)**               |
+  | 같음 + `ROLLDOWN_WORKER_THREADS=1`                                           | 0/40                 | —                              |
+  | **vite 8.3.2 · rolldown 1.2.12 · vitest 4.1.11 · plugin-react 6.1.2 (지금)** | **0/120**            | **0/450**                      |
+
+  멈춘 프로세스의 `sample` 은 rolldown 워커 스레드 18개가 전부 `_pthread_cond_wait`, 메인 스레드는 `kevent` 에서 대기(CPU 0%) — `vite build --ssr` 를 시작하는 두 번째 번들 등에서 난다. 심볼이 없는 바이너리라 원인 줄까지는 못 찍었다: 네이티브 바인딩의 경합으로 `bundle.generate()` 가 영원히 끝나지 않는 증상이고, 같은 머신의 다른 레포(lindorm-io/monorepo #247 · #253)가 같은 버전에서 독립적으로 재현해(1%, 0/2400 으로 8.3.2 · 8.0.11 에서 사라짐) 일치한다. 환경변수 `ROLLDOWN_WORKER_THREADS=1` 도 효과가 있었지만(0/40) 모든 명령에 붙일 수 없어 버전을 올리는 쪽을 골랐다. Vite 7(rollup)로 내릴 필요는 없었다. 열린 upstream 이슈: rolldown/rolldown#10695(vite 8.x 대형 빌드 교착, 미해결).
+
+- 올린 것: `vite ^8.3.2` · `@vitejs/plugin-react ^6.1.2` · `vitest ^4.1.11` · `@vitest/browser-playwright 4.1.11`(vitest 와 같은 버전이어야 한다). 루트 `package.json` 한 곳이 정본이라 `new-project.sh` 로 찍은 프로젝트와 CI 에 그대로 흐른다. 8.0.0–8.0.15 는 `npm audit` 에서 high 였다.
+- **`scripts/with-watchdog.mjs`**(의존성 없음): `node scripts/with-watchdog.mjs [--wall 초] [--idle 초] [--retries n] -- <명령>` — 한 시도가 `--wall` 을 넘기거나 `--idle` 동안 출력도 CPU 도 없으면 프로세스 그룹째 죽이고 다시 돈다. 끊김만 재시도하고 스스로 실패한 명령은 그 종료 코드를 그대로 준다(재시도를 다 쓰고도 멈추면 124). 단위 테스트 `tests/withWatchdog.test.ts`(진짜 자식 프로세스: 멈춤 → 죽임 → 재시도 → 종료 코드, 진짜 실패는 한 번만, 바쁜 CPU · 계속 출력하는 프로세스는 안 끊음, 손자까지 죽임)
+- `scripts/test-new-project.sh --full` 의 조합별 단계가 워치독을 거친다(단계당 15분 · 무활동 3분, 내려받기는 시간 한도만). `apps/sample` 의 `pnpm e2e` 는 워치독으로 감싸고, e2e 의 Vite 서버는 30초 안에 응답이 없으면 죽이고 새로 띄운다(최대 3번). README 「알려진 함정」 · CLAUDE.md 에 주의 추가
+
 ### Added — `@skeleton/i18n` · `@skeleton/ui` 설정/오류 부품 5개 + `LanguageMenu` · SSE 클라이언트 하드닝 (2026-10-06)
 
 Ovation 웹의 일반화할 수 있는 아이디어를 스켈레톤 규칙(토큰 · prop 문구 · 스토리 + play · SSR 안전)에 맞게 다시 만들었다 — 파일을 옮기지 않았고 Ovation 이름 · 저장 키 · 문구는 없다.

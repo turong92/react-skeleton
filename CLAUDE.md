@@ -158,6 +158,8 @@ PoC 기동 속도 + AI 친화성. 정적 번들 출력이라 호스팅 자유도
 
 루트에서: `pnpm lint` · `pnpm tokens:check` · `pnpm typecheck`(모든 앱 · 패키지 `tsc` + 루트 tests) · `pnpm test`(각 앱 · 패키지 + 루트 `tests/`) · `pnpm format:check` · `pnpm build`(네 앱). CI(`.github/workflows/ci.yml`)가 같은 순서로 돈다. 한 곳만: `pnpm --filter @skeleton/auth test`. dev 서버: `pnpm dev`(starter) · `pnpm dev:ssr` · `pnpm dev:workbench`.
 
+**멈춤 주의**: `vite build` · `vitest` 가 0% CPU 로 영원히 멈추는 rolldown 교착이 vite 8.0.x 에 있었다(vite ^8.3.2 에서 재현 안 됨 — 내리지 말 것). 오래 걸릴 수 있는 명령은 `node scripts/with-watchdog.mjs --wall 300 --retries 2 -- <명령>` 으로 돌린다(자세히는 README 「알려진 함정」). macOS 에는 `timeout` 이 없다.
+
 <!-- storybook:start -->
 
 스토리집: `pnpm storybook`(http://localhost:6006) · `pnpm storybook:build`(정적 빌드) · `pnpm test:stories`(진짜 브라우저 headless — 모든 스토리의 `play` + a11y. Playwright chromium 이 필요하다: `pnpm exec playwright install chromium`). `pnpm test` 는 빠른 단위 테스트만 돌린다. CI 는 `stories` 잡이 `test:stories` 를 따로 돈다.

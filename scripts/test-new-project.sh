@@ -288,12 +288,14 @@ check "ci.yml 은 두 경우 모두 올바른 YAML 들여쓰기 그대로다 (st
 if [ "$MODE" = "--full" ]; then
   echo "== 10. 조합마다 pnpm install · format · lint · typecheck · test · build (순차)"
   verify_composition() { # verify_composition <dir> <이름> [stories] — stories 면 test:stories(진짜 브라우저)도 돈다
-    local dir="$1" name="$2" with_stories="${3:-}" started ended step
+    local dir="$1" name="$2" with_stories="${3:-}" started ended step idle
     local steps=("install --no-frozen-lockfile --prefer-offline" "format" "tokens:check" "lint" "typecheck" "test" "format:check" "build")
     if [ -n "$with_stories" ]; then steps+=("storybook:build" "exec playwright install ${CI:+--with-deps }chromium" "test:stories"); fi
     started="$(date +%s)"
     for step in "${steps[@]}"; do
-      if ! (cd "$dir" && pnpm $step > "$TMP/$name-${step%% *}.log" 2>&1); then
+      # 워치독: rolldown(rc) 교착으로 멈추면 끊고 다시 돈다(README "알려진 함정"). 내려받기 단계는 CPU 를 안 써도 멀쩡해 시간 한도만 둔다
+      case "$step" in install*|exec\ playwright*) idle=100000 ;; *) idle=180 ;; esac
+      if ! (cd "$dir" && node "$SRC/scripts/with-watchdog.mjs" --wall 900 --idle "$idle" --retries 2 -- pnpm $step > "$TMP/$name-${step%% *}.log" 2>&1); then
         ended="$(date +%s)"
         fail "$name: pnpm ${step%% *} 실패 ($((ended - started))초) — 로그 마지막 줄:"
         tail -25 "$TMP/$name-${step%% *}.log" | sed 's/^/      /'

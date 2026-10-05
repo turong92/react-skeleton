@@ -72,32 +72,51 @@ export default async function setup(project: TestProject) {
     if (!apiUrl) throw new Error(`backend script printed no READY <url> line:\n${started.stdout}`)
   }
 
-  const port = await freePort()
-  const web: ChildProcess = spawn(
-    'pnpm',
-    ['exec', 'vite', '--port', String(port), '--strictPort', '--host', '127.0.0.1'],
-    {
-      cwd: appDir,
-      env: { ...process.env, API_PROXY_TARGET: apiUrl, MARINA_DIRECT: '1' },
-      stdio: 'ignore',
-      detached: true,
-    },
-  )
-  const baseUrl = `http://127.0.0.1:${port}`
-
-  const stopAll = () => {
-    if (web.pid) {
+  // Vite 서버(rolldown)가 드물게 기동 중 교착으로 0% CPU 로 멈춘다(README "알려진 함정") — 첫 응답을 기다리다 제때 안 오면 그룹째 죽이고 새로 띄운다
+  let web: ChildProcess | null = null
+  let baseUrl = ''
+  const killWeb = () => {
+    if (web?.pid) {
       try {
         process.kill(-web.pid) // 프로세스 그룹째 — pnpm 이 낳은 서버까지
       } catch {
         // 이미 끝남
       }
     }
+  }
+  const WEB_ATTEMPTS = 3
+  for (let attempt = 1; ; attempt++) {
+    const port = await freePort()
+    web = spawn(
+      'pnpm',
+      ['exec', 'vite', '--port', String(port), '--strictPort', '--host', '127.0.0.1'],
+      {
+        cwd: appDir,
+        env: { ...process.env, API_PROXY_TARGET: apiUrl, MARINA_DIRECT: '1' },
+        stdio: 'ignore',
+        detached: true,
+      },
+    )
+    baseUrl = `http://127.0.0.1:${port}`
+    try {
+      await waitFor(`${baseUrl}/`, 'web server', 30_000)
+      break
+    } catch (error) {
+      killWeb()
+      if (attempt >= WEB_ATTEMPTS) {
+        if (backendScript) spawnSync('bash', [backendScript, 'stop'], { env: backendEnv })
+        throw error
+      }
+      console.warn(`[e2e] web server not up (attempt ${attempt}/${WEB_ATTEMPTS}) — restarting`)
+    }
+  }
+
+  const stopAll = () => {
+    killWeb()
     if (backendScript) spawnSync('bash', [backendScript, 'stop'], { env: backendEnv })
   }
 
   try {
-    await waitFor(`${baseUrl}/`, 'web server')
     await waitFor(`${baseUrl}/api/v1/auth/me`, 'backend through the web server proxy')
   } catch (error) {
     stopAll()

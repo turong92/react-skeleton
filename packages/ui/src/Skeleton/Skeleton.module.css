@@ -1,0 +1,51 @@
+.root {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.bar {
+  display: block;
+  background: var(--surface-muted);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.bar[data-shape='text'] {
+  height: 1em;
+  border-radius: var(--radius-sm);
+}
+
+.bar[data-shape='text'][data-last='true'] {
+  width: 60%;
+}
+
+.bar[data-shape='rect'] {
+  min-height: 4rem;
+  border-radius: var(--radius-md);
+}
+
+.bar[data-shape='circle'] {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-full);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar {
+    animation: none;
+  }
+}

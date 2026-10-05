@@ -194,6 +194,26 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
     ],
     onChange: noop,
   }),
+  'ui#Skeleton': () => ({ lines: 2, label: 'Loading' }),
+  'ui#Avatar': () => ({ name: 'Ada Lovelace', src: '/ada.png' }),
+  'ui#Breadcrumbs': () => ({
+    label: 'Breadcrumb',
+    items: [{ label: 'Home', href: '/' }, { label: 'Notes' }],
+  }),
+  'ui#Alert': () => ({ tone: 'warning', title: 'Heads up', children: 'Details' }),
+  'ui#CopyButton': () => ({ value: 'abc', label: 'Copy' }),
+  'ui#Stepper': () => ({
+    label: 'Progress',
+    current: 1,
+    steps: [
+      { id: 'a', label: 'A' },
+      { id: 'b', label: 'B' },
+    ],
+  }),
+  'ui#Tooltip': () => ({
+    content: 'Hint',
+    children: (aria: Record<string, unknown>) => createElement('button', aria, 'Help'),
+  }),
   'i18n#I18nProvider': (ctx) => ({ i18n: fakeI18n(ctx), children: 'inside' }),
   'theme#ThemeToggle': () => ({}),
   'theme#ThemedToaster': () => ({}),

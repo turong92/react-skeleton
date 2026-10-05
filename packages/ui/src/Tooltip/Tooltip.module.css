@@ -1,0 +1,32 @@
+.root {
+  position: relative;
+  display: inline-flex;
+}
+
+.tip {
+  position: absolute;
+  inset-inline-start: 50%;
+  z-index: 20;
+  width: max-content;
+  max-width: 16rem;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  background: var(--inverse);
+  color: var(--on-inverse);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-snug);
+  transform: translateX(-50%);
+  pointer-events: auto;
+}
+
+.tip[hidden] {
+  display: none;
+}
+
+.tip[data-placement='top'] {
+  bottom: calc(100% + var(--space-xs));
+}
+
+.tip[data-placement='bottom'] {
+  top: calc(100% + var(--space-xs));
+}

@@ -178,12 +178,32 @@ export function renderLlmsTxt(catalog) {
       `- ${catalog.skeleton.pointer} (스켈레톤 ${catalog.skeleton.name} ${catalog.skeleton.version})`,
       '',
     )
-  out.push('## 기능 한눈에 (id — 켜는 법: 요약 [키워드])', '')
+  if (!project && catalog.newProject)
+    out.push(
+      '## 새 프로젝트 세팅 (두 레포 — 각 스켈레톤 레포 루트에서 실행)',
+      '',
+      `- react: ${code(catalog.newProject.react.usage)}`,
+      `- kotlin: ${code(catalog.newProject.kotlin.usage)}`,
+      '- 아래 기능 줄의 「→ react / kotlin」 조각을 합쳐 쓴다: `--packages` 는 하나로(쉼표) 합치고 다른 옵션은 덧붙인다. 의존으로 닫히는 패키지는 적지 않아도 따라온다. 완성된 예와 손으로 써야 하는 것: docs/new-project-recipe.md · docs/capabilities.md',
+      '',
+    )
+  out.push(
+    project
+      ? '## 기능 한눈에 (id: 요약 [키워드])'
+      : '## 기능 한눈에 (id: 요약 [키워드] → 켜는 조각)',
+    '',
+  )
   for (const kind of KINDS)
-    for (const e of catalog.capabilities.filter((x) => x.kind === kind))
-      out.push(
-        `- ${e.id}${project ? '' : ` (${shortFlag(e)})`}: ${e.summary} [${e.keywords.ko.slice(0, 4).join(', ')}; ${e.keywords.en.slice(0, 3).join(', ')}]`,
-      )
+    for (const e of catalog.capabilities.filter((x) => x.kind === kind)) {
+      let line = `- ${e.id}: ${e.summary} [${e.keywords.ko.slice(0, 4).join(', ')}; ${e.keywords.en.slice(0, 3).join(', ')}]`
+      if (!project && kind !== 'script') {
+        const f = fragmentFor(catalog, [e.id])
+        line += ` → react ${f.react ? code(f.react) : '기본 포함'}`
+        if (e.backend)
+          line += ` · kotlin ${f.kotlin ? code(f.kotlin) : '기본 포함'}${f.choices.length ? ` (${f.choices.map((g) => g.join(' | ')).join('; ')} 중 고른다)` : ''}`
+      }
+      out.push(line)
+    }
   out.push('')
   return out.join('\n')
 }

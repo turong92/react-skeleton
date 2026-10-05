@@ -139,6 +139,43 @@ describe('docs/new-project-recipe.md cannot rot', () => {
   })
 })
 
+describe('llms.txt answers the owners words without opening anything else', () => {
+  const llms = readFileSync(join(REPO, 'llms.txt'), 'utf8')
+  const OWNER_WORDS = [
+    '로그인',
+    '소셜 로그인',
+    '게시판',
+    '댓글',
+    '공감',
+    '알림',
+    '다국어',
+    '랜딩',
+    '약관',
+    '결제',
+    '파일 업로드',
+    '캡차',
+    '다크 모드',
+    '요금제',
+    '검색 노출',
+  ]
+  it.each(OWNER_WORDS)('mentions "%s"', (word) => {
+    expect(
+      llms,
+      `add "${word}" to the keywords (or summary) of the entry that provides it`,
+    ).toContain(word)
+  })
+  it('gives a pattern line the packages of everything it needs (live-notifications also needs realtime)', () => {
+    const line = llms.split('\n').find((l) => l.startsWith('- live-notifications:')) ?? ''
+    expect(line).toContain('--packages notifications,realtime')
+    expect(line).toContain('kotlin')
+  })
+  it('states both new-project.sh interfaces and how to combine the fragments', () => {
+    expect(llms).toContain('<root-package>')
+    expect(llms).toContain('--packages')
+    expect(llms).toContain('docs/new-project-recipe.md')
+  })
+})
+
 describe('the backend side of the catalog names real kotlin-skeleton modules (only when the sibling repo is checked out)', () => {
   const sibling = join(REPO, '..', 'kotlin-skeleton', 'docs', 'modules', 'README.md')
   it.skipIf(!existsSync(sibling))(

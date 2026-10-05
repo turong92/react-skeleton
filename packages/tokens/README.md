@@ -26,7 +26,7 @@ pnpm tokens:check   # 쓰지 않고 비교, 어긋나면 종료 코드 1 (CI). �
 
 | export                         | 뜻                                                                                                                             |
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
-| `@skeleton/tokens/tokens.css`  | 생성된 스타일시트(`:root` 라이트 · `html[data-theme='dark']` · 시스템 다크)                                                    |
+| `@skeleton/tokens/tokens.css`  | 생성된 스타일시트(`:root, [data-theme='light']` 라이트 · `[data-theme='dark']`(`<html>` 이든 컨테이너든) · 시스템 다크)        |
 | `@skeleton/tokens/tokens.json` | 정본                                                                                                                           |
 | `@skeleton/tokens/build`       | `build(options)` · `check(options)` · `main(argv)` · `resolveTokens(json)`                                                     |
 | `@skeleton/tokens`             | 테스트 도구: `themeVars` · `expandVars` · `parseColor` · `over` · `contrast` · `findRawColors` · `findRawLayout` · `cssBlocks` |

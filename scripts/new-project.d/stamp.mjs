@@ -1,7 +1,7 @@
 // scripts/new-project.sh 의 일꾼(node 만 쓴다). 직접 부르지 않는다 — 인자 검증은 셸이 한다.
-//   node stamp.mjs plan  <srcRoot> <withWorkbench 0|1> <requestedCsv>            → 남길 패키지(`keep <p>`)와 이유(`why <p> …`)
-//   node stamp.mjs copy  <srcRoot> <target>                                       → 군더더기 빼고 복사
-//   node stamp.mjs apply <target> <name> <scope> <withWorkbench 0|1> <keepCsv>   → 가지치기 · 이름 · 스코프 · 문서
+//   node stamp.mjs plan  <srcRoot> <withWorkbench 0|1> <requestedCsv> [withShowcase 0|1] [ssr 0|1]   → 남길 패키지(`keep <p>`)와 이유(`why <p> …`)
+//   node stamp.mjs copy  <srcRoot> <target>                                                          → 군더더기 빼고 복사
+//   node stamp.mjs apply <target> <name> <scope> <withWorkbench 0|1> <keepCsv> [withShowcase 0|1] [ssr 0|1]   → 가지치기 · 이름 · 스코프 · 문서
 import {
   cpSync,
   existsSync,
@@ -34,7 +34,7 @@ const skeletonDeps = (pkg) =>
 const nameOf = (dep) => dep.slice(SCOPE.length + 1)
 
 // ------------------------------------------------------------------------------------------------ plan
-function plan(root, withWorkbench, requested) {
+function plan(root, withWorkbench, requested, withShowcase = '0', ssr = '0') {
   const packages = subdirs(join(root, 'packages')).filter((dir) =>
     existsSync(join(root, 'packages', dir, 'package.json')),
   )
@@ -50,13 +50,17 @@ function plan(root, withWorkbench, requested) {
     reasons.set(pkg, why)
     queue.push(pkg)
   }
-  for (const dep of skeletonDeps(readJson(join(root, 'apps', 'starter', 'package.json'))))
-    want(nameOf(dep), 'needed by the starter app')
+  const starter = ssr === '1' ? 'starter-ssr' : 'starter'
+  for (const dep of skeletonDeps(readJson(join(root, 'apps', starter, 'package.json'))))
+    want(nameOf(dep), `needed by the ${starter} app`)
   for (const dep of skeletonDeps(readJson(join(root, 'package.json'))))
     want(nameOf(dep), 'needed by the root tooling')
   if (withWorkbench === '1')
     for (const dep of skeletonDeps(readJson(join(root, 'apps', 'workbench', 'package.json'))))
       want(nameOf(dep), 'needed by the workbench app')
+  if (withShowcase === '1')
+    for (const dep of skeletonDeps(readJson(join(root, 'apps', 'showcase', 'package.json'))))
+      want(nameOf(dep), 'needed by the showcase app')
   for (const pkg of requested.split(',').filter(Boolean)) want(pkg, 'requested')
   for (let i = 0; i < queue.length; i += 1) {
     const pkg = queue[i]
@@ -115,15 +119,20 @@ function replaceOnce(path, from, to) {
   writeFileSync(path, text.replace(from, to))
 }
 
-function apply(target, name, scope, withWorkbench, keepCsv) {
+function apply(target, name, scope, withWorkbench, keepCsv, withShowcase = '0', ssrFlag = '0') {
   const keep = new Set(keepCsv.split(',').filter(Boolean))
   const workbench = withWorkbench === '1'
+  const showcase = withShowcase === '1'
+  const ssr = ssrFlag === '1'
+  const source = ssr ? 'starter-ssr' : 'starter' // 새 앱이 될 스타터
   const app = join(target, 'apps', name)
 
   // 1. 가지치기
   for (const pkg of subdirs(join(target, 'packages')))
     if (!keep.has(pkg)) rmSync(join(target, 'packages', pkg), { recursive: true, force: true })
   if (!workbench) rmSync(join(target, 'apps', 'workbench'), { recursive: true, force: true })
+  if (!showcase) rmSync(join(target, 'apps', 'showcase'), { recursive: true, force: true })
+  rmSync(join(target, 'apps', ssr ? 'starter' : 'starter-ssr'), { recursive: true, force: true })
   for (const path of [
     'scripts/new-project.sh',
     'scripts/test-new-project.sh',
@@ -136,15 +145,29 @@ function apply(target, name, scope, withWorkbench, keepCsv) {
     rmSync(join(target, 'scripts'), { recursive: true })
 
   // 2. 앱 이름
-  if (name !== 'starter') renameSync(join(target, 'apps', 'starter'), app)
+  if (name !== source) renameSync(join(target, 'apps', source), app)
   const appJson = readJson(join(app, 'package.json'))
   writeJson(join(app, 'package.json'), { ...appJson, name, version: '0.1.0' })
-  replaceOnce(join(app, 'index.html'), '<title>starter</title>', `<title>${name}</title>`)
-  replaceOnce(
-    join(app, 'src/layouts/RootLayout.tsx'),
-    '<strong>starter</strong>',
-    `<strong>${name}</strong>`,
-  )
+  if (ssr) {
+    // 서버 렌더 앱: 이름은 한 줄(src/appName.ts) — 문서 제목 · 헤더 브랜드가 거기서 나온다. 실행 · 배포 문서의 이름도 바꾼다
+    replaceOnce(
+      join(app, 'src/appName.ts'),
+      "export const APP_NAME = 'starter-ssr'",
+      `export const APP_NAME = '${name}'`,
+    )
+    replaceOnce(join(app, 'Dockerfile'), 'ARG APP=starter-ssr', `ARG APP=${name}`)
+    for (const file of ['README.md', 'Dockerfile', 'Dockerfile.dockerignore', '.env.example']) {
+      const path = join(app, file)
+      if (existsSync(path)) writeFileSync(path, read(path).replace(/\bstarter-ssr\b/g, name))
+    }
+  } else {
+    replaceOnce(join(app, 'index.html'), '<title>starter</title>', `<title>${name}</title>`)
+    replaceOnce(
+      join(app, 'src/layouts/RootLayout.tsx'),
+      '<strong>starter</strong>',
+      `<strong>${name}</strong>`,
+    )
+  }
   const envFile = join(app, '.env.example')
   const envLines = read(envFile).split('\n')
   envLines[0] = `# ${name} — ${envLines[0].replace(/^#\s*/, '')}`
@@ -157,6 +180,8 @@ function apply(target, name, scope, withWorkbench, keepCsv) {
   root.version = '0.1.0'
   root.scripts.dev = `pnpm --filter ${name} dev`
   if (!workbench) delete root.scripts['dev:workbench']
+  if (!showcase) delete root.scripts['dev:showcase']
+  delete root.scripts['dev:ssr'] // 서버 렌더 스타터를 골랐으면 그것이 `dev` 이고, 아니면 앱이 없다
   root.scripts.test = root.scripts.test.replace(
     /\s*&&\s*bash scripts\/test-new-project\.sh[^&]*/,
     '',
@@ -164,14 +189,22 @@ function apply(target, name, scope, withWorkbench, keepCsv) {
   if (/new-project/.test(JSON.stringify(root.scripts)))
     fail('the root scripts still mention new-project after stripping — update stamp.mjs')
   writeJson(rootFile, root)
-  const group =
-    name === 'starter'
-      ? "'workbench', 'workbench/**', 'starter', 'starter/**'"
-      : `'workbench', 'workbench/**', 'starter', 'starter/**', '${name}', '${name}/**'`
-  replaceOnce(
-    join(target, 'eslint.config.js'),
-    "'workbench', 'workbench/**', 'starter', 'starter/**'",
-    group,
+  // 패키지가 앱을 이름으로 부르지 못하게 막는 목록(eslint.config.js 의 APP_NAMES) — 새 앱 이름을 더한다. 줄바꿈은 `pnpm format` 이 맞춘다
+  const SPEC_NAMES = ['workbench', 'showcase', 'starter', 'starter-ssr']
+  const names = SPEC_NAMES.includes(name) ? SPEC_NAMES : [...SPEC_NAMES, name]
+  const eslintFile = join(target, 'eslint.config.js')
+  const eslintText = read(eslintFile)
+  const appNames = /(const APP_NAMES = \{\s*group: )\[[^\]]*\]/
+  if (!appNames.test(eslintText))
+    fail(
+      'eslint.config.js has no APP_NAMES group — the skeleton changed, update scripts/new-project.d/stamp.mjs',
+    )
+  writeFileSync(
+    eslintFile,
+    eslintText.replace(
+      appNames,
+      (_, head) => `${head}[${names.flatMap((n) => [`'${n}'`, `'${n}/**'`]).join(', ')}]`,
+    ),
   )
 
   // 4. 스코프 — 모든 텍스트 파일(문서는 아래에서 다시 쓴다)
@@ -184,10 +217,10 @@ function apply(target, name, scope, withWorkbench, keepCsv) {
     }
 
   // 5. 문서 다시 쓰기
-  writeDocs(target, name, scope, workbench)
+  writeDocs(target, name, scope, { workbench, showcase, ssr })
 }
 
-function writeDocs(target, name, scope, workbench) {
+function writeDocs(target, name, scope, { workbench, showcase, ssr }) {
   const source = readJson(join(target, 'package.json'))
   const pkgs = subdirs(join(target, 'packages')).map((dir) => ({
     dir,
@@ -206,17 +239,17 @@ function writeDocs(target, name, scope, workbench) {
     join(target, 'README.md'),
     `# ${name}
 
-react-skeleton(pnpm 워크스페이스)에서 \`scripts/new-project.sh\` 로 찍어 낸 프로젝트. 앱은 \`apps/${name}\`${workbench ? ' · 백엔드 확인용 \`apps/workbench\`' : ''}, 패키지는 \`packages/*\`(스코프 \`${scope}\`).
+react-skeleton(pnpm 워크스페이스)에서 \`scripts/new-project.sh\` 로 찍어 낸 프로젝트. 앱은 \`apps/${name}\`${ssr ? '(서버가 첫 응답을 그리는 서버 렌더 앱)' : ''}${workbench ? ' · 백엔드 확인용 \`apps/workbench\`' : ''}${showcase ? ' · 모든 부품 · 패키지를 보는 갤러리 \`apps/showcase\`' : ''}, 패키지는 \`packages/*\`(스코프 \`${scope}\`).
 
 ## 시작
 
 \`\`\`bash
 pnpm install --no-frozen-lockfile   # 처음 한 번 — pnpm-lock.yaml 이 이 워크스페이스에 맞춰진다. 결과를 커밋한다
 pnpm format                          # 처음 한 번 — 이름 · 스코프 바꾸기로 달라진 줄바꿈
-pnpm dev                             # apps/${name}  http://localhost:5173 (백엔드 :8080 으로 /api/v1 프록시)
-pnpm lint && pnpm typecheck && pnpm test && pnpm format:check && pnpm build
+pnpm dev                             # apps/${name}  ${ssr ? 'http://localhost:3000 (Node 서버 + Vite · 서버 렌더가 부르는 백엔드는 API_BASE_URL, 브라우저의 /api/v1 은 :8080 으로 프록시)' : 'http://localhost:5173 (백엔드 :8080 으로 /api/v1 프록시)'}
+${showcase ? 'pnpm dev:showcase                    # apps/showcase  http://localhost:5173 (백엔드 없이 모든 부품 · 패키지 사용 예)\n' : ''}pnpm lint && pnpm typecheck && pnpm test && pnpm format:check && pnpm build
 pnpm tokens                          # packages/tokens/tokens.json → tokens.css
-\`\`\`
+${ssr ? `pnpm --filter ${name} build && pnpm --filter ${name} start   # 프로덕션 서버(dist/ 를 낸다) — Dockerfile 은 apps/${name}/Dockerfile\n` : ''}\`\`\`
 
 Node 24(또는 22.18+), pnpm 10.
 
@@ -229,7 +262,7 @@ ${unused.length ? `\n폴더는 있지만 앱이 아직 쓰지 않는 패키지: 
 ## 백엔드
 
 kotlin-skeleton 계열 REST 백엔드(\`/api/v1\`)와 통신한다. 개발에서는 Vite 가 \`/api/v1\` 을 \`http://localhost:8080\` 으로 프록시하고, 다른 포트는 앱 폴더 \`.env\` 의 \`VITE_API_BASE_URL\`. 패키지별로 어느 백엔드 모듈과 짝인지는 각 \`packages/<이름>/README.md\`.
-`,
+${ssr ? `\n## 서버 렌더\n\n\`apps/${name}\` 는 서버가 첫 응답을 그리고 브라우저가 이어받는다(plain Vite SSR — \`server/\` 의 Node 서버 · \`src/entry-server.tsx\` · \`src/entry-client.tsx\`). 자세한 규칙(데이터 · 인증 · 시간 · 배포)은 \`apps/${name}/README.md\`.\n` : ''}`,
   )
 
   const original = existsSync(join(target, 'CLAUDE.md')) ? read(join(target, 'CLAUDE.md')) : ''
@@ -237,8 +270,15 @@ kotlin-skeleton 계열 REST 백엔드(\`/api/v1\`)와 통신한다. 개발에서
   if (at < 0) fail('CLAUDE.md has no "## 핵심 컨벤션" section — update stamp.mjs')
   const structure = [
     `apps/`,
-    `└── ${name}/        # 앱 — 라우터 · AppShell · API 클라이언트 배선 · 보호 라우트 (starter 에서 이름만 바뀌었다)`,
+    ssr
+      ? `└── ${name}/        # 서버 렌더 앱 — server/(Node 서버 · 정적 파일 · 상태 코드) · src/entry-server.tsx · src/entry-client.tsx · 라우트별 handle(제목 · 설명 · prefetch) (starter-ssr 에서 이름만 바뀌었다)`
+      : `└── ${name}/        # 앱 — 라우터 · AppShell · API 클라이언트 배선 · 보호 라우트 (starter 에서 이름만 바뀌었다)`,
     ...(workbench ? ['└── workbench/     # 백엔드 확인용 시각적 테스트 벤치(복사 대상 아님)'] : []),
+    ...(showcase
+      ? [
+          '└── showcase/      # 모든 부품 · 토큰 · 패키지 사용 예 갤러리(백엔드 없이 · 복사 대상 아님)',
+        ]
+      : []),
     `packages/`,
     ...pkgs.map((p) => `├── ${p.dir.padEnd(18)}# ${p.description ?? ''}`),
   ].join('\n')
@@ -256,7 +296,10 @@ tests/            # 워크스페이스 가로지르는 테스트: usage · contr
 docs/design-tokens.md
 \`\`\`
 
-${original.slice(at).replace(SCOPE_WORD, scope).replaceAll('apps/starter', `apps/${name}`)}`,
+${ssr ? ssrRules(name) : ''}${original
+      .slice(at)
+      .replace(SCOPE_WORD, scope)
+      .replace(/apps\/starter(?![\w-])/g, `apps/${name}`)}`,
   )
 
   writeFileSync(
@@ -275,6 +318,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 `,
   )
   void source
+}
+
+/** 서버 렌더 앱을 고른 프로젝트의 CLAUDE.md 에 들어가는 규칙 — 스켈레톤의 CLAUDE.md 는 이 절을 앱 이름과 함께 따로 가진다 */
+function ssrRules(name) {
+  return `## 서버 렌더 앱 규칙 (apps/${name})
+
+- 서버는 첫 응답만 그린다(\`renderToString\` — 데이터를 \`prefetch\` 로 미리 가져온 뒤). 라우트의 \`handle\`(\`src/routes/routes.tsx\`)에 제목 · 설명을 꼭 적고, 첫 그림에 필요한 데이터는 \`prefetch\`. 브라우저 쪽 진입점은 \`src/entry-client.tsx\`, 서버 쪽은 \`src/entry-server.tsx\`
+- 렌더 중에 \`window\` · \`document\` · \`localStorage\` 를 읽지 않는다(effect · 이벤트 핸들러 안에서만). 시각 · 난수 · 브라우저 시간대에 따라 달라지는 글자는 서버 HTML 과 브라우저 첫 그림이 어긋난다 — 하이드레이션 뒤(effect)에 그리거나 시간대 · 로케일을 명시한다
+- 모듈 전역 클라이언트 · 세션 · 캐시를 쓰지 않는다 — \`useApi()\`(요청마다 / 앱마다 만든 클라이언트)와 \`createClientApp\`. 토큰은 브라우저에만 있다(\`createDeferredTokens\` — 하이드레이션 뒤에 복원). 로그인해야 보이는 라우트는 \`ClientRequireAuth\` 아래
+- 서버가 부르는 백엔드는 \`API_BASE_URL\`(절대 주소), 기다리는 시간은 \`SSR_API_TIMEOUT_MS\`. 실패하면 데이터 없이 200 으로 그리고 브라우저가 다시 부른다
+- \`src/hydration.test.tsx\`(서버 HTML = 브라우저 첫 그림)와 \`server/server.integration.test.ts\`(빌드한 서버를 띄워 JS 없이 요청)가 막는다
+
+`
 }
 
 const [command, ...args] = process.argv.slice(2)

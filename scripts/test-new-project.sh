@@ -3,12 +3,13 @@
 #
 #   scripts/test-new-project.sh            # 빠른 검사 (기본, 수 초): 인자 검증 · 패키지 닫힘 · 구조 · 이름/스코프 바꾸기 · 남는 흔적
 #   scripts/test-new-project.sh --quick    # 위와 같다 (`pnpm test` 가 부른다)
-#   scripts/test-new-project.sh --full     # 위 + 세 조합을 임시 디렉토리에 찍어 각각 pnpm install · lint · typecheck · test · build (네트워크 필요, 순차, 수 분)
+#   scripts/test-new-project.sh --full     # 위 + 네 조합을 임시 디렉토리에 찍어 각각 pnpm install · lint · typecheck · test · build (네트워크 필요, 순차, 수 분)
 #
 # --full 은 CI 의 별도 워크플로(.github/workflows/new-project.yml)가 돈다. 조합:
 #   1. 기본값만
 #   2. --packages realtime,notifications,storage
 #   3. --scope @acme --packages payment
+#   4. --ssr --with-showcase  (서버 렌더 스타터 — 앱의 통합 테스트가 빌드한 서버를 띄워 본다 — 와 쇼케이스)
 # macOS bash 3.2 와 GNU bash 에서 돈다. 임시 디렉토리는 끝나면 지운다 (KEEP=1 이면 남긴다).
 set -euo pipefail
 
@@ -77,6 +78,7 @@ mkdir "$TMP/exists"
 expect_exit 2 "대상 디렉토리가 이미 있으면 exit 2" bash "$SCRIPT" "$TMP/exists" acme-app
 expect_exit 2 "이름은 소문자 · 숫자 · 하이픈" bash "$SCRIPT" "$TMP/x2" "Acme App"
 expect_exit 2 "이름 workbench 는 예약 (apps/workbench 와 겹친다)" bash "$SCRIPT" "$TMP/x3" workbench
+ expect_exit 2 "이름 showcase 도 예약 (apps/showcase 와 겹친다)" bash "$SCRIPT" "$TMP/x3b" showcase
 expect_exit 2 "--scope 는 @이름 꼴" bash "$SCRIPT" "$TMP/x4" acme-app --scope acme
 expect_exit 2 "알 수 없는 옵션은 exit 2" bash "$SCRIPT" "$TMP/x5" acme-app --nope
 expect_exit 2 "--packages 값이 없으면 exit 2" bash "$SCRIPT" "$TMP/x6" acme-app --packages
@@ -103,6 +105,12 @@ plan_keep() { node "$HELPER" plan "$FAKE" 0 "$1" | sed -n 's/^keep //p' | tr '\n
 node "$HELPER" plan "$FAKE" 0 d | grep -q '^why d requested' && pass "고른 이유가 출력된다" || fail "고른 이유가 없다"
 [ "$(node "$HELPER" plan "$FAKE" 0 '' | grep -c '^why c ')" = 1 ] && node "$HELPER" plan "$FAKE" 0 '' | grep -q '^why c needed by b' && pass "닫힘으로 따라온 것은 누가 불렀는지 출력된다" || fail "닫힘 이유가 없다"
 [ "$(plan_keep 'e')" = "a b c e theme tokens" ] && pass "--packages e 도 닫힘 안에서 정렬되어 나온다" || fail "plan e: [$(plan_keep 'e')]"
+mkdir -p "$FAKE/apps/starter-ssr" "$FAKE/apps/showcase"
+echo '{"name":"starter-ssr","dependencies":{"@skeleton/d":"workspace:*"}}' > "$FAKE/apps/starter-ssr/package.json"
+echo '{"name":"showcase","dependencies":{"@skeleton/e":"workspace:*"}}' > "$FAKE/apps/showcase/package.json"
+[ "$(node "$HELPER" plan "$FAKE" 0 '' 0 1 | sed -n 's/^keep //p' | tr '\n' ' ' | sed 's/ $//')" = "c d theme tokens" ] && pass "--ssr 는 apps/starter-ssr 가 쓰는 것을 센다 (apps/starter 가 아니라) — d 와 d 의 의존 c" || fail "plan ssr"
+[ "$(node "$HELPER" plan "$FAKE" 0 '' 1 0 | sed -n 's/^keep //p' | tr '\n' ' ' | sed 's/ $//')" = "a b c e theme tokens" ] && pass "--with-showcase 는 apps/showcase 가 쓰는 것을 더한다" || fail "plan showcase"
+node "$HELPER" plan "$FAKE" 0 '' 1 0 | grep -q '^why e needed by the showcase app' && pass "쇼케이스가 부른 이유가 출력된다" || fail "쇼케이스 이유가 없다"
 expect_exit 3 "plan 은 없는 패키지를 목록과 함께 거절한다" node "$HELPER" plan "$FAKE" 0 zzz
 echo "$LAST_OUTPUT" | grep -q 'valid packages: .*a' && pass "거절 메시지에 유효한 목록" || fail "거절 메시지: $LAST_OUTPUT"
 
@@ -110,7 +118,7 @@ echo "== 3. 기본값만"
 MARKER="$TMP/marker"; touch "$MARKER"; sleep 1
 A="$TMP/a"
 expect_exit 0 "기본 조합을 찍는다" stamp "$A"
-check "프로젝트 앱 apps/acme-app 만 남는다 (apps/starter · apps/workbench 없음)" bash -c "test -d '$A/apps/acme-app' && test ! -e '$A/apps/starter' && test ! -e '$A/apps/workbench'"
+check "프로젝트 앱 apps/acme-app 만 남는다 (apps/starter · apps/workbench · apps/showcase · apps/starter-ssr 없음)" bash -c "test -d '$A/apps/acme-app' && test ! -e '$A/apps/starter' && test ! -e '$A/apps/workbench' && test ! -e '$A/apps/showcase' && test ! -e '$A/apps/starter-ssr'"
 [ "$(json "$A/apps/acme-app/package.json" 'p.name')" = "acme-app" ] && pass "앱 package.json 이름" || fail "앱 package.json 이름"
 check "index.html 제목" grep -q '<title>acme-app</title>' "$A/apps/acme-app/index.html"
 check "헤더 브랜드 글자" grep -q '<strong>acme-app</strong>' "$A/apps/acme-app/src/layouts/RootLayout.tsx"
@@ -120,6 +128,7 @@ want="api-client auth theme time tokens ui"
 [ "$(json "$A/package.json" 'p.name')" = "acme-app-workspace" ] && pass "루트 이름은 <이름>-workspace (앱 이름과 겹치지 않는다)" || fail "루트 이름"
 [ "$(json "$A/package.json" 'p.scripts.dev')" = "pnpm --filter acme-app dev" ] && pass "pnpm dev 가 새 앱을 가리킨다" || fail "dev 스크립트: $(json "$A/package.json" 'p.scripts.dev')"
 [ "$(json "$A/package.json" 'p.scripts["dev:workbench"] === undefined')" = "true" ] && pass "워크벤치를 안 가져오면 dev:workbench 도 없다" || fail "dev:workbench 가 남았다"
+[ "$(json "$A/package.json" '[p.scripts["dev:showcase"], p.scripts["dev:ssr"]].every((s) => s === undefined)')" = "true" ] && pass "쇼케이스 · SSR 스타터를 안 가져오면 dev:showcase · dev:ssr 도 없다" || fail "dev:showcase 또는 dev:ssr 가 남았다"
 check "pnpm test 가 new-project 테스트를 부르지 않는다 (새 프로젝트에는 도구가 없다)" bash -c "! grep -q 'new-project' '$A/package.json'"
 check "new-project 도구 · 스켈레톤 전용 테스트 · 워크플로가 따라오지 않는다" bash -c "test ! -e '$A/scripts' -o -z \"\$(ls '$A/scripts' 2>/dev/null)\"; test ! -e '$A/tests/skeleton.repo.test.ts'; test ! -e '$A/.github/workflows/new-project.yml'"
 check "CI 워크플로(ci.yml)는 남는다" test -f "$A/.github/workflows/ci.yml"
@@ -167,8 +176,37 @@ want="api-client auth captcha-turnstile notifications payment realtime storage t
 [ "$(listing "$W/packages")" = "$want" ] && pass "워크벤치가 쓰는 패키지 전부가 따라온다" || fail "packages: [$(listing "$W/packages")]"
 [ -z "$(dangling_deps "$W" @skeleton)" ] && pass "끊어진 의존 없음" || fail "끊어진 의존: $(dangling_deps "$W" @skeleton)"
 
+echo "== 7. --with-showcase (쇼케이스: 모든 패키지의 사용 예 — 기본으로는 찍지 않는다)"
+SC="$TMP/sc"
+expect_exit 0 "쇼케이스를 함께 찍는다" stamp "$SC" --with-showcase
+check "apps/showcase 가 남고 dev:showcase 스크립트가 있다 (apps/workbench · apps/starter-ssr 는 없다)" bash -c "test -d '$SC/apps/showcase' && test ! -e '$SC/apps/workbench' && test ! -e '$SC/apps/starter-ssr' && node -e \"process.exit(JSON.parse(require('fs').readFileSync('$SC/package.json','utf8')).scripts['dev:showcase'] ? 0 : 1)\""
+want="api-client auth captcha-turnstile notifications payment realtime storage theme time tokens ui"
+[ "$(listing "$SC/packages")" = "$want" ] && pass "쇼케이스가 쓰는 패키지 전부가 따라온다" || fail "packages: [$(listing "$SC/packages")]"
+[ -z "$(dangling_deps "$SC" @skeleton)" ] && pass "끊어진 의존 없음" || fail "끊어진 의존: $(dangling_deps "$SC" @skeleton)"
+check "쇼케이스에 앱 이름이 따라 들어가지 않고 스켈레톤 전용 흔적(workbench · starter-ssr)도 없다" bash -c "! grep -rIlE 'workbench|starter-ssr' '$SC/apps/showcase/src' '$SC/apps/acme-app/src'"
+check "README · CLAUDE 가 쇼케이스를 소개한다" bash -c "grep -q 'showcase' '$SC/README.md' && grep -q 'showcase' '$SC/CLAUDE.md'"
+
+echo "== 8. --ssr (서버 렌더 스타터가 apps/starter 대신 앱이 된다)"
+SR="$TMP/sr"
+expect_exit 0 "SSR 스타터를 찍는다" stamp "$SR" --ssr
+check "앱은 apps/acme-app 하나 — 서버 렌더 앱(server/main.ts · src/entry-server.tsx · Dockerfile)이고 apps/starter · apps/starter-ssr · apps/showcase 는 없다" bash -c "test -f '$SR/apps/acme-app/server/main.ts' && test -f '$SR/apps/acme-app/src/entry-server.tsx' && test -f '$SR/apps/acme-app/Dockerfile' && test ! -e '$SR/apps/starter' && test ! -e '$SR/apps/starter-ssr' && test ! -e '$SR/apps/showcase' && test ! -e '$SR/apps/workbench'"
+[ "$(json "$SR/apps/acme-app/package.json" 'p.name')" = "acme-app" ] && pass "앱 package.json 이름" || fail "SSR 앱 이름"
+[ "$(json "$SR/apps/acme-app/package.json" 'Object.keys(p.scripts).filter((k) => ["dev", "build", "start"].includes(k)).join(" ")')" = "dev build start" ] && pass "pnpm --filter acme-app dev · build · start 가 있다" || fail "SSR 스크립트"
+check "앱 이름이 문서 제목 · 헤더 · Dockerfile · .env.example 에 들어간다 (src/appName.ts 한 줄)" bash -c "grep -q \"APP_NAME = 'acme-app'\" '$SR/apps/acme-app/src/appName.ts' && grep -q 'ARG APP=acme-app' '$SR/apps/acme-app/Dockerfile' && head -1 '$SR/apps/acme-app/.env.example' | grep -q 'acme-app'"
+[ "$(json "$SR/package.json" 'p.scripts.dev')" = "pnpm --filter acme-app dev" ] && pass "pnpm dev 가 SSR 앱을 가리킨다" || fail "SSR dev 스크립트: $(json "$SR/package.json" 'p.scripts.dev')"
+check "스켈레톤 전용 앱 이름(starter-ssr)이 코드 · 문서에 남지 않는다 (잠금 파일 · 예약 이름 목록(eslint.config.js) · 「~에서 이름만 바뀌었다」(CLAUDE.md) 제외)" bash -c "! grep -rIl --exclude-dir=node_modules --exclude=pnpm-lock.yaml --exclude=eslint.config.js --exclude=CLAUDE.md 'starter-ssr' '$SR'"
+check "eslint 의 앱 이름 막기에 새 앱 이름이 더해진다" grep -q "'acme-app/\*\*'" "$SR/eslint.config.js"
+want="api-client auth theme time tokens ui"
+[ "$(listing "$SR/packages")" = "$want" ] && pass "패키지는 SSR 스타터가 쓰는 것 + 도구만 남는다 ($want)" || fail "packages: [$(listing "$SR/packages")]"
+[ -z "$(dangling_deps "$SR" @skeleton)" ] && pass "끊어진 의존 없음" || fail "끊어진 의존: $(dangling_deps "$SR" @skeleton)"
+check "README · CLAUDE 가 SSR 앱의 실행 · 배포 방법을 말한다" bash -c "grep -q 'pnpm --filter acme-app start' '$SR/README.md' && grep -q 'entry-server' '$SR/CLAUDE.md'"
+check "tests/ssr.safety.test.ts(모든 패키지가 서버에서 그려지는가)는 따라온다" test -f "$SR/tests/ssr.safety.test.ts"
+SRS="$TMP/srs"
+expect_exit 0 "--ssr --with-showcase 도 찍힌다" stamp "$SRS" --ssr --with-showcase
+check "둘 다 남는다 (apps/acme-app 서버 렌더 앱 + apps/showcase)" bash -c "test -f '$SRS/apps/acme-app/server/main.ts' && test -d '$SRS/apps/showcase' && test ! -e '$SRS/apps/starter-ssr'"
+
 if [ "$MODE" = "--full" ]; then
-  echo "== 7. 조합마다 pnpm install · format · lint · typecheck · test · build (순차)"
+  echo "== 9. 조합마다 pnpm install · format · lint · typecheck · test · build (순차)"
   verify_composition() { # verify_composition <dir> <이름>
     local dir="$1" name="$2" started ended step
     started="$(date +%s)"
@@ -186,6 +224,7 @@ if [ "$MODE" = "--full" ]; then
   verify_composition "$A" "1-defaults"
   verify_composition "$B" "2-packages"
   verify_composition "$C" "3-scope-payment"
+  verify_composition "$SRS" "4-ssr-showcase"
 fi
 
 echo

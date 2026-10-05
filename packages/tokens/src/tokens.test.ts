@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { build } from '../build.mjs'
-import { expandVars, themeVars } from './themeVars'
+import { cssBlocks, expandVars, themeVars } from './themeVars'
 
 /*
  * 디자인 토큰 정본(tokens.json) → 생성물(tokens.css). docs/design-tokens.md 표 구역의 일치는 루트 tests/tokens.docs.test.ts.
@@ -117,11 +117,20 @@ describe('light theme keeps the look the app had before tokens (names and values
 describe('theme blocks in tokens.css', () => {
   const css = out.css
 
-  it('light is :root, dark is html[data-theme=dark], system dark is a media block that skips an explicit light', () => {
-    expect(css).toMatch(/\n:root \{\n {2}color-scheme: light;/)
-    expect(css).toContain("html[data-theme='dark'] {")
+  it('light is :root, dark is [data-theme=dark], system dark is a media block that skips an explicit light', () => {
+    expect(css).toMatch(/\n:root,\n\[data-theme='light'\] \{\n {2}color-scheme: light;/)
+    expect(css).toContain("\n[data-theme='dark'] {")
     expect(css).toContain('@media (prefers-color-scheme: dark) {')
     expect(css).toContain(":root:not([data-theme='light']) {")
+  })
+
+  it('a theme applies to any element, not only <html> — a container can show light or dark side by side', () => {
+    expect(css).not.toContain("html[data-theme='")
+    const selectors = cssBlocks(css)
+      .filter((block) => block.media === null)
+      .map((block) => block.selector)
+    expect(selectors).toContain(":root, [data-theme='light']")
+    expect(selectors).toContain("[data-theme='dark']")
   })
 
   it('color-scheme follows the theme so native controls match', () => {

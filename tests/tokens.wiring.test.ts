@@ -26,7 +26,10 @@ describe('docs/design-tokens.md', () => {
 })
 
 describe.each(apps.map((w) => [w.dir, w] as const))('%s entry wiring', (_, app) => {
-  const main = app.files.find((f) => f.path === 'src/main.tsx')!.text
+  // 브라우저 진입점 — SPA 는 src/main.tsx, 서버 렌더 앱은 src/entry-client.tsx
+  const main = app.files.find(
+    (f) => f.path === 'src/main.tsx' || f.path === 'src/entry-client.tsx',
+  )!.text
 
   it('main.tsx loads tokens.css, then base.css, before any app stylesheet', () => {
     const tokens = main.indexOf("'@skeleton/tokens/tokens.css'")
@@ -35,6 +38,14 @@ describe.each(apps.map((w) => [w.dir, w] as const))('%s entry wiring', (_, app) 
     expect(base).toBeGreaterThan(tokens)
     const own = [...main.matchAll(/import '(\.\/[^']+\.css)'/g)].map((m) => main.indexOf(m[0]))
     for (const at of own) expect(at).toBeGreaterThan(base)
+  })
+
+  it('calls initTheme() before it renders (@skeleton/theme does nothing at import time)', () => {
+    const init = main.search(/\binitTheme\(\)/)
+    const render = main.search(/\b(?:createRoot|hydrateRoot)\(/)
+    expect(main).toMatch(/import\s*\{[^}]*\binitTheme\b[^}]*\}\s*from\s*'@skeleton\/theme'/)
+    expect(init).toBeGreaterThanOrEqual(0)
+    expect(render).toBeGreaterThan(init)
   })
 
   it('index.html has no hand-copied theme script (the plugin injects it)', () => {

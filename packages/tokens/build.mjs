@@ -176,8 +176,9 @@ function renderCss(tokens) {
     '}',
     '',
     `/* semantic — the names screen CSS uses. ${base.title} (default): data-theme absent or "${base.name}".`,
+    "   A theme attribute works on any element — a container can show a theme beside the page's — not only <html>.",
     '   Other theme blocks follow and override with the same specificity */',
-    ':root {',
+    `:root,\n${themeAttr(base.name)} {`,
     `  color-scheme: ${base.colorScheme};`,
     '',
   )
@@ -191,8 +192,8 @@ function renderCss(tokens) {
     if (!tokens.some((t) => t.byTheme[theme.name].value !== null)) continue
     lines.push(
       '',
-      `/* ${theme.title} — <html data-theme="${theme.name}"> */`,
-      `html${themeAttr(theme.name)} {`,
+      `/* ${theme.title} — data-theme="${theme.name}" (on <html> or any container) */`,
+      `${themeAttr(theme.name)} {`,
     )
     themeBody(theme, '  ')
     lines.push('}')

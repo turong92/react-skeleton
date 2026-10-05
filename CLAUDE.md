@@ -1,6 +1,6 @@
 # react-skeleton — Claude Code 컨텍스트
 
-React + TypeScript + Vite 프론트엔드 스켈레톤. pnpm 워크스페이스 — 캡슐화된 패키지 11개 + 앱 2개. REST 백엔드(kotlin-skeleton)와 통신하는 SPA 출발점이고, 백엔드 `modules/` 처럼 프로젝트가 필요한 패키지만 한 줄씩 골라 쓴다.
+React + TypeScript + Vite 프론트엔드 스켈레톤. pnpm 워크스페이스 — 캡슐화된 패키지 11개 + 앱 4개(SPA 스타터 · SSR 스타터 · 쇼케이스 · 워크벤치). REST 백엔드(kotlin-skeleton)와 통신하는 SPA 출발점이고, 백엔드 `modules/` 처럼 프로젝트가 필요한 패키지만 한 줄씩 골라 쓴다.
 
 ## 디렉토리 구조 (AI 참조용)
 
@@ -14,6 +14,13 @@ apps/
 │   ├── src/hooks/useHello.ts # TanStack Query 예시(GET /hello)
 │   ├── src/layouts/RootLayout.tsx   # AppShell + ThemeToggle
 │   └── src/routes/           # routes.tsx(path → page) · index.tsx(router) · Home · Login · Account(RequireAuth 아래) · NotFound(EmptyState)
+├── starter-ssr/              # SSR 스타터(같은 페이지, 서버가 첫 응답을 그린다 — 워크벤치 코드 없음)
+│   ├── server/               # Node 서버: main.ts(개발=Vite 미들웨어 · 프로덕션=dist) · handler.ts(정적 · 상태 코드) · config.ts(env) · contract.ts
+│   ├── src/entry-server.tsx  # render(url,{api}) — 라우트 맞추기(404) → handle.prefetch → renderToString → head(title · 설명 · dehydrate 상태)
+│   ├── src/entry-client.tsx  # initTheme → readSsrState → hydrateRoot(createClientApp) ; src/app/ AppProviders · AppRoutes(서버 · 브라우저 공유)
+│   ├── src/auth/             # createDeferredTokens(저장소 읽기를 하이드레이션 뒤로) · ClientRequireAuth(서버는 중립 자리 표시)
+│   └── src/routes/routes.tsx # 라우트마다 handle { title, description, robots, prefetch } ; Dockerfile(런타임에 node_modules 없음)
+├── showcase/                 # 갤러리(백엔드 없이): /ui(모든 부품 · 상태) · /tokens(라이트 · 다크 나란히) · /packages/<이름>(가짜 전송 위 데모) — src/fakes · src/demos
 └── workbench/                # 백엔드 확인용 시각적 테스트 벤치(HomePage · modules/workbench · workbench.css) + modules/demos(`/packages` 예제 화면: 새 패키지를 눌러 본다)
 packages/                     # 서로를 이름으로만 부른다. 각자 package.json(exports=src/index.ts) · 테스트 · README
 ├── api-client/               # createApiClient(config) · ApiRequestError · ErrorCodes/isErrorCode · createTraceContext · newIdempotencyKey · apiConfigFromEnv
@@ -28,7 +35,7 @@ packages/                     # 서로를 이름으로만 부른다. 각자 pack
 ├── tokens/                   # tokens.json(정본) · build.mjs(생성기) · tokens.css(생성물) · 테스트 도구(findRawColors · findRawLayout …)
 └── ui/                       # base.css · Button/Input/Field/Select/Textarea/Checkbox/Switch/Tabs/Table/Pagination/EmptyState/Card/Dialog/Spinner/AppShell · ErrorBoundary · showApiError · toastPromise
 scripts/                      # new-project.sh(새 프로젝트 찍기) · new-project.d/stamp.mjs(일꾼) · test-new-project.sh(--quick · --full)
-tests/                        # 워크스페이스 가로지르는 테스트: usage(날 색 · 날 간격/모서리/글자 크기 · --p-* · var 정의) · contrast(AA 짝) · tokens.wiring · theme.names · workspace(의존 규칙) · eslint.boundaries · skeleton.repo(이 레포의 앱 · 패키지 목록 — 찍을 때 지워진다)
+tests/                        # 워크스페이스 가로지르는 테스트: ssr.safety(모든 패키지가 window 없는 Node 에서 import · 모든 컴포넌트 · 훅이 서버에서 그려진다 — support/ssrFixtures.ts) · usage(날 색 · 날 간격/모서리/글자 크기 · --p-* · var 정의) · contrast(AA 짝) · tokens.wiring · theme.names · workspace(의존 규칙) · eslint.boundaries · skeleton.repo(이 레포의 앱 · 패키지 목록 — 찍을 때 지워진다)
 docs/design-tokens.md         # 토큰 층 · 이름 · 추가법 + 생성된 표
 ```
 
@@ -42,10 +49,10 @@ docs/design-tokens.md         # 토큰 층 · 이름 · 추가법 + 생성된 �
 
 ## 새 프로젝트 찍기 (이 스켈레톤 레포에서 — 찍은 프로젝트에는 이 절이 없다)
 
-`scripts/new-project.sh <target-dir> <name> [--packages a,b,c] [--with-workbench] [--scope @acme]` — 레포를 복사해 `apps/starter` 를 `apps/<name>` 으로, 패키지는 스타터가 쓰는 것 + 루트 도구(`theme` · `tokens`) + `--packages` 를 `@skeleton/*` 의존으로 닫은 집합만 남긴다(나머지 폴더 · `tests/skeleton.repo.test.ts` · new-project 도구는 지운다). 루트 `package.json` · eslint 앱 이름 막기 · README/CLAUDE/CHANGELOG 를 새 프로젝트용으로 바꾸고, `--scope` 면 `@skeleton` 을 모두 바꾼다. 고른 패키지는 폴더만 오고 앱 의존 한 줄은 쓰기 시작할 때 더한다(안 쓰는 의존은 루트 테스트가 막는다). 일꾼은 `scripts/new-project.d/stamp.mjs`.
+`scripts/new-project.sh <target-dir> <name> [--packages a,b,c] [--ssr] [--with-showcase] [--with-workbench] [--scope @acme]` — 레포를 복사해 `apps/starter`(`--ssr` 이면 `apps/starter-ssr`)를 `apps/<name>` 으로, `--with-showcase` 면 `apps/showcase` 도 남기고, 패키지는 스타터가 쓰는 것 + 루트 도구(`theme` · `tokens`) + `--packages` 를 `@skeleton/*` 의존으로 닫은 집합만 남긴다(나머지 폴더 · `tests/skeleton.repo.test.ts` · new-project 도구는 지운다). 루트 `package.json` · eslint 앱 이름 막기 · README/CLAUDE/CHANGELOG 를 새 프로젝트용으로 바꾸고, `--scope` 면 `@skeleton` 을 모두 바꾼다. 고른 패키지는 폴더만 오고 앱 의존 한 줄은 쓰기 시작할 때 더한다(안 쓰는 의존은 루트 테스트가 막는다). 일꾼은 `scripts/new-project.d/stamp.mjs`.
 
-- 빠른 검사 `bash scripts/test-new-project.sh --quick`(`pnpm test` 가 부른다) · 조합 전체 `--full`(기본 · `--packages realtime,notifications,storage` · `--scope @acme --packages payment` 를 찍어 각각 install · format · tokens:check · lint · typecheck · test · format:check · build — 네트워크, 수 분, 별도 워크플로 `.github/workflows/new-project.yml`).
-- **패키지 · 앱을 더하거나 지우거나 이름을 바꾸면**: `tests/skeleton.repo.test.ts` 의 목록, 이 문서와 README 의 표, `stamp.mjs` 가 기대하는 문자열(`eslint.config.js` 의 앱 이름 줄 · `RootLayout.tsx` 의 `<strong>starter</strong>` · `index.html` 제목 · 루트 `test` 스크립트 꼴)을 함께 본다 — 어긋나면 `stamp.mjs` 가 조용히 넘기지 않고 멈춘다.
+- 빠른 검사 `bash scripts/test-new-project.sh --quick`(`pnpm test` 가 부른다) · 조합 전체 `--full`(기본 · `--packages realtime,notifications,storage` · `--scope @acme --packages payment` · `--ssr --with-showcase` 를 찍어 각각 install · format · tokens:check · lint · typecheck · test · format:check · build — 네트워크, 수 분, 별도 워크플로 `.github/workflows/new-project.yml`).
+- **패키지 · 앱을 더하거나 지우거나 이름을 바꾸면**: `tests/skeleton.repo.test.ts` 의 목록, 이 문서와 README 의 표, `stamp.mjs` 가 기대하는 문자열(`eslint.config.js` 의 `APP_NAMES` 목록 · `starter-ssr` 의 `src/appName.ts` · `Dockerfile` 의 `ARG APP` · `RootLayout.tsx` 의 `<strong>starter</strong>` · `index.html` 제목 · 루트 `test` 스크립트 꼴)을 함께 본다 — 어긋나면 `stamp.mjs` 가 조용히 넘기지 않고 멈춘다.
 
 ## 핵심 컨벤션
 
@@ -53,6 +60,7 @@ docs/design-tokens.md         # 토큰 층 · 이름 · 추가법 + 생성된 �
 - **의존 선언 = 실제 import**: 앱 · 패키지가 `package.json` 에 적은 `@skeleton/*` 는 소스가 import 하는 것과 정확히 같아야 한다(`workspace:*`). 패키지를 새로 쓰면 앱 `package.json` 에 한 줄 더한다. `starter` 는 워크벤치에 의존하지 않는다. 패키지가 외부 라이브러리를 쓰면 `dependencies`(또는 `peerDependencies`)에 선언한다 — 이것도 테스트가 확인
 - **HTTP 엔드포인트가 모듈에 없으면 경로를 설정으로**: 백엔드 모듈이 서비스 계약만 주고 컨트롤러를 앱이 여는 경우(`notification` 받은편지함 · `storage` · `payment` · `captcha-turnstile`) 패키지는 기본 경로를 가정하지 않거나(storage · payment) 데모 경로를 기본값으로 두고 README 에 그렇다고 적는다(notifications `basePath`). 모듈 수준 계약만 겨냥한다 — 어느 Kotlin 파일의 어느 DTO 인지는 패키지 README 에
 - **패키지를 만들거나 키울 때**: `package.json`(`exports` `.` = `{ types, default: ./src/index.ts }`, `test` · `typecheck` 스크립트) · `src/index.ts` barrel(공개 표면은 이것뿐) · 옆에 테스트 · `README.md`(API 표)를 갖춘다. 사용자에게 보이는 문구는 prop(기본 영어), 색은 의미 토큰만
+- **SSR 안전**: 패키지는 import 할 때 브라우저 전역(`window` · `document` · `localStorage`)을 읽거나 쓰지 않는다 — 부수 효과는 명시적 호출(`@skeleton/theme` 의 `initTheme()` 을 앱이 시작할 때 부른다), 브라우저 API 는 effect · 핸들러 안에서만. 새 컴포넌트 · 훅을 export 하면 `tests/support/ssrFixtures.ts` 에 최소 props 한 줄을 더한다(안 하면 `tests/ssr.safety.test.ts` 가 실패, 일부러 브라우저 전용이면 `BROWSER_ONLY` 에 이유와 함께). 서버 렌더 앱 규칙(하이드레이션 일치 · 모듈 전역 금지 · 토큰은 브라우저에만)은 `apps/starter-ssr/README.md`
 - **TypeScript strict**: `any` 금지. 필요하면 `unknown` + 타입 가드. 패키지 tsconfig 는 `types: []`(DOM 쓰는 UI 패키지만 `vite/client`)라 `import.meta.env` 를 쓰면 타입 에러
 - **서버 상태는 TanStack Query로 일원화**: `useQuery`/`useMutation`. raw fetch 금지(실시간 스트림은 `@skeleton/realtime`)
 - **공통 HTTP 는 `createApiClient`(axios 기반)**: baseUrl 은 `apiConfigFromEnv(import.meta.env)`(`VITE_API_BASE_URL` 또는 `/api/v1`). 에러는 `ApiRequestError` — 코드 분기는 `isErrorCode(error, ErrorCodes.AUTH_INVALID_CREDENTIALS)`, 코드는 백엔드 Kotlin enum 에 있는 것만 `packages/api-client/src/errorCodes.ts` 에 둔다
@@ -87,7 +95,7 @@ Kotlin + Spring Boot 백엔드와 REST (`/api/v1/*`) 통신:
 
 ## 왜 Vite (Next.js 아님)
 
-PoC 기동 속도 + AI 친화성. 정적 번들 출력이라 호스팅 자유도 높음. SSR/SEO 필요한 앱이 실제로 나오면 그 앱만 `react-next-skeleton` 신규 스켈레톤 써서 새로 시작 (기존 Vite 앱 강제 이주는 안 함).
+PoC 기동 속도 + AI 친화성. 정적 번들 출력이라 호스팅 자유도 높음. SSR/SEO 가 필요한 앱은 프레임워크로 옮기지 않고 같은 스택 위의 `apps/starter-ssr`(plain Vite SSR — Node 서버 + 하이드레이션, 새 런타임 의존 없음)로 시작한다(`new-project.sh --ssr`). 스트리밍 · 서버 컴포넌트 · 파일 라우팅이 필요해지면 그때 프레임워크를 검토한다.
 
 ## 새 페이지 추가 시 (앱 안)
 
@@ -98,7 +106,7 @@ PoC 기동 속도 + AI 친화성. 정적 번들 출력이라 호스팅 자유도
 
 ## 검증 명령
 
-루트에서: `pnpm lint` · `pnpm tokens:check` · `pnpm typecheck`(모든 앱 · 패키지 `tsc` + 루트 tests) · `pnpm test`(각 앱 · 패키지 + 루트 `tests/`) · `pnpm format:check` · `pnpm build`(두 앱). CI(`.github/workflows/ci.yml`)가 같은 순서로 돈다. 한 곳만: `pnpm --filter @skeleton/auth test`. dev 서버: `pnpm dev`(starter) · `pnpm dev:workbench`.
+루트에서: `pnpm lint` · `pnpm tokens:check` · `pnpm typecheck`(모든 앱 · 패키지 `tsc` + 루트 tests) · `pnpm test`(각 앱 · 패키지 + 루트 `tests/`) · `pnpm format:check` · `pnpm build`(네 앱). CI(`.github/workflows/ci.yml`)가 같은 순서로 돈다. 한 곳만: `pnpm --filter @skeleton/auth test`. dev 서버: `pnpm dev`(starter) · `pnpm dev:ssr` · `pnpm dev:showcase` · `pnpm dev:workbench`.
 
 ## 변경 이력
 

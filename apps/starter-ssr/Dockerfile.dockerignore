@@ -1,0 +1,6 @@
+# 이 폴더의 Dockerfile 로 빌드할 때의 제외 목록(BuildKit: <Dockerfile 이름>.dockerignore)
+**/node_modules
+**/dist
+.git
+**/.env
+**/*.local

@@ -1,5 +1,5 @@
 import { AuthProvider } from '@skeleton/auth'
-import { ThemedToaster } from '@skeleton/theme'
+import { initTheme, ThemedToaster } from '@skeleton/theme'
 import { ErrorBoundary, showApiError } from '@skeleton/ui'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
@@ -17,6 +17,9 @@ const ENABLE_QUERY_DEVTOOLS =
 
 // 쿼리/뮤테이션 에러는 전부 토스트로 — 문구를 바꾸려면 showApiError 의 messages 옵션
 const queryClient = createQueryClient({ onError: (error) => showApiError(error) })
+
+// 저장한 테마를 읽어 <html data-theme> 에 단다(@skeleton/theme 는 불러올 때 아무것도 하지 않는다)
+initTheme()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

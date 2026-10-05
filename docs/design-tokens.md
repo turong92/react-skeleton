@@ -45,7 +45,7 @@ pnpm tokens:check   # 쓰지 않고 비교 — 생성물이 어긋났으면 종�
 ## 테마
 
 - `<html data-theme="light|dark">` 로 고른다. `data-theme` 가 없거나 `system` 이면 OS 설정(`prefers-color-scheme`)을 **CSS 만으로** 따라간다(새로 고침 불필요).
-- 생성 CSS 의 블록: 기본 테마 `:root` · 다른 테마 `html[data-theme='<이름>']` · 시스템 `@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) }`. 시스템 블록은 다크 블록과 같은 선언이다(테스트가 대조).
+- 생성 CSS 의 블록: 기본 테마 `:root, [data-theme='light']` · 다른 테마 `[data-theme='<이름>']`(`<html>` 이 아니어도 된다 — 컨테이너에 달면 그 안만 그 테마라 라이트 · 다크를 나란히 보여 줄 수 있다. 컨테이너는 `background: var(--bg); color: var(--text)` 를 직접 건다) · 시스템 `@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) }`. 시스템 블록은 다크 블록과 같은 선언이다(테스트가 대조).
 - 테마마다 `color-scheme` 이 걸려 폼 컨트롤 · 스크롤 막대도 따라간다.
 - 고른 값은 `packages/theme/src/theme.ts`(`@skeleton/theme`)가 `localStorage` 에 저장하고 `<html data-theme>` 에 단다(레이아웃의 토글 버튼이 `setTheme` 을 부른다). 첫 칠 전에는 `PRE_PAINT_SCRIPT` 가 같은 키 상수로 먼저 단다 — 각 앱의 `vite.config.ts` 가 `themePrePaint()` 플러그인으로 `<head>` 에 인라인한다(깜빡임 방지).
 - 대비: 루트 `tests/contrast.test.ts` 가 두 앱과 패키지가 실제로 쓰는 글자/바탕 짝을 **모든 테마**에서 WCAG AA(본문 4.5:1 · 큰 글자 / UI 경계 3:1)로 잰다. 화면에 새 짝이 생기면 거기에 한 줄 더한다.
@@ -71,7 +71,7 @@ pnpm tokens:check   # 쓰지 않고 비교 — 생성물이 어긋났으면 종�
 
 1. `tokens.json` 맨 위 `themes` 에 한 줄 더한다: `{ "name": "sepia", "title": "sepia", "colorScheme": "light" }`.
 2. 의미 토큰마다 `$extensions.skeleton.sepia` 값을 단다(바꿀 것만 — 없으면 기본 값이 쓰인다). 필요한 원시 단계도 더한다.
-3. `pnpm tokens`. 생성 CSS 에 `html[data-theme='sepia']` 블록이 생기고 문서 표에 칸이 늘어난다.
+3. `pnpm tokens`. 생성 CSS 에 `[data-theme='sepia']` 블록이 생기고 문서 표에 칸이 늘어난다.
 4. `packages/theme/src/themeNames.ts` 의 `THEMES` 에 이름을 더한다(`tests/theme.names.test.ts` 가 정본 목록과 어긋나면 막는다), 대비 테스트의 테마 목록에 sepia 를 더한다.
 
 ## 프로젝트가 색을 바꾸려면

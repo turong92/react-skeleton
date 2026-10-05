@@ -1,6 +1,6 @@
 /*
  * 생성 CSS(styles/tokens.css)를 테마별 `--이름 → 값` 표로 읽는다 — 테스트 전용.
- * 기본 테마 = `:root` 블록(원시 · 의미 기본), 다른 테마 = 기본 위에 `html[data-theme='<이름>']` 블록을 덮은 것(브라우저와 같은 순서),
+ * 기본 테마 = `:root` 블록(원시 · 의미 기본), 다른 테마 = 기본 위에 `[data-theme='<이름>']` 블록(`<html>` 이든 컨테이너든)을 덮은 것(브라우저와 같은 순서),
  * 시스템 = 기본 위에 `@media (prefers-color-scheme: <scheme>)` 안 블록을 덮은 것.
  */
 export interface CssBlock {
@@ -44,7 +44,7 @@ export function cssBlocks(css: string): CssBlock[] {
   return blocks
 }
 
-export const themeSelector = (name: string) => `html[data-theme='${name}']`
+export const themeSelector = (name: string) => `[data-theme='${name}']`
 
 const overlay = (vars: Map<string, string>, block: CssBlock | undefined) => {
   if (block) for (const [k, v] of block.declarations) vars.set(k, v)
@@ -58,7 +58,11 @@ export function themeVars(
 ): Map<string, string> {
   const vars = new Map<string, string>()
   const blocks = cssBlocks(css)
-  for (const b of blocks.filter((b) => b.selector === ':root' && b.media === null)) overlay(vars, b)
+  // 기본 테마 블록 — `:root, [data-theme='light']`(컨테이너가 라이트를 고르는 경우도 같은 값)
+  for (const b of blocks.filter(
+    (b) => b.media === null && (b.selector === ':root' || b.selector.startsWith(':root, ')),
+  ))
+    overlay(vars, b)
   if (system)
     overlay(
       vars,

@@ -20,8 +20,13 @@ const dirs = (kind: 'app' | 'package') =>
     .sort()
 
 describe('the skeleton repo', () => {
-  it('has the two apps and the eleven packages', () => {
-    expect(dirs('app')).toEqual(['apps/starter', 'apps/workbench'])
+  it('has the four apps and the eleven packages', () => {
+    expect(dirs('app')).toEqual([
+      'apps/showcase',
+      'apps/starter',
+      'apps/starter-ssr',
+      'apps/workbench',
+    ])
     expect(dirs('package')).toEqual([
       'packages/api-client',
       'packages/auth',
@@ -43,12 +48,31 @@ describe('the skeleton repo', () => {
     for (const file of starter.files) expect(file.text, file.path).not.toMatch(/workbench/i)
   })
 
+  it('the SPA starter and the SSR starter need the same packages (new-project --ssr swaps one for the other)', () => {
+    const declared = (dir: string) =>
+      Object.keys(workspaces.find((w) => w.dir === dir)!.packageJson.dependencies ?? {})
+        .filter((dep) => dep.startsWith('@skeleton/'))
+        .sort()
+    expect(declared('apps/starter-ssr')).toEqual(declared('apps/starter'))
+  })
+
+  it('the showcase uses every package (it is the place to see everything the skeleton ships)', () => {
+    const showcase = workspaces.find((w) => w.dir === 'apps/showcase')!
+    const used = Object.keys(showcase.packageJson.dependencies ?? {}).filter((dep) =>
+      dep.startsWith('@skeleton/'),
+    )
+    const all = dirs('package').map((dir) => `@skeleton/${dir.split('/')[1]}`)
+    expect(used.sort()).toEqual(all.sort())
+  })
+
   it('the scanners look at the apps and at the packages that draw UI', () => {
     const cssDirs = new Set(css.map((f) => f.ws))
     expect([...cssDirs]).toEqual(
       expect.arrayContaining([
         'apps/workbench',
         'apps/starter',
+        'apps/starter-ssr',
+        'apps/showcase',
         'packages/ui',
         'packages/theme',
         'packages/notifications',

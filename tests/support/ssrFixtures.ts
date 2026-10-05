@@ -1,0 +1,139 @@
+import { createElement, type ComponentType } from 'react'
+
+/*
+ * tests/ssr.safety.test.ts 가 쓰는 「최소한의 올바른 props」 표. 패키지 소스를 정적으로 import 하지 않는다(찍어 낸 프로젝트에는
+ * 지워진 패키지가 있다) — 값은 테스트가 불러 준 모듈 이름공간(`ctx.mod('ui')`)에서 꺼낸다.
+ * 키는 `<패키지 폴더>#<export 이름>`(스코프를 적지 않는다 — `--scope` 로 바꿔도 그대로). 새 컴포넌트 · 훅을 export 하면 여기 한 줄을 더해야 테스트가 통과한다(잊을 수 없다).
+ */
+type Mod = Record<string, unknown>
+export type FixtureContext = { mod(pkg: string): Mod }
+
+const noop = () => undefined
+const call = (fn: unknown, ...args: unknown[]): unknown =>
+  (fn as (...a: unknown[]) => unknown)(...args)
+const Component = (value: unknown) => value as ComponentType<Record<string, unknown>>
+
+const pageOf = <T>(values: T[]) => ({
+  values,
+  pagination: {
+    page: 0,
+    size: 10,
+    totalElements: values.length,
+    totalPages: 1,
+    hasNext: false,
+    hasPrevious: false,
+  },
+  meta: { timestamp: '2026-01-01T00:00:00Z' },
+})
+export const fakeNotificationsApi = () => ({
+  list: async () => pageOf([]),
+  markRead: async (eventId: string) => ({ eventId, readAt: '2026-01-01T00:00:00Z' }),
+  markAllRead: async () => ({ updated: 0 }),
+})
+const notification = {
+  id: 'u1:e1',
+  eventId: 'e1',
+  recipientId: 'u1',
+  topic: 'demo',
+  type: 'demo.created',
+  severity: 'INFO',
+  title: 'Hello',
+  message: 'A message',
+  payload: {},
+  createdAt: '2026-01-01T00:00:00Z',
+  readAt: null,
+}
+export const fakeUploader = () => ({
+  upload: async (file: { name: string }) => ({
+    key: file.name,
+    publicUrl: null,
+    etag: null,
+    multipart: false,
+  }),
+})
+export function fakeSession({ mod }: FixtureContext) {
+  const auth = mod('auth')
+  const unused = async () => {
+    throw new Error('unused')
+  }
+  return call(auth.createAuthSession, {
+    api: { login: unused, socialLogin: unused, me: unused },
+    store: call(auth.createTokenStore),
+  })
+}
+
+/** 컴포넌트 — 서버에서 그려 본다. props 는 호출 때 만든다(호출마다 새 객체) */
+export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<string, unknown>> = {
+  'ui#Button': () => ({ children: 'Save' }),
+  'ui#Input': () => ({ 'aria-label': 'Name' }),
+  'ui#Field': (ctx) => ({
+    label: 'Email',
+    hint: 'We never share it',
+    error: 'Required',
+    children: (control: Record<string, unknown>) =>
+      createElement(Component(ctx.mod('ui').Input), control),
+  }),
+  'ui#Select': () => ({
+    'aria-label': 'Choice',
+    children: createElement('option', { value: 'a' }, 'A'),
+  }),
+  'ui#Textarea': () => ({ 'aria-label': 'Message' }),
+  'ui#Checkbox': () => ({ label: 'Agree', indeterminate: true }),
+  'ui#Switch': () => ({ label: 'Notify me' }),
+  'ui#Tabs': () => ({
+    'aria-label': 'Sections',
+    items: [
+      { id: 'a', label: 'A', content: 'first' },
+      { id: 'b', label: 'B', content: 'second' },
+    ],
+  }),
+  'ui#Table': () => ({
+    caption: 'People',
+    columns: [{ key: 'n', header: 'Name', render: (row: { n: string }) => row.n }],
+    rows: [{ n: 'Ada' }],
+    rowKey: (row: { n: string }) => row.n,
+  }),
+  'ui#Pagination': () => ({ page: 2, totalPages: 9, onPageChange: noop }),
+  'ui#EmptyState': () => ({ title: 'Nothing here', description: 'Add one' }),
+  'ui#Card': () => ({ title: 'Card', children: 'body' }),
+  'ui#Dialog': () => ({ open: true, onClose: noop, title: 'Dialog', children: 'body' }),
+  'ui#Spinner': () => ({}),
+  'ui#AppShell': () => ({
+    brand: 'brand',
+    nav: 'nav',
+    actions: 'actions',
+    children: 'page',
+  }),
+  'ui#ErrorBoundary': () => ({ children: 'safe' }),
+  'theme#ThemeToggle': () => ({}),
+  'theme#ThemedToaster': () => ({}),
+  'auth#AuthProvider': (ctx) => ({ session: fakeSession(ctx), children: 'inside' }),
+  'auth#RequireAuth': () => ({ children: 'secret' }),
+  'notifications#NotificationBell': () => ({ api: fakeNotificationsApi() }),
+  'notifications#NotificationList': () => ({ items: [notification] }),
+  'captcha-turnstile#Turnstile': () => ({ siteKey: 'site-key', onToken: noop }),
+}
+
+/** 훅 — 작은 컴포넌트 안에서 이 인자로 불러 본다 */
+export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
+  'theme#useTheme': () => [],
+  'auth#useAuth': () => [],
+  'auth#useSocialLoginCallback': () => [{ complete: () => new Promise(noop) }, '?code=x'],
+  'captcha-turnstile#useTurnstileToken': () => [],
+  'notifications#useNotifications': () => [fakeNotificationsApi()],
+  'notifications#useUnreadCount': () => [fakeNotificationsApi()],
+  'notifications#useMarkRead': () => [fakeNotificationsApi()],
+  'notifications#useMarkAllRead': () => [fakeNotificationsApi()],
+  'notifications#useNotificationIngest': () => [],
+  'realtime#useSseClient': () => [{ url: '/api/v1/notifications/sse' }],
+  'realtime#useNotificationSocket': () => [
+    { url: 'ws://localhost/ws', topic: 'demo', getAccessToken: () => null },
+  ],
+  'storage#useUpload': () => [fakeUploader()],
+}
+
+/**
+ * 일부러 브라우저 전용인 export — 서버에서 그리지 않는다. 항목마다 이유를 쓴다(이유 없는 항목 · 더는 없는 export 는 테스트가 막는다).
+ * 지금은 없다: 모든 컴포넌트 · 훅이 서버에서 그려진다(브라우저 API 는 effect · 이벤트 핸들러 안에서만).
+ */
+export const BROWSER_ONLY: Record<string, string> = {}

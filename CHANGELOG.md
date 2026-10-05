@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — 서버 렌더 스타터 · 쇼케이스 · SSR 안전
+
+- `apps/starter-ssr` — 서버가 첫 응답을 그리고 브라우저가 이어받는 스타터(plain Vite SSR: `server/` Node 서버 · `src/entry-server.tsx` · `src/entry-client.tsx`, 새 런타임 의존 없음). 홈(`GET /hello` 를 서버가 시간 제한 안에 가져와 TanStack Query `dehydrate`/`hydrate` 로 넘김 — 백엔드가 죽으면 데이터 없이 200) · 로그인 · 보호 `/account`(토큰은 브라우저에만 — 서버는 중립 자리 표시, `createDeferredTokens`) · 404(실제 상태 코드), 라우트별 `<title>` · 설명(`handle`), 테마 스크립트가 `<head>` 맨 앞. `pnpm --filter starter-ssr dev|build|start`, Dockerfile(런타임에 node_modules 없음). 테스트: 서버 렌더 · 하이드레이션 마크업 일치 · 핸들러 · 빌드한 서버를 띄우는 통합 테스트
+- `apps/showcase` — 백엔드 없이 도는 갤러리: 모든 `@skeleton/ui` 부품의 상태 · import 줄, 실제 `tokens.json` 으로 그린 토큰(라이트 · 다크 나란히), 패키지별 사용 데모(가짜 전송). 기본으로는 찍히지 않는다
+- `scripts/new-project.sh --ssr`(`apps/starter-ssr` 를 앱으로) · `--with-showcase`(`apps/showcase` 유지). `scripts/test-new-project.sh --full` 에 `--ssr --with-showcase` 조합 추가
+- 루트 테스트 `tests/ssr.safety.test.ts` — 모든 패키지 entry 가 브라우저 전역 없는 Node 에서 import 되고(import 시점에 아무것도 건드리지 않음), export 한 모든 컴포넌트 · 훅이 서버에서 경고 없이 그려진다(목록은 `exports` 에서 만들어 새 export 를 잊을 수 없다)
+- `@skeleton/theme`: `initTheme()` · `getServerTheme()`
+- `@skeleton/tokens`: 테마 속성이 `<html>` 만이 아니라 아무 요소에서나 동작(`:root, [data-theme='light']` · `[data-theme='dark']`) — 라이트 · 다크를 나란히 보일 수 있다
+
+### Changed (SSR 안전)
+
+- **`@skeleton/theme` 는 import 시점에 저장소를 읽거나 `<html>` 을 건드리지 않는다.** 앱 진입점이 `initTheme()` 을 불러야 한다(`apps/starter` · `apps/workbench` 는 이미 부른다; 루트 테스트가 확인). `useTheme` 의 서버 스냅샷은 항상 `system`(하이드레이션 일치)
+- 루트 devDependencies 에 `react` `react-dom` `react-router-dom` `@tanstack/react-query`(SSR 안전 테스트용)
+- `tokens.css` 의 `html[data-theme='dark']` 셀렉터가 `[data-theme='dark']` 로 — `pnpm tokens` 로 다시 생성
+
 ### Added — 프론트 조각 보강 · 프로젝트 찍기
 
 - **새 패키지 4개** (각자 `package.json` · 테스트 · README, 서로는 이름으로만):

@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { RouterProvider } from 'react-router-dom'
-import { ThemedToaster } from '@skeleton/theme'
+import { initTheme, ThemedToaster } from '@skeleton/theme'
 import { ErrorBoundary } from '@skeleton/ui'
 import '@skeleton/tokens/tokens.css'
 import '@skeleton/ui/base.css'
@@ -24,6 +24,9 @@ const queryClient = new QueryClient({
     onError: (error) => showApiError(error),
   }),
 })
+
+// 저장한 테마를 읽어 <html data-theme> 에 단다(@skeleton/theme 는 불러올 때 아무것도 하지 않는다)
+initTheme()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -3,7 +3,9 @@ import { runInNewContext } from 'node:vm'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   applyTheme,
+  getServerTheme,
   getTheme,
+  initTheme,
   isTheme,
   nextTheme,
   readStoredTheme,
@@ -104,6 +106,50 @@ describe('theme preference', () => {
     expect(nextTheme('system')).toBe('light')
     expect(nextTheme('light')).toBe('dark')
     expect(nextTheme('dark')).toBe('system')
+  })
+})
+
+describe('initTheme — an explicit call, never an import side effect', () => {
+  it('importing the module neither reads storage nor touches <html>, even when the browser globals exist', async () => {
+    const reads: string[] = []
+    vi.stubGlobal('window', {})
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => {
+        reads.push(key)
+        return 'dark'
+      },
+    })
+    vi.resetModules()
+    const fresh = await import('./theme')
+    expect(reads).toEqual([])
+    expect(html.dataset.theme).toBeUndefined()
+    expect(fresh.getTheme()).toBe('system')
+  })
+
+  it('reads the stored choice, applies it to <html>, tells subscribers and returns it', () => {
+    vi.stubGlobal('localStorage', fakeStorage({ [THEME_STORAGE_KEY]: 'dark' }))
+    const listener = vi.fn()
+    const unsubscribe = subscribeTheme(listener)
+    expect(initTheme()).toBe('dark')
+    expect(html.dataset.theme).toBe('dark')
+    expect(getTheme()).toBe('dark')
+    expect(listener).toHaveBeenCalledTimes(1)
+    unsubscribe()
+    setTheme('system')
+  })
+
+  it('falls back to system when storage is blocked, and is safe on a server (no document)', () => {
+    vi.stubGlobal('localStorage', blockedStorage)
+    expect(initTheme()).toBe('system')
+    vi.stubGlobal('document', undefined)
+    expect(() => initTheme()).not.toThrow()
+  })
+
+  it('getServerTheme is always system — the server render and the hydration render agree', () => {
+    vi.stubGlobal('localStorage', fakeStorage({ [THEME_STORAGE_KEY]: 'dark' }))
+    initTheme()
+    expect(getServerTheme()).toBe('system')
+    setTheme('system')
   })
 })
 

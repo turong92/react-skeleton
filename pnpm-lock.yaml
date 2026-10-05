@@ -16,6 +16,9 @@ importers:
       '@skeleton/tokens':
         specifier: workspace:*
         version: link:packages/tokens
+      '@tanstack/react-query':
+        specifier: ^5.99.2
+        version: 5.104.1(react@19.3.0)
       '@types/node':
         specifier: ^24.12.2
         version: 24.12.2
@@ -46,6 +49,15 @@ importers:
       prettier:
         specifier: ^3.8.3
         version: 3.8.3
+      react:
+        specifier: ^19.2.5
+        version: 19.3.0
+      react-dom:
+        specifier: ^19.2.5
+        version: 19.3.0(react@19.3.0)
+      react-router-dom:
+        specifier: ^7.14.1
+        version: 7.18.4(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       typescript:
         specifier: ~6.0.2
         version: 6.0.3
@@ -58,6 +70,60 @@ importers:
       vitest:
         specifier: ^4.1.8
         version: 4.1.8(@types/node@24.12.2)(vite@8.0.9(@types/node@24.12.2))
+
+  apps/showcase:
+    dependencies:
+      '@skeleton/api-client':
+        specifier: workspace:*
+        version: link:../../packages/api-client
+      '@skeleton/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
+      '@skeleton/captcha-turnstile':
+        specifier: workspace:*
+        version: link:../../packages/captcha-turnstile
+      '@skeleton/notifications':
+        specifier: workspace:*
+        version: link:../../packages/notifications
+      '@skeleton/payment':
+        specifier: workspace:*
+        version: link:../../packages/payment
+      '@skeleton/realtime':
+        specifier: workspace:*
+        version: link:../../packages/realtime
+      '@skeleton/storage':
+        specifier: workspace:*
+        version: link:../../packages/storage
+      '@skeleton/theme':
+        specifier: workspace:*
+        version: link:../../packages/theme
+      '@skeleton/time':
+        specifier: workspace:*
+        version: link:../../packages/time
+      '@skeleton/tokens':
+        specifier: workspace:*
+        version: link:../../packages/tokens
+      '@skeleton/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      '@tanstack/react-query':
+        specifier: ^5.99.2
+        version: 5.104.1(react@19.3.0)
+      lucide-react:
+        specifier: ^1.17.0
+        version: 1.52.0(@types/react@19.2.14)(react@19.3.0)
+      react:
+        specifier: ^19.2.5
+        version: 19.3.0
+      react-dom:
+        specifier: ^19.2.5
+        version: 19.3.0(react@19.3.0)
+      react-router-dom:
+        specifier: ^7.14.1
+        version: 7.18.4(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      sonner:
+        specifier: ^2.0.7
+        version: 2.0.8(@types/react@19.2.14)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
 
   apps/starter:
     dependencies:
@@ -85,6 +151,45 @@ importers:
       '@tanstack/react-query-devtools':
         specifier: ^5.99.2
         version: 5.104.1(@tanstack/react-query@5.104.1(react@19.3.0))(@types/react@19.2.14)(csstype@3.2.3)(react@19.3.0)
+      lucide-react:
+        specifier: ^1.17.0
+        version: 1.52.0(@types/react@19.2.14)(react@19.3.0)
+      react:
+        specifier: ^19.2.5
+        version: 19.3.0
+      react-dom:
+        specifier: ^19.2.5
+        version: 19.3.0(react@19.3.0)
+      react-router-dom:
+        specifier: ^7.14.1
+        version: 7.18.4(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      sonner:
+        specifier: ^2.0.7
+        version: 2.0.8(@types/react@19.2.14)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+
+  apps/starter-ssr:
+    dependencies:
+      '@skeleton/api-client':
+        specifier: workspace:*
+        version: link:../../packages/api-client
+      '@skeleton/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
+      '@skeleton/theme':
+        specifier: workspace:*
+        version: link:../../packages/theme
+      '@skeleton/time':
+        specifier: workspace:*
+        version: link:../../packages/time
+      '@skeleton/tokens':
+        specifier: workspace:*
+        version: link:../../packages/tokens
+      '@skeleton/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      '@tanstack/react-query':
+        specifier: ^5.99.2
+        version: 5.104.1(react@19.3.0)
       lucide-react:
         specifier: ^1.17.0
         version: 1.52.0(@types/react@19.2.14)(react@19.3.0)

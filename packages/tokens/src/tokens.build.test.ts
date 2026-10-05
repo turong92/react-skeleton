@@ -180,24 +180,23 @@ describe('build', () => {
     const css = read('tokens.css')
     expect(css).toContain('GENERATED')
     expect(css).toContain('--p-neutral-0: #ffffff;')
-    expect(css).toMatch(/:root \{[^}]*color-scheme: light;[^}]*--bg: var\(--p-neutral-0\);/s)
     expect(css).toMatch(
-      /html\[data-theme='dark'\] \{[^}]*color-scheme: dark;[^}]*--bg: var\(--p-neutral-900\);/s,
+      /:root,\n\[data-theme='light'\] \{[^}]*color-scheme: light;[^}]*--bg: var\(--p-neutral-0\);/s,
+    )
+    expect(css).toMatch(
+      /\[data-theme='dark'\] \{[^}]*color-scheme: dark;[^}]*--bg: var\(--p-neutral-900\);/s,
     )
     expect(css).toContain('@media (prefers-color-scheme: dark)')
     expect(css).toContain(":root:not([data-theme='light'])")
     // --card has no dark value: it follows --bg through var()
-    expect(css).not.toMatch(/html\[data-theme='dark'\] \{[^}]*--card/s)
+    expect(css).not.toMatch(/\[data-theme='dark'\] \{[^}]*--card/s)
   })
 
   it('system block repeats the dark declarations', () => {
     const { root, read } = sandbox()
     build({ root, docOut: DOC })
     const css = read('tokens.css')
-    const dark = /html\[data-theme='dark'\] \{([^}]*)\}/s
-      .exec(css)![1]
-      .trim()
-      .replace(/^ {2}/gm, '')
+    const dark = /\[data-theme='dark'\] \{([^}]*)\}/s.exec(css)![1].trim().replace(/^ {2}/gm, '')
     const system = /@media \(prefers-color-scheme: dark\) \{\s*:root[^{]*\{([^}]*)\}/s.exec(css)![1]
     expect(system.trim().replace(/^ {4}/gm, '')).toBe(dark)
   })

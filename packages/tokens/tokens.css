@@ -68,8 +68,10 @@
 }
 
 /* semantic — the names screen CSS uses. light (default): data-theme absent or "light".
+   A theme attribute works on any element — a container can show a theme beside the page's — not only <html>.
    Other theme blocks follow and override with the same specificity */
-:root {
+:root,
+[data-theme='light'] {
   color-scheme: light;
 
   /* Surface */
@@ -136,8 +138,8 @@
   --line-height-normal: var(--p-line-height-normal);
 }
 
-/* dark — <html data-theme="dark"> */
-html[data-theme='dark'] {
+/* dark — data-theme="dark" (on <html> or any container) */
+[data-theme='dark'] {
   color-scheme: dark;
 
   /* Surface */

@@ -25,7 +25,16 @@ const OTHER_PACKAGE_PATH = {
   message: 'Import another package by its name (`@skeleton/<name>`), not by relative path.',
 }
 const APP_NAMES = {
-  group: ['workbench', 'workbench/**', 'starter', 'starter/**'],
+  group: [
+    'workbench',
+    'workbench/**',
+    'showcase',
+    'showcase/**',
+    'starter',
+    'starter/**',
+    'starter-ssr',
+    'starter-ssr/**',
+  ],
   message: 'Packages must not import apps.',
 }
 

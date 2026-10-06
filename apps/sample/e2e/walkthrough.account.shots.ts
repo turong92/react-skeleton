@@ -76,7 +76,7 @@ describe('account walkthrough', () => {
         '로그인 — 이 앱이 켠 방법이 모두 보인다: 구글로 계속하기(소셜) · 비밀번호 폼 · 「이메일로 로그인 링크 받기」(매직링크). 방법은 설정(VITE_AUTH_METHODS)이 정한다.',
       )
       await fillSignIn(page, { email, password })
-      await page.getByRole('heading', { level: 1 }).first().waitFor()
+      await page.waitForURL((url) => !url.pathname.startsWith('/login'))
 
       await page.goto(`${baseUrl}/account`)
       const region = (name: string) => page.getByRole('region', { name })
@@ -153,6 +153,7 @@ describe('account walkthrough', () => {
       await en.getByLabel('Email').fill(email)
       await en.getByLabel('Password').first().fill(password)
       await en.getByRole('button', { name: 'Sign in', exact: true }).click()
+      await en.waitForURL((url) => !url.pathname.startsWith('/login'))
       await en.goto(`${baseUrl}/account`)
       await en.getByRole('heading', { name: 'Active sessions' }).waitFor()
       await shot(
@@ -170,7 +171,7 @@ describe('account walkthrough', () => {
       await ad.goto(`${baseUrl}/login`)
       await dismissConsent(ad).catch(() => undefined)
       await fillSignIn(ad, { email: 'admin@example.com', password: 'password' })
-      await ad.getByRole('heading', { level: 1 }).first().waitFor()
+      await ad.waitForURL((url) => !url.pathname.startsWith('/login'))
       await ad.goto(`${baseUrl}/admin/accounts`)
       await ad.getByRole('table', { name: auth.adminCaption }).waitFor()
       await pwExpect(ad.getByText(email)).toBeVisible()
@@ -182,7 +183,7 @@ describe('account walkthrough', () => {
       await admin.close()
     } finally {
       writeFileSync(
-        join(out, 'captions.md'),
+        join(out, 'captions-account.md'),
         `# 계정 수명주기 — 진짜 백엔드 · 진짜 메일 증거\n\n${captions.map(([f, c]) => `- \`${f}\` — ${c}`).join('\n')}\n`,
       )
       await browser.close()

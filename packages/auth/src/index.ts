@@ -159,6 +159,7 @@ export type {
   CaptchaSlotApi,
   ConsentItem,
   SignUpScreenProps,
+  ConsentSlotApi,
   SignUpSubmit,
 } from './screens/SignUpScreen'
 export { CheckEmailPanel } from './screens/CheckEmailPanel'

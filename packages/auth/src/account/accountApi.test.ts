@@ -37,6 +37,23 @@ describe('createAccountApi (mirrors kotlin-skeleton docs/account-http-contract.m
     ])
   })
 
+  it('signUp carries the consents of the form exactly as ticked (type, version, locale) — and nothing when there are none', async () => {
+    const { client, calls } = fakeClient({ status: 'VERIFICATION_SENT' })
+    const api = createAccountApi(client)
+    await api.signUp({
+      email: 'a@b.c',
+      password: 'pw',
+      consents: [{ type: 'terms', version: '2026-10-01', locale: 'ko' }],
+    })
+    await api.signUp({ email: 'a@b.c', password: 'pw' })
+    expect(calls[0].request?.json).toEqual({
+      email: 'a@b.c',
+      password: 'pw',
+      consents: [{ type: 'terms', version: '2026-10-01', locale: 'ko' }],
+    })
+    expect(calls[1].request?.json).toEqual({ email: 'a@b.c', password: 'pw' })
+  })
+
   it('forgot / reset / policy are public calls with the contract bodies', async () => {
     const { client, calls } = fakeClient()
     const api = createAccountApi(client)

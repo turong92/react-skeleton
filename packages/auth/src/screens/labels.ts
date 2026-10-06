@@ -40,6 +40,8 @@ export type AuthLabels = {
   errorIdentityTaken: string
   errorIdentityExists: string
   errorSocialConflict: string
+  /** 400 `LEGAL.CONSENT_REQUIRED` — 가입하는 사이 약관이 바뀌었다 */
+  errorConsentRequired: string
   /** 400 `AUTH.SOCIAL_PKCE_FAILED` · `AUTH.SOCIAL_NONCE_FAILED` — 요청이 안전하게 만들어지지 않았다(아직 아무것도 쓰이지 않았다) */
   errorSocialRequest: string
   /** 401 `AUTH_SOCIAL.INVALID_AUTHORIZATION_CODE` · `AUTH.SOCIAL_ID_TOKEN_INVALID` — 동의를 처음부터 */
@@ -296,6 +298,8 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   errorIdentityExists: 'That sign-in method is already linked.',
   errorSocialConflict:
     'An account with that email already exists. Sign in with it, then link this provider in settings.',
+  errorConsentRequired:
+    'The agreements changed while you were signing up. Read the updated text and agree again.',
   errorSocialRequest: 'The sign-in could not be started securely. Reload the page and try again.',
   errorSocialCode: 'This sign-in expired or was already used. Start it again.',
   errorSocialGateway: 'The provider is not answering right now. Try again in a moment.',

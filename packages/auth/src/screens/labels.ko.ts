@@ -38,6 +38,7 @@ export const koAuthLabels: AuthLabels = {
   errorSelfAction: '내 계정에는 할 수 없는 동작이에요.',
   errorIdentityTaken: '그 계정은 이미 다른 사람과 연결돼 있어요.',
   errorIdentityExists: '이미 연결된 로그인 수단이에요.',
+  errorConsentRequired: '가입하는 사이 약관이 바뀌었어요. 바뀐 내용을 읽고 다시 동의해 주세요.',
   errorSocialRequest:
     '로그인을 안전하게 시작하지 못했어요. 페이지를 새로 고치고 다시 시도해 주세요.',
   errorSocialCode: '이 로그인은 만료됐거나 이미 쓰였어요. 처음부터 다시 시작해 주세요.',

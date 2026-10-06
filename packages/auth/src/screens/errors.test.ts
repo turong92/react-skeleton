@@ -30,6 +30,7 @@ describe('authErrorMessage', () => {
     ['AUTH.SOCIAL_ID_TOKEN_INVALID', 401, L.errorSocialCode],
     ['AUTH_SOCIAL.INVALID_AUTHORIZATION_CODE', 401, L.errorSocialCode],
     ['AUTH_SOCIAL.PROVIDER_GATEWAY_ERROR', 502, L.errorSocialGateway],
+    ['LEGAL.CONSENT_REQUIRED', 400, L.errorConsentRequired],
     ['COMMON.VALIDATION_FAILED', 400, L.errorValidation],
     ['CLIENT.NETWORK_ERROR', 0, L.errorNetwork],
     ['COMMON.INTERNAL_SERVER_ERROR', 500, L.errorGeneric],

@@ -1,0 +1,31 @@
+{
+  "name": "@skeleton/legal",
+  "version": "1.1.0",
+  "private": true,
+  "type": "module",
+  "description": "법적 문서 · 동의 — 백엔드 modules/legal 짝: 문서 읽기(마크다운 · 판 · 효력일) · 가입 동의 체크리스트(필수/선택 · 전체 동의 · 문서 다이얼로그) · 첫 로그인 · 새 판 재동의 화면(403 LEGAL.RECONSENT_REQUIRED 를 api-client 계층에서 받아 동의 뒤 그 요청을 다시 보낸다) · 동의 설정(이력 · 선택 동의 철회). 문구는 모두 prop(ko/en 사전 포함), 문서 본문은 MarkdownView",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "types": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run --pool forks --testTimeout 30000 --hookTimeout 60000",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@skeleton/api-client": "workspace:*",
+    "@skeleton/ui": "workspace:*"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "^5.0.0",
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@tanstack/react-query": "^5.99.2",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
+  }
+}

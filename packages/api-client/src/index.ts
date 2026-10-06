@@ -11,6 +11,7 @@ export type {
   ApiRetryOptions,
   HeaderRecord,
   UnauthorizedContext,
+  ForbiddenContext,
 } from './createApiClient'
 export { apiConfigFromEnv } from './env'
 export type { ApiEnvConfig } from './env'

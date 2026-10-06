@@ -30,6 +30,7 @@ const byCode = (labels: AuthLabels): Record<string, string> => ({
   [ErrorCodes.ACCOUNT_IDENTITY_TAKEN]: labels.errorIdentityTaken,
   [ErrorCodes.ACCOUNT_IDENTITY_EXISTS]: labels.errorIdentityExists,
   [ErrorCodes.ACCOUNT_SOCIAL_EMAIL_CONFLICT]: labels.errorSocialConflict,
+  [ErrorCodes.LEGAL_CONSENT_REQUIRED]: labels.errorConsentRequired,
   [ErrorCodes.AUTH_SOCIAL_PKCE_FAILED]: labels.errorSocialRequest,
   [ErrorCodes.AUTH_SOCIAL_NONCE_FAILED]: labels.errorSocialRequest,
   [ErrorCodes.AUTH_SOCIAL_ID_TOKEN_INVALID]: labels.errorSocialCode,

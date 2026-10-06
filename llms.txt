@@ -33,6 +33,7 @@
 - captcha-turnstile: 봇 방지 — Cloudflare Turnstile 스크립트 로더 · <Turnstile> · 토큰 훅 · 요청에 토큰 붙이기. [캡차, 봇 방지, 스팸 방지, 로봇 확인; captcha, turnstile, bot protection] → react `--packages captcha-turnstile` · kotlin 기본 포함
 - seo: 검색 · 공유 미리보기 — 제목 · 설명 · canonical · OG/Twitter · hreflang · JSON-LD 를 SPA(effect)와 SSR(문자열)에서 같은 규칙으로, 빌드 때 sitemap.xml · robots.txt 까지. [검색 노출, SEO, 메타 태그, OG 이미지; seo, meta tags, open graph] → react `--packages seo`
 - marketing: 공개 페이지 조립 부품 — Hero · 기능 · FAQ · 후기 · CTA · 푸터 · 요금제(월/연) · 쿠키 동의 · 약관 문서 페이지 · 404/500/점검 화면. [랜딩, 랜딩 페이지, 홈페이지, 요금제; landing page, marketing site, pricing table] → react `--packages marketing`
+- legal: 법적 문서 · 동의 — 서버의 약관 읽기(마크다운 · 판 · 효력일) · 가입 동의 체크리스트(필수/선택 · 전체 동의 · 문서 다이얼로그) · 첫 로그인과 새 판 재동의(403 LEGAL.RECONSENT_REQUIRED 를 api-client 계층에서 받아 동의 뒤 막힌 호출을 다시 보낸다) · 동의 설정(이력 · 선택 동의 철회). [약관 동의, 가입 동의 체크박스, 재동의, 개인정보 동의; terms consent, sign-up consent checkbox, re-consent] → react `--packages legal` · kotlin 기본 포함
 - time: 글로벌 시간 — 순간 · 달력 날짜 · 현지+내 시간대 3종 포맷, 서버 시각 보정(카운트다운), 국가→시간대, 오늘의 날짜. [시간, 날짜 표시, 시간대, 타임존; time, date format, timezone] → react 기본 포함 · kotlin 기본 포함
 - theme: 라이트/다크/시스템 테마 — 토글 · 토스트 테마 · 첫 칠 전 스크립트(깜빡임 방지) · Vite 플러그인. [다크 모드, 테마, 라이트 모드, 다크 테마; dark mode, theme, light mode] → react 기본 포함
 - tokens: 디자인 토큰 — 색 · 간격 · 모서리 · 글자 크기의 단일 정본(tokens.json)과 생성기 → tokens.css(라이트/다크), 날값 검출 테스트 도구. [디자인 토큰, 색상, 브랜드 색, 간격; design tokens, colors, brand color] → react 기본 포함

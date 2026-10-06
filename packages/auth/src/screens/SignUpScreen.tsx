@@ -1,6 +1,6 @@
 import { ApiRequestError, ErrorCodes } from '@skeleton/api-client'
 import { Alert, Button, Checkbox, Field, Input } from '@skeleton/ui'
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { passwordRequirements, violationsOf } from '../account/passwordRules'
 import type {
@@ -27,14 +27,24 @@ export type ConsentItem = {
   label: ReactNode
   required?: boolean
 }
-export type AcceptedConsent = { id: string; version: string }
+export type AcceptedConsent = { id: string; version: string; locale?: string }
+
+/** 동의 자리를 통째로 맡길 때(`renderConsents`) 화면이 슬롯에 주는 것 — `@skeleton/legal` 의 `SignUpConsents` 가 받는다 */
+export type ConsentSlotApi = {
+  /** 체크가 바뀔 때마다 — 체크한 항목과 「필수가 모두 체크됐는가」 */
+  onChange: (accepted: AcceptedConsent[], complete: boolean) => void
+  /** 필수를 안 채우고 제출을 시도했다 */
+  showError: boolean
+  /** 서버가 `LEGAL.CONSENT_REQUIRED`(그 사이 약관이 바뀜)로 거절할 때마다 올라간다 — 슬롯은 문서를 다시 읽는다 */
+  refreshKey: number
+}
 
 export type CaptchaSlotApi = {
   /** 캡차가 토큰을 받으면(없애면 null) */
   onToken: (token: string | null) => void
 }
 
-export type SignUpSubmit = Omit<SignUpRequest, 'captchaToken'> & {
+export type SignUpSubmit = Omit<SignUpRequest, 'captchaToken' | 'consents'> & {
   captchaToken?: string
   /** 체크한 동의 항목과 그 판 */
   consents: AcceptedConsent[]
@@ -62,6 +72,8 @@ export type SignUpScreenProps = {
   renderCaptcha?: (api: CaptchaSlotApi) => ReactNode
   /** 약관 · 방침 동의 자리 — 체크한 판을 `onSignUp` 의 `consents` 와 `onConsentsChange` 로 보고한다 */
   consents?: ConsentItem[]
+  /** 동의 자리를 통째로 슬롯에 맡긴다(서버가 문서를 쥘 때) — 있으면 `consents` 대신 쓰이고, 슬롯이 「완료」를 알리기 전에는 제출하지 않는다 */
+  renderConsents?: (api: ConsentSlotApi) => ReactNode
   onConsentsChange?: (accepted: AcceptedConsent[]) => void
   /** 표시 이름을 묻는다(기본 안 묻는다 — 가입은 짧을수록 좋다) */
   askDisplayName?: boolean
@@ -85,6 +97,7 @@ export function SignUpScreen({
   onSocialSignIn,
   renderCaptcha,
   consents = [],
+  renderConsents,
   onConsentsChange,
   askDisplayName = false,
   signInTo,
@@ -99,6 +112,21 @@ export function SignUpScreen({
   const [captchaToken, setCaptchaToken] = useState<string | null>(null)
   const [checked, setChecked] = useState<Record<string, boolean>>({})
   const [consentError, setConsentError] = useState(false)
+  const [slotAccepted, setSlotAccepted] = useState<AcceptedConsent[]>([])
+  const [slotComplete, setSlotComplete] = useState(!renderConsents)
+  const [consentRefresh, setConsentRefresh] = useState(0)
+  const slotApi = useMemo<ConsentSlotApi>(
+    () => ({
+      onChange: (accepted, complete) => {
+        setSlotAccepted(accepted)
+        setSlotComplete(complete)
+        if (complete) setConsentError(false)
+      },
+      showError: consentError,
+      refreshKey: consentRefresh,
+    }),
+    [consentError, consentRefresh],
+  )
   const [busy, setBusy] = useState(false)
   const [failure, setFailure] = useState<AuthErrorInfo | null>(null)
   const [serverViolations, setServerViolations] = useState<PasswordViolation[]>([])
@@ -120,7 +148,7 @@ export function SignUpScreen({
     setFailure(null)
     setEmailError(undefined)
     setServerViolations([])
-    if (consents.some((c) => c.required && !checked[c.id])) {
+    if (renderConsents ? !slotComplete : consents.some((c) => c.required && !checked[c.id])) {
       setConsentError(true)
       return
     }
@@ -129,9 +157,9 @@ export function SignUpScreen({
     }
     setBusy(true)
     try {
-      const accepted = consents
-        .filter((c) => checked[c.id])
-        .map(({ id, version }) => ({ id, version }))
+      const accepted = renderConsents
+        ? slotAccepted
+        : consents.filter((c) => checked[c.id]).map(({ id, version }) => ({ id, version }))
       const result = await onSignUp({
         email,
         password,
@@ -162,6 +190,7 @@ export function SignUpScreen({
           const emailField = error.apiError.errors?.find((e) => e.field === 'email')
           if (emailField) setEmailError(emailField.message ?? labels.errorValidation)
         }
+        if (info.code === ErrorCodes.LEGAL_CONSENT_REQUIRED) setConsentRefresh((n) => n + 1)
         if (info.code === ErrorCodes.ACCOUNT_EMAIL_TAKEN) setEmailError(info.message)
         else setFailure(info)
         if (info.retryAfterSeconds) wait.start(info.retryAfterSeconds)
@@ -267,7 +296,8 @@ export function SignUpScreen({
               {renderCaptcha({ onToken: setCaptchaToken })}
             </div>
           )}
-          {consents.length > 0 && (
+          {renderConsents && <div className={styles.stack}>{renderConsents(slotApi)}</div>}
+          {!renderConsents && consents.length > 0 && (
             <div className={styles.stack}>
               {consents.map((item) => (
                 <Checkbox

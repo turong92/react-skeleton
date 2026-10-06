@@ -49,6 +49,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 | 회원가입 · 이메일 인증 · 비밀번호 재설정 · 계정 설정(비밀번호 · 이메일 · 세션 · 삭제) | `auth` + `account-lifecycle` + `session-refresh` | (기본 포함 — 덧붙일 것 없음) | (모듈 없음) | 백엔드는 account · auth-session(+ -jdbc) 모듈과 메일(notification-mail) · 링크 주소 설정. 프런트는 createAuthRoutes 한 번(apps/starter 의 auth/routes.tsx 를 따른다), 켜는 로그인 방법은 백엔드가 알려 준다(고정하려면 new-project.sh --auth-methods 또는 VITE_AUTH_METHODS), 문구는 labels(koAuthLabels). |
 | 이메일 링크(매직링크) 로그인 | `magic-link-login` | (기본 포함 — 덧붙일 것 없음) | `--modules auth-magic-link` | 백엔드 auth-magic-link + 메일. 로그인 화면의 링크 버튼 · /magic-link 도착 화면은 백엔드가 그 방법을 열었을 때(GET /auth/methods)만 보인다. |
 | 운영자 계정 관리 표 (검색 · 정지 · 복구 · 역할) | `account-admin` | (기본 포함 — 덧붙일 것 없음) | (모듈 없음) | 백엔드 skeleton.account.admin.enabled=true. 프런트는 apps/sample 의 AdminAccountsPage 와 RequireRole 라우트를 복사한다. |
+| 약관 · 개인정보 동의 (가입 체크박스 · 새 판 재동의 · 선택 동의 철회) — 문서와 동의 기록은 서버가 쥔다 | `legal` | `--packages legal` | (모듈 없음) | 백엔드 스타터는 legal 을 켠다(문서는 TEMPLATE — stage · prod 는 자기 문서가 있어야 기동). 프런트는 createLegalApi + createReconsentController(api-client 의 recoverForbidden 에 꽂는다) + <ReconsentGate> 를 앱 맨 위에, 가입 라우트의 signUp.renderConsents 에 <SignUpConsents>, 설정에 <ConsentSettings>. 서버 없이 정적 약관만이면 legal-documents(marketing). |
 
 ## 전체 목록
 
@@ -67,6 +68,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 | `captcha-turnstile` | 봇 방지 — Cloudflare Turnstile 스크립트 로더 · <Turnstile> · 토큰 훅 · 요청에 토큰 붙이기. | --packages captcha-turnstile | captcha-turnstile | stable | 캡차, 봇 방지, 스팸 방지, 로봇 확인, 가입 폼 보호 / captcha, turnstile, bot protection, cloudflare, spam protection |
 | `seo` | 검색 · 공유 미리보기 — 제목 · 설명 · canonical · OG/Twitter · hreflang · JSON-LD 를 SPA(effect)와 SSR(문자열)에서 같은 규칙으로, 빌드 때 sitemap.xml · robots.txt 까지. | --packages seo | — | stable | 검색 노출, SEO, 메타 태그, OG 이미지, 링크 미리보기, 사이트맵 / seo, meta tags, open graph, twitter card, canonical, sitemap |
 | `marketing` | 공개 페이지 조립 부품 — Hero · 기능 · FAQ · 후기 · CTA · 푸터 · 요금제(월/연) · 쿠키 동의 · 약관 문서 페이지 · 404/500/점검 화면. | --packages marketing | — | stable | 랜딩, 랜딩 페이지, 홈페이지, 요금제, 가격표, FAQ / landing page, marketing site, pricing table, faq, terms of service, privacy policy |
+| `legal` | 법적 문서 · 동의 — 서버의 약관 읽기(마크다운 · 판 · 효력일) · 가입 동의 체크리스트(필수/선택 · 전체 동의 · 문서 다이얼로그) · 첫 로그인과 새 판 재동의(403 LEGAL.RECONSENT_REQUIRED 를 api-client 계층에서 받아 동의 뒤 막힌 호출을 다시 보낸다) · 동의 설정(이력 · 선택 동의 철회). | --packages legal | legal, legal-jdbc | stable | 약관 동의, 가입 동의 체크박스, 재동의, 개인정보 동의, 마케팅 수신 동의, 동의 철회 / terms consent, sign-up consent checkbox, re-consent, privacy consent, marketing opt-in, withdraw consent |
 | `time` | 글로벌 시간 — 순간 · 달력 날짜 · 현지+내 시간대 3종 포맷, 서버 시각 보정(카운트다운), 국가→시간대, 오늘의 날짜. | 항상 | time | stable | 시간, 날짜 표시, 시간대, 타임존, 서버 시각, 카운트다운 / time, date format, timezone, server clock, countdown, relative time |
 | `theme` | 라이트/다크/시스템 테마 — 토글 · 토스트 테마 · 첫 칠 전 스크립트(깜빡임 방지) · Vite 플러그인. | 항상 | — | stable | 다크 모드, 테마, 라이트 모드, 다크 테마 / dark mode, theme, light mode, color scheme |
 | `tokens` | 디자인 토큰 — 색 · 간격 · 모서리 · 글자 크기의 단일 정본(tokens.json)과 생성기 → tokens.css(라이트/다크), 날값 검출 테스트 도구. | 항상 | — | stable | 디자인 토큰, 색상, 브랜드 색, 간격, 디자인 시스템, 색 바꾸기 / design tokens, colors, brand color, spacing, design system, css variables |
@@ -76,11 +78,11 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 
 | id | 무엇을 주는가 | 켜는 법 | 백엔드 | 상태 | 키워드 (ko / en) |
 |---|---|---|---|---|---|
-| `app-starter` | SPA 스타터 — 라우터 · AppShell · 테마 토글 · API 클라이언트 · 로그인 · 보호 라우트가 이어진 출발점(새 프로젝트의 앱이 된다). | 항상 | account, account-jdbc, alert, auth, auth-session, auth-session-jdbc, auth-social, captcha-turnstile, db-postgresql, idempotency, job-queue-jdbc, migration, migration-flyway, notification-mail, persistence-jdbc, platform, time | stable | 스타터, SPA, 시작 템플릿, 새 앱, 프런트 시작 / starter, spa, boilerplate, vite react, frontend start |
-| `app-starter-ssr` | 서버 렌더 스타터 — Node 서버가 첫 응답을 그리고 브라우저가 이어받는다(plain Vite SSR · Dockerfile · 라우트별 제목 · 설명 · 데이터 미리 가져오기). | --ssr | account, account-jdbc, alert, auth, auth-session, auth-session-jdbc, auth-social, captcha-turnstile, db-postgresql, idempotency, job-queue-jdbc, migration, migration-flyway, notification-mail, persistence-jdbc, platform, time | stable | 서버 렌더링, SSR, 검색 노출, 첫 화면 빠르게, 콘텐츠 사이트, 링크 미리보기 / ssr, server-side rendering, seo, node server, hydration, content site |
-| `app-sample` | 참조 앱 Notes — Patterns 로 조립한 작지만 실제 같은 제품(랜딩 · 로그인 · 대시보드 · 목록 · 상세 · 폼 · 첨부 · 알림 · 게시판 · 다국어 · 설정 · 404), 새 기능은 이 앱의 한 조각을 따라 한다. | --with-sample | account, account-jdbc, alert, alert-jdbc, auth, auth-magic-link, auth-session, auth-session-jdbc, auth-social, board, board-jdbc, captcha-turnstile, crypto, db-postgresql, idempotency, job-queue-jdbc, json, migration, migration-flyway, notification, notification-jdbc, notification-mail, notification-sse, persistence-jdbc, platform, storage, storage-s3, time | template-only | 참조 앱, 예제 앱, 샘플, 제품 모양, 노트 앱, 화면 조립 예 / reference app, sample app, example, demo product, notes app |
+| `app-starter` | SPA 스타터 — 라우터 · AppShell · 테마 토글 · API 클라이언트 · 로그인 · 보호 라우트가 이어진 출발점(새 프로젝트의 앱이 된다). | 항상 | account, account-jdbc, alert, auth, auth-session, auth-session-jdbc, auth-social, captcha-turnstile, db-postgresql, idempotency, job-queue-jdbc, legal, legal-jdbc, migration, migration-flyway, notification-mail, persistence-jdbc, platform, time | stable | 스타터, SPA, 시작 템플릿, 새 앱, 프런트 시작 / starter, spa, boilerplate, vite react, frontend start |
+| `app-starter-ssr` | 서버 렌더 스타터 — Node 서버가 첫 응답을 그리고 브라우저가 이어받는다(plain Vite SSR · Dockerfile · 라우트별 제목 · 설명 · 데이터 미리 가져오기). | --ssr | account, account-jdbc, alert, auth, auth-session, auth-session-jdbc, auth-social, captcha-turnstile, db-postgresql, idempotency, job-queue-jdbc, legal, legal-jdbc, migration, migration-flyway, notification-mail, persistence-jdbc, platform, time | stable | 서버 렌더링, SSR, 검색 노출, 첫 화면 빠르게, 콘텐츠 사이트, 링크 미리보기 / ssr, server-side rendering, seo, node server, hydration, content site |
+| `app-sample` | 참조 앱 Notes — Patterns 로 조립한 작지만 실제 같은 제품(랜딩 · 로그인 · 대시보드 · 목록 · 상세 · 폼 · 첨부 · 알림 · 게시판 · 다국어 · 설정 · 404), 새 기능은 이 앱의 한 조각을 따라 한다. | --with-sample | account, account-jdbc, alert, alert-jdbc, auth, auth-magic-link, auth-session, auth-session-jdbc, auth-social, board, board-jdbc, captcha-turnstile, crypto, db-postgresql, idempotency, job-queue-jdbc, json, legal, legal-jdbc, migration, migration-flyway, notification, notification-jdbc, notification-mail, notification-sse, persistence-jdbc, platform, storage, storage-s3, time | template-only | 참조 앱, 예제 앱, 샘플, 제품 모양, 노트 앱, 화면 조립 예 / reference app, sample app, example, demo product, notes app |
 | `app-storybook` | 스토리집 — 모든 부품 · 복사해 시작하는 화면 틀(Patterns) · 토큰을 백엔드 없이 보고, 진짜 브라우저로 동작 · 접근성을 테스트한다. | 기본 | — | stable | 스토리북, 스토리집, 화면 틀, 컴포넌트 카탈로그, 접근성 테스트, 컴포넌트 문서 / storybook, component catalog, patterns, a11y test, component docs |
-| `app-workbench` | 백엔드 확인용 시각적 테스트 벤치 — 백엔드 모듈을 눌러 보는 화면들과 /packages 예제 화면. | --with-workbench | account, account-jdbc, alert, alert-jdbc, async, async-notification, auth, auth-magic-link, auth-session, auth-session-jdbc, auth-social, auth-social-google, auth-social-kakao, auth-social-naver, board, board-jdbc, captcha-turnstile, config-aws-ssm, crypto, db-postgresql, event-kafka, idempotency, job-queue-jdbc, json, migration, migration-flyway, notification, notification-jdbc, notification-mail, notification-slack, notification-sse, notification-websocket, payment, payment-stripe, payment-toss, persistence-jdbc, persistence-jpa, platform, redis-cache, redis-core, redis-lock, redis-rate-limit, scheduler, storage, storage-s3, time | experimental | 워크벤치, 백엔드 확인, 시각적 테스트, 모듈 데모 / workbench, backend smoke test, visual test bench, module demo |
+| `app-workbench` | 백엔드 확인용 시각적 테스트 벤치 — 백엔드 모듈을 눌러 보는 화면들과 /packages 예제 화면. | --with-workbench | account, account-jdbc, alert, alert-jdbc, async, async-notification, auth, auth-magic-link, auth-session, auth-session-jdbc, auth-social, auth-social-google, auth-social-kakao, auth-social-naver, board, board-jdbc, captcha-turnstile, config-aws-ssm, crypto, db-postgresql, event-kafka, idempotency, job-queue-jdbc, json, legal, legal-jdbc, migration, migration-flyway, notification, notification-jdbc, notification-mail, notification-slack, notification-sse, notification-websocket, payment, payment-stripe, payment-toss, persistence-jdbc, persistence-jpa, platform, redis-cache, redis-core, redis-lock, redis-rate-limit, scheduler, storage, storage-s3, time | experimental | 워크벤치, 백엔드 확인, 시각적 테스트, 모듈 데모 / workbench, backend smoke test, visual test bench, module demo |
 
 ### 패턴 (패키지 안의 한 기능 · 화면 틀)
 
@@ -249,6 +251,19 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 - 쓰지 않는 경우: 법적 효력이 있는 약관 — 템플릿일 뿐이다(법률 검토 필요) / 분석 · 추적 — 동의 저장소만 있고 추적 코드는 없다 / 블로그 · CMS 콘텐츠 관리는 없다
 - 키워드: 랜딩, 랜딩 페이지, 홈페이지, 요금제, 가격표, FAQ, 약관, 개인정보처리방침, 쿠키 동의, 404 페이지, 푸터 / landing page, marketing site, pricing table, faq, terms of service, privacy policy, cookie consent, 404 page, hero, footer
 
+### `legal` — 법적 문서 · 동의 — 서버의 약관 읽기(마크다운 · 판 · 효력일) · 가입 동의 체크리스트(필수/선택 · 전체 동의 · 문서 다이얼로그) · 첫 로그인과 새 판 재동의(403 LEGAL.RECONSENT_REQUIRED 를 api-client 계층에서 받아 동의 뒤 막힌 호출을 다시 보낸다) · 동의 설정(이력 · 선택 동의 철회).
+
+- 종류 · 상태: package · stable
+- 위치: `@skeleton/legal` (`packages/legal`)
+- 켜는 법: `--packages legal` — 함께 따라오는 패키지 `api-client` · `auth` · `theme` · `time` · `tokens` · `ui`
+- 필요한 것: `api-client` · `ui`
+- 백엔드: 모듈 `legal` · `legal-jdbc` · 경로 `/api/v1/legal`
+- 주요 진입점: `createLegalApi` · `createReconsentController` · `ReconsentGate` · `SignUpConsents` · `ConsentChecklist` · `ConsentSettings` · `ApiLegalDocumentPage` · `DocumentDialog` · `useLegalDocuments` · `useMyConsents`
+- 보고 따라 할 스토리: `packages/legal/src/ConsentChecklist.stories.tsx` · `packages/legal/src/SignUpConsents.stories.tsx` · `packages/legal/src/ReconsentGate.stories.tsx` · `packages/legal/src/ConsentSettings.stories.tsx` · `packages/legal/src/ApiLegalDocumentPage.stories.tsx`
+- 문서: `packages/legal/README.md`
+- 쓰지 않는 경우: 백엔드가 없거나 legal 모듈이 없는 사이트의 정적 약관은 marketing 의 LegalDocumentPage 를 쓴다 / 문서 본문 · 사실(회사명 …) · 검토 상태는 백엔드 소관이다 — 이 패키지는 서버가 준 마크다운을 그린다 / 쿠키 · 추적 동의는 marketing 의 ConsentBanner(브라우저 저장)
+- 키워드: 약관 동의, 가입 동의 체크박스, 재동의, 개인정보 동의, 마케팅 수신 동의, 동의 철회, 약관 개정 / terms consent, sign-up consent checkbox, re-consent, privacy consent, marketing opt-in, withdraw consent, terms update
+
 ### `time` — 글로벌 시간 — 순간 · 달력 날짜 · 현지+내 시간대 3종 포맷, 서버 시각 보정(카운트다운), 국가→시간대, 오늘의 날짜.
 
 - 종류 · 상태: package · stable
@@ -305,7 +320,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 - 위치: `starter` (`apps/starter`)
 - 켜는 법: 모든 프로젝트에 들어간다
 - 필요한 것: `api-client` · `auth` · `theme` · `time` · `tokens` · `ui`
-- 백엔드: 모듈 `account` · `account-jdbc` · `alert` · `auth` · `auth-session` · `auth-session-jdbc` · `auth-social` · `captcha-turnstile` · `db-postgresql` · `idempotency` · `job-queue-jdbc` · `migration` · `migration-flyway` · `notification-mail` · `persistence-jdbc` · `platform` · `time` · 경로 `/api/v1` · 짝 앱 `apps/api`
+- 백엔드: 모듈 `account` · `account-jdbc` · `alert` · `auth` · `auth-session` · `auth-session-jdbc` · `auth-social` · `captcha-turnstile` · `db-postgresql` · `idempotency` · `job-queue-jdbc` · `legal` · `legal-jdbc` · `migration` · `migration-flyway` · `notification-mail` · `persistence-jdbc` · `platform` · `time` · 경로 `/api/v1` · 짝 앱 `apps/api`
 - 주요 진입점: `apps/starter/src/main.tsx` · `apps/starter/src/routes/routes.tsx` · `apps/starter/src/api/client.ts` · `apps/starter/src/auth/session.ts` · `apps/starter/src/layouts/RootLayout.tsx`
 - 문서: `CLAUDE.md`
 - 쓰지 않는 경우: 서버가 첫 HTML 을 그려야 하면(검색 노출 · 링크 미리보기) → app-starter-ssr / 복사 후 안 쓰는 것은 지운다 — 스타터는 최소다
@@ -317,7 +332,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 - 위치: `starter-ssr` (`apps/starter-ssr`)
 - 켜는 법: `--ssr` — 함께 따라오는 패키지 `seo`
 - 필요한 것: `api-client` · `auth` · `seo` · `theme` · `time` · `tokens` · `ui`
-- 백엔드: 모듈 `account` · `account-jdbc` · `alert` · `auth` · `auth-session` · `auth-session-jdbc` · `auth-social` · `captcha-turnstile` · `db-postgresql` · `idempotency` · `job-queue-jdbc` · `migration` · `migration-flyway` · `notification-mail` · `persistence-jdbc` · `platform` · `time` · 경로 `/api/v1` · 짝 앱 `apps/api`
+- 백엔드: 모듈 `account` · `account-jdbc` · `alert` · `auth` · `auth-session` · `auth-session-jdbc` · `auth-social` · `captcha-turnstile` · `db-postgresql` · `idempotency` · `job-queue-jdbc` · `legal` · `legal-jdbc` · `migration` · `migration-flyway` · `notification-mail` · `persistence-jdbc` · `platform` · `time` · 경로 `/api/v1` · 짝 앱 `apps/api`
 - 주요 진입점: `apps/starter-ssr/server/main.ts` · `apps/starter-ssr/src/entry-server.tsx` · `apps/starter-ssr/src/entry-client.tsx` · `apps/starter-ssr/src/routes/routes.tsx` · `apps/starter-ssr/Dockerfile`
 - 문서: `apps/starter-ssr/README.md` · `CLAUDE.md`
 - 쓰지 않는 경우: 로그인 뒤 앱(대시보드)은 SPA 로 충분하다 → app-starter / 렌더 중 window · localStorage · 난수 · 시각을 읽지 않는다(하이드레이션 어긋남) / --ssr 은 SPA 스타터를 대신한다(둘 다 찍을 수 없다)
@@ -329,7 +344,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 - 위치: `sample` (`apps/sample`)
 - 켜는 법: `--with-sample` — 함께 따라오는 패키지 `board` · `i18n` · `marketing` · `notifications` · `realtime` · `seo` · `storage`
 - 필요한 것: `api-client` · `auth` · `board` · `i18n` · `marketing` · `notifications` · `realtime` · `seo` · `storage` · `theme` · `time` · `tokens` · `ui`
-- 백엔드: 모듈 `account` · `account-jdbc` · `alert` · `alert-jdbc` · `auth` · `auth-magic-link` · `auth-session` · `auth-session-jdbc` · `auth-social` · `board` · `board-jdbc` · `captcha-turnstile` · `crypto` · `db-postgresql` · `idempotency` · `job-queue-jdbc` · `json` · `migration` · `migration-flyway` · `notification` · `notification-jdbc` · `notification-mail` · `notification-sse` · `persistence-jdbc` · `platform` · `storage` · `storage-s3` · `time` · 경로 `/api/v1/notes` · 짝 앱 `apps/sample`
+- 백엔드: 모듈 `account` · `account-jdbc` · `alert` · `alert-jdbc` · `auth` · `auth-magic-link` · `auth-session` · `auth-session-jdbc` · `auth-social` · `board` · `board-jdbc` · `captcha-turnstile` · `crypto` · `db-postgresql` · `idempotency` · `job-queue-jdbc` · `json` · `legal` · `legal-jdbc` · `migration` · `migration-flyway` · `notification` · `notification-jdbc` · `notification-mail` · `notification-sse` · `persistence-jdbc` · `platform` · `storage` · `storage-s3` · `time` · 경로 `/api/v1/notes` · 짝 앱 `apps/sample`
 - 주요 진입점: `apps/sample/src/routes/routes.tsx` · `apps/sample/src/layouts/RootLayout.tsx` · `apps/sample/src/i18n/index.ts` · `apps/sample/src/board/api.ts` · `apps/sample/src/notifications/useLiveNotifications.ts` · `apps/sample/src/routes/LandingPage.tsx`
 - 문서: `apps/sample/README.md`
 - 쓰지 않는 경우: 제품 코드가 아니다 — 화면마다 어느 Pattern 으로 짰는지 보고 따라 하는 참조(README 의 「화면 → Pattern」 표) / 백엔드는 kotlin-skeleton 의 apps/sample 과 짝(PostgreSQL 전용) — 다른 백엔드에는 맞지 않는다
@@ -354,7 +369,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 - 위치: `workbench` (`apps/workbench`)
 - 켜는 법: `--with-workbench` — 함께 따라오는 패키지 `captcha-turnstile` · `notifications` · `payment` · `realtime` · `storage`
 - 필요한 것: `api-client` · `auth` · `captcha-turnstile` · `notifications` · `payment` · `realtime` · `storage` · `theme` · `time` · `tokens` · `ui`
-- 백엔드: 모듈 `account` · `account-jdbc` · `alert` · `alert-jdbc` · `async` · `async-notification` · `auth` · `auth-magic-link` · `auth-session` · `auth-session-jdbc` · `auth-social` · `auth-social-google` · `auth-social-kakao` · `auth-social-naver` · `board` · `board-jdbc` · `captcha-turnstile` · `config-aws-ssm` · `crypto` · `db-postgresql` · `event-kafka` · `idempotency` · `job-queue-jdbc` · `json` · `migration` · `migration-flyway` · `notification` · `notification-jdbc` · `notification-mail` · `notification-slack` · `notification-sse` · `notification-websocket` · `payment` · `payment-stripe` · `payment-toss` · `persistence-jdbc` · `persistence-jpa` · `platform` · `redis-cache` · `redis-core` · `redis-lock` · `redis-rate-limit` · `scheduler` · `storage` · `storage-s3` · `time` · 경로 `/api/v1` · `/api/v1/examples` · `/api/v1/skeleton` · `/api/v1/skeleton/enums` · `/api/v1/skeleton/json` · `/api/v1/skeleton/payments` · `/api/v1/skeleton/polymorphic/contents` · 짝 앱 `apps/workbench`
+- 백엔드: 모듈 `account` · `account-jdbc` · `alert` · `alert-jdbc` · `async` · `async-notification` · `auth` · `auth-magic-link` · `auth-session` · `auth-session-jdbc` · `auth-social` · `auth-social-google` · `auth-social-kakao` · `auth-social-naver` · `board` · `board-jdbc` · `captcha-turnstile` · `config-aws-ssm` · `crypto` · `db-postgresql` · `event-kafka` · `idempotency` · `job-queue-jdbc` · `json` · `legal` · `legal-jdbc` · `migration` · `migration-flyway` · `notification` · `notification-jdbc` · `notification-mail` · `notification-slack` · `notification-sse` · `notification-websocket` · `payment` · `payment-stripe` · `payment-toss` · `persistence-jdbc` · `persistence-jpa` · `platform` · `redis-cache` · `redis-core` · `redis-lock` · `redis-rate-limit` · `scheduler` · `storage` · `storage-s3` · `time` · 경로 `/api/v1` · `/api/v1/examples` · `/api/v1/skeleton` · `/api/v1/skeleton/enums` · `/api/v1/skeleton/json` · `/api/v1/skeleton/payments` · `/api/v1/skeleton/polymorphic/contents` · 짝 앱 `apps/workbench`
 - 주요 진입점: `apps/workbench/src/main.tsx` · `apps/workbench/src/routes/index.tsx`
 - 쓰지 않는 경우: 복사 대상이 아니다 — 스타터가 워크벤치를 모른다(날 요소 · 인라인 스타일 예외 앱) / 제품 화면의 모범은 app-sample 과 Patterns
 - 키워드: 워크벤치, 백엔드 확인, 시각적 테스트, 모듈 데모 / workbench, backend smoke test, visual test bench, module demo

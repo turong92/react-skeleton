@@ -33,6 +33,8 @@
         "db-postgresql",
         "idempotency",
         "job-queue-jdbc",
+        "legal",
+        "legal-jdbc",
         "migration",
         "migration-flyway",
         "notification-mail",
@@ -752,6 +754,80 @@
       }
     },
     {
+      "id": "legal",
+      "kind": "package",
+      "package": "@skeleton/legal",
+      "path": "packages/legal",
+      "status": "stable",
+      "summary": "법적 문서 · 동의 — 서버의 약관 읽기(마크다운 · 판 · 효력일) · 가입 동의 체크리스트(필수/선택 · 전체 동의 · 문서 다이얼로그) · 첫 로그인과 새 판 재동의(403 LEGAL.RECONSENT_REQUIRED 를 api-client 계층에서 받아 동의 뒤 막힌 호출을 다시 보낸다) · 동의 설정(이력 · 선택 동의 철회).",
+      "stampFlag": {
+        "flag": "--packages legal",
+        "included": "flag",
+        "autoIncludes": ["api-client", "auth", "theme", "time", "tokens", "ui"],
+        "alsoVia": [],
+        "optOut": null
+      },
+      "needs": ["api-client", "ui"],
+      "backend": {
+        "modules": ["legal", "legal-jdbc"],
+        "oneOfModules": [],
+        "optionalModules": [],
+        "basePaths": ["/api/v1/legal"],
+        "docs": [
+          "docs/modules/legal.md",
+          "docs/modules/legal-jdbc.md",
+          "docs/legal.md",
+          "docs/legal-http-contract.md"
+        ]
+      },
+      "entryPoints": [
+        "createLegalApi",
+        "createReconsentController",
+        "ReconsentGate",
+        "SignUpConsents",
+        "ConsentChecklist",
+        "ConsentSettings",
+        "ApiLegalDocumentPage",
+        "DocumentDialog",
+        "useLegalDocuments",
+        "useMyConsents"
+      ],
+      "stories": [
+        "packages/legal/src/ConsentChecklist.stories.tsx",
+        "packages/legal/src/SignUpConsents.stories.tsx",
+        "packages/legal/src/ReconsentGate.stories.tsx",
+        "packages/legal/src/ConsentSettings.stories.tsx",
+        "packages/legal/src/ApiLegalDocumentPage.stories.tsx"
+      ],
+      "patterns": [],
+      "docs": ["packages/legal/README.md"],
+      "notFor": [
+        "백엔드가 없거나 legal 모듈이 없는 사이트의 정적 약관은 marketing 의 LegalDocumentPage 를 쓴다",
+        "문서 본문 · 사실(회사명 …) · 검토 상태는 백엔드 소관이다 — 이 패키지는 서버가 준 마크다운을 그린다",
+        "쿠키 · 추적 동의는 marketing 의 ConsentBanner(브라우저 저장)"
+      ],
+      "keywords": {
+        "ko": [
+          "약관 동의",
+          "가입 동의 체크박스",
+          "재동의",
+          "개인정보 동의",
+          "마케팅 수신 동의",
+          "동의 철회",
+          "약관 개정"
+        ],
+        "en": [
+          "terms consent",
+          "sign-up consent checkbox",
+          "re-consent",
+          "privacy consent",
+          "marketing opt-in",
+          "withdraw consent",
+          "terms update"
+        ]
+      }
+    },
+    {
       "patterns": [],
       "stories": ["packages/time/src/formats.stories.tsx"],
       "docs": ["packages/time/README.md"],
@@ -977,6 +1053,8 @@
           "db-postgresql",
           "idempotency",
           "job-queue-jdbc",
+          "legal",
+          "legal-jdbc",
           "migration",
           "migration-flyway",
           "notification-mail",
@@ -1037,6 +1115,8 @@
           "db-postgresql",
           "idempotency",
           "job-queue-jdbc",
+          "legal",
+          "legal-jdbc",
           "migration",
           "migration-flyway",
           "notification-mail",
@@ -1126,6 +1206,8 @@
           "idempotency",
           "job-queue-jdbc",
           "json",
+          "legal",
+          "legal-jdbc",
           "migration",
           "migration-flyway",
           "notification",
@@ -1266,6 +1348,8 @@
           "idempotency",
           "job-queue-jdbc",
           "json",
+          "legal",
+          "legal-jdbc",
           "migration",
           "migration-flyway",
           "notification",
@@ -2112,6 +2196,11 @@
       "need": "운영자 계정 관리 표 (검색 · 정지 · 복구 · 역할)",
       "capabilities": ["account-admin"],
       "byHand": "백엔드 skeleton.account.admin.enabled=true. 프런트는 apps/sample 의 AdminAccountsPage 와 RequireRole 라우트를 복사한다."
+    },
+    {
+      "need": "약관 · 개인정보 동의 (가입 체크박스 · 새 판 재동의 · 선택 동의 철회) — 문서와 동의 기록은 서버가 쥔다",
+      "capabilities": ["legal"],
+      "byHand": "백엔드 스타터는 legal 을 켠다(문서는 TEMPLATE — stage · prod 는 자기 문서가 있어야 기동). 프런트는 createLegalApi + createReconsentController(api-client 의 recoverForbidden 에 꽂는다) + <ReconsentGate> 를 앱 맨 위에, 가입 라우트의 signUp.renderConsents 에 <SignUpConsents>, 설정에 <ConsentSettings>. 서버 없이 정적 약관만이면 legal-documents(marketing)."
     }
   ],
   "examples": [

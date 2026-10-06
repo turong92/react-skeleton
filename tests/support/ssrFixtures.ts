@@ -61,6 +61,25 @@ const fakeBoardApi = () =>
       },
     },
   )
+const fakeLegalApi = () =>
+  new Proxy(
+    {},
+    {
+      get: () => async () => {
+        throw new Error('unused in the server render')
+      },
+    },
+  )
+const legalRow = {
+  type: 'terms',
+  version: '2026-10-01',
+  locale: 'ko',
+  title: '이용약관',
+  kind: 'required',
+  template: false,
+}
+const legalController = (ctx: FixtureContext) =>
+  call(ctx.mod('legal').createReconsentController, { api: fakeLegalApi() })
 const boardConfig = {
   reactionTypes: ['LIKE', 'EMPATHY'],
   reactionMode: 'SINGLE',
@@ -454,6 +473,39 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
     requestDeleteCode: asyncNoop,
     onDelete: async () => ({ status: 'DELETION_SCHEDULED', purgeAfter: '2026-11-05T00:00:00Z' }),
   }),
+  'legal#ConsentChecklist': () => ({ rows: [legalRow], checked: {}, onChange: noop }),
+  'legal#SignUpConsents': () => ({
+    api: fakeLegalApi(),
+    slot: { onChange: noop, showError: false, refreshKey: 0 },
+    locale: 'ko',
+  }),
+  'legal#DocumentDialog': () => ({ api: fakeLegalApi(), document: null, onClose: noop }),
+  'legal#LegalDocumentView': () => ({
+    document: {
+      type: 'terms',
+      version: '2026-10-01',
+      locale: 'ko',
+      effectiveFrom: '2026-10-01T00:00:00Z',
+      current: true,
+      template: false,
+      title: '이용약관',
+      sha256: 'x',
+      required: true,
+      requiredAtSignUp: true,
+      markdown: '# 제1조\n\n본문',
+    },
+  }),
+  'legal#ApiLegalDocumentPage': () => ({ api: fakeLegalApi(), type: 'terms' }),
+  'legal#ReconsentScreen': () => ({ rows: [legalRow], onAgree: asyncNoop, onLeave: noop }),
+  'legal#ReconsentGate': (ctx) => ({
+    controller: legalController(ctx),
+    api: fakeLegalApi(),
+    accountId: null,
+    onLeave: noop,
+    locale: 'ko',
+    children: createElement('p', null, 'app'),
+  }),
+  'legal#ConsentSettings': () => ({ api: fakeLegalApi(), locale: 'ko' }),
   'notifications#NotificationBell': () => ({ api: fakeNotificationsApi() }),
   'notifications#NotificationList': () => ({ items: [notification] }),
   'board#ReactionBar': () => ({
@@ -535,6 +587,12 @@ export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
   'board#useRemoveComment': () => [fakeBoardApi(), 'free', 'p1'],
   'board#useModerateComment': () => [fakeBoardApi(), 'free', 'p1'],
   'board#useReaction': () => [fakeBoardApi(), 'free', 'SINGLE'],
+  'legal#useLegalDocuments': () => [fakeLegalApi()],
+  'legal#useLegalDocument': () => [fakeLegalApi(), 'terms'],
+  'legal#useMyConsents': () => [fakeLegalApi()],
+  'legal#useConsentHistory': () => [fakeLegalApi(), 0],
+  'legal#useAgree': () => [fakeLegalApi()],
+  'legal#useWithdraw': () => [fakeLegalApi()],
   'marketing#useConsent': (ctx) => [
     call(ctx.mod('marketing').createConsentStore, { categories: ['necessary'], version: '1' }),
   ],

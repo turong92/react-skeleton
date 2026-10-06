@@ -7,6 +7,8 @@ export type SignUpRequest = {
   locale?: string
   timeZone?: string
   captchaToken?: string
+  /** 체크한 약관 · 방침 — `{종류, 판, 언어}`(백엔드 legal 모듈이 있을 때. 없으면 서버가 무시한다) */
+  consents?: Array<{ type: string; version: string; locale?: string }>
 }
 
 /** 가입 응답. 메일 인증이 켜져 있으면 늘 `VERIFICATION_SENT`(202), 꺼져 있으면 `CREATED`(201) */

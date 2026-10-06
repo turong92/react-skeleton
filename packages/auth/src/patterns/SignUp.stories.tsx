@@ -93,6 +93,65 @@ export const ConsentAndCaptchaSlots: Story = {
   },
 }
 
+/** 서버가 문서를 쥘 때(`@skeleton/legal` 의 `SignUpConsents`) — 동의 자리가 통째로 슬롯이다. 필수가 안 채워진 동안은 보내지 않고, 보낼 때는 `{id, version, locale}` 를 싣는다 */
+export const ConsentSlotFromTheBackend: Story = {
+  args: {
+    renderConsents: (slot) => (
+      <div data-refresh={slot.refreshKey}>
+        <button
+          type="button"
+          onClick={() =>
+            slot.onChange([{ id: 'terms', version: '2026-10-01', locale: 'ko' }], true)
+          }
+        >
+          Agree to the terms
+        </button>
+        {slot.showError && <p role="alert">Needs the terms</p>}
+      </div>
+    ),
+  },
+  play: async ({ canvas, args, userEvent }) => {
+    await userEvent.type(canvas.getByLabelText(/Email/), 'new@example.com')
+    await userEvent.type(canvas.getByLabelText(/^Password/), 'Correct-horse-battery-9')
+    await userEvent.click(canvas.getByRole('button', { name: 'Create account' }))
+    await expect(args.onSignUp).not.toHaveBeenCalled() // 슬롯이 아직 「완료」를 알리지 않았다
+    await expect(await canvas.findByRole('alert')).toHaveTextContent('Needs the terms')
+    await userEvent.click(canvas.getByRole('button', { name: 'Agree to the terms' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Create account' }))
+    await expect(args.onSignUp).toHaveBeenCalledWith(
+      expect.objectContaining({
+        consents: [{ id: 'terms', version: '2026-10-01', locale: 'ko' }],
+      }),
+    )
+  },
+}
+
+/** 서버가 `400 LEGAL.CONSENT_REQUIRED`(문서가 그 사이 바뀌었다)로 거절하면 문구를 보이고 슬롯에 「다시 읽어라」(refreshKey) 를 알린다 */
+export const ConsentRequiredAsksTheSlotToReload: Story = {
+  args: {
+    onSignUp: async () => {
+      throw apiError('LEGAL.CONSENT_REQUIRED', 400, {
+        missing: [{ type: 'terms', version: '2026-12-01', reason: 'STALE' }],
+      })
+    },
+    renderConsents: (slot) => (
+      <div data-testid="slot" data-refresh={slot.refreshKey}>
+        <button type="button" onClick={() => slot.onChange([], true)}>
+          Ready
+        </button>
+      </div>
+    ),
+  },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.type(canvas.getByLabelText(/Email/), 'new@example.com')
+    await userEvent.type(canvas.getByLabelText(/^Password/), 'Correct-horse-battery-9')
+    await userEvent.click(canvas.getByRole('button', { name: 'Ready' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Create account' }))
+    await expect(await canvas.findByText(/agreements changed/i)).toBeVisible()
+    await expect(canvas.getByTestId('slot')).toHaveAttribute('data-refresh', '1')
+  },
+}
+
 export const ServerRejectsPassword: Story = {
   args: {
     onSignUp: async () => {

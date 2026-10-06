@@ -196,10 +196,21 @@ export function SignUpPage({
         navigate(ctx.afterSignIn, { replace: true })
       }}
       onResendCode={(signUpId) => ctx.accountApi.resendSignUpCode(signUpId)}
-      onSignUp={async ({ consents, ...request }) => {
-        void consents // 동의 모듈이 생기면 서버로 보낸다 — 지금은 `onConsentsChange` · `signUp.onSignUp` 훅이 받는다
-        return ctx.accountApi.signUp(request)
-      }}
+      onSignUp={async ({ consents, ...request }) =>
+        // 체크한 약관 · 방침은 가입 시도에 묶여 간다(백엔드 legal 모듈 — 없으면 서버가 무시한다). 하나도 없으면 필드를 싣지 않는다
+        ctx.accountApi.signUp({
+          ...request,
+          ...(consents.length > 0
+            ? {
+                consents: consents.map((c) => ({
+                  type: c.id,
+                  version: c.version,
+                  ...(c.locale ? { locale: c.locale } : {}),
+                })),
+              }
+            : {}),
+        })
+      }
       onCreated={() => navigate(ctx.paths.signIn, { replace: true })}
       onSocialSignIn={async (provider) => {
         if (!ctx.socialFlow) return

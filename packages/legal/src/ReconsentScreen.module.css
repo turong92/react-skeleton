@@ -1,0 +1,36 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: var(--space-lg);
+  background: var(--bg);
+  overflow-y: auto;
+}
+
+.card {
+  display: grid;
+  gap: var(--space-lg);
+  inline-size: min(100%, 32rem);
+  padding: var(--space-xl);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.card h1 {
+  margin: 0;
+  font-size: var(--font-size-heading);
+}
+
+.card p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}

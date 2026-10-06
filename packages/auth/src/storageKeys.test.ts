@@ -20,6 +20,7 @@ describe('M10 — storage, lock and channel names are namespaced per app', () =>
     expect(keys.returnTo).toBe('skeleton.returnTo')
     expect(keys.social).toBe('skeleton.social.')
     expect(keys.socialLink).toBe('skeleton.social-link.')
+    expect(keys.signUp).toBe('skeleton.signUp')
     expect(keys.reauthChannel).toBe('skeleton.reauth')
   })
 

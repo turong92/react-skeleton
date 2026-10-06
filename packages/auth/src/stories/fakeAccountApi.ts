@@ -37,7 +37,12 @@ export type FakeAccountOptions = {
   onlyMethod?: boolean
   /** 새 주소의 확인을 기다리는 이메일 변경이 이미 있다(새로고침 뒤) */
   pendingEmail?: string
+  /** FINAL-3 초안: 가입이 `signUpId` 를 돌려주고 6자리 코드로 인증한다(코드는 `FAKE_CODE`) */
+  codeFlow?: boolean
 }
+
+/** 가짜 서버가 받아 주는 6자리 코드 */
+export const FAKE_CODE = '123456'
 
 /** 가짜 서버가 받아 주는 본인 확인 토큰(메일 링크의 값) */
 export const FAKE_REAUTH_TOKEN = 'tok'
@@ -106,13 +111,34 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
       current: false,
     },
   ]
+  let attemptsLeft = 5
   const track = <T>(name: string, value: T) => {
     calls.push(name)
     return Promise.resolve(value)
   }
   return {
     calls,
-    signUp: () => track('signUp', { status: 'VERIFICATION_SENT' as const }),
+    signUp: () =>
+      track('signUp', {
+        status: 'VERIFICATION_SENT' as const,
+        ...(options.codeFlow ? { signUpId: 'sid-1' } : {}),
+      }),
+    verifySignUpCode: async (_signUpId, code) => {
+      calls.push('verifySignUpCode')
+      if (code !== FAKE_CODE) {
+        attemptsLeft -= 1
+        if (attemptsLeft <= 0) throw apiError('ACCOUNT.CODE_EXPIRED', 410)
+        throw apiError('ACCOUNT.CODE_INVALID', 400, { attemptsLeft })
+      }
+      return {
+        accessToken: 'fake',
+        tokenType: 'Bearer',
+        expiresAt: '2099-01-01T00:00:00Z',
+        principal: { accountId: 'acc_demo', roles: [] },
+      }
+    },
+    resendSignUpCode: () => track('resendSignUpCode', undefined),
+    confirmEmailChangeCode: () => track('confirmEmailChangeCode', undefined),
     resendVerification: () => track('resendVerification', undefined),
     verifyEmail: () => track('verifyEmail', undefined),
     forgotPassword: () => track('forgotPassword', undefined),

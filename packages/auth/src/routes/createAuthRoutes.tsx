@@ -14,6 +14,7 @@ import { createReauthStore, type ReauthStore } from '../reauth'
 import type { ReauthChannel } from '../reauthChannel'
 import { onAccountChange } from '../accountChange'
 import { authStorageKeys } from '../storageKeys'
+import { createSignUpPending } from '../signUpPending'
 import {
   AccountPage,
   ConfirmEmailChangePage,
@@ -130,6 +131,10 @@ export function createAuthRoutes(options: AuthRoutesOptions): RouteObject[] {
   const ctx: PageContext = {
     keys,
     notes: { warned: false },
+    signUpPending: createSignUpPending({
+      storage: typeof window === 'undefined' ? undefined : safeSessionStorage(),
+      key: keys.signUp,
+    }),
     reauthChannel: options.reauthChannel,
     authApi: options.authApi as AuthApi,
     accountApi: options.accountApi as AccountApi,

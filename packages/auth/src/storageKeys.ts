@@ -9,6 +9,8 @@ export type AuthStorageKeys = {
   social: string
   /** 소셜 연결 state 접두어 */
   socialLink: string
+  /** 진행 중인 가입 시도(코드 입력 단계) */
+  signUp: string
   /** BroadcastChannel 이름 */
   reauthChannel: string
 }
@@ -28,6 +30,7 @@ export function authStorageKeys(namespace = 'skeleton'): AuthStorageKeys {
     returnTo: `${namespace}.returnTo`,
     social: `${namespace}.social.`,
     socialLink: `${namespace}.social-link.`,
+    signUp: `${namespace}.signUp`,
     reauthChannel: `${namespace}.reauth`,
   }
 }

@@ -119,6 +119,92 @@ export const SignUpClosed: Story = {
   },
 }
 
+/* FINAL-3 초안(가입 = 6자리 인증번호, 같은 화면): 가입 응답의 signUpId → 코드 입력 → 맞으면 로그인. 백엔드 확정 뒤 다시 맞춘다 */
+const codeArgs = () => ({
+  onSignUp: fn(async () => ({ status: 'VERIFICATION_SENT' as const, signUpId: 'sid-1' })),
+  onVerifyCode: fn(async (_id: string, code: string) => {
+    if (code === '123456') return undefined
+    throw apiError('ACCOUNT.CODE_INVALID', 400, { attemptsLeft: 4 })
+  }),
+  onResendCode: fn(async () => undefined),
+})
+
+async function fillAndSubmit(
+  canvas: Parameters<NonNullable<Story['play']>>[0]['canvas'],
+  userEvent: Parameters<NonNullable<Story['play']>>[0]['userEvent'],
+) {
+  await userEvent.type(canvas.getByLabelText(/^Email/), 'ann@example.com')
+  await userEvent.type(canvas.getByLabelText(/^Password/), 'Correct-horse-battery-9')
+  await userEvent.click(canvas.getByRole('button', { name: /Create account|Sign up/ }))
+}
+
+export const CodeStepSignsInOnTheRightCode: Story = {
+  args: codeArgs(),
+  play: async ({ canvas, userEvent, args }) => {
+    await fillAndSubmit(canvas, userEvent)
+    await expect(
+      await canvas.findByRole('heading', { name: 'Enter the 6-digit code' }),
+    ).toBeVisible()
+    await expect(canvas.getByLabelText('Digit 1 of 6')).toHaveAttribute(
+      'autocomplete',
+      'one-time-code',
+    )
+    await userEvent.click(canvas.getByLabelText('Digit 1 of 6'))
+    await userEvent.paste('123456') // 붙여넣으면 채워지고 버튼 없이 제출된다
+    await waitFor(() =>
+      expect(args.onVerifyCode).toHaveBeenCalledExactlyOnceWith('sid-1', '123456'),
+    )
+  },
+}
+
+export const CodeStepWrongCodeShowsAttemptsLeft: Story = {
+  args: codeArgs(),
+  play: async ({ canvas, userEvent }) => {
+    await fillAndSubmit(canvas, userEvent)
+    await userEvent.click(await canvas.findByLabelText('Digit 1 of 6'))
+    await userEvent.keyboard('000000')
+    await expect(await canvas.findByRole('alert')).toHaveTextContent('4 attempts left')
+    await expect(canvas.getByLabelText('Digit 1 of 6')).toHaveValue('') // 비우고 다시 칠 수 있게
+  },
+}
+
+export const CodeStepExpiredStartsOver: Story = {
+  args: {
+    ...codeArgs(),
+    onVerifyCode: fn(async () => {
+      throw apiError('ACCOUNT.CODE_EXPIRED', 410)
+    }),
+  },
+  play: async ({ canvas, userEvent }) => {
+    await fillAndSubmit(canvas, userEvent)
+    await userEvent.click(await canvas.findByLabelText('Digit 1 of 6'))
+    await userEvent.keyboard('111111')
+    await expect(await canvas.findByText(/expired or was used up/)).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Start over' }))
+    // 주소는 남고 비밀번호는 비워진 가입 폼으로
+    await expect(await canvas.findByLabelText(/^Email/)).toHaveValue('ann@example.com')
+    await expect(canvas.getByLabelText(/^Password/)).toHaveValue('')
+  },
+}
+
+export const CodeStepResendHasACooldown: Story = {
+  args: codeArgs(),
+  play: async ({ canvas, userEvent, args }) => {
+    await fillAndSubmit(canvas, userEvent)
+    await userEvent.click(await canvas.findByRole('button', { name: 'Send a new code' }))
+    await waitFor(() => expect(args.onResendCode).toHaveBeenCalledExactlyOnceWith('sid-1'))
+    await expect(await canvas.findByRole('button', { name: 'Send a new code' })).toBeDisabled()
+  },
+}
+
+export const CodeStepResumesAfterAReload: Story = {
+  args: { ...codeArgs(), initialPending: { email: 'ann@example.com', signUpId: 'sid-1' } },
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByText(/ann@example.com/)).toBeVisible()
+    await expect(canvas.getByLabelText('Digit 6 of 6')).toBeVisible()
+  },
+}
+
 export const Dark: Story = {
   globals: { theme: 'dark' },
   play: async ({ canvas }) => {

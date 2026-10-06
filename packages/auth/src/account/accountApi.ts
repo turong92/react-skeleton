@@ -1,4 +1,5 @@
 import { newIdempotencyKey, type ApiClient } from '@skeleton/api-client'
+import type { AuthTokenResponse } from '../types'
 import type {
   AccountMe,
   AccountSession,
@@ -10,17 +11,36 @@ import type {
   SignUpStatus,
 } from './types'
 
-/** 민감한 작업의 다시 인증 — 비밀번호가 있으면 `currentPassword`, 없으면 메일로 받은 `confirmationToken` */
-export type ReauthCredential = { currentPassword?: string; confirmationToken?: string }
+/** 주소가 없는 계정(Naver 등)의 다시 인증 — 이미 연결된 제공자의 **새** 인가 코드(제공자 동의를 다시 거친다). FINAL-3 초안 */
+export type SocialReauth = { provider: string; authorizationCode: string; redirectUri?: string }
+
+/**
+ * 민감한 작업의 다시 인증 — 세 전략: 비밀번호가 있으면 `currentPassword`, 주소가 있는 비밀번호 없는 계정은 메일로 받은 6자리 `confirmationCode`
+ * (FINAL-3 초안; 그 전 백엔드는 링크의 `confirmationToken`), 주소가 없으면 `socialReauth`
+ */
+export type ReauthCredential = {
+  currentPassword?: string
+  /** 옛 계약(링크의 토큰) — FINAL-3 이 확정되면 `confirmationCode` 로 대체된다 */
+  confirmationToken?: string
+  confirmationCode?: string
+  socialReauth?: SocialReauth
+}
 
 export type AccountApi = {
-  signUp(request: SignUpRequest): Promise<{ status: SignUpStatus }>
+  /** FINAL-3 초안: 메일 인증이 켜져 있으면 `signUpId` 가 함께 온다(그 시도에 묶인 6자리 코드를 `verifySignUpCode` 에 낸다) */
+  signUp(request: SignUpRequest): Promise<{ status: SignUpStatus; signUpId?: string }>
   resendVerification(email: string, captchaToken?: string): Promise<void>
   verifyEmail(token: string): Promise<void>
+  /** FINAL-3 초안 `POST /auth/verify-email {signUpId, code}` → 가입이 끝나고 **바로 로그인**(토큰 응답). 400 `ACCOUNT.CODE_INVALID`(`data.attemptsLeft`) · 410 `ACCOUNT.CODE_EXPIRED` · 429 */
+  verifySignUpCode(signUpId: string, code: string): Promise<AuthTokenResponse>
+  /** FINAL-3 초안 `POST /account/verification/resend {signUpId}` — 같은 시도에 새 코드(늘 202 — 쿨다운 · 횟수 초과는 조용히 무시) */
+  resendSignUpCode(signUpId: string, captchaToken?: string): Promise<void>
   forgotPassword(email: string, captchaToken?: string): Promise<void>
   resetPassword(token: string, newPassword: string): Promise<void>
   passwordPolicy(): Promise<PasswordPolicy>
   confirmEmailChange(token: string): Promise<void>
+  /** FINAL-3 초안 `POST /account/email/change/confirm {code}` — 새 주소로 간 6자리 코드를 로그인한 채 입력한다. 400 `CODE_INVALID` · 410 `CODE_EXPIRED` · 409 `EMAIL_TAKEN` */
+  confirmEmailChangeCode(code: string): Promise<void>
 
   me(): Promise<AccountMe>
   updateProfile(patch: ProfilePatch): Promise<AccountMe>
@@ -36,7 +56,8 @@ export type AccountApi = {
   ): Promise<void>
 
   identities(): Promise<SignInIdentity[]>
-  unlinkIdentity(id: string): Promise<void>
+  /** FINAL-3 초안: 다시 인증이 필요하다(비밀번호 · 코드 · socialReauth) — 본문에 싣는다 */
+  unlinkIdentity(id: string, reauth?: ReauthCredential): Promise<void>
   /** 다시 인증이 필요하다: 비밀번호가 있으면 `currentPassword`, 없으면 `confirmationToken`(서버가 강제) */
   linkSocial(
     provider: string,
@@ -50,10 +71,7 @@ export type AccountApi = {
   /** 비밀번호가 없는 계정의 삭제 확인 메일 */
   requestDeleteConfirmation(): Promise<void>
   /** 비밀번호가 있으면 `currentPassword`, 없으면 메일로 받은 `confirmationToken` 중 정확히 하나 */
-  deleteAccount(
-    credential: { currentPassword?: string; confirmationToken?: string },
-    idempotencyKey?: string,
-  ): Promise<DeletionResult>
+  deleteAccount(credential: ReauthCredential, idempotencyKey?: string): Promise<DeletionResult>
 
   sessions(): Promise<AccountSession[]>
   revokeSession(id: string): Promise<void>
@@ -83,6 +101,14 @@ export function createAccountApi(
     verifyEmail: async (token) => {
       await client.value('/auth/verify-email', publicPost({ token }))
     },
+    verifySignUpCode: (signUpId, code) =>
+      client.value<AuthTokenResponse>('/auth/verify-email', publicPost({ signUpId, code })),
+    resendSignUpCode: async (signUpId, captchaToken) => {
+      await client.value(
+        '/account/verification/resend',
+        publicPost(compact({ signUpId, captchaToken })),
+      )
+    },
     forgotPassword: async (email, captchaToken) => {
       await client.value('/account/password/forgot', publicPost(compact({ email, captchaToken })))
     },
@@ -99,6 +125,8 @@ export function createAccountApi(
     },
     confirmEmailChange: (token) =>
       client.noContent('/auth/confirm-email-change', publicPost({ token })),
+    confirmEmailChangeCode: (code) =>
+      client.noContent('/account/email/change/confirm', { method: 'POST', json: { code } }),
 
     me: () => client.value('/account/me'),
     updateProfile: (patch) =>
@@ -114,8 +142,11 @@ export function createAccountApi(
     },
 
     identities: () => client.list('/account/identities'),
-    unlinkIdentity: (id) =>
-      client.noContent(`/account/identities/${seg(id)}`, { method: 'DELETE' }),
+    unlinkIdentity: (id, reauth) =>
+      client.noContent(`/account/identities/${seg(id)}`, {
+        method: 'DELETE',
+        ...(reauth ? { json: compact(reauth) } : {}),
+      }),
     linkSocial: (provider, authorizationCode, redirectUri, reauth) =>
       client.value(`/account/identities/social/${seg(provider)}`, {
         method: 'POST',

@@ -88,6 +88,21 @@ export const koAuthLabels: AuthLabels = {
   signUpClosedTitle: '지금은 가입을 받지 않아요',
   signUpConsentRequired: '필수',
   signUpCaptcha: '보안 확인',
+  codeTitle: '인증번호 6자리를 입력해 주세요',
+  codeBody: (email) =>
+    `${email} 로 인증번호를 보냈어요. 10분 안에 입력해 주세요 — 다른 사람에게 알려 주지 마세요.`,
+  codeGroupLabel: '인증번호',
+  codeDigit: (position, total) => `${total}자리 중 ${position}번째`,
+  codeInvalid: (left) =>
+    left === undefined
+      ? '인증번호가 맞지 않아요.'
+      : `인증번호가 맞지 않아요. ${left}번 더 시도할 수 있어요.`,
+  codeExpired: '인증번호가 만료됐거나 다 썼어요. 처음부터 다시 받아 주세요.',
+  codeRestart: '처음부터 다시',
+  codeResend: '인증번호 다시 받기',
+  codeResent: '새 인증번호를 보냈어요.',
+  codeResendIn: (seconds) => `${seconds}초 뒤에 다시 받을 수 있어요`,
+  codeChecking: '인증번호를 확인하는 중',
   checkEmailTitle: '메일함을 확인해 주세요',
   checkEmailBody: (email) => `${email} 로 링크를 보냈어요. 열어서 계속해 주세요.`,
   checkEmailSpam: '아직 안 왔나요? 스팸함도 살펴보세요.',

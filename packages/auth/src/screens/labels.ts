@@ -79,6 +79,18 @@ export type AuthLabels = {
   signUpConsentRequired: string
   signUpCaptcha: string
   // 메일 확인 안내
+  /** FINAL-3 초안 — 메일로 받은 6자리 인증번호를 같은 화면에서 입력한다 */
+  codeTitle: string
+  codeBody: (email: string) => string
+  codeGroupLabel: string
+  codeDigit: (position: number, total: number) => string
+  codeInvalid: (attemptsLeft: number | undefined) => string
+  codeExpired: string
+  codeRestart: string
+  codeResend: string
+  codeResent: string
+  codeResendIn: (seconds: number) => string
+  codeChecking: string
   checkEmailTitle: string
   checkEmailBody: (email: string) => string
   checkEmailSpam: string
@@ -327,6 +339,21 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   signUpClosedTitle: 'Sign-up is closed',
   signUpConsentRequired: 'Required',
   signUpCaptcha: 'Security check',
+  codeTitle: 'Enter the 6-digit code',
+  codeBody: (email) =>
+    `We sent a 6-digit code to ${email}. It works for 10 minutes — never tell it to anyone.`,
+  codeGroupLabel: 'Verification code',
+  codeDigit: (position, total) => `Digit ${position} of ${total}`,
+  codeInvalid: (left) =>
+    left === undefined
+      ? 'That code is not right.'
+      : `That code is not right. ${left} ${left === 1 ? 'attempt' : 'attempts'} left.`,
+  codeExpired: 'This code has expired or was used up. Start over to get a new one.',
+  codeRestart: 'Start over',
+  codeResend: 'Send a new code',
+  codeResent: 'A new code is on its way.',
+  codeResendIn: (seconds) => `You can ask again in ${seconds} s`,
+  codeChecking: 'Checking the code',
   checkEmailTitle: 'Check your email',
   checkEmailBody: (email) => `We sent a link to ${email}. Open it to continue.`,
   checkEmailSpam: 'Nothing yet? Look in your spam folder.',

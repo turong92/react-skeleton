@@ -38,6 +38,7 @@ import {
 import type { ReauthChannel } from '../reauthChannel'
 import type { AuthStorageKeys } from '../storageKeys'
 import { scrubUrlParams } from '../scrubUrl'
+import type { SignUpPendingStore } from '../signUpPending'
 import { useSocialLoginCallback } from '../useSocialLoginCallback'
 
 export type AuthPaths = {
@@ -77,6 +78,8 @@ export type PageContext = {
   discovery?: DiscoveryOptions
   /** 본인 확인 토큰을 같은 브라우저의 다른 탭에 넘기는 채널 — 앱이 만들어 넘긴다(없으면 토큰은 이 탭에 보관) */
   reauthChannel?: ReauthChannel | null
+  /** 진행 중인 가입 시도(코드 입력 단계가 새로고침을 견딘다) */
+  signUpPending?: SignUpPendingStore
   /** 저장 키 · 락 · 채널 이름(앱 이름공간) */
   keys: AuthStorageKeys
   /** 이 라우트 한 벌의 기억(경고를 한 번만 하기 등) */
@@ -171,6 +174,16 @@ export function SignUpPage({
       labels={ctx.labels}
       methods={ctx.methods}
       signInTo={ctx.paths.signIn}
+      initialPending={ctx.signUpPending?.read() ?? undefined}
+      onPendingChange={(next) =>
+        next ? ctx.signUpPending?.save(next) : ctx.signUpPending?.clear()
+      }
+      onVerifyCode={async (signUpId, code) => {
+        // 인증이 끝나면 가입도 끝나고 바로 로그인한다(토큰 응답) — 이어서 원래 가려던 곳으로
+        auth.signIn(await ctx.accountApi.verifySignUpCode(signUpId, code))
+        navigate(ctx.afterSignIn, { replace: true })
+      }}
+      onResendCode={(signUpId) => ctx.accountApi.resendSignUpCode(signUpId)}
       onSignUp={async ({ consents, ...request }) => {
         void consents // 동의 모듈이 생기면 서버로 보낸다 — 지금은 `onConsentsChange` · `signUp.onSignUp` 훅이 받는다
         return ctx.accountApi.signUp(request)

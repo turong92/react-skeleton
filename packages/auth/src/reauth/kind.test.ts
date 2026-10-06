@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import type { AccountMe, SignInIdentity } from '../account/types'
 import { isReauthFailure, reauthKindOf, reauthSubjectOf } from './kind'
-import { apiError } from '../stories/fakeAccountApi'
+import { ApiRequestError } from '@skeleton/api-client'
 
+// 스토리 폴더는 스토리북 없이 찍은 프로젝트에서 빠진다 — 테스트는 거기에 기대지 않는다
+const apiError = (code: string, status: number) =>
+  new ApiRequestError({ code, title: code, status, timestamp: 't' }, 'trace', 'span', 'p')
 const method = (id: string, name: string): SignInIdentity => ({
   id,
   method: name,

@@ -191,6 +191,24 @@ export const CodeStepExpiredStartsOver: Story = {
   },
 }
 
+/** 주소당 추측 상한(429)은 틀린 번호가 아니다 — 남은 횟수 대신 기다릴 시간을 말하고 입력을 잠근다 */
+export const CodeStepRateLimitedShowsTheWaitNotAWrongCode: Story = {
+  args: {
+    ...codeArgs(),
+    onVerifyCode: fn(async () => {
+      throw apiError('ACCOUNT.RATE_LIMITED', 429, { retryAfterSeconds: 90 })
+    }),
+  },
+  play: async ({ canvas, userEvent }) => {
+    await fillAndSubmit(canvas, userEvent)
+    await userEvent.click(await canvas.findByLabelText('Digit 1 of 6'))
+    await userEvent.keyboard('111111')
+    await expect(await canvas.findByRole('alert')).toHaveTextContent('Try again in 90 s')
+    await expect(canvas.getByRole('alert')).not.toHaveTextContent('attempts left')
+    await expect(canvas.getByLabelText('Digit 1 of 6')).toBeDisabled()
+  },
+}
+
 export const CodeStepResendHasACooldown: Story = {
   args: codeArgs(),
   play: async ({ canvas, userEvent, args }) => {

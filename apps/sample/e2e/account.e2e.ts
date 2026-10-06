@@ -543,7 +543,7 @@ describe('pre-hijack: an attacker who starts a sign-up for someone else’s addr
       .toBe(true)
     pwExpect(
       (await subjectsFor(mailUrl, victim)).filter((s) =>
-        /^(인증번호|Your verification code:) /.test(s),
+        /^(인증번호를 보내 드려요|Your verification code)$/.test(s),
       ),
     ).toHaveLength(2)
   })

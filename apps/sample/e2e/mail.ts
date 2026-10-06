@@ -47,11 +47,12 @@ export async function waitForLink(
 /** 인증번호 메일의 종류 — 제목으로 가른다(백엔드 기본 문구: ko · en) */
 export type CodeKind = 'verify' | 'email-change' | 'reauth' | 'delete'
 
-const CODE_SUBJECT: Record<CodeKind, RegExp> = {
-  verify: /^(?:인증번호|Your verification code:) (\d{6})$/,
-  'email-change': /^(?:새 이메일 확인 인증번호|Your code to confirm the new email:) (\d{6})$/,
-  reauth: /^(?:보안 인증번호|Your security code:) (\d{6})$/,
-  delete: /^(?:계정 삭제 인증번호|Your code to delete the account:) (\d{6})$/,
+// 제목에는 번호가 없다(백엔드 3b8a0b8 — 번호는 본문에만) — 제목으로 종류만 가르고 번호는 본문에서 읽는다
+export const CODE_SUBJECT: Record<CodeKind, RegExp> = {
+  verify: /^(?:인증번호를 보내 드려요|Your verification code)$/,
+  'email-change': /^(?:새 이메일 확인 인증번호|Your code to confirm the new email)$/,
+  reauth: /^(?:보안 인증번호|Your security code)$/,
+  delete: /^(?:계정 삭제 인증번호|Your code to delete the account)$/,
 }
 
 export type MailCode = {
@@ -78,7 +79,11 @@ export async function waitForCode(
         !message.To.some((t) => t.Address.toLowerCase() === to.toLowerCase())
       )
         continue
-      const found = CODE_SUBJECT[kind].exec(message.Subject)
+      if (!CODE_SUBJECT[kind].test(message.Subject)) continue
+      const detail = (await (await fetch(`${mailUrl}/api/v1/message/${message.ID}`)).json()) as {
+        Text?: string
+      }
+      const found = /(?<!\d)(\d{6})(?!\d)/.exec(detail.Text ?? '')
       if (found) {
         seen.add(message.ID)
         return { code: found[1], id: message.ID }

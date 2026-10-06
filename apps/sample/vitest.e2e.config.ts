@@ -13,6 +13,7 @@ export default defineConfig({
           'e2e/walkthrough.shots.ts',
           'e2e/walkthrough.board.shots.ts',
           'e2e/walkthrough.account.shots.ts',
+          'e2e/walkthrough.account2.shots.ts',
         ]
       : ['e2e/**/*.e2e.ts'],
     globalSetup: ['e2e/globalSetup.ts'],

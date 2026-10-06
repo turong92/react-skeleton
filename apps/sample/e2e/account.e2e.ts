@@ -355,7 +355,8 @@ describe('operator tools (opt-in @skeleton/auth/admin)', () => {
     await page.waitForURL((url) => !url.pathname.startsWith('/login'))
     await page.goto(`${baseUrl}/admin/accounts`)
     await pwExpect(page.getByRole('table', { name: auth.adminCaption })).toBeVisible()
-    await pwExpect(page.getByText('user@example.com')).toBeVisible()
+    await page.getByLabel(auth.adminSearch).fill('user@example.com') // 목록은 쪽으로 나뉜다 — 검색으로 찾는다
+    await pwExpect(page.getByText('user@example.com', { exact: true })).toBeVisible()
     await page.getByLabel(auth.adminSearch).fill(emailNext)
     await pwExpect(page.getByText(emailNext)).toBeVisible()
     await pwExpect(

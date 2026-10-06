@@ -61,7 +61,7 @@ export type { RefreshCredentials, RefreshStore, RefreshStoreOptions } from './re
 export type { CrossTabOption, StorageEventSource } from './crossTab'
 export type { AuthApiOptions, RefreshDelivery } from './authApi'
 export { createSocialLinkFlow } from './socialLink'
-export type { SocialLinkFlow, SocialLinkFlowOptions } from './socialLink'
+export type { SocialLinkCallback, SocialLinkFlow, SocialLinkFlowOptions } from './socialLink'
 
 // 가드 · 로그인 뒤 돌아가기
 export { RequireRole } from './RequireRole'
@@ -74,9 +74,42 @@ export {
   safeReturnPath,
 } from './returnTo'
 
+// 로그인 방법 발견(`GET /auth/methods`)
+export {
+  clearAuthMethodsCache,
+  deliveryMismatch,
+  loadAuthMethods,
+  methodsFromInfo,
+  normalizeMethodsInfo,
+  peekAuthMethods,
+} from './discovery'
+export type { DiscoveredMethods, MethodsFromInfoOptions } from './discovery'
+export { useAuthMethods } from './screens/useAuthMethods'
+export type { AuthMethodsState } from './screens/useAuthMethods'
+export { DiscoveryLoading } from './screens/DiscoveryLoading'
+export type { DiscoveryOptions } from './routes/discovery'
+export type { AuthMethodsWire } from './types'
+
+// 다시 인증(비밀번호 없는 계정) — 하려던 작업을 메일 링크 왕복 동안 기억한다
+export { createReauthStore, submitWithReauth } from './reauth'
+export type {
+  PendingReauthAction,
+  ReauthStore,
+  ReauthStoreOptions,
+  SubmitWithReauthResult,
+} from './reauth'
+export {
+  browserReauthChannel,
+  createBroadcastReauthChannel,
+  listenForReauthToken,
+} from './reauthChannel'
+export type { ReauthChannel } from './reauthChannel'
+export { resolveReauthLanding } from './reauthLanding'
+export type { ReauthLandingOutcome } from './reauthLanding'
+
 // 계정 API · 규칙
 export { createAccountApi } from './account/accountApi'
-export type { AccountApi } from './account/accountApi'
+export type { AccountApi, ReauthCredential } from './account/accountApi'
 export { passwordRequirements, passwordStrength, violationsOf } from './account/passwordRules'
 export type { PasswordRequirement } from './account/passwordRules'
 export { supportedTimeZones } from './account/timeZones'
@@ -122,6 +155,10 @@ export { TokenLanding } from './screens/TokenLanding'
 export { VerifyEmailScreen } from './screens/VerifyEmailScreen'
 export { MagicLinkLanding } from './screens/MagicLinkLanding'
 export { ConfirmEmailChangeLanding } from './screens/ConfirmEmailChangeLanding'
+export { ConfirmReauthLanding } from './screens/ConfirmReauthLanding'
+export type { ConfirmReauthLandingProps } from './screens/ConfirmReauthLanding'
+export { SocialLinkPasswordScreen } from './screens/SocialLinkPasswordScreen'
+export type { SocialLinkPasswordScreenProps } from './screens/SocialLinkPasswordScreen'
 export { ForgotPasswordScreen } from './screens/ForgotPasswordScreen'
 export { ResetPasswordScreen } from './screens/ResetPasswordScreen'
 export { SocialCallbackScreen } from './screens/SocialCallbackScreen'

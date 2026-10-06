@@ -1,10 +1,17 @@
 import type { ApiClient } from '@skeleton/api-client'
-import type { AuthPrincipal, AuthTokenResponse, PasswordLoginRequest } from './types'
+import type {
+  AuthMethodsWire,
+  AuthPrincipal,
+  AuthTokenResponse,
+  PasswordLoginRequest,
+} from './types'
 
 /** 리프레시 토큰이 오가는 방식 — 백엔드 `skeleton.auth-session.delivery`(`body` 기본 | `cookie`)와 같아야 한다 */
 export type RefreshDelivery = 'body' | 'cookie'
 
 export type AuthApi = {
+  /** `GET /auth/methods` — 백엔드가 열어 둔 로그인 방법 · 소셜 제공자의 공개 값(캐시 가능, 인증 없음). 앱은 환경변수 대신 이것을 따른다 */
+  methods(): Promise<AuthMethodsWire>
   /** `POST /auth/login` — `deviceName` 은 `X-Device-Name` 헤더로 가서 세션 목록에 보인다 */
   login(
     credentials: PasswordLoginRequest,
@@ -44,6 +51,7 @@ export function createAuthApi(
   const tokenBody = (refreshToken: string | null) =>
     delivery === 'cookie' || refreshToken === null ? {} : { refreshToken }
   return {
+    methods: () => client.value<AuthMethodsWire>('/auth/methods', { skipAuth: true }),
     login: (credentials, options) =>
       client.value<AuthTokenResponse>('/auth/login', {
         method: 'POST',

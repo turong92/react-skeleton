@@ -29,6 +29,9 @@ const api: AuthApi = {
   refresh: unused,
   logout: async () => undefined,
   magicLinkRequest: async () => undefined,
+  methods: async () => {
+    throw new Error('unused')
+  },
   magicLinkRedeem: unused,
 }
 function render(token: string | undefined, element: React.ReactElement) {

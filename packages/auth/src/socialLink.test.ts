@@ -103,4 +103,39 @@ describe('createSocialLinkFlow (logged-in user adds a provider to the account)',
     await same.complete('?code=abc&state=s')
     expect(linkSocial).toHaveBeenCalledTimes(1)
   })
+
+  it('read checks state and hands back the code without linking (the page asks for the password first)', async () => {
+    const linkSocial = vi.fn(async () => ({}) as never)
+    const flow = createSocialLinkFlow({
+      providers,
+      accountApi: { linkSocial },
+      createState: () => 's',
+    })
+    flow.start('google')
+    const first = await flow.read('?code=abc&state=s')
+    expect(first).toEqual({
+      provider: 'google',
+      authorizationCode: 'abc',
+      redirectUri: providers.google.redirectUri,
+    })
+    expect(await flow.read('?code=abc&state=s')).toEqual(first) // a double effect reads the same result
+    expect(linkSocial).not.toHaveBeenCalled()
+    await expect(flow.read('?code=abc&state=other')).rejects.toMatchObject({
+      reason: 'state_mismatch',
+    })
+  })
+
+  it('complete carries the re-authentication credential to the server call', async () => {
+    const linkSocial = vi.fn(async () => ({}) as never)
+    const flow = createSocialLinkFlow({
+      providers,
+      accountApi: { linkSocial },
+      createState: () => 's',
+    })
+    flow.start('google')
+    await flow.complete('?code=abc&state=s', { confirmationToken: 'rt' })
+    expect(linkSocial).toHaveBeenCalledWith('google', 'abc', providers.google.redirectUri, {
+      confirmationToken: 'rt',
+    })
+  })
 })

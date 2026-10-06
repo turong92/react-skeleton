@@ -56,6 +56,13 @@ export function createFakeAuthApi(): AuthApi {
     me: async () => principal,
     refresh: async () => token(),
     logout: async () => undefined,
+    methods: async () => ({
+      methods: ['password', 'magic_link'],
+      signUp: { password: true, emailVerification: true, social: true },
+      social: [],
+      captchaRequired: false,
+      refreshDelivery: 'body',
+    }),
     magicLinkRequest: async () => undefined,
     magicLinkRedeem: async () => token(),
   }

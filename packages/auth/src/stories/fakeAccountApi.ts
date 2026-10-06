@@ -35,7 +35,12 @@ export type FakeAccountOptions = {
   passwordless?: boolean
   /** 로그인 수단이 하나뿐 */
   onlyMethod?: boolean
+  /** 새 주소의 확인을 기다리는 이메일 변경이 이미 있다(새로고침 뒤) */
+  pendingEmail?: string
 }
+
+/** 가짜 서버가 받아 주는 본인 확인 토큰(메일 링크의 값) */
+export const FAKE_REAUTH_TOKEN = 'tok'
 
 /** 백엔드 없이 도는 `AccountApi` — 상태를 기억하고 계약의 오류 코드(현재 비밀번호 틀림 · 마지막 수단 …)를 낸다. 스토리 · 테스트 전용 */
 export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountApi & {
@@ -59,6 +64,18 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
     createdAt: '2026-01-01T00:00:00Z',
     hasPassword: !options.passwordless,
     methods,
+    pendingEmail: options.pendingEmail ?? null,
+    pendingEmailExpiresAt: options.pendingEmail ? '2026-10-06T10:00:00Z' : null,
+  }
+  /** 서버가 강제하는 다시 인증 — 비밀번호가 있으면 현재 비밀번호, 없으면 메일 링크의 토큰 */
+  const reauth = (c: { currentPassword?: string; confirmationToken?: string }) => {
+    if (me.hasPassword) {
+      if (c.currentPassword !== 'old-password-1')
+        throw apiError('ACCOUNT.CURRENT_PASSWORD_INVALID', 400)
+      return
+    }
+    if (!c.confirmationToken) throw apiError('ACCOUNT.REAUTH_REQUIRED', 403)
+    if (c.confirmationToken !== FAKE_REAUTH_TOKEN) throw apiError('ACCOUNT.REAUTH_FAILED', 400)
   }
   let sessions: AccountSession[] = [
     {
@@ -107,12 +124,21 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
       Object.assign(me, patch)
       return track('updateProfile', { ...me })
     },
-    changePassword: async ({ currentPassword }) => {
+    changePassword: async ({ currentPassword, confirmationToken }) => {
       calls.push('changePassword')
-      if (me.hasPassword && currentPassword !== 'old-password-1')
-        throw apiError('ACCOUNT.CURRENT_PASSWORD_INVALID', 400)
+      reauth({ currentPassword, confirmationToken })
+      if (!me.hasPassword) {
+        me.hasPassword = true
+        methods.push(identity({ id: 'idn_pw2' }))
+      }
     },
-    changeEmail: () => track('changeEmail', undefined),
+    changeEmail: async ({ newEmail, currentPassword, confirmationToken }) => {
+      calls.push('changeEmail')
+      reauth({ currentPassword, confirmationToken })
+      me.pendingEmail = newEmail
+      me.pendingEmailExpiresAt = '2026-10-06T10:00:00Z'
+    },
+    requestReauthConfirmation: () => track('requestReauthConfirmation', undefined),
     identities: () => track('identities', [...methods]),
     unlinkIdentity: async (id) => {
       calls.push(`unlink:${id}`)
@@ -122,8 +148,11 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
         1,
       )
     },
-    linkSocial: () =>
-      track('linkSocial', identity({ id: 'idn_k', method: 'kakao', subject: null })),
+    linkSocial: async (_provider, _code, _uri, c) => {
+      calls.push('linkSocial')
+      reauth({ currentPassword: c?.currentPassword, confirmationToken: c?.confirmationToken })
+      return identity({ id: 'idn_k', method: 'kakao', subject: null })
+    },
     requestDeleteConfirmation: () => track('requestDeleteConfirmation', undefined),
     deleteAccount: async ({ currentPassword, confirmationToken }) => {
       calls.push('deleteAccount')

@@ -22,6 +22,9 @@ const api: AuthApi = {
   refresh: unused,
   logout: unused,
   magicLinkRequest: unused,
+  methods: async () => {
+    throw new Error('unused')
+  },
   magicLinkRedeem: unused,
 }
 

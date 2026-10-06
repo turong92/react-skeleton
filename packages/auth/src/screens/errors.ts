@@ -22,6 +22,7 @@ const byCode = (labels: AuthLabels): Record<string, string> => ({
   [ErrorCodes.ACCOUNT_CAPTCHA_FAILED]: labels.errorCaptcha,
   [ErrorCodes.ACCOUNT_CURRENT_PASSWORD_INVALID]: labels.errorCurrentPassword,
   [ErrorCodes.ACCOUNT_REAUTH_FAILED]: labels.errorReauth,
+  [ErrorCodes.ACCOUNT_REAUTH_REQUIRED]: labels.errorReauthRequired,
   [ErrorCodes.ACCOUNT_LAST_SIGN_IN_METHOD]: labels.errorLastMethod,
   [ErrorCodes.ACCOUNT_LAST_ADMIN]: labels.errorLastAdmin,
   [ErrorCodes.ACCOUNT_SELF_ACTION_FORBIDDEN]: labels.errorSelfAction,

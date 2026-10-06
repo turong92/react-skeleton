@@ -25,6 +25,15 @@ describe('createAdminAccountsApi (opt-in backend: skeleton.account.admin.enabled
     expect(calls[1].request?.params).toEqual({ status: 'SUSPENDED' })
   })
 
+  it('paging stays inside what the backend accepts (page >= 0, 1 <= size <= 100, else 400)', async () => {
+    const { client, calls } = fake()
+    const api = createAdminAccountsApi(client)
+    await api.list({ page: -3, size: 500 })
+    await api.list({ page: 2.7, size: 0 })
+    expect(calls[0].request?.params).toEqual({ page: 0, size: 100 })
+    expect(calls[1].request?.params).toEqual({ page: 2, size: 1 })
+  })
+
   it('commands hit the contract paths', async () => {
     const { client, calls } = fake()
     const api = createAdminAccountsApi(client)

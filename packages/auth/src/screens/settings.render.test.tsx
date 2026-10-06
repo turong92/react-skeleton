@@ -10,6 +10,7 @@ import { SessionsSection } from './SessionsSection'
 import { SignInMethodsSection } from './SignInMethodsSection'
 import { canUnlink, labelOfMethod } from './methodsList'
 import { defaultAuthLabels } from './labels'
+import { createReauthStore } from '../reauth'
 
 const html = (node: React.ReactNode) => renderToStaticMarkup(<MemoryRouter>{node}</MemoryRouter>)
 const noop = async () => undefined
@@ -81,6 +82,74 @@ describe('settings sections', () => {
     expect(out).toContain('a@b.c')
     expect(out).toContain('Verified')
     expect(out).toContain('New email')
+  })
+
+  it('email: shows the pending change the server reports, so a reload restores the state', () => {
+    const pending = html(
+      <EmailSection
+        email="a@b.c"
+        verified
+        hasPassword
+        onChangeEmail={noop}
+        pendingEmail="new@b.c"
+        pendingEmailExpiresAt="2026-10-06T10:00:00Z"
+        formatDate={(iso) => `until<${iso}>`}
+      />,
+    )
+    expect(pending).toContain('Confirm the change')
+    expect(pending).toContain('new@b.c')
+    expect(pending).toContain('until&lt;2026-10-06T10:00:00Z&gt;')
+    const none = html(<EmailSection email="a@b.c" verified hasPassword onChangeEmail={noop} />)
+    expect(none).not.toContain('Confirm the change')
+    const absent = html(
+      <EmailSection email="a@b.c" verified hasPassword onChangeEmail={noop} pendingEmail={null} />,
+    )
+    expect(absent).not.toContain('Confirm the change')
+  })
+
+  it('email and password: a passwordless account with a stashed confirmation says it is confirmed', () => {
+    const store = createReauthStore({})
+    store.stashToken('rt')
+    const email = html(
+      <EmailSection
+        email="a@b.c"
+        verified
+        hasPassword={false}
+        onChangeEmail={noop}
+        reauth={{ store, requestMail: noop }}
+      />,
+    )
+    expect(email).toContain('Identity confirmed')
+    const password = html(
+      <PasswordSection
+        hasPassword={false}
+        policy={policy}
+        onChange={noop}
+        reauth={{ store, requestMail: noop }}
+      />,
+    )
+    expect(password).toContain('Identity confirmed')
+    const without = html(
+      <PasswordSection
+        hasPassword={false}
+        policy={policy}
+        onChange={noop}
+        reauth={{ store: createReauthStore({}), requestMail: noop }}
+      />,
+    )
+    expect(without).not.toContain('Identity confirmed')
+    expect(without).toContain('We email you a confirmation link')
+  })
+
+  it('methods: shows the notice the page passes (the confirmation mail for linking)', () => {
+    const out = html(
+      <SignInMethodsSection
+        identities={[identity()]}
+        notice="Check your email to confirm it is you"
+        onUnlink={noop}
+      />,
+    )
+    expect(out).toContain('Check your email to confirm it is you')
   })
 
   it('methods: lists each method; the last one cannot be removed and says why', () => {

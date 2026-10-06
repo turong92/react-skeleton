@@ -1,6 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn } from 'storybook/test'
+import { ApiRequestError } from '@skeleton/api-client'
 import type { AdminAccount } from '../account/types'
+import { AdminAccounts } from './AdminAccounts'
+import type { AdminAccountsApi } from './adminApi'
 import { AdminAccountsTable } from './AdminAccountsTable'
 
 /**
@@ -91,5 +94,30 @@ export const Empty: Story = {
   args: { accounts: [] },
   play: async ({ canvas }) => {
     await expect(canvas.getByText('No accounts match.')).toBeVisible()
+  },
+}
+
+/** 토큰은 아직 관리자 토큰이어도, 저장된 계정이 더는 활성 관리자가 아니면 백엔드는 403 — 로그아웃 없이 「접근 차단」 */
+export const BlockedAdmin: StoryObj = {
+  render: () => {
+    const forbidden = () =>
+      Promise.reject(
+        new ApiRequestError(
+          { code: 'COMMON.FORBIDDEN', title: 'Forbidden', status: 403, timestamp: 't' },
+          'trace',
+          'span',
+          'tp',
+        ),
+      )
+    return (
+      <AdminAccounts
+        api={{ list: forbidden, get: forbidden } as unknown as AdminAccountsApi}
+        assignableRoles={['ADMIN']}
+      />
+    )
+  },
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByRole('heading', { name: 'Access blocked' })).toBeVisible()
+    await expect(canvas.queryByRole('table')).toBeNull()
   },
 }

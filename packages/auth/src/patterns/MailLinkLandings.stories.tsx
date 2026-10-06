@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn } from 'storybook/test'
 import { ConfirmEmailChangeLanding } from '../screens/ConfirmEmailChangeLanding'
+import { ConfirmReauthLanding } from '../screens/ConfirmReauthLanding'
+import { SocialLinkPasswordScreen } from '../screens/SocialLinkPasswordScreen'
 import { ForgotPasswordScreen } from '../screens/ForgotPasswordScreen'
 import { MagicLinkLanding } from '../screens/MagicLinkLanding'
 import { ResetPasswordScreen } from '../screens/ResetPasswordScreen'
@@ -10,7 +12,7 @@ import { FAKE_POLICY, apiError } from '../stories/fakeAccountApi'
 import { withRouter } from '../stories/withRouter'
 
 /**
- * 메일 링크가 닿는 화면들 — 이메일 인증 · 링크 로그인 · 이메일 변경 확인 · 비밀번호 찾기/재설정 · 소셜 콜백.
+ * 메일 링크가 닿는 화면들 — 이메일 인증 · 링크 로그인 · 이메일 변경 확인 · 본인 확인(비밀번호 없는 계정) · 비밀번호 찾기/재설정 · 소셜 콜백.
  * 링크를 열면 한 번만 서버를 부른다(메일 스캐너의 GET 이 아니라 SPA 의 POST). 서버는 「없는 · 만료 · 이미 씀」을 한 응답(410)으로 주므로 화면도 한 상태로 말하고 새 링크를 받게 한다.
  * 토큰은 주소의 `#token=`(조각) 또는 `?token=`(쿼리)에서 `readLinkToken` 이 읽는다.
  */
@@ -175,5 +177,91 @@ export const SocialCallbackConflict: Story = {
       await canvas.findByRole('heading', { name: 'You already have an account' }),
     ).toBeVisible()
     await expect(canvas.getByRole('link', { name: 'Back to sign in' })).toBeVisible()
+  },
+}
+
+/** 비밀번호 없는 계정의 본인 확인 링크 — 열자마자 토큰을 하려던 작업에 돌려준다. 이 탭이 그 작업을 모르면(다른 기기 · 닫힌 탭) 설정에서 이어 가게 안내 */
+export const ConfirmReauthCompleted: Story = {
+  render: () => (
+    <ConfirmReauthLanding
+      token="tok"
+      settingsTo="/account"
+      onResolve={async () => ({ status: 'completed', action: 'email-change' })}
+    />
+  ),
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByText(/We sent a link to your new address/)).toBeVisible()
+  },
+}
+
+export const ConfirmReauthHandedOff: Story = {
+  render: () => (
+    <ConfirmReauthLanding
+      token="tok"
+      settingsTo="/account"
+      onResolve={async () => ({ status: 'handed-off' })}
+    />
+  ),
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByText(/continues by itself/)).toBeVisible()
+  },
+}
+
+export const ConfirmReauthOtherDevice: Story = {
+  render: () => (
+    <ConfirmReauthLanding
+      token="tok"
+      settingsTo="/account"
+      onResolve={async () => ({ status: 'stashed', resume: null })}
+    />
+  ),
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByText(/did not start the action/)).toBeVisible()
+    await expect(canvas.getByRole('link', { name: 'Open account settings' })).toHaveAttribute(
+      'href',
+      '/account',
+    )
+  },
+}
+
+export const ConfirmReauthRefusedOrMissing: Story = {
+  render: () => (
+    <>
+      <ConfirmReauthLanding
+        token="stale"
+        settingsTo="/account"
+        onResolve={async () => ({
+          status: 'failed',
+          error: apiError('ACCOUNT.REAUTH_FAILED', 400),
+        })}
+      />
+      <ConfirmReauthLanding
+        token={null}
+        settingsTo="/account"
+        onResolve={async () => ({ status: 'handed-off' })}
+      />
+    </>
+  ),
+  play: async ({ canvas }) => {
+    await expect(
+      await canvas.findByText('The password or confirmation is not correct.'),
+    ).toBeVisible()
+    await expect(canvas.getByRole('heading', { name: 'This link does not work' })).toBeVisible()
+  },
+}
+
+/** 비밀번호가 있는 계정이 제공자에 다녀온 뒤: 현재 비밀번호를 받아 연결을 마친다(틀리면 같은 인가 코드로 다시) */
+export const SocialLinkNeedsPassword: Story = {
+  render: () => {
+    const onSubmit = fn(async (password: string) => {
+      if (password !== 'old-password-1') throw apiError('ACCOUNT.CURRENT_PASSWORD_INVALID', 400)
+    })
+    return <SocialLinkPasswordScreen provider="Kakao" backTo="/account" onSubmit={onSubmit} />
+  },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.type(canvas.getByLabelText(/^Current password/), 'wrong')
+    await userEvent.click(canvas.getByRole('button', { name: 'Link Kakao' }))
+    await expect(await canvas.findByText('The current password is not correct.')).toBeVisible()
+    await expect(canvas.getByRole('link', { name: 'Cancel' })).toHaveAttribute('href', '/account')
   },
 }

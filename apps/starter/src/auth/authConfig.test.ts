@@ -1,9 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { parseAuthMethods, parseDelivery, socialProviderConfigs } from './authConfig'
+import {
+  parseAuthMethods,
+  parseDelivery,
+  socialClientIds,
+  socialProviderConfigs,
+} from './authConfig'
 
-describe('parseAuthMethods (how the app enables or disables each sign-in method)', () => {
-  it('defaults to password + magic link', () => {
-    expect(parseAuthMethods(undefined)).toEqual({ password: true, magicLink: true, social: [] })
+describe('parseAuthMethods (the optional override of what the backend says)', () => {
+  it('unset or blank means: ask the backend (GET /auth/methods) — there is no env default any more', () => {
+    expect(parseAuthMethods(undefined)).toBeUndefined()
+    expect(parseAuthMethods('')).toBeUndefined()
+    expect(parseAuthMethods('   ')).toBeUndefined()
   })
   it('a list picks exactly those methods, social providers by code', () => {
     expect(parseAuthMethods('password, google ,KAKAO')).toEqual({
@@ -19,6 +26,19 @@ describe('refresh delivery', () => {
   it('body unless cookie is asked for', () => {
     expect(parseDelivery(undefined)).toBe('body')
     expect(parseDelivery('cookie')).toBe('cookie')
+  })
+})
+
+describe('socialClientIds (public client ids the app supplies when discovery does not know them)', () => {
+  it('reads VITE_SOCIAL_<PROVIDER>_CLIENT_ID for any provider', () => {
+    expect(
+      socialClientIds({
+        VITE_SOCIAL_GOOGLE_CLIENT_ID: 'g',
+        VITE_SOCIAL_KAKAO_CLIENT_ID: 'k',
+        VITE_SOCIAL_NAVER_CLIENT_ID: '',
+        UNRELATED: 'x',
+      }),
+    ).toEqual({ google: 'g', kakao: 'k' })
   })
 })
 

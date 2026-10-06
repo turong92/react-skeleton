@@ -79,6 +79,9 @@ describe('the check can fail (it is not vacuous)', () => {
     refresh: unused,
     logout: unused,
     magicLinkRequest: unused,
+    methods: async () => {
+      throw new Error('unused')
+    },
     magicLinkRedeem: unused,
   }
 

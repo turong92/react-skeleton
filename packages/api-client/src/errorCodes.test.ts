@@ -80,3 +80,9 @@ describe('storage error codes (kotlin-skeleton modules/storage StorageErrorCode)
     expect(ErrorCodes.STORAGE_UNAUTHENTICATED).toBe('STORAGE.UNAUTHENTICATED')
   })
 })
+
+describe('re-authentication codes (account contract FINAL-2)', () => {
+  it('knows ACCOUNT.REAUTH_REQUIRED', () => {
+    expect(ErrorCodes.ACCOUNT_REAUTH_REQUIRED).toBe('ACCOUNT.REAUTH_REQUIRED')
+  })
+})

@@ -3,18 +3,28 @@ import { useMemo } from 'react'
 import { expect, fn, waitFor, within } from 'storybook/test'
 import { AccountStateNotice } from '../screens/AccountStateNotice'
 import { AccountSettings, type AccountSettingsProps } from '../screens/AccountSettings'
-import { createFakeAccountApi, type FakeAccountOptions } from '../stories/fakeAccountApi'
+import { createReauthStore } from '../reauth'
+import { createReauthChannelHub } from '../reauthChannel'
+import {
+  createFakeAccountApi,
+  FAKE_REAUTH_TOKEN,
+  type FakeAccountOptions,
+} from '../stories/fakeAccountApi'
 import { withRouter } from '../stories/withRouter'
 
 /**
  * 계정 설정 — 프로필(언어 · 시간대) · 비밀번호 · 이메일(확인 대기) · 로그인 수단(마지막 수단 보호) · 활성 세션(하나씩 · 한꺼번에) · 계정 삭제(다시 인증 → 글자 입력 확인 → 유예 안내).
  * `AccountApi` 하나로 이어진다(여기서는 가짜). `sections` 로 절을 끄고, 소셜 연결 버튼은 앱이 켠 제공자만 나온다.
  */
+const hub = createReauthChannelHub() // 이 스토리집 한 페이지 안의 「탭」들
+
 function Demo({ fake, ...props }: { fake?: FakeAccountOptions } & Partial<AccountSettingsProps>) {
   const api = useMemo(() => createFakeAccountApi(fake), [fake])
+  const reauth = useMemo(() => createReauthStore({}), [])
   return (
     <AccountSettings
       api={api}
+      reauth={reauth}
       locales={[
         { value: 'en', label: 'English' },
         { value: 'ko', label: '한국어' },
@@ -68,6 +78,70 @@ export const ChangeEmailPending: Story = {
     await userEvent.type(section.getByLabelText(/^Current password/), 'old-password-1')
     await userEvent.click(section.getByRole('button', { name: 'Change email' }))
     await expect(await section.findByText(/We sent a link to next@example.com/)).toBeVisible()
+  },
+}
+
+export const PendingEmailFromServer: Story = {
+  args: { fake: { pendingEmail: 'next@example.com' } },
+  play: async ({ canvas }) => {
+    // 새로고침 직후에도 서버(me.pendingEmail)가 말해 주는 「확인 대기」
+    await expect(await canvas.findByText(/We sent a link to next@example.com/)).toBeVisible()
+    await expect(await canvas.findByText(/the link works until/)).toBeVisible()
+  },
+}
+
+/** 비밀번호 없는 계정: 이메일 변경은 본인 확인 메일의 링크를 거친다 — 요청 → 메일 → (링크가 토큰을 돌려준다) → 한 번 더 제출 */
+export const PasswordlessEmailReauth: Story = {
+  args: { fake: { passwordless: true } },
+  play: async ({ canvas, userEvent }) => {
+    const section = within(await canvas.findByRole('region', { name: 'Email address' }))
+    await expect(section.getByText(/We email you a confirmation link/)).toBeVisible()
+    await userEvent.type(section.getByLabelText(/^New email/), 'next@example.com')
+    await userEvent.click(section.getByRole('button', { name: 'Change email' }))
+    await expect(await section.findByText('Check your email')).toBeVisible()
+    await expect(section.getByLabelText(/^New email/)).toHaveValue('next@example.com') // 입력은 남는다
+  },
+}
+
+export const PasswordlessFirstPassword: Story = {
+  args: { fake: { passwordless: true } },
+  play: async ({ canvas, userEvent }) => {
+    const section = within(await canvas.findByRole('region', { name: 'Set a password' }))
+    await userEvent.type(section.getByLabelText(/^New password/), 'Correct-horse-battery-9')
+    await userEvent.click(section.getByRole('button', { name: 'Change password' }))
+    await expect(await section.findByText('Check your email')).toBeVisible()
+    await expect(section.getByRole('button', { name: 'Send the link again' })).toBeVisible()
+  },
+}
+
+/** 본인 확인 링크는 새 탭에서 열린다 — 그 탭이 토큰을 제안하면 하려던 작업이 있는 이 탭이 이어 간다 */
+export const HandoffFromAnotherTab: Story = {
+  args: { fake: { passwordless: true } },
+  render: (args) => <Demo {...args} reauthChannel={hub.open()} />,
+  play: async ({ canvas, userEvent }) => {
+    const section = within(await canvas.findByRole('region', { name: 'Email address' }))
+    await userEvent.type(section.getByLabelText(/^New email/), 'next@example.com')
+    await userEvent.click(section.getByRole('button', { name: 'Change email' }))
+    await expect(await section.findByText('Check your email')).toBeVisible()
+    // 다른 탭(도착 화면)이 메일 링크의 토큰을 제안한다
+    await expect(await hub.open().offer(FAKE_REAUTH_TOKEN, 1000)).toBe(true)
+    await expect(await canvas.findByText(/We sent a link to next@example.com/)).toBeVisible()
+    await expect(await canvas.findByText(/your email changes when you open it/i)).toBeVisible()
+  },
+}
+
+export const PasswordlessLinkNeedsConfirmation: Story = {
+  args: {
+    fake: { passwordless: true },
+    socialProviders: [{ provider: 'kakao' }],
+    onLinkSocial: fn(),
+  },
+  play: async ({ canvas, args, userEvent }) => {
+    await userEvent.click(await canvas.findByRole('button', { name: 'Link Kakao' }))
+    await expect(
+      await canvas.findByText(/We sent a confirmation link to ann@example.com/),
+    ).toBeVisible()
+    await expect(args.onLinkSocial).not.toHaveBeenCalled() // 제공자에는 확인 뒤에 간다
   },
 }
 

@@ -55,3 +55,14 @@ export type AuthState = {
   token: string | null
   principal: AuthPrincipal | null
 }
+
+/** `GET /auth/methods` 의 값(계약 FINAL-2b) — 모양은 `normalizeMethodsInfo` 가 느슨하게 읽는다 */
+export type AuthMethodsWire = {
+  /** 소셜을 뺀 방법: `password` · `magic_link` */
+  methods: string[]
+  signUp: { password: boolean; emailVerification: boolean; social: boolean }
+  social: Array<{ provider: string; clientId: string | null; redirectUri: string | null }>
+  captchaRequired: boolean
+  /** auth-session 이 없으면 null */
+  refreshDelivery: 'body' | 'cookie' | null
+}

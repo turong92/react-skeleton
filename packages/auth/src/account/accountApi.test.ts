@@ -93,6 +93,34 @@ describe('createAccountApi (mirrors kotlin-skeleton docs/account-http-contract.m
     expect(calls[0].request?.idempotencyKey).toBe('fixed-key')
   })
 
+  it('re-authentication: confirmationToken rides on first-password, email change and social link', async () => {
+    const { client, calls } = fakeClient()
+    const api = createAccountApi(client)
+    await api.changePassword({ newPassword: 'n', confirmationToken: 'rt' })
+    await api.changeEmail({ newEmail: 'n@b.c', confirmationToken: 'rt' })
+    await api.linkSocial('google', 'code', 'https://app/cb', { confirmationToken: 'rt' })
+    await api.linkSocial('kakao', 'code2', undefined, { currentPassword: 'pw' })
+    expect(calls[0].request?.json).toEqual({ newPassword: 'n', confirmationToken: 'rt' })
+    expect(calls[1].request?.json).toEqual({ newEmail: 'n@b.c', confirmationToken: 'rt' })
+    expect(calls[2].request?.json).toEqual({
+      authorizationCode: 'code',
+      redirectUri: 'https://app/cb',
+      confirmationToken: 'rt',
+    })
+    expect(calls[3].request?.json).toEqual({ authorizationCode: 'code2', currentPassword: 'pw' })
+  })
+
+  it('requestReauthConfirmation → POST /account/reauth/confirmation (202, authenticated)', async () => {
+    const { client, calls } = fakeClient({ status: 'ACCEPTED' })
+    await createAccountApi(client).requestReauthConfirmation()
+    expect(calls[0]).toMatchObject({
+      kind: 'value',
+      path: '/account/reauth/confirmation',
+      request: { method: 'POST' },
+    })
+    expect(calls[0].request?.skipAuth).toBeUndefined()
+  })
+
   it('confirmEmailChange is public (the token is the credential)', async () => {
     const { client, calls } = fakeClient()
     await createAccountApi(client).confirmEmailChange('tok')

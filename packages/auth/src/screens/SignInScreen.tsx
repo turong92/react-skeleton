@@ -1,5 +1,5 @@
 import { Alert, Button, Field, Input } from '@skeleton/ui'
-import { useState, type FormEvent } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { ErrorCodes } from '@skeleton/api-client'
 import { AuthLayout } from './AuthLayout'
@@ -28,6 +28,8 @@ export type SignInScreenProps = {
   forgotPasswordTo?: string
   /** 폼 위 안내(세션이 끝난 이유 …) */
   notice?: string
+  /** 안내 옆 동작(방법을 못 불러왔을 때 「다시 시도」) */
+  noticeAction?: ReactNode
   /** 처음 채워 둘 이메일(체험 계정 · 로그아웃 직후) */
   initialEmail?: string
 }
@@ -43,6 +45,7 @@ export function SignInScreen({
   signUpTo,
   forgotPasswordTo,
   notice,
+  noticeAction,
   initialEmail = '',
 }: SignInScreenProps) {
   const labels = mergeLabels(given)
@@ -128,7 +131,11 @@ export function SignInScreen({
       }
     >
       <div className={styles.stack}>
-        {notice && <Alert tone="info">{notice}</Alert>}
+        {notice && (
+          <Alert tone="info" action={noticeAction}>
+            {notice}
+          </Alert>
+        )}
         {(hasPassword || hasMagic) && (
           <form className={styles.form} onSubmit={submit} aria-label={labels.signInTitle}>
             {failure && (

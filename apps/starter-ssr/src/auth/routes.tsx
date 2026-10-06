@@ -2,7 +2,7 @@ import { createAccountApi, createAuthApi, createAuthRoutes, koAuthLabels } from 
 import { useMemo } from 'react'
 import { useApi } from '../api/useApi'
 import { ClientRequireAuth } from './ClientRequireAuth'
-import { authMethods, parseDelivery } from './authConfig'
+import { authMethodsOverride, parseDelivery } from './authConfig'
 
 /** 요청마다 · 앱마다 만든 API 클라이언트(컨텍스트)로 인증 · 계정 API 를 만든다 — 서버 렌더 앱은 모듈 전역 API 가 없다 */
 function useApis() {
@@ -27,7 +27,9 @@ export const accountRoutes = (handle?: (page: string) => unknown) =>
   createAuthRoutes({
     session: { getState: () => ({ status: 'anonymous', token: null, principal: null }) },
     useApis,
-    methods: { ...authMethods, social: [] },
+    // 방법은 백엔드가 알려 준다(`GET /auth/methods` — 서버는 로딩 화면을 그리고 브라우저가 묻는다). 환경변수 · 고정 목록이 덮어쓴다
+    methods: authMethodsOverride && { ...authMethodsOverride, social: [] },
+    discovery: { delivery: parseDelivery(import.meta.env.VITE_AUTH_REFRESH_DELIVERY) },
     labels: koAuthLabels,
     guard: <ClientRequireAuth redirectTo="/login" />,
     settings: {

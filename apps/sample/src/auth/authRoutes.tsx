@@ -7,13 +7,19 @@ import {
 import type { MessageKey } from '../i18n'
 import type { SeoHandle } from '../seo/routeSeo'
 import { accountApi, authApi, authSession } from './session'
-import { authMethods, socialProviderConfigs } from './authConfig'
+import {
+  authMethodsOverride,
+  refreshDelivery,
+  socialClientIds,
+  socialProviderConfigs,
+} from './authConfig'
 import { useAuthLabels } from './useAuthLabels'
 
 const browserStorage = () => (typeof window === 'undefined' ? undefined : window.sessionStorage)
 const origin = typeof window === 'undefined' ? '' : window.location.origin
+// 환경변수가 방법을 덮어쓸 때만 여기서 소셜 흐름을 만든다 — 아니면 백엔드가 알려 준 제공자로 라우트가 만든다(`discovery`)
 const providers = socialProviderConfigs(import.meta.env, origin)
-const hasSocial = Object.keys(providers).length > 0
+const hasSocial = authMethodsOverride !== undefined && Object.keys(providers).length > 0
 
 // OAuth state 는 이 브라우저 탭의 sessionStorage 에 묶는다 — 제공자에 다녀와도 남고, 다른 브라우저 · 탭이 시작한 콜백은 거절된다
 const socialFlow = hasSocial
@@ -43,15 +49,23 @@ const hidden = (page: AuthPageName): SeoHandle => ({
   },
 })
 
-/** 계정 수명주기 라우트 한 벌 — 켠 방법은 `authConfig.ts`(환경변수) 가 정한다 */
+/** 계정 수명주기 라우트 한 벌 — 켠 방법은 백엔드(`GET /auth/methods`)가 알려 주고, `authConfig.ts` 의 환경변수 · 고정 목록이 덮어쓸 수 있다 */
 export const accountRoutes = createAuthRoutes({
   session: authSession,
   authApi,
   accountApi,
-  methods: {
-    ...authMethods,
+  methods: authMethodsOverride && {
+    ...authMethodsOverride,
     // clientId 가 없는 제공자는 버튼을 그리지 않는다
-    social: (authMethods.social ?? []).filter((p) => providers[p.provider]),
+    social: (authMethodsOverride.social ?? []).filter((p) => providers[p.provider]),
+  },
+  discovery: {
+    delivery: refreshDelivery,
+    social: {
+      session: authSession,
+      storage: browserStorage(),
+      clientIds: socialClientIds(import.meta.env),
+    },
   },
   socialFlow,
   socialLinkFlow,

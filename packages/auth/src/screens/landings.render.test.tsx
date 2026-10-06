@@ -9,6 +9,8 @@ import { SocialCallbackScreen } from './SocialCallbackScreen'
 import { VerifyEmailScreen } from './VerifyEmailScreen'
 import { MagicLinkLanding } from './MagicLinkLanding'
 import { ConfirmEmailChangeLanding } from './ConfirmEmailChangeLanding'
+import { ConfirmReauthLanding } from './ConfirmReauthLanding'
+import { SocialLinkPasswordScreen } from './SocialLinkPasswordScreen'
 import { readLinkToken } from './linkToken'
 
 const html = (node: React.ReactNode) => renderToStaticMarkup(<MemoryRouter>{node}</MemoryRouter>)
@@ -66,6 +68,33 @@ describe('one-time link landings', () => {
     expect(
       html(<ConfirmEmailChangeLanding token="t" onConfirm={noop} signInTo="/login" />),
     ).toContain('Confirming the change')
+  })
+})
+
+describe('confirm-reauth landing (the mail link of a passwordless account re-authenticating)', () => {
+  const resolve = async () => ({ status: 'stashed' as const, resume: null })
+  it('starts by working on the token (the POST happens on mount, never on a mail scanner GET)', () => {
+    const out = html(<ConfirmReauthLanding token="t" onResolve={resolve} settingsTo="/account" />)
+    expect(out).toContain('Confirming it is you')
+  })
+  it('a link without a token says it does not work and points at the settings', () => {
+    const out = html(
+      <ConfirmReauthLanding token={null} onResolve={resolve} settingsTo="/account" />,
+    )
+    expect(out).toContain('This link does not work')
+    expect(out).toContain('href="/account"')
+  })
+})
+
+describe('social link: the password check after the provider redirect', () => {
+  it('asks the current password for the provider being linked, with a way back', () => {
+    const out = html(
+      <SocialLinkPasswordScreen provider="Kakao" onSubmit={noop} backTo="/account" />,
+    )
+    expect(out).toContain('Confirm it is you')
+    expect(out).toContain('Kakao')
+    expect(out).toContain('type="password"')
+    expect(out).toContain('href="/account"')
   })
 })
 

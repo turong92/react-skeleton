@@ -382,6 +382,17 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
     onConfirm: asyncNoop,
     signInTo: '/login',
   }),
+  'auth#ConfirmReauthLanding': () => ({
+    token: 't',
+    onResolve: () => new Promise(noop),
+    settingsTo: '/account',
+  }),
+  'auth#SocialLinkPasswordScreen': () => ({
+    provider: 'Kakao',
+    onSubmit: asyncNoop,
+    backTo: '/account',
+  }),
+  'auth#DiscoveryLoading': () => ({}),
   'auth#ForgotPasswordScreen': () => ({ onSubmit: asyncNoop, signInTo: '/login' }),
   'auth#ResetPasswordScreen': () => ({
     token: 't',
@@ -475,6 +486,7 @@ export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
   'theme#useTheme': () => [],
   'auth#useAuth': () => [],
   'auth#useCountdown': () => [],
+  'auth#useAuthMethods': () => [{ methods: () => new Promise(noop) }, true],
   'auth#useSocialLoginCallback': () => [{ complete: () => new Promise(noop) }, '?code=x'],
   'captcha-turnstile#useTurnstileToken': () => [],
   'notifications#useNotifications': () => [fakeNotificationsApi()],

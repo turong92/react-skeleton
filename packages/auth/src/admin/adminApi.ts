@@ -21,6 +21,10 @@ export type AdminAccountsApi = {
 
 const seg = encodeURIComponent
 
+/** 백엔드가 받는 범위(`page >= 0`, `1 <= size <= 100` — 벗어나면 400)로 맞춘다 */
+const clampPage = (page: number) => Math.max(0, Math.floor(page))
+const clampSize = (size: number) => Math.min(100, Math.max(1, Math.floor(size)))
+
 /** 운영자 계정 도구(`/admin/accounts` — 백엔드 `skeleton.account.admin.enabled=true` 일 때만 열린다, ADMIN 역할 필요) */
 export function createAdminAccountsApi(
   client: Pick<ApiClient, 'page' | 'value' | 'noContent'>,
@@ -31,7 +35,11 @@ export function createAdminAccountsApi(
     list: (query = {}) =>
       client.page<AdminAccount>('/admin/accounts', {
         params: Object.fromEntries(
-          Object.entries(query).filter(([, v]) => v !== undefined && v !== ''),
+          Object.entries({
+            ...query,
+            ...(query.page !== undefined ? { page: clampPage(query.page) } : {}),
+            ...(query.size !== undefined ? { size: clampSize(query.size) } : {}),
+          }).filter(([, v]) => v !== undefined && v !== ''),
         ),
       }),
     get: (id) => client.value(`/admin/accounts/${seg(id)}`),

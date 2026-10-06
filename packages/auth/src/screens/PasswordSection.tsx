@@ -2,7 +2,9 @@ import { Alert, Button, SectionCard } from '@skeleton/ui'
 import { useState, type FormEvent } from 'react'
 import { passwordRequirements, violationsOf } from '../account/passwordRules'
 import type { PasswordPolicy, PasswordViolation } from '../account/types'
+import { submitWithReauth } from '../reauth'
 import { PasswordField } from './PasswordField'
+import { ReauthNotices, type ReauthSupport } from './ReauthNotices'
 import { PasswordHints } from './PasswordHints'
 import styles from './auth.module.css'
 import { ErrorCodes } from '@skeleton/api-client'
@@ -14,7 +16,15 @@ export type PasswordSectionProps = {
   hasPassword: boolean
   policy?: PasswordPolicy
   email?: string
-  onChange: (request: { currentPassword?: string; newPassword: string }) => Promise<unknown>
+  onChange: (request: {
+    currentPassword?: string
+    confirmationToken?: string
+    newPassword: string
+  }) => Promise<unknown>
+  /** 첫 비밀번호를 정하는(비밀번호 없는) 계정의 다시 인증 — 메일 링크 왕복 */
+  reauth?: ReauthSupport
+  /** 비밀번호 없는 계정의 확인 메일을 보낼 주소(안내 문장) */
+  mailTo?: string | null
   labels?: Partial<AuthLabels>
 }
 
@@ -24,12 +34,17 @@ export function PasswordSection({
   policy,
   email,
   onChange,
+  reauth,
+  mailTo = email ?? null,
   labels: given,
 }: PasswordSectionProps) {
   const labels = mergeLabels(given)
   const [current, setCurrent] = useState('')
   const [next, setNext] = useState('')
   const [done, setDone] = useState(false)
+  const [mailSent, setMailSent] = useState(false)
+  const resend = useAction(labels)
+  const reauthActive = !hasPassword && !!reauth
   const [violations, setViolations] = useState<PasswordViolation[]>([])
   const action = useAction(labels)
 
@@ -38,10 +53,24 @@ export function PasswordSection({
     setDone(false)
     setViolations([])
     if (policy && passwordRequirements(policy, next, email).some((r) => !r.met)) return
-    const ok = await action.run(() =>
-      onChange({ ...(hasPassword ? { currentPassword: current } : {}), newPassword: next }),
-    )
-    if (ok) {
+    setMailSent(false)
+    let finished = true
+    const ok = await action.run(async () => {
+      if (!hasPassword && reauth) {
+        const result = await submitWithReauth({
+          store: reauth.store,
+          requestMail: reauth.requestMail,
+          // 새 비밀번호는 저장하지 않는다 — 링크를 연 뒤 한 번 더 입력한다
+          action: { kind: 'set-password' },
+          run: (credential) => onChange({ newPassword: next, ...credential }),
+        })
+        finished = result.status === 'done'
+        setMailSent(!finished)
+        return
+      }
+      await onChange({ ...(hasPassword ? { currentPassword: current } : {}), newPassword: next })
+    })
+    if (ok && finished) {
       setDone(true)
       setCurrent('')
       setNext('')
@@ -60,6 +89,15 @@ export function PasswordSection({
       description={hasPassword ? labels.passwordOtherSessionsNote : labels.passwordSetHint}
     >
       <form className={styles.form} onSubmit={submit} aria-label={labels.sectionPassword}>
+        <ReauthNotices
+          active={reauthActive}
+          sent={mailSent}
+          ready={reauthActive && reauth.store.hasToken()}
+          email={mailTo}
+          resending={resend.busy}
+          onResend={() => void resend.run(() => reauth!.requestMail())}
+          labels={labels}
+        />
         {showError && <Alert tone="danger">{action.error?.message}</Alert>}
         {done && <Alert tone="success">{labels.passwordChanged}</Alert>}
         {hasPassword && (

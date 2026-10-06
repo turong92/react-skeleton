@@ -31,6 +31,7 @@ export const koAuthLabels: AuthLabels = {
   errorCaptcha: '확인을 통과하지 못했어요. 다시 해 주세요.',
   errorCurrentPassword: '현재 비밀번호가 맞지 않아요.',
   errorReauth: '비밀번호 또는 확인 코드가 맞지 않아요.',
+  errorReauthRequired: '먼저 본인 확인이 필요해요. 메일로 링크를 보내 드려요.',
   errorLastMethod: '마지막 로그인 수단이에요. 다른 수단을 먼저 추가해 주세요.',
   errorLastAdmin: '관리자는 최소 한 명이 있어야 해요.',
   errorSelfAction: '내 계정에는 할 수 없는 동작이에요.',
@@ -113,6 +114,32 @@ export const koAuthLabels: AuthLabels = {
   confirmEmailChangeDone:
     '이메일 주소를 바꿨어요. 모든 기기에서 로그아웃됐으니 새 주소로 다시 로그인해 주세요.',
   confirmEmailChangeInvalidBody: '링크가 올바르지 않거나 만료됐거나 이미 썼어요.',
+  confirmReauthTitle: '본인 확인',
+  confirmReauthChecking: '본인 확인을 마치는 중',
+  confirmReauthEmailChanged:
+    '확인했어요. 새 주소로 링크를 보냈어요 — 그 링크를 열면 이메일이 바뀌어요.',
+  confirmReauthStashed:
+    '확인했어요. 이 브라우저에서 시작한 작업이 아니에요. 여기서 계정 설정을 열어 한 번 더 제출하거나, 작업을 시작한 탭으로 돌아가세요.',
+  confirmReauthStashedPassword:
+    '확인했어요. 계정 설정으로 가서 새 비밀번호를 한 번 더 입력하면 끝나요.',
+  confirmReauthStashedSocial: '확인했어요. 계정 설정으로 가서 연결 버튼을 한 번 더 누르면 끝나요.',
+  confirmReauthSettings: '계정 설정 열기',
+  confirmReauthHandedOff:
+    '확인했어요. 작업을 시작한 탭에서 알아서 이어 가요 — 이 탭은 닫아도 돼요.',
+  methodsLoading: '로그인 방법을 확인하는 중',
+  methodsFailed:
+    '쓸 수 있는 로그인 방법을 확인하지 못했어요. 기본 방법을 보여 드려요 — 빠진 게 있으면 다시 시도하세요.',
+  methodsRetry: '다시 시도',
+  linkPasswordHint: (provider) => `${provider} 를 계정에 연결하려면 현재 비밀번호를 입력하세요.`,
+  reauthHint: '비밀번호 없이 로그인하는 계정이에요. 저장하기 전에 확인 링크를 메일로 보내 드려요.',
+  reauthSentTitle: '메일을 확인해 주세요',
+  reauthSentBody: (email) => `${email} 로 확인 링크를 보냈어요. 링크를 열면 이 작업이 이어져요.`,
+  reauthResend: '링크 다시 보내기',
+  reauthReadyTitle: '본인 확인을 마쳤어요',
+  reauthReadyBody: '한 번 더 제출하면 끝나요 — 확인은 잠시 동안만 유효해요.',
+  confirmReauthInvalidTitle: '이 링크는 쓸 수 없어요',
+  confirmReauthInvalidBody:
+    '올바르지 않거나 만료됐거나 이미 쓴 링크예요. 계정 설정에서 작업을 다시 시작하면 새 링크를 보내 드려요.',
   forgotTitle: '비밀번호 재설정',
   forgotSubtitle: '이메일을 적으면 재설정 링크를 보내 드려요.',
   forgotSubmit: '링크 보내기',
@@ -161,7 +188,9 @@ export const koAuthLabels: AuthLabels = {
   emailNew: '새 이메일',
   emailChangeSubmit: '이메일 바꾸기',
   emailPendingTitle: '변경을 확인해 주세요',
-  emailPendingBody: (email) => `${email} 로 링크를 보냈어요. 링크를 열면 주소가 바뀌어요.`,
+  emailPendingBody: (email, until) =>
+    `${email} 로 링크를 보냈어요. 링크를 열면 주소가 바뀌어요${until ? ` (링크는 ${until} 까지 유효해요)` : ''}. 메일이 안 오면 아래에서 다시 요청하세요.`,
+  emailRequested: '그 주소를 쓸 수 있다면 확인 링크가 가고 있어요.',
   methodsDescription: '이 계정에 로그인할 수 있는 방법이에요.',
   methodsLastProtected: '로그인 수단은 하나 이상 있어야 해서 이 수단은 뗄 수 없어요.',
   methodNames: { password: '비밀번호', magic_link: '이메일 링크' },

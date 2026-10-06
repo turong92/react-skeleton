@@ -21,6 +21,9 @@ const auth = createAuth({
     },
     logout: async () => undefined,
     magicLinkRequest: async () => undefined,
+    methods: async () => {
+      throw new Error('unused')
+    },
     magicLinkRedeem: async () => {
       throw new Error('unused')
     },

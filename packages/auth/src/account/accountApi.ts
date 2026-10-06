@@ -10,6 +10,9 @@ import type {
   SignUpStatus,
 } from './types'
 
+/** 민감한 작업의 다시 인증 — 비밀번호가 있으면 `currentPassword`, 없으면 메일로 받은 `confirmationToken` */
+export type ReauthCredential = { currentPassword?: string; confirmationToken?: string }
+
 export type AccountApi = {
   signUp(request: SignUpRequest): Promise<{ status: SignUpStatus }>
   resendVerification(email: string, captchaToken?: string): Promise<void>
@@ -21,21 +24,28 @@ export type AccountApi = {
 
   me(): Promise<AccountMe>
   updateProfile(patch: ProfilePatch): Promise<AccountMe>
-  /** 소셜 · 매직링크만 쓰던 계정은 `currentPassword` 없이 첫 비밀번호를 정한다 */
-  changePassword(request: { currentPassword?: string; newPassword: string }): Promise<void>
-  /** 202 — 새 주소로 확인 메일이 갈 뿐 바로 바뀌지 않는다. `Idempotency-Key` 는 안 주면 만든다 */
+  /**
+   * 비밀번호가 있으면 `currentPassword`. 소셜 · 매직링크만 쓰던 계정이 첫 비밀번호를 정할 때는 `confirmationToken`
+   * (`requestReauthConfirmation` 의 메일 링크) — 없으면 403 `ACCOUNT.REAUTH_REQUIRED`, 틀리면 400 `ACCOUNT.REAUTH_FAILED`
+   */
+  changePassword(request: ReauthCredential & { newPassword: string }): Promise<void>
+  /** 202 — 새 주소로 확인 메일이 갈 뿐 바로 바뀌지 않는다. 비밀번호 없는 계정은 `confirmationToken`. `Idempotency-Key` 는 안 주면 만든다 */
   changeEmail(
-    request: { newEmail: string; currentPassword?: string },
+    request: ReauthCredential & { newEmail: string },
     idempotencyKey?: string,
   ): Promise<void>
 
   identities(): Promise<SignInIdentity[]>
   unlinkIdentity(id: string): Promise<void>
+  /** 다시 인증이 필요하다: 비밀번호가 있으면 `currentPassword`, 없으면 `confirmationToken`(서버가 강제) */
   linkSocial(
     provider: string,
     authorizationCode: string,
     redirectUri?: string,
+    reauth?: ReauthCredential,
   ): Promise<SignInIdentity>
+  /** `POST /account/reauth/confirmation` (202) — 계정 주소로 `/confirm-reauth?token=` 링크를 보낸다(비밀번호 없는 계정의 다시 인증) */
+  requestReauthConfirmation(): Promise<void>
 
   /** 비밀번호가 없는 계정의 삭제 확인 메일 */
   requestDeleteConfirmation(): Promise<void>
@@ -106,11 +116,14 @@ export function createAccountApi(
     identities: () => client.list('/account/identities'),
     unlinkIdentity: (id) =>
       client.noContent(`/account/identities/${seg(id)}`, { method: 'DELETE' }),
-    linkSocial: (provider, authorizationCode, redirectUri) =>
+    linkSocial: (provider, authorizationCode, redirectUri, reauth) =>
       client.value(`/account/identities/social/${seg(provider)}`, {
         method: 'POST',
-        json: compact({ authorizationCode, redirectUri }),
+        json: compact({ authorizationCode, redirectUri, ...reauth }),
       }),
+    requestReauthConfirmation: async () => {
+      await client.value('/account/reauth/confirmation', { method: 'POST' })
+    },
 
     requestDeleteConfirmation: async () => {
       await client.value('/account/delete/confirmation', { method: 'POST' })

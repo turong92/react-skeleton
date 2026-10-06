@@ -17,6 +17,7 @@ describe('authErrorMessage', () => {
     ['ACCOUNT.CAPTCHA_FAILED', 400, L.errorCaptcha],
     ['ACCOUNT.CURRENT_PASSWORD_INVALID', 400, L.errorCurrentPassword],
     ['ACCOUNT.REAUTH_FAILED', 400, L.errorReauth],
+    ['ACCOUNT.REAUTH_REQUIRED', 403, L.errorReauthRequired],
     ['ACCOUNT.LAST_SIGN_IN_METHOD', 409, L.errorLastMethod],
     ['ACCOUNT.LAST_ADMIN', 409, L.errorLastAdmin],
     ['ACCOUNT.SELF_ACTION_FORBIDDEN', 409, L.errorSelfAction],

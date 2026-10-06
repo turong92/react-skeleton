@@ -1,4 +1,4 @@
-import type { AccountApi } from './account/accountApi'
+import type { AccountApi, ReauthCredential } from './account/accountApi'
 import { createSocialLoginFlow, type SocialLoginFlowOptions } from './social'
 import type { AuthTokenResponse } from './types'
 
@@ -6,10 +6,22 @@ export type SocialLinkFlowOptions = Omit<SocialLoginFlowOptions, 'session'> & {
   accountApi: Pick<AccountApi, 'linkSocial'>
 }
 
+/** 콜백이 돌려준, 서버로 보낼 값 — state 는 이미 확인했다 */
+export type SocialLinkCallback = {
+  provider: string
+  authorizationCode: string
+  redirectUri?: string
+}
+
 export type SocialLinkFlow = {
   start(provider: string): { url: string; state: string }
-  /** 콜백을 확인하고 `POST /account/identities/social/{provider}` 로 보낸다 — 로그인 상태는 바뀌지 않는다 */
-  complete(search: string | URLSearchParams): Promise<{ provider: string }>
+  /** 콜백의 state · 에러 · code 를 확인하고 **서버를 부르지 않은 채** 값을 돌려준다 — 화면이 비밀번호를 먼저 받을 때. 같은 콜백을 두 번 읽어도 같은 결과 */
+  read(search: string | URLSearchParams): Promise<SocialLinkCallback>
+  /** `read` 한 뒤 `POST /account/identities/social/{provider}` — 로그인 상태는 바뀌지 않는다. 다시 인증(`currentPassword` 또는 `confirmationToken`)은 서버가 강제한다 */
+  complete(
+    search: string | URLSearchParams,
+    reauth?: ReauthCredential,
+  ): Promise<{ provider: string }>
 }
 
 /**
@@ -22,18 +34,33 @@ export function createSocialLinkFlow({
   storagePrefix = 'skeleton.social-link.',
   ...rest
 }: SocialLinkFlowOptions): SocialLinkFlow {
+  // 로그인 흐름의 state 검증을 그대로 쓰되, 서버 호출 자리에는 값을 모으기만 한다
   const flow = createSocialLoginFlow({
     ...rest,
     storagePrefix,
     session: {
-      socialLogin: async (provider, authorizationCode, redirectUri) => {
-        await accountApi.linkSocial(provider, authorizationCode, redirectUri)
-        return { linked: provider } as unknown as AuthTokenResponse
-      },
+      socialLogin: async (provider, authorizationCode, redirectUri) =>
+        ({ provider, authorizationCode, redirectUri }) as unknown as AuthTokenResponse,
     },
   })
+  const read: SocialLinkFlow['read'] = async (search) =>
+    (await flow.complete(search)).token as unknown as SocialLinkCallback
+  const linked = new Map<string, Promise<{ provider: string }>>()
   return {
     start: flow.start,
-    complete: async (search) => ({ provider: (await flow.complete(search)).provider }),
+    read,
+    complete(search, reauth) {
+      const state = new URLSearchParams(search).get('state') ?? ''
+      const known = linked.get(state)
+      if (known) return known
+      const run = read(search).then(async ({ provider, authorizationCode, redirectUri }) => {
+        await (reauth
+          ? accountApi.linkSocial(provider, authorizationCode, redirectUri, reauth)
+          : accountApi.linkSocial(provider, authorizationCode, redirectUri))
+        return { provider }
+      })
+      if (state) linked.set(state, run)
+      return run
+    },
   }
 }

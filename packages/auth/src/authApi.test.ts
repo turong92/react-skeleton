@@ -151,4 +151,11 @@ describe('createAuthApi (mirrors kotlin-skeleton modules/auth and auth-social)',
       },
     ])
   })
+
+  it('methods → GET /auth/methods, public (the backend tells which sign-in methods exist)', async () => {
+    const info = { methods: ['password'], signUp: {}, social: [], captchaRequired: false }
+    const { client, calls } = fakeClient(info)
+    expect(await createAuthApi(client).methods()).toBe(info)
+    expect(calls).toEqual([{ path: '/auth/methods', request: { skipAuth: true } }])
+  })
 })

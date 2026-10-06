@@ -33,6 +33,7 @@ export type AuthLabels = {
   errorCaptcha: string
   errorCurrentPassword: string
   errorReauth: string
+  errorReauthRequired: string
   errorLastMethod: string
   errorLastAdmin: string
   errorSelfAction: string
@@ -103,6 +104,26 @@ export type AuthLabels = {
   confirmEmailChangeChecking: string
   confirmEmailChangeDone: string
   confirmEmailChangeInvalidBody: string
+  confirmReauthTitle: string
+  confirmReauthChecking: string
+  confirmReauthEmailChanged: string
+  confirmReauthStashed: string
+  confirmReauthStashedPassword: string
+  confirmReauthStashedSocial: string
+  confirmReauthSettings: string
+  confirmReauthHandedOff: string
+  reauthHint: string
+  methodsLoading: string
+  methodsFailed: string
+  methodsRetry: string
+  linkPasswordHint: (provider: string) => string
+  reauthSentTitle: string
+  reauthSentBody: (email: string) => string
+  reauthResend: string
+  reauthReadyTitle: string
+  reauthReadyBody: string
+  confirmReauthInvalidTitle: string
+  confirmReauthInvalidBody: string
   // 비밀번호 찾기 · 재설정
   forgotTitle: string
   forgotSubtitle: string
@@ -154,7 +175,8 @@ export type AuthLabels = {
   emailNew: string
   emailChangeSubmit: string
   emailPendingTitle: string
-  emailPendingBody: (email: string) => string
+  emailPendingBody: (email: string, until?: string) => string
+  emailRequested: string
   methodsDescription: string
   methodsLastProtected: string
   methodNames: Record<string, string>
@@ -242,6 +264,7 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   errorCaptcha: 'The check did not pass. Try again.',
   errorCurrentPassword: 'The current password is not correct.',
   errorReauth: 'The password or confirmation is not correct.',
+  errorReauthRequired: 'Please confirm it is you first — we email you a link.',
   errorLastMethod: 'This is your last sign-in method. Add another one first.',
   errorLastAdmin: 'There must be at least one administrator.',
   errorSelfAction: 'You cannot do that to your own account.',
@@ -324,6 +347,36 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   confirmEmailChangeDone:
     'Your email address is changed. You were signed out everywhere; sign in again with the new address.',
   confirmEmailChangeInvalidBody: 'This link is invalid, expired or already used.',
+  confirmReauthTitle: 'Confirm it is you',
+  confirmReauthChecking: 'Confirming it is you',
+  confirmReauthEmailChanged:
+    'Confirmed. We sent a link to your new address — your email changes when you open it.',
+  confirmReauthStashed:
+    'Confirmed. This browser did not start the action: open your account settings here and submit it once more, or go back to the tab where you started.',
+  confirmReauthStashedPassword:
+    'Confirmed. Go to your account settings and enter the new password once more to finish.',
+  confirmReauthStashedSocial:
+    'Confirmed. Go to your account settings and press the connect button once more to finish.',
+  confirmReauthSettings: 'Open account settings',
+  confirmReauthHandedOff:
+    'Confirmed. The tab where you started continues by itself — you can close this one.',
+  methodsLoading: 'Checking how you can sign in',
+  methodsFailed:
+    'We could not check which sign-in methods are available. Showing the default — try again if something is missing.',
+  methodsRetry: 'Try again',
+  linkPasswordHint: (provider) =>
+    `Enter your current password to connect ${provider} to your account.`,
+  reauthHint:
+    'You sign in without a password. We email you a confirmation link before this is saved.',
+  reauthSentTitle: 'Check your email',
+  reauthSentBody: (email) =>
+    `We sent a confirmation link to ${email}. Open it and this action continues.`,
+  reauthResend: 'Send the link again',
+  reauthReadyTitle: 'Identity confirmed',
+  reauthReadyBody: 'Submit once more to finish — the confirmation stays valid for a short while.',
+  confirmReauthInvalidTitle: 'This link does not work',
+  confirmReauthInvalidBody:
+    'It is invalid, expired or already used. Start the action again from your account settings and we will send a new link.',
   forgotTitle: 'Reset your password',
   forgotSubtitle: 'Enter your email and we send a reset link.',
   forgotSubmit: 'Send the link',
@@ -372,7 +425,9 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   emailNew: 'New email',
   emailChangeSubmit: 'Change email',
   emailPendingTitle: 'Confirm the change',
-  emailPendingBody: (email) => `We sent a link to ${email}. Your address changes when you open it.`,
+  emailPendingBody: (email, until) =>
+    `We sent a link to ${email}. Your address changes when you open it${until ? ` (the link works until ${until})` : ''}. No mail? Request the change again below.`,
+  emailRequested: 'If that address can be used, a confirmation link is on its way.',
   methodsDescription: 'The ways you can sign in to this account.',
   methodsLastProtected: 'You need at least one way to sign in, so this one cannot be removed.',
   methodNames: { password: 'Password', magic_link: 'Email link' },

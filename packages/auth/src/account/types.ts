@@ -60,6 +60,9 @@ export type AccountMe = {
   createdAt: string
   hasPassword: boolean
   methods: SignInIdentity[]
+  /** 새 주소의 확인을 기다리는 이메일 변경(만료 · 대체 · 확정 전까지) — 새로고침 뒤에도 서버가 알려 준다. 남의 주소로 요청했으면 null(존재 여부를 숨긴다) */
+  pendingEmail?: string | null
+  pendingEmailExpiresAt?: string | null
 }
 
 export type ProfilePatch = { displayName?: string; locale?: string; timeZone?: string }

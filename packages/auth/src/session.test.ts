@@ -28,6 +28,9 @@ function fakeApi(overrides: Partial<AuthApi> = {}): AuthApi {
     logout: async () => undefined,
     magicLinkRequest: async () => undefined,
     magicLinkRedeem: async () => response('magic-token'),
+    methods: async () => {
+      throw new Error('unused')
+    },
     ...overrides,
   }
 }

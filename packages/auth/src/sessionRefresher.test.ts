@@ -99,17 +99,16 @@ describe('session refresher', () => {
     expect(call).toHaveBeenCalledTimes(1)
   })
 
-  it('a request whose 401 arrives after the refresh finished does not refresh again', async () => {
+  it('a request whose 401 arrives after the refresh finished does not refresh again (it just retries with the current token)', async () => {
     const { client, call, access } = setup()
-    const slowStale = client.value('/slow')
+    const first = client.value('/first')
     await vi.advanceTimersByTimeAsync(60)
-    await slowStale
-    access.set('access-1') // simulate a stale in-flight request failing now with the old token
-    // refresh credentials now hold r1.2; access-1 !== current? it equals failed token, so a refresh is allowed — verify it uses r1.2
-    const again = client.value('/late')
-    await vi.advanceTimersByTimeAsync(60)
-    await again
-    expect(call.mock.calls.map((c) => c[0])).toEqual(['r1.1', 'r1.2'])
+    await first
+    expect(access.get()).toBe('access-2')
+    // a slow in-flight request that was sent with the OLD token fails only now: the store already holds access-2
+    const recovered = await createLateRecover(access, call)
+    expect(recovered).toBe(true)
+    expect(call).toHaveBeenCalledTimes(1) // still only the first refresh
   })
 
   it('signs out (both stores) and reports "reuse-detected" on AUTH.REFRESH_REUSED', async () => {
@@ -226,3 +225,20 @@ describe('session refresher', () => {
     ).not.toThrow()
   })
 })
+
+/** 같은 저장소를 쓰는 갱신기에 「낡은 토큰으로 보낸 요청의 401」이 늦게 도착한 상황 */
+async function createLateRecover(
+  access: ReturnType<typeof createTokenStore>,
+  call: (refreshToken: string | null) => Promise<AuthTokenResponse>,
+) {
+  const refresh = createRefreshStore()
+  refresh.set({ refreshToken: 'r1.2', sessionId: 'ses_1' })
+  const refresher = createSessionRefresher({
+    tokens: access,
+    refreshTokens: refresh,
+    delivery: 'body',
+    refresh: call,
+    locks: false,
+  })
+  return refresher.recover({ failedAuthorization: 'Bearer access-1' } as never)
+}

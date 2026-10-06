@@ -75,6 +75,10 @@ export function createSessionRefresher(options: SessionRefresherOptions): Sessio
       }
       throw error
     }
+    // 응답을 기다리는 사이 로그아웃했거나(같은 탭 · 다른 탭) 다른 로그인으로 바뀌었다면 이 응답은 낡았다 — 세션을 되살리지 않는다
+    tokens.reload()
+    refreshTokens.reload()
+    if (JSON.stringify(refreshTokens.get()) !== JSON.stringify(credentials)) return false
     // 회전: 새 리프레시 토큰이 먼저 — 그 사이 다른 요청이 새 액세스 토큰으로 갱신을 다시 걸어도 새 리프레시 토큰을 쓴다
     refreshTokens.set({
       refreshToken: delivery === 'cookie' ? null : (response.refreshToken ?? null),

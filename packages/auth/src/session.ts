@@ -59,7 +59,10 @@ export function createAuthSession({
     return { status: 'authenticated', token, principal }
   }
 
+  // 저장소를 둘 다 바꾸는 동안에는 알리지 않는다 — 한쪽만 바뀐 중간 상태(옛 토큰 + 새 principal)가 구독자에게 새면 계정이 잠깐 「모르는 사람」으로 보인다
+  let batching = false
   function refreshState() {
+    if (batching) return
     const next = compute()
     if (
       next.status === state.status &&
@@ -77,12 +80,17 @@ export function createAuthSession({
   function accept(response: AuthTokenResponse) {
     known = { token: response.accessToken, principal: response.principal }
     // 리프레시 자격을 먼저 — 액세스 토큰이 보이는 순간 갱신이 필요해도 새 자격이 있다
-    refreshStore?.set({
-      refreshToken: delivery === 'cookie' ? null : (response.refreshToken ?? null),
-      refreshExpiresAt: response.refreshExpiresAt,
-      sessionId: response.sessionId,
-    })
-    store.set(response.accessToken)
+    batching = true
+    try {
+      refreshStore?.set({
+        refreshToken: delivery === 'cookie' ? null : (response.refreshToken ?? null),
+        refreshExpiresAt: response.refreshExpiresAt,
+        sessionId: response.sessionId,
+      })
+      store.set(response.accessToken)
+    } finally {
+      batching = false
+    }
     refreshState()
     return response
   }
@@ -105,8 +113,13 @@ export function createAuthSession({
       const refreshToken = refreshStore?.get()?.refreshToken ?? null
       const hadSession = store.get() !== null || refreshStore?.get() != null
       known = null
-      refreshStore?.clear()
-      store.clear()
+      batching = true
+      try {
+        refreshStore?.clear()
+        store.clear()
+      } finally {
+        batching = false
+      }
       refreshState()
       if (!hadSession) return
       try {

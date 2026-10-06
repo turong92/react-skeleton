@@ -198,9 +198,20 @@ export const DeleteWithPassword: Story = {
     const dialog = within(await canvas.findByRole('dialog'))
     const confirm = await dialog.findByRole('button', { name: 'Delete account' })
     await expect(confirm).toBeDisabled() // 글자를 쳐야 켜진다
-    await userEvent.type(dialog.getByLabelText('Type DELETE to confirm'), 'DELETE')
+    const typed = dialog.getByLabelText('Type DELETE to confirm')
+    await userEvent.type(typed, 'delete') // 대소문자가 다르면 켜지지 않는다
+    await expect(confirm).toBeDisabled()
+    await userEvent.clear(typed)
+    await userEvent.type(typed, 'DELETE')
+    await expect(confirm).toBeEnabled()
     await userEvent.click(confirm)
     await expect(await canvas.findByText(/scheduled for erasure/)).toBeVisible()
+    // 안내를 읽을 시간을 준다 — 로그아웃은 사용자가 누른다(곧바로 로그아웃하면 가드가 로그인으로 보내 안내가 보이지 않는다)
+    await expect(
+      within(canvas.getByRole('region', { name: 'Delete account' })).getByRole('button', {
+        name: 'Sign out',
+      }),
+    ).toBeVisible()
   },
 }
 

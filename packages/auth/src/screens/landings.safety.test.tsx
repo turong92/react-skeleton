@@ -12,7 +12,10 @@ import { SocialCallbackScreen } from './SocialCallbackScreen'
 
 // React 는 서버 출력에 `autoComplete` 로 쓴다 — HTML 속성은 대소문자를 가리지 않으므로 소문자로 맞춰 읽는다
 const html = (node: React.ReactNode) =>
-  renderToStaticMarkup(<MemoryRouter>{node}</MemoryRouter>).replaceAll('autoComplete=', 'autocomplete=')
+  renderToStaticMarkup(<MemoryRouter>{node}</MemoryRouter>).replaceAll(
+    'autoComplete=',
+    'autocomplete=',
+  )
 const noop = async () => undefined
 
 describe('M2 — mail-scanner safety: an explicit click before a link verifies something', () => {
@@ -35,7 +38,9 @@ describe('M2 — mail-scanner safety: an explicit click before a link verifies s
   })
 
   it('magic-link keeps signing in on arrival (the contract allows the POST on mount)', () => {
-    const out = html(<MagicLinkLanding token="t" onRedeem={noop} onDone={() => undefined} requestTo="/login" />)
+    const out = html(
+      <MagicLinkLanding token="t" onRedeem={noop} onDone={() => undefined} requestTo="/login" />,
+    )
     expect(out).toContain('Signing you in')
     expect(out).not.toContain('>Continue<')
   })
@@ -54,9 +59,9 @@ describe('autocomplete attributes (password managers and one-time codes)', () =>
     expect(out).toContain('autocomplete="current-password"')
   })
   it('sign-up and reset: new-password', () => {
-    expect(html(<SignUpScreen onSignUp={async () => ({ status: 'CREATED' })} signInTo="/login" />)).toContain(
-      'autocomplete="new-password"',
-    )
+    expect(
+      html(<SignUpScreen onSignUp={async () => ({ status: 'CREATED' })} signInTo="/login" />),
+    ).toContain('autocomplete="new-password"')
     expect(
       html(
         <ResetPasswordScreen
@@ -83,7 +88,12 @@ describe('autocomplete attributes (password managers and one-time codes)', () =>
   })
   it('the social callback error screen has no form fields at all', () => {
     expect(
-      html(<SocialCallbackScreen state={{ status: 'error', error: new Error('x') }} signInTo="/login" />),
+      html(
+        <SocialCallbackScreen
+          state={{ status: 'error', error: new Error('x') }}
+          signInTo="/login"
+        />,
+      ),
     ).not.toContain('<input')
   })
 })

@@ -329,13 +329,7 @@ function SocialCallbackInner({ flow, ctx }: { flow: SocialLoginFlow; ctx: PageCo
 }
 
 /** 소셜 흐름이 없는 콜백 — 방법을 아직 묻는 중이면 기다리고, 묻기에 실패했거나 그 제공자가 없으면 오류 화면(다시 시도 포함). 쓰이지 않은 코드는 주소에서 지운다 */
-function SocialCallbackUnavailable({
-  ctx,
-  signInTo,
-}: {
-  ctx: PageContext
-  signInTo: string
-}) {
+function SocialCallbackUnavailable({ ctx, signInTo }: { ctx: PageContext; signInTo: string }) {
   useEffect(() => {
     scrubUrlParams(['code', 'state', 'error', 'error_description'])
   }, [])

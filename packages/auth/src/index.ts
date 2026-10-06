@@ -102,10 +102,7 @@ export type {
   ReauthStoreOptions,
   SubmitWithReauthResult,
 } from './reauth'
-export {
-  createBroadcastReauthChannel,
-  listenForReauthToken,
-} from './reauthChannel'
+export { createBroadcastReauthChannel, listenForReauthToken } from './reauthChannel'
 export type { ReauthChannel, ReauthOfferHandler } from './reauthChannel'
 export { scrubUrlParams } from './scrubUrl'
 export { resolveReauthLanding } from './reauthLanding'

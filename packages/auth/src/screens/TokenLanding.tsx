@@ -48,7 +48,9 @@ export function TokenLanding({
   labels: given,
 }: TokenLandingProps) {
   const labels = mergeLabels(given)
-  const [phase, setPhase] = useState<Phase>(token ? (requireConfirm ? 'ready' : 'checking') : 'invalid')
+  const [phase, setPhase] = useState<Phase>(
+    token ? (requireConfirm ? 'ready' : 'checking') : 'invalid',
+  )
   const [failure, setFailure] = useState<string | null>(null)
 
   function settle(outcome: { ok: true; value: unknown } | { ok: false; error: unknown }) {

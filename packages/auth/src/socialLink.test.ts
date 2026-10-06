@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { AccountApi } from './account/accountApi'
+import { createSocialLoginFlow } from './social'
 import { createSocialLinkFlow } from './socialLink'
 
 const providers = {
@@ -7,7 +8,7 @@ const providers = {
 }
 
 describe('createSocialLinkFlow (logged-in user adds a provider to the account)', () => {
-  it('start builds the authorize url with a state kept apart from the sign-in flow', () => {
+  it('start builds the authorize url for the link callback', () => {
     const flow = createSocialLinkFlow({
       providers,
       accountApi: { linkSocial: vi.fn() },
@@ -16,6 +17,49 @@ describe('createSocialLinkFlow (logged-in user adds a provider to the account)',
     const { url, state } = flow.start('google')
     expect(state).toBe('state-1')
     expect(new URL(url).searchParams.get('redirect_uri')).toBe(providers.google.redirectUri)
+  })
+
+  it('a state issued for linking cannot finish a sign-in, and a sign-in state cannot finish a link (separate key prefixes in one storage)', async () => {
+    const data = new Map<string, string>()
+    const storage = {
+      getItem: (k: string) => data.get(k) ?? null,
+      setItem: (k: string, v: string) => void data.set(k, v),
+      removeItem: (k: string) => void data.delete(k),
+    }
+    const socialLogin = vi.fn()
+    const login = createSocialLoginFlow({
+      providers,
+      session: { socialLogin },
+      storage,
+      createState: () => 'login-state',
+    })
+    const link = createSocialLinkFlow({
+      providers,
+      accountApi: { linkSocial: vi.fn() },
+      storage,
+      createState: () => 'link-state',
+    })
+    link.start('google')
+    login.start('google')
+    // the two flows keep their states under different prefixes
+    expect([...data.keys()].sort()).toEqual([
+      'skeleton.social-link.link-state',
+      'skeleton.social.login-state',
+    ])
+    // same state values crossed over: each side rejects the other's
+    const sameState = createSocialLinkFlow({
+      providers,
+      accountApi: { linkSocial: vi.fn() },
+      storage,
+      createState: () => 'login-state',
+    })
+    await expect(sameState.read('code=c&state=login-state')).rejects.toMatchObject({
+      reason: 'state_mismatch',
+    })
+    await expect(login.complete('code=c&state=link-state')).rejects.toMatchObject({
+      reason: 'state_mismatch',
+    })
+    expect(socialLogin).not.toHaveBeenCalled()
   })
 
   it('complete sends the code to POST /account/identities/social/{provider}, never to a login', async () => {

@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn } from 'storybook/test'
+import { StrictMode } from 'react'
+import { expect, fn, waitFor } from 'storybook/test'
 import { ConfirmEmailChangeLanding } from '../screens/ConfirmEmailChangeLanding'
 import { ConfirmReauthLanding } from '../screens/ConfirmReauthLanding'
 import { SocialLinkPasswordScreen } from '../screens/SocialLinkPasswordScreen'
@@ -27,7 +28,9 @@ export const VerifyEmailSuccess: Story = {
   render: () => (
     <VerifyEmailScreen token="tok" onVerify={async () => undefined} signInTo="/login" />
   ),
-  play: async ({ canvas }) => {
+  play: async ({ canvas, userEvent }) => {
+    // 링크를 열기만 해서는 인증하지 않는다 — 사람이 「계속」을 눌러야(메일 스캐너 방어)
+    await userEvent.click(await canvas.findByRole('button', { name: 'Continue' }))
     await expect(await canvas.findByText(/Your email is verified/)).toBeVisible()
     await expect(canvas.getByRole('link', { name: 'Go to sign in' })).toHaveAttribute(
       'href',
@@ -51,6 +54,7 @@ export const VerifyEmailExpiredWithResend: Story = {
     )
   },
   play: async ({ canvas, userEvent }) => {
+    await userEvent.click(await canvas.findByRole('button', { name: 'Continue' }))
     await expect(
       await canvas.findByRole('heading', { name: 'This link does not work' }),
     ).toBeVisible()
@@ -60,14 +64,37 @@ export const VerifyEmailExpiredWithResend: Story = {
   },
 }
 
+const verifyOnce = fn(async () => undefined)
 export const VerifyEmailVerifiesOnce: Story = {
-  render: () => {
-    const onVerify = fn(async () => undefined)
-    // 같은 화면을 두 번 마운트해도(StrictMode) 일회용 토큰은 한 번만 쓴다
-    return <VerifyEmailScreen token="tok" onVerify={onVerify} signInTo="/login" />
-  },
-  play: async ({ canvas }) => {
+  beforeEach: () => verifyOnce.mockClear(),
+  // 더블클릭해도 일회용 토큰은 한 번만 쓴다(두 번째는 410). 주의: 스토리 실행기는 StrictMode 의 이중 effect 를 재현하지 않는다(effect 가 한 번만 돈다) —
+  // 그 경로의 보증은 `useOnceOnMount` 의 ref 가드와 개발 서버의 e2e(`account.e2e.ts`)가 맡는다
+  render: () => (
+    <StrictMode>
+      <VerifyEmailScreen token="tok" onVerify={verifyOnce} signInTo="/login" />
+    </StrictMode>
+  ),
+  play: async ({ canvas, userEvent }) => {
+    await expect(verifyOnce).not.toHaveBeenCalled() // 열기만 해서는 부르지 않는다
+    const button = await canvas.findByRole('button', { name: 'Continue' })
+    await userEvent.dblClick(button)
     await expect(await canvas.findByText(/Your email is verified/)).toBeVisible()
+    await expect(verifyOnce).toHaveBeenCalledTimes(1)
+  },
+}
+
+const redeemOnce = fn(async () => undefined)
+export const MagicLinkRedeemsOnce: Story = {
+  beforeEach: () => redeemOnce.mockClear(),
+  render: () => (
+    <StrictMode>
+      <MagicLinkLanding token="tok" onRedeem={redeemOnce} onDone={fn()} requestTo="/login" />
+    </StrictMode>
+  ),
+  play: async () => {
+    await waitFor(() => expect(redeemOnce).toHaveBeenCalledTimes(1))
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    await expect(redeemOnce).toHaveBeenCalledTimes(1)
   },
 }
 
@@ -109,7 +136,8 @@ export const ConfirmEmailChange: Story = {
   render: () => (
     <ConfirmEmailChangeLanding token="tok" onConfirm={async () => undefined} signInTo="/login" />
   ),
-  play: async ({ canvas }) => {
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(await canvas.findByRole('button', { name: 'Continue' }))
     await expect(await canvas.findByText(/Your email address is changed/)).toBeVisible()
   },
 }

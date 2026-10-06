@@ -1,4 +1,5 @@
 import { RequireAuth, RequireRole } from '@skeleton/auth'
+import { BlockedNotice } from '../auth/BlockedNotice'
 import { accountRoutes } from '../auth/authRoutes'
 import type { RouteObject } from 'react-router-dom'
 import { landingJsonLd } from '../landing/landingSeo'
@@ -78,7 +79,7 @@ export const routes: RouteObject[] = [
           },
           { path: '/settings', element: <SettingsPage />, handle: privateSeo('nav.settings') },
           {
-            element: <RequireRole roles={['ADMIN']} />,
+            element: <RequireRole roles={['ADMIN']} forbidden={<BlockedNotice />} />,
             children: [
               {
                 path: '/admin/accounts',

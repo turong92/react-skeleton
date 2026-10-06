@@ -20,6 +20,13 @@ describe('parseAuthMethods (the optional override of what the backend says)', ()
     })
     expect(parseAuthMethods('magic-link')).toEqual({ password: false, magicLink: true, social: [] })
   })
+  it('M8: the backend spelling magic_link works too (it must not be read as a social provider)', () => {
+    expect(parseAuthMethods('password,magic_link')).toEqual({
+      password: true,
+      magicLink: true,
+      social: [],
+    })
+  })
 })
 
 describe('refresh delivery', () => {

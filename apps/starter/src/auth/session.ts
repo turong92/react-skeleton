@@ -1,7 +1,7 @@
 import { createAccountApi, createAuthApi, createAuthSession } from '@skeleton/auth'
 import { apiClient } from '../api/client'
 import { refreshDelivery } from './authConfig'
-import { bindAuthApi } from './refresher'
+import { bindAuthApi, refresher } from './refresher'
 import { refreshStore, tokenStore } from './tokenStore'
 
 export const authApi = createAuthApi(apiClient, { delivery: refreshDelivery })
@@ -14,4 +14,5 @@ export const authSession = createAuthSession({
   store: tokenStore,
   refreshStore,
   delivery: refreshDelivery,
+  refresher, // restore() 도 갱신 한 줄(single-flight · 탭 락)을 거친다
 })

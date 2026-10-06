@@ -1,10 +1,13 @@
 import {
   createAuthRoutes,
+  createBroadcastReauthChannel,
   createSocialLinkFlow,
   createSocialLoginFlow,
   koAuthLabels,
 } from '@skeleton/auth'
 import {
+  authKeys,
+  AUTH_NAMESPACE,
   authMethodsOverride,
   refreshDelivery,
   socialClientIds,
@@ -19,7 +22,12 @@ const hasSocial = authMethodsOverride !== undefined && Object.keys(providers).le
 
 // OAuth state 는 이 탭의 sessionStorage 에 묶는다 — 다른 브라우저 · 탭이 시작한 콜백은 거절된다
 const socialFlow = hasSocial
-  ? createSocialLoginFlow({ providers, session: authSession, storage })
+  ? createSocialLoginFlow({
+      providers,
+      session: authSession,
+      storage,
+      storagePrefix: authKeys.social,
+    })
   : undefined
 const socialLinkFlow = hasSocial
   ? createSocialLinkFlow({
@@ -31,6 +39,7 @@ const socialLinkFlow = hasSocial
       ),
       accountApi,
       storage,
+      storagePrefix: authKeys.socialLink,
     })
   : undefined
 
@@ -40,6 +49,9 @@ const socialLinkFlow = hasSocial
  */
 export const accountRoutes = createAuthRoutes({
   session: authSession,
+  namespace: AUTH_NAMESPACE,
+  reauthChannel:
+    typeof window === 'undefined' ? null : createBroadcastReauthChannel(authKeys.reauthChannel),
   authApi,
   accountApi,
   methods: authMethodsOverride && {

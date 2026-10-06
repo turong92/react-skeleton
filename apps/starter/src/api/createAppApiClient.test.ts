@@ -94,3 +94,25 @@ describe('createAppApiClient — the env wiring a project copies', () => {
     expect(onUnauthorized).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('M3 — an unrecoverable 401 clears both credentials', () => {
+  it('drops the refresh credential together with the access token', async () => {
+    const { createRefreshStore } = await import('@skeleton/auth')
+    const tokenStore = createTokenStore()
+    const refreshStore = createRefreshStore()
+    tokenStore.set('jwt')
+    refreshStore.set({ refreshToken: 'r', sessionId: 's' })
+    const client = createAppApiClient({
+      env: {},
+      tokenStore,
+      refreshStore,
+      adapter: adapterFor([], {
+        status: 401,
+        data: { code: 'COMMON.UNAUTHORIZED', title: 'u', status: 401, timestamp: 't' },
+      }),
+    })
+    await expect(client.value('/auth/me')).rejects.toBeInstanceOf(ApiRequestError)
+    expect(tokenStore.get()).toBeNull()
+    expect(refreshStore.get()).toBeNull()
+  })
+})

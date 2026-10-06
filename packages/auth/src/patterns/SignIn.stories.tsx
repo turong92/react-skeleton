@@ -37,6 +37,31 @@ export const PasswordOnly: Story = {
   },
 }
 
+/** 「보기」 토글은 입력칸 옆 같은 줄에 — 좁은 화면(20rem)에서도 아래로 밀려 내려가지 않는다 */
+export const PasswordToggleBesideInput: Story = {
+  decorators: [
+    (Story) => (
+      <div style={{ width: '20rem' }}>
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvas, userEvent }) => {
+    const input = canvas.getByLabelText(/^Password/)
+    const toggle = canvas.getByRole('button', { name: 'Show' })
+    const box = input.getBoundingClientRect()
+    const button = toggle.getBoundingClientRect()
+    await expect(button.top).toBeGreaterThanOrEqual(box.top - 1)
+    await expect(button.bottom).toBeLessThanOrEqual(box.bottom + 1)
+    await expect(button.left).toBeGreaterThanOrEqual(box.right - 1)
+    await expect(button.right).toBeLessThanOrEqual(
+      (input.closest('form') as HTMLElement).getBoundingClientRect().right + 1,
+    )
+    await userEvent.click(toggle)
+    await expect(input).toHaveAttribute('type', 'text')
+  },
+}
+
 export const AllMethods: Story = {
   args: { methods: { magicLink: true, social: [{ provider: 'google' }, { provider: 'kakao' }] } },
   play: async ({ canvas, args, userEvent }) => {

@@ -16,7 +16,7 @@ export type PasswordFieldProps = {
   name?: string
 }
 
-/** 비밀번호 칸 + 보이기 토글. 눌러도 값 · 포커스는 그대로(토글 버튼이 입력칸 옆) */
+/** 비밀번호 칸 + 보이기 토글. 눌러도 값 · 포커스는 그대로 — 토글은 입력칸 옆 같은 줄에 머문다(좁은 화면에서도 줄바꿈 없음) */
 export function PasswordField({
   label,
   value,
@@ -32,7 +32,7 @@ export function PasswordField({
   return (
     <Field label={label} error={error} hint={hint} required={required}>
       {(control) => (
-        <div className={styles.row}>
+        <div className={styles.passwordRow}>
           <Input
             {...control}
             name={name}

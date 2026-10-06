@@ -37,6 +37,23 @@
   gap: var(--space-sm);
 }
 
+.passwordRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+/* 입력칸이 남는 폭을 쓰고(줄어들 수 있게 min-width: 0) 토글은 제 크기 그대로 — 좁은 화면에서도 아래로 밀려 내려가지 않는다 */
+.passwordRow > :first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.passwordRow > button {
+  flex: none;
+  white-space: nowrap;
+}
+
 .between {
   justify-content: space-between;
 }

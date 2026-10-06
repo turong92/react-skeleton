@@ -111,6 +111,7 @@ export const KeyboardOpensAndEscapeReturnsFocus: Story = {
     // Esc 는 브라우저가 하는 일 — 같은 경로(cancel → close)로 대신한다(UI/Dialog 스토리 참고)
     dialog.requestClose()
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
-    await expect(bell).toHaveFocus()
+    // 포커스 복귀는 부모가 닫힘을 반영한 뒤(다음 작업)에 일어난다 — `<dialog>` 가 닫힌 것만으로는 아직이다
+    await waitFor(() => expect(bell).toHaveFocus())
   },
 }

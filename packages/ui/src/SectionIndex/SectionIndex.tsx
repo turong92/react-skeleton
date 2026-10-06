@@ -1,4 +1,4 @@
-import { useEffect, useState, type MouseEvent } from 'react'
+import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import styles from './SectionIndex.module.css'
 
 export type SectionIndexItem = {
@@ -24,6 +24,8 @@ export type SectionIndexProps = {
 export function SectionIndex({ items, label, onJump }: SectionIndexProps) {
   const [current, setCurrent] = useState<string | null>(null)
   const idsKey = items.map((item) => item.id).join('\n')
+  /** 방금 목차로 간 절 — 사용자가 직접 스크롤(휠 · 터치 · 키 · 포인터)하기 전까지는 관찰자가 「현재」를 덮어쓰지 못한다 */
+  const jumped = useRef<string | null>(null)
 
   useEffect(() => {
     if (typeof IntersectionObserver === 'undefined') return
@@ -33,6 +35,8 @@ export function SectionIndex({ items, label, onJump }: SectionIndexProps) {
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) visible.set(entry.target.id, entry.isIntersecting)
+        // 관찰자의 보고는 비동기라 점프 **전** 상태를 늘 늦게 싣고 올 수 있다 — 방금 누른 절을 되돌리지 않는다
+        if (jumped.current) return
         const first = ids.find((id) => visible.get(id))
         if (first) setCurrent(first)
       },
@@ -42,7 +46,15 @@ export function SectionIndex({ items, label, onJump }: SectionIndexProps) {
       const section = document.getElementById(id)
       if (section) observer.observe(section)
     }
-    return () => observer.disconnect()
+    const release = () => {
+      jumped.current = null
+    }
+    const events = ['wheel', 'touchstart', 'keydown', 'pointerdown'] as const
+    for (const name of events) window.addEventListener(name, release, { passive: true })
+    return () => {
+      observer.disconnect()
+      for (const name of events) window.removeEventListener(name, release)
+    }
   }, [idsKey])
 
   function jump(event: MouseEvent<HTMLAnchorElement>, id: string) {
@@ -50,6 +62,7 @@ export function SectionIndex({ items, label, onJump }: SectionIndexProps) {
     if (!section) return // 앵커 기본 동작에 맡긴다
     event.preventDefault()
     onJump?.(id)
+    jumped.current = id
     section.scrollIntoView({ block: 'start' })
     document.getElementById(`${id}-title`)?.focus({ preventScroll: true })
     setCurrent(id)

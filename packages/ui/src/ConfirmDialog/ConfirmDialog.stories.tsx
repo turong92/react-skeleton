@@ -103,6 +103,9 @@ export const TypedConfirmationIsClearedWhenReopened: Story = {
     // 합성 키 입력은 `<dialog>` 의 Esc 를 못 하니 같은 경로(`cancel` → `close`)를 `requestClose()` 로 탄다
     ;(screen.getByRole('dialog') as HTMLDialogElement).requestClose()
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    // `requestClose()` 는 `<dialog>` 를 바로 닫지만 부모의 `open` 상태는 `close` 이벤트(다음 작업)로 내려간다 — 그 전에 다시 누르면 「열기」가 아직 true 인 상태에 묻혀 사라진다.
+    // 부모가 닫힘을 반영하면 `Dialog` 가 포커스를 여는 버튼으로 돌려주므로 그것을 기다린다(느린 러너에서 이 경주가 졌다)
+    await waitFor(() => expect(canvas.getByRole('button', { name: 'Delete…' })).toHaveFocus())
     await userEvent.click(canvas.getByRole('button', { name: 'Delete…' }))
     await screen.findByRole('dialog', { name: 'Delete project' })
     await expect(screen.getByLabelText('Type my-project to confirm')).toHaveValue('')

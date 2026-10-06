@@ -1,3 +1,4 @@
+import { ApiRequestError } from '@skeleton/api-client'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { LegalApi } from './legalApi'
 import { documentQuery, documentsQuery, historyQuery, legalKeys, myConsentsQuery } from './queries'
@@ -9,9 +10,19 @@ import type { ConsentRequest, ConsentSource, ReadDocumentOptions } from './types
  */
 const FIVE_MINUTES = 5 * 60_000
 
+/**
+ * 다시 시도할까 — 모듈이 없는 백엔드의 답(401 · 403 · 404 · 405)은 다시 물어도 같다. 기본 재시도(3번 · 지수 대기, 약 7초)를 그대로 두면 가입 폼이 그동안 「불러오는 중」으로 막힌다(e2e 로 확인).
+ * 일시 실패(네트워크 · 5xx)만 두 번 더 해 본다.
+ */
+export function legalRetry(failureCount: number, error: unknown): boolean {
+  if (error instanceof ApiRequestError && [401, 403, 404, 405].includes(error.apiError.status))
+    return false
+  return failureCount < 2
+}
+
 /** 현재 판 목록(종류 · 언어마다 한 줄) */
 export function useLegalDocuments(api: LegalApi) {
-  return useQuery({ ...documentsQuery(api), staleTime: FIVE_MINUTES })
+  return useQuery({ ...documentsQuery(api), staleTime: FIVE_MINUTES, retry: legalRetry })
 }
 
 /** 문서 한 건 — `enabled` 가 false 면 열릴 때까지 가져오지 않는다(다이얼로그) */
@@ -21,7 +32,12 @@ export function useLegalDocument(
   options: ReadDocumentOptions & { enabled?: boolean } = {},
 ) {
   const { enabled = true, ...read } = options
-  return useQuery({ ...documentQuery(api, type, read), enabled, staleTime: FIVE_MINUTES })
+  return useQuery({
+    ...documentQuery(api, type, read),
+    enabled,
+    staleTime: FIVE_MINUTES,
+    retry: legalRetry,
+  })
 }
 
 /** 내 동의 상태 — 로그인한 사람만 부른다 */

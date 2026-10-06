@@ -21,8 +21,8 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 
 | 필요한 것 | 고를 것(id) | react `new-project.sh` 조각 | kotlin `new-project.sh` 조각 | 그래도 손으로 써야 하는 것 |
 |---|---|---|---|---|
-| 로그인 (이메일 · 비밀번호) · 로그인한 사람만 보는 화면 | `auth` | (기본 포함 — 덧붙일 것 없음) | (모듈 없음) | 기본 포함. 회원가입 · 비밀번호 재설정은 없다(백엔드 AuthAccountRepository + 화면을 앱이 만든다). 로그인 화면은 Patterns/Login 을 복사한다. |
-| 소셜 로그인 (구글 · 카카오 · 네이버) | `social-login` | (기본 포함 — 덧붙일 것 없음) | `--modules auth-social,auth-social-google` — `auth-social-google` \| `auth-social-kakao` \| `auth-social-naver` 중 고른다 | 소셜 버튼과 `/auth/callback` 페이지는 Pattern 이 없다 — Patterns/Login 을 복사해 버튼을 더하고 packages/auth/README.md 의 스니펫을 쓴다. 제공자 clientId 는 프런트 환경변수, clientSecret 은 백엔드 설정에만. |
+| 로그인 (이메일 · 비밀번호) · 로그인한 사람만 보는 화면 | `auth` | (기본 포함 — 덧붙일 것 없음) | (모듈 없음) | 기본 포함. 로그인 · 가입 · 메일 확인 · 비밀번호 재설정 · 계정 설정은 createAuthRoutes 한 번(account-lifecycle). 화면의 모양은 Patterns/Auth/* 스토리를 보고 labels · 설정으로 맞춘다. |
+| 소셜 로그인 (구글 · 카카오 · 네이버) | `social-login` | (기본 포함 — 덧붙일 것 없음) | `--modules auth-social,auth-social-google` — `auth-social-google` \| `auth-social-kakao` \| `auth-social-naver` 중 고른다 | VITE_AUTH_METHODS 에 제공자 코드(google · kakao · naver)와 VITE_SOCIAL_<제공자>_CLIENT_ID 를 주면 로그인 화면에 버튼이, /auth/callback 라우트가 생긴다. clientSecret 은 백엔드 skeleton.auth-social.providers.* 에만. |
 | 게시판 · 글쓰기 · 댓글 · 대댓글 · 공감(반응) | `board` | `--packages board` | `--modules board,board-jdbc` | 게시판 코드 만들기(운영자 API), 목록 · 상세 · 글쓰기 라우트(apps/sample 의 BoardPage · BoardPostPage · BoardFormPage 를 복사), 반응 라벨 · 아이콘 맵, 반응 종류는 백엔드 yml(skeleton.board.reaction.types). |
 | 알림 (종 · 목록 · 안 읽은 수) | `notifications` | `--packages notifications` | `--modules notification,notification-jdbc` | 헤더에 NotificationBell 배치와 알림 API 인스턴스(앱이 한 번 만든다). 알림을 만드는 쪽은 백엔드 코드(NotificationPublisher.publish). |
 | 알림이 즉시 뜬다 (실시간) | `live-notifications` | `--packages notifications,realtime` | `--modules notification,notification-jdbc,notification-sse` — `notification-sse` \| `notification-websocket` 중 고른다 | 연결 훅 한 개(apps/sample/src/notifications/useLiveNotifications.ts 를 복사)와 백엔드의 SSE 또는 WebSocket 모듈 선택. |
@@ -46,6 +46,9 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 | 화면 부품 (버튼 · 입력 · 표 · 모달 · 탭 · 날짜 선택) | `ui` | (기본 포함 — 덧붙일 것 없음) | (모듈 없음) | 기본 포함. 쓰기 전에 docs/ui-catalog.md 에서 그 부품의 스토리를 읽고 같은 사용법으로 쓴다. 날 요소를 쓰지 않는다. |
 | 참조 앱을 같이 가져가서 보고 따라 하기 | `app-sample` | `--with-sample` | `--modules idempotency,notification-jdbc,notification-sse,storage-s3,job-queue-jdbc,board,board-jdbc,alert-jdbc` | 샘플은 참조다 — 쓰지 않을 화면은 지운다. 백엔드는 kotlin-skeleton apps/sample 과 짝. |
 | 백엔드 모듈을 눌러 보는 확인 벤치 | `app-workbench` | `--with-workbench` | (모듈 없음) | 복사 대상이 아니다 — 백엔드 개발자가 모듈을 눈으로 확인하는 용도. |
+| 회원가입 · 이메일 인증 · 비밀번호 재설정 · 계정 설정(비밀번호 · 이메일 · 세션 · 삭제) | `auth` + `account-lifecycle` + `session-refresh` | (기본 포함 — 덧붙일 것 없음) | `--modules account,account-jdbc,auth-session,auth-session-jdbc` | 백엔드는 account · auth-session(+ -jdbc) 모듈과 메일(notification-mail) · 링크 주소 설정. 프런트는 createAuthRoutes 한 번(apps/starter 의 auth/routes.tsx 를 따른다), 켜는 로그인 방법은 VITE_AUTH_METHODS, 문구는 labels(koAuthLabels). |
+| 이메일 링크(매직링크) 로그인 | `magic-link-login` | (기본 포함 — 덧붙일 것 없음) | `--modules auth-magic-link` | 백엔드 auth-magic-link + 메일. 프런트는 VITE_AUTH_METHODS 에 magic-link(기본 켜짐) — 로그인 화면 · /magic-link 도착 화면이 따라온다. |
+| 운영자 계정 관리 표 (검색 · 정지 · 복구 · 역할) | `account-admin` | (기본 포함 — 덧붙일 것 없음) | `--modules account` | 백엔드 skeleton.account.admin.enabled=true. 프런트는 apps/sample 의 AdminAccountsPage 와 RequireRole 라우트를 복사한다. |
 
 ## 전체 목록
 
@@ -54,7 +57,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 | id | 무엇을 주는가 | 켜는 법 | 백엔드 | 상태 | 키워드 (ko / en) |
 |---|---|---|---|---|---|
 | `api-client` | 백엔드 REST 호출 한 곳 — 응답 envelope 벗기기 · 표준 에러(ApiRequestError · 에러 코드) · traceparent · 멱등 키 · 서버 시각 연결점을 갖춘 클라이언트. | 항상 | platform | stable | API 호출, 백엔드 연결, 에러 처리, 에러 코드, 멱등 키, traceId / api client, rest, http client, error codes, idempotency key, trace id |
-| `auth` | 로그인 — 토큰 저장소 · 이메일/비밀번호 로그인 · 소셜 로그인 흐름 · dev-login · 401 처리, AuthProvider/RequireAuth 로 로그인한 사람만 보는 라우트. | 항상 | auth | stable | 로그인, 로그아웃, 인증, 토큰, JWT, 보호 라우트 / login, logout, auth, authentication, jwt, token |
+| `auth` | 로그인 · 계정 수명주기 — 토큰 갱신(401 → 갱신 한 번 → 재시도, 회전 안전 · 탭 락) · 가입 · 메일 인증 · 비밀번호 재설정 · 링크 로그인 · 소셜 · 계정 설정(비밀번호 · 이메일 · 로그인 수단 · 세션 · 삭제) 화면과 라우트 한 벌, 방법은 설정으로 켜고 끈다. | 항상 | auth | stable | 로그인, 로그아웃, 인증, 토큰, JWT, 보호 라우트 / login, logout, auth, authentication, jwt, token |
 | `realtime` | 서버가 밀어 주는 실시간 연결 — SSE(탭 숨김 일시정지 · 유휴 감시 · 재연결)와 STOMP WebSocket 알림 클라이언트. | --packages realtime | (경로만) | stable | 실시간, 실시간 알림, SSE, 웹소켓, 푸시, 연결 유지 / realtime, sse, server-sent events, websocket, stomp, push |
 | `i18n` | 화면 문구 다국어 — ICU 메시지 · 브라우저 언어 감지/저장 · 지연 로딩 사전 · useT() · 사전 짝 맞춤 테스트 도구. | --packages i18n | — | stable | 다국어, 번역, 언어 전환, 한국어 영어, 국제화, 로케일 / i18n, internationalization, localization, translation, locale, multi-language |
 | `notifications` | 알림 받은편지함 — 목록 · 안 읽은 수 · 읽음/모두 읽음 · 실시간 이벤트로 캐시 갱신, NotificationBell/List 부품과 TanStack Query 훅. | --packages notifications | notification, notification-jdbc | stable | 알림, 알림 목록, 알림 종, 안 읽은 알림, 읽음 처리, 받은편지함 / notifications, inbox, notification bell, unread count, mark as read |
@@ -83,7 +86,11 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 
 | id | 무엇을 주는가 | 켜는 법 | 백엔드 | 상태 | 키워드 (ko / en) |
 |---|---|---|---|---|---|
-| `social-login` | 소셜 로그인의 프런트 절반 — 제공자 인가 주소 만들기 · state 검증 · 콜백의 code 를 백엔드로 보내 로그인 처리(화면의 버튼과 /auth/callback 페이지는 직접 만든다). | 항상 | auth-social | stable | 소셜 로그인, 구글 로그인, 카카오 로그인, 네이버 로그인, 간편 로그인, OAuth / social login, google login, kakao login, naver login, oauth, sso |
+| `social-login` | 소셜 로그인의 프런트 절반 — 제공자 인가 주소 · state 검증(탭에 묶임 · 한 번만) · 콜백의 code 를 백엔드로 보내 로그인 처리, 로그인한 계정에 제공자를 더하는 연결 흐름(createSocialLinkFlow). 버튼 · 콜백 화면은 SignInScreen · createAuthRoutes 가 그린다. | 항상 | auth-social | stable | 소셜 로그인, 구글 로그인, 카카오 로그인, 네이버 로그인, 간편 로그인, OAuth / social login, google login, kakao login, naver login, oauth, sso |
+| `account-lifecycle` | 계정 수명주기 화면 한 벌 — 가입(서버 정책 힌트 · 캡차 · 동의 슬롯) · 메일 확인 안내 · 인증/재설정/이메일 변경 링크 도착 · 로그인(방법은 설정) · 계정 설정 · 정지/차단 안내. createAuthRoutes 가 라우트까지 한 번에. | 항상 | account, account-jdbc, auth-session, auth-session-jdbc | stable | 회원가입, 가입 화면, 이메일 인증, 메일 확인, 비밀번호 재설정, 비밀번호 찾기 / sign up, registration screen, verify email, check your email, reset password, forgot password |
+| `session-refresh` | 액세스 토큰 자동 갱신 — 401 이면 갱신을 한 번으로 합쳐(single-flight) 요청을 한 번만 다시 보낸다. 회전하는 리프레시 토큰을 안전하게 저장하고 탭 사이를 락 · storage 이벤트로 맞추며, 재사용 · 만료 때는 깨끗이 로그아웃. body · cookie 모드. | 항상 | auth-session, auth-session-jdbc | stable | 토큰 갱신, 리프레시 토큰, 자동 로그인 유지, 세션 만료, 탭 동기화 / token refresh, refresh token, silent refresh, session expiry, cross-tab sync |
+| `magic-link-login` | 이메일 링크 로그인 — 로그인 화면의 「링크 받기」 · 메일 확인 안내 · 링크를 열면 로그인되는 도착 화면. 비밀번호 없이 쓰거나 비밀번호와 나란히 켠다. | 항상 | auth-magic-link | stable | 링크 로그인, 매직링크, 비밀번호 없는 로그인, 이메일 로그인 / magic link, passwordless, email sign in |
+| `account-admin` | 운영자 계정 표(선택 내보내기 @skeleton/auth/admin) — 검색 · 상태 필터 · 정지 · 해제 · 삭제 유예 복구 · 역할 부여/회수. | 항상 | account | stable | 운영자 도구, 계정 관리, 계정 정지, 관리자 화면 / admin tools, account management, suspend account, admin panel |
 | `live-notifications` | 알림이 새로고침 없이 즉시 뜬다 — 실시간 연결(SSE 또는 WebSocket)로 받은 이벤트를 알림 캐시에 넣어 종 · 목록 · 안 읽은 수가 바로 바뀐다. | --packages notifications | (경로만) | stable | 실시간 알림, 알림 즉시 표시, 푸시 알림, 알림 종 실시간 / live notifications, realtime notifications, push notifications, sse notifications |
 | `landing-page` | 공개 첫 화면 — Hero · 기능 · 한마디 · 요금제 · FAQ · 마지막 권유 · 푸터를 Patterns/Landing 한 장으로 조립해 시작한다. | --packages marketing | — | stable | 랜딩, 랜딩 페이지, 홍보 페이지, 첫 화면, 홈페이지 / landing page, homepage, marketing page, hero section |
 | `pricing-page` | 요금제 페이지 — 월/연 토글 · 절약 % · 강조 요금제 · 문의형 · 결제 질문 FAQ 를 데이터(plans)로 그리고 선택은 onSelect 로 받는다. | --packages marketing | — | stable | 요금제, 가격표, 플랜, 월 연 결제 토글, 구독 요금 / pricing page, pricing table, plans, subscription pricing |
@@ -114,19 +121,19 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 - 쓰지 않는 경우: 실시간 스트림(SSE · WebSocket) → realtime / 페이지 · 컴포넌트에서 fetch/axios 를 직접 부르지 않는다 — 앱의 api/client.ts 인스턴스를 훅(useQuery)으로 쓴다
 - 키워드: API 호출, 백엔드 연결, 에러 처리, 에러 코드, 멱등 키, traceId, 응답 형식 / api client, rest, http client, error codes, idempotency key, trace id, axios
 
-### `auth` — 로그인 — 토큰 저장소 · 이메일/비밀번호 로그인 · 소셜 로그인 흐름 · dev-login · 401 처리, AuthProvider/RequireAuth 로 로그인한 사람만 보는 라우트.
+### `auth` — 로그인 · 계정 수명주기 — 토큰 갱신(401 → 갱신 한 번 → 재시도, 회전 안전 · 탭 락) · 가입 · 메일 인증 · 비밀번호 재설정 · 링크 로그인 · 소셜 · 계정 설정(비밀번호 · 이메일 · 로그인 수단 · 세션 · 삭제) 화면과 라우트 한 벌, 방법은 설정으로 켜고 끈다.
 
 - 종류 · 상태: package · stable
 - 위치: `@skeleton/auth` (`packages/auth`)
 - 켜는 법: 모든 프로젝트에 들어간다
-- 필요한 것: `api-client`
-- 백엔드: 모듈 `auth` · 경로 `/api/v1/auth`
-- 주요 진입점: `createTokenStore` · `createAuthApi` · `createAuthSession` · `AuthProvider` · `useAuth` · `RequireAuth` · `createAuthHeadersProvider` · `createUnauthorizedHandler`
+- 필요한 것: `api-client` · `ui`
+- 백엔드: 모듈 `auth` · 있으면 더 켜지는 `account` · `account-jdbc` · `auth-session` · `auth-session-jdbc` · `auth-magic-link` · 경로 `/api/v1/auth` · `/api/v1/account`
+- 주요 진입점: `createTokenStore` · `createRefreshStore` · `createAuthApi` · `createAuthSession` · `createSessionRefresher` · `createAccountApi` · `createAuthRoutes` · `AuthProvider` · `useAuth` · `RequireAuth` · `RequireRole` · `SignInScreen` · `SignUpScreen` · `AccountSettings` · `createAuthHeadersProvider` · `createUnauthorizedHandler`
 - 보고 따라 할 스토리: `packages/auth/src/RequireAuth.stories.tsx`
-- 복사해 시작할 Patterns: `apps/storybook/src/patterns/LoginPage.stories.tsx` · `apps/storybook/src/patterns/ForbiddenPage.stories.tsx`
+- 복사해 시작할 Patterns: `apps/storybook/src/patterns/LoginPage.stories.tsx` · `apps/storybook/src/patterns/ForbiddenPage.stories.tsx` · `packages/auth/src/patterns/SignIn.stories.tsx` · `packages/auth/src/patterns/SignUp.stories.tsx` · `packages/auth/src/patterns/MailLinkLandings.stories.tsx` · `packages/auth/src/patterns/AccountSettings.stories.tsx`
 - 문서: `packages/auth/README.md`
-- 쓰지 않는 경우: 회원가입 · 비밀번호 재설정 · 이메일 인증은 없다 — 백엔드 앱의 AuthAccountRepository 와 화면을 앱이 만든다 / 권한(roles) 정책 자체는 백엔드 — 이 패키지는 토큰 · 라우트 가드만
-- 키워드: 로그인, 로그아웃, 인증, 토큰, JWT, 보호 라우트, 로그인 상태, 세션 / login, logout, auth, authentication, jwt, token, session, protected route, sign in
+- 쓰지 않는 경우: 권한(roles) 정책 자체는 백엔드 — 이 패키지는 토큰 · 라우트 가드(RequireAuth · RequireRole)만 / 약관 동의 저장은 없다 — 가입 화면의 동의 슬롯은 체크한 판을 콜백으로 보고할 뿐(백엔드 동의 모듈이 아직 없다) / 로그인 화면의 모양(색 · 로고 · 문구 톤)은 앱의 몫 — 문구는 labels prop(기본 영어, koAuthLabels 한국어)
+- 키워드: 로그인, 로그아웃, 인증, 토큰, JWT, 보호 라우트, 로그인 상태, 세션, 회원가입, 가입, 이메일 인증, 비밀번호 재설정, 비밀번호 찾기, 계정 설정, 계정 삭제, 토큰 갱신, 리프레시 토큰, 세션 목록 / login, logout, auth, authentication, jwt, token, session, protected route, sign in, sign up, registration, email verification, password reset, forgot password, account settings, delete account, refresh token, token refresh, active sessions
 
 ### `realtime` — 서버가 밀어 주는 실시간 연결 — SSE(탭 숨김 일시정지 · 유휴 감시 · 재연결)와 STOMP WebSocket 알림 클라이언트.
 
@@ -352,18 +359,69 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 - 쓰지 않는 경우: 복사 대상이 아니다 — 스타터가 워크벤치를 모른다(날 요소 · 인라인 스타일 예외 앱) / 제품 화면의 모범은 app-sample 과 Patterns
 - 키워드: 워크벤치, 백엔드 확인, 시각적 테스트, 모듈 데모 / workbench, backend smoke test, visual test bench, module demo
 
-### `social-login` — 소셜 로그인의 프런트 절반 — 제공자 인가 주소 만들기 · state 검증 · 콜백의 code 를 백엔드로 보내 로그인 처리(화면의 버튼과 /auth/callback 페이지는 직접 만든다).
+### `social-login` — 소셜 로그인의 프런트 절반 — 제공자 인가 주소 · state 검증(탭에 묶임 · 한 번만) · 콜백의 code 를 백엔드로 보내 로그인 처리, 로그인한 계정에 제공자를 더하는 연결 흐름(createSocialLinkFlow). 버튼 · 콜백 화면은 SignInScreen · createAuthRoutes 가 그린다.
 
 - 종류 · 상태: pattern · stable
 - 위치: `@skeleton/auth` (`packages/auth/src/social.ts`)
 - 켜는 법: 모든 프로젝트에 들어간다
 - 필요한 것: `auth`
 - 백엔드: 모듈 `auth-social` · `auth-social-google` | `auth-social-kakao` | `auth-social-naver` 중 하나 이상 · 경로 `/api/v1/auth/social`
-- 주요 진입점: `createSocialLoginFlow` · `useSocialLoginCallback` · `buildAuthorizeUrl` · `parseSocialCallback` · `SOCIAL_AUTHORIZE_PRESETS`
-- 복사해 시작할 Patterns: `apps/storybook/src/patterns/LoginPage.stories.tsx`
+- 주요 진입점: `createSocialLoginFlow` · `createSocialLinkFlow` · `useSocialLoginCallback` · `buildAuthorizeUrl` · `parseSocialCallback` · `SOCIAL_AUTHORIZE_PRESETS` · `SocialCallbackScreen`
+- 복사해 시작할 Patterns: `packages/auth/src/patterns/SignIn.stories.tsx` · `packages/auth/src/patterns/MailLinkLandings.stories.tsx`
 - 문서: `packages/auth/README.md`
-- 쓰지 않는 경우: 소셜 버튼 · 콜백 페이지를 그려 주는 Pattern 은 없다 — LoginPage 를 복사해 버튼을 더하고 README 의 스니펫을 쓴다(어느 앱도 아직 쓰지 않는다) / clientSecret 은 프런트에 두지 않는다 — 백엔드 skeleton.auth-social.providers.* 에만 / 이메일 가입 · 계정 연결 정책은 백엔드(OAuthAccountProvisioningPolicy)
+- 쓰지 않는 경우: clientSecret 은 프런트에 두지 않는다 — 백엔드 skeleton.auth-social.providers.* 에만 / 이메일 가입 · 계정 연결 정책은 백엔드(자동 합치지 않는다 — 같은 이메일이면 ACCOUNT.SOCIAL_EMAIL_CONFLICT, 설정의 계정 연결로) / 제공자마다 콜백 주소 · clientId 를 콘솔에 등록해야 한다(VITE_SOCIAL_<제공자>_CLIENT_ID)
 - 키워드: 소셜 로그인, 구글 로그인, 카카오 로그인, 네이버 로그인, 간편 로그인, OAuth / social login, google login, kakao login, naver login, oauth, sso
+
+### `account-lifecycle` — 계정 수명주기 화면 한 벌 — 가입(서버 정책 힌트 · 캡차 · 동의 슬롯) · 메일 확인 안내 · 인증/재설정/이메일 변경 링크 도착 · 로그인(방법은 설정) · 계정 설정 · 정지/차단 안내. createAuthRoutes 가 라우트까지 한 번에.
+
+- 종류 · 상태: pattern · stable
+- 위치: `@skeleton/auth` (`packages/auth/src/routes/createAuthRoutes.tsx`)
+- 켜는 법: 모든 프로젝트에 들어간다
+- 필요한 것: `auth`
+- 백엔드: 모듈 `account` · `account-jdbc` · `auth-session` · `auth-session-jdbc` · 경로 `/api/v1/account` · `/api/v1/auth`
+- 주요 진입점: `createAuthRoutes` · `SignInScreen` · `SignUpScreen` · `VerifyEmailScreen` · `ForgotPasswordScreen` · `ResetPasswordScreen` · `AccountSettings` · `AccountStateNotice` · `defaultAuthLabels` · `koAuthLabels`
+- 복사해 시작할 Patterns: `packages/auth/src/patterns/SignUp.stories.tsx` · `packages/auth/src/patterns/MailLinkLandings.stories.tsx` · `packages/auth/src/patterns/AccountSettings.stories.tsx`
+- 문서: `packages/auth/README.md`
+- 쓰지 않는 경우: 메일을 보내는 쪽(notification-mail)과 링크 주소(skeleton.account.mail.link-base-url)는 백엔드 설정 — 프런트의 /verify-email · /reset-password · /magic-link … 경로와 맞춘다 / 백엔드가 어떤 로그인 방법을 열었는지 알려 주는 엔드포인트는 없다 — 앱 설정(VITE_AUTH_METHODS)과 백엔드 모듈이 같아야 한다 / 동의(약관 판) 저장은 없다 — 슬롯이 체크한 판을 콜백으로 보고할 뿐
+- 키워드: 회원가입, 가입 화면, 이메일 인증, 메일 확인, 비밀번호 재설정, 비밀번호 찾기, 계정 설정, 프로필, 로그인 세션 관리, 계정 삭제, 정지된 계정 / sign up, registration screen, verify email, check your email, reset password, forgot password, account settings, profile, active sessions, delete account, suspended account
+
+### `session-refresh` — 액세스 토큰 자동 갱신 — 401 이면 갱신을 한 번으로 합쳐(single-flight) 요청을 한 번만 다시 보낸다. 회전하는 리프레시 토큰을 안전하게 저장하고 탭 사이를 락 · storage 이벤트로 맞추며, 재사용 · 만료 때는 깨끗이 로그아웃. body · cookie 모드.
+
+- 종류 · 상태: pattern · stable
+- 위치: `@skeleton/auth` (`packages/auth/src/sessionRefresher.ts`)
+- 켜는 법: 모든 프로젝트에 들어간다
+- 필요한 것: `auth`
+- 백엔드: 모듈 `auth-session` · `auth-session-jdbc` · 경로 `/api/v1/auth/refresh` · `/api/v1/auth/logout`
+- 주요 진입점: `createSessionRefresher` · `createRefreshStore` · `createTokenStore` · `createAuthSession`
+- 문서: `packages/auth/README.md`
+- 쓰지 않는 경우: body 모드(기본)의 리프레시 토큰은 JS 가 쥔다 — localStorage 에 두면 XSS 에 노출된다. 쿠키 모드(HttpOnly)는 백엔드 skeleton.auth-session.delivery=cookie 와 VITE_AUTH_REFRESH_DELIVERY=cookie 를 함께 켠다 / 서버가 세션을 끊어도 이미 발급된 액세스 토큰은 만료(최대 15분)까지 산다
+- 키워드: 토큰 갱신, 리프레시 토큰, 자동 로그인 유지, 세션 만료, 탭 동기화 / token refresh, refresh token, silent refresh, session expiry, cross-tab sync
+
+### `magic-link-login` — 이메일 링크 로그인 — 로그인 화면의 「링크 받기」 · 메일 확인 안내 · 링크를 열면 로그인되는 도착 화면. 비밀번호 없이 쓰거나 비밀번호와 나란히 켠다.
+
+- 종류 · 상태: pattern · stable
+- 위치: `@skeleton/auth` (`packages/auth/src/screens/MagicLinkLanding.tsx`)
+- 켜는 법: 모든 프로젝트에 들어간다
+- 필요한 것: `auth`
+- 백엔드: 모듈 `auth-magic-link` · 경로 `/api/v1/auth/magic-link`
+- 주요 진입점: `SignInScreen` · `MagicLinkLanding` · `createAuthRoutes`
+- 복사해 시작할 Patterns: `packages/auth/src/patterns/SignIn.stories.tsx` · `packages/auth/src/patterns/MailLinkLandings.stories.tsx`
+- 문서: `packages/auth/README.md`
+- 쓰지 않는 경우: 링크는 15분 · 한 번만 — 도착 화면은 열자마자 한 번만 호출한다 / 없는 주소로 가입까지 해 줄지는 백엔드 skeleton.auth-magic-link.sign-up
+- 키워드: 링크 로그인, 매직링크, 비밀번호 없는 로그인, 이메일 로그인 / magic link, passwordless, email sign in
+
+### `account-admin` — 운영자 계정 표(선택 내보내기 @skeleton/auth/admin) — 검색 · 상태 필터 · 정지 · 해제 · 삭제 유예 복구 · 역할 부여/회수.
+
+- 종류 · 상태: pattern · stable
+- 위치: `@skeleton/auth` (`packages/auth/src/admin/AdminAccounts.tsx`)
+- 켜는 법: 모든 프로젝트에 들어간다
+- 필요한 것: `auth`
+- 백엔드: 모듈 `account` · 경로 `/api/v1/admin/accounts`
+- 주요 진입점: `@skeleton/auth/admin#AdminAccounts` · `@skeleton/auth/admin#AdminAccountsTable` · `@skeleton/auth/admin#createAdminAccountsApi`
+- 복사해 시작할 Patterns: `packages/auth/src/admin/AdminAccounts.stories.tsx`
+- 문서: `packages/auth/README.md`
+- 쓰지 않는 경우: 백엔드 skeleton.account.admin.enabled=true 와 ADMIN 역할이 있어야 열린다(RequireRole 은 화면용, 검사는 서버) / 사용자 지원용 상세 · 감사 로그 화면은 없다
+- 키워드: 운영자 도구, 계정 관리, 계정 정지, 관리자 화면 / admin tools, account management, suspend account, admin panel
 
 ### `live-notifications` — 알림이 새로고침 없이 즉시 뜬다 — 실시간 연결(SSE 또는 WebSocket)로 받은 이벤트를 알림 캐시에 넣어 종 · 목록 · 안 읽은 수가 바로 바뀐다.
 

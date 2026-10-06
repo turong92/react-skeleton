@@ -2,7 +2,7 @@ import type { PasswordViolation } from '../account/types'
 
 /**
  * 화면 문구. `@skeleton/auth` 는 번역을 모른다 — 모든 화면이 `labels?: Partial<AuthLabels>` 를 받고, 기본은 영어다.
- * 앱이 자기 i18n 으로 채워 넘긴다(`apps/sample/src/auth/authLabels.ts`). 값이 함수인 항목은 자리값이 낀 문장이다.
+ * 앱이 자기 i18n 으로 채워 넘긴다(`createAuthRoutes` 의 `useLabels` 훅). 값이 함수인 항목은 자리값이 낀 문장이다.
  */
 export type AuthLabels = {
   // 공통

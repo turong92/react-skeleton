@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # 새 프로젝트 한 줄 찍어내기: 복사 → 필요한 패키지만 남기기 → 앱 이름 바꾸기 → (선택) 스코프 바꾸기 → 문서 다시 쓰기.
 #
-#   scripts/new-project.sh <target-dir> <name> [--packages a,b,c] [--ssr] [--without-storybook] [--with-workbench] [--with-sample] [--scope @acme]
+#   scripts/new-project.sh <target-dir> <name> [--packages a,b,c] [--ssr] [--without-storybook] [--with-workbench] [--with-sample] [--auth-methods password,magic-link,google] [--scope @acme]
 #
 #   예) scripts/new-project.sh ~/work/ovation ovation
 #       scripts/new-project.sh ~/work/ovation ovation --packages realtime,notifications,storage
@@ -38,7 +38,7 @@ HELPER="$SRC/scripts/new-project.d/stamp.mjs"
 
 usage() {
   cat <<'EOF2'
-usage: scripts/new-project.sh <target-dir> <name> [--packages a,b,c] [--ssr] [--without-storybook] [--with-workbench] [--with-sample] [--scope @acme]
+usage: scripts/new-project.sh <target-dir> <name> [--packages a,b,c] [--ssr] [--without-storybook] [--with-workbench] [--with-sample] [--auth-methods a,b] [--scope @acme]
 
   <target-dir>      새로 만들 디렉토리 (이미 있으면 거부, 소스 레포 안이면 거부)
   <name>            앱 이름 = apps/<name> (소문자 · 숫자 · 하이픈, `workbench` · `storybook` · `sample` 은 예약)
@@ -46,6 +46,7 @@ usage: scripts/new-project.sh <target-dir> <name> [--packages a,b,c] [--ssr] [--
   --ssr             앱을 서버 렌더 스타터(apps/starter-ssr: Node 서버 + 하이드레이션)로 — 기본은 SPA 스타터(apps/starter)
   --without-storybook  스토리집(apps/storybook) · 스토리 · 에이전트 안내 · 카탈로그를 떼고 찍는다 — 기본은 모두 따라온다
   --with-workbench  apps/workbench(백엔드 확인용 시각적 테스트 벤치)도 남긴다 — 모든 패키지가 남는다
+  --auth-methods    로그인 화면이 켤 방법의 기본값(쉼표): password · magic-link · 소셜 제공자 코드(google · kakao · naver). 기본 password,magic-link — 환경변수 VITE_AUTH_METHODS 로 언제든 바꾼다
   --with-sample     참조 앱 apps/sample(Notes)도 남긴다 — 백엔드 kotlin-skeleton 의 apps/sample 과 짝. 기본은 떼고 찍는다
   --scope           패키지 스코프를 바꾼다 (예: @acme → @acme/ui). 기본 @skeleton
 EOF2
@@ -68,6 +69,7 @@ WITH_WORKBENCH=0
 WITH_SAMPLE=0
 WITH_STORYBOOK=1
 SSR=0
+AUTH_METHODS=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --packages) [ $# -ge 2 ] && [ "${2#--}" = "$2" ] || die_usage "--packages needs a value"; PACKAGES_ARG="$2"; shift 2 ;;
@@ -76,6 +78,8 @@ while [ $# -gt 0 ]; do
     --scope=*) SCOPE="${1#--scope=}"; shift ;;
     --with-workbench) WITH_WORKBENCH=1; shift ;;
     --with-sample) WITH_SAMPLE=1; shift ;;
+    --auth-methods) [ $# -ge 2 ] && [ "${2#--}" = "$2" ] || die_usage "--auth-methods needs a value"; AUTH_METHODS="$2"; shift 2 ;;
+    --auth-methods=*) AUTH_METHODS="${1#--auth-methods=}"; shift ;;
     --without-storybook) WITH_STORYBOOK=0; shift ;;
     --with-showcase) die_usage "--with-showcase is gone: the showcase moved into Storybook (apps/storybook), which every project keeps by default — use --without-storybook to drop it" ;;
     --ssr) SSR=1; shift ;;
@@ -92,6 +96,7 @@ echo "$NAME" | grep -Eq '^[a-z][a-z0-9-]*$' || die_usage "name must be lower-cas
 [ "$NAME" != sample ] || die_usage "the name 'sample' is reserved (apps/sample)"
 [ "$NAME" != storybook ] || die_usage "the name 'storybook' is reserved (apps/storybook)"
 [ "$NAME" != storybook-app ] || die_usage "the name 'storybook-app' is reserved (the package name of apps/storybook)"
+if [ -n "$AUTH_METHODS" ]; then echo "$AUTH_METHODS" | grep -Eq '^[a-z][a-z-]*(,[a-z][a-z-]*)*$' || die_usage "--auth-methods must be a comma list like password,magic-link,google: $AUTH_METHODS"; fi
 echo "$SCOPE" | grep -Eq '^@[a-z][a-z0-9-]*$' || die_usage "scope must look like @acme: $SCOPE"
 
 ALL_PACKAGES="$(valid_packages)"
@@ -133,7 +138,7 @@ echo "   app: apps/$NAME (from apps/$([ "$SSR" = 1 ] && echo starter-ssr || echo
 echo "== copy → $TARGET"
 node "$HELPER" copy "$SRC" "$TARGET"
 echo "== transform"
-node "$HELPER" apply "$TARGET" "$NAME" "$SCOPE" "$WITH_WORKBENCH" "$KEEP" "$SSR" "$WITH_STORYBOOK" "$WITH_SAMPLE"
+AUTH_METHODS="$AUTH_METHODS" node "$HELPER" apply "$TARGET" "$NAME" "$SCOPE" "$WITH_WORKBENCH" "$KEEP" "$SSR" "$WITH_STORYBOOK" "$WITH_SAMPLE"
 
 # ---------------------------------------------------------------------------------------------------- 안내
 cat <<EOF2

@@ -52,7 +52,7 @@ export type SignUpScreenProps = {
   /** 소셜 가입(소셜 로그인과 같은 흐름) */
   methods?: SignInMethodsConfig
   onSocialSignIn?: (provider: string) => void
-  /** 캡차 자리 — 위젯을 그리고 토큰을 `onToken` 으로 올린다(`@skeleton/captcha-turnstile` 의 `<Turnstile>` 등) */
+  /** 캡차 자리 — 위젯을 그리고 토큰을 `onToken` 으로 올린다(Turnstile 같은 캡차 위젯) */
   renderCaptcha?: (api: CaptchaSlotApi) => ReactNode
   /** 약관 · 방침 동의 자리 — 체크한 판을 `onSignUp` 의 `consents` 와 `onConsentsChange` 로 보고한다 */
   consents?: ConsentItem[]

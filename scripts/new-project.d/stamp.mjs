@@ -214,6 +214,17 @@ function stampSample(target, withSample) {
   if (existsSync(ci)) writeFileSync(ci, read(ci).replace(SAMPLE_JOB, ''))
 }
 
+/** --auth-methods: 로그인 방법 기본값(`authConfig.ts`)을 바꾼다 — 환경변수 VITE_AUTH_METHODS 가 여전히 이긴다 */
+function applyAuthMethods(app, methods) {
+  if (!methods) return
+  const file = join(app, 'src', 'auth', 'authConfig.ts')
+  if (!existsSync(file)) fail(`--auth-methods: ${file} is missing — the skeleton changed, update scripts/new-project.d/stamp.mjs`)
+  const before = read(file)
+  const after = before.replace("'password,magic-link'", `'${methods}'`)
+  if (after === before) fail('--auth-methods: the default list was not found in authConfig.ts — the skeleton changed, update scripts/new-project.d/stamp.mjs')
+  writeFileSync(file, after)
+}
+
 function apply(
   target,
   name,
@@ -257,6 +268,7 @@ function apply(
 
   // 2. 앱 이름
   if (name !== source) renameSync(join(target, 'apps', source), app)
+  applyAuthMethods(app, process.env.AUTH_METHODS ?? '')
   const appJson = readJson(join(app, 'package.json'))
   writeJson(join(app, 'package.json'), { ...appJson, name, version: '0.1.0' })
   if (ssr) {

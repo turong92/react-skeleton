@@ -86,6 +86,7 @@ expect_exit 2 "이름 storybook 도 예약 (apps/storybook 와 겹친다)" bash 
 expect_exit 2 "이름 sample 도 예약 (apps/sample 과 겹친다)" bash "$SCRIPT" "$TMP/x3d" sample
 expect_exit 2 "--with-showcase 는 없어졌다 — 스토리집(기본으로 따라온다)이 대신한다고 알려 준다" bash "$SCRIPT" "$TMP/x3c" acme-app --with-showcase
 echo "$LAST_OUTPUT" | grep -qi "storybook" && pass "--with-showcase 오류가 스토리집을 가리킨다" || fail "--with-showcase 오류 메시지: $LAST_OUTPUT"
+expect_exit 2 "--auth-methods 는 쉼표 목록" bash "$SCRIPT" "$TMP/x4a" acme-app --auth-methods "Password;rm"
 expect_exit 2 "--scope 는 @이름 꼴" bash "$SCRIPT" "$TMP/x4" acme-app --scope acme
 expect_exit 2 "알 수 없는 옵션은 exit 2" bash "$SCRIPT" "$TMP/x5" acme-app --nope
 expect_exit 2 "--packages 값이 없으면 exit 2" bash "$SCRIPT" "$TMP/x6" acme-app --packages
@@ -172,6 +173,17 @@ D="$TMP/a2"
 stamp "$D" >/dev/null
 check "같은 인자로 두 번 찍으면 결과가 같다" diff -r "$A" "$D"
 
+echo "== 3b. 계정 수명주기 라우트 · --auth-methods"
+check "스타터에 계정 화면 라우트(로그인 · 가입 · 메일 확인 · 비밀번호 재설정 · 계정 설정)가 따라온다" bash -c "grep -q 'createAuthRoutes' '$A/apps/acme-app/src/auth/routes.tsx' && grep -q 'accountRoutes' '$A/apps/acme-app/src/routes/routes.tsx' && test ! -e '$A/apps/acme-app/src/routes/LoginPage.tsx'"
+check "auth 패키지는 ui 를 진짜 의존으로 갖는다 (화면을 그린다)" bash -c "grep -q '\"@skeleton/ui\"' '$A/packages/auth/package.json'"
+check "기본 로그인 방법은 password,magic-link" grep -q "'password,magic-link'" "$A/apps/acme-app/src/auth/authConfig.ts"
+AM="$TMP/am"
+expect_exit 0 "--auth-methods password,google 로 찍는다" stamp "$AM" --auth-methods password,google
+check "방법 기본값이 앱 설정에 심긴다" grep -q "'password,google'" "$AM/apps/acme-app/src/auth/authConfig.ts"
+AMS="$TMP/ams"
+expect_exit 0 "SSR 스타터도 같은 옵션을 받는다" stamp "$AMS" --ssr --auth-methods magic-link
+check "SSR 앱 설정에도 심긴다" grep -q "'magic-link'" "$AMS/apps/acme-app/src/auth/authConfig.ts"
+
 echo "== 4. --packages realtime,notifications,storage,i18n"
 B="$TMP/b"
 expect_exit 0 "조합 2 를 찍는다" stamp "$B" --packages realtime,notifications,storage,i18n
@@ -239,7 +251,7 @@ expect_exit 0 "스토리집 없이 찍는다" stamp "$NS" --without-storybook
 check "apps/storybook · 스토리 파일 · 스토리가 쓰던 가짜(src/stories/)가 하나도 없다" bash -c "test ! -e '$NS/apps/storybook' && [ -z \"\$(find '$NS/packages' '$NS/apps' -not -path '*/node_modules/*' \\( -name '*.stories.tsx' -o -path '*/src/stories' \\) | head -1)\" ]"
 [ "$(json "$NS/package.json" '["storybook", "storybook:build", "test:stories"].every((k) => p.scripts[k] === undefined) && Object.keys(p.devDependencies).every((d) => !/storybook|playwright/.test(d))')" = "true" ] && pass "루트 스크립트 · 의존에 스토리집이 없다" || fail "루트에 스토리집 흔적: $(json "$NS/package.json" 'JSON.stringify(Object.keys(p.devDependencies).filter((d) => /storybook|playwright/.test(d)))')"
 check "스토리 전용 테스트 · 카탈로그가 없다 (tests/stories.test.ts · docs/ui-catalog.md)" bash -c "test ! -e '$NS/tests/stories.test.ts' && test ! -e '$NS/docs/ui-catalog.md'"
-check "스토리 때문에만 선언했던 @skeleton/ui devDependency 도 패키지에서 걷힌다 (theme · auth · time)" bash -c "! grep -q '@skeleton/ui' '$NS/packages/theme/package.json' '$NS/packages/auth/package.json' '$NS/packages/time/package.json'"
+check "스토리 때문에만 선언했던 @skeleton/ui devDependency 도 패키지에서 걷힌다 (theme · time — auth 는 화면을 그려서 진짜 의존이다)" bash -c "! grep -q '@skeleton/ui' '$NS/packages/theme/package.json' '$NS/packages/time/package.json' && grep -q '\"@skeleton/ui\"' '$NS/packages/auth/package.json'"
 check "앱 · 패키지 · 문서 · CI · 루트 설정 어디에도 storybook 이 남지 않는다 (잠금 파일 · .gitignore · 예약 이름 목록 eslint.config.js · 도구 목록 tests/ 제외)" bash -c "! grep -rIil --exclude-dir=node_modules --exclude-dir=tests --exclude=pnpm-lock.yaml --exclude=.gitignore --exclude=.prettierignore --exclude=eslint.config.js storybook '$NS'"
 check "CI 워크플로에 스토리 잡이 없다" bash -c "! grep -qi 'stories' '$NS/.github/workflows/ci.yml'"
 check "날 요소를 막는 ESLint 규칙은 남는다 (부품은 그대로 있다)" bash -c "grep -q 'UI_ONLY' '$NS/eslint.config.js' && test -f '$NS/tests/eslint.uiOnly.test.ts'"

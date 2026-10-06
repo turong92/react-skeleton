@@ -182,7 +182,7 @@ describe('operator tools (opt-in @skeleton/auth/admin)', () => {
       .click()
     await page.goto(`${baseUrl}/login`)
     await fillSignIn(page, { email: 'admin@example.com', password: 'password' })
-    await pwExpect(heading(/안녕하세요/)).toBeVisible()
+    await page.waitForURL((url) => !url.pathname.startsWith('/login'))
     await page.goto(`${baseUrl}/admin/accounts`)
     await pwExpect(page.getByRole('table', { name: auth.adminCaption })).toBeVisible()
     await pwExpect(page.getByText('user@example.com')).toBeVisible()

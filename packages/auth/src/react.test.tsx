@@ -72,7 +72,7 @@ describe('AuthProvider / useAuth', () => {
     expect(signedIn).toBe('<p>authenticated:acc_7</p>')
   })
 
-  it('offers login, socialLogin, logout and refresh bound to the session', () => {
+  it('offers login, socialLogin, magicLinkLogin, signIn, restore, logout and refresh bound to the session', () => {
     function Keys() {
       const auth = useAuth()
       return <p>{Object.keys(auth).sort().join(',')}</p>
@@ -83,7 +83,9 @@ describe('AuthProvider / useAuth', () => {
           <Keys />
         </AuthProvider>,
       ),
-    ).toBe('<p>login,logout,principal,refresh,socialLogin,status,token</p>')
+    ).toBe(
+      '<p>login,logout,magicLinkLogin,principal,refresh,restore,signIn,socialLogin,status,token</p>',
+    )
   })
 
   it('throws a clear error when used outside the provider', () => {

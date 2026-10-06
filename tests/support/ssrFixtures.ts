@@ -114,10 +114,32 @@ export function fakeSession({ mod }: FixtureContext) {
     throw new Error('unused')
   }
   return call(auth.createAuthSession, {
-    api: { login: unused, socialLogin: unused, me: unused },
+    api: {
+      login: unused,
+      socialLogin: unused,
+      me: unused,
+      refresh: unused,
+      logout: unused,
+      magicLinkRequest: unused,
+      magicLinkRedeem: unused,
+    },
     store: call(auth.createTokenStore),
   })
 }
+
+const pending = () => new Promise<never>(noop)
+/** 부르면 끝나지 않는 약속을 돌려주는 계정 API — 서버에서는 「불러오는 중」까지만 그려진다 */
+const fakeAccountApi = () => new Proxy({}, { get: () => pending })
+const authLabels = ({ mod }: FixtureContext) => mod('auth').defaultAuthLabels
+const authPolicy = {
+  minLength: 10,
+  maxBytes: 72,
+  requireLetter: true,
+  requireDigit: true,
+  requireSymbol: false,
+  forbidEmailLocalPart: true,
+}
+const asyncNoop = async () => undefined
 
 /** 컴포넌트 — 서버에서 그려 본다. props 는 호출 때 만든다(호출마다 새 객체) */
 export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<string, unknown>> = {
@@ -318,6 +340,83 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
   'theme#ThemedToaster': () => ({}),
   'auth#AuthProvider': (ctx) => ({ session: fakeSession(ctx), children: 'inside' }),
   'auth#RequireAuth': () => ({ children: 'secret' }),
+  'auth#RequireRole': () => ({ roles: ['ADMIN'], children: 'secret' }),
+  'auth#AuthLayout': () => ({ title: 'Sign in', children: 'inside' }),
+  'auth#SignInScreen': () => ({ onPasswordSignIn: asyncNoop }),
+  'auth#SignUpScreen': () => ({
+    policy: authPolicy,
+    onSignUp: async () => ({ status: 'VERIFICATION_SENT' }),
+  }),
+  'auth#CheckEmailPanel': () => ({ email: 'a@example.com' }),
+  'auth#PasswordHints': (ctx) => ({ policy: authPolicy, password: '', labels: authLabels(ctx) }),
+  'auth#PasswordField': (ctx) => ({
+    label: 'Password',
+    value: '',
+    onChange: noop,
+    labels: authLabels(ctx),
+    autoComplete: 'new-password',
+  }),
+  'auth#SocialButtons': (ctx) => ({
+    providers: [{ provider: 'google' }],
+    labels: authLabels(ctx),
+    onSelect: noop,
+  }),
+  'auth#TokenLanding': () => ({
+    token: 't',
+    run: asyncNoop,
+    title: 'Verify',
+    checking: 'Checking',
+    done: 'Done',
+    invalidTitle: 'Invalid',
+    invalidBody: 'Invalid link',
+  }),
+  'auth#VerifyEmailScreen': () => ({ token: 't', onVerify: asyncNoop, signInTo: '/login' }),
+  'auth#MagicLinkLanding': () => ({
+    token: 't',
+    onRedeem: asyncNoop,
+    onDone: noop,
+    requestTo: '/login',
+  }),
+  'auth#ConfirmEmailChangeLanding': () => ({
+    token: 't',
+    onConfirm: asyncNoop,
+    signInTo: '/login',
+  }),
+  'auth#ForgotPasswordScreen': () => ({ onSubmit: asyncNoop, signInTo: '/login' }),
+  'auth#ResetPasswordScreen': () => ({
+    token: 't',
+    policy: authPolicy,
+    onReset: asyncNoop,
+    signInTo: '/login',
+    forgotTo: '/forgot-password',
+  }),
+  'auth#SocialCallbackScreen': () => ({ state: { status: 'pending' }, signInTo: '/login' }),
+  'auth#AccountStateNotice': () => ({ kind: 'suspended' }),
+  'auth#AccountSettings': () => ({
+    api: fakeAccountApi(),
+    locales: [{ value: 'en', label: 'English' }],
+  }),
+  'auth#ProfileSection': () => ({
+    profile: { displayName: 'Ann', locale: 'en', timeZone: 'UTC' },
+    locales: [{ value: 'en', label: 'English' }],
+    timeZones: ['UTC'],
+    onSave: asyncNoop,
+  }),
+  'auth#PasswordSection': () => ({ hasPassword: true, policy: authPolicy, onChange: asyncNoop }),
+  'auth#EmailSection': () => ({
+    email: 'a@example.com',
+    verified: true,
+    hasPassword: true,
+    onChangeEmail: asyncNoop,
+  }),
+  'auth#SignInMethodsSection': () => ({ identities: [], onUnlink: asyncNoop }),
+  'auth#SessionsSection': () => ({ sessions: [], onRevoke: asyncNoop, onRevokeOthers: asyncNoop }),
+  'auth#DeleteAccountSection': () => ({
+    hasPassword: true,
+    graceDays: 30,
+    onRequestConfirmation: asyncNoop,
+    onDelete: async () => ({ status: 'DELETION_SCHEDULED', purgeAfter: '2026-11-05T00:00:00Z' }),
+  }),
   'notifications#NotificationBell': () => ({ api: fakeNotificationsApi() }),
   'notifications#NotificationList': () => ({ items: [notification] }),
   'board#ReactionBar': () => ({
@@ -375,6 +474,7 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
 export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
   'theme#useTheme': () => [],
   'auth#useAuth': () => [],
+  'auth#useCountdown': () => [],
   'auth#useSocialLoginCallback': () => [{ complete: () => new Promise(noop) }, '?code=x'],
   'captcha-turnstile#useTurnstileToken': () => [],
   'notifications#useNotifications': () => [fakeNotificationsApi()],

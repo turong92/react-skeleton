@@ -132,7 +132,7 @@
         "createAuthHeadersProvider",
         "createUnauthorizedHandler"
       ],
-      "needs": ["api-client"],
+      "needs": ["api-client", "ui"],
       "backend": {
         "modules": ["auth"],
         "oneOfModules": [],

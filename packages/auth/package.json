@@ -3,11 +3,15 @@
   "version": "1.1.0",
   "private": true,
   "type": "module",
-  "description": "인증 — 토큰 저장소 · login/me/socialLogin(백엔드 modules/auth 짝) · dev-login/break-glass 헤더 · 401 훅 · AuthProvider/RequireAuth",
+  "description": "인증 · 계정 수명주기 — 토큰 갱신(single-flight · 회전 안전 · 탭 동기화) · 로그인/가입/메일 확인/비밀번호 재설정/링크 로그인/소셜 콜백/계정 설정 화면(방법은 설정으로 켜고 끈다) · 가드 · 선택 관리자 표(@skeleton/auth/admin)",
   "exports": {
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./admin": {
+      "types": "./src/admin/index.ts",
+      "default": "./src/admin/index.ts"
     }
   },
   "types": "./src/index.ts",
@@ -16,14 +20,14 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@skeleton/api-client": "workspace:*"
+    "@skeleton/api-client": "workspace:*",
+    "@skeleton/ui": "workspace:*"
   },
   "peerDependencies": {
     "react": "^19.0.0",
     "react-router-dom": "^7.0.0"
   },
   "devDependencies": {
-    "@skeleton/ui": "workspace:*",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-router-dom": "^7.14.1"

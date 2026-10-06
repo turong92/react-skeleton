@@ -1,6 +1,6 @@
 import { ApiRequestError, type ForbiddenContext } from '@skeleton/api-client'
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { expect, fn, screen, waitFor, within } from 'storybook/test'
 import { koLegalLabels } from './labels'
 import { createReconsentController } from './reconsent'
@@ -25,7 +25,9 @@ function Demo({
   trigger?: Array<{ type: string; version: string; reason: 'NOT_AGREED' | 'STALE' }>
 }) {
   const api = useMemo(() => createFakeLegalApi(fake), [fake])
-  ;(window as unknown as { __legalCalls: string[] }).__legalCalls = api.calls
+  useEffect(() => {
+    ;(window as unknown as { __legalCalls: string[] }).__legalCalls = api.calls
+  }, [api])
   const controller = useMemo(() => createReconsentController({ api }), [api])
   const [result, setResult] = useState('')
   async function call() {

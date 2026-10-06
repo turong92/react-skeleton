@@ -1,5 +1,5 @@
 import {
-  expect as pwExpect,
+  expect as baseExpect,
   type Browser,
   type BrowserContext,
   type Page,
@@ -16,6 +16,8 @@ import { waitForLink } from './mail'
  * 비밀번호 없는 계정(링크 로그인): 이메일 변경 · 첫 비밀번호가 본인 확인 메일의 링크를 거친다(다른 기기에서 열면 안내 · 같은 브라우저의 새 탭이면 하려던 탭이 이어 간다) →
  * 계정 삭제 → 운영자 표. 진짜 백엔드 · 진짜 브라우저 · 진짜 메일(mailpit). 한 흐름이라 단계가 앞 단계의 결과에 기댄다.
  */
+// 개발 서버의 첫 방문(모듈 변환)이 부하가 큰 기계에서는 5초(기본)를 넘길 수 있다 — 첫 화면을 기다리는 단언만 아니라 모두 넉넉히
+const pwExpect = baseExpect.configure({ timeout: 20_000 })
 const baseUrl = inject('baseUrl')
 const apiUrl = inject('apiUrl')
 const mailUrl = inject('mailUrl')

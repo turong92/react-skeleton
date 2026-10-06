@@ -1,0 +1,179 @@
+import type { Meta, StoryObj } from '@storybook/react-vite'
+import { expect, fn } from 'storybook/test'
+import { ConfirmEmailChangeLanding } from '../screens/ConfirmEmailChangeLanding'
+import { ForgotPasswordScreen } from '../screens/ForgotPasswordScreen'
+import { MagicLinkLanding } from '../screens/MagicLinkLanding'
+import { ResetPasswordScreen } from '../screens/ResetPasswordScreen'
+import { SocialCallbackScreen } from '../screens/SocialCallbackScreen'
+import { VerifyEmailScreen } from '../screens/VerifyEmailScreen'
+import { FAKE_POLICY, apiError } from '../stories/fakeAccountApi'
+import { withRouter } from '../stories/withRouter'
+
+/**
+ * 메일 링크가 닿는 화면들 — 이메일 인증 · 링크 로그인 · 이메일 변경 확인 · 비밀번호 찾기/재설정 · 소셜 콜백.
+ * 링크를 열면 한 번만 서버를 부른다(메일 스캐너의 GET 이 아니라 SPA 의 POST). 서버는 「없는 · 만료 · 이미 씀」을 한 응답(410)으로 주므로 화면도 한 상태로 말하고 새 링크를 받게 한다.
+ * 토큰은 주소의 `#token=`(조각) 또는 `?token=`(쿼리)에서 `readLinkToken` 이 읽는다.
+ */
+const meta = {
+  title: 'Patterns/Auth/Mail link landings',
+  decorators: [withRouter],
+} satisfies Meta
+export default meta
+type Story = StoryObj<typeof meta>
+
+export const VerifyEmailSuccess: Story = {
+  render: () => (
+    <VerifyEmailScreen token="tok" onVerify={async () => undefined} signInTo="/login" />
+  ),
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByText(/Your email is verified/)).toBeVisible()
+    await expect(canvas.getByRole('link', { name: 'Go to sign in' })).toHaveAttribute(
+      'href',
+      '/login',
+    )
+  },
+}
+
+export const VerifyEmailExpiredWithResend: Story = {
+  render: () => {
+    const onResend = fn(async () => undefined)
+    return (
+      <VerifyEmailScreen
+        token="old"
+        signInTo="/login"
+        onVerify={async () => {
+          throw apiError('ACCOUNT.TOKEN_INVALID', 410)
+        }}
+        onResend={onResend}
+      />
+    )
+  },
+  play: async ({ canvas, userEvent }) => {
+    await expect(
+      await canvas.findByRole('heading', { name: 'This link does not work' }),
+    ).toBeVisible()
+    await userEvent.type(canvas.getByLabelText(/Email/), 'ann@example.com')
+    await userEvent.click(canvas.getByRole('button', { name: 'Send a new link' }))
+    await expect(await canvas.findByText(/new email is on its way/)).toBeVisible()
+  },
+}
+
+export const VerifyEmailVerifiesOnce: Story = {
+  render: () => {
+    const onVerify = fn(async () => undefined)
+    // 같은 화면을 두 번 마운트해도(StrictMode) 일회용 토큰은 한 번만 쓴다
+    return <VerifyEmailScreen token="tok" onVerify={onVerify} signInTo="/login" />
+  },
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByText(/Your email is verified/)).toBeVisible()
+  },
+}
+
+export const MagicLinkSignsIn: Story = {
+  args: {},
+  render: () => (
+    <MagicLinkLanding
+      token="tok"
+      onRedeem={async () => undefined}
+      onDone={fn()}
+      requestTo="/login"
+    />
+  ),
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByRole('heading', { name: 'Signing you in' })).toBeVisible()
+  },
+}
+
+export const MagicLinkExpired: Story = {
+  render: () => (
+    <MagicLinkLanding
+      token="old"
+      requestTo="/login"
+      onDone={fn()}
+      onRedeem={async () => {
+        throw apiError('ACCOUNT.TOKEN_INVALID', 410)
+      }}
+    />
+  ),
+  play: async ({ canvas }) => {
+    await expect(
+      await canvas.findByRole('heading', { name: 'This sign-in link does not work' }),
+    ).toBeVisible()
+    await expect(canvas.getByRole('link', { name: 'Request a new link' })).toBeVisible()
+  },
+}
+
+export const ConfirmEmailChange: Story = {
+  render: () => (
+    <ConfirmEmailChangeLanding token="tok" onConfirm={async () => undefined} signInTo="/login" />
+  ),
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByText(/Your email address is changed/)).toBeVisible()
+  },
+}
+
+export const ForgotThenSent: Story = {
+  render: () => <ForgotPasswordScreen onSubmit={async () => undefined} signInTo="/login" />,
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.type(canvas.getByLabelText(/Email/), 'ann@example.com')
+    await userEvent.click(canvas.getByRole('button', { name: 'Send the link' }))
+    await expect(await canvas.findByText(/If ann@example.com has an account/)).toBeVisible()
+  },
+}
+
+export const ResetPassword: Story = {
+  render: () => {
+    const onReset = fn(async () => undefined)
+    return (
+      <ResetPasswordScreen
+        token="tok"
+        policy={FAKE_POLICY}
+        onReset={onReset}
+        signInTo="/login"
+        forgotTo="/forgot-password"
+      />
+    )
+  },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.type(canvas.getByLabelText(/^New password/), 'Correct-horse-battery-9')
+    await userEvent.click(canvas.getByRole('button', { name: 'Set the password' }))
+    await expect(await canvas.findByRole('heading', { name: 'Password changed' })).toBeVisible()
+    await expect(canvas.getByRole('link', { name: 'Back to sign in' })).toHaveAttribute(
+      'href',
+      '/login',
+    )
+  },
+}
+
+export const ResetLinkInvalid: Story = {
+  render: () => (
+    <ResetPasswordScreen
+      token={null}
+      policy={FAKE_POLICY}
+      onReset={async () => undefined}
+      signInTo="/login"
+      forgotTo="/forgot-password"
+    />
+  ),
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('link', { name: 'Request a new link' })).toHaveAttribute(
+      'href',
+      '/forgot-password',
+    )
+  },
+}
+
+export const SocialCallbackConflict: Story = {
+  render: () => (
+    <SocialCallbackScreen
+      state={{ status: 'error', error: apiError('ACCOUNT.SOCIAL_EMAIL_CONFLICT', 409) }}
+      signInTo="/login"
+    />
+  ),
+  play: async ({ canvas }) => {
+    await expect(
+      await canvas.findByRole('heading', { name: 'You already have an account' }),
+    ).toBeVisible()
+    await expect(canvas.getByRole('link', { name: 'Back to sign in' })).toBeVisible()
+  },
+}

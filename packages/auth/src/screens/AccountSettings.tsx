@@ -90,7 +90,7 @@ export function AccountSettings({
       return <AccountStateNotice kind="blocked" supportHref={supportHref} labels={given} />
     return <Alert tone="danger">{authErrorMessage(me.error, labels).message}</Alert>
   }
-  if (me.loading || !me.data) return <Skeleton />
+  if (!me.data) return <Skeleton />
   const account = me.data
   const zones = withCurrent(timeZones ?? supportedTimeZones(), account.timeZone)
   const items = ALL.filter(on).map((id) => ({

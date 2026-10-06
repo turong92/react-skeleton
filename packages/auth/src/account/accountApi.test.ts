@@ -149,4 +149,18 @@ describe('createAccountApi (mirrors kotlin-skeleton docs/account-http-contract.m
     await createAccountApi(client).revokeSession('a/b')
     expect(calls[0].path).toBe('/auth/sessions/a%2Fb')
   })
+
+  it('passwordPolicy accepts the backend maxBytes and the documented maxLength', async () => {
+    const base = {
+      minLength: 10,
+      requireLetter: true,
+      requireDigit: true,
+      requireSymbol: false,
+      forbidEmailLocalPart: true,
+    }
+    const a = fakeClient({ ...base, maxBytes: 72 })
+    expect((await createAccountApi(a.client).passwordPolicy()).maxBytes).toBe(72)
+    const b = fakeClient({ ...base, maxLength: 64 })
+    expect((await createAccountApi(b.client).passwordPolicy()).maxBytes).toBe(64)
+  })
 })

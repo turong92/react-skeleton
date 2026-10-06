@@ -199,6 +199,7 @@ export function MagicLinkPage({ ctx }: { ctx: PageContext }) {
 }
 
 export function ConfirmEmailChangePage({ ctx }: { ctx: PageContext }) {
+  const auth = useAuth()
   return (
     <TokenPage>
       {(token) => (
@@ -206,7 +207,11 @@ export function ConfirmEmailChangePage({ ctx }: { ctx: PageContext }) {
           token={token}
           labels={ctx.labels}
           signInTo={ctx.paths.signIn}
-          onConfirm={(t) => ctx.accountApi.confirmEmailChange(t)}
+          onConfirm={async (t) => {
+            await ctx.accountApi.confirmEmailChange(t)
+            // 서버가 모든 세션을 닫는다 — 이 기기도 로그아웃으로 다루고 로그인으로 보낸다
+            await auth.logout()
+          }}
         />
       )}
     </TokenPage>

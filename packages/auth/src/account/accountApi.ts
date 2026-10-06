@@ -78,7 +78,15 @@ export function createAccountApi(
     },
     resetPassword: (token, newPassword) =>
       client.noContent('/account/password/reset', publicPost({ token, newPassword })),
-    passwordPolicy: () => client.value('/account/password/policy', { skipAuth: true }),
+    passwordPolicy: async () => {
+      // 컨트롤러는 `maxBytes`, 계약 문서는 `maxLength` — 둘 다 받는다
+      const raw = await client.value<PasswordPolicy & { maxLength?: number }>(
+        '/account/password/policy',
+        { skipAuth: true },
+      )
+      const { maxLength, ...policy } = raw
+      return { ...policy, maxBytes: raw.maxBytes ?? maxLength ?? 72 }
+    },
     confirmEmailChange: (token) =>
       client.noContent('/auth/confirm-email-change', publicPost({ token })),
 

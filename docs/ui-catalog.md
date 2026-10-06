@@ -83,19 +83,24 @@
 
 `@skeleton/ui` 만으로 짠 한 파일짜리 화면. 가장 가까운 것을 복사해 문구 · 데이터 연결만 바꾼다(숨은 도우미 파일 없음).
 
-| 화면      | 스토리                                                      | 언제 복사하는가                                                                                |
-| --------- | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| 대시보드  | `apps/storybook/src/patterns/DashboardPage.stories.tsx`     | 숫자 4칸 + 최근 항목 표 + 알림 카드 · 로딩 · 오류 · 첫 사용 빈 상태                            |
-| 목록      | `apps/storybook/src/patterns/ListPage.stories.tsx`          | 표 + 쪽 이동 + 빈 상태 + 로딩 + 오류(다시 시도)                                                |
-| 폼        | `apps/storybook/src/patterns/FormPage.stories.tsx`          | 입력 · 검증 오류(첫 오류로 포커스) · 제출 중 · 성공 · 실패                                     |
-| 상세      | `apps/storybook/src/patterns/DetailPage.stories.tsx`        | 제목 + 탭 + 위험 구역(삭제 확인) · 로딩 · 없음                                                 |
-| 로그인    | `apps/storybook/src/patterns/LoginPage.stories.tsx`         | 이메일 · 비밀번호 · 제출 중 · 잘못된 계정 정보                                                 |
-| 권한 없음 | `apps/storybook/src/patterns/ForbiddenPage.stories.tsx`     | 403 — 이유를 말하고 갈 곳을 준다                                                               |
-| 설정      | `apps/storybook/src/patterns/SettingsPage.stories.tsx`      | 목차 + 즉시 적용 스위치 + 저장 폼(실패 시 참조 번호) + ⋯ 메뉴 목록 + 위험 구역                 |
-| 랜딩      | `packages/marketing/src/patterns/Landing.stories.tsx`       | 공개 첫 화면 — Hero · 기능 · 한마디 · 요금제 · FAQ · 마지막 권유 · 푸터(`@skeleton/marketing`) |
-| 요금제    | `packages/marketing/src/patterns/Pricing.stories.tsx`       | 요금제 페이지 — 월/연 토글 · 강조 · 문의 · 결제 질문(`onSelect` 에서 결제로)                   |
-| 법적 문서 | `packages/marketing/src/patterns/LegalDocument.stories.tsx` | 약관 · 방침 — 판 바꾸기 · 효력일 · 템플릿 표시 · 사실 채우기                                   |
-| 404 · 500 | `packages/marketing/src/patterns/NotFound.stories.tsx`      | 없는 주소 · 서버 오류 · 점검 — 이유를 말하고 갈 곳을 준다                                      |
+| 화면              | 스토리                                                      | 언제 복사하는가                                                                                                 |
+| ----------------- | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| 대시보드          | `apps/storybook/src/patterns/DashboardPage.stories.tsx`     | 숫자 4칸 + 최근 항목 표 + 알림 카드 · 로딩 · 오류 · 첫 사용 빈 상태                                             |
+| 목록              | `apps/storybook/src/patterns/ListPage.stories.tsx`          | 표 + 쪽 이동 + 빈 상태 + 로딩 + 오류(다시 시도)                                                                 |
+| 폼                | `apps/storybook/src/patterns/FormPage.stories.tsx`          | 입력 · 검증 오류(첫 오류로 포커스) · 제출 중 · 성공 · 실패                                                      |
+| 상세              | `apps/storybook/src/patterns/DetailPage.stories.tsx`        | 제목 + 탭 + 위험 구역(삭제 확인) · 로딩 · 없음                                                                  |
+| 로그인            | `apps/storybook/src/patterns/LoginPage.stories.tsx`         | 이메일 · 비밀번호 · 제출 중 · 잘못된 계정 정보                                                                  |
+| 권한 없음         | `apps/storybook/src/patterns/ForbiddenPage.stories.tsx`     | 403 — 이유를 말하고 갈 곳을 준다                                                                                |
+| 설정              | `apps/storybook/src/patterns/SettingsPage.stories.tsx`      | 목차 + 즉시 적용 스위치 + 저장 폼(실패 시 참조 번호) + ⋯ 메뉴 목록 + 위험 구역                                  |
+| 로그인(방법 설정) | `packages/auth/src/patterns/SignIn.stories.tsx`             | 켠 방법만 그리는 로그인 — 비밀번호 · 소셜 · 이메일 링크 · 미인증 다시 보내기 · 429 카운트다운(`@skeleton/auth`) |
+| 가입              | `packages/auth/src/patterns/SignUp.stories.tsx`             | 정책 힌트 · 강도 · 캡차 · 동의 슬롯 · 「메일을 확인하세요」(`@skeleton/auth`)                                   |
+| 메일 링크 도착    | `packages/auth/src/patterns/MailLinkLandings.stories.tsx`   | 이메일 인증 · 링크 로그인 · 이메일 변경 확인 · 비밀번호 찾기/재설정 · 소셜 콜백(만료 · 이미 씀 한 상태)         |
+| 계정 설정         | `packages/auth/src/patterns/AccountSettings.stories.tsx`    | 프로필 · 비밀번호 · 이메일 · 로그인 수단 · 세션 · 삭제 · 정지/차단 안내(`AccountApi` 하나로)                    |
+| 운영자 계정 표    | `packages/auth/src/admin/AdminAccounts.stories.tsx`         | 검색 · 정지 · 복구 · 역할 — 선택 내보내기 `@skeleton/auth/admin`                                                |
+| 랜딩              | `packages/marketing/src/patterns/Landing.stories.tsx`       | 공개 첫 화면 — Hero · 기능 · 한마디 · 요금제 · FAQ · 마지막 권유 · 푸터(`@skeleton/marketing`)                  |
+| 요금제            | `packages/marketing/src/patterns/Pricing.stories.tsx`       | 요금제 페이지 — 월/연 토글 · 강조 · 문의 · 결제 질문(`onSelect` 에서 결제로)                                    |
+| 법적 문서         | `packages/marketing/src/patterns/LegalDocument.stories.tsx` | 약관 · 방침 — 판 바꾸기 · 효력일 · 템플릿 표시 · 사실 채우기                                                    |
+| 404 · 500         | `packages/marketing/src/patterns/NotFound.stories.tsx`      | 없는 주소 · 서버 오류 · 점검 — 이유를 말하고 갈 곳을 준다                                                       |
 
 ## 디자인 토큰
 

@@ -1,0 +1,127 @@
+import type { Meta, StoryObj } from '@storybook/react-vite'
+import { expect, fn, waitFor } from 'storybook/test'
+import { SignUpScreen } from '../screens/SignUpScreen'
+import { FAKE_POLICY, apiError } from '../stories/fakeAccountApi'
+import { withRouter } from '../stories/withRouter'
+
+/**
+ * 가입 화면 — 비밀번호 규칙은 서버 정책(`GET /account/password/policy`)에서 읽어 체크리스트 · 강도 막대로 보여 준다.
+ * 응답은 늘 「메일을 확인하세요」(서버가 주소의 존재를 숨긴다). 캡차(`renderCaptcha`)와 약관 동의(`consents`)는 슬롯이다 —
+ * 동의는 체크한 판(`id` + `version`)을 콜백으로 보고한다(백엔드 동의 모듈은 아직 없다).
+ */
+const meta = {
+  title: 'Patterns/Auth/Sign up',
+  component: SignUpScreen,
+  decorators: [withRouter],
+  args: {
+    policy: FAKE_POLICY,
+    signInTo: '/login',
+    onSignUp: fn(async () => ({ status: 'VERIFICATION_SENT' as const })),
+    onResendVerification: fn(async () => undefined),
+  },
+} satisfies Meta<typeof SignUpScreen>
+export default meta
+type Story = StoryObj<typeof SignUpScreen>
+
+export const PolicyHints: Story = {
+  play: async ({ canvas, userEvent }) => {
+    const password = canvas.getByLabelText(/^Password/)
+    await userEvent.type(password, 'abc')
+    await expect(canvas.getByText(/Enough characters/).closest('li')).toHaveAttribute(
+      'data-met',
+      'false',
+    )
+    await expect(canvas.getByRole('img', { name: /Strength: Weak/ })).toBeVisible()
+    await userEvent.clear(password)
+    await userEvent.type(password, 'Correct-horse-battery-9')
+    await waitFor(() =>
+      expect(canvas.getByText(/Enough characters/).closest('li')).toHaveAttribute(
+        'data-met',
+        'true',
+      ),
+    )
+    await expect(canvas.getByRole('img', { name: /Strength: Strong/ })).toBeVisible()
+  },
+}
+
+export const CheckYourEmail: Story = {
+  play: async ({ canvas, args, userEvent }) => {
+    await userEvent.type(canvas.getByLabelText(/Email/), 'new@example.com')
+    await userEvent.type(canvas.getByLabelText(/^Password/), 'Correct-horse-battery-9')
+    await userEvent.click(canvas.getByRole('button', { name: 'Create account' }))
+    await expect(await canvas.findByRole('heading', { name: 'Check your email' })).toBeVisible()
+    await expect(args.onSignUp).toHaveBeenCalledWith(
+      expect.objectContaining({ email: 'new@example.com', consents: [] }),
+    )
+    await userEvent.click(canvas.getByRole('button', { name: 'Send it again' }))
+    await expect(args.onResendVerification).toHaveBeenCalledWith('new@example.com')
+  },
+}
+
+export const ConsentAndCaptchaSlots: Story = {
+  args: {
+    consents: [
+      { id: 'terms', version: '2.0', label: 'I accept the Terms of Service', required: true },
+      { id: 'marketing', version: '1.0', label: 'Send me product news' },
+    ],
+    onConsentsChange: fn(),
+    renderCaptcha: ({ onToken }) => (
+      <button type="button" onClick={() => onToken('captcha-ok')}>
+        Solve captcha
+      </button>
+    ),
+  },
+  play: async ({ canvas, args, userEvent }) => {
+    await userEvent.type(canvas.getByLabelText(/Email/), 'new@example.com')
+    await userEvent.type(canvas.getByLabelText(/^Password/), 'Correct-horse-battery-9')
+    // 필수 동의를 안 하면 보내지 않는다
+    await userEvent.click(canvas.getByRole('button', { name: 'Create account' }))
+    await expect(args.onSignUp).not.toHaveBeenCalled()
+    await userEvent.click(canvas.getByRole('checkbox', { name: /Terms of Service/ }))
+    await expect(args.onConsentsChange).toHaveBeenLastCalledWith([{ id: 'terms', version: '2.0' }])
+    await userEvent.click(canvas.getByRole('button', { name: 'Solve captcha' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Create account' }))
+    await expect(args.onSignUp).toHaveBeenCalledWith(
+      expect.objectContaining({
+        captchaToken: 'captcha-ok',
+        consents: [{ id: 'terms', version: '2.0' }],
+      }),
+    )
+  },
+}
+
+export const ServerRejectsPassword: Story = {
+  args: {
+    onSignUp: async () => {
+      throw apiError('ACCOUNT.PASSWORD_POLICY', 400, { violations: ['BREACHED'] })
+    },
+  },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.type(canvas.getByLabelText(/Email/), 'new@example.com')
+    await userEvent.type(canvas.getByLabelText(/^Password/), 'Correct-horse-battery-9')
+    await userEvent.click(canvas.getByRole('button', { name: 'Create account' }))
+    // 서버만 아는 규칙(유출 검사)도 체크리스트에 올라온다
+    await expect(await canvas.findByText(/Not in a known data breach/)).toBeVisible()
+  },
+}
+
+export const SignUpClosed: Story = {
+  args: {
+    onSignUp: async () => {
+      throw apiError('ACCOUNT.SIGN_UP_CLOSED', 403)
+    },
+  },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.type(canvas.getByLabelText(/Email/), 'new@example.com')
+    await userEvent.type(canvas.getByLabelText(/^Password/), 'Correct-horse-battery-9')
+    await userEvent.click(canvas.getByRole('button', { name: 'Create account' }))
+    await expect(await canvas.findByRole('heading', { name: 'Sign-up is closed' })).toBeVisible()
+  },
+}
+
+export const Dark: Story = {
+  globals: { theme: 'dark' },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('form', { name: 'Create your account' })).toBeVisible()
+  },
+}

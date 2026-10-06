@@ -1,0 +1,119 @@
+import type { Meta, StoryObj } from '@storybook/react-vite'
+import { expect, fn, waitFor } from 'storybook/test'
+import { SignInScreen } from '../screens/SignInScreen'
+import { apiError } from '../stories/fakeAccountApi'
+import { withRouter } from '../stories/withRouter'
+
+/**
+ * 로그인 화면 — 켜 둔 방법(`methods`)만 그린다: 비밀번호 폼 · 소셜 버튼 · 이메일 링크. 앱이 설정 한 곳에서 방법을 더하고 뺀다.
+ * 실패는 던지면 화면이 문구로 바꾼다(`AUTH.*` 코드 → 한 문장, 429 는 카운트다운). 문구는 `labels` prop(기본 영어)로 앱이 번역해 넘긴다.
+ */
+const meta = {
+  title: 'Patterns/Auth/Sign in',
+  component: SignInScreen,
+  decorators: [withRouter],
+  args: {
+    signUpTo: '/sign-up',
+    forgotPasswordTo: '/forgot-password',
+    onPasswordSignIn: fn(async () => undefined),
+    onMagicLinkRequest: fn(async () => undefined),
+    onSocialSignIn: fn(),
+    onResendVerification: fn(async () => undefined),
+  },
+} satisfies Meta<typeof SignInScreen>
+export default meta
+type Story = StoryObj<typeof SignInScreen>
+
+export const PasswordOnly: Story = {
+  play: async ({ canvas, args, userEvent }) => {
+    await expect(canvas.queryByRole('button', { name: /Continue with/ })).toBeNull()
+    await expect(canvas.queryByRole('button', { name: 'Email me a sign-in link' })).toBeNull()
+    await userEvent.type(canvas.getByLabelText(/Email/), 'ann@example.com')
+    await userEvent.type(canvas.getByLabelText(/^Password/), 'secret-pass{Enter}')
+    await expect(args.onPasswordSignIn).toHaveBeenCalledWith({
+      email: 'ann@example.com',
+      password: 'secret-pass',
+    })
+  },
+}
+
+export const AllMethods: Story = {
+  args: { methods: { magicLink: true, social: [{ provider: 'google' }, { provider: 'kakao' }] } },
+  play: async ({ canvas, args, userEvent }) => {
+    await userEvent.click(canvas.getByRole('button', { name: 'Continue with Kakao' }))
+    await expect(args.onSocialSignIn).toHaveBeenCalledWith('kakao')
+    // 이메일 링크로 바꾸면 비밀번호 칸이 사라진다
+    await userEvent.click(canvas.getByRole('button', { name: 'Email me a sign-in link' }))
+    await expect(canvas.queryByLabelText(/^Password/)).toBeNull()
+    await userEvent.type(canvas.getByLabelText(/Email/), 'ann@example.com')
+    await userEvent.click(canvas.getByRole('button', { name: 'Send the link' }))
+    await expect(args.onMagicLinkRequest).toHaveBeenCalledWith('ann@example.com')
+    await expect(await canvas.findByRole('heading', { name: 'Check your email' })).toBeVisible()
+    await expect(canvas.getByText(/ann@example.com/)).toBeVisible()
+  },
+}
+
+export const MagicLinkOnly: Story = {
+  args: { methods: { password: false, magicLink: true } },
+  play: async ({ canvas }) => {
+    await expect(canvas.queryByLabelText(/^Password/)).toBeNull()
+    await expect(canvas.getByRole('button', { name: 'Send the link' })).toBeVisible()
+  },
+}
+
+export const InvalidCredentials: Story = {
+  args: {
+    onPasswordSignIn: async () => {
+      throw apiError('AUTH.INVALID_CREDENTIALS', 401)
+    },
+  },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.type(canvas.getByLabelText(/Email/), 'ann@example.com')
+    await userEvent.type(canvas.getByLabelText(/^Password/), 'wrong{Enter}')
+    await expect(await canvas.findByRole('alert')).toHaveTextContent(
+      'The email or password is not correct.',
+    )
+  },
+}
+
+export const EmailNotVerified: Story = {
+  args: {
+    onPasswordSignIn: async () => {
+      throw apiError('AUTH.EMAIL_NOT_VERIFIED', 403)
+    },
+  },
+  play: async ({ canvas, args, userEvent }) => {
+    await userEvent.type(canvas.getByLabelText(/Email/), 'ann@example.com')
+    await userEvent.type(canvas.getByLabelText(/^Password/), 'right-pass{Enter}')
+    await userEvent.click(
+      await canvas.findByRole('button', { name: 'Resend the verification email' }),
+    )
+    await expect(args.onResendVerification).toHaveBeenCalledWith('ann@example.com')
+    await expect(await canvas.findByText(/new email is on its way/)).toBeVisible()
+  },
+}
+
+export const RateLimited: Story = {
+  args: {
+    onPasswordSignIn: async () => {
+      throw apiError('AUTH.TOO_MANY_ATTEMPTS', 429, { retryAfterSeconds: 30 })
+    },
+  },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.type(canvas.getByLabelText(/Email/), 'ann@example.com')
+    await userEvent.type(canvas.getByLabelText(/^Password/), 'x{Enter}')
+    await expect(await canvas.findByRole('alert')).toHaveTextContent('Try again in 30 s.')
+    // 기다리는 동안 제출은 막힌다
+    await waitFor(() =>
+      expect(canvas.getByRole('button', { name: /Try again in \d+ s/ })).toBeDisabled(),
+    )
+  },
+}
+
+export const Dark: Story = {
+  globals: { theme: 'dark' },
+  args: { methods: { magicLink: true, social: [{ provider: 'google' }] } },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('form', { name: 'Sign in' })).toBeVisible()
+  },
+}

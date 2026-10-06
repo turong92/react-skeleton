@@ -51,4 +51,56 @@ describe('createSocialLinkFlow (logged-in user adds a provider to the account)',
     })
     expect(linkSocial).not.toHaveBeenCalled()
   })
+
+  it('a callback without state is refused (login CSRF / forced linking)', async () => {
+    const linkSocial = vi.fn()
+    const flow = createSocialLinkFlow({
+      providers,
+      accountApi: { linkSocial },
+      createState: () => 's',
+    })
+    flow.start('google')
+    await expect(flow.complete('?code=abc')).rejects.toMatchObject({ reason: 'state_mismatch' })
+    expect(linkSocial).not.toHaveBeenCalled()
+  })
+
+  it('state is single use: a replayed callback after completion is refused and links once', async () => {
+    const linkSocial = vi.fn(async () => ({}) as never)
+    const flow = createSocialLinkFlow({
+      providers,
+      accountApi: { linkSocial },
+      createState: () => 's',
+    })
+    flow.start('google')
+    await flow.complete('?code=abc&state=s')
+    await expect(flow.complete('?code=abc&state=s')).resolves.toBeDefined() // same in-flight result, no second request
+    expect(linkSocial).toHaveBeenCalledTimes(1)
+  })
+
+  it('state is bound to the browser storage it was started in', async () => {
+    const data = new Map<string, string>()
+    const storage = {
+      getItem: (k: string) => data.get(k) ?? null,
+      setItem: (k: string, v: string) => void data.set(k, v),
+      removeItem: (k: string) => void data.delete(k),
+    }
+    const linkSocial = vi.fn(async () => ({}) as never)
+    createSocialLinkFlow({
+      providers,
+      accountApi: { linkSocial },
+      storage,
+      createState: () => 's',
+    }).start('google')
+    const other = createSocialLinkFlow({
+      providers,
+      accountApi: { linkSocial },
+      createState: () => 's',
+    }) // another browser: empty storage
+    await expect(other.complete('?code=abc&state=s')).rejects.toMatchObject({
+      reason: 'state_mismatch',
+    })
+    const same = createSocialLinkFlow({ providers, accountApi: { linkSocial }, storage })
+    await same.complete('?code=abc&state=s')
+    expect(linkSocial).toHaveBeenCalledTimes(1)
+  })
 })

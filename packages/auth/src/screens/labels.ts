@@ -321,7 +321,8 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   magicLinkSentTitle: 'Check your email',
   confirmEmailChangeTitle: 'Confirm your new email',
   confirmEmailChangeChecking: 'Confirming the change',
-  confirmEmailChangeDone: 'Your email address is changed. Other devices were signed out.',
+  confirmEmailChangeDone:
+    'Your email address is changed. You were signed out everywhere; sign in again with the new address.',
   confirmEmailChangeInvalidBody: 'This link is invalid, expired or already used.',
   forgotTitle: 'Reset your password',
   forgotSubtitle: 'Enter your email and we send a reset link.',

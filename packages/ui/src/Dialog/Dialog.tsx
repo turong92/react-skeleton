@@ -23,12 +23,23 @@ export function Dialog({
 }: DialogProps) {
   const ref = useRef<HTMLDialogElement>(null)
   const titleId = useId()
+  const openerRef = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
     const dialog = ref.current
     if (!dialog) return
-    if (open && !dialog.open) dialog.showModal()
-    if (!open && dialog.open) dialog.close()
+    if (open && !dialog.open) {
+      openerRef.current =
+        document.activeElement instanceof HTMLElement ? document.activeElement : null
+      dialog.showModal()
+    }
+    if (!open && dialog.open) {
+      dialog.close()
+      // 브라우저가 연 곳으로 포커스를 돌려주지만(창이 포커스를 잃었을 때 등) 늘 그렇지는 않다 — 직접 돌려준다
+      const opener = openerRef.current
+      openerRef.current = null
+      if (opener?.isConnected && document.activeElement !== opener) opener.focus()
+    }
   }, [open])
 
   return (

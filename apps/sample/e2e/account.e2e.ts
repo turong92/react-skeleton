@@ -44,7 +44,7 @@ describe('account lifecycle against the real backend', () => {
     ).toBeVisible()
     await page.getByLabel(auth.password).first().fill(password)
     await pwExpect(
-      page.getByRole('img', { name: new RegExp(auth.passwordStrength[3]) }),
+      page.getByRole('img', { name: new RegExp(auth.passwordStrength[4]) }),
     ).toBeVisible()
     await page.getByRole('button', { name: auth.signUpSubmit }).click()
     await pwExpect(heading(auth.checkEmailTitle, 2)).toBeVisible()

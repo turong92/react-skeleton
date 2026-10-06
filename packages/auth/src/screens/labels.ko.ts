@@ -201,6 +201,8 @@ export const koAuthLabels: AuthLabels = {
   methodUnlinkTitle: (method) => `${method} 수단을 해제할까요?`,
   methodUnlinkBody: '해제하면 이 수단으로는 로그인할 수 없어요.',
   methodUnlinked: '해제했어요.',
+  methodLinkedNotice: (provider) =>
+    `${provider} 를 연결했어요. 계정 주소로 알림 메일을 보냈어요 — 내가 한 일이 아니면 비밀번호를 바꾸고 다른 기기를 로그아웃하세요.`,
   methodLinked: '연결했어요.',
   sessionsDescription: '이 계정에 로그인한 기기예요.',
   sessionsCurrent: '이 기기',

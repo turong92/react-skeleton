@@ -334,7 +334,8 @@ function SocialLinkCallbackInner({ flow, ctx }: { flow: SocialLinkFlow; ctx: Pag
       .then(() => setDone(true), setFailure)
   }, [callback, account, ctx.accountApi, ctx.reauth])
 
-  if (done) return <Navigate to={ctx.paths.account} replace />
+  if (done)
+    return <Navigate to={ctx.paths.account} replace state={{ linked: callback?.provider }} />
   const error = read.error ?? me.error ?? failure
   if (error)
     return (
@@ -415,6 +416,7 @@ export function AccountPage({
       onDeleted={() => void auth.logout()}
       reauth={ctx.reauth}
       reauthChannel={browserReauthChannel()}
+      linkedProvider={(location.state as { linked?: string } | null)?.linked}
       {...settings}
     />
   )

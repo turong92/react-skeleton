@@ -148,6 +148,14 @@ export const PasswordlessLinkNeedsConfirmation: Story = {
   },
 }
 
+/** 제공자를 연결하고 돌아오면 — 서버가 계정 주소로 알림 메일을 보낸다(연결 · 병합) */
+export const JustLinkedNotice: Story = {
+  args: { linkedProvider: 'kakao' },
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByText(/Kakao is linked.*notice/)).toBeVisible()
+  },
+}
+
 export const LastMethodProtected: Story = {
   args: { fake: { onlyMethod: true } },
   play: async ({ canvas }) => {

@@ -19,6 +19,7 @@ import styles from './auth.module.css'
 import { authErrorMessage } from './errors'
 import { mergeLabels, type AuthLabels } from './labels'
 import type { SocialProviderButton } from './methods'
+import { labelOfMethod } from './methodsList'
 import { reloadLater } from './reloadLater'
 import { useResource } from './useResource'
 
@@ -57,6 +58,8 @@ export type AccountSettingsProps = {
   reauth?: ReauthStore
   /** 본인 확인 링크를 연 새 탭이 토큰을 이 탭에 넘기는 길(`createBroadcastReauthChannel`) */
   reauthChannel?: ReauthChannel | null
+  /** 방금 연결한 소셜 제공자(연결 콜백이 돌아온 직후) — 서버가 계정 주소로 알림 메일을 보냈다는 안내를 보인다 */
+  linkedProvider?: string
 }
 
 const ALL: AccountSectionName[] = ['profile', 'password', 'email', 'methods', 'sessions', 'delete']
@@ -80,6 +83,7 @@ export function AccountSettings({
   supportHref,
   reauth,
   reauthChannel,
+  linkedProvider,
 }: AccountSettingsProps) {
   const labels = mergeLabels(given)
   const on = (name: AccountSectionName) => sections?.[name] !== false
@@ -237,6 +241,9 @@ export function AccountSettings({
           }
           notice={
             linkNotice ??
+            (linkedProvider
+              ? labels.methodLinkedNotice(labelOfMethod(linkedProvider, labels))
+              : undefined) ??
             (reauth && !account.hasPassword && reauth.hasToken()
               ? `${labels.reauthReadyTitle} — ${labels.reauthReadyBody}`
               : undefined)

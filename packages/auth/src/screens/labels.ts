@@ -188,6 +188,7 @@ export type AuthLabels = {
   methodUnlinkBody: string
   methodUnlinked: string
   methodLinked: string
+  methodLinkedNotice: (provider: string) => string
   sessionsDescription: string
   sessionsCurrent: string
   sessionsRevoke: string
@@ -438,6 +439,8 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   methodUnlinkTitle: (method) => `Remove ${method}?`,
   methodUnlinkBody: 'You will no longer be able to sign in with it.',
   methodUnlinked: 'Removed.',
+  methodLinkedNotice: (provider) =>
+    `${provider} is linked. We sent a notice to your account address — if this was not you, change your password and sign out other devices.`,
   methodLinked: 'Linked.',
   sessionsDescription: 'Devices signed in to your account.',
   sessionsCurrent: 'This device',

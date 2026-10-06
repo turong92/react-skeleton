@@ -81,7 +81,13 @@ describe('account lifecycle against the real backend', () => {
     )
     const refreshCalls: string[] = []
     page.on('request', (r) => r.url().includes('/auth/refresh') && refreshCalls.push(r.url()))
+    const refreshed = page.waitForResponse((r) => r.url().includes('/auth/refresh'))
     await page.goto(`${baseUrl}/notes`)
+    await refreshed // 화면은 갱신보다 먼저 그려진다 — 갱신 응답이 와서 저장될 때까지 기다린다(그 전에 이동하면 회전한 토큰을 잃는다)
+    await page.waitForFunction(
+      (before) => !window.localStorage.getItem('skeleton.refresh')?.includes(before),
+      before,
+    )
     await pwExpect(heading(ko('notes.title'))).toBeVisible()
     const after = JSON.parse((await token('skeleton.refresh')) ?? '{}').refreshToken as string
     pwExpect(after).not.toBe(before) // 회전

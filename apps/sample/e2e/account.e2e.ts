@@ -14,6 +14,7 @@ import {
   fillSignIn,
   ko,
   launch,
+  signUpConsents,
 } from './helpers'
 import { subjectsFor, waitForCode, waitForLink } from './mail'
 
@@ -503,7 +504,11 @@ describe('pre-hijack: an attacker who starts a sign-up for someone else’s addr
     const attack = await fetch(`${apiUrl}/api/v1/account/sign-up`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: victim, password: attackerPassword }),
+      body: JSON.stringify({
+        email: victim,
+        password: attackerPassword,
+        ...(await signUpConsents(apiUrl)),
+      }),
     })
     pwExpect(attack.status).toBe(202)
     const attackerId = ((await attack.json()) as { value: { signUpId: string } }).value.signUpId

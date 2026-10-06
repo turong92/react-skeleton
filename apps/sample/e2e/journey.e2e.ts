@@ -1,6 +1,6 @@
 import { expect as pwExpect, type Browser, type BrowserContext, type Page } from 'playwright/test'
 import { afterAll, beforeAll, describe, inject, it } from 'vitest'
-import { auth, fillSignIn, ko, launch, seedNotes, signIn } from './helpers'
+import { auth, fillSignIn, ko, launch, legalOn, seedNotes, signIn } from './helpers'
 
 /*
  * 핵심 여정 — 랜딩(로그아웃 상태의 `/` · 동의 배너 · 약관 · 404) → 로그인 → 빈 대시보드 → 만들기(검증 오류 → 성공) → 알림 → 첨부 업로드 → 내보내기 → 목록(검색 · 필터 · 쪽) → 수정 → 삭제 → 설정(테마) → 로그아웃.
@@ -44,11 +44,17 @@ describe('Notes — the main journey against the real backend', () => {
 
     // 약관(템플릿): 푸터 링크 → 템플릿 표시 → 옛 판
     await page.getByRole('link', { name: ko('footer.terms') }).click()
-    await pwExpect(heading(ko('legal.terms.title'))).toBeVisible()
-    await pwExpect(page.getByRole('alert')).toContainText('템플릿')
-    await page.getByLabel(ko('legal.switcher')).selectOption('1.0')
-    await pwExpect(page).toHaveURL(/\?v=1\.0$/)
-    await pwExpect(page.getByText(ko('legal.older', { current: '2.0' }))).toBeVisible()
+    if (await legalOn(apiUrl)) {
+      // 백엔드(legal 모듈)가 문서를 쥔 곳: 서버의 문서(판 · 효력일 · 샘플 표시)가 정적 파일을 대신한다
+      await pwExpect(page.getByRole('heading', { level: 1 })).toContainText('이용약관')
+      await pwExpect(page.getByText(/sample-1 판/).first()).toBeVisible()
+    } else {
+      await pwExpect(heading(ko('legal.terms.title'))).toBeVisible()
+      await pwExpect(page.getByRole('alert')).toContainText('템플릿')
+      await page.getByLabel(ko('legal.switcher')).selectOption('1.0')
+      await pwExpect(page).toHaveURL(/\?v=1\.0$/)
+      await pwExpect(page.getByText(ko('legal.older', { current: '2.0' }))).toBeVisible()
+    }
     await pwExpect(page).toHaveTitle(new RegExp(ko('seo.terms.title')))
 
     // 없는 주소: 404 화면 · 검색에서 뺀다

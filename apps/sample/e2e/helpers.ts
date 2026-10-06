@@ -53,7 +53,7 @@ export async function signIn(page: Page, baseUrl: string, account = DEMO) {
  * 시드 계정(가입 화면을 거치지 않은 체험 · 운영자 계정)은 동의 기록이 없다 — legal 모듈이 있는 백엔드에서는 화면 로그인 직후 동의 화면이 막는다.
  * 그 여정을 시험하는 것이 아닌 곳에서는 API 로 먼저 동의해 둔다(없는 백엔드에서는 아무 일도 하지 않는다)
  */
-async function consentViaApi(account: { email: string; password: string }) {
+export async function consentViaApi(account: { email: string; password: string }) {
   const apiUrl = inject('apiUrl')
   if (!(await legalOn(apiUrl))) return
   const login = await fetch(`${apiUrl}/api/v1/auth/login`, {
@@ -151,4 +151,21 @@ export async function acceptLegalGate(page: Page, apiUrl: string) {
   await gate.getByRole('checkbox', { name: legal.agreeAll }).check()
   await gate.getByRole('button', { name: legal.reconsentSubmit }).click()
   await gate.waitFor({ state: 'detached' })
+}
+
+/** 가입 API 를 화면 없이 부르는 곳(공격자 시나리오)의 `consents` — legal 모듈이 있으면 가입에 필요한 문서(현재 판 · 첫 언어) 전부, 없으면 필드 없음 */
+export async function signUpConsents(apiUrl: string) {
+  if (!(await legalOn(apiUrl))) return {}
+  const docs = (await (await fetch(`${apiUrl}/api/v1/legal/documents`)).json()).values as Array<{
+    type: string
+    version: string
+    locale: string
+    requiredAtSignUp: boolean
+  }>
+  const seenTypes = new Set<string>()
+  return {
+    consents: docs
+      .filter((d) => d.requiredAtSignUp && !seenTypes.has(d.type) && seenTypes.add(d.type))
+      .map((d) => ({ type: d.type, version: d.version, locale: d.locale })),
+  }
 }

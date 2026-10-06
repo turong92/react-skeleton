@@ -35,6 +35,7 @@ type BoardConfigJson = {
 
 /** 로그인 화면에서 이메일 · 비밀번호로(체험 계정 채우기 버튼이 아니라) */
 export async function signInAs(page: Page, baseUrl: string, account: Account) {
+  await consentViaApi(account) // legal 모듈이 있는 백엔드: 시드 계정은 동의 기록이 없다(없으면 아무 일도 안 한다)
   await page.goto(`${baseUrl}/login`)
   await dismissConsent(page)
   await page.getByLabel(ko('login.email')).fill(account.email)

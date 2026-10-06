@@ -91,7 +91,9 @@ export function createDeferredTokens({
   }
 }
 
-export type Auth = Omit<DeferredTokens, 'store' | 'refreshStore' | 'markRestored'> & { session: AuthSession }
+export type Auth = Omit<DeferredTokens, 'store' | 'refreshStore' | 'markRestored'> & {
+  session: AuthSession
+}
 
 /** 세션 + 복원 상태. 화면은 `useAuth()` 로 세션을, `useSessionRestored()` 로 복원 여부를 읽는다 */
 export function createAuth({

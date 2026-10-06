@@ -36,7 +36,10 @@ export const TypingFillsAndSubmitsOnTheSixthDigit: Story = {
     await userEvent.keyboard('12345')
     await expect(args.onComplete).not.toHaveBeenCalled()
     await userEvent.keyboard('6')
-    await waitFor(() => expect(args.onComplete).toHaveBeenCalledExactlyOnceWith('123456'))
+    await waitFor(() => {
+      expect(args.onComplete).toHaveBeenCalledTimes(1)
+      expect(args.onComplete).toHaveBeenCalledWith('123456')
+    })
   },
 }
 
@@ -44,7 +47,10 @@ export const PasteFillsEverythingFromAnyCell: Story = {
   play: async ({ canvas, userEvent, args }) => {
     await userEvent.click(canvas.getByLabelText('Digit 3 of 6'))
     await userEvent.paste('482 915')
-    await waitFor(() => expect(args.onComplete).toHaveBeenCalledExactlyOnceWith('482915'))
+    await waitFor(() => {
+      expect(args.onComplete).toHaveBeenCalledTimes(1)
+      expect(args.onComplete).toHaveBeenCalledWith('482915')
+    })
     await expect(canvas.getByLabelText('Digit 1 of 6')).toHaveValue('4')
     await expect(canvas.getByLabelText('Digit 6 of 6')).toHaveValue('5'.replace('5', '5'))
   },

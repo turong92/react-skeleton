@@ -35,6 +35,4 @@ describe('I6 — the documented default storage is the real one (localStorage, s
     const { browserTokenStorage } = await import('./storage')
     expect(browserTokenStorage()).toBe(local)
   })
-
 })
-

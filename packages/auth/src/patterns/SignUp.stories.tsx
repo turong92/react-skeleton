@@ -151,9 +151,10 @@ export const CodeStepSignsInOnTheRightCode: Story = {
     )
     await userEvent.click(canvas.getByLabelText('Digit 1 of 6'))
     await userEvent.paste('123456') // 붙여넣으면 채워지고 버튼 없이 제출된다
-    await waitFor(() =>
-      expect(args.onVerifyCode).toHaveBeenCalledExactlyOnceWith('sid-1', '123456'),
-    )
+    await waitFor(() => {
+      expect(args.onVerifyCode).toHaveBeenCalledTimes(1)
+      expect(args.onVerifyCode).toHaveBeenCalledWith('sid-1', '123456')
+    })
   },
 }
 
@@ -192,7 +193,10 @@ export const CodeStepResendHasACooldown: Story = {
   play: async ({ canvas, userEvent, args }) => {
     await fillAndSubmit(canvas, userEvent)
     await userEvent.click(await canvas.findByRole('button', { name: 'Send a new code' }))
-    await waitFor(() => expect(args.onResendCode).toHaveBeenCalledExactlyOnceWith('sid-1'))
+    await waitFor(() => {
+      expect(args.onResendCode).toHaveBeenCalledTimes(1)
+      expect(args.onResendCode).toHaveBeenCalledWith('sid-1')
+    })
     await expect(await canvas.findByRole('button', { name: 'Send a new code' })).toBeDisabled()
   },
 }

@@ -12,7 +12,8 @@ const read = (path: string) => readFileSync(join(REPO, path), 'utf8')
 const allApps = readdirSync(join(REPO, 'apps'))
 // 인증을 가진 앱(스타터 · 샘플, 찍힌 프로젝트의 앱)만 — 스토리집 · 워크벤치는 인증 저장소가 없다
 const apps = allApps.filter((app) => existsSync(join(REPO, 'apps', app, 'src/auth/storage.ts')))
-const stripComments = (code: string) => code.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')
+const stripComments = (code: string) =>
+  code.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')
 
 describe('I6 — the documented default token storage is the real one (localStorage, shared by tabs)', () => {
   it.each(apps)('%s: browserTokenStorage() returns window.localStorage', (app) => {
@@ -21,10 +22,15 @@ describe('I6 — the documented default token storage is the real one (localStor
     expect(code).not.toContain('sessionStorage')
   })
 
-  it.each(apps)('%s: the token stores listen to other tabs (crossTab) — a localStorage default only works with it', (app) => {
-    const code = read(`apps/${app}/src/auth/${existsSync(join(REPO, `apps/${app}/src/auth/createAuth.ts`)) ? 'createAuth.ts' : 'tokenStore.ts'}`)
-    expect(code).toContain('crossTab: true')
-  })
+  it.each(apps)(
+    '%s: the token stores listen to other tabs (crossTab) — a localStorage default only works with it',
+    (app) => {
+      const code = read(
+        `apps/${app}/src/auth/${existsSync(join(REPO, `apps/${app}/src/auth/createAuth.ts`)) ? 'createAuth.ts' : 'tokenStore.ts'}`,
+      )
+      expect(code).toContain('crossTab: true')
+    },
+  )
 
   it('the docs name localStorage as the default and do not claim sessionStorage holds the tokens', () => {
     const docs = [

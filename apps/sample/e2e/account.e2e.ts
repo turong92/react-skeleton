@@ -43,7 +43,7 @@ const heading = (name: string | RegExp, level = 1) => page.getByRole('heading', 
 const region = (name: string, on: Page = page) => on.getByRole('region', { name })
 const token = (key: string) => page.evaluate((k) => window.localStorage.getItem(k), key)
 const refreshToken = async () =>
-  JSON.parse((await token('skeleton.refresh')) ?? '{}').refreshToken as string
+  JSON.parse((await token('sample.refresh')) ?? '{}').refreshToken as string
 
 describe('sign-in methods are discovered from the backend', () => {
   it('the login page asks GET /auth/methods; until the answer arrives it shows a loading state, never the wrong methods', async () => {
@@ -109,11 +109,15 @@ describe('account lifecycle against the real backend', () => {
     await pwExpect(page.getByRole('button', { name: auth.signInResendVerification })).toBeVisible()
   })
 
-  it('the mailed link verifies the address (one POST on mount), a second visit says the link is used up', async () => {
+  it('the mailed link verifies the address only after an explicit Continue click, a second visit says the link is used up', async () => {
     const link = await waitForLink(mailUrl, email, 'verify-email', { seen })
     await page.goto(`${baseUrl}${link.path}`)
+    // 열기만 해서는 인증하지 않는다(메일 스캐너 방어) — 사람이 「계속」을 누른다
+    await pwExpect(page.getByText(auth.verifyEmailDone)).toHaveCount(0)
+    await page.getByRole('button', { name: auth.landingContinue }).click()
     await pwExpect(page.getByText(auth.verifyEmailDone)).toBeVisible()
     await page.goto(`${baseUrl}${link.path}`) // 같은 링크를 다시 — 한 번만 쓸 수 있다
+    await page.getByRole('button', { name: auth.landingContinue }).click()
     await pwExpect(heading(auth.verifyEmailInvalidTitle)).toBeVisible()
   })
 
@@ -121,14 +125,14 @@ describe('account lifecycle against the real backend', () => {
     await page.goto(`${baseUrl}/login`)
     await fillSignIn(page, { email, password })
     await pwExpect(heading(/안녕하세요/)).toBeVisible()
-    pwExpect(await token('skeleton.accessToken')).toBeTruthy()
-    pwExpect(await token('skeleton.refresh')).toContain('refreshToken')
+    pwExpect(await token('sample.accessToken')).toBeTruthy()
+    pwExpect(await token('sample.refresh')).toContain('refreshToken')
   })
 
   it('navigation during a refresh: the response is lost, the next page presents the previous token within the 10 s grace and the session carries on', async () => {
     const before = await refreshToken()
     await page.evaluate(() =>
-      window.localStorage.setItem('skeleton.accessToken', 'header.e30.expired'),
+      window.localStorage.setItem('sample.accessToken', 'header.e30.expired'),
     )
     const presented: string[] = []
     page.on('request', (r) => {
@@ -158,7 +162,7 @@ describe('account lifecycle against the real backend', () => {
   it('a broken access token is replaced silently: the request is retried after one refresh and the refresh token rotates', async () => {
     const before = await refreshToken()
     await page.evaluate(() =>
-      window.localStorage.setItem('skeleton.accessToken', 'header.e30.expired'),
+      window.localStorage.setItem('sample.accessToken', 'header.e30.expired'),
     )
     const refreshCalls: string[] = []
     page.on(
@@ -169,13 +173,13 @@ describe('account lifecycle against the real backend', () => {
     await page.goto(`${baseUrl}/notes`)
     await refreshed // 화면은 갱신보다 먼저 그려진다 — 갱신 응답이 와서 저장될 때까지 기다린다(그 전에 이동하면 회전한 토큰을 잃는다)
     await page.waitForFunction(
-      (before) => !window.localStorage.getItem('skeleton.refresh')?.includes(before),
+      (before) => !window.localStorage.getItem('sample.refresh')?.includes(before),
       before,
     )
     await pwExpect(heading(ko('notes.title'))).toBeVisible()
     const after = await refreshToken()
     pwExpect(after).not.toBe(before) // 회전
-    pwExpect(await token('skeleton.accessToken')).not.toBe('header.e30.expired')
+    pwExpect(await token('sample.accessToken')).not.toBe('header.e30.expired')
     pwExpect(refreshCalls).toHaveLength(1) // 여러 요청이 동시에 401 이어도 갱신은 한 번
     page.removeAllListeners('request')
   })
@@ -207,6 +211,7 @@ describe('account lifecycle against the real backend', () => {
   it('the new address confirms the change: every session ends (this one too) and only the new address signs in', async () => {
     const link = await waitForLink(mailUrl, emailNext, 'confirm-email-change', { seen })
     await page.goto(`${baseUrl}${link.path}`)
+    await page.getByRole('button', { name: auth.landingContinue }).click()
     await pwExpect(page.getByText(auth.confirmEmailChangeDone)).toBeVisible()
     await page.goto(`${baseUrl}/account`)
     await pwExpect(heading(auth.signInTitle)).toBeVisible() // 모든 세션이 닫혔다

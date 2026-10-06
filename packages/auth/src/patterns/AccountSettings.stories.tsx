@@ -103,14 +103,26 @@ export const PasswordlessEmailReauth: Story = {
   },
 }
 
+const recorded = new Map<string, string>()
+const recordingStorage = {
+  getItem: (k: string) => recorded.get(k) ?? null,
+  setItem: (k: string, v: string) => void recorded.set(k, v),
+  removeItem: (k: string) => void recorded.delete(k),
+}
+
 export const PasswordlessFirstPassword: Story = {
   args: { fake: { passwordless: true } },
+  beforeEach: () => recorded.clear(),
+  // 진짜 호출부(PasswordSection)를 거친다: 하려던 작업은 기억하되 새 비밀번호는 저장소 어디에도 쓰지 않는다
+  render: (args) => <Demo {...args} reauth={createReauthStore({ storage: recordingStorage })} />,
   play: async ({ canvas, userEvent }) => {
     const section = within(await canvas.findByRole('region', { name: 'Set a password' }))
     await userEvent.type(section.getByLabelText(/^New password/), 'Correct-horse-battery-9')
     await userEvent.click(section.getByRole('button', { name: 'Change password' }))
     await expect(await section.findByText('Check your email')).toBeVisible()
     await expect(section.getByRole('button', { name: 'Send the link again' })).toBeVisible()
+    await expect(recorded.size).toBeGreaterThan(0) // 하려던 작업은 기억했다
+    await expect([...recorded.values()].join('')).not.toContain('Correct-horse-battery-9')
   },
 }
 

@@ -12,6 +12,7 @@
 | ---------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | `Button`         | `packages/ui/src/Button/Button.stories.tsx`                 | 모든 클릭 동작. 일하는 중에는 `loading`, 폼 제출만 `type="submit"`                                                                           |
 | `Input`          | `packages/ui/src/Input/Input.stories.tsx`                   | 한 줄 입력. 라벨이 필요하니 `Field` 안에서                                                                                                   |
+| `CodeEntry`      | `packages/ui/src/CodeEntry/CodeEntry.stories.tsx`           | 인증번호(6자리) 입력 — 붙여넣기 · 칸 사이 Backspace · 다 채우면 자동 제출 · 오류 · 다시 보내기 대기 · 숫자 키패드 · `one-time-code`          |
 | `Field`          | `packages/ui/src/Field/Field.stories.tsx`                   | 라벨 · 도움말 · 오류를 입력칸에 이어 주는 래퍼 — 입력칸은 항상 이 안에                                                                       |
 | `Select`         | `packages/ui/src/Select/Select.stories.tsx`                 | 정해진 선택지 하나 고르기(`Field` 안에서)                                                                                                    |
 | `LanguageMenu`   | `packages/ui/src/LanguageMenu/LanguageMenu.stories.tsx`     | 헤더의 화면 언어 메뉴(글자는 prop — `@skeleton/i18n` 의 `useT()` 와 잇는다)                                                                  |

@@ -145,6 +145,18 @@ const asyncNoop = async () => undefined
 export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<string, unknown>> = {
   'ui#Button': () => ({ children: 'Save' }),
   'ui#Input': () => ({ 'aria-label': 'Name' }),
+  'ui#CodeEntry': () => ({
+    label: 'Verification code',
+    digitLabel: (position: number, total: number) => `Digit ${position} of ${total}`,
+    onComplete: () => undefined,
+    error: 'Wrong code',
+    resend: {
+      label: 'Send again',
+      onResend: () => undefined,
+      secondsLeft: 12,
+      waitLabel: (s: number) => `${s}s`,
+    },
+  }),
   'ui#Field': (ctx) => ({
     label: 'Email',
     hint: 'We never share it',

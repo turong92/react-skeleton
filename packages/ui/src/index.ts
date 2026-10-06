@@ -1,5 +1,7 @@
 export { Button } from './Button/Button'
 export type { ButtonProps } from './Button/Button'
+export { CodeEntry } from './CodeEntry/CodeEntry'
+export type { CodeEntryProps } from './CodeEntry/CodeEntry'
 export { Input } from './Input/Input'
 export type { InputProps } from './Input/Input'
 export { Field } from './Field/Field'

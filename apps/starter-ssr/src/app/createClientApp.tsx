@@ -1,8 +1,14 @@
-import { createAuthApi, type TokenStorage } from '@skeleton/auth'
+import {
+  createAuthApi,
+  createSessionRefresher,
+  type AuthApi,
+  type TokenStorage,
+} from '@skeleton/auth'
 import { showApiError } from '@skeleton/ui'
 import { hydrate } from '@tanstack/react-query'
 import { StrictMode, type ComponentType, type ReactElement, type ReactNode } from 'react'
 import { createAppApiClient } from '../api/createAppApiClient'
+import { parseDelivery } from '../auth/authConfig'
 import { createAuth, createDeferredTokens } from '../auth/createAuth'
 import { AppProviders } from './AppProviders'
 import { AppRoutes } from './AppRoutes'
@@ -36,8 +42,24 @@ export function createClientApp({
   debug = false,
 }: ClientAppOptions): ReactElement {
   const tokens = createDeferredTokens({ storage })
-  const api = createAppApiClient({ env, tokenStore: tokens.store, debug })
-  const auth = createAuth({ api: createAuthApi(api), tokens })
+  const delivery = parseDelivery(env.VITE_AUTH_REFRESH_DELIVERY)
+  // 401 → 갱신 한 번(single-flight) → 재시도 한 번. 갱신 호출은 이 훅이 꽂힌 클라이언트로 만든 api 라 늦게 잇는다
+  const bound: { authApi?: AuthApi } = {}
+  const refresher = createSessionRefresher({
+    tokens: tokens.store,
+    refreshTokens: tokens.refreshStore,
+    delivery,
+    refresh: (refreshToken) => bound.authApi!.refresh(refreshToken),
+  })
+  const api = createAppApiClient({
+    env,
+    tokenStore: tokens.store,
+    debug,
+    recoverUnauthorized: refresher.recover,
+    withCredentials: delivery === 'cookie',
+  })
+  const authApi = (bound.authApi = createAuthApi(api, { delivery }))
+  const auth = createAuth({ api: authApi, tokens, delivery })
   const queryClient = createQueryClient({ onError, staleTime: QUERY_STALE_TIME_MS })
   if (state) hydrate(queryClient, state)
   return (

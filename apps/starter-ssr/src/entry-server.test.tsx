@@ -66,7 +66,7 @@ describe('render("/") — the home page with the hello example, rendered on the 
   it('a backend that never answers is cut off by the server-side timeout — the page is still rendered', async () => {
     const hung = { value: () => new Promise(() => undefined) } as unknown as Pick<
       ApiClient,
-      'value'
+      'value' | 'list' | 'noContent' | 'page'
     >
     const started = Date.now()
     const result = await render('/', { api: hung, prefetchTimeoutMs: 30 })
@@ -91,7 +91,10 @@ describe('render("/") — the home page with the hello example, rendered on the 
 
 describe('render("/account") — a protected page on the server', () => {
   it('is 200 with a neutral placeholder: no account content, no redirect, no backend call (the token lives in the browser)', async () => {
-    const api = { value: vi.fn() } as unknown as Pick<ApiClient, 'value'>
+    const api = { value: vi.fn() } as unknown as Pick<
+      ApiClient,
+      'value' | 'list' | 'noContent' | 'page'
+    >
     const result = await render('/account', { api })
     expect(result.status).toBe(200)
     expect(result.html).toContain('확인 중')
@@ -105,7 +108,10 @@ describe('render("/account") — a protected page on the server', () => {
 
 describe('render of an unknown path', () => {
   it('is 404 with the not-found page, its own title and noindex — and fetches nothing', async () => {
-    const api = { value: vi.fn() } as unknown as Pick<ApiClient, 'value'>
+    const api = { value: vi.fn() } as unknown as Pick<
+      ApiClient,
+      'value' | 'list' | 'noContent' | 'page'
+    >
     const result = await render('/no/such/page', { api })
     expect(result.status).toBe(404)
     expect(result.html).toContain('404 — Not Found')
@@ -126,15 +132,20 @@ describe('the head of every response (@skeleton/seo)', () => {
   const siteUrl = 'https://app.example.com'
 
   it('an indexable page carries canonical, Open Graph and Twitter tags built from its route handle and SITE_URL', async () => {
-    const { head } = await render('/login?next=%2Faccount', { api: backend(down), siteUrl })
-    expect(head).toContain('<link rel="canonical" href="https://app.example.com/login" data-seo />')
-    expect(head).toContain('<meta property="og:title" content="로그인" data-seo />')
-    expect(head).toContain(
-      '<meta property="og:url" content="https://app.example.com/login" data-seo />',
-    )
+    const { head } = await render('/?utm=x', { api: backend(down), siteUrl })
+    expect(head).toContain('<link rel="canonical" href="https://app.example.com/" data-seo />')
+    expect(head).toContain('<meta property="og:title" content="홈" data-seo />')
+    expect(head).toContain('<meta property="og:url" content="https://app.example.com/" data-seo />')
     expect(head).toContain(`<meta property="og:site_name" content="${APP_NAME}" data-seo />`)
     expect(head).toContain('<meta name="twitter:card" content="summary" data-seo />')
     expect(head).toContain(`<meta name="app:site-url" content="${siteUrl}" />`)
+  })
+
+  it('the auth pages (login, sign-up, reset …) are noindex and have no canonical', async () => {
+    for (const path of ['/login', '/sign-up', '/forgot-password', '/verify-email'])
+      expect((await render(path, { api: backend(down), siteUrl })).head, path).not.toContain(
+        'canonical',
+      )
   })
 
   it('a noindex page (account, 404) has no canonical at all', async () => {

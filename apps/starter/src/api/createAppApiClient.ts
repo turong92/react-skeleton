@@ -2,6 +2,7 @@ import {
   apiConfigFromEnv,
   createApiClient,
   type ApiClient,
+  type ApiClientConfig,
   type AxiosAdapter,
   type ApiRequestError,
 } from '@skeleton/api-client'
@@ -19,6 +20,10 @@ export type AppApiClientOptions = {
   tokenStore: TokenStore
   /** 401(세션 만료) 뒤 — 토큰은 이미 지워졌다. 라우트 가드가 로그인으로 보내므로 보통 필요 없다 */
   onUnauthorized?: (error: ApiRequestError) => void
+  /** 401 → 토큰 갱신 → 한 번 재시도(`@skeleton/auth` 의 `createSessionRefresher().recover`) */
+  recoverUnauthorized?: ApiClientConfig['recoverUnauthorized']
+  /** 쿠키 모드(리프레시 토큰이 HttpOnly 쿠키)면 true */
+  withCredentials?: boolean
   /** true 면 요청마다 콘솔 로그(보통 `import.meta.env.DEV`) */
   debug?: boolean
   /** 테스트용 */
@@ -33,6 +38,8 @@ export function createAppApiClient({
   env,
   tokenStore,
   onUnauthorized,
+  recoverUnauthorized,
+  withCredentials,
   debug = false,
   adapter,
 }: AppApiClientOptions): ApiClient {
@@ -40,6 +47,8 @@ export function createAppApiClient({
     ...apiConfigFromEnv(env),
     adapter,
     debug,
+    recoverUnauthorized,
+    withCredentials,
     getAuthHeaders: createAuthHeadersProvider(tokenStore),
     getTimeZone: userTimeZone,
     onResponseDate: (date) => serverClock.observeDateHeader(date),

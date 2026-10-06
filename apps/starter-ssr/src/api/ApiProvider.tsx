@@ -7,7 +7,7 @@ export function ApiProvider({
   client,
   children,
 }: {
-  client: Pick<ApiClient, 'value'>
+  client: Pick<ApiClient, 'value' | 'list' | 'noContent' | 'page'>
   children: ReactNode
 }) {
   return <ApiContext.Provider value={client}>{children}</ApiContext.Provider>

@@ -95,6 +95,7 @@ export type {
 
 // 화면 — 문구는 `labels` prop(기본 영어), 로그인 방법은 `methods` 설정
 export { defaultAuthLabels, mergeLabels } from './screens/labels'
+export { koAuthLabels } from './screens/labels.ko'
 export type { AuthLabels } from './screens/labels'
 export { resolveMethods } from './screens/methods'
 export type { SignInMethodsConfig, SocialProviderButton } from './screens/methods'

@@ -3,6 +3,7 @@ import type { AccountApi } from '../account/accountApi'
 import type { AuthApi } from '../authApi'
 import { RequireAuth } from '../RequireAuth'
 import type { SignUpScreenProps } from '../screens/SignUpScreen'
+import type { ReactElement, ReactNode } from 'react'
 import type { AuthLabels } from '../screens/labels'
 import { resolveMethods, type SignInMethodsConfig } from '../screens/methods'
 import type { AuthSession } from '../session'
@@ -19,6 +20,7 @@ import {
   SocialCallbackPage,
   SocialLinkCallbackPage,
   VerifyPage,
+  WithLabels,
   type AuthPaths,
   type PageContext,
   type SettingsExtras,
@@ -55,8 +57,13 @@ export type AuthPageName =
 
 export type AuthRoutesOptions = {
   session: Pick<AuthSession, 'getState'>
-  authApi: AuthApi
-  accountApi: AccountApi
+  /** 모듈 전역 API 를 쓰는 앱(SPA)이 준다 — 서버 렌더 앱은 대신 `useApis` */
+  authApi?: AuthApi
+  accountApi?: AccountApi
+  /** 요청마다 · 앱마다 API 를 만드는 앱(SSR)의 훅 — 렌더 때 부른다 */
+  useApis?: () => { authApi: AuthApi; accountApi: AccountApi }
+  /** 계정 페이지를 감싸는 가드(기본 `<RequireAuth redirectTo={signIn} />`). 서버 렌더 앱은 하이드레이션 안전판을 꽂는다 */
+  guard?: ReactElement
   /** 켠 로그인 방법 — 화면 · 라우트가 이것을 따른다 */
   methods?: SignInMethodsConfig
   /** 소셜 로그인 흐름(`createSocialLoginFlow`) — 있어야 `/auth/callback` 이 생긴다 */
@@ -64,6 +71,8 @@ export type AuthRoutesOptions = {
   /** 소셜 계정 연결 흐름(`createSocialLinkFlow`) */
   socialLinkFlow?: SocialLinkFlow
   labels?: Partial<AuthLabels>
+  /** 화면 언어에 따라 문구가 바뀌는 앱: 렌더 때 부르는 훅(보통 `useT()` 로 고른 사전). 있으면 `labels` 보다 먼저 */
+  useLabels?: () => Partial<AuthLabels> | undefined
   paths?: Partial<AuthPaths>
   /** 로그인 뒤 기본 목적지(기본 `/`). 가려던 곳이 있으면 그곳이 먼저 */
   afterSignIn?: string
@@ -86,9 +95,11 @@ export type AuthRoutesOptions = {
 export function createAuthRoutes(options: AuthRoutesOptions): RouteObject[] {
   const paths = { ...DEFAULT_AUTH_PATHS, ...options.paths }
   const methods = resolveMethods(options.methods)
+  if (!options.useApis && (!options.authApi || !options.accountApi))
+    throw new Error('createAuthRoutes needs authApi and accountApi (or a useApis hook)')
   const ctx: PageContext = {
-    authApi: options.authApi,
-    accountApi: options.accountApi,
+    authApi: options.authApi as AuthApi,
+    accountApi: options.accountApi as AccountApi,
     labels: options.labels,
     paths,
     afterSignIn: options.afterSignIn ?? '/',
@@ -96,53 +107,60 @@ export function createAuthRoutes(options: AuthRoutesOptions): RouteObject[] {
     socialFlow: options.socialFlow,
     socialLinkFlow: options.socialLinkFlow,
   }
-  const handle = (page: AuthPageName) => (options.handle ? { handle: options.handle(page) } : {})
+  const page = (render: (c: PageContext) => ReactNode) => (
+    <WithLabels ctx={ctx} useLabels={options.useLabels} useApis={options.useApis} render={render} />
+  )
+  const handle = (name: AuthPageName) => (options.handle ? { handle: options.handle(name) } : {})
   const open: RouteObject[] = [
     {
       path: paths.signIn,
-      element: <SignInPage ctx={ctx} notice={options.signInNotice} />,
+      element: page((c) => <SignInPage ctx={c} notice={options.signInNotice} />),
       ...handle('signIn'),
     },
   ]
   if (options.signUp !== false)
     open.push({
       path: paths.signUp,
-      element: (
-        <SignUpPage ctx={ctx} signUp={typeof options.signUp === 'object' ? options.signUp : {}} />
-      ),
+      element: page((c) => (
+        <SignUpPage ctx={c} signUp={typeof options.signUp === 'object' ? options.signUp : {}} />
+      )),
       ...handle('signUp'),
     })
   // 가입 · 링크 로그인 · 이메일 변경 메일이 닿는 곳 — 메일 인증은 가입이 있을 때만 의미가 있다
   if (options.signUp !== false)
     open.push({
       path: paths.verifyEmail,
-      element: <VerifyPage ctx={ctx} />,
+      element: page((c) => <VerifyPage ctx={c} />),
       ...handle('verifyEmail'),
     })
   if (options.forgotPassword !== false)
     open.push(
       {
         path: paths.forgotPassword,
-        element: <ForgotPage ctx={ctx} />,
+        element: page((c) => <ForgotPage ctx={c} />),
         ...handle('forgotPassword'),
       },
-      { path: paths.resetPassword, element: <ResetPage ctx={ctx} />, ...handle('resetPassword') },
+      {
+        path: paths.resetPassword,
+        element: page((c) => <ResetPage ctx={c} />),
+        ...handle('resetPassword'),
+      },
     )
   if (methods.magicLink)
     open.push({
       path: paths.magicLink,
-      element: <MagicLinkPage ctx={ctx} />,
+      element: page((c) => <MagicLinkPage ctx={c} />),
       ...handle('magicLink'),
     })
   if (options.socialFlow)
     open.push({
       path: paths.socialCallback,
-      element: <SocialCallbackPage ctx={ctx} />,
+      element: page((c) => <SocialCallbackPage ctx={c} />),
       ...handle('socialCallback'),
     })
   open.push({
     path: paths.confirmEmailChange,
-    element: <ConfirmEmailChangePage ctx={ctx} />,
+    element: page((c) => <ConfirmEmailChangePage ctx={c} />),
     ...handle('confirmEmailChange'),
   })
 
@@ -150,22 +168,27 @@ export function createAuthRoutes(options: AuthRoutesOptions): RouteObject[] {
   const guarded: RouteObject[] = [
     {
       path: paths.account,
-      element: <AccountPage ctx={ctx} settings={settings} socialProviders={methods.social} />,
+      element: page((c) => (
+        <AccountPage ctx={c} settings={settings} socialProviders={methods.social} />
+      )),
       ...handle('account'),
     },
     {
       path: paths.confirmDelete,
-      element: (
-        <AccountPage ctx={ctx} settings={settings} socialProviders={methods.social} confirmDelete />
-      ),
+      element: page((c) => (
+        <AccountPage ctx={c} settings={settings} socialProviders={methods.social} confirmDelete />
+      )),
       ...handle('confirmDelete'),
     },
   ]
   if (options.socialLinkFlow)
     guarded.push({
       path: paths.socialLinkCallback,
-      element: <SocialLinkCallbackPage ctx={ctx} />,
+      element: page((c) => <SocialLinkCallbackPage ctx={c} />),
       ...handle('socialLinkCallback'),
     })
-  return [...open, { element: <RequireAuth redirectTo={paths.signIn} />, children: guarded }]
+  return [
+    ...open,
+    { element: options.guard ?? <RequireAuth redirectTo={paths.signIn} />, children: guarded },
+  ]
 }

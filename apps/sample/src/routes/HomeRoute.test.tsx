@@ -11,7 +11,15 @@ afterEach(() => i18n.setLocale('ko', { remember: false }))
 const unused = async () => {
   throw new Error('unused')
 }
-const api: AuthApi = { login: unused, socialLogin: unused, me: unused }
+const api: AuthApi = {
+  login: unused,
+  socialLogin: unused,
+  me: unused,
+  refresh: unused,
+  logout: unused,
+  magicLinkRequest: unused,
+  magicLinkRedeem: unused,
+}
 
 function page(signedIn: boolean) {
   const store = createTokenStore()
@@ -28,14 +36,14 @@ function page(signedIn: boolean) {
 }
 
 describe('/ (HomeRoute)', () => {
-  it('a signed-out visitor gets the landing page: one h1, the sections, and a link to sign in', () => {
+  it('a signed-out visitor gets the landing page: one h1, the sections, and a link to sign up', () => {
     const html = page(false)
     expect(html.match(/<h1/g)).toHaveLength(1)
     expect(html).toContain(i18n.t('landing.title'))
     expect(html).toContain(i18n.t('landing.features.title'))
     expect(html).toContain(i18n.t('landing.pricing.title'))
     expect(html).toContain(i18n.t('landing.faq.title'))
-    expect(html).toMatch(/<a[^>]*href="\/login"/)
+    expect(html).toMatch(/<a[^>]*href="\/sign-up"/)
     expect(html).not.toContain(i18n.t('dashboard.statsLabel'))
   })
 

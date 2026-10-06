@@ -9,7 +9,7 @@ import type { Auth } from '../auth/createAuth'
 
 export type AppProvidersProps = {
   queryClient: QueryClient
-  api: Pick<ApiClient, 'value'>
+  api: Pick<ApiClient, 'value' | 'list' | 'noContent' | 'page'>
   auth: Auth
   /** 서버는 `StaticRouter`, 브라우저는 `BrowserRouter` — 이 껍데기가 둘의 유일한 차이다(`AppRoutes` 를 안에 둔다) */
   children: ReactNode

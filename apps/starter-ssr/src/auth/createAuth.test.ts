@@ -1,5 +1,6 @@
 import type { AuthApi, TokenStorage } from '@skeleton/auth'
 import { describe, expect, it, vi } from 'vitest'
+import { DEFAULT_TOKEN_STORAGE_KEY } from '@skeleton/auth'
 import { createAuth, createDeferredTokens } from './createAuth'
 
 function fakeStorage(initial: Record<string, string> = {}) {
@@ -23,6 +24,14 @@ const api: AuthApi = {
     throw new Error('unused')
   },
   me: async () => {
+    throw new Error('unused')
+  },
+  refresh: async () => {
+    throw new Error('unused')
+  },
+  logout: async () => undefined,
+  magicLinkRequest: async () => undefined,
+  magicLinkRedeem: async () => {
     throw new Error('unused')
   },
 }
@@ -105,5 +114,36 @@ describe('createAuth — a session that is safe to hydrate', () => {
     expect(tokens.store.get()).toBeNull()
     auth.restore()
     expect(tokens.store.get()).toBe('stored-token')
+  })
+})
+
+describe('deferred refresh credentials', () => {
+  it('are not read at creation (server render and the first client paint stay signed-out), only written', () => {
+    const { storage, data } = fakeStorage({
+      'skeleton.refresh': JSON.stringify({ refreshToken: 'r1.x' }),
+    })
+    const tokens = createDeferredTokens({ storage })
+    expect(tokens.refreshStore.get()).toBeNull()
+    tokens.refreshStore.set({ refreshToken: 'r1.y' })
+    expect(data.get('skeleton.refresh')).toContain('r1.y')
+  })
+
+  it('restore() lifts both the access token and the refresh credential from the storage', () => {
+    const { storage } = fakeStorage({
+      [DEFAULT_TOKEN_STORAGE_KEY]: 'access-1',
+      'skeleton.refresh': JSON.stringify({ refreshToken: 'r1.x', sessionId: 'ses_1' }),
+    })
+    const tokens = createDeferredTokens({ storage })
+    tokens.restore()
+    expect(tokens.store.get()).toBe('access-1')
+    expect(tokens.refreshStore.get()).toEqual({ refreshToken: 'r1.x', sessionId: 'ses_1' })
+  })
+
+  it('after restore(), reload() sees the real storage instead of wiping memory', () => {
+    const { storage } = fakeStorage({ [DEFAULT_TOKEN_STORAGE_KEY]: 'access-1' })
+    const tokens = createDeferredTokens({ storage })
+    tokens.restore()
+    tokens.store.reload()
+    expect(tokens.store.get()).toBe('access-1')
   })
 })

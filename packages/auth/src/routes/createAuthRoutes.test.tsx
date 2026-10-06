@@ -85,4 +85,24 @@ describe('createAuthRoutes', () => {
     const guard = routes.find((r) => r.children?.some((c) => c.path === '/account'))
     expect(guard).toBeDefined()
   })
+
+  it('apis can come from a hook instead (server-rendered apps build them per request)', () => {
+    const routes = createAuthRoutes({
+      session,
+      useApis: () => ({ authApi: api, accountApi }),
+      locales: [],
+    } as never)
+    expect(routes.some((r) => r.path === '/login')).toBe(true)
+  })
+
+  it('throws a clear error when neither apis nor useApis are given', () => {
+    expect(() => createAuthRoutes({ session } as never)).toThrow(/authApi/)
+  })
+
+  it('the guard around the account pages can be replaced (SSR apps use a hydration-safe guard)', () => {
+    const Guard = () => null
+    const routes = createAuthRoutes({ ...base, guard: <Guard /> })
+    const guarded = routes.find((r) => r.children?.some((c) => c.path === '/account'))
+    expect((guarded?.element as { type: unknown }).type).toBe(Guard)
+  })
 })

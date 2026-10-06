@@ -13,7 +13,15 @@ const unused = async () => {
 describe('RootLayout', () => {
   it('wraps the page in the AppShell with the app name and the theme toggle, with no browser global (server render)', () => {
     const auth = createAuth({
-      api: { login: unused, socialLogin: unused, me: unused },
+      api: {
+        login: unused,
+        socialLogin: unused,
+        me: unused,
+        refresh: unused,
+        logout: unused,
+        magicLinkRequest: unused,
+        magicLinkRedeem: unused,
+      },
       tokens: createDeferredTokens(),
     })
     const html = renderToString(

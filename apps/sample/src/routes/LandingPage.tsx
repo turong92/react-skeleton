@@ -59,7 +59,7 @@ export function LandingPage() {
         eyebrow={t('landing.eyebrow')}
         title={t('landing.title')}
         subtitle={t('landing.subtitle')}
-        primaryAction={<LinkButton to="/login">{t('landing.primary')}</LinkButton>}
+        primaryAction={<LinkButton to="/sign-up">{t('landing.primary')}</LinkButton>}
         secondaryAction={
           <a className={styles.anchor} href="#pricing">
             {t('landing.secondary')}
@@ -103,7 +103,7 @@ export function LandingPage() {
           plans={plans}
           interval={interval}
           onIntervalChange={setInterval}
-          onSelect={() => navigate('/login')}
+          onSelect={() => navigate('/sign-up')}
           currency={money.currency}
           locale={money.locale}
           labels={{
@@ -135,7 +135,7 @@ export function LandingPage() {
           title={t('landing.cta.title')}
           description={t('landing.cta.body')}
           action={
-            <LinkButton to="/login" variant="inverse">
+            <LinkButton to="/sign-up" variant="inverse">
               {t('landing.cta.action')}
             </LinkButton>
           }

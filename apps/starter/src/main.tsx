@@ -21,16 +21,24 @@ const queryClient = createQueryClient({ onError: (error) => showApiError(error) 
 // 저장한 테마를 읽어 <html data-theme> 에 단다(@skeleton/theme 는 불러올 때 아무것도 하지 않는다)
 initTheme()
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider session={authSession}>
-          <RouterProvider router={router} />
-        </AuthProvider>
-        <ThemedToaster />
-        {ENABLE_QUERY_DEVTOOLS && <ReactQueryDevtools initialIsOpen={false} />}
-      </QueryClientProvider>
-    </ErrorBoundary>
-  </StrictMode>,
-)
+// 액세스 토큰은 없고 갱신 자격만 남은 탭(다른 탭이 로그인했다 · 쿠키 모드)을 되살린 뒤 그린다
+void authSession
+  .restore()
+  .catch(() => undefined)
+  .then(render)
+
+function render() {
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <ErrorBoundary>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider session={authSession}>
+            <RouterProvider router={router} />
+          </AuthProvider>
+          <ThemedToaster />
+          {ENABLE_QUERY_DEVTOOLS && <ReactQueryDevtools initialIsOpen={false} />}
+        </QueryClientProvider>
+      </ErrorBoundary>
+    </StrictMode>,
+  )
+}

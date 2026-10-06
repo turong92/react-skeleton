@@ -18,7 +18,7 @@ import { buildHead } from './ssr/head'
 
 export type RenderOptions = {
   /** 백엔드 클라이언트(토큰 없음) — 테스트는 가짜 어댑터를 단 것을 넘긴다 */
-  api: Pick<ApiClient, 'value'>
+  api: Pick<ApiClient, 'value' | 'list' | 'noContent' | 'page'>
   /** 첫 데이터를 기다리는 최대 시간(기본 2000ms). 넘으면 데이터 없이 그린다 */
   prefetchTimeoutMs?: number
   /** 사이트의 공개 주소(`SITE_URL`) — canonical · `og:url` 의 바탕. 없으면 그 태그는 빠진다 */

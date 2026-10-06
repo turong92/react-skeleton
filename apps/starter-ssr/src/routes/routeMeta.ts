@@ -7,7 +7,7 @@ import { APP_NAME } from '../appName'
 export type PrefetchContext = {
   queryClient: QueryClient
   /** 서버 렌더의 백엔드 클라이언트(토큰 없음) */
-  api: Pick<ApiClient, 'value'>
+  api: Pick<ApiClient, 'value' | 'list' | 'noContent' | 'page'>
 }
 
 /** 라우트의 `handle` — 문서 제목 · 설명 · 공유 미리보기와 서버가 첫 그림 전에 미리 가져올 데이터 */

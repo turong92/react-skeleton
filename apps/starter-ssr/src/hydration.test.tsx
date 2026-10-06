@@ -72,7 +72,15 @@ describe('the check can fail (it is not vacuous)', () => {
   const unused = async () => {
     throw new Error('unused')
   }
-  const api = { login: unused, socialLogin: unused, me: unused }
+  const api = {
+    login: unused,
+    socialLogin: unused,
+    me: unused,
+    refresh: unused,
+    logout: unused,
+    magicLinkRequest: unused,
+    magicLinkRedeem: unused,
+  }
 
   it('reading the stored token while creating the session gives a different first render — the logout button appears', async () => {
     const server = await render('/', { api: backend })

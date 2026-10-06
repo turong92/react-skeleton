@@ -13,7 +13,15 @@ afterEach(async () => {
 const unused = async () => {
   throw new Error('unused')
 }
-const api: AuthApi = { login: unused, socialLogin: unused, me: unused }
+const api: AuthApi = {
+  login: unused,
+  socialLogin: unused,
+  me: unused,
+  refresh: unused,
+  logout: unused,
+  magicLinkRequest: unused,
+  magicLinkRedeem: unused,
+}
 
 describe('RootLayout (signed out)', () => {
   it('shows the brand and the theme toggle only — no menu, no bell, no sign-out before login', () => {

@@ -293,3 +293,20 @@ export function AccountPage({
     />
   )
 }
+
+/** 렌더 때 `useLabels` · `useApis` 훅으로 문구 · API 를 골라 페이지에 넘긴다(언어를 바꾸면 그 자리에서 다시 그린다) */
+export function WithLabels({
+  ctx,
+  useLabels,
+  useApis,
+  render,
+}: {
+  ctx: PageContext
+  useLabels?: () => Partial<AuthLabels> | undefined
+  useApis?: () => { authApi: AuthApi; accountApi: AccountApi }
+  render: (ctx: PageContext) => ReactNode
+}) {
+  const labels = useLabels?.() ?? ctx.labels
+  const apis = useApis?.()
+  return render({ ...ctx, ...apis, labels })
+}

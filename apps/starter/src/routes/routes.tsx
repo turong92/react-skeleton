@@ -1,9 +1,7 @@
-import { RequireAuth } from '@skeleton/auth'
 import type { RouteObject } from 'react-router-dom'
 import { RootLayout } from '../layouts/RootLayout'
-import { AccountPage } from './AccountPage'
+import { accountRoutes } from '../auth/routes'
 import { HomePage } from './HomePage'
-import { LoginPage } from './LoginPage'
 import { NotFoundPage } from './NotFoundPage'
 
 /**
@@ -17,8 +15,8 @@ export const routes: RouteObject[] = [
     element: <RootLayout />,
     children: [
       { path: '/', element: <HomePage /> },
-      { path: '/login', element: <LoginPage /> },
-      { element: <RequireAuth />, children: [{ path: '/account', element: <AccountPage /> }] },
+      // 로그인 · 가입 · 메일 확인 · 비밀번호 재설정 · 링크 로그인 · 계정 설정(/account 는 로그인한 사람만) — `auth/routes.tsx`
+      ...accountRoutes,
       { path: '*', element: <NotFoundPage /> },
     ],
   },

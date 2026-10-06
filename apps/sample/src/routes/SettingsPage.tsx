@@ -2,7 +2,7 @@ import { useAuth } from '@skeleton/auth'
 import { setTheme, THEMES, useTheme, type Theme } from '@skeleton/theme'
 import { Button, Card, Field, PageHeader, Select } from '@skeleton/ui'
 import { useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useT } from '../i18n'
 import styles from './SettingsPage.module.css'
 
@@ -55,6 +55,7 @@ export function SettingsPage() {
             <dd>{principal?.roles.join(', ') || t('common.none')}</dd>
           </div>
         </dl>
+        <Link to="/account">{t('settings.manageAccount')}</Link>
       </Card>
       <Card title={t('settings.session')}>
         <div className={styles.session}>

@@ -10,7 +10,7 @@ describe('helloQuery — the example TanStack Query hook', () => {
         calls.push(path)
         return { message: 'hello', timestamp: '2026-06-12T00:00:00Z' } as T
       },
-    } as Pick<ApiClient, 'value'>
+    } as Pick<ApiClient, 'value' | 'list' | 'noContent' | 'page'>
 
     const query = helloQuery(client)
 

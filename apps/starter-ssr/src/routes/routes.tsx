@@ -1,10 +1,8 @@
 import type { RouteObject } from 'react-router-dom'
-import { ClientRequireAuth } from '../auth/ClientRequireAuth'
 import { helloQuery } from '../hooks/useHello'
 import { RootLayout } from '../layouts/RootLayout'
-import { AccountPage } from './AccountPage'
+import { accountRoutes } from '../auth/routes'
 import { HomePage } from './HomePage'
-import { LoginPage } from './LoginPage'
 import { NotFoundPage } from './NotFoundPage'
 import type { RouteHandle } from './routeMeta'
 
@@ -30,25 +28,14 @@ export const routes: RouteObject[] = [
           prefetch: ({ queryClient, api }) => queryClient.prefetchQuery(helloQuery(api)),
         }),
       },
-      {
-        path: '/login',
-        element: <LoginPage />,
-        handle: handle({ title: '로그인', description: '계정으로 로그인합니다.' }),
-      },
-      {
-        element: <ClientRequireAuth />,
-        children: [
-          {
-            path: '/account',
-            element: <AccountPage />,
-            handle: handle({
-              title: '계정',
-              description: '로그인한 사용자의 계정 정보.',
-              robots: 'noindex',
-            }),
-          },
-        ],
-      },
+      // 로그인 · 가입 · 메일 확인 · 비밀번호 재설정 · 링크 로그인 · 계정 설정 — `auth/routes.tsx`. 모두 검색에서 뺀다
+      ...accountRoutes((page) =>
+        handle({
+          title: page === 'account' || page === 'confirmDelete' ? '계정' : '로그인',
+          description: '계정 화면.',
+          robots: 'noindex',
+        }),
+      ),
       {
         path: '*',
         element: <NotFoundPage />,

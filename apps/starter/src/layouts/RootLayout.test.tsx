@@ -6,6 +6,9 @@ import { RootLayout } from './RootLayout'
 
 afterEach(() => vi.unstubAllGlobals())
 
+const unused = async () => {
+  throw new Error('unused')
+}
 const api: AuthApi = {
   login: async () => {
     throw new Error('unused')
@@ -16,6 +19,10 @@ const api: AuthApi = {
   me: async () => {
     throw new Error('unused')
   },
+  refresh: unused,
+  logout: unused,
+  magicLinkRequest: unused,
+  magicLinkRedeem: unused,
 }
 
 describe('RootLayout', () => {

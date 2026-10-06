@@ -1,4 +1,5 @@
 import { RequireAuth } from '@skeleton/auth'
+import { accountRoutes } from '../auth/authRoutes'
 import type { RouteObject } from 'react-router-dom'
 import { landingJsonLd } from '../landing/landingSeo'
 import { AppFrame } from '../layouts/AppFrame'
@@ -9,7 +10,6 @@ import { BoardPage } from './BoardPage'
 import { BoardPostPage } from './BoardPostPage'
 import { HomeRoute } from './HomeRoute'
 import { LegalPage } from './LegalPage'
-import { LoginPage } from './LoginPage'
 import { NoteDetailPage } from './NoteDetailPage'
 import { NoteFormPage } from './NoteFormPage'
 import { NotesPage } from './NotesPage'
@@ -44,11 +44,8 @@ export const routes: RouteObject[] = [
           jsonLd: landingJsonLd,
         }),
       },
-      {
-        path: '/login',
-        element: <LoginPage />,
-        handle: hiddenSeo('login.title', 'seo.login.description'),
-      },
+      // 로그인 · 가입 · 메일 확인 · 비밀번호 재설정 · 링크 로그인 · 계정 설정(`@skeleton/auth` 의 `createAuthRoutes` — 방법은 `auth/authConfig.ts`)
+      ...accountRoutes,
       {
         path: '/terms',
         element: <LegalPage doc="terms" />,

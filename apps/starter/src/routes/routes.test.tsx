@@ -10,9 +10,12 @@ function leaf(path: string) {
 }
 
 describe('routes', () => {
-  it('has a home page, a login page, an account page and a 404 catch-all', () => {
+  it('has a home page, the account lifecycle pages (login, sign-up, verify, reset, account) and a 404 catch-all', () => {
     expect(leaf('/')?.path).toBe('/')
     expect(leaf('/login')?.path).toBe('/login')
+    expect(leaf('/sign-up')?.path).toBe('/sign-up')
+    expect(leaf('/verify-email')?.path).toBe('/verify-email')
+    expect(leaf('/reset-password')?.path).toBe('/reset-password')
     expect(leaf('/account')?.path).toBe('/account')
     expect(leaf('/definitely/not/here')?.path).toBe('*')
   })
@@ -26,6 +29,7 @@ describe('routes', () => {
     expect(guarded('/account')).toBe(true)
     expect(guarded('/')).toBe(false)
     expect(guarded('/login')).toBe(false)
+    expect(guarded('/sign-up')).toBe(false)
     expect(guarded('/nope')).toBe(false)
   })
 })

@@ -16,6 +16,14 @@ const auth = createAuth({
     me: async () => {
       throw new Error('unused')
     },
+    refresh: async () => {
+      throw new Error('unused')
+    },
+    logout: async () => undefined,
+    magicLinkRequest: async () => undefined,
+    magicLinkRedeem: async () => {
+      throw new Error('unused')
+    },
   },
   tokens: createDeferredTokens({
     storage: {

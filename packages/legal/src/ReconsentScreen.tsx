@@ -9,7 +9,7 @@ import type { ConsentRequest } from './types'
 export type ReconsentScreenProps = {
   /** 동의해야 하는 줄 — 서버가 말한 `missing`(`rowsFromMissing`) */
   rows: readonly ConsentRow[]
-  /** `true`: 로그인 직후(처음 동의) · `false`: 쓰다가 약관이 바뀌었다 — 안내 문구가 다르다 */
+  /** `true`: 한 번도 동의한 적이 없다(처음 동의) · `false`: 쓰다가 약관이 바뀌었다 — 제목 · 안내 문구가 다르다 */
   firstSignIn?: boolean
   /** 동의 요청을 보낸다 — 실패는 던진다(화면이 문구로 바꾼다) */
   onAgree: (consents: ConsentRequest[]) => Promise<void>
@@ -55,7 +55,7 @@ export function ReconsentScreen({
   return (
     <div className={styles.overlay} role="dialog" aria-modal="true" aria-labelledby={titleId}>
       <div className={styles.card}>
-        <h1 id={titleId}>{labels.reconsentTitle}</h1>
+        <h1 id={titleId}>{firstSignIn ? labels.firstConsentTitle : labels.reconsentTitle}</h1>
         <p>{firstSignIn ? labels.reconsentBodyFirstSignIn : labels.reconsentBody}</p>
         {failure === 'stale' && <Alert tone="warning">{labels.reconsentStale}</Alert>}
         {failure === 'failed' && <Alert tone="danger">{labels.reconsentFailed}</Alert>}

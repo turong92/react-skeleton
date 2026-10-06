@@ -140,7 +140,9 @@ export async function agreeToLegal(page: Page, apiUrl: string) {
 /** 링크 · 소셜로 처음 들어온 계정은 동의가 없어 동의 화면이 앞을 막는다 — 있으면 모두 동의하고 이어 간다(legal 모듈이 없으면 아무 일도 하지 않는다) */
 export async function acceptLegalGate(page: Page, apiUrl: string) {
   if (!(await legalOn(apiUrl))) return
-  const gate = page.getByRole('dialog', { name: legal.reconsentTitle })
+  const gate = page.getByRole('dialog', {
+    name: new RegExp(`${legal.reconsentTitle}|${legal.firstConsentTitle}`),
+  })
   try {
     await gate.waitFor({ timeout: 10_000 })
   } catch {

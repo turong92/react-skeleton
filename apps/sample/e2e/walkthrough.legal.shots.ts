@@ -61,7 +61,7 @@ describe('legal walkthrough', () => {
       const code = await waitForCode(mailUrl, email, 'verify', { seen })
       await page.getByLabel(auth.codeDigit(1, 6)).click()
       await page.keyboard.type(code.code)
-      await page.getByRole('heading', { level: 1 }).first().waitFor()
+      await page.getByRole('heading', { level: 1, name: /안녕하세요/ }).waitFor()
       await page.goto(`${baseUrl}/account`)
       const section = page.getByRole('region', { name: legal.settingsTitle })
       await section.waitFor()
@@ -81,7 +81,7 @@ describe('legal walkthrough', () => {
       await page.getByRole('button', { name: auth.signInMagicLinkSubmit }).click()
       const link = await waitForLink(mailUrl, first, 'magic-link', { seen })
       await page.goto(`${baseUrl}${link.path}`)
-      await page.getByRole('dialog', { name: legal.reconsentTitle }).waitFor()
+      await page.getByRole('dialog', { name: legal.firstConsentTitle }).waitFor()
       await shot(
         page,
         '22-reconsent-interstitial.png',

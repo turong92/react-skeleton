@@ -84,7 +84,7 @@ describe('sign-up consent checklist', () => {
       await page.getByLabel(auth.codeDigit(1, 6)).click()
       await page.keyboard.type(code.code)
       await pwExpect(page.getByRole('heading', { level: 1, name: /안녕하세요/ })).toBeVisible()
-      await pwExpect(page.getByRole('dialog', { name: legal.reconsentTitle })).toHaveCount(0)
+      await pwExpect(page.getByRole('dialog', { name: legal.firstConsentTitle })).toHaveCount(0)
       const token = await page.evaluate(() => window.localStorage.getItem('sample.accessToken'))
       const mine = await (
         await fetch(`${apiUrl}/api/v1/legal/consents/me`, {
@@ -135,7 +135,7 @@ describe('first sign-in without a consent (link login creates the account with n
       await page.getByRole('button', { name: auth.signInMagicLinkSubmit }).click()
       const link = await waitForLink(mailUrl, first, 'magic-link', { seen })
       await page.goto(`${baseUrl}${link.path}`)
-      const gate = page.getByRole('dialog', { name: legal.reconsentTitle })
+      const gate = page.getByRole('dialog', { name: legal.firstConsentTitle })
       await pwExpect(gate).toBeVisible()
       await pwExpect(gate.getByText(legal.reconsentBodyFirstSignIn)).toBeVisible()
       await gate.getByRole('button', { name: legal.reconsentSubmit }).click() // 체크 없이
@@ -169,7 +169,7 @@ describe('first sign-in without a consent (link login creates the account with n
     await page.getByRole('button', { name: auth.signInMagicLinkSubmit }).click()
     const link = await waitForLink(mailUrl, other, 'magic-link', { seen })
     await page.goto(`${baseUrl}${link.path}`)
-    const gate = page.getByRole('dialog', { name: legal.reconsentTitle })
+    const gate = page.getByRole('dialog', { name: legal.firstConsentTitle })
     await pwExpect(gate).toBeVisible()
     await gate.getByRole('button', { name: legal.reconsentLeave }).click()
     await pwExpect(gate).toBeHidden()
@@ -194,16 +194,17 @@ describe('re-consent filter (backend started with skeleton.legal.reconsent.enabl
     await page.getByRole('button', { name: auth.signInMagicLinkSubmit }).click()
     const link = await waitForLink(mailUrl, blocked, 'magic-link', { seen })
     await page.goto(`${baseUrl}${link.path}`)
-    await page.goto(`${baseUrl}/notes`) // 보호된 API 호출 — 동의가 없으니 403
-    await page.unroute('**/api/v1/legal/consents/me')
-    const gate = page.getByRole('dialog', { name: legal.reconsentTitle })
+    // 링크가 로그인시키고 대시보드로 보낸다 — 대시보드의 보호된 호출이 동의가 없어 403 으로 막힌다(첫 로그인 확인은 위에서 가렸다)
+    const gate = page.getByRole('dialog', { name: legal.firstConsentTitle })
     await pwExpect(gate).toBeVisible()
-    await pwExpect(gate.getByText(legal.reconsentBody)).toBeVisible() // 「쓰다가 바뀐」 문구
+    await pwExpect(gate.getByText(legal.reconsentBodyFirstSignIn)).toBeVisible() // 한 번도 동의한 적이 없다(NOT_AGREED) — 처음 동의 문구
     await gate.getByRole('checkbox', { name: legal.agreeAll }).check()
     await gate.getByRole('button', { name: legal.reconsentSubmit }).click()
     await pwExpect(gate).toBeHidden()
     // 막혔던 목록 호출이 그대로 나가 화면이 채워진다 — 로그인 화면으로 쫓겨나지 않았다
-    await pwExpect(page).toHaveURL(/\/notes$/)
-    await pwExpect(page.getByRole('heading', { level: 1 })).toBeVisible()
+    await page.unroute('**/api/v1/legal/consents/me')
+    await pwExpect(page).not.toHaveURL(/\/login/)
+    await pwExpect(page.getByRole('heading', { level: 1, name: /안녕하세요/ })).toBeVisible()
+    await pwExpect(page.locator('[inert]')).toHaveCount(0)
   })
 })

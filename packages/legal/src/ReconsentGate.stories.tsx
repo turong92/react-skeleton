@@ -77,8 +77,9 @@ type Story = StoryObj<typeof meta>
 export const FirstSignInWithoutConsent: Story = {
   args: { fake: { blocked: true }, accountId: 'acc-1' },
   play: async ({ canvas, userEvent }) => {
-    const dialog = await screen.findByRole('dialog', { name: '약관이 바뀌었어요' })
-    await expect(within(dialog).getByText(/계속하기 전에/)).toBeVisible() // 로그인 직후 문구
+    // 한 번도 동의한 적이 없다(모두 NOT_AGREED) — 「약관이 바뀌었어요」가 아니라 처음 동의 문구
+    const dialog = await screen.findByRole('dialog', { name: '약관 동의' })
+    await expect(within(dialog).getByText(/계속하기 전에/)).toBeVisible()
     // 뒤 화면은 inert — 키보드 · 낭독에서 빠진다(살아 있어서 동의 뒤 그 자리에서 이어진다)
     await expect(canvas.getByRole('heading', { name: '내 노트' }).closest('[inert]')).not.toBeNull()
     // 체크 없이는 못 간다
@@ -139,7 +140,7 @@ export const LeavingKeepsThe403: Story = {
   },
   play: async ({ canvas, args, userEvent }) => {
     await userEvent.click(await canvas.findByRole('button', { name: '노트 불러오기' }))
-    const dialog = await screen.findByRole('dialog', { name: '약관이 바뀌었어요' })
+    const dialog = await screen.findByRole('dialog', { name: '약관 동의' })
     await userEvent.click(within(dialog).getByRole('button', { name: '로그아웃' }))
     await expect(args.onLeave).toHaveBeenCalled()
     await expect(await canvas.findByText('403 그대로')).toBeVisible()

@@ -29,6 +29,8 @@ export type LegalLabels = {
   newTab: string
   // 재동의
   reconsentTitle: string
+  /** 한 번도 동의한 적이 없는 계정(링크 · 소셜 첫 로그인)의 제목 */
+  firstConsentTitle: string
   reconsentBody: string
   reconsentBodyFirstSignIn: string
   reconsentSubmit: string
@@ -81,6 +83,7 @@ export const defaultLegalLabels: LegalLabels = {
   documentFailed: 'We could not load this document.',
   newTab: '(opens in a new tab)',
   reconsentTitle: 'Our terms have changed',
+  firstConsentTitle: 'Agreements',
   reconsentBody: 'Please read and agree to the updated documents to keep using the service.',
   reconsentBodyFirstSignIn: 'Before you continue, please read and agree to these documents.',
   reconsentSubmit: 'Agree and continue',
@@ -140,6 +143,7 @@ export const koLegalLabels: LegalLabels = {
   documentFailed: '문서를 불러오지 못했어요.',
   newTab: '(새 탭에서 열림)',
   reconsentTitle: '약관이 바뀌었어요',
+  firstConsentTitle: '약관 동의',
   reconsentBody: '계속 이용하려면 바뀐 문서를 읽고 동의해 주세요.',
   reconsentBodyFirstSignIn: '계속하기 전에 아래 문서를 읽고 동의해 주세요.',
   reconsentSubmit: '동의하고 계속하기',

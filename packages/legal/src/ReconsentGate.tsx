@@ -95,7 +95,10 @@ export function ReconsentGate({
           <ReconsentScreen
             key={rows.map((r) => `${r.type}@${r.version}`).join(',')}
             rows={rows}
-            firstSignIn={state.origin === 'sign-in'}
+            // 모두 `NOT_AGREED` 면 처음 동의 — 어디서 알았는가(403 · 로그인 직후)보다 서버가 말한 이유가 정확하다
+            firstSignIn={
+              state.missing.length > 0 && state.missing.every((m) => m.reason === 'NOT_AGREED')
+            }
             onAgree={agree}
             onLeave={() => {
               controller.decline()

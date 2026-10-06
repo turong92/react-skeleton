@@ -9,7 +9,11 @@ const walkthrough = process.env.E2E_WALKTHROUGH === '1'
 export default defineConfig({
   test: {
     include: walkthrough
-      ? ['e2e/walkthrough.shots.ts', 'e2e/walkthrough.board.shots.ts', 'e2e/walkthrough.account.shots.ts']
+      ? [
+          'e2e/walkthrough.shots.ts',
+          'e2e/walkthrough.board.shots.ts',
+          'e2e/walkthrough.account.shots.ts',
+        ]
       : ['e2e/**/*.e2e.ts'],
     globalSetup: ['e2e/globalSetup.ts'],
     pool: 'forks',

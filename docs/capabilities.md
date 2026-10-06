@@ -87,7 +87,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 | id | 무엇을 주는가 | 켜는 법 | 백엔드 | 상태 | 키워드 (ko / en) |
 |---|---|---|---|---|---|
 | `social-login` | 소셜 로그인의 프런트 절반 — 제공자 인가 주소 · state 검증(탭에 묶임 · 한 번만) · 콜백의 code 를 백엔드로 보내 로그인 처리, 로그인한 계정에 제공자를 더하는 연결 흐름(createSocialLinkFlow). 버튼 · 콜백 화면은 SignInScreen · createAuthRoutes 가 그린다. | 항상 | auth-social | stable | 소셜 로그인, 구글 로그인, 카카오 로그인, 네이버 로그인, 간편 로그인, OAuth / social login, google login, kakao login, naver login, oauth, sso |
-| `account-lifecycle` | 계정 수명주기 화면 한 벌 — 가입(서버 정책 힌트 · 캡차 · 동의 슬롯) · 메일 확인 안내 · 인증/재설정/이메일 변경/본인 확인 링크 도착 · 로그인(방법은 백엔드가 알려 준다) · 계정 설정(이메일 변경 확인 대기는 서버가 말해 준다) · 정지/차단 안내. createAuthRoutes 가 라우트까지 한 번에. | 항상 | account, account-jdbc, auth-session, auth-session-jdbc | stable | 회원가입, 가입 화면, 이메일 인증, 메일 확인, 비밀번호 재설정, 비밀번호 찾기 / sign up, registration screen, verify email, check your email, reset password, forgot password |
+| `account-lifecycle` | 계정 수명주기 화면 한 벌 — 가입(서버 정책 힌트 · 캡차 · 동의 슬롯 · 메일로 받은 6자리 인증번호를 같은 화면에서 입력하면 바로 로그인) · 비밀번호 재설정 · 링크 로그인 도착 · 로그인(방법은 백엔드가 알려 준다) · 계정 설정(이메일 변경 · 첫 비밀번호 · 소셜 연결/해제 · 삭제의 다시 인증은 비밀번호 · 메일 인증번호(그 자리에서 입력) · 제공자 동의 중 계정에 맞는 하나, 이메일 변경 대기는 서버가 말해 준다) · 오래된 메일 링크 안내 · 정지/차단 안내. createAuthRoutes 가 라우트까지 한 번에. | 항상 | account, account-jdbc, auth-session, auth-session-jdbc | stable | 회원가입, 가입 화면, 이메일 인증, 메일 확인, 비밀번호 재설정, 비밀번호 찾기 / sign up, registration screen, verify email, check your email, reset password, forgot password |
 | `session-refresh` | 액세스 토큰 자동 갱신 — 401 이면 갱신을 한 번으로 합쳐(single-flight) 요청을 한 번만 다시 보낸다. 회전하는 리프레시 토큰을 안전하게 저장하고 탭 사이를 락 · storage 이벤트로 맞추며, 재사용 · 만료 때는 깨끗이 로그아웃. body · cookie 모드. | 항상 | auth-session, auth-session-jdbc | stable | 토큰 갱신, 리프레시 토큰, 자동 로그인 유지, 세션 만료, 탭 동기화 / token refresh, refresh token, silent refresh, session expiry, cross-tab sync |
 | `magic-link-login` | 이메일 링크 로그인 — 로그인 화면의 「링크 받기」 · 메일 확인 안내 · 링크를 열면 로그인되는 도착 화면. 비밀번호 없이 쓰거나 비밀번호와 나란히 켠다. | 항상 | auth-magic-link | stable | 링크 로그인, 매직링크, 비밀번호 없는 로그인, 이메일 로그인 / magic link, passwordless, email sign in |
 | `account-admin` | 운영자 계정 표(선택 내보내기 @skeleton/auth/admin) — 검색 · 상태 필터 · 정지 · 해제 · 삭제 유예 복구 · 역할 부여/회수. | 항상 | account | stable | 운영자 도구, 계정 관리, 계정 정지, 관리자 화면 / admin tools, account management, suspend account, admin panel |
@@ -372,17 +372,17 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 - 쓰지 않는 경우: clientSecret 은 프런트에 두지 않는다 — 백엔드 skeleton.auth-social.providers.* 에만 / 이메일 가입 · 계정 연결 정책은 백엔드 — 앱이 병합을 켜 두면(skeleton.account.social.merge-on-verified-email, 샘플 · 스타터 백엔드는 켠다) 확인된 제공자 이메일은 기존 계정으로 바로 로그인되고, 꺼 두면 ACCOUNT.SOCIAL_EMAIL_CONFLICT(409)가 나온다 — 화면은 둘 다 다룬다. 연결 · 병합은 계정 주소로 알림 메일이 간다 / 제공자마다 콜백 주소 · clientId 를 콘솔에 등록해야 한다(VITE_SOCIAL_<제공자>_CLIENT_ID)
 - 키워드: 소셜 로그인, 구글 로그인, 카카오 로그인, 네이버 로그인, 간편 로그인, OAuth / social login, google login, kakao login, naver login, oauth, sso
 
-### `account-lifecycle` — 계정 수명주기 화면 한 벌 — 가입(서버 정책 힌트 · 캡차 · 동의 슬롯) · 메일 확인 안내 · 인증/재설정/이메일 변경/본인 확인 링크 도착 · 로그인(방법은 백엔드가 알려 준다) · 계정 설정(이메일 변경 확인 대기는 서버가 말해 준다) · 정지/차단 안내. createAuthRoutes 가 라우트까지 한 번에.
+### `account-lifecycle` — 계정 수명주기 화면 한 벌 — 가입(서버 정책 힌트 · 캡차 · 동의 슬롯 · 메일로 받은 6자리 인증번호를 같은 화면에서 입력하면 바로 로그인) · 비밀번호 재설정 · 링크 로그인 도착 · 로그인(방법은 백엔드가 알려 준다) · 계정 설정(이메일 변경 · 첫 비밀번호 · 소셜 연결/해제 · 삭제의 다시 인증은 비밀번호 · 메일 인증번호(그 자리에서 입력) · 제공자 동의 중 계정에 맞는 하나, 이메일 변경 대기는 서버가 말해 준다) · 오래된 메일 링크 안내 · 정지/차단 안내. createAuthRoutes 가 라우트까지 한 번에.
 
 - 종류 · 상태: pattern · stable
 - 위치: `@skeleton/auth` (`packages/auth/src/routes/createAuthRoutes.tsx`)
 - 켜는 법: 모든 프로젝트에 들어간다
 - 필요한 것: `auth`
 - 백엔드: 모듈 `account` · `account-jdbc` · `auth-session` · `auth-session-jdbc` · 경로 `/api/v1/account` · `/api/v1/auth`
-- 주요 진입점: `createAuthRoutes` · `SignInScreen` · `SignUpScreen` · `VerifyEmailScreen` · `ForgotPasswordScreen` · `ResetPasswordScreen` · `AccountSettings` · `AccountStateNotice` · `defaultAuthLabels` · `koAuthLabels`
+- 주요 진입점: `createAuthRoutes` · `SignInScreen` · `SignUpScreen` · `VerifyCodePanel` · `ReauthProof` · `ForgotPasswordScreen` · `ResetPasswordScreen` · `AccountSettings` · `AccountStateNotice` · `defaultAuthLabels` · `koAuthLabels`
 - 복사해 시작할 Patterns: `packages/auth/src/patterns/SignUp.stories.tsx` · `packages/auth/src/patterns/MailLinkLandings.stories.tsx` · `packages/auth/src/patterns/AccountSettings.stories.tsx`
 - 문서: `packages/auth/README.md`
-- 쓰지 않는 경우: 메일을 보내는 쪽(notification-mail)과 링크 주소(skeleton.account.mail.link-base-url)는 백엔드 설정 — 프런트의 /verify-email · /reset-password · /magic-link … 경로와 맞춘다 / 로그인 방법은 백엔드 GET /auth/methods 가 알려 준다(로딩 · 실패 대체 화면 포함) — 환경변수 VITE_AUTH_METHODS 는 그것을 덮어쓰는 선택일 뿐이다. 리프레시 전달 방식(body · cookie)만은 앱이 시작할 때 정하므로 VITE_AUTH_REFRESH_DELIVERY 가 백엔드와 같아야 한다(다르면 개발 콘솔에 경고) / 동의(약관 판) 저장은 없다 — 슬롯이 체크한 판을 콜백으로 보고할 뿐 / 비밀번호 없는 계정(링크 · 소셜로만 가입)의 이메일 변경 · 첫 비밀번호 · 소셜 연결은 서버가 다시 인증(메일 링크의 토큰)을 요구한다 — 화면이 하려던 작업을 sessionStorage 에 기억하고 /confirm-reauth 도착 화면이 토큰을 돌려준다(저장하지 않는 비밀 — 새 비밀번호 · 소셜 인가 코드 — 는 링크를 연 뒤 한 번 더 입력)
+- 쓰지 않는 경우: 메일을 보내는 쪽(notification-mail)과 링크 주소(skeleton.account.mail.link-base-url)는 백엔드 설정 — 프런트의 /reset-password · /magic-link 경로와 맞춘다(링크가 남은 곳은 그 둘뿐 — 가입 인증 · 이메일 변경 · 다시 인증 · 삭제 확인은 6자리 인증번호) / 로그인 방법은 백엔드 GET /auth/methods 가 알려 준다(로딩 · 실패 대체 화면 포함) — 환경변수 VITE_AUTH_METHODS 는 그것을 덮어쓰는 선택일 뿐이다. 리프레시 전달 방식(body · cookie)만은 앱이 시작할 때 정하므로 VITE_AUTH_REFRESH_DELIVERY 가 백엔드와 같아야 한다(다르면 개발 콘솔에 경고) / 동의(약관 판) 저장은 없다 — 슬롯이 체크한 판을 콜백으로 보고할 뿐 / 이메일 주소가 없는 계정(Naver 등)의 다시 인증은 제공자 동의 왕복이다 — 하려던 작업과 계정은 OAuth state 기록에 묶이고(sessionStorage · 한 번 읽으면 지워진다) 돌아오면 설정 화면이 한 번만 이어서 한다. 서버에 이메일 변경 취소 엔드포인트는 없다(새 요청이 대신하거나 만료). PKCE 는 아직 없다(백엔드가 미룸)
 - 키워드: 회원가입, 가입 화면, 이메일 인증, 메일 확인, 비밀번호 재설정, 비밀번호 찾기, 계정 설정, 프로필, 로그인 세션 관리, 계정 삭제, 정지된 계정 / sign up, registration screen, verify email, check your email, reset password, forgot password, account settings, profile, active sessions, delete account, suspended account
 
 ### `session-refresh` — 액세스 토큰 자동 갱신 — 401 이면 갱신을 한 번으로 합쳐(single-flight) 요청을 한 번만 다시 보낸다. 회전하는 리프레시 토큰을 안전하게 저장하고 탭 사이를 락 · storage 이벤트로 맞추며, 재사용 · 만료 때는 깨끗이 로그아웃. body · cookie 모드.

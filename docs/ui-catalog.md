@@ -31,7 +31,7 @@
 | `CopyButton`     | `packages/ui/src/CopyButton/CopyButton.stories.tsx`         | 링크 · 토큰 · 참조 번호를 클립보드로(결과는 낭독되고 잠시 뒤 되돌아온다)                                                                     |
 | `Stepper`        | `packages/ui/src/Stepper/Stepper.stories.tsx`               | 여러 단계 폼의 머리(순서 목록 · `aria-current="step"` · 끝낸 단계로 돌아가기)                                                                |
 | `Tooltip`        | `packages/ui/src/Tooltip/Tooltip.stories.tsx`               | 짧은 이름의 아이콘 버튼에 보조 설명(포커스 · 호버 · Esc — 유일한 안내로 쓰지 않는다)                                                         |
-| `ConfirmDialog`  | `packages/ui/src/ConfirmDialog/ConfirmDialog.stories.tsx`   | 되돌릴 수 없는 동작 앞의 확인 창(처음 포커스는 취소 · 문구를 쳐야 켜지는 확인 선택)                                                          |
+| `ConfirmDialog`  | `packages/ui/src/ConfirmDialog/ConfirmDialog.stories.tsx`   | 되돌릴 수 없는 동작 앞의 확인 창(처음 포커스는 취소 · 문구를 쳐야 켜지는 확인 선택 · 다른 준비(다시 인증)가 안 됐으면 `confirmDisabled`)     |
 | `InfiniteList`   | `packages/ui/src/InfiniteList/InfiniteList.stories.tsx`     | 이어 보기 목록(끝에 닿으면 자동 + 언제나 키보드 「더 보기」 버튼 · 실패 시 다시 시도)                                                        |
 | `Combobox`       | `packages/ui/src/Combobox/Combobox.stories.tsx`             | 자동완성 입력(정해진 목록 거르기 · 서버 검색 `loadOptions` — 늦은 옛 응답 버림 · `Field` 안에서)                                             |
 | `DatePicker`     | `packages/ui/src/DatePicker/DatePicker.stories.tsx`         | 날짜 하나 · 기간(`DateRangePicker`) — 네이티브 날짜 입력 + 글로 읽어 주기 + 시간대에 맞는 「오늘」                                           |

@@ -2,49 +2,41 @@ import { Alert, Button, SectionCard } from '@skeleton/ui'
 import { useState, type FormEvent } from 'react'
 import { passwordRequirements, violationsOf } from '../account/passwordRules'
 import type { PasswordPolicy, PasswordViolation } from '../account/types'
-import { submitWithReauth } from '../reauth'
+import type { ReauthCredential } from '../account/accountApi'
+import { isReauthFailure, reauthKindOf, type ReauthSubject } from '../reauth/kind'
 import { PasswordField } from './PasswordField'
-import { ReauthNotices, type ReauthSupport } from './ReauthNotices'
+import { ReauthProof } from './ReauthProof'
 import { PasswordHints } from './PasswordHints'
 import styles from './auth.module.css'
-import { ErrorCodes } from '@skeleton/api-client'
 import { mergeLabels, type AuthLabels } from './labels'
 import { useAction } from './useAction'
 
 export type PasswordSectionProps = {
-  /** 소셜 · 링크로만 가입한 계정은 false — 현재 비밀번호 없이 첫 비밀번호를 정한다 */
-  hasPassword: boolean
+  /** 다시 인증의 종류를 고르는 `me` 의 부분(`reauthSubjectOf(me)`) — 비밀번호가 없는 계정은 현재 비밀번호 대신 메일로 받은 인증번호로 첫 비밀번호를 정한다 */
+  subject: ReauthSubject
   policy?: PasswordPolicy
   email?: string
-  onChange: (request: {
-    currentPassword?: string
-    confirmationToken?: string
-    newPassword: string
-  }) => Promise<unknown>
-  /** 첫 비밀번호를 정하는(비밀번호 없는) 계정의 다시 인증 — 메일 링크 왕복 */
-  reauth?: ReauthSupport
-  /** 비밀번호 없는 계정의 확인 메일을 보낼 주소(안내 문장) */
-  mailTo?: string | null
+  onChange: (request: ReauthCredential & { newPassword: string }) => Promise<unknown>
+  /** `POST /account/reauth/confirmation` — 비밀번호 없는 계정의 인증번호 메일 */
+  requestReauthCode: () => Promise<unknown>
   labels?: Partial<AuthLabels>
 }
 
-/** 비밀번호 절 — 바꾸면 다른 기기는 로그아웃되고 이 기기는 그대로 */
+/** 비밀번호 절 — 바꾸면 다른 기기는 로그아웃되고 이 기기는 그대로. 첫 비밀번호는 메일 주소가 인증된 계정만(주소가 없으면 정할 수 없다) */
 export function PasswordSection({
-  hasPassword,
+  subject,
   policy,
   email,
   onChange,
-  reauth,
-  mailTo = email ?? null,
+  requestReauthCode,
   labels: given,
 }: PasswordSectionProps) {
   const labels = mergeLabels(given)
-  const [current, setCurrent] = useState('')
+  const hasPassword = subject.hasPassword
+  const kind = reauthKindOf(subject)
   const [next, setNext] = useState('')
+  const [proof, setProof] = useState<ReauthCredential | null>(null)
   const [done, setDone] = useState(false)
-  const [mailSent, setMailSent] = useState(false)
-  const resend = useAction(labels)
-  const reauthActive = !hasPassword && !!reauth
   const [violations, setViolations] = useState<PasswordViolation[]>([])
   const action = useAction(labels)
 
@@ -53,35 +45,25 @@ export function PasswordSection({
     setDone(false)
     setViolations([])
     if (policy && passwordRequirements(policy, next, email).some((r) => !r.met)) return
-    setMailSent(false)
-    let finished = true
-    const ok = await action.run(async () => {
-      if (!hasPassword && reauth) {
-        const result = await submitWithReauth({
-          store: reauth.store,
-          requestMail: reauth.requestMail,
-          // 새 비밀번호는 저장하지 않는다 — 링크를 연 뒤 한 번 더 입력한다
-          action: { kind: 'set-password' },
-          run: (credential) => onChange({ newPassword: next, ...credential }),
-        })
-        finished = result.status === 'done'
-        setMailSent(!finished)
-        return
-      }
-      await onChange({ ...(hasPassword ? { currentPassword: current } : {}), newPassword: next })
-    })
-    if (ok && finished) {
+    const ok = await action.run(() => onChange({ ...proof, newPassword: next }))
+    if (ok) {
       setDone(true)
-      setCurrent('')
       setNext('')
+      setProof(null)
     }
   }
   // 정책 위반은 힌트 목록이 보여 준다 — 오류 줄에는 중복해서 올리지 않는다
   const serverViolations = violationsOf(action.raw)
   if (serverViolations.length > 0 && violations.length === 0) setViolations(serverViolations)
-  const currentWrong = action.error?.code === ErrorCodes.ACCOUNT_CURRENT_PASSWORD_INVALID
-  const showError = action.error && !currentWrong && serverViolations.length === 0
+  const proofFailure = isReauthFailure(action.raw) ? action.raw : undefined
+  const showError = action.error && !proofFailure && serverViolations.length === 0
 
+  if (kind === 'provider')
+    return (
+      <SectionCard id="password" title={labels.passwordSetTitle}>
+        <Alert tone="info">{labels.passwordNeedsEmail}</Alert>
+      </SectionCard>
+    )
   return (
     <SectionCard
       id="password"
@@ -89,27 +71,16 @@ export function PasswordSection({
       description={hasPassword ? labels.passwordOtherSessionsNote : labels.passwordSetHint}
     >
       <form className={styles.form} onSubmit={submit} aria-label={labels.sectionPassword}>
-        <ReauthNotices
-          active={reauthActive}
-          sent={mailSent}
-          ready={reauthActive && reauth.store.hasToken()}
-          email={mailTo}
-          resending={resend.busy}
-          onResend={() => void resend.run(() => reauth!.requestMail())}
-          labels={labels}
-        />
         {showError && <Alert tone="danger">{action.error?.message}</Alert>}
         {done && <Alert tone="success">{labels.passwordChanged}</Alert>}
-        {hasPassword && (
-          <PasswordField
-            label={labels.currentPassword}
-            labels={labels}
-            autoComplete="current-password"
-            value={current}
-            onChange={setCurrent}
-            error={currentWrong ? action.error?.message : undefined}
-          />
-        )}
+        <ReauthProof
+          kind={kind}
+          email={subject.email}
+          requestCode={hasPassword ? undefined : requestReauthCode}
+          onChange={setProof}
+          failure={proofFailure}
+          labels={given}
+        />
         <PasswordField
           label={labels.newPassword}
           labels={labels}
@@ -127,7 +98,12 @@ export function PasswordSection({
           />
         )}
         <div>
-          <Button type="submit" loading={action.busy} loadingLabel={labels.submitting}>
+          <Button
+            type="submit"
+            disabled={proof === null}
+            loading={action.busy}
+            loadingLabel={labels.submitting}
+          >
             {labels.passwordChangeSubmit}
           </Button>
         </div>

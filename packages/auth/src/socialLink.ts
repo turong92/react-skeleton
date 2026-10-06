@@ -6,18 +6,30 @@ export type SocialLinkFlowOptions = Omit<SocialLoginFlowOptions, 'session'> & {
   accountApi: Pick<AccountApi, 'linkSocial'>
 }
 
-/** 콜백이 돌려준, 서버로 보낼 값 — state 는 이미 확인했다 */
-export type SocialLinkCallback = {
-  provider: string
-  authorizationCode: string
-  redirectUri?: string
-}
+/** 제공자 동의 왕복이 끝난 뒤 이어 갈 작업 — 폼이 다시 그릴 수 있는 것만 담는다(비밀 없음. `link-reauth` 의 `target` 만 아직 쓰이지 않은 인가 코드를 싣는다) */
+export type ProviderAction =
+  | { kind: 'email-change'; newEmail: string }
+  | { kind: 'unlink'; identityId: string }
+  | { kind: 'delete' }
+  /** 이 동의가 **연결할** 제공자의 것이다(비밀번호 · 코드로 다시 인증하는 계정) */
+  | { kind: 'link' }
+  /** 이 동의는 이미 연결된 제공자의 **다시 인증**이고, 연결하려던 제공자의 코드는 `target` 에 있다 */
+  | { kind: 'link-reauth'; target: SocialLinkCallbackBase }
+
+/** state 에 묶여 돌아오는 값 — 어느 계정이 무슨 작업을 하려던 왕복인지 */
+export type SocialLinkContext = { accountId: string; action: ProviderAction }
+
+type SocialLinkCallbackBase = { provider: string; authorizationCode: string; redirectUri?: string }
+
+/** 콜백이 돌려준, 서버로 보낼 값 — state 는 이미 확인했다. `context` 는 `start` 때 묶은 값 */
+export type SocialLinkCallback = SocialLinkCallbackBase & { context?: SocialLinkContext }
 
 export type SocialLinkFlow = {
-  start(provider: string): { url: string; state: string }
+  /** `context` 는 그 state 에 묶여 `read` 결과로 돌아온다(어느 계정의 무슨 작업인지) */
+  start(provider: string, context?: SocialLinkContext): { url: string; state: string }
   /** 콜백의 state · 에러 · code 를 확인하고 **서버를 부르지 않은 채** 값을 돌려준다 — 화면이 비밀번호를 먼저 받을 때. 같은 콜백을 두 번 읽어도 같은 결과 */
   read(search: string | URLSearchParams): Promise<SocialLinkCallback>
-  /** `read` 한 뒤 `POST /account/identities/social/{provider}` — 로그인 상태는 바뀌지 않는다. 다시 인증(`currentPassword` 또는 `confirmationToken`)은 서버가 강제한다 */
+  /** `read` 한 뒤 `POST /account/identities/social/{provider}` — 로그인 상태는 바뀌지 않는다. 다시 인증(`currentPassword` · `confirmationCode` · `socialReauth`)은 서버가 강제한다 */
   complete(
     search: string | URLSearchParams,
     reauth?: ReauthCredential,
@@ -43,8 +55,13 @@ export function createSocialLinkFlow({
         ({ provider, authorizationCode, redirectUri }) as unknown as AuthTokenResponse,
     },
   })
-  const read: SocialLinkFlow['read'] = async (search) =>
-    (await flow.complete(search)).token as unknown as SocialLinkCallback
+  const read: SocialLinkFlow['read'] = async (search) => {
+    const { token, context } = await flow.complete(search)
+    return {
+      ...(token as unknown as SocialLinkCallbackBase),
+      ...(context ? { context } : {}),
+    } as SocialLinkCallback
+  }
   const linked = new Map<string, Promise<{ provider: string }>>()
   return {
     start: flow.start,

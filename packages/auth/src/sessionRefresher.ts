@@ -1,4 +1,9 @@
-import { ApiRequestError, ErrorCodes, type UnauthorizedContext } from '@skeleton/api-client'
+import {
+  ApiRequestError,
+  ErrorCodes,
+  retryAfterSeconds,
+  type UnauthorizedContext,
+} from '@skeleton/api-client'
 import type { RefreshStore } from './refreshStore'
 import type { TokenStore } from './tokenStore'
 import type { AuthTokenResponse } from './types'
@@ -23,6 +28,8 @@ export type SessionRefresherOptions = {
   /** 기본: 브라우저의 `navigator.locks`(있으면). `false` 면 탭 안 합치기만 한다 */
   locks?: LockManagerLike | false
   lockName?: string
+  /** 지금 시각(밀리초) — 기본 `Date.now`. 백오프 시계를 시험에서 돌릴 때 */
+  now?: () => number
 }
 
 export type SessionRefresher = {
@@ -36,18 +43,27 @@ export type SessionRefresher = {
 }
 
 const DEFAULT_LOCK_NAME = 'skeleton.auth.refresh'
+/** `429 AUTH.TOO_MANY_REFRESHES` 뒤의 기다림 — `Retry-After` 가 없으면 30초, 연속이면 두 배씩, 10분을 넘지 않는다 */
+const DEFAULT_BACKOFF_SECONDS = 30
+const MAX_BACKOFF_SECONDS = 600
 
 /**
  * 액세스 토큰 갱신 — 401 마다 세우지 않고 한 번으로 합치고(single-flight), 갱신이 돌려준 **새 리프레시 토큰을 먼저 저장**한 뒤
  * 새 액세스 토큰을 내보낸다(옛 리프레시 토큰은 두 번 다시 보내지 않는다 — 재사용은 서버가 세션 전체를 끊는다).
  * 여러 탭은 `navigator.locks` 로 줄 세우고, 락 안에서 저장소를 다시 읽어 이미 갱신됐으면 그 결과를 쓴다.
  * `AUTH.REFRESH_INVALID` · `REFRESH_REUSED` · `ACCOUNT_SUSPENDED` 이면 두 저장소를 비우고 `onSessionEnded` 를 부른다.
+ * `429 AUTH.TOO_MANY_REFRESHES`(세션이 10분에 30번 넘게 회전)는 **세션이 멀쩡하다** — 로그아웃하지 않고 그 429 를 일시 오류로 내보낸 뒤,
+ * 기다릴 시간(`Retry-After`, 연속이면 두 배씩 · 최대 10분)이 지나기 전에는 서버를 다시 부르지 않고 같은 오류를 돌려준다.
  */
 export function createSessionRefresher(options: SessionRefresherOptions): SessionRefresher {
   const { tokens, refreshTokens, delivery, onSessionEnded } = options
+  const now = options.now ?? Date.now
   let inFlight: Promise<boolean> | null = null
+  /** 백오프 중이면 그때까지 · 마지막 429 · 연속 횟수 */
+  let backoff: { until: number; error: ApiRequestError; streak: number } | null = null
 
   function end(reason: SessionEndReason): false {
+    backoff = null
     refreshTokens.clear()
     tokens.clear()
     onSessionEnded?.(reason)
@@ -71,6 +87,13 @@ export function createSessionRefresher(options: SessionRefresherOptions): Sessio
         const { status, code } = error.apiError
         if (code === ErrorCodes.AUTH_REFRESH_REUSED) return end('reuse-detected')
         if (code === ErrorCodes.AUTH_ACCOUNT_SUSPENDED) return end('suspended')
+        if (code === ErrorCodes.AUTH_TOO_MANY_REFRESHES) {
+          const streak = (backoff?.streak ?? 0) + 1
+          const asked = retryAfterSeconds(error) ?? DEFAULT_BACKOFF_SECONDS
+          const wait = Math.min(MAX_BACKOFF_SECONDS, Math.max(1, asked) * 2 ** (streak - 1))
+          backoff = { until: now() + wait * 1000, error, streak }
+          throw error // 세션은 그대로 — 일시 오류
+        }
         if (status === 401) return end('expired')
       }
       throw error
@@ -86,6 +109,7 @@ export function createSessionRefresher(options: SessionRefresherOptions): Sessio
       sessionId: response.sessionId ?? credentials?.sessionId,
     })
     tokens.set(response.accessToken)
+    backoff = null
     return true
   }
 
@@ -102,6 +126,7 @@ export function createSessionRefresher(options: SessionRefresherOptions): Sessio
 
   function refresh(failedAuthorization?: string): Promise<boolean> {
     if (inFlight) return inFlight
+    if (backoff && now() < backoff.until) return Promise.reject(backoff.error)
     const failedToken = failedAuthorization?.replace(/^Bearer\s+/i, '')
     const flight = withLock(() => run(failedToken)).finally(() => {
       if (inFlight === flight) inFlight = null

@@ -1,23 +1,27 @@
-import { Alert, Button, ConfirmDialog, Field, Input, SectionCard } from '@skeleton/ui'
+import { Alert, Button, ConfirmDialog, SectionCard } from '@skeleton/ui'
 import { useState } from 'react'
+import type { ReauthCredential, SocialReauth } from '../account/accountApi'
 import type { DeletionResult } from '../account/types'
-import { PasswordField } from './PasswordField'
+import { isReauthFailure, reauthKindOf, type ReauthSubject } from '../reauth/kind'
+import { ReauthProof } from './ReauthProof'
 import styles from './auth.module.css'
 import { mergeLabels, type AuthLabels } from './labels'
 import { useAction } from './useAction'
 
 export type DeleteAccountSectionProps = {
-  hasPassword: boolean
+  /** 다시 인증의 종류를 고르는 `me` 의 부분(`reauthSubjectOf(me)`) */
+  subject: ReauthSubject
   /** 서버의 유예 기간(`skeleton.account.deletion.grace`, 기본 30일) — 안내 문장에만 쓴다 */
   graceDays: number
-  /** 비밀번호가 없는 계정: 확인 메일 요청 */
-  onRequestConfirmation: () => Promise<unknown>
-  onDelete: (credential: {
-    currentPassword?: string
-    confirmationToken?: string
-  }) => Promise<DeletionResult>
-  /** 확인 메일 링크(`/confirm-delete?token=`)로 들어왔을 때 미리 채우는 토큰 */
-  confirmationToken?: string
+  /** `POST /account/delete/confirmation` — 비밀번호 없는 계정의 삭제 인증번호 메일(다시 인증 번호와 별개 · 이 세션에만 쓸 수 있다) */
+  requestDeleteCode: () => Promise<unknown>
+  onDelete: (credential: ReauthCredential) => Promise<DeletionResult>
+  /** 주소가 없는 계정: 이 제공자의 동의를 다시 거친 뒤 돌아와 이어서 지운다(하려던 작업은 부모가 state 에 묶는다) */
+  onProviderReauth?: (provider: string) => void
+  /** 제공자 동의를 마치고 돌아왔다 — 그 증거. 글자를 정확히 치는 확인은 그대로 거친다 */
+  resume?: SocialReauth | null
+  /** 제공자 증거는 한 번만 쓰인다 — 시도한 뒤(성공 · 실패)에 부모가 버린다 */
+  onResumeSpent?: () => void
   /** 삭제가 예약되고 안내를 읽은 뒤 사용자가 「로그아웃」을 눌렀을 때(보통 이 기기를 로그아웃한다) */
   onDeleted?: (result: DeletionResult) => void
   formatDate?: (iso: string) => string
@@ -26,34 +30,38 @@ export type DeleteAccountSectionProps = {
 
 const defaultFormat = (iso: string) => new Date(iso).toLocaleDateString()
 
-/** 계정 삭제 절 — 다시 인증(비밀번호 또는 메일 토큰) → 글자를 정확히 쳐야 켜지는 확인 → 유예 기간 안내 */
+/** 계정 삭제 절 — 다시 인증(비밀번호 · 메일 인증번호 · 제공자 동의) → 글자를 정확히 쳐야 켜지는 확인 → 유예 기간 안내 */
 export function DeleteAccountSection({
-  hasPassword,
+  subject,
   graceDays,
-  onRequestConfirmation,
+  requestDeleteCode,
   onDelete,
-  confirmationToken = '',
+  onProviderReauth,
+  resume,
+  onResumeSpent,
   onDeleted,
   formatDate = defaultFormat,
   labels: given,
 }: DeleteAccountSectionProps) {
   const labels = mergeLabels(given)
-  const [password, setPassword] = useState('')
-  const [token, setToken] = useState(confirmationToken)
-  const [mailSent, setMailSent] = useState(false)
+  const kind = reauthKindOf(subject)
+  const [proof, setProof] = useState<ReauthCredential | null>(null)
   const [open, setOpen] = useState(false)
   const [result, setResult] = useState<DeletionResult | null>(null)
-  const mail = useAction(labels)
   const del = useAction(labels)
-  const credential = hasPassword ? { currentPassword: password } : { confirmationToken: token }
-  const ready = hasPassword ? password.length > 0 : token.length > 0
+  const credential: ReauthCredential | null = resume ? { socialReauth: resume } : proof
+  const ready = credential !== null
 
   async function confirm() {
-    const ok = await del.run(async () => {
-      setResult(await onDelete(credential))
+    if (!credential) return
+    await del.run(async () => {
+      try {
+        setResult(await onDelete(credential))
+      } finally {
+        if (resume) onResumeSpent?.()
+      }
     })
     setOpen(false)
-    if (!ok) return
   }
 
   if (result)
@@ -76,50 +84,19 @@ export function DeleteAccountSection({
       description={labels.deleteGraceNotice(graceDays)}
     >
       <div className={styles.stack}>
-        {(del.error || mail.error) && (
-          <Alert tone="danger">{(del.error ?? mail.error)?.message}</Alert>
-        )}
-        {hasPassword ? (
-          <>
-            <p className={styles.muted}>{labels.deletePasswordHint}</p>
-            <PasswordField
-              label={labels.currentPassword}
-              labels={labels}
-              autoComplete="current-password"
-              value={password}
-              onChange={setPassword}
-            />
-          </>
-        ) : (
-          <>
-            <p className={styles.muted}>{labels.deleteMailHint}</p>
-            <div>
-              <Button
-                variant="secondary"
-                loading={mail.busy}
-                loadingLabel={labels.submitting}
-                onClick={async () => setMailSent(await mail.run(onRequestConfirmation))}
-              >
-                {labels.deleteMailSend}
-              </Button>
-            </div>
-            {(mailSent || token) && (
-              <>
-                {mailSent && <Alert tone="success">{labels.deleteMailSent}</Alert>}
-                <Field label={labels.deleteTokenLabel} required>
-                  {(control) => (
-                    <Input
-                      {...control}
-                      autoComplete="one-time-code"
-                      value={token}
-                      onChange={(e) => setToken(e.target.value)}
-                    />
-                  )}
-                </Field>
-              </>
-            )}
-          </>
-        )}
+        {del.error && !isReauthFailure(del.raw) && <Alert tone="danger">{del.error.message}</Alert>}
+        {kind === 'password' && <p className={styles.muted}>{labels.deletePasswordHint}</p>}
+        <ReauthProof
+          kind={kind}
+          email={subject.email}
+          providers={subject.providers}
+          requestCode={requestDeleteCode}
+          onChange={setProof}
+          failure={isReauthFailure(del.raw) ? del.raw : undefined}
+          onProvider={onProviderReauth}
+          confirmedWith={resume?.provider}
+          labels={given}
+        />
         <div>
           <Button variant="danger" disabled={!ready} onClick={() => setOpen(true)}>
             {labels.deleteButton}

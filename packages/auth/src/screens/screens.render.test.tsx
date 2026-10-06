@@ -79,7 +79,11 @@ describe('SignUpScreen', () => {
   }
   it('shows the password requirements from the policy', () => {
     const out = html(
-      <SignUpScreen policy={policy} onSignUp={async () => ({ status: 'VERIFICATION_SENT' })} />,
+      <SignUpScreen
+        policy={policy}
+        onSignUp={async () => ({ status: 'VERIFICATION_SENT' })}
+        onVerifyCode={noop}
+      />,
     )
     expect(out).toContain('Enough characters')
     expect(out).toContain('A digit')
@@ -91,6 +95,7 @@ describe('SignUpScreen', () => {
       <SignUpScreen
         policy={policy}
         onSignUp={async () => ({ status: 'VERIFICATION_SENT' })}
+        onVerifyCode={noop}
         renderCaptcha={() => <div>captcha-here</div>}
         consents={[{ id: 'terms', version: '2.0', label: 'I accept the terms', required: true }]}
       />,

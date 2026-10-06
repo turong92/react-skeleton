@@ -177,9 +177,61 @@ describe('createSocialLinkFlow (logged-in user adds a provider to the account)',
       createState: () => 's',
     })
     flow.start('google')
-    await flow.complete('?code=abc&state=s', { confirmationToken: 'rt' })
+    await flow.complete('?code=abc&state=s', { confirmationCode: '123456' })
     expect(linkSocial).toHaveBeenCalledWith('google', 'abc', providers.google.redirectUri, {
-      confirmationToken: 'rt',
+      confirmationCode: '123456',
+    })
+  })
+
+  describe('the state carries the pending action and the account (re-consent round trip)', () => {
+    const storage = () => {
+      const data = new Map<string, string>()
+      return {
+        data,
+        storage: {
+          getItem: (k: string) => data.get(k) ?? null,
+          setItem: (k: string, v: string) => void data.set(k, v),
+          removeItem: (k: string) => void data.delete(k),
+        },
+      }
+    }
+    const make = (store: ReturnType<typeof storage>, state = 's') =>
+      createSocialLinkFlow({
+        providers,
+        accountApi: { linkSocial: vi.fn() },
+        storage: store.storage,
+        createState: () => state,
+      })
+
+    it('start(provider, context) → read hands the same context back, read twice gives the same result (StrictMode)', async () => {
+      const store = storage()
+      const flow = make(store)
+      const context = {
+        accountId: 'acc_1',
+        action: { kind: 'email-change', newEmail: 'n@b.c' },
+      } as const
+      flow.start('google', context)
+      const first = await flow.read('?code=abc&state=s')
+      expect(first).toMatchObject({ provider: 'google', authorizationCode: 'abc', context })
+      expect(await flow.read('?code=abc&state=s')).toEqual(first)
+    })
+
+    it('the record disappears from storage when it is read (one use) — a replay of the same callback is a mismatch', async () => {
+      const store = storage()
+      make(store).start('google', { accountId: 'acc_1', action: { kind: 'delete' } })
+      expect(store.data.size).toBe(1)
+      await make(store).read('?code=abc&state=s')
+      expect(store.data.size).toBe(0)
+      await expect(make(store).read('?code=abc&state=s')).rejects.toMatchObject({
+        reason: 'state_mismatch',
+      })
+    })
+
+    it('a plain start has no context', async () => {
+      const store = storage()
+      const flow = make(store)
+      flow.start('google')
+      expect((await flow.read('?code=abc&state=s')).context).toBeUndefined()
     })
   })
 })

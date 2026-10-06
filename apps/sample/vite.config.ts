@@ -30,6 +30,7 @@ export default defineConfig(({ mode }) => ({
               '/auth',
               '/account',
               '/confirm-email-change',
+              '/confirm-reauth',
               '/confirm-delete',
               '/admin',
               '/notes',

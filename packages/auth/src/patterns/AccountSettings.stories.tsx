@@ -1,30 +1,26 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { useMemo } from 'react'
+import { StrictMode, useMemo } from 'react'
 import { expect, fn, waitFor, within } from 'storybook/test'
 import { AccountStateNotice } from '../screens/AccountStateNotice'
 import { AccountSettings, type AccountSettingsProps } from '../screens/AccountSettings'
-import { createReauthStore } from '../reauth'
-import { createReauthChannelHub } from '../reauthChannel'
 import {
   createFakeAccountApi,
-  FAKE_REAUTH_TOKEN,
+  FAKE_CODE,
+  FAKE_SOCIAL_REAUTH,
   type FakeAccountOptions,
 } from '../stories/fakeAccountApi'
 import { withRouter } from '../stories/withRouter'
 
 /**
- * 계정 설정 — 프로필(언어 · 시간대) · 비밀번호 · 이메일(확인 대기) · 로그인 수단(마지막 수단 보호) · 활성 세션(하나씩 · 한꺼번에) · 계정 삭제(다시 인증 → 글자 입력 확인 → 유예 안내).
- * `AccountApi` 하나로 이어진다(여기서는 가짜). `sections` 로 절을 끄고, 소셜 연결 버튼은 앱이 켠 제공자만 나온다.
+ * 계정 설정 — 프로필(언어 · 시간대) · 비밀번호 · 이메일(새 주소의 인증번호 단계) · 로그인 수단(연결 해제는 다시 인증) · 활성 세션 · 계정 삭제(다시 인증 → 글자 입력 확인 → 유예 안내).
+ * 다시 인증은 계정에 맞는 하나: 비밀번호 · 메일로 받은 6자리를 **그 자리에서** 입력 · (주소가 없는 계정) 제공자 동의. `AccountApi` 하나로 이어진다(여기서는 가짜).
  */
-const hub = createReauthChannelHub() // 이 스토리집 한 페이지 안의 「탭」들
 
 function Demo({ fake, ...props }: { fake?: FakeAccountOptions } & Partial<AccountSettingsProps>) {
   const api = useMemo(() => createFakeAccountApi(fake), [fake])
-  const reauth = useMemo(() => createReauthStore({}), [])
   return (
     <AccountSettings
       api={api}
-      reauth={reauth}
       locales={[
         { value: 'en', label: 'English' },
         { value: 'ko', label: '한국어' },
@@ -37,6 +33,7 @@ function Demo({ fake, ...props }: { fake?: FakeAccountOptions } & Partial<Accoun
 
 const meta = {
   title: 'Patterns/Auth/Account settings',
+  args: { onProviderReauth: fn() },
   component: Demo,
   decorators: [withRouter],
 } satisfies Meta<typeof Demo>
@@ -71,81 +68,140 @@ export const ChangePassword: Story = {
   },
 }
 
-export const ChangeEmailPending: Story = {
+/** 비밀번호 계정: 새 주소 + 현재 비밀번호 → 새 주소로 간 6자리를 같은 자리에서 입력 → 바뀐다(다른 기기는 로그아웃) */
+export const ChangeEmailWithCode: Story = {
   play: async ({ canvas, userEvent }) => {
     const section = within(await canvas.findByRole('region', { name: 'Email address' }))
     await userEvent.type(section.getByLabelText(/^New email/), 'next@example.com')
     await userEvent.type(section.getByLabelText(/^Current password/), 'old-password-1')
     await userEvent.click(section.getByRole('button', { name: 'Change email' }))
-    await expect(await section.findByText(/We sent a link to next@example.com/)).toBeVisible()
+    await expect(
+      await section.findByText(/We sent a 6-digit code to next@example.com/),
+    ).toBeVisible()
+    const first = section.getByLabelText('Digit 1 of 6')
+    await userEvent.click(first)
+    await userEvent.paste('000000') // 틀린 번호 — 남은 횟수와 함께
+    await expect(await section.findByText(/not right\. 4 attempts left/)).toBeVisible()
+    await userEvent.click(section.getByLabelText('Digit 1 of 6'))
+    await userEvent.paste(FAKE_CODE)
+    await expect(await section.findByText(/Your email address is changed/)).toBeVisible()
+    await expect((await canvas.findAllByText('next@example.com')).length).toBeGreaterThan(0) // 현재 주소가 바뀌었다
   },
 }
 
+export const WrongPasswordKeepsTheForm: Story = {
+  play: async ({ canvas, userEvent }) => {
+    const section = within(await canvas.findByRole('region', { name: 'Email address' }))
+    await userEvent.type(section.getByLabelText(/^New email/), 'next@example.com')
+    await userEvent.type(section.getByLabelText(/^Current password/), 'wrong-1')
+    await userEvent.click(section.getByRole('button', { name: 'Change email' }))
+    await expect(await section.findByText('The current password is not correct.')).toBeVisible()
+    await expect(section.getByLabelText(/^New email/)).toHaveValue('next@example.com')
+  },
+}
+
+/** 새로고침 직후에도 서버(me.pendingEmail)가 말해 주는 상태 — 인증번호 단계가 바로 열린다 */
 export const PendingEmailFromServer: Story = {
   args: { fake: { pendingEmail: 'next@example.com' } },
-  play: async ({ canvas }) => {
-    // 새로고침 직후에도 서버(me.pendingEmail)가 말해 주는 「확인 대기」
-    await expect(await canvas.findByText(/We sent a link to next@example.com/)).toBeVisible()
-    await expect(await canvas.findByText(/the link works until/)).toBeVisible()
+  play: async ({ canvas, userEvent }) => {
+    await expect(
+      await canvas.findByText(/We sent a 6-digit code to next@example.com/),
+    ).toBeVisible()
+    await expect(await canvas.findByText(/it works until/)).toBeVisible()
+    // 「다시 받기」는 새 요청이다 — 다시 인증(비밀번호)을 거친 폼이 새 주소가 채워진 채 열린다
+    await userEvent.click(canvas.getByRole('button', { name: 'Send the code again' }))
+    const section = within(await canvas.findByRole('region', { name: 'Email address' }))
+    await expect(await section.findByLabelText(/^New email/)).toHaveValue('next@example.com')
+    await expect(section.getByLabelText(/^Current password/)).toBeVisible()
   },
 }
 
-/** 비밀번호 없는 계정: 이메일 변경은 본인 확인 메일의 링크를 거친다 — 요청 → 메일 → (링크가 토큰을 돌려준다) → 한 번 더 제출 */
-export const PasswordlessEmailReauth: Story = {
+/** 비밀번호 없는 계정(주소 있음): 같은 자리에서 코드를 받아 입력한다 — 링크 왕복 없음 */
+export const PasswordlessEmailChangeByCode: Story = {
   args: { fake: { passwordless: true } },
   play: async ({ canvas, userEvent }) => {
     const section = within(await canvas.findByRole('region', { name: 'Email address' }))
-    await expect(section.getByText(/We email you a confirmation link/)).toBeVisible()
     await userEvent.type(section.getByLabelText(/^New email/), 'next@example.com')
+    await userEvent.click(section.getByRole('button', { name: 'Email me a code' }))
+    await expect(
+      await section.findByText(/We sent a 6-digit code to ann@example.com/),
+    ).toBeVisible()
+    await userEvent.click(section.getAllByLabelText('Digit 1 of 6')[0])
+    await userEvent.paste(FAKE_CODE)
+    await expect(await section.findByText('Code entered — finish below.')).toBeVisible()
     await userEvent.click(section.getByRole('button', { name: 'Change email' }))
-    await expect(await section.findByText('Check your email')).toBeVisible()
-    await expect(section.getByLabelText(/^New email/)).toHaveValue('next@example.com') // 입력은 남는다
+    await expect(
+      await section.findByText(/We sent a 6-digit code to next@example.com/),
+    ).toBeVisible()
   },
 }
 
-const recorded = new Map<string, string>()
-const recordingStorage = {
-  getItem: (k: string) => recorded.get(k) ?? null,
-  setItem: (k: string, v: string) => void recorded.set(k, v),
-  removeItem: (k: string) => void recorded.delete(k),
+export const PasswordlessWrongReauthCodeShowsAttemptsLeft: Story = {
+  args: { fake: { passwordless: true } },
+  play: async ({ canvas, userEvent }) => {
+    const section = within(await canvas.findByRole('region', { name: 'Email address' }))
+    await userEvent.type(section.getByLabelText(/^New email/), 'next@example.com')
+    await userEvent.click(section.getByRole('button', { name: 'Email me a code' }))
+    await userEvent.click(await section.findByLabelText('Digit 1 of 6'))
+    await userEvent.paste('999999') // 아직 서버는 안 봤다 — 제출하면 틀린 것이 나온다
+    await userEvent.click(section.getByRole('button', { name: 'Change email' }))
+    await expect(await section.findByText(/not right\. 4 attempts left/)).toBeVisible()
+  },
 }
 
-export const PasswordlessFirstPassword: Story = {
+export const PasswordlessFirstPasswordByCode: Story = {
   args: { fake: { passwordless: true } },
-  beforeEach: () => recorded.clear(),
-  // 진짜 호출부(PasswordSection)를 거친다: 하려던 작업은 기억하되 새 비밀번호는 저장소 어디에도 쓰지 않는다
-  render: (args) => <Demo {...args} reauth={createReauthStore({ storage: recordingStorage })} />,
   play: async ({ canvas, userEvent }) => {
     const section = within(await canvas.findByRole('region', { name: 'Set a password' }))
+    await userEvent.click(section.getByRole('button', { name: 'Email me a code' }))
+    await userEvent.click(await section.findByLabelText('Digit 1 of 6'))
+    await userEvent.paste(FAKE_CODE)
     await userEvent.type(section.getByLabelText(/^New password/), 'Correct-horse-battery-9')
     await userEvent.click(section.getByRole('button', { name: 'Change password' }))
-    await expect(await section.findByText('Check your email')).toBeVisible()
-    await expect(section.getByRole('button', { name: 'Send the link again' })).toBeVisible()
-    await expect(recorded.size).toBeGreaterThan(0) // 하려던 작업은 기억했다
-    await expect([...recorded.values()].join('')).not.toContain('Correct-horse-battery-9')
+    await expect(await section.findByText(/Password changed/)).toBeVisible()
   },
 }
 
-/** 본인 확인 링크는 새 탭에서 열린다 — 그 탭이 토큰을 제안하면 하려던 작업이 있는 이 탭이 이어 간다 */
-export const HandoffFromAnotherTab: Story = {
-  args: { fake: { passwordless: true } },
-  render: (args) => <Demo {...args} reauthChannel={hub.open()} />,
-  play: async ({ canvas, userEvent }) => {
+/** 주소가 없는 계정: 비밀번호는 정할 수 없다고 말하고, 이메일 변경은 이미 쓰는 제공자로 다시 동의한다(왕복은 앱이 state 에 묶는다) */
+export const NoAddressAccountReconsents: Story = {
+  args: { fake: { noAddress: true }, socialProviders: [{ provider: 'naver' }] },
+  play: async ({ canvas, args, userEvent }) => {
+    await expect(await canvas.findByText(/needs a verified email address/)).toBeVisible()
     const section = within(await canvas.findByRole('region', { name: 'Email address' }))
     await userEvent.type(section.getByLabelText(/^New email/), 'next@example.com')
-    await userEvent.click(section.getByRole('button', { name: 'Change email' }))
-    await expect(await section.findByText('Check your email')).toBeVisible()
-    // 다른 탭(도착 화면)이 메일 링크의 토큰을 제안한다
-    await expect(await hub.open().offer(FAKE_REAUTH_TOKEN, 1000)).toBe(true)
-    await expect(await canvas.findByText(/We sent a link to next@example.com/)).toBeVisible()
-    await expect(await canvas.findByText(/your email changes when you open it/i)).toBeVisible()
-    // 마친 뒤에는 「메일을 확인해 주세요」 안내와 입력이 남지 않는다 — 서버가 말해 주는 대기 상태 하나만
-    await expect(canvas.queryByText('Check your email')).toBeNull()
-    await expect(canvas.getByLabelText(/^New email/)).toHaveValue('')
+    await userEvent.click(section.getByRole('button', { name: 'Confirm with Naver' }))
+    await expect(args.onProviderReauth).toHaveBeenCalledWith('naver', {
+      kind: 'email-change',
+      newEmail: 'next@example.com',
+    })
   },
 }
 
-export const PasswordlessLinkNeedsConfirmation: Story = {
+/** 제공자 동의에서 돌아왔다 — 이어서 새 주소로 인증번호를 요청하고 코드 단계가 열린다. 한 번만(StrictMode 에서도) */
+export const NoAddressReturnsAndContinuesOnce: Story = {
+  args: {
+    fake: { noAddress: true },
+    socialProviders: [{ provider: 'naver' }],
+    resume: {
+      action: { kind: 'email-change', newEmail: 'next@example.com' },
+      socialReauth: FAKE_SOCIAL_REAUTH,
+    },
+    onResumeConsumed: fn(),
+  },
+  render: (args) => (
+    <StrictMode>
+      <Demo {...args} />
+    </StrictMode>
+  ),
+  play: async ({ canvas, args }) => {
+    await expect(
+      await canvas.findByText(/We sent a 6-digit code to next@example.com/),
+    ).toBeVisible()
+    await expect(args.onResumeConsumed).toHaveBeenCalledTimes(1)
+  },
+}
+
+export const PasswordlessLinkAsksForTheProofAfterTheProvider: Story = {
   args: {
     fake: { passwordless: true },
     socialProviders: [{ provider: 'kakao' }],
@@ -153,10 +209,7 @@ export const PasswordlessLinkNeedsConfirmation: Story = {
   },
   play: async ({ canvas, args, userEvent }) => {
     await userEvent.click(await canvas.findByRole('button', { name: 'Link Kakao' }))
-    await expect(
-      await canvas.findByText(/We sent a confirmation link to ann@example.com/),
-    ).toBeVisible()
-    await expect(args.onLinkSocial).not.toHaveBeenCalled() // 제공자에는 확인 뒤에 간다
+    await expect(args.onLinkSocial).toHaveBeenCalledWith('kakao') // 증거는 제공자에 다녀온 뒤 콜백 화면이 받는다
   },
 }
 
@@ -185,8 +238,47 @@ export const UnlinkAndLink: Story = {
     await canvas.findAllByRole('listitem')
     const rows = removes().filter((b) => b.closest('li'))
     await userEvent.click(rows[rows.length - 1]) // Google 은 목록 맨 끝
-    await userEvent.click(await waitFor(() => removes().find((b) => !b.closest('li'))!))
+    const dialog = within(await canvas.findByRole('dialog'))
+    const confirm = dialog.getByRole('button', { name: 'Remove' })
+    await expect(confirm).toBeDisabled() // 다시 인증이 있어야 켜진다
+    await userEvent.type(dialog.getByLabelText(/^Current password/), 'wrong-1')
+    await userEvent.click(confirm)
+    await expect(await dialog.findByText('The current password is not correct.')).toBeVisible()
+    await userEvent.clear(dialog.getByLabelText(/^Current password/))
+    await userEvent.type(dialog.getByLabelText(/^Current password/), 'old-password-1')
+    await userEvent.click(confirm)
     await waitFor(() => expect(canvas.queryByText('Google')).toBeNull())
+  },
+}
+
+/** 비밀번호 없는 계정(주소 있음)이 수단을 뗄 때는 메일로 받은 6자리를 창 안에서 입력한다 */
+export const UnlinkNeedsTheMailedCodeForAPasswordlessAccount: Story = {
+  args: { fake: { passwordless: true } },
+  play: async ({ canvas, userEvent }) => {
+    const rows = (await canvas.findAllByRole('listitem')).filter((li) => li.querySelector('button'))
+    await userEvent.click(within(rows[0]).getByRole('button', { name: 'Remove' }))
+    const dialog = within(await canvas.findByRole('dialog'))
+    await expect(dialog.getByRole('button', { name: 'Remove' })).toBeDisabled()
+    await userEvent.click(dialog.getByRole('button', { name: 'Email me a code' }))
+    await userEvent.click(await dialog.findByLabelText('Digit 1 of 6'))
+    await userEvent.paste(FAKE_CODE)
+    await userEvent.click(dialog.getByRole('button', { name: 'Remove' }))
+    await expect(await canvas.findByText('Removed.')).toBeVisible()
+  },
+}
+
+/** 주소가 없는 계정이 수단을 뗄 때는 이미 쓰는 제공자로 다시 동의한다 */
+export const UnlinkNoAddressReconsents: Story = {
+  args: { fake: { noAddress: true }, socialProviders: [{ provider: 'naver' }] },
+  play: async ({ canvas, args, userEvent }) => {
+    const rows = (await canvas.findAllByRole('listitem')).filter((li) => li.querySelector('button'))
+    await userEvent.click(within(rows[1]).getByRole('button', { name: 'Remove' }))
+    const dialog = within(await canvas.findByRole('dialog'))
+    await userEvent.click(dialog.getByRole('button', { name: 'Confirm with Naver' }))
+    await expect(args.onProviderReauth).toHaveBeenCalledWith('naver', {
+      kind: 'unlink',
+      identityId: expect.any(String),
+    })
   },
 }
 
@@ -227,13 +319,55 @@ export const DeleteWithPassword: Story = {
   },
 }
 
-export const DeletePasswordless: Story = {
+/** 비밀번호 없는 계정: 삭제용 인증번호를 받아 같은 자리에서 입력 → 글자 확인 → 유예 안내 */
+export const DeletePasswordlessByCode: Story = {
   args: { fake: { passwordless: true } },
   play: async ({ canvas, userEvent }) => {
-    await expect(await canvas.findByRole('button', { name: 'Email me the link' })).toBeVisible()
-    await expect(canvas.queryByLabelText(/^Current password/)).toBeNull()
-    await userEvent.click(canvas.getByRole('button', { name: 'Email me the link' }))
-    await expect(await canvas.findByLabelText(/Confirmation code/)).toBeVisible()
+    const section = within(await canvas.findByRole('region', { name: 'Delete account' }))
+    await expect(section.queryByLabelText(/^Current password/)).toBeNull()
+    await expect(section.getByRole('button', { name: 'Delete my account' })).toBeDisabled()
+    await userEvent.click(section.getByRole('button', { name: 'Email me a code' }))
+    await userEvent.click(await section.findByLabelText('Digit 1 of 6'))
+    await userEvent.paste(FAKE_CODE)
+    await userEvent.click(section.getByRole('button', { name: 'Delete my account' }))
+    const dialog = within(await canvas.findByRole('dialog'))
+    await userEvent.type(dialog.getByLabelText('Type DELETE to confirm'), 'DELETE')
+    await userEvent.click(dialog.getByRole('button', { name: 'Delete account' }))
+    await expect(await canvas.findByText(/scheduled for erasure/)).toBeVisible()
+  },
+}
+
+export const DeleteWithAWrongCodeShowsAttemptsLeft: Story = {
+  args: { fake: { passwordless: true } },
+  play: async ({ canvas, userEvent }) => {
+    const section = within(await canvas.findByRole('region', { name: 'Delete account' }))
+    await userEvent.click(section.getByRole('button', { name: 'Email me a code' }))
+    await userEvent.click(await section.findByLabelText('Digit 1 of 6'))
+    await userEvent.paste('111111')
+    await userEvent.click(section.getByRole('button', { name: 'Delete my account' }))
+    const dialog = within(await canvas.findByRole('dialog'))
+    await userEvent.type(dialog.getByLabelText('Type DELETE to confirm'), 'DELETE')
+    await userEvent.click(dialog.getByRole('button', { name: 'Delete account' }))
+    await expect(await section.findByText(/not right\. 4 attempts left/)).toBeVisible()
+    await expect(canvas.queryByText(/scheduled for erasure/)).toBeNull()
+  },
+}
+
+/** 주소가 없는 계정: 제공자 동의를 다시 거쳐 돌아오면 확인했다고 말하고, 글자 확인으로 지운다 */
+export const DeleteNoAddressAfterProviderReturn: Story = {
+  args: {
+    fake: { noAddress: true },
+    socialProviders: [{ provider: 'naver' }],
+    resume: { action: { kind: 'delete' }, socialReauth: FAKE_SOCIAL_REAUTH },
+  },
+  play: async ({ canvas, userEvent }) => {
+    const section = within(await canvas.findByRole('region', { name: 'Delete account' }))
+    await expect(await section.findByText('Confirmed with Naver.')).toBeVisible()
+    await userEvent.click(section.getByRole('button', { name: 'Delete my account' }))
+    const dialog = within(await canvas.findByRole('dialog'))
+    await userEvent.type(dialog.getByLabelText('Type DELETE to confirm'), 'DELETE')
+    await userEvent.click(dialog.getByRole('button', { name: 'Delete account' }))
+    await expect(await canvas.findByText(/scheduled for erasure/)).toBeVisible()
   },
 }
 

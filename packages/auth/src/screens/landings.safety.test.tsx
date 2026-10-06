@@ -1,12 +1,11 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
-import { ConfirmEmailChangeLanding } from './ConfirmEmailChangeLanding'
+import { ReauthProof } from './ReauthProof'
 import { MagicLinkLanding } from './MagicLinkLanding'
 import { ResetPasswordScreen } from './ResetPasswordScreen'
 import { SignInScreen } from './SignInScreen'
 import { SignUpScreen } from './SignUpScreen'
-import { VerifyEmailScreen } from './VerifyEmailScreen'
 import { DeleteAccountSection } from './DeleteAccountSection'
 import { SocialCallbackScreen } from './SocialCallbackScreen'
 
@@ -18,37 +17,13 @@ const html = (node: React.ReactNode) =>
   )
 const noop = async () => undefined
 
-describe('M2 — mail-scanner safety: an explicit click before a link verifies something', () => {
-  it('confirm-email-change waits for a Continue click instead of confirming on mount', () => {
-    const out = html(<ConfirmEmailChangeLanding token="t" onConfirm={noop} signInTo="/login" />)
-    expect(out).toContain('>Continue<')
-    expect(out).not.toContain('Confirming the change')
-  })
-
-  it('the prop opts out (a deployment that accepts the scanner risk)', () => {
-    const out = html(
-      <ConfirmEmailChangeLanding
-        token="t"
-        onConfirm={noop}
-        signInTo="/login"
-        requireConfirm={false}
-      />,
-    )
-    expect(out).toContain('Confirming the change')
-  })
-
+describe('M2 — mail-scanner safety: the only link that acts on arrival is the magic link (the contract allows its POST on mount)', () => {
   it('magic-link keeps signing in on arrival (the contract allows the POST on mount)', () => {
     const out = html(
       <MagicLinkLanding token="t" onRedeem={noop} onDone={() => undefined} requestTo="/login" />,
     )
     expect(out).toContain('Signing you in')
     expect(out).not.toContain('>Continue<')
-  })
-
-  it('verify-email (an old mailed link) waits for a Continue click too', () => {
-    const out = html(<VerifyEmailScreen token="t" onVerify={noop} signInTo="/login" />)
-    expect(out).toContain('>Continue<')
-    expect(out).not.toContain('Checking your link')
   })
 })
 
@@ -60,7 +35,13 @@ describe('autocomplete attributes (password managers and one-time codes)', () =>
   })
   it('sign-up and reset: new-password', () => {
     expect(
-      html(<SignUpScreen onSignUp={async () => ({ status: 'CREATED' })} signInTo="/login" />),
+      html(
+        <SignUpScreen
+          onSignUp={async () => ({ status: 'CREATED' })}
+          onVerifyCode={noop}
+          signInTo="/login"
+        />,
+      ),
     ).toContain('autocomplete="new-password"')
     expect(
       html(
@@ -73,18 +54,20 @@ describe('autocomplete attributes (password managers and one-time codes)', () =>
       ),
     ).toContain('autocomplete="new-password"')
   })
-  it('delete confirmation: current-password for the password, one-time-code for the mailed code', () => {
+  it('delete confirmation: current-password for the password; the mailed code goes into one-time-code cells', () => {
     const base = {
       graceDays: 30,
-      onRequestConfirmation: noop,
+      requestDeleteCode: noop,
       onDelete: async () => ({ scheduledFor: '2030-01-01T00:00:00Z' }) as never,
     }
-    expect(html(<DeleteAccountSection hasPassword {...base} />)).toContain(
-      'autocomplete="current-password"',
-    )
+    const subject = { email: 'a@b.c', providers: [] }
     expect(
-      html(<DeleteAccountSection hasPassword={false} confirmationToken="tok" {...base} />),
-    ).toContain('autocomplete="one-time-code"')
+      html(<DeleteAccountSection subject={{ ...subject, hasPassword: true }} {...base} />),
+    ).toContain('autocomplete="current-password"')
+    // the code cells appear once the code is requested; with no mail step (an already-sent code) they are there at once
+    expect(html(<ReauthProof kind="code" email="a@b.c" onChange={() => undefined} />)).toContain(
+      'autocomplete="one-time-code"',
+    )
   })
   it('the social callback error screen has no form fields at all', () => {
     expect(

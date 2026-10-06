@@ -37,18 +37,14 @@ describe('createAccountApi (mirrors kotlin-skeleton docs/account-http-contract.m
     ])
   })
 
-  it('resend / forgot / verify / reset / policy are public calls with the contract bodies', async () => {
+  it('forgot / reset / policy are public calls with the contract bodies', async () => {
     const { client, calls } = fakeClient()
     const api = createAccountApi(client)
-    await api.resendVerification('a@b.c')
     await api.forgotPassword('a@b.c', 'cap')
-    await api.verifyEmail('tok')
     await api.resetPassword('tok', 'new-pw')
     await api.passwordPolicy()
     expect(calls.map((c) => [c.kind, c.path, c.request?.json, c.request?.skipAuth])).toEqual([
-      ['value', '/account/verification/resend', { email: 'a@b.c' }, true],
       ['value', '/account/password/forgot', { email: 'a@b.c', captchaToken: 'cap' }, true],
-      ['value', '/auth/verify-email', { token: 'tok' }, true],
       ['noContent', '/account/password/reset', { token: 'tok', newPassword: 'new-pw' }, true],
       ['value', '/account/password/policy', undefined, true],
     ])
@@ -93,19 +89,19 @@ describe('createAccountApi (mirrors kotlin-skeleton docs/account-http-contract.m
     expect(calls[0].request?.idempotencyKey).toBe('fixed-key')
   })
 
-  it('re-authentication: confirmationToken rides on first-password, email change and social link', async () => {
+  it('re-authentication: confirmationCode rides on first-password, email change and social link', async () => {
     const { client, calls } = fakeClient()
     const api = createAccountApi(client)
-    await api.changePassword({ newPassword: 'n', confirmationToken: 'rt' })
-    await api.changeEmail({ newEmail: 'n@b.c', confirmationToken: 'rt' })
-    await api.linkSocial('google', 'code', 'https://app/cb', { confirmationToken: 'rt' })
+    await api.changePassword({ newPassword: 'n', confirmationCode: '123456' })
+    await api.changeEmail({ newEmail: 'n@b.c', confirmationCode: '123456' })
+    await api.linkSocial('google', 'code', 'https://app/cb', { confirmationCode: '123456' })
     await api.linkSocial('kakao', 'code2', undefined, { currentPassword: 'pw' })
-    expect(calls[0].request?.json).toEqual({ newPassword: 'n', confirmationToken: 'rt' })
-    expect(calls[1].request?.json).toEqual({ newEmail: 'n@b.c', confirmationToken: 'rt' })
+    expect(calls[0].request?.json).toEqual({ newPassword: 'n', confirmationCode: '123456' })
+    expect(calls[1].request?.json).toEqual({ newEmail: 'n@b.c', confirmationCode: '123456' })
     expect(calls[2].request?.json).toEqual({
       authorizationCode: 'code',
       redirectUri: 'https://app/cb',
-      confirmationToken: 'rt',
+      confirmationCode: '123456',
     })
     expect(calls[3].request?.json).toEqual({ authorizationCode: 'code2', currentPassword: 'pw' })
   })
@@ -119,16 +115,6 @@ describe('createAccountApi (mirrors kotlin-skeleton docs/account-http-contract.m
       request: { method: 'POST' },
     })
     expect(calls[0].request?.skipAuth).toBeUndefined()
-  })
-
-  it('confirmEmailChange is public (the token is the credential)', async () => {
-    const { client, calls } = fakeClient()
-    await createAccountApi(client).confirmEmailChange('tok')
-    expect(calls[0]).toMatchObject({
-      kind: 'noContent',
-      path: '/auth/confirm-email-change',
-      request: { json: { token: 'tok' }, skipAuth: true },
-    })
   })
 
   it('identities: list, unlink, link social', async () => {

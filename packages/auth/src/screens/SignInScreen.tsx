@@ -1,7 +1,6 @@
 import { Alert, Button, Field, Input } from '@skeleton/ui'
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { ErrorCodes } from '@skeleton/api-client'
 import { AuthLayout } from './AuthLayout'
 import { CheckEmailPanel } from './CheckEmailPanel'
 import { PasswordField } from './PasswordField'
@@ -22,8 +21,6 @@ export type SignInScreenProps = {
   onMagicLinkRequest?: (email: string) => Promise<void>
   /** 소셜 제공자로 보낸다(보통 `window.location.assign(flow.start(provider))`) */
   onSocialSignIn?: (provider: string) => void
-  /** 미인증 이메일(`AUTH.EMAIL_NOT_VERIFIED`)일 때 「다시 보내기」 */
-  onResendVerification?: (email: string) => Promise<void>
   signUpTo?: string
   forgotPasswordTo?: string
   /** 폼 위 안내(세션이 끝난 이유 …) */
@@ -41,7 +38,6 @@ export function SignInScreen({
   onPasswordSignIn,
   onMagicLinkRequest,
   onSocialSignIn,
-  onResendVerification,
   signUpTo,
   forgotPasswordTo,
   notice,
@@ -58,7 +54,6 @@ export function SignInScreen({
   const [busy, setBusy] = useState(false)
   const [failure, setFailure] = useState<AuthErrorInfo | null>(null)
   const [magicSentTo, setMagicSentTo] = useState<string | null>(null)
-  const [resent, setResent] = useState(false)
   const wait = useCountdown()
 
   function fail(error: unknown) {
@@ -71,7 +66,6 @@ export function SignInScreen({
     event.preventDefault()
     setBusy(true)
     setFailure(null)
-    setResent(false)
     try {
       if (mode === 'magic' && onMagicLinkRequest) {
         await onMagicLinkRequest(email)
@@ -83,16 +77,6 @@ export function SignInScreen({
       fail(error)
     } finally {
       setBusy(false)
-    }
-  }
-
-  async function resendVerification() {
-    if (!onResendVerification) return
-    try {
-      await onResendVerification(email)
-      setResent(true)
-    } catch (error) {
-      fail(error)
     }
   }
 
@@ -139,21 +123,11 @@ export function SignInScreen({
         {(hasPassword || hasMagic) && (
           <form className={styles.form} onSubmit={submit} aria-label={labels.signInTitle}>
             {failure && (
-              <Alert
-                tone="danger"
-                action={
-                  failure.code === ErrorCodes.AUTH_EMAIL_NOT_VERIFIED && onResendVerification ? (
-                    <Button variant="secondary" size="sm" onClick={resendVerification}>
-                      {labels.signInResendVerification}
-                    </Button>
-                  ) : undefined
-                }
-              >
+              <Alert tone="danger">
                 {message}
                 {failure.reference && ` (${labels.errorReference(failure.reference)})`}
               </Alert>
             )}
-            {resent && <Alert tone="success">{labels.signInVerificationResent}</Alert>}
             <Field label={labels.email} required>
               {(control) => (
                 <Input

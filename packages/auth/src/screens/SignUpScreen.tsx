@@ -10,7 +10,6 @@ import type {
   SignUpStatus,
 } from '../account/types'
 import { AuthLayout } from './AuthLayout'
-import { CheckEmailPanel } from './CheckEmailPanel'
 import { VerifyCodePanel } from './VerifyCodePanel'
 import { PasswordField } from './PasswordField'
 import { PasswordHints } from './PasswordHints'
@@ -46,19 +45,14 @@ export type SignUpScreenProps = {
   policy?: PasswordPolicy
   labels?: Partial<AuthLabels>
   onSignUp: (request: SignUpSubmit) => Promise<{ status: SignUpStatus; signUpId?: string }>
-  /**
-   * FINAL-3 초안 — 가입 응답에 `signUpId` 가 오면 같은 화면에서 6자리 인증번호를 받는다. 이 함수가 코드를 서버에 내고(성공하면 로그인),
-   * 있어야 코드 단계가 켜진다(없으면 옛 「링크를 열어 주세요」 안내)
-   */
-  onVerifyCode?: (signUpId: string, code: string) => Promise<unknown>
+  /** 가입 응답에 `signUpId` 가 오면 같은 화면에서 6자리 인증번호를 받는다. 이 함수가 코드를 서버에 내고(성공하면 가입이 끝나고 바로 로그인) 그 뒤의 이동은 호출자가 한다 */
+  onVerifyCode: (signUpId: string, code: string) => Promise<unknown>
   /** 코드 단계의 「새 코드 받기」(같은 시도에 새 코드) */
   onResendCode?: (signUpId: string) => Promise<void>
   /** 새로고침해도 코드 단계가 이어지도록 앱이 보관해 둔 진행 중 가입(탭 하나의 sessionStorage 등) */
   initialPending?: { email: string; signUpId: string }
   /** 코드 단계에 들어가거나(값) 벗어나면(null) — 앱이 보관한다 */
   onPendingChange?: (pending: { email: string; signUpId: string } | null) => void
-  /** 메일 인증 상태(`VERIFICATION_SENT`)의 「다시 보내기」 */
-  onResendVerification?: (email: string) => Promise<void>
   /** 메일 인증이 꺼진 앱(`CREATED`) — 바로 쓸 수 있는 계정 */
   onCreated?: () => void
   /** 소셜 가입(소셜 로그인과 같은 흐름) */
@@ -77,12 +71,11 @@ export type SignUpScreenProps = {
   timeZone?: string
 }
 
-/** 가입 화면 — 비밀번호 규칙은 서버 정책에서 읽는다. 응답은 늘 「메일을 확인하세요」(주소가 있든 없든 같다) */
+/** 가입 화면 — 비밀번호 규칙은 서버 정책에서 읽는다. 응답은 늘 같은 모양이라(주소가 있든 없든) 메일로 받은 6자리 인증번호를 같은 화면에서 입력하고, 맞으면 바로 로그인한다 */
 export function SignUpScreen({
   policy,
   labels: given,
   onSignUp,
-  onResendVerification,
   onVerifyCode,
   onResendCode,
   initialPending,
@@ -110,7 +103,6 @@ export function SignUpScreen({
   const [failure, setFailure] = useState<AuthErrorInfo | null>(null)
   const [serverViolations, setServerViolations] = useState<PasswordViolation[]>([])
   const [emailError, setEmailError] = useState<string | undefined>()
-  const [sentTo, setSentTo] = useState<string | null>(null)
   const [pending, setPending] = useState(initialPending ?? null)
   const wait = useCountdown()
 
@@ -151,11 +143,12 @@ export function SignUpScreen({
       })
       if (result.status === 'VERIFICATION_SENT') {
         setPassword('') // 메일 확인 화면에 남아 「주소가 틀렸어요」로 돌아와도 비밀번호는 다시 받는다
-        if (result.signUpId && onVerifyCode) {
+        // 메일 인증이 켜져 있으면 늘 signUpId 가 온다(주소가 새것이든 이미 있든 같은 모양) — 코드 입력 단계로
+        if (result.signUpId) {
           const next = { email, signUpId: result.signUpId }
           setPending(next)
           onPendingChange?.(next)
-        } else setSentTo(email)
+        }
       } else onCreated?.()
     } catch (error) {
       const violations = violationsOf(error)
@@ -178,7 +171,7 @@ export function SignUpScreen({
     }
   }
 
-  if (pending && onVerifyCode) {
+  if (pending) {
     const leave = () => {
       setPending(null)
       onPendingChange?.(null)
@@ -194,19 +187,6 @@ export function SignUpScreen({
           }}
           onResend={onResendCode ? () => onResendCode(pending.signUpId) : undefined}
           onStartOver={leave} // 이메일은 남고 비밀번호는 비워져 있다
-        />
-      </AuthLayout>
-    )
-  }
-
-  if (sentTo) {
-    return (
-      <AuthLayout title={labels.signUpTitle}>
-        <CheckEmailPanel
-          email={sentTo}
-          labels={given}
-          onResend={onResendVerification ? () => onResendVerification(sentTo) : undefined}
-          onStartOver={() => setSentTo(null)}
         />
       </AuthLayout>
     )

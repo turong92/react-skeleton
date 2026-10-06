@@ -1396,7 +1396,8 @@
         "createAuthRoutes",
         "SignInScreen",
         "SignUpScreen",
-        "VerifyEmailScreen",
+        "VerifyCodePanel",
+        "ReauthProof",
         "ForgotPasswordScreen",
         "ResetPasswordScreen",
         "AccountSettings",
@@ -1429,13 +1430,13 @@
         "alsoVia": [],
         "optOut": null
       },
-      "summary": "계정 수명주기 화면 한 벌 — 가입(서버 정책 힌트 · 캡차 · 동의 슬롯) · 메일 확인 안내 · 인증/재설정/이메일 변경/본인 확인 링크 도착 · 로그인(방법은 백엔드가 알려 준다) · 계정 설정(이메일 변경 확인 대기는 서버가 말해 준다) · 정지/차단 안내. createAuthRoutes 가 라우트까지 한 번에.",
+      "summary": "계정 수명주기 화면 한 벌 — 가입(서버 정책 힌트 · 캡차 · 동의 슬롯 · 메일로 받은 6자리 인증번호를 같은 화면에서 입력하면 바로 로그인) · 비밀번호 재설정 · 링크 로그인 도착 · 로그인(방법은 백엔드가 알려 준다) · 계정 설정(이메일 변경 · 첫 비밀번호 · 소셜 연결/해제 · 삭제의 다시 인증은 비밀번호 · 메일 인증번호(그 자리에서 입력) · 제공자 동의 중 계정에 맞는 하나, 이메일 변경 대기는 서버가 말해 준다) · 오래된 메일 링크 안내 · 정지/차단 안내. createAuthRoutes 가 라우트까지 한 번에.",
       "path": "packages/auth/src/routes/createAuthRoutes.tsx",
       "notFor": [
-        "메일을 보내는 쪽(notification-mail)과 링크 주소(skeleton.account.mail.link-base-url)는 백엔드 설정 — 프런트의 /verify-email · /reset-password · /magic-link … 경로와 맞춘다",
+        "메일을 보내는 쪽(notification-mail)과 링크 주소(skeleton.account.mail.link-base-url)는 백엔드 설정 — 프런트의 /reset-password · /magic-link 경로와 맞춘다(링크가 남은 곳은 그 둘뿐 — 가입 인증 · 이메일 변경 · 다시 인증 · 삭제 확인은 6자리 인증번호)",
         "로그인 방법은 백엔드 GET /auth/methods 가 알려 준다(로딩 · 실패 대체 화면 포함) — 환경변수 VITE_AUTH_METHODS 는 그것을 덮어쓰는 선택일 뿐이다. 리프레시 전달 방식(body · cookie)만은 앱이 시작할 때 정하므로 VITE_AUTH_REFRESH_DELIVERY 가 백엔드와 같아야 한다(다르면 개발 콘솔에 경고)",
         "동의(약관 판) 저장은 없다 — 슬롯이 체크한 판을 콜백으로 보고할 뿐",
-        "비밀번호 없는 계정(링크 · 소셜로만 가입)의 이메일 변경 · 첫 비밀번호 · 소셜 연결은 서버가 다시 인증(메일 링크의 토큰)을 요구한다 — 화면이 하려던 작업을 sessionStorage 에 기억하고 /confirm-reauth 도착 화면이 토큰을 돌려준다(저장하지 않는 비밀 — 새 비밀번호 · 소셜 인가 코드 — 는 링크를 연 뒤 한 번 더 입력)"
+        "이메일 주소가 없는 계정(Naver 등)의 다시 인증은 제공자 동의 왕복이다 — 하려던 작업과 계정은 OAuth state 기록에 묶이고(sessionStorage · 한 번 읽으면 지워진다) 돌아오면 설정 화면이 한 번만 이어서 한다. 서버에 이메일 변경 취소 엔드포인트는 없다(새 요청이 대신하거나 만료). PKCE 는 아직 없다(백엔드가 미룸)"
       ],
       "keywords": {
         "ko": [

@@ -41,7 +41,9 @@ export function authErrorMessage(error: unknown, labels: AuthLabels): AuthErrorI
     const base =
       code === ErrorCodes.AUTH_TOO_MANY_ATTEMPTS
         ? labels.errorTooManyAttempts
-        : labels.errorRateLimited
+        : code === ErrorCodes.AUTH_TOO_MANY_REFRESHES
+          ? labels.errorTooManyRefreshes
+          : labels.errorRateLimited
     return {
       code,
       retryAfterSeconds: wait,

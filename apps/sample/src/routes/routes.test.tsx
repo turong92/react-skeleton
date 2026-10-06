@@ -29,7 +29,9 @@ describe('routes', () => {
     expect(leaf('/forgot-password')?.path).toBe('/forgot-password')
     expect(leaf('/reset-password')?.path).toBe('/reset-password')
     expect(leaf('/magic-link')?.path).toBe('/magic-link')
-    expect(leaf('/confirm-email-change')?.path).toBe('/confirm-email-change')
+    // old mailed links (now codes) land on one friendly page instead of a 404
+    for (const old of ['/confirm-email-change', '/confirm-reauth', '/confirm-delete'])
+      expect(leaf(old)?.path, old).toBe(old)
     expect(leaf('/account')?.path).toBe('/account')
     expect(leaf('/admin/accounts')?.path).toBe('/admin/accounts')
     expect(leaf('/terms')?.path).toBe('/terms')
@@ -47,7 +49,6 @@ describe('routes', () => {
       '/board/new',
       '/board/abc',
       '/account',
-      '/confirm-delete',
       '/admin/accounts',
       '/board/abc/edit',
       '/settings',
@@ -58,6 +59,9 @@ describe('routes', () => {
       '/login',
       '/sign-up',
       '/verify-email',
+      '/confirm-email-change',
+      '/confirm-reauth',
+      '/confirm-delete',
       '/forgot-password',
       '/magic-link',
       '/terms',
@@ -79,6 +83,8 @@ describe('routes', () => {
       '/reset-password',
       '/magic-link',
       '/account',
+      '/confirm-email-change',
+      '/confirm-reauth',
       '/confirm-delete',
       '/notes',
       '/notes/new',

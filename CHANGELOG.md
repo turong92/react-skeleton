@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — 계정 프런트를 백엔드 FINAL-3(인증번호 · kotlin-skeleton cbb8b4a)에 맞춘다 — 링크 왕복을 걷어낸다 (2026-10-07)
+
+- **초안 대비 어긋남을 바로잡음**: `ACCOUNT.CODE_INVALID`/`CODE_EXPIRED`/`AUTH.TOO_MANY_REFRESHES` 코드 · `verifySignUpCode` 가 `X-Device-Name` 을 싣는다(`createAccountApi(client, { deviceName })`) · 가입 응답은 늘 `signUpId` 를 준다(메일 인증을 끈 백엔드만 `CREATED`) · `SignUpScreen.onVerifyCode` 는 필수가 됐고 코드 없는 「링크를 열어 주세요」 갈래는 없다 · 로그인 화면의 「인증 메일 다시 받기」 삭제(재전송은 `signUpId` 로만 — 미인증 계정은 더 만들어지지 않는다).
+- **다시 인증 = 계정에 맞는 하나**(`ReauthProof` · `reauthKindOf(reauthSubjectOf(me))`): 비밀번호 · 메일로 받은 6자리를 **그 자리에서** 입력(`CodeEntry`; 틀리면 남은 횟수 · 만료면 새로 받기) · 주소가 없는 계정은 이미 연결된 제공자 동의 왕복(`socialReauth`). 이메일 변경 · 첫 비밀번호 · 소셜 연결 · **연결 해제(이제 다시 인증이 든다)** · 삭제가 같은 부품을 쓴다. 삭제는 별도의 삭제 코드 + 글자 확인.
+- **이메일 변경 = 새 주소의 인증번호**: 설정의 코드 단계가 `me.pendingEmail` 로 열려 새로고침을 견디고 `POST /account/email/change/confirm` 로 마친다(다른 세션만 끊긴다). 서버에 취소 엔드포인트가 없어 「코드 다시 받기」는 새 요청이 대신하는 것.
+- **제공자 동의 왕복**: `createSocialLinkFlow().start(provider, { accountId, action })` — 하려던 작업과 계정이 OAuth `state` 기록에 묶인다(`ProviderAction` · `SocialLinkContext`; 같은 콜백을 두 번 읽어도 같은 결과 · 다른 계정이 시작한 왕복은 거절 · 로그아웃하면 기록을 비운다). 돌아오면 설정 화면이 하려던 작업을 한 번만 이어서 한다.
+- **`AUTH.TOO_MANY_REFRESHES`(429)**: `createSessionRefresher` 가 로그아웃하지 않고 일시 오류로 내보내며 `Retry-After`(없으면 30초 · 연속이면 두 배 · 최대 10분) 동안은 서버를 다시 부르지 않는다. 화면 문구 `errorTooManyRefreshes`.
+- **삭제(깨지는 변경)**: `/confirm-reauth` 도착 화면(`ConfirmReauthLanding`) · `BroadcastChannel` 다시 인증 채널과 offer/claim/grant(`createBroadcastReauthChannel` · `listenForReauthToken`) · `resolveReauthLanding` · `createReauthStore` · `submitWithReauth` · `ReauthNotices` · `/confirm-email-change`(`ConfirmEmailChangeLanding`) · 옛 `/verify-email?token=` 도착(`VerifyEmailScreen`) · `reloadLater` · `accountApi.verifyEmail`/`confirmEmailChange`/`resendVerification` · `confirmationToken`(→ `confirmationCode`) · 라우트 옵션 `reauthChannel` · `reauthStore` · `AuthPaths.verifyEmail`/`confirmEmailChange`/`confirmReauth`/`confirmDelete` · `authStorageKeys` 의 `reauthPrefix` · `reauthChannel` · 라벨(`confirmReauth*` · `verifyEmail*` · `confirmEmailChange*` · `reauth{Hint,Sent*,Ready*}` · `deleteMail*`). 링크가 남은 곳은 비밀번호 재설정과 링크 로그인뿐. 오래된 메일의 링크(`/verify-email` · `/confirm-email-change` · `/confirm-reauth` · `/confirm-delete`)는 `LegacyLinkNotice` 한 장(`legacyLinks` 옵션)으로 보낸다. `SocialLinkPasswordScreen` 은 `SocialLinkProofScreen`(세 종류)으로. `PasswordSection` · `EmailSection` · `SignInMethodsSection` · `DeleteAccountSection` 은 `hasPassword` 대신 `subject`(`reauthSubjectOf(me)`) · `requestReauthCode`/`requestDeleteCode` 를 받는다. `@skeleton/ui` `ConfirmDialog` 에 `confirmDisabled`.
+- PKCE 는 백엔드가 이번에 미뤘다 — OAuth `state` 검사가 로그인 CSRF 방어다.
+
 ### Fixed — 계정 프런트 독립 보안 검토(REVIEW-react) 반영 (2026-10-06)
 
 - **I1 갱신이 로그아웃을 이기지 않는다**: `createSessionRefresher` 가 응답 뒤 저장소를 다시 읽어 보낸 자격과 다르면(로그아웃 · 다른 로그인 · 다른 탭의 로그아웃) 응답을 버리고 `false`(「세션 끝남」 알림 없음).
@@ -19,7 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **M10 이름공간(마이그레이션 주의)**: 저장 키 · 락 · 채널 이름이 앱 이름으로 나뉜다 — `authStorageKeys(namespace)`(`<ns>.accessToken` · `.refresh` · `.auth.refresh` · `.reauth.` · `.returnTo` · `.social.` · `.social-link.` · `.signUp`), 앱은 `authConfig.ts` 의 `AUTH_NAMESPACE`(sample `sample` · starter `starter` · starter-ssr `starter-ssr`; `new-project.sh` 가 새 이름으로 찍는다). 패키지의 기본 이름공간은 옛 이름 `skeleton` 그대로라 직접 쓰는 곳은 영향 없지만, **세 앱은 옛 `skeleton.*` 키를 더 읽지 않는다 — 배포 후 한 번 다시 로그인한다**. 옛 키는 브라우저에 남는다(원하면 앱이 한 번 지운다).
 - **테스트**: 방어를 빼면 실패하도록 고친 것 — 「다시 갱신하지 않는다」(이제 호출 횟수 1), 로그인/연결 state 접두어(같은 저장소에서 서로의 state 를 거절하는지), 일회용 호출 한 번(스토리: 더블클릭 · 마운트 한 번), 새 비밀번호 비저장(진짜 호출부를 거치는 스토리). 새 것: autocomplete 속성 · 삭제의 글자 입력 확인(대소문자) · 소셜 콜백 오류 · 주소창 토큰 지움 · 앱별 캐시 비우기 배선 · 이름공간. 스토리 실행기는 StrictMode 의 이중 effect 를 재현하지 않는다(실측) — 그 경로는 ref 가드와 e2e 가 맡는다.
 
-### Added — 인증번호(6자리) 흐름의 프런트 쪽(백엔드 FINAL-3 초안 기준 — 계약이 확정되면 다시 맞춘다) (2026-10-06)
+### Added — 인증번호(6자리) 흐름의 프런트 쪽(초안 — 위 FINAL-3 항목이 확정판) (2026-10-06)
 
 - **`@skeleton/ui` `CodeEntry`**: 6칸 인증번호 입력(숫자 키패드 · 첫 칸 `one-time-code` · 붙여넣기 · 칸 사이 Backspace · 방향키 · 다 채우면 자동 제출 · 오류 · 다시 보내기 쿨다운). 일반 입력 부품이라 `@skeleton/ui`(문구는 모두 prop).
 - **`@skeleton/auth`**: `VerifyCodePanel` · 가입 화면의 코드 단계(`onVerifyCode` · `onResendCode` · `initialPending`) · `createSignUpPending`(새로고침을 견딘다 — 10분, 비밀번호는 저장하지 않는다) · `accountApi.verifySignUpCode` · `resendSignUpCode` · `confirmEmailChangeCode` · `ReauthCredential` 의 `confirmationCode` · `socialReauth` · `unlinkIdentity(id, reauth)` · `ACCOUNT.CODE_INVALID` · `CODE_EXPIRED`. 이메일 변경 · 다시 인증 · 삭제 확인의 코드 입력 화면과 제공자 재동의 왕복의 UI 는 아직 옛 링크 방식이다(API 는 준비됨).

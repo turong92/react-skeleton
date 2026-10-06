@@ -16,12 +16,13 @@ describe('M10 — storage, lock and channel names are namespaced per app', () =>
     expect(keys.accessToken).toBe(DEFAULT_TOKEN_STORAGE_KEY)
     expect(keys.refresh).toBe(DEFAULT_REFRESH_STORAGE_KEY)
     expect(keys.refreshLock).toBe('skeleton.auth.refresh')
-    expect(keys.reauthPrefix).toBe('skeleton.reauth.')
     expect(keys.returnTo).toBe('skeleton.returnTo')
     expect(keys.social).toBe('skeleton.social.')
     expect(keys.socialLink).toBe('skeleton.social-link.')
     expect(keys.signUp).toBe('skeleton.signUp')
-    expect(keys.reauthChannel).toBe('skeleton.reauth')
+    // the link round trips are gone: no reauth prefix, no BroadcastChannel name
+    expect(keys).not.toHaveProperty('reauthPrefix')
+    expect(keys).not.toHaveProperty('reauthChannel')
   })
 
   it('rejects a namespace that is not a plain word (it ends up in storage keys and lock names)', () => {

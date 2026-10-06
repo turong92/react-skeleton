@@ -6,25 +6,22 @@ import type { AccountApi } from '../account/accountApi'
 import type { AuthApi } from '../authApi'
 import { postSignInTarget, rememberReturnTo, consumeReturnTo } from '../returnTo'
 import { AccountSettings, type AccountSettingsProps } from '../screens/AccountSettings'
-import { ConfirmEmailChangeLanding } from '../screens/ConfirmEmailChangeLanding'
-import { ConfirmReauthLanding } from '../screens/ConfirmReauthLanding'
-import { resolveReauthLanding } from '../reauthLanding'
-import type { ReauthStore } from '../reauth'
 import { ForgotPasswordScreen } from '../screens/ForgotPasswordScreen'
 import { MagicLinkLanding } from '../screens/MagicLinkLanding'
 import { ResetPasswordScreen } from '../screens/ResetPasswordScreen'
 import { SignInScreen } from '../screens/SignInScreen'
 import { SignUpScreen, type SignUpScreenProps } from '../screens/SignUpScreen'
+import { LegacyLinkNotice } from '../screens/LegacyLinkNotice'
+import { SocialLinkProofScreen } from '../screens/SocialLinkProofScreen'
+import { reauthKindOf, reauthSubjectOf } from '../reauth/kind'
 import { SocialCallbackScreen } from '../screens/SocialCallbackScreen'
-import { SocialLinkPasswordScreen } from '../screens/SocialLinkPasswordScreen'
 import { labelOfMethod } from '../screens/methodsList'
-import { VerifyEmailScreen } from '../screens/VerifyEmailScreen'
 import { readLinkToken } from '../screens/linkToken'
 import { mergeLabels, type AuthLabels } from '../screens/labels'
 import { resolveMethods, type SignInMethodsConfig } from '../screens/methods'
 import { useResource } from '../screens/useResource'
 import type { SocialLoginFlow } from '../social'
-import type { SocialLinkFlow } from '../socialLink'
+import type { ProviderAction, SocialLinkFlow } from '../socialLink'
 import { useAuth } from '../useAuth'
 import { useMounted } from './useMounted'
 import styles from '../screens/auth.module.css'
@@ -35,7 +32,6 @@ import {
   type DiscoveryNotes,
   type DiscoveryOptions,
 } from './discovery'
-import type { ReauthChannel } from '../reauthChannel'
 import type { AuthStorageKeys } from '../storageKeys'
 import { scrubUrlParams } from '../scrubUrl'
 import type { SignUpPendingStore } from '../signUpPending'
@@ -46,14 +42,10 @@ export type AuthPaths = {
   signUp: string
   forgotPassword: string
   resetPassword: string
-  verifyEmail: string
   magicLink: string
   socialCallback: string
   socialLinkCallback: string
-  confirmEmailChange: string
-  confirmReauth: string
   account: string
-  confirmDelete: string
 }
 
 function usePolicy(accountApi: AccountApi) {
@@ -72,12 +64,8 @@ export type PageContext = {
   methods?: SignInMethodsConfig
   socialFlow?: SocialLoginFlow
   socialLinkFlow?: SocialLinkFlow
-  /** 비밀번호 없는 계정의 다시 인증 — 하려던 작업과 받은 토큰을 기억한다 */
-  reauth: ReauthStore
   /** 백엔드에 로그인 방법을 묻는 앱의 설정(없으면 `methods` 가 정한다) */
   discovery?: DiscoveryOptions
-  /** 본인 확인 토큰을 같은 브라우저의 다른 탭에 넘기는 채널 — 앱이 만들어 넘긴다(없으면 토큰은 이 탭에 보관) */
-  reauthChannel?: ReauthChannel | null
   /** 진행 중인 가입 시도(코드 입력 단계가 새로고침을 견딘다) */
   signUpPending?: SignUpPendingStore
   /** 저장 키 · 락 · 채널 이름(앱 이름공간) */
@@ -129,9 +117,6 @@ export function SignInPage({
         navigate(target, { replace: true })
       }}
       onMagicLinkRequest={(email) => ctx.authApi.magicLinkRequest(email)}
-      onResendVerification={async (email) => {
-        await ctx.accountApi.resendVerification(email)
-      }}
       onSocialSignIn={(provider) => {
         if (!ctx.socialFlow) return
         rememberReturnTo(target, undefined, ctx.keys.returnTo)
@@ -188,7 +173,6 @@ export function SignUpPage({
         void consents // 동의 모듈이 생기면 서버로 보낸다 — 지금은 `onConsentsChange` · `signUp.onSignUp` 훅이 받는다
         return ctx.accountApi.signUp(request)
       }}
-      onResendVerification={(email) => ctx.accountApi.resendVerification(email)}
       onCreated={() => navigate(ctx.paths.signIn, { replace: true })}
       onSocialSignIn={(provider) => {
         if (!ctx.socialFlow) return
@@ -219,12 +203,6 @@ function TokenPage({ children }: { children: (token: string | null) => ReactNode
   return children(readLinkToken(location))
 }
 
-/** 현재 로그인한 계정에 묶인 다시 인증 보관소 — 다른 계정이 적은 하려던 작업 · 토큰은 읽히지 않는다 */
-function useBoundReauth(store: ReauthStore): ReauthStore {
-  const accountId = useAuth().principal?.accountId ?? null
-  return useMemo(() => store.forAccount(accountId), [store, accountId])
-}
-
 export function ResetPage({ ctx }: { ctx: PageContext }) {
   const policy = usePolicy(ctx.accountApi)
   return (
@@ -243,20 +221,8 @@ export function ResetPage({ ctx }: { ctx: PageContext }) {
   )
 }
 
-export function VerifyPage({ ctx }: { ctx: PageContext }) {
-  return (
-    <TokenPage>
-      {(token) => (
-        <VerifyEmailScreen
-          token={token}
-          labels={ctx.labels}
-          signInTo={ctx.paths.signIn}
-          onVerify={(t) => ctx.accountApi.verifyEmail(t)}
-          onResend={(email) => ctx.accountApi.resendVerification(email)}
-        />
-      )}
-    </TokenPage>
-  )
+export function LegacyLinkPage({ ctx }: { ctx: PageContext }) {
+  return <LegacyLinkNotice labels={ctx.labels} signInTo={ctx.paths.signIn} />
 }
 
 export function MagicLinkPage({ ctx }: { ctx: PageContext }) {
@@ -271,51 +237,6 @@ export function MagicLinkPage({ ctx }: { ctx: PageContext }) {
           requestTo={ctx.paths.signIn}
           onRedeem={(t) => auth.magicLinkLogin(t)}
           onDone={() => navigate(ctx.afterSignIn, { replace: true })}
-        />
-      )}
-    </TokenPage>
-  )
-}
-
-export function ConfirmEmailChangePage({ ctx }: { ctx: PageContext }) {
-  const auth = useAuth()
-  return (
-    <TokenPage>
-      {(token) => (
-        <ConfirmEmailChangeLanding
-          token={token}
-          labels={ctx.labels}
-          signInTo={ctx.paths.signIn}
-          onConfirm={async (t) => {
-            await ctx.accountApi.confirmEmailChange(t)
-            // 서버는 그 계정의 모든 세션을 닫는다. 이 기기에 로그인한 사람이 **그 계정인지는 모른다** — 무조건 로그아웃하지 않고
-            // 한 번 물어본다: 그 계정이면 401 → 갱신 실패로 세션이 정리되고, 다른 계정이면 그대로 남는다
-            await auth.refresh().catch(() => undefined)
-          }}
-        />
-      )}
-    </TokenPage>
-  )
-}
-
-export function ConfirmReauthPage({ ctx }: { ctx: PageContext }) {
-  const reauth = useBoundReauth(ctx.reauth)
-  const channel = ctx.reauthChannel
-  return (
-    <TokenPage>
-      {(token) => (
-        <ConfirmReauthLanding
-          token={token}
-          labels={ctx.labels}
-          settingsTo={ctx.paths.account}
-          onResolve={(t) =>
-            resolveReauthLanding({
-              token: t,
-              store: reauth,
-              accountApi: ctx.accountApi,
-              channel,
-            })
-          }
         />
       )}
     </TokenPage>
@@ -374,7 +295,8 @@ export function SocialCallbackPage({ ctx }: { ctx: PageContext }) {
 
 function SocialLinkCallbackInner({ flow, ctx }: { flow: SocialLinkFlow; ctx: PageContext }) {
   const location = useLocation()
-  const reauth = useBoundReauth(ctx.reauth)
+  const auth = useAuth()
+  const accountId = auth.principal?.accountId ?? null
   useEffect(() => {
     scrubUrlParams(['code', 'state', 'error', 'error_description'])
   }, [])
@@ -386,28 +308,40 @@ function SocialLinkCallbackInner({ flow, ctx }: { flow: SocialLinkFlow; ctx: Pag
   const started = useRef(false)
   const callback = read.data
   const account = me.data
+  const action = useMemo<ProviderAction | null>(
+    () => (callback ? (callback.context?.action ?? { kind: 'link' }) : null),
+    [callback],
+  )
+  // state 는 시작한 계정에 묶여 있다 — 같은 탭에서 계정이 바뀌었으면(다른 사람이 시작한 왕복) 이어 가지 않는다
+  const foreign = !!callback?.context && callback.context.accountId !== accountId
+  const reauthProviders = resolveMethods(ctx.methods).social.map((p) => p.provider)
 
-  // 비밀번호 없는 계정: 링크를 열어 보관한 본인 확인 토큰으로 바로 마친다(서버는 토큰 없이는 403 `ACCOUNT.REAUTH_REQUIRED`)
+  // 연결할 제공자의 코드를 쥐고 이미 연결된 제공자로 다시 인증하고 돌아왔다 — 두 코드로 한 번에 연결한다(한 번만: StrictMode 의 두 번째 효과가 코드를 또 쓰지 않게)
   useEffect(() => {
-    if (!callback || !account || account.hasPassword || started.current) return
+    if (!callback || foreign || action?.kind !== 'link-reauth' || started.current) return
     started.current = true
-    // 지우지 않고 본다 — 호출이 성공한 뒤에만 지워, 일시 오류에 토큰을 잃지 않는다
-    const token = reauth.peekToken()
+    const { target } = action
     ctx.accountApi
-      .linkSocial(
-        callback.provider,
-        callback.authorizationCode,
-        callback.redirectUri,
-        token ? { confirmationToken: token } : undefined,
-      )
-      .then(() => {
-        if (token) reauth.clearToken()
-        setDone(true)
-      }, setFailure)
-  }, [callback, account, ctx.accountApi, reauth])
+      .linkSocial(target.provider, target.authorizationCode, target.redirectUri, {
+        socialReauth: {
+          provider: callback.provider,
+          authorizationCode: callback.authorizationCode,
+          redirectUri: callback.redirectUri,
+        },
+      })
+      .then(() => setDone(true), setFailure)
+  }, [callback, foreign, action, ctx.accountApi])
 
   if (done)
-    return <Navigate to={ctx.paths.account} replace state={{ linked: callback?.provider }} />
+    return (
+      <Navigate
+        to={ctx.paths.account}
+        replace
+        state={{
+          linked: action?.kind === 'link-reauth' ? action.target.provider : callback?.provider,
+        }}
+      />
+    )
   const error = read.error ?? me.error ?? failure
   if (error)
     return (
@@ -417,24 +351,73 @@ function SocialLinkCallbackInner({ flow, ctx }: { flow: SocialLinkFlow; ctx: Pag
         signInTo={ctx.paths.account}
       />
     )
-  // 비밀번호가 있는 계정: 제공자에 다녀온 뒤 현재 비밀번호를 받는다(코드는 이 화면이 쥐고 있다 — 틀려도 다시 시도할 수 있다)
-  if (callback && account?.hasPassword)
+  if (callback && foreign)
     return (
-      <SocialLinkPasswordScreen
+      <SocialCallbackScreen
+        state={{ status: 'error', error: new Error('this round trip belongs to another account') }}
+        labels={ctx.labels}
+        signInTo={ctx.paths.account}
+      />
+    )
+  // 이메일 변경 · 연결 해제 · 삭제의 다시 인증 — 새 인가 코드를 가지고 설정 화면으로 돌아가 하려던 작업을 이어서 한다
+  if (callback && action && ['email-change', 'unlink', 'delete'].includes(action.kind))
+    return (
+      <Navigate
+        to={ctx.paths.account}
+        replace
+        state={{
+          resume: {
+            action,
+            socialReauth: {
+              provider: callback.provider,
+              authorizationCode: callback.authorizationCode,
+              ...(callback.redirectUri ? { redirectUri: callback.redirectUri } : {}),
+            },
+          },
+        }}
+      />
+    )
+  // 제공자를 연결한다 — 계정에 맞는 증거(비밀번호 · 메일 인증번호 · 다른 제공자의 동의)를 받는다. 코드는 이 화면이 쥐고 있어 틀려도 다시 시도할 수 있다
+  if (callback && account && action?.kind === 'link') {
+    const subject = reauthSubjectOf(account)
+    return (
+      <SocialLinkProofScreen
         provider={labelOfMethod(callback.provider, mergeLabels(ctx.labels))}
+        kind={reauthKindOf(subject)}
+        email={subject.email}
+        reauthProviders={subject.providers.filter((p) => reauthProviders.includes(p))}
         labels={ctx.labels}
         backTo={ctx.paths.account}
-        onSubmit={async (currentPassword) => {
+        requestCode={() => ctx.accountApi.requestReauthConfirmation()}
+        onSubmit={async (credential) => {
           await ctx.accountApi.linkSocial(
             callback.provider,
             callback.authorizationCode,
             callback.redirectUri,
-            { currentPassword },
+            credential,
           )
           setDone(true)
         }}
+        onProvider={(reauthProvider) => {
+          if (!accountId) return
+          // 연결하려던 제공자의 코드는 state 에 묶어 두고 이미 연결된 제공자의 동의를 거친다
+          window.location.assign(
+            flow.start(reauthProvider, {
+              accountId,
+              action: {
+                kind: 'link-reauth',
+                target: {
+                  provider: callback.provider,
+                  authorizationCode: callback.authorizationCode,
+                  ...(callback.redirectUri ? { redirectUri: callback.redirectUri } : {}),
+                },
+              },
+            }).url,
+          )
+        }}
       />
     )
+  }
   return (
     <SocialCallbackScreen
       state={{ status: 'pending' }}
@@ -463,37 +446,42 @@ export type SettingsExtras = Partial<
   Pick<AccountSettingsProps, 'sections' | 'graceDays' | 'supportHref' | 'formatDate' | 'timeZones'>
 > & { locales: AccountSettingsProps['locales'] }
 
-export function AccountPage({
-  ctx,
-  settings,
-  confirmDelete,
-}: {
-  ctx: PageContext
-  settings: SettingsExtras
-  confirmDelete?: boolean
-}) {
+type AccountRouteState = {
+  linked?: string
+  resume?: AccountSettingsProps['resume']
+} | null
+
+export function AccountPage({ ctx, settings }: { ctx: PageContext; settings: SettingsExtras }) {
   const auth = useAuth()
   const location = useLocation()
+  const navigate = useNavigate()
   const mounted = useMounted()
-  const reauth = useBoundReauth(ctx.reauth)
-  useEffect(() => {
-    if (mounted && confirmDelete) scrubUrlParams(['token'])
-  }, [mounted, confirmDelete])
+  const accountId = auth.principal?.accountId ?? null
+  const state = location.state as AccountRouteState
+  // 제공자 동의에서 돌아오며 실어 온 증거 — 한 번 쥐고 주소의 state 에서는 곧 지운다(새로고침 · 뒤로 가기에 인가 코드가 남지 않게)
+  const [resume] = useState(() => state?.resume ?? null)
+  const flow = ctx.socialLinkFlow
+  const beginRoundTrip = (provider: string, action: ProviderAction) => {
+    if (!flow || !accountId) return
+    window.location.assign(flow.start(provider, { accountId, action }).url)
+  }
   if (!mounted) return null
   return (
     <AccountSettings
       api={ctx.accountApi}
       labels={ctx.labels}
       socialProviders={resolveMethods(ctx.methods).social}
-      onLinkSocial={(provider) => {
-        if (!ctx.socialLinkFlow) return
-        window.location.assign(ctx.socialLinkFlow.start(provider).url)
-      }}
-      confirmationToken={confirmDelete ? (readLinkToken(location) ?? undefined) : undefined}
+      onLinkSocial={flow && ((provider) => beginRoundTrip(provider, { kind: 'link' }))}
+      onProviderReauth={flow && beginRoundTrip}
+      resume={resume}
+      onResumeConsumed={() =>
+        navigate(location.pathname, {
+          replace: true,
+          state: state?.linked ? { linked: state.linked } : null,
+        })
+      }
       onDeleted={() => void auth.logout()}
-      reauth={reauth}
-      reauthChannel={ctx.reauthChannel}
-      linkedProvider={(location.state as { linked?: string } | null)?.linked}
+      linkedProvider={state?.linked}
       {...settings}
     />
   )

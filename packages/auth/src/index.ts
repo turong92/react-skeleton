@@ -65,7 +65,13 @@ export type { RefreshCredentials, RefreshStore, RefreshStoreOptions } from './re
 export type { CrossTabOption, StorageEventSource } from './crossTab'
 export type { AuthApiOptions, RefreshDelivery } from './authApi'
 export { createSocialLinkFlow } from './socialLink'
-export type { SocialLinkCallback, SocialLinkFlow, SocialLinkFlowOptions } from './socialLink'
+export type {
+  ProviderAction,
+  SocialLinkCallback,
+  SocialLinkContext,
+  SocialLinkFlow,
+  SocialLinkFlowOptions,
+} from './socialLink'
 
 // 가드 · 로그인 뒤 돌아가기
 export { RequireRole } from './RequireRole'
@@ -94,23 +100,14 @@ export { DiscoveryLoading } from './screens/DiscoveryLoading'
 export type { DiscoveryOptions } from './routes/discovery'
 export type { AuthMethodsWire } from './types'
 
-// 다시 인증(비밀번호 없는 계정) — 하려던 작업을 메일 링크 왕복 동안 기억한다
-export { createReauthStore, submitWithReauth } from './reauth'
-export type {
-  PendingReauthAction,
-  ReauthStore,
-  ReauthStoreOptions,
-  SubmitWithReauthResult,
-} from './reauth'
-export { createBroadcastReauthChannel, listenForReauthToken } from './reauthChannel'
-export type { ReauthChannel, ReauthOfferHandler } from './reauthChannel'
+// 다시 인증 — 민감한 작업(이메일 변경 · 첫 비밀번호 · 소셜 연결 · 해제 · 삭제)에 계정에 맞는 증거 하나: 비밀번호 · 메일 인증번호(그 자리에서 입력) · 제공자 동의
+export { isReauthFailure, reauthKindOf, reauthSubjectOf } from './reauth/kind'
+export type { ReauthKind, ReauthSubject } from './reauth/kind'
 export { scrubUrlParams } from './scrubUrl'
-export { resolveReauthLanding } from './reauthLanding'
-export type { ReauthLandingOutcome } from './reauthLanding'
 
 // 계정 API · 규칙
 export { createAccountApi } from './account/accountApi'
-export type { AccountApi, ReauthCredential } from './account/accountApi'
+export type { AccountApi, ReauthCredential, SocialReauth } from './account/accountApi'
 export { passwordRequirements, passwordStrength, violationsOf } from './account/passwordRules'
 export type { PasswordRequirement } from './account/passwordRules'
 export { supportedTimeZones } from './account/timeZones'
@@ -153,13 +150,15 @@ export { PasswordHints } from './screens/PasswordHints'
 export { PasswordField } from './screens/PasswordField'
 export { SocialButtons } from './screens/SocialButtons'
 export { TokenLanding } from './screens/TokenLanding'
-export { VerifyEmailScreen } from './screens/VerifyEmailScreen'
 export { MagicLinkLanding } from './screens/MagicLinkLanding'
-export { ConfirmEmailChangeLanding } from './screens/ConfirmEmailChangeLanding'
-export { ConfirmReauthLanding } from './screens/ConfirmReauthLanding'
-export type { ConfirmReauthLandingProps } from './screens/ConfirmReauthLanding'
-export { SocialLinkPasswordScreen } from './screens/SocialLinkPasswordScreen'
-export type { SocialLinkPasswordScreenProps } from './screens/SocialLinkPasswordScreen'
+export { LegacyLinkNotice } from './screens/LegacyLinkNotice'
+export type { LegacyLinkNoticeProps } from './screens/LegacyLinkNotice'
+export { ReauthProof } from './screens/ReauthProof'
+export type { ReauthProofProps } from './screens/ReauthProof'
+export { VerifyCodePanel } from './screens/VerifyCodePanel'
+export type { VerifyCodePanelProps } from './screens/VerifyCodePanel'
+export { SocialLinkProofScreen } from './screens/SocialLinkProofScreen'
+export type { SocialLinkProofScreenProps } from './screens/SocialLinkProofScreen'
 export { ForgotPasswordScreen } from './screens/ForgotPasswordScreen'
 export { ResetPasswordScreen } from './screens/ResetPasswordScreen'
 export { SocialCallbackScreen } from './screens/SocialCallbackScreen'
@@ -175,5 +174,9 @@ export { DeleteAccountSection } from './screens/DeleteAccountSection'
 export { useCountdown } from './screens/useCountdown'
 
 // 라우트 한 벌
-export { createAuthRoutes, DEFAULT_AUTH_PATHS } from './routes/createAuthRoutes'
+export {
+  createAuthRoutes,
+  DEFAULT_AUTH_PATHS,
+  DEFAULT_LEGACY_LINK_PATHS,
+} from './routes/createAuthRoutes'
 export type { AuthPageName, AuthPaths, AuthRoutesOptions } from './routes/createAuthRoutes'

@@ -37,6 +37,15 @@ describe('authErrorMessage', () => {
     expect(result.retryAfterSeconds).toBe(90)
   })
 
+  it('AUTH.TOO_MANY_REFRESHES says the session is fine and names the wait (transient, never a sign-out)', () => {
+    const result = authErrorMessage(
+      err('AUTH.TOO_MANY_REFRESHES', 429, { retryAfterSeconds: 45 }),
+      L,
+    )
+    expect(result.message).toBe(`${L.errorTooManyRefreshes} ${L.errorRetryIn(45)}`)
+    expect(result.retryAfterSeconds).toBe(45)
+  })
+
   it('login throttling uses its own sentence', () => {
     expect(
       authErrorMessage(err('AUTH.TOO_MANY_ATTEMPTS', 429, { retryAfterSeconds: 5 }), L).message,

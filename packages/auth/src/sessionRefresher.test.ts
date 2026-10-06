@@ -214,6 +214,65 @@ describe('session refresher', () => {
     expect(tabB.access.get()).toBe('access-2')
   })
 
+  describe('429 AUTH.TOO_MANY_REFRESHES — the session is intact, back off and retry later', () => {
+    const tooMany = (seconds?: number) =>
+      failure(
+        429,
+        ErrorCodes.AUTH_TOO_MANY_REFRESHES,
+        seconds === undefined ? undefined : { retryAfterSeconds: seconds },
+      )
+
+    it('keeps both stores, does not sign out, and surfaces the 429 as a transient error', async () => {
+      const { client, call, ended, access, refresh } = setup()
+      call.mockRejectedValueOnce(tooMany(20))
+      await expect(client.value('/a')).rejects.toMatchObject({
+        apiError: { status: 429, code: ErrorCodes.AUTH_TOO_MANY_REFRESHES },
+      })
+      expect(ended).not.toHaveBeenCalled()
+      expect(access.get()).toBe('access-1')
+      expect(refresh.get()?.refreshToken).toBe('r1.1')
+    })
+
+    it('does not call the server again until the Retry-After wait is over, then tries again and recovers', async () => {
+      const { client, call } = setup()
+      call.mockRejectedValueOnce(tooMany(20))
+      await expect(client.value('/a')).rejects.toBeDefined()
+      expect(call).toHaveBeenCalledTimes(1)
+      // a second 401 inside the wait is refused locally — still the same transient 429, still no server call
+      await expect(client.value('/b')).rejects.toMatchObject({ apiError: { status: 429 } })
+      expect(call).toHaveBeenCalledTimes(1)
+      await vi.advanceTimersByTimeAsync(20_000)
+      const third = client.value('/c')
+      await vi.advanceTimersByTimeAsync(60)
+      await expect(third).resolves.toBe('/c')
+      expect(call).toHaveBeenCalledTimes(2)
+    })
+
+    it('doubles the wait on consecutive 429s but never beyond ten minutes', async () => {
+      const { client, call } = setup()
+      call.mockRejectedValue(tooMany(400))
+      await expect(client.value('/a')).rejects.toBeDefined() // wait 400 s
+      await vi.advanceTimersByTimeAsync(400_000)
+      await expect(client.value('/a')).rejects.toBeDefined() // 800 s asked → capped at 600 s
+      expect(call).toHaveBeenCalledTimes(2)
+      await vi.advanceTimersByTimeAsync(599_000)
+      await expect(client.value('/a')).rejects.toBeDefined()
+      expect(call).toHaveBeenCalledTimes(2) // still backing off
+      await vi.advanceTimersByTimeAsync(1_000)
+      await expect(client.value('/a')).rejects.toBeDefined()
+      expect(call).toHaveBeenCalledTimes(3)
+    })
+
+    it('without a Retry-After it waits a default 30 s', async () => {
+      const { client, call } = setup()
+      call.mockRejectedValueOnce(tooMany())
+      await expect(client.value('/a')).rejects.toBeDefined()
+      await vi.advanceTimersByTimeAsync(29_000)
+      await expect(client.value('/a')).rejects.toBeDefined()
+      expect(call).toHaveBeenCalledTimes(1)
+    })
+  })
+
   it('is SSR-safe: building one without window or navigator does not throw', () => {
     expect(() =>
       createSessionRefresher({

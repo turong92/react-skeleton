@@ -131,6 +131,8 @@ const pending = () => new Promise<never>(noop)
 /** 부르면 끝나지 않는 약속을 돌려주는 계정 API — 서버에서는 「불러오는 중」까지만 그려진다 */
 const fakeAccountApi = () => new Proxy({}, { get: () => pending })
 const authLabels = ({ mod }: FixtureContext) => mod('auth').defaultAuthLabels
+/** 다시 인증의 종류를 고르는 `me` 의 부분 — 비밀번호가 있는 계정 */
+const authSubject = { hasPassword: true, email: 'a@example.com', providers: [] }
 const authPolicy = {
   minLength: 10,
   maxBytes: 72,
@@ -357,8 +359,16 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
   'auth#SignInScreen': () => ({ onPasswordSignIn: asyncNoop }),
   'auth#SignUpScreen': () => ({
     policy: authPolicy,
-    onSignUp: async () => ({ status: 'VERIFICATION_SENT' }),
+    onSignUp: async () => ({ status: 'VERIFICATION_SENT', signUpId: 's' }),
+    onVerifyCode: asyncNoop,
   }),
+  'auth#VerifyCodePanel': () => ({
+    email: 'a@example.com',
+    onVerify: asyncNoop,
+    onStartOver: noop,
+  }),
+  'auth#ReauthProof': () => ({ kind: 'password', email: 'a@example.com', onChange: noop }),
+  'auth#LegacyLinkNotice': () => ({ signInTo: '/login' }),
   'auth#CheckEmailPanel': () => ({ email: 'a@example.com' }),
   'auth#PasswordHints': (ctx) => ({ policy: authPolicy, password: '', labels: authLabels(ctx) }),
   'auth#PasswordField': (ctx) => ({
@@ -382,25 +392,17 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
     invalidTitle: 'Invalid',
     invalidBody: 'Invalid link',
   }),
-  'auth#VerifyEmailScreen': () => ({ token: 't', onVerify: asyncNoop, signInTo: '/login' }),
   'auth#MagicLinkLanding': () => ({
     token: 't',
     onRedeem: asyncNoop,
     onDone: noop,
     requestTo: '/login',
   }),
-  'auth#ConfirmEmailChangeLanding': () => ({
-    token: 't',
-    onConfirm: asyncNoop,
-    signInTo: '/login',
-  }),
-  'auth#ConfirmReauthLanding': () => ({
-    token: 't',
-    onResolve: () => new Promise(noop),
-    settingsTo: '/account',
-  }),
-  'auth#SocialLinkPasswordScreen': () => ({
+  'auth#SocialLinkProofScreen': () => ({
     provider: 'Kakao',
+    kind: 'password',
+    email: 'a@example.com',
+    requestCode: asyncNoop,
     onSubmit: asyncNoop,
     backTo: '/account',
   }),
@@ -425,19 +427,31 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
     timeZones: ['UTC'],
     onSave: asyncNoop,
   }),
-  'auth#PasswordSection': () => ({ hasPassword: true, policy: authPolicy, onChange: asyncNoop }),
+  'auth#PasswordSection': () => ({
+    subject: authSubject,
+    policy: authPolicy,
+    onChange: asyncNoop,
+    requestReauthCode: asyncNoop,
+  }),
   'auth#EmailSection': () => ({
     email: 'a@example.com',
     verified: true,
-    hasPassword: true,
+    subject: authSubject,
+    requestReauthCode: asyncNoop,
     onChangeEmail: asyncNoop,
+    onConfirmCode: asyncNoop,
   }),
-  'auth#SignInMethodsSection': () => ({ identities: [], onUnlink: asyncNoop }),
+  'auth#SignInMethodsSection': () => ({
+    identities: [],
+    subject: authSubject,
+    requestReauthCode: asyncNoop,
+    onUnlink: asyncNoop,
+  }),
   'auth#SessionsSection': () => ({ sessions: [], onRevoke: asyncNoop, onRevokeOthers: asyncNoop }),
   'auth#DeleteAccountSection': () => ({
-    hasPassword: true,
+    subject: authSubject,
     graceDays: 30,
-    onRequestConfirmation: asyncNoop,
+    requestDeleteCode: asyncNoop,
     onDelete: async () => ({ status: 'DELETION_SCHEDULED', purgeAfter: '2026-11-05T00:00:00Z' }),
   }),
   'notifications#NotificationBell': () => ({ api: fakeNotificationsApi() }),

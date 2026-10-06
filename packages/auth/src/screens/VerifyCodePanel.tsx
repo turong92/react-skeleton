@@ -10,6 +10,9 @@ import { useCountdown } from './useCountdown'
 export type VerifyCodePanelProps = {
   /** 코드를 보낸 주소(안내 문장에) */
   email: string
+  /** 제목 · 안내 문장을 바꾼다 — 기본은 가입 인증의 문구(10분), 이메일 변경은 30분이라 자기 문구를 준다 */
+  title?: string
+  description?: string
   /** 6자리를 서버에 낸다. 성공하면 호출자가 이어 간다(로그인 · 설정 갱신). 실패는 던진다 — 화면이 가른다(틀림 · 만료 · 429) */
   onVerify: (code: string) => Promise<unknown>
   /** 같은 시도에 새 코드를 받는다 */
@@ -22,11 +25,13 @@ export type VerifyCodePanelProps = {
 }
 
 /**
- * 메일로 받은 6자리 인증번호를 같은 화면에서 입력 — 가입 인증 · 이메일 변경이 쓴다(FINAL-3 초안). 6자리를 채우면 버튼 없이 제출되고,
+ * 메일로 받은 6자리 인증번호를 같은 화면에서 입력 — 가입 인증 · 이메일 변경이 쓴다. 6자리를 채우면 버튼 없이 제출되고,
  * 틀리면 남은 횟수와 함께 칸을 비워 다시 받고, 만료 · 소진이면 처음부터 다시 하라고 말하고, 429 면 기다릴 시간을 센다.
  */
 export function VerifyCodePanel({
   email,
+  title,
+  description,
   onVerify,
   onResend,
   onStartOver,
@@ -86,8 +91,8 @@ export function VerifyCodePanel({
   const waiting = Math.max(resendWait.seconds, rateWait.seconds)
   return (
     <div className={styles.stack} data-testid="verify-code">
-      <h2>{labels.codeTitle}</h2>
-      <p>{labels.codeBody(email)}</p>
+      <h2>{title ?? labels.codeTitle}</h2>
+      <p>{description ?? labels.codeBody(email)}</p>
       <p className={styles.muted}>{labels.checkEmailSpam}</p>
       <CodeEntry
         label={labels.codeGroupLabel}

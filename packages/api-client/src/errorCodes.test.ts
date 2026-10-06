@@ -86,3 +86,9 @@ describe('re-authentication codes (account contract FINAL-2)', () => {
     expect(ErrorCodes.ACCOUNT_REAUTH_REQUIRED).toBe('ACCOUNT.REAUTH_REQUIRED')
   })
 })
+
+describe('refresh back-off code', () => {
+  it('names AUTH.TOO_MANY_REFRESHES (429, the session stays valid)', () => {
+    expect(ErrorCodes.AUTH_TOO_MANY_REFRESHES).toBe('AUTH.TOO_MANY_REFRESHES')
+  })
+})

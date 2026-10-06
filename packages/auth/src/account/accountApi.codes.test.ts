@@ -14,8 +14,8 @@ function fakeClient(result: unknown = {}) {
   }
 }
 
-/* FINAL-3 DRAFT (scratchpad/account/CONTRACT-FINAL3-draft.md) — built against the description, re-check against the final contract */
-describe('FINAL-3 draft: codes in session', () => {
+/* FINAL-3 (kotlin-skeleton docs/account-http-contract.md, cbb8b4a) */
+describe('FINAL-3: codes in session', () => {
   it('verifySignUpCode → POST /auth/verify-email {signUpId, code}, public, answers with the tokens (signed in)', async () => {
     const tokens = {
       accessToken: 'a',
@@ -52,7 +52,7 @@ describe('FINAL-3 draft: codes in session', () => {
     expect(calls[0].request?.skipAuth).toBeUndefined()
   })
 
-  it('re-auth carries confirmationCode or socialReauth (and the old confirmationToken still works for a backend that has not moved)', async () => {
+  it('re-auth carries confirmationCode or socialReauth', async () => {
     const { client, calls } = fakeClient()
     const api = createAccountApi(client)
     await api.changeEmail({ newEmail: 'n@x.y', confirmationCode: '111111' }, 'k1')
@@ -73,5 +73,22 @@ describe('FINAL-3 draft: codes in session', () => {
       request: { method: 'DELETE', json: { currentPassword: 'pw' } },
     })
     expect(calls[1].request?.json).toBeUndefined()
+  })
+})
+
+describe('FINAL-3: the superseded link calls are gone', () => {
+  it('has no link round-trip members (verify-email token, email-change link, resend by email)', () => {
+    const api = createAccountApi(fakeClient().client) as unknown as Record<string, unknown>
+    for (const name of ['verifyEmail', 'confirmEmailChange', 'resendVerification'])
+      expect(api[name], name).toBeUndefined()
+  })
+
+  it('verifySignUpCode passes the device name as X-Device-Name (the session list shows it)', async () => {
+    const { client, calls } = fakeClient({})
+    await createAccountApi(client, { deviceName: 'Chrome on Mac' }).verifySignUpCode(
+      'sid',
+      '123456',
+    )
+    expect(calls[0].request?.headers).toEqual({ 'X-Device-Name': 'Chrome on Mac' })
   })
 })

@@ -63,4 +63,11 @@ describe('ConfirmDialog', () => {
     const html = renderToStaticMarkup(<ConfirmDialog {...base} confirmLabel="Delete" busy />)
     expect(html).toContain('aria-busy="true"')
   })
+
+  it('confirmDisabled keeps the confirm button off even when nothing else is missing (a proof the dialog asks for is not ready yet)', () => {
+    const html = renderToStaticMarkup(
+      <ConfirmDialog {...base} confirmLabel="Remove" confirmDisabled />,
+    )
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>[^<]*(<[^>]*>)*Remove/)
+  })
 })

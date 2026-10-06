@@ -2,14 +2,17 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { StrictMode } from 'react'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { expect, fn } from 'storybook/test'
-import { createReauthStore } from '../reauth'
+import { AuthProvider } from '../AuthProvider'
+import { createAuthSession } from '../session'
+import { createSocialLinkFlow, type SocialLinkContext } from '../socialLink'
+import { createTokenStore } from '../tokenStore'
 import { consumeReturnTo, rememberReturnTo } from '../returnTo'
 import { createSocialLoginFlow } from '../social'
 import { authStorageKeys } from '../storageKeys'
 import { createFakeAccountApi } from '../stories/fakeAccountApi'
-import { createFakeAuthApi } from '../stories/fakeAuthApi'
 import { DEFAULT_AUTH_PATHS } from './createAuthRoutes'
-import { ResetPage, SocialCallbackPage, type PageContext } from './pages'
+import { createFakeAuthApi, FAKE_ACCESS_TOKEN } from '../stories/fakeAuthApi'
+import { ResetPage, SocialCallbackPage, SocialLinkCallbackPage, type PageContext } from './pages'
 
 /**
  * 라우트 페이지의 동작(렌더 밖의 일) — 소셜 콜백이 방법을 못 받았을 때의 오류 · 다시 시도, StrictMode 에서도 「가려던 곳」이 남는 이동,
@@ -33,7 +36,6 @@ const context = (overrides: Partial<PageContext> = {}): PageContext => ({
   accountApi: createFakeAccountApi(),
   paths: DEFAULT_AUTH_PATHS,
   afterSignIn: '/',
-  reauth: createReauthStore({}),
   keys,
   notes: { warned: false },
   ...overrides,
@@ -139,5 +141,112 @@ export const ResetPageScrubsTheTokenFromTheAddressBar: Story = {
     // 주소창 · 히스토리에서는 지워졌다
     await expect(new URL(location.href).searchParams.has('token')).toBe(false)
     await expect(location.href).not.toContain('secret-token')
+  },
+}
+
+/* ── 연결 콜백: 제공자 동의 왕복의 state 는 하려던 작업과 계정에 묶여 있다 ─────────────────────────────── */
+
+function loggedIn() {
+  const store = createTokenStore()
+  store.set(FAKE_ACCESS_TOKEN)
+  return createAuthSession({ api: createFakeAuthApi(), store })
+}
+
+function ShowLocationState() {
+  const location = useLocation()
+  return <pre data-testid="state">{JSON.stringify(location.state)}</pre>
+}
+
+function linkCallback(
+  contextOf: SocialLinkContext,
+  accountApi = createFakeAccountApi(),
+  search = '?code=fresh&state=st',
+) {
+  const flow = createSocialLinkFlow({
+    providers: { naver: { clientId: 'c', redirectUri: 'https://app.test/account/link-callback' } },
+    accountApi,
+    storage: memoryStorage(),
+    createState: () => 'st',
+  })
+  flow.start('naver', contextOf)
+  return (
+    <StrictMode>
+      <AuthProvider session={loggedIn()}>
+        <MemoryRouter initialEntries={['/account/link-callback' + search]}>
+          <Routes>
+            <Route
+              path="/account/link-callback"
+              element={
+                <SocialLinkCallbackPage ctx={context({ socialLinkFlow: flow, accountApi })} />
+              }
+            />
+            <Route path="/account" element={<ShowLocationState />} />
+          </Routes>
+        </MemoryRouter>
+      </AuthProvider>
+    </StrictMode>
+  )
+}
+
+export const LinkCallbackCarriesTheProofBackToTheSettings: Story = {
+  render: () =>
+    linkCallback({
+      accountId: 'acct-demo',
+      action: { kind: 'email-change', newEmail: 'next@example.com' },
+    }),
+  play: async ({ canvas }) => {
+    const state = JSON.parse((await canvas.findByTestId('state')).textContent ?? 'null')
+    await expect(state.resume.action).toEqual({
+      kind: 'email-change',
+      newEmail: 'next@example.com',
+    })
+    await expect(state.resume.socialReauth).toMatchObject({
+      provider: 'naver',
+      authorizationCode: 'fresh',
+    })
+  },
+}
+
+export const LinkCallbackOfAnotherAccountIsRefused: Story = {
+  render: () => linkCallback({ accountId: 'someone-else', action: { kind: 'delete' } }),
+  play: async ({ canvas }) => {
+    await expect(
+      await canvas.findByRole('heading', { name: 'Sign-in did not finish' }),
+    ).toBeVisible()
+    await expect(canvas.queryByTestId('state')).toBeNull() // 설정 화면으로 이어 가지 않는다
+  },
+}
+
+export const LinkAfterReconsentLinksOnceEvenUnderStrictMode: Story = {
+  render: () => {
+    const accountApi = createFakeAccountApi({ noAddress: true })
+    ;(window as unknown as { __link: ReturnType<typeof fn> }).__link = fn()
+    const linkSocial = accountApi.linkSocial
+    accountApi.linkSocial = (...args) => {
+      ;(window as unknown as { __link: ReturnType<typeof fn> }).__link(...args)
+      return linkSocial(...args)
+    }
+    return linkCallback(
+      {
+        accountId: 'acct-demo',
+        action: {
+          kind: 'link-reauth',
+          target: { provider: 'google', authorizationCode: 'target-code' },
+        },
+      },
+      accountApi,
+      '?code=fresh-code&state=st',
+    )
+  },
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByTestId('state')).toBeVisible() // 연결이 끝나 설정으로 돌아왔다
+    const link = (window as unknown as { __link: ReturnType<typeof fn> }).__link
+    await expect(link).toHaveBeenCalledTimes(1) // 인가 코드는 한 번만 쓴다
+    await expect(link).toHaveBeenCalledWith(
+      'google',
+      'target-code',
+      undefined,
+      expect.objectContaining({ socialReauth: expect.objectContaining({ provider: 'naver' }) }),
+    )
   },
 }

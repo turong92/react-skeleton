@@ -10,10 +10,13 @@ import { SessionsSection } from './SessionsSection'
 import { SignInMethodsSection } from './SignInMethodsSection'
 import { canUnlink, labelOfMethod } from './methodsList'
 import { defaultAuthLabels } from './labels'
-import { createReauthStore } from '../reauth'
+import type { ReauthSubject } from '../reauth/kind'
 
 const html = (node: React.ReactNode) => renderToStaticMarkup(<MemoryRouter>{node}</MemoryRouter>)
 const noop = async () => undefined
+const withPassword: ReauthSubject = { hasPassword: true, email: 'a@b.c', providers: [] }
+const passwordless: ReauthSubject = { hasPassword: false, email: 'a@b.c', providers: [] }
+const noAddress: ReauthSubject = { hasPassword: false, email: null, providers: ['naver'] }
 const policy = {
   minLength: 10,
   maxBytes: 72,
@@ -68,92 +71,93 @@ describe('settings sections', () => {
     expect(out).toContain('Asia/Seoul')
   })
 
-  it('password: asks for the current password only when the account has one', () => {
-    expect(html(<PasswordSection hasPassword policy={policy} onChange={noop} />)).toContain(
-      'Current password',
+  const password = (subject: ReauthSubject) =>
+    html(
+      <PasswordSection
+        subject={subject}
+        policy={policy}
+        onChange={noop}
+        requestReauthCode={noop}
+      />,
     )
-    const noPassword = html(<PasswordSection hasPassword={false} policy={policy} onChange={noop} />)
+  it('password: asks for the current password only when the account has one; a passwordless one gets a mailed code instead', () => {
+    expect(password(withPassword)).toContain('Current password')
+    const noPassword = password(passwordless)
     expect(noPassword).not.toContain('Current password')
     expect(noPassword).toContain('Set a password')
+    expect(noPassword).toContain('Email me a code')
+    expect(noPassword).toContain('a@b.c')
   })
 
-  it('email: shows the address, its verification, and a change form', () => {
-    const out = html(<EmailSection email="a@b.c" verified hasPassword onChangeEmail={noop} />)
+  it('password: an account without any address cannot set one (the server wants a verified address) and says so', () => {
+    const out = password(noAddress)
+    expect(out).toContain('needs a verified email address')
+    expect(out).not.toContain('type="password"')
+  })
+
+  const email = (subject: ReauthSubject, extra: Partial<Parameters<typeof EmailSection>[0]> = {}) =>
+    html(
+      <EmailSection
+        email="a@b.c"
+        verified
+        subject={subject}
+        requestReauthCode={noop}
+        onChangeEmail={noop}
+        onConfirmCode={noop}
+        {...extra}
+      />,
+    )
+  it('email: shows the address, its verification, and a change form with the proof that fits the account', () => {
+    const out = email(withPassword)
     expect(out).toContain('a@b.c')
     expect(out).toContain('Verified')
     expect(out).toContain('New email')
+    expect(out).toContain('Current password')
+    expect(email(passwordless)).toContain('Email me a code')
+    const none = email(noAddress)
+    expect(none).toContain('Confirm with Naver')
+    expect(none).not.toContain('Current password')
   })
 
-  it('email: shows the pending change the server reports, so a reload restores the state', () => {
-    const pending = html(
-      <EmailSection
-        email="a@b.c"
-        verified
-        hasPassword
-        onChangeEmail={noop}
-        pendingEmail="new@b.c"
-        pendingEmailExpiresAt="2026-10-06T10:00:00Z"
-        formatDate={(iso) => `until<${iso}>`}
-      />,
-    )
-    expect(pending).toContain('Confirm the change')
+  it('email: the pending change the server reports opens the code step, so a reload restores the state', () => {
+    const pending = email(withPassword, {
+      pendingEmail: 'new@b.c',
+      pendingEmailExpiresAt: '2026-10-06T10:00:00Z',
+      formatDate: (iso) => `until<${iso}>`,
+    })
+    expect(pending).toContain('Enter the code for your new address')
     expect(pending).toContain('new@b.c')
     expect(pending).toContain('until&lt;2026-10-06T10:00:00Z&gt;')
-    const none = html(<EmailSection email="a@b.c" verified hasPassword onChangeEmail={noop} />)
-    expect(none).not.toContain('Confirm the change')
-    const absent = html(
-      <EmailSection email="a@b.c" verified hasPassword onChangeEmail={noop} pendingEmail={null} />,
-    )
-    expect(absent).not.toContain('Confirm the change')
+    expect(pending).toContain('Digit 1 of 6') // the code cells
+    expect(pending).toContain('Send the code again')
+    expect(pending).not.toContain('New email') // the form is replaced by the code step
+    const none = email(withPassword)
+    expect(none).not.toContain('Enter the code for your new address')
+    expect(email(withPassword, { pendingEmail: null })).not.toContain('Digit 1 of 6')
   })
 
-  it('email and password: a passwordless account with a stashed confirmation says it is confirmed', () => {
-    const store = createReauthStore({})
-    store.stashToken('rt')
-    const email = html(
-      <EmailSection
-        email="a@b.c"
-        verified
-        hasPassword={false}
-        onChangeEmail={noop}
-        reauth={{ store, requestMail: noop }}
-      />,
-    )
-    expect(email).toContain('Identity confirmed')
-    const password = html(
-      <PasswordSection
-        hasPassword={false}
-        policy={policy}
-        onChange={noop}
-        reauth={{ store, requestMail: noop }}
-      />,
-    )
-    expect(password).toContain('Identity confirmed')
-    const without = html(
-      <PasswordSection
-        hasPassword={false}
-        policy={policy}
-        onChange={noop}
-        reauth={{ store: createReauthStore({}), requestMail: noop }}
-      />,
-    )
-    expect(without).not.toContain('Identity confirmed')
-    expect(without).toContain('We email you a confirmation link')
-  })
-
-  it('methods: shows the notice the page passes (the confirmation mail for linking)', () => {
+  it('methods: shows the notice the page passes (the notice mail after linking)', () => {
     const out = html(
       <SignInMethodsSection
         identities={[identity()]}
-        notice="Check your email to confirm it is you"
+        notice="Linked: check your inbox"
+        subject={withPassword}
+        requestReauthCode={noop}
         onUnlink={noop}
       />,
     )
-    expect(out).toContain('Check your email to confirm it is you')
+    expect(out).toContain('Linked: check your inbox')
   })
 
   it('methods: lists each method; the last one cannot be removed and says why', () => {
-    const only = html(<SignInMethodsSection identities={[identity()]} onUnlink={noop} />)
+    const only = html(
+      <SignInMethodsSection
+        identities={[identity()]}
+        subject={withPassword}
+        requestReauthCode={noop}
+        onUnlink={noop}
+      />,
+    )
     expect(only).toContain('Password')
     expect(only).toContain('cannot be removed')
     // the confirm dialog always carries one "Remove"; a removable row would add a second
@@ -161,6 +165,8 @@ describe('settings sections', () => {
     const two = html(
       <SignInMethodsSection
         identities={[identity(), identity({ id: 'idn_2', method: 'google', subject: null })]}
+        subject={withPassword}
+        requestReauthCode={noop}
         onUnlink={noop}
       />,
     )
@@ -173,6 +179,8 @@ describe('settings sections', () => {
         identities={[identity(), identity({ id: 'idn_2', method: 'google', subject: null })]}
         socialProviders={[{ provider: 'google' }, { provider: 'kakao' }]}
         onLink={() => undefined}
+        subject={withPassword}
+        requestReauthCode={noop}
         onUnlink={noop}
       />,
     )
@@ -204,29 +212,29 @@ describe('settings sections', () => {
     expect(out.match(/>Sign out</g)).toHaveLength(1)
   })
 
-  it('delete: password accounts re-enter the password, passwordless ones get the mail path; both see the grace notice', () => {
-    const withPw = html(
+  const del = (subject: ReauthSubject) =>
+    html(
       <DeleteAccountSection
-        hasPassword
+        subject={subject}
         graceDays={30}
         onDelete={async () => ({
           status: 'DELETION_SCHEDULED',
           purgeAfter: '2026-11-05T00:00:00Z',
         })}
-        onRequestConfirmation={noop}
+        requestDeleteCode={noop}
       />,
     )
+  it('delete: password accounts re-enter the password, passwordless ones get a mailed code, address-less ones re-consent; all see the grace notice', () => {
+    const withPw = del(withPassword)
     expect(withPw).toContain('Enter your password')
     expect(withPw).toContain('erased after 30 days')
-    const without = html(
-      <DeleteAccountSection
-        hasPassword={false}
-        graceDays={30}
-        onDelete={async () => ({ status: 'DELETION_SCHEDULED', purgeAfter: 'x' })}
-        onRequestConfirmation={noop}
-      />,
-    )
-    expect(without).toContain('Email me the link')
-    expect(without).not.toContain('Enter your password')
+    const code = del(passwordless)
+    expect(code).toContain('Email me a code')
+    expect(code).not.toContain('Enter your password')
+    expect(del(noAddress)).toContain('Confirm with Naver')
+  })
+
+  it('delete: the button stays off until the proof is there (a typed phrase follows in the dialog)', () => {
+    expect(del(withPassword)).toMatch(/disabled=""[^>]*>[^<]*Delete my account/)
   })
 })

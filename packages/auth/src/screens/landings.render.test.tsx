@@ -6,11 +6,9 @@ import { AccountStateNotice } from './AccountStateNotice'
 import { ForgotPasswordScreen } from './ForgotPasswordScreen'
 import { ResetPasswordScreen } from './ResetPasswordScreen'
 import { SocialCallbackScreen } from './SocialCallbackScreen'
-import { VerifyEmailScreen } from './VerifyEmailScreen'
 import { MagicLinkLanding } from './MagicLinkLanding'
-import { ConfirmEmailChangeLanding } from './ConfirmEmailChangeLanding'
-import { ConfirmReauthLanding } from './ConfirmReauthLanding'
-import { SocialLinkPasswordScreen } from './SocialLinkPasswordScreen'
+import { LegacyLinkNotice } from './LegacyLinkNotice'
+import { SocialLinkProofScreen } from './SocialLinkProofScreen'
 import { readLinkToken } from './linkToken'
 
 const html = (node: React.ReactNode) => renderToStaticMarkup(<MemoryRouter>{node}</MemoryRouter>)
@@ -36,27 +34,6 @@ describe('readLinkToken', () => {
 })
 
 describe('one-time link landings', () => {
-  it('verify-email starts by asking for a click (nothing is posted on mount; opt out with requireConfirm={false})', () => {
-    const out = html(
-      <VerifyEmailScreen
-        token="t"
-        onVerify={noop}
-        onResend={noop}
-        signInTo="/login"
-        requireConfirm={false}
-      />,
-    )
-    expect(out).toContain('Checking your link')
-  })
-
-  it('a link without a token goes straight to the "does not work" state with a resend form', () => {
-    const out = html(
-      <VerifyEmailScreen token={null} onVerify={noop} onResend={noop} signInTo="/login" />,
-    )
-    expect(out).toContain('This link does not work')
-    expect(out).toContain('type="email"')
-  })
-
   it('magic link landing starts by checking; without a token it offers a new request', () => {
     expect(
       html(
@@ -69,45 +46,44 @@ describe('one-time link landings', () => {
     expect(none).toContain('This sign-in link does not work')
     expect(none).toContain('href="/login"')
   })
+})
 
-  it('confirm-email-change landing', () => {
-    expect(
-      html(
-        <ConfirmEmailChangeLanding
-          token="t"
-          onConfirm={noop}
-          signInTo="/login"
-          requireConfirm={false}
-        />,
-      ),
-    ).toContain('Confirming the change')
+describe('old mailed links (verification, email change, re-auth, delete — now codes)', () => {
+  it('say the link is no longer used, explain the code, and point at sign-in — and read no token', () => {
+    const out = html(<LegacyLinkNotice signInTo="/login" />)
+    expect(out).toContain('This link is no longer used')
+    expect(out).toContain('6-digit code')
+    expect(out).toContain('href="/login"')
+    expect(out).not.toContain('type="email"')
   })
 })
 
-describe('confirm-reauth landing (the mail link of a passwordless account re-authenticating)', () => {
-  const resolve = async () => ({ status: 'stashed' as const, resume: null })
-  it('starts by working on the token (the POST happens on mount, never on a mail scanner GET)', () => {
-    const out = html(<ConfirmReauthLanding token="t" onResolve={resolve} settingsTo="/account" />)
-    expect(out).toContain('Confirming it is you')
-  })
-  it('a link without a token says it does not work and points at the settings', () => {
-    const out = html(
-      <ConfirmReauthLanding token={null} onResolve={resolve} settingsTo="/account" />,
-    )
-    expect(out).toContain('This link does not work')
-    expect(out).toContain('href="/account"')
-  })
-})
-
-describe('social link: the password check after the provider redirect', () => {
-  it('asks the current password for the provider being linked, with a way back', () => {
-    const out = html(
-      <SocialLinkPasswordScreen provider="Kakao" onSubmit={noop} backTo="/account" />,
-    )
+describe('social link: the proof after the provider redirect', () => {
+  const props = {
+    provider: 'Kakao',
+    email: 'a@b.c',
+    requestCode: noop,
+    onSubmit: noop,
+    backTo: '/account',
+  }
+  it('a password account types the current password for the provider being linked, with a way back', () => {
+    const out = html(<SocialLinkProofScreen {...props} kind="password" />)
     expect(out).toContain('Confirm it is you')
     expect(out).toContain('Kakao')
     expect(out).toContain('type="password"')
     expect(out).toContain('href="/account"')
+  })
+  it('a passwordless account with an address gets a code mailed to it — entered right here', () => {
+    const out = html(<SocialLinkProofScreen {...props} kind="code" />)
+    expect(out).toContain('Email me a code')
+    expect(out).toContain('a@b.c')
+    expect(out).not.toContain('type="password"')
+  })
+  it('an account without an address re-consents with a provider it already has', () => {
+    const out = html(
+      <SocialLinkProofScreen {...props} kind="provider" email={null} reauthProviders={['naver']} />,
+    )
+    expect(out).toContain('Confirm with Naver')
   })
 })
 

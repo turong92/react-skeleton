@@ -111,15 +111,18 @@ export type SocialLoginFlowOptions = {
 }
 
 export type SocialLoginFlow = {
-  /** `state` 를 만들어 보관하고 authorize 주소를 돌려준다 — 호출자가 `window.location.assign(url)` 한다 */
-  start(provider: string): { url: string; state: string }
+  /**
+   * `state` 를 만들어 보관하고 authorize 주소를 돌려준다 — 호출자가 `window.location.assign(url)` 한다.
+   * `context`(JSON 으로 직렬화되는 값)는 그 state 에 묶여 콜백 결과로 돌아온다 — 다시 인증 왕복이 「무슨 작업을 · 어느 계정이」 하려던 것인지 싣는 자리(`socialLink`)
+   */
+  start(provider: string, context?: unknown): { url: string; state: string }
   /** 콜백 쿼리를 확인(state 일치 · 에러 · code)하고 `session.socialLogin(provider, code, redirectUri)` 를 부른다. 같은 콜백을 두 번 불러도 로그인은 한 번 */
   complete(
     search: string | URLSearchParams,
-  ): Promise<{ provider: string; token: AuthTokenResponse }>
+  ): Promise<{ provider: string; token: AuthTokenResponse; context?: unknown }>
 }
 
-type Pending = { provider: string; redirectUri: string }
+type Pending = { provider: string; redirectUri: string; context?: unknown }
 
 export function createSocialLoginFlow({
   providers,
@@ -146,14 +149,18 @@ export function createSocialLoginFlow({
   }
 
   return {
-    start(provider) {
+    start(provider, context) {
       const config = providers[provider]
       if (!config) throw new Error(`social provider "${provider}" is not configured`)
       const state = createState()
       const url = buildAuthorizeUrl(provider, config, state)
       store.setItem(
         storagePrefix + state,
-        JSON.stringify({ provider, redirectUri: config.redirectUri } satisfies Pending),
+        JSON.stringify({
+          provider,
+          redirectUri: config.redirectUri,
+          ...(context === undefined ? {} : { context }),
+        } satisfies Pending),
       )
       return { url, state }
     },
@@ -184,7 +191,11 @@ export function createSocialLoginFlow({
           callback.code,
           pending.redirectUri,
         )
-        return { provider: pending.provider, token }
+        return {
+          provider: pending.provider,
+          token,
+          ...(pending.context === undefined ? {} : { context: pending.context }),
+        }
       })()
       inflight.set(callback.state, run)
       return run

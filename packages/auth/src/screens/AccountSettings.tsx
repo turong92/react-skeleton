@@ -1,18 +1,16 @@
 import { ErrorCodes, isErrorCode } from '@skeleton/api-client'
 import { Alert, PageHeader, SectionIndex, Skeleton } from '@skeleton/ui'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { AccountApi } from '../account/accountApi'
+import type { AccountApi, SocialReauth } from '../account/accountApi'
 import { supportedTimeZones, withCurrent } from '../account/timeZones'
 import type { DeletionResult, PasswordPolicy } from '../account/types'
-import type { ReauthStore } from '../reauth'
-import { listenForReauthToken, type ReauthChannel } from '../reauthChannel'
-import type { ReauthLandingOutcome } from '../reauthLanding'
+import { reauthSubjectOf } from '../reauth/kind'
+import type { ProviderAction } from '../socialLink'
 import { AccountStateNotice } from './AccountStateNotice'
 import { DeleteAccountSection } from './DeleteAccountSection'
 import { EmailSection } from './EmailSection'
 import { PasswordSection } from './PasswordSection'
 import { ProfileSection } from './ProfileSection'
-import type { ReauthSupport } from './ReauthNotices'
 import { SessionsSection } from './SessionsSection'
 import { SignInMethodsSection } from './SignInMethodsSection'
 import styles from './auth.module.css'
@@ -20,7 +18,6 @@ import { authErrorMessage } from './errors'
 import { mergeLabels, type AuthLabels } from './labels'
 import type { SocialProviderButton } from './methods'
 import { labelOfMethod } from './methodsList'
-import { reloadLater } from './reloadLater'
 import { useResource } from './useResource'
 
 export type AccountSectionName =
@@ -45,21 +42,21 @@ export type AccountSettingsProps = {
   timeZones?: string[]
   /** 서버의 삭제 유예 기간(안내 문장) — 기본 30 */
   graceDays?: number
-  /** `/confirm-delete?token=` 로 들어왔을 때 */
-  confirmationToken?: string
   onDeleted?: (result: DeletionResult) => void
   formatDate?: (iso: string) => string
   /** 접근 불가 · 정지일 때 「문의」 링크 */
   supportHref?: string
-  /**
-   * 비밀번호 없는 계정의 다시 인증(이메일 변경 · 첫 비밀번호 · 소셜 연결) — 하려던 작업 · 받은 토큰의 보관소.
-   * 없으면 이 절들은 서버의 `403 ACCOUNT.REAUTH_REQUIRED` 를 오류 줄로 보일 뿐이다
-   */
-  reauth?: ReauthStore
-  /** 본인 확인 링크를 연 새 탭이 토큰을 이 탭에 넘기는 길(`createBroadcastReauthChannel`) */
-  reauthChannel?: ReauthChannel | null
   /** 방금 연결한 소셜 제공자(연결 콜백이 돌아온 직후) — 서버가 계정 주소로 알림 메일을 보냈다는 안내를 보인다 */
   linkedProvider?: string
+  /**
+   * 주소가 없는 계정의 다시 인증 — 이 제공자의 동의 화면으로 보낸다(앱이 `socialLinkFlow.start(provider, { accountId, action })` 로 state 에 하려던 작업과 계정을 묶는다).
+   * 없으면 그 계정은 이메일 변경 · 연결 해제 · 삭제를 못 한다(서버가 `403 ACCOUNT.REAUTH_REQUIRED`)
+   */
+  onProviderReauth?: (provider: string, action: ProviderAction) => void
+  /** 제공자 동의를 마치고 돌아왔다 — 하려던 작업과 그 제공자가 준 새 인가 코드. 이 화면이 한 번만 이어서 한다 */
+  resume?: { action: ProviderAction; socialReauth: SocialReauth } | null
+  /** `resume` 을 읽었다(앱이 돌아온 주소의 state 를 비운다) */
+  onResumeConsumed?: () => void
 }
 
 const ALL: AccountSectionName[] = ['profile', 'password', 'email', 'methods', 'sessions', 'delete']
@@ -77,55 +74,31 @@ export function AccountSettings({
   locales,
   timeZones,
   graceDays = 30,
-  confirmationToken,
   onDeleted,
   formatDate,
   supportHref,
-  reauth,
-  reauthChannel,
   linkedProvider,
+  onProviderReauth,
+  resume,
+  onResumeConsumed,
 }: AccountSettingsProps) {
   const labels = mergeLabels(given)
   const on = (name: AccountSectionName) => sections?.[name] !== false
   const sessionsOn = sections?.sessions !== false
   const passwordOn = sections?.password !== false
   const me = useResource(useCallback(() => api.me(), [api]))
-  const [handoff, setHandoff] = useState<ReauthLandingOutcome | null>(null)
-  const [linkNotice, setLinkNotice] = useState<string | null>(null)
-  const reload = me.reload
-  const pendingSeen = useRef(false)
-  const stopLater = useRef<() => void>(() => undefined)
-  useEffect(() => () => stopLater.current(), [])
-  const pendingEmail = me.data?.pendingEmail
-  useEffect(() => {
-    pendingSeen.current = !!pendingEmail
-  }, [pendingEmail])
-  // 하려던 작업을 기억하는 이 탭이 본인 확인 링크를 연 다른 탭의 토큰을 받아 이어 간다
-  useEffect(() => {
-    if (!reauth || !reauthChannel) return undefined
-    return listenForReauthToken({
-      channel: reauthChannel,
-      store: reauth,
-      accountApi: api,
-      onOutcome: (outcome) => {
-        setHandoff(outcome)
-        reload()
-        if (outcome.status === 'completed') {
-          stopLater.current()
-          stopLater.current = reloadLater(
-            reload,
-            [400, 1500, 4000, 8000],
-            () => pendingSeen.current,
-          )
-        }
-      },
-    })
-  }, [api, reauth, reauthChannel, reload])
-  const reauthSupport = useMemo<ReauthSupport | undefined>(
+  const [resumeError, setResumeError] = useState<unknown>(null)
+  // 제공자 동의 왕복에서 돌아온 증거로 이어 갈 작업 — 처음 그릴 때부터 알고 있다(앱이 `resume` 을 첫 렌더에 준다)
+  const [emailResume, setEmailResume] = useState<{ newEmail: string; provider: string } | null>(
     () =>
-      reauth ? { store: reauth, requestMail: () => api.requestReauthConfirmation() } : undefined,
-    [api, reauth],
+      resume?.action.kind === 'email-change'
+        ? { newEmail: resume.action.newEmail, provider: resume.socialReauth.provider }
+        : null,
   )
+  const [deleteResume, setDeleteResume] = useState<SocialReauth | null>(() =>
+    resume?.action.kind === 'delete' ? resume.socialReauth : null,
+  )
+  const resumed = useRef(false)
   const sessions = useResource(
     useCallback(() => (sessionsOn ? api.sessions() : Promise.resolve([])), [api, sessionsOn]),
   )
@@ -136,6 +109,46 @@ export function AccountSettings({
       [api, passwordOn],
     ),
   )
+  const reloadMe = me.reload
+  const reloadSessions = sessions.reload
+
+  // 제공자 동의 왕복에서 돌아왔다 — 하려던 작업을 **한 번만** 이어서 한다(인가 코드는 한 번 쓰면 끝이라 StrictMode 의 두 번째 효과가 다시 내지 않게 ref 로 막는다)
+  useEffect(() => {
+    if (!resume || resumed.current) return
+    resumed.current = true
+    const { action, socialReauth } = resume
+    onResumeConsumed?.()
+    if (action.kind === 'email-change') {
+      api.changeEmail({ newEmail: action.newEmail, socialReauth }).then(
+        () => {
+          setEmailResume(null)
+          reloadMe()
+        },
+        (error: unknown) => {
+          setEmailResume(null)
+          setResumeError(error)
+        },
+      )
+    } else if (action.kind === 'unlink')
+      api.unlinkIdentity(action.identityId, { socialReauth }).then(() => {
+        reloadMe()
+        reloadSessions() // 서버가 이 계정의 다른 세션을 닫는다
+      }, setResumeError)
+  }, [resume, api, reloadMe, reloadSessions, onResumeConsumed])
+
+  const requestReauthCode = useCallback(() => api.requestReauthConfirmation(), [api])
+  const requestDeleteCode = useCallback(() => api.requestDeleteConfirmation(), [api])
+  const subject = useMemo(() => {
+    if (!me.data) return null
+    const base = reauthSubjectOf(me.data)
+    // 앱이 동의 화면을 열 수 있는 제공자만(설정되지 않은 제공자는 왕복을 시작할 수 없다)
+    return socialProviders
+      ? {
+          ...base,
+          providers: base.providers.filter((p) => socialProviders.some((s) => s.provider === p)),
+        }
+      : base
+  }, [me.data, socialProviders])
 
   if (me.error) {
     if (isErrorCode(me.error, ErrorCodes.AUTH_ACCOUNT_SUSPENDED))
@@ -144,7 +157,7 @@ export function AccountSettings({
       return <AccountStateNotice kind="blocked" supportHref={supportHref} labels={given} />
     return <Alert tone="danger">{authErrorMessage(me.error, labels).message}</Alert>
   }
-  if (!me.data) return <Skeleton />
+  if (!me.data || !subject) return <Skeleton />
   const account = me.data
   const zones = withCurrent(timeZones ?? supportedTimeZones(), account.timeZone)
   const items = ALL.filter(on).map((id) => ({
@@ -163,11 +176,8 @@ export function AccountSettings({
     <div className={styles.sections}>
       <PageHeader title={labels.settingsTitle} description={account.email ?? undefined} />
       <SectionIndex items={items} label={labels.settingsIndexLabel} />
-      {handoff?.status === 'completed' && (
-        <Alert tone="success">{labels.confirmReauthEmailChanged}</Alert>
-      )}
-      {handoff?.status === 'failed' && (
-        <Alert tone="danger">{authErrorMessage(handoff.error, labels).message}</Alert>
+      {resumeError !== null && (
+        <Alert tone="danger">{authErrorMessage(resumeError, labels).message}</Alert>
       )}
       {on('profile') && (
         <ProfileSection
@@ -183,10 +193,10 @@ export function AccountSettings({
       )}
       {on('password') && (
         <PasswordSection
-          hasPassword={account.hasPassword}
+          subject={subject}
           policy={policy.data}
           email={account.email ?? undefined}
-          reauth={reauthSupport}
+          requestReauthCode={requestReauthCode}
           labels={given}
           onChange={async (request) => {
             await api.changePassword(request)
@@ -199,21 +209,25 @@ export function AccountSettings({
         <EmailSection
           email={account.email}
           verified={account.emailVerified}
-          hasPassword={account.hasPassword}
+          subject={subject}
           pendingEmail={account.pendingEmail}
           pendingEmailExpiresAt={account.pendingEmailExpiresAt}
           formatDate={formatDate}
-          reauth={reauthSupport}
+          requestReauthCode={requestReauthCode}
+          resume={emailResume}
+          onProviderReauth={
+            onProviderReauth &&
+            ((provider, newEmail) => onProviderReauth(provider, { kind: 'email-change', newEmail }))
+          }
           labels={given}
           onChangeEmail={async (request) => {
             await api.changeEmail(request)
-            me.reload() // 대기 중인 새 주소를 서버에서 다시 읽는다 — 서버는 토큰 · 메일을 비동기로 만들어 잠시 뒤에야 보인다
-            stopLater.current()
-            stopLater.current = reloadLater(
-              me.reload,
-              [400, 1500, 4000, 8000],
-              () => pendingSeen.current,
-            )
+            me.reload() // 대기 중인 새 주소(`pendingEmail`)는 요청이 끝나기 전에 서버에 저장된다
+          }}
+          onConfirmCode={(code) => api.confirmEmailChangeCode(code)}
+          onConfirmed={() => {
+            me.reload()
+            sessions.reload() // 서버가 이 세션만 남기고 다른 세션을 닫는다
           }}
         />
       )}
@@ -221,37 +235,22 @@ export function AccountSettings({
         <SignInMethodsSection
           identities={account.methods}
           socialProviders={socialProviders}
-          onLink={
-            onLinkSocial &&
-            (async (provider) => {
-              setLinkNotice(null)
-              // 비밀번호 없는 계정은 제공자에 다녀오기 전에 본인 확인 — 확인 링크를 아직 안 열었으면 메일부터
-              if (reauth && !account.hasPassword && !reauth.hasToken()) {
-                try {
-                  reauth.remember({ kind: 'link-social', provider })
-                  await api.requestReauthConfirmation()
-                  setLinkNotice(labels.reauthSentBody(account.email ?? ''))
-                } catch (error) {
-                  setLinkNotice(authErrorMessage(error, labels).message)
-                }
-                return
-              }
-              onLinkSocial(provider)
-            })
+          subject={subject}
+          requestReauthCode={requestReauthCode}
+          onProviderReauth={
+            onProviderReauth &&
+            ((provider, identityId) => onProviderReauth(provider, { kind: 'unlink', identityId }))
           }
+          onLink={onLinkSocial}
           notice={
-            linkNotice ??
-            (linkedProvider
+            linkedProvider
               ? labels.methodLinkedNotice(labelOfMethod(linkedProvider, labels))
-              : undefined) ??
-            (reauth && !account.hasPassword && reauth.hasToken()
-              ? `${labels.reauthReadyTitle} — ${labels.reauthReadyBody}`
-              : undefined)
+              : undefined
           }
           formatDate={formatDate}
           labels={given}
-          onUnlink={async (id) => {
-            await api.unlinkIdentity(id)
+          onUnlink={async (id, reauth) => {
+            await api.unlinkIdentity(id, reauth)
             me.reload()
             sessions.reload() // 서버가 이 계정의 다른 세션을 닫는다
           }}
@@ -274,13 +273,17 @@ export function AccountSettings({
       )}
       {on('delete') && (
         <DeleteAccountSection
-          hasPassword={account.hasPassword}
+          subject={subject}
           graceDays={graceDays}
-          confirmationToken={confirmationToken}
           formatDate={formatDate}
           labels={given}
-          onRequestConfirmation={() => api.requestDeleteConfirmation()}
+          requestDeleteCode={requestDeleteCode}
           onDelete={(credential) => api.deleteAccount(credential)}
+          onProviderReauth={
+            onProviderReauth && ((provider) => onProviderReauth(provider, { kind: 'delete' }))
+          }
+          resume={deleteResume}
+          onResumeSpent={() => setDeleteResume(null)}
           onDeleted={onDeleted}
         />
       )}

@@ -18,7 +18,6 @@ const meta = {
     onPasswordSignIn: fn(async () => undefined),
     onMagicLinkRequest: fn(async () => undefined),
     onSocialSignIn: fn(),
-    onResendVerification: fn(async () => undefined),
   },
 } satisfies Meta<typeof SignInScreen>
 export default meta
@@ -101,20 +100,18 @@ export const InvalidCredentials: Story = {
   },
 }
 
+/** 인증 안 된 계정은 이제 만들어지지 않는다(가입은 인증번호로 끝나야 계정이 생긴다) — 남은 옛 계정에는 안내만 한다 */
 export const EmailNotVerified: Story = {
   args: {
     onPasswordSignIn: async () => {
       throw apiError('AUTH.EMAIL_NOT_VERIFIED', 403)
     },
   },
-  play: async ({ canvas, args, userEvent }) => {
+  play: async ({ canvas, userEvent }) => {
     await userEvent.type(canvas.getByLabelText(/Email/), 'ann@example.com')
     await userEvent.type(canvas.getByLabelText(/^Password/), 'right-pass{Enter}')
-    await userEvent.click(
-      await canvas.findByRole('button', { name: 'Resend the verification email' }),
-    )
-    await expect(args.onResendVerification).toHaveBeenCalledWith('ann@example.com')
-    await expect(await canvas.findByText(/new email is on its way/)).toBeVisible()
+    await expect(await canvas.findByRole('alert')).toHaveTextContent(/Sign up again/)
+    await expect(canvas.queryByRole('button', { name: /Resend/ })).toBeNull()
   },
 }
 

@@ -1,6 +1,5 @@
 import {
   createAuthRoutes,
-  createBroadcastReauthChannel,
   createSocialLinkFlow,
   createSocialLoginFlow,
   type AuthPageName,
@@ -50,9 +49,7 @@ const socialLinkFlow = hasSocial
 /** 인증 화면은 모두 검색에서 뺀다(`noindex, nofollow`) — 제목 · 설명은 앱 사전의 키 */
 const hidden = (page: AuthPageName): SeoHandle => ({
   seo: {
-    titleKey: (page === 'account' || page === 'confirmDelete'
-      ? 'nav.account'
-      : 'login.title') as MessageKey,
+    titleKey: (page === 'account' ? 'nav.account' : 'login.title') as MessageKey,
     descriptionKey: 'seo.login.description' as MessageKey,
     indexable: false,
   },
@@ -62,9 +59,6 @@ const hidden = (page: AuthPageName): SeoHandle => ({
 export const accountRoutes = createAuthRoutes({
   session: authSession,
   namespace: AUTH_NAMESPACE,
-  // 본인 확인 링크를 연 새 탭이 토큰을 하려던 작업이 있는 탭에 넘기는 길 — 브라우저에서만, 앱이 만든다
-  reauthChannel:
-    typeof window === 'undefined' ? null : createBroadcastReauthChannel(authKeys.reauthChannel),
   authApi,
   accountApi,
   methods: authMethodsOverride && {

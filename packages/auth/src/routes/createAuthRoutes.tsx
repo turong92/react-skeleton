@@ -10,23 +10,19 @@ import type { AuthSession } from '../session'
 import type { DiscoveryOptions } from './discovery'
 import type { SocialLoginFlow } from '../social'
 import type { SocialLinkFlow } from '../socialLink'
-import { createReauthStore, type ReauthStore } from '../reauth'
-import type { ReauthChannel } from '../reauthChannel'
 import { onAccountChange } from '../accountChange'
 import { authStorageKeys } from '../storageKeys'
 import { createSignUpPending } from '../signUpPending'
 import {
   AccountPage,
-  ConfirmEmailChangePage,
-  ConfirmReauthPage,
   ForgotPage,
+  LegacyLinkPage,
   MagicLinkPage,
   ResetPage,
   SignInPage,
   SignUpPage,
   SocialCallbackPage,
   SocialLinkCallbackPage,
-  VerifyPage,
   WithLabels,
   type AuthPaths,
   type PageContext,
@@ -43,42 +39,55 @@ function safeSessionStorage(): Storage | undefined {
   }
 }
 
+/** `Storage` 에서 접두어로 시작하는 키만 지운다(삭제하며 인덱스가 밀리므로 먼저 모은다) */
+function removeKeysWithPrefix(storage: Storage, prefix: string) {
+  try {
+    const keys: string[] = []
+    for (let i = 0; i < storage.length; i += 1) {
+      const key = storage.key(i)
+      if (key?.startsWith(prefix)) keys.push(key)
+    }
+    for (const key of keys) storage.removeItem(key)
+  } catch {
+    // 저장소가 막혔다 — 지울 것도 없다
+  }
+}
+
 export const DEFAULT_AUTH_PATHS: AuthPaths = {
   signIn: '/login',
   signUp: '/sign-up',
   forgotPassword: '/forgot-password',
   resetPassword: '/reset-password',
-  verifyEmail: '/verify-email',
   magicLink: '/magic-link',
   socialCallback: '/auth/callback',
   socialLinkCallback: '/account/link-callback',
-  confirmEmailChange: '/confirm-email-change',
-  confirmReauth: '/confirm-reauth',
   account: '/account',
-  confirmDelete: '/confirm-delete',
 }
+
+/** 오래된 메일의 링크(가입 인증 · 이메일 변경 · 본인 확인 · 삭제 확인 — 이제는 6자리 인증번호)가 닿는 길 — 한 장의 안내 화면으로 보낸다 */
+export const DEFAULT_LEGACY_LINK_PATHS: readonly string[] = [
+  '/verify-email',
+  '/confirm-email-change',
+  '/confirm-reauth',
+  '/confirm-delete',
+]
 
 export type AuthPageName =
   | 'signIn'
   | 'signUp'
   | 'forgotPassword'
   | 'resetPassword'
-  | 'verifyEmail'
   | 'magicLink'
   | 'socialCallback'
   | 'socialLinkCallback'
-  | 'confirmEmailChange'
-  | 'confirmReauth'
+  | 'legacyLink'
   | 'account'
-  | 'confirmDelete'
 
 export type AuthRoutesOptions = {
-  /** 있으면 로그아웃 · 계정 전환 때 다시 인증 보관소를 비운다. 서버 렌더 앱처럼 세션이 이 라우트를 만드는 자리에 없으면 생략한다(보관소가 계정에 묶여 있어 다른 계정은 읽지 못한다) */
+  /** 앱의 세션 — 서버 렌더 앱처럼 세션이 이 라우트를 만드는 자리에 없으면 생략한다(제공자 동의 왕복은 state 에 계정 id 를 묶어 다른 계정은 이어 가지 못한다) */
   session?: Pick<AuthSession, 'getState' | 'subscribe'>
-  /** 저장 키 · 락 · 채널 이름의 접두어(앱 이름 — 기본 `skeleton`). 앱의 토큰 저장소 · 갱신기에도 같은 `authStorageKeys(namespace)` 를 쓴다 */
+  /** 저장 키 · 락의 접두어(앱 이름 — 기본 `skeleton`). 앱의 토큰 저장소 · 갱신기에도 같은 `authStorageKeys(namespace)` 를 쓴다 */
   namespace?: string
-  /** 본인 확인 토큰을 같은 브라우저의 다른 탭에 넘기는 채널(`createBroadcastReauthChannel(keys.reauthChannel)`) — 앱이 브라우저에서 만들어 넘긴다. 없으면 토큰은 링크를 연 탭에 보관된다 */
-  reauthChannel?: ReauthChannel | null
   /** 모듈 전역 API 를 쓰는 앱(SPA)이 준다 — 서버 렌더 앱은 대신 `useApis` */
   authApi?: AuthApi
   accountApi?: AccountApi
@@ -109,8 +118,8 @@ export type AuthRoutesOptions = {
   forgotPassword?: boolean
   /** 설정 화면 값(언어 목록 · 절 켜기 · 삭제 유예 …) */
   settings?: SettingsExtras
-  /** 다시 인증 상태(하려던 작업 · 받은 토큰) — 기본은 브라우저의 sessionStorage(탭 하나에 묶인다) */
-  reauthStore?: ReauthStore
+  /** 오래된 메일 링크가 닿는 길(기본 `DEFAULT_LEGACY_LINK_PATHS`) — 한 장의 안내 화면. `false` 면 두지 않는다 */
+  legacyLinks?: readonly string[] | false
   /** 라우트마다 붙일 `handle`(SEO `noindex` 등 — 앱이 정한다) */
   handle?: (page: AuthPageName) => unknown
   /** 로그인 화면 위 안내(세션이 끝난 이유 등) */
@@ -118,8 +127,9 @@ export type AuthRoutesOptions = {
 }
 
 /**
- * 계정 수명주기 라우트 한 벌 — 앱의 라우트 배열에 펼쳐 넣는다(`...createAuthRoutes({...})`). 로그인 · 가입 · 메일 확인 · 비밀번호 찾기/재설정 ·
- * 링크 로그인 · 소셜 콜백 · 이메일 변경 확인 · 계정 설정(`RequireAuth` 아래) · 삭제 확인. 방법 · 화면은 옵션으로 켜고 끈다.
+ * 계정 수명주기 라우트 한 벌 — 앱의 라우트 배열에 펼쳐 넣는다(`...createAuthRoutes({...})`). 로그인 · 가입(6자리 인증번호는 같은 화면) · 비밀번호 찾기/재설정 ·
+ * 링크 로그인 · 소셜 콜백 · 계정 설정(`RequireAuth` 아래 — 이메일 변경 · 다시 인증 · 삭제도 같은 화면에서 인증번호를 입력한다) · 오래된 메일 링크 안내.
+ * 링크가 남은 곳은 비밀번호 재설정과 링크 로그인뿐이다(그 흐름에는 세션이 없다). 방법 · 화면은 옵션으로 켜고 끈다.
  */
 export function createAuthRoutes(options: AuthRoutesOptions): RouteObject[] {
   const paths = { ...DEFAULT_AUTH_PATHS, ...options.paths }
@@ -135,7 +145,6 @@ export function createAuthRoutes(options: AuthRoutesOptions): RouteObject[] {
       storage: typeof window === 'undefined' ? undefined : safeSessionStorage(),
       key: keys.signUp,
     }),
-    reauthChannel: options.reauthChannel,
     authApi: options.authApi as AuthApi,
     accountApi: options.accountApi as AccountApi,
     labels: options.labels,
@@ -145,14 +154,13 @@ export function createAuthRoutes(options: AuthRoutesOptions): RouteObject[] {
     socialFlow: options.socialFlow,
     socialLinkFlow: options.socialLinkFlow,
     discovery: discoveryOn ? options.discovery : undefined,
-    reauth:
-      options.reauthStore ??
-      createReauthStore({
-        storage: typeof window === 'undefined' ? undefined : safeSessionStorage(),
-        prefix: keys.reauthPrefix,
-      }),
   }
-  if (options.session?.subscribe) onAccountChange(options.session, () => ctx.reauth.clear())
+  // 로그아웃 · 계정 전환 때 제공자 동의 왕복의 state 기록(하려던 작업 · 연결하려던 제공자의 쓰이지 않은 코드)을 비운다
+  if (options.session?.subscribe && typeof window !== 'undefined') {
+    const storage = safeSessionStorage()
+    if (storage)
+      onAccountChange(options.session, () => removeKeysWithPrefix(storage, keys.socialLink))
+  }
   const page = (render: (c: PageContext) => ReactNode) => (
     <WithLabels ctx={ctx} useLabels={options.useLabels} useApis={options.useApis} render={render} />
   )
@@ -171,13 +179,6 @@ export function createAuthRoutes(options: AuthRoutesOptions): RouteObject[] {
         <SignUpPage ctx={c} signUp={typeof options.signUp === 'object' ? options.signUp : {}} />
       )),
       ...handle('signUp'),
-    })
-  // 가입 · 링크 로그인 · 이메일 변경 메일이 닿는 곳 — 메일 인증은 가입이 있을 때만 의미가 있다
-  if (options.signUp !== false)
-    open.push({
-      path: paths.verifyEmail,
-      element: page((c) => <VerifyPage ctx={c} />),
-      ...handle('verifyEmail'),
     })
   if (options.forgotPassword !== false)
     open.push(
@@ -204,28 +205,20 @@ export function createAuthRoutes(options: AuthRoutesOptions): RouteObject[] {
       element: page((c) => <SocialCallbackPage ctx={c} />),
       ...handle('socialCallback'),
     })
-  open.push({
-    path: paths.confirmEmailChange,
-    element: page((c) => <ConfirmEmailChangePage ctx={c} />),
-    ...handle('confirmEmailChange'),
-  })
+  for (const path of options.legacyLinks === false
+    ? []
+    : (options.legacyLinks ?? DEFAULT_LEGACY_LINK_PATHS))
+    open.push({
+      path,
+      element: page((c) => <LegacyLinkPage ctx={c} />),
+      ...handle('legacyLink'),
+    })
   const settings: SettingsExtras = options.settings ?? { locales: [] }
   const guarded: RouteObject[] = [
-    // 비밀번호 없는 계정의 다시 인증 메일이 닿는 곳 — 로그인한 계정에만 의미가 있다(보관소가 그 계정에 묶인다). 로그아웃 상태로 열면 로그인한 뒤 이 링크로 돌아온다
-    {
-      path: paths.confirmReauth,
-      element: page((c) => <ConfirmReauthPage ctx={c} />),
-      ...handle('confirmReauth'),
-    },
     {
       path: paths.account,
       element: page((c) => <AccountPage ctx={c} settings={settings} />),
       ...handle('account'),
-    },
-    {
-      path: paths.confirmDelete,
-      element: page((c) => <AccountPage ctx={c} settings={settings} confirmDelete />),
-      ...handle('confirmDelete'),
     },
   ]
   if (options.socialLinkFlow || discoveryOn)

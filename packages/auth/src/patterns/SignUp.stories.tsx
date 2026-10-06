@@ -6,7 +6,7 @@ import { withRouter } from '../stories/withRouter'
 
 /**
  * 가입 화면 — 비밀번호 규칙은 서버 정책(`GET /account/password/policy`)에서 읽어 체크리스트 · 강도 막대로 보여 준다.
- * 응답은 늘 「메일을 확인하세요」(서버가 주소의 존재를 숨긴다). 캡차(`renderCaptcha`)와 약관 동의(`consents`)는 슬롯이다 —
+ * 응답은 늘 같은 모양(서버가 주소의 존재를 숨긴다) — 메일로 받은 6자리 인증번호를 **같은 화면에서** 입력하면 가입이 끝나고 바로 로그인한다. 캡차(`renderCaptcha`)와 약관 동의(`consents`)는 슬롯이다 —
  * 동의는 체크한 판(`id` + `version`)을 콜백으로 보고한다(백엔드 동의 모듈은 아직 없다).
  */
 const meta = {
@@ -16,8 +16,8 @@ const meta = {
   args: {
     policy: FAKE_POLICY,
     signInTo: '/login',
-    onSignUp: fn(async () => ({ status: 'VERIFICATION_SENT' as const })),
-    onResendVerification: fn(async () => undefined),
+    onSignUp: fn(async () => ({ status: 'VERIFICATION_SENT' as const, signUpId: 'sid-1' })),
+    onVerifyCode: fn(async () => undefined),
   },
 } satisfies Meta<typeof SignUpScreen>
 export default meta
@@ -44,17 +44,20 @@ export const PolicyHints: Story = {
   },
 }
 
-export const CheckYourEmail: Story = {
+export const AsksForTheCodeRightAfterSigningUp: Story = {
   play: async ({ canvas, args, userEvent }) => {
     await userEvent.type(canvas.getByLabelText(/Email/), 'new@example.com')
     await userEvent.type(canvas.getByLabelText(/^Password/), 'Correct-horse-battery-9')
     await userEvent.click(canvas.getByRole('button', { name: 'Create account' }))
-    await expect(await canvas.findByRole('heading', { name: 'Check your email' })).toBeVisible()
+    await expect(
+      await canvas.findByRole('heading', { name: 'Enter the 6-digit code' }),
+    ).toBeVisible()
+    await expect(canvas.getByText(/new@example.com/)).toBeVisible()
     await expect(args.onSignUp).toHaveBeenCalledWith(
       expect.objectContaining({ email: 'new@example.com', consents: [] }),
     )
-    await userEvent.click(canvas.getByRole('button', { name: 'Send it again' }))
-    await expect(args.onResendVerification).toHaveBeenCalledWith('new@example.com')
+    // 비밀번호는 코드 단계에 남지 않는다
+    await expect(canvas.queryByLabelText(/^Password/)).toBeNull()
   },
 }
 
@@ -119,7 +122,7 @@ export const SignUpClosed: Story = {
   },
 }
 
-/* FINAL-3 초안(가입 = 6자리 인증번호, 같은 화면): 가입 응답의 signUpId → 코드 입력 → 맞으면 로그인. 백엔드 확정 뒤 다시 맞춘다 */
+/* 가입 = 6자리 인증번호, 같은 화면: 가입 응답의 signUpId → 코드 입력 → 맞으면 로그인 */
 const codeArgs = () => ({
   onSignUp: fn(async () => ({ status: 'VERIFICATION_SENT' as const, signUpId: 'sid-1' })),
   onVerifyCode: fn(async (_id: string, code: string) => {

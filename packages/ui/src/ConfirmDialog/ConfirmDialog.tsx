@@ -23,6 +23,8 @@ export type ConfirmDialogProps = {
   busy?: boolean
   /** 있으면 이 문구를 정확히 쳐야 확인이 켜진다(프로젝트 · 계정 삭제처럼 실수가 큰 동작) */
   typedConfirmation?: { phrase: string; label: string; hint?: string }
+  /** true 면 확인이 꺼져 있다 — 창이 요구하는 다른 것(다시 인증 · 동의)이 아직 준비되지 않았을 때 */
+  confirmDisabled?: boolean
 }
 
 type BodyProps = Pick<ConfirmDialogProps, 'description' | 'typedConfirmation'> & {
@@ -88,11 +90,12 @@ export function ConfirmDialog({
   tone = 'danger',
   busy = false,
   typedConfirmation,
+  confirmDisabled = false,
 }: ConfirmDialogProps) {
   const formId = useId()
   const [typed, setTyped] = useState('')
   const anchorRef = useRef<HTMLDivElement>(null)
-  const ready = isConfirmed(typedConfirmation?.phrase, typed) && !busy
+  const ready = isConfirmed(typedConfirmation?.phrase, typed) && !busy && !confirmDisabled
 
   // `Dialog` 의 효과(showModal)가 먼저 돈 뒤 — 안전한 곳으로 포커스
   useEffect(() => {
@@ -125,7 +128,7 @@ export function ConfirmDialog({
           <Button
             variant={tone}
             loading={busy}
-            disabled={!ready && !busy}
+            disabled={confirmDisabled || (!ready && !busy)}
             form={typedConfirmation ? formId : undefined}
             type={typedConfirmation ? 'submit' : 'button'}
             onClick={typedConfirmation ? undefined : confirm}

@@ -66,8 +66,6 @@ export type AuthLabels = {
   signInMagicLinkHelp: string
   signInMagicLinkSubmit: string
   signInUsePassword: string
-  signInResendVerification: string
-  signInVerificationResent: string
   providerNames: Record<string, string>
   // 가입
   signUpTitle: string
@@ -78,8 +76,8 @@ export type AuthLabels = {
   signUpClosedTitle: string
   signUpConsentRequired: string
   signUpCaptcha: string
-  // 메일 확인 안내
-  /** FINAL-3 초안 — 메일로 받은 6자리 인증번호를 같은 화면에서 입력한다 */
+  // 인증번호 입력
+  /** 메일로 받은 6자리 인증번호를 같은 화면에서 입력한다(가입 인증 · 이메일 변경) */
   codeTitle: string
   codeBody: (email: string) => string
   codeGroupLabel: string
@@ -98,47 +96,41 @@ export type AuthLabels = {
   checkEmailResent: string
   checkEmailResendIn: (seconds: number) => string
   checkEmailWrongAddress: string
-  // 한 번 쓰는 링크 도착 화면
+  /** 오래된 메일 링크 도착 화면(가입 인증 · 이메일 변경 · 본인 확인 · 삭제 확인은 이제 6자리 인증번호) */
+  legacyLinkTitle: string
+  legacyLinkBody: string
+  legacyLinkAction: string
+  // 다시 인증(비밀번호 · 메일로 받은 인증번호 · 제공자 동의)
+  reauthTitle: string
+  reauthCodeHint: (email: string) => string
+  reauthCodeSend: string
+  reauthCodeSent: (email: string) => string
+  reauthCodeEntered: string
+  reauthCodeExpired: string
+  reauthProviderHint: string
+  reauthProviderButton: (provider: string) => string
+  reauthProviderNone: string
+  reauthProviderDone: (provider: string) => string
+  linkReauthHint: (provider: string) => string
+  passwordNeedsEmail: string
+  errorTooManyRefreshes: string
+  emailChanged: string
+  emailSendAgain: string
+  emailPendingNote: string
+  emailCodeExpired: string
+  // 한 번 쓰는 링크 도착 화면(비밀번호 재설정 · 링크 로그인)
   /** 메일 링크 도착 화면의 「계속」 버튼 — 메일 스캐너가 대신 확정하지 못하게 사람이 누른다 */
   landingContinue: string
-  confirmEmailChangePrompt: string
-  verifyEmailTitle: string
-  verifyEmailChecking: string
-  verifyEmailDone: string
-  verifyEmailDoneAction: string
-  verifyEmailInvalidTitle: string
-  verifyEmailInvalidBody: string
-  verifyEmailResendSubmit: string
+  /** 메일 링크 도착 화면의 「계속」 버튼 — 메일 스캐너가 대신 확정하지 못하게 사람이 누른다 */
   magicLinkTitle: string
   magicLinkChecking: string
   magicLinkInvalidTitle: string
   magicLinkInvalidBody: string
   magicLinkRequestNew: string
   magicLinkSentTitle: string
-  confirmEmailChangeTitle: string
-  confirmEmailChangeChecking: string
-  confirmEmailChangeDone: string
-  confirmEmailChangeInvalidBody: string
-  confirmReauthTitle: string
-  confirmReauthChecking: string
-  confirmReauthEmailChanged: string
-  confirmReauthStashed: string
-  confirmReauthStashedPassword: string
-  confirmReauthStashedSocial: string
-  confirmReauthSettings: string
-  confirmReauthHandedOff: string
-  reauthHint: string
   methodsLoading: string
   methodsFailed: string
   methodsRetry: string
-  linkPasswordHint: (provider: string) => string
-  reauthSentTitle: string
-  reauthSentBody: (email: string) => string
-  reauthResend: string
-  reauthReadyTitle: string
-  reauthReadyBody: string
-  confirmReauthInvalidTitle: string
-  confirmReauthInvalidBody: string
   // 비밀번호 찾기 · 재설정
   forgotTitle: string
   forgotSubtitle: string
@@ -191,7 +183,6 @@ export type AuthLabels = {
   emailChangeSubmit: string
   emailPendingTitle: string
   emailPendingBody: (email: string, until?: string) => string
-  emailRequested: string
   methodsDescription: string
   methodsLastProtected: string
   methodNames: Record<string, string>
@@ -215,10 +206,6 @@ export type AuthLabels = {
   deleteTitle: string
   deleteGraceNotice: (days: number) => string
   deletePasswordHint: string
-  deleteMailHint: string
-  deleteMailSend: string
-  deleteMailSent: string
-  deleteTokenLabel: string
   deleteButton: string
   deleteDialogTitle: string
   deleteDialogBody: string
@@ -270,7 +257,8 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   cancel: 'Cancel',
   copyHint: 'Copy',
   errorInvalidCredentials: 'The email or password is not correct.',
-  errorEmailNotVerified: 'Verify your email address first. We can send the link again.',
+  errorEmailNotVerified:
+    'This account has not finished email verification. Sign up again and enter the code we email you.',
   errorSuspended: 'This account is suspended.',
   errorBlocked: 'This account cannot be used.',
   errorTooManyAttempts: 'Too many attempts. Try again later.',
@@ -281,8 +269,8 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   errorSignUpClosed: 'Sign-up is closed right now.',
   errorCaptcha: 'The check did not pass. Try again.',
   errorCurrentPassword: 'The current password is not correct.',
-  errorReauth: 'The password or confirmation is not correct.',
-  errorReauthRequired: 'Please confirm it is you first — we email you a link.',
+  errorReauth: 'The confirmation did not pass. Try again.',
+  errorReauthRequired: 'Please confirm it is you first.',
   errorLastMethod: 'This is your last sign-in method. Add another one first.',
   errorLastAdmin: 'There must be at least one administrator.',
   errorSelfAction: 'You cannot do that to your own account.',
@@ -328,8 +316,6 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   signInMagicLinkHelp: 'We email you a link. No password needed.',
   signInMagicLinkSubmit: 'Send the link',
   signInUsePassword: 'Use a password instead',
-  signInResendVerification: 'Resend the verification email',
-  signInVerificationResent: 'If that address needs verification, a new email is on its way.',
   providerNames: { google: 'Google', kakao: 'Kakao', naver: 'Naver' },
   signUpTitle: 'Create your account',
   signUpSubtitle: 'It takes a minute.',
@@ -362,56 +348,42 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   checkEmailResendIn: (seconds) => `Send again in ${seconds} s`,
   checkEmailWrongAddress: 'Wrong address? Start over',
   landingContinue: 'Continue',
-  confirmEmailChangePrompt: 'Confirm that you want to use this address for your account.',
-  verifyEmailTitle: 'Verify your email',
-  verifyEmailChecking: 'Checking your link',
-  verifyEmailDone: 'Your email is verified. You can sign in now.',
-  verifyEmailDoneAction: 'Go to sign in',
-  verifyEmailInvalidTitle: 'This link does not work',
-  verifyEmailInvalidBody:
-    'It may have expired or already been used. Enter your email and we send a new one.',
-  verifyEmailResendSubmit: 'Send a new link',
+  legacyLinkTitle: 'This link is no longer used',
+  legacyLinkBody:
+    'Verifying an email, changing it, confirming it is you and deleting an account now work with a 6-digit code instead of a link. Start the action again — sign up, or open your account settings — and we email you a code.',
+  legacyLinkAction: 'Go to sign in',
+  reauthTitle: 'Confirm it is you',
+  reauthCodeHint: (email) => `To confirm it is you we email a 6-digit code to ${email}.`,
+  reauthCodeSend: 'Email me a code',
+  reauthCodeSent: (email) =>
+    `We sent a 6-digit code to ${email}. It works for 30 minutes — never tell it to anyone.`,
+  reauthCodeEntered: 'Code entered — finish below.',
+  reauthCodeExpired: 'This code has expired or was used up. Ask for a new one.',
+  reauthProviderHint:
+    'Your account has no email address, so confirm it is you with a sign-in method you already use. You come back here afterwards.',
+  reauthProviderButton: (provider) => `Confirm with ${provider}`,
+  reauthProviderNone: 'None of your sign-in methods can confirm it is you. Contact support.',
+  reauthProviderDone: (provider) => `Confirmed with ${provider}.`,
+  linkReauthHint: (provider) => `Confirm it is you to connect ${provider} to your account.`,
+  passwordNeedsEmail:
+    'A password needs a verified email address on the account, and this one has none.',
+  errorTooManyRefreshes:
+    'Your session is fine, but it was refreshed too often. Try again in a moment.',
+  emailChanged: 'Your email address is changed. Your other devices were signed out.',
+  emailSendAgain: 'Send the code again',
+  emailPendingNote:
+    'The code is sent to the new address only — nothing changes until you enter it.',
+  emailCodeExpired: 'This code has expired or was used up. Request a new one.',
   magicLinkTitle: 'Signing you in',
   magicLinkChecking: 'Checking your link',
   magicLinkInvalidTitle: 'This sign-in link does not work',
   magicLinkInvalidBody: 'It may have expired or already been used. Request a new one.',
   magicLinkRequestNew: 'Request a new link',
   magicLinkSentTitle: 'Check your email',
-  confirmEmailChangeTitle: 'Confirm your new email',
-  confirmEmailChangeChecking: 'Confirming the change',
-  confirmEmailChangeDone:
-    'Your email address is changed. You were signed out everywhere; sign in again with the new address.',
-  confirmEmailChangeInvalidBody: 'This link is invalid, expired or already used.',
-  confirmReauthTitle: 'Confirm it is you',
-  confirmReauthChecking: 'Confirming it is you',
-  confirmReauthEmailChanged:
-    'Confirmed. We sent a link to your new address — your email changes when you open it.',
-  confirmReauthStashed:
-    'Confirmed. This browser did not start the action: open your account settings here and submit it once more, or go back to the tab where you started.',
-  confirmReauthStashedPassword:
-    'Confirmed. Go to your account settings and enter the new password once more to finish.',
-  confirmReauthStashedSocial:
-    'Confirmed. Go to your account settings and press the connect button once more to finish.',
-  confirmReauthSettings: 'Open account settings',
-  confirmReauthHandedOff:
-    'Confirmed. The tab where you started continues by itself — you can close this one.',
   methodsLoading: 'Checking how you can sign in',
   methodsFailed:
     'We could not check which sign-in methods are available. Showing the default — try again if something is missing.',
   methodsRetry: 'Try again',
-  linkPasswordHint: (provider) =>
-    `Enter your current password to connect ${provider} to your account.`,
-  reauthHint:
-    'You sign in without a password. We email you a confirmation link before this is saved.',
-  reauthSentTitle: 'Check your email',
-  reauthSentBody: (email) =>
-    `We sent a confirmation link to ${email}. Open it and this action continues.`,
-  reauthResend: 'Send the link again',
-  reauthReadyTitle: 'Identity confirmed',
-  reauthReadyBody: 'Submit once more to finish — the confirmation stays valid for a short while.',
-  confirmReauthInvalidTitle: 'This link does not work',
-  confirmReauthInvalidBody:
-    'It is invalid, expired or already used. Start the action again from your account settings and we will send a new link.',
   forgotTitle: 'Reset your password',
   forgotSubtitle: 'Enter your email and we send a reset link.',
   forgotSubmit: 'Send the link',
@@ -459,10 +431,9 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   emailUnverified: 'Not verified',
   emailNew: 'New email',
   emailChangeSubmit: 'Change email',
-  emailPendingTitle: 'Confirm the change',
+  emailPendingTitle: 'Enter the code for your new address',
   emailPendingBody: (email, until) =>
-    `We sent a link to ${email}. Your address changes when you open it${until ? ` (the link works until ${until})` : ''}. No mail? Request the change again below.`,
-  emailRequested: 'If that address can be used, a confirmation link is on its way.',
+    `We sent a 6-digit code to ${email}. Enter it here to switch your address${until ? ` (it works until ${until})` : ''}. No mail? Send the code again below.`,
   methodsDescription: 'The ways you can sign in to this account.',
   methodsLastProtected: 'You need at least one way to sign in, so this one cannot be removed.',
   methodNames: { password: 'Password', magic_link: 'Email link' },
@@ -488,10 +459,6 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   deleteGraceNotice: (days) =>
     `Your account is deleted at once and your data is erased after ${days} days. Within that time an administrator can still restore it.`,
   deletePasswordHint: 'Enter your password to confirm it is you.',
-  deleteMailHint: 'You sign in without a password, so we email you a confirmation link.',
-  deleteMailSend: 'Email me the link',
-  deleteMailSent: 'Link sent. Paste the code from the link below, or open the link.',
-  deleteTokenLabel: 'Confirmation code',
   deleteButton: 'Delete my account',
   deleteDialogTitle: 'Delete your account?',
   deleteDialogBody: 'You are signed out everywhere. This cannot be undone by you.',

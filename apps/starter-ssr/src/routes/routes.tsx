@@ -31,7 +31,7 @@ export const routes: RouteObject[] = [
       // 로그인 · 가입 · 메일 확인 · 비밀번호 재설정 · 링크 로그인 · 계정 설정 — `auth/routes.tsx`. 모두 검색에서 뺀다
       ...accountRoutes((page) =>
         handle({
-          title: page === 'account' || page === 'confirmDelete' ? '계정' : '로그인',
+          title: page === 'account' ? '계정' : '로그인',
           description: '계정 화면.',
           robots: 'noindex',
         }),

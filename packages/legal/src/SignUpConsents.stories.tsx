@@ -100,6 +100,16 @@ export const BackendWithoutTheModuleShowsNothingAndDoesNotBlock: Story = {
   },
 }
 
+/** 출시된 백엔드는 모르는 경로를 **401** 로 답한다(공개 경로가 아니라서) — 404 만 「모듈 없음」으로 읽으면 가입이 막힌다(e2e 로 확인) */
+export const BackendAnswering401ForTheUnknownPathDoesNotBlockEither: Story = {
+  args: { slot: slot(), fake: { noModule: 401 } },
+  play: async ({ canvas, args }) => {
+    await waitFor(() => expect(args.slot.onChange).toHaveBeenLastCalledWith([], true))
+    await expect(canvas.queryByRole('checkbox')).toBeNull()
+    await expect(canvas.queryByText('약관을 불러오지 못했어요.')).toBeNull()
+  },
+}
+
 export const FailedLoadBlocksAndOffersRetry: Story = {
   args: { slot: slot(), fake: { documentsFail: true } },
   play: async ({ canvas, args }) => {

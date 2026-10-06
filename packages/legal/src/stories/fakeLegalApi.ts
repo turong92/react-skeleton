@@ -21,7 +21,7 @@ export type FakeLegalOptions = {
   /** 서버가 이미 더 새 판을 현재로 본다 — 처음 `agree` 한 번은 409 */
   staleFirstAgree?: boolean
   /** 문서 목록이 없다(legal 모듈이 없는 백엔드) */
-  noModule?: boolean
+  noModule?: boolean | 401 | 404
   /** 문서 목록이 실패한다(네트워크) */
   documentsFail?: boolean
   /** 처음에 철회된 마케팅 */
@@ -146,7 +146,10 @@ export function createFakeLegalApi(options: FakeLegalOptions = {}): LegalApi & {
     calls,
     async documents() {
       calls.push('documents')
-      if (options.noModule) throw error('COMMON.NOT_FOUND', 404)
+      if (options.noModule)
+        throw options.noModule === 401
+          ? error('COMMON.UNAUTHORIZED', 401)
+          : error('COMMON.NOT_FOUND', 404)
       if (options.documentsFail) throw error('CLIENT.NETWORK_ERROR', 0)
       return documents
     },

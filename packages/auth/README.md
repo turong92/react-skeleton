@@ -28,13 +28,36 @@ const { status, principal, login, logout } = useAuth()
 const social = createSocialLoginFlow({
   session: authSession, // socialLogin(provider, code, redirectUri) 를 가진 것
   storage: window.sessionStorage,
-  providers: { google: { clientId: '…', redirectUri: `${location.origin}/auth/callback` } },
+  providers: discovered.providers, // GET /auth/methods → methodsFromInfo(info).providers — authorize 주소 · scope · pkce · nonce 가 들어 있다
 })
-window.location.assign(social.start('google').url) // 로그인 버튼
+const { url } = await social.start('line') // 비동기(WebCrypto SHA-256) — PKCE 필수인데 WebCrypto 가 없으면 PkceUnavailableError
+window.location.assign(url) // 로그인 버튼
 // 콜백 페이지: const result = useSocialLoginCallback(social, location.search) → 'pending' | 'success' | 'error'
 ```
 
-`clientId` 는 공개값(authorize 주소에 실린다). `clientSecret` 은 백엔드 `skeleton.auth-social.providers.*` 에만 있다. 이 흐름은 백엔드 계약(`OAuthSocialLoginRequest`)까지만 안다 — scope 의 의미 · 계정 연결 정책(`LinkedAccountOnly…`)은 백엔드 설정이다.
+제공자 목록 · 순서 · authorize 주소 · scope · `pkce`/`nonce` 요구는 모두 백엔드의 `GET /auth/methods` 가 말해 준다(`createAuthRoutes({ discovery })` 가 알아서 쓴다) — 프런트에는 제공자 주소가 없다(authorize 정보를 안 보내는 옛 백엔드용 `SOCIAL_AUTHORIZE_PRESETS` 는 **LEGACY** 대체 표). 버튼의 마크 · 문구는 제공자 코드로 붙는다(`providerPresentation` — google · line · x · kakao · naver, 모르는 코드는 중립 마크; 문구는 `labels.providerSignInText` / `signInWithProvider`). `clientId` 는 공개값(authorize 주소에 실린다). `clientSecret` 은 백엔드 `skeleton.auth-social.providers.*` 에만 있다. 이 흐름은 백엔드 계약(`OAuthSocialLoginRequest`)까지만 안다 — scope 의 의미 · 계정 연결 정책(`LinkedAccountOnly…`)은 백엔드 설정이다.
+
+## 실제 제공자 붙일 때 (Google · LINE · X)
+
+**1. 콜백 주소를 제공자 콘솔에 글자 그대로 등록한다.** 이 앱이 내놓는 주소는 둘이다 — 로그인용과 (설정에서 하는) 연결 · 다시 인증용. 제공자는 `redirect_uri` 를 **정확히** 비교한다(http/https · 호스트 · 포트 · 끝 슬래시 하나만 달라도 `redirect_uri_mismatch`).
+
+| 쓰임                                                                              | 로컬(Vite 기본 포트)                                                                               | 배포                                     |
+| --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| 로그인 · 가입 (`/auth/callback`)                                                  | `http://localhost:5173/auth/callback` · X 는 `http://127.0.0.1:5173/auth/callback`                 | `https://<도메인>/auth/callback`         |
+| 계정 연결 · 이메일 변경 · 연결 해제 · 삭제의 다시 인증 (`/account/link-callback`) | `http://localhost:5173/account/link-callback` · X 는 `http://127.0.0.1:5173/account/link-callback` | `https://<도메인>/account/link-callback` |
+
+- **X 는 `localhost` 를 거부한다** — 개발 서버를 `127.0.0.1` 로 열고(`vite --host 127.0.0.1`) 그 주소로 등록 · 접속한다. LINE 이 http `localhost` 를 허용하는지는 콘솔에서 확인(안 되면 https 터널 주소).
+- 두 주소를 **모두** 등록한다(Google 은 여러 개 가능 · LINE 은 Callback URL 칸에 여러 줄 · X 는 Callback URI 여러 개). 로그인 요청의 `redirectUri` 는 그 인가 요청에 쓴 값과 같아야 하므로 이 패키지가 시작 때 저장한 값을 그대로 보낸다.
+- 백엔드가 `redirectUri` 를 알려 주면(`skeleton.auth-social*.providers.*.redirect-uri`) 그 값이 이긴다 — 이 앱의 콜백과 **출처 · 경로 · 끝 슬래시**가 다르면 개발 콘솔에 어디가 다른지 경고한다(`redirectUriProblems`). 백엔드 값은 보통 비워 두고 앱이 자기 출처로 만든다.
+- 시작한 탭에서 끝내야 한다(`state` · verifier · nonce 는 그 탭의 `sessionStorage`). 모바일에서 LINE 앱 · 인앱 브라우저가 콜백을 **다른 브라우저/탭**으로 열면 「이 탭에서 시작한 로그인이 아니에요」 안내가 뜬다 — 같은 브라우저에서 다시 시작한다.
+- **인가 코드 수명**: LINE 10분 · **X 30초** · 그 밖은 비공개 — 콜백을 받으면 바로 백엔드로 보낸다(이 패키지는 `complete` 안에서 곧바로). 같은 코드를 두 번 쓰지 않는다(StrictMode 이중 실행도 로그인은 한 번).
+- 제공자가 이메일을 안 주거나 믿을 수 없다고 하면(LINE · X) 주소 없는 계정이 된다 — 설정은 「주소 없음」으로 그리고 「이메일 추가」는 LINE/X 동의를 다시 거친다(새 `state` · verifier · nonce).
+
+백엔드 쪽 콘솔 설정(Channel ID · secret · 이메일 권한 · 테스터 등록)은 kotlin-skeleton 의 `docs/modules/auth-social-oidc.md` · `auth-social-x.md` 체크리스트를 따른다.
+
+## PKCE · nonce — 시도마다
+
+시작할 때마다 `state`(24바이트) · `codeVerifier`(32바이트 → 43자 base64url) · `nonce`(제공자가 쓸 때)를 CSPRNG 로 만들어 탭 `sessionStorage` 의 `state` 키 아래에 **제공자 · 종류(login · link · reauth) · 계정**과 함께 둔다 — 한 번 읽으면 지워진다. `code_challenge = BASE64URL(SHA-256(verifier))`(S256 뿐) 만 URL 에 간다. 로그인 · 연결(최상위) · `socialReauth`(이메일 변경 · 연결 해제 · 삭제)에 `codeVerifier` · `nonce` 를 싣는다. `pkce: UNSUPPORTED` 제공자에는 PKCE 파라미터를 보내지 않는다(모르는 파라미터를 거절하는 곳이 있다). 400 `AUTH.SOCIAL_PKCE_FAILED` · `AUTH.SOCIAL_NONCE_FAILED` 는 요청이 잘못 만들어진 것(아직 아무것도 쓰이지 않았다), 401 `AUTH_SOCIAL.INVALID_AUTHORIZATION_CODE` · `AUTH.SOCIAL_ID_TOKEN_INVALID` 는 동의를 처음부터 다시.
 
 ## 계정 수명주기 — 라우트 한 벌
 

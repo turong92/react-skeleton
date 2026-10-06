@@ -41,12 +41,16 @@ export type SignUpConsentsProps = {
   labels?: Partial<LegalLabels>
 }
 
+/**
+ * 이 백엔드에는 legal 모듈이 없다 — 공개 경로(`GET /documents`)가 모듈이 있으면 늘 열려 있으니 404 뿐 아니라 401 · 403 · 405 도 「없음」이다
+ * (출시된 백엔드는 모르는 경로를 401 로 답한다 — e2e 로 확인). 네트워크 오류 · 5xx 는 일시 실패라 가입을 막고 다시 시도를 준다.
+ */
 const isNotFound = (error: unknown) =>
-  error instanceof ApiRequestError && error.apiError.status === 404
+  error instanceof ApiRequestError && [401, 403, 404, 405].includes(error.apiError.status)
 
 /**
  * 가입 폼의 동의 자리 — `GET /legal/documents` 로 체크박스를 만든다(필수 · 선택 · 전체 동의 · 줄마다 문서 다이얼로그).
- * 체크한 줄의 `{종류, 판, 언어}` 가 슬롯으로 올라가 가입 요청의 `consents` 가 된다. 백엔드에 legal 모듈이 없으면(404) 아무것도 그리지 않고 가입을 막지 않는다.
+ * 체크한 줄의 `{종류, 판, 언어}` 가 슬롯으로 올라가 가입 요청의 `consents` 가 된다. 백엔드에 legal 모듈이 없으면(404 · 401) 아무것도 그리지 않고 가입을 막지 않는다.
  */
 export function SignUpConsents({
   api,

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — 글로벌 소셜 로그인(Google · LINE · X, PKCE S256 · nonce)과 법적 문서 · 동의(`@skeleton/legal`) (2026-10-07)
+
+- **소셜 로그인은 발견이 이끈다**: `GET /auth/methods` 의 제공자마다 `pkce`/`nonce`(REQUIRED · SUPPORTED · UNSUPPORTED) · `authorize {url, scopes, params}` 를 읽어 authorize 주소를 만든다 — 프런트에 제공자 주소가 없다(`SOCIAL_AUTHORIZE_PRESETS` 는 authorize 정보를 안 보내는 옛 백엔드용 **LEGACY** 대체 표 — kakao · naver). 순서는 백엔드가 준 순서. **깨지는 변경**: `createSocialLoginFlow(...).start` / `createSocialLinkFlow(...).start` 가 `Promise` 를 돌려준다(WebCrypto SHA-256) · `session.socialLogin` / `authApi.socialLogin` 의 네 번째 인자 `{ codeVerifier, nonce }`.
+- **PKCE · nonce**: 시도마다 `state` · `codeVerifier`(CSPRNG 43자) · `nonce` 를 탭 `sessionStorage` 에 제공자 · 종류(login · link · reauth) · 계정에 묶어 두고 한 번 쓰고 지운다. `codeVerifier`/`nonce` 는 로그인 · 연결(최상위) · `socialReauth`(이메일 변경 · 연결 해제 · 삭제)에 실린다 — 연결 도중 다른 제공자로 다시 인증하는 왕복은 두 시도의 verifier 를 각자 보낸다. PKCE 필수 제공자는 WebCrypto 없이는 시작하지 않고(`PkceUnavailableError` · 문구) `pkce: UNSUPPORTED` 에는 PKCE 파라미터를 보내지 않는다. 새 오류 문구: `AUTH.SOCIAL_PKCE_FAILED` · `NONCE_FAILED` · `ID_TOKEN_INVALID` · `INVALID_AUTHORIZATION_CODE` · `PROVIDER_GATEWAY_ERROR`.
+- **콜백이 진짜 제공자에 견딘다**: 취소(`access_denied`)는 실패가 아니라 「취소했어요」 · state 없이 오는 `error` · 다른 탭이 시작한 콜백(탭 규칙 안내) · 로그인 뒤 쿼리 없는 콜백으로 돌아오면(뒤로 가기) 가던 길로 · redirectUri 의 출처 · 끝 슬래시 · 경로 불일치를 개발 콘솔에 경고(`redirectUriProblems`). README 에 「실제 제공자 붙일 때」 — 로그인 · 연결/재인증 콜백 주소 표.
+- **제공자 표시**: `providerPresentation` — google · line · x · kakao · naver 인라인 SVG 마크(모르는 코드는 중립) · 문구 `providerSignInText`(ko: 「Google로 / LINE으로 / X로 계속하기」). ko `providerNames.google` 은 「구글」 → 「Google」.
+- **주소 없는 계정**(LINE · X): 이메일 절이 빈 값 대신 「주소 없음」, 「이메일 추가」는 제공자 동의를 다시 거친다.
+- **`@skeleton/legal`**(백엔드 `legal` · `legal-jdbc` 짝): `createLegalApi` · 훅 · `ConsentChecklist`(필수/선택 · 전체 동의) · `SignUpConsents`(가입 폼 슬롯 `SignUpScreen.renderConsents` — 보낸 `consents` 는 `{type, version, locale}`) · `createReconsentController` + `ReconsentGate`(403 `LEGAL.RECONSENT_REQUIRED` 를 api-client 의 새 `recoverForbidden` 으로 받아 동의 뒤 막힌 호출을 다시 보낸다 · 로그인 직후 `blocked` 확인 · 제외 경로 `/legal` `/auth` `/account`) · `ConsentSettings`(상태 · 이력 · 선택 동의 철회) · `ApiLegalDocumentPage`(서버 마크다운 · 판 · 효력일). 스타터 · SSR 스타터 · 샘플이 배선한다(백엔드 스타터가 legal 을 켜므로 모든 찍힌 프로젝트에 포함). 서버에 legal 모듈이 없으면(404) 아무것도 그리지 않고 가입을 막지 않는다.
+- `@skeleton/api-client`: `recoverForbidden`(403 을 한 번 풀어 보는 훅 — `recoverUnauthorized` 의 짝) · `LEGAL.*` 오류 코드. `AccountPage` 의 `settings.after`.
+- **고침**: 느린 러너에서 지던 스토리 경주 둘 — `SectionIndex` 는 방금 누른 절을 관찰자 보고가 되돌리지 않는다 · 다이얼로그 스토리는 부모가 닫힘을 반영(포커스 복귀)한 뒤 다시 누른다.
+
 ### Changed — 계정 프런트를 백엔드 FINAL-3(인증번호 · kotlin-skeleton cbb8b4a)에 맞춘다 — 링크 왕복을 걷어낸다 (2026-10-07)
 
 - **초안 대비 어긋남을 바로잡음**: `ACCOUNT.CODE_INVALID`/`CODE_EXPIRED`/`AUTH.TOO_MANY_REFRESHES` 코드 · `verifySignUpCode`(`createAccountApi(client, { deviceName })`) · `magicLinkRedeem`(세션의 `deviceName`)이 `X-Device-Name` 을 싣는다 · 가입 응답은 늘 `signUpId` 를 준다(메일 인증을 끈 백엔드만 `CREATED`) · `SignUpScreen.onVerifyCode` 는 필수가 됐고 코드 없는 「링크를 열어 주세요」 갈래는 없다 · 로그인 화면의 「인증 메일 다시 받기」 삭제(재전송은 `signUpId` 로만 — 미인증 계정은 더 만들어지지 않는다).

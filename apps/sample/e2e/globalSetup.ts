@@ -3,6 +3,7 @@ import { createServer } from 'node:net'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { TestProject } from 'vitest/node'
+import { FAKE_LINE, FAKE_X, startFakeProviders, type FakeProviders } from './fakeProviders'
 
 /*
  * e2e 준비 — 1) 백엔드(kotlin-skeleton 의 `scripts/sample-e2e-backend.sh start`: 새 DB · 로컬 S3 · apps/sample 기동, 준비되면 `READY <주소>` 한 줄을 찍는다)
@@ -12,6 +13,9 @@ import type { TestProject } from 'vitest/node'
  *   이 준비 단계는 빈 포트(`MAIL_SMTP_PORT` · `MAIL_HTTP_PORT`)를 넘겨 그 줄의 api 주소를 테스트에 주고, 테스트는 그 HTTP API 에서 링크를 읽는다(자체 캐처를 띄우지 않는다).
  *   E2E_MAIL_URL 을 주면 이미 떠 있는 캐처를 쓴다(그때는 백엔드의 메일 포트를 E2E_MAIL_SMTP_PORT 로 맞춘다).
  *
+ * 가짜 소셜 제공자: `E2E_FAKE_PROVIDERS=1` 이면 백엔드를 올리기 전에 가짜 LINE · X 를 띄우고 그 주소로 백엔드의 LINE · X 설정(`SPRING_APPLICATION_JSON`)을 덮는다 —
+ *   소셜 백엔드(`feat/social-oidc-x`)용. 약관 재동의 필터를 시험하려면 `SKELETON_LEGAL_RECONSENT_ENABLED=true`(로컬 프로필은 꺼 둔다).
+ *
  * 환경변수: E2E_API_URL — 이미 떠 있는 백엔드를 쓴다(기동 · 정리를 건너뜀) · SAMPLE_API_DIR — 백엔드 레포 위치(기본: 이 레포 옆 ../kotlin-skeleton)
  */
 declare module 'vitest' {
@@ -20,6 +24,8 @@ declare module 'vitest' {
     apiUrl: string
     /** 메일 캐처(mailpit)의 HTTP API 주소 — 백엔드가 보낸 메일의 링크를 읽는다 */
     mailUrl: string
+    /** 가짜 LINE · X(`fakeProviders.ts`) — `E2E_FAKE_PROVIDERS=1` 일 때만, 아니면 빈 문자열 */
+    fakeUrl: string
   }
 }
 
@@ -54,6 +60,7 @@ async function waitFor(url: string, label: string, timeoutMs = 60_000) {
 export default async function setup(project: TestProject) {
   let backendScript: string | null = null
   let backendEnv: NodeJS.ProcessEnv = process.env
+  let fake: FakeProviders | null = null
   let apiUrl = process.env.E2E_API_URL ?? ''
   let mailUrl = process.env.E2E_MAIL_URL ?? ''
   if (!apiUrl) {
@@ -65,8 +72,46 @@ export default async function setup(project: TestProject) {
       Number(process.env.E2E_MAIL_SMTP_PORT) || (await freePort()),
       await freePort(),
     ]
+    if (process.env.E2E_FAKE_PROVIDERS === '1') fake = await startFakeProviders()
+    const fakeConfig = fake
+      ? {
+          SPRING_APPLICATION_JSON: JSON.stringify({
+            skeleton: {
+              'auth-social-oidc': {
+                providers: {
+                  line: {
+                    'client-id': FAKE_LINE.clientId,
+                    'client-secret': FAKE_LINE.clientSecret,
+                    scopes: ['openid', 'profile', 'email'],
+                    issuer: `${fake.url}/line`,
+                    'authorization-endpoint': `${fake.url}/line/authorize`,
+                    'token-endpoint': `${fake.url}/line/token`,
+                    'jwks-uri': `${fake.url}/line/certs`,
+                  },
+                },
+              },
+              // Google 은 가짜 서버가 없다 — 로그인 화면의 세 번째 버튼(증거 스크린샷)으로만 켠다. 눌러 보는 여정은 LINE · X
+              'auth-social': {
+                providers: {
+                  google: {
+                    enabled: true,
+                    'client-id': 'google-e2e',
+                    'client-secret': 'google-secret',
+                  },
+                },
+              },
+              'auth-social-x': {
+                'client-id': FAKE_X.clientId,
+                'client-secret': FAKE_X.clientSecret,
+                'api-base-url': `${fake.url}/x`,
+              },
+            },
+          }),
+        }
+      : {}
     backendEnv = {
       ...process.env,
+      ...fakeConfig,
       MARINA_DIRECT: '1',
       SERVER_PORT: String(serverPort),
       DB_PORT: String(dbPort),
@@ -139,6 +184,7 @@ export default async function setup(project: TestProject) {
 
   const stopAll = () => {
     killWeb()
+    void fake?.close()
     if (backendScript) spawnSync('bash', [backendScript, 'stop'], { env: backendEnv })
   }
 
@@ -152,5 +198,6 @@ export default async function setup(project: TestProject) {
   project.provide('baseUrl', baseUrl)
   project.provide('apiUrl', apiUrl)
   project.provide('mailUrl', mailUrl)
+  project.provide('fakeUrl', fake?.url ?? '')
   return stopAll
 }

@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import type { BrowserContext, Locator, Page } from 'playwright'
 import { describe, inject, it } from 'vitest'
-import { auth, dismissConsent, launch } from './helpers'
+import { agreeToLegal, auth, dismissConsent, launch } from './helpers'
 import { waitForCode, waitForLink } from './mail'
 
 /*
@@ -52,6 +52,7 @@ describe('account walkthrough (FINAL-3 codes)', () => {
         '01-sign-up-form.png',
         '가입 — 주소와 비밀번호(서버 정책 체크리스트 · 강도 막대)를 쓰고 「계정 만들기」. 이 시점에는 계정이 아직 없다.',
       )
+      await agreeToLegal(page, inject('apiUrl'))
       await page.getByRole('button', { name: auth.signUpSubmit }).click()
       await page.getByRole('heading', { name: auth.codeTitle }).waitFor()
       await shot(

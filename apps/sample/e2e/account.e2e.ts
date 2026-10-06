@@ -6,7 +6,15 @@ import {
   type Route,
 } from 'playwright/test'
 import { afterAll, beforeAll, describe, inject, it } from 'vitest'
-import { auth, dismissConsent, fillSignIn, ko, launch } from './helpers'
+import {
+  acceptLegalGate,
+  agreeToLegal,
+  auth,
+  dismissConsent,
+  fillSignIn,
+  ko,
+  launch,
+} from './helpers'
 import { subjectsFor, waitForCode, waitForLink } from './mail'
 
 /*
@@ -114,6 +122,7 @@ describe('sign-up by a 6-digit code, signed in at once', () => {
     await pwExpect(
       page.getByRole('img', { name: new RegExp(auth.passwordStrength[4]) }),
     ).toBeVisible()
+    await agreeToLegal(page, apiUrl)
     await page.getByRole('button', { name: auth.signUpSubmit }).click()
     await pwExpect(heading(auth.codeTitle, 2)).toBeVisible()
     await pwExpect(page.getByText(email).first()).toBeVisible()
@@ -372,6 +381,7 @@ describe('a passwordless account (email link) re-authenticates by a mailed code,
     await pwExpect(heading(auth.magicLinkSentTitle, 2)).toBeVisible()
     const link = await waitForLink(mailUrl, linkEmail, 'magic-link', { seen })
     await page.goto(`${baseUrl}${link.path}`)
+    await acceptLegalGate(page, apiUrl) // legal 모듈이 있는 백엔드: 링크로 처음 들어온 계정은 동의부터
     await pwExpect(heading(/안녕하세요/)).toBeVisible()
   })
 
@@ -459,6 +469,7 @@ describe('delete a passwordless account with a mailed code and a typed phrase', 
     await page.getByRole('button', { name: auth.signInMagicLinkSubmit }).click()
     const link = await waitForLink(mailUrl, goneEmail, 'magic-link', { seen })
     await page.goto(`${baseUrl}${link.path}`)
+    await acceptLegalGate(page, apiUrl)
     await pwExpect(heading(/안녕하세요/)).toBeVisible()
     await page.goto(`${baseUrl}/account`)
     const section = region(auth.sectionDelete)
@@ -502,6 +513,7 @@ describe('pre-hijack: an attacker who starts a sign-up for someone else’s addr
     await page.goto(`${baseUrl}/sign-up`)
     await page.getByLabel(auth.email).fill(victim)
     await page.getByLabel(auth.password).first().fill(ownerPassword)
+    await agreeToLegal(page, apiUrl)
     await page.getByRole('button', { name: auth.signUpSubmit }).click()
     await pwExpect(heading(auth.codeTitle, 2)).toBeVisible()
     const ownersCode = await waitForCode(mailUrl, victim, 'verify', { seen })
@@ -529,6 +541,7 @@ describe('pre-hijack: an attacker who starts a sign-up for someone else’s addr
     await page.goto(`${baseUrl}/sign-up`)
     await page.getByLabel(auth.email).fill(victim)
     await page.getByLabel(auth.password).first().fill('Whatever-pass-2026')
+    await agreeToLegal(page, apiUrl)
     await page.getByRole('button', { name: auth.signUpSubmit }).click()
     await pwExpect(heading(auth.codeTitle, 2)).toBeVisible() // 존재 여부를 숨긴다
     await enterCode(page, '123456')

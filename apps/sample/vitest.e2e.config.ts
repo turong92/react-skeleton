@@ -13,6 +13,8 @@ export default defineConfig({
           'e2e/walkthrough.shots.ts',
           'e2e/walkthrough.board.shots.ts',
           'e2e/walkthrough.account.shots.ts',
+          'e2e/walkthrough.social.shots.ts', // E2E_FAKE_PROVIDERS=1 (소셜 백엔드) 일 때만 의미가 있다 — 아니면 건너뛴다
+          'e2e/walkthrough.legal.shots.ts', // legal 모듈이 있는 백엔드일 때만 — 아니면 건너뛴다
         ]
       : ['e2e/**/*.e2e.ts'],
     globalSetup: ['e2e/globalSetup.ts'],

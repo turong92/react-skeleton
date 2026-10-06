@@ -1423,7 +1423,10 @@
         "buildAuthorizeUrl",
         "parseSocialCallback",
         "SOCIAL_AUTHORIZE_PRESETS",
-        "SocialCallbackScreen"
+        "SocialCallbackScreen",
+        "createCodeVerifier",
+        "redirectUriProblems",
+        "providerPresentation"
       ],
       "needs": ["auth"],
       "backend": {
@@ -1449,7 +1452,7 @@
         "alsoVia": [],
         "optOut": null
       },
-      "summary": "소셜 로그인의 프런트 절반 — 제공자 인가 주소 · state 검증(탭에 묶임 · 한 번만) · 콜백의 code 를 백엔드로 보내 로그인 처리, 로그인한 계정에 제공자를 더하는 연결 흐름(createSocialLinkFlow). 버튼 · 콜백 화면은 SignInScreen · createAuthRoutes 가 그린다.",
+      "summary": "소셜 로그인의 프런트 절반 — GET /auth/methods 가 알려 준 제공자 · authorize 주소 · scope · pkce/nonce 로 인가 주소 만들기(Google · LINE · X · Kakao · Naver, PKCE S256 · nonce 는 시도마다), state 검증(탭에 묶임 · 한 번만) · 콜백의 code 를 백엔드로 보내 로그인 처리, 로그인한 계정에 제공자를 더하는 연결 흐름(createSocialLinkFlow), 제공자 마크 · 문구. 버튼 · 콜백 화면은 SignInScreen · createAuthRoutes 가 그린다.",
       "path": "packages/auth/src/social.ts",
       "notFor": [
         "clientSecret 은 프런트에 두지 않는다 — 백엔드 skeleton.auth-social.providers.* 에만",
@@ -1463,9 +1466,26 @@
           "카카오 로그인",
           "네이버 로그인",
           "간편 로그인",
-          "OAuth"
+          "OAuth",
+          "LINE 로그인",
+          "라인 로그인",
+          "X 로그인",
+          "트위터 로그인",
+          "PKCE"
         ],
-        "en": ["social login", "google login", "kakao login", "naver login", "oauth", "sso"]
+        "en": [
+          "social login",
+          "google login",
+          "kakao login",
+          "naver login",
+          "oauth",
+          "sso",
+          "line login",
+          "x login",
+          "twitter login",
+          "pkce",
+          "openid connect"
+        ]
       }
     },
     {
@@ -2063,7 +2083,7 @@
       "byHand": "기본 포함. 로그인 · 가입 · 메일 확인 · 비밀번호 재설정 · 계정 설정은 createAuthRoutes 한 번(account-lifecycle). 어떤 방법이 열려 있는지는 백엔드(GET /auth/methods)가 알려 준다. 화면의 모양은 Patterns/Auth/* 스토리를 보고 labels · 설정으로 맞춘다."
     },
     {
-      "need": "소셜 로그인 (구글 · 카카오 · 네이버)",
+      "need": "소셜 로그인 (구글 · LINE · X · 카카오 · 네이버)",
       "capabilities": ["social-login"],
       "byHand": "백엔드가 켠 제공자와 공개 clientId 는 GET /auth/methods 가 알려 줘 로그인 화면에 버튼이, /auth/callback 라우트가 생긴다(백엔드가 clientId 를 모르면 VITE_SOCIAL_<제공자>_CLIENT_ID). clientSecret 은 백엔드 skeleton.auth-social.providers.* 에만."
     },

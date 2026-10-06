@@ -22,7 +22,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 | 필요한 것 | 고를 것(id) | react `new-project.sh` 조각 | kotlin `new-project.sh` 조각 | 그래도 손으로 써야 하는 것 |
 |---|---|---|---|---|
 | 로그인 (이메일 · 비밀번호) · 로그인한 사람만 보는 화면 | `auth` | (기본 포함 — 덧붙일 것 없음) | (모듈 없음) | 기본 포함. 로그인 · 가입 · 메일 확인 · 비밀번호 재설정 · 계정 설정은 createAuthRoutes 한 번(account-lifecycle). 어떤 방법이 열려 있는지는 백엔드(GET /auth/methods)가 알려 준다. 화면의 모양은 Patterns/Auth/* 스토리를 보고 labels · 설정으로 맞춘다. |
-| 소셜 로그인 (구글 · 카카오 · 네이버) | `social-login` | (기본 포함 — 덧붙일 것 없음) | `--modules auth-social-google` — `auth-social-google` \| `auth-social-kakao` \| `auth-social-naver` 중 고른다 | 백엔드가 켠 제공자와 공개 clientId 는 GET /auth/methods 가 알려 줘 로그인 화면에 버튼이, /auth/callback 라우트가 생긴다(백엔드가 clientId 를 모르면 VITE_SOCIAL_<제공자>_CLIENT_ID). clientSecret 은 백엔드 skeleton.auth-social.providers.* 에만. |
+| 소셜 로그인 (구글 · LINE · X · 카카오 · 네이버) | `social-login` | (기본 포함 — 덧붙일 것 없음) | `--modules auth-social-google` — `auth-social-google` \| `auth-social-kakao` \| `auth-social-naver` 중 고른다 | 백엔드가 켠 제공자와 공개 clientId 는 GET /auth/methods 가 알려 줘 로그인 화면에 버튼이, /auth/callback 라우트가 생긴다(백엔드가 clientId 를 모르면 VITE_SOCIAL_<제공자>_CLIENT_ID). clientSecret 은 백엔드 skeleton.auth-social.providers.* 에만. |
 | 게시판 · 글쓰기 · 댓글 · 대댓글 · 공감(반응) | `board` | `--packages board` | `--modules board,board-jdbc` | 게시판 코드 만들기(운영자 API), 목록 · 상세 · 글쓰기 라우트(apps/sample 의 BoardPage · BoardPostPage · BoardFormPage 를 복사), 반응 라벨 · 아이콘 맵, 반응 종류는 백엔드 yml(skeleton.board.reaction.types). |
 | 알림 (종 · 목록 · 안 읽은 수) | `notifications` | `--packages notifications` | `--modules notification,notification-jdbc` | 헤더에 NotificationBell 배치와 알림 API 인스턴스(앱이 한 번 만든다). 알림을 만드는 쪽은 백엔드 코드(NotificationPublisher.publish). |
 | 알림이 즉시 뜬다 (실시간) | `live-notifications` | `--packages notifications,realtime` | `--modules notification,notification-jdbc,notification-sse` — `notification-sse` \| `notification-websocket` 중 고른다 | 연결 훅 한 개(apps/sample/src/notifications/useLiveNotifications.ts 를 복사)와 백엔드의 SSE 또는 WebSocket 모듈 선택. |
@@ -88,7 +88,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 
 | id | 무엇을 주는가 | 켜는 법 | 백엔드 | 상태 | 키워드 (ko / en) |
 |---|---|---|---|---|---|
-| `social-login` | 소셜 로그인의 프런트 절반 — 제공자 인가 주소 · state 검증(탭에 묶임 · 한 번만) · 콜백의 code 를 백엔드로 보내 로그인 처리, 로그인한 계정에 제공자를 더하는 연결 흐름(createSocialLinkFlow). 버튼 · 콜백 화면은 SignInScreen · createAuthRoutes 가 그린다. | 항상 | auth-social | stable | 소셜 로그인, 구글 로그인, 카카오 로그인, 네이버 로그인, 간편 로그인, OAuth / social login, google login, kakao login, naver login, oauth, sso |
+| `social-login` | 소셜 로그인의 프런트 절반 — GET /auth/methods 가 알려 준 제공자 · authorize 주소 · scope · pkce/nonce 로 인가 주소 만들기(Google · LINE · X · Kakao · Naver, PKCE S256 · nonce 는 시도마다), state 검증(탭에 묶임 · 한 번만) · 콜백의 code 를 백엔드로 보내 로그인 처리, 로그인한 계정에 제공자를 더하는 연결 흐름(createSocialLinkFlow), 제공자 마크 · 문구. 버튼 · 콜백 화면은 SignInScreen · createAuthRoutes 가 그린다. | 항상 | auth-social | stable | 소셜 로그인, 구글 로그인, 카카오 로그인, 네이버 로그인, 간편 로그인, OAuth / social login, google login, kakao login, naver login, oauth, sso |
 | `account-lifecycle` | 계정 수명주기 화면 한 벌 — 가입(서버 정책 힌트 · 캡차 · 동의 슬롯 · 메일로 받은 6자리 인증번호를 같은 화면에서 입력하면 바로 로그인) · 비밀번호 재설정 · 링크 로그인 도착 · 로그인(방법은 백엔드가 알려 준다) · 계정 설정(이메일 변경 · 첫 비밀번호 · 소셜 연결/해제 · 삭제의 다시 인증은 비밀번호 · 메일 인증번호(그 자리에서 입력) · 제공자 동의 중 계정에 맞는 하나, 이메일 변경 대기는 서버가 말해 준다) · 오래된 메일 링크 안내 · 정지/차단 안내. createAuthRoutes 가 라우트까지 한 번에. | 항상 | account, account-jdbc, auth-session, auth-session-jdbc | stable | 회원가입, 가입 화면, 이메일 인증, 메일 확인, 비밀번호 재설정, 비밀번호 찾기 / sign up, registration screen, verify email, check your email, reset password, forgot password |
 | `session-refresh` | 액세스 토큰 자동 갱신 — 401 이면 갱신을 한 번으로 합쳐(single-flight) 요청을 한 번만 다시 보낸다. 회전하는 리프레시 토큰을 안전하게 저장하고 탭 사이를 락 · storage 이벤트로 맞추며, 재사용 · 만료 때는 깨끗이 로그아웃. body · cookie 모드. | 항상 | auth-session, auth-session-jdbc | stable | 토큰 갱신, 리프레시 토큰, 자동 로그인 유지, 세션 만료, 탭 동기화 / token refresh, refresh token, silent refresh, session expiry, cross-tab sync |
 | `magic-link-login` | 이메일 링크 로그인 — 로그인 화면의 「링크 받기」 · 메일 확인 안내 · 링크를 열면 로그인되는 도착 화면. 비밀번호 없이 쓰거나 비밀번호와 나란히 켠다. | 항상 | auth-magic-link | stable | 링크 로그인, 매직링크, 비밀번호 없는 로그인, 이메일 로그인 / magic link, passwordless, email sign in |
@@ -374,18 +374,18 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 - 쓰지 않는 경우: 복사 대상이 아니다 — 스타터가 워크벤치를 모른다(날 요소 · 인라인 스타일 예외 앱) / 제품 화면의 모범은 app-sample 과 Patterns
 - 키워드: 워크벤치, 백엔드 확인, 시각적 테스트, 모듈 데모 / workbench, backend smoke test, visual test bench, module demo
 
-### `social-login` — 소셜 로그인의 프런트 절반 — 제공자 인가 주소 · state 검증(탭에 묶임 · 한 번만) · 콜백의 code 를 백엔드로 보내 로그인 처리, 로그인한 계정에 제공자를 더하는 연결 흐름(createSocialLinkFlow). 버튼 · 콜백 화면은 SignInScreen · createAuthRoutes 가 그린다.
+### `social-login` — 소셜 로그인의 프런트 절반 — GET /auth/methods 가 알려 준 제공자 · authorize 주소 · scope · pkce/nonce 로 인가 주소 만들기(Google · LINE · X · Kakao · Naver, PKCE S256 · nonce 는 시도마다), state 검증(탭에 묶임 · 한 번만) · 콜백의 code 를 백엔드로 보내 로그인 처리, 로그인한 계정에 제공자를 더하는 연결 흐름(createSocialLinkFlow), 제공자 마크 · 문구. 버튼 · 콜백 화면은 SignInScreen · createAuthRoutes 가 그린다.
 
 - 종류 · 상태: pattern · stable
 - 위치: `@skeleton/auth` (`packages/auth/src/social.ts`)
 - 켜는 법: 모든 프로젝트에 들어간다
 - 필요한 것: `auth`
 - 백엔드: 모듈 `auth-social` · `auth-social-google` | `auth-social-kakao` | `auth-social-naver` 중 하나 이상 · 경로 `/api/v1/auth/social`
-- 주요 진입점: `createSocialLoginFlow` · `createSocialLinkFlow` · `useSocialLoginCallback` · `buildAuthorizeUrl` · `parseSocialCallback` · `SOCIAL_AUTHORIZE_PRESETS` · `SocialCallbackScreen`
+- 주요 진입점: `createSocialLoginFlow` · `createSocialLinkFlow` · `useSocialLoginCallback` · `buildAuthorizeUrl` · `parseSocialCallback` · `SOCIAL_AUTHORIZE_PRESETS` · `SocialCallbackScreen` · `createCodeVerifier` · `redirectUriProblems` · `providerPresentation`
 - 복사해 시작할 Patterns: `packages/auth/src/patterns/SignIn.stories.tsx` · `packages/auth/src/patterns/MailLinkLandings.stories.tsx`
 - 문서: `packages/auth/README.md`
 - 쓰지 않는 경우: clientSecret 은 프런트에 두지 않는다 — 백엔드 skeleton.auth-social.providers.* 에만 / 이메일 가입 · 계정 연결 정책은 백엔드 — 앱이 병합을 켜 두면(skeleton.account.social.merge-on-verified-email, 샘플 · 스타터 백엔드는 켠다) 확인된 제공자 이메일은 기존 계정으로 바로 로그인되고, 꺼 두면 ACCOUNT.SOCIAL_EMAIL_CONFLICT(409)가 나온다 — 화면은 둘 다 다룬다. 연결 · 병합은 계정 주소로 알림 메일이 간다 / 제공자마다 콜백 주소 · clientId 를 콘솔에 등록해야 한다(VITE_SOCIAL_<제공자>_CLIENT_ID)
-- 키워드: 소셜 로그인, 구글 로그인, 카카오 로그인, 네이버 로그인, 간편 로그인, OAuth / social login, google login, kakao login, naver login, oauth, sso
+- 키워드: 소셜 로그인, 구글 로그인, 카카오 로그인, 네이버 로그인, 간편 로그인, OAuth, LINE 로그인, 라인 로그인, X 로그인, 트위터 로그인, PKCE / social login, google login, kakao login, naver login, oauth, sso, line login, x login, twitter login, pkce, openid connect
 
 ### `account-lifecycle` — 계정 수명주기 화면 한 벌 — 가입(서버 정책 힌트 · 캡차 · 동의 슬롯 · 메일로 받은 6자리 인증번호를 같은 화면에서 입력하면 바로 로그인) · 비밀번호 재설정 · 링크 로그인 도착 · 로그인(방법은 백엔드가 알려 준다) · 계정 설정(이메일 변경 · 첫 비밀번호 · 소셜 연결/해제 · 삭제의 다시 인증은 비밀번호 · 메일 인증번호(그 자리에서 입력) · 제공자 동의 중 계정에 맞는 하나, 이메일 변경 대기는 서버가 말해 준다) · 오래된 메일 링크 안내 · 정지/차단 안내. createAuthRoutes 가 라우트까지 한 번에.
 

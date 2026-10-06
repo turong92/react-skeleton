@@ -17,7 +17,26 @@ export default defineConfig(({ mode }) => ({
       routes: ['/', '/terms', '/privacy'],
       robots: {
         rules: [
-          { userAgent: '*', allow: ['/'], disallow: ['/login', '/notes', '/board', '/settings'] },
+          {
+            userAgent: '*',
+            allow: ['/'],
+            disallow: [
+              '/login',
+              '/sign-up',
+              '/verify-email',
+              '/forgot-password',
+              '/reset-password',
+              '/magic-link',
+              '/auth',
+              '/account',
+              '/confirm-email-change',
+              '/confirm-delete',
+              '/admin',
+              '/notes',
+              '/board',
+              '/settings',
+            ],
+          },
         ],
       },
     }),

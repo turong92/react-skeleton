@@ -1,5 +1,9 @@
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright'
+import { koAuthLabels } from '@skeleton/auth'
 import { i18n, type MessageKey } from '../src/i18n'
+
+/** 인증 화면 문구(한국어) — 패키지의 사전이라 앱 사전이 아니다 */
+export const auth = koAuthLabels
 
 /** 화면 문구(한국어) — 브라우저가 `ko-KR` 로 뜨므로 앱이 한국어로 그린다. 어느 문구를 찾는지 사전의 키로 읽힌다 */
 export const ko = (key: MessageKey, values?: Record<string, string | number>) =>
@@ -31,14 +35,19 @@ export async function dismissConsent(page: Page) {
   if (await reject.isVisible()) await reject.click()
 }
 
-/** 화면 로그인 — 랜딩(`/`)에서 헤더의 「로그인」 링크로 들어가 체험 계정 채우기 → 로그인 */
-export async function signIn(page: Page, baseUrl: string) {
+/** 화면 로그인 — 랜딩(`/`)에서 헤더의 「로그인」 링크로 들어가 이메일 · 비밀번호를 입력(기본: 시드 체험 계정) */
+export async function signIn(page: Page, baseUrl: string, account = DEMO) {
   await page.goto(baseUrl)
   await dismissConsent(page)
   await page.getByRole('link', { name: ko('header.signIn'), exact: true }).click()
-  await page.getByRole('button', { name: ko('login.demoFill') }).click()
-  await page.getByRole('button', { name: ko('login.submit'), exact: true }).click()
+  await fillSignIn(page, account)
   await page.getByRole('heading', { level: 1 }).first().waitFor()
+}
+
+export async function fillSignIn(page: Page, account: { email: string; password: string }) {
+  await page.getByLabel(auth.email).fill(account.email)
+  await page.getByLabel(auth.password, { exact: false }).first().fill(account.password)
+  await page.getByRole('button', { name: auth.signInSubmit, exact: true }).click()
 }
 
 type SeedNote = {

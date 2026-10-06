@@ -1,6 +1,6 @@
 import { expect as pwExpect, type Browser, type BrowserContext, type Page } from 'playwright/test'
 import { afterAll, beforeAll, describe, inject, it } from 'vitest'
-import { ko, launch, seedNotes, signIn } from './helpers'
+import { auth, fillSignIn, ko, launch, seedNotes, signIn } from './helpers'
 
 /*
  * 핵심 여정 — 랜딩(로그아웃 상태의 `/` · 동의 배너 · 약관 · 404) → 로그인 → 빈 대시보드 → 만들기(검증 오류 → 성공) → 알림 → 첨부 업로드 → 내보내기 → 목록(검색 · 필터 · 쪽) → 수정 → 삭제 → 설정(테마) → 로그아웃.
@@ -62,15 +62,15 @@ describe('Notes — the main journey against the real backend', () => {
     // 랜딩 → 로그인
     await page.goto(baseUrl)
     await page.getByRole('link', { name: ko('landing.primary'), exact: true }).click()
-    await pwExpect(page).toHaveURL(/\/login$/)
+    await pwExpect(page).toHaveURL(/\/sign-up$/) // 「시작하기」는 가입으로
+    await pwExpect(heading(auth.signUpTitle)).toBeVisible()
+    await page.goto(`${baseUrl}/login`)
     await pwExpect(heading(ko('login.title'))).toBeVisible()
   })
 
   it('rejects a wrong password, then signs in with the demo account', async () => {
-    await page.getByLabel(ko('login.email')).fill('user@example.com')
-    await page.getByLabel(ko('login.password')).fill('not-the-password')
-    await page.getByRole('button', { name: ko('login.submit'), exact: true }).click()
-    await pwExpect(page.getByRole('alert')).toContainText(ko('login.invalid'))
+    await fillSignIn(page, { email: 'user@example.com', password: 'not-the-password' })
+    await pwExpect(page.getByRole('alert')).toContainText(auth.errorInvalidCredentials)
 
     await signIn(page, baseUrl)
     await pwExpect(heading(/안녕하세요/)).toBeVisible()

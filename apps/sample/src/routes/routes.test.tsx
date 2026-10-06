@@ -31,6 +31,7 @@ describe('routes', () => {
     expect(leaf('/magic-link')?.path).toBe('/magic-link')
     expect(leaf('/confirm-email-change')?.path).toBe('/confirm-email-change')
     expect(leaf('/account')?.path).toBe('/account')
+    expect(leaf('/admin/accounts')?.path).toBe('/admin/accounts')
     expect(leaf('/terms')?.path).toBe('/terms')
     expect(leaf('/privacy')?.path).toBe('/privacy')
     expect(leaf('/nope/nope')?.path).toBe('*')
@@ -47,6 +48,7 @@ describe('routes', () => {
       '/board/abc',
       '/account',
       '/confirm-delete',
+      '/admin/accounts',
       '/board/abc/edit',
       '/settings',
     ])

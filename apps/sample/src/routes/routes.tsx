@@ -1,10 +1,11 @@
-import { RequireAuth } from '@skeleton/auth'
+import { RequireAuth, RequireRole } from '@skeleton/auth'
 import { accountRoutes } from '../auth/authRoutes'
 import type { RouteObject } from 'react-router-dom'
 import { landingJsonLd } from '../landing/landingSeo'
 import { AppFrame } from '../layouts/AppFrame'
 import type { MessageKey } from '../i18n'
 import type { SeoHandle } from '../seo/routeSeo'
+import { AdminAccountsPage } from './AdminAccountsPage'
 import { BoardFormPage } from './BoardFormPage'
 import { BoardPage } from './BoardPage'
 import { BoardPostPage } from './BoardPostPage'
@@ -76,6 +77,16 @@ export const routes: RouteObject[] = [
             handle: privateSeo('nav.board'),
           },
           { path: '/settings', element: <SettingsPage />, handle: privateSeo('nav.settings') },
+          {
+            element: <RequireRole roles={['ADMIN']} />,
+            children: [
+              {
+                path: '/admin/accounts',
+                element: <AdminAccountsPage />,
+                handle: privateSeo('nav.account'),
+              },
+            ],
+          },
         ],
       },
       {

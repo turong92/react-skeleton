@@ -125,7 +125,7 @@ cd ~/work/community/api && scripts/dev.sh
 cd ~/work/community/web && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm capabilities:check
 ```
 
-손으로 써야 하는 것: 소셜 버튼 + `/auth/callback` 페이지(Pattern 없음 — 로그인 Pattern 에 버튼을 더하고 `packages/auth/README.md` 스니펫), 게시판 코드 · 반응 종류(`skeleton.board.seed-boards` · `reaction.types`), 알림 연결 훅(`apps/sample/src/notifications/useLiveNotifications.ts` 복사), 한/영 사전, 랜딩 문구, 약관 본문(템플릿은 법적 효력이 없다).
+손으로 써야 하는 것: 소셜은 `VITE_AUTH_METHODS` 에 제공자 코드 · `VITE_SOCIAL_<제공자>_CLIENT_ID`(로그인 버튼 · `/auth/callback` 은 `createAuthRoutes` 가 만든다 — `packages/auth/README.md`), 게시판 코드 · 반응 종류(`skeleton.board.seed-boards` · `reaction.types`), 알림 연결 훅(`apps/sample/src/notifications/useLiveNotifications.ts` 복사), 한/영 사전, 랜딩 문구, 약관 본문(템플릿은 법적 효력이 없다).
 
 ### 예 2. 유료 SaaS 대시보드 — 로그인 · 대시보드/목록/설정 · 요금제 · 결제 · 알림
 

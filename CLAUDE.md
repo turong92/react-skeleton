@@ -42,7 +42,7 @@ apps/
 │   ├── src/main.tsx          # QueryClient(에러 토스트) · AuthProvider · RouterProvider · ErrorBoundary
 │   ├── src/api/              # createAppApiClient(환경변수 · 토큰 · 시간대 · 서버 시각 · 401 배선) · client(인스턴스) · serverClock
 │   ├── src/app/createQueryClient.ts
-│   ├── src/auth/             # tokenStore(저장소 선택) · session(createAuthSession)
+│   ├── src/auth/             # tokenStore(저장소 · 리프레시 저장소) · refresher · session · authConfig(VITE_AUTH_METHODS) · routes(createAuthRoutes)
 │   ├── src/hooks/useHello.ts # TanStack Query 예시(GET /hello)
 │   ├── src/layouts/RootLayout.tsx   # AppShell + ThemeToggle
 │   └── src/routes/           # routes.tsx(path → page) · index.tsx(router) · Home · Login · Account(RequireAuth 아래) · NotFound(EmptyState)
@@ -57,7 +57,7 @@ apps/
 └── workbench/                # 백엔드 확인용 시각적 테스트 벤치(HomePage · modules/workbench · workbench.css) + modules/demos(`/packages` 예제 화면: 새 패키지를 눌러 본다)
 packages/                     # 서로를 이름으로만 부른다. 각자 package.json(exports=src/index.ts) · 테스트 · README
 ├── api-client/               # createApiClient(config) · ApiRequestError · ErrorCodes/isErrorCode · createTraceContext · newIdempotencyKey · apiConfigFromEnv
-├── auth/                     # createTokenStore · createAuthApi · createAuthSession · AuthProvider/useAuth/RequireAuth · createSocialLoginFlow(소셜 로그인 도우미) · dev-login/break-glass 헤더 · 401 훅
+├── auth/                     # 토큰 저장소 · createSessionRefresher(401 → 갱신 한 번 → 재시도, 회전 안전 · 탭 락) · createAuthApi/createAccountApi · AuthProvider/useAuth/RequireAuth/RequireRole · 계정 화면(SignIn/SignUp/…/AccountSettings, labels prop) + createAuthRoutes(라우트 한 벌, 로그인 방법은 methods 설정) · 소셜 로그인/연결 흐름 · @skeleton/auth/admin(선택 운영자 표) · dev-login/break-glass 헤더
 ├── realtime/                 # createSseClient(탭 숨김 일시정지 · 유휴 감시 · 401/403/404 중지 · 429/503 느린 재시도 · onOpen) · createStompNotificationClient · useSseClient · useNotificationSocket · 재연결 정책
 ├── i18n/                     # createI18n(ICU · 감지 · 저장 · 지연 사전) · I18nProvider/useT · detectLocale · @skeleton/i18n/testing(catalogProblems) — 부품은 i18n 을 모르고 라벨은 prop, 앱이 번역해 넘긴다
 ├── notifications/            # createNotificationsApi(목록 · 읽음 · 모두 읽음) · useNotifications/useUnreadCount/useMarkRead · useNotificationIngest(실시간 → 캐시) · NotificationBell/List

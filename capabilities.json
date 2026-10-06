@@ -22,19 +22,28 @@
     },
     "kotlin": {
       "starterModules": [
-        "platform",
+        "account",
+        "account-jdbc",
+        "alert",
         "auth",
-        "persistence-jdbc",
+        "auth-session",
+        "auth-session-jdbc",
+        "auth-social",
+        "captcha-turnstile",
         "db-postgresql",
-        "db-mysql",
+        "idempotency",
+        "job-queue-jdbc",
         "migration",
         "migration-flyway",
+        "notification-mail",
+        "persistence-jdbc",
+        "platform",
         "time"
       ],
       "script": "scripts/new-project.sh",
-      "usage": "scripts/new-project.sh <target-dir> <root-package> <config-prefix> <ClassPrefix> [--modules a,b,c] [--db postgresql|mysql] [--with-workbench] [--with-sample]  (kotlin-skeleton 레포에서 실행)",
+      "usage": "scripts/new-project.sh <target-dir> <root-package> <config-prefix> <ClassPrefix> [--modules a,b,c] [--db postgresql|mysql] [--with-workbench] [--with-sample] [--dry-run]",
       "positional": ["target-dir", "root-package", "config-prefix", "ClassPrefix"],
-      "flags": ["--modules", "--db", "--with-workbench", "--with-sample"]
+      "flags": ["--modules", "--db", "--with-workbench", "--with-sample", "--dry-run"]
     }
   },
   "guides": [
@@ -241,7 +250,7 @@
         "modules": [],
         "oneOfModules": [["notification-sse", "notification-websocket"]],
         "optionalModules": [],
-        "basePaths": ["/api/v1/notifications/sse", "/ws/notifications"],
+        "basePaths": ["/api/v1/notifications/sse"],
         "docs": ["docs/modules/notification-sse.md", "docs/modules/notification-websocket.md"]
       },
       "status": "stable",
@@ -536,7 +545,11 @@
         "oneOfModules": [["payment-toss", "payment-stripe"]],
         "optionalModules": [],
         "basePaths": [],
-        "docs": ["docs/modules/payment.md", "docs/modules/payment-toss.md"]
+        "docs": [
+          "docs/modules/payment.md",
+          "docs/modules/payment-toss.md",
+          "docs/modules/payment-stripe.md"
+        ]
       },
       "status": "experimental",
       "id": "payment",
@@ -952,7 +965,25 @@
       ],
       "needs": ["api-client", "auth", "theme", "time", "tokens", "ui"],
       "backend": {
-        "modules": ["platform", "auth"],
+        "modules": [
+          "account",
+          "account-jdbc",
+          "alert",
+          "auth",
+          "auth-session",
+          "auth-session-jdbc",
+          "auth-social",
+          "captcha-turnstile",
+          "db-postgresql",
+          "idempotency",
+          "job-queue-jdbc",
+          "migration",
+          "migration-flyway",
+          "notification-mail",
+          "persistence-jdbc",
+          "platform",
+          "time"
+        ],
         "oneOfModules": [],
         "optionalModules": [],
         "basePaths": ["/api/v1"],
@@ -994,7 +1025,25 @@
       ],
       "needs": ["api-client", "auth", "seo", "theme", "time", "tokens", "ui"],
       "backend": {
-        "modules": ["platform", "auth"],
+        "modules": [
+          "account",
+          "account-jdbc",
+          "alert",
+          "auth",
+          "auth-session",
+          "auth-session-jdbc",
+          "auth-social",
+          "captcha-turnstile",
+          "db-postgresql",
+          "idempotency",
+          "job-queue-jdbc",
+          "migration",
+          "migration-flyway",
+          "notification-mail",
+          "persistence-jdbc",
+          "platform",
+          "time"
+        ],
         "oneOfModules": [],
         "optionalModules": [],
         "basePaths": ["/api/v1"],
@@ -1060,24 +1109,38 @@
       ],
       "backend": {
         "modules": [
-          "platform",
+          "account",
+          "account-jdbc",
+          "alert",
+          "alert-jdbc",
           "auth",
-          "persistence-jdbc",
-          "db-postgresql",
-          "migration-flyway",
-          "time",
-          "idempotency",
-          "notification-jdbc",
-          "notification-sse",
-          "storage-s3",
-          "job-queue-jdbc",
+          "auth-magic-link",
+          "auth-session",
+          "auth-session-jdbc",
+          "auth-social",
           "board",
           "board-jdbc",
-          "alert-jdbc"
+          "captcha-turnstile",
+          "crypto",
+          "db-postgresql",
+          "idempotency",
+          "job-queue-jdbc",
+          "json",
+          "migration",
+          "migration-flyway",
+          "notification",
+          "notification-jdbc",
+          "notification-mail",
+          "notification-sse",
+          "persistence-jdbc",
+          "platform",
+          "storage",
+          "storage-s3",
+          "time"
         ],
         "oneOfModules": [],
         "optionalModules": [],
-        "basePaths": ["/api/v1"],
+        "basePaths": ["/api/v1/notes"],
         "docs": ["docs/sample.md"],
         "app": "apps/sample"
       },
@@ -1178,10 +1241,65 @@
         "ui"
       ],
       "backend": {
-        "modules": [],
+        "modules": [
+          "account",
+          "account-jdbc",
+          "alert",
+          "alert-jdbc",
+          "async",
+          "async-notification",
+          "auth",
+          "auth-magic-link",
+          "auth-session",
+          "auth-session-jdbc",
+          "auth-social",
+          "auth-social-google",
+          "auth-social-kakao",
+          "auth-social-naver",
+          "board",
+          "board-jdbc",
+          "captcha-turnstile",
+          "config-aws-ssm",
+          "crypto",
+          "db-postgresql",
+          "event-kafka",
+          "idempotency",
+          "job-queue-jdbc",
+          "json",
+          "migration",
+          "migration-flyway",
+          "notification",
+          "notification-jdbc",
+          "notification-mail",
+          "notification-slack",
+          "notification-sse",
+          "notification-websocket",
+          "payment",
+          "payment-stripe",
+          "payment-toss",
+          "persistence-jdbc",
+          "persistence-jpa",
+          "platform",
+          "redis-cache",
+          "redis-core",
+          "redis-lock",
+          "redis-rate-limit",
+          "scheduler",
+          "storage",
+          "storage-s3",
+          "time"
+        ],
         "oneOfModules": [],
         "optionalModules": [],
-        "basePaths": ["/api/v1/skeleton"],
+        "basePaths": [
+          "/api/v1",
+          "/api/v1/examples",
+          "/api/v1/skeleton",
+          "/api/v1/skeleton/enums",
+          "/api/v1/skeleton/json",
+          "/api/v1/skeleton/payments",
+          "/api/v1/skeleton/polymorphic/contents"
+        ],
         "docs": ["docs/minimal-composition.md"],
         "app": "apps/workbench"
       },
@@ -1251,7 +1369,7 @@
       "path": "packages/auth/src/social.ts",
       "notFor": [
         "clientSecret 은 프런트에 두지 않는다 — 백엔드 skeleton.auth-social.providers.* 에만",
-        "이메일 가입 · 계정 연결 정책은 백엔드(자동 합치지 않는다 — 같은 이메일이면 ACCOUNT.SOCIAL_EMAIL_CONFLICT, 설정의 계정 연결로)",
+        "이메일 가입 · 계정 연결 정책은 백엔드 — 앱이 병합을 켜 두면(skeleton.account.social.merge-on-verified-email, 샘플 · 스타터 백엔드는 켠다) 확인된 제공자 이메일은 기존 계정으로 바로 로그인되고, 꺼 두면 ACCOUNT.SOCIAL_EMAIL_CONFLICT(409)가 나온다 — 화면은 둘 다 다룬다. 연결 · 병합은 계정 주소로 알림 메일이 간다",
         "제공자마다 콜백 주소 · clientId 를 콘솔에 등록해야 한다(VITE_SOCIAL_<제공자>_CLIENT_ID)"
       ],
       "keywords": {
@@ -1295,7 +1413,9 @@
         "docs": [
           "docs/account-http-contract.md",
           "docs/modules/account.md",
-          "docs/modules/auth-session.md"
+          "docs/modules/auth-session.md",
+          "docs/modules/account-jdbc.md",
+          "docs/modules/auth-session-jdbc.md"
         ]
       },
       "status": "stable",
@@ -1309,12 +1429,13 @@
         "alsoVia": [],
         "optOut": null
       },
-      "summary": "계정 수명주기 화면 한 벌 — 가입(서버 정책 힌트 · 캡차 · 동의 슬롯) · 메일 확인 안내 · 인증/재설정/이메일 변경 링크 도착 · 로그인(방법은 설정) · 계정 설정 · 정지/차단 안내. createAuthRoutes 가 라우트까지 한 번에.",
+      "summary": "계정 수명주기 화면 한 벌 — 가입(서버 정책 힌트 · 캡차 · 동의 슬롯) · 메일 확인 안내 · 인증/재설정/이메일 변경/본인 확인 링크 도착 · 로그인(방법은 백엔드가 알려 준다) · 계정 설정(이메일 변경 확인 대기는 서버가 말해 준다) · 정지/차단 안내. createAuthRoutes 가 라우트까지 한 번에.",
       "path": "packages/auth/src/routes/createAuthRoutes.tsx",
       "notFor": [
         "메일을 보내는 쪽(notification-mail)과 링크 주소(skeleton.account.mail.link-base-url)는 백엔드 설정 — 프런트의 /verify-email · /reset-password · /magic-link … 경로와 맞춘다",
-        "백엔드가 어떤 로그인 방법을 열었는지 알려 주는 엔드포인트는 없다 — 앱 설정(VITE_AUTH_METHODS)과 백엔드 모듈이 같아야 한다",
-        "동의(약관 판) 저장은 없다 — 슬롯이 체크한 판을 콜백으로 보고할 뿐"
+        "로그인 방법은 백엔드 GET /auth/methods 가 알려 준다(로딩 · 실패 대체 화면 포함) — 환경변수 VITE_AUTH_METHODS 는 그것을 덮어쓰는 선택일 뿐이다. 리프레시 전달 방식(body · cookie)만은 앱이 시작할 때 정하므로 VITE_AUTH_REFRESH_DELIVERY 가 백엔드와 같아야 한다(다르면 개발 콘솔에 경고)",
+        "동의(약관 판) 저장은 없다 — 슬롯이 체크한 판을 콜백으로 보고할 뿐",
+        "비밀번호 없는 계정(링크 · 소셜로만 가입)의 이메일 변경 · 첫 비밀번호 · 소셜 연결은 서버가 다시 인증(메일 링크의 토큰)을 요구한다 — 화면이 하려던 작업을 sessionStorage 에 기억하고 /confirm-reauth 도착 화면이 토큰을 돌려준다(저장하지 않는 비밀 — 새 비밀번호 · 소셜 인가 코드 — 는 링크를 연 뒤 한 번 더 입력)"
       ],
       "keywords": {
         "ko": [
@@ -1361,7 +1482,11 @@
         "oneOfModules": [],
         "optionalModules": [],
         "basePaths": ["/api/v1/auth/refresh", "/api/v1/auth/logout"],
-        "docs": ["docs/modules/auth-session.md", "docs/account-http-contract.md"]
+        "docs": [
+          "docs/modules/auth-session.md",
+          "docs/account-http-contract.md",
+          "docs/modules/auth-session-jdbc.md"
+        ]
       },
       "status": "stable",
       "id": "session-refresh",
@@ -1377,8 +1502,9 @@
       "summary": "액세스 토큰 자동 갱신 — 401 이면 갱신을 한 번으로 합쳐(single-flight) 요청을 한 번만 다시 보낸다. 회전하는 리프레시 토큰을 안전하게 저장하고 탭 사이를 락 · storage 이벤트로 맞추며, 재사용 · 만료 때는 깨끗이 로그아웃. body · cookie 모드.",
       "path": "packages/auth/src/sessionRefresher.ts",
       "notFor": [
-        "body 모드(기본)의 리프레시 토큰은 JS 가 쥔다 — localStorage 에 두면 XSS 에 노출된다. 쿠키 모드(HttpOnly)는 백엔드 skeleton.auth-session.delivery=cookie 와 VITE_AUTH_REFRESH_DELIVERY=cookie 를 함께 켠다",
-        "서버가 세션을 끊어도 이미 발급된 액세스 토큰은 만료(최대 15분)까지 산다"
+        "body 모드(기본)의 리프레시 토큰은 JS 가 쥔다 — localStorage 에 두면 XSS 에 노출된다. 쿠키 모드(HttpOnly)는 한 줄 스위치(apps/*/src/auth/authConfig.ts 의 DEFAULT_REFRESH_DELIVERY 또는 VITE_AUTH_REFRESH_DELIVERY=cookie)와 백엔드 skeleton.auth-session.delivery=cookie 를 함께 켠다(프런트 · API 가 같은 사이트여야 한다 — SameSite=Strict)",
+        "서버가 세션을 끊어도 이미 발급된 액세스 토큰은 만료(최대 15분)까지 산다",
+        "갱신 도중 페이지가 이동해 응답을 잃으면: 백엔드 reuse-grace(샘플 · 스타터는 10s)가 있으면 이어지고, 모듈 기본 0s 면 탈취로 보고 세션이 닫힌다(재로그인) — 클라이언트는 한 번 깨끗이 로그아웃하고 멈춘다"
       ],
       "keywords": {
         "ko": ["토큰 갱신", "리프레시 토큰", "자동 로그인 유지", "세션 만료", "탭 동기화"],
@@ -1422,7 +1548,8 @@
       "path": "packages/auth/src/screens/MagicLinkLanding.tsx",
       "notFor": [
         "링크는 15분 · 한 번만 — 도착 화면은 열자마자 한 번만 호출한다",
-        "없는 주소로 가입까지 해 줄지는 백엔드 skeleton.auth-magic-link.sign-up"
+        "없는 주소로 가입까지 해 줄지는 백엔드 skeleton.auth-magic-link.sign-up",
+        "이미 있는 계정은 가입이 닫혀 있어도 링크로 들어온다. 비밀번호가 미확인인 계정은 링크로 들어오면 가입 때 정한 비밀번호가 버려진다 — 설정은 「비밀번호 없음」으로 보인다"
       ],
       "keywords": {
         "ko": ["링크 로그인", "매직링크", "비밀번호 없는 로그인", "이메일 로그인"],
@@ -1489,7 +1616,7 @@
         "modules": [],
         "oneOfModules": [["notification-sse", "notification-websocket"]],
         "optionalModules": [],
-        "basePaths": ["/api/v1/notifications/sse", "/ws/notifications"],
+        "basePaths": ["/api/v1/notifications/sse"],
         "docs": ["docs/modules/notification-sse.md", "docs/modules/notification-websocket.md"]
       },
       "status": "stable",
@@ -1848,12 +1975,12 @@
     {
       "need": "로그인 (이메일 · 비밀번호) · 로그인한 사람만 보는 화면",
       "capabilities": ["auth"],
-      "byHand": "기본 포함. 로그인 · 가입 · 메일 확인 · 비밀번호 재설정 · 계정 설정은 createAuthRoutes 한 번(account-lifecycle). 화면의 모양은 Patterns/Auth/* 스토리를 보고 labels · 설정으로 맞춘다."
+      "byHand": "기본 포함. 로그인 · 가입 · 메일 확인 · 비밀번호 재설정 · 계정 설정은 createAuthRoutes 한 번(account-lifecycle). 어떤 방법이 열려 있는지는 백엔드(GET /auth/methods)가 알려 준다. 화면의 모양은 Patterns/Auth/* 스토리를 보고 labels · 설정으로 맞춘다."
     },
     {
       "need": "소셜 로그인 (구글 · 카카오 · 네이버)",
       "capabilities": ["social-login"],
-      "byHand": "VITE_AUTH_METHODS 에 제공자 코드(google · kakao · naver)와 VITE_SOCIAL_<제공자>_CLIENT_ID 를 주면 로그인 화면에 버튼이, /auth/callback 라우트가 생긴다. clientSecret 은 백엔드 skeleton.auth-social.providers.* 에만."
+      "byHand": "백엔드가 켠 제공자와 공개 clientId 는 GET /auth/methods 가 알려 줘 로그인 화면에 버튼이, /auth/callback 라우트가 생긴다(백엔드가 clientId 를 모르면 VITE_SOCIAL_<제공자>_CLIENT_ID). clientSecret 은 백엔드 skeleton.auth-social.providers.* 에만."
     },
     {
       "need": "게시판 · 글쓰기 · 댓글 · 대댓글 · 공감(반응)",
@@ -1973,12 +2100,12 @@
     {
       "need": "회원가입 · 이메일 인증 · 비밀번호 재설정 · 계정 설정(비밀번호 · 이메일 · 세션 · 삭제)",
       "capabilities": ["auth", "account-lifecycle", "session-refresh"],
-      "byHand": "백엔드는 account · auth-session(+ -jdbc) 모듈과 메일(notification-mail) · 링크 주소 설정. 프런트는 createAuthRoutes 한 번(apps/starter 의 auth/routes.tsx 를 따른다), 켜는 로그인 방법은 VITE_AUTH_METHODS, 문구는 labels(koAuthLabels)."
+      "byHand": "백엔드는 account · auth-session(+ -jdbc) 모듈과 메일(notification-mail) · 링크 주소 설정. 프런트는 createAuthRoutes 한 번(apps/starter 의 auth/routes.tsx 를 따른다), 켜는 로그인 방법은 백엔드가 알려 준다(고정하려면 new-project.sh --auth-methods 또는 VITE_AUTH_METHODS), 문구는 labels(koAuthLabels)."
     },
     {
       "need": "이메일 링크(매직링크) 로그인",
       "capabilities": ["magic-link-login"],
-      "byHand": "백엔드 auth-magic-link + 메일. 프런트는 VITE_AUTH_METHODS 에 magic-link(기본 켜짐) — 로그인 화면 · /magic-link 도착 화면이 따라온다."
+      "byHand": "백엔드 auth-magic-link + 메일. 로그인 화면의 링크 버튼 · /magic-link 도착 화면은 백엔드가 그 방법을 열었을 때(GET /auth/methods)만 보인다."
     },
     {
       "need": "운영자 계정 관리 표 (검색 · 정지 · 복구 · 역할)",

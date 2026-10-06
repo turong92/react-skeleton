@@ -237,6 +237,20 @@ export function recipeCommands(root) {
   })
 }
 
+/**
+ * kotlin `--modules a,b` 에서 스타터에 이미 들어 있는 모듈을 뺀다 — 스타터 모듈을 목록에 적어도 받아 주는 군더더기일 뿐이라(kotlin 의 예제 명령이 그렇게 적는다)
+ * 레시피가 그 줄을 그대로 옮겨도 틀린 것이 아니다. 필요한 모듈이 **빠지면** 여전히 어긋난다.
+ */
+function withoutStarterModules(flags, starter) {
+  return flags
+    .replace(/--modules (\S+)/, (_, list) => {
+      const kept = list.split(',').filter((m) => !starter.has(m))
+      return kept.length ? `--modules ${kept.join(',')}` : ''
+    })
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 export function checkRecipe(catalog, root) {
   const problems = []
   const path = join(root, RECIPE)
@@ -275,7 +289,8 @@ export function checkRecipe(catalog, root) {
         problems.push(
           `${RECIPE}: example "${ex.id}" kotlin command must have 4 positional arguments (<target-dir> <root-package> <config-prefix> <ClassPrefix>)`,
         )
-      if (flags !== f.kotlin)
+      const starter = new Set(catalog.newProject?.kotlin?.starterModules ?? [])
+      if (withoutStarterModules(flags, starter) !== withoutStarterModules(f.kotlin, starter))
         problems.push(
           `${RECIPE}: example "${ex.id}" kotlin command has "${flags}" but capabilities.json computes: ${expectedKotlin}`,
         )

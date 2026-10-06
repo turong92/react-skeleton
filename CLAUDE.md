@@ -42,7 +42,7 @@ apps/
 │   ├── src/main.tsx          # QueryClient(에러 토스트) · AuthProvider · RouterProvider · ErrorBoundary
 │   ├── src/api/              # createAppApiClient(환경변수 · 토큰 · 시간대 · 서버 시각 · 401 배선) · client(인스턴스) · serverClock
 │   ├── src/app/createQueryClient.ts
-│   ├── src/auth/             # tokenStore(저장소 · 리프레시 저장소) · refresher · session · authConfig(VITE_AUTH_METHODS) · routes(createAuthRoutes)
+│   ├── src/auth/             # tokenStore(저장소 · 리프레시 저장소) · refresher · session · authConfig(로그인 방법은 백엔드 GET /auth/methods — VITE_AUTH_METHODS · DEFAULT_AUTH_METHODS 는 덮어쓰기, DEFAULT_REFRESH_DELIVERY 쿠키 스위치) · routes(createAuthRoutes)
 │   ├── src/hooks/useHello.ts # TanStack Query 예시(GET /hello)
 │   ├── src/layouts/RootLayout.tsx   # AppShell + ThemeToggle
 │   └── src/routes/           # routes.tsx(path → page) · index.tsx(router) · Home · Login · Account(RequireAuth 아래) · NotFound(EmptyState)

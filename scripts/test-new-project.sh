@@ -176,13 +176,14 @@ check "같은 인자로 두 번 찍으면 결과가 같다" diff -r "$A" "$D"
 echo "== 3b. 계정 수명주기 라우트 · --auth-methods"
 check "스타터에 계정 화면 라우트(로그인 · 가입 · 메일 확인 · 비밀번호 재설정 · 계정 설정)가 따라온다" bash -c "grep -q 'createAuthRoutes' '$A/apps/acme-app/src/auth/routes.tsx' && grep -q 'accountRoutes' '$A/apps/acme-app/src/routes/routes.tsx' && test ! -e '$A/apps/acme-app/src/routes/LoginPage.tsx'"
 check "auth 패키지는 ui 를 진짜 의존으로 갖는다 (화면을 그린다)" bash -c "grep -q '\"@skeleton/ui\"' '$A/packages/auth/package.json'"
-check "기본 로그인 방법은 password,magic-link" grep -q "'password,magic-link'" "$A/apps/acme-app/src/auth/authConfig.ts"
+check "기본 로그인 방법은 백엔드가 알려 준다(고정 목록 없음 — GET /auth/methods)" grep -q "DEFAULT_AUTH_METHODS = ''" "$A/apps/acme-app/src/auth/authConfig.ts"
+check "라우트는 백엔드에 묻는 발견을 켠다(discovery)" grep -q "discovery:" "$A/apps/acme-app/src/auth/routes.tsx"
 AM="$TMP/am"
 expect_exit 0 "--auth-methods password,google 로 찍는다" stamp "$AM" --auth-methods password,google
-check "방법 기본값이 앱 설정에 심긴다" grep -q "'password,google'" "$AM/apps/acme-app/src/auth/authConfig.ts"
+check "목록이 앱 설정에 고정으로 심긴다(백엔드에 묻지 않고 이 방법)" grep -q "DEFAULT_AUTH_METHODS = 'password,google'" "$AM/apps/acme-app/src/auth/authConfig.ts"
 AMS="$TMP/ams"
 expect_exit 0 "SSR 스타터도 같은 옵션을 받는다" stamp "$AMS" --ssr --auth-methods magic-link
-check "SSR 앱 설정에도 심긴다" grep -q "'magic-link'" "$AMS/apps/acme-app/src/auth/authConfig.ts"
+check "SSR 앱 설정에도 심긴다" grep -q "DEFAULT_AUTH_METHODS = 'magic-link'" "$AMS/apps/acme-app/src/auth/authConfig.ts"
 
 echo "== 4. --packages realtime,notifications,storage,i18n"
 B="$TMP/b"
@@ -330,7 +331,7 @@ case " $(cat_ids "$WS") " in *" app-sample "*) pass "--with-sample 이면 app-sa
 case " $(cat_ids "$NS") " in *" app-storybook "*) fail "스토리집 없이 찍었는데 app-storybook 이 있다";; *) pass "--without-storybook 이면 app-storybook 항목이 없다";; esac
 [ "$(json "$C/capabilities.json" 'p.scope')" = "@acme" ] && pass "--scope 가 카탈로그에도 적용된다 (@acme)" || fail "scope: $(json "$C/capabilities.json" 'p.scope')"
 check "CLAUDE.md · README 가 카탈로그를 먼저 읽으라고 안내한다" bash -c "grep -q 'llms.txt' '$A/CLAUDE.md' && grep -q 'capabilities.json' '$A/CLAUDE.md' && grep -q 'capabilities.json' '$A/README.md'"
-check "스켈레톤 전용(레시피 · stampCheck · new-project 전용 테스트)은 따라오지 않는다 · 일반 가드 테스트는 따라온다" bash -c "test ! -e '$A/docs/new-project-recipe.md' && test ! -e '$A/scripts/capabilities.d/stampCheck.mjs' && test ! -e '$A/tests/capabilities.skeleton.test.ts' && test -f '$A/tests/capabilities.test.ts' && test -f '$A/scripts/build-capabilities.mjs'"
+check "스켈레톤 전용(레시피 · stampCheck · siblingCheck · new-project 전용 테스트)은 따라오지 않는다 · 일반 가드 테스트는 따라온다" bash -c "test ! -e '$A/docs/new-project-recipe.md' && test ! -e '$A/scripts/capabilities.d/stampCheck.mjs' && test ! -e '$A/scripts/capabilities.d/siblingCheck.mjs' && test ! -e '$A/tests/capabilities.skeleton.test.ts' && test -f '$A/tests/capabilities.test.ts' && test -f '$A/scripts/build-capabilities.mjs'"
 check "package.json 에 capabilities · capabilities:check 스크립트가 있다" bash -c "node -e \"const s=JSON.parse(require('fs').readFileSync('$A/package.json','utf8')).scripts;process.exit(s.capabilities&&s['capabilities:check']?0:1)\""
 
 echo "== 12. 레시피(docs/new-project-recipe.md)의 작업 예 명령을 그대로 찍는다"

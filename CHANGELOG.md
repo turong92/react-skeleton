@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — 계정 프런트를 보안 검토를 거친 백엔드(account-http-contract FINAL-2 · kotlin-skeleton 155bc75)에 맞춘다 (2026-10-06)
+
+- **다시 인증(비밀번호 없는 계정)**: 이메일 변경 · 첫 비밀번호 · 소셜 연결은 `confirmationToken`(없으면 403 `ACCOUNT.REAUTH_REQUIRED`). `createAccountApi.requestReauthConfirmation()`(`POST /account/reauth/confirmation`) · `changePassword` / `changeEmail` / `linkSocial` 이 `confirmationToken` · `currentPassword` 를 받는다. 설정 화면이 하려던 작업을 탭 `sessionStorage` 에 기억하고(`createReauthStore`) 메일 링크의 새 도착 화면 `/confirm-reauth`(`ConfirmReauthLanding`)가 같은 브라우저의 다른 탭에 토큰을 넘기거나(`BroadcastChannel`) 보관해 설정에서 이어 간다. 비밀번호 계정의 소셜 연결은 제공자에 다녀온 뒤 현재 비밀번호를 받는다(`SocialLinkPasswordScreen` · `createSocialLinkFlow().read`).
+- **`GET /auth/methods` 발견**: 앱은 로그인 방법 · 가입 열림 · 소셜 제공자(공개 clientId)를 백엔드에서 알아낸다(`discovery` 옵션 · `useAuthMethods` · `loadAuthMethods` 5분 공유) — 로딩 화면(틀린 방법이 깜박이지 않는다) · 실패 시 대체 + 다시 시도. `VITE_AUTH_METHODS` · `new-project.sh --auth-methods` 는 **고정(덮어쓰기)** 으로 바뀌었다(`DEFAULT_AUTH_METHODS` 가 빈 값이면 백엔드가 말하는 대로). 리프레시 전달 방식 불일치는 개발 콘솔 경고.
+- `me.pendingEmail` · `pendingEmailExpiresAt` 로 이메일 변경 「확인 대기」를 서버에서 그린다(새로고침 뒤에도) — 서버가 비동기로 채우므로 요청 직후 몇 번 다시 읽는다. 소셜 연결 해제 · 계정 삭제 뒤 세션 목록을 다시 읽는다. 운영자 호출의 403 은 「접근 차단」(로그아웃 없음), 목록은 `size ≤ 100` · `page ≥ 0`. `ACCOUNT.REAUTH_REQUIRED` 코드 · 문구.
+- 갱신 도중 페이지 이동(응답 손실)은 백엔드 `reuse-grace` 가 있으면 이어지고 0s 면 한 번 깨끗이 로그아웃한다 — `refreshNavigation.test.ts`. 쿠키 모드는 한 줄 스위치(`DEFAULT_REFRESH_DELIVERY`) + `cookieDelivery.test.ts`.
+- **고침**: 비밀번호 「보기」 토글이 좁은 화면에서 입력칸 아래로 내려가던 것(스토리가 20rem 에서 위치를 잰다).
+- **카탈로그 ↔ kotlin 카탈로그**: `newProject.kotlin`(usage · `--dry-run` · starterModules)을 kotlin 의 것과 같게, 앱 항목의 모듈 닫힘 · basePaths, `/ws/notifications` 제거, payment 문서. `scripts/capabilities.d/siblingCheck.mjs` 가 옆 레포를 읽기만 해 양방향으로 맞는지 본다(`tests/capabilities.skeleton.test.ts`).
+- **e2e**: 준비 단계가 자체 mailpit 을 띄우지 않고 백엔드 `scripts/sample-e2e-backend.sh` 가 올린 것(`MAIL smtp=… api=…` 줄)을 쓴다. 새 여정: 방법 발견 · 갱신 중 이동 · 이메일 변경 확인 대기(새로고침 뒤) · 모든 세션 종료 · 비밀번호 없는 계정의 본인 확인 왕복(다른 기기 · 새 탭 · 첫 비밀번호) · 운영자 목록 페이징 거절.
+
 ### Added — 계정 수명주기 프런트: 토큰 자동 갱신 · 가입/메일 인증/재설정/링크 로그인/계정 설정 화면 · 라우트 한 벌 · 선택 관리자 표 (2026-10-06)
 
 백엔드 kotlin-skeleton `docs/account-http-contract.md`(account · auth-session · auth-magic-link) 짝. 로그인 방법은 앱 설정으로 켜고 끈다(비밀번호 · 이메일 링크 · 소셜).

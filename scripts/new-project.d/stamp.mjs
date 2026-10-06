@@ -214,7 +214,10 @@ function stampSample(target, withSample) {
   if (existsSync(ci)) writeFileSync(ci, read(ci).replace(SAMPLE_JOB, ''))
 }
 
-/** --auth-methods: 로그인 방법 기본값(`authConfig.ts`)을 바꾼다 — 환경변수 VITE_AUTH_METHODS 가 여전히 이긴다 */
+/**
+ * --auth-methods: 로그인 방법을 이 목록으로 **고정**한다(`authConfig.ts` 의 `DEFAULT_AUTH_METHODS`) — 앱이 백엔드(`GET /auth/methods`)에 묻지 않고 이 방법만 쓴다.
+ * 안 주면 빈 값 = 백엔드가 알려 준 대로. 환경변수 VITE_AUTH_METHODS 가 여전히 이긴다
+ */
 function applyAuthMethods(app, methods) {
   if (!methods) return
   const file = join(app, 'src', 'auth', 'authConfig.ts')
@@ -223,10 +226,13 @@ function applyAuthMethods(app, methods) {
       `--auth-methods: ${file} is missing — the skeleton changed, update scripts/new-project.d/stamp.mjs`,
     )
   const before = read(file)
-  const after = before.replace("'password,magic-link'", `'${methods}'`)
+  const after = before.replace(
+    "export const DEFAULT_AUTH_METHODS = ''",
+    `export const DEFAULT_AUTH_METHODS = '${methods}'`,
+  )
   if (after === before)
     fail(
-      '--auth-methods: the default list was not found in authConfig.ts — the skeleton changed, update scripts/new-project.d/stamp.mjs',
+      '--auth-methods: DEFAULT_AUTH_METHODS was not found in authConfig.ts — the skeleton changed, update scripts/new-project.d/stamp.mjs',
     )
   writeFileSync(file, after)
 }
@@ -266,6 +272,8 @@ function apply(
     // 카탈로그 가드 중 스켈레톤 전용(stampFlag = new-project.sh 의 동작 · 레시피 명령) — 스크립트가 없는 프로젝트에는 맞지 않는다
     'tests/capabilities.skeleton.test.ts',
     'scripts/capabilities.d/stampCheck.mjs',
+    'scripts/capabilities.d/siblingCheck.mjs', // 옆 레포(kotlin-skeleton)의 카탈로그를 읽는 가드 — 찍힌 프로젝트에는 옆 레포가 없다
+    'scripts/capabilities.d/siblingCheck.d.mts',
     'docs/new-project-recipe.md',
   ])
     rmSync(join(target, path), { recursive: true, force: true })

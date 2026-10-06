@@ -12,6 +12,11 @@ import {
   planPackages,
   recipeCommands,
 } from '../scripts/capabilities.d/stampCheck.mjs'
+import {
+  checkAgainstKotlin,
+  gradleClosure,
+  loadKotlin,
+} from '../scripts/capabilities.d/siblingCheck.mjs'
 import type { Json } from './support/capabilitiesFixture'
 import { REPO } from './support/loadWorkspaces'
 
@@ -120,6 +125,32 @@ describe('docs/new-project-recipe.md cannot rot', () => {
     expect(text).toContain('payment')
     expect(text).toContain('scripts/new-project.sh')
   })
+  it('a starter module listed in the recipe kotlin --modules is tolerated (kotlin examples list them redundantly) but a needed one missing is not', () => {
+    const c = real()
+    const community = c.examples.find((e) => e.id === 'community') as Json
+    const mine = fragmentFor(
+      c,
+      community.capabilities as string[],
+      community.extraFlags as string[],
+    )
+    expect(mine.kotlin).not.toContain('auth-social,') // 스타터라 계산에서는 빠진다
+    expect(checkRecipe(c, REPO)).toEqual([]) // 레시피는 kotlin 예제 그대로 auth-social 을 적어도 통과
+    const without = {
+      ...c,
+      capabilities: c.capabilities.map((e) =>
+        e.id === 'board'
+          ? {
+              ...e,
+              backend: {
+                ...(e.backend as Json),
+                modules: [...((e.backend as Json).modules as string[]), 'payment-toss'],
+              },
+            }
+          : e,
+      ),
+    }
+    expect(checkRecipe(without, REPO).join('\n')).toContain('payment-toss')
+  })
   it('has three worked examples and extracts their react commands for the --full stamp test', () => {
     const commands = recipeCommands(REPO)
     expect(commands.length).toBeGreaterThanOrEqual(3)
@@ -182,6 +213,135 @@ describe('the backend side of the catalog names real kotlin-skeleton modules (on
     'every module in backend.* is in kotlin-skeleton docs/modules/README.md',
     () => {
       expect(checkKotlinNames(real(), sibling)).toEqual([])
+    },
+  )
+})
+
+describe('the catalog agrees with kotlin-skeleton (rules, on small fixtures — no sibling needed)', () => {
+  const kEntry = (over: Json): Json => ({
+    id: 'x',
+    kind: 'module',
+    module: 'x',
+    basePaths: [],
+    docs: [],
+    frontend: { capabilities: [] },
+    ...over,
+  })
+  const kotlin = (entries: Json[], over: Json = {}): Record<string, unknown> => ({
+    capabilities: entries,
+    starterModules: ['platform', 'auth'],
+    newProject: {
+      script: 'scripts/new-project.sh',
+      usage: 'u --dry-run',
+      positional: ['a'],
+      flags: ['--modules', '--dry-run'],
+    },
+    decisions: [],
+    ...over,
+  })
+  const reactCatalog = (entries: Json[], over: Json = {}) =>
+    ({
+      newProject: {
+        react: { usage: 'r' },
+        kotlin: {
+          script: 'scripts/new-project.sh',
+          usage: 'u --dry-run',
+          positional: ['a'],
+          flags: ['--modules', '--dry-run'],
+          starterModules: ['platform', 'auth'],
+        },
+      },
+      capabilities: entries,
+      decisions: [],
+      examples: [],
+      ...over,
+    }) as unknown as Parameters<typeof checkAgainstKotlin>[0]
+  const rEntry = (over: Json): Json => ({
+    id: 'x',
+    kind: 'package',
+    stampFlag: {
+      flag: '--packages x',
+      included: 'flag',
+      autoIncludes: [],
+      alsoVia: [],
+      optOut: null,
+    },
+    needs: [],
+    backend: {
+      modules: ['x'],
+      oneOfModules: [],
+      optionalModules: [],
+      basePaths: [],
+      docs: [],
+    },
+    ...over,
+  })
+  const run = (r: Json[], k: Json[], over?: Json, rOver?: Json) =>
+    checkAgainstKotlin(reactCatalog(r, rOver), kotlin(k, over), '/nonexistent').join('\n')
+
+  it('matching catalogs have nothing to report', () => {
+    const k = [kEntry({ frontend: { capabilities: ['x'] } })]
+    expect(run([rEntry({})], k)).toBe('')
+  })
+  it('the copied kotlin usage, flags and starter modules must be the real ones (--dry-run, db-mysql is not a starter)', () => {
+    const k = [kEntry({ frontend: { capabilities: ['x'] } })]
+    const bad = reactCatalog([rEntry({})], {
+      newProject: {
+        react: { usage: 'r' },
+        kotlin: {
+          script: 'scripts/new-project.sh',
+          usage: 'u (kotlin-skeleton 레포에서 실행)',
+          positional: ['a'],
+          flags: ['--modules'],
+          starterModules: ['platform', 'auth', 'db-mysql'],
+        },
+      },
+    })
+    const text = checkAgainstKotlin(bad, kotlin(k), '/nonexistent').join('\n')
+    expect(text).toContain('newProject.kotlin.usage')
+    expect(text).toContain('newProject.kotlin.flags')
+    expect(text).toContain('db-mysql')
+  })
+  it('a base path no listed module serves (/ws/notifications is not a controller) is reported', () => {
+    const k = [kEntry({ basePaths: ['/api/v1/x'], frontend: { capabilities: ['x'] } })]
+    const r = rEntry({
+      backend: {
+        modules: ['x'],
+        oneOfModules: [],
+        optionalModules: [],
+        basePaths: ['/api/v1/x', '/ws/x'],
+        docs: [],
+      },
+    })
+    expect(run([r], k)).toContain('/ws/x')
+    expect(run([r], k)).not.toContain('"/api/v1/x"')
+  })
+  it('a module that names the entry as its frontend pair must be listed by the entry', () => {
+    const k = [
+      kEntry({ module: 'y', id: 'y', frontend: { capabilities: ['x'] } }),
+      kEntry({ frontend: { capabilities: ['x'] } }),
+    ]
+    expect(run([rEntry({})], k)).toContain('"y" pairs with "x"')
+  })
+  it('the kotlin decision table flag must be what the catalog computes', () => {
+    const k = [kEntry({ frontend: { capabilities: ['x'] } })]
+    const decisions = [{ need: 'n', frontend: { capabilities: ['x'], flag: '--packages x,y' } }]
+    expect(run([rEntry({})], k, { decisions })).toContain('--packages x,y')
+  })
+})
+
+describe('the catalog agrees with the real kotlin-skeleton (only when the sibling repo is checked out)', () => {
+  const kotlinRoot = join(REPO, '..', 'kotlin-skeleton')
+  const present = existsSync(join(kotlinRoot, 'capabilities.json'))
+  it.skipIf(!present)('every claim the catalog makes about the backend is true over there', () => {
+    expect(checkAgainstKotlin(real(), loadKotlin(kotlinRoot), kotlinRoot)).toEqual([])
+  })
+  it.skipIf(!present)(
+    'apps/sample composes what the catalog says (closure of its gradle file)',
+    () => {
+      const closure = gradleClosure(kotlinRoot, 'sample')
+      const entry = real().capabilities.find((e) => e.id === 'app-sample') as Json
+      expect([...((entry.backend as Json).modules as string[])].sort()).toEqual(closure)
     },
   )
 })

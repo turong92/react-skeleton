@@ -10,6 +10,7 @@ export type {
   ApiResponseInterceptor,
   ApiRetryOptions,
   HeaderRecord,
+  UnauthorizedContext,
 } from './createApiClient'
 export { apiConfigFromEnv } from './env'
 export type { ApiEnvConfig } from './env'
@@ -29,7 +30,7 @@ export type {
   FieldError,
   PaginationMeta,
 } from './types'
-export { ClientErrorCodes, ErrorCodes, isErrorCode } from './errorCodes'
+export { ClientErrorCodes, ErrorCodes, isErrorCode, retryAfterSeconds } from './errorCodes'
 export type { ErrorCodeValue } from './errorCodes'
 export { createTraceContext, createTraceId } from './traceContext'
 export type { TraceContext } from './traceContext'

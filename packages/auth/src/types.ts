@@ -16,6 +16,8 @@ export type AuthPrincipal = {
   username?: string | null
   email?: string | null
   roles: string[]
+  /** auth-session 이 설치된 백엔드가 채운다 */
+  sessionId?: string | null
 }
 
 /** 백엔드 `AuthTokenResponse`. `expiresAt` 은 `Instant` → ISO 문자열 */
@@ -24,6 +26,10 @@ export type AuthTokenResponse = {
   tokenType: string
   expiresAt: string
   principal: AuthPrincipal
+  /** `body` 전달 모드(기본)에서만 — `cookie` 모드와 auth-session 이 없는 백엔드에는 없다 */
+  refreshToken?: string
+  refreshExpiresAt?: string
+  sessionId?: string
 }
 
 /**

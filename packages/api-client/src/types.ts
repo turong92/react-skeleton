@@ -111,6 +111,8 @@ export class ApiRequestError extends Error {
   readonly traceId: string
   readonly spanId: string
   readonly traceparent: string
+  /** 응답의 `Retry-After`(초). 429 에 붙는다 — `retryAfterSeconds(error)` 가 본문 값과 합쳐 읽는다 */
+  retryAfterHeader?: number
 
   constructor(apiError: ApiError, traceId: string, spanId: string, traceparent: string) {
     super(`[${apiError.status}] ${apiError.title}${apiError.detail ? ` - ${apiError.detail}` : ''}`)

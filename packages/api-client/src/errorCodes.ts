@@ -22,6 +22,33 @@ export const ErrorCodes = {
   // modules/auth auth/api/AuthErrorCode.kt
   AUTH_INVALID_CREDENTIALS: 'AUTH.INVALID_CREDENTIALS',
 
+  // 계정 수명주기(kotlin-skeleton docs/account-http-contract.md 10절) — AUTH.* 는 modules/auth · auth-session, ACCOUNT.* 는 modules/account
+  AUTH_EMAIL_NOT_VERIFIED: 'AUTH.EMAIL_NOT_VERIFIED',
+  AUTH_ACCOUNT_SUSPENDED: 'AUTH.ACCOUNT_SUSPENDED',
+  AUTH_TOO_MANY_ATTEMPTS: 'AUTH.TOO_MANY_ATTEMPTS',
+  AUTH_REFRESH_INVALID: 'AUTH.REFRESH_INVALID',
+  AUTH_REFRESH_REUSED: 'AUTH.REFRESH_REUSED',
+  AUTH_SESSION_NOT_FOUND: 'AUTH.SESSION_NOT_FOUND',
+  AUTH_CSRF_HEADER_REQUIRED: 'AUTH.CSRF_HEADER_REQUIRED',
+  ACCOUNT_TOKEN_INVALID: 'ACCOUNT.TOKEN_INVALID',
+  ACCOUNT_PASSWORD_POLICY: 'ACCOUNT.PASSWORD_POLICY',
+  ACCOUNT_CURRENT_PASSWORD_INVALID: 'ACCOUNT.CURRENT_PASSWORD_INVALID',
+  ACCOUNT_REAUTH_FAILED: 'ACCOUNT.REAUTH_FAILED',
+  ACCOUNT_CAPTCHA_FAILED: 'ACCOUNT.CAPTCHA_FAILED',
+  ACCOUNT_EMAIL_TAKEN: 'ACCOUNT.EMAIL_TAKEN',
+  ACCOUNT_SIGN_UP_CLOSED: 'ACCOUNT.SIGN_UP_CLOSED',
+  ACCOUNT_SOCIAL_EMAIL_CONFLICT: 'ACCOUNT.SOCIAL_EMAIL_CONFLICT',
+  ACCOUNT_IDENTITY_TAKEN: 'ACCOUNT.IDENTITY_TAKEN',
+  ACCOUNT_IDENTITY_EXISTS: 'ACCOUNT.IDENTITY_EXISTS',
+  ACCOUNT_IDENTITY_NOT_FOUND: 'ACCOUNT.IDENTITY_NOT_FOUND',
+  ACCOUNT_LAST_SIGN_IN_METHOD: 'ACCOUNT.LAST_SIGN_IN_METHOD',
+  ACCOUNT_LAST_ADMIN: 'ACCOUNT.LAST_ADMIN',
+  ACCOUNT_SELF_ACTION_FORBIDDEN: 'ACCOUNT.SELF_ACTION_FORBIDDEN',
+  ACCOUNT_NOT_FOUND: 'ACCOUNT.NOT_FOUND',
+  ACCOUNT_RATE_LIMITED: 'ACCOUNT.RATE_LIMITED',
+  ACCOUNT_PASSWORD_REQUIRED: 'ACCOUNT.PASSWORD_REQUIRED',
+  ACCOUNT_METHOD_UNKNOWN: 'ACCOUNT.METHOD_UNKNOWN',
+
   // modules/auth-social auth/social/oauth/AuthSocialErrorCode.kt
   AUTH_SOCIAL_PROVIDER_NOT_FOUND: 'AUTH_SOCIAL.PROVIDER_NOT_FOUND',
   AUTH_SOCIAL_INVALID_AUTHORIZATION_CODE: 'AUTH_SOCIAL.INVALID_AUTHORIZATION_CODE',
@@ -69,4 +96,18 @@ export const ClientErrorCodes = {
 export function isErrorCode(error: unknown, codes: string | readonly string[]): boolean {
   if (!(error instanceof ApiRequestError)) return false
   return (Array.isArray(codes) ? codes : [codes]).includes(error.apiError.code)
+}
+
+/**
+ * 429 가 알려 준 기다릴 시간(초). 본문 `data.retryAfterSeconds`(계약 0절)가 우선이고, 없으면 `Retry-After` 헤더.
+ * 429 가 아니거나 둘 다 없으면 undefined.
+ */
+export function retryAfterSeconds(error: unknown): number | undefined {
+  if (!(error instanceof ApiRequestError)) return undefined
+  const data = error.apiError.data
+  if (typeof data === 'object' && data !== null && 'retryAfterSeconds' in data) {
+    const value = Number((data as { retryAfterSeconds: unknown }).retryAfterSeconds)
+    if (Number.isFinite(value) && value >= 0) return value
+  }
+  return error.retryAfterHeader
 }

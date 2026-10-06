@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { fakeJwt } from './test/fixtures'
 import { createAuthSession } from './session'
+import { createRefreshStore } from './refreshStore'
 import { createTokenStore } from './tokenStore'
 import type { AuthApi } from './authApi'
 import type { AuthPrincipal, AuthTokenResponse } from './types'
@@ -23,6 +24,10 @@ function fakeApi(overrides: Partial<AuthApi> = {}): AuthApi {
     login: async () => response('login-token'),
     socialLogin: async () => response('social-token'),
     me: async () => principal,
+    refresh: async () => response('refreshed'),
+    logout: async () => undefined,
+    magicLinkRequest: async () => undefined,
+    magicLinkRedeem: async () => response('magic-token'),
     ...overrides,
   }
 }
@@ -135,5 +140,108 @@ describe('createAuthSession', () => {
     await session.login({ email: 'u@e.com', password: 'pw' })
     expect(session.getState()).not.toBe(before)
     expect(session.getState()).toBe(session.getState())
+  })
+
+  describe('with a refresh store', () => {
+    const withRefresh = (
+      overrides: Partial<AuthApi> = {},
+      delivery: 'body' | 'cookie' = 'body',
+    ) => {
+      const store = createTokenStore()
+      const refreshStore = createRefreshStore()
+      const api = fakeApi(overrides)
+      const session = createAuthSession({ api, store, refreshStore, delivery })
+      return { store, refreshStore, session, api }
+    }
+    const rotated = (n: number): AuthTokenResponse => ({
+      ...response(`access-${n}`),
+      refreshToken: `r1.${n}`,
+      refreshExpiresAt: '2026-11-05T00:00:00Z',
+      sessionId: 'ses_1',
+    })
+
+    it('login keeps the refresh token next to the access token', async () => {
+      const { session, refreshStore } = withRefresh({ login: async () => rotated(1) })
+      await session.login({ email: 'u@e.com', password: 'pw' })
+      expect(refreshStore.get()).toEqual({
+        refreshToken: 'r1.1',
+        refreshExpiresAt: '2026-11-05T00:00:00Z',
+        sessionId: 'ses_1',
+      })
+    })
+
+    it('cookie mode keeps only the session marker, never a token', async () => {
+      const { session, refreshStore } = withRefresh(
+        { login: async () => ({ ...rotated(1), refreshToken: 'leaked' }) },
+        'cookie',
+      )
+      await session.login({ email: 'u@e.com', password: 'pw' })
+      expect(refreshStore.get()?.refreshToken).toBeNull()
+      expect(refreshStore.get()?.sessionId).toBe('ses_1')
+    })
+
+    it('signIn(response) adopts tokens from any flow (magic link redeem)', async () => {
+      const { session, store } = withRefresh({ magicLinkRedeem: async () => rotated(3) })
+      await session.magicLinkLogin('tok')
+      expect(store.get()).toBe('access-3')
+    })
+
+    it('logout clears locally at once, then tells the server which refresh token to revoke', async () => {
+      const logout = vi.fn(async () => undefined)
+      const { session, store, refreshStore } = withRefresh({
+        login: async () => rotated(1),
+        logout,
+      })
+      await session.login({ email: 'u@e.com', password: 'pw' })
+      const pending = session.logout()
+      expect(store.get()).toBeNull() // sync part
+      expect(refreshStore.get()).toBeNull()
+      await pending
+      expect(logout).toHaveBeenCalledWith('r1.1')
+    })
+
+    it('logout still signs out when the server call fails', async () => {
+      const { session, store } = withRefresh({
+        login: async () => rotated(1),
+        logout: async () => {
+          throw new Error('offline')
+        },
+      })
+      await session.login({ email: 'u@e.com', password: 'pw' })
+      await expect(session.logout()).resolves.toBeUndefined()
+      expect(store.get()).toBeNull()
+    })
+
+    it('another tab clearing the refresh store signs this tab out too', async () => {
+      const { session, refreshStore, store } = withRefresh({ login: async () => rotated(1) })
+      await session.login({ email: 'u@e.com', password: 'pw' })
+      refreshStore.clear()
+      store.clear()
+      expect(session.getState().status).toBe('anonymous')
+    })
+
+    it('restore() exchanges a surviving refresh credential for an access token (new tab, memory access store)', async () => {
+      const refresh = vi.fn(async () => rotated(5))
+      const { session, store, refreshStore } = withRefresh({ refresh })
+      refreshStore.set({ refreshToken: 'r1.4', sessionId: 'ses_1' })
+      expect(session.getState().status).toBe('anonymous')
+      await session.restore()
+      expect(refresh).toHaveBeenCalledWith('r1.4')
+      expect(store.get()).toBe('access-5')
+      expect(refreshStore.get()?.refreshToken).toBe('r1.5')
+      expect(session.getState().status).toBe('authenticated')
+    })
+
+    it('restore() does nothing when already authenticated or when there is no credential', async () => {
+      const refresh = vi.fn(async () => rotated(5))
+      const none = withRefresh({ refresh })
+      await none.session.restore()
+      expect(refresh).not.toHaveBeenCalled()
+      const have = withRefresh({ refresh })
+      have.store.set('x')
+      have.refreshStore.set({ refreshToken: 'r1.4' })
+      await have.session.restore()
+      expect(refresh).not.toHaveBeenCalled()
+    })
   })
 })

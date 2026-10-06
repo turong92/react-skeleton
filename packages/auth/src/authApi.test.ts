@@ -14,6 +14,9 @@ function fakeClient<T>(result: T) {
         calls.push({ path, request })
         return result as unknown as V
       },
+      noContent: async (path: string, request?: ApiRequest) => {
+        calls.push({ path, request })
+      },
     },
   }
 }
@@ -82,5 +85,70 @@ describe('createAuthApi (mirrors kotlin-skeleton modules/auth and auth-social)',
     expect(JSON.parse(JSON.stringify(calls[0].request?.json))).toEqual({
       authorizationCode: 'code-2',
     })
+  })
+
+  it('refresh (body mode) → POST /auth/refresh with the refresh token, skipping auth', async () => {
+    const { client, calls } = fakeClient(token)
+    await createAuthApi(client).refresh('r1.abc')
+    expect(calls).toEqual([
+      {
+        path: '/auth/refresh',
+        request: { method: 'POST', json: { refreshToken: 'r1.abc' }, skipAuth: true },
+      },
+    ])
+  })
+
+  it('refresh (cookie mode) sends no token but the CSRF header the backend demands', async () => {
+    const { client, calls } = fakeClient(token)
+    await createAuthApi(client, { delivery: 'cookie' }).refresh(null)
+    expect(calls[0]).toEqual({
+      path: '/auth/refresh',
+      request: {
+        method: 'POST',
+        json: {},
+        headers: { 'X-Requested-With': 'fetch' },
+        skipAuth: true,
+      },
+    })
+  })
+
+  it('logout → POST /auth/logout (204) with the refresh token; cookie mode adds the CSRF header', async () => {
+    const body = fakeClient(token)
+    await createAuthApi(body.client).logout('r1.abc')
+    expect(body.calls[0]).toEqual({
+      path: '/auth/logout',
+      request: { method: 'POST', json: { refreshToken: 'r1.abc' }, skipAuth: true },
+    })
+    const cookie = fakeClient(token)
+    await createAuthApi(cookie.client, { delivery: 'cookie' }).logout(null)
+    expect(cookie.calls[0].request?.headers).toEqual({ 'X-Requested-With': 'fetch' })
+  })
+
+  it('login passes the optional device name as X-Device-Name (no body field)', async () => {
+    const { client, calls } = fakeClient(token)
+    await createAuthApi(client).login({ email: 'a@b.c', password: 'pw' }, { deviceName: 'Pixel' })
+    expect(calls[0].request?.headers).toEqual({ 'X-Device-Name': 'Pixel' })
+    expect(calls[0].request?.json).toEqual({ email: 'a@b.c', password: 'pw' })
+  })
+
+  it('magic link: request → 202 body, redeem → tokens', async () => {
+    const { client, calls } = fakeClient(token)
+    const api = createAuthApi(client)
+    await api.magicLinkRequest('a@b.c', 'captcha-1')
+    await api.magicLinkRedeem('tok')
+    expect(calls).toEqual([
+      {
+        path: '/auth/magic-link/request',
+        request: {
+          method: 'POST',
+          json: { email: 'a@b.c', captchaToken: 'captcha-1' },
+          skipAuth: true,
+        },
+      },
+      {
+        path: '/auth/magic-link/redeem',
+        request: { method: 'POST', json: { token: 'tok' }, skipAuth: true },
+      },
+    ])
   })
 })

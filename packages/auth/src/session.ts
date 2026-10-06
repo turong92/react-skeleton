@@ -1,5 +1,6 @@
-import type { AuthApi } from './authApi'
+import type { AuthApi, RefreshDelivery } from './authApi'
 import { decodeTokenPrincipal } from './principal'
+import type { RefreshStore } from './refreshStore'
 import type { TokenStore } from './tokenStore'
 import type { AuthPrincipal, AuthState, AuthTokenResponse, PasswordLoginRequest } from './types'
 
@@ -13,21 +14,40 @@ export type AuthSession = {
     authorizationCode: string,
     redirectUri?: string,
   ): Promise<AuthTokenResponse>
-  logout(): void
+  /** 메일 링크(`/magic-link?token=`)의 토큰으로 로그인한다 */
+  magicLinkLogin(token: string): Promise<AuthTokenResponse>
+  /** 다른 흐름이 받은 토큰 응답을 이 세션에 들인다 */
+  signIn(response: AuthTokenResponse): AuthTokenResponse
+  /** 이 기기에서 먼저 로그아웃(저장소 비움 — 동기)한 뒤 서버에 세션 폐기를 알린다. 서버가 실패해도 로그아웃은 유지 */
+  logout(): Promise<void>
   /** `GET /auth/me` 로 principal 을 다시 읽는다 */
   refresh(): Promise<AuthPrincipal>
+  /** 액세스 토큰은 없지만 갱신 자격이 남아 있으면(새 탭 · 쿠키 모드 표식) 갱신해 로그인 상태를 되살린다. 앱 시작 때 한 번 */
+  restore(): Promise<void>
 }
 
 export type AuthSessionOptions = {
   api: AuthApi
   store: TokenStore
+  /** 주면 로그인 응답의 리프레시 토큰(또는 쿠키 모드의 표식)을 이 저장소에 둔다. 토큰 갱신(`createSessionRefresher`)과 같은 저장소를 쓴다 */
+  refreshStore?: RefreshStore
+  /** 기본 `body` */
+  delivery?: RefreshDelivery
+  /** 로그인 때 서버에 보여 줄 기기 이름(`X-Device-Name`) */
+  deviceName?: string
 }
 
 /**
  * 토큰 저장소 + 인증 API 를 묶은 세션. React 없이 테스트된다 — `AuthProvider` 는 이 세션을 구독할 뿐이다.
  * principal 은 로그인 응답 → `refresh()` → 토큰 claim 순으로 얻는다.
  */
-export function createAuthSession({ api, store }: AuthSessionOptions): AuthSession {
+export function createAuthSession({
+  api,
+  store,
+  refreshStore,
+  delivery = 'body',
+  deviceName,
+}: AuthSessionOptions): AuthSession {
   const listeners = new Set<() => void>()
   let known: { token: string; principal: AuthPrincipal | null } | null = null
   let state = compute()
@@ -52,9 +72,16 @@ export function createAuthSession({ api, store }: AuthSessionOptions): AuthSessi
   }
 
   store.subscribe(refreshState)
+  refreshStore?.subscribe(refreshState)
 
-  async function accept(response: AuthTokenResponse) {
+  function accept(response: AuthTokenResponse) {
     known = { token: response.accessToken, principal: response.principal }
+    // 리프레시 자격을 먼저 — 액세스 토큰이 보이는 순간 갱신이 필요해도 새 자격이 있다
+    refreshStore?.set({
+      refreshToken: delivery === 'cookie' ? null : (response.refreshToken ?? null),
+      refreshExpiresAt: response.refreshExpiresAt,
+      sessionId: response.sessionId,
+    })
     store.set(response.accessToken)
     refreshState()
     return response
@@ -68,13 +95,25 @@ export function createAuthSession({ api, store }: AuthSessionOptions): AuthSessi
         listeners.delete(listener)
       }
     },
-    login: async (credentials) => accept(await api.login(credentials)),
+    login: async (credentials) =>
+      accept(await (deviceName ? api.login(credentials, { deviceName }) : api.login(credentials))),
     socialLogin: async (provider, authorizationCode, redirectUri) =>
       accept(await api.socialLogin(provider, authorizationCode, redirectUri)),
-    logout() {
+    magicLinkLogin: async (token) => accept(await api.magicLinkRedeem(token)),
+    signIn: accept,
+    async logout() {
+      const refreshToken = refreshStore?.get()?.refreshToken ?? null
+      const hadSession = store.get() !== null || refreshStore?.get() != null
       known = null
+      refreshStore?.clear()
       store.clear()
       refreshState()
+      if (!hadSession) return
+      try {
+        await api.logout(refreshToken)
+      } catch {
+        // 이 기기는 이미 로그아웃했다 — 서버 폐기는 만료로도 끝난다
+      }
     },
     async refresh() {
       const principal = await api.me()
@@ -82,6 +121,13 @@ export function createAuthSession({ api, store }: AuthSessionOptions): AuthSessi
       if (token) known = { token, principal }
       refreshState()
       return principal
+    },
+    async restore() {
+      if (store.get()) return
+      const credentials = refreshStore?.get()
+      const usable = delivery === 'cookie' ? credentials != null : !!credentials?.refreshToken
+      if (!usable) return
+      accept(await api.refresh(credentials?.refreshToken ?? null))
     },
   }
 }

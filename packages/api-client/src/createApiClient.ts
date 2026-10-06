@@ -43,12 +43,26 @@ export type ApiClientConfig = {
   onResponseDate?: (date: string | undefined) => void
   /** 실패한 요청이 `ApiRequestError` 로 던져지기 직전에 한 번. 401 처리(`@skeleton/auth`)나 로깅을 건다. 여기서 던져도 원래 에러가 나간다 */
   onError?: (error: ApiRequestError) => void
+  /**
+   * 인증이 붙은 요청이 401 을 받았을 때 한 번 부른다 — true 를 돌려주면 (새 인증 헤더로) 같은 요청을 **한 번만** 다시 보낸다(무한 재시도 없음).
+   * false 면 원래 401 이 그대로 나가고, 던지면 던진 에러가 나간다(예: 갱신 중 네트워크 오류). `skipAuth` 요청(로그인 · 갱신 자신)은 부르지 않는다.
+   * 토큰 갱신(`@skeleton/auth` 의 `createSessionRefresher`)을 여기에 꽂는다.
+   */
+  recoverUnauthorized?: (context: UnauthorizedContext) => Promise<boolean>
+  /** 쿠키를 함께 보낸다(리프레시 토큰이 HttpOnly 쿠키로 오가는 `cookie` 모드 · 다른 origin 의 백엔드) */
+  withCredentials?: boolean
   /** true 면 요청마다 콘솔 그룹 로그(보통 `import.meta.env.DEV`) */
   debug?: boolean
   adapter?: AxiosAdapter
   requestInterceptors?: ApiRequestInterceptor[]
   responseInterceptors?: ApiResponseInterceptor[]
   errorInterceptors?: ApiErrorInterceptor[]
+}
+
+export type UnauthorizedContext = {
+  error: ApiRequestError
+  /** 실패한 요청이 보낸 `Authorization` 값 — 그 사이 토큰이 이미 바뀌었는지(다른 요청 · 탭이 갱신했는지) 비교한다 */
+  failedAuthorization: string | undefined
 }
 
 export type ApiRequestInterceptor = (
@@ -122,9 +136,17 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
     instance.interceptors.response.use(undefined, (error) => Promise.reject(interceptor(error)))
   })
 
-  async function response<TEnvelope = unknown>(
+  function response<TEnvelope = unknown>(
     path: string,
     request: ApiRequest = {},
+  ): Promise<ApiHttpResponse<TEnvelope>> {
+    return perform<TEnvelope>(path, request, true)
+  }
+
+  async function perform<TEnvelope>(
+    path: string,
+    request: ApiRequest,
+    mayRecover: boolean,
   ): Promise<ApiHttpResponse<TEnvelope>> {
     const traceContext = createTraceContext(request.traceId)
     const method = request.method ?? 'GET'
@@ -136,6 +158,7 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
       traceContext,
       providedHeaders,
       config.timeoutMs,
+      config.withCredentials,
     )
     const started = nowMs()
 
@@ -160,6 +183,28 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
         error instanceof ApiRequestError
           ? error
           : apiRequestErrorFromTransport(error, path, traceContext)
+      if (
+        mayRecover &&
+        config.recoverUnauthorized &&
+        !request.skipAuth &&
+        failure.apiError.status === 401
+      ) {
+        let recovered: boolean
+        try {
+          recovered = await config.recoverUnauthorized({
+            error: failure,
+            failedAuthorization: authorizationOf(axiosRequest),
+          })
+        } catch (recoveryError) {
+          const surfaced =
+            recoveryError instanceof ApiRequestError
+              ? recoveryError
+              : apiRequestErrorFromTransport(recoveryError, path, traceContext)
+          notifyError(config.onError, surfaced)
+          throw surfaced
+        }
+        if (recovered) return perform<TEnvelope>(path, request, false)
+      }
       notifyError(config.onError, failure)
       throw failure
     }
@@ -233,6 +278,7 @@ function buildAxiosRequest(
   traceContext: TraceContext,
   providedHeaders: Record<string, string>,
   defaultTimeoutMs?: number,
+  withCredentials?: boolean,
 ): AxiosRequestConfig {
   const headers = new AxiosHeaders({ ...providedHeaders, ...compactHeaders(request.headers) })
   headers.set('traceparent', traceContext.traceparent)
@@ -249,7 +295,13 @@ function buildAxiosRequest(
     data: request.json ?? request.data,
     timeout: request.timeoutMs ?? defaultTimeoutMs ?? DEFAULT_TIMEOUT_MS,
     signal: request.signal,
+    ...(withCredentials ? { withCredentials: true } : {}),
   }
+}
+
+function authorizationOf(request: AxiosRequestConfig): string | undefined {
+  const value = AxiosHeaders.from(request.headers as AxiosHeaders).get('Authorization')
+  return typeof value === 'string' ? value : undefined
 }
 
 async function executeWithRetry(
@@ -326,12 +378,15 @@ function apiRequestErrorFromResponse(
         detail: `Failed to reach ${path}`,
         timestamp: new Date().toISOString(),
       }
-  return new ApiRequestError(
+  const failure = new ApiRequestError(
     apiError,
     apiError.traceId ?? headers['x-trace-id'] ?? traceContext.traceId,
     apiError.spanId ?? headers['x-span-id'] ?? traceContext.spanId,
     headers.traceparent ?? traceContext.traceparent,
   )
+  const retryAfter = Number(headers['retry-after'])
+  if (Number.isFinite(retryAfter) && retryAfter >= 0) failure.retryAfterHeader = retryAfter
+  return failure
 }
 
 function apiRequestErrorFromTransport(

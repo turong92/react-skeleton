@@ -54,5 +54,9 @@ export function createFakeAuthApi(): AuthApi {
     },
     socialLogin: async () => token(),
     me: async () => principal,
+    refresh: async () => token(),
+    logout: async () => undefined,
+    magicLinkRequest: async () => undefined,
+    magicLinkRedeem: async () => token(),
   }
 }

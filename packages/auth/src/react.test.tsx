@@ -30,6 +30,14 @@ const api: AuthApi = {
   me: async () => {
     throw new Error('unused')
   },
+  refresh: async () => {
+    throw new Error('unused')
+  },
+  logout: async () => undefined,
+  magicLinkRequest: async () => undefined,
+  magicLinkRedeem: async () => {
+    throw new Error('unused')
+  },
 }
 
 function sessionWith(token?: string) {

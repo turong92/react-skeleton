@@ -4,7 +4,6 @@ import { ConsentBanner, SiteFooter, type FooterLink } from '@skeleton/marketing'
 import { ThemeToggle } from '@skeleton/theme'
 import { AppShell, Button, LanguageMenu } from '@skeleton/ui'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { useQueryClient } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { LinkButton } from '../components/LinkButton'
 import { consent } from '../consent/consent'
@@ -18,12 +17,10 @@ function SignedInActions() {
   const { t } = useT()
   const { logout } = useAuth()
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
   useLiveNotifications()
 
   function signOut() {
     logout()
-    queryClient.clear() // 다음 사람에게 이전 사람의 노트가 보이지 않게
     navigate('/login', { replace: true })
   }
 

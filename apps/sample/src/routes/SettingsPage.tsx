@@ -1,7 +1,6 @@
 import { useAuth } from '@skeleton/auth'
 import { setTheme, THEMES, useTheme, type Theme } from '@skeleton/theme'
 import { Button, Card, Field, PageHeader, Select } from '@skeleton/ui'
-import { useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from 'react-router-dom'
 import { useT } from '../i18n'
 import styles from './SettingsPage.module.css'
@@ -12,11 +11,9 @@ export function SettingsPage() {
   const { principal, logout } = useAuth()
   const theme = useTheme()
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
 
   function signOut() {
     logout()
-    queryClient.clear()
     navigate('/login', { replace: true })
   }
 

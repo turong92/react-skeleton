@@ -1,15 +1,22 @@
-import type { RefreshDelivery, SignInMethodsConfig } from '@skeleton/auth'
+import { authStorageKeys, type RefreshDelivery, type SignInMethodsConfig } from '@skeleton/auth'
 
 /*
  * 이 앱의 로그인 설정.
  *
  * 로그인 방법(비밀번호 · 링크 · 소셜)은 **백엔드가 알려 준다** — 앱은 `GET /auth/methods` 를 물어 그대로 따른다(로딩 · 실패 대체 화면 포함).
  * 환경변수는 선택적 덮어쓰기일 뿐이다:
- *   VITE_AUTH_METHODS             쉼표 목록: `password` · `magic-link` · 소셜 제공자 코드(`google` · `kakao` · `naver`). 있으면 백엔드에 묻지 않고 이것을 쓴다
+ *   VITE_AUTH_METHODS             쉼표 목록: `password` · `magic-link`(`magic_link` 도 된다) · 소셜 제공자 코드(`google` · `kakao` · `naver`). 있으면 백엔드에 묻지 않고 이것을 쓴다
  *   VITE_SOCIAL_<제공자>_CLIENT_ID  백엔드가 clientId 를 알려 주지 않는 제공자에 앱이 주는 공개 값(예 `VITE_SOCIAL_GOOGLE_CLIENT_ID`)
  *   VITE_AUTH_REFRESH_DELIVERY    `body`(기본) | `cookie` — 백엔드 `skeleton.auth-session.delivery` 와 같아야 한다(다르면 개발 콘솔에 경고)
  * `new-project.sh --auth-methods a,b` 는 아래 `DEFAULT_AUTH_METHODS` 를 그 목록으로 고정한다(환경변수가 여전히 이긴다).
  */
+
+/**
+ * 저장 키 · 락 · 채널 이름의 접두어 — 같은 출처에 앱 둘을 경로로 나눠 올려도 토큰이 섞이지 않게 앱마다 다르다.
+ * `new-project.sh` 가 새 프로젝트 이름으로 바꾼다. 바꾸면 이 앱의 로그인 상태는 한 번 풀린다(옛 키 `skeleton.*` 는 쓰이지 않는다 — CHANGELOG)
+ */
+export const AUTH_NAMESPACE = 'sample'
+export const authKeys = authStorageKeys(AUTH_NAMESPACE)
 
 /** 비어 있으면 백엔드에 묻는다. 목록(`password,magic-link,google`)을 적으면 그 방법으로 고정 — `new-project.sh --auth-methods` 가 이 줄을 쓴다 */
 export const DEFAULT_AUTH_METHODS = ''
@@ -21,6 +28,8 @@ export const DEFAULT_AUTH_METHODS = ''
  */
 export const DEFAULT_REFRESH_DELIVERY: RefreshDelivery = 'body'
 
+const isMagicLink = (item: string) => item === 'magic-link' || item === 'magic_link'
+
 /** 환경변수 목록 → 방법 설정. 비어 있으면 undefined(= 백엔드에 묻는다) */
 export function parseAuthMethods(value: unknown): SignInMethodsConfig | undefined {
   if (typeof value !== 'string' || !value.trim()) return undefined
@@ -30,9 +39,10 @@ export function parseAuthMethods(value: unknown): SignInMethodsConfig | undefine
     .filter(Boolean)
   return {
     password: list.includes('password'),
-    magicLink: list.includes('magic-link'),
+    // 백엔드가 쓰는 철자(`magic_link`)와 이 앱의 철자(`magic-link`) 둘 다 — 아니면 소셜 제공자로 읽혀 방법이 하나도 없는 화면이 된다
+    magicLink: list.some(isMagicLink),
     social: list
-      .filter((item) => item !== 'password' && item !== 'magic-link')
+      .filter((item) => item !== 'password' && !isMagicLink(item))
       .map((provider) => ({ provider })),
   }
 }

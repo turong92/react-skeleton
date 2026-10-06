@@ -1,5 +1,5 @@
 import { createSessionRefresher, type AuthApi, type SessionEndReason } from '@skeleton/auth'
-import { refreshDelivery } from './authConfig'
+import { authKeys, refreshDelivery } from './authConfig'
 import { refreshStore, tokenStore } from './tokenStore'
 
 /** 갱신이 못 되어 로그아웃된 이유 — 앱이 알림으로 말한다(`main.tsx`) */
@@ -19,6 +19,7 @@ export const refresher = createSessionRefresher({
   tokens: tokenStore,
   refreshTokens: refreshStore,
   delivery: refreshDelivery,
+  lockName: authKeys.refreshLock,
   refresh: (refreshToken) => {
     if (!authApi) throw new Error('auth api is not bound yet')
     return authApi.refresh(refreshToken)

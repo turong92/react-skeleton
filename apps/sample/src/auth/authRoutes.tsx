@@ -1,5 +1,6 @@
 import {
   createAuthRoutes,
+  createBroadcastReauthChannel,
   createSocialLinkFlow,
   createSocialLoginFlow,
   type AuthPageName,
@@ -8,6 +9,8 @@ import type { MessageKey } from '../i18n'
 import type { SeoHandle } from '../seo/routeSeo'
 import { accountApi, authApi, authSession } from './session'
 import {
+  authKeys,
+  AUTH_NAMESPACE,
   authMethodsOverride,
   refreshDelivery,
   socialClientIds,
@@ -23,7 +26,12 @@ const hasSocial = authMethodsOverride !== undefined && Object.keys(providers).le
 
 // OAuth state 는 이 브라우저 탭의 sessionStorage 에 묶는다 — 제공자에 다녀와도 남고, 다른 브라우저 · 탭이 시작한 콜백은 거절된다
 const socialFlow = hasSocial
-  ? createSocialLoginFlow({ providers, session: authSession, storage: browserStorage() })
+  ? createSocialLoginFlow({
+      providers,
+      session: authSession,
+      storage: browserStorage(),
+      storagePrefix: authKeys.social,
+    })
   : undefined
 const socialLinkFlow = hasSocial
   ? createSocialLinkFlow({
@@ -35,6 +43,7 @@ const socialLinkFlow = hasSocial
       ),
       accountApi,
       storage: browserStorage(),
+      storagePrefix: authKeys.socialLink,
     })
   : undefined
 
@@ -52,6 +61,10 @@ const hidden = (page: AuthPageName): SeoHandle => ({
 /** 계정 수명주기 라우트 한 벌 — 켠 방법은 백엔드(`GET /auth/methods`)가 알려 주고, `authConfig.ts` 의 환경변수 · 고정 목록이 덮어쓸 수 있다 */
 export const accountRoutes = createAuthRoutes({
   session: authSession,
+  namespace: AUTH_NAMESPACE,
+  // 본인 확인 링크를 연 새 탭이 토큰을 하려던 작업이 있는 탭에 넘기는 길 — 브라우저에서만, 앱이 만든다
+  reauthChannel:
+    typeof window === 'undefined' ? null : createBroadcastReauthChannel(authKeys.reauthChannel),
   authApi,
   accountApi,
   methods: authMethodsOverride && {

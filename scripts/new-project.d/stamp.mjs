@@ -218,10 +218,16 @@ function stampSample(target, withSample) {
 function applyAuthMethods(app, methods) {
   if (!methods) return
   const file = join(app, 'src', 'auth', 'authConfig.ts')
-  if (!existsSync(file)) fail(`--auth-methods: ${file} is missing — the skeleton changed, update scripts/new-project.d/stamp.mjs`)
+  if (!existsSync(file))
+    fail(
+      `--auth-methods: ${file} is missing — the skeleton changed, update scripts/new-project.d/stamp.mjs`,
+    )
   const before = read(file)
   const after = before.replace("'password,magic-link'", `'${methods}'`)
-  if (after === before) fail('--auth-methods: the default list was not found in authConfig.ts — the skeleton changed, update scripts/new-project.d/stamp.mjs')
+  if (after === before)
+    fail(
+      '--auth-methods: the default list was not found in authConfig.ts — the skeleton changed, update scripts/new-project.d/stamp.mjs',
+    )
   writeFileSync(file, after)
 }
 

@@ -1,6 +1,7 @@
 import { ApiRequestError } from '@skeleton/api-client'
 import { describe, expect, it } from 'vitest'
 import { authErrorMessage, secondsLeft } from './errors'
+import { PkceUnavailableError } from '../pkce'
 import { defaultAuthLabels as L } from './labels'
 
 const err = (code: string, status: number, data?: unknown) =>
@@ -24,11 +25,20 @@ describe('authErrorMessage', () => {
     ['ACCOUNT.IDENTITY_TAKEN', 409, L.errorIdentityTaken],
     ['ACCOUNT.IDENTITY_EXISTS', 409, L.errorIdentityExists],
     ['ACCOUNT.SOCIAL_EMAIL_CONFLICT', 409, L.errorSocialConflict],
+    ['AUTH.SOCIAL_PKCE_FAILED', 400, L.errorSocialRequest],
+    ['AUTH.SOCIAL_NONCE_FAILED', 400, L.errorSocialRequest],
+    ['AUTH.SOCIAL_ID_TOKEN_INVALID', 401, L.errorSocialCode],
+    ['AUTH_SOCIAL.INVALID_AUTHORIZATION_CODE', 401, L.errorSocialCode],
+    ['AUTH_SOCIAL.PROVIDER_GATEWAY_ERROR', 502, L.errorSocialGateway],
     ['COMMON.VALIDATION_FAILED', 400, L.errorValidation],
     ['CLIENT.NETWORK_ERROR', 0, L.errorNetwork],
     ['COMMON.INTERNAL_SERVER_ERROR', 500, L.errorGeneric],
   ])('%s → its label', (code, status, label) => {
     expect(authErrorMessage(err(code, status), L).message).toBe(label)
+  })
+
+  it('a browser without WebCrypto gets a clear message, not the generic one', () => {
+    expect(authErrorMessage(new PkceUnavailableError(), L).message).toBe(L.errorPkceUnavailable)
   })
 
   it('429 names the wait and carries retryAfterSeconds for a countdown', () => {

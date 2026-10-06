@@ -1,4 +1,5 @@
 import { ApiRequestError, ErrorCodes, retryAfterSeconds } from '@skeleton/api-client'
+import { PkceUnavailableError } from '../pkce'
 import type { AuthLabels } from './labels'
 
 export type AuthErrorInfo = {
@@ -29,11 +30,17 @@ const byCode = (labels: AuthLabels): Record<string, string> => ({
   [ErrorCodes.ACCOUNT_IDENTITY_TAKEN]: labels.errorIdentityTaken,
   [ErrorCodes.ACCOUNT_IDENTITY_EXISTS]: labels.errorIdentityExists,
   [ErrorCodes.ACCOUNT_SOCIAL_EMAIL_CONFLICT]: labels.errorSocialConflict,
+  [ErrorCodes.AUTH_SOCIAL_PKCE_FAILED]: labels.errorSocialRequest,
+  [ErrorCodes.AUTH_SOCIAL_NONCE_FAILED]: labels.errorSocialRequest,
+  [ErrorCodes.AUTH_SOCIAL_ID_TOKEN_INVALID]: labels.errorSocialCode,
+  [ErrorCodes.AUTH_SOCIAL_INVALID_AUTHORIZATION_CODE]: labels.errorSocialCode,
+  [ErrorCodes.AUTH_SOCIAL_PROVIDER_GATEWAY_ERROR]: labels.errorSocialGateway,
   [ErrorCodes.COMMON_VALIDATION_FAILED]: labels.errorValidation,
 })
 
 /** 어떤 실패든 화면에 보일 한 문장으로. 429 는 기다릴 시간을 덧붙이고, 예상 밖 실패는 참조 번호를 함께 돌려준다 */
 export function authErrorMessage(error: unknown, labels: AuthLabels): AuthErrorInfo {
+  if (error instanceof PkceUnavailableError) return { message: labels.errorPkceUnavailable }
   if (!(error instanceof ApiRequestError)) return { message: labels.errorGeneric }
   const { code, status } = error.apiError
   if (status === 429) {

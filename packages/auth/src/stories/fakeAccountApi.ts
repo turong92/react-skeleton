@@ -35,6 +35,8 @@ export type FakeAccountOptions = {
   passwordless?: boolean
   /** 이메일 주소가 없는 계정(Naver 등) — 이미 연결된 제공자로 다시 동의해 본인 확인 */
   noAddress?: boolean
+  /** 주소 없는 계정의 유일한 로그인 수단(LINE · X). 없으면 naver + magic_link */
+  noAddressProvider?: string
   /** 로그인 수단이 하나뿐 */
   onlyMethod?: boolean
   /** 새 주소의 인증번호를 기다리는 이메일 변경이 이미 있다(새로고침 뒤) */
@@ -54,19 +56,28 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
   calls: string[]
 } {
   const calls: string[] = []
-  const methods: SignInIdentity[] = options.noAddress
+  const methods: SignInIdentity[] = options.noAddressProvider
     ? [
-        identity({ id: 'idn_n', method: 'naver', subject: null }),
-        identity({ id: 'idn_m', method: 'magic_link' }),
+        identity({
+          id: 'idn_p',
+          method: options.noAddressProvider,
+          subject: null,
+          removable: false,
+        }),
       ]
-    : options.passwordless
+    : options.noAddress
       ? [
-          identity({ id: 'idn_g', method: 'google', subject: null }),
+          identity({ id: 'idn_n', method: 'naver', subject: null }),
           identity({ id: 'idn_m', method: 'magic_link' }),
         ]
-      : options.onlyMethod
-        ? [identity({ removable: false })]
-        : [identity({}), identity({ id: 'idn_g', method: 'google', subject: null })]
+      : options.passwordless
+        ? [
+            identity({ id: 'idn_g', method: 'google', subject: null }),
+            identity({ id: 'idn_m', method: 'magic_link' }),
+          ]
+        : options.onlyMethod
+          ? [identity({ removable: false })]
+          : [identity({}), identity({ id: 'idn_g', method: 'google', subject: null })]
   const me: AccountMe = {
     id: 'acc_demo',
     email: options.noAddress ? null : 'ann@example.com',

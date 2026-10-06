@@ -12,7 +12,14 @@ import { authStorageKeys } from '../storageKeys'
 import { createFakeAccountApi } from '../stories/fakeAccountApi'
 import { DEFAULT_AUTH_PATHS } from './createAuthRoutes'
 import { createFakeAuthApi, FAKE_ACCESS_TOKEN } from '../stories/fakeAuthApi'
-import { ResetPage, SocialCallbackPage, SocialLinkCallbackPage, type PageContext } from './pages'
+import { PkceUnavailableError } from '../pkce'
+import {
+  ResetPage,
+  SignInPage,
+  SocialCallbackPage,
+  SocialLinkCallbackPage,
+  type PageContext,
+} from './pages'
 
 /**
  * 라우트 페이지의 동작(렌더 밖의 일) — 소셜 콜백이 방법을 못 받았을 때의 오류 · 다시 시도, StrictMode 에서도 「가려던 곳」이 남는 이동,
@@ -49,11 +56,13 @@ export const SocialCallbackWithoutProviderShowsErrorAndRetry: Story = {
   render: () => {
     const retry = fn()
     return (
-      <MemoryRouter initialEntries={['/auth/callback?code=unused&state=s']}>
-        <SocialCallbackPage
-          ctx={context({ discovered: { status: 'failed', signUp: true, retry } })}
-        />
-      </MemoryRouter>
+      <AuthProvider session={anonymous()}>
+        <MemoryRouter initialEntries={['/auth/callback?code=unused&state=s']}>
+          <SocialCallbackPage
+            ctx={context({ discovered: { status: 'failed', signUp: true, retry } })}
+          />
+        </MemoryRouter>
+      </AuthProvider>
     )
   },
   play: async ({ canvas, userEvent }) => {
@@ -68,11 +77,13 @@ export const SocialCallbackWithoutProviderShowsErrorAndRetry: Story = {
 
 export const SocialCallbackProviderMissingShowsError: Story = {
   render: () => (
-    <MemoryRouter initialEntries={['/auth/callback?code=unused&state=s']}>
-      <SocialCallbackPage
-        ctx={context({ discovered: { status: 'ready', signUp: true, retry: fn() } })}
-      />
-    </MemoryRouter>
+    <AuthProvider session={anonymous()}>
+      <MemoryRouter initialEntries={['/auth/callback?code=unused&state=s']}>
+        <SocialCallbackPage
+          ctx={context({ discovered: { status: 'ready', signUp: true, retry: fn() } })}
+        />
+      </MemoryRouter>
+    </AuthProvider>
   ),
   play: async ({ canvas }) => {
     await expect(
@@ -102,18 +113,29 @@ export const SocialCallbackKeepsTheWantedPage: Story = {
       storage,
       createState: () => 'st',
     })
-    flow.start('google')
+    // 시작은 비동기(WebCrypto)라 스토리는 시작해 둔 state 를 저장소에 직접 놓는다 — 구조는 `createSocialLoginFlow` 가 쓰는 그대로
+    storage.setItem(
+      'skeleton.social.st',
+      JSON.stringify({
+        provider: 'google',
+        redirectUri: 'https://app.test/auth/callback',
+        purpose: 'login',
+        action: 'login',
+      }),
+    )
     return (
       <StrictMode>
-        <MemoryRouter initialEntries={['/auth/callback?code=c&state=st']}>
-          <Routes>
-            <Route
-              path="/auth/callback"
-              element={<SocialCallbackPage ctx={context({ socialFlow: flow })} />}
-            />
-            <Route path="*" element={<Here />} />
-          </Routes>
-        </MemoryRouter>
+        <AuthProvider session={anonymous()}>
+          <MemoryRouter initialEntries={['/auth/callback?code=c&state=st']}>
+            <Routes>
+              <Route
+                path="/auth/callback"
+                element={<SocialCallbackPage ctx={context({ socialFlow: flow })} />}
+              />
+              <Route path="*" element={<Here />} />
+            </Routes>
+          </MemoryRouter>
+        </AuthProvider>
       </StrictMode>
     )
   },
@@ -152,6 +174,9 @@ function loggedIn() {
   return createAuthSession({ api: createFakeAuthApi(), store })
 }
 
+/** 로그인하지 않은 세션 — 콜백 페이지는 `useAuth()` 를 읽는다(앱에서는 늘 `AuthProvider` 안) */
+const anonymous = () => createAuthSession({ api: createFakeAuthApi(), store: createTokenStore() })
+
 function ShowLocationState() {
   const location = useLocation()
   return <pre data-testid="state">{JSON.stringify(location.state)}</pre>
@@ -161,14 +186,26 @@ function linkCallback(
   contextOf: SocialLinkContext,
   accountApi = createFakeAccountApi(),
   search = '?code=fresh&state=st',
+  proof: { codeVerifier?: string; nonce?: string } = {},
 ) {
+  const storage = memoryStorage()
   const flow = createSocialLinkFlow({
     providers: { naver: { clientId: 'c', redirectUri: 'https://app.test/account/link-callback' } },
     accountApi,
-    storage: memoryStorage(),
+    storage,
     createState: () => 'st',
   })
-  flow.start('naver', contextOf)
+  storage.setItem(
+    'skeleton.social-link.st',
+    JSON.stringify({
+      provider: 'naver',
+      redirectUri: 'https://app.test/account/link-callback',
+      purpose: 'link',
+      action: contextOf.action.kind === 'link' ? 'link' : 'reauth',
+      ...proof,
+      context: contextOf,
+    }),
+  )
   return (
     <StrictMode>
       <AuthProvider session={loggedIn()}>
@@ -248,5 +285,123 @@ export const LinkAfterReconsentLinksOnceEvenUnderStrictMode: Story = {
       undefined,
       expect.objectContaining({ socialReauth: expect.objectContaining({ provider: 'naver' }) }),
     )
+  },
+}
+
+const VERIFIER = 'v'.repeat(43)
+
+export const LinkCallbackCarriesTheVerifierToTheSettings: Story = {
+  render: () =>
+    linkCallback(
+      { accountId: 'acct-demo', action: { kind: 'delete' } },
+      createFakeAccountApi(),
+      '?code=fresh&state=st',
+      { codeVerifier: VERIFIER, nonce: 'nonce-0123456789' },
+    ),
+  play: async ({ canvas }) => {
+    const state = JSON.parse((await canvas.findByTestId('state')).textContent ?? 'null')
+    // 삭제의 다시 인증은 그 동의 시도의 verifier · nonce 와 함께 설정 화면으로 돌아간다 — 서버가 PKCE 필수 제공자의 `socialReauth` 에서 요구한다
+    await expect(state.resume.socialReauth).toMatchObject({
+      authorizationCode: 'fresh',
+      codeVerifier: VERIFIER,
+      nonce: 'nonce-0123456789',
+    })
+  },
+}
+
+export const LinkAfterReconsentSendsBothAttemptsTheirOwnVerifier: Story = {
+  render: () => {
+    const accountApi = createFakeAccountApi({ noAddress: true })
+    ;(window as unknown as { __link: ReturnType<typeof fn> }).__link = fn()
+    const linkSocial = accountApi.linkSocial
+    accountApi.linkSocial = (...args) => {
+      ;(window as unknown as { __link: ReturnType<typeof fn> }).__link(...args)
+      return linkSocial(...args)
+    }
+    return linkCallback(
+      {
+        accountId: 'acct-demo',
+        action: {
+          kind: 'link-reauth',
+          target: {
+            provider: 'x',
+            authorizationCode: 'x-code',
+            codeVerifier: 'x'.repeat(43),
+          },
+        },
+      },
+      accountApi,
+      '?code=fresh-code&state=st',
+      { codeVerifier: VERIFIER },
+    )
+  },
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByTestId('state')).toBeVisible()
+    const link = (window as unknown as { __link: ReturnType<typeof fn> }).__link
+    await expect(link).toHaveBeenCalledTimes(1)
+    // 연결할 제공자의 verifier 는 최상위에, 다시 인증한 제공자의 verifier 는 socialReauth 안에 — 서로 바뀌면 서버가 PKCE 실패로 거절한다
+    await expect(link).toHaveBeenCalledWith(
+      'x',
+      'x-code',
+      undefined,
+      expect.objectContaining({
+        socialReauth: expect.objectContaining({ codeVerifier: VERIFIER }),
+      }),
+      { codeVerifier: 'x'.repeat(43) },
+    )
+  },
+}
+
+export const SocialCallbackAfterSignInGoesStraightOn: Story = {
+  render: () => (
+    <AuthProvider session={loggedIn()}>
+      <MemoryRouter initialEntries={['/auth/callback']}>
+        <Routes>
+          <Route
+            path="/auth/callback"
+            element={
+              <SocialCallbackPage
+                ctx={context({ discovered: { status: 'ready', signUp: true, retry: fn() } })}
+              />
+            }
+          />
+          <Route path="*" element={<Here />} />
+        </Routes>
+      </MemoryRouter>
+    </AuthProvider>
+  ),
+  play: async ({ canvas }) => {
+    // 로그인이 끝난 뒤 뒤로 가기로 쿼리 없는 콜백에 왔다 — 「로그인을 마치지 못했어요」 대신 가던 길로
+    await expect(await canvas.findByTestId('here')).toHaveTextContent('/')
+    await expect(canvas.queryByRole('heading', { name: 'Sign-in did not finish' })).toBeNull()
+  },
+}
+
+export const SocialSignInThatCannotStartShowsWhy: Story = {
+  render: () => (
+    <AuthProvider
+      session={createAuthSession({ api: createFakeAuthApi(), store: createTokenStore() })}
+    >
+      <MemoryRouter>
+        <SignInPage
+          ctx={context({
+            methods: { password: true, social: [{ provider: 'line' }] },
+            socialFlow: {
+              start: async () => {
+                throw new PkceUnavailableError()
+              },
+              complete: async () => {
+                throw new Error('unused')
+              },
+            },
+          })}
+        />
+      </MemoryRouter>
+    </AuthProvider>
+  ),
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(await canvas.findByRole('button', { name: 'Continue with LINE' }))
+    await expect(await canvas.findByText(/cannot start a secure sign-in/)).toBeVisible()
+    await expect(canvas.getByRole('button', { name: 'Continue with LINE' })).toBeEnabled() // 다시 눌러 볼 수 있다
   },
 }

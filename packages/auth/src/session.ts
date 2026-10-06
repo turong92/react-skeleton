@@ -4,7 +4,13 @@ import { decodeTokenPrincipal } from './principal'
 import type { RefreshStore } from './refreshStore'
 import type { SessionRefresher } from './sessionRefresher'
 import type { TokenStore } from './tokenStore'
-import type { AuthPrincipal, AuthState, AuthTokenResponse, PasswordLoginRequest } from './types'
+import type {
+  AuthPrincipal,
+  AuthState,
+  AuthTokenResponse,
+  PasswordLoginRequest,
+  SocialProof,
+} from './types'
 
 export type AuthSession = {
   /** 바뀌기 전까지 같은 객체를 돌려준다(`useSyncExternalStore` 용) */
@@ -15,6 +21,7 @@ export type AuthSession = {
     provider: string,
     authorizationCode: string,
     redirectUri?: string,
+    proof?: SocialProof,
   ): Promise<AuthTokenResponse>
   /** 메일 링크(`/magic-link?token=`)의 토큰으로 로그인한다 */
   magicLinkLogin(token: string): Promise<AuthTokenResponse>
@@ -110,8 +117,12 @@ export function createAuthSession({
     },
     login: async (credentials) =>
       accept(await (deviceName ? api.login(credentials, { deviceName }) : api.login(credentials))),
-    socialLogin: async (provider, authorizationCode, redirectUri) =>
-      accept(await api.socialLogin(provider, authorizationCode, redirectUri)),
+    socialLogin: async (provider, authorizationCode, redirectUri, proof) =>
+      accept(
+        await (proof
+          ? api.socialLogin(provider, authorizationCode, redirectUri, proof)
+          : api.socialLogin(provider, authorizationCode, redirectUri)),
+      ),
     magicLinkLogin: async (token) =>
       accept(
         await (deviceName

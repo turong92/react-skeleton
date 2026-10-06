@@ -19,8 +19,8 @@ export type SignInScreenProps = {
   onPasswordSignIn?: (credentials: { email: string; password: string }) => Promise<void>
   /** 이메일 링크 요청(항상 성공처럼 보인다 — 서버가 존재 여부를 숨긴다) */
   onMagicLinkRequest?: (email: string) => Promise<void>
-  /** 소셜 제공자로 보낸다(보통 `window.location.assign(flow.start(provider))`) */
-  onSocialSignIn?: (provider: string) => void
+  /** 소셜 제공자로 보낸다(보통 `flow.start(provider)` 뒤 `window.location.assign(url)`). 못 시작하면(WebCrypto 없음 …) 던진다 — 화면이 문구로 바꾼다 */
+  onSocialSignIn?: (provider: string) => void | Promise<unknown>
   signUpTo?: string
   forgotPasswordTo?: string
   /** 폼 위 안내(세션이 끝난 이유 …) */
@@ -52,6 +52,7 @@ export function SignInScreen({
   const [email, setEmail] = useState(initialEmail)
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
+  const [socialBusy, setSocialBusy] = useState(false)
   const [failure, setFailure] = useState<AuthErrorInfo | null>(null)
   const [magicSentTo, setMagicSentTo] = useState<string | null>(null)
   const wait = useCountdown()
@@ -182,12 +183,24 @@ export function SignInScreen({
             </div>
           </form>
         )}
+        {failure && !(hasPassword || hasMagic) && <Alert tone="danger">{failure.message}</Alert>}
         {showSocial && otherMethodAbove && <div className={styles.divider}>{labels.or}</div>}
         {showSocial && (
           <SocialButtons
             providers={enabled.social}
             labels={labels}
-            onSelect={(provider) => onSocialSignIn?.(provider)}
+            disabled={socialBusy}
+            onSelect={async (provider) => {
+              setFailure(null)
+              setSocialBusy(true) // 시작이 끝나는 동안(WebCrypto) 두 번 누르지 못하게 — 페이지가 떠나면 어차피 사라진다
+              try {
+                await onSocialSignIn?.(provider)
+              } catch (error) {
+                fail(error)
+              } finally {
+                setSocialBusy(false)
+              }
+            }}
           />
         )}
       </div>

@@ -38,6 +38,12 @@ export const koAuthLabels: AuthLabels = {
   errorSelfAction: '내 계정에는 할 수 없는 동작이에요.',
   errorIdentityTaken: '그 계정은 이미 다른 사람과 연결돼 있어요.',
   errorIdentityExists: '이미 연결된 로그인 수단이에요.',
+  errorSocialRequest:
+    '로그인을 안전하게 시작하지 못했어요. 페이지를 새로 고치고 다시 시도해 주세요.',
+  errorSocialCode: '이 로그인은 만료됐거나 이미 쓰였어요. 처음부터 다시 시작해 주세요.',
+  errorSocialGateway: '제공자가 지금 응답하지 않아요. 잠시 뒤에 다시 시도해 주세요.',
+  errorPkceUnavailable:
+    '이 브라우저에서는 이 제공자로 안전한 로그인을 시작할 수 없어요. 최신 브라우저에서 https(또는 localhost) 주소로 열어 주세요.',
   errorSocialConflict:
     '같은 이메일의 계정이 이미 있어요. 그 계정으로 로그인한 뒤 설정에서 이 서비스를 연결해 주세요.',
   errorValidation: '표시된 칸을 확인해 주세요.',
@@ -78,7 +84,15 @@ export const koAuthLabels: AuthLabels = {
   signInMagicLinkHelp: '메일로 링크를 보내 드려요. 비밀번호는 필요 없어요.',
   signInMagicLinkSubmit: '링크 보내기',
   signInUsePassword: '비밀번호로 로그인',
-  providerNames: { google: '구글', kakao: '카카오', naver: '네이버' },
+  providerNames: { google: 'Google', line: 'LINE', x: 'X', kakao: '카카오', naver: '네이버' },
+  // 조사는 이름의 받침에 달려 있다 — 알려진 제공자는 문장째 적는다(LINE 은 「라인」이라 읽혀 `으로`)
+  providerSignInText: {
+    google: 'Google로 계속하기',
+    line: 'LINE으로 계속하기',
+    x: 'X로 계속하기',
+    kakao: '카카오로 계속하기',
+    naver: '네이버로 계속하기',
+  },
   signUpTitle: '계정 만들기',
   signUpSubtitle: '1분이면 끝나요.',
   signUpSubmit: '가입하기',
@@ -162,6 +176,10 @@ export const koAuthLabels: AuthLabels = {
   callbackFailedTitle: '로그인을 마치지 못했어요',
   callbackFailedBody: '제공자가 로그인을 확인해 주지 않았어요. 다시 시도해 주세요.',
   callbackConflictTitle: '이미 계정이 있어요',
+  callbackCancelledTitle: '로그인을 취소했어요',
+  callbackCancelledBody: '제공자 화면에서 취소해서 바뀐 것은 없어요. 원할 때 다시 시작하세요.',
+  callbackStateBody:
+    '이 탭에서 시작한 로그인이 아니거나 이미 끝난 로그인이에요. 로그인 화면에서 다시 시작하고, 같은 탭에서 끝내 주세요.',
   callbackConflictBody:
     '그 이메일은 다른 로그인 수단으로 이미 가입돼 있어요. 그 수단으로 로그인한 뒤 계정 설정에서 이 서비스를 연결해 주세요.',
   suspendedTitle: '정지된 계정이에요',
@@ -191,6 +209,10 @@ export const koAuthLabels: AuthLabels = {
   emailUnverified: '인증 안 됨',
   emailNew: '새 이메일',
   emailChangeSubmit: '이메일 바꾸기',
+  emailNone: '이 계정에는 이메일 주소가 없어요',
+  emailAddHint:
+    '계정 안내와 접근 복구를 받으려면 이메일을 추가하세요. 아래에 주소를 적고, 이미 쓰는 로그인 수단으로 본인임을 확인해 주세요.',
+  emailAddSubmit: '이메일 추가',
   emailPendingTitle: '새 주소의 인증번호를 입력하세요',
   emailPendingBody: (email, until) =>
     `${email} 로 인증번호 6자리를 보냈어요. 여기에 입력하면 주소가 바뀌어요${until ? ` (${until} 까지 유효해요)` : ''}. 메일이 안 오면 아래에서 다시 받으세요.`,

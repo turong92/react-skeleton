@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react'
 import type { AccountApi } from '../account/accountApi'
 import type { AuthApi, RefreshDelivery } from '../authApi'
-import { deliveryMismatch, methodsFromInfo } from '../discovery'
+import { deliveryMismatch, methodsFromInfo, redirectUriProblems } from '../discovery'
 import { resolveMethods, type SignInMethodsConfig } from '../screens/methods'
 import { useAuthMethods } from '../screens/useAuthMethods'
 import type { AuthSession } from '../session'
@@ -40,7 +40,7 @@ export type DiscoveredContext = {
 }
 
 /** 경고를 한 번만 하려는 기억 — 라우트 한 벌(`createAuthRoutes`)마다 하나(모듈 전역이 아니다) */
-export type DiscoveryNotes = { warned: boolean }
+export type DiscoveryNotes = { warned: boolean; warnedRedirect?: boolean }
 
 export function warnDeliveryOnce(
   info: AuthMethodsWire,
@@ -53,6 +53,19 @@ export function warnDeliveryOnce(
   if (!problem) return
   notes.warned = true
   warn(`[@skeleton/auth] ${problem}`)
+}
+
+export function warnRedirectOnce(
+  info: AuthMethodsWire,
+  expected: string,
+  notes: DiscoveryNotes,
+  warn: (message: string) => void = console.warn,
+): void {
+  if (notes.warnedRedirect) return
+  const problems = redirectUriProblems(info.social, expected)
+  if (problems.length === 0) return
+  notes.warnedRedirect = true
+  for (const problem of problems) warn(`[@skeleton/auth] ${problem.message}`)
 }
 
 /** 렌더 때 부른다 — 발견을 켠 라우트(`discovery` 가 있고 방법 설정이 없는)에서만 의미가 있다. 켜지 않았으면 undefined */
@@ -78,6 +91,10 @@ export function useDiscoveredContext({
   useEffect(() => {
     if (info && discovery?.delivery) warnDeliveryOnce(info, discovery.delivery, notes)
   }, [info, discovery?.delivery, notes])
+  useEffect(() => {
+    if (!info || typeof window === 'undefined') return
+    warnRedirectOnce(info, window.location.origin + paths.socialCallback, notes)
+  }, [info, paths.socialCallback, notes])
 
   const social = discovery?.social
   const resolved = useMemo(() => {

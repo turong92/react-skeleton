@@ -1,5 +1,5 @@
 import { newIdempotencyKey, type ApiClient } from '@skeleton/api-client'
-import type { AuthTokenResponse } from '../types'
+import type { AuthTokenResponse, SocialProof } from '../types'
 import type {
   AccountMe,
   AccountSession,
@@ -12,7 +12,11 @@ import type {
 } from './types'
 
 /** 주소가 없는 계정(Naver 등)의 다시 인증 — 이미 연결된 제공자의 **새** 인가 코드(제공자 동의를 다시 거친다) */
-export type SocialReauth = { provider: string; authorizationCode: string; redirectUri?: string }
+export type SocialReauth = {
+  provider: string
+  authorizationCode: string
+  redirectUri?: string
+} & SocialProof
 
 /**
  * 민감한 작업의 다시 인증 — 세 전략 중 계정에 맞는 **하나**: 비밀번호가 있으면 `currentPassword`, 주소가 있는 비밀번호 없는 계정은
@@ -59,6 +63,8 @@ export type AccountApi = {
     authorizationCode: string,
     redirectUri?: string,
     reauth?: ReauthCredential,
+    /** 연결하려는 제공자 동의의 PKCE `codeVerifier` · `nonce`(최상위 필드) — 제공자가 쓸 때만 */
+    proof?: SocialProof,
   ): Promise<SignInIdentity>
   /** `POST /account/reauth/confirmation` (202) — 계정 주소로 6자리 코드를 보낸다(계정 + 이 세션에 묶임 · 30분 · 5번). 새 요청이 열린 코드를 대신한다 */
   requestReauthConfirmation(): Promise<void>
@@ -135,10 +141,10 @@ export function createAccountApi(
         method: 'DELETE',
         ...(reauth ? { json: compact(reauth) } : {}),
       }),
-    linkSocial: (provider, authorizationCode, redirectUri, reauth) =>
+    linkSocial: (provider, authorizationCode, redirectUri, reauth, proof) =>
       client.value(`/account/identities/social/${seg(provider)}`, {
         method: 'POST',
-        json: compact({ authorizationCode, redirectUri, ...reauth }),
+        json: compact({ authorizationCode, redirectUri, ...reauth, ...proof }),
       }),
     requestReauthConfirmation: async () => {
       await client.value('/account/reauth/confirmation', { method: 'POST' })

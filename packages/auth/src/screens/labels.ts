@@ -40,6 +40,14 @@ export type AuthLabels = {
   errorIdentityTaken: string
   errorIdentityExists: string
   errorSocialConflict: string
+  /** 400 `AUTH.SOCIAL_PKCE_FAILED` · `AUTH.SOCIAL_NONCE_FAILED` — 요청이 안전하게 만들어지지 않았다(아직 아무것도 쓰이지 않았다) */
+  errorSocialRequest: string
+  /** 401 `AUTH_SOCIAL.INVALID_AUTHORIZATION_CODE` · `AUTH.SOCIAL_ID_TOKEN_INVALID` — 동의를 처음부터 */
+  errorSocialCode: string
+  /** 502 `AUTH_SOCIAL.PROVIDER_GATEWAY_ERROR` */
+  errorSocialGateway: string
+  /** WebCrypto 가 없어 PKCE 필수 제공자를 시작할 수 없다 */
+  errorPkceUnavailable: string
   errorValidation: string
   errorNetwork: string
   errorGeneric: string
@@ -67,6 +75,8 @@ export type AuthLabels = {
   signInMagicLinkSubmit: string
   signInUsePassword: string
   providerNames: Record<string, string>
+  /** 제공자별 버튼 글자 전체(조사가 이름에 달려 있는 언어용) — 없으면 `signInWithProvider(이름)` */
+  providerSignInText: Record<string, string>
   // 가입
   signUpTitle: string
   signUpSubtitle: string
@@ -152,6 +162,10 @@ export type AuthLabels = {
   callbackFailedBody: string
   callbackConflictTitle: string
   callbackConflictBody: string
+  callbackCancelledTitle: string
+  callbackCancelledBody: string
+  /** state 가 이 탭에 없다 — 다른 탭 · 브라우저가 시작했거나 이미 쓰였거나 오래됐다 */
+  callbackStateBody: string
   // 정지 · 차단
   suspendedTitle: string
   suspendedBody: string
@@ -181,6 +195,10 @@ export type AuthLabels = {
   emailUnverified: string
   emailNew: string
   emailChangeSubmit: string
+  /** 주소가 없는 계정(LINE · X …)의 이메일 절 */
+  emailNone: string
+  emailAddHint: string
+  emailAddSubmit: string
   emailPendingTitle: string
   emailPendingBody: (email: string, until?: string) => string
   methodsDescription: string
@@ -278,6 +296,11 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   errorIdentityExists: 'That sign-in method is already linked.',
   errorSocialConflict:
     'An account with that email already exists. Sign in with it, then link this provider in settings.',
+  errorSocialRequest: 'The sign-in could not be started securely. Reload the page and try again.',
+  errorSocialCode: 'This sign-in expired or was already used. Start it again.',
+  errorSocialGateway: 'The provider is not answering right now. Try again in a moment.',
+  errorPkceUnavailable:
+    'This browser cannot start a secure sign-in with this provider. Open the site over https (or on localhost) in an up-to-date browser.',
   errorValidation: 'Check the highlighted fields.',
   errorNetwork: 'No connection. Try again.',
   errorGeneric: 'Something went wrong. Try again.',
@@ -316,7 +339,8 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   signInMagicLinkHelp: 'We email you a link. No password needed.',
   signInMagicLinkSubmit: 'Send the link',
   signInUsePassword: 'Use a password instead',
-  providerNames: { google: 'Google', kakao: 'Kakao', naver: 'Naver' },
+  providerNames: { google: 'Google', line: 'LINE', x: 'X', kakao: 'Kakao', naver: 'Naver' },
+  providerSignInText: {},
   signUpTitle: 'Create your account',
   signUpSubtitle: 'It takes a minute.',
   signUpSubmit: 'Create account',
@@ -404,6 +428,11 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   callbackConflictTitle: 'You already have an account',
   callbackConflictBody:
     'That email is already registered with another sign-in method. Sign in with it, then link this provider in your account settings.',
+  callbackCancelledTitle: 'Sign-in cancelled',
+  callbackCancelledBody:
+    'You cancelled at the provider, so nothing changed. Start again whenever you like.',
+  callbackStateBody:
+    'This sign-in was not started in this browser tab (or it already finished). Start again from the sign-in page, and finish it in the same tab.',
   suspendedTitle: 'Account suspended',
   suspendedBody: 'This account is suspended. Contact support if you think this is a mistake.',
   blockedTitle: 'Access blocked',
@@ -431,6 +460,10 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   emailUnverified: 'Not verified',
   emailNew: 'New email',
   emailChangeSubmit: 'Change email',
+  emailNone: 'No email address on this account',
+  emailAddHint:
+    'Add one to get account notices and to recover access. Type it below, then confirm it is you with a sign-in method you already use.',
+  emailAddSubmit: 'Add email',
   emailPendingTitle: 'Enter the code for your new address',
   emailPendingBody: (email, until) =>
     `We sent a 6-digit code to ${email}. Enter it here to switch your address${until ? ` (it works until ${until})` : ''}. No mail? Send the code again below.`,

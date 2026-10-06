@@ -77,6 +77,32 @@ export const AllMethods: Story = {
   },
 }
 
+/** 글로벌 서비스: Google · LINE · X — 버튼과 순서는 `GET /auth/methods` 가 정하고, 마크는 제공자 코드로 붙는다(모르는 코드는 중립 마크) */
+export const GlobalProviders: Story = {
+  args: {
+    methods: {
+      social: [
+        { provider: 'google' },
+        { provider: 'line' },
+        { provider: 'x' },
+        { provider: 'acme-sso' },
+      ],
+    },
+  },
+  play: async ({ canvas, args, userEvent }) => {
+    const buttons = canvas.getAllByRole('button', { name: /^Continue with/ })
+    await expect(buttons.map((b) => b.textContent)).toEqual([
+      'Continue with Google',
+      'Continue with LINE',
+      'Continue with X',
+      'Continue with acme-sso',
+    ])
+    for (const button of buttons) await expect(button.querySelector('svg')).not.toBeNull()
+    await userEvent.click(canvas.getByRole('button', { name: 'Continue with X' }))
+    await expect(args.onSocialSignIn).toHaveBeenCalledWith('x')
+  },
+}
+
 export const MagicLinkOnly: Story = {
   args: { methods: { password: false, magicLink: true } },
   play: async ({ canvas }) => {
@@ -134,7 +160,12 @@ export const RateLimited: Story = {
 
 export const Dark: Story = {
   globals: { theme: 'dark' },
-  args: { methods: { magicLink: true, social: [{ provider: 'google' }] } },
+  args: {
+    methods: {
+      magicLink: true,
+      social: [{ provider: 'google' }, { provider: 'line' }, { provider: 'x' }],
+    },
+  },
   play: async ({ canvas }) => {
     await expect(canvas.getByRole('form', { name: 'Sign in' })).toBeVisible()
   },

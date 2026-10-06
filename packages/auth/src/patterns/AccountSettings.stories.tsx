@@ -177,6 +177,28 @@ export const NoAddressAccountReconsents: Story = {
   },
 }
 
+/** LINE · X 로만 가입한 계정(이메일 주소 없음): 빈 칸이 아니라 「주소 없음」, 로그인 수단 목록에 LINE, 「이메일 추가」는 LINE 동의를 다시 거친다 */
+export const AddressLessLineAccount: Story = {
+  args: {
+    fake: { noAddress: true, noAddressProvider: 'line' },
+    socialProviders: [{ provider: 'line' }, { provider: 'x' }],
+  },
+  play: async ({ canvas, args, userEvent }) => {
+    const section = within(await canvas.findByRole('region', { name: 'Email address' }))
+    await expect(section.getByText('No email address on this account')).toBeVisible()
+    await expect(section.queryByText('Current address')).toBeNull()
+    await expect(section.queryByText('Unverified')).toBeNull()
+    const methods = within(await canvas.findByRole('region', { name: 'Sign-in methods' }))
+    await expect(methods.getByText('LINE')).toBeVisible()
+    await userEvent.type(section.getByLabelText(/^New email/), 'me@example.com')
+    await userEvent.click(section.getByRole('button', { name: 'Confirm with LINE' }))
+    await expect(args.onProviderReauth).toHaveBeenCalledWith('line', {
+      kind: 'email-change',
+      newEmail: 'me@example.com',
+    })
+  },
+}
+
 /** 제공자 동의에서 돌아왔다 — 이어서 새 주소로 인증번호를 요청하고 코드 단계가 열린다. 한 번만(StrictMode 에서도) */
 export const NoAddressReturnsAndContinuesOnce: Story = {
   args: {

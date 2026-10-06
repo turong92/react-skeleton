@@ -1,7 +1,7 @@
 import type { AuthApi, RefreshDelivery } from './authApi'
 import type { SignInMethodsConfig } from './screens/methods'
 import type { SocialProviderConfig } from './social'
-import type { AuthMethodsWire } from './types'
+import type { AuthMethodsWire, SocialAuthorizeInfo, SocialMode } from './types'
 
 /*
  * 로그인 방법 발견 — 백엔드의 `GET /auth/methods` 가 말해 주는 것을 앱이 따른다(환경변수는 선택적 덮어쓰기).
@@ -10,6 +10,21 @@ import type { AuthMethodsWire } from './types'
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null
+
+const MODES: readonly string[] = ['REQUIRED', 'SUPPORTED', 'UNSUPPORTED']
+const readMode = (value: unknown): SocialMode | undefined =>
+  typeof value === 'string' && MODES.includes(value) ? (value as SocialMode) : undefined
+
+function readAuthorize(value: unknown): SocialAuthorizeInfo | undefined {
+  if (!isRecord(value) || typeof value.url !== 'string' || !value.url) return undefined
+  if (!Array.isArray(value.scopes) || !value.scopes.every((s) => typeof s === 'string'))
+    return undefined
+  const params: Record<string, string> = {}
+  if (isRecord(value.params))
+    for (const [key, entry] of Object.entries(value.params))
+      if (typeof entry === 'string') params[key] = entry
+  return { url: value.url, scopes: value.scopes as string[], params }
+}
 
 export function normalizeMethodsInfo(raw: unknown): AuthMethodsWire {
   const source = isRecord(raw) ? raw : {}
@@ -29,11 +44,19 @@ export function normalizeMethodsInfo(raw: unknown): AuthMethodsWire {
         (entry): entry is Record<string, unknown> =>
           isRecord(entry) && typeof entry.provider === 'string',
       )
-      .map((entry) => ({
-        provider: entry.provider as string,
-        clientId: typeof entry.clientId === 'string' ? entry.clientId : null,
-        redirectUri: typeof entry.redirectUri === 'string' ? entry.redirectUri : null,
-      })),
+      .map((entry) => {
+        const pkce = readMode(entry.pkce)
+        const nonce = readMode(entry.nonce)
+        const authorize = readAuthorize(entry.authorize)
+        return {
+          provider: entry.provider as string,
+          clientId: typeof entry.clientId === 'string' ? entry.clientId : null,
+          redirectUri: typeof entry.redirectUri === 'string' ? entry.redirectUri : null,
+          ...(pkce ? { pkce } : {}),
+          ...(nonce ? { nonce } : {}),
+          ...(authorize ? { authorize } : {}),
+        }
+      }),
     captchaRequired: source.captchaRequired === true,
     refreshDelivery:
       source.refreshDelivery === 'body' || source.refreshDelivery === 'cookie'
@@ -69,6 +92,9 @@ export function methodsFromInfo(
     providers[entry.provider] = {
       clientId,
       redirectUri: entry.redirectUri ?? defaultRedirectUri,
+      ...(entry.pkce ? { pkce: entry.pkce } : {}),
+      ...(entry.nonce ? { nonce: entry.nonce } : {}),
+      ...(entry.authorize ? { authorize: entry.authorize } : {}),
     }
   }
   return {
@@ -79,6 +105,53 @@ export function methodsFromInfo(
     },
     signUp: info.signUp.password,
     providers,
+  }
+}
+
+export type RedirectUriProblem = {
+  provider: string
+  kind: 'origin' | 'trailing-slash' | 'path'
+  message: string
+}
+
+/**
+ * 제공자 콘솔은 redirect_uri 를 **글자 그대로** 비교한다 — http/https · 호스트 · 포트 · 끝 슬래시 하나만 달라도 거절하거나(`redirect_uri_mismatch`),
+ * 코드가 이 앱에 라우트가 없는 곳으로 간다. 백엔드가 알려 준 `redirectUri` 가 이 앱의 콜백 주소(`expected`)와 다르면 어디가 다른지 말해 준다(개발 콘솔 경고용).
+ */
+export function redirectUriProblems(
+  social: AuthMethodsWire['social'],
+  expected: string,
+): RedirectUriProblem[] {
+  const problems: RedirectUriProblem[] = []
+  for (const entry of social) {
+    const given = entry.redirectUri
+    if (!given || given === expected) continue
+    const kind = diffKind(given, expected)
+    problems.push({
+      provider: entry.provider,
+      kind,
+      message: `${entry.provider}: the backend redirectUri "${given}" differs from this app's callback "${expected}" (${
+        kind === 'origin'
+          ? 'different http/https, host or port — the code would go to another origin'
+          : kind === 'trailing-slash'
+            ? 'a trailing slash — providers compare it exactly'
+            : 'a different path — this app has no callback route there'
+      }). Register exactly one of them at the provider and use the same value everywhere.`,
+    })
+  }
+  return problems
+}
+
+function diffKind(given: string, expected: string): RedirectUriProblem['kind'] {
+  try {
+    const a = new URL(given)
+    const b = new URL(expected)
+    if (a.origin !== b.origin) return 'origin'
+    return a.pathname.replace(/\/+$/, '') === b.pathname.replace(/\/+$/, '')
+      ? 'trailing-slash'
+      : 'path'
+  } catch {
+    return 'path'
   }
 }
 

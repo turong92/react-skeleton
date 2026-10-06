@@ -114,32 +114,32 @@ describe('parseSocialCallback', () => {
 })
 
 describe('createSocialLoginFlow', () => {
-  it('start stores the state for that provider and returns the redirect url carrying it', () => {
+  it('start stores the state for that provider and returns the redirect url carrying it', async () => {
     const { flow, storage } = flowWith()
-    const { url, state } = flow.start('kakao')
+    const { url, state } = await flow.start('kakao')
     expect(state).toBe('state-1')
     expect(new URL(url).searchParams.get('state')).toBe('state-1')
     expect([...storage.data.values()].some((value) => value.includes('kakao'))).toBe(true)
   })
 
-  it('start for a provider that is not configured throws and stores nothing', () => {
+  it('start for a provider that is not configured throws and stores nothing', async () => {
     const { flow, storage } = flowWith()
-    expect(() => flow.start('github')).toThrow(/github/)
+    await expect(flow.start('github')).rejects.toThrow(/github/)
     expect(storage.data.size).toBe(0)
   })
 
   it('complete → session.socialLogin(provider, code, the redirectUri used at start), and the state is single-use', async () => {
     const { flow, storage, socialLogin } = flowWith()
-    const { state } = flow.start('google')
+    const { state } = await flow.start('google')
     const result = await flow.complete(`?code=the-code&state=${state}`)
-    expect(result).toEqual({ provider: 'google', token })
+    expect(result).toEqual({ provider: 'google', token, action: 'login' })
     expect(socialLogin).toHaveBeenCalledWith('google', 'the-code', 'https://app.test/auth/callback')
     expect(storage.data.size).toBe(0)
   })
 
   it('completing the same callback twice (React StrictMode) logs in once', async () => {
     const { flow, socialLogin } = flowWith()
-    const { state } = flow.start('google')
+    const { state } = await flow.start('google')
     const [a, b] = await Promise.all([
       flow.complete(`?code=c&state=${state}`),
       flow.complete(`?code=c&state=${state}`),
@@ -150,7 +150,7 @@ describe('createSocialLoginFlow', () => {
 
   it('a state we never issued is rejected before any request (CSRF guard)', async () => {
     const { flow, socialLogin } = flowWith()
-    flow.start('google')
+    await flow.start('google')
     const failure = await flow.complete('?code=c&state=forged').catch((e: unknown) => e)
     expect(failure).toBeInstanceOf(SocialLoginCallbackError)
     expect((failure as SocialLoginCallbackError).reason).toBe('state_mismatch')
@@ -159,7 +159,7 @@ describe('createSocialLoginFlow', () => {
 
   it('a missing state or code is rejected with its own reason', async () => {
     const { flow } = flowWith()
-    const { state } = flow.start('google')
+    const { state } = await flow.start('google')
     const noState = await flow.complete('?code=c').catch((e: unknown) => e)
     expect((noState as SocialLoginCallbackError).reason).toBe('state_mismatch')
     const noCode = await flow.complete(`?state=${state}`).catch((e: unknown) => e)
@@ -168,7 +168,7 @@ describe('createSocialLoginFlow', () => {
 
   it('a provider error (the user pressed cancel) is surfaced and consumes the state', async () => {
     const { flow, storage, socialLogin } = flowWith()
-    const { state } = flow.start('google')
+    const { state } = await flow.start('google')
     const failure = await flow
       .complete(`?error=access_denied&state=${state}`)
       .catch((e: unknown) => e)
@@ -181,7 +181,7 @@ describe('createSocialLoginFlow', () => {
   it('a backend failure of socialLogin propagates to the caller untouched', async () => {
     const boom = new Error('AUTH_SOCIAL.INVALID_AUTHORIZATION_CODE')
     const { flow } = flowWith({ socialLogin: async () => Promise.reject(boom) })
-    const { state } = flow.start('google')
+    const { state } = await flow.start('google')
     await expect(flow.complete(`?code=c&state=${state}`)).rejects.toBe(boom)
   })
 })

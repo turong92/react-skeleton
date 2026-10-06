@@ -15,12 +15,14 @@ import { LegacyLinkNotice } from '../screens/LegacyLinkNotice'
 import { SocialLinkProofScreen } from '../screens/SocialLinkProofScreen'
 import { reauthKindOf, reauthSubjectOf } from '../reauth/kind'
 import { SocialCallbackScreen } from '../screens/SocialCallbackScreen'
+import { authErrorMessage } from '../screens/errors'
 import { labelOfMethod } from '../screens/methodsList'
 import { readLinkToken } from '../screens/linkToken'
 import { mergeLabels, type AuthLabels } from '../screens/labels'
 import { resolveMethods, type SignInMethodsConfig } from '../screens/methods'
 import { useResource } from '../screens/useResource'
 import type { SocialLoginFlow } from '../social'
+import type { SocialProof } from '../types'
 import type { ProviderAction, SocialLinkFlow } from '../socialLink'
 import { useAuth } from '../useAuth'
 import { useMounted } from './useMounted'
@@ -46,6 +48,29 @@ export type AuthPaths = {
   socialCallback: string
   socialLinkCallback: string
   account: string
+}
+
+/** 콜백이 돌려준 그 시도의 PKCE verifier · nonce — 제공자가 쓴 것만(없으면 undefined: 서버로 아무것도 더 보내지 않는다) */
+function proofOf(callback: SocialProof): SocialProof | undefined {
+  const proof: SocialProof = {
+    ...(callback.codeVerifier ? { codeVerifier: callback.codeVerifier } : {}),
+    ...(callback.nonce ? { nonce: callback.nonce } : {}),
+  }
+  return Object.keys(proof).length > 0 ? proof : undefined
+}
+
+/** `proof` 가 있을 때만 다섯 번째 인자로 보낸다 — PKCE 를 쓰지 않는 제공자의 호출은 이전과 똑같다 */
+function linkSocial(
+  api: AccountApi,
+  provider: string,
+  code: string,
+  redirectUri: string | undefined,
+  reauth: Parameters<AccountApi['linkSocial']>[3],
+  proof: SocialProof | undefined,
+) {
+  return proof
+    ? api.linkSocial(provider, code, redirectUri, reauth, proof)
+    : api.linkSocial(provider, code, redirectUri, reauth)
 }
 
 function usePolicy(accountApi: AccountApi) {
@@ -117,10 +142,12 @@ export function SignInPage({
         navigate(target, { replace: true })
       }}
       onMagicLinkRequest={(email) => ctx.authApi.magicLinkRequest(email)}
-      onSocialSignIn={(provider) => {
+      onSocialSignIn={async (provider) => {
         if (!ctx.socialFlow) return
+        // 시작하지 못하면(WebCrypto 없음) 던진다 — 화면이 문구로 바꾸고, 「가려던 곳」은 아직 기억하지 않는다
+        const { url } = await ctx.socialFlow.start(provider)
         rememberReturnTo(target, undefined, ctx.keys.returnTo)
-        window.location.assign(ctx.socialFlow.start(provider).url)
+        window.location.assign(url)
       }}
     />
   )
@@ -174,9 +201,9 @@ export function SignUpPage({
         return ctx.accountApi.signUp(request)
       }}
       onCreated={() => navigate(ctx.paths.signIn, { replace: true })}
-      onSocialSignIn={(provider) => {
+      onSocialSignIn={async (provider) => {
         if (!ctx.socialFlow) return
-        window.location.assign(ctx.socialFlow.start(provider).url)
+        window.location.assign((await ctx.socialFlow.start(provider)).url)
       }}
     />
   )
@@ -280,7 +307,12 @@ function SocialCallbackUnavailable({ ctx, signInTo }: { ctx: PageContext; signIn
 
 export function SocialCallbackPage({ ctx }: { ctx: PageContext }) {
   const mounted = useMounted()
+  const auth = useAuth()
+  const location = useLocation()
   if (!mounted) return null
+  // 로그인이 끝난 뒤 뒤로 가기 · 즐겨찾기로 쿼리 없는 콜백 주소에 왔다 — 오류 화면 대신 가던 길로
+  if (auth.status === 'authenticated' && !location.search)
+    return <Navigate to={ctx.afterSignIn} replace />
   if (ctx.socialFlow) return <SocialCallbackInner flow={ctx.socialFlow} ctx={ctx} />
   if (ctx.discovered?.status === 'loading')
     return (
@@ -321,15 +353,21 @@ function SocialLinkCallbackInner({ flow, ctx }: { flow: SocialLinkFlow; ctx: Pag
     if (!callback || foreign || action?.kind !== 'link-reauth' || started.current) return
     started.current = true
     const { target } = action
-    ctx.accountApi
-      .linkSocial(target.provider, target.authorizationCode, target.redirectUri, {
+    linkSocial(
+      ctx.accountApi,
+      target.provider,
+      target.authorizationCode,
+      target.redirectUri,
+      {
         socialReauth: {
           provider: callback.provider,
           authorizationCode: callback.authorizationCode,
           redirectUri: callback.redirectUri,
+          ...proofOf(callback),
         },
-      })
-      .then(() => setDone(true), setFailure)
+      },
+      proofOf(target),
+    ).then(() => setDone(true), setFailure)
   }, [callback, foreign, action, ctx.accountApi])
 
   if (done)
@@ -372,6 +410,7 @@ function SocialLinkCallbackInner({ flow, ctx }: { flow: SocialLinkFlow; ctx: Pag
               provider: callback.provider,
               authorizationCode: callback.authorizationCode,
               ...(callback.redirectUri ? { redirectUri: callback.redirectUri } : {}),
+              ...proofOf(callback),
             },
           },
         }}
@@ -390,30 +429,32 @@ function SocialLinkCallbackInner({ flow, ctx }: { flow: SocialLinkFlow; ctx: Pag
         backTo={ctx.paths.account}
         requestCode={() => ctx.accountApi.requestReauthConfirmation()}
         onSubmit={async (credential) => {
-          await ctx.accountApi.linkSocial(
+          await linkSocial(
+            ctx.accountApi,
             callback.provider,
             callback.authorizationCode,
             callback.redirectUri,
             credential,
+            proofOf(callback),
           )
           setDone(true)
         }}
-        onProvider={(reauthProvider) => {
+        onProvider={async (reauthProvider) => {
           if (!accountId) return
-          // 연결하려던 제공자의 코드는 state 에 묶어 두고 이미 연결된 제공자의 동의를 거친다
-          window.location.assign(
-            flow.start(reauthProvider, {
-              accountId,
-              action: {
-                kind: 'link-reauth',
-                target: {
-                  provider: callback.provider,
-                  authorizationCode: callback.authorizationCode,
-                  ...(callback.redirectUri ? { redirectUri: callback.redirectUri } : {}),
-                },
+          // 연결하려던 제공자의 코드(와 그 시도의 verifier · nonce)는 state 에 묶어 두고 이미 연결된 제공자의 동의를 거친다
+          const { url } = await flow.start(reauthProvider, {
+            accountId,
+            action: {
+              kind: 'link-reauth',
+              target: {
+                provider: callback.provider,
+                authorizationCode: callback.authorizationCode,
+                ...(callback.redirectUri ? { redirectUri: callback.redirectUri } : {}),
+                ...proofOf(callback),
               },
-            }).url,
-          )
+            },
+          })
+          window.location.assign(url)
         }}
       />
     )
@@ -461,29 +502,39 @@ export function AccountPage({ ctx, settings }: { ctx: PageContext; settings: Set
   // 제공자 동의에서 돌아오며 실어 온 증거 — 한 번 쥐고 주소의 state 에서는 곧 지운다(새로고침 · 뒤로 가기에 인가 코드가 남지 않게)
   const [resume] = useState(() => state?.resume ?? null)
   const flow = ctx.socialLinkFlow
-  const beginRoundTrip = (provider: string, action: ProviderAction) => {
+  const [startError, setStartError] = useState<string | null>(null)
+  const beginRoundTrip = async (provider: string, action: ProviderAction) => {
     if (!flow || !accountId) return
-    window.location.assign(flow.start(provider, { accountId, action }).url)
+    setStartError(null)
+    try {
+      const { url } = await flow.start(provider, { accountId, action })
+      window.location.assign(url)
+    } catch (error) {
+      setStartError(authErrorMessage(error, mergeLabels(ctx.labels)).message)
+    }
   }
   if (!mounted) return null
   return (
-    <AccountSettings
-      api={ctx.accountApi}
-      labels={ctx.labels}
-      socialProviders={resolveMethods(ctx.methods).social}
-      onLinkSocial={flow && ((provider) => beginRoundTrip(provider, { kind: 'link' }))}
-      onProviderReauth={flow && beginRoundTrip}
-      resume={resume}
-      onResumeConsumed={() =>
-        navigate(location.pathname, {
-          replace: true,
-          state: state?.linked ? { linked: state.linked } : null,
-        })
-      }
-      onDeleted={() => void auth.logout()}
-      linkedProvider={state?.linked}
-      {...settings}
-    />
+    <>
+      {startError && <Alert tone="danger">{startError}</Alert>}
+      <AccountSettings
+        api={ctx.accountApi}
+        labels={ctx.labels}
+        socialProviders={resolveMethods(ctx.methods).social}
+        onLinkSocial={flow && ((provider) => beginRoundTrip(provider, { kind: 'link' }))}
+        onProviderReauth={flow && beginRoundTrip}
+        resume={resume}
+        onResumeConsumed={() =>
+          navigate(location.pathname, {
+            replace: true,
+            state: state?.linked ? { linked: state.linked } : null,
+          })
+        }
+        onDeleted={() => void auth.logout()}
+        linkedProvider={state?.linked}
+        {...settings}
+      />
+    </>
   )
 }
 

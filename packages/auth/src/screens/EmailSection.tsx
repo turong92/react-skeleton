@@ -86,12 +86,19 @@ export function EmailSection({
     <SectionCard id="email" title={labels.sectionEmail}>
       <div className={styles.stack}>
         <div className={styles.row}>
-          <span className={styles.muted}>{labels.emailCurrent}</span>
-          <strong>{email}</strong>
-          <Badge tone={verified ? 'success' : 'warning'}>
-            {verified ? labels.emailVerified : labels.emailUnverified}
-          </Badge>
+          {email ? (
+            <>
+              <span className={styles.muted}>{labels.emailCurrent}</span>
+              <strong>{email}</strong>
+              <Badge tone={verified ? 'success' : 'warning'}>
+                {verified ? labels.emailVerified : labels.emailUnverified}
+              </Badge>
+            </>
+          ) : (
+            <span className={styles.muted}>{labels.emailNone}</span>
+          )}
         </div>
+        {!email && !showCode && <p className={styles.muted}>{labels.emailAddHint}</p>}
         {changed && <Alert tone="success">{labels.emailChanged}</Alert>}
         {showCode ? (
           <div className={styles.stack}>
@@ -169,7 +176,7 @@ export function EmailSection({
                   loading={action.busy}
                   loadingLabel={labels.submitting}
                 >
-                  {labels.emailChangeSubmit}
+                  {email ? labels.emailChangeSubmit : labels.emailAddSubmit}
                 </Button>
                 {editing && (
                   <Button variant="ghost" onClick={() => setEditing(false)}>

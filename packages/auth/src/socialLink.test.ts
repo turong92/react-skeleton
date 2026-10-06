@@ -8,13 +8,13 @@ const providers = {
 }
 
 describe('createSocialLinkFlow (logged-in user adds a provider to the account)', () => {
-  it('start builds the authorize url for the link callback', () => {
+  it('start builds the authorize url for the link callback', async () => {
     const flow = createSocialLinkFlow({
       providers,
       accountApi: { linkSocial: vi.fn() },
       createState: () => 'state-1',
     })
-    const { url, state } = flow.start('google')
+    const { url, state } = await flow.start('google')
     expect(state).toBe('state-1')
     expect(new URL(url).searchParams.get('redirect_uri')).toBe(providers.google.redirectUri)
   })
@@ -39,8 +39,8 @@ describe('createSocialLinkFlow (logged-in user adds a provider to the account)',
       storage,
       createState: () => 'link-state',
     })
-    link.start('google')
-    login.start('google')
+    await link.start('google')
+    await login.start('google')
     // the two flows keep their states under different prefixes
     expect([...data.keys()].sort()).toEqual([
       'skeleton.social-link.link-state',
@@ -77,7 +77,7 @@ describe('createSocialLinkFlow (logged-in user adds a provider to the account)',
       accountApi: { linkSocial } as Pick<AccountApi, 'linkSocial'>,
       createState: () => 's',
     })
-    flow.start('google')
+    await flow.start('google')
     const result = await flow.complete('?code=abc&state=s')
     expect(linkSocial).toHaveBeenCalledWith('google', 'abc', providers.google.redirectUri)
     expect(result.provider).toBe('google')
@@ -103,7 +103,7 @@ describe('createSocialLinkFlow (logged-in user adds a provider to the account)',
       accountApi: { linkSocial },
       createState: () => 's',
     })
-    flow.start('google')
+    await flow.start('google')
     await expect(flow.complete('?code=abc')).rejects.toMatchObject({ reason: 'state_mismatch' })
     expect(linkSocial).not.toHaveBeenCalled()
   })
@@ -115,7 +115,7 @@ describe('createSocialLinkFlow (logged-in user adds a provider to the account)',
       accountApi: { linkSocial },
       createState: () => 's',
     })
-    flow.start('google')
+    await flow.start('google')
     await flow.complete('?code=abc&state=s')
     await expect(flow.complete('?code=abc&state=s')).resolves.toBeDefined() // same in-flight result, no second request
     expect(linkSocial).toHaveBeenCalledTimes(1)
@@ -155,7 +155,7 @@ describe('createSocialLinkFlow (logged-in user adds a provider to the account)',
       accountApi: { linkSocial },
       createState: () => 's',
     })
-    flow.start('google')
+    await flow.start('google')
     const first = await flow.read('?code=abc&state=s')
     expect(first).toEqual({
       provider: 'google',
@@ -176,7 +176,7 @@ describe('createSocialLinkFlow (logged-in user adds a provider to the account)',
       accountApi: { linkSocial },
       createState: () => 's',
     })
-    flow.start('google')
+    await flow.start('google')
     await flow.complete('?code=abc&state=s', { confirmationCode: '123456' })
     expect(linkSocial).toHaveBeenCalledWith('google', 'abc', providers.google.redirectUri, {
       confirmationCode: '123456',
@@ -210,7 +210,7 @@ describe('createSocialLinkFlow (logged-in user adds a provider to the account)',
         accountId: 'acc_1',
         action: { kind: 'email-change', newEmail: 'n@b.c' },
       } as const
-      flow.start('google', context)
+      await flow.start('google', context)
       const first = await flow.read('?code=abc&state=s')
       expect(first).toMatchObject({ provider: 'google', authorizationCode: 'abc', context })
       expect(await flow.read('?code=abc&state=s')).toEqual(first)
@@ -230,8 +230,92 @@ describe('createSocialLinkFlow (logged-in user adds a provider to the account)',
     it('a plain start has no context', async () => {
       const store = storage()
       const flow = make(store)
-      flow.start('google')
+      await flow.start('google')
       expect((await flow.read('?code=abc&state=s')).context).toBeUndefined()
+    })
+  })
+
+  describe('PKCE and nonce of the provider consent (LINE / X link, re-auth)', () => {
+    const line = {
+      line: {
+        clientId: '2001234567',
+        redirectUri: 'https://app.example.com/account/link-callback',
+        pkce: 'REQUIRED' as const,
+        nonce: 'REQUIRED' as const,
+        authorize: {
+          url: 'https://access.line.me/oauth2/v2.1/authorize',
+          scopes: ['openid', 'profile'],
+          params: {},
+        },
+      },
+    }
+    const storage = () => {
+      const data = new Map<string, string>()
+      return {
+        data,
+        storage: {
+          getItem: (k: string) => data.get(k) ?? null,
+          setItem: (k: string, v: string) => void data.set(k, v),
+          removeItem: (k: string) => void data.delete(k),
+        },
+      }
+    }
+
+    it('complete sends the verifier and nonce of THIS attempt at the top level of the link call', async () => {
+      const linkSocial = vi.fn(async () => ({}) as never)
+      const { data, storage: store } = storage()
+      const flow = createSocialLinkFlow({
+        providers: line,
+        accountApi: { linkSocial },
+        storage: store,
+        createState: () => 's',
+      })
+      await flow.start('line')
+      const kept = JSON.parse([...data.values()][0])
+      await flow.complete('?code=abc&state=s', { currentPassword: 'pw' })
+      expect(linkSocial).toHaveBeenCalledWith(
+        'line',
+        'abc',
+        line.line.redirectUri,
+        { currentPassword: 'pw' },
+        { codeVerifier: kept.codeVerifier, nonce: kept.nonce },
+      )
+    })
+
+    it('read hands the verifier and nonce back so a page that waits for the password still has them', async () => {
+      const { storage: store } = storage()
+      const flow = createSocialLinkFlow({
+        providers: line,
+        accountApi: { linkSocial: vi.fn() },
+        storage: store,
+        createState: () => 's',
+      })
+      await flow.start('line', {
+        accountId: 'acc',
+        action: { kind: 'unlink', identityId: 'idn_1' },
+      })
+      const read = await flow.read('?code=abc&state=s')
+      expect(read.codeVerifier).toMatch(/^[A-Za-z0-9\-._~]{43}$/)
+      expect(read.nonce).toBeTruthy()
+      expect(read.context).toEqual({
+        accountId: 'acc',
+        action: { kind: 'unlink', identityId: 'idn_1' },
+      })
+    })
+
+    it('a re-authentication round trip is stored as a "reauth", linking as a "link"', async () => {
+      const { data, storage: store } = storage()
+      let n = 0
+      const flow = createSocialLinkFlow({
+        providers: line,
+        accountApi: { linkSocial: vi.fn() },
+        storage: store,
+        createState: () => `s${(n += 1)}`,
+      })
+      await flow.start('line', { accountId: 'acc', action: { kind: 'link' } })
+      await flow.start('line', { accountId: 'acc', action: { kind: 'delete' } })
+      expect(JSON.parse(data.get('skeleton.social-link.s1') ?? '{}').action).toBe('link')
+      expect(JSON.parse(data.get('skeleton.social-link.s2') ?? '{}').action).toBe('reauth')
     })
   })
 })

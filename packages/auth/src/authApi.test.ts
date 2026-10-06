@@ -78,6 +78,26 @@ describe('createAuthApi (mirrors kotlin-skeleton modules/auth and auth-social)',
     ])
   })
 
+  it('socialLogin sends the PKCE codeVerifier and nonce next to the code, and nothing extra without them', async () => {
+    const { client, calls } = fakeClient(token)
+    const api = createAuthApi(client)
+    await api.socialLogin('line', 'c', 'https://app/cb', {
+      codeVerifier: 'v'.repeat(43),
+      nonce: 'nonce-0123456789',
+    })
+    await api.socialLogin('google', 'c2', 'https://app/cb')
+    expect(calls[0].request?.json).toEqual({
+      authorizationCode: 'c',
+      redirectUri: 'https://app/cb',
+      codeVerifier: 'v'.repeat(43),
+      nonce: 'nonce-0123456789',
+    })
+    expect(calls[1].request?.json).toEqual({
+      authorizationCode: 'c2',
+      redirectUri: 'https://app/cb',
+    })
+  })
+
   it('socialLogin leaves redirectUri out when not given and encodes the provider segment', async () => {
     const { client, calls } = fakeClient(token)
     await createAuthApi(client).socialLogin('my provider', 'code-2')

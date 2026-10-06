@@ -178,3 +178,10 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* 소셜 제공자 마크(providers.tsx) — 글자 높이에 맞춘 작은 정사각형 */
+.providerIcon {
+  inline-size: 1.25em;
+  block-size: 1.25em;
+  flex: none;
+}

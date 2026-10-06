@@ -4,6 +4,7 @@ import type {
   AuthPrincipal,
   AuthTokenResponse,
   PasswordLoginRequest,
+  SocialProof,
 } from './types'
 
 /** 리프레시 토큰이 오가는 방식 — 백엔드 `skeleton.auth-session.delivery`(`body` 기본 | `cookie`)와 같아야 한다 */
@@ -24,6 +25,8 @@ export type AuthApi = {
     provider: string,
     authorizationCode: string,
     redirectUri?: string,
+    /** 이 시도의 PKCE `codeVerifier` · `nonce` — 백엔드가 알려 준 제공자만(없으면 보내지 않는다) */
+    proof?: SocialProof,
   ): Promise<AuthTokenResponse>
   /** `POST /auth/refresh` (auth-session) — body 모드는 토큰을 본문으로, cookie 모드는 쿠키(+`X-Requested-With`)로 */
   refresh(refreshToken: string | null): Promise<AuthTokenResponse>
@@ -60,10 +63,10 @@ export function createAuthApi(
         ...(options?.deviceName ? { headers: { 'X-Device-Name': options.deviceName } } : {}),
       }),
     me: () => client.value<AuthPrincipal>('/auth/me'),
-    socialLogin: (provider, authorizationCode, redirectUri) =>
+    socialLogin: (provider, authorizationCode, redirectUri, proof) =>
       client.value<AuthTokenResponse>(`/auth/social/${encodeURIComponent(provider)}/login`, {
         method: 'POST',
-        json: { authorizationCode, redirectUri },
+        json: { authorizationCode, redirectUri, ...proof },
         skipAuth: true,
       }),
     refresh: (refreshToken) =>

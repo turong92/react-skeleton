@@ -106,6 +106,37 @@ describe('createAccountApi (mirrors kotlin-skeleton docs/account-http-contract.m
     expect(calls[3].request?.json).toEqual({ authorizationCode: 'code2', currentPassword: 'pw' })
   })
 
+  it('PKCE: codeVerifier / nonce ride top level on link, and inside socialReauth on every re-authenticated action', async () => {
+    const { client, calls } = fakeClient()
+    const api = createAccountApi(client)
+    const socialReauth = {
+      provider: 'line',
+      authorizationCode: 'fresh',
+      redirectUri: 'https://app/cb',
+      codeVerifier: 'v'.repeat(43),
+      nonce: 'n-0123456789',
+    }
+    await api.linkSocial(
+      'x',
+      'code',
+      'https://app/cb',
+      { socialReauth },
+      { codeVerifier: 'w'.repeat(43) },
+    )
+    await api.changeEmail({ newEmail: 'n@b.c', socialReauth })
+    await api.unlinkIdentity('idn_1', { socialReauth })
+    await api.deleteAccount({ socialReauth })
+    expect(calls[0].request?.json).toEqual({
+      authorizationCode: 'code',
+      redirectUri: 'https://app/cb',
+      socialReauth,
+      codeVerifier: 'w'.repeat(43),
+    })
+    expect(calls[1].request?.json).toEqual({ newEmail: 'n@b.c', socialReauth })
+    expect(calls[2].request?.json).toEqual({ socialReauth })
+    expect(calls[3].request?.json).toEqual({ socialReauth })
+  })
+
   it('requestReauthConfirmation → POST /account/reauth/confirmation (202, authenticated)', async () => {
     const { client, calls } = fakeClient({ status: 'ACCEPTED' })
     await createAccountApi(client).requestReauthConfirmation()

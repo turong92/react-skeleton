@@ -7,6 +7,9 @@ export type {
   DevLoginIdentity,
   PasswordLoginRequest,
   SocialLoginRequest,
+  SocialMode,
+  SocialAuthorizeInfo,
+  SocialProof,
 } from './types'
 export {
   applyAuthHeaders,
@@ -40,11 +43,24 @@ export {
 } from './social'
 export type {
   SocialCallback,
+  SocialAction,
+  AuthorizeExtras,
+  SocialComplete,
+  SocialStart,
   SocialLoginCallbackFailure,
   SocialLoginFlow,
   SocialLoginFlowOptions,
   SocialProviderConfig,
 } from './social'
+export {
+  codeChallengeS256,
+  createCodeVerifier,
+  createNonce,
+  createState,
+  hasWebCrypto,
+  PkceUnavailableError,
+} from './pkce'
+export { KNOWN_PROVIDER_CODES, providerPresentation } from './screens/providers'
 export { useSocialLoginCallback } from './useSocialLoginCallback'
 export type { SocialCallbackState } from './useSocialLoginCallback'
 
@@ -92,8 +108,9 @@ export {
   methodsFromInfo,
   normalizeMethodsInfo,
   peekAuthMethods,
+  redirectUriProblems,
 } from './discovery'
-export type { DiscoveredMethods, MethodsFromInfoOptions } from './discovery'
+export type { DiscoveredMethods, MethodsFromInfoOptions, RedirectUriProblem } from './discovery'
 export { useAuthMethods } from './screens/useAuthMethods'
 export type { AuthMethodsState } from './screens/useAuthMethods'
 export { DiscoveryLoading } from './screens/DiscoveryLoading'

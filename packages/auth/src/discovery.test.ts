@@ -6,6 +6,7 @@ import {
   loadAuthMethods,
   methodsFromInfo,
   normalizeMethodsInfo,
+  redirectUriProblems,
 } from './discovery'
 
 const wire = {
@@ -123,5 +124,38 @@ describe('loadAuthMethods (one request per api, shared by every page that needs 
     clearAuthMethodsCache(a)
     await loadAuthMethods(a)
     expect(a.methods).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('redirectUriProblems (the exact-match pitfalls of provider consoles)', () => {
+  const entry = (redirectUri: string | null) => ({ provider: 'line', clientId: 'c', redirectUri })
+  const expected = 'https://app.example.com/auth/callback'
+
+  it('is quiet when the backend address is byte-identical to this app’s callback', () => {
+    expect(redirectUriProblems([entry(expected)], expected)).toEqual([])
+    expect(redirectUriProblems([entry(null)], expected)).toEqual([]) // the app uses its own
+  })
+
+  it('names the origin when http/https, host or port differ — the provider would send the code to another place', () => {
+    for (const other of [
+      'http://app.example.com/auth/callback',
+      'https://www.example.com/auth/callback',
+      'https://app.example.com:8443/auth/callback',
+    ])
+      expect(redirectUriProblems([entry(other)], expected)).toMatchObject([
+        { provider: 'line', kind: 'origin' },
+      ])
+  })
+
+  it('names a trailing slash, which most providers compare exactly', () => {
+    expect(redirectUriProblems([entry(expected + '/')], expected)).toMatchObject([
+      { kind: 'trailing-slash' },
+    ])
+  })
+
+  it('names a different path: the callback would land where this app has no callback route', () => {
+    expect(redirectUriProblems([entry('https://app.example.com/cb/line')], expected)).toMatchObject(
+      [{ kind: 'path' }],
+    )
   })
 })

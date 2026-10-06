@@ -1,6 +1,6 @@
 import type { AccountApi, ReauthCredential } from './account/accountApi'
-import { createSocialLoginFlow, type SocialLoginFlowOptions } from './social'
-import type { AuthTokenResponse } from './types'
+import { createSocialLoginFlow, type SocialLoginFlowOptions, type SocialStart } from './social'
+import type { AuthTokenResponse, SocialProof } from './types'
 
 export type SocialLinkFlowOptions = Omit<SocialLoginFlowOptions, 'session'> & {
   accountApi: Pick<AccountApi, 'linkSocial'>
@@ -19,14 +19,18 @@ export type ProviderAction =
 /** state 에 묶여 돌아오는 값 — 어느 계정이 무슨 작업을 하려던 왕복인지 */
 export type SocialLinkContext = { accountId: string; action: ProviderAction }
 
-type SocialLinkCallbackBase = { provider: string; authorizationCode: string; redirectUri?: string }
+type SocialLinkCallbackBase = {
+  provider: string
+  authorizationCode: string
+  redirectUri?: string
+} & SocialProof
 
 /** 콜백이 돌려준, 서버로 보낼 값 — state 는 이미 확인했다. `context` 는 `start` 때 묶은 값 */
 export type SocialLinkCallback = SocialLinkCallbackBase & { context?: SocialLinkContext }
 
 export type SocialLinkFlow = {
   /** `context` 는 그 state 에 묶여 `read` 결과로 돌아온다(어느 계정의 무슨 작업인지) */
-  start(provider: string, context?: SocialLinkContext): { url: string; state: string }
+  start(provider: string, context?: SocialLinkContext): Promise<SocialStart>
   /** 콜백의 state · 에러 · code 를 확인하고 **서버를 부르지 않은 채** 값을 돌려준다 — 화면이 비밀번호를 먼저 받을 때. 같은 콜백을 두 번 읽어도 같은 결과 */
   read(search: string | URLSearchParams): Promise<SocialLinkCallback>
   /** `read` 한 뒤 `POST /account/identities/social/{provider}` — 로그인 상태는 바뀌지 않는다. 다시 인증(`currentPassword` · `confirmationCode` · `socialReauth`)은 서버가 강제한다 */
@@ -50,9 +54,15 @@ export function createSocialLinkFlow({
   const flow = createSocialLoginFlow({
     ...rest,
     storagePrefix,
+    purpose: 'link',
     session: {
-      socialLogin: async (provider, authorizationCode, redirectUri) =>
-        ({ provider, authorizationCode, redirectUri }) as unknown as AuthTokenResponse,
+      socialLogin: async (provider, authorizationCode, redirectUri, proof) =>
+        ({
+          provider,
+          authorizationCode,
+          redirectUri,
+          ...proof,
+        }) as unknown as AuthTokenResponse,
     },
   })
   const read: SocialLinkFlow['read'] = async (search) => {
@@ -64,18 +74,31 @@ export function createSocialLinkFlow({
   }
   const linked = new Map<string, Promise<{ provider: string }>>()
   return {
-    start: flow.start,
+    // 계정 연결(`link`)과 다른 작업(다시 인증)의 왕복은 구분해 보관한다 — 둘 다 이 흐름의 콜백으로 돌아온다
+    start: (provider, context) =>
+      flow.start(provider, context, {
+        action: !context || context.action.kind === 'link' ? 'link' : 'reauth',
+      }),
     read,
     complete(search, reauth) {
       const state = new URLSearchParams(search).get('state') ?? ''
       const known = linked.get(state)
       if (known) return known
-      const run = read(search).then(async ({ provider, authorizationCode, redirectUri }) => {
-        await (reauth
-          ? accountApi.linkSocial(provider, authorizationCode, redirectUri, reauth)
-          : accountApi.linkSocial(provider, authorizationCode, redirectUri))
-        return { provider }
-      })
+      const run = read(search).then(
+        async ({ provider, authorizationCode, redirectUri, codeVerifier, nonce }) => {
+          const proof: SocialProof = {
+            ...(codeVerifier ? { codeVerifier } : {}),
+            ...(nonce ? { nonce } : {}),
+          }
+          if (Object.keys(proof).length > 0)
+            await accountApi.linkSocial(provider, authorizationCode, redirectUri, reauth, proof)
+          else
+            await (reauth
+              ? accountApi.linkSocial(provider, authorizationCode, redirectUri, reauth)
+              : accountApi.linkSocial(provider, authorizationCode, redirectUri))
+          return { provider }
+        },
+      )
       if (state) linked.set(state, run)
       return run
     },

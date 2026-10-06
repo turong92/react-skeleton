@@ -4,13 +4,18 @@
 의존: `@skeleton/api-client` · `@skeleton/ui`(화면). peer: `react` `react-router-dom`.
 
 ```tsx
-const tokenStore = createTokenStore({ storage: window.sessionStorage }) // storage 생략 = 메모리만
+// 기본 저장소는 localStorage + crossTab(탭 사이 로그인 · 로그아웃 · 갱신 공유). 탭마다 따로면 sessionStorage, storage 생략 = 메모리만
+const keys = authStorageKeys('my-app') // 저장 키 · 락 · 채널 이름을 앱 이름으로 나눈다(같은 출처의 앱끼리 토큰이 섞이지 않게)
+const tokenStore = createTokenStore({ storage: window.localStorage, storageKey: keys.accessToken, crossTab: true })
+const refreshStore = createRefreshStore({ storage: window.localStorage, storageKey: keys.refresh, crossTab: true })
 const apiClient = createApiClient({
   ...,
   getAuthHeaders: createAuthHeadersProvider(tokenStore),
-  onError: createUnauthorizedHandler({ store: tokenStore }), // 401 → 토큰 삭제(+ onUnauthorized)
+  onError: createUnauthorizedHandler({ store: tokenStore, refreshStore }), // 복구할 수 없는 401 → 두 저장소 삭제(+ onUnauthorized)
 })
-const authSession = createAuthSession({ api: createAuthApi(apiClient), store: tokenStore })
+const authSession = createAuthSession({ api: createAuthApi(apiClient), store: tokenStore, refreshStore, refresher })
+// 로그아웃 · 다른 탭의 로그아웃 · 갱신 실패 · 다른 계정의 링크 로그인 — 계정이 사라지거나 바뀔 때마다 서버 상태 캐시를 비운다
+onAccountChange(authSession, () => queryClient.clear())
 
 <AuthProvider session={authSession}> … </AuthProvider>
 { element: <RequireAuth redirectTo="/login" />, children: [{ path: '/account', element: <Account /> }] }

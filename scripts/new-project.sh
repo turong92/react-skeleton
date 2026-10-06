@@ -46,7 +46,7 @@ usage: scripts/new-project.sh <target-dir> <name> [--packages a,b,c] [--ssr] [--
   --ssr             앱을 서버 렌더 스타터(apps/starter-ssr: Node 서버 + 하이드레이션)로 — 기본은 SPA 스타터(apps/starter)
   --without-storybook  스토리집(apps/storybook) · 스토리 · 에이전트 안내 · 카탈로그를 떼고 찍는다 — 기본은 모두 따라온다
   --with-workbench  apps/workbench(백엔드 확인용 시각적 테스트 벤치)도 남긴다 — 모든 패키지가 남는다
-  --auth-methods    로그인 방법을 이 목록으로 고정(쉼표): password · magic-link · 소셜 제공자 코드(google · kakao · naver). 안 주면 앱이 백엔드(GET /auth/methods)가 알려 주는 대로 따른다 — 환경변수 VITE_AUTH_METHODS 가 언제나 이긴다
+  --auth-methods    로그인 방법을 이 목록으로 고정(쉼표): password · magic-link(magic_link 도 된다) · 소셜 제공자 코드(google · kakao · naver). 안 주면 앱이 백엔드(GET /auth/methods)가 알려 주는 대로 따른다 — 환경변수 VITE_AUTH_METHODS 가 언제나 이긴다
   --with-sample     참조 앱 apps/sample(Notes)도 남긴다 — 백엔드 kotlin-skeleton 의 apps/sample 과 짝. 기본은 떼고 찍는다
   --scope           패키지 스코프를 바꾼다 (예: @acme → @acme/ui). 기본 @skeleton
 EOF2
@@ -96,7 +96,7 @@ echo "$NAME" | grep -Eq '^[a-z][a-z0-9-]*$' || die_usage "name must be lower-cas
 [ "$NAME" != sample ] || die_usage "the name 'sample' is reserved (apps/sample)"
 [ "$NAME" != storybook ] || die_usage "the name 'storybook' is reserved (apps/storybook)"
 [ "$NAME" != storybook-app ] || die_usage "the name 'storybook-app' is reserved (the package name of apps/storybook)"
-if [ -n "$AUTH_METHODS" ]; then echo "$AUTH_METHODS" | grep -Eq '^[a-z][a-z-]*(,[a-z][a-z-]*)*$' || die_usage "--auth-methods must be a comma list like password,magic-link,google: $AUTH_METHODS"; fi
+if [ -n "$AUTH_METHODS" ]; then echo "$AUTH_METHODS" | grep -Eq '^[a-z][a-z_-]*(,[a-z][a-z_-]*)*$' || die_usage "--auth-methods must be a comma list like password,magic-link,google: $AUTH_METHODS"; fi
 echo "$SCOPE" | grep -Eq '^@[a-z][a-z0-9-]*$' || die_usage "scope must look like @acme: $SCOPE"
 
 ALL_PACKAGES="$(valid_packages)"

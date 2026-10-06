@@ -75,7 +75,7 @@ GET /            server/main.ts ─ createHandler(server/handler.ts)
 
 ## 인증 — 토큰은 브라우저에만 있다
 
-토큰은 `sessionStorage`(앱의 `auth/storage.ts` — `apps/starter` 와 같다)에 있고 서버로 보내지 않는다. 그래서 **서버는 로그인 여부를 모른다.**
+토큰은 `localStorage`(앱의 `auth/storage.ts` — `apps/starter` 와 같다. 탭 사이 로그인이 공유되고 `crossTab` 이 따라간다)에 있고 서버로 보내지 않는다. 그래서 **서버는 로그인 여부를 모른다.**
 
 - 서버 렌더와 하이드레이션 첫 그림은 항상 「로그인 안 한」 상태다(`createDeferredTokens`: 저장소를 **생성할 때 읽지 않고** 하이드레이션 뒤 `AuthRoot` 의 effect 가 `restore()` 로 올린다). 읽는 순간 헤더의 로그아웃 버튼이 달라져 서버 HTML 과 어긋난다 — `src/hydration.test.tsx` 의 대조 검사가 그 경우를 일부러 재현해, 검사가 실제로 실패할 수 있음을 보인다.
 - 보호된 `/account` 는 `ClientRequireAuth` 아래에 있다. 복원이 끝나기 전에는 **중립 자리 표시(스피너 `확인 중`)만** 그린다 — 보호된 내용도 `/login` 이동도 없다. 서버 응답은 200(+ `noindex`). 복원이 끝나면 `RequireAuth` 와 똑같이 동작한다(로그인 안 했으면 `/login` 으로, 돌아올 위치를 기억한다).

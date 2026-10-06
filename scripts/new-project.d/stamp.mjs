@@ -283,6 +283,12 @@ function apply(
   // 2. 앱 이름
   if (name !== source) renameSync(join(target, 'apps', source), app)
   applyAuthMethods(app, process.env.AUTH_METHODS ?? '')
+  // 저장 키 · 락 · 채널 이름의 접두어 — 같은 출처에 앱 둘을 올려도 토큰이 섞이지 않게 새 앱 이름으로
+  replaceOnce(
+    join(app, 'src/auth/authConfig.ts'),
+    `AUTH_NAMESPACE = '${source}'`,
+    `AUTH_NAMESPACE = '${name}'`,
+  )
   const appJson = readJson(join(app, 'package.json'))
   writeJson(join(app, 'package.json'), { ...appJson, name, version: '0.1.0' })
   if (ssr) {

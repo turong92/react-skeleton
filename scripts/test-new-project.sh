@@ -141,6 +141,8 @@ check "eslint 의 앱 이름 막기에 sample 이 없다 (앱이 없으니)" bas
 [ "$(json "$A/apps/acme-app/package.json" 'p.name')" = "acme-app" ] && pass "앱 package.json 이름" || fail "앱 package.json 이름"
 check "index.html 제목" grep -q '<title>acme-app</title>' "$A/apps/acme-app/index.html"
 check "헤더 브랜드 글자" grep -q '<strong>acme-app</strong>' "$A/apps/acme-app/src/layouts/RootLayout.tsx"
+check "인증 이름공간(저장 키 · 락 · 채널 접두어)이 새 이름으로 찍힌다 (같은 출처의 앱끼리 토큰이 섞이지 않게)" bash -c "grep -q \"AUTH_NAMESPACE = 'acme-app'\" '$A/apps/acme-app/src/auth/authConfig.ts'"
+check "앱 껍데기가 Referer 를 막는다 (일회용 토큰 유출 방지)" grep -q 'name="referrer" content="no-referrer"' "$A/apps/acme-app/index.html"
 check ".env.example 첫 줄에 이름" bash -c "head -1 '$A/apps/acme-app/.env.example' | grep -q 'acme-app'"
 want="api-client auth theme time tokens ui"
 [ "$(listing "$A/packages")" = "$want" ] && pass "패키지는 스타터가 쓰는 것 + 도구만 남는다 ($want)" || fail "packages: [$(listing "$A/packages")] expected [$want]"

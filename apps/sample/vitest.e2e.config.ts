@@ -19,6 +19,6 @@ export default defineConfig({
     pool: 'forks',
     fileParallelism: false,
     testTimeout: 90_000,
-    hookTimeout: 300_000, // 컨테이너 · 백엔드 첫 기동(그레이들)이 걸린다
+    hookTimeout: 600_000, // 컨테이너 · 백엔드 첫 기동(그레이들)이 걸린다 — 부하가 큰 기계에서는 몇 분
   },
 })

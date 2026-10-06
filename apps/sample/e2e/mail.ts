@@ -2,7 +2,7 @@
 type Summary = { ID: string; To: Array<{ Address: string }>; Subject: string }
 
 const LINK =
-  /https?:\/\/[^\s"'<>)]+\/(verify-email|magic-link|reset-password|confirm-email-change|confirm-delete)\?token=[A-Za-z0-9_\-.~%]+/
+  /https?:\/\/[^\s"'<>)]+\/(verify-email|magic-link|reset-password|confirm-email-change|confirm-reauth|confirm-delete)\?token=[A-Za-z0-9_\-.~%]+/
 
 export type MailLink = {
   kind: string

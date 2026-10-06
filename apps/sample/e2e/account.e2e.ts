@@ -188,6 +188,8 @@ describe('operator tools (opt-in @skeleton/auth/admin)', () => {
     await pwExpect(page.getByText('user@example.com')).toBeVisible()
     await page.getByLabel(auth.adminSearch).fill(email)
     await pwExpect(page.getByText(email)).toBeVisible()
-    await pwExpect(page.getByText(auth.adminStatus.DELETED)).toBeVisible()
+    await pwExpect(
+      page.getByRole('region', { name: auth.adminCaption }).getByText(auth.adminStatus.DELETED),
+    ).toBeVisible()
   })
 })

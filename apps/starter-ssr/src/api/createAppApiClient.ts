@@ -9,6 +9,7 @@ import {
 import {
   createAuthHeadersProvider,
   createUnauthorizedHandler,
+  type RefreshStore,
   type TokenStore,
 } from '@skeleton/auth'
 import { userTimeZone } from '@skeleton/time'
@@ -18,6 +19,8 @@ export type AppApiClientOptions = {
   /** `import.meta.env` — 환경변수는 앱이 읽어 넘긴다(패키지는 읽지 않는다) */
   env: Record<string, unknown>
   tokenStore: TokenStore
+  /** 주면 복구할 수 없는 401 에 갱신 자격도 함께 비운다(액세스 토큰만 지우면 새로고침이 다시 로그인시킨다) */
+  refreshStore?: RefreshStore
   /** 401(세션 만료) 뒤 — 토큰은 이미 지워졌다. 라우트 가드가 로그인으로 보내므로 보통 필요 없다 */
   onUnauthorized?: (error: ApiRequestError) => void
   /** 401 → 토큰 갱신 → 한 번 재시도(`@skeleton/auth` 의 `createSessionRefresher().recover`) */
@@ -37,6 +40,7 @@ export type AppApiClientOptions = {
 export function createAppApiClient({
   env,
   tokenStore,
+  refreshStore,
   onUnauthorized,
   recoverUnauthorized,
   withCredentials,
@@ -52,6 +56,6 @@ export function createAppApiClient({
     getAuthHeaders: createAuthHeadersProvider(tokenStore),
     getTimeZone: userTimeZone,
     onResponseDate: (date) => serverClock.observeDateHeader(date),
-    onError: createUnauthorizedHandler({ store: tokenStore, onUnauthorized }),
+    onError: createUnauthorizedHandler({ store: tokenStore, refreshStore, onUnauthorized }),
   })
 }

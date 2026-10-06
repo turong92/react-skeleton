@@ -1,8 +1,14 @@
-import { createAccountApi, createAuthApi, createAuthRoutes, koAuthLabels } from '@skeleton/auth'
+import {
+  createAccountApi,
+  createAuthApi,
+  createAuthRoutes,
+  createBroadcastReauthChannel,
+  koAuthLabels,
+} from '@skeleton/auth'
 import { useMemo } from 'react'
 import { useApi } from '../api/useApi'
 import { ClientRequireAuth } from './ClientRequireAuth'
-import { authMethodsOverride, parseDelivery } from './authConfig'
+import { AUTH_NAMESPACE, authKeys, authMethodsOverride, parseDelivery } from './authConfig'
 
 /** 요청마다 · 앱마다 만든 API 클라이언트(컨텍스트)로 인증 · 계정 API 를 만든다 — 서버 렌더 앱은 모듈 전역 API 가 없다 */
 function useApis() {
@@ -25,7 +31,10 @@ function useApis() {
  */
 export const accountRoutes = (handle?: (page: string) => unknown) =>
   createAuthRoutes({
-    session: { getState: () => ({ status: 'anonymous', token: null, principal: null }) },
+    namespace: AUTH_NAMESPACE,
+    // 본인 확인 링크를 연 새 탭이 토큰을 하려던 작업이 있는 탭에 넘기는 길 — 브라우저에서만 연다(서버는 BroadcastChannel 을 열어 두면 프로세스가 끝나지 않는다)
+    reauthChannel:
+      typeof window === 'undefined' ? null : createBroadcastReauthChannel(authKeys.reauthChannel),
     useApis,
     // 방법은 백엔드가 알려 준다(`GET /auth/methods` — 서버는 로딩 화면을 그리고 브라우저가 묻는다). 환경변수 · 고정 목록이 덮어쓴다
     methods: authMethodsOverride && { ...authMethodsOverride, social: [] },

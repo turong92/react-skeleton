@@ -150,3 +150,54 @@ describe('deferred refresh credentials', () => {
     expect(tokens.store.get()).toBe('access-1')
   })
 })
+
+describe('M4 — the guard waits for the refresh that restore() may need', () => {
+  it('with only a refresh credential stored, isRestored() turns true after the refresh settled — not before (no early redirect to /login)', async () => {
+    const { storage } = fakeStorage({
+      'skeleton.refresh': JSON.stringify({ refreshToken: 'r1.1', sessionId: 'ses_1' }),
+    })
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => (release = resolve))
+    const tokens = createDeferredTokens({ storage })
+    const auth = createAuth({
+      api: {
+        ...api,
+        refresh: async () => {
+          await gate
+          return {
+            accessToken: 'refreshed-token',
+            tokenType: 'Bearer',
+            expiresAt: '2030-01-01T00:00:00Z',
+            principal: { accountId: 'a1', roles: [] },
+            refreshToken: 'r1.2',
+          }
+        },
+      },
+      tokens,
+    })
+    auth.restore()
+    expect(auth.isRestored()).toBe(false)
+    expect(auth.session.getState().status).toBe('anonymous')
+    release()
+    await vi.waitFor(() => expect(auth.isRestored()).toBe(true))
+    expect(auth.session.getState().status).toBe('authenticated')
+  })
+
+  it('a refresh that fails with the network still ends the waiting (the guard then decides)', async () => {
+    const { storage } = fakeStorage({
+      'skeleton.refresh': JSON.stringify({ refreshToken: 'r1.1' }),
+    })
+    const tokens = createDeferredTokens({ storage })
+    const auth = createAuth({
+      api: {
+        ...api,
+        refresh: async () => {
+          throw new Error('offline')
+        },
+      },
+      tokens,
+    })
+    auth.restore()
+    await vi.waitFor(() => expect(auth.isRestored()).toBe(true))
+  })
+})

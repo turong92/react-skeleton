@@ -10,6 +10,7 @@ import {
   type BadgeProps,
   type MarkdownFacts,
 } from '@skeleton/ui'
+import { ApiRequestError } from '@skeleton/api-client'
 import { useState } from 'react'
 import { pickDocuments } from './consentLogic'
 import { DocumentDialog } from './DocumentDialog'
@@ -57,7 +58,7 @@ export function ConsentSettings({
 }: ConsentSettingsProps) {
   const labels = mergeLegalLabels(given)
   const mine = useMyConsents(api)
-  const documents = useLegalDocuments(api)
+  const documents = useLegalDocuments(api, { enabled: mine.isSuccess })
   const agree = useAgree(api)
   const withdraw = useWithdraw(api)
   const [open, setOpen] = useState<{
@@ -81,6 +82,12 @@ export function ConsentSettings({
         <Skeleton />
       </SectionCard>
     )
+  // legal 모듈이 없는 백엔드(401 · 403 · 404 · 405) — 스타터 · 샘플이 늘 이 절을 붙여 두므로 오류 대신 아무것도 그리지 않는다
+  if (
+    mine.error instanceof ApiRequestError &&
+    [401, 403, 404, 405].includes(mine.error.apiError.status)
+  )
+    return null
   if (mine.isError || !mine.data)
     return (
       <SectionCard id={id} title={labels.settingsTitle}>

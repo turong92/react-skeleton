@@ -21,8 +21,13 @@ export function legalRetry(failureCount: number, error: unknown): boolean {
 }
 
 /** 현재 판 목록(종류 · 언어마다 한 줄) */
-export function useLegalDocuments(api: LegalApi) {
-  return useQuery({ ...documentsQuery(api), staleTime: FIVE_MINUTES, retry: legalRetry })
+export function useLegalDocuments(api: LegalApi, options: { enabled?: boolean } = {}) {
+  return useQuery({
+    ...documentsQuery(api),
+    enabled: options.enabled ?? true,
+    staleTime: FIVE_MINUTES,
+    retry: legalRetry,
+  })
 }
 
 /** 문서 한 건 — `enabled` 가 false 면 열릴 때까지 가져오지 않는다(다이얼로그) */
@@ -42,7 +47,11 @@ export function useLegalDocument(
 
 /** 내 동의 상태 — 로그인한 사람만 부른다 */
 export function useMyConsents(api: LegalApi, options: { enabled?: boolean } = {}) {
-  return useQuery({ ...myConsentsQuery(api), enabled: options.enabled ?? true })
+  return useQuery({
+    ...myConsentsQuery(api),
+    enabled: options.enabled ?? true,
+    retry: legalRetry,
+  })
 }
 
 export function useConsentHistory(api: LegalApi, page: number, size = 10) {

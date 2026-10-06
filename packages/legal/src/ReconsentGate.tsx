@@ -45,7 +45,8 @@ export function ReconsentGate({
 }: ReconsentGateProps) {
   const state = useSyncExternalStore(controller.subscribe, controller.getState, controller.getState)
   const required = state.status === 'required'
-  const documents = useLegalDocuments(api)
+  // 제목 · 언어를 쓰는 건 막이 열렸을 때뿐 — 열려 있지 않으면 묻지 않는다(legal 모듈이 없는 백엔드에 화면마다 묻지 않게)
+  const documents = useLegalDocuments(api, { enabled: required })
   const [failure, setFailure] = useState<'stale' | 'failed' | null>(null)
   const [open, setOpen] = useState<ConsentRow | null>(null)
 

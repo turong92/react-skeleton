@@ -21,10 +21,10 @@ function fakeClient(result: unknown = {}) {
 }
 
 describe('createLegalApi (mirrors kotlin-skeleton docs/legal-http-contract.md)', () => {
-  it('documents → GET /legal/documents, public (no sign-in header, cacheable)', async () => {
+  it('documents → GET /legal/documents — sent with the sign-in when there is one, so a 401 always means the session (a skipAuth call answering 401 on a backend without the module would sign the user out)', async () => {
     const { client, calls } = fakeClient([])
     await createLegalApi(client).documents()
-    expect(calls).toEqual([{ kind: 'list', path: '/legal/documents', request: { skipAuth: true } }])
+    expect(calls).toEqual([{ kind: 'list', path: '/legal/documents', request: undefined }])
   })
 
   it('document → GET /legal/documents/{type} with version and locale, public; the type is encoded', async () => {
@@ -35,7 +35,7 @@ describe('createLegalApi (mirrors kotlin-skeleton docs/legal-http-contract.md)',
     expect(calls[0]).toEqual({
       kind: 'value',
       path: '/legal/documents/terms',
-      request: { skipAuth: true, params: { version: '2026-10-01', locale: 'ko' } },
+      request: { params: { version: '2026-10-01', locale: 'ko' } },
     })
     expect(calls[1].path).toBe('/legal/documents/a%20b')
     expect(calls[1].request?.params).toEqual({})

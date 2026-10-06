@@ -25,6 +25,7 @@ function Demo({
   trigger?: Array<{ type: string; version: string; reason: 'NOT_AGREED' | 'STALE' }>
 }) {
   const api = useMemo(() => createFakeLegalApi(fake), [fake])
+  ;(window as unknown as { __legalCalls: string[] }).__legalCalls = api.calls
   const controller = useMemo(() => createReconsentController({ api }), [api])
   const [result, setResult] = useState('')
   async function call() {
@@ -95,6 +96,17 @@ export const NothingMissingShowsNothing: Story = {
   play: async ({ canvas }) => {
     await expect(await canvas.findByRole('heading', { name: '내 노트' })).toBeVisible()
     await expect(screen.queryByRole('dialog')).toBeNull()
+  },
+}
+
+/** 막이 열려 있지 않은 동안은 문서 목록을 묻지 않는다 — legal 모듈이 없는 백엔드에 모든 화면이 쓸데없이 묻지 않게 */
+export const IdleGateDoesNotFetchDocuments: Story = {
+  args: { fake: {}, accountId: 'acc-1' },
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByRole('heading', { name: '내 노트' })).toBeVisible()
+    const calls = (window as unknown as { __legalCalls: string[] }).__legalCalls
+    await waitFor(() => expect(calls).toContain('myConsents')) // 로그인 확인은 한다
+    await expect(calls).not.toContain('documents')
   },
 }
 

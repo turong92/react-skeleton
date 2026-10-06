@@ -180,6 +180,7 @@ export function createFakeLegalApi(options: FakeLegalOptions = {}): LegalApi & {
     },
     async myConsents() {
       calls.push('myConsents')
+      if (options.noModule) throw error('COMMON.NOT_FOUND', 404)
       return mine()
     },
     async agree(consents, source) {

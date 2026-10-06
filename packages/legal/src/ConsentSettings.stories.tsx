@@ -59,6 +59,17 @@ export const HistoryShowsAgreementAndWithdrawal: Story = {
   },
 }
 
+/** legal 모듈이 없는 백엔드 — 빨간 「불러오지 못했어요」 대신 절이 통째로 없다(스타터 · 샘플이 늘 붙여 두므로) */
+export const BackendWithoutTheModuleShowsNoSection: Story = {
+  args: { fake: { noModule: 404 } },
+  play: async ({ canvas }) => {
+    await waitFor(() => expect(canvas.queryByRole('region', { name: '약관 동의' })).toBeNull())
+    await new Promise((resolve) => setTimeout(resolve, 300)) // 로딩 뼈대가 사라질 때까지
+    await expect(canvas.queryByRole('region')).toBeNull()
+    await expect(canvas.queryByText('동의 내역을 불러오지 못했어요.')).toBeNull()
+  },
+}
+
 export const ReadTheDocument: Story = {
   args: { fake: {} },
   play: async ({ canvas, userEvent }) => {

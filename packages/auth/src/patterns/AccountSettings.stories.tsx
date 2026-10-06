@@ -127,6 +127,9 @@ export const HandoffFromAnotherTab: Story = {
     await expect(await hub.open().offer(FAKE_REAUTH_TOKEN, 1000)).toBe(true)
     await expect(await canvas.findByText(/We sent a link to next@example.com/)).toBeVisible()
     await expect(await canvas.findByText(/your email changes when you open it/i)).toBeVisible()
+    // 마친 뒤에는 「메일을 확인해 주세요」 안내와 입력이 남지 않는다 — 서버가 말해 주는 대기 상태 하나만
+    await expect(canvas.queryByText('Check your email')).toBeNull()
+    await expect(canvas.getByLabelText(/^New email/)).toHaveValue('')
   },
 }
 

@@ -108,7 +108,11 @@ export function AccountSettings({
         reload()
         if (outcome.status === 'completed') {
           stopLater.current()
-          stopLater.current = reloadLater(reload, [1200, 3500, 8000], () => pendingSeen.current)
+          stopLater.current = reloadLater(
+            reload,
+            [400, 1500, 4000, 8000],
+            () => pendingSeen.current,
+          )
         }
       },
     })
@@ -203,7 +207,7 @@ export function AccountSettings({
             stopLater.current()
             stopLater.current = reloadLater(
               me.reload,
-              [1200, 3500, 8000],
+              [400, 1500, 4000, 8000],
               () => pendingSeen.current,
             )
           }}

@@ -51,6 +51,13 @@ export function EmailSection({
   const action = useAction(labels)
   const resend = useAction(labels)
   const reauthActive = !hasPassword && !!reauth
+  // 서버가 방금 요청한 새 주소를 대기 상태로 보여 주면(링크를 연 탭이 이어서 마쳤다) 「메일을 확인해 주세요」 안내와 입력은 할 일을 다했다
+  const alreadyPending =
+    !!pendingEmail && pendingEmail.toLowerCase() === newEmail.trim().toLowerCase()
+  if (alreadyPending && (mailSent || newEmail)) {
+    setMailSent(false)
+    setNewEmail('')
+  }
 
   async function submit(event: FormEvent) {
     event.preventDefault()

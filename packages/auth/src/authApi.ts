@@ -31,8 +31,8 @@ export type AuthApi = {
   logout(refreshToken: string | null): Promise<void>
   /** `POST /auth/magic-link/request` (auth-magic-link) — 항상 202(없는 주소여도 같다) */
   magicLinkRequest(email: string, captchaToken?: string): Promise<void>
-  /** `POST /auth/magic-link/redeem` — 메일 링크의 토큰을 로그인으로 바꾼다(410 `ACCOUNT.TOKEN_INVALID`) */
-  magicLinkRedeem(token: string): Promise<AuthTokenResponse>
+  /** `POST /auth/magic-link/redeem` — 메일 링크의 토큰을 로그인으로 바꾼다(410 `ACCOUNT.TOKEN_INVALID`). `deviceName` 은 로그인처럼 `X-Device-Name` 헤더로 간다 */
+  magicLinkRedeem(token: string, options?: { deviceName?: string }): Promise<AuthTokenResponse>
 }
 
 export type AuthApiOptions = {
@@ -87,11 +87,12 @@ export function createAuthApi(
         skipAuth: true,
       })
     },
-    magicLinkRedeem: (token) =>
+    magicLinkRedeem: (token, options) =>
       client.value<AuthTokenResponse>('/auth/magic-link/redeem', {
         method: 'POST',
         json: { token },
         skipAuth: true,
+        ...(options?.deviceName ? { headers: { 'X-Device-Name': options.deviceName } } : {}),
       }),
   }
 }

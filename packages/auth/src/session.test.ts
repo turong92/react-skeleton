@@ -41,6 +41,17 @@ describe('createAuthSession', () => {
     expect(session.getState()).toEqual({ status: 'anonymous', token: null, principal: null })
   })
 
+  it('magicLinkLogin names this device like login does (X-Device-Name for the session list)', async () => {
+    const magicLinkRedeem = vi.fn(async () => response('magic-token'))
+    const session = createAuthSession({
+      api: fakeApi({ magicLinkRedeem }),
+      store: createTokenStore(),
+      deviceName: 'Pixel',
+    })
+    await session.magicLinkLogin('tok')
+    expect(magicLinkRedeem).toHaveBeenCalledWith('tok', { deviceName: 'Pixel' })
+  })
+
   it('starts authenticated from a stored token, decoding the principal from its claims', () => {
     const store = createTokenStore()
     store.set(fakeJwt({ sub: 'acc_9', roles: ['ADMIN'] }))

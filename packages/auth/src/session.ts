@@ -112,7 +112,12 @@ export function createAuthSession({
       accept(await (deviceName ? api.login(credentials, { deviceName }) : api.login(credentials))),
     socialLogin: async (provider, authorizationCode, redirectUri) =>
       accept(await api.socialLogin(provider, authorizationCode, redirectUri)),
-    magicLinkLogin: async (token) => accept(await api.magicLinkRedeem(token)),
+    magicLinkLogin: async (token) =>
+      accept(
+        await (deviceName
+          ? api.magicLinkRedeem(token, { deviceName })
+          : api.magicLinkRedeem(token)),
+      ),
     signIn: accept,
     async logout() {
       const refreshToken = refreshStore?.get()?.refreshToken ?? null

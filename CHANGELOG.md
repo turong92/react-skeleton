@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — 계정 프런트를 백엔드 FINAL-3(인증번호 · kotlin-skeleton cbb8b4a)에 맞춘다 — 링크 왕복을 걷어낸다 (2026-10-07)
 
-- **초안 대비 어긋남을 바로잡음**: `ACCOUNT.CODE_INVALID`/`CODE_EXPIRED`/`AUTH.TOO_MANY_REFRESHES` 코드 · `verifySignUpCode` 가 `X-Device-Name` 을 싣는다(`createAccountApi(client, { deviceName })`) · 가입 응답은 늘 `signUpId` 를 준다(메일 인증을 끈 백엔드만 `CREATED`) · `SignUpScreen.onVerifyCode` 는 필수가 됐고 코드 없는 「링크를 열어 주세요」 갈래는 없다 · 로그인 화면의 「인증 메일 다시 받기」 삭제(재전송은 `signUpId` 로만 — 미인증 계정은 더 만들어지지 않는다).
+- **초안 대비 어긋남을 바로잡음**: `ACCOUNT.CODE_INVALID`/`CODE_EXPIRED`/`AUTH.TOO_MANY_REFRESHES` 코드 · `verifySignUpCode`(`createAccountApi(client, { deviceName })`) · `magicLinkRedeem`(세션의 `deviceName`)이 `X-Device-Name` 을 싣는다 · 가입 응답은 늘 `signUpId` 를 준다(메일 인증을 끈 백엔드만 `CREATED`) · `SignUpScreen.onVerifyCode` 는 필수가 됐고 코드 없는 「링크를 열어 주세요」 갈래는 없다 · 로그인 화면의 「인증 메일 다시 받기」 삭제(재전송은 `signUpId` 로만 — 미인증 계정은 더 만들어지지 않는다).
 - **다시 인증 = 계정에 맞는 하나**(`ReauthProof` · `reauthKindOf(reauthSubjectOf(me))`): 비밀번호 · 메일로 받은 6자리를 **그 자리에서** 입력(`CodeEntry`; 틀리면 남은 횟수 · 만료면 새로 받기) · 주소가 없는 계정은 이미 연결된 제공자 동의 왕복(`socialReauth`). 이메일 변경 · 첫 비밀번호 · 소셜 연결 · **연결 해제(이제 다시 인증이 든다)** · 삭제가 같은 부품을 쓴다. 삭제는 별도의 삭제 코드 + 글자 확인.
 - **이메일 변경 = 새 주소의 인증번호**: 설정의 코드 단계가 `me.pendingEmail` 로 열려 새로고침을 견디고 `POST /account/email/change/confirm` 로 마친다(다른 세션만 끊긴다). 서버에 취소 엔드포인트가 없어 「코드 다시 받기」는 새 요청이 대신하는 것.
 - **제공자 동의 왕복**: `createSocialLinkFlow().start(provider, { accountId, action })` — 하려던 작업과 계정이 OAuth `state` 기록에 묶인다(`ProviderAction` · `SocialLinkContext`; 같은 콜백을 두 번 읽어도 같은 결과 · 다른 계정이 시작한 왕복은 거절 · 로그아웃하면 기록을 비운다). 돌아오면 설정 화면이 하려던 작업을 한 번만 이어서 한다.

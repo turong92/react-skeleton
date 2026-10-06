@@ -131,6 +131,13 @@ describe('createAuthApi (mirrors kotlin-skeleton modules/auth and auth-social)',
     expect(calls[0].request?.json).toEqual({ email: 'a@b.c', password: 'pw' })
   })
 
+  it('magic link redeem passes the optional device name as X-Device-Name too (the contract honours it there)', async () => {
+    const { client, calls } = fakeClient(token)
+    await createAuthApi(client).magicLinkRedeem('tok', { deviceName: 'Pixel' })
+    expect(calls[0].request?.headers).toEqual({ 'X-Device-Name': 'Pixel' })
+    expect(calls[0].request?.json).toEqual({ token: 'tok' })
+  })
+
   it('magic link: request → 202 body, redeem → tokens', async () => {
     const { client, calls } = fakeClient(token)
     const api = createAuthApi(client)

@@ -1,20 +1,21 @@
 import {
   expect as baseExpect,
   type Browser,
-  type BrowserContext,
+  type Locator,
   type Page,
   type Route,
 } from 'playwright/test'
 import { afterAll, beforeAll, describe, inject, it } from 'vitest'
 import { auth, dismissConsent, fillSignIn, ko, launch } from './helpers'
-import { waitForLink } from './mail'
+import { subjectsFor, waitForCode, waitForLink } from './mail'
 
 /*
- * 계정 수명주기 여정 (계약 FINAL-2) — 로그인 방법은 백엔드(`GET /auth/methods`)에서 알아낸다 → 가입(정책 힌트) → 메일 확인 → 인증 전 로그인 거절 → 메일 링크로 인증 →
- * 로그인 → 갱신 도중 페이지가 이동해도(응답을 잃어도) 세션이 이어짐(유예 안의 멱등 회전) → 액세스 토큰이 깨져도 갱신으로 이어짐(회전) → 비밀번호 변경 →
- * 이메일 변경(새로고침 뒤에도 서버가 말해 주는 「확인 대기」) → 새 주소의 링크로 확정(모든 세션 종료) → 다른 기기 세션 보기 · 끊기 →
- * 비밀번호 없는 계정(링크 로그인): 이메일 변경 · 첫 비밀번호가 본인 확인 메일의 링크를 거친다(다른 기기에서 열면 안내 · 같은 브라우저의 새 탭이면 하려던 탭이 이어 간다) →
- * 계정 삭제 → 운영자 표. 진짜 백엔드 · 진짜 브라우저 · 진짜 메일(mailpit). 한 흐름이라 단계가 앞 단계의 결과에 기댄다.
+ * 계정 수명주기 여정 (계약 FINAL-3 — 인증번호) — 로그인 방법은 백엔드(`GET /auth/methods`)에서 알아낸다 → 가입(정책 힌트) → 메일로 받은 6자리를 같은 화면에서 입력
+ * (틀리면 남은 횟수 · 새 코드 받기 · 맞으면 **바로 로그인**) → 갱신 도중 페이지가 이동해도 세션이 이어짐 → 액세스 토큰이 깨져도 갱신으로 이어짐 → 비밀번호 변경 →
+ * 이메일 변경(새 주소로 간 인증번호를 같은 세션에서 입력 · 새로고침 뒤에도 서버가 말해 주는 「대기」 · 다른 기기 세션은 끊기고 이 세션은 남는다) → 다른 기기 세션 보기 · 끊기 →
+ * 비밀번호 없는 계정(링크 로그인): 이메일 변경 · 첫 비밀번호가 메일로 받은 인증번호를 **그 자리에서 입력**해 다시 인증 → 연결 해제(다시 인증) → 계정 삭제(삭제 인증번호 + 글자 확인) →
+ * 가입 선점 시나리오(공격자가 먼저 가입을 시작해도 주인의 인증번호로 끝낸 계정에는 공격자의 비밀번호가 안 통한다) → 운영자 표. 진짜 백엔드 · 진짜 브라우저 · 진짜 메일(mailpit).
+ * 한 흐름이라 단계가 앞 단계의 결과에 기댄다. 링크가 남은 메일은 링크 로그인 · 비밀번호 재설정뿐이다.
  */
 // 개발 서버의 첫 방문(모듈 변환)이 부하가 큰 기계에서는 5초(기본)를 넘길 수 있다 — 첫 화면을 기다리는 단언만 아니라 모두 넉넉히
 const pwExpect = baseExpect.configure({ timeout: 20_000 })
@@ -30,10 +31,9 @@ const nextPassword = 'Another-pass-2026'
 const seen = new Set<string>()
 
 let browser: Browser
-let context: BrowserContext
 let page: Page
 beforeAll(async () => {
-  ;({ browser, context, page } = await launch())
+  ;({ browser, page } = await launch())
 })
 afterAll(async () => {
   await browser?.close()
@@ -44,6 +44,23 @@ const region = (name: string, on: Page = page) => on.getByRole('region', { name 
 const token = (key: string) => page.evaluate((k) => window.localStorage.getItem(k), key)
 const refreshToken = async () =>
   JSON.parse((await token('sample.refresh')) ?? '{}').refreshToken as string
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+/** 인증번호 칸에 6자리를 친다(첫 칸에서 시작 — 한 자리마다 다음 칸으로 넘어가고, 다 채우면 버튼 없이 제출된다) */
+async function enterCode(scope: Page | Locator, code: string) {
+  await scope.getByLabel(auth.codeDigit(1, 6)).click()
+  await page.keyboard.type(code)
+}
+
+/** 같은 기기에서 API 로 로그인한다(세션 목록에 이름이 보인다) */
+async function apiLogin(account: { email: string; password: string }, device?: string) {
+  const response = await fetch(`${apiUrl}/api/v1/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(device ? { 'X-Device-Name': device } : {}) },
+    body: JSON.stringify(account),
+  })
+  return { status: response.status, body: await response.json().catch(() => ({})) }
+}
 
 describe('sign-in methods are discovered from the backend', () => {
   it('the login page asks GET /auth/methods; until the answer arrives it shows a loading state, never the wrong methods', async () => {
@@ -83,8 +100,8 @@ describe('sign-in methods are discovered from the backend', () => {
   })
 })
 
-describe('account lifecycle against the real backend', () => {
-  it('sign-up shows the password policy hints, then asks to check the email', async () => {
+describe('sign-up by a 6-digit code, signed in at once', () => {
+  it('sign-up shows the password policy hints, then asks for the code (no account exists yet)', async () => {
     await page.goto(`${baseUrl}/sign-up`)
     await page.getByLabel(auth.email).fill(email)
     await page.getByLabel(auth.password).first().fill('abc')
@@ -98,38 +115,65 @@ describe('account lifecycle against the real backend', () => {
       page.getByRole('img', { name: new RegExp(auth.passwordStrength[4]) }),
     ).toBeVisible()
     await page.getByRole('button', { name: auth.signUpSubmit }).click()
-    await pwExpect(heading(auth.checkEmailTitle, 2)).toBeVisible()
-    await pwExpect(page.getByText(email)).toBeVisible()
+    await pwExpect(heading(auth.codeTitle, 2)).toBeVisible()
+    await pwExpect(page.getByText(email).first()).toBeVisible()
+    await pwExpect(page.getByLabel(auth.password)).toHaveCount(0) // 비밀번호는 코드 단계에 남지 않는다
+    // 계정은 아직 없다 — 이 주소로는 로그인할 수 없다
+    pwExpect((await apiLogin({ email, password })).status).toBe(401)
   })
 
-  it('an unverified address cannot sign in and is offered a new verification mail', async () => {
-    await page.goto(`${baseUrl}/login`)
-    await fillSignIn(page, { email, password })
-    await pwExpect(page.getByRole('alert')).toContainText(auth.errorEmailNotVerified)
-    await pwExpect(page.getByRole('button', { name: auth.signInResendVerification })).toBeVisible()
+  it('the code survives a reload of the tab (the attempt id lives in sessionStorage; the password does not)', async () => {
+    await page.reload()
+    await pwExpect(heading(auth.codeTitle, 2)).toBeVisible()
+    pwExpect(await page.evaluate(() => JSON.stringify(window.sessionStorage))).not.toContain(
+      password,
+    )
   })
 
-  it('the mailed link verifies the address only after an explicit Continue click, a second visit says the link is used up', async () => {
-    const link = await waitForLink(mailUrl, email, 'verify-email', { seen })
-    await page.goto(`${baseUrl}${link.path}`)
-    // 열기만 해서는 인증하지 않는다(메일 스캐너 방어) — 사람이 「계속」을 누른다
-    await pwExpect(page.getByText(auth.verifyEmailDone)).toHaveCount(0)
-    await page.getByRole('button', { name: auth.landingContinue }).click()
-    await pwExpect(page.getByText(auth.verifyEmailDone)).toBeVisible()
-    await page.goto(`${baseUrl}${link.path}`) // 같은 링크를 다시 — 한 번만 쓸 수 있다
-    await page.getByRole('button', { name: auth.landingContinue }).click()
-    await pwExpect(heading(auth.verifyEmailInvalidTitle)).toBeVisible()
+  it('a wrong code says how many attempts are left and clears the cells', async () => {
+    await enterCode(page, '000000')
+    await pwExpect(page.getByRole('alert')).toContainText(auth.codeInvalid(4))
+    await pwExpect(page.getByLabel(auth.codeDigit(1, 6))).toHaveValue('')
+    await enterCode(page, '111111')
+    await pwExpect(page.getByRole('alert')).toContainText(auth.codeInvalid(3))
   })
 
-  it('signs in and lands on the dashboard; the tokens are stored', async () => {
-    await page.goto(`${baseUrl}/login`)
-    await fillSignIn(page, { email, password })
+  it('"send a new code" mails a new code for the same attempt (after the 30 s cooldown) and restores the attempts', async () => {
+    const first = await waitForCode(mailUrl, email, 'verify', { seen })
+    await sleep(31_000) // 서버는 30초 안의 재전송을 조용히 무시한다
+    await page.getByRole('button', { name: auth.codeResend }).click()
+    await pwExpect(page.getByText(auth.codeResent)).toBeVisible()
+    const second = await waitForCode(mailUrl, email, 'verify', { seen })
+    pwExpect(second.id).not.toBe(first.id)
+    await enterCode(page, '222222')
+    await pwExpect(page.getByRole('alert')).toContainText(auth.codeInvalid(4)) // 횟수가 다시 5 에서
+    await enterCode(page, second.code)
+    // 맞으면 별도 로그인 없이 바로 로그인한다
     await pwExpect(heading(/안녕하세요/)).toBeVisible()
     pwExpect(await token('sample.accessToken')).toBeTruthy()
     pwExpect(await token('sample.refresh')).toContain('refreshToken')
+    pwExpect(await page.evaluate(() => window.sessionStorage.getItem('sample.signUp'))).toBeNull() // 진행 중이던 가입 기록은 지워졌다
   })
 
+  it('the account exists now: the password from THIS sign-up attempt signs in', async () => {
+    pwExpect((await apiLogin({ email, password })).status).toBe(200)
+  })
+
+  it('an old mailed verification link says it is no longer used (no dead end, nothing is sent to the server)', async () => {
+    const calls: string[] = []
+    page.on('request', (r) => r.url().includes('/api/v1/') && calls.push(r.url()))
+    await page.goto(`${baseUrl}/verify-email?token=old`)
+    await pwExpect(heading(auth.legacyLinkTitle)).toBeVisible()
+    await pwExpect(page.getByText(auth.legacyLinkBody)).toBeVisible()
+    pwExpect(calls.filter((url) => url.includes('verify-email'))).toEqual([])
+    page.removeAllListeners('request')
+    await page.goto(`${baseUrl}/`)
+  })
+})
+
+describe('account lifecycle against the real backend', () => {
   it('navigation during a refresh: the response is lost, the next page presents the previous token within the 10 s grace and the session carries on', async () => {
+    await page.goto(`${baseUrl}/`)
     const before = await refreshToken()
     await page.evaluate(() =>
       window.localStorage.setItem('sample.accessToken', 'header.e30.expired'),
@@ -184,8 +228,44 @@ describe('account lifecycle against the real backend', () => {
     page.removeAllListeners('request')
   })
 
+  it('a 429 AUTH.TOO_MANY_REFRESHES keeps the session: no sign-out, the same error is shown while backing off, and no new refresh request goes out', async () => {
+    const refreshCalls: string[] = []
+    page.on(
+      'request',
+      (r) => r.url().includes('/api/v1/auth/refresh') && refreshCalls.push(r.url()),
+    )
+    await page.route('**/api/v1/auth/refresh', (route) =>
+      route.fulfill({
+        status: 429,
+        headers: { 'Content-Type': 'application/json', 'Retry-After': '60' },
+        body: JSON.stringify({
+          code: 'AUTH.TOO_MANY_REFRESHES',
+          title: 'Too many refreshes',
+          status: 429,
+          timestamp: new Date().toISOString(),
+          data: { retryAfterSeconds: 60 },
+        }),
+      }),
+    )
+    const refresh = await refreshToken()
+    await page.evaluate(() =>
+      window.localStorage.setItem('sample.accessToken', 'header.e30.expired'),
+    )
+    await page.goto(`${baseUrl}/notes`)
+    await pwExpect.poll(() => refreshCalls.length).toBeGreaterThanOrEqual(1)
+    const calls = refreshCalls.length
+    await page.reload() // 한 번 더 — 기다리는 동안이라 서버를 부르지 않는다(탭마다 새 갱신기라면 한 번 더 갈 수 있다)
+    await page.waitForTimeout(500)
+    pwExpect(await refreshToken()).toBe(refresh) // 세션은 그대로 — 자격을 비우지 않았다
+    pwExpect(refreshCalls.length).toBeLessThanOrEqual(calls + 1)
+    await pwExpect(page).not.toHaveURL(/\/login/) // 로그인 화면으로 쫓겨나지 않는다
+    await page.unroute('**/api/v1/auth/refresh')
+    page.removeAllListeners('request')
+  })
+
   it('account settings: a wrong current password is refused, the right one changes it', async () => {
     await page.goto(`${baseUrl}/account`)
+    await pwExpect(heading(auth.settingsTitle)).toBeVisible()
     const section = region(auth.sectionPassword)
     await section.getByLabel(auth.currentPassword).fill('wrong-password-1')
     await section.getByLabel(auth.newPassword).fill(nextPassword)
@@ -196,45 +276,61 @@ describe('account lifecycle against the real backend', () => {
     await pwExpect(section.getByText(auth.passwordChanged)).toBeVisible()
   })
 
-  it('email change: the pending change comes from the server, so it is still there after a reload', async () => {
+  it('email change: the code step comes from the server (still there after a reload), a wrong code shows the attempts left', async () => {
     const section = region(auth.sectionEmail)
     await pwExpect(section.getByText(auth.emailPendingTitle)).toHaveCount(0)
     await section.getByLabel(auth.emailNew).fill(emailNext)
+    await section.getByLabel(auth.currentPassword).fill('wrong-password-1')
+    await section.getByRole('button', { name: auth.emailChangeSubmit }).click()
+    await pwExpect(section.getByText(auth.errorCurrentPassword)).toBeVisible()
     await section.getByLabel(auth.currentPassword).fill(nextPassword)
     await section.getByRole('button', { name: auth.emailChangeSubmit }).click()
     await pwExpect(section.getByText(auth.emailPendingTitle)).toBeVisible()
     await page.reload()
     await pwExpect(section.getByText(auth.emailPendingTitle)).toBeVisible()
-    await pwExpect(section.getByText(new RegExp(emailNext))).toBeVisible()
+    await pwExpect(section.getByText(new RegExp(emailNext)).first()).toBeVisible()
+    await enterCode(section, '000000')
+    await pwExpect(section.getByRole('alert')).toContainText(auth.codeInvalid(4))
   })
 
-  it('the new address confirms the change: every session ends (this one too) and only the new address signs in', async () => {
-    const link = await waitForLink(mailUrl, emailNext, 'confirm-email-change', { seen })
-    await page.goto(`${baseUrl}${link.path}`)
-    await page.getByRole('button', { name: auth.landingContinue }).click()
-    await pwExpect(page.getByText(auth.confirmEmailChangeDone)).toBeVisible()
-    await page.goto(`${baseUrl}/account`)
-    await pwExpect(heading(auth.signInTitle)).toBeVisible() // 모든 세션이 닫혔다
-    await fillSignIn(page, { email, password: nextPassword })
-    await pwExpect(page.getByRole('alert')).toContainText(auth.errorInvalidCredentials)
-    await fillSignIn(page, { email: emailNext, password: nextPassword })
-    await page.waitForURL((url) => !url.pathname.startsWith('/login')) // 가려던 곳(/account)으로 돌아간다
+  it('the code goes to the NEW address; entering it in this session switches the address — this session stays signed in, the other devices are signed out', async () => {
+    // 이 주소로 간 인증번호 메일이 있고, 옛 주소에는 「변경 요청」 알림만 있다(코드는 없다)
+    const code = await waitForCode(mailUrl, emailNext, 'email-change', { seen })
+    pwExpect(
+      (await subjectsFor(mailUrl, email)).some((s) =>
+        /새 이메일 확인 인증번호|Your code to confirm the new email/.test(s),
+      ),
+    ).toBe(false)
+    // 다른 기기(같은 계정의 다른 세션) — 변경이 확정되면 끊긴다
+    pwExpect((await apiLogin({ email, password: nextPassword }, 'Second device')).status).toBe(200)
+    const section = region(auth.sectionEmail)
+    await enterCode(section, code.code)
+    await pwExpect(section.getByText(auth.emailChanged)).toBeVisible()
+    await pwExpect(section.getByText(emailNext, { exact: true })).toBeVisible()
+    await pwExpect(section.getByText(auth.emailPendingTitle)).toHaveCount(0)
+    // 이 세션은 로그인된 채다 — 새로고침해도 설정이 열린다
+    await page.reload()
     await pwExpect(heading(auth.settingsTitle)).toBeVisible()
+    await pwExpect(region(auth.sectionSessions).getByText('Second device')).toHaveCount(0)
+    // 옛 주소로는 로그인할 수 없고 새 주소로는 된다
+    pwExpect((await apiLogin({ email, password: nextPassword })).status).toBe(401)
+    pwExpect((await apiLogin({ email: emailNext, password: nextPassword })).status).toBe(200)
   })
 
   it('sessions: another device shows up, and signing it out removes it', async () => {
-    const login = await fetch(`${apiUrl}/api/v1/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Device-Name': 'Second device' },
-      body: JSON.stringify({ email: emailNext, password: nextPassword }),
-    })
-    pwExpect(login.status).toBe(200)
+    pwExpect(
+      (await apiLogin({ email: emailNext, password: nextPassword }, 'Third device')).status,
+    ).toBe(200)
     await page.goto(`${baseUrl}/account`)
     const section = region(auth.sectionSessions)
-    await pwExpect(section.getByText('Second device')).toBeVisible()
+    await pwExpect(section.getByText('Third device')).toBeVisible()
     await pwExpect(section.getByText(auth.sessionsCurrent)).toBeVisible()
+    // 가입 인증(코드)으로 로그인한 이 세션도 기기 이름(X-Device-Name)을 갖는다 — 「알 수 없는 기기」가 아니다
+    await pwExpect(
+      section.getByRole('listitem').filter({ hasText: auth.sessionsCurrent }),
+    ).not.toContainText(auth.sessionsUnknownDevice)
     await section.getByRole('button', { name: auth.sessionsRevoke, exact: true }).first().click()
-    await pwExpect(section.getByText('Second device')).toHaveCount(0)
+    await pwExpect(section.getByText('Third device')).toHaveCount(0)
   })
 
   it('profile: language and time zone are saved to the account', async () => {
@@ -255,13 +351,14 @@ describe('account lifecycle against the real backend', () => {
     await pwExpect(confirm).toBeDisabled()
     await dialog.getByLabel(auth.deleteTypedLabel).fill(auth.deleteTypedPhrase)
     await confirm.click()
+    await section.getByRole('button', { name: auth.deleteDoneAction }).click()
     await pwExpect(heading(auth.signInTitle)).toBeVisible() // 삭제되면 이 기기도 로그아웃
     await fillSignIn(page, { email: emailNext, password: nextPassword })
     await pwExpect(page.getByRole('alert')).toContainText(auth.errorInvalidCredentials)
   })
 })
 
-describe('a passwordless account (email link) re-authenticates by mail before the sensitive actions', () => {
+describe('a passwordless account (email link) re-authenticates by a mailed code, entered in place', () => {
   const linkEmail = `e2e-link-${stamp}@example.com`
   const linkNext = `e2e-link-next-${stamp}@example.com`
   const firstPassword = 'First-pass-2026!'
@@ -278,71 +375,177 @@ describe('a passwordless account (email link) re-authenticates by mail before th
     await pwExpect(heading(/안녕하세요/)).toBeVisible()
   })
 
-  it('settings know there is no password (no "current password" field) and say a confirmation mail comes first', async () => {
+  it('settings know there is no password (no "current password" field) and offer the mailed code instead', async () => {
     await page.goto(`${baseUrl}/account`)
-    const password = region(auth.passwordSetTitle)
-    await pwExpect(password).toBeVisible()
-    await pwExpect(password.getByLabel(auth.currentPassword)).toHaveCount(0)
-    await pwExpect(password.getByText(auth.reauthHint)).toBeVisible()
+    const passwordSection = region(auth.passwordSetTitle)
+    await pwExpect(passwordSection).toBeVisible()
+    await pwExpect(passwordSection.getByLabel(auth.currentPassword)).toHaveCount(0)
+    await pwExpect(passwordSection.getByRole('button', { name: auth.reauthCodeSend })).toBeVisible()
   })
 
-  it('email change: the server demands re-authentication, a mail goes out; a link opened on ANOTHER device only gets guidance', async () => {
+  it('email change: "email me a code" → the 6 digits are typed right there → the code for the NEW address follows (survives a reload)', async () => {
     const section = region(auth.sectionEmail)
     await section.getByLabel(auth.emailNew).fill(linkNext)
+    await section.getByRole('button', { name: auth.reauthCodeSend }).click()
+    await pwExpect(section.getByText(auth.reauthCodeSent(linkEmail))).toBeVisible()
+    // 비밀번호 없는 계정이 코드 없이 요청하면 서버가 거절한다 — 코드를 받기 전에는 제출이 꺼져 있다
+    await pwExpect(section.getByRole('button', { name: auth.emailChangeSubmit })).toBeDisabled()
+    const reauth = await waitForCode(mailUrl, linkEmail, 'reauth', { seen })
+    await enterCode(section, '000000')
+    await pwExpect(section.getByText(auth.reauthCodeEntered)).toBeVisible()
     await section.getByRole('button', { name: auth.emailChangeSubmit }).click()
-    await pwExpect(section.getByText(auth.reauthSentTitle)).toBeVisible()
-    await pwExpect(section.getByText(auth.emailPendingTitle)).toHaveCount(0) // 아직 아무것도 요청되지 않았다
-    const first = await waitForLink(mailUrl, linkEmail, 'confirm-reauth', { seen })
-
-    // 다른 기기(다른 브라우저 컨텍스트 — sessionStorage · 채널이 공유되지 않는다)
-    const other = await browser.newContext({ locale: 'ko-KR' })
-    const otherPage = await other.newPage()
-    await otherPage.goto(`${baseUrl}${first.path}`)
-    await pwExpect(otherPage.getByText(auth.confirmReauthStashed)).toBeVisible()
-    await pwExpect(otherPage.getByRole('link', { name: auth.confirmReauthSettings })).toBeVisible()
-    await other.close()
-  })
-
-  it('same browser, new tab: the tab that started the action picks the link up and finishes — the pending change then comes from the server', async () => {
-    const section = region(auth.sectionEmail)
-    await section.getByRole('button', { name: auth.reauthResend }).click()
-    const second = await waitForLink(mailUrl, linkEmail, 'confirm-reauth', { seen })
-    const tab = await context.newPage()
-    await tab.goto(`${baseUrl}${second.path}`)
-    await pwExpect(tab.getByText(auth.confirmReauthHandedOff)).toBeVisible()
-    await tab.close()
-    await pwExpect(page.getByText(auth.confirmReauthEmailChanged)).toBeVisible()
+    await pwExpect(section.getByRole('alert')).toContainText(auth.codeInvalid(4)) // 서버가 틀린 코드를 가려 준다
+    await enterCode(section, reauth.code)
+    await section.getByRole('button', { name: auth.emailChangeSubmit }).click()
     await pwExpect(section.getByText(auth.emailPendingTitle)).toBeVisible()
     await page.reload()
-    await pwExpect(section.getByText(new RegExp(linkNext))).toBeVisible()
+    await pwExpect(section.getByText(new RegExp(linkNext)).first()).toBeVisible()
+    const confirm = await waitForCode(mailUrl, linkNext, 'email-change', { seen })
+    await enterCode(section, confirm.code)
+    await pwExpect(section.getByText(auth.emailChanged)).toBeVisible()
+    await pwExpect(section.getByText(linkNext, { exact: true })).toBeVisible()
   })
 
-  it('first password: re-authentication by mail, then one more submit sets it; the account then has a password', async () => {
+  it('first password: a new mailed code is typed in place, then the password is set; the account then signs in with it', async () => {
     const section = region(auth.passwordSetTitle)
+    await section.getByRole('button', { name: auth.reauthCodeSend }).click()
+    const reauth = await waitForCode(mailUrl, linkNext, 'reauth', { seen })
+    await enterCode(section, reauth.code)
     await section.getByLabel(auth.newPassword).fill(firstPassword)
-    await section.getByRole('button', { name: auth.passwordChangeSubmit }).click()
-    await pwExpect(section.getByText(auth.reauthSentTitle)).toBeVisible()
-    const link = await waitForLink(mailUrl, linkEmail, 'confirm-reauth', { seen })
-    const tab = await context.newPage()
-    await tab.goto(`${baseUrl}${link.path}`)
-    await pwExpect(tab.getByText(auth.confirmReauthHandedOff)).toBeVisible()
-    await tab.close()
-    await pwExpect(section.getByText(auth.reauthReadyTitle)).toBeVisible() // 토큰이 와 있다 — 한 번 더 제출
     await section.getByRole('button', { name: auth.passwordChangeSubmit }).click()
     // 계정이 비밀번호를 갖게 되면 절 제목이 「비밀번호 정하기」 → 「비밀번호」 로 바뀐다 — 절이 아니라 페이지에서 찾는다
     await pwExpect(page.getByText(auth.passwordChanged)).toBeVisible()
+    pwExpect((await apiLogin({ email: linkNext, password: firstPassword })).status).toBe(200)
     await page.reload()
     await pwExpect(region(auth.sectionPassword).getByLabel(auth.currentPassword)).toBeVisible()
   })
 
-  it('the account can now be deleted with its new password', async () => {
+  it('unlink: removing a sign-in method needs re-authentication — the dialog asks for the password and stays open on a wrong one', async () => {
+    const section = region(auth.sectionMethods)
+    const mail = section.getByRole('listitem').filter({ hasText: auth.methodNames.magic_link })
+    await mail.getByRole('button', { name: auth.methodUnlink }).click()
+    const dialog = page.getByRole('dialog')
+    await pwExpect(dialog.getByRole('button', { name: auth.methodUnlink })).toBeDisabled()
+    await dialog.getByLabel(auth.currentPassword).fill('wrong-password-1')
+    await dialog.getByRole('button', { name: auth.methodUnlink }).click()
+    await pwExpect(dialog.getByText(auth.errorCurrentPassword)).toBeVisible()
+    await dialog.getByLabel(auth.currentPassword).fill(firstPassword)
+    await dialog.getByRole('button', { name: auth.methodUnlink }).click()
+    await pwExpect(section.getByText(auth.methodUnlinked)).toBeVisible()
+    await pwExpect(
+      section.getByRole('listitem').filter({ hasText: auth.methodNames.magic_link }),
+    ).toHaveCount(0)
+  })
+
+  it('the account can still be deleted with its password (the code route is shown with the next account)', async () => {
     const section = region(auth.sectionDelete)
     await section.getByLabel(auth.currentPassword).fill(firstPassword)
     await section.getByRole('button', { name: auth.deleteButton }).click()
     const dialog = page.getByRole('dialog')
     await dialog.getByLabel(auth.deleteTypedLabel).fill(auth.deleteTypedPhrase)
     await dialog.getByRole('button', { name: auth.deleteConfirm }).click()
+    await section.getByRole('button', { name: auth.deleteDoneAction }).click()
     await pwExpect(heading(auth.signInTitle)).toBeVisible()
+  })
+})
+
+describe('delete a passwordless account with a mailed code and a typed phrase', () => {
+  const goneEmail = `e2e-gone-${stamp}@example.com`
+
+  it('"email me a code" for the DELETE code (a separate code), a wrong one shows the attempts left, the right one + the phrase schedules the deletion', async () => {
+    await page.goto(`${baseUrl}/login`)
+    await page.getByRole('button', { name: auth.signInMagicLink }).click()
+    await page.getByLabel(auth.email).fill(goneEmail)
+    await page.getByRole('button', { name: auth.signInMagicLinkSubmit }).click()
+    const link = await waitForLink(mailUrl, goneEmail, 'magic-link', { seen })
+    await page.goto(`${baseUrl}${link.path}`)
+    await pwExpect(heading(/안녕하세요/)).toBeVisible()
+    await page.goto(`${baseUrl}/account`)
+    const section = region(auth.sectionDelete)
+    await pwExpect(section.getByLabel(auth.currentPassword)).toHaveCount(0)
+    await pwExpect(section.getByRole('button', { name: auth.deleteButton })).toBeDisabled() // 코드 전에는 꺼져 있다
+    await section.getByRole('button', { name: auth.reauthCodeSend }).click()
+    const code = await waitForCode(mailUrl, goneEmail, 'delete', { seen })
+    await enterCode(section, '000000')
+    await section.getByRole('button', { name: auth.deleteButton }).click()
+    let dialog = page.getByRole('dialog')
+    await dialog.getByLabel(auth.deleteTypedLabel).fill(auth.deleteTypedPhrase)
+    await dialog.getByRole('button', { name: auth.deleteConfirm }).click()
+    await pwExpect(section.getByRole('alert')).toContainText(auth.codeInvalid(4))
+    await enterCode(section, code.code)
+    await section.getByRole('button', { name: auth.deleteButton }).click()
+    dialog = page.getByRole('dialog')
+    await dialog.getByLabel(auth.deleteTypedLabel).fill(auth.deleteTypedPhrase)
+    await dialog.getByRole('button', { name: auth.deleteConfirm }).click()
+    await section.getByRole('button', { name: auth.deleteDoneAction }).click()
+    await pwExpect(heading(auth.signInTitle)).toBeVisible()
+  })
+})
+
+describe('pre-hijack: an attacker who starts a sign-up for someone else’s address gets nothing', () => {
+  const victim = `e2e-victim-${stamp}@example.com`
+  const attackerPassword = 'Attacker-pass-2026'
+  const ownerPassword = 'Owner-pass-2026!'
+
+  it('the attacker starts a sign-up with their own password; the real owner then signs up and verifies with their OWN code — only the owner’s password works', async () => {
+    // 공격자 — 주인의 주소로 자기 비밀번호를 걸어 가입을 먼저 시작한다(코드는 주인의 메일함으로 간다)
+    const attack = await fetch(`${apiUrl}/api/v1/account/sign-up`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: victim, password: attackerPassword }),
+    })
+    pwExpect(attack.status).toBe(202)
+    const attackerId = ((await attack.json()) as { value: { signUpId: string } }).value.signUpId
+    const attackersCode = await waitForCode(mailUrl, victim, 'verify', { seen })
+
+    // 주인 — 같은 주소로 화면에서 가입하고 자기 메일의 새 코드로 끝낸다
+    await page.goto(`${baseUrl}/sign-up`)
+    await page.getByLabel(auth.email).fill(victim)
+    await page.getByLabel(auth.password).first().fill(ownerPassword)
+    await page.getByRole('button', { name: auth.signUpSubmit }).click()
+    await pwExpect(heading(auth.codeTitle, 2)).toBeVisible()
+    const ownersCode = await waitForCode(mailUrl, victim, 'verify', { seen })
+    pwExpect(ownersCode.id).not.toBe(attackersCode.id)
+    await enterCode(page, ownersCode.code)
+    await pwExpect(heading(/안녕하세요/)).toBeVisible() // 주인은 바로 로그인
+
+    // 공격자의 비밀번호는 통하지 않고, 주인의 것만 통한다
+    pwExpect((await apiLogin({ email: victim, password: attackerPassword })).status).toBe(401)
+    pwExpect((await apiLogin({ email: victim, password: ownerPassword })).status).toBe(200)
+    // 공격자가 자기 시도로 코드를 내도 거절된다(그 주소는 이미 가입됐다 — 하나의 응답 410)
+    const late = await fetch(`${apiUrl}/api/v1/auth/verify-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ signUpId: attackerId, code: attackersCode.code }),
+    })
+    pwExpect(late.status).toBe(410)
+    pwExpect(((await late.json()) as { code: string }).code).toBe('ACCOUNT.CODE_EXPIRED')
+    // 그래도 공격자의 비밀번호는 여전히 통하지 않는다
+    pwExpect((await apiLogin({ email: victim, password: attackerPassword })).status).toBe(401)
+    await page.evaluate(() => window.localStorage.clear())
+  })
+
+  it('signing up with an address that is already registered looks the same as a new one (a code prompt), and no code is mailed to it', async () => {
+    await page.goto(`${baseUrl}/sign-up`)
+    await page.getByLabel(auth.email).fill(victim)
+    await page.getByLabel(auth.password).first().fill('Whatever-pass-2026')
+    await page.getByRole('button', { name: auth.signUpSubmit }).click()
+    await pwExpect(heading(auth.codeTitle, 2)).toBeVisible() // 존재 여부를 숨긴다
+    await enterCode(page, '123456')
+    await pwExpect(page.getByRole('alert')).toContainText(auth.codeInvalid(4)) // 새 주소의 틀린 번호와 같은 모양
+    // 가입된 주소에는 코드 대신 「이미 계정이 있어요」 알림이 간다 — 코드 메일은 그대로 둘뿐(공격자 시도 · 주인)
+    await pwExpect
+      .poll(async () =>
+        (await subjectsFor(mailUrl, victim)).some((s) =>
+          /이미 계정이 있어요|You already have an account/.test(s),
+        ),
+      )
+      .toBe(true)
+    pwExpect(
+      (await subjectsFor(mailUrl, victim)).filter((s) =>
+        /^(인증번호|Your verification code:) /.test(s),
+      ),
+    ).toHaveLength(2)
   })
 })
 

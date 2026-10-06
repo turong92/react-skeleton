@@ -113,7 +113,7 @@ scripts/new-project.sh ~/work/community/web community --packages board,notificat
 <!-- kotlin-stamp: community -->
 
 ```bash
-scripts/new-project.sh ~/work/community/api dev.example.community community Community --modules auth-social,auth-social-google,board,board-jdbc,notification,notification-jdbc,notification-sse
+scripts/new-project.sh ~/work/community/api dev.example.community community Community --modules auth-social-google,board,board-jdbc,notification,notification-jdbc,notification-sse
 ```
 
 그다음:
@@ -142,7 +142,7 @@ scripts/new-project.sh ~/work/saas/web saas --packages marketing,payment,notific
 <!-- kotlin-stamp: saas -->
 
 ```bash
-scripts/new-project.sh ~/work/saas/api dev.example.saas saas Saas --modules payment,payment-toss,notification,notification-jdbc,captcha-turnstile --db mysql
+scripts/new-project.sh ~/work/saas/api dev.example.saas saas Saas --modules payment,payment-toss,notification,notification-jdbc --db mysql
 ```
 
 그다음:

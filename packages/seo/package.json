@@ -16,7 +16,7 @@
   },
   "types": "./src/index.ts",
   "scripts": {
-    "test": "vitest run --pool forks",
+    "test": "vitest run --pool forks --testTimeout 30000 --hookTimeout 60000",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "peerDependencies": {

@@ -20,7 +20,7 @@
   "scripts": {
     "tokens": "node build.mjs --doc ../../docs/design-tokens.md",
     "tokens:check": "node build.mjs --check --doc ../../docs/design-tokens.md",
-    "test": "vitest run --pool forks",
+    "test": "vitest run --pool forks --testTimeout 30000 --hookTimeout 60000",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   }
 }

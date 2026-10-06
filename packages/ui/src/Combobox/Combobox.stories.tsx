@@ -124,23 +124,33 @@ export const TextThatIsNotAnOptionRevertsOnBlur: Story = {
   },
 }
 
-/** 느린 첫 질의(`a`)가 빠른 둘째 질의(`ab`)보다 늦게 도착한다 — 옛 응답이 화면을 덮어쓰면 안 된다 */
-const racing = async (query: string, signal: AbortSignal) => {
-  await new Promise((resolve) => setTimeout(resolve, query.length === 1 ? 400 : 30))
-  if (signal.aborted) throw new DOMException('aborted', 'AbortError')
-  return [{ value: `r-${query}`, label: `Result for ${query}` }]
-}
+/**
+ * 느린 첫 질의(`a`)가 빠른 둘째 질의(`ab`)보다 늦게 도착한다 — 옛 응답이 화면을 덮어쓰면 안 된다.
+ * 도착 순서를 시계(setTimeout 400 vs 30 ms)에 맡기면 부하가 큰 기계에서 순서가 뒤집히므로, 응답을 play 가 손으로 풀어 준다.
+ */
+const answers = new Map<string, () => void>()
+const racing = (query: string, signal: AbortSignal) =>
+  new Promise<{ value: string; label: string }[]>((resolve, reject) => {
+    answers.set(query, () => {
+      if (signal.aborted) reject(new DOMException('aborted', 'AbortError'))
+      else resolve([{ value: `r-${query}`, label: `Result for ${query}` }])
+    })
+  })
 
 export const AsyncLatestAnswerWins: Story = {
   render: () => <Demo options={undefined} loadOptions={racing} debounceMs={10} />,
   play: async ({ canvas, userEvent }) => {
+    answers.clear()
     const input = canvas.getByRole('combobox', { name: 'City' })
     await userEvent.type(input, 'a')
     await expect(canvas.getByRole('status')).toHaveTextContent('Loading')
-    await new Promise((resolve) => setTimeout(resolve, 40))
+    await waitFor(() => expect(answers.has('a')).toBe(true)) // 디바운스를 지나 첫 질의가 나갔다
     await userEvent.type(input, 'b')
+    await waitFor(() => expect(answers.has('ab')).toBe(true))
+    answers.get('ab')?.() // 둘째가 먼저 도착하고
     await expect(await canvas.findByRole('option', { name: 'Result for ab' })).toBeVisible()
-    await new Promise((resolve) => setTimeout(resolve, 500))
+    answers.get('a')?.() // 옛 첫째가 뒤늦게 도착한다
+    await new Promise((resolve) => setTimeout(resolve, 0)) // 한 턴만 흘려 반영될 기회를 준다(조건이 아니라 「안 일어남」을 보는 자리)
     await expect(canvas.queryByRole('option', { name: 'Result for a' })).toBeNull()
     await expect(canvas.getByRole('status')).toHaveTextContent('1 results')
   },

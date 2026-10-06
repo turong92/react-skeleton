@@ -126,7 +126,9 @@ describe('parseMarkdown inline', () => {
       { t: 'code', v: '{{x}}' },
     ])
   })
-  it('deep nesting does not blow the stack', () => {
+  // 증명하는 것은 「스택이 터지지 않는다」(던지지 않는다) — 걸린 시간이 아니다. 이 입력(2 만 개)은 한가한 기계에서 0.7 s 지만(`[` 반복은 길이에 제곱으로 느는 정규식 탐색)
+  // 부하가 큰 기계에서는 5 s 기본값을 넘는다. 그래서 시간 상한을 단언하지 않고, 이 테스트만 넉넉한 자기 시간(60 s)을 갖는다.
+  it('deep nesting does not blow the stack', { timeout: 60_000 }, () => {
     expect(() => parseMarkdown('**'.repeat(20000) + 'x')).not.toThrow()
     expect(() => parseMarkdown('['.repeat(20000))).not.toThrow()
   })

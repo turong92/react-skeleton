@@ -7,7 +7,7 @@
     "storybook": "storybook dev -p 6006 --no-open",
     "build-storybook": "storybook build -o storybook-static",
     "test-stories": "vitest run --config vitest.stories.config.ts",
-    "test": "vitest run --pool forks",
+    "test": "vitest run --pool forks --testTimeout 30000 --hookTimeout 60000",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {

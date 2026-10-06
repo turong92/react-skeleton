@@ -53,7 +53,7 @@ export const Success: Story = {
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(canvas.getByRole('button', { name: 'Create' }))
     await expect(await screen.findByText('Creating project…')).toBeInTheDocument()
-    await expect(await screen.findByText('Created Acme', {}, { timeout: 3000 })).toBeInTheDocument()
+    await expect(await screen.findByText('Created Acme')).toBeInTheDocument()
   },
 }
 
@@ -74,8 +74,6 @@ export const Failure: Story = {
   ),
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(canvas.getByRole('button', { name: 'Create anyway' }))
-    await expect(
-      await screen.findByText('Quota exceeded', {}, { timeout: 3000 }),
-    ).toBeInTheDocument()
+    await expect(await screen.findByText('Quota exceeded')).toBeInTheDocument()
   },
 }

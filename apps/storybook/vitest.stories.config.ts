@@ -7,6 +7,9 @@ export default defineConfig({
   plugins: [storybookTest({ configDir: '.storybook' })],
   test: {
     name: 'storybook',
+    // 진짜 브라우저 · 번들 예열이 부하에서 느려진다 — play 안의 findBy/waitFor 는 .storybook/preview.tsx 의 asyncUtilTimeout 이, 스토리 한 개 전체는 이 값이 받친다
+    testTimeout: 90_000,
+    hookTimeout: 180_000,
     browser: {
       enabled: true,
       headless: true,

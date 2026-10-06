@@ -74,9 +74,7 @@ export const UploadsWithProgress: Story = {
     await expect(canvas.getByRole('status')).toHaveTextContent('idle')
     await userEvent.click(canvas.getByRole('button', { name: 'Upload 2 MiB' }))
     await waitFor(() => expect(canvas.getByRole('status')).toHaveTextContent('uploading'))
-    await waitFor(() => expect(canvas.getByRole('status')).toHaveTextContent('done · 100%'), {
-      timeout: 4000,
-    })
+    await waitFor(() => expect(canvas.getByRole('status')).toHaveTextContent('done · 100%'))
     await expect(canvas.getByText('Key: demo/sample.bin')).toBeVisible()
   },
 }
@@ -95,9 +93,7 @@ export const CancelMidUpload: Story = {
     await userEvent.click(canvas.getByRole('button', { name: 'Upload 2 MiB' }))
     await waitFor(() => expect(canvas.getByRole('button', { name: 'Cancel' })).toBeEnabled())
     await userEvent.click(canvas.getByRole('button', { name: 'Cancel' }))
-    await waitFor(() => expect(canvas.getByRole('status')).toHaveTextContent('aborted'), {
-      timeout: 3000,
-    })
+    await waitFor(() => expect(canvas.getByRole('status')).toHaveTextContent('aborted'))
     await userEvent.click(canvas.getByRole('button', { name: 'Reset' }))
     await expect(canvas.getByRole('status')).toHaveTextContent('idle')
   },

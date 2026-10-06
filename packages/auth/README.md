@@ -47,7 +47,7 @@ export const accountRoutes = createAuthRoutes({
 // routes: [{ element: <Layout />, children: [...accountRoutes, ...] }]
 ```
 
-생기는 경로(`paths` 로 바꾼다): `/login` `/sign-up` `/verify-email` `/forgot-password` `/reset-password` `/magic-link`(방법이 켜졌을 때) `/auth/callback`(`socialFlow` 가 있을 때) `/confirm-email-change` · 로그인한 사람만 `/account` `/confirm-delete` `/account/link-callback`. 서버 렌더 앱은 `useApis`(요청마다 API) · `guard`(하이드레이션 안전판)를 쓴다 — `apps/starter-ssr/src/auth/routes.tsx`.
+생기는 경로(`paths` 로 바꾼다): `/login` `/sign-up` `/verify-email` `/forgot-password` `/reset-password` `/magic-link`(방법이 켜졌을 때) `/auth/callback`(`socialFlow` 가 있을 때) `/confirm-email-change` · 로그인한 사람만 `/account` `/confirm-delete` `/account/link-callback`. 서버 렌더 앱은 `useApis`(요청마다 API) · `guard`(하이드레이션 안전판)를 쓴다 — SSR 스타터의 `src/auth/routes.tsx`.
 
 **방법을 켜고 끄는 법** — `methods`(위) 한 곳. 앱 스타터는 환경변수 `VITE_AUTH_METHODS`(쉼표 목록, 기본 `password,magic-link`)와 `VITE_SOCIAL_<제공자>_CLIENT_ID` 를 `src/auth/authConfig.ts` 가 읽는다. 새 프로젝트의 기본값은 `new-project.sh --auth-methods password,google`. 백엔드의 같은 방법(모듈 · 설정)이 켜져 있어야 한다 — 백엔드가 열린 방법을 알려 주는 엔드포인트는 없다.
 

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { normalizeMethodsInfo } from '../discovery'
-import { warnDeliveryOnce } from './discovery'
+import { warnDeliveryOnce, warnRedirectOnce } from './discovery'
 
 const cookieBackend = normalizeMethodsInfo({ methods: ['password'], refreshDelivery: 'cookie' })
 
@@ -19,5 +19,27 @@ describe('M6 — the delivery-mismatch warning is remembered per routes instance
     const warn = vi.fn()
     warnDeliveryOnce(cookieBackend, 'cookie', { warned: false }, warn)
     expect(warn).not.toHaveBeenCalled()
+  })
+})
+
+describe('the redirect-uri warning (exact-match pitfalls) is also once per routes instance', () => {
+  const info = normalizeMethodsInfo({
+    methods: ['password'],
+    social: [
+      { provider: 'line', clientId: 'c', redirectUri: 'https://app.example.com/auth/callback/' },
+    ],
+  })
+
+  it('names the provider and the difference once, and stays quiet when the backend agrees', () => {
+    const warn = vi.fn()
+    const notes = { warned: false }
+    warnRedirectOnce(info, 'https://app.example.com/auth/callback', notes, warn)
+    warnRedirectOnce(info, 'https://app.example.com/auth/callback', notes, warn)
+    expect(warn).toHaveBeenCalledTimes(1)
+    expect(warn.mock.calls[0][0]).toContain('line')
+    expect(warn.mock.calls[0][0]).toContain('trailing slash')
+    const quiet = vi.fn()
+    warnRedirectOnce(info, 'https://app.example.com/auth/callback/', { warned: false }, quiet)
+    expect(quiet).not.toHaveBeenCalled()
   })
 })

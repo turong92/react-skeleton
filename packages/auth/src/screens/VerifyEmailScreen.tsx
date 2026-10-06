@@ -12,6 +12,8 @@ export type VerifyEmailScreenProps = {
   /** 안 되는 링크(만료 · 이미 씀)에서 새 링크를 받는다 */
   onResend?: (email: string) => Promise<unknown>
   signInTo: string
+  /** 기본 true — 링크를 열기만 해서는 인증하지 않고 「계속」을 눌러야 한다(메일 스캐너 방어) */
+  requireConfirm?: boolean
   labels?: Partial<AuthLabels>
 }
 
@@ -21,6 +23,7 @@ export function VerifyEmailScreen({
   onVerify,
   onResend,
   signInTo,
+  requireConfirm = true,
   labels: given,
 }: VerifyEmailScreenProps) {
   const labels = mergeLabels(given)
@@ -48,6 +51,8 @@ export function VerifyEmailScreen({
     <TokenLanding
       token={token}
       run={onVerify}
+      requireConfirm={requireConfirm}
+      confirmPrompt={labels.verifyEmailTitle}
       labels={given}
       title={labels.verifyEmailTitle}
       checking={labels.verifyEmailChecking}

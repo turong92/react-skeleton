@@ -49,6 +49,8 @@ export { useSocialLoginCallback } from './useSocialLoginCallback'
 export type { SocialCallbackState } from './useSocialLoginCallback'
 
 // 세션: 갱신(single-flight · 회전 안전 · 탭 사이 락) · 리프레시 저장소 · 탭 사이 동기화
+export { authStorageKeys } from './storageKeys'
+export type { AuthStorageKeys } from './storageKeys'
 export { accountKeyOf, onAccountChange } from './accountChange'
 export type { AccountChange } from './accountChange'
 export { createSessionRefresher } from './sessionRefresher'

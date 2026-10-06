@@ -1,3 +1,4 @@
+import { ApiRequestError } from '@skeleton/api-client'
 import type { AccountApi } from './account/accountApi'
 import type { ReauthStore } from './reauth'
 import type { ReauthChannel } from './reauthChannel'
@@ -30,17 +31,27 @@ export async function resolveReauthLanding({
   handoffTimeoutMs?: number
 }): Promise<ReauthLandingOutcome> {
   const pending = store.pending()
-  store.clearPending()
   if (pending?.kind === 'email-change') {
     try {
       await accountApi.changeEmail({ newEmail: pending.newEmail, confirmationToken: token })
+      store.clearPending() // 마친 뒤에만 지운다
       return { status: 'completed', action: 'email-change' }
     } catch (error) {
+      // 서버가 답해 거절했으면(4xx — 429 제외) 토큰은 낡았고 작업은 끝이다. 일시 오류(네트워크 · 5xx · 429)면 작업과 아직 쓰이지 않은 토큰을 둔다 — 다시 시도할 수 있다
+      if (isDefinitive(error)) store.clearPending()
+      else store.stashToken(token)
       return { status: 'failed', error }
     }
   }
+  store.clearPending()
   if (!pending && channel && (await channel.offer(token, handoffTimeoutMs)))
     return { status: 'handed-off' }
   store.stashToken(token)
   return { status: 'stashed', resume: pending?.kind ?? null }
 }
+
+const isDefinitive = (error: unknown) =>
+  error instanceof ApiRequestError &&
+  error.apiError.status >= 400 &&
+  error.apiError.status < 500 &&
+  error.apiError.status !== 429

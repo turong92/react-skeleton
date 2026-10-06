@@ -1,6 +1,8 @@
+import { ApiRequestError } from '@skeleton/api-client'
 import type { AuthApi, RefreshDelivery } from './authApi'
 import { decodeTokenPrincipal } from './principal'
 import type { RefreshStore } from './refreshStore'
+import type { SessionRefresher } from './sessionRefresher'
 import type { TokenStore } from './tokenStore'
 import type { AuthPrincipal, AuthState, AuthTokenResponse, PasswordLoginRequest } from './types'
 
@@ -33,6 +35,8 @@ export type AuthSessionOptions = {
   refreshStore?: RefreshStore
   /** 기본 `body` */
   delivery?: RefreshDelivery
+  /** 주면 `restore()` 가 이 갱신기(single-flight · 탭 락 · 죽은 자격 비우기)를 거친다. 앱이 `recoverUnauthorized` 에 꽂은 것과 같은 것을 준다 */
+  refresher?: Pick<SessionRefresher, 'refresh'>
   /** 로그인 때 서버에 보여 줄 기기 이름(`X-Device-Name`) */
   deviceName?: string
 }
@@ -47,6 +51,7 @@ export function createAuthSession({
   refreshStore,
   delivery = 'body',
   deviceName,
+  refresher,
 }: AuthSessionOptions): AuthSession {
   const listeners = new Set<() => void>()
   let known: { token: string; principal: AuthPrincipal | null } | null = null
@@ -140,7 +145,20 @@ export function createAuthSession({
       const credentials = refreshStore?.get()
       const usable = delivery === 'cookie' ? credentials != null : !!credentials?.refreshToken
       if (!usable) return
-      accept(await api.refresh(credentials?.refreshToken ?? null))
+      if (refresher) {
+        // 락 · single-flight 안에서 한 번만 — 죽은 자격이면 갱신기가 두 저장소를 비운다
+        await refresher.refresh()
+        return
+      }
+      try {
+        accept(await api.refresh(credentials?.refreshToken ?? null))
+      } catch (error) {
+        if (error instanceof ApiRequestError && error.apiError.status === 401) {
+          refreshStore?.clear() // 죽은 자격을 매 로드마다 내밀지 않는다
+          return
+        }
+        throw error
+      }
     },
   }
 }

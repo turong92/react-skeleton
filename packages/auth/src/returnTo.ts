@@ -18,10 +18,21 @@ export function locationPath(location: {
   return `${location.pathname}${location.search ?? ''}${location.hash ?? ''}`
 }
 
-/** `/` 로 시작하되 `//` · `/\` 로 시작하지 않는(= 같은 출처의) 경로만 통과. 아니면 `fallback` */
+/**
+ * 같은 출처의 경로만 통과(아니면 `fallback`). 제어 문자(탭 · 줄바꿈 · NUL …)와 역슬래시는 URL 파서가 지우거나 `/` 로 바꿔
+ * `/\t/evil.example` 이 `//evil.example` 이 되므로 처음부터 거절하고, 그 뒤에도 실제로 URL 로 풀어 출처가 같은지 확인한다.
+ */
 export function safeReturnPath(value: unknown, fallback = '/'): string {
   if (typeof value !== 'string' || value === '') return fallback
-  if (!value.startsWith('/') || value.startsWith('//') || value.startsWith('/\\')) return fallback
+  if (!value.startsWith('/') || value.startsWith('//')) return fallback
+  // eslint-disable-next-line no-control-regex -- 제어 문자를 막는 것이 목적이다
+  if (/[\u0000-\u001f\u007f\\]/.test(value)) return fallback
+  try {
+    const base = 'https://same-origin.invalid'
+    if (new URL(value, base).origin !== base) return fallback
+  } catch {
+    return fallback
+  }
   return value
 }
 

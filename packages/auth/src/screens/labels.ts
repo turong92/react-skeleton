@@ -87,6 +87,9 @@ export type AuthLabels = {
   checkEmailResendIn: (seconds: number) => string
   checkEmailWrongAddress: string
   // 한 번 쓰는 링크 도착 화면
+  /** 메일 링크 도착 화면의 「계속」 버튼 — 메일 스캐너가 대신 확정하지 못하게 사람이 누른다 */
+  landingContinue: string
+  confirmEmailChangePrompt: string
   verifyEmailTitle: string
   verifyEmailChecking: string
   verifyEmailDone: string
@@ -329,6 +332,8 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   checkEmailResent: 'Sent again.',
   checkEmailResendIn: (seconds) => `Send again in ${seconds} s`,
   checkEmailWrongAddress: 'Wrong address? Start over',
+  landingContinue: 'Continue',
+  confirmEmailChangePrompt: 'Confirm that you want to use this address for your account.',
   verifyEmailTitle: 'Verify your email',
   verifyEmailChecking: 'Checking your link',
   verifyEmailDone: 'Your email is verified. You can sign in now.',

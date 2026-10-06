@@ -95,6 +95,8 @@ export const koAuthLabels: AuthLabels = {
   checkEmailResent: '다시 보냈어요.',
   checkEmailResendIn: (seconds) => `${seconds}초 뒤에 다시 보낼 수 있어요`,
   checkEmailWrongAddress: '주소를 잘못 썼나요? 처음부터',
+  landingContinue: '계속',
+  confirmEmailChangePrompt: '이 주소를 계정의 이메일로 쓰려면 확인을 눌러 주세요.',
   verifyEmailTitle: '이메일 인증',
   verifyEmailChecking: '링크를 확인하는 중',
   verifyEmailDone: '이메일을 인증했어요. 이제 로그인할 수 있어요.',

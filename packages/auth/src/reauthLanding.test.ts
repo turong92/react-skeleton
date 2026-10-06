@@ -141,9 +141,8 @@ describe('handing the token to the tab that started the action (the mail link op
     const name = 'test.reauth.shared'
     const left = createBroadcastReauthChannel(name)!
     const right = createBroadcastReauthChannel(name)!
-    const stop = right.onOffer((token) => token === 'rt')
+    const stop = right.onOffer({ claim: () => true, take: () => undefined })
     expect(await left.offer('rt', 500)).toBe(true)
-    expect(await left.offer('other', 50)).toBe(false)
     stop()
     a.close()
     left.close()

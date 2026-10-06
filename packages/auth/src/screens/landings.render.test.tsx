@@ -36,9 +36,15 @@ describe('readLinkToken', () => {
 })
 
 describe('one-time link landings', () => {
-  it('verify-email starts by checking (the POST happens on mount, not on a GET prefetch)', () => {
+  it('verify-email starts by asking for a click (nothing is posted on mount; opt out with requireConfirm={false})', () => {
     const out = html(
-      <VerifyEmailScreen token="t" onVerify={noop} onResend={noop} signInTo="/login" />,
+      <VerifyEmailScreen
+        token="t"
+        onVerify={noop}
+        onResend={noop}
+        signInTo="/login"
+        requireConfirm={false}
+      />,
     )
     expect(out).toContain('Checking your link')
   })
@@ -66,7 +72,14 @@ describe('one-time link landings', () => {
 
   it('confirm-email-change landing', () => {
     expect(
-      html(<ConfirmEmailChangeLanding token="t" onConfirm={noop} signInTo="/login" />),
+      html(
+        <ConfirmEmailChangeLanding
+          token="t"
+          onConfirm={noop}
+          signInTo="/login"
+          requireConfirm={false}
+        />,
+      ),
     ).toContain('Confirming the change')
   })
 })

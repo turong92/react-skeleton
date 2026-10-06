@@ -21,8 +21,20 @@ export type ReauthStore = {
   /** 도착 화면이 받은 토큰을 보관한다 — 하려던 작업이 이 탭에 없었을 때(다른 탭 · 기기에서 연 링크) 다음 제출이 쓴다 */
   stashToken(token: string): void
   hasToken(): boolean
-  /** 한 번 꺼내면 지운다(토큰은 한 번만 쓰인다) */
+  /** 지우지 않고 본다 — 호출이 성공하기 전에 잃지 않도록(일시 오류면 다시 쓴다) */
+  peekToken(): string | null
+  /** 보관한 토큰을 지운다(한 번 쓰였거나 서버가 거절한 뒤) */
+  clearToken(): void
+  /** 한 번 꺼내면 지운다(토큰은 한 번만 쓰인다) — 호출이 끝나기 전에 잃어도 되는 곳에서만. 보통은 `peekToken` + `clearToken` */
   takeToken(): string | null
+  /** 하려던 작업과 토큰을 모두 비운다(로그아웃) */
+  clear(): void
+  /**
+   * 이 계정에 묶인 보기. 기록할 때 계정 id 를 함께 적고, 읽을 때 다른 계정이 적은 것은 버린다 —
+   * 같은 탭에서 A 가 시작한 이메일 변경이 B 의 본인 확인 링크로 실행되지 않게.
+   * `null` 은 로그인하지 않은 상태(그 상태에서 적은 것은 로그인한 뒤에는 읽히지 않는다)
+   */
+  forAccount(accountId: string | null | undefined): ReauthStore
 }
 
 export type ReauthStoreOptions = {
@@ -32,10 +44,11 @@ export type ReauthStoreOptions = {
   /** 링크 수명(서버 30분)보다 조금 짧게 — 기본 25분(토큰), 30분(작업) */
   tokenTtlMs?: number
   pendingTtlMs?: number
+  /** 저장 키 접두어(기본 `skeleton.reauth.`) — 앱마다 다르게(`authStorageKeys(namespace).reauthPrefix`) */
   prefix?: string
 }
 
-type Stamped<T> = { value: T; at: number }
+type Stamped<T> = { value: T; at: number; accountId?: string | null }
 
 export function createReauthStore({
   storage,
@@ -71,7 +84,8 @@ export function createReauthStore({
       // 괜찮다
     }
   }
-  function readFresh<T>(key: string, ttl: number): T | null {
+  /** `account === undefined` 는 묶지 않은 보기(계정 검사 없음) */
+  function readFresh<T>(key: string, ttl: number, account: string | null | undefined): T | null {
     const raw = read(key)
     if (!raw) return null
     try {
@@ -80,25 +94,45 @@ export function createReauthStore({
         remove(key)
         return null
       }
+      if (account !== undefined && (stamped.accountId ?? null) !== account) {
+        remove(key) // 다른 계정(또는 로그아웃 상태)이 적은 것 — 이 계정은 쓸 수 없고 남겨 둘 이유도 없다
+        return null
+      }
       return stamped.value
     } catch {
       return null
     }
   }
-  const stamp = <T>(value: T) => JSON.stringify({ value, at: now() } satisfies Stamped<T>)
 
-  return {
-    remember: (action) => write('pending', stamp(action)),
-    pending: () => readFresh<PendingReauthAction>('pending', pendingTtlMs),
-    clearPending: () => remove('pending'),
-    stashToken: (token) => write('token', stamp(token)),
-    hasToken: () => readFresh<string>('token', tokenTtlMs) !== null,
-    takeToken() {
-      const token = readFresh<string>('token', tokenTtlMs)
-      remove('token')
-      return token
-    },
+  function view(account: string | null | undefined): ReauthStore {
+    const stamp = <T>(value: T) =>
+      JSON.stringify({
+        value,
+        at: now(),
+        ...(account === undefined ? {} : { accountId: account }),
+      } satisfies Stamped<T>)
+    const self: ReauthStore = {
+      remember: (action) => write('pending', stamp(action)),
+      pending: () => readFresh<PendingReauthAction>('pending', pendingTtlMs, account),
+      clearPending: () => remove('pending'),
+      stashToken: (token) => write('token', stamp(token)),
+      hasToken: () => readFresh<string>('token', tokenTtlMs, account) !== null,
+      peekToken: () => readFresh<string>('token', tokenTtlMs, account),
+      clearToken: () => remove('token'),
+      takeToken() {
+        const token = readFresh<string>('token', tokenTtlMs, account)
+        remove('token')
+        return token
+      },
+      clear() {
+        remove('pending')
+        remove('token')
+      },
+      forAccount: (next) => view(next),
+    }
+    return self
   }
+  return view(undefined)
 }
 
 export type SubmitWithReauthOptions<T> = {
@@ -128,11 +162,14 @@ export async function submitWithReauth<T>({
   action,
   run,
 }: SubmitWithReauthOptions<T>): Promise<SubmitWithReauthResult<T>> {
-  const token = store.takeToken()
+  const token = store.peekToken()
   try {
-    return { status: 'done', value: await run(token ? { confirmationToken: token } : {}) }
+    const value = await run(token ? { confirmationToken: token } : {})
+    if (token) store.clearToken() // 한 번 쓰였다
+    return { status: 'done', value }
   } catch (error) {
-    if (!isReauthFailure(error, token !== null)) throw error
+    if (!isReauthFailure(error, token !== null)) throw error // 일시 오류면 토큰은 그대로 — 다시 시도할 수 있다
+    if (token) store.clearToken() // 서버가 거절한 토큰은 낡았다
     store.remember(action)
     await requestMail()
     return { status: 'mail-sent' }

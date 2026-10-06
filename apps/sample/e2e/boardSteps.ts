@@ -1,5 +1,5 @@
 import { expect as pwExpect, type Locator, type Page } from 'playwright/test'
-import { dismissConsent, ko } from './helpers'
+import { consentViaApi, dismissConsent, ko } from './helpers'
 
 /*
  * 게시판 여정(board.e2e.ts)과 증거 스크립트(walkthrough.board.shots.ts)가 같이 쓰는 단계 — 화면에서 사람이 하는 일 그대로.

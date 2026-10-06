@@ -66,20 +66,28 @@ type SessionStorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
 const RETURN_KEY = 'skeleton.returnTo'
 
 /** 사이트를 벗어나는 흐름(소셜 로그인)을 시작하기 전에 돌아올 곳을 적어 둔다 — 저장소가 막혀도 조용히 넘어간다 */
-export function rememberReturnTo(path: string, storage?: SessionStorageLike): void {
+export function rememberReturnTo(
+  path: string,
+  storage?: SessionStorageLike,
+  key: string = RETURN_KEY,
+): void {
   try {
-    ;(storage ?? sessionStorage).setItem(RETURN_KEY, safeReturnPath(path))
+    ;(storage ?? sessionStorage).setItem(key, safeReturnPath(path))
   } catch {
     // 못 적어도 로그인은 된다 — 기본 위치로 간다
   }
 }
 
 /** `rememberReturnTo` 로 적은 곳을 한 번 읽고 지운다 */
-export function consumeReturnTo(fallback = '/', storage?: SessionStorageLike): string {
+export function consumeReturnTo(
+  fallback = '/',
+  storage?: SessionStorageLike,
+  key: string = RETURN_KEY,
+): string {
   try {
     const store = storage ?? sessionStorage
-    const value = store.getItem(RETURN_KEY)
-    store.removeItem(RETURN_KEY)
+    const value = store.getItem(key)
+    store.removeItem(key)
     return safeReturnPath(value, fallback)
   } catch {
     return fallback

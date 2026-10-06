@@ -132,7 +132,10 @@ export function SignUpScreen({
         ...(captchaToken ? { captchaToken } : {}),
         consents: accepted,
       })
-      if (result.status === 'VERIFICATION_SENT') setSentTo(email)
+      if (result.status === 'VERIFICATION_SENT') {
+        setPassword('') // 메일 확인 화면에 남아 「주소가 틀렸어요」로 돌아와도 비밀번호는 다시 받는다
+        setSentTo(email)
+      }
       else onCreated?.()
     } catch (error) {
       const violations = violationsOf(error)

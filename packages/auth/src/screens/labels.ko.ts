@@ -229,6 +229,7 @@ export const koAuthLabels: AuthLabels = {
   deleteTypedLabel: '확인하려면 「삭제」를 입력하세요',
   deleteConfirm: '계정 삭제',
   deleteScheduled: (date) => `${date} 에 계정 데이터가 지워질 예정이에요.`,
+  deleteDoneAction: '로그아웃',
   adminTitle: '계정 관리',
   adminSearch: '이메일로 찾기',
   adminStatusFilter: '상태',

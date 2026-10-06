@@ -11,6 +11,9 @@ import type { DiscoveryOptions } from './discovery'
 import type { SocialLoginFlow } from '../social'
 import type { SocialLinkFlow } from '../socialLink'
 import { createReauthStore, type ReauthStore } from '../reauth'
+import type { ReauthChannel } from '../reauthChannel'
+import { onAccountChange } from '../accountChange'
+import { authStorageKeys } from '../storageKeys'
 import {
   AccountPage,
   ConfirmEmailChangePage,
@@ -69,7 +72,12 @@ export type AuthPageName =
   | 'confirmDelete'
 
 export type AuthRoutesOptions = {
-  session: Pick<AuthSession, 'getState'>
+  /** 있으면 로그아웃 · 계정 전환 때 다시 인증 보관소를 비운다. 서버 렌더 앱처럼 세션이 이 라우트를 만드는 자리에 없으면 생략한다(보관소가 계정에 묶여 있어 다른 계정은 읽지 못한다) */
+  session?: Pick<AuthSession, 'getState' | 'subscribe'>
+  /** 저장 키 · 락 · 채널 이름의 접두어(앱 이름 — 기본 `skeleton`). 앱의 토큰 저장소 · 갱신기에도 같은 `authStorageKeys(namespace)` 를 쓴다 */
+  namespace?: string
+  /** 본인 확인 토큰을 같은 브라우저의 다른 탭에 넘기는 채널(`createBroadcastReauthChannel(keys.reauthChannel)`) — 앱이 브라우저에서 만들어 넘긴다. 없으면 토큰은 링크를 연 탭에 보관된다 */
+  reauthChannel?: ReauthChannel | null
   /** 모듈 전역 API 를 쓰는 앱(SPA)이 준다 — 서버 렌더 앱은 대신 `useApis` */
   authApi?: AuthApi
   accountApi?: AccountApi
@@ -118,7 +126,11 @@ export function createAuthRoutes(options: AuthRoutesOptions): RouteObject[] {
   const methods = resolveMethods(options.methods)
   if (!options.useApis && (!options.authApi || !options.accountApi))
     throw new Error('createAuthRoutes needs authApi and accountApi (or a useApis hook)')
+  const keys = authStorageKeys(options.namespace)
   const ctx: PageContext = {
+    keys,
+    notes: { warned: false },
+    reauthChannel: options.reauthChannel,
     authApi: options.authApi as AuthApi,
     accountApi: options.accountApi as AccountApi,
     labels: options.labels,
@@ -132,8 +144,10 @@ export function createAuthRoutes(options: AuthRoutesOptions): RouteObject[] {
       options.reauthStore ??
       createReauthStore({
         storage: typeof window === 'undefined' ? undefined : safeSessionStorage(),
+        prefix: keys.reauthPrefix,
       }),
   }
+  if (options.session?.subscribe) onAccountChange(options.session, () => ctx.reauth.clear())
   const page = (render: (c: PageContext) => ReactNode) => (
     <WithLabels ctx={ctx} useLabels={options.useLabels} useApis={options.useApis} render={render} />
   )
@@ -190,15 +204,14 @@ export function createAuthRoutes(options: AuthRoutesOptions): RouteObject[] {
     element: page((c) => <ConfirmEmailChangePage ctx={c} />),
     ...handle('confirmEmailChange'),
   })
-  // 비밀번호 없는 계정의 다시 인증 메일이 닿는 곳 — 어떤 방법 구성에서도 있다(메일 링크가 404 면 안 된다)
-  open.push({
-    path: paths.confirmReauth,
-    element: page((c) => <ConfirmReauthPage ctx={c} />),
-    ...handle('confirmReauth'),
-  })
-
   const settings: SettingsExtras = options.settings ?? { locales: [] }
   const guarded: RouteObject[] = [
+    // 비밀번호 없는 계정의 다시 인증 메일이 닿는 곳 — 로그인한 계정에만 의미가 있다(보관소가 그 계정에 묶인다). 로그아웃 상태로 열면 로그인한 뒤 이 링크로 돌아온다
+    {
+      path: paths.confirmReauth,
+      element: page((c) => <ConfirmReauthPage ctx={c} />),
+      ...handle('confirmReauth'),
+    },
     {
       path: paths.account,
       element: page((c) => <AccountPage ctx={c} settings={settings} />),

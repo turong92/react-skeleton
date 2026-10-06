@@ -103,11 +103,11 @@ export type {
   SubmitWithReauthResult,
 } from './reauth'
 export {
-  browserReauthChannel,
   createBroadcastReauthChannel,
   listenForReauthToken,
 } from './reauthChannel'
-export type { ReauthChannel } from './reauthChannel'
+export type { ReauthChannel, ReauthOfferHandler } from './reauthChannel'
+export { scrubUrlParams } from './scrubUrl'
 export { resolveReauthLanding } from './reauthLanding'
 export type { ReauthLandingOutcome } from './reauthLanding'
 

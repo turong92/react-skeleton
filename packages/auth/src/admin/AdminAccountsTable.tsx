@@ -176,7 +176,10 @@ export function AdminAccountsTable({
       />
       <ConfirmDialog
         open={suspending !== null}
-        onClose={() => setSuspending(null)}
+        onClose={() => {
+          setSuspending(null)
+          setReason('') // 닫을 때 비운다 — 다음 계정 정지에 이전 사유가 채워지지 않게
+        }}
         onConfirm={confirmSuspend}
         title={labels.adminSuspendTitle(suspending?.email ?? '')}
         description={

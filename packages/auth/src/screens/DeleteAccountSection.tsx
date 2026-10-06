@@ -18,7 +18,7 @@ export type DeleteAccountSectionProps = {
   }) => Promise<DeletionResult>
   /** 확인 메일 링크(`/confirm-delete?token=`)로 들어왔을 때 미리 채우는 토큰 */
   confirmationToken?: string
-  /** 삭제가 예약되고 나서(보통 이 기기를 로그아웃하고 안내 화면으로) */
+  /** 삭제가 예약되고 안내를 읽은 뒤 사용자가 「로그아웃」을 눌렀을 때(보통 이 기기를 로그아웃한다) */
   onDeleted?: (result: DeletionResult) => void
   formatDate?: (iso: string) => string
   labels?: Partial<AuthLabels>
@@ -50,9 +50,7 @@ export function DeleteAccountSection({
 
   async function confirm() {
     const ok = await del.run(async () => {
-      const done = await onDelete(credential)
-      setResult(done)
-      onDeleted?.(done)
+      setResult(await onDelete(credential))
     })
     setOpen(false)
     if (!ok) return
@@ -61,7 +59,13 @@ export function DeleteAccountSection({
   if (result)
     return (
       <SectionCard id="delete" title={labels.sectionDelete}>
-        <Alert tone="warning">{labels.deleteScheduled(formatDate(result.purgeAfter))}</Alert>
+        <div className={styles.stack}>
+          <Alert tone="warning">{labels.deleteScheduled(formatDate(result.purgeAfter))}</Alert>
+          {/* 안내를 읽을 시간을 준다 — 곧바로 로그아웃하면 가드가 로그인으로 보내 안내가 보이지 않는다 */}
+          <div>
+            <Button onClick={() => onDeleted?.(result)}>{labels.deleteDoneAction}</Button>
+          </div>
+        </div>
       </SectionCard>
     )
 

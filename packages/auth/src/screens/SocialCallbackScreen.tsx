@@ -1,5 +1,5 @@
 import { ErrorCodes, isErrorCode } from '@skeleton/api-client'
-import { Alert, Spinner } from '@skeleton/ui'
+import { Alert, Button, Spinner } from '@skeleton/ui'
 import { Link } from 'react-router-dom'
 import type { SocialCallbackState } from '../useSocialLoginCallback'
 import { AuthLayout } from './AuthLayout'
@@ -10,6 +10,8 @@ export type SocialCallbackScreenProps = {
   /** `useSocialLoginCallback(flow, search)` 의 상태 — 성공 뒤 이동은 호출자가 */
   state: SocialCallbackState
   signInTo: string
+  /** 있으면 오류 화면에 「다시 시도」(발견에 실패했을 때 방법을 다시 묻는다) */
+  onRetry?: () => void
   labels?: Partial<AuthLabels>
 }
 
@@ -17,6 +19,7 @@ export type SocialCallbackScreenProps = {
 export function SocialCallbackScreen({
   state,
   signInTo,
+  onRetry,
   labels: given,
 }: SocialCallbackScreenProps) {
   const labels = mergeLabels(given)
@@ -28,6 +31,13 @@ export function SocialCallbackScreen({
           <Alert tone={conflict ? 'warning' : 'danger'}>
             {conflict ? labels.callbackConflictBody : labels.callbackFailedBody}
           </Alert>
+          {onRetry && (
+            <div>
+              <Button variant="secondary" size="sm" onClick={onRetry}>
+                {labels.methodsRetry}
+              </Button>
+            </div>
+          )}
           <Link className={styles.link} to={signInTo}>
             {labels.backToSignIn}
           </Link>

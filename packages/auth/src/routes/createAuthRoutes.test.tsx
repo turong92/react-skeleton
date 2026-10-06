@@ -72,10 +72,18 @@ describe('createAuthRoutes', () => {
     expect(paths({ ...base, methods: { password: true } })).not.toContain('/magic-link')
   })
 
-  it('the re-authentication landing is always there (a mail link must never 404), outside the guard', () => {
+  it('the re-authentication landing is always there (a mail link must never 404) — behind the guard: the token belongs to the signed-in account, and a signed-out visitor comes back after signing in', () => {
     expect(paths({ ...base, methods: { password: true } })).toContain('/confirm-reauth')
     const routes = createAuthRoutes(base)
-    expect(routes.find((r) => r.path === '/confirm-reauth')).toBeDefined()
+    expect(routes.find((r) => r.path === '/confirm-reauth')).toBeUndefined() // not a top-level open route
+    const guarded = routes.find((r) => r.children)?.children ?? []
+    expect(guarded.map((r) => r.path)).toContain('/confirm-reauth')
+  })
+
+  it('createAuthRoutes works without a session option (server-render apps need not fake one)', () => {
+    const { session: _unused, ...withoutSession } = base
+    void _unused
+    expect(() => createAuthRoutes(withoutSession)).not.toThrow()
   })
 
   it('social callback exists only with a social flow', () => {
@@ -161,5 +169,28 @@ describe('createAuthRoutes with discovery (the backend tells which methods exist
     const out = renderRoute({ ...base, discovery }, '/sign-up')
     expect(out).toContain('Checking how you can sign in')
     expect(out).not.toContain('type="password"')
+  })
+})
+
+describe('createAuthRoutes — the re-auth store follows the session (I3)', () => {
+  it('signing out clears the pending action and the token', async () => {
+    const { createReauthStore } = await import('../reauth')
+    const reauthStore = createReauthStore({})
+    const live = createAuthSession({
+      api: { ...api, logout: async () => undefined } as AuthApi,
+      store: createTokenStore(),
+    })
+    live.signIn({
+      accessToken: 't',
+      tokenType: 'Bearer',
+      expiresAt: '2030-01-01T00:00:00Z',
+      principal: { accountId: 'A', roles: [] },
+    })
+    createAuthRoutes({ ...base, session: live, reauthStore })
+    reauthStore.remember({ kind: 'set-password' })
+    reauthStore.stashToken('tok')
+    await live.logout()
+    expect(reauthStore.pending()).toBeNull()
+    expect(reauthStore.hasToken()).toBe(false)
   })
 })

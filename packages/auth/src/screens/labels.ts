@@ -214,6 +214,8 @@ export type AuthLabels = {
   deleteTypedLabel: string
   deleteConfirm: string
   deleteScheduled: (date: string) => string
+  /** 삭제 예약 안내 아래 — 누르면 이 기기를 로그아웃한다 */
+  deleteDoneAction: string
   // 관리자
   adminTitle: string
   adminSearch: string
@@ -470,6 +472,7 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   deleteTypedLabel: 'Type DELETE to confirm',
   deleteConfirm: 'Delete account',
   deleteScheduled: (date) => `Your account is scheduled for erasure on ${date}.`,
+  deleteDoneAction: 'Sign out',
   adminTitle: 'Accounts',
   adminSearch: 'Search by email',
   adminStatusFilter: 'Status',

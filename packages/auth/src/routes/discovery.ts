@@ -8,6 +8,7 @@ import type { AuthSession } from '../session'
 import { createSocialLoginFlow, type SocialLoginFlow } from '../social'
 import { createSocialLinkFlow, type SocialLinkFlow } from '../socialLink'
 import type { TokenStorage } from '../tokenStore'
+import type { AuthMethodsWire } from '../types'
 
 export type DiscoveryOptions = {
   /** 백엔드에 못 물었을 때 보여 줄 방법(기본: 비밀번호만) */
@@ -38,7 +39,21 @@ export type DiscoveredContext = {
   discovered: DiscoveredState
 }
 
-let warned = false
+/** 경고를 한 번만 하려는 기억 — 라우트 한 벌(`createAuthRoutes`)마다 하나(모듈 전역이 아니다) */
+export type DiscoveryNotes = { warned: boolean }
+
+export function warnDeliveryOnce(
+  info: AuthMethodsWire,
+  configured: RefreshDelivery,
+  notes: DiscoveryNotes,
+  warn: (message: string) => void = console.warn,
+): void {
+  if (notes.warned) return
+  const problem = deliveryMismatch(info, configured)
+  if (!problem) return
+  notes.warned = true
+  warn(`[@skeleton/auth] ${problem}`)
+}
 
 /** 렌더 때 부른다 — 발견을 켠 라우트(`discovery` 가 있고 방법 설정이 없는)에서만 의미가 있다. 켜지 않았으면 undefined */
 export function useDiscoveredContext({
@@ -46,23 +61,23 @@ export function useDiscoveredContext({
   authApi,
   accountApi,
   paths,
+  notes,
+  statePrefixes,
 }: {
   discovery: DiscoveryOptions | undefined
   authApi: AuthApi
   accountApi: AccountApi
   paths: { socialCallback: string; socialLinkCallback: string }
+  notes: DiscoveryNotes
+  /** OAuth state 저장 접두어(앱 이름공간) — 없으면 패키지 기본 */
+  statePrefixes?: { social: string; socialLink: string }
 }): DiscoveredContext | undefined {
   const state = useAuthMethods(authApi, !!discovery)
   const info = state?.status === 'ready' ? state.info : undefined
 
   useEffect(() => {
-    if (!info || !discovery?.delivery || warned) return
-    const problem = deliveryMismatch(info, discovery.delivery)
-    if (problem) {
-      warned = true
-      console.warn(`[@skeleton/auth] ${problem}`)
-    }
-  }, [info, discovery?.delivery])
+    if (info && discovery?.delivery) warnDeliveryOnce(info, discovery.delivery, notes)
+  }, [info, discovery?.delivery, notes])
 
   const social = discovery?.social
   const resolved = useMemo(() => {
@@ -80,6 +95,7 @@ export function useDiscoveredContext({
             providers: found.providers,
             session: social.session,
             storage: social.storage,
+            ...(statePrefixes ? { storagePrefix: statePrefixes.social } : {}),
           })
         : undefined,
       socialLinkFlow: on
@@ -92,10 +108,11 @@ export function useDiscoveredContext({
             ),
             accountApi,
             storage: social.storage,
+            ...(statePrefixes ? { storagePrefix: statePrefixes.socialLink } : {}),
           })
         : undefined,
     }
-  }, [info, social, accountApi, paths.socialCallback, paths.socialLinkCallback])
+  }, [info, social, accountApi, paths.socialCallback, paths.socialLinkCallback, statePrefixes])
 
   if (!discovery || !state) return undefined
   const retry = state.status === 'failed' ? state.retry : () => undefined

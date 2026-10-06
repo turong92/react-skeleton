@@ -15,6 +15,8 @@ import {
   socialClientIds,
   socialProviderConfigs,
 } from './authConfig'
+import { ConsentSettingsSection } from '../legal/ConsentSettingsSection'
+import { SignUpConsentsSlot } from '../legal/SignUpConsentsSlot'
 import { useAuthLabels } from './useAuthLabels'
 
 const browserStorage = () => (typeof window === 'undefined' ? undefined : window.sessionStorage)
@@ -78,11 +80,14 @@ export const accountRoutes = createAuthRoutes({
   socialLinkFlow,
   useLabels: useAuthLabels,
   signInNotice: undefined,
+  // 약관 동의 — 가입 폼의 체크박스(서버 문서) · 설정의 동의 이력 · 선택 동의 철회
+  signUp: { renderConsents: (slot) => <SignUpConsentsSlot slot={slot} /> },
   settings: {
     locales: [
       { value: 'ko', label: '한국어' },
       { value: 'en', label: 'English' },
     ],
+    after: <ConsentSettingsSection />,
   },
   handle: hidden,
 })

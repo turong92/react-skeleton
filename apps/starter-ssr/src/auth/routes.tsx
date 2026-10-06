@@ -1,6 +1,8 @@
 import { createAccountApi, createAuthApi, createAuthRoutes, koAuthLabels } from '@skeleton/auth'
 import { useMemo } from 'react'
 import { useApi } from '../api/useApi'
+import { ConsentSettingsSection } from '../legal/ConsentSettingsSection'
+import { SignUpConsentsSlot } from '../legal/SignUpConsentsSlot'
 import { ClientRequireAuth } from './ClientRequireAuth'
 import { AUTH_NAMESPACE, authMethodsOverride, parseDelivery } from './authConfig'
 
@@ -32,11 +34,14 @@ export const accountRoutes = (handle?: (page: string) => unknown) =>
     discovery: { delivery: parseDelivery(import.meta.env.VITE_AUTH_REFRESH_DELIVERY) },
     labels: koAuthLabels,
     guard: <ClientRequireAuth redirectTo="/login" />,
+    // 약관 동의 — 가입 폼의 체크박스(서버 문서) · 설정의 이력 · 선택 동의 철회
+    signUp: { renderConsents: (slot) => <SignUpConsentsSlot slot={slot} /> },
     settings: {
       locales: [
         { value: 'ko', label: '한국어' },
         { value: 'en', label: 'English' },
       ],
+      after: <ConsentSettingsSection />,
     },
     handle,
   })

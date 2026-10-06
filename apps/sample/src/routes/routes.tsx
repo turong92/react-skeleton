@@ -11,7 +11,7 @@ import { BoardFormPage } from './BoardFormPage'
 import { BoardPage } from './BoardPage'
 import { BoardPostPage } from './BoardPostPage'
 import { HomeRoute } from './HomeRoute'
-import { LegalPage } from './LegalPage'
+import { LegalRoute } from './LegalRoute'
 import { NoteDetailPage } from './NoteDetailPage'
 import { NoteFormPage } from './NoteFormPage'
 import { NotesPage } from './NotesPage'
@@ -50,12 +50,12 @@ export const routes: RouteObject[] = [
       ...accountRoutes,
       {
         path: '/terms',
-        element: <LegalPage doc="terms" />,
+        element: <LegalRoute doc="terms" />,
         handle: publicSeo('seo.terms.title', 'seo.terms.description'),
       },
       {
         path: '/privacy',
-        element: <LegalPage doc="privacy" />,
+        element: <LegalRoute doc="privacy" />,
         handle: publicSeo('seo.privacy.title', 'seo.privacy.description'),
       },
       {

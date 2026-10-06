@@ -25,8 +25,11 @@ export type ReconsentController = {
   decline(): void
 }
 
+type ConsentApi = Pick<LegalApi, 'agree' | 'myConsents'>
+
 export type ReconsentOptions = {
-  api: Pick<LegalApi, 'agree' | 'myConsents'>
+  /** 법적 문서 API — 함수로 줘도 된다(API 클라이언트가 `recoverForbidden` 으로 이 컨트롤러를 먼저 필요로 해서, API 는 그 뒤에 만들어진다) */
+  api: ConsentApi | (() => ConsentApi)
   /** 서버가 막지 않는 경로의 접두어(기본 `/legal` · `/auth` · `/account`) — `legal` 의 basePath 를 바꿨다면 같이 바꾼다 */
   excludedPrefixes?: readonly string[]
 }
@@ -38,9 +41,13 @@ const IDLE: ReconsentState = { status: 'idle' }
  * 403 은 로그아웃도 토큰 갱신도 아니다: 동의가 끝나면 막혔던 호출을 **그대로 한 번 더** 보낸다(api-client 의 `recoverForbidden`).
  */
 export function createReconsentController({
-  api,
+  api: given,
   excludedPrefixes = DEFAULT_RECONSENT_EXCLUDED,
 }: ReconsentOptions): ReconsentController {
+  const api: ConsentApi = {
+    agree: (...args) => (typeof given === 'function' ? given() : given).agree(...args),
+    myConsents: () => (typeof given === 'function' ? given() : given).myConsents(),
+  }
   let state: ReconsentState = IDLE
   const listeners = new Set<() => void>()
   let waiters: Array<(value: boolean) => void> = []

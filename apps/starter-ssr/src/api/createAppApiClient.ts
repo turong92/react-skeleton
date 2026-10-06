@@ -25,6 +25,8 @@ export type AppApiClientOptions = {
   onUnauthorized?: (error: ApiRequestError) => void
   /** 401 → 토큰 갱신 → 한 번 재시도(`@skeleton/auth` 의 `createSessionRefresher().recover`) */
   recoverUnauthorized?: ApiClientConfig['recoverUnauthorized']
+  /** 사용자에게 물어 풀 수 있는 403(법적 문서 재동의 — `@skeleton/legal` 의 컨트롤러 `recover`) → 풀리면 같은 호출을 한 번 다시 보낸다 */
+  recoverForbidden?: ApiClientConfig['recoverForbidden']
   /** 쿠키 모드(리프레시 토큰이 HttpOnly 쿠키)면 true */
   withCredentials?: boolean
   /** true 면 요청마다 콘솔 로그(보통 `import.meta.env.DEV`) */
@@ -43,6 +45,7 @@ export function createAppApiClient({
   refreshStore,
   onUnauthorized,
   recoverUnauthorized,
+  recoverForbidden,
   withCredentials,
   debug = false,
   adapter,
@@ -52,6 +55,7 @@ export function createAppApiClient({
     adapter,
     debug,
     recoverUnauthorized,
+    recoverForbidden,
     withCredentials,
     getAuthHeaders: createAuthHeadersProvider(tokenStore),
     getTimeZone: userTimeZone,

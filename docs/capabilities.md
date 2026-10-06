@@ -49,7 +49,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 | 회원가입 · 이메일 인증 · 비밀번호 재설정 · 계정 설정(비밀번호 · 이메일 · 세션 · 삭제) | `auth` + `account-lifecycle` + `session-refresh` | (기본 포함 — 덧붙일 것 없음) | (모듈 없음) | 백엔드는 account · auth-session(+ -jdbc) 모듈과 메일(notification-mail) · 링크 주소 설정. 프런트는 createAuthRoutes 한 번(apps/starter 의 auth/routes.tsx 를 따른다), 켜는 로그인 방법은 백엔드가 알려 준다(고정하려면 new-project.sh --auth-methods 또는 VITE_AUTH_METHODS), 문구는 labels(koAuthLabels). |
 | 이메일 링크(매직링크) 로그인 | `magic-link-login` | (기본 포함 — 덧붙일 것 없음) | `--modules auth-magic-link` | 백엔드 auth-magic-link + 메일. 로그인 화면의 링크 버튼 · /magic-link 도착 화면은 백엔드가 그 방법을 열었을 때(GET /auth/methods)만 보인다. |
 | 운영자 계정 관리 표 (검색 · 정지 · 복구 · 역할) | `account-admin` | (기본 포함 — 덧붙일 것 없음) | (모듈 없음) | 백엔드 skeleton.account.admin.enabled=true. 프런트는 apps/sample 의 AdminAccountsPage 와 RequireRole 라우트를 복사한다. |
-| 약관 · 개인정보 동의 (가입 체크박스 · 새 판 재동의 · 선택 동의 철회) — 문서와 동의 기록은 서버가 쥔다 | `legal` | `--packages legal` | (모듈 없음) | 백엔드 스타터는 legal 을 켠다(문서는 TEMPLATE — stage · prod 는 자기 문서가 있어야 기동). 프런트는 createLegalApi + createReconsentController(api-client 의 recoverForbidden 에 꽂는다) + <ReconsentGate> 를 앱 맨 위에, 가입 라우트의 signUp.renderConsents 에 <SignUpConsents>, 설정에 <ConsentSettings>. 서버 없이 정적 약관만이면 legal-documents(marketing). |
+| 약관 · 개인정보 동의 (가입 체크박스 · 새 판 재동의 · 선택 동의 철회) — 문서와 동의 기록은 서버가 쥔다 | `legal` | (기본 포함 — 덧붙일 것 없음) | (모듈 없음) | 백엔드 스타터는 legal 을 켠다(문서는 TEMPLATE — stage · prod 는 자기 문서가 있어야 기동). 프런트는 createLegalApi + createReconsentController(api-client 의 recoverForbidden 에 꽂는다) + <ReconsentGate> 를 앱 맨 위에, 가입 라우트의 signUp.renderConsents 에 <SignUpConsents>, 설정에 <ConsentSettings>. 서버 없이 정적 약관만이면 legal-documents(marketing). |
 
 ## 전체 목록
 
@@ -68,7 +68,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 | `captcha-turnstile` | 봇 방지 — Cloudflare Turnstile 스크립트 로더 · <Turnstile> · 토큰 훅 · 요청에 토큰 붙이기. | --packages captcha-turnstile | captcha-turnstile | stable | 캡차, 봇 방지, 스팸 방지, 로봇 확인, 가입 폼 보호 / captcha, turnstile, bot protection, cloudflare, spam protection |
 | `seo` | 검색 · 공유 미리보기 — 제목 · 설명 · canonical · OG/Twitter · hreflang · JSON-LD 를 SPA(effect)와 SSR(문자열)에서 같은 규칙으로, 빌드 때 sitemap.xml · robots.txt 까지. | --packages seo | — | stable | 검색 노출, SEO, 메타 태그, OG 이미지, 링크 미리보기, 사이트맵 / seo, meta tags, open graph, twitter card, canonical, sitemap |
 | `marketing` | 공개 페이지 조립 부품 — Hero · 기능 · FAQ · 후기 · CTA · 푸터 · 요금제(월/연) · 쿠키 동의 · 약관 문서 페이지 · 404/500/점검 화면. | --packages marketing | — | stable | 랜딩, 랜딩 페이지, 홈페이지, 요금제, 가격표, FAQ / landing page, marketing site, pricing table, faq, terms of service, privacy policy |
-| `legal` | 법적 문서 · 동의 — 서버의 약관 읽기(마크다운 · 판 · 효력일) · 가입 동의 체크리스트(필수/선택 · 전체 동의 · 문서 다이얼로그) · 첫 로그인과 새 판 재동의(403 LEGAL.RECONSENT_REQUIRED 를 api-client 계층에서 받아 동의 뒤 막힌 호출을 다시 보낸다) · 동의 설정(이력 · 선택 동의 철회). | --packages legal | legal, legal-jdbc | stable | 약관 동의, 가입 동의 체크박스, 재동의, 개인정보 동의, 마케팅 수신 동의, 동의 철회 / terms consent, sign-up consent checkbox, re-consent, privacy consent, marketing opt-in, withdraw consent |
+| `legal` | 법적 문서 · 동의 — 서버의 약관 읽기(마크다운 · 판 · 효력일) · 가입 동의 체크리스트(필수/선택 · 전체 동의 · 문서 다이얼로그) · 첫 로그인과 새 판 재동의(403 LEGAL.RECONSENT_REQUIRED 를 api-client 계층에서 받아 동의 뒤 막힌 호출을 다시 보낸다) · 동의 설정(이력 · 선택 동의 철회). | 항상 | legal, legal-jdbc | stable | 약관 동의, 가입 동의 체크박스, 재동의, 개인정보 동의, 마케팅 수신 동의, 동의 철회 / terms consent, sign-up consent checkbox, re-consent, privacy consent, marketing opt-in, withdraw consent |
 | `time` | 글로벌 시간 — 순간 · 달력 날짜 · 현지+내 시간대 3종 포맷, 서버 시각 보정(카운트다운), 국가→시간대, 오늘의 날짜. | 항상 | time | stable | 시간, 날짜 표시, 시간대, 타임존, 서버 시각, 카운트다운 / time, date format, timezone, server clock, countdown, relative time |
 | `theme` | 라이트/다크/시스템 테마 — 토글 · 토스트 테마 · 첫 칠 전 스크립트(깜빡임 방지) · Vite 플러그인. | 항상 | — | stable | 다크 모드, 테마, 라이트 모드, 다크 테마 / dark mode, theme, light mode, color scheme |
 | `tokens` | 디자인 토큰 — 색 · 간격 · 모서리 · 글자 크기의 단일 정본(tokens.json)과 생성기 → tokens.css(라이트/다크), 날값 검출 테스트 도구. | 항상 | — | stable | 디자인 토큰, 색상, 브랜드 색, 간격, 디자인 시스템, 색 바꾸기 / design tokens, colors, brand color, spacing, design system, css variables |
@@ -141,7 +141,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 
 - 종류 · 상태: package · stable
 - 위치: `@skeleton/realtime` (`packages/realtime`)
-- 켜는 법: `--packages realtime` — 함께 따라오는 패키지 `api-client` · `auth` · `theme` · `time` · `tokens` · `ui` — `--with-sample` · `--with-workbench` 로도 따라온다
+- 켜는 법: `--packages realtime` — 함께 따라오는 패키지 `api-client` · `auth` · `legal` · `theme` · `time` · `tokens` · `ui` — `--with-sample` · `--with-workbench` 로도 따라온다
 - 필요한 것: `api-client`
 - 백엔드: `notification-sse` | `notification-websocket` 중 하나 이상 · 경로 `/api/v1/notifications/sse`
 - 주요 진입점: `createSseClient` · `useSseClient` · `createStompNotificationClient` · `useNotificationSocket` · `websocketUrlFromApiBase`
@@ -153,7 +153,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 
 - 종류 · 상태: package · stable
 - 위치: `@skeleton/i18n` (`packages/i18n`)
-- 켜는 법: `--packages i18n` — 함께 따라오는 패키지 `api-client` · `auth` · `theme` · `time` · `tokens` · `ui` — `--with-sample` 로도 따라온다
+- 켜는 법: `--packages i18n` — 함께 따라오는 패키지 `api-client` · `auth` · `legal` · `theme` · `time` · `tokens` · `ui` — `--with-sample` 로도 따라온다
 - 백엔드: 없음(프런트만)
 - 주요 진입점: `createI18n` · `I18nProvider` · `useT` · `detectLocale` · `@skeleton/i18n/testing#catalogProblems`
 - 보고 따라 할 스토리: `packages/i18n/src/I18nProvider.stories.tsx` · `packages/ui/src/LanguageMenu/LanguageMenu.stories.tsx`
@@ -165,7 +165,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 
 - 종류 · 상태: package · stable
 - 위치: `@skeleton/notifications` (`packages/notifications`)
-- 켜는 법: `--packages notifications` — 함께 따라오는 패키지 `api-client` · `auth` · `theme` · `time` · `tokens` · `ui` — `--with-sample` · `--with-workbench` 로도 따라온다
+- 켜는 법: `--packages notifications` — 함께 따라오는 패키지 `api-client` · `auth` · `legal` · `theme` · `time` · `tokens` · `ui` — `--with-sample` · `--with-workbench` 로도 따라온다
 - 필요한 것: `api-client` · `time` · `ui`
 - 백엔드: 모듈 `notification` · `notification-jdbc` · 있으면 더 켜지는 `notification-sse` · `notification-websocket` · 경로 `/api/v1/notifications`
 - 주요 진입점: `createNotificationsApi` · `useNotifications` · `useUnreadCount` · `useMarkRead` · `useMarkAllRead` · `useNotificationIngest` · `NotificationBell` · `NotificationList`
@@ -178,7 +178,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 
 - 종류 · 상태: package · stable
 - 위치: `@skeleton/board` (`packages/board`)
-- 켜는 법: `--packages board` — 함께 따라오는 패키지 `api-client` · `auth` · `theme` · `time` · `tokens` · `ui` — `--with-sample` 로도 따라온다
+- 켜는 법: `--packages board` — 함께 따라오는 패키지 `api-client` · `auth` · `legal` · `theme` · `time` · `tokens` · `ui` — `--with-sample` 로도 따라온다
 - 필요한 것: `api-client` · `time` · `ui`
 - 백엔드: 모듈 `board` · `board-jdbc` · 있으면 더 켜지는 `notification` · `idempotency` · 경로 `/api/v1/boards`
 - 주요 진입점: `createBoardApi` · `useBoardConfig` · `usePosts` · `usePost` · `useCreatePost` · `useReaction` · `PostList` · `PostDetail` · `PostEditor` · `CommentThread` · `BoardComments` · `ReactionBar` · `PostReactionBar` · `nestThread`
@@ -192,7 +192,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 
 - 종류 · 상태: package · stable
 - 위치: `@skeleton/storage` (`packages/storage`)
-- 켜는 법: `--packages storage` — 함께 따라오는 패키지 `api-client` · `auth` · `theme` · `time` · `tokens` · `ui` — `--with-sample` · `--with-workbench` 로도 따라온다
+- 켜는 법: `--packages storage` — 함께 따라오는 패키지 `api-client` · `auth` · `legal` · `theme` · `time` · `tokens` · `ui` — `--with-sample` · `--with-workbench` 로도 따라온다
 - 필요한 것: `api-client`
 - 백엔드: 모듈 `storage` · `storage-s3` · 경로 `/api/v1/storage`
 - 주요 진입점: `createStorageApi` · `createUploader` · `useUpload` · `validateFile` · `storageEndpoints` · `createXhrTransport`
@@ -205,7 +205,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 
 - 종류 · 상태: package · experimental
 - 위치: `@skeleton/payment` (`packages/payment`)
-- 켜는 법: `--packages payment` — 함께 따라오는 패키지 `api-client` · `auth` · `theme` · `time` · `tokens` · `ui` — `--with-workbench` 로도 따라온다
+- 켜는 법: `--packages payment` — 함께 따라오는 패키지 `api-client` · `auth` · `legal` · `theme` · `time` · `tokens` · `ui` — `--with-workbench` 로도 따라온다
 - 필요한 것: `api-client`
 - 백엔드: 모듈 `payment` · `payment-toss` | `payment-stripe` 중 하나 이상 · HTTP 를 열지 않는다(앱이 컨트롤러를 둔다)
 - 주요 진입점: `createPaymentApi` · `confirmRequestFromTossRedirect` · `isPaymentError` · `PAYMENT_ERROR_CODES` · `PaymentRedirectError`
@@ -217,7 +217,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 
 - 종류 · 상태: package · stable
 - 위치: `@skeleton/captcha-turnstile` (`packages/captcha-turnstile`)
-- 켜는 법: `--packages captcha-turnstile` — 함께 따라오는 패키지 `api-client` · `auth` · `theme` · `time` · `tokens` · `ui` — `--with-workbench` 로도 따라온다
+- 켜는 법: `--packages captcha-turnstile` — 함께 따라오는 패키지 `api-client` · `auth` · `legal` · `theme` · `time` · `tokens` · `ui` — `--with-workbench` 로도 따라온다
 - 백엔드: 모듈 `captcha-turnstile` · HTTP 를 열지 않는다(앱이 컨트롤러를 둔다)
 - 주요 진입점: `loadTurnstile` · `Turnstile` · `useTurnstileToken` · `attachTurnstileToken` · `turnstileHeaders`
 - 보고 따라 할 스토리: `packages/captcha-turnstile/src/Turnstile.stories.tsx`
@@ -229,7 +229,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 
 - 종류 · 상태: package · stable
 - 위치: `@skeleton/seo` (`packages/seo`)
-- 켜는 법: `--packages seo` — 함께 따라오는 패키지 `api-client` · `auth` · `theme` · `time` · `tokens` · `ui` — `--ssr` · `--with-sample` 로도 따라온다
+- 켜는 법: `--packages seo` — 함께 따라오는 패키지 `api-client` · `auth` · `legal` · `theme` · `time` · `tokens` · `ui` — `--ssr` · `--with-sample` 로도 따라온다
 - 백엔드: 없음(프런트만)
 - 주요 진입점: `buildHeadSpec` · `renderHeadHtml` · `useSeo` · `Seo` · `SeoProvider` · `applyHead` · `sitemapXml` · `robotsTxt` · `faqLd` · `breadcrumbLd` · `@skeleton/seo/vite#seoFiles`
 - 보고 따라 할 스토리: `packages/seo/src/Seo.stories.tsx`
@@ -241,7 +241,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 
 - 종류 · 상태: package · stable
 - 위치: `@skeleton/marketing` (`packages/marketing`)
-- 켜는 법: `--packages marketing` — 함께 따라오는 패키지 `api-client` · `auth` · `theme` · `time` · `tokens` · `ui` — `--with-sample` 로도 따라온다
+- 켜는 법: `--packages marketing` — 함께 따라오는 패키지 `api-client` · `auth` · `legal` · `theme` · `time` · `tokens` · `ui` — `--with-sample` 로도 따라온다
 - 필요한 것: `time` · `ui`
 - 백엔드: 없음(프런트만)
 - 주요 진입점: `Hero` · `FeatureGrid` · `FaqAccordion` · `Testimonial` · `CtaBand` · `SiteFooter` · `PricingTable` · `ConsentBanner` · `createConsentStore` · `LegalDocumentPage` · `NotFoundPage` · `ServerErrorPage` · `MaintenancePage`
@@ -255,7 +255,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 
 - 종류 · 상태: package · stable
 - 위치: `@skeleton/legal` (`packages/legal`)
-- 켜는 법: `--packages legal` — 함께 따라오는 패키지 `api-client` · `auth` · `theme` · `time` · `tokens` · `ui`
+- 켜는 법: 모든 프로젝트에 들어간다
 - 필요한 것: `api-client` · `ui`
 - 백엔드: 모듈 `legal` · `legal-jdbc` · 경로 `/api/v1/legal`
 - 주요 진입점: `createLegalApi` · `createReconsentController` · `ReconsentGate` · `SignUpConsents` · `ConsentChecklist` · `ConsentSettings` · `ApiLegalDocumentPage` · `DocumentDialog` · `useLegalDocuments` · `useMyConsents`
@@ -442,7 +442,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 
 - 종류 · 상태: pattern · stable
 - 위치: `@skeleton/notifications` (`packages/notifications/src/hooks.ts`)
-- 켜는 법: `--packages notifications` — 함께 따라오는 패키지 `api-client` · `auth` · `theme` · `time` · `tokens` · `ui` — `--with-sample` · `--with-workbench` 로도 따라온다
+- 켜는 법: `--packages notifications` — 함께 따라오는 패키지 `api-client` · `auth` · `legal` · `theme` · `time` · `tokens` · `ui` — `--with-sample` · `--with-workbench` 로도 따라온다
 - 필요한 것: `notifications` · `realtime`
 - 백엔드: `notification-sse` | `notification-websocket` 중 하나 이상 · 경로 `/api/v1/notifications/sse`
 - 주요 진입점: `useNotificationIngest` · `createInboxSync` · `parseNotificationEvent` · `useNotifications` · `useUnreadCount` · `NotificationBell`
@@ -454,7 +454,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 
 - 종류 · 상태: pattern · stable
 - 위치: `@skeleton/marketing` (`packages/marketing/src/patterns/Landing.stories.tsx`)
-- 켜는 법: `--packages marketing` — 함께 따라오는 패키지 `api-client` · `auth` · `theme` · `time` · `tokens` · `ui` — `--with-sample` 로도 따라온다
+- 켜는 법: `--packages marketing` — 함께 따라오는 패키지 `api-client` · `auth` · `legal` · `theme` · `time` · `tokens` · `ui` — `--with-sample` 로도 따라온다
 - 필요한 것: `marketing`
 - 백엔드: 없음(프런트만)
 - 주요 진입점: `Hero` · `FeatureGrid` · `Testimonial` · `FaqAccordion` · `CtaBand` · `SiteFooter` · `PricingTable`
@@ -468,7 +468,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 
 - 종류 · 상태: pattern · stable
 - 위치: `@skeleton/marketing` (`packages/marketing/src/patterns/Pricing.stories.tsx`)
-- 켜는 법: `--packages marketing` — 함께 따라오는 패키지 `api-client` · `auth` · `theme` · `time` · `tokens` · `ui` — `--with-sample` 로도 따라온다
+- 켜는 법: `--packages marketing` — 함께 따라오는 패키지 `api-client` · `auth` · `legal` · `theme` · `time` · `tokens` · `ui` — `--with-sample` 로도 따라온다
 - 필요한 것: `marketing`
 - 백엔드: 없음(프런트만)
 - 주요 진입점: `PricingTable` · `formatPrice` · `monthlyEquivalent` · `savingsPercent`
@@ -482,7 +482,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 
 - 종류 · 상태: pattern · template-only
 - 위치: `@skeleton/marketing` (`packages/marketing/src/patterns/LegalDocument.stories.tsx`)
-- 켜는 법: `--packages marketing` — 함께 따라오는 패키지 `api-client` · `auth` · `theme` · `time` · `tokens` · `ui` — `--with-sample` 로도 따라온다
+- 켜는 법: `--packages marketing` — 함께 따라오는 패키지 `api-client` · `auth` · `legal` · `theme` · `time` · `tokens` · `ui` — `--with-sample` 로도 따라온다
 - 필요한 것: `marketing`
 - 백엔드: 없음(프런트만)
 - 주요 진입점: `LegalDocumentPage` · `currentVersionOf` · `sortVersions`
@@ -496,7 +496,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 
 - 종류 · 상태: pattern · stable
 - 위치: `@skeleton/marketing` (`packages/marketing/src/consent/ConsentBanner.stories.tsx`)
-- 켜는 법: `--packages marketing` — 함께 따라오는 패키지 `api-client` · `auth` · `theme` · `time` · `tokens` · `ui` — `--with-sample` 로도 따라온다
+- 켜는 법: `--packages marketing` — 함께 따라오는 패키지 `api-client` · `auth` · `legal` · `theme` · `time` · `tokens` · `ui` — `--with-sample` 로도 따라온다
 - 필요한 것: `marketing`
 - 백엔드: 없음(프런트만)
 - 주요 진입점: `createConsentStore` · `ConsentBanner` · `useConsent`
@@ -509,7 +509,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 
 - 종류 · 상태: pattern · stable
 - 위치: `@skeleton/marketing` (`packages/marketing/src/patterns/NotFound.stories.tsx`)
-- 켜는 법: `--packages marketing` — 함께 따라오는 패키지 `api-client` · `auth` · `theme` · `time` · `tokens` · `ui` — `--with-sample` 로도 따라온다
+- 켜는 법: `--packages marketing` — 함께 따라오는 패키지 `api-client` · `auth` · `legal` · `theme` · `time` · `tokens` · `ui` — `--with-sample` 로도 따라온다
 - 필요한 것: `marketing`
 - 백엔드: 없음(프런트만)
 - 주요 진입점: `NotFoundPage` · `ServerErrorPage` · `MaintenancePage` · `StatusPage`

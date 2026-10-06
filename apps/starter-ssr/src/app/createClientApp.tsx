@@ -5,6 +5,11 @@ import {
   type AuthApi,
   type TokenStorage,
 } from '@skeleton/auth'
+import {
+  createLegalApi,
+  createReconsentController,
+  type ReconsentController,
+} from '@skeleton/legal'
 import { showApiError } from '@skeleton/ui'
 import { hydrate } from '@tanstack/react-query'
 import type { QueryClient } from '@tanstack/react-query'
@@ -38,6 +43,8 @@ export type ClientRuntime = {
   api: ApiClient
   auth: Auth
   queryClient: QueryClient
+  /** 약관 재동의(403 `LEGAL.RECONSENT_REQUIRED`) — `AppProviders` 의 `<LegalGate>` 가 화면을 그린다 */
+  reconsent: ReconsentController
 }
 
 /**
@@ -67,12 +74,15 @@ export function createClientRuntime({
     lockName: authKeys.refreshLock,
     refresh: (refreshToken) => bound.authApi!.refresh(refreshToken),
   })
+  // 재동의 컨트롤러는 클라이언트(`recoverForbidden`)보다 먼저 있고 법적 문서 API 는 클라이언트 뒤에 만들어지므로 늦게 잇는다
+  const reconsent = createReconsentController({ api: () => createLegalApi(api) })
   const api = createAppApiClient({
     env,
     tokenStore: tokens.store,
     refreshStore: tokens.refreshStore,
     debug,
     recoverUnauthorized: refresher.recover,
+    recoverForbidden: reconsent.recover,
     withCredentials: delivery === 'cookie',
   })
   const authApi = (bound.authApi = createAuthApi(api, { delivery }))
@@ -81,7 +91,7 @@ export function createClientRuntime({
   if (state) hydrate(queryClient, state)
   // 로그인한 계정이 사라지거나 바뀔 때마다 서버 상태를 비운다 — 다음 사람에게 이전 사람의 데이터가 보이지 않게(staleTime 이 있어 재조회도 늦다)
   onAccountChange(auth.session, () => queryClient.clear())
-  return { api, auth, queryClient }
+  return { api, auth, queryClient, reconsent }
 }
 
 /**
@@ -89,10 +99,10 @@ export function createClientRuntime({
  * 라우터만 다르다. 모듈 전역 없이 호출할 때마다 클라이언트 · 세션 · 캐시를 새로 만든다 — 테스트가 「브라우저처럼」 그려 서버 HTML 과 대조한다.
  */
 export function createClientApp({ Router, ...options }: ClientAppOptions): ReactElement {
-  const { api, auth, queryClient } = createClientRuntime(options)
+  const { api, auth, queryClient, reconsent } = createClientRuntime(options)
   return (
     <StrictMode>
-      <AppProviders queryClient={queryClient} api={api} auth={auth}>
+      <AppProviders queryClient={queryClient} api={api} auth={auth} reconsent={reconsent}>
         <Router>
           <AppRoutes />
         </Router>

@@ -13,6 +13,7 @@
   "dependencies": {
     "@skeleton/api-client": "workspace:*",
     "@skeleton/auth": "workspace:*",
+    "@skeleton/legal": "workspace:*",
     "@skeleton/theme": "workspace:*",
     "@skeleton/time": "workspace:*",
     "@skeleton/tokens": "workspace:*",

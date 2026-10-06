@@ -12,6 +12,7 @@ import { defaultAuthLabels, koAuthLabels } from '@skeleton/auth'
 import { toast } from 'sonner'
 import { onSessionEnded } from './auth/refresher'
 import { authSession } from './auth/session'
+import { LegalGate } from './legal/LegalGate'
 import { i18n } from './i18n'
 import { router } from './routes'
 
@@ -30,7 +31,9 @@ function render() {
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <AuthProvider session={authSession}>
-            <RouterProvider router={router} />
+            <LegalGate>
+              <RouterProvider router={router} />
+            </LegalGate>
           </AuthProvider>
           {/* 헤더의 종 · 메뉴를 덮지 않게 아래쪽에 */}
           <ThemedToaster position="bottom-right" />

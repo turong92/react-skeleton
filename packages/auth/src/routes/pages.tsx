@@ -496,14 +496,25 @@ export function SocialLinkCallbackPage({ ctx }: { ctx: PageContext }) {
 
 export type SettingsExtras = Partial<
   Pick<AccountSettingsProps, 'sections' | 'graceDays' | 'supportHref' | 'formatDate' | 'timeZones'>
-> & { locales: AccountSettingsProps['locales'] }
+> & {
+  locales: AccountSettingsProps['locales']
+  /** 설정 화면 아래에 이어 붙일 것(예: `@skeleton/legal` 의 `<ConsentSettings />`) */
+  after?: ReactNode
+}
 
 type AccountRouteState = {
   linked?: string
   resume?: AccountSettingsProps['resume']
 } | null
 
-export function AccountPage({ ctx, settings }: { ctx: PageContext; settings: SettingsExtras }) {
+export function AccountPage({
+  ctx,
+  settings: given,
+}: {
+  ctx: PageContext
+  settings: SettingsExtras
+}) {
+  const { after, ...settings } = given
   const auth = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
@@ -545,6 +556,7 @@ export function AccountPage({ ctx, settings }: { ctx: PageContext; settings: Set
         linkedProvider={state?.linked}
         {...settings}
       />
+      {after}
     </>
   )
 }

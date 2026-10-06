@@ -3,6 +3,7 @@ import { helloQuery } from '../hooks/useHello'
 import { RootLayout } from '../layouts/RootLayout'
 import { accountRoutes } from '../auth/routes'
 import { HomePage } from './HomePage'
+import { LegalPage } from './LegalPage'
 import { NotFoundPage } from './NotFoundPage'
 import type { RouteHandle } from './routeMeta'
 
@@ -36,6 +37,16 @@ export const routes: RouteObject[] = [
           robots: 'noindex',
         }),
       ),
+      // 서버가 쥐는 약관 · 방침(백엔드 legal 모듈) — 문서는 브라우저가 불러와 채우므로 검색에서 뺀다(정적 약관이 필요하면 marketing 의 LegalDocumentPage)
+      {
+        path: '/legal/:type',
+        element: <LegalPage />,
+        handle: handle({
+          title: '약관',
+          description: '이용약관 · 개인정보 처리방침.',
+          robots: 'noindex',
+        }),
+      },
       {
         path: '*',
         element: <NotFoundPage />,

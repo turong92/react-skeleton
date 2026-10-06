@@ -107,6 +107,9 @@ importers:
       '@skeleton/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
+      '@skeleton/legal':
+        specifier: workspace:*
+        version: link:../../packages/legal
       '@skeleton/marketing':
         specifier: workspace:*
         version: link:../../packages/marketing
@@ -162,6 +165,9 @@ importers:
       '@skeleton/auth':
         specifier: workspace:*
         version: link:../../packages/auth
+      '@skeleton/legal':
+        specifier: workspace:*
+        version: link:../../packages/legal
       '@skeleton/theme':
         specifier: workspace:*
         version: link:../../packages/theme
@@ -204,6 +210,9 @@ importers:
       '@skeleton/auth':
         specifier: workspace:*
         version: link:../../packages/auth
+      '@skeleton/legal':
+        specifier: workspace:*
+        version: link:../../packages/legal
       '@skeleton/seo':
         specifier: workspace:*
         version: link:../../packages/seo
@@ -396,9 +405,6 @@ importers:
       '@skeleton/api-client':
         specifier: workspace:*
         version: link:../api-client
-      '@skeleton/time':
-        specifier: workspace:*
-        version: link:../time
       '@skeleton/ui':
         specifier: workspace:*
         version: link:../ui

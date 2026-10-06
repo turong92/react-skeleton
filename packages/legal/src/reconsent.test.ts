@@ -175,4 +175,15 @@ describe('createReconsentController', () => {
     await expect(result).resolves.toBe('notes')
     expect(calls).toBe(2)
   })
+
+  it('takes the api lazily — the api client needs the controller (recoverForbidden) before the legal api can exist', async () => {
+    const agree = vi.fn(async (): Promise<MyConsents> => settled)
+    const bound: { api?: { agree: typeof agree; myConsents: () => Promise<MyConsents> } } = {}
+    const controller = createReconsentController({ api: () => bound.api! })
+    bound.api = { agree, myConsents: async () => blocked }
+    await controller.check()
+    expect(controller.getState()).toMatchObject({ status: 'required' })
+    await controller.agree([{ type: 'terms', version: '2026-12-01' }])
+    expect(agree).toHaveBeenCalledTimes(1)
+  })
 })

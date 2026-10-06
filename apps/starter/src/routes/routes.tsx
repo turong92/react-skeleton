@@ -1,6 +1,7 @@
 import type { RouteObject } from 'react-router-dom'
 import { RootLayout } from '../layouts/RootLayout'
 import { accountRoutes } from '../auth/routes'
+import { LegalPage } from '../legal/LegalPage'
 import { HomePage } from './HomePage'
 import { NotFoundPage } from './NotFoundPage'
 
@@ -17,6 +18,8 @@ export const routes: RouteObject[] = [
       { path: '/', element: <HomePage /> },
       // 로그인 · 가입 · 메일 확인 · 비밀번호 재설정 · 링크 로그인 · 계정 설정(/account 는 로그인한 사람만) — `auth/routes.tsx`
       ...accountRoutes,
+      // 서버가 쥐는 약관 · 방침(백엔드 legal 모듈) — 가입 폼의 체크박스 · 재동의 화면의 「보기」가 이 문서를 연다
+      { path: '/legal/:type', element: <LegalPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],
   },

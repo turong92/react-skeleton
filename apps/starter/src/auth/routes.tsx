@@ -12,6 +12,9 @@ import {
   socialClientIds,
   socialProviderConfigs,
 } from './authConfig'
+import { ConsentSettings, koLegalLabels } from '@skeleton/legal'
+import { legalApi } from '../api/legal'
+import { SignUpConsentsSlot } from '../legal/SignUpConsentsSlot'
 import { accountApi, authApi, authSession } from './session'
 
 const origin = typeof window === 'undefined' ? '' : window.location.origin
@@ -66,10 +69,13 @@ export const accountRoutes = createAuthRoutes({
   socialFlow,
   socialLinkFlow,
   labels: koAuthLabels, // 영어로 쓰려면 이 줄을 지운다(기본 영어)
+  // 약관 동의 — 가입 폼의 체크박스(서버 문서) · 설정의 동의 이력 · 선택 동의 철회. legal 모듈이 없는 백엔드면 둘 다 비어 있다(가입을 막지 않는다)
+  signUp: { renderConsents: (slot) => <SignUpConsentsSlot slot={slot} /> },
   settings: {
     locales: [
       { value: 'ko', label: '한국어' },
       { value: 'en', label: 'English' },
     ],
+    after: <ConsentSettings api={legalApi} locale="ko" labels={koLegalLabels} />,
   },
 })

@@ -263,7 +263,7 @@
       "stampFlag": {
         "flag": "--packages realtime",
         "included": "flag",
-        "autoIncludes": ["api-client", "auth", "theme", "time", "tokens", "ui"],
+        "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
         "alsoVia": ["--with-sample", "--with-workbench"],
         "optOut": null
       },
@@ -309,7 +309,7 @@
       "stampFlag": {
         "flag": "--packages i18n",
         "included": "flag",
-        "autoIncludes": ["api-client", "auth", "theme", "time", "tokens", "ui"],
+        "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
         "alsoVia": ["--with-sample"],
         "optOut": null
       },
@@ -365,7 +365,7 @@
       "stampFlag": {
         "flag": "--packages notifications",
         "included": "flag",
-        "autoIncludes": ["api-client", "auth", "theme", "time", "tokens", "ui"],
+        "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
         "alsoVia": ["--with-sample", "--with-workbench"],
         "optOut": null
       },
@@ -428,7 +428,7 @@
       "stampFlag": {
         "flag": "--packages board",
         "included": "flag",
-        "autoIncludes": ["api-client", "auth", "theme", "time", "tokens", "ui"],
+        "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
         "alsoVia": ["--with-sample"],
         "optOut": null
       },
@@ -499,7 +499,7 @@
       "stampFlag": {
         "flag": "--packages storage",
         "included": "flag",
-        "autoIncludes": ["api-client", "auth", "theme", "time", "tokens", "ui"],
+        "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
         "alsoVia": ["--with-sample", "--with-workbench"],
         "optOut": null
       },
@@ -561,7 +561,7 @@
       "stampFlag": {
         "flag": "--packages payment",
         "included": "flag",
-        "autoIncludes": ["api-client", "auth", "theme", "time", "tokens", "ui"],
+        "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
         "alsoVia": ["--with-workbench"],
         "optOut": null
       },
@@ -603,7 +603,7 @@
       "stampFlag": {
         "flag": "--packages captcha-turnstile",
         "included": "flag",
-        "autoIncludes": ["api-client", "auth", "theme", "time", "tokens", "ui"],
+        "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
         "alsoVia": ["--with-workbench"],
         "optOut": null
       },
@@ -644,7 +644,7 @@
       "stampFlag": {
         "flag": "--packages seo",
         "included": "flag",
-        "autoIncludes": ["api-client", "auth", "theme", "time", "tokens", "ui"],
+        "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
         "alsoVia": ["--ssr", "--with-sample"],
         "optOut": null
       },
@@ -715,7 +715,7 @@
       "stampFlag": {
         "flag": "--packages marketing",
         "included": "flag",
-        "autoIncludes": ["api-client", "auth", "theme", "time", "tokens", "ui"],
+        "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
         "alsoVia": ["--with-sample"],
         "optOut": null
       },
@@ -761,9 +761,9 @@
       "status": "stable",
       "summary": "법적 문서 · 동의 — 서버의 약관 읽기(마크다운 · 판 · 효력일) · 가입 동의 체크리스트(필수/선택 · 전체 동의 · 문서 다이얼로그) · 첫 로그인과 새 판 재동의(403 LEGAL.RECONSENT_REQUIRED 를 api-client 계층에서 받아 동의 뒤 막힌 호출을 다시 보낸다) · 동의 설정(이력 · 선택 동의 철회).",
       "stampFlag": {
-        "flag": "--packages legal",
-        "included": "flag",
-        "autoIncludes": ["api-client", "auth", "theme", "time", "tokens", "ui"],
+        "flag": null,
+        "included": "always",
+        "autoIncludes": [],
         "alsoVia": [],
         "optOut": null
       },
@@ -1711,7 +1711,7 @@
       "stampFlag": {
         "flag": "--packages notifications",
         "included": "flag",
-        "autoIncludes": ["api-client", "auth", "theme", "time", "tokens", "ui"],
+        "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
         "alsoVia": ["--with-sample", "--with-workbench"],
         "optOut": null
       },
@@ -1753,7 +1753,7 @@
       "stampFlag": {
         "flag": "--packages marketing",
         "included": "flag",
-        "autoIncludes": ["api-client", "auth", "theme", "time", "tokens", "ui"],
+        "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
         "alsoVia": ["--with-sample"],
         "optOut": null
       },
@@ -1782,7 +1782,7 @@
       "stampFlag": {
         "flag": "--packages marketing",
         "included": "flag",
-        "autoIncludes": ["api-client", "auth", "theme", "time", "tokens", "ui"],
+        "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
         "alsoVia": ["--with-sample"],
         "optOut": null
       },
@@ -1811,7 +1811,7 @@
       "stampFlag": {
         "flag": "--packages marketing",
         "included": "flag",
-        "autoIncludes": ["api-client", "auth", "theme", "time", "tokens", "ui"],
+        "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
         "alsoVia": ["--with-sample"],
         "optOut": null
       },
@@ -1839,7 +1839,7 @@
       "stampFlag": {
         "flag": "--packages marketing",
         "included": "flag",
-        "autoIncludes": ["api-client", "auth", "theme", "time", "tokens", "ui"],
+        "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
         "alsoVia": ["--with-sample"],
         "optOut": null
       },
@@ -1867,7 +1867,7 @@
       "stampFlag": {
         "flag": "--packages marketing",
         "included": "flag",
-        "autoIncludes": ["api-client", "auth", "theme", "time", "tokens", "ui"],
+        "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
         "alsoVia": ["--with-sample"],
         "optOut": null
       },

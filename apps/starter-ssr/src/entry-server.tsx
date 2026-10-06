@@ -1,5 +1,6 @@
 import type { ApiClient } from '@skeleton/api-client'
 import { createAuthApi } from '@skeleton/auth'
+import { createLegalApi, createReconsentController } from '@skeleton/legal'
 import { buildHeadSpec } from '@skeleton/seo'
 import { dehydrate } from '@tanstack/react-query'
 import { StrictMode } from 'react'
@@ -57,7 +58,12 @@ export async function render(
   const auth = createAuth({ api: createAuthApi(api), tokens: createDeferredTokens() })
   const html = renderToString(
     <StrictMode>
-      <AppProviders queryClient={queryClient} api={api} auth={auth}>
+      <AppProviders
+        queryClient={queryClient}
+        api={api}
+        auth={auth}
+        reconsent={createReconsentController({ api: () => createLegalApi(api) })}
+      >
         <StaticRouter location={url}>
           <AppRoutes />
         </StaticRouter>

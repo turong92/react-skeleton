@@ -10,6 +10,7 @@ import '@skeleton/tokens/tokens.css'
 import '@skeleton/ui/base.css'
 import { queryClient } from './app/queryClient'
 import { authSession } from './auth/session'
+import { LegalGate } from './legal/LegalGate'
 import { router } from './routes'
 
 const ENABLE_QUERY_DEVTOOLS =
@@ -30,7 +31,9 @@ function render() {
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <AuthProvider session={authSession}>
-            <RouterProvider router={router} />
+            <LegalGate>
+              <RouterProvider router={router} />
+            </LegalGate>
           </AuthProvider>
           <ThemedToaster />
           {ENABLE_QUERY_DEVTOOLS && <ReactQueryDevtools initialIsOpen={false} />}

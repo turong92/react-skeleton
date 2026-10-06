@@ -115,4 +115,36 @@ describe('M3 — an unrecoverable 401 clears both credentials', () => {
     expect(tokenStore.get()).toBeNull()
     expect(refreshStore.get()).toBeNull()
   })
+
+  it('hands a 403 the app can fix (legal re-consent) to recoverForbidden and retries once when it says so', async () => {
+    let calls = 0
+    const adapter: AxiosAdapter = async (config) => {
+      calls += 1
+      return {
+        config,
+        data:
+          calls === 1
+            ? { code: 'LEGAL.RECONSENT_REQUIRED', title: 'x', status: 403, timestamp: 't' }
+            : { value: { message: 'hi' }, meta: { timestamp: 't' } },
+        headers: {},
+        status: calls === 1 ? 403 : 200,
+        statusText: '',
+      }
+    }
+    const recoverForbidden = vi.fn(async () => true)
+    const client = createAppApiClient({
+      env: {},
+      tokenStore: createTokenStore(),
+      adapter,
+      recoverForbidden,
+    })
+    // the 403 only reaches the hook for requests that carry a sign-in
+    const store = createTokenStore()
+    store.set('t')
+    const signedIn = createAppApiClient({ env: {}, tokenStore: store, adapter, recoverForbidden })
+    await expect(signedIn.value('/notes')).resolves.toEqual({ message: 'hi' })
+    expect(recoverForbidden).toHaveBeenCalledTimes(1)
+    expect(calls).toBe(2)
+    void client
+  })
 })

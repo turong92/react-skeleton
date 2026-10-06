@@ -3,7 +3,7 @@ import { copyFileSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { expect as pwExpect, type Page } from 'playwright/test'
 import { describe, inject, it } from 'vitest'
-import { dismissConsent, ko, launch, seedNotes } from './helpers'
+import { auth, dismissConsent, fillSignIn, ko, launch, seedNotes, DEMO } from './helpers'
 
 /*
  * 소유자에게 보이는 증거 — 같은 서버 · 같은 여정을 사람이 보는 속도로 밟으며 스크린샷(라이트 10 + 다크 2 + 모바일 · 알림 덤)과 녹화(.webm → .mp4 · .gif)를 남긴다.
@@ -39,13 +39,14 @@ describe('walkthrough', () => {
       await page.getByRole('link', { name: ko('header.signIn'), exact: true }).click()
 
       // 1 로그인
-      await page.getByRole('button', { name: ko('login.demoFill') }).click()
+      await page.getByLabel(auth.email).fill(DEMO.email)
+      await page.getByLabel(auth.password).first().fill(DEMO.password)
       await shot(
         page,
         '01-login.png',
-        '로그인 — 체험 계정을 채운 모습. Patterns/Login page + @skeleton/auth(JWT)',
+        '로그인 — 체험 계정을 채운 모습. Patterns/Auth/Sign in + @skeleton/auth(JWT)',
       )
-      await page.getByRole('button', { name: ko('login.submit'), exact: true }).click()
+      await fillSignIn(page, DEMO)
 
       // 2 첫 대시보드(빈 상태)
       await page.getByRole('heading', { name: ko('dashboard.emptyTitle') }).waitFor()

@@ -27,6 +27,8 @@ export function useSseClient(options: UseSseClientOptions) {
     createSseClient({
       url: () => resolve(latest().url),
       getAuthHeaders: () => latest().getAuthHeaders?.(),
+      recoverUnauthorized: (failed) => latest().recoverUnauthorized?.(failed) ?? Promise.resolve(false),
+      subscribeAuthChanges: (onChange) => latest().subscribeAuthChanges?.(onChange) ?? (() => undefined),
       traceId: () => resolve(latest().traceId),
       reconnect: options.reconnect,
       fetch: options.fetch,

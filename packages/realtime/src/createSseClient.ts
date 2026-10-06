@@ -50,6 +50,16 @@ export type SseClientOptions = {
   url: string | (() => string)
   /** 재연결마다 다시 불러, 바뀐 토큰을 쓴다 */
   getAuthHeaders?: () => Record<string, string> | undefined
+  /**
+   * 401 이면 토큰 갱신을 한 번 시도한다(`@skeleton/auth` 의 `createSessionRefresher().refresh`). 인자는 방금 보낸 `Authorization` 값.
+   * true 면 곧바로 다시 잇고, false 면 세션이 끝난 것이라 `off`. 갱신 직후 또 401 이면 `off`(되풀이 없음). 없으면 401 은 바로 `off`
+   */
+  recoverUnauthorized?: (failedAuthorization: string | undefined) => Promise<boolean>
+  /**
+   * 토큰이 바뀔 때(다른 요청이 갱신했다 · 다른 탭이 로그인했다) 부를 처리기를 등록한다 — `start()` 부터 `stop()` 까지.
+   * 스트림이 죽어 있으면(`off` · `error`) 다시 잇는다. 정상이면 건드리지 않는다
+   */
+  subscribeAuthChanges?: (onChange: () => void) => () => void
   /** 같은 흐름을 묶는 traceId(없으면 새로 만든다) */
   traceId?: string | (() => string | undefined)
   onEvent: (event: SseEvent) => void
@@ -97,6 +107,8 @@ export function createSseClient(options: SseClientOptions): SseClient {
   let timer: ReturnType<typeof setTimeout> | null = null
   let idleTimer: ReturnType<typeof setTimeout> | null = null
   let unsubscribeVisibility: (() => void) | null = null
+  let unsubscribeAuth: (() => void) | null = null
+  let recoveredUnauthorized = false
 
   const policy =
     options.reconnect === false
@@ -206,6 +218,17 @@ export function createSseClient(options: SseClientOptions): SseClient {
         durationMs: Math.round(performance.now() - started),
       })
       if (controller !== abortController) return
+      if (response.status === 401 && options.recoverUnauthorized && !recoveredUnauthorized) {
+        recoveredUnauthorized = true // 한 번만 — 갱신했는데도 401 이면 되풀이하지 않는다
+        const recovered = await options
+          .recoverUnauthorized(headers.get('Authorization') ?? undefined)
+          .catch(() => false)
+        if (controller !== abortController) return
+        if (recovered) {
+          retry = { delayMs: 0 }
+          return
+        }
+      }
       if ([401, 403, 404].includes(response.status)) {
         haltSession()
         setStatus('off')
@@ -217,6 +240,7 @@ export function createSseClient(options: SseClientOptions): SseClient {
         return
       }
       reconnectAttempt = 0
+      recoveredUnauthorized = false
       setStatus('open')
       armIdle()
       options.onOpen?.({ reconnect: everOpened })
@@ -256,11 +280,19 @@ export function createSseClient(options: SseClientOptions): SseClient {
   return {
     start() {
       everOpened = false
+      recoveredUnauthorized = false
+      unsubscribeAuth?.()
+      unsubscribeAuth =
+        options.subscribeAuthChanges?.(() => {
+          if (status === 'off' || status === 'error') void connect(0)
+        }) ?? null
       unsubscribeVisibility?.()
       unsubscribeVisibility = visibilitySource.subscribe(onVisibilityChange)
       return connect(0)
     },
     stop() {
+      unsubscribeAuth?.()
+      unsubscribeAuth = null
       haltSession()
       controller?.abort()
       controller = null

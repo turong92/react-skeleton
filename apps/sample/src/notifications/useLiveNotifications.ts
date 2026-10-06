@@ -4,6 +4,7 @@ import { useSseClient } from '@skeleton/realtime'
 import { toast } from 'sonner'
 import { useEffect } from 'react'
 import { apiClient } from '../api/client'
+import { refresher } from '../auth/refresher'
 import { tokenStore } from '../auth/tokenStore'
 
 const getAuthHeaders = createAuthHeadersProvider(tokenStore)
@@ -21,6 +22,9 @@ export function useLiveNotifications() {
   const sse = useSseClient({
     url: apiClient.endpoint('/notifications/sse'),
     getAuthHeaders,
+    // 액세스 토큰이 만료돼 401 이면 갱신하고 다시 잇는다 · 다른 요청이 토큰을 갱신하면 죽은 스트림을 다시 잇는다
+    recoverUnauthorized: (failed) => refresher.refresh(failed),
+    subscribeAuthChanges: (onChange) => tokenStore.subscribe(onChange),
     onEvent: (event) => ingest(event.data),
   })
   const { start, stop } = sse

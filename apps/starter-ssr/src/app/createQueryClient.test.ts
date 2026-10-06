@@ -41,4 +41,21 @@ describe('createQueryClient — error toast wiring', () => {
     const plain = createQueryClient({ onError: vi.fn() })
     expect(plain.getDefaultOptions().queries?.staleTime).toBeUndefined()
   })
+
+  it('a query that marks statuses as expected (meta.quietStatuses — e.g. a backend without the legal module answering 404) is not reported; other failures of it still are', async () => {
+    const onError = vi.fn()
+    const client = createQueryClient({ onError })
+    const apiError = (status: number) =>
+      Object.assign(new Error('x'), { apiError: { status, code: 'X', title: 'x', timestamp: 't' } })
+    const run = (key: string, error: unknown, meta?: Record<string, unknown>) =>
+      client
+        .fetchQuery({ queryKey: [key], queryFn: () => Promise.reject(error), retry: false, meta })
+        .catch(() => undefined)
+    await run('quiet', apiError(404), { quietStatuses: [404] })
+    expect(onError).not.toHaveBeenCalled()
+    await run('other-status', apiError(500), { quietStatuses: [404] })
+    expect(onError).toHaveBeenCalledTimes(1)
+    await run('no-meta', apiError(404))
+    expect(onError).toHaveBeenCalledTimes(2)
+  })
 })

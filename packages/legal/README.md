@@ -50,6 +50,7 @@ signUp: {
 }
 ```
 
+- **legal 모듈이 없는 백엔드**: 공개 읽기(`GET /documents`)가 401(익명) · 404(로그인)로 답한다. 가입 슬롯 · 설정 절은 아무것도 그리지 않고 가입을 막지 않으며(`401·403·404·405` = 모듈 없음, 재시도 없음), 앱의 전역 오류 토스트가 울리지 않도록 쿼리에 `meta.quietStatuses` 를 단다 — 앱의 `createQueryClient` 가 그 코드를 거른다(스타터 · 샘플 · SSR 스타터 모두).
 - **제외 경로**: 서버는 `/legal/**` · `/auth/**` · `/account/**` 를 막지 않는다(계약 4절) — 컨트롤러도 이 경로의 403 은 풀려 하지 않는다(`excludedPrefixes`).
 - **첫 로그인(소셜 · 링크)**: 로그인한 계정 id 가 생기면 `ReconsentGate` 가 `GET /consents/me` 를 한 번 부르고 `blocked` 면 같은 화면을 연다(`source: first-sign-in`).
 - **판 고르기**: 서버에는 판 목록 엔드포인트가 없다(현재 판 · `next` 뿐). 판 고르기는 현재 판 + 앱이 아는 판(`extraVersions` — 예: 내가 동의한 판)이다.

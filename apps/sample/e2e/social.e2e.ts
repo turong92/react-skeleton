@@ -95,7 +95,7 @@ describe('LINE: PKCE + nonce on the way out and back, an address-less account, a
       pwExpect(body.nonce).toBe(q.get('nonce'))
       pwExpect(body.redirectUri).toBe(q.get('redirect_uri')) // 인가 요청과 글자까지 같다
       await acceptLegalGate(page, apiUrl) // legal 모듈이 있는 백엔드: 소셜로 처음 들어오면 동의부터
-      await pwExpect(page.getByRole('heading', { level: 1 })).toBeVisible()
+      await pwExpect(page.getByRole('heading', { level: 1, name: /안녕하세요/ })).toBeVisible()
       // 인가 코드 · state 는 주소창에 남지 않는다
       pwExpect(page.url()).not.toContain('code=')
       // sessionStorage 의 state · verifier 는 한 번 쓰고 지워졌다
@@ -133,7 +133,10 @@ describe('LINE: PKCE + nonce on the way out and back, an address-less account, a
       await page.getByLabel(auth.codeDigit(1, 6)).click()
       await page.keyboard.type(code.code)
       await pwExpect(
-        page.getByRole('region', { name: auth.sectionEmail }).getByText(lineEmail),
+        page
+          .getByRole('region', { name: auth.sectionEmail })
+          .locator('strong')
+          .filter({ hasText: lineEmail }),
       ).toBeVisible()
     },
   )
@@ -144,10 +147,13 @@ describe('LINE: PKCE + nonce on the way out and back, an address-less account, a
       await page.evaluate(() => window.localStorage.clear())
       await page.goto(`${baseUrl}/login`)
       await page.getByRole('button', { name: 'LINE으로 계속하기' }).click()
-      await pwExpect(page.getByRole('heading', { level: 1 })).toBeVisible()
+      await pwExpect(page.getByRole('heading', { level: 1, name: /안녕하세요/ })).toBeVisible()
       await page.goto(`${baseUrl}/account`)
       await pwExpect(
-        page.getByRole('region', { name: auth.sectionEmail }).getByText(lineEmail),
+        page
+          .getByRole('region', { name: auth.sectionEmail })
+          .locator('strong')
+          .filter({ hasText: lineEmail }),
       ).toBeVisible()
     },
   )
@@ -171,6 +177,7 @@ describe('X: PKCE without a nonce, 30-second codes are exchanged at once', () =>
       pwExpect(body.codeVerifier).toMatch(/^[A-Za-z0-9_-]{43}$/)
       pwExpect('nonce' in body).toBe(false)
       await acceptLegalGate(page, apiUrl)
+      await pwExpect(page.getByRole('heading', { level: 1, name: /안녕하세요/ })).toBeVisible() // 콜백이 끝나고 토큰이 저장될 때까지
       await page.goto(`${baseUrl}/account`)
       await pwExpect(
         page.getByRole('region', { name: auth.sectionEmail }).getByText(auth.emailNone),
@@ -216,10 +223,10 @@ describe('callback robustness', () => {
       await page.goto(`${baseUrl}/login`)
       await page.getByRole('button', { name: 'LINE으로 계속하기' }).click()
       await acceptLegalGate(page, apiUrl)
-      await pwExpect(page.getByRole('heading', { level: 1 })).toBeVisible()
+      await pwExpect(page.getByRole('heading', { level: 1, name: /안녕하세요/ })).toBeVisible()
       await page.goto(`${baseUrl}/auth/callback`)
       await pwExpect(page.getByRole('heading', { name: auth.callbackFailedTitle })).toHaveCount(0)
-      await pwExpect(page.getByRole('heading', { level: 1 })).toBeVisible()
+      await pwExpect(page.getByRole('heading', { level: 1, name: /안녕하세요/ })).toBeVisible()
     },
   )
 })

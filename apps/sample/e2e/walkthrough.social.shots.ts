@@ -72,7 +72,7 @@ describe('social sign-in walkthrough', () => {
       await dismissConsent(page)
       await page.getByRole('button', { name: 'LINE으로 계속하기' }).click()
       await acceptLegalGate(page, apiUrl)
-      await page.getByRole('heading', { level: 1 }).first().waitFor()
+      await page.getByRole('heading', { level: 1, name: /안녕하세요/ }).waitFor()
       await page.goto(`${baseUrl}/account`)
       await page.getByRole('region', { name: auth.sectionEmail }).waitFor()
       await page.getByRole('region', { name: auth.sectionEmail }).scrollIntoViewIfNeeded()

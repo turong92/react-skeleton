@@ -10,6 +10,9 @@ import type { ConsentRequest, ConsentSource, ReadDocumentOptions } from './types
  */
 const FIVE_MINUTES = 5 * 60_000
 
+/** 이 상태 코드는 오류가 아니라 「이 백엔드에 legal 모듈이 없다」 — 앱의 전역 오류 토스트가 거른다(`meta.quietStatuses`, 앱의 `createQueryClient`) */
+const MODULE_MISSING = { quietStatuses: [401, 403, 404, 405] }
+
 /**
  * 다시 시도할까 — 모듈이 없는 백엔드의 답(401 · 403 · 404 · 405)은 다시 물어도 같다. 기본 재시도(3번 · 지수 대기, 약 7초)를 그대로 두면 가입 폼이 그동안 「불러오는 중」으로 막힌다(e2e 로 확인).
  * 일시 실패(네트워크 · 5xx)만 두 번 더 해 본다.
@@ -27,6 +30,7 @@ export function useLegalDocuments(api: LegalApi, options: { enabled?: boolean } 
     enabled: options.enabled ?? true,
     staleTime: FIVE_MINUTES,
     retry: legalRetry,
+    meta: MODULE_MISSING,
   })
 }
 
@@ -51,6 +55,7 @@ export function useMyConsents(api: LegalApi, options: { enabled?: boolean } = {}
     ...myConsentsQuery(api),
     enabled: options.enabled ?? true,
     retry: legalRetry,
+    meta: MODULE_MISSING,
   })
 }
 

@@ -53,6 +53,20 @@ const region = (name: string, on: Page = page) => on.getByRole('region', { name 
 const token = (key: string) => page.evaluate((k) => window.localStorage.getItem(k), key)
 const refreshToken = async () =>
   JSON.parse((await token('sample.refresh')) ?? '{}').refreshToken as string
+/**
+ * 삭제가 받아들여지면 `/account` 에 남지 않고 로그아웃 상태의 안내(`/account-deleted`)로 간다 — 머리글도 로그아웃 상태.
+ * 샘플은 서버가 self-restore 를 켜 둬 「그 전에 다시 로그인하면 취소할 수 있어요」 도 말한다. 「로그인 화면으로」 로 로그인 화면까지 간다
+ */
+async function expectAccountDeletedLanding() {
+  await pwExpect(heading(auth.accountDeletedTitle)).toBeVisible()
+  await pwExpect(page).toHaveURL(/\/account-deleted$/)
+  await pwExpect(page.getByText(auth.accountDeletedRestoreNote)).toBeVisible()
+  await pwExpect(
+    page.getByRole('banner').getByRole('button', { name: ko('header.signOut') }),
+  ).toHaveCount(0)
+  await page.getByRole('link', { name: auth.accountDeletedAction }).click()
+}
+
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 /** 인증번호 칸에 6자리를 친다(첫 칸에서 시작 — 한 자리마다 다음 칸으로 넘어가고, 다 채우면 버튼 없이 제출된다) */
@@ -303,7 +317,7 @@ describe('account lifecycle against the real backend', () => {
     await pwExpect(section.getByText(auth.emailPendingTitle)).toBeVisible()
     await pwExpect(section.getByText(new RegExp(emailNext)).first()).toBeVisible()
     await enterCode(section, '000000')
-    await pwExpect(section.getByRole('alert')).toContainText(auth.codeInvalid(4))
+    await pwExpect(section.getByText(auth.codeInvalid(4)).first()).toBeVisible()
   })
 
   it('the code goes to the NEW address; entering it in this session switches the address — this session stays signed in, the other devices are signed out', async () => {
@@ -337,10 +351,13 @@ describe('account lifecycle against the real backend', () => {
     await page.goto(`${baseUrl}/account`)
     const section = region(auth.sectionSessions)
     await pwExpect(section.getByText('Third device')).toBeVisible()
-    await pwExpect(section.getByText(auth.sessionsCurrent)).toBeVisible()
+    // 「이 기기」 배지(정확히) — 로컬 IP 는 「이 기기(로컬)」 로 읽혀 부분 일치로는 여럿이 걸린다
+    await pwExpect(section.getByText(auth.sessionsCurrent, { exact: true })).toBeVisible()
     // 가입 인증(코드)으로 로그인한 이 세션도 기기 이름(X-Device-Name)을 갖는다 — 「알 수 없는 기기」가 아니다
     await pwExpect(
-      section.getByRole('listitem').filter({ hasText: auth.sessionsCurrent }),
+      section
+        .getByRole('listitem')
+        .filter({ has: page.getByText(auth.sessionsCurrent, { exact: true }) }),
     ).not.toContainText(auth.sessionsUnknownDevice)
     await section.getByRole('button', { name: auth.sessionsRevoke, exact: true }).first().click()
     await pwExpect(section.getByText('Third device')).toHaveCount(0)
@@ -364,10 +381,12 @@ describe('account lifecycle against the real backend', () => {
     await pwExpect(confirm).toBeDisabled()
     await dialog.getByLabel(auth.deleteTypedLabel).fill(auth.deleteTypedPhrase)
     await confirm.click()
-    await section.getByRole('button', { name: auth.deleteDoneAction }).click()
-    await pwExpect(heading(auth.signInTitle)).toBeVisible() // 삭제되면 이 기기도 로그아웃
+    await expectAccountDeletedLanding()
+    await pwExpect(heading(auth.signInTitle)).toBeVisible() // 안내의 「로그인 화면으로」 — 이 기기는 이미 로그아웃
+    // 서버가 self-restore 를 켜 둔 샘플: 삭제 유예 중인 계정이 맞는 비밀번호로 로그인하면 세션 대신 「탈퇴를 취소할까요?」 — 취소하지 않는 한 쓸 수 없다
     await fillSignIn(page, { email: emailNext, password: nextPassword })
-    await pwExpect(page.getByRole('alert')).toContainText(auth.errorInvalidCredentials)
+    await pwExpect(heading(auth.deletionPendingTitle)).toBeVisible()
+    pwExpect(await token('sample.accessToken')).toBeNull()
   })
 })
 
@@ -402,13 +421,14 @@ describe('a passwordless account (email link) re-authenticates by a mailed code,
     await section.getByLabel(auth.emailNew).fill(linkNext)
     await section.getByRole('button', { name: auth.reauthCodeSend }).click()
     await pwExpect(section.getByText(auth.reauthCodeSent(linkEmail))).toBeVisible()
-    // 비밀번호 없는 계정이 코드 없이 요청하면 서버가 거절한다 — 코드를 받기 전에는 제출이 꺼져 있다
-    await pwExpect(section.getByRole('button', { name: auth.emailChangeSubmit })).toBeDisabled()
+    // 비밀번호 없는 계정이 코드 없이 요청하면 서버가 거절한다 — 코드를 입력하기 전에 누르면 보내지 않고 이유를 말한다(제출 뒤 문제 목록)
+    await section.getByRole('button', { name: auth.emailChangeSubmit }).click()
+    await pwExpect(section.getByText(auth.problemProofMissing).first()).toBeVisible()
     const reauth = await waitForCode(mailUrl, linkEmail, 'reauth', { seen })
     await enterCode(section, '000000')
     await pwExpect(section.getByText(auth.reauthCodeEntered)).toBeVisible()
     await section.getByRole('button', { name: auth.emailChangeSubmit }).click()
-    await pwExpect(section.getByRole('alert')).toContainText(auth.codeInvalid(4)) // 서버가 틀린 코드를 가려 준다
+    await pwExpect(section.getByText(auth.codeInvalid(4)).first()).toBeVisible() // 서버가 틀린 코드를 가려 준다
     await enterCode(section, reauth.code)
     await section.getByRole('button', { name: auth.emailChangeSubmit }).click()
     await pwExpect(section.getByText(auth.emailPendingTitle)).toBeVisible()
@@ -459,7 +479,7 @@ describe('a passwordless account (email link) re-authenticates by a mailed code,
     const dialog = page.getByRole('dialog')
     await dialog.getByLabel(auth.deleteTypedLabel).fill(auth.deleteTypedPhrase)
     await dialog.getByRole('button', { name: auth.deleteConfirm }).click()
-    await section.getByRole('button', { name: auth.deleteDoneAction }).click()
+    await expectAccountDeletedLanding()
     await pwExpect(heading(auth.signInTitle)).toBeVisible()
   })
 })
@@ -479,7 +499,10 @@ describe('delete a passwordless account with a mailed code and a typed phrase', 
     await page.goto(`${baseUrl}/account`)
     const section = region(auth.sectionDelete)
     await pwExpect(section.getByLabel(auth.currentPassword)).toHaveCount(0)
-    await pwExpect(section.getByRole('button', { name: auth.deleteButton })).toBeDisabled() // 코드 전에는 꺼져 있다
+    // 코드 전에도 눌린다 — 보내지 않고 이유를 말한다(`FormProblems`)
+    await section.getByRole('button', { name: auth.deleteButton }).click()
+    await pwExpect(section.getByText(auth.problemProofMissing).first()).toBeVisible()
+    await pwExpect(page.getByRole('dialog')).toHaveCount(0)
     await section.getByRole('button', { name: auth.reauthCodeSend }).click()
     const code = await waitForCode(mailUrl, goneEmail, 'delete', { seen })
     await enterCode(section, '000000')
@@ -487,13 +510,13 @@ describe('delete a passwordless account with a mailed code and a typed phrase', 
     let dialog = page.getByRole('dialog')
     await dialog.getByLabel(auth.deleteTypedLabel).fill(auth.deleteTypedPhrase)
     await dialog.getByRole('button', { name: auth.deleteConfirm }).click()
-    await pwExpect(section.getByRole('alert')).toContainText(auth.codeInvalid(4))
+    await pwExpect(section.getByText(auth.codeInvalid(4)).first()).toBeVisible()
     await enterCode(section, code.code)
     await section.getByRole('button', { name: auth.deleteButton }).click()
     dialog = page.getByRole('dialog')
     await dialog.getByLabel(auth.deleteTypedLabel).fill(auth.deleteTypedPhrase)
     await dialog.getByRole('button', { name: auth.deleteConfirm }).click()
-    await section.getByRole('button', { name: auth.deleteDoneAction }).click()
+    await expectAccountDeletedLanding()
     await pwExpect(heading(auth.signInTitle)).toBeVisible()
   })
 })
@@ -511,6 +534,7 @@ describe('pre-hijack: an attacker who starts a sign-up for someone else’s addr
       body: JSON.stringify({
         email: victim,
         password: attackerPassword,
+        displayName: '선점 시험', // 샘플 백엔드는 가입에서 닉네임이 필수다
         ...(await signUpConsents(apiUrl)),
       }),
     })

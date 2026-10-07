@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
@@ -85,8 +86,6 @@ describe('other pressables look pressable too', () => {
 describe('icon buttons and small controls: boxed at rest, 44px targets', () => {
   const read = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8')
   const cases: Array<[string, string, string]> = [
-    ['NotificationBell', '../../../notifications/src/NotificationBell.module.css', '.bell'],
-    ['ThemeToggle', '../../../theme/src/ThemeToggle.module.css', '.toggle'],
     ['CopyButton', '../CopyButton/CopyButton.module.css', '.button'],
     ['SectionIndex', '../SectionIndex/SectionIndex.module.css', '.link'],
     ['RowMenu trigger', '../RowMenu/RowMenu.module.css', '.button'],

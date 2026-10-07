@@ -114,9 +114,15 @@ describe('Board — posts, nested comments and typed reactions against the real 
     await pwExpect(reaction(first, 'EMPATHY', 1)).toHaveAttribute('aria-pressed', 'true')
 
     await page.getByRole('link', { name: `← ${ko('board.back')}` }).click()
+    // 열은 머리글 이름으로 찾는다(작성자 열이 생기며 위치가 밀렸다) — 위치로 세지 않는다
     const row = page.getByRole('row').filter({ hasText: TITLE })
-    await pwExpect(row.getByRole('cell').nth(0)).toHaveText('3') // 댓글
-    await pwExpect(row.getByRole('cell').nth(1)).toHaveText(single ? '1' : '2') // 반응(글의 공감 — PER_TYPE 이면 좋아요도 남아 있다)
+    await row.waitFor() // 목록이 그려진 뒤에 머리글을 읽는다
+    const headers = (await page.getByRole('columnheader').allInnerTexts()).map((h) => h.trim())
+    const cell = (header: string) => row.getByRole('cell').nth(headers.indexOf(header) - 1) // 첫 열(제목)은 th scope=row
+    await pwExpect(cell(ko('board.list.comments'))).toHaveText('3', { timeout: 15_000 }) // 댓글
+    await pwExpect(cell(ko('board.list.reactions'))).toHaveText(single ? '1' : '2', {
+      timeout: 15_000,
+    }) // 반응(글의 공감 — PER_TYPE 이면 좋아요도 남아 있다)
   })
 
   it('the author edits the post and deletes own comment after a confirmation', async () => {

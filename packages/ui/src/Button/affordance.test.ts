@@ -71,6 +71,10 @@ describe('other pressables look pressable too', () => {
   it('header navigation links and the page back link are not plain text', () => {
     const shell = read('../AppShell/AppShell.module.css')
     expect(body('.nav a:hover', shell)).toMatch(/background/)
+    expect(body('.nav a:active', shell)).toMatch(/background/)
+    const current = body(".nav a[aria-current='page']", shell) // 지금 위치는 색만이 아니다
+    expect(value(current, 'font-weight')).toBe('750')
+    expect(current).toMatch(/box-shadow/)
     expect(value(body('.nav a', shell), 'min-height')).toBeDefined()
     expect(
       value(body('.back a', read('../PageHeader/PageHeader.module.css')), 'text-decoration'),

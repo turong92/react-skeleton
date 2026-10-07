@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect } from 'storybook/test'
 import { Button } from '../Button/Button'
+import { LanguageMenu } from '../LanguageMenu/LanguageMenu'
 import { AppShell } from './AppShell'
 
 /**
@@ -118,3 +119,88 @@ export const Dark: Story = {
     )
   },
 }
+
+const overlaps = (a: DOMRect, b: DOMRect) =>
+  a.left < b.right - 0.5 &&
+  b.left < a.right - 0.5 &&
+  a.top < b.bottom - 0.5 &&
+  b.top < a.bottom - 0.5
+
+/**
+ * 로그인한 앱의 머리글(로고 · 내비 4개 · 알림 · 로그아웃 · 언어 · 테마)이 320 · 360 · 390px 에서 넘치지도 겹치지도 않는다 —
+ * 로고는 줄어들지 않고(글자가 잘리지 않는다), 행동들이 옆에 안 들어가면 다음 줄로 감긴다.
+ */
+const signedInArgs = {
+  brand: (
+    <a href="#home">
+      <strong>Notes</strong>
+    </a>
+  ),
+  nav: ['대시보드', '노트', '게시판', '설정'].map((name) => (
+    <a key={name} href={`#${name}`}>
+      {name}
+    </a>
+  )),
+  actions: (
+    <>
+      <Button variant="secondary" aria-label="알림" style={{ width: '44px', padding: 0 }}>
+        ●
+      </Button>
+      <Button variant="ghost" size="sm">
+        로그아웃
+      </Button>
+      <LanguageMenu
+        label="언어"
+        value="ko"
+        options={[
+          { value: 'ko', label: '한국어' },
+          { value: 'en', label: 'English' },
+        ]}
+        onChange={() => undefined}
+      />
+      <Button variant="secondary" aria-label="테마" style={{ width: '44px', padding: 0 }}>
+        ◐
+      </Button>
+    </>
+  ),
+}
+
+const phoneStory = (width: number): Story => ({
+  args: signedInArgs,
+  render: (args) => (
+    <div style={{ width: `${width}px` }} data-testid="phone">
+      <AppShell {...args} />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const wrapper = canvasElement.querySelector<HTMLElement>('[data-testid="phone"]')!
+    await expect(wrapper.scrollWidth, `${width}px: horizontal scroll`).toBeLessThanOrEqual(
+      wrapper.clientWidth,
+    )
+    const header = wrapper.querySelector('header')!
+    const brand = header.querySelector<HTMLElement>('div:first-child')!
+    await expect(brand.scrollWidth, `${width}px: logo clipped`).toBeLessThanOrEqual(
+      brand.clientWidth,
+    )
+    const boxes = [
+      brand,
+      ...header.querySelectorAll<HTMLElement>('nav a'),
+      ...header.querySelectorAll<HTMLElement>('header > div:last-child > *'),
+    ].map((el) => ({ el, rect: el.getBoundingClientRect() }))
+    for (const { el, rect } of boxes)
+      await expect(
+        rect.right,
+        `${width}px: ${el.textContent} leaves the header`,
+      ).toBeLessThanOrEqual(wrapper.getBoundingClientRect().right + 0.5)
+    for (let i = 0; i < boxes.length; i += 1)
+      for (let j = i + 1; j < boxes.length; j += 1)
+        await expect(
+          overlaps(boxes[i].rect, boxes[j].rect),
+          `${width}px: "${boxes[i].el.textContent}" overlaps "${boxes[j].el.textContent}"`,
+        ).toBe(false)
+  },
+})
+
+export const SignedInHeaderAt320: Story = phoneStory(320)
+export const SignedInHeaderAt360: Story = phoneStory(360)
+export const SignedInHeaderAt390: Story = phoneStory(390)

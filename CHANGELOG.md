@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`@skeleton/ui` `Button`**: `ghost` 에 쉬는 상태의 테두리(`--border-strong`) + hover 바탕. 새 변형 `link`(밑줄 + 링크색, 상자 없음 — 글 사이 링크용). 높이 md 44px · sm 36px(거친 포인터 44px) · lg 52px. `:active`(눌림) · 더 또렷한 `:focus-visible` · 흐린 비활성 + `not-allowed` · `disabledReason`(title + `aria-description`). 위험은 위험색 테두리 + hover.
 - 같은 원칙으로: `SectionCard` 펼침 머리(테두리 상자 + 화살표) · `AppShell` 내비(44px · hover 바탕 + 밑줄) · `PageHeader` 뒤로 링크(밑줄) · `RowMenu` ⋯(테두리 상자 · 이전에는 투명) · 알림 종 · 테마 토글 · 복사 · 목차 알약 · 대화상자 닫기 · 쪽 이동 · 탭이 44px, 샘플 `LinkButton`(ghost 테두리).
 - **동작 변경(모양)**: 취소 · 보기 · 답글/수정/삭제 · 로그아웃 · 쿠키 설정 같은 `ghost` 버튼이 테두리 상자로 보인다. 버튼이 커져(38 → 44px) 줄 높이가 늘 수 있다. 입력칸 · 셀렉트(38px)는 그대로.
+- **좁은 폭 머리글**: 버튼이 44px 로 커지며 로고가 종 버튼에 가려지던 것을 `AppShell` 에서 고쳤다 — 좁은 컨테이너에서 로고는 줄어들지 않고(`flex: 0 0 auto`), 행동들은 옆에 안 들어가면 다음 줄로 감긴다(320 · 360 · 390px 스토리 `SignedInHeaderAt…` 가 가로 스크롤 · 잘림 · 겹침 없음을 단정). 내비는 기본 글자색을 진하게, 지금 위치는 굵게 + 아래 막대 + 바탕, 눌림 바탕을 더했다.
 - 가드: `packages/ui/src/Button/affordance.test.ts`(모든 변형의 쉬는 상태 테두리/채움 · 높이 · 상태 · 아이콘 버튼 표) · `apps/sample/src/components/LinkButton.affordance.test.ts` · 스토리 `EveryVariantLooksPressableAtRest` · `DisabledExplainsWhy`. 새 대비 짝(`--text-strong` on `--teal-wash` · `--teal-soft`, 눌린 주 버튼)을 `tests/contrast.test.ts` 에 등록. 원칙은 `docs/ui-catalog.md` 맨 위.
 
 ### Added — 닉네임: 게시판 작성자 표시 · 가입 닉네임 칸 · 꼬리표 (2026-10-07)

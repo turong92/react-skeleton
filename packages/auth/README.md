@@ -1,6 +1,6 @@
 # @skeleton/auth
 
-인증 조각 — 백엔드 `modules/auth` · `modules/auth-social` 계약을 그대로 부르고, 토큰을 들고, 라우트를 지킨다.
+인증 조각 — 백엔드 `modules/auth` · `modules/auth-social`(+ 제공자 모듈 google · kakao · naver · oidc(LINE) · x) 계약을 그대로 부르고, 토큰을 들고, 라우트를 지킨다.
 의존: `@skeleton/api-client` · `@skeleton/ui`(화면). peer: `react` `react-router-dom`.
 
 ```tsx

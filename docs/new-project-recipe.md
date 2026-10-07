@@ -26,7 +26,7 @@
 - react: `scripts/new-project.sh <target-dir> <name> [--packages a,b,c] [--ssr] [--without-storybook] [--with-workbench] [--with-sample] [--scope @acme]`
 - kotlin: `scripts/new-project.sh <target-dir> <root-package> <config-prefix> <ClassPrefix> [--modules a,b,c] [--db postgresql|mysql] [--with-workbench] [--with-sample]`
 
-결정표의 조각을 합친다: `--packages` 는 하나로(쉼표) 합치고 다른 옵션은 그대로 덧붙인다. 소셜 로그인 제공자(`auth-social-google` | `-kakao` | `-naver`)와 실시간 전달(`notification-sse` | `notification-websocket`)은 하나 이상 고른다 — 아래 예는 첫 번째를 쓴다.
+결정표의 조각을 합친다: `--packages` 는 하나로(쉼표) 합치고 다른 옵션은 그대로 덧붙인다. 소셜 로그인 제공자(`auth-social-google` | `-kakao` | `-naver` | `-oidc`(LINE 프리셋) | `-x`)와 실시간 전달(`notification-sse` | `notification-websocket`)은 하나 이상 고른다 — 아래 예는 첫 번째를 쓴다.
 
 ## 3. 채울 설정
 

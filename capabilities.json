@@ -1198,6 +1198,11 @@
           "auth-session",
           "auth-session-jdbc",
           "auth-social",
+          "auth-social-google",
+          "auth-social-kakao",
+          "auth-social-naver",
+          "auth-social-oidc",
+          "auth-social-x",
           "board",
           "board-jdbc",
           "captcha-turnstile",
@@ -1338,6 +1343,8 @@
           "auth-social-google",
           "auth-social-kakao",
           "auth-social-naver",
+          "auth-social-oidc",
+          "auth-social-x",
           "board",
           "board-jdbc",
           "captcha-turnstile",
@@ -1431,14 +1438,24 @@
       "needs": ["auth"],
       "backend": {
         "modules": ["auth-social"],
-        "oneOfModules": [["auth-social-google", "auth-social-kakao", "auth-social-naver"]],
+        "oneOfModules": [
+          [
+            "auth-social-google",
+            "auth-social-kakao",
+            "auth-social-naver",
+            "auth-social-oidc",
+            "auth-social-x"
+          ]
+        ],
         "optionalModules": [],
         "basePaths": ["/api/v1/auth/social"],
         "docs": [
           "docs/modules/auth-social.md",
           "docs/modules/auth-social-google.md",
           "docs/modules/auth-social-kakao.md",
-          "docs/modules/auth-social-naver.md"
+          "docs/modules/auth-social-naver.md",
+          "docs/modules/auth-social-oidc.md",
+          "docs/modules/auth-social-x.md"
         ]
       },
       "status": "stable",

@@ -1,6 +1,8 @@
+import type { Duration } from './duration'
+
 /**
  * 선택기 · 관리 화면의 모든 문구 — 패키지는 영어 기본값만 갖고, 앱이 번역해 `labels` prop 으로 일부 또는 전부를 덮는다.
- * `…(name)` 꼴은 `이름#꼬리표` 를 받는다.
+ * `…(name)` 꼴은 `이름#꼬리표`(꼬리표 · 이름이 없으면 그것 없이)를 받는다.
  */
 export type AuthorProfileLabels = {
   // ── 선택기
@@ -16,12 +18,16 @@ export type AuthorProfileLabels = {
   noProfiles: string
   /** 프로필이 하나도 없을 때 만들기로 가는 단추 */
   createProfile: string
+  /** 이름이 없는 프로필(이름 없는 옛 글을 넘겨받은 첫 프로필)을 가리키는 말 */
+  unnamed: string
+  /** 이 스레드의 댓글을 아직 받는 중 — 선택기 단추가 잠기고 이 글이 보인다(보이는 글자 = 낭독 이름) */
+  threadLoading: string
   /** 이 스레드에서 다른 프로필로 쓴 적이 있을 때 한 줄 — `threadName` 은 그 프로필 */
   switchNotice: (threadName: string) => string
   /** 바꾸기를 확인하는 단추 */
   switchConfirm: (nextName: string) => string
-  /** 바꾸지 않고 이 스레드의 프로필을 유지하는 단추 */
-  switchKeep: (threadName: string) => string
+  /** 바꾸지 않고 **지금 고른 프로필**을 유지하는 단추 — `currentName` 은 지금 값(이 스레드의 프로필과 다를 수 있다) */
+  switchKeep: (currentName: string) => string
   // ── 관리
   /** 목록의 낭독 이름 */
   listLabel: string
@@ -56,13 +62,16 @@ export type AuthorProfileLabels = {
   nameTooLong: (max: number) => string
   nameTaken: string
   limitReached: (max: number) => string
-  rateLimited: (retryAfterSeconds: number | undefined) => string
+  /** `wait` 는 기다려야 하는 시간(`foldDuration` 으로 접은 단위 — 초 · 분 · 시간 · 일), 서버가 안 알렸으면 undefined */
+  rateLimited: (wait: Duration | undefined) => string
   notFound: string
   failed: string
 }
 
 export const defaultAuthorProfileLabels: AuthorProfileLabels = {
   choose: 'Choose a profile',
+  unnamed: 'Unnamed',
+  threadLoading: 'Loading this thread',
   triggerLabel: (current) =>
     current ? `Writing as ${current}. Change profile` : 'Choose a profile',
   loading: 'Loading profiles',
@@ -71,12 +80,12 @@ export const defaultAuthorProfileLabels: AuthorProfileLabels = {
   createProfile: 'Create a profile',
   switchNotice: (threadName) => `You wrote in this thread as ${threadName}.`,
   switchConfirm: (nextName) => `Use ${nextName}`,
-  switchKeep: (threadName) => `Keep ${threadName}`,
+  switchKeep: (currentName) => `Keep ${currentName}`,
   listLabel: 'Your profiles',
   empty: 'You have no profiles yet.',
   count: (n, max) => `${n} of ${max} profiles`,
   nameLabel: 'New profile name',
-  nameHint: (max) => `Up to ${max} characters. A tag is added to tell same names apart.`,
+  nameHint: (max) => `Up to ${max} characters. A tag may be added to tell same names apart.`,
   add: 'Add profile',
   adding: 'Adding',
   renameAction: 'Rename',
@@ -97,12 +106,12 @@ export const defaultAuthorProfileLabels: AuthorProfileLabels = {
   namePattern: 'Names cannot contain # or @.',
   nameReserved: 'That name is not available.',
   nameTooLong: (max) => `Use ${max} characters or fewer.`,
-  nameTaken: 'You already use that name.',
-  limitReached: (max) => `You can have up to ${max} profiles. Delete one to add another.`,
-  rateLimited: (seconds) =>
-    seconds === undefined
+  nameTaken: 'That name is taken.',
+  limitReached: (max) => `You can have up to ${max} profiles.`,
+  rateLimited: (wait) =>
+    wait === undefined
       ? 'Too many profile changes. Try again later.'
-      : `Too many profile changes. Try again in ${seconds} seconds.`,
+      : `Too many profile changes. Try again in ${wait.value} ${wait.unit}${wait.value === 1 ? '' : 's'}.`,
   notFound: 'That profile no longer exists.',
   failed: 'Something went wrong. Try again.',
 }

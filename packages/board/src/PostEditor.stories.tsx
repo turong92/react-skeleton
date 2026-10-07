@@ -130,6 +130,17 @@ export const PickerIsNotDrawnWithoutAuthorRequired: Story = {
   },
 }
 
+/** 필수인데 선택기를 꽂지 않았으면 막지 않는다 — 고를 수단이 없는 막다른 길을 만들지 않는다(서버가 `BOARD.AUTHOR_REQUIRED` 로 답한다) */
+export const AuthorRequiredWithoutAPickerDoesNotBlock: Story = {
+  args: { authorRequired: true },
+  play: async ({ canvas, args, userEvent }) => {
+    await userEvent.type(canvas.getByLabelText(/Title/), 'Hello')
+    await userEvent.type(canvas.getByLabelText(/Body/), 'First line')
+    await userEvent.click(canvas.getByRole('button', { name: 'Publish' }))
+    await expect(args.onSubmit).toHaveBeenCalledWith({ title: 'Hello', body: 'First line' })
+  },
+}
+
 export const AuthorRequiredMessageIsAProp: Story = {
   args: {
     authorRequired: true,

@@ -1,46 +1,14 @@
 import { Button, Field, Input, Textarea } from '@skeleton/ui'
 import { useCallback, useId, useState, type FormEvent } from 'react'
 import { AuthorError, AuthorSlot } from './AuthorSlot'
-import { defaultCommentLabels } from './commentLabels'
 import { focusAuthorSlot } from './focusAuthorSlot'
 import type { AuthorPicker } from './authorship'
+import { defaultPostEditorLabels, type PostEditorLabels } from './postEditorLabels'
 import type { BoardConfig } from './types'
 import styles from './PostEditor.module.css'
 
 /** `authorId` 는 선택기에서 고른 값 — 선택기가 없거나 고르지 않았으면 키 자체가 없다 */
 export type PostEditorValues = { title: string; body: string; authorId?: string }
-
-/** 글 폼의 글자 — 기본은 영어. 일부만 덮어쓰려면 `labels={{ title: '제목' }}` */
-export type PostEditorLabels = {
-  title: string
-  body: string
-  requiredMark: string
-  titleHint: (max: number) => string
-  bodyHint: (max: number) => string
-  titleRequired: string
-  bodyRequired: string
-  titleTooLong: (max: number) => string
-  bodyTooLong: (max: number) => string
-  cancel: string
-  formLabel: string
-  /** `authorRequired` 인데 작성자를 고르지 않았을 때 */
-  authorRequired: string
-}
-
-const defaultLabels: PostEditorLabels = {
-  title: 'Title',
-  body: 'Body',
-  requiredMark: '*',
-  titleHint: (max) => `Up to ${max} characters`,
-  bodyHint: (max) => `Up to ${max} characters`,
-  titleRequired: 'Enter a title.',
-  bodyRequired: 'Write something in the body.',
-  titleTooLong: (max) => `Keep the title within ${max} characters.`,
-  bodyTooLong: (max) => `Keep the body within ${max} characters.`,
-  cancel: 'Cancel',
-  formLabel: 'Post',
-  authorRequired: defaultCommentLabels.authorRequired,
-}
 
 export type PostEditorProps = {
   /** 길이 한도 — 서버 설정(`BoardConfig`)의 값 */
@@ -62,7 +30,10 @@ export type PostEditorProps = {
    * (서버가 필수로 하지 않으면 보낸 `authorId` 를 거절한다). 고치기 폼에는 주지 않는다 — 작성자는 불변
    */
   authorPicker?: AuthorPicker
-  /** `BoardConfig.authorRequired` — true 인데 고른 값이 없으면 칸 오류로 막는다 */
+  /**
+   * `BoardConfig.authorRequired` — true 인데 고른 값이 없으면 칸 오류로 막는다. **`authorPicker` 가 없으면 막지 않는다**
+   * (고를 수단이 없는 막다른 길이 된다 — 서버가 400 `BOARD.AUTHOR_REQUIRED` 로 답하니 앱이 선택기를 꽂아야 한다)
+   */
   authorRequired?: boolean
   labels?: Partial<PostEditorLabels>
 }
@@ -81,7 +52,7 @@ export function PostEditor({
   authorRequired,
   labels: input,
 }: PostEditorProps) {
-  const labels = { ...defaultLabels, ...input }
+  const labels = { ...defaultPostEditorLabels, ...input }
   const [values, setValues] = useState(initial)
   const [problems, setProblems] = useState<Partial<Record<keyof PostEditorValues, string>>>({})
   const [authorId, setAuthorId] = useState<string>()

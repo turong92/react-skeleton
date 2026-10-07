@@ -26,6 +26,24 @@ export function browserLocalStorage(): StorageLike | undefined {
 }
 
 /**
+ * 이 모듈이 쓴 기억을 **모든 계정 · 모든 게시판** 만큼 지운다 — 계정 id 를 모르고 저장소만으로 부른다(로그아웃 · 계정 바뀜 핸들러는 이전 계정 id 를 이미 잃었을 수 있다).
+ * 다른 저장 값은 건드리지 않는다. 저장소가 없거나 던지면 조용히 넘어간다.
+ */
+export function forgetAuthorMemory(storage: StorageLike | undefined): void {
+  try {
+    if (!storage) return
+    const mine: string[] = []
+    for (let i = 0; i < storage.length; i += 1) {
+      const key = storage.key(i)
+      if (key?.startsWith(PREFIX)) mine.push(key)
+    }
+    for (const key of mine) storage.removeItem(key)
+  } catch {
+    // 기억은 편의일 뿐이다
+  }
+}
+
+/**
  * 기기 기억 — `localStorage` 한 겹. 키 `skeleton.author-profile:<계정 id>:<게시판 코드>`(둘 다 인코딩) 의 **키에만** 계정 id 가 있고(화면에는 어디에도 없다),
  * 값은 프로필 id 하나뿐이다. 저장소가 없거나 던지면 아무것도 기억하지 않고 조용히 넘어간다.
  */
@@ -51,18 +69,6 @@ export function createAuthorMemory(
         // 가득 찼거나 막힌 저장소 — 기억은 편의일 뿐이다
       }
     },
-    forget() {
-      try {
-        if (!storage) return
-        const mine: string[] = []
-        for (let i = 0; i < storage.length; i += 1) {
-          const key = storage.key(i)
-          if (key?.startsWith(PREFIX)) mine.push(key)
-        }
-        for (const key of mine) storage.removeItem(key)
-      } catch {
-        // 위와 같다
-      }
-    },
+    forget: () => forgetAuthorMemory(storage),
   }
 }

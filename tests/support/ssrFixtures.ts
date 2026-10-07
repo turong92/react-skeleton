@@ -77,6 +77,7 @@ const authorPickerSlot = {
   value: undefined,
   onChange: noop,
   threadAuthorId: undefined,
+  threadLoading: false,
   invalid: false,
   disabled: false,
 }

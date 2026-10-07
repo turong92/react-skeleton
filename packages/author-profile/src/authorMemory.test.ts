@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createAuthorMemory, type StorageLike } from './authorMemory'
+import { createAuthorMemory, forgetAuthorMemory, type StorageLike } from './authorMemory'
 
 function memoryStorage(): StorageLike & { dump(): Record<string, string> } {
   const map = new Map<string, string>()
@@ -83,5 +83,16 @@ describe('createAuthorMemory — which profile this device wrote with last, per 
     memory.set('free', 'prf_a')
     expect(memory.get('free')).toBeUndefined()
     expect(() => memory.forget()).not.toThrow()
+  })
+
+  it('forgetAuthorMemory(storage) wipes the same keys without knowing an account id (the logout / account-change hook has none left to give)', () => {
+    const storage = memoryStorage()
+    storage.setItem('theme', 'dark')
+    createAuthorMemory(storage, 'acc_1').set('free', 'prf_a')
+    createAuthorMemory(storage, 'acc_2').set('news', 'prf_b')
+    forgetAuthorMemory(storage)
+    expect(storage.dump()).toEqual({ theme: 'dark' })
+    expect(() => forgetAuthorMemory(undefined)).not.toThrow()
+    expect(() => forgetAuthorMemory(throwing)).not.toThrow()
   })
 })

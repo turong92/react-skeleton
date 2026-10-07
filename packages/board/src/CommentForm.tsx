@@ -28,7 +28,10 @@ export type CommentFormProps = {
    * (서버가 필수로 하지 않으면 보낸 `authorId` 를 거절한다). 수정 칸에는 주지 않는다 — 작성자는 불변
    */
   authorPicker?: AuthorPicker
-  /** `BoardConfig.authorRequired` — true 인데 고른 값이 없으면 칸 오류로 막는다 */
+  /**
+   * `BoardConfig.authorRequired` — true 인데 고른 값이 없으면 칸 오류로 막는다. **`authorPicker` 가 없으면 막지 않는다**
+   * (고를 수단이 없는 막다른 길이 된다 — 서버가 400 `BOARD.AUTHOR_REQUIRED` 로 답하니 앱이 선택기를 꽂아야 한다)
+   */
   authorRequired?: boolean
   authorRequiredMessage?: string
   /** 이 스레드에서 내가 마지막으로 쓴 작성자 id — 선택기에 그대로 넘긴다 */

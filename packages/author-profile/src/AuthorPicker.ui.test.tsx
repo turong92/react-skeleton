@@ -80,6 +80,40 @@ describe('AuthorPickerView — the folded state', () => {
     )
   })
 
+  it('while the thread is still loading and nothing is chosen, the button says so and is locked (visible text = accessible name)', () => {
+    const html = renderToStaticMarkup(
+      <AuthorPickerView {...view} value={undefined} threadLoading />,
+    )
+    expect(html).toContain(`aria-label="${defaultAuthorProfileLabels.threadLoading}"`)
+    expect(html).toContain(`>${defaultAuthorProfileLabels.threadLoading}<`)
+    expect(html).toContain('aria-disabled="true"')
+  })
+
+  it('a chosen name stays visible while the thread reloads, only locked', () => {
+    const html = renderToStaticMarkup(<AuthorPickerView {...view} value="prf_a" threadLoading />)
+    expect(html).toContain('Ann')
+    expect(html).toContain('aria-disabled="true"')
+    expect(html).not.toContain(defaultAuthorProfileLabels.threadLoading)
+  })
+
+  it('an unnamed or tagless profile reads naturally: no "null", no empty "#"', () => {
+    const odd = [
+      { id: 'prf_n', name: null, tag: null, createdAt: '2026-01-01T00:00:00Z' },
+      { id: 'prf_t', name: 'Ann', tag: null, createdAt: '2026-01-01T00:00:00Z' },
+    ]
+    const unnamed = renderToStaticMarkup(
+      <AuthorPickerView {...view} profiles={odd} value="prf_n" />,
+    )
+    expect(unnamed).toContain(defaultAuthorProfileLabels.unnamed)
+    expect(unnamed).not.toContain('null')
+    expect(unnamed).not.toContain('#')
+    const tagless = renderToStaticMarkup(
+      <AuthorPickerView {...view} profiles={odd} value="prf_t" />,
+    )
+    expect(tagless).toContain('Ann')
+    expect(tagless).not.toContain('#')
+  })
+
   it('shows no standing warning about other profiles (a warning that is always there is itself a leak)', () => {
     const html = renderToStaticMarkup(
       <AuthorPickerView {...view} value="prf_b" threadAuthorId="prf_a" />,

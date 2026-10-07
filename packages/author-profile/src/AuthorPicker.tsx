@@ -1,5 +1,5 @@
 import { Button, RowMenu } from '@skeleton/ui'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { AuthorProfileApi } from './authorProfileApi'
 import type { AuthorMemory } from './authorMemory'
 import { useAuthorProfiles } from './hooks'
@@ -36,11 +36,14 @@ export type AuthorPickerViewProps = AuthorPickerSlotProps & {
   labels?: Partial<AuthorProfileLabels>
 }
 
-type Pending = { next: AuthorProfile; thread: AuthorProfile }
+/** `key` — 질문을 만든 때의 전제(값 · 이 스레드의 프로필 · 잠금). 전제가 바뀌면 낡은 질문이라 보이지 않는다 */
+type Pending = { next: AuthorProfile; thread: AuthorProfile; key: string }
 
 /**
  * 작성자 선택기(데이터를 이미 가진 모습) — 접힌 상태는 **지금 고른 `이름#꼬리표` 하나**만 늘 보이고, 목록은 눌러야 열린다(메뉴 단추: ↑↓ · Home · End · Esc).
  * 처음 값은 ① 이 스레드에서 쓴 프로필 ② 이 기기가 기억하는 이 게시판의 프로필 ③ 비어 있음. 이 스레드에서 쓴 프로필과 **다른 것으로 바꿀 때만** 한 줄 확인이 나온다(늘 떠 있는 경고는 없다).
+ * 한 줄 확인은 **지금 고른 프로필을 유지**하는 단추(「Keep ○○」 — ○○ 는 지금 값)와 바꾸는 단추를 가진다. 값 · 이 스레드의 프로필 · 잠금이 바뀌거나 Esc · 바깥 포커스 · 바깥 누르기가 오면 닫힌다.
+ * 댓글을 받는 중(`threadLoading`)에는 처음 값을 확정하지 않고 단추를 잠근다(고른 값이 없으면 「불러오는 중」을 보인다).
  * 계정 id 는 어디에도 그리지 않는다(프로필 id 도 글자로는 그리지 않는다).
  */
 export function AuthorPickerView({
@@ -58,8 +61,30 @@ export function AuthorPickerView({
   'aria-describedby': describedBy,
 }: AuthorPickerViewProps) {
   const labels = mergeLabels(given)
-  const [pending, setPending] = useState<Pending>()
+  const [asked, setPending] = useState<Pending>()
+  const rootRef = useRef<HTMLDivElement>(null)
   const current = profiles.find((profile) => profile.id === value)
+  const show = (profile: Pick<AuthorProfile, 'name' | 'tag'>) =>
+    profileDisplay(profile, labels.unnamed)
+  const locked = disabled || threadLoading
+
+  // 한 줄 확인은 그것이 물은 전제(값 · 이 스레드의 프로필 · 잠금)가 바뀌면 낡은 질문이다 — 닫는다
+  const premise = `${value ?? ''}|${threadAuthorId ?? ''}|${locked}`
+  const pending = asked?.key === premise ? asked : undefined
+
+  // 바깥으로 포커스가 가거나 바깥을 누르면 닫는다(고르지도 유지하지도 않고 떠난 것)
+  useEffect(() => {
+    if (!pending) return
+    const outside = (event: Event) => {
+      if (!rootRef.current?.contains(event.target as Node)) setPending(undefined)
+    }
+    document.addEventListener('focusin', outside)
+    document.addEventListener('pointerdown', outside)
+    return () => {
+      document.removeEventListener('focusin', outside)
+      document.removeEventListener('pointerdown', outside)
+    }
+  }, [pending])
 
   // 처음 값 — 비어 있으면 ①② 로 채우고, 값이 더는 내 프로필이 아니면(다른 탭에서 지움) 비운다
   useEffect(() => {
@@ -87,13 +112,13 @@ export function AuthorPickerView({
   function choose(profile: AuthorProfile) {
     if (profile.id === value) return setPending(undefined)
     const thread = switchNotice({ profiles, threadAuthorId, nextId: profile.id })
-    if (thread) setPending({ next: profile, thread })
+    if (thread) setPending({ next: profile, thread, key: premise })
     else apply(profile)
   }
 
   if (profiles.length === 0) {
     return (
-      <div className={styles.root} data-invalid={invalid ? 'true' : undefined}>
+      <div ref={rootRef} className={styles.root} data-invalid={invalid ? 'true' : undefined}>
         {onCreateProfile ? (
           <Button
             variant="secondary"
@@ -110,23 +135,25 @@ export function AuthorPickerView({
     )
   }
 
-  const shown = current ? profileDisplay(current) : undefined
+  const shown = current ? show(current) : undefined
+  // 고른 값이 없고 댓글을 받는 중이면 단추가 그것을 말한다(보이는 글자 = 낭독 이름)
+  const waiting = threadLoading && !current
   return (
-    <div className={styles.root} data-invalid={invalid ? 'true' : undefined}>
+    <div ref={rootRef} className={styles.root} data-invalid={invalid ? 'true' : undefined}>
       <RowMenu
-        label={labels.triggerLabel(shown)}
+        label={waiting ? labels.threadLoading : labels.triggerLabel(shown)}
         align="start"
-        disabled={disabled}
+        disabled={locked}
         describedBy={describedBy}
         trigger={
           <span className={styles.current}>
             {current ? (
               <>
-                <span className={styles.name}>{current.name}</span>
-                <span className={styles.tag}>{`#${current.tag}`}</span>
+                <span className={styles.name}>{current.name ?? labels.unnamed}</span>
+                {current.tag && <span className={styles.tag}>{`#${current.tag}`}</span>}
               </>
             ) : (
-              <span>{labels.choose}</span>
+              <span>{waiting ? labels.threadLoading : labels.choose}</span>
             )}
             <span className={styles.chevron} aria-hidden="true">
               ▾
@@ -135,7 +162,7 @@ export function AuthorPickerView({
         }
         items={profiles.map((profile) => ({
           key: profile.id,
-          label: profileDisplay(profile),
+          label: show(profile),
           checked: profile.id === value,
           onSelect: () => choose(profile),
         }))}
@@ -143,15 +170,19 @@ export function AuthorPickerView({
       {pending && (
         <div
           className={styles.notice}
-          role="group"
-          aria-label={labels.switchNotice(profileDisplay(pending.thread))}
+          onKeyDown={(event) => {
+            if (event.key !== 'Escape') return
+            event.stopPropagation()
+            setPending(undefined)
+            rootRef.current?.querySelector<HTMLElement>('button[aria-haspopup]')?.focus()
+          }}
         >
-          <p role="status">{labels.switchNotice(profileDisplay(pending.thread))}</p>
+          <p role="status">{labels.switchNotice(show(pending.thread))}</p>
           <Button size="sm" variant="primary" onClick={() => apply(pending.next)}>
-            {labels.switchConfirm(profileDisplay(pending.next))}
+            {labels.switchConfirm(show(pending.next))}
           </Button>
           <Button size="sm" variant="secondary" onClick={() => setPending(undefined)}>
-            {labels.switchKeep(profileDisplay(pending.thread))}
+            {current ? labels.switchKeep(show(current)) : labels.cancel}
           </Button>
         </div>
       )}
@@ -184,12 +215,7 @@ export function AuthorPicker({ api, ...rest }: AuthorPickerProps) {
       </Button>
     )
   return (
-    <Button
-      variant="secondary"
-      loading
-      loadingLabel={labels.loading}
-      aria-describedby={rest['aria-describedby']}
-    >
+    <Button variant="secondary" loading loadingLabel="" aria-describedby={rest['aria-describedby']}>
       {labels.loading}
     </Button>
   )

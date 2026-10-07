@@ -9,7 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added — `@skeleton/author-profile` (작성자 프로필)
 
-- 새 패키지: `createAuthorProfileApi`(`/author-profiles`) · `useAuthorProfiles` 등 훅(변경 뒤 목록 무효화, `alsoInvalidate` 로 게시판 캐시도) · `AuthorPicker`(board 의 `authorPicker` 에 꽂는 선택기 — 접힌 상태는 고른 이름#꼬리표 하나, 처음 값 스레드 → 기기 → 비어 있음, 이 스레드의 프로필과 다른 것으로 바꿀 때만 한 줄 확인) · `AuthorProfileManager`(목록 · 추가 · 이름 바꾸기 · 삭제 확인) · `createAuthorMemory`(기기 기억 — 키에만 계정 id, `forget()`). 문구는 `labels` prop. 처음 값은 댓글을 받는 중(`threadLoading`)에는 확정하지 않고, 선택기 단추는 폼의 칸 오류 문장을 `aria-describedby` 로 잇는다. `ErrorCodes.AUTHOR_PROFILE_*` 추가. 백엔드 짝 `author-profile` 모듈. `@skeleton/ui` 의 `RowMenu` 에 `describedBy`(버튼의 `aria-describedby`) 추가.
+- 새 패키지: `createAuthorProfileApi`(`/author-profiles`) · `useAuthorProfiles` 등 훅(변경 뒤 목록 무효화, `alsoInvalidate` 로 게시판 캐시도) · `AuthorPicker`(board 의 `authorPicker` 에 꽂는 선택기 — 접힌 상태는 고른 이름#꼬리표 하나, 처음 값 스레드 → 기기 → 비어 있음, 이 스레드의 프로필과 다른 것으로 바꿀 때만 한 줄 확인) · `AuthorProfileManager`(목록 · 추가 · 이름 바꾸기 · 삭제 확인) · `createAuthorMemory`(기기 기억 — 키에만 계정 id, `forget()`). 문구는 `labels` prop. 처음 값은 댓글을 받는 중(`threadLoading`)에는 확정하지 않고(단추도 잠근다), 선택기 단추는 폼의 칸 오류 문장을 `aria-describedby` 로 잇는다. `name` · `tag` 는 `string | null`(이름 없는 옛 글의 첫 프로필 · 꼬리표가 꺼진 서버) — `profileDisplay(profile, unnamed?)`, 새 라벨 `unnamed` · `threadLoading`. 「Keep ○○」 는 지금 고른 프로필, 한 줄 확인은 Esc · 바깥 포커스 · 잠금 · 값 변화로 닫힌다. 이름 바꾸기는 한 번에 한 줄, 저장 · 취소 · 삭제 뒤 포커스를 옮긴다. `forgetAuthorMemory(storage)`(계정 id 없이 지우기) · `foldDuration`(대기 시간을 초 · 분 · 시간 · 일로, `labels.rateLimited` 가 `{ unit, value }` 를 받는다 — **번역을 쓰는 앱은 이 라벨의 시그니처가 바뀌었다**) · `shouldReuseIdempotencyKey`. `isAuthorProfileFormError` 는 이제 `AUTHOR_PROFILE.` 코드만. 문구: 상한 안내에서 삭제 권유를 뺐고, NAME*TAKEN 은 중립("That name is taken."). `ErrorCodes.AUTHOR_PROFILE*\*`추가. 백엔드 짝`author-profile` 모듈.
+
+### Added — `@skeleton/ui`
+
+- `RowMenu` 에 `describedBy`(버튼의 `aria-describedby` — 메뉴 칸 밖의 설명 · 폼 오류 문장의 id). 이름(`label`)은 그대로. 스토리 `DescribedByTiesAnOutsideDescriptionToTheButton`.
 
 ### Changed — `@skeleton/board`: 작성자 선택기 자리 · `mine` 소유 판정 · `authorRequired` (작성자 프로필을 쓰는 서버)
 
@@ -17,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **타입**: 글 · 댓글 응답 `mine?`, `BoardConfig.authorRequired?`, 생성 입력 `authorId?`. 응답의 `authorId` 는 프로필 id(`prf_…`) 또는 켜기 전 옛 행의 `pending:p<id>` · `pending:c<id>`. **`PostPatch` 가 좁아졌다**(`Partial<Omit<PostInput, 'authorId'>>` — 작성자는 불변, 서버는 수정의 `authorId` 를 무시한다).
 - **소유 판정**: `isOwn(item, currentUserId)` = `mine ?? (authorId === currentUserId)` — `CommentItem` 이 쓴다. 앱의 글 쪽 비교(`authorId === accountId`)도 이것으로 바꾼다. `mine` 은 호출자마다 달라 계정이 바뀌면 앱이 쿼리 캐시를 비운다.
-- **선택기 자리**: `PostEditor` · `CommentForm`(답글) · `BoardComments` 의 `authorPicker` 렌더 prop(`AuthorPicker` · `AuthorPickerArgs` = `{ value, onChange, threadAuthorId, threadLoading, invalid, disabled, 'aria-describedby' }`). **`authorRequired === true` 일 때만 그려지고 `authorId` 를 싣는다**(서버는 필수가 아닐 때 보낸 `authorId` 를 403 으로 거절한다). 값이 없으면 칸 오류로 막고 선택기로 포커스, 오류 문장은 `aria-describedby` 로 선택기에 이어진다. 고치기 폼에는 주지 않는다.
+- **선택기 자리**: `PostEditor` · `CommentForm`(답글) · `BoardComments` 의 `authorPicker` 렌더 prop(`AuthorPicker` · `AuthorPickerArgs` = `{ value, onChange, threadAuthorId, threadLoading, invalid, disabled, 'aria-describedby' }`). **`authorRequired === true` 일 때만 그려지고 `authorId` 를 싣는다**(서버는 필수가 아닐 때 보낸 `authorId` 를 403 으로 거절한다). 값이 없으면 칸 오류로 막고 선택기로 포커스, 오류 문장은 `aria-describedby` 로 선택기에 이어진다. 고치기 폼에는 주지 않는다. **필수인데 `authorPicker` 를 꽂지 않았으면 막지 않는다**(고를 수단이 없는 막다른 길이 되므로 — 서버가 400 `BOARD.AUTHOR_REQUIRED` 로 답한다). 선택기는 현재 쪽의 댓글이 도착하기 전(받는 중 · 이전 쪽 placeholder · 첫 불러오기 실패)에는 처음 값을 확정하지 않는다(`threadLoading`).
 - **`lastOwnAuthorId(comments)`**: 현재 쪽의 `mine` 댓글 중 마지막 `authorId`(탈퇴 · `pending:` 건너뜀, 시각은 `Date.parse`). `BoardComments` 의 `postAuthor` 로 글 작성자를 대체 단서로 더할 수 있다.
 - **이식할 때 주의**: 새 필수 라벨 키 `authorRequired`(`CommentLabels` · `PostEditorLabels` — 번역을 쓰는 앱은 키를 더한다, 없으면 영어 기본값) · `CommentForm.onSubmit` 이 `(body, authorId?)` · `onReply` 가 `(parentId, body, authorId?)`(옛 호출부는 그대로 동작) · `PostEditorValues` 에 선택 `authorId` · 가짜 서버 `createFakeBoard({ authorRequired, owned })`(`mine` 을 응답에 싣고, 필수가 아닐 때 `authorId` 를 보내면 403).
 - `@skeleton/api-client`: `ErrorCodes.BOARD_AUTHOR_REQUIRED`(400) · `BOARD_AUTHOR_NOT_ALLOWED`(403).

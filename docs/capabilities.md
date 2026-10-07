@@ -198,7 +198,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 - 필요한 것: `api-client` · `ui`
 - 백엔드: 모듈 `author-profile` · `author-profile-jdbc` · 있으면 더 켜지는 `board` · 경로 `/api/v1/author-profiles`
 - 주요 진입점: `createAuthorProfileApi` · `useAuthorProfiles` · `useCreateAuthorProfile` · `useRenameAuthorProfile` · `useRemoveAuthorProfile` · `AuthorPicker` · `AuthorProfileManager` · `createAuthorMemory` · `isAuthorProfileFormError`
-- 보고 따라 할 스토리: `packages/author-profile/src/AuthorPicker.stories.tsx` · `packages/author-profile/src/AuthorProfileManager.stories.tsx`
+- 보고 따라 할 스토리: `packages/author-profile/src/AuthorPicker.stories.tsx` · `packages/author-profile/src/AuthorPicker.thread.stories.tsx` · `packages/author-profile/src/AuthorProfileManager.stories.tsx` · `packages/author-profile/src/AuthorProfileManager.edit.stories.tsx`
 - 문서: `packages/author-profile/README.md`
 - 쓰지 않는 경우: 게시판 화면 자체 → board (이 패키지는 board 를 모른 채 authorPicker 자리에 꽂힌다) / 계정의 닉네임(가입 · 설정) → auth 의 계정 화면 — 이 패키지는 글에 붙는 별도 프로필이다 / 프로필 아바타 · 소개글 · 공개 프로필 페이지 → 만들지 않는다(표 구조만 막지 않는다) / 관리자가 프로필로 계정을 찾는 화면 → 없다(백엔드 admin 조회만)
 - 키워드: 작성자 프로필, 프로필 선택, 부계정, 다중 닉네임, 익명 닉네임, 닉네임 여러 개, 프로필 관리, 기기 기억 / author profile, profile picker, multiple nicknames, alias, pseudonym, persona, profile manager, remembered profile

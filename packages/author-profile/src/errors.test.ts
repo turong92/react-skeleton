@@ -1,7 +1,13 @@
 import { ApiRequestError, ErrorCodes, type ApiError } from '@skeleton/api-client'
 import { describe, expect, it } from 'vitest'
 import { defaultAuthorProfileLabels as L } from './labels'
-import { nameProblem, profileFormProblem } from './errors'
+import { foldDuration } from './duration'
+import {
+  isAuthorProfileFormError,
+  nameProblem,
+  profileFormProblem,
+  shouldReuseIdempotencyKey,
+} from './errors'
 
 const limits = { maxPerAccount: 5, nameMaxLength: 60 }
 
@@ -62,7 +68,7 @@ describe('profileFormProblem — the server answers a profile name form can show
         L,
         limits,
       ),
-    ).toEqual({ where: 'form', message: L.rateLimited(90) })
+    ).toEqual({ where: 'form', message: L.rateLimited(foldDuration(90)) })
   })
 
   it('NOT_FOUND says the profile is gone; anything else is the generic sentence', () => {
@@ -96,5 +102,45 @@ describe('nameProblem — what the form can say before asking the server', () =>
   it('a good name, spaces around it ignored, has no problem', () => {
     expect(nameProblem('  Ann  ', L, limits)).toBeUndefined()
     expect(nameProblem('a'.repeat(60), L, limits)).toBeUndefined()
+  })
+})
+
+describe("isAuthorProfileFormError — which errors the app's global toast must skip", () => {
+  it('only AUTHOR_PROFILE.* codes: the form says those in place', () => {
+    for (const code of [
+      ErrorCodes.AUTHOR_PROFILE_NAME_TAKEN,
+      ErrorCodes.AUTHOR_PROFILE_LIMIT_REACHED,
+      ErrorCodes.AUTHOR_PROFILE_RATE_LIMITED,
+      ErrorCodes.AUTHOR_PROFILE_NOT_FOUND,
+    ])
+      expect(isAuthorProfileFormError(err({ code }))).toBe(true)
+  })
+
+  it('a 400 name field error is NOT claimed — other forms (nickname) share that shape and the app already filters it by meta.quietStatuses', () => {
+    expect(
+      isAuthorProfileFormError(
+        err({ errors: [{ field: 'name', code: 'Required', message: 'x' }] }),
+      ),
+    ).toBe(false)
+  })
+
+  it('anything else — another module, a plain Error — is not ours', () => {
+    expect(isAuthorProfileFormError(err({ code: 'BOARD.FORBIDDEN', status: 403 }))).toBe(false)
+    expect(isAuthorProfileFormError(new Error('boom'))).toBe(false)
+  })
+})
+
+describe('shouldReuseIdempotencyKey — a resend of the same submission keeps its key only when the first try may or may not have landed', () => {
+  it('network failure (status 0), a server error (5xx) or a non-API throw: yes — the create might have happened', () => {
+    expect(shouldReuseIdempotencyKey(err({ code: 'CLIENT.NETWORK_ERROR', status: 0 }))).toBe(true)
+    expect(shouldReuseIdempotencyKey(err({ code: 'COMMON.INTERNAL', status: 503 }))).toBe(true)
+    expect(shouldReuseIdempotencyKey(new Error('offline'))).toBe(true)
+  })
+
+  it('a definite answer (4xx — name taken, limit, validation): no — the next try is a new submission', () => {
+    expect(
+      shouldReuseIdempotencyKey(err({ code: ErrorCodes.AUTHOR_PROFILE_NAME_TAKEN, status: 409 })),
+    ).toBe(false)
+    expect(shouldReuseIdempotencyKey(err({ status: 400 }))).toBe(false)
   })
 })

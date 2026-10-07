@@ -11,12 +11,19 @@ export {
   useRemoveAuthorProfile,
   useRenameAuthorProfile,
 } from './hooks'
-export { browserLocalStorage, createAuthorMemory } from './authorMemory'
+export { browserLocalStorage, createAuthorMemory, forgetAuthorMemory } from './authorMemory'
 export type { AuthorMemory, StorageLike } from './authorMemory'
 export { resolveInitialAuthor, switchNotice } from './initialAuthor'
 export { defaultAuthorProfileLabels } from './labels'
 export type { AuthorProfileLabels } from './labels'
-export { isAuthorProfileFormError, nameProblem, profileFormProblem } from './errors'
+export {
+  isAuthorProfileFormError,
+  nameProblem,
+  profileFormProblem,
+  shouldReuseIdempotencyKey,
+} from './errors'
+export { foldDuration } from './duration'
+export type { Duration } from './duration'
 export type { ProfileFormProblem } from './errors'
 export { AuthorPicker, AuthorPickerView } from './AuthorPicker'
 export type {

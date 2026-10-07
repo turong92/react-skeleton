@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isOwn, lastOwnAuthorId } from './authorship'
+import { isOwn, lastOwnAuthorId, threadIsUnknown } from './authorship'
 import { comment, thread } from './test/fixtures'
 
 describe('isOwn', () => {
@@ -79,5 +79,24 @@ describe('lastOwnAuthorId', () => {
       comment(2, null, { authorId: 'prf_b', mine: true, createdAt: '2026-01-01T18:30:00+09:00' }),
     ]
     expect(lastOwnAuthorId(comments)).toBe('prf_a')
+  })
+})
+
+describe('lastOwnAuthorId — unparsable times', () => {
+  it('a createdAt that does not parse never beats a real one, and does not throw the comparison off', () => {
+    const comments = [
+      comment(1, null, { authorId: 'prf_a', mine: true, createdAt: '2026-01-01T00:00:00Z' }),
+      comment(2, null, { authorId: 'prf_bad', mine: true, createdAt: 'not a time' }),
+    ]
+    expect(lastOwnAuthorId(comments)).toBe('prf_a')
+    expect(lastOwnAuthorId(comments.slice(1))).toBe('prf_bad') // 그래도 단서가 이것뿐이면 이것
+  })
+})
+
+describe('threadIsUnknown', () => {
+  it('is true until comments of the CURRENT page have arrived: nothing yet (loading or first load failed), or only the previous page kept as placeholder', () => {
+    expect(threadIsUnknown({ data: undefined, isPlaceholderData: false })).toBe(true)
+    expect(threadIsUnknown({ data: [], isPlaceholderData: true })).toBe(true)
+    expect(threadIsUnknown({ data: [], isPlaceholderData: false })).toBe(false)
   })
 })

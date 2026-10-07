@@ -64,35 +64,6 @@ export const FoldedShowsOnlyTheRememberedProfile: Story = {
   },
 }
 
-export const ThisThreadBeatsTheDeviceMemory: Story = {
-  args: { remembered: 'prf_b', threadAuthorId: 'prf_a' },
-  play: async ({ canvas }) => {
-    await expect(await canvas.findByRole('button', { name: /Writing as Ann#0001/ })).toBeVisible()
-    await waitFor(() => expect(onChange).toHaveBeenCalledWith('prf_a'))
-  },
-}
-
-/** 댓글을 받는 동안(`threadLoading`)은 처음 값을 확정하지 않는다 — 「아직 모름」이 「쓴 적 없음」이 아니라서 기기 기억으로 넘어가지도 않는다. 받고 나면(`threadLoading` 꺼짐) 스레드 프로필이 이긴다 */
-export const WaitsWhileTheThreadIsLoading: Story = {
-  args: { remembered: 'prf_b', threadAuthorId: undefined, threadLoading: true },
-  play: async ({ canvas }) => {
-    await expect(await canvas.findByRole('button', { name: 'Choose a profile' })).toBeVisible()
-    await new Promise((resolve) => setTimeout(resolve, 150)) // 목록이 이미 와 있어도 확정하지 않는다
-    await expect(onChange).not.toHaveBeenCalled()
-    await expect(canvas.getByRole('button', { name: 'Choose a profile' })).toBeVisible()
-  },
-}
-
-/** 칸 오류 문장이 선택기 단추의 설명으로 이어진다 — 낭독기가 단추에서 오류를 읽는다 */
-export const FormErrorIsTheTriggersDescription: Story = {
-  args: { invalid: true, describedBy: 'author-error' },
-  play: async ({ canvas }) => {
-    await expect(
-      await canvas.findByRole('button', { name: 'Choose a profile' }),
-    ).toHaveAccessibleDescription('Choose who to post as.')
-  },
-}
-
 export const NothingToStartFromLeavesItEmpty: Story = {
   play: async ({ canvas }) => {
     const button = await canvas.findByRole('button', { name: 'Choose a profile' })
@@ -117,41 +88,6 @@ export const ChoosingWithNoThreadProfileAsksNothingAndIsRemembered: Story = {
     await expect(await canvas.findByRole('button', { name: /Writing as Bea#0002/ })).toBeVisible()
     await expect(canvas.queryByRole('status')).toBeNull()
     await expect(onChange).toHaveBeenLastCalledWith('prf_b')
-    await expect(Object.values(storage.dump())).toEqual(['prf_b'])
-  },
-}
-
-export const SwitchingAwayFromTheThreadProfileAsksOnce: Story = {
-  args: { threadAuthorId: 'prf_a' },
-  play: async ({ canvas, userEvent }) => {
-    const trigger = await canvas.findByRole('button', { name: /Writing as Ann#0001/ })
-    await expect(canvas.queryByRole('status')).toBeNull() // 평소에는 경고가 없다
-
-    // 같은 프로필을 다시 고르면 묻지 않는다
-    await userEvent.click(trigger)
-    await userEvent.click(await canvas.findByRole('menuitemradio', { name: 'Ann#0001' }))
-    await expect(canvas.queryByRole('status')).toBeNull()
-
-    // 다른 프로필 → 한 줄 확인, 값은 아직 그대로
-    await userEvent.click(trigger)
-    await userEvent.click(await canvas.findByRole('menuitemradio', { name: 'Bea#0002' }))
-    await expect(await canvas.findByRole('status')).toHaveTextContent(
-      'You wrote in this thread as Ann#0001.',
-    )
-    await expect(canvas.getByRole('button', { name: /Writing as Ann#0001/ })).toBeVisible()
-    await expect(storage.dump()).toEqual({})
-
-    // 유지
-    await userEvent.click(canvas.getByRole('button', { name: 'Keep Ann#0001' }))
-    await expect(canvas.queryByRole('status')).toBeNull()
-    await expect(canvas.getByRole('button', { name: /Writing as Ann#0001/ })).toBeVisible()
-
-    // 다시 골라 확인
-    await userEvent.click(canvas.getByRole('button', { name: /Writing as Ann#0001/ }))
-    await userEvent.click(await canvas.findByRole('menuitemradio', { name: 'Bea#0002' }))
-    await userEvent.click(await canvas.findByRole('button', { name: 'Use Bea#0002' }))
-    await expect(await canvas.findByRole('button', { name: /Writing as Bea#0002/ })).toBeVisible()
-    await expect(canvas.queryByRole('status')).toBeNull()
     await expect(Object.values(storage.dump())).toEqual(['prf_b'])
   },
 }
@@ -215,5 +151,34 @@ export const DisabledWhileSending: Story = {
     await expect(trigger).toHaveAttribute('aria-disabled', 'true')
     await userEvent.click(trigger)
     await expect(canvas.queryByRole('menu')).toBeNull()
+  },
+}
+/** 이름이 없는 프로필(이름 없는 옛 글을 넘겨받은 첫 프로필) · 꼬리표가 없는 서버 — 글자 「null」 도 빈 `#` 도 없다 */
+export const UnnamedAndTaglessProfilesReadNaturally: Story = {
+  args: { remembered: 'prf_n' },
+  render: (args) => (
+    <PickerDemo
+      {...args}
+      api={
+        createFakeAuthorProfiles({
+          profiles: [
+            { id: 'prf_n', name: null, tag: null, createdAt: '2026-01-01T00:00:00Z' },
+            { id: 'prf_t', name: 'Ann', tag: null, createdAt: '2026-01-02T00:00:00Z' },
+          ],
+        }).api
+      }
+    />
+  ),
+  play: async ({ canvas, userEvent }) => {
+    const trigger = await canvas.findByRole('button', {
+      name: 'Writing as Unnamed. Change profile',
+    })
+    await expect(trigger).toHaveTextContent('Unnamed')
+    await expect(trigger).not.toHaveTextContent('#')
+    await userEvent.click(trigger)
+    await expect(await canvas.findByRole('menuitemradio', { name: 'Ann' })).toBeVisible()
+    await expect(canvas.getByRole('menuitemradio', { name: 'Unnamed' })).toBeVisible()
+    await expect(document.body).not.toHaveTextContent('null')
+    await expect(document.body).not.toHaveTextContent('#')
   },
 }

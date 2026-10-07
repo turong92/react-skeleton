@@ -1,7 +1,7 @@
 import { Button, Card, Dialog, EmptyState, Field, Pagination, Select, Spinner } from '@skeleton/ui'
 import { useMemo, useState } from 'react'
 import { collidingNames } from './authorDisplay'
-import { isUsableOwnAuthorId, lastOwnAuthorId } from './authorship'
+import { isUsableOwnAuthorId, lastOwnAuthorId, threadIsUnknown } from './authorship'
 import type { BoardApi } from './boardApi'
 import { resolveBoardCommentsLabels, type BoardCommentsLabelsInput } from './boardCommentsLabels'
 import { CommentForm } from './CommentForm'
@@ -90,8 +90,8 @@ export function BoardComments({
     [comments.data, postAuthor],
   )
   const authorRequired = config.authorRequired === true
-  /** 댓글을 아직 못 받았다 — 이때의 undefined 는 「쓴 적 없음」이 아니다 */
-  const threadLoading = comments.isPending
+  /** 현재 쪽의 댓글을 아직 모른다(받는 중 · 이전 쪽 placeholder · 첫 불러오기 실패) — 이때의 undefined 는 「쓴 적 없음」이 아니다 */
+  const threadLoading = threadIsUnknown(comments)
   const create = useCreateComment(api, boardCode, postId)
   const update = useUpdateComment(api, boardCode, postId)
   const remove = useRemoveComment(api, boardCode, postId)

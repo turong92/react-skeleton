@@ -403,6 +403,39 @@ export const PickerStartsOnTheAuthorOfMyEarlierComment: Story = {
   },
 }
 
+/**
+ * 댓글을 받는 동안(`threadLoading`)에는 처음 값을 확정하지 않는다 — 단서(글 작성자 Ann)가 먼저 있어도 **Ann 을 거치지 않고**, 내 댓글(Bea)이 도착한 뒤 Bea 로 시작한다.
+ * 선택기가 `onChange` 로 받은 값을 전부 센다(spy).
+ */
+const pickedSpy = fn()
+const spyingPicker = demoAuthorPicker()
+export const PickerNeverPassesThroughTheFallbackWhileLoading: Story = {
+  beforeEach: () => pickedSpy.mockClear(),
+  args: {
+    fake: { ...profileServer, delayMs: 300 },
+    postAuthor: { authorId: 'prf_a', mine: true },
+    setup: (board) => {
+      board.newComment(3, 'Written earlier as Bea', null, 'prf_b')
+    },
+    authorPicker: (args) =>
+      spyingPicker({
+        ...args,
+        onChange: (next) => {
+          pickedSpy(next)
+          args.onChange(next)
+        },
+      }),
+  },
+  play: async ({ canvas }) => {
+    const picker = () => canvas.getByRole('combobox', { name: 'Post as' })
+    await expect(picker()).toHaveDisplayValue('Choose…') // 받는 중: 비어 있다
+    await canvas.findByText('Written earlier as Bea', { selector: 'p' })
+    await waitFor(() => expect(picker()).toHaveDisplayValue('Bea'))
+    await expect(pickedSpy).toHaveBeenCalledTimes(1)
+    await expect(pickedSpy).toHaveBeenCalledWith('prf_b') // Ann 을 거치지 않았다
+  },
+}
+
 /** 이 글을 내가 쓰고 댓글은 아직 안 썼다 — 글의 `authorId`(`postAuthor`)가 단서다 */
 export const PostAuthorIsTheFallbackClue: Story = {
   args: {
@@ -434,8 +467,8 @@ export const PickerFollowsTheAuthorUsedInThisThread: Story = {
   },
 }
 
-/** 서버가 필수로 하지 않고(`authorRequired` 없음) 선택기를 줘도 — 선택기 자리 없음, 서버로 가는 입력은 정확히 `{ body }`(`authorId` 키 없음) */
-export const NoPickerAndNotRequiredIsUnchanged: Story = {
+/** 서버가 필수로 하지 않으면(`authorRequired` 없음) 선택기를 줘도 그리지 않는다 — 새 댓글 · 답글 모두 서버로 가는 입력에 `authorId` 키가 없다 */
+export const PickerIsNotDrawnAndInputStaysBodyOnlyWithoutAuthorRequired: Story = {
   args: { authorPicker: demoAuthorPicker(), watchCreate: fn() },
   play: async ({ canvas, userEvent, args }) => {
     await canvas.findByText('Spaces, always.')

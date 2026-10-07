@@ -188,6 +188,21 @@ export const CustomTrigger: Story = {
   },
 }
 
+/** `describedBy` — 메뉴 칸 밖의 설명(예: 폼의 오류 문장)이 버튼의 접근 가능한 설명으로 이어진다. 이름(`label`)은 그대로다 */
+export const DescribedByTiesAnOutsideDescriptionToTheButton: Story = {
+  args: { describedBy: 'row-menu-why' },
+  render: (args) => (
+    <div style={{ display: 'flex', gap: 'var(--space-lg)', alignItems: 'start' }}>
+      <RowMenu {...args} />
+      <p id="row-menu-why">Pick one before sending.</p>
+    </div>
+  ),
+  play: async ({ canvas }) => {
+    const button = canvas.getByRole('button', { name: 'More for Ada' })
+    await expect(button).toHaveAccessibleDescription('Pick one before sending.')
+  },
+}
+
 export const OpensUpwardWhenThereIsNoRoomBelow: Story = {
   render: (args) => (
     <div

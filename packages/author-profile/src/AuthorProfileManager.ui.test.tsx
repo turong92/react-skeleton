@@ -28,7 +28,7 @@ describe('AuthorProfileManager', () => {
     expect(html.match(/<li/g)).toHaveLength(2)
   })
 
-  it('every row has a Rename and a Delete that LOOK like buttons and name their row for a screen reader', () => {
+  it('every row has a Rename and a Delete: real buttons with a visible word, named after their row for a screen reader', () => {
     const html = render([profile('prf_a', 'Ann', '0001')])
     expect(html).toContain(`aria-label="${L.rename('Ann#0001')}"`)
     expect(html).toContain(`aria-label="${L.remove('Ann#0001')}"`)
@@ -42,7 +42,12 @@ describe('AuthorProfileManager', () => {
       3,
     )
     expect(html).toContain(L.limitReached(3))
-    expect(html).toMatch(/<button[^>]*disabled[^>]*>[^<]*(<[^>]+>)*[^<]*Add profile/)
+    // 꺼진 추가 단추와 칸이 그 이유 문장을 설명으로 가진다
+    const id = html.match(/<p id="([^"]+)"[^>]*>[^<]*You can have up to 3 profiles/)?.[1]
+    expect(id).toBeTruthy()
+    expect(html).toMatch(new RegExp(`<button[^>]*aria-describedby="${id}"[^>]*>`))
+    expect(html).toMatch(new RegExp(`<input[^>]*aria-describedby="[^"]*${id}[^"]*"`))
+    expect(html).not.toContain('Delete one')
   })
 
   it('under the limit there is no limit sentence; an empty list says so', () => {
@@ -55,6 +60,15 @@ describe('AuthorProfileManager', () => {
     const html = render([profile('prf_a', 'Ann')])
     expect(html).not.toContain('prf_')
     expect(html).not.toContain('acc_')
+  })
+
+  it('an unnamed or tagless profile row reads naturally and never prints "null"', () => {
+    const html = render([profile('prf_n', null, null), profile('prf_t', 'Ann', null)])
+    expect(html).toContain(L.unnamed)
+    expect(html).toContain(`aria-label="${L.rename(L.unnamed)}"`)
+    expect(html).toContain(`aria-label="${L.remove('Ann')}"`)
+    expect(html).not.toContain('null')
+    expect(html).not.toContain('#')
   })
 
   it('the delete confirmation is closed until asked for', () => {

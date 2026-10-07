@@ -40,12 +40,34 @@ describe('fake author profiles', () => {
     expect(await field('admin')).toMatchObject({ field: 'name', code: 'Reserved' })
   })
 
-  it('uniqueNames makes a repeated name a 409 NAME_TAKEN', async () => {
-    const { api } = createFakeAuthorProfiles({ uniqueNames: true })
-    await api.create({ name: 'Ann' })
+  it('takenNames are names somebody else holds: 409 NAME_TAKEN whatever the case; your own names are not blocked', async () => {
+    const { api } = createFakeAuthorProfiles({ takenNames: ['Ann'] })
     expect(codeOf(await rejects(api.create({ name: 'ann' })))).toBe(
       ErrorCodes.AUTHOR_PROFILE_NAME_TAKEN,
     )
+    const bea = await api.create({ name: 'Bea' })
+    await api.create({ name: 'Bea' }) // 내 이름끼리 겹침은 막지 않는다(꼬리표로 구분)
+    expect(codeOf(await rejects(api.rename(bea.id, { name: 'ANN' })))).toBe(
+      ErrorCodes.AUTHOR_PROFILE_NAME_TAKEN,
+    )
+  })
+
+  it('failNext fails the next call of that kind once, with that code (keys: create · rename · remove)', async () => {
+    const { api } = createFakeAuthorProfiles({
+      failNext: { create: 'AUTHOR_PROFILE.LIMIT_REACHED' },
+    })
+    expect(codeOf(await rejects(api.create({ name: 'Ann' })))).toBe(
+      ErrorCodes.AUTHOR_PROFILE_LIMIT_REACHED,
+    )
+    await api.create({ name: 'Ann' }) // 한 번뿐
+    expect(await api.list()).toHaveLength(1)
+  })
+
+  it('a failNext NOT_FOUND means "gone elsewhere": the profile is not in the list afterwards', async () => {
+    const { api } = createFakeAuthorProfiles({ failNext: { remove: 'AUTHOR_PROFILE.NOT_FOUND' } })
+    const a = await api.create({ name: 'Ann' })
+    expect(codeOf(await rejects(api.remove(a.id)))).toBe(ErrorCodes.AUTHOR_PROFILE_NOT_FOUND)
+    expect(await api.list()).toEqual([])
   })
 
   it('rateLimited answers 429 with the wait', async () => {

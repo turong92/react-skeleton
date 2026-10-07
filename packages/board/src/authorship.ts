@@ -12,6 +12,12 @@ export function isOwn(
   return item.mine ?? (currentUserId !== undefined && item.authorId === currentUserId)
 }
 
+/** 읽을 수 없는 시각은 가장 이른 것으로(비교가 NaN 으로 어긋나지 않게) */
+const instant = (iso: string) => {
+  const parsed = Date.parse(iso)
+  return Number.isNaN(parsed) ? Number.NEGATIVE_INFINITY : parsed
+}
+
 type Walkable = Comment & { replies?: readonly Walkable[] }
 
 /** 켜기 전에 쌓인 옛 행의 공개 id(`pending:p<id>` · `pending:c<id>`) — 어느 프로필의 것도 아니라 선택기의 단서가 못 된다 */
@@ -43,8 +49,8 @@ export function lastOwnAuthorId(
   const visit = (items: readonly Walkable[]) => {
     for (const item of items) {
       if (isUsableOwnAuthorId(item)) {
-        const at = Date.parse(item.createdAt)
-        const bestAt = best ? Date.parse(best.createdAt) : Number.NEGATIVE_INFINITY
+        const at = instant(item.createdAt)
+        const bestAt = best ? instant(best.createdAt) : Number.NEGATIVE_INFINITY
         if (!best || at > bestAt || (at === bestAt && item.id > best.id)) best = item
       }
       if (item.replies) visit(item.replies)
@@ -52,6 +58,14 @@ export function lastOwnAuthorId(
   }
   visit(comments)
   return best?.authorId
+}
+
+/**
+ * 이 글의 댓글을 아직 모르는가 — 현재 쪽의 댓글이 도착하기 전(불러오는 중 · 첫 불러오기 실패로 데이터 없음)이거나, 쪽 · 정렬을 바꾸는 사이
+ * 이전 쪽 데이터가 자리를 지키는 중(`isPlaceholderData`)이면 true. 이때 선택기는 처음 값을 확정하지 않는다.
+ */
+export function threadIsUnknown(query: { data: unknown; isPlaceholderData: boolean }): boolean {
+  return query.data === undefined || query.isPlaceholderData
 }
 
 /** `authorPicker` 렌더 함수가 받는 것 — 보드는 선택기가 무엇인지 모른다(작성자 프로필이든 무엇이든 값은 문자열 id 하나) */

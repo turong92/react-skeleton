@@ -1,4 +1,5 @@
 import { ApiRequestError, ErrorCodes, retryAfterSeconds } from '@skeleton/api-client'
+import { foldDuration } from './duration'
 import type { AuthorProfileConfig } from './types'
 import type { AuthorProfileLabels } from './labels'
 
@@ -56,8 +57,13 @@ export function profileFormProblem(
         return { where: 'name', message: labels.nameTaken }
       case ErrorCodes.AUTHOR_PROFILE_LIMIT_REACHED:
         return { where: 'form', message: labels.limitReached(limits.maxPerAccount) }
-      case ErrorCodes.AUTHOR_PROFILE_RATE_LIMITED:
-        return { where: 'form', message: labels.rateLimited(retryAfterSeconds(error)) }
+      case ErrorCodes.AUTHOR_PROFILE_RATE_LIMITED: {
+        const seconds = retryAfterSeconds(error)
+        return {
+          where: 'form',
+          message: labels.rateLimited(seconds === undefined ? undefined : foldDuration(seconds)),
+        }
+      }
       case ErrorCodes.AUTHOR_PROFILE_NOT_FOUND:
         return { where: 'form', message: labels.notFound }
     }
@@ -65,9 +71,20 @@ export function profileFormProblem(
   return { where: 'form', message: labels.failed }
 }
 
-/** 폼이 제자리에서 말하는 오류인가 — 앱의 전역 토스트가 건너뛰는 데 쓴다 */
+/**
+ * 폼이 제자리에서 말하는 오류인가 — 앱의 전역 토스트가 건너뛰는 데 쓴다. **`AUTHOR_PROFILE.` 코드만**이다:
+ * 이름 칸의 400 검증 오류는 닉네임 같은 다른 폼과 같은 모양이라 여기서 가로채지 않는다(앱이 이미 `meta.quietStatuses` 로 400 을 조용히 한다).
+ */
 export function isAuthorProfileFormError(error: unknown): boolean {
-  if (!(error instanceof ApiRequestError)) return false
-  const { code, errors } = error.apiError
-  return code.startsWith('AUTHOR_PROFILE.') || (errors ?? []).some((e) => e.field === NAME_FIELD)
+  return error instanceof ApiRequestError && error.apiError.code.startsWith('AUTHOR_PROFILE.')
+}
+
+/**
+ * 같은 제출을 다시 보낼 때 `Idempotency-Key` 를 그대로 쓸까 — 첫 시도가 서버에 닿았는지 모를 때(네트워크 실패 · 5xx · API 오류가 아닌 던짐)만.
+ * 4xx 는 서버가 확정해 답한 것이라 다음 시도는 새 제출이다(상한 · 이름 겹침이 풀린 뒤 같은 이름을 다시 만들 수 있다).
+ */
+export function shouldReuseIdempotencyKey(error: unknown): boolean {
+  if (!(error instanceof ApiRequestError)) return true
+  const { status } = error.apiError
+  return status === 0 || status >= 500
 }

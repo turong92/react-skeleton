@@ -126,8 +126,8 @@ describe('a mailed sign-in link is redeemed exactly once', () => {
     await acceptLegalGate(page, apiUrl)
     await pwExpect(heading(/안녕하세요/)).toBeVisible()
     await pwExpect(page.getByText(auth.magicLinkInvalidTitle)).toHaveCount(0)
-    await page.waitForLoadState('networkidle') // 늦게 나가는 두 번째 호출이 있다면 여기서 잡힌다
-    await new Promise((resolve) => setTimeout(resolve, 1_000))
+    // 실시간 알림(SSE)이 연결을 열어 두어 네트워크가 잠잠해지지 않는다 — 대신 늦게 나가는 두 번째 호출이 있다면 잡히도록 잠시 지켜본다
+    await new Promise((resolve) => setTimeout(resolve, 3_000))
     page.removeAllListeners('response')
     pwExpect(statuses).toEqual([200]) // 두 번째 호출(410)이 없다
   })

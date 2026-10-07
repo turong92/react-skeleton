@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { apiError } from './stories/fakeAccountApi'
+import { apiError } from './test/apiFixtures'
 import { deletionPendingOf } from './pendingDeletion'
 
 describe('deletionPendingOf (403 AUTH.ACCOUNT_DELETION_PENDING of a correct sign-in during the grace)', () => {

@@ -1,38 +1,9 @@
-import { ApiRequestError } from '@skeleton/api-client'
 import type { AccountApi, ReauthCredential } from '../account/accountApi'
-import type { AccountMe, AccountSession, PasswordPolicy, SignInIdentity } from '../account/types'
+import type { AccountMe, AccountSession, SignInIdentity } from '../account/types'
 
-export const FAKE_POLICY: PasswordPolicy = {
-  minLength: 10,
-  maxBytes: 72,
-  requireLetter: true,
-  requireDigit: true,
-  requireSymbol: false,
-  forbidEmailLocalPart: true,
-}
+import { FAKE_POLICY, apiError, fieldError } from '../test/apiFixtures'
 
-/** 필드 오류가 있는 400(`errors[]`) — 서버의 message 는 영어다(화면은 그대로 보이지 않는다) */
-export const fieldError = (field: string, code: string, message: string) =>
-  new ApiRequestError(
-    {
-      code: 'COMMON.VALIDATION_FAILED',
-      title: 'Validation failed',
-      status: 400,
-      timestamp: '2026-01-01T00:00:00Z',
-      errors: [{ field, code, message }],
-    } as never,
-    'trace-demo',
-    'span-demo',
-    '00-trace-demo-span-demo-01',
-  )
-
-export const apiError = (code: string, status: number, data?: unknown) =>
-  new ApiRequestError(
-    { code, title: code, status, timestamp: '2026-01-01T00:00:00Z', data },
-    'trace-demo',
-    'span-demo',
-    '00-trace-demo-span-demo-01',
-  )
+export { FAKE_POLICY, apiError, fieldError }
 
 /** 지금부터 n분 뒤의 ISO 시각 — 코드 만료는 시계에 따라 달라지므로 고정 날짜를 쓰면 스토리가 곧 만료된 화면이 된다 */
 const inMinutes = (minutes: number): string => new Date(Date.now() + minutes * 60_000).toISOString()

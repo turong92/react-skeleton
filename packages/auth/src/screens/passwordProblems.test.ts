@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { FAKE_POLICY } from '../stories/fakeAccountApi'
+import { FAKE_POLICY } from '../test/apiFixtures'
 import { defaultAuthLabels as labels } from './labels'
 import { passwordProblems } from './passwordProblems'
 

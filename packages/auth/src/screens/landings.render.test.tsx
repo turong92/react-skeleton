@@ -12,7 +12,7 @@ import { SocialLinkProofScreen } from './SocialLinkProofScreen'
 import { readLinkToken } from './linkToken'
 import { DeletionPendingScreen } from './DeletionPendingScreen'
 import { koAuthLabels } from './labels.ko'
-import { apiError } from '../stories/fakeAccountApi'
+import { apiError } from '../test/apiFixtures'
 
 const html = (node: React.ReactNode) => renderToStaticMarkup(<MemoryRouter>{node}</MemoryRouter>)
 const noop = async () => undefined

@@ -78,8 +78,9 @@ describe('with-watchdog', () => {
 
   it('does not kill a silent process that is busy on the CPU', () => {
     const r = run(
-      ['--wall', '60', '--idle', '1', '--retries', '0'],
-      `const end = Date.now() + 3000; while (Date.now() < end) {} console.log('busy done')`,
+      // Linux 의 ps 는 CPU 시간을 1초 단위로 보여 준다 — 바쁜 러너에서 1초 창은 "진행 없음"으로 읽힐 수 있다. 창을 CPU 눈금보다 넉넉히 둔다
+      ['--wall', '60', '--idle', '4', '--poll', '500', '--retries', '0'],
+      `const end = Date.now() + 7000; while (Date.now() < end) {} console.log('busy done')`,
     )
     expect(r.status).toBe(0)
     expect(r.stdout).toContain('busy done')

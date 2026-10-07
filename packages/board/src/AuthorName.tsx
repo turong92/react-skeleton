@@ -18,7 +18,7 @@ export type AuthorNameProps = {
   tag?: AuthorTagMode
   /** 긴 이름을 한 줄 말줄임으로(좁은 열) — 전체 글자는 DOM 에 그대로라 스크린 리더는 전체를 읽는다 */
   truncate?: boolean
-  /** 같은 화면에 같은 닉네임의 다른 계정이 있는가 — `collision` 일 때만 본다(부모가 `collidingNames` 로 안다) */
+  /** 같은 화면에 같은 닉네임의 다른 작성자 id 가 있는가 — `collision` 일 때만 본다(부모가 `collidingNames` 로 안다) */
   collides?: boolean
 }
 

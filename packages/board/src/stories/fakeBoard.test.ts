@@ -190,3 +190,53 @@ describe('fake board — author tags', () => {
     expect(byTitle.other.authorTag).toBeNull()
   })
 })
+
+describe('fake board — author profiles (authorRequired)', () => {
+  const server = () =>
+    createFakeBoard({
+      seed: false,
+      authorRequired: true,
+      owned: ['prf_a', 'prf_b'],
+      nicknames: { prf_a: 'Ann', prf_b: 'Bea', prf_z: 'Zed' },
+    })
+
+  it('announces authorRequired in the config, and omits the key when the option is off', () => {
+    expect(server().config.authorRequired).toBe(true)
+    expect('authorRequired' in createFakeBoard({ seed: false }).config).toBe(false)
+  })
+
+  it('rejects a write without authorId (400 BOARD.AUTHOR_REQUIRED) and with a foreign one (403 BOARD.AUTHOR_NOT_ALLOWED)', async () => {
+    const { api } = server()
+    const missing = await rejects(api.createPost('free', { title: 't', body: 'b' }))
+    expect(missing).toMatchObject({
+      apiError: { status: 400, code: 'BOARD.AUTHOR_REQUIRED' },
+    })
+    const foreign = await rejects(
+      api.createPost('free', { title: 't', body: 'b', authorId: 'prf_z' }),
+    )
+    expect(foreign).toMatchObject({
+      apiError: { status: 403, code: 'BOARD.AUTHOR_NOT_ALLOWED' },
+    })
+  })
+
+  it('publishes under the chosen id and marks it mine without ever being the account id', async () => {
+    const { api } = server()
+    const post = await api.createPost('free', { title: 't', body: 'b', authorId: 'prf_a' })
+    expect(post).toMatchObject({ authorId: 'prf_a', authorName: 'Ann', mine: true })
+    const comment = await api.createComment('free', post.id, { body: 'hi', authorId: 'prf_b' })
+    expect(comment).toMatchObject({ authorId: 'prf_b', mine: true })
+    const listed = (await api.listComments('free', post.id)).values[0]
+    expect(listed.mine).toBe(true)
+  })
+
+  it('lets the owner edit and delete under any of their ids, not someone else', async () => {
+    const { api, newPost } = server()
+    const post = await api.createPost('free', { title: 't', body: 'b', authorId: 'prf_b' })
+    await api.updatePost('free', post.id, { title: 'new' })
+    const other = newPost('theirs', 'x', 'prf_z')
+    expect((await api.getPost('free', other.id)).mine).toBe(false)
+    expect(await rejects(api.removePost('free', other.id))).toMatchObject({
+      apiError: { status: 403 },
+    })
+  })
+})

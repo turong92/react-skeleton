@@ -14,12 +14,23 @@ export type { FakeBoardOptions } from './fakeBoardStore'
  */
 export function createFakeBoard(options: FakeBoardOptions = {}) {
   const store = createStore(options)
-  const { me, canModerate, config, comments, posts, seqOf, stamp, findPost, findComment, view } =
-    store
+  const {
+    owns,
+    authorOf,
+    canModerate,
+    config,
+    comments,
+    posts,
+    seqOf,
+    stamp,
+    findPost,
+    findComment,
+    view,
+  } = store
   const { guard, needModerator, react, newPost, newComment } = store
   const slow = withDelay(options.delayMs ?? 0)
   const page = <T>(all: T[], pageNo?: number, size?: number) => pageOf(all, stamp(), pageNo, size)
-  const postView = (post: PostDetail): PostDetail => ({ ...post })
+  const postView = (post: PostDetail): PostDetail => ({ ...post, mine: owns(post.authorId) })
   const setCommentStatus = (id: number, status: Comment['status']) => {
     const row = findComment(id)
     row.status = status
@@ -70,7 +81,7 @@ export function createFakeBoard(options: FakeBoardOptions = {}) {
     }),
     getPost: slow(async (_code, id) => {
       const row = findPost(id)
-      const visible = row.status === 'PUBLISHED' || row.authorId === me || canModerate
+      const visible = row.status === 'PUBLISHED' || owns(row.authorId) || canModerate
       if (!visible) fail(ErrorCodes.BOARD_POST_NOT_FOUND, 404, 'Post not found')
       row.viewCount += 1
       return postView(row)
@@ -79,12 +90,14 @@ export function createFakeBoard(options: FakeBoardOptions = {}) {
       guard(input.title.trim() !== '' && input.title.length <= config.titleMaxLength)
       guard(input.body.trim() !== '' && input.body.length <= config.bodyMaxLength)
       return postView(
-        newPost(input.title.trim(), input.body, me, { status: input.status ?? 'PUBLISHED' }),
+        newPost(input.title.trim(), input.body, authorOf(input.authorId), {
+          status: input.status ?? 'PUBLISHED',
+        }),
       )
     }),
     updatePost: slow(async (_code, id, patch) => {
       const row = findPost(id)
-      if (row.authorId !== me && !canModerate) fail(ErrorCodes.BOARD_FORBIDDEN, 403, 'Forbidden')
+      if (!owns(row.authorId) && !canModerate) fail(ErrorCodes.BOARD_FORBIDDEN, 403, 'Forbidden')
       if (patch.title !== undefined)
         guard(patch.title.trim() !== '' && patch.title.length <= config.titleMaxLength)
       if (patch.body !== undefined)
@@ -98,7 +111,7 @@ export function createFakeBoard(options: FakeBoardOptions = {}) {
     }),
     removePost: slow(async (_code, id) => {
       const row = findPost(id)
-      if (row.authorId !== me && !canModerate) fail(ErrorCodes.BOARD_FORBIDDEN, 403, 'Forbidden')
+      if (!owns(row.authorId) && !canModerate) fail(ErrorCodes.BOARD_FORBIDDEN, 403, 'Forbidden')
       row.status = 'DELETED'
     }),
     moderatePost: slow(async (_code, id, moderation) => {
@@ -131,18 +144,20 @@ export function createFakeBoard(options: FakeBoardOptions = {}) {
       if (post.status !== 'PUBLISHED')
         fail(ErrorCodes.BOARD_POST_NOT_COMMENTABLE, 409, 'Not commentable')
       guard(input.body.trim() !== '' && input.body.length <= config.commentMaxLength)
-      return view(newComment(postId, input.body.trim(), input.parentId ?? null))
+      return view(
+        newComment(postId, input.body.trim(), input.parentId ?? null, authorOf(input.authorId)),
+      )
     }),
     updateComment: slow(async (_code, _postId, id, input) => {
       const row = findComment(id)
-      if (row.authorId !== me) fail(ErrorCodes.BOARD_FORBIDDEN, 403, 'Forbidden')
+      if (!owns(row.authorId)) fail(ErrorCodes.BOARD_FORBIDDEN, 403, 'Forbidden')
       guard(input.body.trim() !== '' && input.body.length <= config.commentMaxLength)
       Object.assign(row, { body: input.body.trim(), updatedAt: stamp() })
       return view(row)
     }),
     removeComment: slow(async (_code, _postId, id) => {
       const row = findComment(id)
-      if (row.authorId !== me && !canModerate) fail(ErrorCodes.BOARD_FORBIDDEN, 403, 'Forbidden')
+      if (!owns(row.authorId) && !canModerate) fail(ErrorCodes.BOARD_FORBIDDEN, 403, 'Forbidden')
       row.status = 'DELETED'
     }),
     moderateComment: slow(async (_code, _postId, id, moderation) => {

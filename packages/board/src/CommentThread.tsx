@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { collidingNames } from './authorDisplay'
+import { lastOwnAuthorId } from './authorship'
 import { useAuthorScope } from './authorScopeContext'
 import { defaultCommentLabels } from './commentLabels'
 import type { CommentOptions } from './commentThreadContext'
@@ -33,6 +34,7 @@ export function CommentThread({ thread, scopeNames, ...options }: CommentThreadP
 
   const ctx: ThreadContext = {
     ...options,
+    threadAuthorId: options.threadAuthorId ?? lastOwnAuthorId([thread]),
     labels: { ...defaultCommentLabels, ...options.labels },
     collapseFromDepth: options.collapseFromDepth ?? 2,
     collidingNames: colliding,

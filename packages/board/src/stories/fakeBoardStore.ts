@@ -27,6 +27,13 @@ export type FakeBoardOptions = {
    * `deleted:` 로 시작하는 id 는 탈퇴한 작성자(`authorDeleted: true`). 기본은 데모 시드의 작성자들.
    */
   nicknames?: Record<string, string | null>
+  /**
+   * true 면 작성자 프로필을 쓰는 서버처럼 군다 — `config.authorRequired`, 쓰기에 `authorId` 필수(없으면 400 `BOARD.AUTHOR_REQUIRED`,
+   * 내 것이 아니면 403 `BOARD.AUTHOR_NOT_ALLOWED`), 글 · 댓글의 `authorId` 는 그 id
+   */
+  authorRequired?: boolean
+  /** 호출자(`me`)가 쓸 수 있는 작성자 id들(프로필) — 이 id 의 글 · 댓글도 `mine: true`, 수정 · 삭제도 된다 */
+  owned?: string[]
   /** 계정 id → 꼬리표(4자리, 꼬리표 방식 서버). 없으면 null */
   tags?: Record<string, string>
 }
@@ -44,6 +51,9 @@ const DEFAULT_NICKNAMES: Record<string, string | null> = {
 export function createStore(options: FakeBoardOptions) {
   const { mode = 'SINGLE', me = 'me', canModerate = false } = options
   const nicknames = options.nicknames ?? DEFAULT_NICKNAMES
+  const ownedIds = new Set([me, ...(options.owned ?? [])])
+  /** 서버가 `mine` 을 싣는 규칙 — 호출자가 쓸 수 있는 작성자 id 인가 */
+  const owns = (authorId: string) => ownedIds.has(authorId)
   /** 서버가 글 · 댓글 응답에 붙이는 작성자 필드 */
   const authorFields = (id: string) => ({
     authorId: id,
@@ -61,6 +71,7 @@ export function createStore(options: FakeBoardOptions) {
     commentMaxLength: 300,
     maxPageSize: 50,
     canModerate,
+    ...(options.authorRequired === undefined ? {} : { authorRequired: options.authorRequired }),
   }
   const posts = new Map<number, PostDetail>()
   const comments = new Map<number, Comment>()
@@ -136,6 +147,7 @@ export function createStore(options: FakeBoardOptions) {
         .reduce((sum, c) => sum + 1 + descendants(c.id), 0)
     return {
       ...row,
+      mine: owns(row.authorId),
       body: row.status === 'PUBLISHED' ? row.body : null,
       replyCount: descendants(row.id),
     }
@@ -161,8 +173,18 @@ export function createStore(options: FakeBoardOptions) {
     return { counts: { ...row.reactionCounts }, myReactions: [...mine] }
   }
 
+  /** 쓰기 요청의 작성자 — 프로필을 쓰는 서버는 `authorId` 필수 · 내 것만, 아니면 계정 자신(보낸 `authorId` 는 무시) */
+  const authorOf = (authorId: string | undefined) => {
+    if (!config.authorRequired) return me
+    if (!authorId) fail('BOARD.AUTHOR_REQUIRED', 400, 'Author required')
+    if (!owns(authorId!)) fail('BOARD.AUTHOR_NOT_ALLOWED', 403, 'Author not allowed')
+    return authorId!
+  }
+
   return {
     me,
+    owns,
+    authorOf,
     mode,
     canModerate,
     config,

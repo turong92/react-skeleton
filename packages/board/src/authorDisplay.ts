@@ -1,6 +1,6 @@
 /*
  * 작성자를 화면에 어떻게 보이는지 정하는 한 곳 — 글 목록 · 글 상세 · 댓글이 모두 이 규칙을 쓴다.
- * 계정 id(`acc_…`)는 어디에도 그리지 않는다: 닉네임이 있으면 그것, 탈퇴했으면 「탈퇴한 사용자」, 없으면 「이름 없는 사용자」.
+ * 작성자 id(계정 id `acc_…` · 프로필 id 모두)는 어디에도 그리지 않는다: 닉네임이 있으면 그것, 탈퇴했으면 「탈퇴한 사용자」, 없으면 「이름 없는 사용자」.
  */
 
 /** 작성자 자리에 쓰는 글자 — 기본은 영어 */
@@ -26,7 +26,7 @@ export type AuthorFields = {
 }
 
 /**
- * 꼬리표를 보일 때 — `collision`(기본): 같은 화면에서 서로 다른 계정이 같은 닉네임을 쓸 때만,
+ * 꼬리표를 보일 때 — `collision`(기본): 같은 화면에서 서로 다른 작성자 id 가 같은 닉네임을 쓸 때만,
  * `always`: 항상(프로필 · 설정), `never`: 보이지 않는다
  */
 export type AuthorTagMode = 'always' | 'collision' | 'never'
@@ -63,7 +63,7 @@ export function nameKey(name: string): string {
   return name.normalize('NFKC').toLowerCase().replace(INVISIBLE, '').trim()
 }
 
-/** 한 화면(목록 · 스레드)에서 서로 다른 계정이 같이 쓰는 닉네임들(`nameKey` 로 접은 키) — 꼬리표가 필요한 이름 */
+/** 한 화면(목록 · 스레드)에서 서로 다른 작성자 id 가 같이 쓰는 닉네임들(`nameKey` 로 접은 키) — 꼬리표가 필요한 이름. 작성자 id 는 서버가 정한다(작성자 프로필을 쓰는 서버에서는 프로필 id 라 같은 사람의 두 프로필도 남처럼 센다) */
 export function collidingNames(items: Iterable<AuthorFields>): ReadonlySet<string> {
   const owners = new Map<string, Set<string>>()
   for (const item of items) {

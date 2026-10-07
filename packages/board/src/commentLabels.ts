@@ -24,6 +24,8 @@ export type CommentLabels = AuthorLabels & {
   required: string
   tooLong: (max: number) => string
   reactionGroup: string
+  /** `authorRequired` 인데 작성자를 고르지 않고 보낼 때 칸 아래에 */
+  authorRequired: string
 }
 
 export const defaultCommentLabels: CommentLabels = {
@@ -47,4 +49,5 @@ export const defaultCommentLabels: CommentLabels = {
   required: 'Write something first.',
   tooLong: (max) => `Keep it within ${max} characters.`,
   reactionGroup: 'Reactions',
+  authorRequired: 'Choose who to post as.',
 }

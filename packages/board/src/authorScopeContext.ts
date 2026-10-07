@@ -4,7 +4,7 @@ import type { AuthorFields } from './authorDisplay'
 export type AuthorScopeValue = {
   report: (key: string, authors: readonly AuthorFields[]) => void
   forget: (key: string) => void
-  /** 이 범위 전체에서 서로 다른 계정이 같이 쓰는 닉네임 */
+  /** 이 범위 전체에서 서로 다른 작성자 id 가 같이 쓰는 닉네임 */
   names: ReadonlySet<string>
 }
 

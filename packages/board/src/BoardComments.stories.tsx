@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState, type ComponentProps } from 'react'
 import { expect, fn, screen, waitFor, within } from 'storybook/test'
 import { BoardComments } from './BoardComments'
+import { demoAuthorPicker } from './stories/demoAuthorPicker'
 import { createFakeBoard, type FakeBoardOptions } from './stories/fakeBoard'
 import { WithQuery } from './stories/WithQuery'
 
@@ -288,5 +289,81 @@ export const SameNicknameAcrossThreadsOfOnePageShowsTags: Story = {
     await expect(canvas.getAllByText('#0001').length).toBeGreaterThan(0)
     await expect(canvas.getAllByText('#0002').length).toBeGreaterThan(0)
     await expect(canvas.queryByText('#0003')).toBeNull() // Bob 은 겹치지 않는다
+  },
+}
+
+/** 작성자 프로필을 쓰는 서버 — `authorRequired` 가 켜지고 쓰기에 `authorId` 가 필요하다. 계정(`me`) 아래 프로필 둘(`prf_a` · `prf_b`) */
+const profileServer: FakeBoardOptions = {
+  authorRequired: true,
+  owned: ['prf_a', 'prf_b'],
+  nicknames: {
+    me: 'Me',
+    alice: 'Alice',
+    bob: 'Bob',
+    carol: 'Carol',
+    dave: 'Dave',
+    admin: 'Admin',
+    prf_a: 'Ann',
+    prf_b: 'Bea',
+  },
+}
+
+export const AuthorRequiredBlocksAnUnpickedComment: Story = {
+  args: { fake: profileServer, authorPicker: demoAuthorPicker() },
+  play: async ({ canvas, userEvent }) => {
+    await canvas.findByText('Spaces, always.')
+    await userEvent.type(canvas.getByRole('textbox', { name: 'Write a comment' }), 'As a profile')
+    await userEvent.click(canvas.getByRole('button', { name: 'Post comment' }))
+    await expect(await canvas.findByRole('alert')).toHaveTextContent('Choose who to post as.')
+    await expect(canvas.getByRole('combobox', { name: 'Post as' })).toHaveFocus()
+    await expect(canvas.queryByText('As a profile', { selector: 'p' })).toBeNull() // 서버에 가지 않았다
+
+    await userEvent.selectOptions(canvas.getByRole('combobox', { name: 'Post as' }), 'Ann')
+    await userEvent.click(canvas.getByRole('button', { name: 'Post comment' }))
+    await expect(await canvas.findByText('As a profile', { selector: 'p' })).toBeVisible()
+  },
+}
+
+/** 작성자 id(`prf_a`)는 계정 id(`me`)와 다르지만 서버가 `mine` 을 준다 — 수정 · 삭제 단추가 남는다 */
+export const MineKeepsEditAndDeleteWhenTheAuthorIsNotTheAccount: Story = {
+  args: { fake: profileServer, authorPicker: demoAuthorPicker() },
+  play: async ({ canvas, userEvent }) => {
+    await canvas.findByText('Spaces, always.')
+    await userEvent.type(canvas.getByRole('textbox', { name: 'Write a comment' }), 'Mine')
+    await userEvent.selectOptions(canvas.getByRole('combobox', { name: 'Post as' }), 'Ann')
+    await userEvent.click(canvas.getByRole('button', { name: 'Post comment' }))
+    await expect(await canvas.findByText('Mine', { selector: 'p' })).toBeVisible()
+    await expect(canvas.getByRole('button', { name: 'Edit: Ann' })).toBeVisible()
+    await expect(canvas.getByRole('button', { name: 'Delete: Ann' })).toBeVisible()
+    // 남의 댓글에는 없다
+    await expect(canvas.queryByRole('button', { name: 'Edit: Alice' })).toBeNull()
+  },
+}
+
+/** 이 스레드에서 쓴 작성자가 선택기의 처음 값이 된다(`lastOwnAuthorId`) — 답글 칸도 같다 */
+export const PickerStartsOnTheAuthorUsedInThisThread: Story = {
+  args: { fake: profileServer, authorPicker: demoAuthorPicker() },
+  play: async ({ canvas, userEvent }) => {
+    await canvas.findByText('Spaces, always.')
+    await userEvent.type(canvas.getByRole('textbox', { name: 'Write a comment' }), 'First as Bea')
+    await userEvent.selectOptions(canvas.getByRole('combobox', { name: 'Post as' }), 'Bea')
+    await userEvent.click(canvas.getByRole('button', { name: 'Post comment' }))
+    await canvas.findByText('First as Bea', { selector: 'p' })
+    // 새 댓글 칸 · 답글 칸이 모두 Bea 로 시작한다
+    await waitFor(() =>
+      expect(canvas.getByRole('combobox', { name: 'Post as' })).toHaveDisplayValue('Bea'),
+    )
+    await userEvent.click(canvas.getByRole('button', { name: 'Reply: Alice' }))
+    const pickers = canvas.getAllByRole('combobox', { name: 'Post as' })
+    await expect(pickers).toHaveLength(2)
+    await waitFor(() => expect(pickers[1]).toHaveDisplayValue('Bea'))
+  },
+}
+
+/** 서버가 필수로 하지 않고 선택기도 없으면 지금과 같다 — 선택기 자리 없음, 입력에 `authorId` 없음 */
+export const NoPickerAndNotRequiredIsUnchanged: Story = {
+  play: async ({ canvas }) => {
+    await canvas.findByText('Spaces, always.')
+    await expect(canvas.queryByRole('combobox', { name: 'Post as' })).toBeNull()
   },
 }

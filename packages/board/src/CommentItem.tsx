@@ -1,4 +1,5 @@
 import { AuthorName } from './AuthorName'
+import { isOwn } from './authorship'
 import { nameKey, resolveAuthor, showsTag } from './authorDisplay'
 import { formatInstant } from '@skeleton/time'
 import { Button } from '@skeleton/ui'
@@ -14,7 +15,7 @@ import styles from './CommentItem.module.css'
 export type ThreadContext = CommentOptions & {
   labels: CommentLabels
   collapseFromDepth: number
-  /** 이 스레드에서 서로 다른 계정이 같이 쓰는 닉네임 */
+  /** 이 스레드에서 서로 다른 작성자 id 가 같이 쓰는 닉네임 */
   collidingNames: ReadonlySet<string>
   replyingTo: BoardId | null
   editing: BoardId | null
@@ -31,7 +32,7 @@ export function CommentItem({ node, ctx }: { node: CommentNode; ctx: ThreadConte
   const { comment, children } = node
   const { labels: L } = ctx
   const published = comment.status === 'PUBLISHED'
-  const own = ctx.currentUserId !== undefined && comment.authorId === ctx.currentUserId
+  const own = isOwn(comment, ctx.currentUserId)
   const resolved = resolveAuthor(comment, L)
   const author = ctx.renderAuthor ? (
     <strong>
@@ -140,9 +141,15 @@ export function CommentItem({ node, ctx }: { node: CommentNode; ctx: ThreadConte
           maxLength={ctx.commentMaxLength}
           requiredMessage={L.required}
           tooLongMessage={L.tooLong}
+          authorPicker={ctx.authorPicker}
+          authorRequired={ctx.authorRequired}
+          authorRequiredMessage={L.authorRequired}
+          threadAuthorId={ctx.threadAuthorId}
           onCancel={() => ctx.setReplyingTo(null)}
-          onSubmit={async (body) => {
-            await ctx.onReply?.(comment.id, body)
+          onSubmit={async (body, authorId) => {
+            await (authorId
+              ? ctx.onReply?.(comment.id, body, authorId)
+              : ctx.onReply?.(comment.id, body))
             ctx.expand(comment.id)
             ctx.setReplyingTo(null)
           }}

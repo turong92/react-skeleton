@@ -66,6 +66,8 @@ export {
   useUpdateComment,
   useUpdatePost,
 } from './hooks'
+export { isOwn, lastOwnAuthorId } from './authorship'
+export type { AuthorPicker, AuthorPickerArgs } from './authorship'
 export { AuthorScope } from './authorScope'
 export { AuthorName } from './AuthorName'
 export type { AuthorNameProps } from './AuthorName'

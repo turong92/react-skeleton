@@ -1,6 +1,7 @@
 import { Button, Card, Dialog, EmptyState, Field, Pagination, Select, Spinner } from '@skeleton/ui'
 import { useMemo, useState } from 'react'
 import { collidingNames } from './authorDisplay'
+import { lastOwnAuthorId } from './authorship'
 import type { BoardApi } from './boardApi'
 import { resolveBoardCommentsLabels, type BoardCommentsLabelsInput } from './boardCommentsLabels'
 import { CommentForm } from './CommentForm'
@@ -29,6 +30,8 @@ export type BoardCommentsProps = Omit<
   | 'onDelete'
   | 'onModerate'
   | 'onReact'
+  | 'authorRequired'
+  | 'threadAuthorId'
 > & {
   api: BoardApi
   boardCode: string
@@ -67,9 +70,14 @@ export function BoardComments({
   const [page, setPage] = useState(0)
   const [deleting, setDeleting] = useState<BoardId | null>(null)
   const comments = useComments(api, boardCode, postId, { sort, page, size: pageSize })
-  /** 이 쪽의 모든 줄기를 한 범위로 — 줄기가 달라도 같은 닉네임의 다른 계정이면 꼬리표(데이터로 렌더 중에 계산한다) */
+  /** 이 쪽의 모든 줄기를 한 범위로 — 줄기가 달라도 같은 닉네임의 다른 작성자 id 면 꼬리표(데이터로 렌더 중에 계산한다) */
   const pageNames = useMemo(
     () => collidingNames((comments.data?.values ?? []).flatMap((root) => [root, ...root.replies])),
+    [comments.data],
+  )
+  /** 이 글의 (이 쪽) 댓글에서 내가 마지막으로 쓴 작성자 id — 선택기의 처음 값을 정하는 단서 */
+  const threadAuthorId = useMemo(
+    () => lastOwnAuthorId(comments.data?.values ?? []),
     [comments.data],
   )
   const create = useCreateComment(api, boardCode, postId)
@@ -93,9 +101,13 @@ export function BoardComments({
             maxLength={config.commentMaxLength}
             requiredMessage={labels.required}
             tooLongMessage={labels.tooLong}
-            onSubmit={async (body) => {
+            authorPicker={options.authorPicker}
+            authorRequired={config.authorRequired}
+            authorRequiredMessage={labels.authorRequired}
+            threadAuthorId={threadAuthorId}
+            onSubmit={async (body, authorId) => {
               await allowed()
-              return create.mutateAsync({ input: { body } })
+              return create.mutateAsync({ input: authorId ? { body, authorId } : { body } })
             }}
           />
         )}
@@ -139,6 +151,8 @@ export function BoardComments({
                   {...options}
                   thread={thread}
                   scopeNames={pageNames}
+                  authorRequired={config.authorRequired}
+                  threadAuthorId={threadAuthorId}
                   labels={labels}
                   maxDepth={config.maxCommentDepth}
                   commentMaxLength={config.commentMaxLength}
@@ -146,9 +160,11 @@ export function BoardComments({
                   reactionTypes={config.reactionTypes}
                   onReply={
                     commentable
-                      ? async (parentId, body) => {
+                      ? async (parentId, body, authorId) => {
                           await allowed()
-                          return create.mutateAsync({ input: { body, parentId } })
+                          return create.mutateAsync({
+                            input: authorId ? { body, parentId, authorId } : { body, parentId },
+                          })
                         }
                       : undefined
                   }

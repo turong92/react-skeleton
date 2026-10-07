@@ -367,3 +367,21 @@ export const WithoutAScopeEachAreaJudgesAlone: Story = {
     await expect(canvas.queryByText('#0097')).toBeNull()
   },
 }
+
+/** 서버가 `mine` 을 주면 그것이 정본 — 작성자 id 가 내 계정 id 와 달라도(작성자 프로필) 수정 · 삭제가 남고, `mine: false` 면 id 가 같아도 없다 */
+export const MineDecidesOwnershipNotTheAccountId: Story = {
+  args: {
+    currentUserId: 'acc_me',
+    thread: thread(
+      1,
+      [comment(2, 1, { authorId: 'acc_me', authorName: 'Mirror', mine: false, depth: 1 })],
+      { authorId: 'prf_x', authorName: 'Ann', mine: true, body: 'Written as a profile' },
+    ),
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('button', { name: 'Edit: Ann' })).toBeVisible()
+    await expect(canvas.getByRole('button', { name: 'Delete: Ann' })).toBeVisible()
+    await expect(canvas.queryByRole('button', { name: 'Edit: Mirror' })).toBeNull()
+    await expect(canvas.queryByRole('button', { name: 'Delete: Mirror' })).toBeNull()
+  },
+}

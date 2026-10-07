@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn } from 'storybook/test'
 import { PostEditor } from './PostEditor'
+import { demoAuthorPicker } from './stories/demoAuthorPicker'
 
 /**
  * 글쓰기 · 고치기 폼 — 제목 · 본문. 길이 한도는 서버 설정(`titleMaxLength` · `bodyMaxLength`)에서 오고, 비었거나 넘으면 제출 때 칸 아래에
@@ -84,6 +85,56 @@ export const ServerFieldErrorsLandOnTheirFields: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByText('The server says the body is not allowed.')).toBeVisible()
     await expect(canvas.getByLabelText(/Body/)).toHaveAttribute('aria-invalid', 'true')
+  },
+}
+
+/** 서버가 `authorRequired` 를 알린 게시판 — 작성자를 고르기 전에는 보내지 못한다. 선택기는 제출 단추 옆(보드는 안쪽을 모른다 — `authorPicker` 렌더 함수) */
+export const AuthorRequiredBlocksUntilPicked: Story = {
+  args: { authorRequired: true, authorPicker: demoAuthorPicker() },
+  play: async ({ canvas, args, userEvent }) => {
+    await userEvent.type(canvas.getByLabelText(/Title/), 'Hello')
+    await userEvent.type(canvas.getByLabelText(/Body/), 'First line')
+    await userEvent.click(canvas.getByRole('button', { name: 'Publish' }))
+    await expect(canvas.getByRole('alert')).toHaveTextContent('Choose who to post as.')
+    await expect(canvas.getByRole('combobox', { name: 'Post as' })).toHaveFocus()
+    await expect(canvas.getByRole('combobox', { name: 'Post as' })).toHaveAttribute(
+      'aria-invalid',
+      'true',
+    )
+    await expect(args.onSubmit).not.toHaveBeenCalled()
+
+    await userEvent.selectOptions(canvas.getByRole('combobox', { name: 'Post as' }), 'Ann')
+    await expect(canvas.queryByRole('alert')).toBeNull() // 고르면 오류가 사라진다
+    await userEvent.click(canvas.getByRole('button', { name: 'Publish' }))
+    await expect(args.onSubmit).toHaveBeenCalledWith({
+      title: 'Hello',
+      body: 'First line',
+      authorId: 'prf_a',
+    })
+  },
+}
+
+/** 선택기가 있어도 서버가 필수로 하지 않으면(`authorRequired` 꺼짐) 비워 둔 채 보낼 수 있고, 입력에는 `authorId` 키가 없다 */
+export const PickerWithoutAuthorRequiredMayStayEmpty: Story = {
+  args: { authorPicker: demoAuthorPicker() },
+  play: async ({ canvas, args, userEvent }) => {
+    await userEvent.type(canvas.getByLabelText(/Title/), 'Hello')
+    await userEvent.type(canvas.getByLabelText(/Body/), 'First line')
+    await userEvent.click(canvas.getByRole('button', { name: 'Publish' }))
+    await expect(args.onSubmit).toHaveBeenCalledWith({ title: 'Hello', body: 'First line' })
+  },
+}
+
+export const AuthorRequiredMessageIsAProp: Story = {
+  args: {
+    authorRequired: true,
+    authorPicker: demoAuthorPicker([{ id: 'prf_a', name: '하늘' }], '작성자', '고르세요'),
+    labels: { authorRequired: '누구로 쓸지 골라 주세요.' },
+    initial: { title: 'T', body: 'B' },
+  },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole('button', { name: 'Publish' }))
+    await expect(canvas.getByRole('alert')).toHaveTextContent('누구로 쓸지 골라 주세요.')
   },
 }
 

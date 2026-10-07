@@ -1,0 +1,12 @@
+.slot {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.error {
+  margin: 0;
+  color: var(--red);
+  font-size: var(--font-size-caption);
+  font-weight: 600;
+}

@@ -62,7 +62,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 | `realtime` | 서버가 밀어 주는 실시간 연결 — SSE(탭 숨김 일시정지 · 유휴 감시 · 재연결)와 STOMP WebSocket 알림 클라이언트. | --packages realtime | (경로만) | stable | 실시간, 실시간 알림, SSE, 웹소켓, 푸시, 연결 유지 / realtime, sse, server-sent events, websocket, stomp, push |
 | `i18n` | 화면 문구 다국어 — ICU 메시지 · 브라우저 언어 감지/저장 · 지연 로딩 사전 · useT() · 사전 짝 맞춤 테스트 도구. | --packages i18n | — | stable | 다국어, 번역, 언어 전환, 한국어 영어, 국제화, 로케일 / i18n, internationalization, localization, translation, locale, multi-language |
 | `notifications` | 알림 받은편지함 — 목록 · 안 읽은 수 · 읽음/모두 읽음 · 실시간 이벤트로 캐시 갱신, NotificationBell/List 부품과 TanStack Query 훅. | --packages notifications | notification, notification-jdbc | stable | 알림, 알림 목록, 알림 종, 안 읽은 알림, 읽음 처리, 받은편지함 / notifications, inbox, notification bell, unread count, mark as read |
-| `board` | 게시판 — 글 · 중첩 댓글(대댓글) · 서버 설정으로 늘어나는 반응(좋아요 · 공감 …) · 운영자 숨김/고정, 작성자 표시(닉네임 · 탈퇴한 사용자 · 이름 없는 사용자 — 계정 id 는 그리지 않는다) · 목록 · 상세 · 편집기 · 댓글 · 반응 부품과 훅(반응은 낙관적 갱신). | --packages board | board, board-jdbc | stable | 게시판, 커뮤니티, 글쓰기, 댓글, 대댓글, 공감 / board, forum, community, post, comment, reply |
+| `board` | 게시판 — 글 · 중첩 댓글(대댓글) · 서버 설정으로 늘어나는 반응(좋아요 · 공감 …) · 운영자 숨김/고정, 작성자 표시(닉네임 · 탈퇴한 사용자 · 이름 없는 사용자 — 작성자 id 는 그리지 않는다) · 내 것 판정(서버의 mine) · 작성자 선택기 자리(authorPicker 렌더 prop — 작성자 프로필을 쓰는 서버에서 authorRequired 가 켜지면 고른 authorId 를 싣는다) · 목록 · 상세 · 편집기 · 댓글 · 반응 부품과 훅(반응은 낙관적 갱신). | --packages board | board, board-jdbc | stable | 게시판, 커뮤니티, 글쓰기, 댓글, 대댓글, 공감 / board, forum, community, post, comment, reply |
 | `storage` | 파일 업로드 — 검증 → presign → 브라우저에서 스토리지로 직접 PUT(진행률 · 취소 · 멀티파트)과 useUpload 훅. | --packages storage | storage, storage-s3 | stable | 파일 업로드, 이미지 업로드, 첨부파일, 프리사인, 대용량 업로드, 멀티파트 / file upload, image upload, attachment, presigned url, multipart, s3 |
 | `payment` | 결제 계약 — 토스 성공 리다이렉트를 승인 요청으로 바꾸고 승인/취소/환불을 부르는 얇은 클라이언트(경로는 앱이 정한다). | --packages payment | payment | experimental | 결제, 토스, 스트라이프, 환불, 카드 결제, 결제 승인 / payment, toss, stripe, checkout, refund, billing |
 | `captcha-turnstile` | 봇 방지 — Cloudflare Turnstile 스크립트 로더 · <Turnstile> · 토큰 훅 · 요청에 토큰 붙이기. | --packages captcha-turnstile | captcha-turnstile | stable | 캡차, 봇 방지, 스팸 방지, 로봇 확인, 가입 폼 보호 / captcha, turnstile, bot protection, cloudflare, spam protection |
@@ -174,19 +174,19 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 - 쓰지 않는 경우: 알림을 보내는 쪽(발행)은 백엔드 코드(NotificationPublisher) — 이 패키지는 받는 화면만 / 이메일 · Slack 알림 → 백엔드 notification-mail · notification-slack (프런트 짝 없음) / 실시간으로 즉시 뜨게 하려면 realtime 을 더한다(live-notifications)
 - 키워드: 알림, 알림 목록, 알림 종, 안 읽은 알림, 읽음 처리, 받은편지함 / notifications, inbox, notification bell, unread count, mark as read
 
-### `board` — 게시판 — 글 · 중첩 댓글(대댓글) · 서버 설정으로 늘어나는 반응(좋아요 · 공감 …) · 운영자 숨김/고정, 작성자 표시(닉네임 · 탈퇴한 사용자 · 이름 없는 사용자 — 계정 id 는 그리지 않는다) · 목록 · 상세 · 편집기 · 댓글 · 반응 부품과 훅(반응은 낙관적 갱신).
+### `board` — 게시판 — 글 · 중첩 댓글(대댓글) · 서버 설정으로 늘어나는 반응(좋아요 · 공감 …) · 운영자 숨김/고정, 작성자 표시(닉네임 · 탈퇴한 사용자 · 이름 없는 사용자 — 작성자 id 는 그리지 않는다) · 내 것 판정(서버의 mine) · 작성자 선택기 자리(authorPicker 렌더 prop — 작성자 프로필을 쓰는 서버에서 authorRequired 가 켜지면 고른 authorId 를 싣는다) · 목록 · 상세 · 편집기 · 댓글 · 반응 부품과 훅(반응은 낙관적 갱신).
 
 - 종류 · 상태: package · stable
 - 위치: `@skeleton/board` (`packages/board`)
 - 켜는 법: `--packages board` — 함께 따라오는 패키지 `api-client` · `auth` · `legal` · `theme` · `time` · `tokens` · `ui` — `--with-sample` 로도 따라온다
 - 필요한 것: `api-client` · `time` · `ui`
 - 백엔드: 모듈 `board` · `board-jdbc` · 있으면 더 켜지는 `notification` · `idempotency` · 경로 `/api/v1/boards`
-- 주요 진입점: `createBoardApi` · `useBoardConfig` · `usePosts` · `usePost` · `useCreatePost` · `useReaction` · `PostList` · `PostDetail` · `PostEditor` · `CommentThread` · `BoardComments` · `AuthorName` · `ReactionBar` · `PostReactionBar` · `nestThread`
+- 주요 진입점: `createBoardApi` · `useBoardConfig` · `usePosts` · `usePost` · `useCreatePost` · `useReaction` · `PostList` · `PostDetail` · `PostEditor` · `CommentThread` · `BoardComments` · `AuthorName` · `ReactionBar` · `PostReactionBar` · `nestThread` · `isOwn` · `lastOwnAuthorId`
 - 보고 따라 할 스토리: `packages/board/src/PostList.stories.tsx` · `packages/board/src/PostDetail.stories.tsx` · `packages/board/src/PostEditor.stories.tsx` · `packages/board/src/CommentThread.stories.tsx` · `packages/board/src/BoardComments.stories.tsx` · `packages/board/src/ReactionBar.stories.tsx` · `packages/board/src/BoardPage.stories.tsx`
 - 복사해 시작할 Patterns: `apps/storybook/src/patterns/ListPage.stories.tsx` · `apps/storybook/src/patterns/DetailPage.stories.tsx` · `apps/storybook/src/patterns/FormPage.stories.tsx`
 - 문서: `packages/board/README.md`
 - 쓰지 않는 경우: 채팅 · 피드 · 실시간 대화 — 글 + 댓글 트리 모델이다 / 반응의 글자 · 아이콘은 패키지가 모른다 — 서버가 준 코드에 labels/icons 맵 prop 을 앱이 준다 / 게시판 만들기(관리)는 운영자 API — 화면은 없다
-- 키워드: 게시판, 커뮤니티, 글쓰기, 댓글, 대댓글, 공감, 좋아요, 반응, 게시글, 운영자 숨김, 공지 고정, 작성자, 닉네임, 탈퇴한 사용자 / board, forum, community, post, comment, reply, thread, reaction, like, moderation, bulletin board, author, nickname, deleted user
+- 키워드: 게시판, 커뮤니티, 글쓰기, 댓글, 대댓글, 공감, 좋아요, 반응, 게시글, 운영자 숨김, 공지 고정, 작성자, 닉네임, 탈퇴한 사용자, 작성자 선택기 / board, forum, community, post, comment, reply, thread, reaction, like, moderation, bulletin board, author, nickname, deleted user, author picker
 
 ### `storage` — 파일 업로드 — 검증 → presign → 브라우저에서 스토리지로 직접 PUT(진행률 · 취소 · 멀티파트)과 useUpload 훅.
 

@@ -25,6 +25,8 @@ export type BoardConfig = {
   maxPageSize: number
   /** 호출자가 운영자 역할인가 — 숨김 · 고정 · 게시판 만들기 버튼의 근거 */
   canModerate: boolean
+  /** true 면 글 · 댓글을 쓸 때 `authorId` 가 필수 — 서버가 작성자를 고르지 않는다(없는 서버 · 옛 서버는 undefined = 아니오) */
+  authorRequired?: boolean
 }
 
 export type Board = {
@@ -47,7 +49,10 @@ export type ReactionState = { counts: Record<ReactionType, number>; myReactions:
 export type PostSummary = {
   id: BoardId
   boardCode: string
+  /** 작성자 id — 작성자 프로필을 쓰는 서버에서는 계정 id 가 아니다. 소유 판정에 쓰지 않는다(`mine`) */
   authorId: string
+  /** 내 글인가 — 서버가 본인 응답에만 참으로 싣는다. 옛 서버는 없음(`isOwn` 이 `authorId` 로 대신 판정) */
+  mine?: boolean
   /** 작성자 닉네임 — 닉네임이 없는 계정이거나 옛 서버면 null · 없음. 화면은 계정 id 를 그리지 않고 `authorName` 만 쓴다 */
   authorName?: string | null
   /** 작성자가 탈퇴했는가(그때 `authorId` 는 `deleted:<해시>`) */
@@ -76,8 +81,10 @@ export type PostInput = {
   attachments?: string[]
   /** 만들 때 기본 `PUBLISHED`. 고칠 때는 주인이 `DRAFT` ↔ `PUBLISHED` */
   status?: 'DRAFT' | 'PUBLISHED'
+  /** 만들 때만 — `BoardConfig.authorRequired` 인 서버는 필수, 고칠 때는 보내지 않는다(작성자는 불변) */
+  authorId?: string
 }
-export type PostPatch = Partial<PostInput>
+export type PostPatch = Partial<Omit<PostInput, 'authorId'>>
 export type PostModeration = { status?: 'PUBLISHED' | 'HIDDEN' | 'DELETED'; pinned?: boolean }
 
 export const POST_SORTS = ['latest', 'reactions', 'comments'] as const
@@ -108,6 +115,8 @@ export type Comment = {
   /** 0 = 최상위 */
   depth: number
   authorId: string
+  /** 내 댓글인가 — 글의 `mine` 과 같다 */
+  mine?: boolean
   /** 작성자 닉네임 — 글의 `authorName` 과 같다 */
   authorName?: string | null
   authorDeleted?: boolean
@@ -125,7 +134,12 @@ export type Comment = {
 /** 계약의 `CommentThread` — 최상위 댓글 + 그 아래 **모든** 자손(평평하게, 오래된 순). 자손의 `replies` 는 항상 빈 배열 — 중첩은 `nestThread` 가 만든다 */
 export type CommentWithReplies = Comment & { replies: Comment[] }
 
-export type CommentInput = { body: string; parentId?: BoardId }
+export type CommentInput = {
+  body: string
+  parentId?: BoardId
+  /** 만들 때만 — `BoardConfig.authorRequired` 인 서버는 필수 */
+  authorId?: string
+}
 
 /** 반응 대상 — 글 하나 또는 그 글의 댓글 하나 */
 export type ReactionTarget =

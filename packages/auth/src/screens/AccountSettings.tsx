@@ -3,7 +3,7 @@ import { Alert, PageHeader, SectionIndex, Skeleton } from '@skeleton/ui'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { AccountApi, SocialReauth } from '../account/accountApi'
 import { supportedTimeZones, withCurrent } from '../account/timeZones'
-import type { DeletionResult, PasswordPolicy } from '../account/types'
+import type { AccountMe, DeletionResult, PasswordPolicy } from '../account/types'
 import { reauthSubjectOf } from '../reauth/kind'
 import type { ProviderAction } from '../socialLink'
 import { AccountStateNotice } from './AccountStateNotice'
@@ -47,6 +47,8 @@ export type AccountSettingsProps = {
   /** 서버가 탈퇴 취소(`skeleton.account.deletion.self-restore`)를 켰다 — 삭제 안내에 「기간 안에 다시 로그인하면 취소할 수 있어요」를 더한다. 앱은 서버 설정을 알 때만 켠다(꺼진 서버에서는 거짓이 된다). 기본 false */
   selfRestore?: boolean
   onDeleted?: (result: DeletionResult) => void
+  /** 프로필(닉네임 · 언어 · 시간대)을 저장했다 — 저장된 프로필과 함께. 앱이 닉네임이 걸린 자기 캐시 · 화면(게시판 작성자 …)을 다시 읽게 한다 */
+  onProfileChanged?: (profile: AccountMe) => void
   formatDate?: (iso: string) => string
   /** 접근 불가 · 정지일 때 「문의」 링크 */
   supportHref?: string
@@ -81,6 +83,7 @@ export function AccountSettings({
   graceDays = 30,
   selfRestore = false,
   onDeleted,
+  onProfileChanged,
   formatDate,
   supportHref,
   linkedProvider,
@@ -192,8 +195,9 @@ export function AccountSettings({
           timeZones={zones}
           labels={given}
           onSave={async (patch) => {
-            await api.updateProfile(patch)
+            const saved = await api.updateProfile(patch)
             me.reload()
+            onProfileChanged?.(saved)
           }}
         />
       )}

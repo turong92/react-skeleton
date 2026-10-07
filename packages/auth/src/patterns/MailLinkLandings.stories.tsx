@@ -4,6 +4,7 @@ import { expect, fn, waitFor } from 'storybook/test'
 import { LegacyLinkNotice } from '../screens/LegacyLinkNotice'
 import { SocialLinkProofScreen } from '../screens/SocialLinkProofScreen'
 import { ForgotPasswordScreen } from '../screens/ForgotPasswordScreen'
+import { createOnceRunner } from '../screens/runOnce'
 import { MagicLinkLanding } from '../screens/MagicLinkLanding'
 import { ResetPasswordScreen } from '../screens/ResetPasswordScreen'
 import { SocialCallbackScreen } from '../screens/SocialCallbackScreen'
@@ -59,6 +60,7 @@ export const MagicLinkRedeemsOnce: Story = {
 
 /** 실제 앱에서 두 번 나가던 경로 — 로그인되는 순간 위쪽(동의 게이트 등)이 화면을 다시 마운트해 **새 인스턴스**가 같은 토큰으로 또 부른다. 같은 토큰의 호출은 모듈 수준에서 한 번이다 */
 const redeemAcrossRemount = fn(async () => undefined)
+const redeemOnceRunner = createOnceRunner() // 라우트 한 벌이 쥐는 실행기(`createAuthRoutes`)
 function RemountsOnce() {
   const [round, setRound] = useState(0)
   useEffect(() => {
@@ -69,6 +71,7 @@ function RemountsOnce() {
     <MagicLinkLanding
       key={round}
       token="tok-remount"
+      once={redeemOnceRunner}
       onRedeem={redeemAcrossRemount}
       onDone={fn()}
       requestTo="/login"

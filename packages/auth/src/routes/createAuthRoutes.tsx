@@ -12,6 +12,7 @@ import type { SocialLoginFlow } from '../social'
 import type { SocialLinkFlow } from '../socialLink'
 import { onAccountChange } from '../accountChange'
 import { authStorageKeys } from '../storageKeys'
+import { createOnceRunner } from '../screens/runOnce'
 import { createSignUpPending } from '../signUpPending'
 import {
   AccountDeletedPage,
@@ -149,6 +150,7 @@ export function createAuthRoutes(options: AuthRoutesOptions): RouteObject[] {
     throw new Error('createAuthRoutes needs authApi and accountApi (or a useApis hook)')
   const keys = authStorageKeys(options.namespace)
   const ctx: PageContext = {
+    once: createOnceRunner(),
     keys,
     notes: { warned: false },
     signUpPending: createSignUpPending({

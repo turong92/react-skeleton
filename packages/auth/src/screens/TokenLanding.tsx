@@ -5,7 +5,7 @@ import { AuthLayout } from './AuthLayout'
 import styles from './auth.module.css'
 import { authErrorMessage } from './errors'
 import { mergeLabels, type AuthLabels } from './labels'
-import { runOnce } from './runOnce'
+import type { OnceRunner } from './runOnce'
 import { useOnceOnMount } from './useOnceOnMount'
 
 export type TokenLandingProps = {
@@ -31,6 +31,12 @@ export type TokenLandingProps = {
   /** 계속 버튼 위 한 줄 설명 */
   confirmPrompt?: string
   labels?: Partial<AuthLabels>
+  /**
+   * 같은 토큰을 화면이 다시 마운트돼도 한 번만 보내는 실행기(`createOnceRunner` — 라우트 한 벌이 쥔다). 없으면 마운트마다 부른다.
+   * 키는 `onceKind` + 토큰 — 다른 종류의 일회용 값과 섞이지 않는다
+   */
+  once?: OnceRunner
+  onceKind?: string
 }
 
 type Phase = 'ready' | 'checking' | 'done' | 'invalid' | 'failed' | 'custom'
@@ -50,6 +56,8 @@ export function TokenLanding({
   requireConfirm = false,
   confirmPrompt,
   labels: given,
+  once,
+  onceKind = 'token',
 }: TokenLandingProps) {
   const labels = mergeLabels(given)
   const [phase, setPhase] = useState<Phase>(
@@ -78,10 +86,13 @@ export function TokenLanding({
     }
   }
 
+  const send = (value: string) =>
+    once ? once(`${onceKind}:${value}`, () => run(value)) : run(value)
+
   // 확인 없이 도착하는 링크: 마운트 때 한 번(StrictMode 에서도 한 번)
   useOnceOnMount(
-    // 같은 토큰은 화면이 다시 마운트돼도 모듈 수준에서 한 번만 보낸다(`runOnce`)
-    async () => (token && !requireConfirm ? runOnce(token, () => run(token)) : undefined),
+    // 같은 토큰은 화면이 다시 마운트돼도 한 번만 보낸다(`once`)
+    async () => (token && !requireConfirm ? send(token) : undefined),
     (outcome) => {
       if (!token || requireConfirm) return
       settle(outcome)
@@ -94,7 +105,7 @@ export function TokenLanding({
     if (!token || clicked.current) return
     clicked.current = true
     setPhase('checking')
-    runOnce(token, () => run(token)).then(
+    send(token).then(
       (value) => settle({ ok: true, value }),
       (error: unknown) => settle({ ok: false, error }),
     )

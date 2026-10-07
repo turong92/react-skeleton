@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { createOnceRunner } from '../screens/runOnce'
 import { StrictMode } from 'react'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { expect, fn } from 'storybook/test'
@@ -46,6 +47,7 @@ const context = (overrides: Partial<PageContext> = {}): PageContext => ({
   afterSignIn: '/',
   keys,
   notes: { warned: false },
+  once: createOnceRunner(),
   ...overrides,
 })
 function Here() {

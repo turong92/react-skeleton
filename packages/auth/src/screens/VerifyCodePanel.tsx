@@ -129,13 +129,22 @@ export function VerifyCodePanel({
     }
   }
 
+  const resending = useRef(false)
+
   async function resend() {
-    if (!onResend) return
+    if (!onResend || resending.current) return // 진행 중에는 다시 보내지 않는다(두 번 누르면 요청 둘)
+    resending.current = true
     setError(undefined)
     const afterExpiry = timedOut && expiredResend === 'restart'
     try {
       const response = await onResend()
-      if (afterExpiry && codeWindowOf(response) === null) return onStartOver() // 서버가 새 시각을 안 줬다 — 옛 서버는 만료된 시도의 다시 받기를 무시한다
+      const answered = codeWindowOf(response)
+      // 만료 뒤의 다시 받기가 소용없었다 — 옛 서버는 시각 없이 조용히 무시하고, 예산을 다 쓴 시도는 지나간 `expiresAt`(과 `resendAvailableAt: null`)을 준다: 막다른 길 대신 처음부터
+      if (afterExpiry && (answered === null || answered.expiresAt <= now())) return onStartOver()
+      if (answered && answered.expiresAt <= now()) {
+        setExpired(true) // 시간이 이미 지난 새 시각 — 새 번호를 보냈다고 말하지 않는다
+        return
+      }
       setNote(labels.codeResent)
       // 서버가 새 시각을 주면 그것으로, 아니면 문서화된 유효 시간으로 어림한다(어림은 `data-expiry-source="estimate"`)
       const fresh =
@@ -155,6 +164,8 @@ export function VerifyCodePanel({
     } catch (caught) {
       const info = authErrorMessage(caught, labels)
       setError(info.message)
+    } finally {
+      resending.current = false
     }
     resendWait.start(resendCooldownSeconds)
   }

@@ -181,7 +181,7 @@ export const SubmitWithNothingTickedExplainsItself: Story = {
     await expect(submit).toBeEnabled()
     await userEvent.click(submit)
     const summary = await within(dialog).findByRole('button', { name: '필수 약관에 동의해 주세요' })
-    await expect(summary.closest('[role="alert"]')).toHaveTextContent('아래 항목을 확인해 주세요')
+    await expect(summary.closest('[role="group"]')).toHaveTextContent('아래 항목을 확인해 주세요')
     await waitFor(() =>
       expect(within(dialog).getAllByRole('checkbox', { name: /\[필수\]/ })[0]).toHaveFocus(),
     )

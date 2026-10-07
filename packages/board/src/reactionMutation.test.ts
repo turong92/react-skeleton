@@ -154,3 +154,48 @@ describe('reaction mutation — optimistic, with rollback', () => {
     await done
   })
 })
+
+describe('reaction mutation — overlapping presses and list freshness', () => {
+  it('an earlier answer does not overwrite the newer optimistic state while a later press on the same target is in flight', async () => {
+    const client = newClient()
+    seed(client)
+    const first = deferred<ReactionState>()
+    const second = deferred<ReactionState>()
+    const answers = [first, second]
+    const react = run(
+      client,
+      stubApi({
+        putReaction: () => answers.shift()!.promise,
+        removeReaction: () => second.promise,
+      }),
+    )
+    const one = react({ target: post, type: 'EMPATHY', active: true })
+    await vi.waitFor(() => expect(postDetail(client).myReactions).toEqual(['EMPATHY']))
+    const two = react({ target: post, type: 'EMPATHY', active: false }) // 바로 다시 눌러 뺀다
+    await vi.waitFor(() => expect(postDetail(client).myReactions).toEqual([]))
+
+    first.resolve({ counts: { LIKE: 2, EMPATHY: 1 }, myReactions: ['EMPATHY'] }) // 앞선 응답(이미 낡았다)
+    await one
+    expect(postDetail(client).myReactions).toEqual([]) // 뒤의 낙관 상태가 덮이지 않는다
+
+    second.resolve({ counts: { LIKE: 2 }, myReactions: [] })
+    await two
+    expect(postDetail(client).reactionCounts).toEqual({ LIKE: 2 })
+  })
+
+  it('after a post reaction settles the cached lists are re-fetched (a list GET that raced the PUT may have kept a stale count) — the detail is not (it would bump the view count)', async () => {
+    const client = newClient()
+    seed(client)
+    const invalidate = vi.spyOn(client, 'invalidateQueries')
+    const react = run(
+      client,
+      stubApi({
+        putReaction: async () => ({ counts: { LIKE: 3, EMPATHY: 1 }, myReactions: ['EMPATHY'] }),
+      }),
+    )
+    await react({ target: post, type: 'EMPATHY', active: true })
+    const keys = invalidate.mock.calls.map((call) => JSON.stringify(call[0]?.queryKey))
+    expect(keys).toContain(JSON.stringify(boardKeys.postLists('free')))
+    expect(keys).not.toContain(JSON.stringify(boardKeys.post('free', 1)))
+  })
+})

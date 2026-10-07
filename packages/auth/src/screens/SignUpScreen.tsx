@@ -284,6 +284,7 @@ export function SignUpScreen({
             signUpId: result.signUpId,
             expiresAt: sent.expiresAt,
             ...(sent.resendAvailableAt ? { resendAvailableAt: sent.resendAvailableAt } : {}),
+            ...(sent.resendExhausted ? { resendExhausted: true as const } : {}),
             ...(sent.source === 'estimate' ? { estimated: true } : {}),
           }
           setPending(next)
@@ -373,7 +374,7 @@ export function SignUpScreen({
                           (failure.kind === 'invalid'
                             ? labels.codeInvalid(failure.attemptsLeft)
                             : authErrorMessage(error, labels).message))
-                    setRetry({ ...retry, busy: false, error: message })
+                    setRetry((current) => current && { ...current, busy: false, error: message }) // await 뒤: 그 사이 고친 입력을 낡은 값으로 덮지 않는다
                   }
                 }}
               />

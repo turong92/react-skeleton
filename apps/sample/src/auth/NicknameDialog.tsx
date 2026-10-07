@@ -13,7 +13,7 @@ import { useT } from '../i18n'
 import styles from './NicknameDialog.module.css'
 import { accountApi } from './session'
 import { useAuthLabels } from './useAuthLabels'
-import { myProfileKey } from './useMyProfile'
+import { refreshAfterProfileChange } from './profileCache'
 
 /** 닉네임을 그 자리에서 입력 · 저장하는 작은 대화상자 — `PATCH /account/me`(`displayName`) 한 번. 겹치는 닉네임(중복 금지 서버)은 칸 아래에 */
 export function NicknameDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -34,7 +34,7 @@ export function NicknameDialog({ open, onClose }: { open: boolean; onClose: () =
   const save = useMutation({
     mutationFn: (displayName: string) => accountApi.updateProfile({ displayName }),
     onSuccess: async () => {
-      await client.invalidateQueries({ queryKey: myProfileKey })
+      refreshAfterProfileChange(client)
       close()
     },
     onError: (error) => {

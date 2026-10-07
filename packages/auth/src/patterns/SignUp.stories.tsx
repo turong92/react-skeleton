@@ -446,6 +446,67 @@ export const CodeStepExpiredLocksAndFocusesTheRestart: Story = {
   },
 }
 
+/** 새 백엔드가 예산을 다 쓴 시도의 다시 받기를 조용히 무시하면 **지나간** `expiresAt` 과 `resendAvailableAt: null` 을 준다 — 「새 번호를 보냈어요」 + 잠긴 칸이 아니라 처음부터 다시 */
+export const CodeStepExpiredResendIgnoredByTheServerGoesBackToTheForm: Story = {
+  args: {
+    ...codeArgs(),
+    onResendCode: fn(async () => ({
+      status: 'ACCEPTED',
+      expiresAt: new Date(Date.now() - 5_000).toISOString(),
+      resendAvailableAt: null,
+    })),
+  },
+  render: (args) => (
+    <SignUpScreen
+      {...args}
+      initialPending={{
+        email: 'ann@example.com',
+        signUpId: 'sid-1',
+        expiresAt: Date.now() + 1_500,
+      }}
+    />
+  ),
+  play: async ({ canvas, userEvent }) => {
+    await expect(await canvas.findByRole('alert', {}, { timeout: 6000 })).toHaveTextContent(
+      'Time is up',
+    )
+    await userEvent.click(canvas.getByRole('button', { name: 'Send a new code' }))
+    await expect(await canvas.findByLabelText(/^Email/)).toHaveValue('ann@example.com')
+    await expect(canvas.queryByText('A new code is on its way.')).toBeNull()
+  },
+}
+
+/** 두 번 눌러도 요청은 하나 — 진행 중에는 다시 보내지 않는다 */
+export const CodeStepResendIgnoresADoublePress: Story = {
+  args: {
+    ...codeArgs(),
+    onResendCode: fn(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 300))
+      return {
+        status: 'ACCEPTED',
+        expiresAt: new Date(Date.now() + 600_000).toISOString(),
+        resendAvailableAt: new Date(Date.now() + 30_000).toISOString(),
+      }
+    }),
+  },
+  render: (args) => (
+    <SignUpScreen
+      {...args}
+      initialPending={{
+        email: 'ann@example.com',
+        signUpId: 'sid-1',
+        expiresAt: Date.now() + 500_000,
+      }}
+    />
+  ),
+  play: async ({ canvas, args, userEvent }) => {
+    const button = await canvas.findByRole('button', { name: 'Send a new code' })
+    await userEvent.dblClick(button)
+    await new Promise((resolve) => setTimeout(resolve, 600))
+    await expect(args.onResendCode).toHaveBeenCalledTimes(1)
+  },
+}
+
 export const CodeStepReloadKeepsTheResendCooldown: Story = {
   args: codeArgs(),
   render: (args) => (
@@ -499,7 +560,7 @@ export const SubmitWithoutTheRequiredConsentExplainsItself: Story = {
     await expect(args.onSignUp).not.toHaveBeenCalled()
     // ① 버튼 바로 위 요약
     const summary = await canvas.findByRole('button', { name: 'Agree to the required terms' })
-    await expect(summary.closest('[role="alert"]')).toHaveTextContent('Please check the following')
+    await expect(summary.closest('[role="group"]')).toHaveTextContent('Please check the following')
     await expect(
       summary.compareDocumentPosition(submit) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
@@ -516,7 +577,9 @@ export const SubmitWithoutTheRequiredConsentExplainsItself: Story = {
     await waitFor(() => expect(terms).toHaveFocus())
     // ⑤ 체크하면 바로 사라지고 제출된다
     await userEvent.click(terms)
-    await waitFor(() => expect(canvas.queryByText('Please check the following')).toBeNull())
+    await waitFor(() =>
+      expect(canvas.queryByRole('group', { name: 'Please check the following' })).toBeNull(),
+    )
     await expect(terms).not.toHaveAttribute('aria-invalid')
     await userEvent.click(submit)
     await waitFor(() => expect(args.onSignUp).toHaveBeenCalledTimes(1))
@@ -639,7 +702,7 @@ export const KoreanLabels: Story = {
     await expect(
       await canvas.findByRole('button', { name: '필수 약관에 동의해 주세요' }),
     ).toBeVisible()
-    await expect(canvas.getByText('아래 항목을 확인해 주세요')).toBeVisible()
+    await expect(canvas.getAllByText('아래 항목을 확인해 주세요').length).toBeGreaterThan(0)
   },
 }
 

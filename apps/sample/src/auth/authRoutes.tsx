@@ -16,6 +16,8 @@ import {
   socialClientIds,
   socialProviderConfigs,
 } from './authConfig'
+import { queryClient } from '../app/queryClient'
+import { refreshAfterProfileChange } from './profileCache'
 import { ConsentSettingsSection } from '../legal/ConsentSettingsSection'
 import { SignUpConsentsSlot } from '../legal/SignUpConsentsSlot'
 import { useAuthLabels } from './useAuthLabels'
@@ -92,6 +94,8 @@ export const accountRoutes = createAuthRoutes({
   settings: {
     // 서버(kotlin-skeleton `skeleton.account.deletion.self-restore`)가 켜져 있다 — 삭제 안내에 「다시 로그인하면 취소」를 말한다
     selfRestore: true,
+    // 닉네임을 바꾸면 내 프로필(띠 · 게이트 · 인사말)과 게시판의 작성자 이름을 다시 읽는다
+    onProfileChanged: () => refreshAfterProfileChange(queryClient),
     locales: [
       { value: 'ko', label: '한국어' },
       { value: 'en', label: 'English' },

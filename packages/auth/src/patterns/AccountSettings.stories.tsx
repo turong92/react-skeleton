@@ -748,3 +748,20 @@ export const DeleteCodeWithNoMoreResends: Story = {
     await expect(section.queryByRole('button', { name: /Send a new code/ })).toBeNull()
   },
 }
+
+/** 프로필을 저장하면 앱에 알린다(`onProfileChanged`) — 앱이 자기 쪽 프로필 캐시 · 작성자 이름이 걸린 화면을 다시 읽게 한다 */
+export const ProfileSaveNotifiesTheApp: Story = {
+  args: { onProfileChanged: fn() },
+  play: async ({ canvas, args, userEvent }) => {
+    const field = await canvas.findByLabelText('Nickname')
+    const profile = within(canvas.getByRole('form', { name: 'Profile' }))
+    await userEvent.clear(field)
+    await userEvent.type(field, 'Annie')
+    await userEvent.click(profile.getByRole('button', { name: 'Save' }))
+    await expect(await profile.findByText('Profile saved.')).toBeVisible()
+    await expect(args.onProfileChanged).toHaveBeenCalledTimes(1)
+    await expect(args.onProfileChanged).toHaveBeenCalledWith(
+      expect.objectContaining({ displayName: 'Annie' }),
+    )
+  },
+}

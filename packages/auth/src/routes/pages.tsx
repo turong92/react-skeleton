@@ -12,6 +12,7 @@ import { ResetPasswordScreen } from '../screens/ResetPasswordScreen'
 import { SignInScreen } from '../screens/SignInScreen'
 import { SignUpScreen, type SignUpScreenProps } from '../screens/SignUpScreen'
 import { LegacyLinkNotice } from '../screens/LegacyLinkNotice'
+import { accountDeletedDestination } from './accountDeleted'
 import { AccountDeletedScreen } from '../screens/AccountDeletedScreen'
 import { SocialLinkProofScreen } from '../screens/SocialLinkProofScreen'
 import { reauthKindOf, reauthSubjectOf } from '../reauth/kind'
@@ -39,7 +40,7 @@ import type { AuthStorageKeys } from '../storageKeys'
 import { scrubUrlParams } from '../scrubUrl'
 import { CodeClockProvider } from '../codeClock'
 import type { SignUpPendingStore } from '../signUpPending'
-import { runOnce } from '../screens/runOnce'
+import type { OnceRunner } from '../screens/runOnce'
 import { useSocialLoginCallback } from '../useSocialLoginCallback'
 
 export type AuthPaths = {
@@ -108,6 +109,8 @@ export type PageContext = {
   keys: AuthStorageKeys
   /** 이 라우트 한 벌의 기억(경고를 한 번만 하기 등) */
   notes: DiscoveryNotes
+  /** 일회용 값(링크 토큰 · 인가 코드)을 화면이 다시 마운트돼도 한 번만 보내는 실행기 — 이 라우트 한 벌이 쥔다(모듈 전역이 아니다) */
+  once: OnceRunner
   /** 발견의 현재 상태 — 화면이 로딩 · 실패를 그린다(렌더 때 채워진다) */
   discovered?: DiscoveredState
 }
@@ -291,6 +294,7 @@ export function MagicLinkPage({ ctx }: { ctx: PageContext }) {
         <MagicLinkLanding
           token={token}
           labels={ctx.labels}
+          once={ctx.once}
           requestTo={ctx.paths.signIn}
           onRedeem={(t) => auth.magicLinkLogin(t)}
           onDone={() => navigate(ctx.afterSignIn, { replace: true })}
@@ -403,23 +407,25 @@ function SocialLinkCallbackInner({ flow, ctx }: { flow: SocialLinkFlow; ctx: Pag
     started.current = true
     const { target } = action
     // 두 인가 코드는 한 번씩만 쓸 수 있다 — 화면이 다시 마운트돼 `started` 가 새것이어도 같은 코드 쌍은 한 번만 보낸다
-    void runOnce(`link-reauth:${target.authorizationCode}:${callback.authorizationCode}`, () =>
-      linkSocial(
-        ctx.accountApi,
-        target.provider,
-        target.authorizationCode,
-        target.redirectUri,
-        {
-          socialReauth: {
-            provider: callback.provider,
-            authorizationCode: callback.authorizationCode,
-            redirectUri: callback.redirectUri,
-            ...proofOf(callback),
+    void ctx
+      .once(`link-reauth:${target.authorizationCode}:${callback.authorizationCode}`, () =>
+        linkSocial(
+          ctx.accountApi,
+          target.provider,
+          target.authorizationCode,
+          target.redirectUri,
+          {
+            socialReauth: {
+              provider: callback.provider,
+              authorizationCode: callback.authorizationCode,
+              redirectUri: callback.redirectUri,
+              ...proofOf(callback),
+            },
           },
-        },
-        proofOf(target),
-      ),
-    ).then(() => setDone(true), setFailure)
+          proofOf(target),
+        ),
+      )
+      .then(() => setDone(true), setFailure)
   }, [callback, foreign, action, ctx.accountApi])
 
   if (done)
@@ -538,7 +544,13 @@ export function SocialLinkCallbackPage({ ctx }: { ctx: PageContext }) {
 export type SettingsExtras = Partial<
   Pick<
     AccountSettingsProps,
-    'sections' | 'graceDays' | 'selfRestore' | 'supportHref' | 'formatDate' | 'timeZones'
+    | 'sections'
+    | 'graceDays'
+    | 'selfRestore'
+    | 'supportHref'
+    | 'formatDate'
+    | 'timeZones'
+    | 'onProfileChanged'
   >
 > & {
   locales: AccountSettingsProps['locales']
@@ -562,10 +574,14 @@ export function AccountDeletedPage({
   const auth = useAuth()
   const location = useLocation()
   const { logout } = auth
+  const destination = accountDeletedDestination(location.state, auth.status === 'authenticated')
   const purgeAfter = (location.state as { purgeAfter?: string } | null)?.purgeAfter
   useEffect(() => {
-    void logout()
-  }, [logout])
+    // 탈퇴 흐름이 넘긴 때만 이 기기의 세션을 지운다 — 열린 주소라 다른 길로 열린 것은 아무것도 건드리지 않는다
+    if (destination === 'landing') void logout()
+  }, [destination, logout])
+  if (destination === 'home') return <Navigate to={ctx.afterSignIn} replace />
+  if (destination === 'signIn') return <Navigate to={ctx.paths.signIn} replace />
   return (
     <AccountDeletedScreen
       purgeAfter={purgeAfter}

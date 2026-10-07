@@ -75,8 +75,8 @@ export const SummaryAndFocusOnEmptySubmit: Story = {
     const submit = canvas.getByRole('button', { name: 'Create account' })
     await expect(submit).toBeEnabled()
     await userEvent.click(submit)
-    const alert = await canvas.findByText('Check these before continuing')
-    await expect(alert.closest('[role="alert"]')).toBeVisible()
+    const summary = await canvas.findByRole('group', { name: 'Check these before continuing' })
+    await expect(summary).toBeVisible()
     await expect(canvas.getByRole('button', { name: 'Enter your email' })).toBeVisible()
     await expect(canvas.getByRole('button', { name: 'Agree to the required terms' })).toBeVisible()
     // 첫 틀린 칸으로 포커스
@@ -115,7 +115,9 @@ export const FixingClearsTheProblemAtOnce: Story = {
     )
     await expect(canvas.getByRole('checkbox')).not.toHaveAttribute('aria-invalid', 'true')
     await userEvent.type(canvas.getByLabelText(/^Email/), 'a@b.co')
-    await waitFor(() => expect(canvas.queryByText('Check these before continuing')).toBeNull())
+    await waitFor(() =>
+      expect(canvas.queryByRole('group', { name: 'Check these before continuing' })).toBeNull(),
+    )
     await userEvent.click(canvas.getByRole('button', { name: 'Create account' }))
     await expect(await canvas.findByRole('status')).toHaveTextContent('Sent')
   },
@@ -134,5 +136,29 @@ export const ScrollsTheFirstProblemIntoView: Story = {
       expect(box.bottom).toBeLessThanOrEqual(window.innerHeight)
     })
     await expect(email).toHaveFocus()
+  },
+}
+
+/** 낭독은 제출 시도 때 **한 번**이다 — 이후 타이핑으로 목록이 줄어도 남은 목록 전체를 다시 낭독하지 않는다(낭독 영역이 바뀌지 않는다) */
+export const AnnouncesOnceAndStaysQuietWhileTyping: Story = {
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    await userEvent.click(canvas.getByRole('button', { name: 'Create account' }))
+    await canvas.findByRole('group', { name: 'Check these before continuing' })
+    const live = () => [...canvasElement.querySelectorAll('[role="alert"]')]
+    // 칸 옆의 오류(Field)도 alert 지만, 요약은 낭독 영역이 하나뿐이고 제출 순간에만 생긴다
+    const summaryLive = live().filter((el) =>
+      /Check these before continuing/.test(el.textContent ?? ''),
+    )
+    await expect(summaryLive).toHaveLength(1)
+    let mutations = 0
+    const watcher = new MutationObserver((records) => {
+      mutations += records.length
+    })
+    watcher.observe(summaryLive[0], { childList: true, characterData: true, subtree: true })
+    await userEvent.type(canvas.getByLabelText(/^Email/), 'a@b.co')
+    await userEvent.click(canvas.getByRole('checkbox'))
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    watcher.disconnect()
+    await expect(mutations).toBe(0)
   },
 }

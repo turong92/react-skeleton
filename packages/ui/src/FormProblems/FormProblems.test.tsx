@@ -7,7 +7,7 @@ describe('FormProblems', () => {
     expect(renderToStaticMarkup(<FormProblems title="Check these" problems={[]} />)).toBe('')
   })
 
-  it('is one alert that lists every problem as a button, so a missed field is one press away', () => {
+  it('announces once (one alert) and lists every problem as a button, so a missed field is one press away', () => {
     const html = renderToStaticMarkup(
       <FormProblems
         title="Check these"
@@ -17,7 +17,7 @@ describe('FormProblems', () => {
         ]}
       />,
     )
-    expect(html).toContain('role="alert"')
+    expect(html.match(/role="alert"/g)).toHaveLength(1) // 낭독은 한 영역 — 목록 자체는 낭독 영역이 아니다
     expect(html).toContain('Check these')
     expect(html).toMatch(/<button[^>]*type="button"[^>]*>Enter your email<\/button>/)
     expect(html).toMatch(/<button[^>]*type="button"[^>]*>Agree to the required terms<\/button>/)

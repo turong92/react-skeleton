@@ -72,6 +72,27 @@ export const ThisThreadBeatsTheDeviceMemory: Story = {
   },
 }
 
+/** 댓글을 받는 동안(`threadLoading`)은 처음 값을 확정하지 않는다 — 「아직 모름」이 「쓴 적 없음」이 아니라서 기기 기억으로 넘어가지도 않는다. 받고 나면(`threadLoading` 꺼짐) 스레드 프로필이 이긴다 */
+export const WaitsWhileTheThreadIsLoading: Story = {
+  args: { remembered: 'prf_b', threadAuthorId: undefined, threadLoading: true },
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByRole('button', { name: 'Choose a profile' })).toBeVisible()
+    await new Promise((resolve) => setTimeout(resolve, 150)) // 목록이 이미 와 있어도 확정하지 않는다
+    await expect(onChange).not.toHaveBeenCalled()
+    await expect(canvas.getByRole('button', { name: 'Choose a profile' })).toBeVisible()
+  },
+}
+
+/** 칸 오류 문장이 선택기 단추의 설명으로 이어진다 — 낭독기가 단추에서 오류를 읽는다 */
+export const FormErrorIsTheTriggersDescription: Story = {
+  args: { invalid: true, describedBy: 'author-error' },
+  play: async ({ canvas }) => {
+    await expect(
+      await canvas.findByRole('button', { name: 'Choose a profile' }),
+    ).toHaveAccessibleDescription('Choose who to post as.')
+  },
+}
+
 export const NothingToStartFromLeavesItEmpty: Story = {
   play: async ({ canvas }) => {
     const button = await canvas.findByRole('button', { name: 'Choose a profile' })

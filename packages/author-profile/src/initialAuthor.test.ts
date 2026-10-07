@@ -42,6 +42,38 @@ describe('resolveInitialAuthor — three steps: this thread, then this device, t
   })
 })
 
+describe('resolveInitialAuthor — while the thread is still loading', () => {
+  it('does not settle: an unknown thread is not "never wrote here", so the device memory must not fill in', () => {
+    expect(
+      resolveInitialAuthor({
+        profiles,
+        threadAuthorId: undefined,
+        remembered: 'prf_b',
+        threadLoading: true,
+      }),
+    ).toBeUndefined()
+    expect(
+      resolveInitialAuthor({
+        profiles,
+        threadAuthorId: 'prf_a',
+        remembered: 'prf_b',
+        threadLoading: true,
+      }),
+    ).toBeUndefined()
+  })
+
+  it('once loaded it follows the three steps again', () => {
+    expect(
+      resolveInitialAuthor({
+        profiles,
+        threadAuthorId: undefined,
+        remembered: 'prf_b',
+        threadLoading: false,
+      }),
+    ).toBe('prf_b')
+  })
+})
+
 describe('switchNotice — the one-line confirmation, only when leaving the profile used in this thread', () => {
   it('names the thread profile when switching to a different one', () => {
     expect(switchNotice({ profiles, threadAuthorId: 'prf_a', nextId: 'prf_b' })).toEqual(

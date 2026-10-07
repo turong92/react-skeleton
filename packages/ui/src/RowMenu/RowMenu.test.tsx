@@ -31,4 +31,12 @@ describe('RowMenu', () => {
     expect(html).toContain('aria-disabled="true"')
     expect(html).not.toMatch(/<button[^>]*\sdisabled/)
   })
+
+  it('describedBy ties an outside description (e.g. a field error) to the menu button', () => {
+    const html = renderToStaticMarkup(<RowMenu label="m" items={items} describedBy="why" />)
+    expect(html).toMatch(/<button[^>]*aria-describedby="why"/)
+    expect(renderToStaticMarkup(<RowMenu label="m" items={items} />)).not.toContain(
+      'aria-describedby',
+    )
+  })
 })

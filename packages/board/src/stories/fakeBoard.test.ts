@@ -239,4 +239,17 @@ describe('fake board — author profiles (authorRequired)', () => {
       apiError: { status: 403 },
     })
   })
+
+  it('a server without authorRequired rejects a sent authorId with 403 BOARD.AUTHOR_NOT_ALLOWED (spec §7.1)', async () => {
+    const { api } = createFakeBoard({ seed: false })
+    const post = await rejects(api.createPost('free', { title: 't', body: 'b', authorId: 'prf_a' }))
+    expect(post).toMatchObject({
+      apiError: { status: 403, code: ErrorCodes.BOARD_AUTHOR_NOT_ALLOWED },
+    })
+    const ok = await api.createPost('free', { title: 't', body: 'b' })
+    const comment = await rejects(
+      api.createComment('free', ok.id, { body: 'hi', authorId: 'prf_a' }),
+    )
+    expect(comment).toMatchObject({ apiError: { status: 403, code: 'BOARD.AUTHOR_NOT_ALLOWED' } })
+  })
 })

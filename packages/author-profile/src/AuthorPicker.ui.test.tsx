@@ -15,6 +15,7 @@ const view = {
   labels: defaultAuthorProfileLabels,
   onChange: noop,
   threadAuthorId: undefined,
+  threadLoading: false,
   invalid: false,
   disabled: false,
 }
@@ -59,6 +60,26 @@ describe('AuthorPickerView — the folded state', () => {
     expect(html).toContain('data-invalid="true"')
   })
 
+  it('ties the form error to the trigger with aria-describedby (a screen reader reads the error on the picker)', () => {
+    const html = renderToStaticMarkup(
+      <AuthorPickerView {...view} value={undefined} invalid aria-describedby="err-1" />,
+    )
+    expect(html).toMatch(/<button[^>]*aria-describedby="err-1"/)
+    const empty = renderToStaticMarkup(
+      <AuthorPickerView
+        {...view}
+        profiles={[]}
+        value={undefined}
+        onCreateProfile={noop}
+        aria-describedby="err-2"
+      />,
+    )
+    expect(empty).toMatch(/<button[^>]*aria-describedby="err-2"/)
+    expect(renderToStaticMarkup(<AuthorPickerView {...view} value="prf_a" />)).not.toContain(
+      'aria-describedby',
+    )
+  })
+
   it('shows no standing warning about other profiles (a warning that is always there is itself a leak)', () => {
     const html = renderToStaticMarkup(
       <AuthorPickerView {...view} value="prf_b" threadAuthorId="prf_a" />,
@@ -80,6 +101,7 @@ describe('AuthorPicker — connected to the list query', () => {
           value={undefined}
           onChange={noop}
           threadAuthorId={undefined}
+          threadLoading={false}
           invalid={false}
           disabled={false}
         />
@@ -97,6 +119,7 @@ describe('AuthorPicker — connected to the list query', () => {
           value="prf_b"
           onChange={noop}
           threadAuthorId={undefined}
+          threadLoading={false}
           invalid={false}
           disabled={false}
         />

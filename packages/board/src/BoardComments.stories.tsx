@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState, type ComponentProps } from 'react'
 import { expect, fn, screen, waitFor, within } from 'storybook/test'
 import { BoardComments } from './BoardComments'
+import type { CommentInput } from './types'
 import { demoAuthorPicker } from './stories/demoAuthorPicker'
 import { createFakeBoard, type FakeBoardOptions } from './stories/fakeBoard'
 import { WithQuery } from './stories/WithQuery'
@@ -12,15 +13,32 @@ import { WithQuery } from './stories/WithQuery'
  */
 function Demo({
   fake,
+  setup,
+  watchCreate,
   ...rest
 }: {
   fake?: FakeBoardOptions
+  /** 서버에 미리 깔아 둘 것(예: 내가 이 글에 이미 쓴 댓글) — 가짜 서버의 `newComment` 등 */
+  setup?: (board: ReturnType<typeof createFakeBoard>) => void
+  /** 댓글 만들기 요청이 서버로 갈 때마다 입력을 알린다(spy) */
+  watchCreate?: (input: CommentInput) => void
 } & Partial<ComponentProps<typeof BoardComments>>) {
-  const [board] = useState(() => createFakeBoard(fake))
+  const [{ api, board }] = useState(() => {
+    const made = createFakeBoard(fake)
+    setup?.(made)
+    const wrapped = {
+      ...made.api,
+      createComment: (...args: Parameters<typeof made.api.createComment>) => {
+        watchCreate?.(args[2])
+        return made.api.createComment(...args)
+      },
+    }
+    return { api: wrapped, board: made }
+  })
   return (
     <WithQuery>
       <BoardComments
-        api={board.api}
+        api={api}
         boardCode="free"
         postId={3}
         config={board.config}
@@ -309,18 +327,45 @@ const profileServer: FakeBoardOptions = {
 }
 
 export const AuthorRequiredBlocksAnUnpickedComment: Story = {
-  args: { fake: profileServer, authorPicker: demoAuthorPicker() },
-  play: async ({ canvas, userEvent }) => {
+  args: { fake: profileServer, authorPicker: demoAuthorPicker(), watchCreate: fn() },
+  play: async ({ canvas, userEvent, args }) => {
     await canvas.findByText('Spaces, always.')
     await userEvent.type(canvas.getByRole('textbox', { name: 'Write a comment' }), 'As a profile')
     await userEvent.click(canvas.getByRole('button', { name: 'Post comment' }))
     await expect(await canvas.findByRole('alert')).toHaveTextContent('Choose who to post as.')
     await expect(canvas.getByRole('combobox', { name: 'Post as' })).toHaveFocus()
-    await expect(canvas.queryByText('As a profile', { selector: 'p' })).toBeNull() // 서버에 가지 않았다
+    await expect(canvas.getByRole('combobox', { name: 'Post as' })).toHaveAccessibleDescription(
+      'Choose who to post as.',
+    )
+    await expect(canvas.queryByText('As a profile', { selector: 'p' })).toBeNull()
+    await expect(args.watchCreate).not.toHaveBeenCalled() // 서버에 가지 않았다
 
     await userEvent.selectOptions(canvas.getByRole('combobox', { name: 'Post as' }), 'Ann')
     await userEvent.click(canvas.getByRole('button', { name: 'Post comment' }))
     await expect(await canvas.findByText('As a profile', { selector: 'p' })).toBeVisible()
+    await expect(args.watchCreate).toHaveBeenCalledWith({ body: 'As a profile', authorId: 'prf_a' })
+  },
+}
+
+/** 답글 칸도 같다 — 고르지 않으면 막고(서버에 가지 않는다), 고르면 `authorId` 가 입력에 실려 간다 */
+export const ReplyFormBlocksThenCarriesTheAuthorId: Story = {
+  args: { fake: profileServer, authorPicker: demoAuthorPicker(), watchCreate: fn() },
+  play: async ({ canvas, userEvent, args }) => {
+    await canvas.findByText('Spaces, always.')
+    await userEvent.click(canvas.getByRole('button', { name: 'Reply: Alice' }))
+    await userEvent.type(canvas.getByRole('textbox', { name: 'Your reply' }), 'Reply as Ann')
+    await userEvent.click(canvas.getByRole('button', { name: 'Post reply' }))
+    await expect(await canvas.findByRole('alert')).toHaveTextContent('Choose who to post as.')
+    await expect(args.watchCreate).not.toHaveBeenCalled()
+
+    const pickers = canvas.getAllByRole('combobox', { name: 'Post as' })
+    await userEvent.selectOptions(pickers[1], 'Ann')
+    await userEvent.click(canvas.getByRole('button', { name: 'Post reply' }))
+    await expect(await canvas.findByText('Reply as Ann', { selector: 'p' })).toBeVisible()
+    await expect(args.watchCreate).toHaveBeenCalledTimes(1)
+    await expect(args.watchCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ body: 'Reply as Ann', authorId: 'prf_a' }),
+    )
   },
 }
 
@@ -335,13 +380,46 @@ export const MineKeepsEditAndDeleteWhenTheAuthorIsNotTheAccount: Story = {
     await expect(await canvas.findByText('Mine', { selector: 'p' })).toBeVisible()
     await expect(canvas.getByRole('button', { name: 'Edit: Ann' })).toBeVisible()
     await expect(canvas.getByRole('button', { name: 'Delete: Ann' })).toBeVisible()
-    // 남의 댓글에는 없다
     await expect(canvas.queryByRole('button', { name: 'Edit: Alice' })).toBeNull()
   },
 }
 
-/** 이 스레드에서 쓴 작성자가 선택기의 처음 값이 된다(`lastOwnAuthorId`) — 답글 칸도 같다 */
-export const PickerStartsOnTheAuthorUsedInThisThread: Story = {
+/** 이 글에 내가 이미 쓴 댓글(서버가 깔아 둔 `mine`)의 작성자가 선택기의 처음 값이다(`lastOwnAuthorId`) — 아무것도 누르기 전에. 댓글을 받는 동안은 확정하지 않는다 */
+export const PickerStartsOnTheAuthorOfMyEarlierComment: Story = {
+  args: {
+    fake: { ...profileServer, delayMs: 300 },
+    authorPicker: demoAuthorPicker(),
+    setup: (board) => {
+      board.newComment(3, 'Written earlier as Bea', null, 'prf_b')
+    },
+  },
+  play: async ({ canvas }) => {
+    // 받는 중: 아직 모른다 — 비어 있다
+    await expect(canvas.getByRole('combobox', { name: 'Post as' })).toHaveDisplayValue('Choose…')
+    await canvas.findByText('Written earlier as Bea', { selector: 'p' })
+    await waitFor(() =>
+      expect(canvas.getByRole('combobox', { name: 'Post as' })).toHaveDisplayValue('Bea'),
+    )
+  },
+}
+
+/** 이 글을 내가 쓰고 댓글은 아직 안 썼다 — 글의 `authorId`(`postAuthor`)가 단서다 */
+export const PostAuthorIsTheFallbackClue: Story = {
+  args: {
+    fake: profileServer,
+    authorPicker: demoAuthorPicker(),
+    postAuthor: { authorId: 'prf_b', mine: true },
+  },
+  play: async ({ canvas }) => {
+    await canvas.findByText('Spaces, always.')
+    await waitFor(() =>
+      expect(canvas.getByRole('combobox', { name: 'Post as' })).toHaveDisplayValue('Bea'),
+    )
+  },
+}
+
+/** 이 스레드에서 쓴 작성자가 선택기의 처음 값이 된다 — 방금 쓴 뒤의 새 댓글 칸 · 답글 칸이 모두 같다 */
+export const PickerFollowsTheAuthorUsedInThisThread: Story = {
   args: { fake: profileServer, authorPicker: demoAuthorPicker() },
   play: async ({ canvas, userEvent }) => {
     await canvas.findByText('Spaces, always.')
@@ -349,10 +427,6 @@ export const PickerStartsOnTheAuthorUsedInThisThread: Story = {
     await userEvent.selectOptions(canvas.getByRole('combobox', { name: 'Post as' }), 'Bea')
     await userEvent.click(canvas.getByRole('button', { name: 'Post comment' }))
     await canvas.findByText('First as Bea', { selector: 'p' })
-    // 새 댓글 칸 · 답글 칸이 모두 Bea 로 시작한다
-    await waitFor(() =>
-      expect(canvas.getByRole('combobox', { name: 'Post as' })).toHaveDisplayValue('Bea'),
-    )
     await userEvent.click(canvas.getByRole('button', { name: 'Reply: Alice' }))
     const pickers = canvas.getAllByRole('combobox', { name: 'Post as' })
     await expect(pickers).toHaveLength(2)
@@ -360,10 +434,26 @@ export const PickerStartsOnTheAuthorUsedInThisThread: Story = {
   },
 }
 
-/** 서버가 필수로 하지 않고 선택기도 없으면 지금과 같다 — 선택기 자리 없음, 입력에 `authorId` 없음 */
+/** 서버가 필수로 하지 않고(`authorRequired` 없음) 선택기를 줘도 — 선택기 자리 없음, 서버로 가는 입력은 정확히 `{ body }`(`authorId` 키 없음) */
 export const NoPickerAndNotRequiredIsUnchanged: Story = {
-  play: async ({ canvas }) => {
+  args: { authorPicker: demoAuthorPicker(), watchCreate: fn() },
+  play: async ({ canvas, userEvent, args }) => {
     await canvas.findByText('Spaces, always.')
     await expect(canvas.queryByRole('combobox', { name: 'Post as' })).toBeNull()
+    await userEvent.type(canvas.getByRole('textbox', { name: 'Write a comment' }), 'Plain')
+    await userEvent.click(canvas.getByRole('button', { name: 'Post comment' }))
+    await expect(await canvas.findByText('Plain', { selector: 'p' })).toBeVisible()
+    await expect(args.watchCreate).toHaveBeenCalledTimes(1)
+    await expect(args.watchCreate).toHaveBeenCalledWith({ body: 'Plain' })
+    await userEvent.click(canvas.getByRole('button', { name: 'Reply: Alice' }))
+    await userEvent.type(canvas.getByRole('textbox', { name: 'Your reply' }), 'Plain reply')
+    await userEvent.click(canvas.getByRole('button', { name: 'Post reply' }))
+    await canvas.findByText('Plain reply', { selector: 'p' })
+    await expect(args.watchCreate).toHaveBeenLastCalledWith(
+      expect.objectContaining({ body: 'Plain reply' }),
+    )
+    await expect(
+      (args.watchCreate as ReturnType<typeof fn>).mock.calls.at(-1)?.[0],
+    ).not.toHaveProperty('authorId')
   },
 }

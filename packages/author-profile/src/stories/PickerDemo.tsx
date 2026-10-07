@@ -13,6 +13,8 @@ export function PickerDemo({
   api,
   boardCode = 'free',
   threadAuthorId,
+  threadLoading = false,
+  describedBy,
   remembered,
   storage,
   invalid = false,
@@ -23,6 +25,10 @@ export function PickerDemo({
   api: AuthorProfileApi
   boardCode?: string
   threadAuthorId?: string
+  /** 댓글을 아직 받는 중(처음 값을 확정하지 않는다) */
+  threadLoading?: boolean
+  /** 칸 오류 문장의 id */
+  describedBy?: string
   /** 이 기기가 이 게시판에서 기억하는 프로필 id(처음 값 ②) */
   remembered?: string
   storage: StorageLike
@@ -52,11 +58,14 @@ export function PickerDemo({
             onChange?.(next)
           }}
           threadAuthorId={threadAuthorId}
+          threadLoading={threadLoading}
+          aria-describedby={describedBy}
           invalid={invalid}
           disabled={disabled}
           onCreateProfile={onCreateProfile}
         />
         <Button>Send</Button>
+        {describedBy && <p id={describedBy}>Choose who to post as.</p>}
       </div>
     </WithQuery>
   )

@@ -57,34 +57,70 @@ describe('mine-based ownership in CommentThread', () => {
 })
 
 describe('authorPicker slot', () => {
-  it('PostEditor renders the picker with the current value, an onChange and the thread author id', () => {
+  it('PostEditor renders the picker with value, onChange, thread id, loading flag and no description when there is no error', () => {
     const html = renderToStaticMarkup(
       <PostEditor
         limits={limits}
         onSubmit={noop}
-        authorPicker={({ value, threadAuthorId, onChange }) => (
-          <i data-picker={`${value ?? 'none'}|${threadAuthorId ?? 'none'}|${typeof onChange}`} />
+        authorRequired
+        authorPicker={({ value, threadAuthorId, onChange, threadLoading, ...rest }) => (
+          <i
+            data-picker={`${value ?? 'none'}|${threadAuthorId ?? 'none'}|${typeof onChange}|${threadLoading}|${rest['aria-describedby'] ?? 'nodesc'}`}
+          />
         )}
       />,
     )
-    expect(html).toContain('data-picker="none|none|function"')
+    expect(html).toContain('data-picker="none|none|function|false|nodesc"')
+    expect(html).toContain('data-author-slot')
   })
 
-  it('CommentForm renders the picker too', () => {
+  it('CommentForm renders the picker too, handing over the thread id and the loading flag', () => {
     const html = renderToStaticMarkup(
       <CommentForm
         {...formProps}
-        authorPicker={() => <i data-picker="here" />}
+        authorRequired
+        authorPicker={({ threadAuthorId, threadLoading }) => (
+          <i data-picker={`${threadAuthorId}|${threadLoading}`} />
+        )}
         threadAuthorId="prf_a"
+        threadLoading
       />,
     )
-    expect(html).toContain('data-picker="here"')
+    expect(html).toContain('data-picker="prf_a|true"')
   })
 
-  it('without a picker the forms render exactly as before', () => {
-    expect(renderToStaticMarkup(<CommentForm {...formProps} />)).not.toContain('data-picker')
+  it('a picker is not drawn unless the server says authorRequired (the server would reject an authorId)', () => {
+    const picker = () => <i data-picker="here" />
     expect(
+      renderToStaticMarkup(<CommentForm {...formProps} authorPicker={picker} />),
+    ).not.toContain('data-picker')
+    expect(
+      renderToStaticMarkup(
+        <PostEditor limits={limits} onSubmit={noop} authorPicker={picker} authorRequired={false} />,
+      ),
+    ).not.toContain('data-picker')
+  })
+
+  it('without a picker the forms render exactly as before — no slot, nothing author-related', () => {
+    for (const html of [
+      renderToStaticMarkup(<CommentForm {...formProps} />),
+      renderToStaticMarkup(<CommentForm {...formProps} authorRequired />),
       renderToStaticMarkup(<PostEditor limits={limits} onSubmit={noop} authorRequired={false} />),
-    ).not.toContain('author')
+    ]) {
+      expect(html).not.toContain('data-author-slot')
+      expect(html).not.toContain('data-picker')
+    }
+  })
+
+  it('CommentThread keeps the reply picker out of the page until a reply form is opened', () => {
+    const html = renderToStaticMarkup(
+      <CommentThread
+        {...threadProps}
+        authorRequired
+        thread={thread(1, [], { authorId: 'prf_a', mine: true })}
+        authorPicker={() => <i data-picker="reply" />}
+      />,
+    )
+    expect(html).not.toContain('data-picker')
   })
 })

@@ -14,10 +14,27 @@ export function isOwn(
 
 type Walkable = Comment & { replies?: readonly Walkable[] }
 
+/** 켜기 전에 쌓인 옛 행의 공개 id(`pending:p<id>` · `pending:c<id>`) — 어느 프로필의 것도 아니라 선택기의 단서가 못 된다 */
+const PENDING_ID_PREFIX = 'pending:'
+
+/** 선택기가 처음 값으로 삼을 수 있는 내 작성자 id 인가 — `mine` 이고, 탈퇴 표시가 아니고, 옛 행의 `pending:` 가 아닐 때 */
+export function isUsableOwnAuthorId(item: {
+  mine?: boolean
+  authorId: string
+  authorDeleted?: boolean
+}): boolean {
+  return (
+    item.mine === true &&
+    item.authorDeleted !== true &&
+    !item.authorId.startsWith(PENDING_ID_PREFIX)
+  )
+}
+
 /**
  * 이 스레드에서 내가 **마지막으로** 쓴 댓글의 `authorId`(없으면 undefined). `mine` 이 참인 댓글만 센다 —
- * `mine` 이 없는 옛 서버 응답은 판정하지 않는다. 서버는 최상위 아래에 모든 자손을 평평하게 주지만(`replies`),
- * 중첩돼 와도 따라 내려간다. 같은 시각이면 id 가 큰 쪽.
+ * `mine` 이 없는 옛 서버 응답은 판정하지 않고, 탈퇴한 작성자(`authorDeleted`)와 옛 행의 `pending:` id 는 건너뛴다.
+ * 서버는 최상위 아래에 모든 자손을 평평하게 주지만(`replies`), 중첩돼 와도 따라 내려간다.
+ * 시각은 `Date.parse` 로 비교한다(오프셋이 다른 ISO 문자열의 사전순이 아니다). 같은 시각이면 id 가 큰 쪽.
  */
 export function lastOwnAuthorId(
   comments: readonly (Comment | CommentWithReplies)[],
@@ -25,12 +42,10 @@ export function lastOwnAuthorId(
   let best: Comment | undefined
   const visit = (items: readonly Walkable[]) => {
     for (const item of items) {
-      if (item.mine === true) {
-        const newer =
-          !best ||
-          item.createdAt > best.createdAt ||
-          (item.createdAt === best.createdAt && item.id > best.id)
-        if (newer) best = item
+      if (isUsableOwnAuthorId(item)) {
+        const at = Date.parse(item.createdAt)
+        const bestAt = best ? Date.parse(best.createdAt) : Number.NEGATIVE_INFINITY
+        if (!best || at > bestAt || (at === bestAt && item.id > best.id)) best = item
       }
       if (item.replies) visit(item.replies)
     }
@@ -45,8 +60,15 @@ export type AuthorPickerArgs = {
   value: string | undefined
   /** 바꾼다. 처음 값을 정하는 것도 선택기의 몫이다(effect 에서 불러도 된다) */
   onChange: (authorId: string | undefined) => void
-  /** 이 스레드(글의 댓글)에서 내가 마지막으로 쓴 작성자 id — 없으면 undefined. 글쓰기 폼에는 늘 undefined */
+  /**
+   * 이 스레드(글의 댓글)에서 내가 마지막으로 쓴 작성자 id — 현재 불러온 쪽의 댓글 기준이다(다른 쪽에 쓴 것은 모른다).
+   * undefined 는 「쓴 적 없음」이거나 「아직 모름」(`threadLoading`). 글쓰기 폼에는 늘 undefined
+   */
   threadAuthorId: string | undefined
+  /** 댓글을 아직 불러오는 중 — true 인 동안 `threadAuthorId` 가 undefined 인 것은 「쓴 적 없음」이 아니다. 처음 값을 확정하지 말고(기기 기억으로도 넘어가지 말고) 기다린다 */
+  threadLoading: boolean
+  /** 칸 오류 문장의 id — 오류가 보일 때만 있다. 선택기의 조작 요소에 `aria-describedby` 로 잇는다 */
+  'aria-describedby'?: string
   /** 칸 오류 문장이 보이는 중인가 — 선택기가 `aria-invalid` 를 걸 수 있게 */
   invalid: boolean
   /** 보내는 중 */

@@ -145,6 +145,7 @@ export function CommentItem({ node, ctx }: { node: CommentNode; ctx: ThreadConte
           authorRequired={ctx.authorRequired}
           authorRequiredMessage={L.authorRequired}
           threadAuthorId={ctx.threadAuthorId}
+          threadLoading={ctx.threadLoading}
           onCancel={() => ctx.setReplyingTo(null)}
           onSubmit={async (body, authorId) => {
             await (authorId

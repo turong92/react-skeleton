@@ -55,4 +55,29 @@ describe('lastOwnAuthorId', () => {
       ]),
     ).toBe('prf_late')
   })
+
+  it('skips a deleted-author comment and a pending: id (legacy rows that no profile owns)', () => {
+    const comments = [
+      comment(1, null, { authorId: 'prf_a', mine: true, createdAt: '2026-01-01T00:00:00Z' }),
+      comment(2, null, {
+        authorId: 'deleted:x',
+        authorDeleted: true,
+        mine: true,
+        createdAt: '2026-01-02T00:00:00Z',
+      }),
+      comment(3, null, { authorId: 'pending:c3', mine: true, createdAt: '2026-01-03T00:00:00Z' }),
+    ]
+    expect(lastOwnAuthorId(comments)).toBe('prf_a')
+    expect(lastOwnAuthorId(comments.slice(1))).toBeUndefined()
+  })
+
+  it('compares instants, not strings (an offset timestamp is not later just because it sorts later)', () => {
+    const comments = [
+      // 10:00Z
+      comment(1, null, { authorId: 'prf_a', mine: true, createdAt: '2026-01-01T10:00:00Z' }),
+      // 09:30Z written with +09:00 — string-wise "…T18:30…" is larger, instant-wise it is earlier
+      comment(2, null, { authorId: 'prf_b', mine: true, createdAt: '2026-01-01T18:30:00+09:00' }),
+    ]
+    expect(lastOwnAuthorId(comments)).toBe('prf_a')
+  })
 })

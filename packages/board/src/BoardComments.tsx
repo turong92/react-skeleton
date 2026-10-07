@@ -1,7 +1,7 @@
 import { Button, Card, Dialog, EmptyState, Field, Pagination, Select, Spinner } from '@skeleton/ui'
 import { useMemo, useState } from 'react'
 import { collidingNames } from './authorDisplay'
-import { lastOwnAuthorId } from './authorship'
+import { isUsableOwnAuthorId, lastOwnAuthorId } from './authorship'
 import type { BoardApi } from './boardApi'
 import { resolveBoardCommentsLabels, type BoardCommentsLabelsInput } from './boardCommentsLabels'
 import { CommentForm } from './CommentForm'
@@ -32,6 +32,7 @@ export type BoardCommentsProps = Omit<
   | 'onReact'
   | 'authorRequired'
   | 'threadAuthorId'
+  | 'threadLoading'
 > & {
   api: BoardApi
   boardCode: string
@@ -48,6 +49,11 @@ export type BoardCommentsProps = Omit<
    * 앱이 먼저 해야 할 일이 있을 때(예: 닉네임이 없으면 정하는 대화상자를 띄우고 막는다)
    */
   beforeWrite?: () => boolean
+  /**
+   * 이 댓글 영역이 달린 글의 작성자 — 글이 내 것(`mine`)이면 그 `authorId` 가 선택기의 처음 값 후보가 된다
+   * (이 글에 댓글을 쓴 적이 없어도 같은 이름으로 이어 쓰게). 내 댓글이 있으면 댓글이 먼저다. 탈퇴 · `pending:` id 는 건너뛴다
+   */
+  postAuthor?: { authorId: string; mine?: boolean; authorDeleted?: boolean }
 }
 
 /**
@@ -63,6 +69,7 @@ export function BoardComments({
   commentable = true,
   labels: input,
   beforeWrite,
+  postAuthor,
   ...options
 }: BoardCommentsProps) {
   const labels = resolveBoardCommentsLabels(input)
@@ -77,9 +84,14 @@ export function BoardComments({
   )
   /** 이 글의 (이 쪽) 댓글에서 내가 마지막으로 쓴 작성자 id — 선택기의 처음 값을 정하는 단서 */
   const threadAuthorId = useMemo(
-    () => lastOwnAuthorId(comments.data?.values ?? []),
-    [comments.data],
+    () =>
+      lastOwnAuthorId(comments.data?.values ?? []) ??
+      (postAuthor && isUsableOwnAuthorId(postAuthor) ? postAuthor.authorId : undefined),
+    [comments.data, postAuthor],
   )
+  const authorRequired = config.authorRequired === true
+  /** 댓글을 아직 못 받았다 — 이때의 undefined 는 「쓴 적 없음」이 아니다 */
+  const threadLoading = comments.isPending
   const create = useCreateComment(api, boardCode, postId)
   const update = useUpdateComment(api, boardCode, postId)
   const remove = useRemoveComment(api, boardCode, postId)
@@ -102,9 +114,10 @@ export function BoardComments({
             requiredMessage={labels.required}
             tooLongMessage={labels.tooLong}
             authorPicker={options.authorPicker}
-            authorRequired={config.authorRequired}
+            authorRequired={authorRequired}
             authorRequiredMessage={labels.authorRequired}
             threadAuthorId={threadAuthorId}
+            threadLoading={threadLoading}
             onSubmit={async (body, authorId) => {
               await allowed()
               return create.mutateAsync({ input: authorId ? { body, authorId } : { body } })
@@ -151,8 +164,9 @@ export function BoardComments({
                   {...options}
                   thread={thread}
                   scopeNames={pageNames}
-                  authorRequired={config.authorRequired}
+                  authorRequired={authorRequired}
                   threadAuthorId={threadAuthorId}
+                  threadLoading={threadLoading}
                   labels={labels}
                   maxDepth={config.maxCommentDepth}
                   commentMaxLength={config.commentMaxLength}

@@ -15,9 +15,13 @@ export type AuthorPickerSlotProps = {
   onChange: (authorId: string | undefined) => void
   /** 이 스레드에서 내가 마지막으로 쓴 프로필 id */
   threadAuthorId: string | undefined
+  /** 댓글을 아직 받는 중 — true 인 동안은 처음 값을 확정하지 않는다(기기 기억으로도 넘어가지 않는다) */
+  threadLoading: boolean
   /** 칸 오류 문장이 보이는 중인가 */
   invalid: boolean
   disabled: boolean
+  /** 칸 오류 문장의 id — 선택기 단추에 `aria-describedby` 로 잇는다 */
+  'aria-describedby'?: string
 }
 
 export type AuthorPickerViewProps = AuthorPickerSlotProps & {
@@ -48,8 +52,10 @@ export function AuthorPickerView({
   value,
   onChange,
   threadAuthorId,
+  threadLoading,
   invalid,
   disabled,
+  'aria-describedby': describedBy,
 }: AuthorPickerViewProps) {
   const labels = mergeLabels(given)
   const [pending, setPending] = useState<Pending>()
@@ -66,10 +72,11 @@ export function AuthorPickerView({
         profiles,
         threadAuthorId,
         remembered: memory?.get(boardCode),
+        threadLoading,
       })
       if (initial !== undefined) onChange(initial)
     }
-  }, [value, current, profiles, threadAuthorId, memory, boardCode, onChange])
+  }, [value, current, profiles, threadAuthorId, threadLoading, memory, boardCode, onChange])
 
   function apply(profile: AuthorProfile) {
     setPending(undefined)
@@ -88,7 +95,12 @@ export function AuthorPickerView({
     return (
       <div className={styles.root} data-invalid={invalid ? 'true' : undefined}>
         {onCreateProfile ? (
-          <Button variant="secondary" disabled={disabled} onClick={onCreateProfile}>
+          <Button
+            variant="secondary"
+            disabled={disabled}
+            aria-describedby={describedBy}
+            onClick={onCreateProfile}
+          >
             {labels.createProfile}
           </Button>
         ) : (
@@ -105,6 +117,7 @@ export function AuthorPickerView({
         label={labels.triggerLabel(shown)}
         align="start"
         disabled={disabled}
+        describedBy={describedBy}
         trigger={
           <span className={styles.current}>
             {current ? (
@@ -161,12 +174,22 @@ export function AuthorPicker({ api, ...rest }: AuthorPickerProps) {
   if (list.data) return <AuthorPickerView {...rest} profiles={list.data} />
   if (list.isError)
     return (
-      <Button variant="secondary" disabled={rest.disabled} onClick={() => void list.refetch()}>
+      <Button
+        variant="secondary"
+        disabled={rest.disabled}
+        aria-describedby={rest['aria-describedby']}
+        onClick={() => void list.refetch()}
+      >
         {labels.loadFailed}
       </Button>
     )
   return (
-    <Button variant="secondary" loading loadingLabel={labels.loading}>
+    <Button
+      variant="secondary"
+      loading
+      loadingLabel={labels.loading}
+      aria-describedby={rest['aria-describedby']}
+    >
       {labels.loading}
     </Button>
   )

@@ -34,6 +34,8 @@ export type RowMenuProps = {
   /** 메뉴를 버튼의 어느 쪽 끝에 맞출까(기본 `end`) — 화면 밖으로 넘치면 반대쪽으로 맞춘다 */
   align?: 'start' | 'end'
   className?: string
+  /** 버튼에 이어 줄 바깥 설명의 id(예: 이 메뉴 칸의 오류 문장) — `aria-describedby` */
+  describedBy?: string
 }
 
 /** 열 때 포커스할 항목 — ↑ 로 열면 마지막(APG 메뉴 버튼) */
@@ -50,6 +52,7 @@ export function RowMenu({
   trigger,
   align = 'end',
   className,
+  describedBy,
 }: RowMenuProps) {
   const [openAt, setOpenAt] = useState<OpenAt | null>(null)
   const open = openAt !== null && !disabled
@@ -142,6 +145,7 @@ export function RowMenu({
         type="button"
         className={styles.button}
         aria-label={label}
+        aria-describedby={describedBy}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}

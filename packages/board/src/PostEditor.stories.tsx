@@ -97,6 +97,10 @@ export const AuthorRequiredBlocksUntilPicked: Story = {
     await userEvent.click(canvas.getByRole('button', { name: 'Publish' }))
     await expect(canvas.getByRole('alert')).toHaveTextContent('Choose who to post as.')
     await expect(canvas.getByRole('combobox', { name: 'Post as' })).toHaveFocus()
+    // 낭독기가 선택기에서 오류를 읽는다 — 오류 문장이 선택기의 설명으로 이어져 있다
+    await expect(canvas.getByRole('combobox', { name: 'Post as' })).toHaveAccessibleDescription(
+      'Choose who to post as.',
+    )
     await expect(canvas.getByRole('combobox', { name: 'Post as' })).toHaveAttribute(
       'aria-invalid',
       'true',
@@ -114,10 +118,11 @@ export const AuthorRequiredBlocksUntilPicked: Story = {
   },
 }
 
-/** 선택기가 있어도 서버가 필수로 하지 않으면(`authorRequired` 꺼짐) 비워 둔 채 보낼 수 있고, 입력에는 `authorId` 키가 없다 */
-export const PickerWithoutAuthorRequiredMayStayEmpty: Story = {
+/** 서버가 필수로 하지 않으면(`authorRequired` 꺼짐) 선택기를 줘도 그리지 않고, 입력에는 `authorId` 키가 없다(서버는 보낸 `authorId` 를 거절한다) */
+export const PickerIsNotDrawnWithoutAuthorRequired: Story = {
   args: { authorPicker: demoAuthorPicker() },
   play: async ({ canvas, args, userEvent }) => {
+    await expect(canvas.queryByRole('combobox', { name: 'Post as' })).toBeNull()
     await userEvent.type(canvas.getByLabelText(/Title/), 'Hello')
     await userEvent.type(canvas.getByLabelText(/Body/), 'First line')
     await userEvent.click(canvas.getByRole('button', { name: 'Publish' }))

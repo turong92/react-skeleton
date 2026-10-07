@@ -33,6 +33,8 @@ export type CommentOptions = {
   authorRequired?: boolean
   /** 이 스레드에서 내가 마지막으로 쓴 작성자 id(`lastOwnAuthorId`) — 생략하면 이 줄기에서 찾는다 */
   threadAuthorId?: string
+  /** 댓글을 아직 불러오는 중 — 선택기가 처음 값을 확정하지 않고 기다린다 */
+  threadLoading?: boolean
   /** 콜백을 주어야 그 단추가 생긴다. 약속을 돌려주면 끝날 때까지 폼이 「보내는 중」 */
   onReply?: (parentId: BoardId, body: string, authorId?: string) => Promise<unknown> | void
   onEdit?: (id: BoardId, body: string) => Promise<unknown> | void

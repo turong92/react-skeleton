@@ -1,6 +1,7 @@
 import { Button, Field, Input, Textarea } from '@skeleton/ui'
-import { useState, type FormEvent } from 'react'
+import { useCallback, useId, useState, type FormEvent } from 'react'
 import { AuthorError, AuthorSlot } from './AuthorSlot'
+import { defaultCommentLabels } from './commentLabels'
 import { focusAuthorSlot } from './focusAuthorSlot'
 import type { AuthorPicker } from './authorship'
 import type { BoardConfig } from './types'
@@ -38,7 +39,7 @@ const defaultLabels: PostEditorLabels = {
   bodyTooLong: (max) => `Keep the body within ${max} characters.`,
   cancel: 'Cancel',
   formLabel: 'Post',
-  authorRequired: 'Choose who to post as.',
+  authorRequired: defaultCommentLabels.authorRequired,
 }
 
 export type PostEditorProps = {
@@ -56,9 +57,12 @@ export type PostEditorProps = {
   error?: string
   /** 서버가 칸마다 돌려준 오류 */
   fieldErrors?: Partial<Record<keyof PostEditorValues, string>>
-  /** 작성자 선택기 자리(제출 단추 옆) — 고른 id 가 제출 값의 `authorId` 로 간다. 없으면 폼은 지금과 같다 */
+  /**
+   * 작성자 선택기 자리(제출 단추 옆) — 고른 id 가 제출 값의 `authorId` 로 간다. **`authorRequired` 가 true 일 때만 그려진다**
+   * (서버가 필수로 하지 않으면 보낸 `authorId` 를 거절한다). 고치기 폼에는 주지 않는다 — 작성자는 불변
+   */
   authorPicker?: AuthorPicker
-  /** true 인데 고른 값이 없으면 칸 오류로 막는다(`BoardConfig.authorRequired`) */
+  /** `BoardConfig.authorRequired` — true 인데 고른 값이 없으면 칸 오류로 막는다 */
   authorRequired?: boolean
   labels?: Partial<PostEditorLabels>
 }
@@ -81,6 +85,14 @@ export function PostEditor({
   const [values, setValues] = useState(initial)
   const [problems, setProblems] = useState<Partial<Record<keyof PostEditorValues, string>>>({})
   const [authorId, setAuthorId] = useState<string>()
+  const authorErrorId = useId()
+  const withAuthor = authorRequired === true && authorPicker !== undefined
+  const authorProblem = problems.authorId ?? fieldErrors?.authorId
+  // 안정된 함수 — 선택기가 effect 의존에 넣어도 매 렌더 다시 돌지 않는다
+  const changeAuthor = useCallback((next: string | undefined) => {
+    setAuthorId(next)
+    if (next) setProblems((current) => ({ ...current, authorId: undefined }))
+  }, [])
 
   function check(): typeof problems {
     const found: typeof problems = {}
@@ -92,7 +104,7 @@ export function PostEditor({
     if (!body) found.body = labels.bodyRequired
     else if (body.length > limits.bodyMaxLength)
       found.body = labels.bodyTooLong(limits.bodyMaxLength)
-    if (authorRequired && !authorId) found.authorId = labels.authorRequired
+    if (withAuthor && !authorId) found.authorId = labels.authorRequired
     return found
   }
 
@@ -114,7 +126,7 @@ export function PostEditor({
       await onSubmit({
         title: values.title.trim(),
         body: values.body.trim(),
-        ...(authorId ? { authorId } : {}),
+        ...(withAuthor && authorId ? { authorId } : {}),
       })
     } catch {
       // 표시는 부모가 `error` · `fieldErrors` 로 한다
@@ -162,16 +174,15 @@ export function PostEditor({
         )}
       </Field>
       <div className={styles.actions}>
-        {authorPicker && (
+        {withAuthor && (
           <AuthorSlot
             picker={authorPicker}
             value={authorId}
-            onChange={(next) => {
-              setAuthorId(next)
-              if (next) setProblems((p) => ({ ...p, authorId: undefined }))
-            }}
+            onChange={changeAuthor}
             threadAuthorId={undefined}
-            invalid={problems.authorId !== undefined}
+            threadLoading={false}
+            error={authorProblem}
+            errorId={authorErrorId}
             disabled={submitting === true}
           />
         )}
@@ -184,7 +195,7 @@ export function PostEditor({
           </Button>
         )}
       </div>
-      <AuthorError message={problems.authorId ?? fieldErrors?.authorId} />
+      {withAuthor && <AuthorError id={authorErrorId} message={authorProblem} />}
     </form>
   )
 }

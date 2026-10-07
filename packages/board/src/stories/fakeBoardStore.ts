@@ -29,7 +29,7 @@ export type FakeBoardOptions = {
   nicknames?: Record<string, string | null>
   /**
    * true 면 작성자 프로필을 쓰는 서버처럼 군다 — `config.authorRequired`, 쓰기에 `authorId` 필수(없으면 400 `BOARD.AUTHOR_REQUIRED`,
-   * 내 것이 아니면 403 `BOARD.AUTHOR_NOT_ALLOWED`), 글 · 댓글의 `authorId` 는 그 id
+   * 내 것이 아니면 403 `BOARD.AUTHOR_NOT_ALLOWED`), 글 · 댓글의 `authorId` 는 그 id. 꺼져 있을 때 `authorId` 를 보내도 403 `BOARD.AUTHOR_NOT_ALLOWED`
    */
   authorRequired?: boolean
   /** 호출자(`me`)가 쓸 수 있는 작성자 id들(프로필) — 이 id 의 글 · 댓글도 `mine: true`, 수정 · 삭제도 된다 */
@@ -173,11 +173,16 @@ export function createStore(options: FakeBoardOptions) {
     return { counts: { ...row.reactionCounts }, myReactions: [...mine] }
   }
 
-  /** 쓰기 요청의 작성자 — 프로필을 쓰는 서버는 `authorId` 필수 · 내 것만, 아니면 계정 자신(보낸 `authorId` 는 무시) */
+  /** 쓰기 요청의 작성자 — 프로필을 쓰는 서버는 `authorId` 필수 · 내 것만, 아니면 계정 자신(`authorId` 를 보내면 403) */
   const authorOf = (authorId: string | undefined) => {
-    if (!config.authorRequired) return me
-    if (!authorId) fail('BOARD.AUTHOR_REQUIRED', 400, 'Author required')
-    if (!owns(authorId!)) fail('BOARD.AUTHOR_NOT_ALLOWED', 403, 'Author not allowed')
+    if (!config.authorRequired) {
+      // 서버는 필수가 아닐 때 보낸 authorId 를 거절한다(스펙 §7.1) — 선택기가 없는 화면은 키 자체를 보내지 않는다
+      if (authorId !== undefined)
+        fail(ErrorCodes.BOARD_AUTHOR_NOT_ALLOWED, 403, 'Author not allowed')
+      return me
+    }
+    if (!authorId) fail(ErrorCodes.BOARD_AUTHOR_REQUIRED, 400, 'Author required')
+    if (!owns(authorId!)) fail(ErrorCodes.BOARD_AUTHOR_NOT_ALLOWED, 403, 'Author not allowed')
     return authorId!
   }
 

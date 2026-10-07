@@ -132,7 +132,7 @@ export function ProfileRow({
             <Button type="submit" size="sm" loading={rename.isPending} loadingLabel="">
               {rename.isPending ? labels.saving : labels.save}
             </Button>
-            <Button size="sm" variant="ghost" onClick={close}>
+            <Button size="sm" variant="ghost" disabled={rename.isPending} onClick={close}>
               {labels.cancel}
             </Button>
           </div>

@@ -61,7 +61,7 @@ export const RenameWorksFromTheKeyboardOnly: Story = {
   },
 }
 
-/** 한 번에 한 줄만 — 한 줄의 오류를 둔 채 다른 줄을 열면 앞의 줄은 닫히고 오류는 따라오지 않는다 */
+/** 한 번에 한 줄만 — 오류가 열린 줄에서 다른 줄을 열면(취소 없이) 앞의 줄은 닫히고 오류는 새 줄로 따라가지 않는다 */
 export const OnlyOneRowEditsAtATimeAndTheErrorDoesNotLeak: Story = {
   args: { failNext: { rename: 'AUTHOR_PROFILE.RATE_LIMITED' } },
   play: async ({ canvas, userEvent }) => {
@@ -69,15 +69,14 @@ export const OnlyOneRowEditsAtATimeAndTheErrorDoesNotLeak: Story = {
     await userEvent.type(canvas.getByLabelText('New name for Ann#0001'), 'x')
     await userEvent.click(canvas.getByRole('button', { name: 'Save' }))
     await expect(await canvas.findByRole('alert')).toHaveTextContent('Too many profile changes.')
+    await expect(canvas.getByLabelText('New name for Ann#0001')).toBeVisible() // 오류가 열린 줄
 
-    await userEvent.click(canvas.getByRole('button', { name: 'Cancel' }))
-    await userEvent.click(canvas.getByRole('button', { name: 'Rename Ann#0001' }))
-    await userEvent.type(canvas.getByLabelText('New name for Ann#0001'), 'y')
-    // 오류가 남은 채 다른 줄을 연다 — 앞의 줄은 닫히고 새 줄에는 오류가 없다
+    // 취소하지 않고 다른 줄을 연다
     await userEvent.click(canvas.getByRole('button', { name: 'Rename Bea#0002' }))
     await expect(canvas.queryByLabelText('New name for Ann#0001')).toBeNull()
     await expect(canvas.getByLabelText('New name for Bea#0002')).toHaveFocus()
     await expect(canvas.queryByRole('alert')).toBeNull()
+    await expect(canvas.getByRole('button', { name: 'Rename Ann#0001' })).toBeVisible()
     await expect(canvas.getAllByRole('form')).toHaveLength(2) // 추가 폼 + 열린 한 줄
   },
 }

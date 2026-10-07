@@ -94,9 +94,20 @@ describe('lastOwnAuthorId — unparsable times', () => {
 })
 
 describe('threadIsUnknown', () => {
-  it('is true until comments of the CURRENT page have arrived: nothing yet (loading or first load failed), or only the previous page kept as placeholder', () => {
-    expect(threadIsUnknown({ data: undefined, isPlaceholderData: false })).toBe(true)
-    expect(threadIsUnknown({ data: [], isPlaceholderData: true })).toBe(true)
-    expect(threadIsUnknown({ data: [], isPlaceholderData: false })).toBe(false)
+  const q = (over: Partial<Parameters<typeof threadIsUnknown>[0]>) => ({
+    data: undefined as unknown,
+    isPlaceholderData: false,
+    isError: false,
+    ...over,
+  })
+
+  it('is true while the current page has not arrived: still loading, or only the previous page kept as placeholder', () => {
+    expect(threadIsUnknown(q({}))).toBe(true)
+    expect(threadIsUnknown(q({ data: [], isPlaceholderData: true }))).toBe(true)
+    expect(threadIsUnknown(q({ data: [] }))).toBe(false)
+  })
+
+  it('a first load that FAILED is not "not yet known" but "failed": the picker is not locked (the list has its own retry)', () => {
+    expect(threadIsUnknown(q({ isError: true }))).toBe(false)
   })
 })

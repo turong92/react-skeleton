@@ -116,7 +116,7 @@ describe("isAuthorProfileFormError — which errors the app's global toast must 
       expect(isAuthorProfileFormError(err({ code }))).toBe(true)
   })
 
-  it('a 400 name field error is NOT claimed — other forms (nickname) share that shape and the app already filters it by meta.quietStatuses', () => {
+  it("a 400 name field error is NOT claimed — other forms (nickname) share that shape; the app's own validation-failure filter (sample: COMMON.VALIDATION_FAILED in errorToast.ts) already keeps those out of the toast", () => {
     expect(
       isAuthorProfileFormError(
         err({ errors: [{ field: 'name', code: 'Required', message: 'x' }] }),
@@ -130,17 +130,21 @@ describe("isAuthorProfileFormError — which errors the app's global toast must 
   })
 })
 
-describe('shouldReuseIdempotencyKey — a resend of the same submission keeps its key only when the first try may or may not have landed', () => {
-  it('network failure (status 0), a server error (5xx) or a non-API throw: yes — the create might have happened', () => {
+describe('shouldReuseIdempotencyKey — a resend keeps its key only when the first try may have landed unseen', () => {
+  it('only a network failure (status 0): the request may have reached the server while the answer was lost', () => {
     expect(shouldReuseIdempotencyKey(err({ code: 'CLIENT.NETWORK_ERROR', status: 0 }))).toBe(true)
-    expect(shouldReuseIdempotencyKey(err({ code: 'COMMON.INTERNAL', status: 503 }))).toBe(true)
-    expect(shouldReuseIdempotencyKey(new Error('offline'))).toBe(true)
   })
 
-  it('a definite answer (4xx — name taken, limit, validation): no — the next try is a new submission', () => {
+  it('a server error (5xx) is an answer too: the next try is a new submission with a new key', () => {
+    expect(shouldReuseIdempotencyKey(err({ code: 'COMMON.INTERNAL', status: 503 }))).toBe(false)
+    expect(shouldReuseIdempotencyKey(err({ code: 'COMMON.INTERNAL', status: 500 }))).toBe(false)
+  })
+
+  it('so is a 4xx (name taken, limit, validation), and so is anything that is not an API error', () => {
     expect(
       shouldReuseIdempotencyKey(err({ code: ErrorCodes.AUTHOR_PROFILE_NAME_TAKEN, status: 409 })),
     ).toBe(false)
     expect(shouldReuseIdempotencyKey(err({ status: 400 }))).toBe(false)
+    expect(shouldReuseIdempotencyKey(new Error('offline'))).toBe(false)
   })
 })

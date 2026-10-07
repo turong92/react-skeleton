@@ -1,13 +1,12 @@
 import type { QueryKey } from '@tanstack/react-query'
-import { Alert, Button, ConfirmDialog, Field, Input, Spinner } from '@skeleton/ui'
-import { newIdempotencyKey } from '@skeleton/api-client'
-import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
+import { Alert, Button, ConfirmDialog, Spinner } from '@skeleton/ui'
+import { useEffect, useRef, useState } from 'react'
 import type { AuthorProfileApi } from './authorProfileApi'
-import { nameProblem, profileFormProblem, shouldReuseIdempotencyKey } from './errors'
+import { AuthorProfileAddForm } from './AuthorProfileAddForm'
+import { profileFormProblem } from './errors'
 import {
   useAuthorProfileConfig,
   useAuthorProfiles,
-  useCreateAuthorProfile,
   useRemoveAuthorProfile,
   useRenameAuthorProfile,
 } from './hooks'
@@ -31,7 +30,7 @@ export type AuthorProfileManagerProps = {
  * 서버의 답(NAME_TAKEN · LIMIT_REACHED · RATE_LIMITED · 이름 칸 오류)은 폼이 제자리에서 말한다 — 앱의 전역 오류 토스트는 `isAuthorProfileFormError` 인 것을 건너뛴다.
  * 상한(`config.maxPerAccount`)에 닿으면 추가가 꺼지고 이유를 먼저 알려 준다(그 문장은 추가 칸 · 단추의 `aria-describedby`). 계정 id · 프로필 id 는 화면 어디에도 없다.
  * 이름 바꾸기는 한 번에 한 줄만 연다(오류 · 진행이 다른 줄로 새지 않는다). 포커스: 저장 · 취소 뒤에는 그 줄의 「이름 바꾸기」, 삭제 뒤에는 그 자리의 다음 줄(없으면 새 이름 칸).
- * 추가에 실패한 같은 이름을 다시 보낼 때(네트워크 · 5xx)는 같은 `Idempotency-Key` 를 쓴다 — 첫 시도가 닿았어도 프로필이 둘 생기지 않는다.
+ * 추가 폼은 `AuthorProfileAddForm`(네트워크 실패 뒤 같은 이름을 다시 보낼 때 같은 `Idempotency-Key`).
  */
 export function AuthorProfileManager({
   api,
@@ -41,19 +40,13 @@ export function AuthorProfileManager({
   const labels = mergeLabels(given)
   const list = useAuthorProfiles(api)
   const configQuery = useAuthorProfileConfig(api)
-  const create = useCreateAuthorProfile(api)
   const rename = useRenameAuthorProfile(api, alsoInvalidate)
   const remove = useRemoveAuthorProfile(api, alsoInvalidate)
-  const [name, setName] = useState('')
-  const [local, setLocal] = useState<string>()
   // 확인 창은 한 번 열린 뒤로 계속 달아 둔다(닫을 때 포커스가 연 단추로 돌아가려면 창이 남아 있어야 한다)
   const [target, setTarget] = useState<AuthorProfile>()
   const [confirming, setConfirming] = useState(false)
   const [editingId, setEditingId] = useState<string>()
   const rootRef = useRef<HTMLDivElement>(null)
-  const limitId = useId()
-  // 같은 제출을 다시 보낼 때의 키 — 성공하거나 4xx 로 확정되거나 이름이 바뀌면 버린다
-  const retry = useRef<{ name: string; key: string }>(undefined)
   // 삭제 뒤 포커스를 옮길 자리(지운 줄이 있던 순서) — 목록이 갱신돼 그 줄이 사라진 뒤에 한 번 쓴다
   const focusAfterRemoval = useRef<{ id: string; index: number }>(undefined)
 
@@ -92,26 +85,7 @@ export function AuthorProfileManager({
     editingId !== undefined && !profiles.some((profile) => profile.id === editingId)
       ? profileFormProblem(rename.error, labels, config)
       : undefined
-  const problem = profileFormProblem(create.error, labels, config)
   const removeProblem = profileFormProblem(remove.error, labels, config)
-
-  async function add(event: FormEvent) {
-    event.preventDefault()
-    const found = nameProblem(name, labels, config!)
-    setLocal(found)
-    if (found) return
-    const trimmed = name.trim()
-    const key = retry.current?.name === trimmed ? retry.current.key : newIdempotencyKey()
-    retry.current = { name: trimmed, key }
-    try {
-      await create.mutateAsync({ name: trimmed, idempotencyKey: key })
-      retry.current = undefined
-      setName('')
-    } catch (error) {
-      // 서버의 답은 create.error 로 폼이 말한다 — 닿았는지 모를 때만 같은 키로 다시 보낸다
-      if (!shouldReuseIdempotencyKey(error)) retry.current = undefined
-    }
-  }
 
   async function confirmRemove() {
     if (!target) return
@@ -143,6 +117,7 @@ export function AuthorProfileManager({
               onClose={() => setEditingId(undefined)}
               onDelete={(picked) => {
                 remove.reset()
+                rename.reset() // 사라진 줄의 낡은 오류 알림을 거둔다
                 focusAfterRemoval.current = {
                   id: picked.id,
                   index: profiles.findIndex((p) => p.id === picked.id),
@@ -154,50 +129,13 @@ export function AuthorProfileManager({
           ))}
         </ul>
       )}
-      <form className={styles.form} onSubmit={add} aria-label={labels.add}>
-        {atLimit && (
-          <p id={limitId} className={styles.note}>
-            {labels.limitReached(config.maxPerAccount)}
-          </p>
-        )}
-        {problem?.where === 'form' && !atLimit && <Alert tone="danger">{problem.message}</Alert>}
-        <Field
-          label={labels.nameLabel}
-          hint={labels.nameHint(config.nameMaxLength)}
-          error={local ?? (problem?.where === 'name' ? problem.message : undefined)}
-        >
-          {(control) => (
-            <Input
-              {...control}
-              data-new-name=""
-              aria-describedby={
-                [control['aria-describedby'], atLimit ? limitId : undefined]
-                  .filter(Boolean)
-                  .join(' ') || undefined
-              }
-              autoComplete="off"
-              disabled={atLimit}
-              value={name}
-              onChange={(event) => {
-                setName(event.target.value)
-                setLocal(undefined)
-                if (create.error) create.reset()
-              }}
-            />
-          )}
-        </Field>
-        <div>
-          <Button
-            type="submit"
-            disabled={atLimit}
-            aria-describedby={atLimit ? limitId : undefined}
-            loading={create.isPending}
-            loadingLabel=""
-          >
-            {create.isPending ? labels.adding : labels.add}
-          </Button>
-        </div>
-      </form>
+      <AuthorProfileAddForm
+        api={api}
+        labels={labels}
+        config={config}
+        atLimit={atLimit}
+        onAdd={() => rename.reset()}
+      />
       {target && (
         <ConfirmDialog
           open={confirming}

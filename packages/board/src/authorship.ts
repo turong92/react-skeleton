@@ -61,11 +61,16 @@ export function lastOwnAuthorId(
 }
 
 /**
- * 이 글의 댓글을 아직 모르는가 — 현재 쪽의 댓글이 도착하기 전(불러오는 중 · 첫 불러오기 실패로 데이터 없음)이거나, 쪽 · 정렬을 바꾸는 사이
- * 이전 쪽 데이터가 자리를 지키는 중(`isPlaceholderData`)이면 true. 이때 선택기는 처음 값을 확정하지 않는다.
+ * 이 글의 댓글을 **아직** 모르는가 — 현재 쪽의 댓글이 오는 중이거나(첫 불러오기), 쪽 · 정렬을 바꾸는 사이 이전 쪽 데이터가 자리를 지키는 중(`isPlaceholderData`)이면 true.
+ * 이때 선택기는 처음 값을 확정하지 않고 잠긴다. **첫 불러오기가 실패해 데이터가 없는 것은 「모름」이 아니라 「실패」**라 false 다 —
+ * 선택기는 잠기지 않고(수동 선택 · 기기 기억으로 채움 가능, 스레드를 모르니 「이 스레드에서 쓴 프로필」 확인은 없다), 댓글 영역의 「다시 시도」가 목록을 다시 받는다.
  */
-export function threadIsUnknown(query: { data: unknown; isPlaceholderData: boolean }): boolean {
-  return query.data === undefined || query.isPlaceholderData
+export function threadIsUnknown(query: {
+  data: unknown
+  isPlaceholderData: boolean
+  isError: boolean
+}): boolean {
+  return query.isPlaceholderData || (query.data === undefined && !query.isError)
 }
 
 /** `authorPicker` 렌더 함수가 받는 것 — 보드는 선택기가 무엇인지 모른다(작성자 프로필이든 무엇이든 값은 문자열 id 하나) */

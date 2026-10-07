@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState, type ComponentProps } from 'react'
 import { expect, fn, screen, waitFor, within } from 'storybook/test'
 import { BoardComments } from './BoardComments'
+import type { AuthorPicker } from './authorship'
 import type { CommentInput } from './types'
 import { demoAuthorPicker } from './stories/demoAuthorPicker'
 import { createFakeBoard, type FakeBoardOptions } from './stories/fakeBoard'
@@ -15,6 +16,8 @@ function Demo({
   fake,
   setup,
   watchCreate,
+  hold,
+  failFirstList,
   ...rest
 }: {
   fake?: FakeBoardOptions
@@ -22,12 +25,30 @@ function Demo({
   setup?: (board: ReturnType<typeof createFakeBoard>) => void
   /** 댓글 만들기 요청이 서버로 갈 때마다 입력을 알린다(spy) */
   watchCreate?: (input: CommentInput) => void
+  /**
+   * 댓글 목록 요청을 붙잡아 둔다 — `first` 는 첫 요청, `later` 는 첫 요청 뒤의 요청들(쪽 · 정렬 바꾸기). 스토리가 `document` 에 `story:release` 를 보내면 풀린다
+   * (시간이 아니라 신호로 — 느린 기계에서도 같은 순서)
+   */
+  hold?: 'first' | 'later'
+  /** 첫 목록 요청을 서버 오류로 실패시킨다(첫 불러오기 실패) */
+  failFirstList?: boolean
 } & Partial<ComponentProps<typeof BoardComments>>) {
   const [{ api, board }] = useState(() => {
     const made = createFakeBoard(fake)
     setup?.(made)
+    let listCalls = 0
+    const gate = () =>
+      new Promise<void>((resolve) =>
+        document.addEventListener('story:release', () => resolve(), { once: true }),
+      )
     const wrapped = {
       ...made.api,
+      listComments: async (...args: Parameters<typeof made.api.listComments>) => {
+        const call = listCalls++
+        if (failFirstList && call === 0) throw new Error('offline')
+        if ((hold === 'first' && call === 0) || (hold === 'later' && call > 0)) await gate()
+        return made.api.listComments(...args)
+      },
       createComment: (...args: Parameters<typeof made.api.createComment>) => {
         watchCreate?.(args[2])
         return made.api.createComment(...args)
@@ -387,7 +408,8 @@ export const MineKeepsEditAndDeleteWhenTheAuthorIsNotTheAccount: Story = {
 /** 이 글에 내가 이미 쓴 댓글(서버가 깔아 둔 `mine`)의 작성자가 선택기의 처음 값이다(`lastOwnAuthorId`) — 아무것도 누르기 전에. 댓글을 받는 동안은 확정하지 않는다 */
 export const PickerStartsOnTheAuthorOfMyEarlierComment: Story = {
   args: {
-    fake: { ...profileServer, delayMs: 300 },
+    fake: profileServer,
+    hold: 'first',
     authorPicker: demoAuthorPicker(),
     setup: (board) => {
       board.newComment(3, 'Written earlier as Bea', null, 'prf_b')
@@ -396,6 +418,7 @@ export const PickerStartsOnTheAuthorOfMyEarlierComment: Story = {
   play: async ({ canvas }) => {
     // 받는 중: 아직 모른다 — 비어 있다
     await expect(canvas.getByRole('combobox', { name: 'Post as' })).toHaveDisplayValue('Choose…')
+    document.dispatchEvent(new Event('story:release'))
     await canvas.findByText('Written earlier as Bea', { selector: 'p' })
     await waitFor(() =>
       expect(canvas.getByRole('combobox', { name: 'Post as' })).toHaveDisplayValue('Bea'),
@@ -412,7 +435,8 @@ const spyingPicker = demoAuthorPicker()
 export const PickerNeverPassesThroughTheFallbackWhileLoading: Story = {
   beforeEach: () => pickedSpy.mockClear(),
   args: {
-    fake: { ...profileServer, delayMs: 300 },
+    fake: profileServer,
+    hold: 'first',
     postAuthor: { authorId: 'prf_a', mine: true },
     setup: (board) => {
       board.newComment(3, 'Written earlier as Bea', null, 'prf_b')
@@ -429,6 +453,8 @@ export const PickerNeverPassesThroughTheFallbackWhileLoading: Story = {
   play: async ({ canvas }) => {
     const picker = () => canvas.getByRole('combobox', { name: 'Post as' })
     await expect(picker()).toHaveDisplayValue('Choose…') // 받는 중: 비어 있다
+    await expect(pickedSpy).not.toHaveBeenCalled() // 글 작성자(Ann)로도 채우지 않았다
+    document.dispatchEvent(new Event('story:release'))
     await canvas.findByText('Written earlier as Bea', { selector: 'p' })
     await waitFor(() => expect(picker()).toHaveDisplayValue('Bea'))
     await expect(pickedSpy).toHaveBeenCalledTimes(1)
@@ -488,5 +514,55 @@ export const PickerIsNotDrawnAndInputStaysBodyOnlyWithoutAuthorRequired: Story =
     await expect(
       (args.watchCreate as ReturnType<typeof fn>).mock.calls.at(-1)?.[0],
     ).not.toHaveProperty('authorId')
+  },
+}
+
+/** 배선을 고정하는 표지 — 선택기가 받은 `threadLoading` 을 DOM 에 드러낸다(선택기 안쪽은 보드가 모른다) */
+const flagged = demoAuthorPicker()
+const flaggedPicker: AuthorPicker = (args) => (
+  <span data-thread-loading={String(args.threadLoading)}>{flagged(args)}</span>
+)
+const loadingFlag = (root: HTMLElement) =>
+  root.querySelector('[data-thread-loading]')?.getAttribute('data-thread-loading')
+
+/** 쪽 · 정렬을 바꾸는 사이 이전 쪽이 자리를 지키는 동안(placeholder)은 「아직 모름」이다 — 받는 중 표지가 켜졌다 꺼진다(`isPending` 만 보면 이 순간을 놓친다) */
+export const PlaceholderPageCountsAsStillLoading: Story = {
+  args: { fake: profileServer, hold: 'later', authorPicker: flaggedPicker },
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    await canvas.findByText('Spaces, always.')
+    await waitFor(() => expect(loadingFlag(canvasElement)).toBe('false'))
+    await userEvent.selectOptions(canvas.getByRole('combobox', { name: 'Sort comments' }), 'Latest')
+    await waitFor(() => expect(loadingFlag(canvasElement)).toBe('true')) // 이전 쪽이 보이는 채
+    await expect(canvas.getByText('Spaces, always.')).toBeVisible()
+    document.dispatchEvent(new Event('story:release'))
+    await waitFor(() => expect(loadingFlag(canvasElement)).toBe('false'))
+  },
+}
+
+/** 첫 불러오기가 **실패**했다 — 「아직 모름」이 아니라 「실패」라 선택기는 잠기지 않는다(수동으로 고를 수 있다). 목록은 「다시 시도」를 가진다 */
+export const FailedFirstLoadDoesNotLockThePicker: Story = {
+  args: { fake: profileServer, failFirstList: true, authorPicker: flaggedPicker },
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    await expect(await canvas.findByRole('button', { name: 'Try again' })).toBeVisible()
+    await expect(loadingFlag(canvasElement)).toBe('false')
+    const picker = canvas.getByRole('combobox', { name: 'Post as' })
+    await expect(picker).toBeEnabled()
+    await userEvent.selectOptions(picker, 'Ann')
+    await expect(picker).toHaveDisplayValue('Ann')
+  },
+}
+
+/** 선택기를 꽂지 않았는데 서버가 필수(`authorRequired`)로 하면 — 클라이언트가 막지 않는다(고를 수단이 없는 막다른 길). 서버가 400 으로 답하고 쓴 글은 남는다 */
+export const AuthorRequiredWithoutAPickerIsLeftToTheServer: Story = {
+  args: { fake: profileServer, watchCreate: fn() },
+  play: async ({ canvas, userEvent, args }) => {
+    await canvas.findByText('Spaces, always.')
+    await expect(canvas.queryByRole('combobox', { name: 'Post as' })).toBeNull()
+    const field = canvas.getByRole('textbox', { name: 'Write a comment' })
+    await userEvent.type(field, 'No picker')
+    await userEvent.click(canvas.getByRole('button', { name: 'Post comment' }))
+    await waitFor(() => expect(args.watchCreate).toHaveBeenCalledWith({ body: 'No picker' }))
+    await expect(canvas.queryByText('Choose who to post as.')).toBeNull()
+    await expect(field).toHaveValue('No picker')
   },
 }

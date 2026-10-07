@@ -16,21 +16,26 @@ const cy = profile('prf_c', 'Cy', '0003')
 const storage = createMemoryStorage()
 const onChange = fn()
 
-/** 시간이 지나며 바뀌는 props — 댓글을 다 받음(`settleAfterMs`) · 보내는 중(`disableAfterMs`) */
+/**
+ * 밖에서 바뀌는 props — 시간이 아니라 **신호**로 바꾼다(스토리가 `document` 에 `story:settle`(댓글을 다 받음) · `story:lock`(보내는 중)을 보낸다).
+ * 이 신호는 포커스 · 누르기가 아니라서 떠 있는 확인을 건드리지 않는다.
+ */
 function Changing({
-  settleAfterMs,
-  disableAfterMs,
+  loadingAtStart,
   ...rest
-}: ComponentProps<typeof PickerDemo> & { settleAfterMs?: number; disableAfterMs?: number }) {
-  const [loading, setLoading] = useState(settleAfterMs !== undefined)
+}: ComponentProps<typeof PickerDemo> & { loadingAtStart?: boolean }) {
+  const [loading, setLoading] = useState(loadingAtStart === true)
   const [sending, setSending] = useState(false)
   useEffect(() => {
-    const timers = [
-      settleAfterMs !== undefined && setTimeout(() => setLoading(false), settleAfterMs),
-      disableAfterMs !== undefined && setTimeout(() => setSending(true), disableAfterMs),
-    ]
-    return () => timers.forEach((timer) => timer && clearTimeout(timer))
-  }, [settleAfterMs, disableAfterMs])
+    const settle = () => setLoading(false)
+    const lock = () => setSending(true)
+    document.addEventListener('story:settle', settle)
+    document.addEventListener('story:lock', lock)
+    return () => {
+      document.removeEventListener('story:settle', settle)
+      document.removeEventListener('story:lock', lock)
+    }
+  }, [])
   return <PickerDemo {...rest} threadLoading={loading} disabled={sending} />
 }
 
@@ -62,15 +67,15 @@ export const ThisThreadBeatsTheDeviceMemory: Story = {
   },
 }
 
-/** 댓글을 받는 동안(`threadLoading`)은 처음 값을 확정하지 않는다 — 「아직 모름」이 「쓴 적 없음」이 아니라서 기기 기억으로 넘어가지도 않는다. 받고 나면(`threadLoading` 꺼짐) 스레드 프로필이 이긴다 */
 /** 댓글을 받는 중에는 확정하지 않는다 — 기기 기억이 있어도 비어 있고, 단추는 잠겨 「불러오는 중」을 말한다. 다 받으면 이 스레드의 프로필이 이긴다(기억을 거치지 않는다) */
 export const WaitsWhileTheThreadIsLoadingThenTheThreadWins: Story = {
-  args: { remembered: 'prf_b', threadAuthorId: 'prf_a', settleAfterMs: 400 },
+  args: { remembered: 'prf_b', threadAuthorId: 'prf_a', loadingAtStart: true },
   play: async ({ canvas }) => {
     const waiting = await canvas.findByRole('button', { name: 'Loading this thread' })
     await expect(waiting).toHaveAttribute('aria-disabled', 'true')
     await expect(waiting).toHaveTextContent('Loading this thread')
     await expect(onChange).not.toHaveBeenCalled() // 기기 기억(Bea)으로 넘어가지 않았다
+    document.dispatchEvent(new Event('story:settle')) // 댓글을 다 받았다
     await expect(await canvas.findByRole('button', { name: /Writing as Ann#0001/ })).toBeVisible()
     await expect(onChange).toHaveBeenCalledTimes(1)
     await expect(onChange).toHaveBeenCalledWith('prf_a')
@@ -109,13 +114,13 @@ export const SwitchingAwayFromTheThreadProfileAsksOnce: Story = {
     // 유지
     await userEvent.click(canvas.getByRole('button', { name: 'Keep Ann#0001' }))
     await expect(canvas.queryByRole('status')).toBeNull()
-    await expect(canvas.getByRole('button', { name: /Writing as Ann#0001/ })).toBeVisible()
+    await expect(canvas.getByRole('button', { name: /Writing as Ann#0001/ })).toHaveFocus()
 
     // 다시 골라 확인
     await userEvent.click(canvas.getByRole('button', { name: /Writing as Ann#0001/ }))
     await userEvent.click(await canvas.findByRole('menuitemradio', { name: 'Bea#0002' }))
     await userEvent.click(await canvas.findByRole('button', { name: 'Use Bea#0002' }))
-    await expect(await canvas.findByRole('button', { name: /Writing as Bea#0002/ })).toBeVisible()
+    await expect(await canvas.findByRole('button', { name: /Writing as Bea#0002/ })).toHaveFocus()
     await expect(canvas.queryByRole('status')).toBeNull()
     await expect(Object.values(storage.dump())).toEqual(['prf_b'])
   },
@@ -144,7 +149,7 @@ export const KeepNamesTheCurrentValueNotTheThreadProfile: Story = {
     await expect(canvas.queryByRole('button', { name: 'Keep Ann#0001' })).toBeNull()
     await userEvent.click(canvas.getByRole('button', { name: 'Keep Cy#0003' }))
     await expect(canvas.queryByRole('status')).toBeNull()
-    await expect(canvas.getByRole('button', { name: /Writing as Cy#0003/ })).toBeVisible()
+    await expect(canvas.getByRole('button', { name: /Writing as Cy#0003/ })).toHaveFocus()
   },
 }
 
@@ -158,7 +163,8 @@ export const NoticeIsAnnouncedOnceAndEscapeClosesIt: Story = {
     await expect(await canvas.findByRole('status')).toBeVisible()
     await expect(canvas.getAllByRole('status')).toHaveLength(1)
     await expect(canvas.queryByRole('group')).toBeNull()
-    canvas.getByRole('button', { name: 'Use Bea#0002' }).focus()
+    // 메뉴에서 고른 직후의 실제 포커스(선택기 단추)에서 Esc — 확인 줄로 포커스를 옮기지 않는다
+    await expect(trigger).toHaveFocus()
     await userEvent.keyboard('{Escape}')
     await waitFor(() => expect(canvas.queryByRole('status')).toBeNull())
     await expect(trigger).toHaveFocus()
@@ -181,12 +187,13 @@ export const NoticeClosesWhenFocusLeaves: Story = {
 
 /** 확인이 떠 있는데 보내는 중(`disabled`)이 되면 닫힌다 — 잠긴 폼 옆에 응답할 수 없는 질문이 남지 않는다 */
 export const NoticeClosesWhenTheFormGetsLocked: Story = {
-  args: { threadAuthorId: 'prf_a', disableAfterMs: 500 },
+  args: { threadAuthorId: 'prf_a' },
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(await canvas.findByRole('button', { name: /Writing as Ann#0001/ }))
     await userEvent.click(await canvas.findByRole('menuitemradio', { name: 'Bea#0002' }))
     await expect(await canvas.findByRole('status')).toBeVisible()
-    await waitFor(() => expect(canvas.queryByRole('status')).toBeNull(), { timeout: 3000 })
+    document.dispatchEvent(new Event('story:lock')) // 보내는 중
+    await waitFor(() => expect(canvas.queryByRole('status')).toBeNull())
     await expect(canvas.getByRole('button', { name: /Writing as Ann#0001/ })).toHaveAttribute(
       'aria-disabled',
       'true',

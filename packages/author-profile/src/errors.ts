@@ -73,18 +73,17 @@ export function profileFormProblem(
 
 /**
  * 폼이 제자리에서 말하는 오류인가 — 앱의 전역 토스트가 건너뛰는 데 쓴다. **`AUTHOR_PROFILE.` 코드만**이다:
- * 이름 칸의 400 검증 오류는 닉네임 같은 다른 폼과 같은 모양이라 여기서 가로채지 않는다(앱이 이미 `meta.quietStatuses` 로 400 을 조용히 한다).
+ * 이름 칸의 400 검증 오류는 닉네임 같은 다른 폼과 같은 모양이라 여기서 가로채지 않는다 — 그것은 앱이 이미 거른다(sample 은 `apps/sample/src/app/errorToast.ts` 의
+ * `COMMON.VALIDATION_FAILED` 필터. 다른 앱은 자기 전역 핸들러가 같은 일을 하는지 확인한다). 이 패키지는 뮤테이션에 `meta` 를 싣지 않는다.
  */
 export function isAuthorProfileFormError(error: unknown): boolean {
   return error instanceof ApiRequestError && error.apiError.code.startsWith('AUTHOR_PROFILE.')
 }
 
 /**
- * 같은 제출을 다시 보낼 때 `Idempotency-Key` 를 그대로 쓸까 — 첫 시도가 서버에 닿았는지 모를 때(네트워크 실패 · 5xx · API 오류가 아닌 던짐)만.
- * 4xx 는 서버가 확정해 답한 것이라 다음 시도는 새 제출이다(상한 · 이름 겹침이 풀린 뒤 같은 이름을 다시 만들 수 있다).
+ * 같은 제출을 다시 보낼 때 `Idempotency-Key` 를 그대로 쓸까 — **네트워크 실패(status 0)만**: 요청이 서버에 닿았는데 답을 잃었을 수 있다.
+ * 5xx · 4xx 는 서버가 답한 것이라 다음 시도는 새 제출이다(상한 · 이름 겹침이 풀린 뒤 같은 이름을 다시 만들 수 있다). API 오류가 아닌 던짐도 새 키.
  */
 export function shouldReuseIdempotencyKey(error: unknown): boolean {
-  if (!(error instanceof ApiRequestError)) return true
-  const { status } = error.apiError
-  return status === 0 || status >= 500
+  return error instanceof ApiRequestError && error.apiError.status === 0
 }

@@ -9,6 +9,7 @@ import {
   openBoard,
   openPost,
   postComment,
+  pressReaction,
   reaction,
   replyTo,
   signInAs,
@@ -71,9 +72,9 @@ describe('Board — posts, nested comments and typed reactions against the real 
   it('reacts to the post: 좋아요, then 공감 (an extra type the server reports) — counts follow and survive a reload', async () => {
     const post = article(page)
     await pwExpect(post.getByRole('group', { name: ko('board.reactions.group') })).toBeVisible()
-    await reaction(post, 'LIKE', 0).click()
+    await pressReaction(page, reaction(post, 'LIKE', 0))
     await pwExpect(reaction(post, 'LIKE', 1)).toHaveAttribute('aria-pressed', 'true')
-    await reaction(post, 'EMPATHY', 0).click()
+    await pressReaction(page, reaction(post, 'EMPATHY', 0))
     await pwExpect(reaction(post, 'EMPATHY', 1)).toHaveAttribute('aria-pressed', 'true')
     // SINGLE 이면 옮겨 간 것(좋아요 0), PER_TYPE 이면 둘 다 1
     await pwExpect(reaction(post, 'LIKE', single ? 0 : 1)).toBeVisible()
@@ -81,9 +82,9 @@ describe('Board — posts, nested comments and typed reactions against the real 
     await page.reload()
     await pwExpect(reaction(article(page), 'EMPATHY', 1)).toHaveAttribute('aria-pressed', 'true')
     // 다시 누르면 취소
-    await reaction(article(page), 'EMPATHY', 1).click()
+    await pressReaction(page, reaction(article(page), 'EMPATHY', 1))
     await pwExpect(reaction(article(page), 'EMPATHY', 0)).toHaveAttribute('aria-pressed', 'false')
-    await reaction(article(page), 'EMPATHY', 0).click()
+    await pressReaction(page, reaction(article(page), 'EMPATHY', 0))
     await pwExpect(reaction(article(page), 'EMPATHY', 1)).toHaveAttribute('aria-pressed', 'true')
   })
 
@@ -108,9 +109,9 @@ describe('Board — posts, nested comments and typed reactions against the real 
 
   it('reacts to a comment, and the board list shows the post totals (comments 3, reactions 1)', async () => {
     const first = commentOf(page, FIRST)
-    await reaction(first, 'LIKE', 0).click()
+    await pressReaction(page, reaction(first, 'LIKE', 0))
     await pwExpect(reaction(first, 'LIKE', 1)).toHaveAttribute('aria-pressed', 'true')
-    await reaction(first, 'EMPATHY', 0).click()
+    await pressReaction(page, reaction(first, 'EMPATHY', 0))
     await pwExpect(reaction(first, 'EMPATHY', 1)).toHaveAttribute('aria-pressed', 'true')
 
     await page.getByRole('link', { name: `← ${ko('board.back')}` }).click()
@@ -119,10 +120,8 @@ describe('Board — posts, nested comments and typed reactions against the real 
     await row.waitFor() // 목록이 그려진 뒤에 머리글을 읽는다
     const headers = (await page.getByRole('columnheader').allInnerTexts()).map((h) => h.trim())
     const cell = (header: string) => row.getByRole('cell').nth(headers.indexOf(header) - 1) // 첫 열(제목)은 th scope=row
-    await pwExpect(cell(ko('board.list.comments'))).toHaveText('3', { timeout: 15_000 }) // 댓글
-    await pwExpect(cell(ko('board.list.reactions'))).toHaveText(single ? '1' : '2', {
-      timeout: 15_000,
-    }) // 반응(글의 공감 — PER_TYPE 이면 좋아요도 남아 있다)
+    await pwExpect(cell(ko('board.list.comments'))).toHaveText('3') // 댓글
+    await pwExpect(cell(ko('board.list.reactions'))).toHaveText(single ? '1' : '2') // 반응(글의 공감 — PER_TYPE 이면 좋아요도 남아 있다)
   })
 
   it('the author edits the post and deletes own comment after a confirmation', async () => {

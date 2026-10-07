@@ -126,14 +126,61 @@ describe('a mailed sign-in link is redeemed exactly once', () => {
     await acceptLegalGate(page, apiUrl)
     await pwExpect(heading(/안녕하세요/)).toBeVisible()
     await pwExpect(page.getByText(auth.magicLinkInvalidTitle)).toHaveCount(0)
+    await page.waitForLoadState('networkidle') // 늦게 나가는 두 번째 호출이 있다면 여기서 잡힌다
+    await new Promise((resolve) => setTimeout(resolve, 1_000))
     page.removeAllListeners('response')
     pwExpect(statuses).toEqual([200]) // 두 번째 호출(410)이 없다
   })
 })
 
-describe('the nickname reminder band', () => {
-  // 백엔드는 새 계정마다 닉네임을 만들어 준다(`user-1a2b3c`) — 가입 · 링크 로그인 · 소셜 어느 경로로도 닉네임 없는 계정을 화면이나 API 로 준비할 수 없다.
-  // 띠(`NicknameNudge`)와 대화상자는 스토리 · 단위 테스트(`apps/sample` 의 NicknameNudge.test.tsx)가 맡는다
-  it.skip('a signed-in account without a nickname sees the band and can set one in place', () =>
-    undefined)
+describe('an account made without a nickname (a mailed sign-in link) is asked for one — in place, never blocked', () => {
+  // 샘플 백엔드는 닉네임 자동 생성을 껐다(`fallback: NONE`) — 링크로 가입한 계정은 이름 없이 만들어진다. 앞의 링크 로그인 테스트의 그 계정으로 이어 간다
+  const reminder = () => page.getByRole('region', { name: ko('nickname.bannerLabel') })
+
+  it('the band is conspicuous (a filled primary button) and the dialog sets the nickname in place — the band goes away and the greeting uses it', async () => {
+    await pwExpect(reminder()).toBeVisible()
+    await pwExpect(
+      reminder().getByRole('button', { name: ko('nickname.nudgeAction') }),
+    ).toBeVisible()
+    await reminder()
+      .getByRole('button', { name: ko('nickname.nudgeAction') })
+      .click()
+    const dialog = page.getByRole('dialog')
+    await pwExpect(dialog.getByRole('heading', { name: ko('nickname.dialogTitle') })).toBeVisible()
+    // 비우고 저장하면 이유를 말한다
+    await dialog.getByRole('button', { name: ko('nickname.save') }).click()
+    await pwExpect(dialog.getByText(auth.problemDisplayNameMissing)).toBeVisible()
+    const chosen = `링크${String(Date.now()).slice(-6)}`
+    await dialog.getByLabel(auth.displayName).fill(chosen)
+    await dialog.getByRole('button', { name: ko('nickname.save') }).click()
+    await pwExpect(dialog).toHaveCount(0)
+    await pwExpect(reminder()).toHaveCount(0)
+    await pwExpect(heading(new RegExp(`안녕하세요, ${chosen}`))).toBeVisible()
+  })
+
+  it('writing on the board asks for the nickname first (the dialog), and after it is set the editor opens', async () => {
+    const second = `e2e-nonick-${stamp}@example.com`
+    const requested = await fetch(`${apiUrl}/api/v1/auth/magic-link/request`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: second }),
+    })
+    pwExpect(requested.status).toBe(202)
+    const link = await waitForLink(mailUrl, second, 'magic-link', { seen })
+    await page.goto(baseUrl)
+    await page.evaluate(() => window.localStorage.clear())
+    await page.goto(`${baseUrl}${link.path}`)
+    await acceptLegalGate(page, apiUrl)
+    await pwExpect(heading(/안녕하세요/)).toBeVisible()
+    await openBoard(page)
+    await page.getByRole('button', { name: ko('board.write') }).click()
+    const dialog = page.getByRole('dialog')
+    await pwExpect(dialog.getByRole('heading', { name: ko('nickname.dialogTitle') })).toBeVisible()
+    await pwExpect(page).toHaveURL(/\/board$/) // 글쓰기 화면으로 넘어가지 않았다
+    await dialog.getByLabel(auth.displayName).fill(`게이트${String(Date.now()).slice(-6)}`)
+    await dialog.getByRole('button', { name: ko('nickname.save') }).click()
+    await pwExpect(dialog).toHaveCount(0)
+    await page.getByRole('button', { name: ko('board.write') }).click()
+    await pwExpect(page.getByLabel(new RegExp(ko('board.form.title')))).toBeVisible()
+  })
 })

@@ -86,6 +86,17 @@ export const reaction = (scope: Locator, type: 'LIKE' | 'DISLIKE' | 'EMPATHY', c
     .getByRole('button', { name: new RegExp(`^${ko(`board.reactions.${type}`)}\\s*${count}$`) })
     .first()
 
+/** 반응 단추를 누르고 서버(PUT · DELETE `/reactions`)의 응답까지 기다린다 — 화면이 낙관적으로 먼저 바뀌므로, 응답 전에 이동 · 새로고침하면 서버 값이 아니라 낙관 값을 본다 */
+export async function pressReaction(page: Page, button: Locator) {
+  const settled = page.waitForResponse(
+    (r) =>
+      /\/reactions$/.test(new URL(r.url()).pathname) &&
+      ['PUT', 'DELETE'].includes(r.request().method()),
+  )
+  await button.click()
+  await settled
+}
+
 export async function postComment(page: Page, text: string) {
   await page.getByRole('textbox', { name: ko('board.comments.newComment') }).fill(text)
   await page.getByRole('button', { name: ko('board.comments.postComment') }).click()

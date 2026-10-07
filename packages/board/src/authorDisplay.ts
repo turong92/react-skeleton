@@ -53,8 +53,10 @@ export function resolveAuthor(
 }
 
 /** 보이지 않게 이름을 갈라 놓는 문자(제로폭 · 서식 · 변형 선택자 · 태그) — 서버가 같은 이름으로 접는 것과 맞춘다 */
+/* eslint-disable no-misleading-character-class -- 일부러 결합 · 변형 문자를 낱개로 지운다(보이지 않는 이름 가름 문자) */
 const INVISIBLE =
   /[\u00AD\u034F\u061C\u115F\u1160\u17B4\u17B5\u180B-\u180F\u200B-\u200F\u202A-\u202E\u2060-\u206F\u3164\uFE00-\uFE0F\uFEFF\uFFA0\u{E0000}-\u{E0FFF}]/gu
+/* eslint-enable no-misleading-character-class */
 
 /** 겹침을 가르는 키 — NFKC(전각 · 반각) + 소문자 + 보이지 않는 문자 제거 + 앞뒤 공백. 서버가 같은 이름으로 접는 `Sumin` / `sumin` 을 같은 이름으로 본다 */
 export function nameKey(name: string): string {

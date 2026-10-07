@@ -26,6 +26,7 @@ const api: AuthApi = {
     throw new Error('unused')
   },
   magicLinkRedeem: unused,
+  cancelDeletion: unused,
 }
 
 describe('RootLayout', () => {

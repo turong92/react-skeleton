@@ -22,6 +22,9 @@ export const koAuthLabels: AuthLabels = {
   errorEmailNotVerified:
     '이메일 인증이 끝나지 않은 계정이에요. 다시 가입하고 메일로 받은 인증번호를 입력해 주세요.',
   errorSuspended: '정지된 계정이에요.',
+  errorDeletionPending: '탈퇴 처리 중인 계정이에요.',
+  errorSuspendedCannotDelete: '정지된 계정은 탈퇴할 수 없어요.',
+  errorRegistrationBlocked: '이 주소(계정)로는 가입할 수 없어요.',
   errorBlocked: '이 계정은 쓸 수 없어요.',
   errorTooManyAttempts: '시도가 너무 많아요. 잠시 뒤에 다시 해 주세요.',
   errorRateLimited: '요청이 너무 많아요. 잠시 뒤에 다시 해 주세요.',
@@ -149,7 +152,7 @@ export const koAuthLabels: AuthLabels = {
   reauthCodeHint: (email) => `본인 확인을 위해 ${email} 로 인증번호 6자리를 보내 드려요.`,
   reauthCodeSend: '인증번호 받기',
   reauthCodeSent: (email) =>
-    `${email} 로 인증번호 6자리를 보냈어요. 30분 동안 쓸 수 있어요 — 누구에게도 알려 주지 마세요.`,
+    `${email} 로 인증번호 6자리를 보냈어요. 10분 동안 쓸 수 있어요 — 누구에게도 알려 주지 마세요.`,
   reauthCodeEntered: '인증번호를 입력했어요 — 아래에서 마무리하세요.',
   reauthCodeExpired: '인증번호가 만료됐거나 다 썼어요. 새로 받아 주세요.',
   reauthProviderHint:
@@ -260,12 +263,25 @@ export const koAuthLabels: AuthLabels = {
   deletePasswordHint: '본인 확인을 위해 비밀번호를 입력해 주세요.',
   deleteButton: '내 계정 삭제',
   deleteDialogTitle: '계정을 삭제할까요?',
-  deleteDialogBody: '모든 기기에서 로그아웃돼요. 직접 되돌릴 수 없어요.',
+  deleteDialogBody: '모든 기기에서 로그아웃되고, 유예 기간이 끝나면 데이터가 지워져요.',
   deleteTypedPhrase: '삭제',
   deleteTypedLabel: '확인하려면 「삭제」를 입력하세요',
   deleteConfirm: '계정 삭제',
   deleteScheduled: (date) => `${date} 에 계정 데이터가 지워질 예정이에요.`,
   deleteDoneAction: '로그아웃',
+  deleteSelfRestoreNote: '기간 안에 다시 로그인하면 탈퇴를 취소할 수 있어요.',
+  deletionPendingTitle: '탈퇴를 취소할까요?',
+  deletionPendingBody: (date) =>
+    date
+      ? `이 계정은 탈퇴 처리 중이에요. ${date}에 완전히 지워져요.`
+      : '이 계정은 탈퇴 처리 중이에요. 유예 기간이 끝나면 완전히 지워져요.',
+  deletionCancelAction: '탈퇴 취소하고 계속 쓰기',
+  deletionLeaveAction: '그대로 두기',
+  deletionNoRestoreTitle: '탈퇴 처리 중인 계정이에요',
+  deletionNoRestoreBody: (date) =>
+    `탈퇴 처리 중이라 로그인할 수 없어요. ${date ? `${date}에 지워져요. ` : ''}되돌리려면 문의해 주세요.`,
+  deletionExpiredTitle: '시간이 지났어요',
+  deletionExpiredBody: '시간이 지났어요. 다시 로그인해 주세요.',
   adminTitle: '계정 관리',
   adminSearch: '이메일로 찾기',
   adminStatusFilter: '상태',

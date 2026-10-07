@@ -44,6 +44,8 @@ export type AccountSettingsProps = {
   timeZones?: string[]
   /** 서버의 삭제 유예 기간(안내 문장) — 기본 30 */
   graceDays?: number
+  /** 서버가 탈퇴 취소(`skeleton.account.deletion.self-restore`)를 켰다 — 삭제 안내에 「기간 안에 다시 로그인하면 취소할 수 있어요」를 더한다. 앱은 서버 설정을 알 때만 켠다(꺼진 서버에서는 거짓이 된다). 기본 false */
+  selfRestore?: boolean
   onDeleted?: (result: DeletionResult) => void
   formatDate?: (iso: string) => string
   /** 접근 불가 · 정지일 때 「문의」 링크 */
@@ -77,6 +79,7 @@ export function AccountSettings({
   locales,
   timeZones,
   graceDays = 30,
+  selfRestore = false,
   onDeleted,
   formatDate,
   supportHref,
@@ -225,8 +228,9 @@ export function AccountSettings({
           }
           labels={given}
           onChangeEmail={async (request) => {
-            await api.changeEmail(request)
+            const sent = await api.changeEmail(request)
             me.reload() // 대기 중인 새 주소(`pendingEmail`)는 요청이 끝나기 전에 서버에 저장된다
+            return sent // 응답의 `expiresAt` · `resendAvailableAt` 이 있으면 인증번호 남은 시간이 그 값을 쓴다
           }}
           onConfirmCode={(code) => api.confirmEmailChangeCode(code)}
           onConfirmed={() => {
@@ -279,6 +283,7 @@ export function AccountSettings({
         <DeleteAccountSection
           subject={subject}
           graceDays={graceDays}
+          selfRestore={selfRestore}
           formatDate={formatDate}
           labels={given}
           requestDeleteCode={requestDeleteCode}

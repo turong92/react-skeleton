@@ -440,6 +440,11 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
     forgotTo: '/forgot-password',
   }),
   'auth#SocialCallbackScreen': () => ({ state: { status: 'pending' }, signInTo: '/login' }),
+  'auth#DeletionPendingScreen': () => ({
+    pending: { purgeAfter: '2026-11-05T00:00:00Z', restoreToken: 't' },
+    onCancel: asyncNoop,
+    leaveTo: '/login',
+  }),
   'auth#AccountStateNotice': () => ({ kind: 'suspended' }),
   'auth#AccountSettings': () => ({
     api: fakeAccountApi(),

@@ -225,4 +225,13 @@ describe('createAccountApi (mirrors kotlin-skeleton docs/account-http-contract.m
     const b = fakeClient({ ...base, maxLength: 64 })
     expect((await createAccountApi(b.client).passwordPolicy()).maxBytes).toBe(64)
   })
+
+  it('the three code requests answer the server window (expiresAt · resendAvailableAt) so the countdown can use it', async () => {
+    const window = { expiresAt: '2026-10-07T01:10:00Z', resendAvailableAt: '2026-10-07T01:00:30Z' }
+    const { client } = fakeClient(window)
+    const api = createAccountApi(client)
+    expect(await api.changeEmail({ newEmail: 'n@b.c', currentPassword: 'pw' })).toEqual(window)
+    expect(await api.requestReauthConfirmation()).toEqual(window)
+    expect(await api.requestDeleteConfirmation()).toEqual(window)
+  })
 })

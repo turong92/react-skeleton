@@ -28,6 +28,7 @@ function fakeApi(overrides: Partial<AuthApi> = {}): AuthApi {
     logout: async () => undefined,
     magicLinkRequest: async () => undefined,
     magicLinkRedeem: async () => response('magic-token'),
+    cancelDeletion: async () => response('restored-token'),
     methods: async () => {
       throw new Error('unused')
     },
@@ -257,5 +258,33 @@ describe('createAuthSession', () => {
       await have.session.restore()
       expect(refresh).not.toHaveBeenCalled()
     })
+  })
+
+  it('cancelDeletion signs in with the answer exactly like a login (token stored, device named)', async () => {
+    const cancelDeletion = vi.fn(async () => response('restored-token'))
+    const store = createTokenStore()
+    const session = createAuthSession({
+      api: fakeApi({ cancelDeletion }),
+      store,
+      deviceName: 'Pixel',
+    })
+    await session.cancelDeletion('opaque')
+    expect(cancelDeletion).toHaveBeenCalledWith('opaque', { deviceName: 'Pixel' })
+    expect(store.get()).toBe('restored-token')
+    expect(session.getState().status).toBe('authenticated')
+  })
+
+  it('cancelDeletion that fails leaves the session anonymous', async () => {
+    const store = createTokenStore()
+    const session = createAuthSession({
+      api: fakeApi({
+        cancelDeletion: async () => {
+          throw new Error('410')
+        },
+      }),
+      store,
+    })
+    await expect(session.cancelDeletion('opaque')).rejects.toThrow('410')
+    expect(store.get()).toBeNull()
   })
 })

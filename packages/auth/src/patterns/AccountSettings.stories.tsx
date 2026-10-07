@@ -189,7 +189,7 @@ export const PendingEmailFromServer: Story = {
   },
 }
 
-/* 인증번호 남은 시간 — 이메일 변경은 서버가 준 `me.pendingEmailExpiresAt`(= 서버 값), 재인증 · 삭제 확인은 서버가 만료 시각을 안 줘서 문서화된 30분으로 어림(`data-expiry-source="estimate"`) */
+/* 인증번호 남은 시간 — 이메일 변경은 서버가 준 `me.pendingEmailExpiresAt`(= 서버 값), 재인증 · 삭제 확인 · 이메일 변경 요청은 응답에 시각이 있으면 그 값, 없으면(옛 서버) 문서화된 10분으로 어림(`data-expiry-source="estimate"`) */
 export const EmailChangeCodeShowsTheServerExpiry: Story = {
   args: { fake: { pendingEmail: 'next@example.com', pendingExpiresInMinutes: 9 } },
   play: async ({ canvas, canvasElement }) => {
@@ -214,13 +214,13 @@ export const EmailChangeCodeExpiredLocksAndFocusesSendAgain: Story = {
   },
 }
 
-export const ReauthCodeCountsDownFromAnEstimatedThirtyMinutes: Story = {
+export const ReauthCodeCountsDownFromAnEstimatedTenMinutes: Story = {
   args: { fake: { passwordless: true } },
   play: async ({ canvas, userEvent }) => {
     const section = within(await canvas.findByRole('region', { name: 'Email address' }))
     await userEvent.type(section.getByLabelText(/^New email/), 'next@example.com')
     await userEvent.click(section.getByRole('button', { name: 'Email me a code' }))
-    await expect(await section.findByText(/^Time left (30:00|29:5\d)$/)).toBeVisible()
+    await expect(await section.findByText(/^Time left (10:00|09:5\d)$/)).toBeVisible()
     // 다시 받기는 쿨다운 동안 버튼 글자에 초로
     await expect(
       section.getByRole('button', { name: /^Send a new code \(\d+ s\)$/ }),
@@ -228,12 +228,12 @@ export const ReauthCodeCountsDownFromAnEstimatedThirtyMinutes: Story = {
   },
 }
 
-export const DeleteCodeCountsDownFromAnEstimatedThirtyMinutes: Story = {
+export const DeleteCodeCountsDownFromAnEstimatedTenMinutes: Story = {
   args: { fake: { passwordless: true } },
   play: async ({ canvas, userEvent }) => {
     const section = within(await canvas.findByRole('region', { name: 'Delete account' }))
     await userEvent.click(section.getByRole('button', { name: 'Email me a code' }))
-    await expect(await section.findByText(/^Time left (30:00|29:5\d)$/)).toBeVisible()
+    await expect(await section.findByText(/^Time left (10:00|09:5\d)$/)).toBeVisible()
   },
 }
 
@@ -454,6 +454,8 @@ export const DeleteWithPassword: Story = {
     await expect(confirm).toBeEnabled()
     await userEvent.click(confirm)
     await expect(await canvas.findByText(/scheduled for erasure/)).toBeVisible()
+    // self-restore 를 켰다고 알리지 않았으면 「다시 로그인하면 취소」를 말하지 않는다 — 꺼진 서버에서 거짓이 되지 않게
+    await expect(canvas.queryByText(/cancel the deletion/)).toBeNull()
     // 안내를 읽을 시간을 준다 — 로그아웃은 사용자가 누른다(곧바로 로그아웃하면 가드가 로그인으로 보내 안내가 보이지 않는다)
     await expect(
       within(canvas.getByRole('region', { name: 'Delete account' })).getByRole('button', {
@@ -542,5 +544,85 @@ export const Dark: Story = {
   globals: { theme: 'dark' },
   play: async ({ canvas }) => {
     await expect(await canvas.findByRole('heading', { name: 'Account' })).toBeVisible()
+  },
+}
+
+/* 백엔드가 `email/change` · `reauth/confirmation` · `delete/confirmation` 응답에 `expiresAt` 을 주면 어림 대신 그 값(`data-expiry-source="server"`) */
+export const ReauthCodeUsesTheServerWindow: Story = {
+  args: { fake: { passwordless: true, codeWindowMinutes: 3 } },
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    const section = within(await canvas.findByRole('region', { name: 'Email address' }))
+    await userEvent.type(section.getByLabelText(/^New email/), 'next@example.com')
+    await userEvent.click(section.getByRole('button', { name: 'Email me a code' }))
+    await expect(await section.findByText(/^Time left (03:00|02:5\d)$/)).toBeVisible()
+    await expect(
+      canvasElement.querySelector('[data-testid="reauth-code"] [data-expiry-source]'),
+    ).toHaveAttribute('data-expiry-source', 'server')
+  },
+}
+
+export const DeleteCodeUsesTheServerWindow: Story = {
+  args: { fake: { passwordless: true, codeWindowMinutes: 3 } },
+  play: async ({ canvas, userEvent }) => {
+    const section = within(await canvas.findByRole('region', { name: 'Delete account' }))
+    await userEvent.click(section.getByRole('button', { name: 'Email me a code' }))
+    await expect(await section.findByText(/^Time left (03:00|02:5\d)$/)).toBeVisible()
+  },
+}
+
+export const EmailChangeRequestUsesTheServerWindow: Story = {
+  args: { fake: { codeWindowMinutes: 4 } },
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    const section = within(await canvas.findByRole('region', { name: 'Email address' }))
+    await userEvent.type(section.getByLabelText(/^New email/), 'next@example.com')
+    await userEvent.type(section.getByLabelText(/^Current password/), 'old-password-1')
+    await userEvent.click(section.getByRole('button', { name: /^(Change|Send)/ }))
+    // 요청 직후(`me` 가 다시 읽히기 전)의 창은 서버 응답의 값 — 어림이 아니다
+    await expect(await canvas.findByText(/^Time left (04:00|03:5\d|03:4\d)$/)).toBeVisible()
+    await expect(
+      canvasElement.querySelector('[data-testid="verify-code"] [data-expiry-source]'),
+    ).toHaveAttribute('data-expiry-source', 'server')
+  },
+}
+
+/** 정지된 계정은 스스로 탈퇴할 수 없다(403 ACCOUNT.SUSPENDED_CANNOT_DELETE) — 일반 오류 문구가 아니라 이유를 말한다 */
+export const SuspendedAccountCannotDelete: Story = {
+  args: { fake: { suspended: true } },
+  play: async ({ canvas, userEvent }) => {
+    const section = within(await canvas.findByRole('region', { name: 'Delete account' }))
+    await userEvent.type(section.getByLabelText(/^Current password/), 'old-password-1')
+    await userEvent.click(section.getByRole('button', { name: 'Delete my account' }))
+    const dialog = within(await canvas.findByRole('dialog'))
+    await userEvent.type(dialog.getByLabelText('Type DELETE to confirm'), 'DELETE')
+    await userEvent.click(dialog.getByRole('button', { name: 'Delete account' }))
+    await expect(await canvas.findByText('A suspended account cannot be deleted.')).toBeVisible()
+    await expect(canvas.queryByText('Something went wrong. Try again.')).toBeNull()
+  },
+}
+
+/** 정지된 계정이 삭제용 인증번호를 받으려 할 때도(`delete/confirmation`) 같은 이유 */
+export const SuspendedAccountCannotAskForTheDeleteCode: Story = {
+  args: { fake: { suspended: true, passwordless: true } },
+  play: async ({ canvas, userEvent }) => {
+    const section = within(await canvas.findByRole('region', { name: 'Delete account' }))
+    await userEvent.click(section.getByRole('button', { name: 'Email me a code' }))
+    await expect(await canvas.findByText('A suspended account cannot be deleted.')).toBeVisible()
+  },
+}
+
+/** 유예 안내는 서버가 self-restore 를 켰다고 앱이 알릴 때만 「다시 로그인하면 취소」를 말한다 — 꺼진 서버에서는 거짓이 되지 않게 말하지 않는다 */
+export const DeletionNoticeMentionsSelfRestoreOnlyWhenOn: Story = {
+  args: { selfRestore: true },
+  play: async ({ canvas, userEvent }) => {
+    const section = within(await canvas.findByRole('region', { name: 'Delete account' }))
+    await userEvent.type(section.getByLabelText(/^Current password/), 'old-password-1')
+    await userEvent.click(section.getByRole('button', { name: 'Delete my account' }))
+    const dialog = within(await canvas.findByRole('dialog'))
+    await userEvent.type(dialog.getByLabelText('Type DELETE to confirm'), 'DELETE')
+    await userEvent.click(dialog.getByRole('button', { name: 'Delete account' }))
+    await expect(await canvas.findByText(/scheduled for erasure/)).toBeVisible()
+    await expect(
+      canvas.getByText(/Sign in again within that time and you can cancel the deletion\./),
+    ).toBeVisible()
   },
 }

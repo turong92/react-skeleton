@@ -86,6 +86,41 @@ export const MagicLinkExpired: Story = {
   },
 }
 
+/** 링크로 들어왔지만 가입이 막힌 주소(403 ACCOUNT.REGISTRATION_BLOCKED) — 일반 오류가 아니라 이유를 말한다 */
+export const MagicLinkBlockedAddress: Story = {
+  render: () => (
+    <MagicLinkLanding
+      token="tok"
+      requestTo="/login"
+      onDone={fn()}
+      onRedeem={async () => {
+        throw apiError('ACCOUNT.REGISTRATION_BLOCKED', 403)
+      }}
+    />
+  ),
+  play: async ({ canvas }) => {
+    await expect(
+      await canvas.findByText('You cannot sign up with this address (account).'),
+    ).toBeVisible()
+  },
+}
+
+/** 소셜 제공자 계정이 막혀 있다 — 같은 안내(실패 제목 아래) */
+export const SocialCallbackBlockedAccount: Story = {
+  render: () => (
+    <SocialCallbackScreen
+      state={{ status: 'error', error: apiError('ACCOUNT.REGISTRATION_BLOCKED', 403) }}
+      signInTo="/login"
+    />
+  ),
+  play: async ({ canvas }) => {
+    await expect(
+      await canvas.findByText('You cannot sign up with this address (account).'),
+    ).toBeVisible()
+    await expect(canvas.getByRole('link', { name: 'Back to sign in' })).toBeVisible()
+  },
+}
+
 export const ForgotThenSent: Story = {
   render: () => <ForgotPasswordScreen onSubmit={async () => undefined} signInTo="/login" />,
   play: async ({ canvas, userEvent }) => {

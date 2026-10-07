@@ -83,6 +83,7 @@ describe('the check can fail (it is not vacuous)', () => {
       throw new Error('unused')
     },
     magicLinkRedeem: unused,
+    cancelDeletion: unused,
   }
 
   it('reading the stored token while creating the session gives a different first render — the logout button appears', async () => {

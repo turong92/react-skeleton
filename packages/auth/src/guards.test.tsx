@@ -33,6 +33,7 @@ const api: AuthApi = {
     throw new Error('unused')
   },
   magicLinkRedeem: unused,
+  cancelDeletion: unused,
 }
 function render(token: string | undefined, element: React.ReactElement) {
   const store = createTokenStore()

@@ -20,6 +20,8 @@ export type DeleteAccountSectionProps = {
   subject: ReauthSubject
   /** 서버의 유예 기간(`skeleton.account.deletion.grace`, 기본 30일) — 안내 문장에만 쓴다 */
   graceDays: number
+  /** 서버가 self-restore 를 켰다(기본 false) — 켠 서버에서만 「다시 로그인하면 취소할 수 있어요」를 말한다 */
+  selfRestore?: boolean
   /** `POST /account/delete/confirmation` — 비밀번호 없는 계정의 삭제 인증번호 메일(다시 인증 번호와 별개 · 이 세션에만 쓸 수 있다) */
   requestDeleteCode: () => Promise<unknown>
   onDelete: (credential: ReauthCredential) => Promise<DeletionResult>
@@ -41,6 +43,7 @@ const defaultFormat = (iso: string) => new Date(iso).toLocaleDateString()
 export function DeleteAccountSection({
   subject,
   graceDays,
+  selfRestore = false,
   requestDeleteCode,
   onDelete,
   onProviderReauth,
@@ -77,7 +80,10 @@ export function DeleteAccountSection({
     return (
       <SectionCard id="delete" title={labels.sectionDelete}>
         <div className={styles.stack}>
-          <Alert tone="warning">{labels.deleteScheduled(formatDate(result.purgeAfter))}</Alert>
+          <Alert tone="warning">
+            {labels.deleteScheduled(formatDate(result.purgeAfter))}
+            {selfRestore && ` ${labels.deleteSelfRestoreNote}`}
+          </Alert>
           {/* 안내를 읽을 시간을 준다 — 곧바로 로그아웃하면 가드가 로그인으로 보내 안내가 보이지 않는다 */}
           <div>
             <Button onClick={() => onDeleted?.(result)}>{labels.deleteDoneAction}</Button>

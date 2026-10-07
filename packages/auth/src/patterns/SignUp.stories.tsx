@@ -264,6 +264,25 @@ export const CodeStepExpiredStartsOver: Story = {
   },
 }
 
+/** 막힌 주소(403 ACCOUNT.REGISTRATION_BLOCKED, 메일함을 증명한 사람에게만 보인다) — 일반 오류가 아니라 「가입할 수 없어요」 */
+export const CodeStepBlockedAddressSaysItCannotSignUp: Story = {
+  args: {
+    ...codeArgs(),
+    onVerifyCode: fn(async () => {
+      throw apiError('ACCOUNT.REGISTRATION_BLOCKED', 403)
+    }),
+  },
+  play: async ({ canvas, userEvent }) => {
+    await fillAndSubmit(canvas, userEvent)
+    await userEvent.click(await canvas.findByLabelText('Digit 1 of 6'))
+    await userEvent.keyboard('123456')
+    await expect(
+      await canvas.findByText('You cannot sign up with this address (account).'),
+    ).toBeVisible()
+    await expect(canvas.queryByText('Something went wrong. Try again.')).toBeNull()
+  },
+}
+
 /** 주소당 추측 상한(429)은 틀린 번호가 아니다 — 남은 횟수 대신 기다릴 시간을 말하고 입력을 잠근다 */
 export const CodeStepRateLimitedShowsTheWaitNotAWrongCode: Story = {
   args: {
@@ -363,9 +382,46 @@ export const CodeStepUnderAMinuteIsEmphasised: Story = {
   },
 }
 
-/** 서버는 **만료된 시도의 다시 받기를 조용히 무시**한다 — 그래서 가입은 시간이 다 되면 「다시 받기」가 처음부터 다시(주소는 남는다)로 이어진다 */
+/**
+ * 시간이 다 된 뒤 「다시 받기」 — 새 백엔드는 만료된 시도에도 **새 번호를 보내고** 응답에 새 `expiresAt` 을 준다: 그 자리에서 타이머가 다시 시작한다(양식으로 돌려보내지 않는다).
+ * 옛 서버는 만료된 시도의 다시 받기를 조용히 무시한다 — 응답에 시각이 없으면 처음부터 다시(주소는 남는다)로 이어진다
+ */
+export const CodeStepExpiredResendRestartsTheTimerWhenTheServerSendsANewCode: Story = {
+  args: {
+    ...codeArgs(),
+    onResendCode: fn(async () => ({
+      expiresAt: new Date(Date.now() + 600_000).toISOString(),
+      resendAvailableAt: new Date(Date.now() + 30_000).toISOString(),
+    })),
+  },
+  render: (args) => (
+    <SignUpScreen
+      {...args}
+      initialPending={{
+        email: 'ann@example.com',
+        signUpId: 'sid-1',
+        expiresAt: Date.now() + 2_000,
+      }}
+    />
+  ),
+  play: async ({ canvas, userEvent, args }) => {
+    await expect(await canvas.findByRole('alert', {}, { timeout: 6000 })).toHaveTextContent(
+      'Time is up. Please get a new code.',
+    )
+    await userEvent.click(canvas.getByRole('button', { name: 'Send a new code' }))
+    await waitFor(() => expect(args.onResendCode).toHaveBeenCalledWith('sid-1'))
+    // 같은 단계에 머문다 — 새 10분이 시작되고 입력이 다시 열린다
+    await expect(await canvas.findByText(/^Time left (10:00|09:5\d)$/)).toBeVisible()
+    await waitFor(() => expect(canvas.getByLabelText('Digit 1 of 6')).toBeEnabled())
+    await expect(canvas.queryByLabelText(/^Email/)).toBeNull()
+    await expect(
+      document.querySelector('[data-testid="verify-code"] [data-expiry-source]'),
+    ).toHaveAttribute('data-expiry-source', 'server')
+  },
+}
+
 export const CodeStepExpiredLocksAndFocusesTheRestart: Story = {
-  args: codeArgs(),
+  args: codeArgs(), // onResendCode 가 시각 없이 돌아온다 = 옛 서버(만료된 시도의 다시 받기를 무시)
   render: (args) => (
     <SignUpScreen
       {...args}
@@ -385,8 +441,8 @@ export const CodeStepExpiredLocksAndFocusesTheRestart: Story = {
       expect(canvas.getByRole('button', { name: 'Send a new code' })).toHaveFocus(),
     )
     await userEvent.click(canvas.getByRole('button', { name: 'Send a new code' }))
-    await expect(args.onResendCode).not.toHaveBeenCalled() // 서버가 어차피 무시하는 호출을 하지 않는다
-    await expect(await canvas.findByLabelText(/^Email/)).toHaveValue('ann@example.com')
+    await waitFor(() => expect(args.onResendCode).toHaveBeenCalledWith('sid-1')) // 새 서버일 수도 있어 먼저 물어본다
+    await expect(await canvas.findByLabelText(/^Email/)).toHaveValue('ann@example.com') // 시각이 없다 = 옛 서버: 처음부터
   },
 }
 

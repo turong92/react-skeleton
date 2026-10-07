@@ -37,6 +37,9 @@ const api: AuthApi = {
   magicLinkRedeem: async () => {
     throw new Error('unused')
   },
+  cancelDeletion: async () => {
+    throw new Error('unused')
+  },
 }
 
 const build = (storage?: TokenStorage) => {

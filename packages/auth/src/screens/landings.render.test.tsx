@@ -10,6 +10,9 @@ import { MagicLinkLanding } from './MagicLinkLanding'
 import { LegacyLinkNotice } from './LegacyLinkNotice'
 import { SocialLinkProofScreen } from './SocialLinkProofScreen'
 import { readLinkToken } from './linkToken'
+import { DeletionPendingScreen } from './DeletionPendingScreen'
+import { koAuthLabels } from './labels.ko'
+import { apiError } from '../stories/fakeAccountApi'
 
 const html = (node: React.ReactNode) => renderToStaticMarkup(<MemoryRouter>{node}</MemoryRouter>)
 const noop = async () => undefined
@@ -155,5 +158,81 @@ describe('AccountStateNotice', () => {
     const blocked = html(<AccountStateNotice kind="blocked" />)
     expect(blocked).toContain('Access blocked')
     expect(blocked).not.toContain('Contact support')
+  })
+})
+
+describe('deletion pending — a correct sign-in during the grace never opens a session', () => {
+  const fmt = (iso: string) => `on ${iso.slice(0, 10)}`
+  const withToken = { purgeAfter: '2026-11-05T00:00:00Z', restoreToken: 'opaque' }
+
+  it('asks whether to cancel: the date, a cancel button and a way to leave', () => {
+    const out = html(
+      <DeletionPendingScreen
+        pending={withToken}
+        onCancel={noop}
+        leaveTo="/login"
+        formatDate={fmt}
+      />,
+    )
+    expect(out).toContain('Cancel the deletion?')
+    expect(out).toContain('It is erased for good on on 2026-11-05.')
+    expect(out).toContain('Cancel the deletion and keep using it')
+    expect(out).toContain('Leave it as it is')
+    expect(out).toContain('href="/login"')
+  })
+
+  it('reads in Korean, with the date placed by the app', () => {
+    const out = html(
+      <DeletionPendingScreen
+        pending={withToken}
+        onCancel={noop}
+        leaveTo="/login"
+        formatDate={() => '2026년 11월 5일'}
+        labels={koAuthLabels}
+      />,
+    )
+    expect(out).toContain('탈퇴를 취소할까요?')
+    expect(out).toContain('이 계정은 탈퇴 처리 중이에요. 2026년 11월 5일에 완전히 지워져요.')
+    expect(out).toContain('탈퇴 취소하고 계속 쓰기')
+    expect(out).toContain('그대로 두기')
+  })
+
+  it('without a restore token (the server has self-restore off) only informs — no cancel button', () => {
+    const out = html(
+      <DeletionPendingScreen
+        pending={{ purgeAfter: '2026-11-05T00:00:00Z' }}
+        onCancel={noop}
+        leaveTo="/login"
+        formatDate={fmt}
+      />,
+    )
+    expect(out).toContain('This account is being deleted')
+    expect(out).toContain('It is erased on on 2026-11-05.')
+    expect(out).toContain('please contact us')
+    expect(out).not.toContain('Cancel the deletion')
+    expect(out).toContain('Back to sign in')
+  })
+
+  it('a token but nobody to cancel with (no handler) also only informs', () => {
+    const out = html(<DeletionPendingScreen pending={withToken} leaveTo="/login" />)
+    expect(out).not.toContain('Cancel the deletion and keep using it')
+  })
+
+  it('never writes the restore token into the page (not in the markup, not in a link)', () => {
+    const out = html(<DeletionPendingScreen pending={withToken} onCancel={noop} leaveTo="/login" />)
+    expect(out).not.toContain('opaque')
+  })
+
+  it('the social callback shows it for a deletion-pending sign-in instead of a failure', () => {
+    const error = apiError('AUTH.ACCOUNT_DELETION_PENDING', 403, withToken)
+    const out = html(
+      <SocialCallbackScreen
+        state={{ status: 'error', error }}
+        signInTo="/login"
+        onCancelDeletion={noop}
+      />,
+    )
+    expect(out).toContain('Cancel the deletion?')
+    expect(out).not.toContain('Sign-in did not finish')
   })
 })

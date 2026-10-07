@@ -40,7 +40,7 @@ export type EmailSectionProps = {
   /** 서버가 알려 주는 대기 중 변경(`me.pendingEmail` · `pendingEmailExpiresAt`) — 새로고침 뒤에도 같은 상태를 그린다 */
   pendingEmail?: string | null
   pendingEmailExpiresAt?: string | null
-  /** 서버가 만료 시각을 안 줄 때(방금 요청한 직후 `me` 가 다시 읽히기 전) 어림하는 유효 시간(초) — 백엔드 `email-change.ttl` 기본 30분 */
+  /** 서버가 만료 시각을 안 줄 때(방금 요청한 직후 `me` 가 다시 읽히기 전) 어림하는 유효 시간(초) — 백엔드 `email-change.ttl` 기본 10분 */
   codeTtlSeconds?: number
   formatDate?: (iso: string) => string
   labels?: Partial<AuthLabels>
@@ -65,7 +65,7 @@ export function EmailSection({
   resume,
   pendingEmail,
   pendingEmailExpiresAt,
-  codeTtlSeconds = 1800,
+  codeTtlSeconds = 600,
   formatDate = defaultFormat,
   labels: given,
 }: EmailSectionProps) {

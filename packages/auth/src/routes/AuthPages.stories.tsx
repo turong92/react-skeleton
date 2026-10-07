@@ -11,9 +11,10 @@ import { createSocialLoginFlow } from '../social'
 import { authStorageKeys } from '../storageKeys'
 import { createFakeAccountApi } from '../stories/fakeAccountApi'
 import { DEFAULT_AUTH_PATHS } from './createAuthRoutes'
-import { createFakeAuthApi, FAKE_ACCESS_TOKEN } from '../stories/fakeAuthApi'
+import { createFakeAuthApi, FAKE_ACCESS_TOKEN, type FakeAuthOptions } from '../stories/fakeAuthApi'
 import { PkceUnavailableError } from '../pkce'
 import {
+  MagicLinkPage,
   ResetPage,
   SignInPage,
   SocialCallbackPage,
@@ -403,5 +404,138 @@ export const SocialSignInThatCannotStartShowsWhy: Story = {
     await userEvent.click(await canvas.findByRole('button', { name: 'Continue with LINE' }))
     await expect(await canvas.findByText(/cannot start a secure sign-in/)).toBeVisible()
     await expect(canvas.getByRole('button', { name: 'Continue with LINE' })).toBeEnabled() // 다시 눌러 볼 수 있다
+  },
+}
+
+function StoredToken({ store }: { store: ReturnType<typeof createTokenStore> }) {
+  return <p data-testid="token">{store.get() ?? 'none'}</p>
+}
+
+/* 탈퇴 대기 계정의 로그인(403 AUTH.ACCOUNT_DELETION_PENDING) — 세 길 모두 같은 질문, 취소하면 일반 로그인 성공과 같은 처리(토큰 저장 · 이동) */
+function pendingSession(options: FakeAuthOptions = { pendingDeletion: 'with-token' }) {
+  const api = createFakeAuthApi(options)
+  const store = createTokenStore()
+  return { api, store, session: createAuthSession({ api, store }) }
+}
+
+export const PasswordSignInOfAPendingDeletionCancelsAndEntersTheApp: Story = {
+  render: () => {
+    const { api, store, session } = pendingSession()
+    return (
+      <AuthProvider session={session}>
+        <MemoryRouter initialEntries={['/login']}>
+          <Routes>
+            <Route path="/login" element={<SignInPage ctx={context({ authApi: api })} />} />
+            <Route
+              path="*"
+              element={
+                <>
+                  <Here />
+                  <StoredToken store={store} />
+                </>
+              }
+            />
+          </Routes>
+        </MemoryRouter>
+      </AuthProvider>
+    )
+  },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.type(await canvas.findByLabelText(/Email/), 'demo@example.com')
+    await userEvent.type(canvas.getByLabelText(/^Password/), 'demo{Enter}')
+    // 세션은 열리지 않았다 — 질문이 먼저
+    await expect(await canvas.findByRole('heading', { name: 'Cancel the deletion?' })).toBeVisible()
+    await userEvent.click(
+      canvas.getByRole('button', { name: 'Cancel the deletion and keep using it' }),
+    )
+    await expect(await canvas.findByTestId('here')).toHaveTextContent('/')
+    await expect(canvas.getByTestId('token')).toHaveTextContent(FAKE_ACCESS_TOKEN)
+  },
+}
+
+export const MagicLinkOfAPendingDeletionCancelsAndEntersTheApp: Story = {
+  render: () => {
+    const { api, store, session } = pendingSession()
+    return (
+      <AuthProvider session={session}>
+        <MemoryRouter initialEntries={['/magic-link?token=tok']}>
+          <Routes>
+            <Route path="/magic-link" element={<MagicLinkPage ctx={context({ authApi: api })} />} />
+            <Route
+              path="*"
+              element={
+                <>
+                  <Here />
+                  <StoredToken store={store} />
+                </>
+              }
+            />
+          </Routes>
+        </MemoryRouter>
+      </AuthProvider>
+    )
+  },
+  play: async ({ canvas, userEvent }) => {
+    await expect(await canvas.findByRole('heading', { name: 'Cancel the deletion?' })).toBeVisible()
+    await userEvent.click(
+      canvas.getByRole('button', { name: 'Cancel the deletion and keep using it' }),
+    )
+    await expect(await canvas.findByTestId('here')).toHaveTextContent('/')
+    await expect(canvas.getByTestId('token')).toHaveTextContent(FAKE_ACCESS_TOKEN)
+  },
+}
+
+export const SocialCallbackOfAPendingDeletionCancelsAndKeepsTheWantedPage: Story = {
+  beforeEach: () => {
+    sessionStorage.clear()
+    rememberReturnTo('/notes', undefined, keys.returnTo)
+  },
+  render: () => {
+    const { api, store, session } = pendingSession()
+    const storage = memoryStorage()
+    const flow = createSocialLoginFlow({
+      providers: { google: { clientId: 'c', redirectUri: 'https://app.test/auth/callback' } },
+      session,
+      storage,
+      createState: () => 'st',
+    })
+    storage.setItem(
+      'skeleton.social.st',
+      JSON.stringify({
+        provider: 'google',
+        redirectUri: 'https://app.test/auth/callback',
+        purpose: 'login',
+        action: 'login',
+      }),
+    )
+    return (
+      <AuthProvider session={session}>
+        <MemoryRouter initialEntries={['/auth/callback?code=c&state=st']}>
+          <Routes>
+            <Route
+              path="/auth/callback"
+              element={<SocialCallbackPage ctx={context({ authApi: api, socialFlow: flow })} />}
+            />
+            <Route
+              path="*"
+              element={
+                <>
+                  <Here />
+                  <StoredToken store={store} />
+                </>
+              }
+            />
+          </Routes>
+        </MemoryRouter>
+      </AuthProvider>
+    )
+  },
+  play: async ({ canvas, userEvent }) => {
+    await expect(await canvas.findByRole('heading', { name: 'Cancel the deletion?' })).toBeVisible()
+    await userEvent.click(
+      canvas.getByRole('button', { name: 'Cancel the deletion and keep using it' }),
+    )
+    await expect(await canvas.findByTestId('here')).toHaveTextContent('/notes')
+    await expect(canvas.getByTestId('token')).toHaveTextContent(FAKE_ACCESS_TOKEN)
   },
 }

@@ -44,10 +44,19 @@ export type FakeAccountOptions = {
   onlyMethod?: boolean
   /** 새 주소의 인증번호를 기다리는 이메일 변경이 이미 있다(새로고침 뒤) */
   pendingEmail?: string
-  /** 그 요청의 만료까지 남은 분(기본 30 — 백엔드 `email-change.ttl`). 서버가 말해 주는 `pendingEmailExpiresAt` 이 된다 */
+  /** 그 요청의 만료까지 남은 분(기본 10 — 백엔드 `email-change.ttl`). 서버가 말해 주는 `pendingEmailExpiresAt` 이 된다 */
   pendingExpiresInMinutes?: number
   /** 메일 인증을 끈 앱 — 가입이 바로 `CREATED` */
   verificationOff?: boolean
+  /** 정지된 계정 — 스스로 탈퇴할 수 없다(`delete` · `delete/confirmation` → 403 `ACCOUNT.SUSPENDED_CANNOT_DELETE`) */
+  suspended?: boolean
+  /** 가입이 막힌 주소 — 코드를 맞게 입력해도 `verify-email` 이 403 `ACCOUNT.REGISTRATION_BLOCKED`(메일함을 증명한 사람에게만 보인다) */
+  registrationBlocked?: boolean
+  /**
+   * 새 백엔드처럼 코드를 보내는 요청(`email/change` · `reauth/confirmation` · `delete/confirmation`)이 응답에 `expiresAt` · `resendAvailableAt` 을 준다 —
+   * 지금부터 n분 뒤 만료. 없으면 옛 서버처럼 본문이 없다(화면이 어림한다)
+   */
+  codeWindowMinutes?: number
 }
 
 /** 가짜 서버가 받아 주는 6자리 코드(가입 · 이메일 변경 · 다시 인증 · 삭제 모두) */
@@ -97,8 +106,19 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
     methods,
     pendingEmail: options.pendingEmail ?? null,
     pendingEmailExpiresAt: options.pendingEmail
-      ? inMinutes(options.pendingExpiresInMinutes ?? 30)
+      ? inMinutes(options.pendingExpiresInMinutes ?? 10)
       : null,
+  }
+  /** 코드를 보내는 요청의 응답 본문 — `codeWindowMinutes` 가 있을 때만 서버 값을 준다 */
+  const codeSent = () =>
+    options.codeWindowMinutes === undefined
+      ? undefined
+      : {
+          expiresAt: inMinutes(options.codeWindowMinutes),
+          resendAvailableAt: new Date(Date.now() + 30_000).toISOString(),
+        }
+  const notSuspended = () => {
+    if (options.suspended) throw apiError('ACCOUNT.SUSPENDED_CANNOT_DELETE', 403)
   }
   let codeAttempts = 5
   const wrongCode = () => {
@@ -168,6 +188,7 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
     verifySignUpCode: async (_signUpId, code) => {
       calls.push('verifySignUpCode')
       if (code !== FAKE_CODE) wrongCode()
+      if (options.registrationBlocked) throw apiError('ACCOUNT.REGISTRATION_BLOCKED', 403)
       return {
         accessToken: 'fake',
         tokenType: 'Bearer',
@@ -204,9 +225,10 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
       calls.push('changeEmail')
       reauth(proof)
       me.pendingEmail = newEmail
-      me.pendingEmailExpiresAt = inMinutes(30)
+      me.pendingEmailExpiresAt = inMinutes(options.codeWindowMinutes ?? 10)
+      return codeSent()
     },
-    requestReauthConfirmation: () => track('requestReauthConfirmation', undefined),
+    requestReauthConfirmation: () => track('requestReauthConfirmation', codeSent()),
     identities: () => track('identities', [...methods]),
     unlinkIdentity: async (id, proof) => {
       calls.push(`unlink:${id}`)
@@ -222,9 +244,13 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
       reauth(c)
       return identity({ id: 'idn_k', method: 'kakao', subject: null })
     },
-    requestDeleteConfirmation: () => track('requestDeleteConfirmation', undefined),
+    requestDeleteConfirmation: async () => {
+      notSuspended()
+      return track('requestDeleteConfirmation', codeSent())
+    },
     deleteAccount: async (proof) => {
       calls.push('deleteAccount')
+      notSuspended()
       reauth(proof, 'ACCOUNT.REAUTH_FAILED')
       return { status: 'DELETION_SCHEDULED' as const, purgeAfter: '2026-11-05T00:00:00Z' }
     },

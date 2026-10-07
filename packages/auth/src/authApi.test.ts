@@ -185,4 +185,21 @@ describe('createAuthApi (mirrors kotlin-skeleton modules/auth and auth-social)',
     expect(await createAuthApi(client).methods()).toBe(info)
     expect(calls).toEqual([{ path: '/auth/methods', request: { skipAuth: true } }])
   })
+
+  it('cancelDeletion → POST /account/delete/cancel {restoreToken}, public, answers the login response', async () => {
+    const { client, calls } = fakeClient(token)
+    expect(await createAuthApi(client).cancelDeletion('opaque')).toBe(token)
+    expect(calls).toEqual([
+      {
+        path: '/account/delete/cancel',
+        request: { method: 'POST', json: { restoreToken: 'opaque' }, skipAuth: true },
+      },
+    ])
+  })
+
+  it('cancelDeletion names this device like login does', async () => {
+    const { client, calls } = fakeClient(token)
+    await createAuthApi(client).cancelDeletion('opaque', { deviceName: 'Pixel' })
+    expect(calls[0].request?.headers).toEqual({ 'X-Device-Name': 'Pixel' })
+  })
 })

@@ -28,6 +28,12 @@ export type ReauthCredential = {
   socialReauth?: SocialReauth
 }
 
+/**
+ * 6자리 코드를 보내는 요청(`email/change` · `reauth/confirmation` · `delete/confirmation`)의 응답 — 백엔드가 만료 · 재요청 가능 시각(ISO-8601)을 주면 남은 시간을 서버 값으로 센다.
+ * 옛 서버는 본문이 없다(undefined) — 화면이 문서화된 유효 시간으로 어림한다(`codeWindowOf`)
+ */
+export type CodeSent = { expiresAt?: string; resendAvailableAt?: string } | undefined
+
 export type AccountApi = {
   /** `202 {status:'VERIFICATION_SENT', signUpId}` — 계정은 아직 없고 6자리 코드가 메일로 갔다(`verifySignUpCode`). 메일 인증을 끈 앱은 `201 {status:'CREATED'}`(signUpId 없음) */
   signUp(request: SignUpRequest): Promise<{
@@ -58,7 +64,7 @@ export type AccountApi = {
   changeEmail(
     request: ReauthCredential & { newEmail: string },
     idempotencyKey?: string,
-  ): Promise<void>
+  ): Promise<CodeSent>
 
   identities(): Promise<SignInIdentity[]>
   /** 다시 인증이 필요하다(비밀번호 · 코드 · socialReauth) — DELETE 의 JSON 본문에 싣는다. 마지막 수단은 409 `LAST_SIGN_IN_METHOD` */
@@ -72,11 +78,11 @@ export type AccountApi = {
     /** 연결하려는 제공자 동의의 PKCE `codeVerifier` · `nonce`(최상위 필드) — 제공자가 쓸 때만 */
     proof?: SocialProof,
   ): Promise<SignInIdentity>
-  /** `POST /account/reauth/confirmation` (202) — 계정 주소로 6자리 코드를 보낸다(계정 + 이 세션에 묶임 · 30분 · 5번). 새 요청이 열린 코드를 대신한다 */
-  requestReauthConfirmation(): Promise<void>
+  /** `POST /account/reauth/confirmation` (202) — 계정 주소로 6자리 코드를 보낸다(계정 + 이 세션에 묶임 · 10분 · 5번). 새 요청이 열린 코드를 대신한다 */
+  requestReauthConfirmation(): Promise<CodeSent>
 
   /** 비밀번호가 없는 계정의 삭제 확인 코드 메일(계정 + 이 세션에 묶임 · 재인증 코드와 별개) */
-  requestDeleteConfirmation(): Promise<void>
+  requestDeleteConfirmation(): Promise<CodeSent>
   /** 계정에 맞는 증거 하나: `currentPassword` · 메일로 받은 `confirmationCode` · (주소 없는 계정) `socialReauth` */
   deleteAccount(credential: ReauthCredential, idempotencyKey?: string): Promise<DeletionResult>
 
@@ -129,13 +135,12 @@ export function createAccountApi(
       client.value('/account/me', { method: 'PATCH', json: compact(patch) }),
     changePassword: (request) =>
       client.noContent('/account/password/change', { method: 'POST', json: compact(request) }),
-    changeEmail: async (request, idempotencyKey) => {
-      await client.value('/account/email/change', {
+    changeEmail: (request, idempotencyKey) =>
+      client.value<CodeSent>('/account/email/change', {
         method: 'POST',
         json: compact(request),
         idempotencyKey: idempotencyKey ?? newIdempotencyKey(),
-      })
-    },
+      }),
 
     identities: () => client.list('/account/identities'),
     unlinkIdentity: (id, reauth) =>
@@ -148,13 +153,11 @@ export function createAccountApi(
         method: 'POST',
         json: compact({ authorizationCode, redirectUri, ...reauth, ...proof }),
       }),
-    requestReauthConfirmation: async () => {
-      await client.value('/account/reauth/confirmation', { method: 'POST' })
-    },
+    requestReauthConfirmation: () =>
+      client.value<CodeSent>('/account/reauth/confirmation', { method: 'POST' }),
 
-    requestDeleteConfirmation: async () => {
-      await client.value('/account/delete/confirmation', { method: 'POST' })
-    },
+    requestDeleteConfirmation: () =>
+      client.value<CodeSent>('/account/delete/confirmation', { method: 'POST' }),
     deleteAccount: (credential, idempotencyKey) =>
       client.value('/account/delete', {
         method: 'POST',

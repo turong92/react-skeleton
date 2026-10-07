@@ -9,8 +9,10 @@ import {
 } from '@skeleton/ui'
 import { useId, useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import { deletionPendingOf, type DeletionPending } from '../pendingDeletion'
 import { AuthLayout } from './AuthLayout'
 import { CheckEmailPanel } from './CheckEmailPanel'
+import { DeletionPendingScreen } from './DeletionPendingScreen'
 import { PasswordField } from './PasswordField'
 import { SocialButtons } from './SocialButtons'
 import styles from './auth.module.css'
@@ -37,6 +39,10 @@ export type SignInScreenProps = {
   noticeAction?: ReactNode
   /** 처음 채워 둘 이메일(체험 계정 · 로그아웃 직후) */
   initialEmail?: string
+  /** 탈퇴 대기 중인 계정이 맞는 비밀번호로 들어왔을 때(`403 AUTH.ACCOUNT_DELETION_PENDING`) 「탈퇴 취소」 — 토큰으로 취소하고 로그인한 뒤 이동은 호출자가. 안 주면 안내만 */
+  onCancelDeletion?: (restoreToken: string) => Promise<unknown>
+  /** 삭제 예정일 표기 */
+  formatDate?: (iso: string) => string
 }
 
 /** 로그인 화면 — 방법(비밀번호 · 링크 · 소셜)은 `methods` 가 정한다. 코드 분기(`AUTH.*`)는 `errors.ts` 한 곳 */
@@ -51,6 +57,8 @@ export function SignInScreen({
   notice,
   noticeAction,
   initialEmail = '',
+  onCancelDeletion,
+  formatDate,
 }: SignInScreenProps) {
   const labels = mergeLabels(given)
   const enabled = resolveMethods(methods)
@@ -63,6 +71,8 @@ export function SignInScreen({
   const [socialBusy, setSocialBusy] = useState(false)
   const [failure, setFailure] = useState<AuthErrorInfo | null>(null)
   const [magicSentTo, setMagicSentTo] = useState<string | null>(null)
+  /** 탈퇴 대기 응답 — 취소용 토큰은 이 상태(메모리)에만 있다 */
+  const [pendingDeletion, setPendingDeletion] = useState<DeletionPending | null>(null)
   const wait = useCountdown()
   const uid = useId()
   const ids = { email: `${uid}-email`, password: `${uid}-password` }
@@ -78,6 +88,12 @@ export function SignInScreen({
   ]
 
   function fail(error: unknown) {
+    const pending = deletionPendingOf(error)
+    if (pending) {
+      setPassword('') // 「그대로 두기」로 돌아와도 비밀번호는 다시 받는다
+      setPendingDeletion(pending)
+      return
+    }
     const info = authErrorMessage(error, labels)
     setFailure(info)
     if (info.retryAfterSeconds) wait.start(info.retryAfterSeconds)
@@ -101,6 +117,17 @@ export function SignInScreen({
       setBusy(false)
     }
   }
+
+  if (pendingDeletion)
+    return (
+      <DeletionPendingScreen
+        pending={pendingDeletion}
+        onCancel={onCancelDeletion}
+        onLeave={() => setPendingDeletion(null)}
+        formatDate={formatDate}
+        labels={given}
+      />
+    )
 
   if (magicSentTo && onMagicLinkRequest) {
     return (

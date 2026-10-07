@@ -34,7 +34,7 @@ export type ReauthProofProps = {
   /** 인증번호 다시 받기 쿨다운(초) — 서버는 30초 안의 새 요청도 받지만 메일 한도(시간당 5번)가 있어 막아 둔다 */
   resendCooldownSeconds?: number
   /**
-   * 인증번호 유효 시간(초) — 서버가 요청 응답에 만료 시각을 안 줄 때(오늘은 안 준다) 남은 시간을 어림하는 값. 백엔드 기본: 재인증 · 삭제 확인 모두 30분(1800)
+   * 인증번호 유효 시간(초) — 서버가 요청 응답에 만료 시각을 안 줄 때(옛 서버) 남은 시간을 어림하는 값. 백엔드 기본: 재인증 · 삭제 확인 · 이메일 변경 모두 10분(600). 응답에 `expiresAt` 이 있으면 그 값이 이긴다
    */
   codeTtlSeconds?: number
   /** `requestCode` 없이 인증번호 칸이 바로 열릴 때(다른 곳에서 이미 보냈다) 그 코드의 만료 시각 */
@@ -60,7 +60,7 @@ export function ReauthProof({
   onProvider,
   confirmedWith,
   resendCooldownSeconds = 30,
-  codeTtlSeconds = 1800,
+  codeTtlSeconds = 600,
   codeExpiresAt,
   disabled,
   labels: given,

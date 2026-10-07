@@ -23,6 +23,7 @@ const api = {
     throw new Error('unused')
   },
   magicLinkRedeem: unused,
+  cancelDeletion: unused,
 } as AuthApi
 const session = createAuthSession({ api, store: createTokenStore() })
 const accountApi = {} as AccountApi

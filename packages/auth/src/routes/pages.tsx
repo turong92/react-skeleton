@@ -86,6 +86,8 @@ export type PageContext = {
   labels?: Partial<AuthLabels>
   /** 인증번호 남은 시간을 세는 시계(서버 보정) */
   now?: () => number
+  /** 날짜 표기(탈퇴 예정일 …) — 앱의 로케일 · 시간대 규칙. 없으면 브라우저 로케일 */
+  formatDate?: (iso: string) => string
   paths: AuthPaths
   /** 로그인 뒤 기본 목적지 */
   afterSignIn: string
@@ -147,6 +149,12 @@ export function SignInPage({
         navigate(target, { replace: true })
       }}
       onMagicLinkRequest={(email) => ctx.authApi.magicLinkRequest(email)}
+      formatDate={ctx.formatDate}
+      onCancelDeletion={async (restoreToken) => {
+        // 일반 로그인과 같은 처리 — 세션을 저장하고 가려던 곳으로(약관 재동의 등은 그 뒤 첫 호출의 가드가 이어 받는다)
+        await auth.cancelDeletion(restoreToken)
+        navigate(target, { replace: true })
+      }}
       onSocialSignIn={async (provider) => {
         if (!ctx.socialFlow) return
         // 시작하지 못하면(WebCrypto 없음) 던진다 — 화면이 문구로 바꾸고, 「가려던 곳」은 아직 기억하지 않는다
@@ -282,6 +290,11 @@ export function MagicLinkPage({ ctx }: { ctx: PageContext }) {
           requestTo={ctx.paths.signIn}
           onRedeem={(t) => auth.magicLinkLogin(t)}
           onDone={() => navigate(ctx.afterSignIn, { replace: true })}
+          formatDate={ctx.formatDate}
+          onCancelDeletion={async (restoreToken) => {
+            await auth.cancelDeletion(restoreToken)
+            navigate(ctx.afterSignIn, { replace: true })
+          }}
         />
       )}
     </TokenPage>
@@ -291,6 +304,7 @@ export function MagicLinkPage({ ctx }: { ctx: PageContext }) {
 function SocialCallbackInner({ flow, ctx }: { flow: SocialLoginFlow; ctx: PageContext }) {
   const location = useLocation()
   const navigate = useNavigate()
+  const auth = useAuth()
   const state = useSocialLoginCallback(flow, location.search)
   const navigated = useRef(false)
   // 쓰인(또는 거절된) 인가 코드는 주소창에 남기지 않는다
@@ -304,7 +318,20 @@ function SocialCallbackInner({ flow, ctx }: { flow: SocialLoginFlow; ctx: PageCo
     navigate(consumeReturnTo(ctx.afterSignIn, undefined, ctx.keys.returnTo), { replace: true })
   }, [state.status, navigate, ctx.afterSignIn, ctx.keys.returnTo])
   if (state.status === 'success') return null
-  return <SocialCallbackScreen state={state} labels={ctx.labels} signInTo={ctx.paths.signIn} />
+  return (
+    <SocialCallbackScreen
+      state={state}
+      labels={ctx.labels}
+      signInTo={ctx.paths.signIn}
+      formatDate={ctx.formatDate}
+      onCancelDeletion={async (restoreToken) => {
+        // 탈퇴 대기 계정의 소셜 로그인 — 취소하면 일반 로그인 성공과 같은 이동(가려던 곳을 읽고 지운다)
+        await auth.cancelDeletion(restoreToken)
+        navigated.current = true
+        navigate(consumeReturnTo(ctx.afterSignIn, undefined, ctx.keys.returnTo), { replace: true })
+      }}
+    />
+  )
 }
 
 /** 소셜 흐름이 없는 콜백 — 방법을 아직 묻는 중이면 기다리고, 묻기에 실패했거나 그 제공자가 없으면 오류 화면(다시 시도 포함). 쓰이지 않은 코드는 주소에서 지운다 */
@@ -502,7 +529,10 @@ export function SocialLinkCallbackPage({ ctx }: { ctx: PageContext }) {
 }
 
 export type SettingsExtras = Partial<
-  Pick<AccountSettingsProps, 'sections' | 'graceDays' | 'supportHref' | 'formatDate' | 'timeZones'>
+  Pick<
+    AccountSettingsProps,
+    'sections' | 'graceDays' | 'selfRestore' | 'supportHref' | 'formatDate' | 'timeZones'
+  >
 > & {
   locales: AccountSettingsProps['locales']
   /** 설정 화면 아래에 이어 붙일 것(예: `@skeleton/legal` 의 `<ConsentSettings />`) */

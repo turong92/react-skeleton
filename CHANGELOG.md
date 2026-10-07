@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — 탈퇴 유예 중 로그인 「탈퇴를 취소할까요?」 · 정지 · 가입 차단 안내 · 코드 요청 응답의 시각 (2026-10-07)
+
+백엔드(kotlin-skeleton `docs/account-http-contract.md` §8 · §9)의 탈퇴 수명주기 변경에 맞춘다.
+
+- **`@skeleton/auth`**: 탈퇴 유예 중 계정이 로그인(비밀번호 · 링크 · 소셜)하면 `403 AUTH.ACCOUNT_DELETION_PENDING` → `DeletionPendingScreen`(「탈퇴를 취소할까요?」 · 취소하고 계속 쓰기 · 그대로 두기). 취소 = `authApi.cancelDeletion` / `auth.cancelDeletion`(`POST /account/delete/cancel` → 일반 로그인 응답, 세션 저장 · 가려던 곳 이동). 410 → 「시간이 지났어요」. `restoreToken` 은 메모리에만. 토큰이 없으면(서버 self-restore 꺼짐) 안내만. `deletionPendingOf(error)` · `AuthApi.cancelDeletion` 은 **필수 멤버**라 `AuthApi` 를 직접 구현한 앱은 한 줄을 더해야 한다. `ACCOUNT.SUSPENDED_CANNOT_DELETE`(「정지된 계정은 탈퇴할 수 없어요」) · `ACCOUNT.REGISTRATION_BLOCKED`(「이 주소(계정)로는 가입할 수 없어요」) 문구. 삭제 안내의 「직접 되돌릴 수 없어요」를 뺐고(self-restore 와 모순) `selfRestore` 를 알린 앱에만 「다시 로그인하면 취소」를 더한다.
+- **`@skeleton/api-client`**: `ErrorCodes` 에 `AUTH_ACCOUNT_DELETION_PENDING` · `ACCOUNT_ERASED` · `ACCOUNT_SUSPENDED_CANNOT_DELETE` · `ACCOUNT_NOT_SUSPENDED` · `ACCOUNT_REGISTRATION_BLOCKED`. (관리자 화면의 `ERASED` · erase · 차단 목록은 이번에 안 했다.)
+- **카운트다운**: `email/change` · `reauth/confirmation` · `delete/confirmation` 응답의 `expiresAt` · `resendAvailableAt` 을 쓴다(`createAccountApi` 가 응답을 돌려준다 · 없으면 어림). 어림 기본 TTL 1800 → **600 초**(백엔드 기본 10분 통일 — 안내 문구의 「30분」도 10분으로). 만료된 가입 시도의 「다시 받기」는 먼저 서버에 다시 받기를 하고 응답에 새 `expiresAt` 이 있으면 그 자리에서 타이머를 다시 시작(보관 상태도 갱신), 없으면(옛 서버) 처음부터 다시.
+- 가짜(스토리): `createFakeAuthApi({ pendingDeletion, cancelExpired })` · `createFakeAccountApi({ suspended, registrationBlocked, codeWindowMinutes })`, 스토리 `Patterns/Auth/Deletion pending`.
+
 ### Added — 인증번호 남은 시간 카운트다운 (2026-10-07)
 
 주인 요청 — 「10분 제한 뒀는데 카운트도 넣어줘 보통 다 있던데」.

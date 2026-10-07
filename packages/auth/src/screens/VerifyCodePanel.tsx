@@ -18,7 +18,7 @@ import { useCountdown } from './useCountdown'
 export type VerifyCodePanelProps = {
   /** 코드를 보낸 주소(안내 문장에) */
   email: string
-  /** 제목 · 안내 문장을 바꾼다 — 기본은 가입 인증의 문구(10분), 이메일 변경은 30분이라 자기 문구를 준다 */
+  /** 제목 · 안내 문장을 바꾼다 — 기본은 가입 인증의 문구(10분) — 유효 시간이 다른 흐름은 자기 문구를 준다 */
   title?: string
   description?: string
   /** 6자리를 서버에 낸다. 성공하면 호출자가 이어 간다(로그인 · 설정 갱신). 실패는 던진다 — 화면이 가른다(틀림 · 만료 · 429) */
@@ -35,7 +35,8 @@ export type VerifyCodePanelProps = {
   /** 문서화된 유효 시간(초) — 서버가 새 만료 시각을 안 줄 때 「다시 받기」 뒤의 어림에 쓴다. 가입 코드는 600(10분) */
   codeTtlSeconds?: number
   /**
-   * 시간이 다 된 뒤 「다시 받기」가 하는 일 — `resend`(기본): 같은 시도에 새 코드. `restart`: 서버가 **만료된 시도의 다시 받기를 조용히 무시**하므로(가입)
+   * 시간이 다 된 뒤 「다시 받기」가 하는 일 — `resend`(기본): 같은 시도에 새 코드. `restart`(가입): 먼저 같은 시도에 다시 받기를 해 본다 —
+   * 새 백엔드는 만료된 시도에도 새 번호를 보내고 응답에 새 `expiresAt` 을 주므로 그 자리에서 타이머를 다시 시작하고, 응답에 시각이 없으면(옛 서버는 조용히 무시한다)
    * 처음부터 다시(주소는 남는다)
    */
   expiredResend?: 'resend' | 'restart'
@@ -121,8 +122,10 @@ export function VerifyCodePanel({
   async function resend() {
     if (!onResend) return
     setError(undefined)
+    const afterExpiry = timedOut && expiredResend === 'restart'
     try {
       const response = await onResend()
+      if (afterExpiry && codeWindowOf(response) === null) return onStartOver() // 서버가 새 시각을 안 줬다 — 옛 서버는 만료된 시도의 다시 받기를 무시한다
       setNote(labels.codeResent)
       // 서버가 새 시각을 주면 그것으로, 아니면 문서화된 유효 시간으로 어림한다(어림은 `data-expiry-source="estimate"`)
       const fresh =
@@ -185,8 +188,7 @@ export function VerifyCodePanel({
           onResend
             ? {
                 label: labels.codeResend,
-                onResend:
-                  timedOut && expiredResend === 'restart' ? onStartOver : () => void resend(),
+                onResend: () => void resend(),
                 secondsLeft: waiting,
                 labelWhileWaiting: labels.codeResendWaiting,
               }

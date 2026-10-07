@@ -23,7 +23,7 @@
 ## 기능 한눈에 (id: 요약 [키워드] → 켜는 조각)
 
 - api-client: 백엔드 REST 호출 한 곳 — 응답 envelope 벗기기 · 표준 에러(ApiRequestError · 에러 코드) · traceparent · 멱등 키 · 서버 시각 연결점을 갖춘 클라이언트. [API 호출, 백엔드 연결, 에러 처리, 에러 코드; api client, rest, http client] → react 기본 포함 · kotlin 기본 포함
-- auth: 로그인 · 계정 수명주기 — 토큰 갱신(401 → 갱신 한 번 → 재시도, 회전 안전 · 탭 락) · 가입 · 메일 인증 · 비밀번호 재설정 · 링크 로그인 · 소셜 · 계정 설정(비밀번호 · 이메일 · 로그인 수단 · 세션 · 삭제) 화면과 라우트 한 벌, 방법은 설정으로 켜고 끈다. [로그인, 로그아웃, 인증, 토큰; login, logout, auth] → react 기본 포함 · kotlin 기본 포함
+- auth: 로그인 · 계정 수명주기 — 토큰 갱신(401 → 갱신 한 번 → 재시도, 회전 안전 · 탭 락) · 가입 · 메일 인증 · 비밀번호 재설정 · 링크 로그인 · 소셜 · 계정 설정(비밀번호 · 이메일 · 로그인 수단 · 세션 · 삭제) · 탈퇴 유예 중 로그인의 「탈퇴를 취소할까요?」 화면과 라우트 한 벌, 방법은 설정으로 켜고 끈다. [로그인, 로그아웃, 인증, 토큰; login, logout, auth] → react 기본 포함 · kotlin 기본 포함
 - realtime: 서버가 밀어 주는 실시간 연결 — SSE(탭 숨김 일시정지 · 유휴 감시 · 재연결)와 STOMP WebSocket 알림 클라이언트. [실시간, 실시간 알림, SSE, 웹소켓; realtime, sse, server-sent events] → react `--packages realtime` · kotlin `--modules notification-sse` (notification-sse | notification-websocket 중 고른다)
 - i18n: 화면 문구 다국어 — ICU 메시지 · 브라우저 언어 감지/저장 · 지연 로딩 사전 · useT() · 사전 짝 맞춤 테스트 도구. [다국어, 번역, 언어 전환, 한국어 영어; i18n, internationalization, localization] → react `--packages i18n`
 - notifications: 알림 받은편지함 — 목록 · 안 읽은 수 · 읽음/모두 읽음 · 실시간 이벤트로 캐시 갱신, NotificationBell/List 부품과 TanStack Query 훅. [알림, 알림 목록, 알림 종, 안 읽은 알림; notifications, inbox, notification bell] → react `--packages notifications` · kotlin `--modules notification,notification-jdbc`

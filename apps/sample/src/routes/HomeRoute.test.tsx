@@ -22,6 +22,7 @@ const api: AuthApi = {
     throw new Error('unused')
   },
   magicLinkRedeem: unused,
+  cancelDeletion: unused,
 }
 
 function page(signedIn: boolean) {

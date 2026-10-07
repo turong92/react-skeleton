@@ -157,6 +157,7 @@ export function createAuthRoutes(options: AuthRoutesOptions): RouteObject[] {
     labels: options.labels,
     confirmPassword: options.confirmPassword,
     now: options.now,
+    formatDate: options.settings?.formatDate,
     paths,
     afterSignIn: options.afterSignIn ?? '/',
     methods: options.methods,

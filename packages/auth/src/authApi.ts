@@ -36,6 +36,14 @@ export type AuthApi = {
   magicLinkRequest(email: string, captchaToken?: string): Promise<void>
   /** `POST /auth/magic-link/redeem` — 메일 링크의 토큰을 로그인으로 바꾼다(410 `ACCOUNT.TOKEN_INVALID`). `deviceName` 은 로그인처럼 `X-Device-Name` 헤더로 간다 */
   magicLinkRedeem(token: string, options?: { deviceName?: string }): Promise<AuthTokenResponse>
+  /**
+   * `POST /account/delete/cancel {restoreToken}` (공개) — 탈퇴 유예 중 로그인이 준 `restoreToken`(`403 AUTH.ACCOUNT_DELETION_PENDING`)으로 탈퇴를 취소한다.
+   * 일반 로그인 응답(토큰)이다. 틀리거나 만료된 토큰은 410 `ACCOUNT.TOKEN_INVALID`, 429 `ACCOUNT.RATE_LIMITED`
+   */
+  cancelDeletion(
+    restoreToken: string,
+    options?: { deviceName?: string },
+  ): Promise<AuthTokenResponse>
 }
 
 export type AuthApiOptions = {
@@ -94,6 +102,13 @@ export function createAuthApi(
       client.value<AuthTokenResponse>('/auth/magic-link/redeem', {
         method: 'POST',
         json: { token },
+        skipAuth: true,
+        ...(options?.deviceName ? { headers: { 'X-Device-Name': options.deviceName } } : {}),
+      }),
+    cancelDeletion: (restoreToken, options) =>
+      client.value<AuthTokenResponse>('/account/delete/cancel', {
+        method: 'POST',
+        json: { restoreToken },
         skipAuth: true,
         ...(options?.deviceName ? { headers: { 'X-Device-Name': options.deviceName } } : {}),
       }),

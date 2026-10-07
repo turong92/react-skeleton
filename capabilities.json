@@ -133,6 +133,7 @@
         "packages/auth/src/patterns/SignIn.stories.tsx",
         "packages/auth/src/patterns/SignUp.stories.tsx",
         "packages/auth/src/patterns/MailLinkLandings.stories.tsx",
+        "packages/auth/src/patterns/DeletionPending.stories.tsx",
         "packages/auth/src/patterns/AccountSettings.stories.tsx"
       ],
       "stories": ["packages/auth/src/RequireAuth.stories.tsx"],
@@ -186,7 +187,7 @@
         "alsoVia": [],
         "optOut": null
       },
-      "summary": "로그인 · 계정 수명주기 — 토큰 갱신(401 → 갱신 한 번 → 재시도, 회전 안전 · 탭 락) · 가입 · 메일 인증 · 비밀번호 재설정 · 링크 로그인 · 소셜 · 계정 설정(비밀번호 · 이메일 · 로그인 수단 · 세션 · 삭제) 화면과 라우트 한 벌, 방법은 설정으로 켜고 끈다.",
+      "summary": "로그인 · 계정 수명주기 — 토큰 갱신(401 → 갱신 한 번 → 재시도, 회전 안전 · 탭 락) · 가입 · 메일 인증 · 비밀번호 재설정 · 링크 로그인 · 소셜 · 계정 설정(비밀번호 · 이메일 · 로그인 수단 · 세션 · 삭제) · 탈퇴 유예 중 로그인의 「탈퇴를 취소할까요?」 화면과 라우트 한 벌, 방법은 설정으로 켜고 끈다.",
       "notFor": [
         "권한(roles) 정책 자체는 백엔드 — 이 패키지는 토큰 · 라우트 가드(RequireAuth · RequireRole)만",
         "약관 동의 저장은 없다 — 가입 화면의 동의 슬롯은 체크한 판을 콜백으로 보고할 뿐(백엔드 동의 모듈이 아직 없다)",
@@ -209,6 +210,8 @@
           "비밀번호 찾기",
           "계정 설정",
           "계정 삭제",
+          "탈퇴 취소",
+          "탈퇴 유예",
           "토큰 갱신",
           "리프레시 토큰",
           "세션 목록"
@@ -230,6 +233,8 @@
           "forgot password",
           "account settings",
           "delete account",
+          "cancel deletion",
+          "deletion grace",
           "refresh token",
           "token refresh",
           "active sessions"

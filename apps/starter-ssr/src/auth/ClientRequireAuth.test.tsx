@@ -27,6 +27,9 @@ const auth = createAuth({
     magicLinkRedeem: async () => {
       throw new Error('unused')
     },
+    cancelDeletion: async () => {
+      throw new Error('unused')
+    },
   },
   tokens: createDeferredTokens({
     storage: {

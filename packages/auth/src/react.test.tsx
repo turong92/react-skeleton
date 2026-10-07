@@ -41,6 +41,9 @@ const api: AuthApi = {
   magicLinkRedeem: async () => {
     throw new Error('unused')
   },
+  cancelDeletion: async () => {
+    throw new Error('unused')
+  },
 }
 
 function sessionWith(token?: string) {
@@ -75,7 +78,7 @@ describe('AuthProvider / useAuth', () => {
     expect(signedIn).toBe('<p>authenticated:acc_7</p>')
   })
 
-  it('offers login, socialLogin, magicLinkLogin, signIn, restore, logout and refresh bound to the session', () => {
+  it('offers login, socialLogin, magicLinkLogin, cancelDeletion, signIn, restore, logout and refresh bound to the session', () => {
     function Keys() {
       const auth = useAuth()
       return <p>{Object.keys(auth).sort().join(',')}</p>
@@ -87,7 +90,7 @@ describe('AuthProvider / useAuth', () => {
         </AuthProvider>,
       ),
     ).toBe(
-      '<p>login,logout,magicLinkLogin,principal,refresh,restore,signIn,socialLogin,status,token</p>',
+      '<p>cancelDeletion,login,logout,magicLinkLogin,principal,refresh,restore,signIn,socialLogin,status,token</p>',
     )
   })
 

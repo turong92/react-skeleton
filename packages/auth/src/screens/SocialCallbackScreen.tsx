@@ -1,9 +1,11 @@
 import { ErrorCodes, isErrorCode } from '@skeleton/api-client'
 import { Alert, Button, Spinner } from '@skeleton/ui'
 import { Link } from 'react-router-dom'
+import { deletionPendingOf } from '../pendingDeletion'
 import { SocialLoginCallbackError } from '../social'
 import type { SocialCallbackState } from '../useSocialLoginCallback'
 import { AuthLayout } from './AuthLayout'
+import { DeletionPendingScreen } from './DeletionPendingScreen'
 import styles from './auth.module.css'
 import { authErrorMessage } from './errors'
 import { mergeLabels, type AuthLabels } from './labels'
@@ -14,6 +16,10 @@ export type SocialCallbackScreenProps = {
   signInTo: string
   /** 있으면 오류 화면에 「다시 시도」(발견에 실패했을 때 방법을 다시 묻는다) */
   onRetry?: () => void
+  /** 탈퇴 대기 중인 계정의 로그인(`403 AUTH.ACCOUNT_DELETION_PENDING`)에서 「탈퇴 취소」 — 토큰으로 취소하고 로그인한 뒤 이동은 호출자가. 안 주면 안내만 */
+  onCancelDeletion?: (restoreToken: string) => Promise<unknown>
+  /** 삭제 예정일 표기 */
+  formatDate?: (iso: string) => string
   labels?: Partial<AuthLabels>
 }
 
@@ -28,9 +34,22 @@ export function SocialCallbackScreen({
   state,
   signInTo,
   onRetry,
+  onCancelDeletion,
+  formatDate,
   labels: given,
 }: SocialCallbackScreenProps) {
   const labels = mergeLabels(given)
+  const pendingDeletion = state.status === 'error' ? deletionPendingOf(state.error) : null
+  if (pendingDeletion)
+    return (
+      <DeletionPendingScreen
+        pending={pendingDeletion}
+        onCancel={onCancelDeletion}
+        leaveTo={signInTo}
+        formatDate={formatDate}
+        labels={given}
+      />
+    )
   if (state.status === 'error') {
     const conflict = isErrorCode(state.error, ErrorCodes.ACCOUNT_SOCIAL_EMAIL_CONFLICT)
     const callbackError = state.error instanceof SocialLoginCallbackError ? state.error : undefined

@@ -24,6 +24,7 @@ describe('RootLayout', () => {
           throw new Error('unused')
         },
         magicLinkRedeem: unused,
+        cancelDeletion: unused,
       },
       tokens: createDeferredTokens(),
     })

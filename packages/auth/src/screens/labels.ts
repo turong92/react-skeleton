@@ -23,6 +23,12 @@ export type AuthLabels = {
   errorInvalidCredentials: string
   errorEmailNotVerified: string
   errorSuspended: string
+  /** `AUTH.ACCOUNT_DELETION_PENDING` 를 아무도 처리하지 않는 자리에서의 일반 문구(화면은 전용 안내를 그린다) */
+  errorDeletionPending: string
+  /** `ACCOUNT.SUSPENDED_CANNOT_DELETE` — 정지된 계정은 스스로 탈퇴할 수 없다 */
+  errorSuspendedCannotDelete: string
+  /** `ACCOUNT.REGISTRATION_BLOCKED` — 가입이 막힌 주소 · 제공자 계정(메일함 · 제공자를 증명한 사람에게만 보인다) */
+  errorRegistrationBlocked: string
   errorBlocked: string
   errorTooManyAttempts: string
   errorRateLimited: string
@@ -258,6 +264,17 @@ export type AuthLabels = {
   deleteScheduled: (date: string) => string
   /** 삭제 예약 안내 아래 — 누르면 이 기기를 로그아웃한다 */
   deleteDoneAction: string
+  /** 서버가 self-restore 를 켰다고 앱이 알려 줄 때(`selfRestore`)만 — 삭제 예약 안내 아래 */
+  deleteSelfRestoreNote: string
+  // 탈퇴 대기 중인 계정의 로그인(403 AUTH.ACCOUNT_DELETION_PENDING)
+  deletionPendingTitle: string
+  deletionPendingBody: (date: string | null) => string
+  deletionCancelAction: string
+  deletionLeaveAction: string
+  deletionNoRestoreTitle: string
+  deletionNoRestoreBody: (date: string | null) => string
+  deletionExpiredTitle: string
+  deletionExpiredBody: string
   // 관리자
   adminTitle: string
   adminSearch: string
@@ -303,6 +320,9 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   errorEmailNotVerified:
     'This account has not finished email verification. Sign up again and enter the code we email you.',
   errorSuspended: 'This account is suspended.',
+  errorDeletionPending: 'This account is being deleted.',
+  errorSuspendedCannotDelete: 'A suspended account cannot be deleted.',
+  errorRegistrationBlocked: 'You cannot sign up with this address (account).',
   errorBlocked: 'This account cannot be used.',
   errorTooManyAttempts: 'Too many attempts. Try again later.',
   errorRateLimited: 'Too many requests. Try again later.',
@@ -423,7 +443,7 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   reauthCodeHint: (email) => `To confirm it is you we email a 6-digit code to ${email}.`,
   reauthCodeSend: 'Email me a code',
   reauthCodeSent: (email) =>
-    `We sent a 6-digit code to ${email}. It works for 30 minutes — never tell it to anyone.`,
+    `We sent a 6-digit code to ${email}. It works for 10 minutes — never tell it to anyone.`,
   reauthCodeEntered: 'Code entered — finish below.',
   reauthCodeExpired: 'This code has expired or was used up. Ask for a new one.',
   reauthProviderHint:
@@ -537,12 +557,26 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   deletePasswordHint: 'Enter your password to confirm it is you.',
   deleteButton: 'Delete my account',
   deleteDialogTitle: 'Delete your account?',
-  deleteDialogBody: 'You are signed out everywhere. This cannot be undone by you.',
+  deleteDialogBody:
+    'You are signed out everywhere, and your data is erased when the waiting period ends.',
   deleteTypedPhrase: 'DELETE',
   deleteTypedLabel: 'Type DELETE to confirm',
   deleteConfirm: 'Delete account',
   deleteScheduled: (date) => `Your account is scheduled for erasure on ${date}.`,
   deleteDoneAction: 'Sign out',
+  deleteSelfRestoreNote: 'Sign in again within that time and you can cancel the deletion.',
+  deletionPendingTitle: 'Cancel the deletion?',
+  deletionPendingBody: (date) =>
+    date
+      ? `This account is being deleted. It is erased for good on ${date}.`
+      : 'This account is being deleted. It is erased for good when the waiting period ends.',
+  deletionCancelAction: 'Cancel the deletion and keep using it',
+  deletionLeaveAction: 'Leave it as it is',
+  deletionNoRestoreTitle: 'This account is being deleted',
+  deletionNoRestoreBody: (date) =>
+    `You cannot sign in because the account is being deleted. ${date ? `It is erased on ${date}. ` : ''}To undo it, please contact us.`,
+  deletionExpiredTitle: 'Time ran out',
+  deletionExpiredBody: 'Time ran out. Please sign in again.',
   adminTitle: 'Accounts',
   adminSearch: 'Search by email',
   adminStatusFilter: 'Status',

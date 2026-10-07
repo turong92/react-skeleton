@@ -25,6 +25,8 @@ export type AuthSession = {
   ): Promise<AuthTokenResponse>
   /** 메일 링크(`/magic-link?token=`)의 토큰으로 로그인한다 */
   magicLinkLogin(token: string): Promise<AuthTokenResponse>
+  /** 탈퇴 유예 중 로그인이 준 `restoreToken` 으로 탈퇴를 취소하고 로그인한다(`403 AUTH.ACCOUNT_DELETION_PENDING` 뒤) */
+  cancelDeletion(restoreToken: string): Promise<AuthTokenResponse>
   /** 다른 흐름이 받은 토큰 응답을 이 세션에 들인다 */
   signIn(response: AuthTokenResponse): AuthTokenResponse
   /** 이 기기에서 먼저 로그아웃(저장소 비움 — 동기)한 뒤 서버에 세션 폐기를 알린다. 서버가 실패해도 로그아웃은 유지 */
@@ -128,6 +130,12 @@ export function createAuthSession({
         await (deviceName
           ? api.magicLinkRedeem(token, { deviceName })
           : api.magicLinkRedeem(token)),
+      ),
+    cancelDeletion: async (restoreToken) =>
+      accept(
+        await (deviceName
+          ? api.cancelDeletion(restoreToken, { deviceName })
+          : api.cancelDeletion(restoreToken)),
       ),
     signIn: accept,
     async logout() {

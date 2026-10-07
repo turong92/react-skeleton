@@ -301,12 +301,33 @@ export function SignUpScreen({
           resendAvailableAt={pending.resendAvailableAt}
           codeTtlSeconds={codeTtlSeconds}
           resendCooldownSeconds={resendCooldownSeconds}
-          expiredResend="restart" // 서버는 만료된 시도의 다시 받기를 조용히 무시한다 — 만료 뒤에는 처음부터
+          expiredResend="restart" // 만료 뒤의 다시 받기: 새 서버는 새 `expiresAt` 을 주고(그 자리에서 다시 센다), 옛 서버는 조용히 무시한다(시각이 없으면 처음부터)
           onVerify={async (code) => {
             await onVerifyCode(pending.signUpId, code)
             onPendingChange?.(null)
           }}
-          onResend={onResendCode ? () => onResendCode(pending.signUpId) : undefined}
+          onResend={
+            onResendCode
+              ? async () => {
+                  const response = await onResendCode(pending.signUpId)
+                  // 서버가 새 만료 · 재요청 시각을 주면 보관한 상태도 갱신한다 — 새로고침해도 새 10분이 이어진다
+                  const window = codeWindowOf(response)
+                  if (window) {
+                    const next: PendingSignUp = {
+                      email: pending.email,
+                      signUpId: pending.signUpId,
+                      expiresAt: window.expiresAt,
+                      ...(window.resendAvailableAt
+                        ? { resendAvailableAt: window.resendAvailableAt }
+                        : {}),
+                    }
+                    setPending(next)
+                    onPendingChange?.(next)
+                  }
+                  return response
+                }
+              : undefined
+          }
           onStartOver={leave} // 이메일은 남고 비밀번호는 비워져 있다
         />
       </AuthLayout>

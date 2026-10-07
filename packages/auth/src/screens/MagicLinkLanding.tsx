@@ -1,4 +1,6 @@
 import { Link } from 'react-router-dom'
+import { deletionPendingOf } from '../pendingDeletion'
+import { DeletionPendingScreen } from './DeletionPendingScreen'
 import { TokenLanding } from './TokenLanding'
 import styles from './auth.module.css'
 import { mergeLabels, type AuthLabels } from './labels'
@@ -11,15 +13,21 @@ export type MagicLinkLandingProps = {
   onDone: () => void
   /** 새 링크를 요청하는 곳(로그인 화면) */
   requestTo: string
+  /** 탈퇴 대기 중인 계정(`403 AUTH.ACCOUNT_DELETION_PENDING`)이 링크로 들어왔을 때 「탈퇴 취소」 — 토큰으로 취소하고 로그인한 뒤 이동은 호출자가. 안 주면 안내만 */
+  onCancelDeletion?: (restoreToken: string) => Promise<unknown>
+  /** 삭제 예정일 표기 */
+  formatDate?: (iso: string) => string
   labels?: Partial<AuthLabels>
 }
 
-/** `/magic-link?token=` — 링크를 열면 로그인한다. 정지된 계정(403) 등은 일시 오류 줄로 보인다 */
+/** `/magic-link?token=` — 링크를 열면 로그인한다. 정지된 계정(403) 등은 일시 오류 줄로, 탈퇴 대기 중인 계정은 「탈퇴를 취소할까요?」로 보인다 */
 export function MagicLinkLanding({
   token,
   onRedeem,
   onDone,
   requestTo,
+  onCancelDeletion,
+  formatDate,
   labels: given,
 }: MagicLinkLandingProps) {
   const labels = mergeLabels(given)
@@ -28,6 +36,18 @@ export function MagicLinkLanding({
       token={token}
       run={onRedeem}
       onDone={onDone}
+      renderFailure={(error) => {
+        const pending = deletionPendingOf(error)
+        return pending ? (
+          <DeletionPendingScreen
+            pending={pending}
+            onCancel={onCancelDeletion}
+            leaveTo={requestTo}
+            formatDate={formatDate}
+            labels={given}
+          />
+        ) : null
+      }}
       labels={given}
       title={labels.magicLinkTitle}
       checking={labels.magicLinkChecking}

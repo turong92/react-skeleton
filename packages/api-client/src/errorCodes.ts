@@ -25,6 +25,8 @@ export const ErrorCodes = {
   // 계정 수명주기(kotlin-skeleton docs/account-http-contract.md 10절) — AUTH.* 는 modules/auth · auth-session, ACCOUNT.* 는 modules/account
   AUTH_EMAIL_NOT_VERIFIED: 'AUTH.EMAIL_NOT_VERIFIED',
   AUTH_ACCOUNT_SUSPENDED: 'AUTH.ACCOUNT_SUSPENDED',
+  /** 탈퇴 유예 중인 계정이 **맞는** 증거로 로그인했다(403) — `data.purgeAfter`, 서버가 self-restore 를 켰을 때만 `data.restoreToken` · `data.restoreTokenExpiresAt`. 세션은 열리지 않는다 */
+  AUTH_ACCOUNT_DELETION_PENDING: 'AUTH.ACCOUNT_DELETION_PENDING',
   AUTH_TOO_MANY_ATTEMPTS: 'AUTH.TOO_MANY_ATTEMPTS',
   AUTH_REFRESH_INVALID: 'AUTH.REFRESH_INVALID',
   AUTH_REFRESH_REUSED: 'AUTH.REFRESH_REUSED',
@@ -52,6 +54,14 @@ export const ErrorCodes = {
   ACCOUNT_LAST_ADMIN: 'ACCOUNT.LAST_ADMIN',
   ACCOUNT_SELF_ACTION_FORBIDDEN: 'ACCOUNT.SELF_ACTION_FORBIDDEN',
   ACCOUNT_NOT_FOUND: 'ACCOUNT.NOT_FOUND',
+  /** 지워진(ERASED) 계정에 한 관리자 동작(복구 · 정지 · 역할 · 삭제) — 410 */
+  ACCOUNT_ERASED: 'ACCOUNT.ERASED',
+  /** 정지된 계정은 스스로 탈퇴할 수 없다(`delete` · `delete/confirmation`, 403) */
+  ACCOUNT_SUSPENDED_CANNOT_DELETE: 'ACCOUNT.SUSPENDED_CANNOT_DELETE',
+  /** 관리자 삭제(erase)는 정지된 계정만(409) */
+  ACCOUNT_NOT_SUSPENDED: 'ACCOUNT.NOT_SUSPENDED',
+  /** 메일함 · 제공자 계정을 증명한 사람에게만 — 재가입이 막힌 주소(`verify-email` · 링크 로그인 · 소셜, 403) */
+  ACCOUNT_REGISTRATION_BLOCKED: 'ACCOUNT.REGISTRATION_BLOCKED',
   ACCOUNT_RATE_LIMITED: 'ACCOUNT.RATE_LIMITED',
   ACCOUNT_PASSWORD_REQUIRED: 'ACCOUNT.PASSWORD_REQUIRED',
   ACCOUNT_METHOD_UNKNOWN: 'ACCOUNT.METHOD_UNKNOWN',

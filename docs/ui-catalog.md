@@ -103,6 +103,7 @@
 | 로그인(방법 설정) | `packages/auth/src/patterns/SignIn.stories.tsx`             | 켠 방법만 그리는 로그인 — 비밀번호 · 소셜 · 이메일 링크 · 429 카운트다운(`@skeleton/auth`)                                                                                |
 | 가입              | `packages/auth/src/patterns/SignUp.stories.tsx`             | 정책 힌트 · 강도 · 캡차 · 동의 슬롯 · 메일의 6자리 인증번호를 같은 화면에서(틀리면 남은 횟수 · 새 코드 · 맞으면 바로 로그인)(`@skeleton/auth`)                            |
 | 메일 링크 도착    | `packages/auth/src/patterns/MailLinkLandings.stories.tsx`   | 링크 로그인 · 비밀번호 찾기/재설정 · 소셜 콜백 · 연결 증거(비밀번호 · 코드 · 제공자) · 오래된 메일 링크 안내(만료 · 이미 씀 한 상태)                                      |
+| 탈퇴 취소 질문    | `packages/auth/src/patterns/DeletionPending.stories.tsx`    | 탈퇴 유예 중 계정의 로그인(비밀번호 · 링크 · 소셜) → 「탈퇴를 취소할까요?」 · 토큰이 없으면 안내만 · 취소가 늦으면(410) 다시 로그인 · 토큰은 메모리에만                   |
 | 계정 설정         | `packages/auth/src/patterns/AccountSettings.stories.tsx`    | 프로필 · 비밀번호 · 이메일(새 주소의 인증번호 단계) · 로그인 수단 · 세션 · 삭제 · 다시 인증(비밀번호 · 메일 인증번호 · 제공자 동의) · 정지/차단 안내(`AccountApi` 하나로) |
 | 운영자 계정 표    | `packages/auth/src/admin/AdminAccounts.stories.tsx`         | 검색 · 정지 · 복구 · 역할 — 선택 내보내기 `@skeleton/auth/admin`                                                                                                          |
 | 랜딩              | `packages/marketing/src/patterns/Landing.stories.tsx`       | 공개 첫 화면 — Hero · 기능 · 한마디 · 요금제 · FAQ · 마지막 권유 · 푸터(`@skeleton/marketing`)                                                                            |

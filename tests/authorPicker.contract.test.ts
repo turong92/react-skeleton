@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { REPO } from './support/loadWorkspaces'
 
 /*
- * `@skeleton/board` 의 `AuthorPickerArgs`(선택기 렌더 함수가 받는 것)와 `@skeleton/author-profile` 의 `AuthorPickerSlotProps`(선택기가 받는 것)는 서로를 import 하지 않는다 —
+ * board 패키지의 `AuthorPickerArgs`(선택기 렌더 함수가 받는 것)와 author-profile 패키지의 `AuthorPickerSlotProps`(선택기가 받는 것)는 서로를 import 하지 않는다 —
  * 그래서 어긋나도 타입 검사가 모른다. 두 정의를 읽어 속성 이름 · 선택 여부 · 타입 글자가 같은지 본다(board 가 인자를 더하면 여기서 멈춘다).
  * 패키지 폴더가 둘 다 있는 프로젝트에서만 잰다 — 폴더가 있는데 정의 파일이 없거나 정의를 읽지 못하면 **실패**한다(조용히 건너뛰지 않는다).
  */

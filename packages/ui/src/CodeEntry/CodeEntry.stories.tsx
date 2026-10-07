@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
 import { expect, fn, waitFor } from 'storybook/test'
-import { CodeEntry } from './CodeEntry'
+import { CodeEntry, type CodeTimeLabels } from './CodeEntry'
 
 /**
  * 인증번호 입력 — 숫자 칸 6개. 붙여넣으면 채워지고, Backspace 는 앞 칸으로 넘어가고, 다 채우면 버튼 없이 제출된다(`onComplete`).
@@ -145,5 +145,214 @@ export const BusyLocksTheCells: Story = {
   play: async ({ canvas }) => {
     for (let i = 1; i <= 6; i++)
       await expect(canvas.getByLabelText(`Digit ${i} of 6`)).toBeDisabled()
+  },
+}
+
+/* ---------------------------------------------------------------------------------------------------------------------------
+ * 남은 시간(`expiresAt`) — 시계는 스토리가 쥔 가짜 시계(`now`)다. 컴포넌트는 매 틱마다 `now()` 를 다시 읽으므로(감산이 아니다)
+ * 시계를 앞으로 돌리면 다음 초 경계(최대 1초)에 화면이 따라온다. 실제 10분을 기다리지 않는다.
+ * ------------------------------------------------------------------------------------------------------------------------- */
+
+const timeLabels: CodeTimeLabels = {
+  remaining: (clock) => `Time left ${clock}`,
+  minuteLeft: 'One minute left',
+  secondsLeft: (seconds) => `${seconds} seconds left`,
+  expired: 'Time is up. Get a new code.',
+}
+
+function fakeClock(start = 1_700_000_000_000) {
+  let t = start
+  return {
+    now: () => t,
+    advance: (ms: number) => {
+      t += ms
+    },
+  }
+}
+
+const slow = { timeout: 4000 }
+
+export const CountdownNormal: Story = {
+  render: (args) => {
+    const clock = fakeClock()
+    return (
+      <CodeEntry
+        {...args}
+        now={clock.now}
+        expiresAt={clock.now() + 582_000}
+        timeLabels={timeLabels}
+        expirySource="server"
+      />
+    )
+  },
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByText('Time left 09:42')).toBeVisible()
+    await expect(canvas.queryByRole('alert')).toBeNull()
+    // 읽어 주는 영역은 문턱 전까지 비어 있다
+    await expect(canvas.getByRole('status')).toBeEmptyDOMElement()
+  },
+}
+
+function UnderMinuteDemo() {
+  const [clock] = useState(() => fakeClock())
+  return (
+    <div>
+      <CodeEntry
+        label="Verification code"
+        digitLabel={(i, n) => `Digit ${i} of ${n}`}
+        onComplete={() => undefined}
+        now={clock.now}
+        expiresAt={clock.now() + 75_000}
+        timeLabels={timeLabels}
+      />
+      <button type="button" onClick={() => clock.advance(20_000)}>
+        +20s
+      </button>
+      <button type="button" onClick={() => clock.advance(7_000)}>
+        +7s
+      </button>
+    </div>
+  )
+}
+
+export const UnderOneMinuteIsEmphasisedAndAnnouncedOnce: Story = {
+  render: () => <UnderMinuteDemo />,
+  play: async ({ canvas, userEvent }) => {
+    const time = await canvas.findByText('Time left 01:15')
+    await expect(time).toHaveAttribute('data-stage', 'normal')
+    await expect(canvas.getByRole('status')).toBeEmptyDOMElement()
+    await userEvent.click(canvas.getByRole('button', { name: '+20s' }))
+    // 60초 아래: 굵게 · 밑줄(색만이 아니다) + 한 번 읽는다
+    await waitFor(
+      () => expect(canvas.getByText('Time left 00:55')).toHaveAttribute('data-stage', 'minute'),
+      slow,
+    )
+    await expect(canvas.getByRole('status')).toHaveTextContent('One minute left')
+    await expect(getComputedStyle(canvas.getByText('Time left 00:55')).textDecorationLine).toBe(
+      'underline',
+    )
+    // 같은 단계 안에서 초가 흘러도 읽어 주는 글은 그대로다(초마다 낭독하지 않는다)
+    await userEvent.click(canvas.getByRole('button', { name: '+20s' }))
+    await waitFor(() => expect(canvas.getByText('Time left 00:35')).toBeVisible(), slow)
+    await expect(canvas.getByRole('status')).toHaveTextContent('One minute left')
+    await userEvent.click(canvas.getByRole('button', { name: '+20s' }))
+    await waitFor(() => expect(canvas.getByText('Time left 00:15')).toBeVisible(), slow)
+    await userEvent.click(canvas.getByRole('button', { name: '+7s' }))
+    await waitFor(
+      () => expect(canvas.getByRole('status')).toHaveTextContent('10 seconds left'),
+      slow,
+    )
+  },
+}
+
+function ExpiryDemo({ onResend }: { onResend: () => void }) {
+  const [clock] = useState(() => fakeClock())
+  const [expiresAt, setExpiresAt] = useState(() => clock.now() + 3_000)
+  return (
+    <div>
+      <CodeEntry
+        label="Verification code"
+        digitLabel={(i, n) => `Digit ${i} of ${n}`}
+        onComplete={() => undefined}
+        now={clock.now}
+        expiresAt={expiresAt}
+        timeLabels={timeLabels}
+        resend={{
+          label: 'Send again',
+          onResend: () => {
+            onResend()
+            setExpiresAt(clock.now() + 600_000)
+          },
+          secondsLeft: 0,
+        }}
+      />
+      <button type="button" onClick={() => clock.advance(4_000)}>
+        +4s
+      </button>
+    </div>
+  )
+}
+
+export const ExpiredLocksTheCellsAndFocusesResend: Story = {
+  render: (args) => <ExpiryDemo onResend={() => args.onComplete('resent')} />,
+  play: async ({ canvas, userEvent }) => {
+    await canvas.findByText('Time left 00:03')
+    await userEvent.click(canvas.getByRole('button', { name: '+4s' }))
+    await expect(await canvas.findByRole('alert', {}, slow)).toHaveTextContent(
+      'Time is up. Get a new code.',
+    )
+    for (let i = 1; i <= 6; i++)
+      await expect(canvas.getByLabelText(`Digit ${i} of 6`)).toBeDisabled()
+    await waitFor(
+      () => expect(canvas.getByRole('button', { name: 'Send again' })).toHaveFocus(),
+      slow,
+    )
+  },
+}
+
+export const ResendResetsTheCountdown: Story = {
+  render: (args) => <ExpiryDemo onResend={() => args.onComplete('resent')} />,
+  play: async ({ canvas, userEvent, args }) => {
+    await userEvent.click(canvas.getByRole('button', { name: '+4s' }))
+    await canvas.findByRole('alert', {}, slow)
+    await userEvent.click(canvas.getByRole('button', { name: 'Send again' }))
+    await expect(args.onComplete).toHaveBeenCalledWith('resent')
+    // 새 10분 — 칸이 풀리고 첫 칸에 포커스
+    await waitFor(() => expect(canvas.getByText('Time left 10:00')).toBeVisible(), slow)
+    await expect(canvas.queryByRole('alert')).toBeNull()
+    await expect(canvas.getByLabelText('Digit 1 of 6')).toBeEnabled()
+    await waitFor(() => expect(canvas.getByLabelText('Digit 1 of 6')).toHaveFocus(), slow)
+  },
+}
+
+export const ResendCooldownInSecondsOnTheButton: Story = {
+  args: {
+    resend: {
+      label: 'Send again',
+      onResend: fn(),
+      secondsLeft: 27,
+      labelWhileWaiting: (seconds: number) => `Send again (${seconds} s)`,
+    },
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('button', { name: 'Send again (27 s)' })).toBeDisabled()
+  },
+}
+
+function ReloadDemo() {
+  const [clock] = useState(() => fakeClock())
+  const [expiresAt] = useState(() => clock.now() + 600_000) // 서버가 준 절대 시각 — 새로고침해도 같다
+  const [mounted, setMounted] = useState(1)
+  return (
+    <div>
+      <CodeEntry
+        key={mounted}
+        label="Verification code"
+        digitLabel={(i, n) => `Digit ${i} of ${n}`}
+        onComplete={() => undefined}
+        now={clock.now}
+        expiresAt={expiresAt}
+        timeLabels={timeLabels}
+      />
+      <button
+        type="button"
+        onClick={() => {
+          clock.advance(100_000) // 100초 지난 뒤 새로고침
+          setMounted((n) => n + 1)
+        }}
+      >
+        Reload after 100s
+      </button>
+    </div>
+  )
+}
+
+export const ReloadRestoresTheRemainingTime: Story = {
+  render: () => <ReloadDemo />,
+  play: async ({ canvas, userEvent }) => {
+    await canvas.findByText('Time left 10:00')
+    await userEvent.click(canvas.getByRole('button', { name: 'Reload after 100s' }))
+    // 처음부터 10분이 아니라, 남은 8분 20초
+    await expect(await canvas.findByText('Time left 08:20')).toBeVisible()
   },
 }

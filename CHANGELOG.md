@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — 인증번호 남은 시간 카운트다운 (2026-10-07)
+
+주인 요청 — 「10분 제한 뒀는데 카운트도 넣어줘 보통 다 있던데」.
+
+- **`@skeleton/ui` `CodeEntry`**: `expiresAt`(절대 시각 — ISO · `Date` · ms) · `now`(시계) · `timeLabels` · `expirySource`(`server`/`estimate` → `data-expiry-source`) · `onExpire`. 칸 옆에 `mm:ss`(문구는 prop). **매 틱 `now()` 를 다시 읽는다**(감산 아님 — 탭이 잠들었다 깨도 맞고, 서버 보정 시계를 넘기면 기기 시계 오차가 없다). 60초 아래는 빨강 + 굵게 + 밑줄(색만이 아니다), 읽어 주는 영역은 60초 · 10초 · 끝에서만 바뀐다(초마다 낭독하지 않는다). 끝나면 칸 잠금 + 안내 + 「다시 받기」 포커스. 새 `expiresAt` 이 오면(다시 받기) 칸을 비우고 처음부터 센다. 서버 렌더에는 시간을 그리지 않는다(하이드레이션 일치). 움직임 없음. 다시 받기 쿨다운은 버튼 글자에 초로(`resend.labelWhileWaiting`) — 초마다 낭독되던 `aria-live` 는 없앴다. 순수 계산: `secondsRemaining` · `formatClock` · `stageOf` · `expiryMillis`.
+- **`@skeleton/auth`**: 가입 · 이메일 변경 · 다시 인증(메일 코드) · 삭제 확인의 모든 코드 단계에 적용. 만료의 출처: 이메일 변경은 서버 값(`me.pendingEmailExpiresAt`), 나머지는 서버가 응답에 시각을 안 줘서 **문서화된 유효 시간으로 어림**(가입 600 초 · 나머지 1800 초, `codeTtlSeconds` 로 바꾼다). 응답에 `expiresAt` · `resendAvailableAt`(ISO)이 오면 코드를 안 고쳐도 서버 값이 이긴다(`codeWindowOf`). 시계는 `createAuthRoutes({ now: () => serverClock.now().getTime() })`(샘플 · 스타터 · SSR 스타터 배선, 응답 `Date` 헤더 — 교차 출처면 `Access-Control-Expose-Headers: Date` 필요). 가입의 보관 상태는 만료 · 재요청 **시각**을 함께 보관한다(코드는 보관하지 않는다) — 새로고침해도 남은 시간 · 쿨다운이 이어진다. 가입은 만료된 시도의 다시 받기를 서버가 조용히 무시하므로 시간이 다 되면 「다시 받기」가 처음부터 다시로 이어진다(`expiredResend="restart"`). 라벨 `codeTimeLeft` · `codeTimeMinute` · `codeTimeTen` · `codeTimeUp` · `codeResendWaiting`(ko · en). **동작 변경**: 가입 직후 30초는 「다시 받기」가 잠겨 있다(서버도 무시하는 구간).
+
 ### Added — 가입 폼 사용성: 비밀번호 확인 · 놓칠 수 없는 제출 피드백 · 쿠키 배너가 폼을 가리지 않는다 (2026-10-07)
 
 주인이 실제로 써 보다 겪은 문제 — 「이메일로 가입하기 눌렀는데 먹통」(필수 약관을 안 켠 채 눌러도 요청이 안 나가고 체크박스 옆 작은 글자뿐 · 아래 쿠키 배너가 그것을 가렸다) · 「비번 일치하는지 보는 거 넣어야지」.

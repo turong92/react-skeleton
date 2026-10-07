@@ -1,5 +1,6 @@
 import { createAccountApi, createAuthApi, createAuthRoutes, koAuthLabels } from '@skeleton/auth'
 import { useMemo } from 'react'
+import { serverClock } from '../api/serverClock'
 import { useApi } from '../api/useApi'
 import { ConsentSettingsSection } from '../legal/ConsentSettingsSection'
 import { SignUpConsentsSlot } from '../legal/SignUpConsentsSlot'
@@ -28,6 +29,8 @@ function useApis() {
 export const accountRoutes = (handle?: (page: string) => unknown) =>
   createAuthRoutes({
     namespace: AUTH_NAMESPACE,
+    // 인증번호 남은 시간은 서버 시각 기준(응답 Date 헤더로 보정한 시계)으로 센다
+    now: () => serverClock.now().getTime(),
     useApis,
     // 방법은 백엔드가 알려 준다(`GET /auth/methods` — 서버는 로딩 화면을 그리고 브라우저가 묻는다). 환경변수 · 고정 목록이 덮어쓴다
     methods: authMethodsOverride && { ...authMethodsOverride, social: [] },

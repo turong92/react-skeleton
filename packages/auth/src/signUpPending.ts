@@ -1,6 +1,16 @@
 import type { TokenStorage } from './tokenStore'
 
-export type PendingSignUp = { email: string; signUpId: string }
+/**
+ * `expiresAt` · `resendAvailableAt` 은 **절대 시각**(에포크 ms, 서버 시각 기준)이다 — 새로고침해도 남은 시간이 이어진다. 코드 자체는 어디에도 두지 않는다
+ */
+export type PendingSignUp = {
+  email: string
+  signUpId: string
+  expiresAt?: number
+  resendAvailableAt?: number
+  /** `expiresAt` 이 서버 값이 아니라 문서화된 유효 시간으로 어림한 값이다 */
+  estimated?: boolean
+}
 
 export type SignUpPendingStore = {
   save(pending: PendingSignUp): void
@@ -55,7 +65,15 @@ export function createSignUpPending({
           now() - parsed.at > ttlMs
         )
           return null
-        return { email: parsed.email, signUpId: parsed.signUpId }
+        return {
+          email: parsed.email,
+          signUpId: parsed.signUpId,
+          ...(typeof parsed.expiresAt === 'number' ? { expiresAt: parsed.expiresAt } : {}),
+          ...(typeof parsed.resendAvailableAt === 'number'
+            ? { resendAvailableAt: parsed.resendAvailableAt }
+            : {}),
+          ...(parsed.estimated === true ? { estimated: true } : {}),
+        }
       } catch {
         return null
       }

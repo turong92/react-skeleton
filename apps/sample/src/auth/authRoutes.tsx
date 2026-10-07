@@ -6,6 +6,7 @@ import {
 } from '@skeleton/auth'
 import type { MessageKey } from '../i18n'
 import type { SeoHandle } from '../seo/routeSeo'
+import { serverClock } from '../api/serverClock'
 import { accountApi, authApi, authSession } from './session'
 import {
   authKeys,
@@ -61,6 +62,8 @@ const hidden = (page: AuthPageName): SeoHandle => ({
 export const accountRoutes = createAuthRoutes({
   session: authSession,
   namespace: AUTH_NAMESPACE,
+  // 인증번호 남은 시간은 서버 시각 기준(응답 Date 헤더로 보정한 시계)으로 센다
+  now: () => serverClock.now().getTime(),
   authApi,
   accountApi,
   methods: authMethodsOverride && {

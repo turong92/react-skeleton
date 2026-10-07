@@ -378,6 +378,7 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
   'auth#AuthProvider': (ctx) => ({ session: fakeSession(ctx), children: 'inside' }),
   'auth#RequireAuth': () => ({ children: 'secret' }),
   'auth#RequireRole': () => ({ roles: ['ADMIN'], children: 'secret' }),
+  'auth#CodeClockProvider': () => ({ now: () => 0, children: 'inside' }),
   'auth#AuthLayout': () => ({ title: 'Sign in', children: 'inside' }),
   'auth#SignInScreen': () => ({ onPasswordSignIn: asyncNoop }),
   'auth#SignUpScreen': () => ({
@@ -568,6 +569,7 @@ export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
   'theme#useTheme': () => [],
   'ui#useSubmitAttempt': () => [],
   'auth#useAuth': () => [],
+  'auth#useCodeClock': () => [],
   'auth#useCountdown': () => [],
   'auth#useAuthMethods': () => [{ methods: () => new Promise(noop) }, true],
   'auth#useSocialLoginCallback': () => [{ complete: () => new Promise(noop) }, '?code=x'],

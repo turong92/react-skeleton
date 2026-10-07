@@ -19,6 +19,9 @@ export const apiError = (code: string, status: number, data?: unknown) =>
     '00-trace-demo-span-demo-01',
   )
 
+/** 지금부터 n분 뒤의 ISO 시각 — 코드 만료는 시계에 따라 달라지므로 고정 날짜를 쓰면 스토리가 곧 만료된 화면이 된다 */
+const inMinutes = (minutes: number): string => new Date(Date.now() + minutes * 60_000).toISOString()
+
 const identity = (over: Partial<SignInIdentity>): SignInIdentity => ({
   id: 'idn_pw',
   method: 'password',
@@ -41,6 +44,8 @@ export type FakeAccountOptions = {
   onlyMethod?: boolean
   /** 새 주소의 인증번호를 기다리는 이메일 변경이 이미 있다(새로고침 뒤) */
   pendingEmail?: string
+  /** 그 요청의 만료까지 남은 분(기본 30 — 백엔드 `email-change.ttl`). 서버가 말해 주는 `pendingEmailExpiresAt` 이 된다 */
+  pendingExpiresInMinutes?: number
   /** 메일 인증을 끈 앱 — 가입이 바로 `CREATED` */
   verificationOff?: boolean
 }
@@ -91,7 +96,9 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
     hasPassword: !options.passwordless && !options.noAddress,
     methods,
     pendingEmail: options.pendingEmail ?? null,
-    pendingEmailExpiresAt: options.pendingEmail ? '2026-10-06T10:00:00Z' : null,
+    pendingEmailExpiresAt: options.pendingEmail
+      ? inMinutes(options.pendingExpiresInMinutes ?? 30)
+      : null,
   }
   let codeAttempts = 5
   const wrongCode = () => {
@@ -197,7 +204,7 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
       calls.push('changeEmail')
       reauth(proof)
       me.pendingEmail = newEmail
-      me.pendingEmailExpiresAt = '2026-10-06T10:00:00Z'
+      me.pendingEmailExpiresAt = inMinutes(30)
     },
     requestReauthConfirmation: () => track('requestReauthConfirmation', undefined),
     identities: () => track('identities', [...methods]),

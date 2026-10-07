@@ -30,11 +30,17 @@ export type ReauthCredential = {
 
 export type AccountApi = {
   /** `202 {status:'VERIFICATION_SENT', signUpId}` — 계정은 아직 없고 6자리 코드가 메일로 갔다(`verifySignUpCode`). 메일 인증을 끈 앱은 `201 {status:'CREATED'}`(signUpId 없음) */
-  signUp(request: SignUpRequest): Promise<{ status: SignUpStatus; signUpId?: string }>
+  signUp(request: SignUpRequest): Promise<{
+    status: SignUpStatus
+    signUpId?: string
+    /** 오늘 백엔드는 안 준다 — 주면(ISO-8601) 화면이 어림 대신 쓴다 */
+    expiresAt?: string
+    resendAvailableAt?: string
+  }>
   /** `POST /auth/verify-email {signUpId, code}` → 이 시도에 입력한 비밀번호로 계정이 만들어지고 **바로 로그인**(토큰 응답). 400 `ACCOUNT.CODE_INVALID`(`data.attemptsLeft`) · 410 `ACCOUNT.CODE_EXPIRED` · 429 */
   verifySignUpCode(signUpId: string, code: string): Promise<AuthTokenResponse>
   /** `POST /account/verification/resend {signUpId}` — 같은 시도에 새 코드(늘 202 — 쿨다운 · 횟수 초과는 조용히 무시, 429 는 IP 한도뿐) */
-  resendSignUpCode(signUpId: string, captchaToken?: string): Promise<void>
+  resendSignUpCode(signUpId: string, captchaToken?: string): Promise<unknown>
   forgotPassword(email: string, captchaToken?: string): Promise<void>
   resetPassword(token: string, newPassword: string): Promise<void>
   passwordPolicy(): Promise<PasswordPolicy>
@@ -99,12 +105,8 @@ export function createAccountApi(
         ...publicPost({ signUpId, code }),
         ...(deviceName ? { headers: { 'X-Device-Name': deviceName } } : {}),
       }),
-    resendSignUpCode: async (signUpId, captchaToken) => {
-      await client.value(
-        '/account/verification/resend',
-        publicPost(compact({ signUpId, captchaToken })),
-      )
-    },
+    resendSignUpCode: (signUpId, captchaToken) =>
+      client.value('/account/verification/resend', publicPost(compact({ signUpId, captchaToken }))),
     forgotPassword: async (email, captchaToken) => {
       await client.value('/account/password/forgot', publicPost(compact({ email, captchaToken })))
     },

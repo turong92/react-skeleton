@@ -113,6 +113,16 @@ export type AuthLabels = {
   codeResend: string
   codeResent: string
   codeResendIn: (seconds: number) => string
+  /** 쿨다운 동안 「다시 받기」 버튼 글자 — 예: `다시 받기 (27초)` */
+  codeResendWaiting: (seconds: number) => string
+  /** 칸 옆의 남은 시간 줄 — 예: `남은 시간 09:42` */
+  codeTimeLeft: (clock: string) => string
+  /** 60초 아래가 되는 순간 한 번 읽는 문구 */
+  codeTimeMinute: string
+  /** 10초 아래가 되는 순간 한 번 읽는 문구 */
+  codeTimeTen: string
+  /** 시간이 다 됐다(보이고 읽힌다) */
+  codeTimeUp: string
   codeChecking: string
   checkEmailTitle: string
   checkEmailBody: (email: string) => string
@@ -391,6 +401,11 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   codeResend: 'Send a new code',
   codeResent: 'A new code is on its way.',
   codeResendIn: (seconds) => `You can ask again in ${seconds} s`,
+  codeResendWaiting: (seconds) => `Send a new code (${seconds} s)`,
+  codeTimeLeft: (clock) => `Time left ${clock}`,
+  codeTimeMinute: 'One minute left',
+  codeTimeTen: '10 seconds left',
+  codeTimeUp: 'Time is up. Please get a new code.',
   codeChecking: 'Checking the code',
   checkEmailTitle: 'Check your email',
   checkEmailBody: (email) => `We sent a link to ${email}. Open it to continue.`,

@@ -15,6 +15,7 @@ import {
 import { ConsentSettings, koLegalLabels } from '@skeleton/legal'
 import { legalApi } from '../api/legal'
 import { SignUpConsentsSlot } from '../legal/SignUpConsentsSlot'
+import { serverClock } from '../api/serverClock'
 import { accountApi, authApi, authSession } from './session'
 
 const origin = typeof window === 'undefined' ? '' : window.location.origin
@@ -52,6 +53,8 @@ const socialLinkFlow = hasSocial
 export const accountRoutes = createAuthRoutes({
   session: authSession,
   namespace: AUTH_NAMESPACE,
+  // 인증번호 남은 시간은 서버 시각 기준(응답 Date 헤더로 보정한 시계)으로 센다
+  now: () => serverClock.now().getTime(),
   authApi,
   accountApi,
   methods: authMethodsOverride && {

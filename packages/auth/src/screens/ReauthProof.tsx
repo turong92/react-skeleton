@@ -1,7 +1,9 @@
 import { ErrorCodes } from '@skeleton/api-client'
-import { Alert, Button, CodeEntry } from '@skeleton/ui'
+import { Alert, Button, CodeEntry, type ExpiryInput } from '@skeleton/ui'
 import { useEffect, useRef, useState } from 'react'
 import type { ReauthCredential } from '../account/accountApi'
+import { useCodeClock } from '../codeClockContext'
+import { codeWindowOf, estimateCodeWindow, type CodeWindow } from '../codeWindow'
 import type { ReauthKind } from '../reauth/kind'
 import { PasswordField } from './PasswordField'
 import styles from './auth.module.css'
@@ -31,6 +33,12 @@ export type ReauthProofProps = {
   confirmedWith?: string
   /** 인증번호 다시 받기 쿨다운(초) — 서버는 30초 안의 새 요청도 받지만 메일 한도(시간당 5번)가 있어 막아 둔다 */
   resendCooldownSeconds?: number
+  /**
+   * 인증번호 유효 시간(초) — 서버가 요청 응답에 만료 시각을 안 줄 때(오늘은 안 준다) 남은 시간을 어림하는 값. 백엔드 기본: 재인증 · 삭제 확인 모두 30분(1800)
+   */
+  codeTtlSeconds?: number
+  /** `requestCode` 없이 인증번호 칸이 바로 열릴 때(다른 곳에서 이미 보냈다) 그 코드의 만료 시각 */
+  codeExpiresAt?: ExpiryInput
   disabled?: boolean
   labels?: Partial<AuthLabels>
 }
@@ -52,6 +60,8 @@ export function ReauthProof({
   onProvider,
   confirmedWith,
   resendCooldownSeconds = 30,
+  codeTtlSeconds = 1800,
+  codeExpiresAt,
   disabled,
   labels: given,
 }: ReauthProofProps) {
@@ -63,6 +73,9 @@ export function ReauthProof({
   const [dismissed, setDismissed] = useState<unknown>(null)
   const mail = useAction(labels)
   const wait = useCountdown()
+  const now = useCodeClock()
+  /** 방금 보낸 코드의 유효 창 — 서버가 준 시각이 있으면 그것, 없으면 `codeTtlSeconds` 로 어림(`source: 'estimate'`) */
+  const [codeWindow, setCodeWindow] = useState<CodeWindow | null>(null)
   const onChangeRef = useRef(onChange)
   useEffect(() => {
     onChangeRef.current = onChange
@@ -85,11 +98,20 @@ export function ReauthProof({
 
   async function sendCode() {
     setExpired(false)
+    let response: unknown
     const ok = await mail.run(async () => {
-      await requestCode?.()
+      response = await requestCode?.()
     })
     if (ok) {
+      setCodeWindow(
+        codeWindowOf(response) ??
+          estimateCodeWindow(now(), {
+            ttlSeconds: codeTtlSeconds,
+            cooldownSeconds: resendCooldownSeconds,
+          }),
+      )
       setPhase('sent')
+      onChange(null) // 새 코드 — 지난 번호는 버려진다
       wait.start(resendCooldownSeconds)
     }
   }
@@ -193,13 +215,27 @@ export function ReauthProof({
               onChange({ confirmationCode: code })
             }}
             error={codeError}
+            expiresAt={codeWindow?.expiresAt ?? codeExpiresAt}
+            expirySource={codeWindow?.source ?? 'server'}
+            now={now}
+            timeLabels={{
+              remaining: labels.codeTimeLeft,
+              minuteLeft: labels.codeTimeMinute,
+              secondsLeft: () => labels.codeTimeTen,
+              expired: labels.codeTimeUp,
+            }}
+            onExpire={() => {
+              // 시간이 다 됐다 — 이 번호는 서버가 어차피 받지 않는다. 증거를 거두고 새로 받게 한다
+              setPhase('sent')
+              onChange(null)
+            }}
             resend={
               requestCode
                 ? {
                     label: labels.codeResend,
                     onResend: () => void sendCode(),
                     secondsLeft: wait.seconds,
-                    waitLabel: labels.codeResendIn,
+                    labelWhileWaiting: labels.codeResendWaiting,
                   }
                 : undefined
             }

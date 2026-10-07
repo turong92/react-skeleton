@@ -2,6 +2,25 @@ import { useEffect, useRef, useState, type ClipboardEvent, type KeyboardEvent } 
 import { Button } from '../Button/Button'
 import styles from './CodeEntry.module.css'
 import { backspaceAt, digitsOf, fillFrom, isComplete } from './codeEntryState'
+import {
+  expiryMillis,
+  formatClock,
+  stageOf,
+  watchRemaining,
+  type ExpiryInput,
+} from './codeEntryTime'
+
+/** 남은 시간 문구 — 번역은 앱의 몫 */
+export type CodeTimeLabels = {
+  /** 칸 옆에 늘 보이는 줄 — 예: `(clock) => \`남은 시간 ${clock}\`` */
+  remaining: (clock: string) => string
+  /** 60초 아래가 되는 순간 한 번 읽는다 */
+  minuteLeft: string
+  /** 10초 아래가 되는 순간 한 번 읽는다 */
+  secondsLeft: (seconds: number) => string
+  /** 끝났을 때(보이는 안내이자 한 번 읽는 알림) — 예: 「시간이 지났어요. 인증번호를 다시 받아 주세요」 */
+  expired: string
+}
 
 export type CodeEntryProps = {
   /** 그룹 이름(스크린 리더가 「인증번호」로 읽는다) */
@@ -25,7 +44,21 @@ export type CodeEntryProps = {
     onResend: () => void
     secondsLeft?: number
     waitLabel?: (seconds: number) => string
+    /** 쿨다운 동안 **버튼 글자** — 예: `(s) => \`다시 받기 (${s}초)\``. 읽어 주는 영역이 아니라 초마다 낭독되지 않는다 */
+    labelWhileWaiting?: (seconds: number) => string
   }
+  /**
+   * 코드가 만료되는 **절대 시각**(서버가 준 값이 가장 좋다). 있으면 칸 옆에 남은 시간 `mm:ss` 를 보이고, 끝나면 칸을 잠그고 안내하며
+   * 「다시 받기」로 포커스를 옮긴다. 다시 받은 뒤에는 **새 `expiresAt`** 를 넘기면 처음부터 센다. 서버 렌더에는 시간을 그리지 않는다(하이드레이션 일치)
+   */
+  expiresAt?: ExpiryInput
+  /** 시계(기본 `Date.now`) — 서버 시각으로 보정한 시계를 넘기면 기기 시계 오차가 없다 */
+  now?: () => number
+  timeLabels?: CodeTimeLabels
+  /** `expiresAt` 이 서버 값인지, 문서화된 유효 시간으로 **클라이언트가 추정한 값**인지 — `data-expiry-source` 로 남는다 */
+  expirySource?: 'server' | 'estimate'
+  /** 시간이 다 됐다(한 번) */
+  onExpire?: () => void
   /** 첫 칸에 달 `id`(바깥 `Field` 의 라벨 연결용은 필요 없다 — 그룹 라벨이 있다) */
   id?: string
 }
@@ -46,12 +79,38 @@ export function CodeEntry({
   disabled = false,
   resend,
   id,
+  expiresAt,
+  now = Date.now,
+  timeLabels,
+  expirySource,
+  onExpire,
 }: CodeEntryProps) {
   const [cells, setCells] = useState<string[]>(() => Array.from({ length }, () => ''))
   const refs = useRef<Array<HTMLInputElement | null>>([])
   const [seenError, setSeenError] = useState<string | undefined>(undefined)
   const errorId = `${id ?? 'code'}-error`
-  const locked = busy || disabled
+  const expiresMs = expiryMillis(expiresAt)
+  const timed = expiresMs !== null && !!timeLabels
+  // 남은 초 — 서버 렌더 · 하이드레이션 첫 렌더에는 null(시간에 따라 다른 마크업이 나오지 않는다). 마운트 뒤 시계로 채운다
+  const [remaining, setRemaining] = useState<number | null>(null)
+  const nowRef = useRef(now)
+  const onExpireRef = useRef(onExpire)
+  useEffect(() => {
+    nowRef.current = now
+    onExpireRef.current = onExpire
+  })
+  useEffect(() => {
+    if (!timed || expiresMs === null) return
+    return watchRemaining({
+      expiresAtMs: expiresMs,
+      now: () => nowRef.current(),
+      onChange: setRemaining,
+    })
+  }, [timed, expiresMs])
+  const stage = remaining === null ? 'normal' : stageOf(remaining)
+  const expired = timed && stage === 'expired'
+  const locked = busy || disabled || expired
+  const resendBox = useRef<HTMLDivElement | null>(null)
 
   // 새 오류가 오면(= 방금 낸 번호가 틀렸다) 칸을 비우고 처음으로 — 다시 칠 수 있게. 렌더 중 상태 조정(이전 값 비교)이라 effect 가 필요 없다
   if (error !== seenError) {
@@ -63,6 +122,24 @@ export function CodeEntry({
   useEffect(() => {
     if (error) refs.current[0]?.focus()
   }, [error])
+
+  // 새 만료 시각이 왔다(= 다시 받았다) — 지난 번호를 비우고 남은 시간을 새로 센다. 렌더 중 상태 조정
+  const [seenExpiry, setSeenExpiry] = useState(expiresMs)
+  if (expiresMs !== seenExpiry) {
+    setSeenExpiry(expiresMs)
+    setRemaining(null)
+    setCells(Array.from({ length }, () => ''))
+  }
+
+  // 끝났다: 한 번 알리고 「다시 받기」로 포커스(눌릴 수 있을 때만 — 쿨다운 중이면 버튼이 꺼져 있다). 다시 받아 풀리면 첫 칸으로
+  const wasExpired = useRef(false)
+  useEffect(() => {
+    if (expired && !wasExpired.current) {
+      resendBox.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus()
+      onExpireRef.current?.()
+    } else if (!expired && wasExpired.current) refs.current[0]?.focus()
+    wasExpired.current = expired
+  }, [expired])
 
   function focus(index: number) {
     const input = refs.current[index]
@@ -106,8 +183,16 @@ export function CodeEntry({
   }
 
   const waiting = (resend?.secondsLeft ?? 0) > 0
+  const announcement =
+    !timed || remaining === null
+      ? ''
+      : stage === 'minute'
+        ? (timeLabels?.minuteLeft ?? '')
+        : stage === 'ten'
+          ? (timeLabels?.secondsLeft(10) ?? '')
+          : ''
   return (
-    <div className={styles.root}>
+    <div className={styles.root} data-expiry-source={timed ? expirySource : undefined}>
       <div
         role="group"
         aria-label={label}
@@ -138,20 +223,44 @@ export function CodeEntry({
           />
         ))}
       </div>
+      {timed && (
+        <>
+          {/* 시간은 문턱(60초 · 10초 · 끝)에서만 읽는다 — 아래 줄은 읽어 주는 영역이 아니라 초마다 낭독되지 않는다 */}
+          <p role="status" className={styles.srOnly}>
+            {announcement}
+          </p>
+          {expired ? (
+            <p role="alert" className={styles.timeUp}>
+              {timeLabels.expired}
+            </p>
+          ) : (
+            remaining !== null && (
+              <p className={styles.time} data-stage={stage}>
+                {timeLabels.remaining(formatClock(remaining))}
+              </p>
+            )
+          )}
+        </>
+      )}
       {error && (
         <p id={errorId} role="alert" className={styles.error}>
           {error}
         </p>
       )}
       {resend && (
-        <div className={styles.resend}>
-          <Button variant="ghost" size="sm" disabled={locked || waiting} onClick={resend.onResend}>
-            {resend.label}
+        <div className={styles.resend} ref={resendBox}>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={busy || disabled || waiting}
+            onClick={resend.onResend}
+          >
+            {waiting && resend.labelWhileWaiting
+              ? resend.labelWhileWaiting(resend.secondsLeft ?? 0)
+              : resend.label}
           </Button>
           {waiting && resend.waitLabel && (
-            <span className={styles.wait} aria-live="polite">
-              {resend.waitLabel(resend.secondsLeft ?? 0)}
-            </span>
+            <span className={styles.wait}>{resend.waitLabel(resend.secondsLeft ?? 0)}</span>
           )}
         </div>
       )}

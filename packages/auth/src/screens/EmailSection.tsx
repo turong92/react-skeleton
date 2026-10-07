@@ -9,8 +9,10 @@ import {
   useSubmitAttempt,
   type FormProblem,
 } from '@skeleton/ui'
-import { useId, useState, type FormEvent } from 'react'
+import { useId, useRef, useState, type FormEvent } from 'react'
 import type { ReauthCredential } from '../account/accountApi'
+import { useCodeClock } from '../codeClockContext'
+import { codeWindowOf, estimateCodeWindow, type CodeWindow } from '../codeWindow'
 import { reauthKindOf, isReauthFailure, type ReauthSubject } from '../reauth/kind'
 import { ReauthProof } from './ReauthProof'
 import { VerifyCodePanel } from './VerifyCodePanel'
@@ -38,6 +40,8 @@ export type EmailSectionProps = {
   /** 서버가 알려 주는 대기 중 변경(`me.pendingEmail` · `pendingEmailExpiresAt`) — 새로고침 뒤에도 같은 상태를 그린다 */
   pendingEmail?: string | null
   pendingEmailExpiresAt?: string | null
+  /** 서버가 만료 시각을 안 줄 때(방금 요청한 직후 `me` 가 다시 읽히기 전) 어림하는 유효 시간(초) — 백엔드 `email-change.ttl` 기본 30분 */
+  codeTtlSeconds?: number
   formatDate?: (iso: string) => string
   labels?: Partial<AuthLabels>
 }
@@ -61,6 +65,7 @@ export function EmailSection({
   resume,
   pendingEmail,
   pendingEmailExpiresAt,
+  codeTtlSeconds = 1800,
   formatDate = defaultFormat,
   labels: given,
 }: EmailSectionProps) {
@@ -73,7 +78,13 @@ export function EmailSection({
   const [editing, setEditing] = useState(false)
   const [changed, setChanged] = useState(false)
   const action = useAction(labels)
+  const now = useCodeClock()
+  /** 방금 보낸 요청의 유효 창(어림) — `me.pendingEmailExpiresAt`(서버 값)이 읽히면 그쪽이 이긴다 */
+  const [localWindow, setLocalWindow] = useState<CodeWindow | null>(null)
+  const againBox = useRef<HTMLDivElement | null>(null)
   const waiting = local ?? pendingEmail ?? null
+  const serverExpiry =
+    pendingEmailExpiresAt && pendingEmail === waiting ? pendingEmailExpiresAt : null
   const showCode = !!waiting && !editing
   const uid = useId()
   const ids = { email: `${uid}-email`, proof: `${uid}-proof` }
@@ -84,10 +95,14 @@ export function EmailSection({
     if (kind === 'provider') return
     // 버튼은 늘 눌린다 — 새 주소가 비었거나 본인 확인이 모자라면 이유를 말하고 그 칸으로 간다
     if (problems.length > 0) return attempt.fail(problems[0].target)
+    let response: unknown
     const ok = await action.run(async () => {
-      await onChangeEmail({ newEmail, ...proof })
+      response = await onChangeEmail({ newEmail, ...proof })
     })
     if (ok) {
+      setLocalWindow(
+        codeWindowOf(response) ?? estimateCodeWindow(now(), { ttlSeconds: codeTtlSeconds }),
+      )
       setLocal(newEmail)
       setNewEmail('')
       setProof(null)
@@ -139,6 +154,10 @@ export function EmailSection({
                   : undefined,
               )}
               labels={given}
+              expiresAt={serverExpiry ?? localWindow?.expiresAt}
+              expirySource={serverExpiry ? 'server' : (localWindow?.source ?? 'estimate')}
+              // 이 요청은 다시 인증이 드니(비밀번호 · 메일 코드) 조용히 다시 보낼 수 없다 — 시간이 다 되면 「다시 받기 · 다른 주소로」로 포커스
+              onExpire={() => againBox.current?.querySelector<HTMLButtonElement>('button')?.focus()}
               onVerify={async (code) => {
                 await onConfirmCode(code)
                 setLocal(null)
@@ -151,7 +170,7 @@ export function EmailSection({
               }}
             />
             <p className={styles.muted}>{labels.emailPendingNote}</p>
-            <div className={styles.row}>
+            <div className={styles.row} ref={againBox}>
               <Button
                 variant="secondary"
                 size="sm"

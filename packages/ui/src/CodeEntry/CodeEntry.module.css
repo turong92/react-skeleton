@@ -47,3 +47,33 @@
 .wait {
   color: var(--text-muted);
 }
+
+.time {
+  margin: 0;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 60초 아래: 색만이 아니라 굵기 · 밑줄도 바뀐다(색을 못 보는 사람도 안다). 움직임은 없다 — 움직임 줄이기를 따로 켤 필요가 없다 */
+.time[data-stage='minute'],
+.time[data-stage='ten'] {
+  color: var(--red);
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.timeUp {
+  margin: 0;
+  color: var(--red);
+  font-weight: 650;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

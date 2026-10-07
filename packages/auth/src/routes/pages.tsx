@@ -36,6 +36,7 @@ import {
 } from './discovery'
 import type { AuthStorageKeys } from '../storageKeys'
 import { scrubUrlParams } from '../scrubUrl'
+import { CodeClockProvider } from '../codeClock'
 import type { SignUpPendingStore } from '../signUpPending'
 import { useSocialLoginCallback } from '../useSocialLoginCallback'
 
@@ -83,6 +84,8 @@ export type PageContext = {
   authApi: AuthApi
   accountApi: AccountApi
   labels?: Partial<AuthLabels>
+  /** 인증번호 남은 시간을 세는 시계(서버 보정) */
+  now?: () => number
   paths: AuthPaths
   /** 로그인 뒤 기본 목적지 */
   afterSignIn: string
@@ -588,5 +591,6 @@ export function WithLabels({
     notes: ctx.notes,
     statePrefixes: { social: ctx.keys.social, socialLink: ctx.keys.socialLink },
   })
-  return render({ ...ctx, ...apis, ...discovered, labels })
+  const page = render({ ...ctx, ...apis, ...discovered, labels })
+  return ctx.now ? <CodeClockProvider now={ctx.now}>{page}</CodeClockProvider> : page
 }

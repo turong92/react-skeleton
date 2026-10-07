@@ -189,6 +189,54 @@ export const PendingEmailFromServer: Story = {
   },
 }
 
+/* 인증번호 남은 시간 — 이메일 변경은 서버가 준 `me.pendingEmailExpiresAt`(= 서버 값), 재인증 · 삭제 확인은 서버가 만료 시각을 안 줘서 문서화된 30분으로 어림(`data-expiry-source="estimate"`) */
+export const EmailChangeCodeShowsTheServerExpiry: Story = {
+  args: { fake: { pendingEmail: 'next@example.com', pendingExpiresInMinutes: 9 } },
+  play: async ({ canvas, canvasElement }) => {
+    await expect(await canvas.findByText(/^Time left (09:00|08:5\d)$/)).toBeVisible()
+    await expect(
+      canvasElement.querySelector('[data-testid="verify-code"] [data-expiry-source]'),
+    ).toHaveAttribute('data-expiry-source', 'server')
+  },
+}
+
+export const EmailChangeCodeExpiredLocksAndFocusesSendAgain: Story = {
+  args: { fake: { pendingEmail: 'next@example.com', pendingExpiresInMinutes: 0.04 } },
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByRole('alert', {}, { timeout: 6000 })).toHaveTextContent(
+      'Time is up. Please get a new code.',
+    )
+    await expect(canvas.getByLabelText('Digit 1 of 6')).toBeDisabled()
+    // 이 요청은 다시 인증이 드니 조용히 다시 보낼 수 없다 — 「다시 받기」(= 새 요청)로 포커스
+    await waitFor(() =>
+      expect(canvas.getByRole('button', { name: 'Send the code again' })).toHaveFocus(),
+    )
+  },
+}
+
+export const ReauthCodeCountsDownFromAnEstimatedThirtyMinutes: Story = {
+  args: { fake: { passwordless: true } },
+  play: async ({ canvas, userEvent }) => {
+    const section = within(await canvas.findByRole('region', { name: 'Email address' }))
+    await userEvent.type(section.getByLabelText(/^New email/), 'next@example.com')
+    await userEvent.click(section.getByRole('button', { name: 'Email me a code' }))
+    await expect(await section.findByText(/^Time left (30:00|29:5\d)$/)).toBeVisible()
+    // 다시 받기는 쿨다운 동안 버튼 글자에 초로
+    await expect(
+      section.getByRole('button', { name: /^Send a new code \(\d+ s\)$/ }),
+    ).toBeDisabled()
+  },
+}
+
+export const DeleteCodeCountsDownFromAnEstimatedThirtyMinutes: Story = {
+  args: { fake: { passwordless: true } },
+  play: async ({ canvas, userEvent }) => {
+    const section = within(await canvas.findByRole('region', { name: 'Delete account' }))
+    await userEvent.click(section.getByRole('button', { name: 'Email me a code' }))
+    await expect(await section.findByText(/^Time left (30:00|29:5\d)$/)).toBeVisible()
+  },
+}
+
 /** 비밀번호 없는 계정(주소 있음): 같은 자리에서 코드를 받아 입력한다 — 링크 왕복 없음 */
 export const PasswordlessEmailChangeByCode: Story = {
   args: { fake: { passwordless: true } },

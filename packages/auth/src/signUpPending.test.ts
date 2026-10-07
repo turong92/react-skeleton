@@ -57,4 +57,47 @@ describe('the sign-up attempt survives a reload of the code step (FINAL-3 draft)
     expect(() => throwing.save({ email: 'a@b.c', signUpId: 's' })).not.toThrow()
     expect(throwing.read()).toEqual({ email: 'a@b.c', signUpId: 's' }) // memory fallback
   })
+
+  it('remembers WHEN the code expires and when a new one may be asked (instants), so a reload resumes the countdown', () => {
+    const storage = memory()
+    createSignUpPending({ storage }).save({
+      email: 'a@b.c',
+      signUpId: 'sid',
+      expiresAt: 1_900_000_600_000,
+      resendAvailableAt: 1_900_000_030_000,
+    })
+    expect(createSignUpPending({ storage }).read()).toEqual({
+      email: 'a@b.c',
+      signUpId: 'sid',
+      expiresAt: 1_900_000_600_000,
+      resendAvailableAt: 1_900_000_030_000,
+    })
+  })
+
+  it('stores no code and no password — only the address, the opaque id and two instants', () => {
+    const storage = memory()
+    createSignUpPending({ storage }).save({
+      email: 'a@b.c',
+      signUpId: 'sid',
+      expiresAt: 5,
+      resendAvailableAt: 3,
+    })
+    const stored = JSON.parse([...storage.map.values()][0]) as Record<string, unknown>
+    expect(Object.keys(stored).sort()).toEqual([
+      'at',
+      'email',
+      'expiresAt',
+      'resendAvailableAt',
+      'signUpId',
+    ])
+  })
+
+  it('an old entry without the instants still reads (no countdown, as before)', () => {
+    const storage = memory()
+    storage.map.set(
+      'skeleton.signUp',
+      JSON.stringify({ email: 'a@b.c', signUpId: 's', at: Date.now() }),
+    )
+    expect(createSignUpPending({ storage }).read()).toEqual({ email: 'a@b.c', signUpId: 's' })
+  })
 })

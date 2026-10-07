@@ -284,14 +284,129 @@ export const CodeStepRateLimitedShowsTheWaitNotAWrongCode: Story = {
 
 export const CodeStepResendHasACooldown: Story = {
   args: codeArgs(),
+  // 가입 직후 30초는 서버도 조용히 무시하는 구간이라 버튼이 잠겨 있다 — 쿨다운이 끝난 뒤(새로고침 뒤 등)에 누르는 경우를 본다
+  render: (args) => (
+    <SignUpScreen
+      {...args}
+      initialPending={{
+        email: 'ann@example.com',
+        signUpId: 'sid-1',
+        expiresAt: Date.now() + 300_000,
+        resendAvailableAt: Date.now() - 1_000,
+      }}
+    />
+  ),
   play: async ({ canvas, userEvent, args }) => {
-    await fillAndSubmit(canvas, userEvent)
+    await expect(await canvas.findByText(/^Time left 0[45]:\d\d$/)).toBeVisible()
     await userEvent.click(await canvas.findByRole('button', { name: 'Send a new code' }))
     await waitFor(() => {
       expect(args.onResendCode).toHaveBeenCalledTimes(1)
       expect(args.onResendCode).toHaveBeenCalledWith('sid-1')
     })
-    await expect(await canvas.findByRole('button', { name: 'Send a new code' })).toBeDisabled()
+    // 쿨다운은 버튼 글자에 초로 — 초마다 읽어 주는 영역이 아니다
+    await expect(
+      await canvas.findByRole('button', { name: /^Send a new code \(\d+ s\)$/ }),
+    ).toBeDisabled()
+    // 다시 받으면 남은 시간이 새로(어림 10분) 시작한다
+    await expect(await canvas.findByText(/^Time left (10:00|09:5\d)$/)).toBeVisible()
+  },
+}
+
+/* 인증번호 남은 시간 — 서버가 만료 시각을 안 줘서(오늘 백엔드) 가입 직후는 문서화된 10분으로 **어림**하고 `data-expiry-source="estimate"` 로 남긴다 */
+export const CodeStepCountsDownFromAnEstimatedTenMinutes: Story = {
+  args: codeArgs(),
+  play: async ({ canvas, userEvent, canvasElement }) => {
+    await fillAndSubmit(canvas, userEvent)
+    await expect(await canvas.findByText(/^Time left (10:00|09:5\d)$/)).toBeVisible()
+    await expect(canvasElement.querySelector('[data-expiry-source]')).toHaveAttribute(
+      'data-expiry-source',
+      'estimate',
+    )
+  },
+}
+
+/** 새로고침으로 돌아왔다: 보관한 **절대 시각**에서 남은 시간을 이어 센다(처음부터 10분이 아니다). 코드는 보관하지 않는다 */
+export const CodeStepReloadResumesTheRemainingTime: Story = {
+  args: codeArgs(),
+  render: (args) => (
+    <SignUpScreen
+      {...args}
+      initialPending={{
+        email: 'ann@example.com',
+        signUpId: 'sid-1',
+        expiresAt: Date.now() + 342_000,
+        estimated: true,
+      }}
+    />
+  ),
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByText(/^Time left 05:4\d$/)).toBeVisible()
+  },
+}
+
+export const CodeStepUnderAMinuteIsEmphasised: Story = {
+  args: codeArgs(),
+  render: (args) => (
+    <SignUpScreen
+      {...args}
+      initialPending={{
+        email: 'ann@example.com',
+        signUpId: 'sid-1',
+        expiresAt: Date.now() + 45_000,
+      }}
+    />
+  ),
+  play: async ({ canvas }) => {
+    const time = await canvas.findByText(/^Time left 00:4\d$/)
+    await expect(time).toHaveAttribute('data-stage', 'minute')
+    await expect(canvas.getByRole('status')).toHaveTextContent('One minute left')
+  },
+}
+
+/** 서버는 **만료된 시도의 다시 받기를 조용히 무시**한다 — 그래서 가입은 시간이 다 되면 「다시 받기」가 처음부터 다시(주소는 남는다)로 이어진다 */
+export const CodeStepExpiredLocksAndFocusesTheRestart: Story = {
+  args: codeArgs(),
+  render: (args) => (
+    <SignUpScreen
+      {...args}
+      initialPending={{
+        email: 'ann@example.com',
+        signUpId: 'sid-1',
+        expiresAt: Date.now() + 2_000,
+      }}
+    />
+  ),
+  play: async ({ canvas, userEvent, args }) => {
+    await expect(await canvas.findByRole('alert', {}, { timeout: 6000 })).toHaveTextContent(
+      'Time is up. Please get a new code.',
+    )
+    await expect(canvas.getByLabelText('Digit 1 of 6')).toBeDisabled()
+    await waitFor(() =>
+      expect(canvas.getByRole('button', { name: 'Send a new code' })).toHaveFocus(),
+    )
+    await userEvent.click(canvas.getByRole('button', { name: 'Send a new code' }))
+    await expect(args.onResendCode).not.toHaveBeenCalled() // 서버가 어차피 무시하는 호출을 하지 않는다
+    await expect(await canvas.findByLabelText(/^Email/)).toHaveValue('ann@example.com')
+  },
+}
+
+export const CodeStepReloadKeepsTheResendCooldown: Story = {
+  args: codeArgs(),
+  render: (args) => (
+    <SignUpScreen
+      {...args}
+      initialPending={{
+        email: 'ann@example.com',
+        signUpId: 'sid-1',
+        expiresAt: Date.now() + 500_000,
+        resendAvailableAt: Date.now() + 27_000,
+      }}
+    />
+  ),
+  play: async ({ canvas }) => {
+    await expect(
+      await canvas.findByRole('button', { name: /^Send a new code \(2\d s\)$/ }),
+    ).toBeDisabled()
   },
 }
 

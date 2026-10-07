@@ -12,6 +12,9 @@ import {
 import { useId, useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { violationsOf } from '../account/passwordRules'
+import { useCodeClock } from '../codeClockContext'
+import { codeWindowOf, estimateCodeWindow } from '../codeWindow'
+import type { PendingSignUp } from '../signUpPending'
 import type {
   PasswordPolicy,
   PasswordViolation,
@@ -65,15 +68,25 @@ export type SignUpScreenProps = {
   /** `GET /account/password/policy` 의 값(앱이 불러 넘긴다 — 불러오는 중에는 undefined 로 두면 규칙 목록을 숨긴다) */
   policy?: PasswordPolicy
   labels?: Partial<AuthLabels>
-  onSignUp: (request: SignUpSubmit) => Promise<{ status: SignUpStatus; signUpId?: string }>
+  onSignUp: (request: SignUpSubmit) => Promise<{
+    status: SignUpStatus
+    signUpId?: string
+    /** 서버가 주면(오늘은 안 준다) 그 값이 이긴다 — 없으면 `codeTtlSeconds` 로 어림 */
+    expiresAt?: string | number
+    resendAvailableAt?: string | number
+  }>
   /** 가입 응답에 `signUpId` 가 오면 같은 화면에서 6자리 인증번호를 받는다. 이 함수가 코드를 서버에 내고(성공하면 가입이 끝나고 바로 로그인) 그 뒤의 이동은 호출자가 한다 */
   onVerifyCode: (signUpId: string, code: string) => Promise<unknown>
   /** 코드 단계의 「새 코드 받기」(같은 시도에 새 코드) */
-  onResendCode?: (signUpId: string) => Promise<void>
+  onResendCode?: (signUpId: string) => Promise<unknown>
   /** 새로고침해도 코드 단계가 이어지도록 앱이 보관해 둔 진행 중 가입(탭 하나의 sessionStorage 등) */
-  initialPending?: { email: string; signUpId: string }
+  initialPending?: PendingSignUp
   /** 코드 단계에 들어가거나(값) 벗어나면(null) — 앱이 보관한다 */
-  onPendingChange?: (pending: { email: string; signUpId: string } | null) => void
+  onPendingChange?: (pending: PendingSignUp | null) => void
+  /** 서버가 만료 시각을 안 줄 때 어림하는 코드 유효 시간(초, 백엔드 `verification.code-ttl` 기본 10분) */
+  codeTtlSeconds?: number
+  /** 다시 받기 쿨다운(초, 백엔드 기본 30) */
+  resendCooldownSeconds?: number
   /** 메일 인증이 꺼진 앱(`CREATED`) — 바로 쓸 수 있는 계정 */
   onCreated?: () => void
   /** 소셜 가입(소셜 로그인과 같은 흐름) */
@@ -105,6 +118,8 @@ export function SignUpScreen({
   onResendCode,
   initialPending,
   onPendingChange,
+  codeTtlSeconds = 600,
+  resendCooldownSeconds = 30,
   onCreated,
   methods,
   onSocialSignIn,
@@ -119,8 +134,9 @@ export function SignUpScreen({
   timeZone,
 }: SignUpScreenProps) {
   const labels = mergeLabels(given)
+  const now = useCodeClock()
   const enabled = resolveMethods(methods)
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState(initialPending?.email ?? '') // 새로고침 뒤 「처음부터」로 돌아와도 주소는 남는다
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [captchaToken, setCaptchaToken] = useState<string | null>(null)
@@ -223,7 +239,20 @@ export function SignUpScreen({
         attempt.reset()
         // 메일 인증이 켜져 있으면 늘 signUpId 가 온다(주소가 새것이든 이미 있든 같은 모양) — 코드 입력 단계로
         if (result.signUpId) {
-          const next = { email, signUpId: result.signUpId }
+          // 만료 · 재요청 시각: 서버가 응답에 주면 그 값(오늘 백엔드는 안 준다), 아니면 문서화된 유효 시간으로 어림한다. 코드는 저장하지 않는다
+          const sent =
+            codeWindowOf(result) ??
+            estimateCodeWindow(now(), {
+              ttlSeconds: codeTtlSeconds,
+              cooldownSeconds: resendCooldownSeconds,
+            })
+          const next: PendingSignUp = {
+            email,
+            signUpId: result.signUpId,
+            expiresAt: sent.expiresAt,
+            ...(sent.resendAvailableAt ? { resendAvailableAt: sent.resendAvailableAt } : {}),
+            ...(sent.source === 'estimate' ? { estimated: true } : {}),
+          }
           setPending(next)
           onPendingChange?.(next)
         }
@@ -267,6 +296,12 @@ export function SignUpScreen({
         <VerifyCodePanel
           email={pending.email}
           labels={given}
+          expiresAt={pending.expiresAt}
+          expirySource={pending.estimated ? 'estimate' : 'server'}
+          resendAvailableAt={pending.resendAvailableAt}
+          codeTtlSeconds={codeTtlSeconds}
+          resendCooldownSeconds={resendCooldownSeconds}
+          expiredResend="restart" // 서버는 만료된 시도의 다시 받기를 조용히 무시한다 — 만료 뒤에는 처음부터
           onVerify={async (code) => {
             await onVerifyCode(pending.signUpId, code)
             onPendingChange?.(null)

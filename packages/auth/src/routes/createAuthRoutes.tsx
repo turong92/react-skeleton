@@ -109,6 +109,11 @@ export type AuthRoutesOptions = {
   labels?: Partial<AuthLabels>
   /** 새 비밀번호를 한 번 더 입력받는다(가입 · 재설정 · 변경 · 첫 설정, 기본 true) — 끄면 비밀번호 칸 하나. 가입만 따로 바꾸려면 `signUp: { confirmPassword }` */
   confirmPassword?: boolean
+  /**
+   * 인증번호 남은 시간을 세는 시계 — 서버 보정 시계를 넣는다: `now: () => serverClock.now().getTime()`(응답 `Date` 헤더로 맞춘 `@skeleton/time`).
+   * 안 넣으면 기기 시계. 교차 출처라면 백엔드가 `Access-Control-Expose-Headers: Date` 를 내야 브라우저가 `Date` 를 읽는다
+   */
+  now?: () => number
   /** 화면 언어에 따라 문구가 바뀌는 앱: 렌더 때 부르는 훅(보통 `useT()` 로 고른 사전). 있으면 `labels` 보다 먼저 */
   useLabels?: () => Partial<AuthLabels> | undefined
   paths?: Partial<AuthPaths>
@@ -151,6 +156,7 @@ export function createAuthRoutes(options: AuthRoutesOptions): RouteObject[] {
     accountApi: options.accountApi as AccountApi,
     labels: options.labels,
     confirmPassword: options.confirmPassword,
+    now: options.now,
     paths,
     afterSignIn: options.afterSignIn ?? '/',
     methods: options.methods,

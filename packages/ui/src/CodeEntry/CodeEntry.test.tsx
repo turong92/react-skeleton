@@ -89,3 +89,51 @@ describe('CodeEntry markup', () => {
     ).toBe(6)
   })
 })
+
+describe('CodeEntry countdown markup (server render)', () => {
+  const timeLabels = {
+    remaining: (clock: string) => `Time left ${clock}`,
+    minuteLeft: 'One minute left',
+    secondsLeft: (seconds: number) => `${seconds} seconds left`,
+    expired: 'Time is up. Get a new code.',
+  }
+  const soon = Date.now() + 9 * 60_000
+
+  it('prints no time on the server — the first client render matches it, the time appears after mount', () => {
+    const out = renderToStaticMarkup(
+      <CodeEntry {...props} expiresAt={soon} timeLabels={timeLabels} expirySource="estimate" />,
+    )
+    expect(out).not.toContain('Time left')
+    expect(out).not.toMatch(/\d\d:\d\d/)
+    expect(out).toContain('data-expiry-source="estimate"')
+  })
+
+  it('keeps a quiet live region for the 60 s / 10 s / expired announcements (empty until a threshold)', () => {
+    const out = renderToStaticMarkup(
+      <CodeEntry {...props} expiresAt={soon} timeLabels={timeLabels} />,
+    )
+    expect(out).toMatch(/<p[^>]*role="status"[^>]*><\/p>/)
+    expect((out.match(/aria-live/g) ?? []).length).toBe(0)
+  })
+
+  it('without expiresAt nothing about time is drawn (the old behaviour)', () => {
+    const out = renderToStaticMarkup(<CodeEntry {...props} timeLabels={timeLabels} />)
+    expect(out).not.toContain('role="status"')
+  })
+
+  it('the resend button itself says the cooldown in seconds, and nothing is read out every second', () => {
+    const out = renderToStaticMarkup(
+      <CodeEntry
+        {...props}
+        resend={{
+          label: 'Send again',
+          onResend: () => undefined,
+          secondsLeft: 27,
+          labelWhileWaiting: (s) => `Send again (${s} s)`,
+        }}
+      />,
+    )
+    expect(out).toMatch(/<button[^>]*disabled[^>]*>Send again \(27 s\)<\/button>/)
+    expect(out).not.toContain('aria-live')
+  })
+})

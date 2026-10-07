@@ -52,15 +52,25 @@ export function resolveAuthor(
   return { kind: 'unnamed', name: labels.authorUnnamed, tag: null }
 }
 
-/** 한 화면(목록 · 스레드)에서 서로 다른 계정이 같이 쓰는 닉네임들 — 꼬리표가 필요한 이름 */
+/** 보이지 않게 이름을 갈라 놓는 문자(제로폭 · 서식 · 변형 선택자 · 태그) — 서버가 같은 이름으로 접는 것과 맞춘다 */
+const INVISIBLE =
+  /[\u00AD\u034F\u061C\u115F\u1160\u17B4\u17B5\u180B-\u180F\u200B-\u200F\u202A-\u202E\u2060-\u206F\u3164\uFE00-\uFE0F\uFEFF\uFFA0\u{E0000}-\u{E0FFF}]/gu
+
+/** 겹침을 가르는 키 — NFKC(전각 · 반각) + 소문자 + 보이지 않는 문자 제거 + 앞뒤 공백. 서버가 같은 이름으로 접는 `Sumin` / `sumin` 을 같은 이름으로 본다 */
+export function nameKey(name: string): string {
+  return name.normalize('NFKC').toLowerCase().replace(INVISIBLE, '').trim()
+}
+
+/** 한 화면(목록 · 스레드)에서 서로 다른 계정이 같이 쓰는 닉네임들(`nameKey` 로 접은 키) — 꼬리표가 필요한 이름 */
 export function collidingNames(items: Iterable<AuthorFields>): ReadonlySet<string> {
   const owners = new Map<string, Set<string>>()
   for (const item of items) {
     const resolved = resolveAuthor(item)
     if (resolved.kind !== 'named') continue
-    const set = owners.get(resolved.name) ?? new Set<string>()
+    const key = nameKey(resolved.name)
+    const set = owners.get(key) ?? new Set<string>()
     set.add(item.authorId)
-    owners.set(resolved.name, set)
+    owners.set(key, set)
   }
   return new Set([...owners].filter(([, ids]) => ids.size > 1).map(([name]) => name))
 }

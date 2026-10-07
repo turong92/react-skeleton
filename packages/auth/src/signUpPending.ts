@@ -45,9 +45,27 @@ export function createSignUpPending({
     }
     return memory
   }
+  const wipe = () => {
+    memory = null
+    try {
+      storage?.removeItem(key)
+    } catch {
+      // 괜찮다
+    }
+  }
   return {
     save(pending) {
-      const raw = JSON.stringify({ ...pending, at: now() })
+      // 허용한 필드만 저장한다(코드 · 비밀번호 같은 것이 실수로 실려도 저장소에 가지 않는다)
+      const { email, signUpId, expiresAt, resendAvailableAt, resendExhausted, estimated } = pending
+      const raw = JSON.stringify({
+        email,
+        signUpId,
+        expiresAt,
+        resendAvailableAt,
+        resendExhausted,
+        estimated,
+        at: now(),
+      })
       memory = raw
       try {
         storage?.setItem(key, raw)
@@ -63,10 +81,13 @@ export function createSignUpPending({
         if (
           typeof parsed.email !== 'string' ||
           typeof parsed.signUpId !== 'string' ||
-          typeof parsed.at !== 'number' ||
-          now() - parsed.at > ttlMs
+          typeof parsed.at !== 'number'
         )
           return null
+        if (now() - parsed.at > ttlMs) {
+          wipe() // 만료된 항목은 읽을 때 지운다 — 저장소에 남아 있지 않게
+          return null
+        }
         return {
           email: parsed.email,
           signUpId: parsed.signUpId,
@@ -81,13 +102,6 @@ export function createSignUpPending({
         return null
       }
     },
-    clear() {
-      memory = null
-      try {
-        storage?.removeItem(key)
-      } catch {
-        // 괜찮다
-      }
-    },
+    clear: wipe,
   }
 }

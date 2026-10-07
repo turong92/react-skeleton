@@ -23,6 +23,7 @@ export const koAuthLabels: AuthLabels = {
   nicknameRetryHint:
     '다른 닉네임을 정하고 같은 인증번호로 확인해요. 비밀번호는 다시 입력하지 않아도 돼요.',
   nicknameRetryAction: '이 닉네임으로 계속',
+  codeTimeUpNoResend: '시간이 다 됐어요. 처음부터 다시 해 주세요.',
   codeNoMoreResends: '이 번호는 더 다시 보낼 수 없어요. 만료되면 처음부터 다시 해 주세요.',
   codeNoMoreResendsSignUp:
     '이 번호는 더 다시 보낼 수 없어요. 만료되면 처음부터 다시 가입해 주세요.',
@@ -277,7 +278,7 @@ export const koAuthLabels: AuthLabels = {
   sessionsRevokeOthers: '다른 모든 기기 로그아웃',
   sessionsRevoked: '로그아웃했어요.',
   sessionsUnknownDevice: '알 수 없는 기기',
-  sessionsLocalDevice: '이 기기(로컬)',
+  sessionsLocalDevice: '로컬 주소',
   sessionsLastUsed: (when) => `마지막 사용 ${when}`,
   sessionsEmpty: '다른 세션이 없어요.',
   deleteTitle: '계정 삭제',

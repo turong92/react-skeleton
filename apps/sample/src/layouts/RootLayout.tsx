@@ -153,6 +153,7 @@ export function RootLayout() {
         )}
       </AppShell>
       <ConsentBanner
+        reserveSpace // 배너가 폼 · 제출 버튼을 가리지 않게 아래를 비워 둔다(모듈 기본은 꺼짐)
         store={consent}
         categories={[
           {

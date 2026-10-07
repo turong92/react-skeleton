@@ -27,10 +27,29 @@ describe('the sign-up attempt survives a reload of the code step (FINAL-3 draft)
     expect(pending.read()).toBeNull()
   })
 
-  it('never stores the password (only the address and the opaque attempt id)', () => {
+  it('stores only the fields it allows — a password (or a code) that slips into the object never reaches the storage', () => {
     const storage = memory()
-    createSignUpPending({ storage }).save({ email: 'a@b.c', signUpId: 'sid' })
-    expect([...storage.map.values()].join('')).not.toMatch(/password/i)
+    createSignUpPending({ storage }).save({
+      email: 'a@b.c',
+      signUpId: 'sid',
+      password: 'hunter2-secret',
+      code: '123456',
+    } as never)
+    const stored = [...storage.map.values()].join('')
+    expect(stored).not.toContain('hunter2-secret')
+    expect(stored).not.toContain('123456')
+    expect(stored).toContain('sid')
+  })
+
+  it('an expired entry is removed from the storage when it is read, not just ignored', () => {
+    const storage = memory()
+    let now = 1_000
+    const pending = createSignUpPending({ storage, now: () => now })
+    pending.save({ email: 'a@b.c', signUpId: 'sid' })
+    expect(storage.map.size).toBe(1)
+    now += 11 * 60_000
+    expect(pending.read()).toBeNull()
+    expect(storage.map.size).toBe(0)
   })
 
   it('clear() removes it; garbage and a throwing storage read as nothing', () => {

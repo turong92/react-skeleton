@@ -174,6 +174,7 @@ export const ResetPassword: Story = {
     const onReset = fn(async () => undefined)
     return (
       <ResetPasswordScreen
+        confirmPassword
         token="tok-ResetPassword"
         policy={FAKE_POLICY}
         onReset={onReset}
@@ -199,6 +200,7 @@ export const ResetMismatchBlocksAndSaysWhy: Story = {
     const onReset = fn(async () => undefined)
     return (
       <ResetPasswordScreen
+        confirmPassword
         token="tok-ResetMismatchBlocksAndSaysWhy"
         policy={FAKE_POLICY}
         onReset={onReset}
@@ -239,6 +241,7 @@ export const ForgotWithoutAnAddressExplainsItself: Story = {
 export const ResetLinkInvalid: Story = {
   render: () => (
     <ResetPasswordScreen
+      confirmPassword
       token={null}
       policy={FAKE_POLICY}
       onReset={async () => undefined}

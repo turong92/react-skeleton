@@ -1,5 +1,6 @@
 import { Button, Card, Dialog, EmptyState, Field, Pagination, Select, Spinner } from '@skeleton/ui'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import { collidingNames } from './authorDisplay'
 import type { BoardApi } from './boardApi'
 import { resolveBoardCommentsLabels, type BoardCommentsLabelsInput } from './boardCommentsLabels'
 import { CommentForm } from './CommentForm'
@@ -66,6 +67,11 @@ export function BoardComments({
   const [page, setPage] = useState(0)
   const [deleting, setDeleting] = useState<BoardId | null>(null)
   const comments = useComments(api, boardCode, postId, { sort, page, size: pageSize })
+  /** 이 쪽의 모든 줄기를 한 범위로 — 줄기가 달라도 같은 닉네임의 다른 계정이면 꼬리표(데이터로 렌더 중에 계산한다) */
+  const pageNames = useMemo(
+    () => collidingNames((comments.data?.values ?? []).flatMap((root) => [root, ...root.replies])),
+    [comments.data],
+  )
   const create = useCreateComment(api, boardCode, postId)
   const update = useUpdateComment(api, boardCode, postId)
   const remove = useRemoveComment(api, boardCode, postId)
@@ -132,6 +138,7 @@ export function BoardComments({
                 <CommentThread
                   {...options}
                   thread={thread}
+                  scopeNames={pageNames}
                   labels={labels}
                   maxDepth={config.maxCommentDepth}
                   commentMaxLength={config.commentMaxLength}

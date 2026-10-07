@@ -402,31 +402,30 @@ function SocialLinkCallbackInner({ flow, ctx }: { flow: SocialLinkFlow; ctx: Pag
   const reauthProviders = resolveMethods(ctx.methods).social.map((p) => p.provider)
 
   // 연결할 제공자의 코드를 쥐고 이미 연결된 제공자로 다시 인증하고 돌아왔다 — 두 코드로 한 번에 연결한다(한 번만: StrictMode 의 두 번째 효과가 코드를 또 쓰지 않게)
+  const once = ctx.once
   useEffect(() => {
     if (!callback || foreign || action?.kind !== 'link-reauth' || started.current) return
     started.current = true
     const { target } = action
     // 두 인가 코드는 한 번씩만 쓸 수 있다 — 화면이 다시 마운트돼 `started` 가 새것이어도 같은 코드 쌍은 한 번만 보낸다
-    void ctx
-      .once(`link-reauth:${target.authorizationCode}:${callback.authorizationCode}`, () =>
-        linkSocial(
-          ctx.accountApi,
-          target.provider,
-          target.authorizationCode,
-          target.redirectUri,
-          {
-            socialReauth: {
-              provider: callback.provider,
-              authorizationCode: callback.authorizationCode,
-              redirectUri: callback.redirectUri,
-              ...proofOf(callback),
-            },
+    void once(`link-reauth:${target.authorizationCode}:${callback.authorizationCode}`, () =>
+      linkSocial(
+        ctx.accountApi,
+        target.provider,
+        target.authorizationCode,
+        target.redirectUri,
+        {
+          socialReauth: {
+            provider: callback.provider,
+            authorizationCode: callback.authorizationCode,
+            redirectUri: callback.redirectUri,
+            ...proofOf(callback),
           },
-          proofOf(target),
-        ),
-      )
-      .then(() => setDone(true), setFailure)
-  }, [callback, foreign, action, ctx.accountApi])
+        },
+        proofOf(target),
+      ),
+    ).then(() => setDone(true), setFailure)
+  }, [callback, foreign, action, ctx.accountApi, once])
 
   if (done)
     return (
@@ -631,8 +630,11 @@ export function AccountPage({
   const api = useMemo(
     () => ({
       ...ctx.accountApi,
-      deleteAccount: async (credential: Parameters<AccountApi['deleteAccount']>[0]) => {
-        const result = await ctx.accountApi.deleteAccount(credential)
+      deleteAccount: async (
+        credential: Parameters<AccountApi['deleteAccount']>[0],
+        idempotencyKey?: string,
+      ) => {
+        const result = await ctx.accountApi.deleteAccount(credential, idempotencyKey) // 멱등 키를 버리지 않는다
         navigateRef.current(deletedPath, {
           replace: true,
           state: { purgeAfter: result.purgeAfter },

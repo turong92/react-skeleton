@@ -69,7 +69,7 @@ export {
 export { AuthorScope } from './authorScope'
 export { AuthorName } from './AuthorName'
 export type { AuthorNameProps } from './AuthorName'
-export { collidingNames, defaultAuthorLabels, resolveAuthor } from './authorDisplay'
+export { collidingNames, defaultAuthorLabels, nameKey, resolveAuthor } from './authorDisplay'
 export type {
   AuthorFields,
   AuthorInfo,

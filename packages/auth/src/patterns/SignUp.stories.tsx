@@ -16,6 +16,7 @@ const meta = {
   decorators: [withRouter],
   args: {
     policy: FAKE_POLICY,
+    confirmPassword: true, // 모듈 기본은 꺼짐 — 이 스토리들은 앱이 켠 모양
     signInTo: '/login',
     onSignUp: fn(async () => ({ status: 'VERIFICATION_SENT' as const, signUpId: 'sid-1' })),
     onVerifyCode: fn(async () => undefined),

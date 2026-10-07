@@ -32,6 +32,8 @@ export function NicknameDialog({ open, onClose }: { open: boolean; onClose: () =
     onClose()
   }
   const save = useMutation({
+    // 칸 아래에 말하는 오류(400 규칙 위반 · 409 겹침 · 429 변경 한도)는 전역 토스트에서 뺀다
+    meta: { quietStatuses: [400, 409, 429] },
     mutationFn: (displayName: string) => accountApi.updateProfile({ displayName }),
     onSuccess: async () => {
       refreshAfterProfileChange(client)

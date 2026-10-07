@@ -37,6 +37,8 @@ export function stageOf(seconds: number): TimeStage {
   return 'normal'
 }
 
+const EXPIRED_RECHECK_MS = 2_000
+
 export type WatchOptions = {
   expiresAtMs: number
   /** 시계 — 서버 보정 시계를 넘기면 기기 시계 오차를 뺀다 */
@@ -48,7 +50,7 @@ export type WatchOptions = {
 
 /**
  * 남은 초가 **바뀔 때** 알린다 — 지금 값을 한 번 부르고, 다음 초 경계까지만 타이머를 걸어 `now()` 로 다시 읽는다(드리프트 없음).
- * 0 이 되면 스스로 멈춘다. 반환값을 부르면 타이머와 리스너가 없어진다.
+ * 0 이 된 뒤에는 2초마다 느리게 다시 읽는다(시계가 보정되면 시간이 돌아올 수 있다 — 바뀔 때만 알린다). 반환값을 부르면 타이머와 리스너가 없어진다.
  */
 export function watchRemaining({
   expiresAtMs,
@@ -59,14 +61,19 @@ export function watchRemaining({
   let timer: ReturnType<typeof setTimeout> | undefined
   let stopped = false
   const target = visibility ?? (typeof document === 'undefined' ? undefined : document)
+  let last: number | undefined
   const tick = () => {
     if (timer !== undefined) clearTimeout(timer)
     timer = undefined
     if (stopped) return
     const at = now()
     const left = expiresAtMs - at
-    onChange(secondsRemaining(expiresAtMs, at))
-    if (left > 0) timer = setTimeout(tick, left % 1000 || 1000)
+    const seconds = secondsRemaining(expiresAtMs, at)
+    if (left > 0 || last !== 0) onChange(seconds)
+    else if (seconds !== 0) onChange(seconds) // 끝났다고 했는데 시계 보정으로 시간이 돌아왔다
+    last = seconds
+    // 끝난 뒤에도 느리게 지켜본다 — 서버 시계 표본이 늦게 오면 틀린 시계로 내린 「만료」 판정이 그대로 굳지 않는다
+    timer = setTimeout(tick, left > 0 ? left % 1000 || 1000 : EXPIRED_RECHECK_MS)
   }
   target?.addEventListener('visibilitychange', tick)
   tick()

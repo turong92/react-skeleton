@@ -32,6 +32,7 @@ export const accountRoutes = (handle?: (page: string) => unknown) =>
     // 인증번호 남은 시간은 서버 시각 기준(응답 Date 헤더로 보정한 시계)으로 센다
     now: () => serverClock.now().getTime(),
     useApis,
+    confirmPassword: true, // 새 비밀번호를 한 번 더(모듈 기본은 꺼짐) — 가입 · 재설정 · 변경
     // 방법은 백엔드가 알려 준다(`GET /auth/methods` — 서버는 로딩 화면을 그리고 브라우저가 묻는다). 환경변수 · 고정 목록이 덮어쓴다
     methods: authMethodsOverride && { ...authMethodsOverride, social: [] },
     discovery: { delivery: parseDelivery(import.meta.env.VITE_AUTH_REFRESH_DELIVERY) },

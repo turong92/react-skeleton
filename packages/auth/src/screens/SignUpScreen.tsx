@@ -116,7 +116,7 @@ export type SignUpScreenProps = {
   displayName?: DisplayNameMode
   /** 옛 이름 — `true` 면 `displayName="optional"`. `displayName` 이 있으면 그쪽이 이긴다 */
   askDisplayName?: boolean
-  /** 비밀번호를 한 번 더 입력받는다(기본 true) — 다르면 제출하지 않는다. 확인 값은 서버로 보내지 않는다 */
+  /** 비밀번호를 한 번 더 입력받는다(기본 false — 모듈은 중립이라 앱이 켠다) — 다르면 제출하지 않는다. 확인 값은 서버로 보내지 않는다 */
   confirmPassword?: boolean
   signInTo?: string
   /** 가입 요청에 실어 보낼 로케일 · 시간대 */
@@ -144,7 +144,7 @@ export function SignUpScreen({
   onConsentsChange,
   displayName: displayNameMode,
   askDisplayName,
-  confirmPassword = true,
+  confirmPassword = false,
   signInTo,
   locale,
   timeZone,

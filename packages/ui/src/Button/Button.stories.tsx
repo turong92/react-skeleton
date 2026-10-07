@@ -88,18 +88,6 @@ export const Sizes: Story = {
   },
 }
 
-export const DisabledExplainsWhy: Story = {
-  args: { disabled: true, disabledReason: 'Fill in the required fields first' },
-  play: async ({ canvas }) => {
-    const button = canvas.getByRole('button', { name: 'Save' })
-    await expect(button).toBeDisabled()
-    await expect(button).toHaveAttribute('title', 'Fill in the required fields first')
-    await expect(button).toHaveAccessibleDescription('Fill in the required fields first')
-    await expect(getComputedStyle(button).cursor).toBe('not-allowed')
-    await expect(parseFloat(getComputedStyle(button).opacity)).toBeLessThan(1)
-  },
-}
-
 export const Disabled: Story = {
   args: { disabled: true },
   play: async ({ canvas, args, userEvent }) => {

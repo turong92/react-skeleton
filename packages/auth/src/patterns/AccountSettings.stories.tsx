@@ -26,6 +26,7 @@ function Demo({ fake, ...props }: { fake?: FakeAccountOptions } & Partial<Accoun
         { value: 'ko', label: '한국어' },
       ]}
       timeZones={['Asia/Seoul', 'UTC']}
+      confirmPassword // 모듈 기본은 꺼짐 — 이 스토리들은 앱이 켠 모양
       {...props}
     />
   )

@@ -11,7 +11,7 @@ import {
 } from '@skeleton/ui'
 import type { ReactNode } from 'react'
 import { AuthorName } from './AuthorName'
-import { collidingNames, type AuthorTagMode } from './authorDisplay'
+import { collidingNames, nameKey, type AuthorTagMode } from './authorDisplay'
 import { resolvePostListLabels, type PostListLabelsInput } from './postListLabels'
 import { PostListToolbar } from './PostListToolbar'
 import { POST_SORTS, type PostSort, type PostSummary } from './types'
@@ -95,12 +95,13 @@ export function PostList({
       key: 'author',
       header: labels.author,
       render: (post) => (
-        <span className={styles.nowrap}>
+        <span className={styles.authorCell}>
           <AuthorName
+            truncate
             author={post}
             labels={labels}
             tag={authorTag}
-            collides={colliding.has(post.authorName?.trim() ?? '')}
+            collides={colliding.has(nameKey(post.authorName ?? ''))}
           />
         </span>
       ),

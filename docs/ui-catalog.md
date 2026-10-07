@@ -10,7 +10,7 @@
 
 - 버튼은 쉬는 상태에서도 **테두리나 채움**이 있다 — 글자만 있는 버튼 금지(`ghost` 도 테두리가 있다). 정말 글 사이의 링크여야 하는 것만 `Button variant="link"` 나 밑줄 + 링크색 `<a>`.
 - 한 구역의 **주된 행동은 채운 `primary` 하나**, 나머지는 테두리(`secondary` · `ghost`), 위험한 행동(탈퇴 · 해제 · 삭제)은 `danger`(위험색 테두리).
-- hover · active · focus-visible 이 서로 다르게 보이고, 높이는 **44px**(`sm` 은 36px, 거친 포인터에서는 44px). 비활성은 흐리고 `not-allowed`, 이유는 `disabledReason`(마우스 올림 · 스크린 리더).
+- hover · active · focus-visible 이 서로 다르게 보이고, 높이는 **44px**(`sm` 은 36px, 거친 포인터에서는 44px). **꺼진 버튼으로 막지 않는다** — 막힌 이유는 누르면 말한다(`FormProblems` 방식: 제출은 늘 눌리고, 보내지 않은 채 이유를 목록 · 칸 옆에 보인다 — 꺼진 버튼은 키보드 · 터치로 이유에 닿지 못한다). 정말 꺼야 하면(진행 중) 흐리고 `not-allowed`.
 - 펼치는 것(`SectionCard collapsible`)은 테두리 + 화살표로, 아이콘 버튼(알림 · 테마 · ⋯ · 닫기 · 복사)도 테두리 상자로 보인다. 눌리지 않는 것(`Badge` · 읽기 전용 값)은 상자로 만들지 않는다.
 - 색만으로 구분하지 않는다(테두리 · 밑줄 · 굵기가 함께) — 대비는 `tests/contrast.test.ts`. 이 원칙은 `packages/ui/src/Button/affordance.test.ts`(스타일 단정)와 Button 스토리의 `EveryVariantLooksPressableAtRest` 가 지킨다.
 
@@ -18,7 +18,7 @@
 
 | 부품             | 스토리                                                      | 언제 쓰는가                                                                                                                                                                                                                                                                |
 | ---------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Button`         | `packages/ui/src/Button/Button.stories.tsx`                 | 모든 클릭 동작(채운 주 버튼은 구역마다 하나, 나머지는 테두리). 일하는 중에는 `loading`, 폼 제출만 `type="submit"`, 비활성 이유는 `disabledReason`                                                                                                                          |
+| `Button`         | `packages/ui/src/Button/Button.stories.tsx`                 | 모든 클릭 동작(채운 주 버튼은 구역마다 하나, 나머지는 테두리). 일하는 중에는 `loading`, 폼 제출만 `type="submit"`, 막힌 이유는 비활성 대신 누르면 말한다(`FormProblems`)                                                                                                   |
 | `Input`          | `packages/ui/src/Input/Input.stories.tsx`                   | 한 줄 입력. 라벨이 필요하니 `Field` 안에서                                                                                                                                                                                                                                 |
 | `CodeEntry`      | `packages/ui/src/CodeEntry/CodeEntry.stories.tsx`           | 인증번호(6자리) 입력 — 붙여넣기 · 칸 사이 Backspace · 다 채우면 자동 제출 · 오류 · 다시 보내기 대기(버튼 글자에 초) · **남은 시간 `mm:ss`(`expiresAt` 절대 시각 · 60초 아래 강조 · 문턱에서만 낭독 · 끝나면 잠금 + 「다시 받기」 포커스)** · 숫자 키패드 · `one-time-code` |
 | `Field`          | `packages/ui/src/Field/Field.stories.tsx`                   | 라벨 · 도움말 · 오류를 입력칸에 이어 주는 래퍼 — 입력칸은 항상 이 안에                                                                                                                                                                                                     |

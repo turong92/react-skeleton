@@ -1,5 +1,5 @@
 import { AuthorName } from './AuthorName'
-import { resolveAuthor } from './authorDisplay'
+import { nameKey, resolveAuthor, showsTag } from './authorDisplay'
 import { formatInstant } from '@skeleton/time'
 import { Button } from '@skeleton/ui'
 import type { CommentLabels } from './commentLabels'
@@ -42,11 +42,21 @@ export function CommentItem({ node, ctx }: { node: CommentNode; ctx: ThreadConte
       author={comment}
       labels={L}
       tag={ctx.authorTag}
-      collides={ctx.collidingNames.has(resolved.name)}
+      collides={ctx.collidingNames.has(nameKey(resolved.name))}
     />
   )
   const format = ctx.formatTime ?? ((iso: string) => formatInstant(iso))
-  const named = (label: string) => `${label}: ${resolved.name}`
+  // 꼬리표가 보일 때는 단추 이름에도 넣는다 — 같은 닉네임의 두 사람이 같은 소리가 나지 않게
+  const tagged =
+    resolved.tag &&
+    showsTag(
+      ctx.authorTag ?? 'collision',
+      ctx.collidingNames.has(nameKey(resolved.name)),
+      resolved.tag,
+    )
+      ? `${resolved.name}#${resolved.tag}`
+      : resolved.name
+  const named = (label: string) => `${label}: ${tagged}`
   const collapsible = children.length > 0 && children[0].comment.depth >= ctx.collapseFromDepth
   const open = !collapsible || ctx.expanded.has(comment.id)
   const reactionTypes = ctx.reactionTypes ?? []

@@ -10,8 +10,6 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   loading?: boolean
   /** 스피너의 낭독 이름(기본 `Loading`) */
   loadingLabel?: string
-  /** 눌리지 않을 때(`disabled`) 왜 그런지 — 마우스 올리면 보이고 스크린 리더에도 읽힌다. 이유 없는 비활성은 피한다 */
-  disabledReason?: string
 }
 
 export function Button({
@@ -19,7 +17,6 @@ export function Button({
   size = 'md',
   loading = false,
   loadingLabel,
-  disabledReason,
   type = 'button',
   disabled,
   className,
@@ -35,8 +32,6 @@ export function Button({
       data-size={size}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
-      title={disabled && disabledReason ? disabledReason : rest.title}
-      aria-description={disabled ? disabledReason : undefined}
     >
       {loading && <Spinner label={loadingLabel} />}
       {children}

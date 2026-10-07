@@ -47,6 +47,15 @@
   white-space: nowrap;
 }
 
+/* 작성자 열 — 긴 이름은 말줄임(전체 이름은 글자 그대로 DOM 에 있어 낭독된다) */
+.authorCell {
+  display: block;
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .error {
   display: grid;
   gap: var(--space-md);

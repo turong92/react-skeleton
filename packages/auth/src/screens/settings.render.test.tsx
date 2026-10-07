@@ -252,7 +252,7 @@ describe('settings sections', () => {
         onRevokeOthers={noop}
       />,
     )
-    expect(out).toContain('This device (local)')
+    expect(out).toContain('Local address')
     expect(out).toContain('2001:db8::1')
     expect(out).not.toContain('0:0:0:0:0:0:0:1')
   })

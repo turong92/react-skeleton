@@ -41,7 +41,7 @@ export type ConsentBannerProps = {
   /** 개인정보 처리방침 링크 */
   policyLink?: ReactNode
   /**
-   * 배너가 떠 있는 동안 페이지 아래를 배너 높이만큼 비워 둔다(기본 true) — 맨 끝까지 스크롤하면 폼 · 오류 문구 · 제출 버튼이 모두 배너 위에 오고,
+   * 배너가 떠 있는 동안 페이지 아래를 배너 높이만큼 비워 둔다(기본 false — 모듈은 중립: 앱이 켠다. 켜 두면 — 맨 끝까지 스크롤하면 폼 · 오류 문구 · 제출 버튼이 모두 배너 위에 오고,
    * `focus` · `scrollIntoView` 도 배너 밑으로 숨지 않는다(`html` 의 `scroll-padding-bottom`). 끄면 배너는 그대로 위에 겹친다.
    */
   reserveSpace?: boolean
@@ -57,7 +57,7 @@ export function ConsentBanner({
   categories,
   labels: given,
   policyLink,
-  reserveSpace = true,
+  reserveSpace = false,
 }: ConsentBannerProps) {
   const labels = { ...DEFAULT_LABELS, ...given }
   const state = useConsent(store)

@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { AuthorName } from './AuthorName'
+import { nameKey } from './authorDisplay'
 import { CommentThread } from './CommentThread'
 import { PostDetail } from './PostDetail'
 import { PostList } from './PostList'
@@ -180,6 +181,35 @@ describe('author tag', () => {
       />,
     )
     expect(apart).not.toContain('#')
+  })
+
+  it('a CommentThread also counts the names of the other threads of its page (scopeNames) — BoardComments hands the whole page over', () => {
+    const html = renderToStaticMarkup(
+      <CommentThread
+        {...threadProps}
+        scopeNames={new Set([nameKey('수민')])}
+        thread={thread(1, [], { authorId: 'a', authorName: '수민', authorTag: '4821' })}
+      />,
+    )
+    expect(html).toContain('#4821')
+  })
+
+  it('the name sits in <bdi> so the tag never lands in front of a right-to-left name', () => {
+    expect(
+      renderToStaticMarkup(<AuthorName author={{ authorId: 'a', authorName: 'שלום' }} />),
+    ).toMatch(/<bdi[^>]*>שלום<\/bdi>/)
+  })
+
+  it('the action buttons of a comment name the tag too when it is shown (two "수민" must not sound alike)', () => {
+    const html = renderToStaticMarkup(
+      <CommentThread
+        {...threadProps}
+        onReply={noop}
+        scopeNames={new Set([nameKey('수민')])}
+        thread={thread(1, [], { authorId: 'a', authorName: '수민', authorTag: '4821' })}
+      />,
+    )
+    expect(html).toContain('aria-label="Reply: 수민#4821"')
   })
 
   it('PostDetail shows the tag when told to always', () => {

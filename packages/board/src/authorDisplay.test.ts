@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { collidingNames, defaultAuthorLabels, resolveAuthor } from './authorDisplay'
+import { collidingNames, defaultAuthorLabels, nameKey, resolveAuthor } from './authorDisplay'
 
 describe('resolveAuthor', () => {
   it('shows the nickname when there is one', () => {
@@ -59,5 +59,24 @@ describe('collidingNames', () => {
       { authorId: 'deleted:y', authorDeleted: true },
     ])
     expect([...names]).toEqual(['수민'])
+  })
+})
+
+describe('collisions fold the way the server folds names (case, full/half width, invisible marks)', () => {
+  it('Sumin / sumin / ＳＵＭＩＮ / S\u200Bumin are one name', () => {
+    expect(nameKey('Sumin')).toBe(nameKey('sumin'))
+    expect(nameKey('ＳＵＭＩＮ')).toBe(nameKey('sumin'))
+    expect(nameKey('S\u200Bumin')).toBe(nameKey('sumin'))
+    expect(nameKey(' 수민 ')).toBe(nameKey('수민'))
+  })
+
+  it('two accounts whose names fold together collide, and the set holds the folded keys', () => {
+    const names = collidingNames([
+      { authorId: 'a', authorName: 'Sumin' },
+      { authorId: 'b', authorName: 'sumin' },
+      { authorId: 'c', authorName: '민수' },
+    ])
+    expect(names.has(nameKey('SUMIN'))).toBe(true)
+    expect(names.has(nameKey('민수'))).toBe(false)
   })
 })

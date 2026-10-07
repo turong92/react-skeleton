@@ -80,7 +80,6 @@ export function ProfileSection({
             <Input
               {...control}
               autoComplete="nickname"
-              maxLength={60}
               value={displayName}
               onChange={(e) => {
                 setDisplayName(e.target.value)

@@ -99,13 +99,30 @@ describe('watchRemaining', () => {
     expect(vi.getTimerCount()).toBe(0)
   })
 
-  it('stops by itself once it reports 0', () => {
+  it('after 0 it keeps a slow watch: a server-corrected clock that arrives late brings the time back (an expiry judged on a wrong clock does not stick)', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(0)
+    let skew = 0 // 서버 시계 보정 — 처음에는 기기 시계가 앞서 있었다
+    const seen: number[] = []
+    watchRemaining({
+      expiresAtMs: 10_000,
+      now: () => Date.now() + skew,
+      onChange: (s) => seen.push(s),
+    })
+    skew = 30_000 // 기기 시계가 앞선 것으로 읽혀 「이미 끝났다」
+    vi.advanceTimersByTime(5_000)
+    expect(seen.at(-1)).toBe(0)
+    skew = 0 // 보정 표본이 도착했다 — 사실 시간이 남아 있었다
+    vi.advanceTimersByTime(3_000)
+    expect(seen.at(-1)).toBeGreaterThan(0)
+  })
+
+  it('once the expiry holds, the slow watch only reports a change (no chatter at 0)', () => {
     vi.useFakeTimers()
     vi.setSystemTime(0)
     const seen: number[] = []
     watchRemaining({ expiresAtMs: 2_000, now: Date.now, onChange: (s) => seen.push(s) })
-    vi.advanceTimersByTime(10_000)
-    expect(seen.at(-1)).toBe(0)
-    expect(vi.getTimerCount()).toBe(0)
+    vi.advanceTimersByTime(30_000)
+    expect(seen.filter((s) => s === 0)).toHaveLength(1)
   })
 })

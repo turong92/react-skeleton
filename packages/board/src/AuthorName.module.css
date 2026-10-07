@@ -26,3 +26,13 @@
   color: var(--text-muted);
   font-size: var(--font-size-small);
 }
+
+.author[data-truncate] .name {
+  display: inline-block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}

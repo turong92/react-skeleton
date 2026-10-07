@@ -46,7 +46,7 @@ function compress(groups: number[]): string {
 }
 
 /**
- * 기기 목록에 보일 IP — 루프백(`127.x` · `::1` · 전개형 `0:0:0:0:0:0:0:1` · `::ffff:127.0.0.1`)은 「이 기기(로컬)」(`localLabel`),
+ * 기기 목록에 보일 IP — 루프백(`127.x` · `::1` · 전개형 `0:0:0:0:0:0:0:1` · `::ffff:127.0.0.1`)은 「로컬 주소」(`localLabel`),
  * 그 밖의 IPv6 는 압축 표기, IPv4 와 알 수 없는 글자는 그대로, `null` 은 `null`.
  */
 export function formatIp(ip: string | null, localLabel: string): string | null {

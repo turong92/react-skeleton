@@ -16,6 +16,8 @@ export type AuthorNameProps = {
   hideAvatar?: boolean
   /** 꼬리표를 보일 때(기본 `collision`) */
   tag?: AuthorTagMode
+  /** 긴 이름을 한 줄 말줄임으로(좁은 열) — 전체 글자는 DOM 에 그대로라 스크린 리더는 전체를 읽는다 */
+  truncate?: boolean
   /** 같은 화면에 같은 닉네임의 다른 계정이 있는가 — `collision` 일 때만 본다(부모가 `collidingNames` 로 안다) */
   collides?: boolean
 }
@@ -28,18 +30,19 @@ export function AuthorName({
   author,
   labels,
   hideAvatar,
+  truncate,
   tag = 'collision',
   collides = false,
 }: AuthorNameProps) {
   const resolved = resolveAuthor(author, { ...defaultAuthorLabels, ...labels })
   return (
-    <span className={styles.author} data-kind={resolved.kind}>
+    <span className={styles.author} data-kind={resolved.kind} data-truncate={truncate || undefined}>
       {!hideAvatar && (
         <span aria-hidden="true" className={styles.avatar}>
           <Avatar name={resolved.name} size="sm" />
         </span>
       )}
-      <span className={styles.name}>{resolved.name}</span>
+      <bdi className={styles.name}>{resolved.name}</bdi>
       {showsTag(tag, collides, resolved.tag) && <span className={styles.tag}>#{resolved.tag}</span>}
     </span>
   )

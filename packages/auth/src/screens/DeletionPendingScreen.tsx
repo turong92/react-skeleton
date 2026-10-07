@@ -78,7 +78,7 @@ export function DeletionPendingScreen({
 
   if (phase === 'expired')
     return (
-      <AuthLayout title={labels.deletionExpiredTitle}>
+      <AuthLayout focusTitle title={labels.deletionExpiredTitle}>
         <div className={styles.stack} aria-live="polite">
           <Alert tone="warning">{labels.deletionExpiredBody}</Alert>
           <div>{leave(labels.backToSignIn, 'secondary')}</div>
@@ -88,7 +88,7 @@ export function DeletionPendingScreen({
 
   if (!token || !onCancel)
     return (
-      <AuthLayout title={labels.deletionNoRestoreTitle}>
+      <AuthLayout focusTitle title={labels.deletionNoRestoreTitle}>
         <div className={styles.stack}>
           <Alert tone="warning">{labels.deletionNoRestoreBody(date)}</Alert>
           <div>{leave(labels.backToSignIn, 'secondary')}</div>
@@ -97,7 +97,7 @@ export function DeletionPendingScreen({
     )
 
   return (
-    <AuthLayout title={labels.deletionPendingTitle}>
+    <AuthLayout focusTitle title={labels.deletionPendingTitle}>
       <div className={styles.stack}>
         <Alert tone="warning">{labels.deletionPendingBody(date)}</Alert>
         {failure && <Alert tone="danger">{failure}</Alert>}

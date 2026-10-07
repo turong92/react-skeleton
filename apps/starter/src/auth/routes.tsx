@@ -57,6 +57,7 @@ export const accountRoutes = createAuthRoutes({
   now: () => serverClock.now().getTime(),
   authApi,
   accountApi,
+  confirmPassword: true, // 새 비밀번호를 한 번 더(모듈 기본은 꺼짐) — 가입 · 재설정 · 변경
   methods: authMethodsOverride && {
     ...authMethodsOverride,
     social: (authMethodsOverride.social ?? []).filter((p) => providers[p.provider]),

@@ -22,7 +22,7 @@ export type PasswordSectionProps = {
   /** `POST /account/reauth/confirmation` — 비밀번호 없는 계정의 인증번호 메일 */
   requestReauthCode: () => Promise<unknown>
   labels?: Partial<AuthLabels>
-  /** 새 비밀번호를 한 번 더 입력받는다(기본 true) — 다르면 제출하지 않는다. 확인 값은 서버로 보내지 않는다 */
+  /** 새 비밀번호를 한 번 더 입력받는다(기본 false — 모듈은 중립이라 앱이 켠다) — 다르면 제출하지 않는다. 확인 값은 서버로 보내지 않는다 */
   confirmPassword?: boolean
 }
 
@@ -34,7 +34,7 @@ export function PasswordSection({
   onChange,
   requestReauthCode,
   labels: given,
-  confirmPassword = true,
+  confirmPassword = false,
 }: PasswordSectionProps) {
   const labels = mergeLabels(given)
   const hasPassword = subject.hasPassword

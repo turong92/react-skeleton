@@ -1,4 +1,4 @@
-import { ApiRequestError, ErrorCodes, retryAfterSeconds } from '@skeleton/api-client'
+import { ApiRequestError, ErrorCodes, isErrorCode, retryAfterSeconds } from '@skeleton/api-client'
 import { PkceUnavailableError } from '../pkce'
 import type { AuthLabels } from './labels'
 
@@ -86,7 +86,7 @@ export function formatWait(seconds: number, labels: AuthLabels): string {
 
 /** 닉네임을 고치다 한도(`429 ACCOUNT.RATE_LIMITED`)에 걸렸다 — 「닉네임을 너무 자주 바꿨어요. {시간} 뒤에 다시 해 주세요」. 그 밖의 오류는 undefined */
 export function displayNameRateLimited(error: unknown, labels: AuthLabels): string | undefined {
-  if (!(error instanceof ApiRequestError) || error.apiError.status !== 429) return undefined
+  if (!isErrorCode(error, ErrorCodes.ACCOUNT_RATE_LIMITED)) return undefined
   const wait = retryAfterSeconds(error)
   return labels.errorDisplayNameRateLimited(
     wait === undefined ? labels.durationMinutes(1) : formatWait(wait, labels),

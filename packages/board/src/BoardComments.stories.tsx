@@ -274,3 +274,19 @@ export const BeforeWriteThatAllowsPostsAsUsual: Story = {
     await expect(await canvas.findByText('Allowed one')).toBeVisible()
   },
 }
+
+/** 한 쪽의 모든 댓글 줄기를 한 범위로 본다 — `AuthorScope` 로 감싸지 않아도 줄기가 달라도(같은 닉네임 · 다른 계정) 꼬리표가 붙는다 */
+export const SameNicknameAcrossThreadsOfOnePageShowsTags: Story = {
+  args: {
+    fake: {
+      nicknames: { alice: 'Sumin', erin: 'sumin', bob: 'Bob' },
+      tags: { alice: '0001', erin: '0002', bob: '0003' },
+    },
+  },
+  play: async ({ canvas }) => {
+    await canvas.findByText('Spaces, always.')
+    await expect(canvas.getAllByText('#0001').length).toBeGreaterThan(0)
+    await expect(canvas.getAllByText('#0002').length).toBeGreaterThan(0)
+    await expect(canvas.queryByText('#0003')).toBeNull() // Bob 은 겹치지 않는다
+  },
+}

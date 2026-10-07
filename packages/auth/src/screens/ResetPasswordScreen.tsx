@@ -21,7 +21,7 @@ export type ResetPasswordScreenProps = {
   /** 새 링크를 요청하는 곳 */
   forgotTo: string
   labels?: Partial<AuthLabels>
-  /** 비밀번호를 한 번 더 입력받는다(기본 true) — 다르면 제출하지 않는다. 확인 값은 서버로 보내지 않는다 */
+  /** 비밀번호를 한 번 더 입력받는다(기본 false — 모듈은 중립이라 앱이 켠다) — 다르면 제출하지 않는다. 확인 값은 서버로 보내지 않는다 */
   confirmPassword?: boolean
 }
 
@@ -33,7 +33,7 @@ export function ResetPasswordScreen({
   signInTo,
   forgotTo,
   labels: given,
-  confirmPassword = true,
+  confirmPassword = false,
 }: ResetPasswordScreenProps) {
   const labels = mergeLabels(given)
   const [password, setPassword] = useState('')

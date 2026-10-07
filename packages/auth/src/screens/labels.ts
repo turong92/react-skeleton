@@ -29,6 +29,8 @@ export type AuthLabels = {
   nicknameRetryAction: string
   /** 서버가 더 다시 보낼 수 없다고 알렸다(`resendAvailableAt: null`) */
   codeNoMoreResends: string
+  /** 더 다시 보낼 수 없는 번호의 시간이 다 됐다 — 「다시 받아 주세요」가 아니라 처음부터 */
+  codeTimeUpNoResend: string
   codeNoMoreResendsSignUp: string
   errorErased: string
   errorErasureInProgress: string
@@ -275,7 +277,7 @@ export type AuthLabels = {
   sessionsRevokeOthers: string
   sessionsRevoked: string
   sessionsUnknownDevice: string
-  /** IP 가 루프백일 때 — 이 기기에서 연 세션(개발 · 같은 컴퓨터) */
+  /** IP 가 루프백일 때(개발 · 같은 컴퓨터) — 기기를 가리키는 말이 아니라 주소의 종류다 */
   sessionsLocalDevice: string
   sessionsLastUsed: (when: string) => string
   sessionsEmpty: string
@@ -353,6 +355,7 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   nicknameRetryHint:
     'Pick another nickname, then confirm with the same code. You do not need to enter your password again.',
   nicknameRetryAction: 'Continue with this nickname',
+  codeTimeUpNoResend: 'Time is up. Please start over.',
   codeNoMoreResends: 'This code cannot be sent again. When it expires, start over.',
   codeNoMoreResendsSignUp:
     'This code cannot be sent again. When it expires, please sign up again from the start.',
@@ -603,7 +606,7 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   sessionsRevokeOthers: 'Sign out all other devices',
   sessionsRevoked: 'Signed out.',
   sessionsUnknownDevice: 'Unknown device',
-  sessionsLocalDevice: 'This device (local)',
+  sessionsLocalDevice: 'Local address',
   sessionsLastUsed: (when) => `Last active ${when}`,
   sessionsEmpty: 'No other sessions.',
   deleteTitle: 'Delete account',

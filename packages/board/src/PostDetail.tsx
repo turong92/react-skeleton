@@ -3,7 +3,12 @@ import { Badge, Button } from '@skeleton/ui'
 import type { ReactNode } from 'react'
 import { AuthorName } from './AuthorName'
 import { useAuthorScope } from './authorScopeContext'
-import { defaultAuthorLabels, type AuthorLabels, type AuthorTagMode } from './authorDisplay'
+import {
+  defaultAuthorLabels,
+  nameKey,
+  type AuthorLabels,
+  type AuthorTagMode,
+} from './authorDisplay'
 import type { PostDetail as PostDetailData, PostModeration, PostStatus } from './types'
 import styles from './PostDetail.module.css'
 
@@ -86,7 +91,7 @@ export function PostDetail({
             author={post}
             labels={labels}
             tag={authorTag}
-            collides={scopeNames?.has(post.authorName?.trim() ?? '') ?? false}
+            collides={scopeNames?.has(nameKey(post.authorName ?? '')) ?? false}
           />
           <time dateTime={post.createdAt}>{formatTime(post.createdAt)}</time>
           <span>{labels.views(post.viewCount)}</span>

@@ -111,7 +111,7 @@ export type AuthRoutesOptions = {
   /** 소셜 계정 연결 흐름(`createSocialLinkFlow`) */
   socialLinkFlow?: SocialLinkFlow
   labels?: Partial<AuthLabels>
-  /** 새 비밀번호를 한 번 더 입력받는다(가입 · 재설정 · 변경 · 첫 설정, 기본 true) — 끄면 비밀번호 칸 하나. 가입만 따로 바꾸려면 `signUp: { confirmPassword }` */
+  /** 새 비밀번호를 한 번 더 입력받는다(가입 · 재설정 · 변경 · 첫 설정, 기본 false — 모듈은 중립이라 앱이 켠다). 가입만 따로 바꾸려면 `signUp: { confirmPassword }` */
   confirmPassword?: boolean
   /**
    * 인증번호 남은 시간을 세는 시계 — 서버 보정 시계를 넣는다: `now: () => serverClock.now().getTime()`(응답 `Date` 헤더로 맞춘 `@skeleton/time`).

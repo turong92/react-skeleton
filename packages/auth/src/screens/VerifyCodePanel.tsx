@@ -200,12 +200,13 @@ export function VerifyCodePanel({
           remaining: labels.codeTimeLeft,
           minuteLeft: labels.codeTimeMinute,
           secondsLeft: () => labels.codeTimeTen,
-          expired: labels.codeTimeUp,
+          expired: exhausted ? labels.codeTimeUpNoResend : labels.codeTimeUp,
         }}
         onExpire={() => {
           setTimedOut(true)
           onExpire?.()
         }}
+        restart={exhausted ? { label: labels.codeRestart, onRestart: onStartOver } : undefined}
         resend={
           onResend && !exhausted
             ? {
@@ -221,11 +222,6 @@ export function VerifyCodePanel({
         <p role="status" className={styles.muted}>
           {resendExhaustedNote ?? labels.codeNoMoreResends}
         </p>
-      )}
-      {exhausted && timedOut && (
-        <div>
-          <Button onClick={onStartOver}>{labels.codeRestart}</Button>
-        </div>
       )}
       {busy && (
         <p role="status" className={styles.muted}>

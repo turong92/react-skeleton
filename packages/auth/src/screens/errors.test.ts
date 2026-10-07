@@ -108,6 +108,10 @@ describe('FINAL-5 review: nickname change limit and admin erase codes', () => {
       displayNameRateLimited(err('ACCOUNT.RATE_LIMITED', 429, { retryAfterSeconds: 40 }), L),
     ).toBe(L.errorDisplayNameRateLimited(L.durationSeconds(40)))
     expect(displayNameRateLimited(err('ACCOUNT.DISPLAY_NAME_TAKEN', 409), L)).toBeUndefined()
+    // 판정은 코드 하나로 — 다른 429(로그인 시도 한도 등)를 닉네임 한도로 읽지 않는다
+    expect(
+      displayNameRateLimited(err('AUTH.TOO_MANY_ATTEMPTS', 429, { retryAfterSeconds: 5 }), L),
+    ).toBeUndefined()
   })
 
   it.each([

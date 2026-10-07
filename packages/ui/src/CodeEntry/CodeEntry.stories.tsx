@@ -245,7 +245,7 @@ export const UnderOneMinuteIsEmphasisedAndAnnouncedOnce: Story = {
   },
 }
 
-function ExpiryDemo({ onResend }: { onResend: () => void }) {
+function ExpiryDemo({ onResend, noResend }: { onResend: () => void; noResend?: boolean }) {
   const [clock] = useState(() => fakeClock())
   const [expiresAt, setExpiresAt] = useState(() => clock.now() + 3_000)
   return (
@@ -257,14 +257,19 @@ function ExpiryDemo({ onResend }: { onResend: () => void }) {
         now={clock.now}
         expiresAt={expiresAt}
         timeLabels={timeLabels}
-        resend={{
-          label: 'Send again',
-          onResend: () => {
-            onResend()
-            setExpiresAt(clock.now() + 600_000)
-          },
-          secondsLeft: 0,
-        }}
+        resend={
+          noResend
+            ? undefined
+            : {
+                label: 'Send again',
+                onResend: () => {
+                  onResend()
+                  setExpiresAt(clock.now() + 600_000)
+                },
+                secondsLeft: 0,
+              }
+        }
+        restart={noResend ? { label: 'Start over', onRestart: onResend } : undefined}
       />
       <button type="button" onClick={() => clock.advance(4_000)}>
         +4s
@@ -287,6 +292,22 @@ export const ExpiredLocksTheCellsAndFocusesResend: Story = {
       () => expect(canvas.getByRole('button', { name: 'Send again' })).toHaveFocus(),
       slow,
     )
+  },
+}
+
+/** 더 다시 보낼 수 없는 번호가 만료되면 — 막다른 길이 아니라 「처음부터 다시」 버튼으로 포커스가 간다 */
+export const ExpiredWithNoResendFocusesTheRestart: Story = {
+  render: (args) => <ExpiryDemo noResend onResend={() => args.onComplete('restarted')} />,
+  play: async ({ canvas, userEvent, args }) => {
+    await canvas.findByText('Time left 00:03')
+    await expect(canvas.queryByRole('button', { name: 'Start over' })).toBeNull() // 만료 전에는 없다
+    await userEvent.click(canvas.getByRole('button', { name: '+4s' }))
+    await waitFor(
+      () => expect(canvas.getByRole('button', { name: 'Start over' })).toHaveFocus(),
+      slow,
+    )
+    await userEvent.click(canvas.getByRole('button', { name: 'Start over' }))
+    await expect(args.onComplete).toHaveBeenCalledWith('restarted')
   },
 }
 

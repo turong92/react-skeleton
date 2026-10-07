@@ -31,7 +31,7 @@ export type AccountSectionName =
 export type AccountSettingsProps = {
   api: AccountApi
   labels?: Partial<AuthLabels>
-  /** 새 비밀번호를 한 번 더 입력받는다(기본 true) */
+  /** 새 비밀번호를 한 번 더 입력받는다(기본 false — 모듈은 중립이라 앱이 켠다) */
   confirmPassword?: boolean
   /** 끄고 싶은 절만 `false` — 기본은 모두 켠다 */
   sections?: Partial<Record<AccountSectionName, boolean>>

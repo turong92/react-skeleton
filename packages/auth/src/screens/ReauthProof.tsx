@@ -69,8 +69,6 @@ export function ReauthProof({
   const [password, setPassword] = useState('')
   const [phase, setPhase] = useState<Phase>(requestCode ? 'idle' : 'sent')
   const [expired, setExpired] = useState(false)
-  /** 이 번호의 시간이 다 됐다(서버가 더 다시 보낼 수 없다고 했을 때 「처음부터 다시」를 보인다) */
-  const [timedOut, setTimedOut] = useState(false)
   /** 이미 읽은(고치려 다시 입력하기 시작한) 오류 — 같은 오류를 계속 붙여 두지 않는다 */
   const [dismissed, setDismissed] = useState<unknown>(null)
   const mail = useAction(labels)
@@ -100,7 +98,6 @@ export function ReauthProof({
 
   async function sendCode() {
     setExpired(false)
-    setTimedOut(false)
     let response: unknown
     const ok = await mail.run(async () => {
       response = await requestCode?.()
@@ -226,14 +223,24 @@ export function ReauthProof({
               remaining: labels.codeTimeLeft,
               minuteLeft: labels.codeTimeMinute,
               secondsLeft: () => labels.codeTimeTen,
-              expired: labels.codeTimeUp,
+              expired: exhausted ? labels.codeTimeUpNoResend : labels.codeTimeUp,
             }}
             onExpire={() => {
               // 시간이 다 됐다 — 이 번호는 서버가 어차피 받지 않는다. 증거를 거두고 새로 받게 한다
               setPhase('sent')
-              setTimedOut(true)
               onChange(null)
             }}
+            restart={
+              exhausted && requestCode
+                ? {
+                    label: labels.codeRestart,
+                    onRestart: () => {
+                      setCodeWindow(null)
+                      setPhase('idle')
+                    },
+                  }
+                : undefined
+            }
             resend={
               requestCode && !exhausted
                 ? {
@@ -249,20 +256,6 @@ export function ReauthProof({
             <p role="status" className={styles.muted}>
               {labels.codeNoMoreResends}
             </p>
-          )}
-          {exhausted && timedOut && requestCode && (
-            <div>
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setCodeWindow(null)
-                  setTimedOut(false)
-                  setPhase('idle')
-                }}
-              >
-                {labels.codeRestart}
-              </Button>
-            </div>
           )}
           {phase === 'entered' && (
             <p role="status" className={styles.muted}>

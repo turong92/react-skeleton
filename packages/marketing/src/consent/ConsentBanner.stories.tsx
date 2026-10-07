@@ -29,7 +29,7 @@ function memory(): StorageLike {
   }
 }
 /** 가입 폼 모양의 긴 페이지 — 제출 버튼이 화면 맨 아래쯤에 온다(배너가 가리기 쉬운 자리) */
-function FormPage({ reserveSpace }: { reserveSpace?: boolean }) {
+function FormPage({ reserveSpace = true }: { reserveSpace?: boolean }) {
   const uid = useId()
   const consent = `${uid}-consent`
   const [agreed, setAgreed] = useState(false)

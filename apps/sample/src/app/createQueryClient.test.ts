@@ -51,4 +51,25 @@ describe('createQueryClient — error toast wiring', () => {
     await run('no-meta', apiError(404))
     expect(onError).toHaveBeenCalledTimes(2)
   })
+
+  it('a mutation that marks statuses as expected (meta.quietStatuses — e.g. the nickname dialog says 409 / 429 under its field) is not reported; other failures of it still are', async () => {
+    const onError = vi.fn()
+    const client = createQueryClient({ onError })
+    const apiError = (status: number) =>
+      Object.assign(new Error(`HTTP ${status}`), { apiError: { status } })
+    const run = (status: number) =>
+      client
+        .getMutationCache()
+        .build(client, {
+          mutationFn: () => Promise.reject(apiError(status)),
+          meta: { quietStatuses: [409, 429] },
+        })
+        .execute(undefined)
+        .catch(() => undefined)
+    await run(429)
+    await run(409)
+    expect(onError).not.toHaveBeenCalled()
+    await run(500)
+    expect(onError).toHaveBeenCalledTimes(1)
+  })
 })

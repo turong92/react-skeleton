@@ -69,7 +69,9 @@ export const AskToCancelKorean: Story = {
     />
   ),
   play: async ({ canvas }) => {
-    await expect(await canvas.findByRole('heading', { name: '탈퇴를 취소할까요?' })).toBeVisible()
+    const title = await canvas.findByRole('heading', { name: '탈퇴를 취소할까요?' })
+    await expect(title).toBeVisible()
+    await waitFor(() => expect(title).toHaveFocus()) // 화면이 바뀌었다 — 제목으로 포커스(낭독기가 새 화면을 알린다)
     await expect(
       canvas.getByText('이 계정은 탈퇴 처리 중이에요. 2026년 11월 5일에 완전히 지워져요.'),
     ).toBeVisible()

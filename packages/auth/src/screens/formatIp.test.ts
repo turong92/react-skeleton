@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { formatIp } from './formatIp'
 
-const label = 'This device (local)'
+const label = 'Local address'
 
 describe('formatIp', () => {
   it('shows loopback addresses (IPv4, IPv6, expanded or compressed) as this device', () => {

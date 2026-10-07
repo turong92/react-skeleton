@@ -47,6 +47,8 @@ export type CodeEntryProps = {
     /** 쿨다운 동안 **버튼 글자** — 예: `(s) => \`다시 받기 (${s}초)\``. 읽어 주는 영역이 아니라 초마다 낭독되지 않는다 */
     labelWhileWaiting?: (seconds: number) => string
   }
+  /** 만료된 뒤 「다시 받기」가 없을 때(더 다시 보낼 수 없다) 대신 보이는 「처음부터 다시」 — 만료되면 이 버튼으로 포커스가 간다 */
+  restart?: { label: string; onRestart: () => void }
   /**
    * 코드가 만료되는 **절대 시각**(서버가 준 값이 가장 좋다). 있으면 칸 옆에 남은 시간 `mm:ss` 를 보이고, 끝나면 칸을 잠그고 안내하며
    * 「다시 받기」로 포커스를 옮긴다. 다시 받은 뒤에는 **새 `expiresAt`** 를 넘기면 처음부터 센다. 서버 렌더에는 시간을 그리지 않는다(하이드레이션 일치)
@@ -78,6 +80,7 @@ export function CodeEntry({
   busy = false,
   disabled = false,
   resend,
+  restart,
   id,
   expiresAt,
   now = Date.now,
@@ -246,6 +249,13 @@ export function CodeEntry({
         <p id={errorId} role="alert" className={styles.error}>
           {error}
         </p>
+      )}
+      {!resend && restart && expired && (
+        <div className={styles.resend} ref={resendBox}>
+          <Button variant="secondary" size="sm" onClick={restart.onRestart}>
+            {restart.label}
+          </Button>
+        </div>
       )}
       {resend && (
         <div className={styles.resend} ref={resendBox}>

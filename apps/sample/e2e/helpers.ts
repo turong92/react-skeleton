@@ -184,23 +184,14 @@ async function accessTokenOf(apiUrl: string, account: { email: string; password:
   return ((await login.json()) as { value: { accessToken: string } }).value.accessToken
 }
 
-/**
- * 이 계정에 쓸 수 있는 작성자 프로필을 보장한다 — 화면을 거치지 않고 API 로(게시판 글쓰기는 서버가 작성자를 요구하면 프로필이 있어야 한다).
- * 이미 있으면 첫 프로필을 그대로, 없으면 `name` 으로 하나 만든다. 백엔드에 `author-profile` 모듈이 없으면 아무 일도 하지 않고 undefined
- */
-export async function ensureProfile(
-  account: { email: string; password: string },
-  name = `e2e${Date.now().toString(36)}`,
-): Promise<E2eProfile | undefined> {
-  const apiUrl = inject('apiUrl')
-  const token = await accessTokenOf(apiUrl, account)
+async function profileHeaders(account: { email: string; password: string }) {
+  const token = await accessTokenOf(inject('apiUrl'), account)
   if (!token) return undefined
-  const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
-  const listed = await fetch(`${apiUrl}/api/v1/author-profiles`, { headers })
-  if (!listed.ok) return undefined // 모듈이 없다(404) — 프로필 없이 쓰는 백엔드
-  const existing = ((await listed.json()) as { values: E2eProfile[] }).values
-  if (existing.length > 0) return existing[0]
-  const created = await fetch(`${apiUrl}/api/v1/author-profiles`, {
+  return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
+}
+
+async function postProfile(headers: Record<string, string>, name: string): Promise<E2eProfile> {
+  const created = await fetch(`${inject('apiUrl')}/api/v1/author-profiles`, {
     method: 'POST',
     headers: { ...headers, 'Idempotency-Key': `e2e-profile-${Date.now()}-${Math.random()}` },
     body: JSON.stringify({ name }),
@@ -208,4 +199,32 @@ export async function ensureProfile(
   if (created.status !== 201)
     throw new Error(`profile seed failed: ${created.status} ${await created.text()}`)
   return ((await created.json()) as { value: E2eProfile }).value
+}
+
+/**
+ * 이 계정에 **이름 있는** 작성자 프로필을 보장한다 — 화면을 거치지 않고 API 로. 백엔드는 첫 프로필을 자동으로 만든다(닉네임이 있으면 그 이름을 복사, 없으면 이름 없는 프로필)이고,
+ * 샘플은 이름 있는 프로필이 없으면 쓰기 전에 만들게 하므로, 글 · 댓글을 쓰는 시나리오는 이름 있는 프로필이 하나는 있어야 한다. 이미 있으면 그것을, 없으면 `name` 으로 만든다.
+ * 404 는 「`author-profile` 모듈이 없는 백엔드」라 undefined — 그 밖의 실패는 던진다
+ */
+export async function ensureProfile(
+  account: { email: string; password: string },
+  name = `e2e${Date.now().toString(36)}`,
+): Promise<E2eProfile | undefined> {
+  const headers = await profileHeaders(account)
+  if (!headers) throw new Error(`could not sign in as ${account.email} to seed a profile`)
+  const listed = await fetch(`${inject('apiUrl')}/api/v1/author-profiles`, { headers })
+  if (listed.status === 404) return undefined
+  if (!listed.ok) throw new Error(`GET /author-profiles → ${listed.status}`)
+  const existing = ((await listed.json()) as { values: E2eProfile[] }).values
+  return existing.find((profile) => profile.name?.trim()) ?? postProfile(headers, name)
+}
+
+/** 이름 있는 프로필을 하나 더 만든다(이미 있는 것에 상관없이) — API 로 */
+export async function createProfile(
+  account: { email: string; password: string },
+  name: string,
+): Promise<E2eProfile> {
+  const headers = await profileHeaders(account)
+  if (!headers) throw new Error(`could not sign in as ${account.email} to create a profile`)
+  return postProfile(headers, name)
 }

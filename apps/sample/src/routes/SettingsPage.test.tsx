@@ -64,9 +64,9 @@ describe('SettingsPage — account card', () => {
     expect(html).not.toContain('계정 ID')
   })
 
-  it('says the account nickname is a private label — it is not what other people see on the board', () => {
+  it('says the nickname only seeds the first profile (copied once, separate afterwards) — it is not what the board shows', () => {
     const html = render(me({ displayName: '수민' }))
-    expect(html).toContain('나만 보는 이름')
+    expect(html).toContain('첫 프로필은 이 닉네임으로 시작해요')
   })
 
   it('without a nickname it says so and points at the account settings', () => {
@@ -87,6 +87,6 @@ describe('SettingsPage — author profiles section', () => {
     await i18n.setLocale('en', { remember: false })
     const html = render(me({ displayName: 'Sumin' }))
     expect(html).toContain('Profiles for posts and comments')
-    expect(html).toContain('Only you see this name')
+    expect(html).toContain('first profile starts with this nickname')
   })
 })

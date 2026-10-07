@@ -42,7 +42,7 @@ describe('author-profile device memory — dropped in the same place as the cach
     store.clear()
   })
 
-  it('a sign-out or a different account forgets the remembered profile; unrelated keys stay', () => {
+  it('a different account arriving forgets the remembered profile; unrelated keys stay', () => {
     vi.stubGlobal('localStorage', fake)
     authSession.signIn(login('A'))
     store.set('skeleton.author-profile:A:general', 'prf_a')
@@ -57,5 +57,14 @@ describe('author-profile device memory — dropped in the same place as the cach
     store.set('skeleton.author-profile:B:general', 'prf_b')
     authSession.signIn({ ...login('B'), accessToken: 'rotated' })
     expect(store.get('skeleton.author-profile:B:general')).toBe('prf_b')
+  })
+
+  it('a sign-out forgets the remembered profile too (the button, another tab, a failed refresh all end here)', async () => {
+    vi.stubGlobal('localStorage', fake)
+    authSession.signIn(login('C'))
+    store.set('skeleton.author-profile:C:general', 'prf_c')
+    store.set('theme', 'dark')
+    await authSession.logout().catch(() => undefined) // 서버 폐기 알림이 실패해도 이 기기의 로그아웃은 유지된다
+    expect([...store.keys()]).toEqual(['theme'])
   })
 })

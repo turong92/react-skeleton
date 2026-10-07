@@ -60,21 +60,39 @@ export async function openBoard(page: Page) {
 }
 
 /**
- * 폼 안의 작성자 선택기에서 프로필을 고른다 — `profile`(이름) 을 주면 그것을, 안 주면 아직 아무것도 안 골랐을 때만 목록의 첫 프로필을 고른다.
- * 선택기가 없는 폼(작성자 프로필을 안 쓰는 백엔드 · 서버가 요구하지 않는 설정)에서는 아무 일도 하지 않는다. 한 줄 확인이 뜨면 그대로 두고 돌아온다(확인은 호출한 쪽이)
+ * 폼 안의 작성자 선택기(`[data-author-slot]`)에서 프로필을 고른다 — `profile`(이름)을 주면 그 이름의 프로필을, 안 주면 아직 아무것도 안 골랐을 때만 **이름 있는** 첫 프로필을 고른다
+ * (백엔드가 자동으로 만든 이름 없는 첫 프로필은 고르지 않는다). 선택기 자리가 없는 폼(작성자 프로필을 안 쓰는 설정)에서는 아무 일도 하지 않는다.
+ * 한 줄 확인이 뜨면 그대로 두고 돌아온다(확인은 호출한 쪽이)
  */
 export async function chooseProfile(form: Locator, profile?: string) {
-  const trigger = form.locator('button[aria-haspopup="menu"]')
-  if ((await trigger.count()) === 0) return
-  // 댓글을 받는 동안 선택기는 잠겨 있다 · 처음 값(이 스레드 → 이 기기 기억)은 그 뒤 효과로 채워진다 — 풀리고 가라앉은 뒤에 본다
-  await pwExpect(trigger).not.toHaveAttribute('aria-disabled', 'true')
+  const slot = form.locator('[data-author-slot]')
+  if ((await slot.count()) === 0) return
+  const trigger = slot.locator('button[aria-haspopup="menu"]')
+  await trigger.waitFor() // 목록을 받는 동안은 단추 모양의 「불러오는 중」이다
+  await pwExpect(trigger).not.toHaveAttribute('aria-disabled', 'true') // 댓글을 받는 동안은 잠겨 있다
   if (!profile) {
-    await form.page().waitForTimeout(300)
-    if (!(await trigger.innerText()).includes(ko('author.choose'))) return
+    // 처음 값(이 스레드 → 이 기기 기억)은 효과로 채워진다 — 글자가 「고르기」가 아니게 되기를 잠깐 지켜보고, 끝내 비어 있으면 직접 고른다
+    const settledByItself = await pwExpect
+      .poll(async () => !(await trigger.innerText()).includes(ko('author.choose')), {
+        timeout: 2_000,
+        intervals: [50, 100, 200],
+      })
+      .toBe(true)
+      .then(
+        () => true,
+        () => false,
+      )
+    if (settledByItself) return
   }
   await trigger.click()
   const items = form.page().getByRole('menuitemradio')
-  await (profile ? items.filter({ hasText: profile }) : items).first().click()
+  await (
+    profile
+      ? items.filter({ hasText: profile })
+      : items.filter({ hasNotText: ko('author.unnamed') })
+  )
+    .first()
+    .click()
 }
 
 /** 글쓰기 폼 */

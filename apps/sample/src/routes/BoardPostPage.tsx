@@ -42,7 +42,7 @@ function PostView({
   const labelsOfReactions = reactionLabels(t)
   const { principal } = useAuth()
   const gate = useProfileGate(config)
-  const authorPicker = useAuthorPicker(code)
+  const authorPicker = useAuthorPicker(code, gate)
   const remove = useRemovePost(boardApi, code)
   const moderate = useModeratePost(boardApi, code, id)
   const [confirming, setConfirming] = useState(false)
@@ -85,7 +85,6 @@ function PostView({
         reactionLabels={labelsOfReactions}
         reactionIcons={REACTION_ICONS}
         labels={commentLabels(t)}
-        beforeWrite={gate.ensure}
         authorPicker={authorPicker}
         postAuthor={{
           authorId: post.authorId,

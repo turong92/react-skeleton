@@ -75,7 +75,7 @@ function Editor({
 function CreatePost({ code, config }: { code: string; config: BoardConfig }) {
   const { t } = useT()
   const gate = useProfileGate(config)
-  const authorPicker = useAuthorPicker(code)
+  const authorPicker = useAuthorPicker(code, gate)
   const navigate = useNavigate()
   const create = useCreatePost(boardApi, code)
   const keyFor = useRef(createKeyRing(newIdempotencyKey))
@@ -91,8 +91,6 @@ function CreatePost({ code, config }: { code: string; config: BoardConfig }) {
         submitLabel={t('board.form.submitCreate')}
         onCancel={() => navigate('/board')}
         onSubmit={async (values) => {
-          // 주소로 바로 들어온 경우에도 — 쓸 수 있는 프로필이 없으면 만들기 대화상자를 띄우고 보내지 않는다(쓴 글은 폼에 남는다)
-          if (!gate.ensure()) return
           const post = await create.mutateAsync({
             input: values,
             idempotencyKey: keyFor.current(values),

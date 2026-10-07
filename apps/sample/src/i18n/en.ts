@@ -49,24 +49,26 @@ const en: Record<keyof typeof ko, string> = {
   'dashboard.greeting': 'Hello, {name}',
   'nickname.nudgeAction': 'Pick a nickname',
   'nickname.bannerTitle': 'Pick a nickname',
-  'nickname.bannerBody': 'Only you see your account name. The board shows your profile names.',
+  'nickname.bannerBody':
+    'Only you see your nickname. Your first profile starts with it; the board shows profile names.',
   'nickname.bannerLabel': 'Nickname reminder',
   'nickname.dialogTitle': 'Pick a nickname',
   'nickname.dialogBody':
-    'Only you see this account name. Your posts and comments show your profile names. You can change it later in account settings.',
+    'Only you see this nickname. Your first profile starts with it (copied once, separate afterwards). You can change it later in account settings.',
   'nickname.later': 'Later',
   'nickname.save': 'Save',
   'nickname.saving': 'Saving',
   'settings.nickname': 'Nickname',
   'settings.nicknameNone': 'Not set yet',
   'settings.nicknameSet': 'Pick a nickname',
-  'settings.nicknameHint': 'Only you see this name. It does not appear on the board.',
+  'settings.nicknameHint':
+    'Only you see this. Your first profile starts with this nickname (copied once, separate afterwards).',
   'settings.profiles': 'Profiles for posts and comments',
   'settings.profilesHint':
-    'On the board you write as one of the profiles you make here. Other people cannot tell that two profiles are the same person.',
-  'profileGate.title': 'Create a profile first',
+    'On the board you write as a profile. If your account has no nickname, your first profile has no name yet — give it one. Other people cannot tell that two profiles are the same person.',
+  'profileGate.title': 'Create a named profile first',
   'profileGate.body':
-    'On the board you write as a profile. Make one below, then close this and try again.',
+    'On the board you write as a named profile. Create one below or name your first profile, then close this and try again.',
   'board.authorRequired': 'Choose which profile to write as.',
   'author.choose': 'Choose a profile',
   'author.triggerLabel': 'Writing as {current}. Change profile',
@@ -84,7 +86,8 @@ const en: Record<keyof typeof ko, string> = {
   'author.empty': 'You have no profiles yet.',
   'author.count': '{n} of {max} profiles',
   'author.nameLabel': 'New profile name',
-  'author.nameHint': 'Up to {max} characters. Same names are told apart by a tag.',
+  'author.nameHint':
+    'Up to {max} characters. If the name is already in use, a tag (#number) may be added.',
   'author.add': 'Add profile',
   'author.adding': 'Adding',
   'author.renameAction': 'Rename',
@@ -106,7 +109,8 @@ const en: Record<keyof typeof ko, string> = {
   'author.nameReserved': 'That name is not available.',
   'author.nameTooLong': 'Use {max} characters or fewer.',
   'author.nameTaken': 'That name is taken.',
-  'author.limitReached': 'You can have up to {max} profiles.',
+  'author.limitReached':
+    'You cannot make another one now. You can have up to {max} profiles, and there is a limit on how many you can create in a period.',
   'author.rateLimited': 'Too many profile changes. Try again later.',
   'author.rateLimitedIn':
     'Too many profile changes. Try again in {value} {unit, select, second {{value, plural, one {second} other {seconds}}} minute {{value, plural, one {minute} other {minutes}}} hour {{value, plural, one {hour} other {hours}}} day {{value, plural, one {day} other {days}}} other {}}.',

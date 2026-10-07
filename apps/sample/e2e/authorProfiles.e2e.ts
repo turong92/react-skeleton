@@ -11,6 +11,7 @@ import {
 } from './boardSteps'
 import { acceptLegalGate, dismissConsent, ko, launch } from './helpers'
 import { waitForLink } from './mail'
+import { sharedLeafValues } from './valueScan'
 
 /*
  * 작성자 프로필 여정 — 사용자 X 가 설정에서 프로필 둘(A · B)을 만들고, 게시판에서 A 로 글 하나 · B 로 글 하나, A 의 글에 B 로 댓글(같은 스레드에서 다른 프로필로 바꿀 때는 한 줄 확인)을 쓴다.
@@ -100,13 +101,42 @@ async function addProfile(page: Page, name: string) {
 const listRow = (page: Page, title: string) => page.getByRole('row').filter({ hasText: title })
 
 /** 응답 본문에서 글 목록(`…/posts?…`)의 한 글 */
-type PostJson = Record<string, unknown> & { title: string; authorId: string; mine?: boolean }
+type PostJson = Record<string, unknown> & {
+  id: number
+  title: string
+  authorId: string
+  mine?: boolean
+}
 function postsSeenBy(): PostJson[] {
   return received
     .filter((r) => r.method === 'GET' && /\/boards\/[^/]+\/posts(\?|$)/.test(r.url))
     .flatMap((r) => (JSON.parse(r.text) as { values?: PostJson[] }).values ?? [])
 }
 const newestPost = (title: string) => postsSeenBy().findLast((p) => p.title === title)
+const jsonOf = (r: { text: string }) =>
+  JSON.parse(r.text) as { value?: unknown; values?: unknown[] }
+/** 그 글에 관한 응답 객체 — 목록의 항목 + 글 상세 응답(`…/posts/{id}`) */
+const objectsOfPost = (post: PostJson): unknown[] => [
+  post,
+  ...received
+    .filter((r) => r.method === 'GET' && new URL(r.url).pathname.endsWith(`/posts/${post.id}`))
+    .map((r) => jsonOf(r).value),
+]
+/** 그 글의 댓글 응답(`…/posts/{id}/comments`)에서 본문이 `body` 인 댓글 */
+function commentSeenBy(post: PostJson, body: string): { authorId: string } | undefined {
+  const flat = (items: unknown[]): Array<Record<string, unknown>> =>
+    items.flatMap((item) => {
+      const c = item as Record<string, unknown>
+      return [c, ...flat((c.replies as unknown[] | undefined) ?? [])]
+    })
+  return flat(
+    received
+      .filter(
+        (r) => r.method === 'GET' && new URL(r.url).pathname.endsWith(`/posts/${post.id}/comments`),
+      )
+      .flatMap((r) => jsonOf(r).values ?? []),
+  ).find((c) => c.body === body) as { authorId: string } | undefined
+}
 
 describe('author profiles — several names, none of them tied to the account', () => {
   it('two new users sign in; X reads the own account id while signing in', async () => {
@@ -136,7 +166,9 @@ describe('author profiles — several names, none of them tied to the account', 
     await pwExpect(profiles(x)).toBeVisible()
     await addProfile(x, nameA)
     await addProfile(x, nameB)
-    await pwExpect(profiles(x).getByRole('listitem')).toHaveCount(2)
+    // 백엔드가 자동으로 만든 첫 프로필(이 계정은 닉네임이 없어 이름 없음) + A + B
+    await pwExpect(profiles(x).getByRole('listitem')).toHaveCount(3)
+    await pwExpect(profiles(x).getByText(ko('author.unnamed'))).toBeVisible()
     pwExpect(await x.content()).not.toContain(accountIdX) // DOM 전체(텍스트 · aria · 속성)
   })
 
@@ -172,10 +204,10 @@ describe('author profiles — several names, none of them tied to the account', 
     const trigger = form.locator('button[aria-haspopup="menu"]')
     await pwExpect(trigger).toContainText(nameA) // 처음 값 = 이 스레드에서 쓴 프로필(글쓴이)
     await chooseProfile(form, nameB)
-    const notice = form.getByRole('status')
+    const notice = form.getByRole('status') // <p> 하나 — 단추는 그 형제라 폼 범위에서 찾는다
     await pwExpect(notice).toContainText(nameA) // 「이 글에서는 A(으)로 쓴 적이 있어요」
     await pwExpect(trigger).toContainText(nameA) // 확인하기 전까지 값은 그대로다
-    await notice.getByRole('button', { name: new RegExp(nameB) }).click()
+    await form.getByRole('button', { name: new RegExp(`${nameB}.*로$|${nameB}$`) }).click()
     await pwExpect(trigger).toContainText(nameB)
     await pwExpect(notice).toHaveCount(0)
     await x.getByRole('button', { name: ko('board.comments.postComment') }).click()
@@ -199,6 +231,9 @@ describe('author profiles — several names, none of them tied to the account', 
     ).toHaveCount(0)
     // 화면에는 X 의 계정 id 가 없다
     pwExpect(await y.content()).not.toContain(accountIdX)
+    // 두 글의 상세 응답도 받아 둔다(목록의 항목 + 상세 + 댓글)
+    await y.getByRole('link', { name: `← ${ko('board.back')}` }).click()
+    await openPost(y, POST_B)
 
     await Promise.all(reading)
     // 응답 본문 전체에 X 의 계정 id · 이메일이 없다
@@ -207,7 +242,7 @@ describe('author profiles — several names, none of them tied to the account', 
       pwExpect(text, `${url} leaks X's account id`).not.toContain(accountIdX)
       pwExpect(text.toLowerCase(), `${url} leaks X's email`).not.toContain(emailX.toLowerCase())
     }
-    // 두 글의 작성자 id 는 서로 다르고(프로필 id), 작성자에 관한 어떤 값도 겹치지 않는다
+    // 두 글의 작성자 id 는 서로 다른 프로필 id 이고, 두 글의 응답 객체(목록 항목 · 상세)를 재귀로 편 잎 값 중 어떤 칸이든 겹치는 것이 없다
     const a = newestPost(POST_A)
     const b = newestPost(POST_B)
     pwExpect(a, 'Y received the A post in a list').toBeDefined()
@@ -217,12 +252,26 @@ describe('author profiles — several names, none of them tied to the account', 
     pwExpect(a!.authorId).not.toBe(b!.authorId)
     pwExpect(a!.mine).toBe(false)
     pwExpect(b!.mine).toBe(false)
-    const authorValues = (post: PostJson) =>
-      Object.entries(post)
-        .filter(([key, value]) => /author/i.test(key) && typeof value === 'string')
-        .map(([, value]) => value as string)
-    const shared = authorValues(a!).filter((value) => authorValues(b!).includes(value))
-    pwExpect(shared).toEqual([])
+    const boardCode = /\/boards\/([^/]+)\/posts/.exec(
+      received.find((r) => /\/boards\/[^/]+\/posts/.test(r.url))!.url,
+    )![1]
+    const vocabulary = new Set([boardCode, 'PUBLISHED', 'LIKE', 'DISLIKE', 'EMPATHY'])
+    const onlyA = objectsOfPost(a!)
+    const onlyB = objectsOfPost(b!)
+    pwExpect(
+      onlyA.length,
+      'list item and detail of the A post were received',
+    ).toBeGreaterThanOrEqual(2)
+    pwExpect(
+      onlyB.length,
+      'list item and detail of the B post were received',
+    ).toBeGreaterThanOrEqual(2)
+    pwExpect(sharedLeafValues(onlyA, onlyB, vocabulary)).toEqual([])
+    // A 글에 B 로 쓴 댓글의 작성자 id 는 B 글의 것과 같고 A 와는 다르다(같은 프로필 = 같은 값, 다른 프로필 = 다른 값)
+    const comment = commentSeenBy(a!, COMMENT_B)
+    pwExpect(comment, 'Y received the B comment under the A post').toBeDefined()
+    pwExpect(comment!.authorId).toBe(b!.authorId)
+    pwExpect(comment!.authorId).not.toBe(a!.authorId)
   })
 
   it('X still owns both posts and the comment (edit / delete buttons come from the server `mine`), also after a reload', async () => {

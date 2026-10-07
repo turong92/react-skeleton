@@ -6,6 +6,7 @@ import {
   acceptLegalGate,
   agreeToLegal,
   auth,
+  createProfile,
   dismissConsent,
   ensureProfile,
   fillSignIn,
@@ -64,17 +65,18 @@ describe('nickname: sign-up → board author → delete → cancel', () => {
     await pwExpect(heading(new RegExp(`안녕하세요, ${nickname}`))).toBeVisible()
   })
 
-  it('the board shows the profile name — never the account nickname or the account id — on a post, its list row and a comment', async () => {
+  it('the first profile starts as a copy of the nickname; a post written as another profile shows that profile — never the nickname or the account id', async () => {
+    // 백엔드는 첫 프로필을 자동으로 만든다 — 닉네임이 있는 계정은 그 이름을 한 번 복사한다(이후 따로 간다)
+    pwExpect((await ensureProfile({ email, password }))?.name).toBe(nickname)
     const profileName = `프${String(stamp).slice(-6)}`
-    // 계정 닉네임은 나만 보는 이름이다 — 게시판에는 글 · 댓글에 쓰는 프로필의 이름이 보인다(백엔드 `author-profile` 필요)
-    pwExpect((await ensureProfile({ email, password }, profileName))?.name).toBe(profileName)
+    await createProfile({ email, password }, profileName)
     const title = `프로필 시험 ${stamp}`
     const comment = `댓글 ${stamp}`
     await openBoard(page)
-    await writePost(page, title, '본문이에요')
+    await writePost(page, title, '본문이에요', profileName)
     await pwExpect(article(page).getByText(profileName)).toBeVisible()
     await pwExpect(article(page).getByText(nickname)).toHaveCount(0)
-    await postComment(page, comment)
+    await postComment(page, comment, profileName)
     await pwExpect(commentOf(page, comment).getByText(profileName)).toBeVisible()
     await pwExpect(commentOf(page, comment).getByText(nickname)).toHaveCount(0)
     await pwExpect(
@@ -164,7 +166,7 @@ describe('an account made without a nickname (a mailed sign-in link) is asked fo
     await pwExpect(heading(new RegExp(`안녕하세요, ${chosen}`))).toBeVisible()
   })
 
-  it('writing on the board with no profile asks to create one first (the dialog), and once one exists the editor opens', async () => {
+  it('writing on the board with only the unnamed first profile asks to name one first (the dialog), and once a named one exists the editor opens', async () => {
     const second = `e2e-nonick-${stamp}@example.com`
     const requested = await fetch(`${apiUrl}/api/v1/auth/magic-link/request`, {
       method: 'POST',
@@ -186,7 +188,9 @@ describe('an account made without a nickname (a mailed sign-in link) is asked fo
     const profileName = `게이트${String(Date.now()).slice(-6)}`
     await dialog.getByLabel(ko('author.nameLabel')).fill(profileName)
     await dialog.getByRole('button', { name: ko('author.add'), exact: true }).click()
+    // 닉네임 없는 계정의 자동 첫 프로필(이름 없음)과 방금 만든 프로필 — 둘
     await pwExpect(dialog.getByRole('listitem').filter({ hasText: profileName })).toBeVisible()
+    await pwExpect(dialog.getByRole('listitem')).toHaveCount(2)
     await dialog
       .getByRole('button', { name: ko('common.close') })
       .first()

@@ -27,8 +27,12 @@ export function SettingsPage() {
 
   // 선택기의 「프로필 만들기」가 `/settings#profiles` 로 보낸다 — 라우터는 해시로 스크롤하지 않으므로 그 구역으로 내린다
   useEffect(() => {
-    if (hash === '#profiles')
-      document.getElementById('profiles')?.scrollIntoView({ block: 'start' })
+    if (hash !== '#profiles') return
+    const section = document.getElementById('profiles')
+    section?.scrollIntoView({ block: 'start' })
+    const heading = section?.querySelector('h2')
+    heading?.setAttribute('tabindex', '-1') // 구역 제목으로 포커스 — 낭독기가 어디에 왔는지 읽는다
+    heading?.focus()
   }, [hash])
 
   function signOut() {

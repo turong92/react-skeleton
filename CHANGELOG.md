@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - 설정 화면에 「글 · 댓글에 쓰는 프로필」 구역(`#profiles`, `AuthorProfileManager` — 이름 바꾸기 · 삭제는 게시판 캐시도 갱신). 계정 이름(닉네임)은 지우지 않았다 — 「나만 보는 이름」이라는 문구가 붙었고 안내 띠 · 대화상자의 문구도 같게 바뀌었다.
 - 게시판: 글쓰기 · 댓글 · 답글에 선택기(`authorPicker`, 고치기에는 없음), 글 상세의 내 글 판정은 `isOwn`(서버의 `mine`), `<BoardComments key={post.id} postAuthor>`. 작성자 자리의 삭제 문구는 「삭제된 사용자」.
-- **동작 변경**: 「닉네임이 없으면 쓰기 전에 닉네임 대화상자」(`NICKNAME_BEFORE_WRITE`)는 「서버가 작성자를 요구하는데 프로필이 없으면 쓰기 전에 프로필 만들기 대화상자」(`PROFILE_BEFORE_WRITE`)로 바뀌었다. `useNicknameGate().ensure` 는 없어졌다(`open` 만).
+- **동작 변경**: 「닉네임이 없으면 쓰기 전에 닉네임 대화상자」(`NICKNAME_BEFORE_WRITE`)는 「서버가 작성자를 요구하는데 **이름 있는** 프로필이 하나도 없으면(백엔드가 자동으로 만든 이름 없는 첫 프로필뿐이어도) 쓰기 전에 프로필 만들기 대화상자」(`PROFILE_BEFORE_WRITE`)로 바뀌었다. 선택기가 이름 있는 프로필이 없을 때 「프로필 만들기」를 보이고 그 단추가 같은 대화상자를 연다(쓰던 글 유지) — 새 글 · 새 댓글 · 답글만 막히고 댓글 수정은 걸리지 않는다. `useNicknameGate().ensure` 는 없어졌다(`open` 만). 샘플은 `author-profile` 모듈이 필수다.
 - **동작 변경**: 설정의 접힌 「문의용 정보」(계정 id + 복사)를 없앴다 — 계정 id 는 화면 · aria 어디에도 그리지 않는다.
 - 전역 오류 토스트는 `AUTHOR_PROFILE.*` 오류를 건너뛰고(폼이 제자리에서 말한다), 계정이 바뀌거나 로그아웃하면 서버 상태 캐시와 함께 기기 기억(`forgetAuthorMemory`)을 한 곳(`onAccountChange`)에서 지운다.
 - e2e `authorProfiles.e2e.ts`(백엔드 `author-profile` 이 켜진 샘플 필요) · 기존 e2e 의 글쓰기 단계는 프로필이 필요하면 하나 만들어 고른다.

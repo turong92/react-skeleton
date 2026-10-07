@@ -1,4 +1,5 @@
 import { onAccountChange } from '@skeleton/auth'
+import { browserLocalStorage, forgetAuthorMemory } from '@skeleton/author-profile'
 import { showApiError } from '@skeleton/ui'
 import { authSession } from '../auth/session'
 import { i18n } from '../i18n'
@@ -21,4 +22,8 @@ export const queryClient = createQueryClient({
 
 // 로그인한 계정이 사라지거나 바뀔 때마다 — 로그아웃 버튼 · 다른 탭의 로그아웃 · 갱신 실패 · 401 · 다른 계정의 링크 로그인 — 서버 상태를 비운다.
 // 다음 사람에게 이전 사람의 노트가 먼저 그려지지 않게. (버튼마다 `queryClient.clear()` 를 부르지 않는다 — 이 한 곳이 모든 길을 덮는다)
-onAccountChange(authSession, () => queryClient.clear())
+// 같은 자리에서 이 기기가 기억하는 「마지막으로 쓴 프로필」도 지운다 — 기기를 같이 쓰는 다음 사람에게 남기지 않는다(`mine` 도 호출자마다 달라 캐시와 함께 비워야 한다)
+onAccountChange(authSession, () => {
+  queryClient.clear()
+  forgetAuthorMemory(browserLocalStorage())
+})

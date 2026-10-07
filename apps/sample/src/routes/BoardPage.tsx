@@ -1,7 +1,7 @@
-import { PostList, usePosts } from '@skeleton/board'
+import { PostList, useBoardConfig, usePosts } from '@skeleton/board'
 import { Button, EmptyState, PageHeader, Spinner } from '@skeleton/ui'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { useNicknameGate } from '../auth/nicknameGateContext'
+import { useProfileGate } from '../author/useProfileGate'
 import { boardApi } from '../board/api'
 import { paramsFromSearch, searchFromParams } from '../board/boardParams'
 import { useBoardCode } from '../board/useBoardCode'
@@ -14,9 +14,9 @@ import styles from './BoardPage.module.css'
 function Posts({ code }: { code: string }) {
   const { t } = useT()
   const navigate = useNavigate()
-  const gate = useNicknameGate()
+  const gate = useProfileGate(useBoardConfig(boardApi).data)
   const write = () => {
-    // 닉네임이 없으면 먼저 정하게 한다(대화상자) — 정한 뒤 다시 누른다
+    // 쓸 수 있는 프로필이 없으면 먼저 만들게 한다(대화상자) — 만든 뒤 다시 누른다
     if (gate.ensure()) navigate('/board/new')
   }
   const [search, setSearch] = useSearchParams()
@@ -25,23 +25,26 @@ function Posts({ code }: { code: string }) {
   const change = (patch: Partial<typeof params>) =>
     setSearch(searchFromParams({ ...params, ...patch }))
   return (
-    <PostList
-      posts={posts.data?.values ?? []}
-      loading={posts.isPending}
-      error={posts.isError}
-      onRetry={() => void posts.refetch()}
-      page={posts.data?.pagination.page ?? 0}
-      totalPages={posts.data?.pagination.totalPages ?? 0}
-      onPageChange={(page) => change({ page })}
-      sort={params.sort}
-      onSortChange={(sort) => change({ sort, page: 0 })}
-      query={params.q}
-      onSearch={(q) => change({ q, page: 0 })}
-      renderTitle={(post) => <Link to={`/board/${post.id}`}>{post.title}</Link>}
-      actions={<Button onClick={write}>{t('board.write')}</Button>}
-      emptyAction={<Button onClick={write}>{t('board.writeFirst')}</Button>}
-      labels={postListLabels(t)}
-    />
+    <>
+      <PostList
+        posts={posts.data?.values ?? []}
+        loading={posts.isPending}
+        error={posts.isError}
+        onRetry={() => void posts.refetch()}
+        page={posts.data?.pagination.page ?? 0}
+        totalPages={posts.data?.pagination.totalPages ?? 0}
+        onPageChange={(page) => change({ page })}
+        sort={params.sort}
+        onSortChange={(sort) => change({ sort, page: 0 })}
+        query={params.q}
+        onSearch={(q) => change({ q, page: 0 })}
+        renderTitle={(post) => <Link to={`/board/${post.id}`}>{post.title}</Link>}
+        actions={<Button onClick={write}>{t('board.write')}</Button>}
+        emptyAction={<Button onClick={write}>{t('board.writeFirst')}</Button>}
+        labels={postListLabels(t)}
+      />
+      {gate.dialog}
+    </>
   )
 }
 

@@ -1,21 +1,35 @@
 import { useAuth } from '@skeleton/auth'
+import { AuthorProfileManager } from '@skeleton/author-profile'
+import { boardKeys } from '@skeleton/board'
 import { setTheme, THEMES, useTheme, type Theme } from '@skeleton/theme'
-import { Button, Card, CopyButton, Field, PageHeader, SectionCard, Select } from '@skeleton/ui'
-import { Link, useNavigate } from 'react-router-dom'
+import { Button, Card, Field, PageHeader, Select } from '@skeleton/ui'
+import { useEffect } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { profileApi } from '../author/api'
+import { authorProfileLabels } from '../author/profileLabels'
 import { shownName } from '../auth/profileDisplay'
 import { useMyProfile } from '../auth/useMyProfile'
 import { useT } from '../i18n'
 import styles from './SettingsPage.module.css'
 
-/** Patterns/Settings page — 즉시 적용(테마) 한 카드 · 읽기 전용 계정 카드 · 세션(로그아웃). 서버에 저장할 설정은 아직 없어 저장 폼은 두지 않았다 */
+/**
+ * Patterns/Settings page — 즉시 적용(테마) 한 카드 · 읽기 전용 계정 카드 · 글 · 댓글에 쓰는 프로필 구역(`#profiles`) · 세션(로그아웃). 서버에 저장할 설정은 아직 없어 저장 폼은 두지 않았다.
+ * 계정 id 는 화면 · aria 어디에도 그리지 않는다(프로필 뒤의 계정을 드러내는 값이라 접힌 구역에도 두지 않는다)
+ */
 export function SettingsPage() {
   const { t } = useT()
   const { principal, logout } = useAuth()
   const profile = useMyProfile().data
   const nickname = shownName(profile)
-  const accountId = profile?.id ?? principal?.accountId
   const theme = useTheme()
   const navigate = useNavigate()
+  const { hash } = useLocation()
+
+  // 선택기의 「프로필 만들기」가 `/settings#profiles` 로 보낸다 — 라우터는 해시로 스크롤하지 않으므로 그 구역으로 내린다
+  useEffect(() => {
+    if (hash === '#profiles')
+      document.getElementById('profiles')?.scrollIntoView({ block: 'start' })
+  }, [hash])
 
   function signOut() {
     logout()
@@ -53,6 +67,7 @@ export function SettingsPage() {
                   <Link to="/account#profile">{t('settings.nicknameSet')}</Link>
                 </>
               )}
+              <small className={styles.hint}>{t('settings.nicknameHint')}</small>
             </dd>
           </div>
           <div>
@@ -66,23 +81,14 @@ export function SettingsPage() {
         </dl>
         <Link to="/account">{t('settings.manageAccount')}</Link>
       </Card>
-      <SectionCard
-        id="support"
-        title={t('settings.support')}
-        description={t('settings.supportHint')}
-        collapsible
-        defaultExpanded={false}
-      >
-        <dl className={styles.list}>
-          <div>
-            <dt>{t('settings.accountId')}</dt>
-            <dd className={styles.idRow}>
-              <code>{accountId ?? t('common.none')}</code>
-              {accountId && <CopyButton value={accountId} label={t('common.copy')} />}
-            </dd>
-          </div>
-        </dl>
-      </SectionCard>
+      <Card id="profiles" title={t('settings.profiles')}>
+        <p>{t('settings.profilesHint')}</p>
+        <AuthorProfileManager
+          api={profileApi}
+          labels={authorProfileLabels(t)}
+          alsoInvalidate={[boardKeys.all]}
+        />
+      </Card>
       <Card title={t('settings.session')}>
         <div className={styles.session}>
           <p>{t('settings.sessionHint')}</p>

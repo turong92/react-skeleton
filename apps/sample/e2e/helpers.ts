@@ -169,3 +169,43 @@ export async function signUpConsents(apiUrl: string) {
       .map((d) => ({ type: d.type, version: d.version, locale: d.locale })),
   }
 }
+
+/** 작성자 프로필(`GET /author-profiles` 의 한 항목) */
+export type E2eProfile = { id: string; name: string | null; tag: string | null }
+
+/** API 로 로그인해 액세스 토큰만 받는다(비밀번호가 있는 계정) */
+async function accessTokenOf(apiUrl: string, account: { email: string; password: string }) {
+  const login = await fetch(`${apiUrl}/api/v1/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(account),
+  })
+  if (!login.ok) return undefined
+  return ((await login.json()) as { value: { accessToken: string } }).value.accessToken
+}
+
+/**
+ * 이 계정에 쓸 수 있는 작성자 프로필을 보장한다 — 화면을 거치지 않고 API 로(게시판 글쓰기는 서버가 작성자를 요구하면 프로필이 있어야 한다).
+ * 이미 있으면 첫 프로필을 그대로, 없으면 `name` 으로 하나 만든다. 백엔드에 `author-profile` 모듈이 없으면 아무 일도 하지 않고 undefined
+ */
+export async function ensureProfile(
+  account: { email: string; password: string },
+  name = `e2e${Date.now().toString(36)}`,
+): Promise<E2eProfile | undefined> {
+  const apiUrl = inject('apiUrl')
+  const token = await accessTokenOf(apiUrl, account)
+  if (!token) return undefined
+  const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
+  const listed = await fetch(`${apiUrl}/api/v1/author-profiles`, { headers })
+  if (!listed.ok) return undefined // 모듈이 없다(404) — 프로필 없이 쓰는 백엔드
+  const existing = ((await listed.json()) as { values: E2eProfile[] }).values
+  if (existing.length > 0) return existing[0]
+  const created = await fetch(`${apiUrl}/api/v1/author-profiles`, {
+    method: 'POST',
+    headers: { ...headers, 'Idempotency-Key': `e2e-profile-${Date.now()}-${Math.random()}` },
+    body: JSON.stringify({ name }),
+  })
+  if (created.status !== 201)
+    throw new Error(`profile seed failed: ${created.status} ${await created.text()}`)
+  return ((await created.json()) as { value: E2eProfile }).value
+}

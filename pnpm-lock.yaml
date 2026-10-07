@@ -101,6 +101,9 @@ importers:
       '@skeleton/auth':
         specifier: workspace:*
         version: link:../../packages/auth
+      '@skeleton/author-profile':
+        specifier: workspace:*
+        version: link:../../packages/author-profile
       '@skeleton/board':
         specifier: workspace:*
         version: link:../../packages/board

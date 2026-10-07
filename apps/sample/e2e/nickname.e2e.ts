@@ -7,6 +7,7 @@ import {
   agreeToLegal,
   auth,
   dismissConsent,
+  ensureProfile,
   fillSignIn,
   ko,
   launch,
@@ -14,7 +15,7 @@ import {
 import { waitForCode, waitForLink } from './mail'
 
 /*
- * 닉네임 묶음의 새 흐름 — 가입에서 닉네임 → 게시판 글 · 댓글에 작성자 닉네임(계정 id 는 안 보인다) → 탈퇴 → 로그인 → 「탈퇴를 취소할까요?」 → 취소,
+ * 닉네임 묶음의 새 흐름 — 가입에서 닉네임 → 게시판 글 · 댓글에 작성자 프로필 이름(계정 닉네임 · 계정 id 는 안 보인다 — 계정 이름은 나만 보는 이름) → 탈퇴 → 로그인 → 「탈퇴를 취소할까요?」 → 취소,
  * 링크 로그인은 redeem 요청이 한 번(200)뿐이고 오류가 안 보인다. 진짜 백엔드 · 진짜 브라우저 · 진짜 메일(mailpit). 앞 단계의 결과에 기댄다.
  */
 const pwExpect = baseExpect.configure({ timeout: 20_000 })
@@ -63,21 +64,26 @@ describe('nickname: sign-up → board author → delete → cancel', () => {
     await pwExpect(heading(new RegExp(`안녕하세요, ${nickname}`))).toBeVisible()
   })
 
-  it('the board shows the nickname — never the account id — on a post, its list row and a comment', async () => {
-    const title = `닉네임 시험 ${stamp}`
+  it('the board shows the profile name — never the account nickname or the account id — on a post, its list row and a comment', async () => {
+    const profileName = `프${String(stamp).slice(-6)}`
+    // 계정 닉네임은 나만 보는 이름이다 — 게시판에는 글 · 댓글에 쓰는 프로필의 이름이 보인다(백엔드 `author-profile` 필요)
+    pwExpect((await ensureProfile({ email, password }, profileName))?.name).toBe(profileName)
+    const title = `프로필 시험 ${stamp}`
     const comment = `댓글 ${stamp}`
     await openBoard(page)
     await writePost(page, title, '본문이에요')
-    await pwExpect(article(page).getByText(nickname)).toBeVisible()
+    await pwExpect(article(page).getByText(profileName)).toBeVisible()
+    await pwExpect(article(page).getByText(nickname)).toHaveCount(0)
     await postComment(page, comment)
-    await pwExpect(commentOf(page, comment).getByText(nickname)).toBeVisible()
+    await pwExpect(commentOf(page, comment).getByText(profileName)).toBeVisible()
+    await pwExpect(commentOf(page, comment).getByText(nickname)).toHaveCount(0)
     await pwExpect(
       commentOf(page, comment).getByRole('button', { name: ko('board.comments.edit') }),
-    ).toHaveAttribute('aria-label', new RegExp(`: ${nickname}$`))
+    ).toHaveAttribute('aria-label', new RegExp(`: ${profileName}$`))
     pwExpect(await page.locator('body').innerText()).not.toMatch(/acc_[0-9a-f]/i)
     await page.getByRole('link', { name: `← ${ko('board.back')}` }).click()
     await pwExpect(
-      page.getByRole('row').filter({ hasText: title }).getByText(nickname),
+      page.getByRole('row').filter({ hasText: title }).getByText(profileName),
     ).toBeVisible()
     pwExpect(await page.locator('body').innerText()).not.toMatch(/acc_[0-9a-f]/i)
   })
@@ -158,7 +164,7 @@ describe('an account made without a nickname (a mailed sign-in link) is asked fo
     await pwExpect(heading(new RegExp(`안녕하세요, ${chosen}`))).toBeVisible()
   })
 
-  it('writing on the board asks for the nickname first (the dialog), and after it is set the editor opens', async () => {
+  it('writing on the board with no profile asks to create one first (the dialog), and once one exists the editor opens', async () => {
     const second = `e2e-nonick-${stamp}@example.com`
     const requested = await fetch(`${apiUrl}/api/v1/auth/magic-link/request`, {
       method: 'POST',
@@ -175,10 +181,16 @@ describe('an account made without a nickname (a mailed sign-in link) is asked fo
     await openBoard(page)
     await page.getByRole('button', { name: ko('board.write') }).click()
     const dialog = page.getByRole('dialog')
-    await pwExpect(dialog.getByRole('heading', { name: ko('nickname.dialogTitle') })).toBeVisible()
+    await pwExpect(dialog.getByRole('heading', { name: ko('profileGate.title') })).toBeVisible()
     await pwExpect(page).toHaveURL(/\/board$/) // 글쓰기 화면으로 넘어가지 않았다
-    await dialog.getByLabel(auth.displayName).fill(`게이트${String(Date.now()).slice(-6)}`)
-    await dialog.getByRole('button', { name: ko('nickname.save') }).click()
+    const profileName = `게이트${String(Date.now()).slice(-6)}`
+    await dialog.getByLabel(ko('author.nameLabel')).fill(profileName)
+    await dialog.getByRole('button', { name: ko('author.add'), exact: true }).click()
+    await pwExpect(dialog.getByRole('listitem').filter({ hasText: profileName })).toBeVisible()
+    await dialog
+      .getByRole('button', { name: ko('common.close') })
+      .first()
+      .click()
     await pwExpect(dialog).toHaveCount(0)
     await page.getByRole('button', { name: ko('board.write') }).click()
     await pwExpect(page.getByLabel(new RegExp(ko('board.form.title')))).toBeVisible()

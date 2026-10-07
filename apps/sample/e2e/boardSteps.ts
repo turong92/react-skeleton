@@ -1,5 +1,5 @@
 import { expect as pwExpect, type Locator, type Page } from 'playwright/test'
-import { consentViaApi, dismissConsent, ko } from './helpers'
+import { consentViaApi, dismissConsent, ensureProfile, ko } from './helpers'
 
 /*
  * 게시판 여정(board.e2e.ts)과 증거 스크립트(walkthrough.board.shots.ts)가 같이 쓰는 단계 — 화면에서 사람이 하는 일 그대로.
@@ -36,6 +36,7 @@ type BoardConfigJson = {
 /** 로그인 화면에서 이메일 · 비밀번호로(체험 계정 채우기 버튼이 아니라) */
 export async function signInAs(page: Page, baseUrl: string, account: Account) {
   await consentViaApi(account) // legal 모듈이 있는 백엔드: 시드 계정은 동의 기록이 없다(없으면 아무 일도 안 한다)
+  await ensureProfile(account) // author-profile 모듈이 있는 백엔드: 글 · 댓글을 쓰려면 프로필이 하나는 있어야 한다(없는 백엔드에서는 아무 일도 안 한다)
   await page.goto(`${baseUrl}/login`)
   await dismissConsent(page)
   await page.getByLabel(ko('login.email')).fill(account.email)
@@ -58,11 +59,39 @@ export async function openBoard(page: Page) {
   await page.getByRole('button', { name: ko('board.write') }).waitFor()
 }
 
-/** 글쓰기 → 올리기 → 상세(글 제목은 `h2`) */
-export async function writePost(page: Page, title: string, body: string) {
+/**
+ * 폼 안의 작성자 선택기에서 프로필을 고른다 — `profile`(이름) 을 주면 그것을, 안 주면 아직 아무것도 안 골랐을 때만 목록의 첫 프로필을 고른다.
+ * 선택기가 없는 폼(작성자 프로필을 안 쓰는 백엔드 · 서버가 요구하지 않는 설정)에서는 아무 일도 하지 않는다. 한 줄 확인이 뜨면 그대로 두고 돌아온다(확인은 호출한 쪽이)
+ */
+export async function chooseProfile(form: Locator, profile?: string) {
+  const trigger = form.locator('button[aria-haspopup="menu"]')
+  if ((await trigger.count()) === 0) return
+  // 댓글을 받는 동안 선택기는 잠겨 있다 · 처음 값(이 스레드 → 이 기기 기억)은 그 뒤 효과로 채워진다 — 풀리고 가라앉은 뒤에 본다
+  await pwExpect(trigger).not.toHaveAttribute('aria-disabled', 'true')
+  if (!profile) {
+    await form.page().waitForTimeout(300)
+    if (!(await trigger.innerText()).includes(ko('author.choose'))) return
+  }
+  await trigger.click()
+  const items = form.page().getByRole('menuitemradio')
+  await (profile ? items.filter({ hasText: profile }) : items).first().click()
+}
+
+/** 글쓰기 폼 */
+export const postForm = (page: Page) => page.getByRole('form', { name: ko('board.form.formLabel') })
+
+/** 새 댓글 폼 — 새 댓글 칸이 든 폼 */
+export const commentForm = (page: Page) =>
+  page.locator('form').filter({
+    has: page.getByRole('textbox', { name: ko('board.comments.newComment') }),
+  })
+
+/** 글쓰기 → (프로필 고르기) → 올리기 → 상세(글 제목은 `h2`) */
+export async function writePost(page: Page, title: string, body: string, profile?: string) {
   await page.getByRole('button', { name: ko('board.write') }).click()
   await page.getByLabel(new RegExp(ko('board.form.title'))).fill(title)
   await page.getByLabel(new RegExp(ko('board.form.body'))).fill(body)
+  await chooseProfile(postForm(page), profile)
   await page.getByRole('button', { name: ko('board.form.submitCreate') }).click()
   await page.getByRole('heading', { level: 2, name: title }).waitFor()
 }
@@ -97,8 +126,9 @@ export async function pressReaction(page: Page, button: Locator) {
   await settled
 }
 
-export async function postComment(page: Page, text: string) {
+export async function postComment(page: Page, text: string, profile?: string) {
   await page.getByRole('textbox', { name: ko('board.comments.newComment') }).fill(text)
+  await chooseProfile(commentForm(page), profile)
   await page.getByRole('button', { name: ko('board.comments.postComment') }).click()
   await pwExpect(page.locator('[data-status] > p').filter({ hasText: text })).toBeVisible()
 }
@@ -110,6 +140,11 @@ export async function replyTo(page: Page, parentText: string, text: string) {
     .first()
     .click()
   await page.getByRole('textbox', { name: ko('board.comments.replyField') }).fill(text)
+  await chooseProfile(
+    page.locator('form').filter({
+      has: page.getByRole('textbox', { name: ko('board.comments.replyField') }),
+    }),
+  )
   await page.getByRole('button', { name: ko('board.comments.postReply') }).click()
   await pwExpect(page.getByRole('textbox', { name: ko('board.comments.replyField') })).toHaveCount(
     0,
@@ -138,12 +173,17 @@ export async function seedPosts(
   }
   const code = boards.values[0]?.code
   if (!code) throw new Error('the backend has no board — seed one (skeleton.board.seed-boards)')
+  // 작성자 프로필을 쓰는 서버는 글마다 `authorId`(프로필 id)를 요구한다 — 쓰는 서버에서만 싣는다
+  const config = (await (await fetch(`${apiUrl}/api/v1/boards/config`, { headers })).json()) as {
+    value: { authorRequired?: boolean }
+  }
+  const profile = config.value.authorRequired ? await ensureProfile(account) : undefined
   const ids: number[] = []
   for (const [index, post] of posts.entries()) {
     const response = await fetch(`${apiUrl}/api/v1/boards/${code}/posts`, {
       method: 'POST',
       headers: { ...headers, 'Idempotency-Key': `e2e-board-${Date.now()}-${index}` },
-      body: JSON.stringify(post),
+      body: JSON.stringify(profile ? { ...post, authorId: profile.id } : post),
     })
     if (response.status !== 201)
       throw new Error(`seed failed: ${response.status} ${await response.text()}`)

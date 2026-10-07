@@ -5,6 +5,7 @@ import {
   BoardComments,
   PostDetail,
   PostReactionBar,
+  isOwn,
   useBoardConfig,
   useModeratePost,
   usePost,
@@ -15,7 +16,8 @@ import {
 import { Button, Dialog, EmptyState, PageHeader, Spinner } from '@skeleton/ui'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { useNicknameGate } from '../auth/nicknameGateContext'
+import { useAuthorPicker } from '../author/useAuthorPicker'
+import { useProfileGate } from '../author/useProfileGate'
 import { boardApi } from '../board/api'
 import { REACTION_ICONS, commentLabels, postDetailLabels, reactionLabels } from '../board/labels'
 import { useBoardCode } from '../board/useBoardCode'
@@ -39,11 +41,12 @@ function PostView({
   const navigate = useNavigate()
   const labelsOfReactions = reactionLabels(t)
   const { principal } = useAuth()
-  const gate = useNicknameGate()
+  const gate = useProfileGate(config)
+  const authorPicker = useAuthorPicker(code)
   const remove = useRemovePost(boardApi, code)
   const moderate = useModeratePost(boardApi, code, id)
   const [confirming, setConfirming] = useState(false)
-  const mine = principal?.accountId === post.authorId
+  const mine = isOwn(post, principal?.accountId) // 서버가 준 `mine`(작성자 id 는 프로필 id 라 계정 id 와 비교하지 않는다)
 
   async function confirmDelete() {
     await remove.mutateAsync(id)
@@ -72,6 +75,7 @@ function PostView({
         }
       />
       <BoardComments
+        key={post.id} // 선택기가 있는 폼은 값을 쥐고 있다 — 글이 바뀌면 고른 값 · 오류가 남지 않게 새로 만든다
         api={boardApi}
         boardCode={code}
         postId={id}
@@ -82,7 +86,14 @@ function PostView({
         reactionIcons={REACTION_ICONS}
         labels={commentLabels(t)}
         beforeWrite={gate.ensure}
+        authorPicker={authorPicker}
+        postAuthor={{
+          authorId: post.authorId,
+          mine: post.mine,
+          authorDeleted: post.authorDeleted,
+        }}
       />
+      {gate.dialog}
       <Dialog
         open={confirming}
         onClose={() => setConfirming(false)}

@@ -1,0 +1,288 @@
+import { expect as baseExpect, type Browser, type Locator, type Page } from 'playwright/test'
+import { afterAll, beforeAll, describe, inject, it } from 'vitest'
+import {
+  article,
+  chooseProfile,
+  commentForm,
+  commentOf,
+  openBoard,
+  openPost,
+  writePost,
+} from './boardSteps'
+import { acceptLegalGate, dismissConsent, ko, launch } from './helpers'
+import { waitForLink } from './mail'
+
+/*
+ * 작성자 프로필 여정 — 사용자 X 가 설정에서 프로필 둘(A · B)을 만들고, 게시판에서 A 로 글 하나 · B 로 글 하나, A 의 글에 B 로 댓글(같은 스레드에서 다른 프로필로 바꿀 때는 한 줄 확인)을 쓴다.
+ * 다른 사용자 Y(다른 브라우저)가 보는 화면에서 두 작성자는 남처럼 서로 다른 이름이고, **Y 가 받은 모든 응답 본문**에 X 의 계정 id · 이메일이 없으며 두 글의 작성자 id 가 서로 다르고 겹치는 값이 없다.
+ * X 의 화면에서는 두 프로필의 글 모두 수정 · 삭제 단추가 남고(`mine`), 프로필 이름을 바꾸면 글의 이름도 바뀌고, 프로필을 지우면 글은 「삭제된 사용자」로 남되 단추는 여전히 남는다.
+ *
+ * 백엔드(kotlin-skeleton `apps/sample`)에 `author-profile` 모듈이 켜져 있어야 한다(B8) — 글 · 댓글 쓰기에 `authorId` 필수, `GET/POST/PATCH/DELETE /api/v1/author-profiles`.
+ * 계정은 시드에 기대지 않고 링크 로그인으로 새로 만든다(진짜 메일 = mailpit). 앞 단계의 결과에 기댄다.
+ */
+const pwExpect = baseExpect.configure({ timeout: 20_000 })
+const baseUrl = inject('baseUrl')
+const apiUrl = inject('apiUrl')
+const mailUrl = inject('mailUrl')
+
+const stamp = Date.now()
+const tail = String(stamp).slice(-6)
+const emailX = `e2e-prof-x-${stamp}@example.com`
+const emailY = `e2e-prof-y-${stamp}@example.com`
+const nameA = `에이${tail}`
+const nameA2 = `에이둘${tail}`
+const nameB = `비${tail}`
+const POST_A = `에이의 글 ${stamp}`
+const POST_B = `비의 글 ${stamp}`
+const COMMENT_B = `비의 댓글 ${stamp}`
+const DELETED = ko('board.author.deleted')
+const seen = new Set<string>()
+
+let browserX: Browser
+let browserY: Browser
+let x: Page
+let y: Page
+/** X 의 계정 id — X 가 `/account/me` 를 읽을 때 응답에서 잡는다. Y 가 받은 어떤 응답에도 없어야 한다 */
+let accountIdX = ''
+
+/** Y 가 받은 `/api/v1/` JSON 응답의 본문 전체 — 스트림(SSE)은 끝나지 않으니 뺀다 */
+const received: Array<{ url: string; method: string; text: string }> = []
+const reading: Array<Promise<void>> = []
+
+beforeAll(async () => {
+  ;({ browser: browserX, page: x } = await launch())
+  ;({ browser: browserY, page: y } = await launch())
+  y.on('response', (response) => {
+    if (!new URL(response.url()).pathname.startsWith('/api/v1/')) return
+    if (!(response.headers()['content-type'] ?? '').includes('json')) return
+    reading.push(
+      response.text().then(
+        (text) =>
+          void received.push({ url: response.url(), method: response.request().method(), text }),
+        () => undefined, // 이동으로 끊긴 응답
+      ),
+    )
+  })
+})
+afterAll(async () => {
+  await browserX?.close()
+  await browserY?.close()
+})
+
+/** 링크 로그인으로 새 계정 — 메일(mailpit)의 링크를 열고 약관 동의 화면이 있으면 넘긴다 */
+async function signUpByLink(page: Page, email: string) {
+  const requested = await fetch(`${apiUrl}/api/v1/auth/magic-link/request`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  })
+  pwExpect(requested.status).toBe(202)
+  const link = await waitForLink(mailUrl, email, 'magic-link', { seen })
+  await page.goto(baseUrl)
+  await dismissConsent(page)
+  await page.goto(`${baseUrl}${link.path}`)
+  await acceptLegalGate(page, apiUrl)
+  await pwExpect(page.getByRole('heading', { level: 1, name: /안녕하세요/ })).toBeVisible()
+}
+
+const profiles = (page: Page) => page.getByRole('region', { name: ko('settings.profiles') })
+const rowOf = (page: Page, name: string): Locator =>
+  profiles(page).getByRole('listitem').filter({ hasText: name })
+
+async function addProfile(page: Page, name: string) {
+  const section = profiles(page)
+  await section.getByLabel(ko('author.nameLabel')).fill(name)
+  await section.getByRole('button', { name: ko('author.add'), exact: true }).click()
+  await pwExpect(rowOf(page, name)).toBeVisible()
+}
+
+/** 목록에서 그 제목의 줄 */
+const listRow = (page: Page, title: string) => page.getByRole('row').filter({ hasText: title })
+
+/** 응답 본문에서 글 목록(`…/posts?…`)의 한 글 */
+type PostJson = Record<string, unknown> & { title: string; authorId: string; mine?: boolean }
+function postsSeenBy(): PostJson[] {
+  return received
+    .filter((r) => r.method === 'GET' && /\/boards\/[^/]+\/posts(\?|$)/.test(r.url))
+    .flatMap((r) => (JSON.parse(r.text) as { values?: PostJson[] }).values ?? [])
+}
+const newestPost = (title: string) => postsSeenBy().findLast((p) => p.title === title)
+
+describe('author profiles — several names, none of them tied to the account', () => {
+  it('two new users sign in; X reads the own account id while signing in', async () => {
+    const me = new Promise<{ id: string; email: string }>((resolve) =>
+      x.on('response', (response) => {
+        const { pathname } = new URL(response.url())
+        if (
+          response.request().method() === 'GET' &&
+          pathname === '/api/v1/account/me' &&
+          response.ok()
+        )
+          void response
+            .json()
+            .then((body: { value: { id: string; email: string } }) => resolve(body.value))
+      }),
+    )
+    await signUpByLink(x, emailX)
+    const mine = await me
+    accountIdX = mine.id
+    pwExpect(accountIdX).toMatch(/^acc_/)
+    pwExpect(mine.email.toLowerCase()).toBe(emailX.toLowerCase())
+    await signUpByLink(y, emailY)
+  })
+
+  it('X makes two profiles in the settings (the account id is nowhere on the screen)', async () => {
+    await x.getByRole('link', { name: ko('nav.settings'), exact: true }).click()
+    await pwExpect(profiles(x)).toBeVisible()
+    await addProfile(x, nameA)
+    await addProfile(x, nameB)
+    await pwExpect(profiles(x).getByRole('listitem')).toHaveCount(2)
+    pwExpect(await x.content()).not.toContain(accountIdX) // DOM 전체(텍스트 · aria · 속성)
+  })
+
+  it('X writes a post as A and another as B — the picker shows the one chosen name and nothing else until opened', async () => {
+    await openBoard(x)
+    await x.getByRole('button', { name: ko('board.write') }).click()
+    const form = x.getByRole('form', { name: ko('board.form.formLabel') })
+    const trigger = form.locator('button[aria-haspopup="menu"]')
+    await pwExpect(trigger).toContainText(ko('author.choose')) // 아무것도 안 골랐다 — 골라야 보낼 수 있다
+    await pwExpect(form.getByText(nameB)).toHaveCount(0) // 목록은 눌러야 열린다
+    // 고르지 않고 보내면 칸 아래에서 막는다
+    await x.getByLabel(new RegExp(ko('board.form.title'))).fill(POST_A)
+    await x.getByLabel(new RegExp(ko('board.form.body'))).fill('에이로 쓴 글이에요.')
+    await x.getByRole('button', { name: ko('board.form.submitCreate') }).click()
+    await pwExpect(x.getByText(ko('board.authorRequired'))).toBeVisible()
+    await chooseProfile(form, nameA)
+    await pwExpect(trigger).toContainText(nameA)
+    await pwExpect(form.getByText(nameB)).toHaveCount(0)
+    await x.getByRole('button', { name: ko('board.form.submitCreate') }).click()
+    await x.getByRole('heading', { level: 2, name: POST_A }).waitFor()
+    await pwExpect(article(x).getByText(nameA)).toBeVisible()
+
+    await x.getByRole('link', { name: `← ${ko('board.back')}` }).click()
+    await writePost(x, POST_B, '비로 쓴 글이에요.', nameB)
+    await pwExpect(article(x).getByText(nameB)).toBeVisible()
+  })
+
+  it('X comments on the A post as B — switching away from the profile already used in the thread asks once, in one line', async () => {
+    await x.getByRole('link', { name: `← ${ko('board.back')}` }).click()
+    await openPost(x, POST_A)
+    await x.getByRole('textbox', { name: ko('board.comments.newComment') }).fill(COMMENT_B)
+    const form = commentForm(x)
+    const trigger = form.locator('button[aria-haspopup="menu"]')
+    await pwExpect(trigger).toContainText(nameA) // 처음 값 = 이 스레드에서 쓴 프로필(글쓴이)
+    await chooseProfile(form, nameB)
+    const notice = form.getByRole('status')
+    await pwExpect(notice).toContainText(nameA) // 「이 글에서는 A(으)로 쓴 적이 있어요」
+    await pwExpect(trigger).toContainText(nameA) // 확인하기 전까지 값은 그대로다
+    await notice.getByRole('button', { name: new RegExp(nameB) }).click()
+    await pwExpect(trigger).toContainText(nameB)
+    await pwExpect(notice).toHaveCount(0)
+    await x.getByRole('button', { name: ko('board.comments.postComment') }).click()
+    await pwExpect(commentOf(x, COMMENT_B).getByText(nameB)).toBeVisible()
+  })
+
+  it('Y sees two different people, and nothing in anything Y received ties them to each other or to X', async () => {
+    await openBoard(y)
+    await pwExpect(listRow(y, POST_A).getByText(nameA)).toBeVisible()
+    await pwExpect(listRow(y, POST_B).getByText(nameB)).toBeVisible()
+    await openPost(y, POST_A)
+    await pwExpect(article(y).getByText(nameA)).toBeVisible()
+    await pwExpect(commentOf(y, COMMENT_B).getByText(nameB)).toBeVisible()
+    // 남의 글 — 수정 · 삭제 단추가 없다
+    await pwExpect(article(y).getByRole('button', { name: ko('board.detail.edit') })).toHaveCount(0)
+    await pwExpect(article(y).getByRole('button', { name: ko('board.detail.delete') })).toHaveCount(
+      0,
+    )
+    await pwExpect(
+      commentOf(y, COMMENT_B).getByRole('button', { name: ko('board.comments.edit') }),
+    ).toHaveCount(0)
+    // 화면에는 X 의 계정 id 가 없다
+    pwExpect(await y.content()).not.toContain(accountIdX)
+
+    await Promise.all(reading)
+    // 응답 본문 전체에 X 의 계정 id · 이메일이 없다
+    pwExpect(received.length).toBeGreaterThan(0)
+    for (const { url, text } of received) {
+      pwExpect(text, `${url} leaks X's account id`).not.toContain(accountIdX)
+      pwExpect(text.toLowerCase(), `${url} leaks X's email`).not.toContain(emailX.toLowerCase())
+    }
+    // 두 글의 작성자 id 는 서로 다르고(프로필 id), 작성자에 관한 어떤 값도 겹치지 않는다
+    const a = newestPost(POST_A)
+    const b = newestPost(POST_B)
+    pwExpect(a, 'Y received the A post in a list').toBeDefined()
+    pwExpect(b, 'Y received the B post in a list').toBeDefined()
+    pwExpect(a!.authorId).toMatch(/^prf_/)
+    pwExpect(b!.authorId).toMatch(/^prf_/)
+    pwExpect(a!.authorId).not.toBe(b!.authorId)
+    pwExpect(a!.mine).toBe(false)
+    pwExpect(b!.mine).toBe(false)
+    const authorValues = (post: PostJson) =>
+      Object.entries(post)
+        .filter(([key, value]) => /author/i.test(key) && typeof value === 'string')
+        .map(([, value]) => value as string)
+    const shared = authorValues(a!).filter((value) => authorValues(b!).includes(value))
+    pwExpect(shared).toEqual([])
+  })
+
+  it('X still owns both posts and the comment (edit / delete buttons come from the server `mine`), also after a reload', async () => {
+    await x.reload()
+    await pwExpect(article(x).getByRole('button', { name: ko('board.detail.edit') })).toBeVisible()
+    await pwExpect(
+      article(x).getByRole('button', { name: ko('board.detail.delete') }),
+    ).toBeVisible()
+    await pwExpect(
+      commentOf(x, COMMENT_B).getByRole('button', { name: ko('board.comments.edit') }),
+    ).toBeVisible()
+    await x.getByRole('link', { name: `← ${ko('board.back')}` }).click()
+    await openPost(x, POST_B)
+    await pwExpect(article(x).getByRole('button', { name: ko('board.detail.edit') })).toBeVisible()
+    await pwExpect(
+      article(x).getByRole('button', { name: ko('board.detail.delete') }),
+    ).toBeVisible()
+    pwExpect(await x.content()).not.toContain(accountIdX)
+  })
+
+  it('renaming A shows the new name on its post and comment; deleting B leaves its post as 「삭제된 사용자」 — still X’s own', async () => {
+    await x.getByRole('link', { name: ko('nav.settings'), exact: true }).click()
+    const row = rowOf(x, nameA)
+    await row.getByRole('button', { name: ko('author.renameAction') }).click()
+    await row.getByRole('textbox').fill(nameA2)
+    await row.getByRole('button', { name: ko('author.save'), exact: true }).click()
+    await pwExpect(rowOf(x, nameA2)).toBeVisible()
+
+    await openBoard(x)
+    await pwExpect(listRow(x, POST_A).getByText(nameA2)).toBeVisible()
+    await pwExpect(listRow(x, POST_A).getByText(nameA, { exact: true })).toHaveCount(0)
+
+    await x.getByRole('link', { name: ko('nav.settings'), exact: true }).click()
+    await rowOf(x, nameB)
+      .getByRole('button', { name: ko('author.removeAction') })
+      .click()
+    const dialog = x.getByRole('dialog')
+    await pwExpect(dialog).toContainText(DELETED) // 글이 남는다는 말
+    await dialog.getByRole('button', { name: ko('author.deleteConfirm') }).click()
+    await pwExpect(rowOf(x, nameB)).toHaveCount(0)
+
+    await openBoard(x)
+    await pwExpect(listRow(x, POST_B).getByText(DELETED)).toBeVisible()
+    await openPost(x, POST_B)
+    await pwExpect(article(x).getByText(DELETED)).toBeVisible()
+    // 작성자 프로필이 지워져도 내 글이다 — 단추가 남는다
+    await pwExpect(article(x).getByRole('button', { name: ko('board.detail.edit') })).toBeVisible()
+    await pwExpect(
+      article(x).getByRole('button', { name: ko('board.detail.delete') }),
+    ).toBeVisible()
+    pwExpect(await x.content()).not.toContain(accountIdX)
+  })
+
+  it('Y sees the rename and the deleted author after a reload — and the account ids still appear nowhere', async () => {
+    await y.goto(`${baseUrl}/board`)
+    await pwExpect(listRow(y, POST_A).getByText(nameA2)).toBeVisible()
+    await pwExpect(listRow(y, POST_B).getByText(DELETED)).toBeVisible()
+    pwExpect(await y.content()).not.toContain(accountIdX)
+    await Promise.all(reading)
+    for (const { url, text } of received)
+      pwExpect(text, `${url} leaks X's account id`).not.toContain(accountIdX)
+  })
+})

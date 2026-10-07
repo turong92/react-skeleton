@@ -11,6 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - 새 패키지: `createAuthorProfileApi`(`/author-profiles`) · `useAuthorProfiles` 등 훅(변경 뒤 목록 무효화, `alsoInvalidate` 로 게시판 캐시도) · `AuthorPicker`(board 의 `authorPicker` 에 꽂는 선택기 — 접힌 상태는 고른 이름#꼬리표 하나, 처음 값 스레드 → 기기 → 비어 있음, 이 스레드의 프로필과 다른 것으로 바꿀 때만 한 줄 확인) · `AuthorProfileManager`(목록 · 추가 · 이름 바꾸기 · 삭제 확인) · `createAuthorMemory`(기기 기억 — 키에만 계정 id, `forget()`). 문구는 `labels` prop. 처음 값은 댓글을 받는 중(`threadLoading`)에는 확정하지 않고(단추도 잠근다), 선택기 단추는 폼의 칸 오류 문장을 `aria-describedby` 로 잇는다. `name` · `tag` 는 `string | null`(이름 없는 옛 글의 첫 프로필 · 꼬리표가 꺼진 서버) — `profileDisplay(profile, unnamed?)`, 새 라벨 `unnamed` · `threadLoading`. 「Keep ○○」 는 지금 고른 프로필, 한 줄 확인은 Esc · 바깥 포커스 · 잠금 · 값 변화로 닫힌다. 이름 바꾸기는 한 번에 한 줄, 저장 · 취소 · 삭제 뒤 포커스를 옮긴다. `forgetAuthorMemory(storage)`(계정 id 없이 지우기) · `foldDuration`(대기 시간을 초 · 분 · 시간 · 일로, `labels.rateLimited` 가 `{ unit, value }` 를 받는다 — **번역을 쓰는 앱은 이 라벨의 시그니처가 바뀌었다**) · `shouldReuseIdempotencyKey`. `isAuthorProfileFormError` 는 이제 `AUTHOR_PROFILE.` 코드만(400 이름 칸 오류는 앱의 검증 실패 필터 몫 — sample 의 `errorToast.ts`). 추가를 같은 이름으로 다시 보낼 때 `Idempotency-Key` 를 재사용하는 것은 네트워크 오류(status 0)일 때만이다. 한 줄 확인은 `Use`/`Keep` 뒤 포커스를 선택기 단추로 돌린다. 문구: 상한 안내에서 삭제 권유를 뺐고, `NAME_TAKEN` 은 중립("That name is taken."). `ErrorCodes.AUTHOR_PROFILE_*` 추가. 백엔드 짝 `author-profile` 모듈.
 
+### Changed — `apps/sample`: 작성자 프로필 연결
+
+- 설정 화면에 「글 · 댓글에 쓰는 프로필」 구역(`#profiles`, `AuthorProfileManager` — 이름 바꾸기 · 삭제는 게시판 캐시도 갱신). 계정 이름(닉네임)은 지우지 않았다 — 「나만 보는 이름」이라는 문구가 붙었고 안내 띠 · 대화상자의 문구도 같게 바뀌었다.
+- 게시판: 글쓰기 · 댓글 · 답글에 선택기(`authorPicker`, 고치기에는 없음), 글 상세의 내 글 판정은 `isOwn`(서버의 `mine`), `<BoardComments key={post.id} postAuthor>`. 작성자 자리의 삭제 문구는 「삭제된 사용자」.
+- **동작 변경**: 「닉네임이 없으면 쓰기 전에 닉네임 대화상자」(`NICKNAME_BEFORE_WRITE`)는 「서버가 작성자를 요구하는데 프로필이 없으면 쓰기 전에 프로필 만들기 대화상자」(`PROFILE_BEFORE_WRITE`)로 바뀌었다. `useNicknameGate().ensure` 는 없어졌다(`open` 만).
+- **동작 변경**: 설정의 접힌 「문의용 정보」(계정 id + 복사)를 없앴다 — 계정 id 는 화면 · aria 어디에도 그리지 않는다.
+- 전역 오류 토스트는 `AUTHOR_PROFILE.*` 오류를 건너뛰고(폼이 제자리에서 말한다), 계정이 바뀌거나 로그아웃하면 서버 상태 캐시와 함께 기기 기억(`forgetAuthorMemory`)을 한 곳(`onAccountChange`)에서 지운다.
+- e2e `authorProfiles.e2e.ts`(백엔드 `author-profile` 이 켜진 샘플 필요) · 기존 e2e 의 글쓰기 단계는 프로필이 필요하면 하나 만들어 고른다.
+
 ### Added — `@skeleton/ui`
 
 - `RowMenu` 에 `describedBy`(버튼의 `aria-describedby` — 메뉴 칸 밖의 설명 · 폼 오류 문장의 id). 이름(`label`)은 그대로. 스토리 `DescribedByTiesAnOutsideDescriptionToTheButton`.

@@ -194,7 +194,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 
 - 종류 · 상태: package · stable
 - 위치: `@skeleton/author-profile` (`packages/author-profile`)
-- 켜는 법: `--packages author-profile` — 함께 따라오는 패키지 `api-client` · `auth` · `legal` · `theme` · `time` · `tokens` · `ui`
+- 켜는 법: `--packages author-profile` — 함께 따라오는 패키지 `api-client` · `auth` · `legal` · `theme` · `time` · `tokens` · `ui` — `--with-sample` 로도 따라온다
 - 필요한 것: `api-client` · `ui`
 - 백엔드: 모듈 `author-profile` · `author-profile-jdbc` · 있으면 더 켜지는 `board` · 경로 `/api/v1/author-profiles`
 - 주요 진입점: `createAuthorProfileApi` · `useAuthorProfiles` · `useCreateAuthorProfile` · `useRenameAuthorProfile` · `useRemoveAuthorProfile` · `AuthorPicker` · `AuthorProfileManager` · `createAuthorMemory` · `isAuthorProfileFormError`
@@ -357,8 +357,8 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 
 - 종류 · 상태: app · template-only
 - 위치: `sample` (`apps/sample`)
-- 켜는 법: `--with-sample` — 함께 따라오는 패키지 `board` · `i18n` · `marketing` · `notifications` · `realtime` · `seo` · `storage`
-- 필요한 것: `api-client` · `auth` · `board` · `i18n` · `marketing` · `notifications` · `realtime` · `seo` · `storage` · `theme` · `time` · `tokens` · `ui`
+- 켜는 법: `--with-sample` — 함께 따라오는 패키지 `author-profile` · `board` · `i18n` · `marketing` · `notifications` · `realtime` · `seo` · `storage`
+- 필요한 것: `api-client` · `auth` · `author-profile` · `board` · `i18n` · `marketing` · `notifications` · `realtime` · `seo` · `storage` · `theme` · `time` · `tokens` · `ui`
 - 백엔드: 모듈 `account` · `account-jdbc` · `alert` · `alert-jdbc` · `auth` · `auth-magic-link` · `auth-session` · `auth-session-jdbc` · `auth-social` · `auth-social-google` · `auth-social-kakao` · `auth-social-naver` · `auth-social-oidc` · `auth-social-x` · `board` · `board-jdbc` · `captcha-turnstile` · `crypto` · `db-postgresql` · `idempotency` · `job-queue-jdbc` · `json` · `legal` · `legal-jdbc` · `migration` · `migration-flyway` · `notification` · `notification-jdbc` · `notification-mail` · `notification-sse` · `persistence-jdbc` · `platform` · `storage` · `storage-s3` · `time` · 경로 `/api/v1/notes` · 짝 앱 `apps/sample`
 - 주요 진입점: `apps/sample/src/routes/routes.tsx` · `apps/sample/src/layouts/RootLayout.tsx` · `apps/sample/src/i18n/index.ts` · `apps/sample/src/board/api.ts` · `apps/sample/src/notifications/useLiveNotifications.ts` · `apps/sample/src/routes/LandingPage.tsx`
 - 문서: `apps/sample/README.md`

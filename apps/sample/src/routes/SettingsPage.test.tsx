@@ -50,24 +50,43 @@ function render(profile: object | undefined) {
 }
 
 describe('SettingsPage — account card', () => {
-  it('leads with the nickname#tag and the email, and keeps the account id out of the visible card', () => {
+  it('leads with the nickname#tag and the email', () => {
     const html = render(me({ displayName: '수민', displayTag: '4821' }))
     expect(html).toContain('수민#4821')
     expect(html).toContain('sumin@example.com')
-    const visible = html.split('id="support-panel"')[0]
-    expect(visible).not.toContain('acc_317e')
   })
 
-  it('puts the account id inside the collapsed 「문의용 정보」 section with a copy button', () => {
+  it('draws the account id nowhere — not in the text, not in an attribute, not behind a collapsed section', () => {
     const html = render(me({ displayName: '수민' }))
-    expect(html).toContain('문의용 정보')
-    expect(html).toMatch(/id="support-panel"[^>]*hidden[^>]*>[\s\S]*acc_317e90ab55d0aa11/)
-    expect(html).toContain('>복사<')
+    expect(html).not.toContain('acc_317e90ab55d0aa11')
+    expect(html).not.toContain('acc_317e')
+    expect(html).not.toContain('문의용 정보')
+    expect(html).not.toContain('계정 ID')
+  })
+
+  it('says the account nickname is a private label — it is not what other people see on the board', () => {
+    const html = render(me({ displayName: '수민' }))
+    expect(html).toContain('나만 보는 이름')
   })
 
   it('without a nickname it says so and points at the account settings', () => {
     const html = render(me({ displayName: null }))
     expect(html).toContain('아직 정하지 않았어요')
     expect(html).toContain('href="/account#profile"')
+  })
+})
+
+describe('SettingsPage — author profiles section', () => {
+  it('has a profiles section other screens can link to (#profiles) that explains posts use a profile, not the account name', () => {
+    const html = render(me({ displayName: '수민' }))
+    expect(html).toMatch(/id="profiles"/)
+    expect(html).toContain('글 · 댓글에 쓰는 프로필')
+  })
+
+  it('speaks English when the locale is en', async () => {
+    await i18n.setLocale('en', { remember: false })
+    const html = render(me({ displayName: 'Sumin' }))
+    expect(html).toContain('Profiles for posts and comments')
+    expect(html).toContain('Only you see this name')
   })
 })

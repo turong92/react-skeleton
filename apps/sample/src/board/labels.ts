@@ -20,7 +20,7 @@ export const REACTION_ICONS: Record<string, string> = { LIKE: '👍', DISLIKE: '
 export const reactionLabels = (t: Translate): Record<string, string> =>
   Object.fromEntries(REACTION_CODES.map((code) => [code, t(`board.reactions.${code}`)]))
 
-/** 작성자 자리의 글자 — 탈퇴한 사용자 · 이름 없는 사용자(계정 id 는 어디에도 그리지 않는다) */
+/** 작성자 자리의 글자 — 삭제된 사용자(지운 프로필 · 탈퇴한 계정) · 이름 없는 사용자(계정 id 도 프로필 id 도 어디에도 그리지 않는다) */
 const authorLabels = (t: Translate) => ({
   authorDeleted: t('board.author.deleted'),
   authorUnnamed: t('board.author.unnamed'),
@@ -98,6 +98,7 @@ export const postEditorLabels = (t: Translate): Partial<PostEditorLabels> => ({
   bodyTooLong: (max) => t('board.form.bodyTooLong', { max }),
   cancel: t('common.cancel'),
   formLabel: t('board.form.formLabel'),
+  authorRequired: t('board.authorRequired'),
 })
 
 export const commentLabels = (t: Translate): BoardCommentsLabelsInput => ({
@@ -136,5 +137,6 @@ export const commentLabels = (t: Translate): BoardCommentsLabelsInput => ({
   retry: t('common.retry'),
   cancel: t('common.cancel'),
   close: t('common.close'),
+  authorRequired: t('board.authorRequired'),
   pagination: { label: t('notes.pagination.label'), page: pageLabel(t) },
 })

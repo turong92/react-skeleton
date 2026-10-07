@@ -5,13 +5,15 @@ import {
   useCreatePost,
   usePost,
   useUpdatePost,
+  type AuthorPicker,
   type BoardConfig,
   type PostEditorValues,
 } from '@skeleton/board'
 import { EmptyState, PageHeader, Spinner } from '@skeleton/ui'
 import { useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { useNicknameGate } from '../auth/nicknameGateContext'
+import { useAuthorPicker } from '../author/useAuthorPicker'
+import { useProfileGate } from '../author/useProfileGate'
 import { boardApi } from '../board/api'
 import { postEditorLabels } from '../board/labels'
 import { useBoardCode } from '../board/useBoardCode'
@@ -23,12 +25,15 @@ import styles from './BoardFormPage.module.css'
 /** `PostEditor` 에 실패 처리를 잇는다 — 서버 400 의 칸별 오류는 같은 칸에, 그 밖의 실패는 폼 위 한 줄(입력은 그대로) */
 function Editor({
   config,
+  authorPicker,
   initial,
   submitLabel,
   onCancel,
   onSubmit,
 }: {
   config: BoardConfig
+  /** 만들 때만 — 작성자는 불변이라 고치는 폼에는 선택기도 `authorRequired` 도 주지 않는다 */
+  authorPicker?: AuthorPicker
   initial?: PostEditorValues
   submitLabel: string
   onCancel: () => void
@@ -41,6 +46,8 @@ function Editor({
   return (
     <PostEditor
       limits={config}
+      authorPicker={authorPicker}
+      authorRequired={authorPicker ? config.authorRequired : undefined}
       initial={initial}
       submitLabel={submitLabel}
       submitting={pending}
@@ -67,7 +74,8 @@ function Editor({
 
 function CreatePost({ code, config }: { code: string; config: BoardConfig }) {
   const { t } = useT()
-  const gate = useNicknameGate()
+  const gate = useProfileGate(config)
+  const authorPicker = useAuthorPicker(code)
   const navigate = useNavigate()
   const create = useCreatePost(boardApi, code)
   const keyFor = useRef(createKeyRing(newIdempotencyKey))
@@ -79,10 +87,11 @@ function CreatePost({ code, config }: { code: string; config: BoardConfig }) {
       />
       <Editor
         config={config}
+        authorPicker={authorPicker}
         submitLabel={t('board.form.submitCreate')}
         onCancel={() => navigate('/board')}
         onSubmit={async (values) => {
-          // 주소로 바로 들어온 경우에도 — 닉네임이 없으면 대화상자를 띄우고 보내지 않는다(쓴 글은 폼에 남는다)
+          // 주소로 바로 들어온 경우에도 — 쓸 수 있는 프로필이 없으면 만들기 대화상자를 띄우고 보내지 않는다(쓴 글은 폼에 남는다)
           if (!gate.ensure()) return
           const post = await create.mutateAsync({
             input: values,
@@ -91,6 +100,7 @@ function CreatePost({ code, config }: { code: string; config: BoardConfig }) {
           navigate(`/board/${post.id}`)
         }}
       />
+      {gate.dialog}
     </>
   )
 }

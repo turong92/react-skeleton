@@ -34,8 +34,11 @@ export const DEFAULT_REFRESH_DELIVERY: RefreshDelivery = 'body'
  */
 export const NICKNAME_NUDGE = true
 
-/** 닉네임이 없으면 게시판에서 글 · 댓글을 쓰려 할 때 닉네임을 정하는 대화상자가 먼저 뜬다(그 자리에서 입력 · 저장). 끄려면 `false` */
-export const NICKNAME_BEFORE_WRITE = true
+/**
+ * 서버가 작성자 프로필을 요구하는데(`GET /boards/config` 의 `authorRequired`) 내 프로필이 하나도 없으면, 게시판에서 글 · 댓글을 쓰려 할 때 프로필을 만드는 대화상자가 먼저 뜬다(쓰던 글은 남는다).
+ * 끄려면 `false` — 그때는 선택기의 「프로필 만들기」 단추가 설정 화면으로 보낸다
+ */
+export const PROFILE_BEFORE_WRITE = true
 
 const isMagicLink = (item: string) => item === 'magic-link' || item === 'magic_link'
 

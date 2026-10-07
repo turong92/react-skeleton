@@ -1,4 +1,10 @@
-import { expect as baseExpect, type Browser, type Locator, type Page } from 'playwright/test'
+import {
+  expect as baseExpect,
+  type Browser,
+  type Locator,
+  type Page,
+  type Request,
+} from 'playwright/test'
 import { afterAll, beforeAll, describe, inject, it } from 'vitest'
 import {
   article,
@@ -100,6 +106,19 @@ async function addProfile(page: Page, name: string) {
   await section.getByLabel(ko('author.nameLabel')).fill(name)
   await section.getByRole('button', { name: ko('author.add'), exact: true }).click()
   await pwExpect(rowOf(page, name)).toBeVisible()
+}
+
+/** 내 닉네임 이름 → 서버가 아는 id(`GET /author-profiles`) — 보낸 요청의 `authorId` 와 단추의 이름을 잇는다 */
+async function profileIds(page: Page): Promise<Record<string, string>> {
+  const values = await page.evaluate(async () => {
+    const token = window.localStorage.getItem('sample.accessToken') ?? ''
+    const response = await fetch('/api/v1/author-profiles', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    return ((await response.json()) as { values: Array<{ id: string; name: string | null }> })
+      .values
+  })
+  return Object.fromEntries(values.filter((v) => v.name).map((v) => [v.name as string, v.id]))
 }
 
 /** 목록에서 그 제목의 줄 */
@@ -221,14 +240,45 @@ describe('author profiles — several names, none of them tied to the account', 
     // 「이 글에는 ‘A’ 닉네임으로 쓴 적이 있어요. 지금은 ‘B’ 닉네임을 골랐어요.」 — 한 문장이 둘 다 말한다(조사에 기대지 않는다)
     await pwExpect(notice).toContainText(nameA)
     await pwExpect(notice).toContainText(nameB)
-    await pwExpect(trigger).toContainText(nameA) // 확인하기 전까지 값은 그대로다
+    // 선택은 곧바로 반영 — 단추가 보이는 닉네임이 올라갈 닉네임이다(확인은 제출만 막는다)
+    await pwExpect(trigger).toContainText(nameB)
     // 단추는 이름 없는 고정 글자 둘 — 「이대로 쓰기」 · 「되돌리기」
     await pwExpect(form.getByRole('button', { name: ko('author.switchKeep') })).toBeVisible()
+    // ① 확인 전: 제출은 막힌다(요청이 나가지 않는다)
+    const sent: string[] = []
+    const onRequest = (r: Request) => {
+      if (r.method() === 'POST' && /\/comments$/.test(new URL(r.url()).pathname))
+        sent.push(String((r.postDataJSON() as { authorId?: string }).authorId))
+    }
+    x.on('request', onRequest)
+    await x.getByRole('button', { name: ko('board.comments.postComment') }).click()
+    await pwExpect(notice).toBeVisible()
+    pwExpect(sent).toEqual([])
+    // ② 이대로 쓰기: 확인만 사라지고 단추는 그대로, 올라가는 authorId 는 단추의 닉네임(B)
     await form.getByRole('button', { name: ko('author.switchConfirm') }).click()
     await pwExpect(trigger).toContainText(nameB)
     await pwExpect(notice).toHaveCount(0)
     await x.getByRole('button', { name: ko('board.comments.postComment') }).click()
     await pwExpect(commentOf(x, COMMENT_B).getByText(nameB)).toBeVisible()
+    const ids = await profileIds(x)
+    pwExpect(sent).toEqual([ids[nameB]])
+    // ③ 되돌리기: 단추가 고르기 전 닉네임으로 돌아가고 확인이 사라지며, 올라가는 authorId 도 그 닉네임
+    await x
+      .getByRole('textbox', { name: ko('board.comments.newComment') })
+      .fill(`${COMMENT_B} 되돌림`)
+    const before = (await trigger.innerText()).includes(nameA) ? nameA : nameB
+    const other = before === nameA ? nameB : nameA
+    await chooseProfile(form, other)
+    await pwExpect(notice).toBeVisible()
+    await pwExpect(trigger).toContainText(other)
+    await form.getByRole('button', { name: ko('author.switchKeep') }).click()
+    await pwExpect(notice).toHaveCount(0)
+    await pwExpect(trigger).toContainText(before)
+    sent.length = 0
+    await x.getByRole('button', { name: ko('board.comments.postComment') }).click()
+    await pwExpect(commentOf(x, `${COMMENT_B} 되돌림`).getByText(before)).toBeVisible()
+    pwExpect(sent).toEqual([ids[before]])
+    x.off('request', onRequest)
   })
 
   it('Y sees two different people, and none of the board pages and responses Y loaded here ties them to each other or to X', async () => {

@@ -20,4 +20,10 @@ describe('the confirmation sentence wraps naturally', () => {
       /font-size:\s*var\(--font-size-small\)/,
     )
   })
+
+  it('is one warning-toned block (a request to confirm, not an error): amber border + soft amber background', () => {
+    const notice = css.match(/\.notice\s*\{([^}]*)\}/)?.[1] ?? ''
+    expect(notice).toMatch(/border:\s*1px solid var\(--amber\)/)
+    expect(notice).toMatch(/background:\s*var\(--amber-soft\)/)
+  })
 })

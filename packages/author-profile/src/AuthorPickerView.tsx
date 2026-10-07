@@ -11,8 +11,16 @@ import styles from './AuthorPicker.module.css'
 
 export type { AuthorPickerSlotProps, AuthorPickerViewProps } from './authorPickerTypes'
 
-/** 한 줄 확인이 묻는 것 — `premise` 는 물은 때의 전제(값 · 이 스레드의 프로필 · 잠금). 전제가 바뀌면 낡은 질문이라 버린다 */
-type Question = { next: AuthorProfile; thread: AuthorProfile; premise: string }
+/**
+ * 확인이 묻는 것 — 선택은 **곧바로 반영**돼 있다(단추 = 올라갈 닉네임). `previous` 는 고르기 전 값(되돌릴 곳), `premise` 는 물은 때의 전제(이 스레드의 닉네임 · 잠금).
+ * 전제가 바뀌거나 값이 `next` 가 아니게 되면 낡은 질문이라 버린다(되돌리지 않는다)
+ */
+type Question = {
+  next: AuthorProfile
+  thread: AuthorProfile
+  previous: string | undefined
+  premise: string
+}
 
 /**
  * 작성자 선택기(데이터를 이미 가진 모습) — 접힌 상태는 **지금 고른 `이름#꼬리표` 하나**만 늘 보이고, 목록은 눌러야 열린다(메뉴 단추: ↑↓ · Home · End · Esc).
@@ -56,9 +64,9 @@ export function AuthorPickerView({
     boardCode,
   })
 
-  // 한 줄 확인은 그것이 물은 전제(값 · 이 스레드의 프로필 · 잠금)가 바뀌면 낡은 질문이다 — 닫는다
-  const premise = `${value ?? ''}|${threadAuthorId ?? ''}|${locked}`
-  const pending = question?.premise === premise ? question : undefined
+  // 확인은 그것이 물은 전제(이 스레드의 닉네임 · 잠금 · 고른 값이 그 닉네임)가 바뀌면 낡은 질문이다 — 닫는다
+  const premise = `${threadAuthorId ?? ''}|${locked}`
+  const pending = question?.premise === premise && question.next.id === value ? question : undefined
   if (question && !pending) setQuestion(undefined) // 낡은 질문은 보이지 않는 데 그치지 않고 비운다(전제가 되돌아와도 되살아나지 않게)
 
   // 확인이 떠 있는 동안 선택기 단추는 그 문장도 설명으로 가진다
@@ -68,8 +76,10 @@ export function AuthorPickerView({
   // 폼에 「답이 필요한 질문이 떠 있다」를 알린다(제출을 막게) — 선택기가 사라질 때는 푼다
   const unsettled = pending !== undefined
   const latestUnsettled = useRef(onUnsettledChange)
+  const latestRevert = useRef(revert)
   useEffect(() => {
     latestUnsettled.current = onUnsettledChange
+    latestRevert.current = revert
   })
   useEffect(() => {
     onUnsettledChange(unsettled)
@@ -82,7 +92,7 @@ export function AuthorPickerView({
     if (!pending) return
     const outside = (event: Event) => {
       const scope = rootRef.current?.closest('form') ?? rootRef.current
-      if (!scope?.contains(event.target as Node)) setQuestion(undefined)
+      if (!scope?.contains(event.target as Node)) latestRevert.current(pending)
     }
     document.addEventListener('focusin', outside)
     document.addEventListener('pointerdown', outside)
@@ -91,6 +101,12 @@ export function AuthorPickerView({
       document.removeEventListener('pointerdown', outside)
     }
   }, [pending])
+
+  /** 답 없이 닫는다 — 고르기 전 값으로 되돌린다(올라갈 닉네임이 확인 없이 남지 않게) */
+  function revert(asked: Question) {
+    setQuestion(undefined)
+    onChange(asked.previous)
+  }
 
   const focusTrigger = () =>
     rootRef.current?.querySelector<HTMLElement>('button[aria-haspopup]')?.focus()
@@ -109,8 +125,11 @@ export function AuthorPickerView({
       return setQuestion(undefined)
     }
     const thread = switchNotice({ profiles, threadAuthorId, nextId: profile.id })
-    if (thread) setQuestion({ next: profile, thread, premise })
-    else apply(profile)
+    if (!thread) return apply(profile)
+    // 선택은 곧바로 반영(단추 = 올라갈 닉네임) — 확인은 제출만 막는다. 기기 기억은 「이대로 쓰기」 때 쓴다
+    chosen()
+    onChange(profile.id)
+    setQuestion({ next: profile, thread, previous: value, premise })
   }
 
   if (profiles.length === 0) {
@@ -139,11 +158,12 @@ export function AuthorPickerView({
     <div
       ref={rootRef}
       className={styles.root}
-      data-invalid={invalid ? 'true' : undefined}
+      data-invalid={invalid && !pending ? 'true' : undefined}
+      data-confirming={pending ? 'true' : undefined}
       onKeyDown={(event) => {
         // 열린 메뉴의 Esc 는 메뉴가 먼저 쓴다(defaultPrevented) — 그 밖의 Esc 는 떠 있는 확인을 접는다
         if (event.key !== 'Escape' || event.defaultPrevented || !pending) return
-        setQuestion(undefined)
+        revert(pending)
         focusTrigger()
       }}
     >
@@ -179,11 +199,11 @@ export function AuthorPickerView({
           labels={labels}
           thread={show(pending.thread)}
           next={show(pending.next)}
-          hasCurrent={current !== undefined}
+          hasCurrent={pending.previous !== undefined}
           onUse={() => apply(pending.next)}
           onKeep={() => {
-            chosen() // 지금 값을 유지하기로 했다 — 사람의 결정
-            setQuestion(undefined)
+            chosen() // 사람의 결정
+            revert(pending)
             focusTrigger()
           }}
         />

@@ -107,36 +107,39 @@ export const SwitchingAwayFromTheThreadProfileAsksOnce: Story = {
     const trigger = await canvas.findByRole('button', { name: /Writing as Ann#0001/ })
     await expect(canvas.queryByRole('status')).toBeNull() // 평소에는 경고가 없다
 
-    // 같은 프로필을 다시 고르면 묻지 않는다
+    // 같은 닉네임을 다시 고르면 묻지 않는다
     await userEvent.click(trigger)
     await userEvent.click(await canvas.findByRole('menuitemradio', { name: 'Ann#0001' }))
     await expect(canvas.queryByRole('status')).toBeNull()
 
-    // 다른 프로필 → 한 줄 확인, 값은 아직 그대로
+    // 다른 닉네임 → 선택은 곧바로 반영(단추 · 보낼 값이 같다)되고 확인은 제출만 막는다. 기기 기억은 아직 쓰지 않는다
     await userEvent.click(trigger)
     await userEvent.click(await canvas.findByRole('menuitemradio', { name: 'Bea#0002' }))
     await expect(await canvas.findByRole('status')).toHaveTextContent(
       "You wrote in this thread with the nickname 'Ann#0001'. You picked 'Bea#0002' now.",
     )
-    await expect(canvas.getByRole('button', { name: /Writing as Ann#0001/ })).toBeVisible()
+    await expect(canvas.getByRole('button', { name: /Writing as Bea#0002/ })).toBeVisible()
+    await expect(onChange).toHaveBeenLastCalledWith('prf_b') // 단추에 보이는 닉네임 = 올라갈 닉네임
     await expect(storage.dump()).toEqual({})
 
-    // 유지
+    // 되돌리기 → 단추도 보낼 값도 Ann 으로, 확인이 사라진다
     await userEvent.click(canvas.getByRole('button', { name: 'Switch back' }))
     await expect(canvas.queryByRole('status')).toBeNull()
     await expect(canvas.getByRole('button', { name: /Writing as Ann#0001/ })).toHaveFocus()
+    await expect(onChange).toHaveBeenLastCalledWith('prf_a')
 
-    // 다시 골라 확인
+    // 다시 골라 이대로 쓰기 → 확인만 사라지고 Bea 가 남는다
     await userEvent.click(canvas.getByRole('button', { name: /Writing as Ann#0001/ }))
     await userEvent.click(await canvas.findByRole('menuitemradio', { name: 'Bea#0002' }))
     await userEvent.click(await canvas.findByRole('button', { name: 'Use as is' }))
     await expect(await canvas.findByRole('button', { name: /Writing as Bea#0002/ })).toHaveFocus()
     await expect(canvas.queryByRole('status')).toBeNull()
+    await expect(onChange).toHaveBeenLastCalledWith('prf_b')
     await expect(Object.values(storage.dump())).toEqual(['prf_b'])
   },
 }
 
-/** 닉네임이 셋일 때 「Switch back」 은 **지금 고른** 닉네임으로 돌아간다 — 이 스레드의 닉네임(Ann)이 아니라 지금 값(Cy). 눌러도 값은 그대로 */
+/** 닉네임이 셋일 때 「Switch back」 은 **고르기 전의** 닉네임으로 돌아간다 — 이 스레드의 닉네임(Ann)이 아니라 고르기 전 값(Cy) */
 export const SwitchBackKeepsTheCurrentValueNotTheThreadNickname: Story = {
   args: { threadAuthorId: 'prf_a' },
   render: (args) => (
@@ -149,9 +152,10 @@ export const SwitchBackKeepsTheCurrentValueNotTheThreadNickname: Story = {
     await userEvent.click(await canvas.findByRole('button', { name: 'Use as is' }))
     await expect(await canvas.findByRole('button', { name: /Writing as Cy#0003/ })).toBeVisible()
 
-    // 이제 Bea 를 고르면: 이 스레드는 Ann, 지금 값은 Cy
+    // 이제 Bea 를 고르면: 이 스레드는 Ann, 고르기 전 값은 Cy — 단추는 곧바로 Bea
     await userEvent.click(canvas.getByRole('button', { name: /Writing as Cy#0003/ }))
     await userEvent.click(await canvas.findByRole('menuitemradio', { name: 'Bea#0002' }))
+    await expect(await canvas.findByRole('button', { name: /Writing as Bea#0002/ })).toBeVisible()
     await expect(await canvas.findByRole('status')).toHaveTextContent(
       "You wrote in this thread with the nickname 'Ann#0001'. You picked 'Bea#0002' now.",
     )
@@ -159,10 +163,11 @@ export const SwitchBackKeepsTheCurrentValueNotTheThreadNickname: Story = {
     await userEvent.click(canvas.getByRole('button', { name: 'Switch back' }))
     await expect(canvas.queryByRole('status')).toBeNull()
     await expect(canvas.getByRole('button', { name: /Writing as Cy#0003/ })).toHaveFocus()
+    await expect(onChange).toHaveBeenLastCalledWith('prf_c')
   },
 }
 
-/** 한 줄 확인은 한 번만 읽힌다 — 문장은 `role="status"` 하나뿐이고(같은 글을 한 번 더 읽는 묶음 이름이 없다), Esc 는 닫고 포커스를 선택기 단추로 돌린다 */
+/** 한 줄 확인은 한 번만 읽힌다 — 문장은 `role="status"` 하나뿐이고(같은 글을 한 번 더 읽는 묶음 이름이 없다), Esc 는 고르기를 취소(고르기 전 값으로)하고 포커스를 선택기 단추로 돌린다 */
 export const NoticeIsAnnouncedOnceAndEscapeClosesIt: Story = {
   args: { threadAuthorId: 'prf_a' },
   play: async ({ canvas, userEvent }) => {
@@ -182,11 +187,12 @@ export const NoticeIsAnnouncedOnceAndEscapeClosesIt: Story = {
     await userEvent.keyboard('{Escape}')
     await waitFor(() => expect(canvas.queryByRole('status')).toBeNull())
     await expect(trigger).toHaveFocus()
-    await expect(trigger).toHaveTextContent('Ann#0001') // 값은 그대로
+    await expect(trigger).toHaveTextContent('Ann#0001') // 답 없이 닫으면 고르기 전 값으로 돌아간다
+    await expect(onChange).toHaveBeenLastCalledWith('prf_a')
   },
 }
 
-/** 확인이 떠 있는데 폼 **밖**으로 포커스가 가면 낡은 질문이라 닫힌다(고르지도 유지하지도 않고 떠난 것). 같은 폼 안(제출 단추 포함)은 떠난 것이 아니다 */
+/** 확인이 떠 있는데 폼 **밖**으로 포커스가 가면 답 없이 떠난 것이라 고르기를 취소한다(고르기 전 값으로). 같은 폼 안(제출 단추 포함)은 떠난 것이 아니다 */
 export const NoticeClosesWhenFocusLeavesTheForm: Story = {
   args: { threadAuthorId: 'prf_a' },
   play: async ({ canvas, userEvent }) => {
@@ -196,9 +202,10 @@ export const NoticeClosesWhenFocusLeavesTheForm: Story = {
     canvas.getByRole('button', { name: 'Send' }).focus() // 같은 폼 안 — 떠난 것이 아니다
     await userEvent.click(canvas.getByRole('button', { name: 'Send' })) // 제출 단추를 눌러도 질문은 그대로(막는 것은 폼의 몫)
     await expect(canvas.getByRole('status')).toBeVisible()
+    await expect(canvas.getByRole('button', { name: /Writing as Bea#0002/ })).toBeVisible() // 제출을 눌러도 고른 값은 그대로
     await userEvent.click(canvas.getByRole('button', { name: 'Elsewhere' })) // 폼 밖
     await waitFor(() => expect(canvas.queryByRole('status')).toBeNull())
-    await expect(canvas.getByRole('button', { name: /Writing as Ann#0001/ })).toBeVisible() // 값은 그대로
+    await expect(canvas.getByRole('button', { name: /Writing as Ann#0001/ })).toBeVisible() // 답 없이 떠났다 — 고르기 전 값
   },
 }
 
@@ -235,7 +242,7 @@ export const NoticeClosesWhenTheFormGetsLocked: Story = {
     await expect(await canvas.findByRole('status')).toBeVisible()
     document.dispatchEvent(new Event('story:lock')) // 보내는 중
     await waitFor(() => expect(canvas.queryByRole('status')).toBeNull())
-    await expect(canvas.getByRole('button', { name: /Writing as Ann#0001/ })).toHaveAttribute(
+    await expect(canvas.getByRole('button', { name: /Writing as Bea#0002/ })).toHaveAttribute(
       'aria-disabled',
       'true',
     )
@@ -291,5 +298,18 @@ export const PickingTheCurrentValueAgainMakesItTheirs: Story = {
     await waitFor(() => expect(canvasElement.querySelector('[data-thread="prf_a"]')).not.toBeNull())
     await expect(canvas.getByRole('button', { name: /Writing as Bea#0002/ })).toBeVisible()
     await expect(canvas.queryByRole('status')).toBeNull()
+  },
+}
+
+/** 확인이 떠 있는 동안 선택기는 오류(빨강)가 아니라 확인 요청으로 보인다 — 오류 표시(`data-invalid`)를 끈다. 폼이 「확인부터」 오류를 이미 보여 주고 있어도 */
+export const OpenQuestionIsNotShownAsAnError: Story = {
+  args: { threadAuthorId: 'prf_a', invalid: true },
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    await userEvent.click(await canvas.findByRole('button', { name: /Writing as Ann#0001/ }))
+    await expect(canvasElement.querySelector('[data-invalid="true"]')).not.toBeNull() // 평소: 오류 칸
+    await userEvent.click(await canvas.findByRole('menuitemradio', { name: 'Bea#0002' }))
+    await expect(await canvas.findByRole('status')).toBeVisible()
+    await expect(canvasElement.querySelector('[data-invalid="true"]')).toBeNull()
+    await expect(canvasElement.querySelector('[data-author-notice]')).not.toBeNull()
   },
 }

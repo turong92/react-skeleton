@@ -14,3 +14,13 @@ describe('form action rows keep the submit button its own height', () => {
     expect(rule(file)).toMatch(/align-items:\s*flex-start/)
   })
 })
+
+describe('the author slot owns its row: picker (+ confirmation) first, submit below — the submit button never floats beside it', () => {
+  it('AuthorSlot.module.css .slot takes a full row', () => {
+    const slot =
+      readFileSync(new URL('./AuthorSlot.module.css', import.meta.url), 'utf8').match(
+        /\.slot\s*\{([^}]*)\}/,
+      )?.[1] ?? ''
+    expect(slot).toMatch(/flex:\s*1 1 100%/)
+  })
+})

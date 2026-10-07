@@ -1,4 +1,6 @@
 .slot {
+  /* 선택기(+ 펼쳐진 확인)가 자기 줄을 통째로 쓴다 — 제출 단추는 늘 그 아래 줄이라 확인이 떠도 위치가 튀지 않는다 */
+  flex: 1 1 100%;
   display: flex;
   align-items: center;
   min-width: 0;

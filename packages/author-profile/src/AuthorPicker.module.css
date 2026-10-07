@@ -37,12 +37,21 @@
   border-color: var(--red);
 }
 
+/* 확인 중 — 선택기 단추도 같은 주의색(확인 문장과 한 덩어리) */
+.root[data-confirming='true'] button[aria-haspopup] {
+  border-color: var(--amber);
+}
+
 .notice {
-  /* 선택기 단추 아래 한 줄을 통째로 쓴다 — 단추 옆에 끼어 문장이 좁게 접히지 않게 */
+  /* 선택기 단추 아래 한 줄을 통째로 쓴다 — 단추 옆에 끼어 문장이 좁게 접히지 않게. 오류가 아니라 「확인해 주세요」 — 주의색 한 덩어리 */
   flex: 1 1 100%;
   display: grid;
   gap: var(--space-sm);
   margin: 0;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--amber);
+  border-radius: var(--radius-md);
+  background: var(--amber-soft);
   color: var(--text);
   font-size: var(--font-size-small);
 }

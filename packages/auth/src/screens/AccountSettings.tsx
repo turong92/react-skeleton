@@ -47,6 +47,8 @@ export type AccountSettingsProps = {
   /** 서버가 탈퇴 취소(`skeleton.account.deletion.self-restore`)를 켰다 — 삭제 안내에 「기간 안에 다시 로그인하면 취소할 수 있어요」를 더한다. 앱은 서버 설정을 알 때만 켠다(꺼진 서버에서는 거짓이 된다). 기본 false */
   selfRestore?: boolean
   onDeleted?: (result: DeletionResult) => void
+  /** 계정 닉네임 줄을 보인다(기본 true) — 글 · 댓글의 이름을 작성자 닉네임(`@skeleton/author-profile`)으로 따로 쓰는 앱은 끈다. 언어 · 시간대는 남는다 */
+  showDisplayName?: boolean
   /** 프로필(닉네임 · 언어 · 시간대)을 저장했다 — 저장된 프로필과 함께. 앱이 닉네임이 걸린 자기 캐시 · 화면(게시판 작성자 …)을 다시 읽게 한다 */
   onProfileChanged?: (profile: AccountMe) => void
   formatDate?: (iso: string) => string
@@ -82,6 +84,7 @@ export function AccountSettings({
   timeZones,
   graceDays = 30,
   selfRestore = false,
+  showDisplayName,
   onDeleted,
   onProfileChanged,
   formatDate,
@@ -194,6 +197,7 @@ export function AccountSettings({
           locales={locales}
           timeZones={zones}
           labels={given}
+          showDisplayName={showDisplayName}
           onSave={async (patch) => {
             const saved = await api.updateProfile(patch)
             me.reload()

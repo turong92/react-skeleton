@@ -9,7 +9,11 @@ import { WithQuery } from './WithQuery'
 function Slot({ api }: { api: AuthorProfileApi }) {
   const [value, setValue] = useState<string>()
   const list = useAuthorProfiles(api)
-  const { open, dialog } = useProfileDialog({ api, title: 'Create a profile first' })
+  const { open, dialog } = useProfileDialog({
+    api,
+    title: 'Create a nickname first',
+    description: <p>Without a nickname you show up as Unnamed.</p>,
+  })
   return (
     <>
       <form aria-label="Post" onSubmit={(event) => event.preventDefault()}>

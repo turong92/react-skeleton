@@ -52,5 +52,5 @@ export const defaultCommentLabels: CommentLabels = {
   tooLong: (max) => `Keep it within ${max} characters.`,
   reactionGroup: 'Reactions',
   authorRequired: 'Choose who to post as.',
-  authorUnsettled: 'Answer the question about which profile to use first.',
+  authorUnsettled: 'Answer the question about which nickname to use first.',
 }

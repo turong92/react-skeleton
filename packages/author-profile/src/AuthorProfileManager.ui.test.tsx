@@ -43,7 +43,7 @@ describe('AuthorProfileManager', () => {
     )
     expect(html).toContain(L.limitReached(3))
     // 꺼진 추가 단추와 칸이 그 이유 문장을 설명으로 가진다
-    const id = html.match(/<p id="([^"]+)"[^>]*>[^<]*You can have up to 3 profiles/)?.[1]
+    const id = html.match(/<p id="([^"]+)"[^>]*>[^<]*You can have up to 3 nicknames/)?.[1]
     expect(id).toBeTruthy()
     expect(html).toMatch(new RegExp(`<button[^>]*aria-describedby="${id}"[^>]*>`))
     expect(html).toMatch(new RegExp(`<input[^>]*aria-describedby="[^"]*${id}[^"]*"`))
@@ -68,7 +68,8 @@ describe('AuthorProfileManager', () => {
     expect(html).toContain(`aria-label="${L.rename(L.unnamed)}"`)
     expect(html).toContain(`aria-label="${L.remove('Ann')}"`)
     expect(html).not.toContain('null')
-    expect(html).not.toContain('#')
+    // 줄에는 꼬리표가 없다(설명 문장의 「#1234」 예시와 섞이지 않게 목록만 본다)
+    expect(html.match(/<ul[\s\S]*<\/ul>/)?.[0]).not.toContain('#')
   })
 
   it('the delete confirmation is closed until asked for', () => {

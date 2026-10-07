@@ -16,8 +16,7 @@ import { NoteStatusBadge } from '../components/NoteStatusBadge'
 import { notificationsApi } from '../notifications/api'
 import { useNotes, useNoteSummary } from '../notes/queries'
 import type { Note } from '../notes/types'
-import { greetingOf } from '../auth/profileDisplay'
-import { useMyProfile } from '../auth/useMyProfile'
+import { TextLink } from '../components/TextLink'
 import { useT } from '../i18n'
 import styles from './DashboardPage.module.css'
 
@@ -29,7 +28,7 @@ function columnsOf(t: Translate): TableColumn<Note>[] {
       key: 'title',
       header: t('notes.columnTitle'),
       rowHeader: true,
-      render: (note) => <Link to={`/notes/${note.id}`}>{note.title}</Link>,
+      render: (note) => <TextLink to={`/notes/${note.id}`}>{note.title}</TextLink>,
     },
     {
       key: 'status',
@@ -52,7 +51,6 @@ export function DashboardPage() {
   const recent = useNotes({ page: 0, size: 5 })
   const unread = useNotifications(notificationsApi, { unreadOnly: true, size: 3 })
   const markRead = useMarkRead(notificationsApi)
-  const { name } = greetingOf(useMyProfile().data)
   const create = <Button onClick={() => navigate('/notes/new')}>{t('dashboard.create')}</Button>
 
   const stats = summary.data
@@ -61,7 +59,7 @@ export function DashboardPage() {
   return (
     <div className={styles.page}>
       <PageHeader
-        title={name ? t('dashboard.greeting', { name }) : t('dashboard.greetingNeutral')}
+        title={t('dashboard.greetingNeutral')}
         description={t('dashboard.subtitle')}
         actions={create}
       />
@@ -125,9 +123,9 @@ export function DashboardPage() {
                 }
               />
               {!noNotes && (
-                <Link to="/notes" className={styles.more}>
-                  {t('dashboard.viewAll')} →
-                </Link>
+                <div className={styles.more}>
+                  <TextLink to="/notes">{t('dashboard.viewAll')} →</TextLink>
+                </div>
               )}
             </>
           )}

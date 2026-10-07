@@ -26,10 +26,10 @@ type Story = StoryObj<typeof meta>
 
 export const ListsEveryProfileWithItsActions: Story = {
   play: async ({ canvas }) => {
-    const list = await canvas.findByRole('list', { name: 'Your profiles' })
+    const list = await canvas.findByRole('list', { name: 'Your nicknames' })
     await expect(within(list).getAllByRole('listitem')).toHaveLength(2)
-    await expect(canvas.getByText('2 of 5 profiles')).toBeVisible()
-    await expect(canvas.getByRole('button', { name: 'Rename Ann#0001' })).toBeVisible()
+    await expect(canvas.getByText('2 of 5 nicknames')).toBeVisible()
+    await expect(canvas.getByRole('button', { name: 'Change Ann#0001' })).toBeVisible()
     await expect(canvas.getByRole('button', { name: 'Delete Bea#0002' })).toBeVisible()
     await expect(document.body.innerHTML).not.toContain('prf_')
   },
@@ -38,29 +38,29 @@ export const ListsEveryProfileWithItsActions: Story = {
 export const EmptyListSaysSo: Story = {
   args: { profiles: [] },
   play: async ({ canvas }) => {
-    await expect(await canvas.findByText('You have no profiles yet.')).toBeVisible()
+    await expect(await canvas.findByText('You have no nicknames yet.')).toBeVisible()
     await expect(canvas.queryByRole('list')).toBeNull()
   },
 }
 
 export const AddingAProfile: Story = {
   play: async ({ canvas, userEvent }) => {
-    await userEvent.type(await canvas.findByLabelText('New profile name'), '  Cy  ')
-    await userEvent.click(canvas.getByRole('button', { name: 'Add profile' }))
-    await expect(await canvas.findByRole('button', { name: /Rename Cy#/ })).toBeVisible()
-    await expect(canvas.getByText('3 of 5 profiles')).toBeVisible()
-    await expect(canvas.getByLabelText('New profile name')).toHaveValue('')
+    await userEvent.type(await canvas.findByLabelText('New nickname'), '  Cy  ')
+    await userEvent.click(canvas.getByRole('button', { name: 'Add nickname' }))
+    await expect(await canvas.findByRole('button', { name: /Change Cy#/ })).toBeVisible()
+    await expect(canvas.getByText('3 of 5 nicknames')).toBeVisible()
+    await expect(canvas.getByLabelText('New nickname')).toHaveValue('')
   },
 }
 
 export const ClientChecksTheNameFirst: Story = {
   play: async ({ canvas, userEvent }) => {
-    await userEvent.type(await canvas.findByLabelText('New profile name'), 'a#b')
-    await userEvent.click(canvas.getByRole('button', { name: 'Add profile' }))
+    await userEvent.type(await canvas.findByLabelText('New nickname'), 'a#b')
+    await userEvent.click(canvas.getByRole('button', { name: 'Add nickname' }))
     await expect(
       await canvas.findByText('That name has characters that are not allowed.'),
     ).toBeVisible()
-    await expect(canvas.getByLabelText('New profile name')).toHaveAttribute('aria-invalid', 'true')
+    await expect(canvas.getByLabelText('New nickname')).toHaveAttribute('aria-invalid', 'true')
     await expect(canvas.getAllByRole('listitem')).toHaveLength(2)
   },
 }
@@ -68,8 +68,8 @@ export const ClientChecksTheNameFirst: Story = {
 export const ServerFieldErrorLandsOnTheNameField: Story = {
   render: () => <Demo profiles={[ann]} />,
   play: async ({ canvas, userEvent }) => {
-    await userEvent.type(await canvas.findByLabelText('New profile name'), 'admin')
-    await userEvent.click(canvas.getByRole('button', { name: 'Add profile' }))
+    await userEvent.type(await canvas.findByLabelText('New nickname'), 'admin')
+    await userEvent.click(canvas.getByRole('button', { name: 'Add nickname' }))
     await expect(await canvas.findByText('That name is not available.')).toBeVisible()
   },
 }
@@ -77,8 +77,8 @@ export const ServerFieldErrorLandsOnTheNameField: Story = {
 export const NameTakenIsSaidUnderTheField: Story = {
   args: { takenNames: ['Taken'] },
   play: async ({ canvas, userEvent }) => {
-    await userEvent.type(await canvas.findByLabelText('New profile name'), 'taken')
-    await userEvent.click(canvas.getByRole('button', { name: 'Add profile' }))
+    await userEvent.type(await canvas.findByLabelText('New nickname'), 'taken')
+    await userEvent.click(canvas.getByRole('button', { name: 'Add nickname' }))
     await expect(await canvas.findByText('That name is taken.')).toBeVisible()
     await expect(canvas.getAllByRole('listitem')).toHaveLength(2)
   },
@@ -87,15 +87,15 @@ export const NameTakenIsSaidUnderTheField: Story = {
 export const LimitReachedTurnsAddingOffAndSaysWhy: Story = {
   args: { maxPerAccount: 2 },
   play: async ({ canvas }) => {
-    await expect(await canvas.findByText('You can have up to 2 profiles.')).toBeVisible()
-    await expect(canvas.getByRole('button', { name: 'Add profile' })).toBeDisabled()
-    await expect(canvas.getByLabelText('New profile name')).toBeDisabled()
+    await expect(await canvas.findByText('You can have up to 2 nicknames.')).toBeVisible()
+    await expect(canvas.getByRole('button', { name: 'Add nickname' })).toBeDisabled()
+    await expect(canvas.getByLabelText('New nickname')).toBeDisabled()
     // 이유 문장이 추가 칸 · 단추의 설명으로 이어져 있다(낭독기가 꺼진 이유를 읽는다)
-    await expect(canvas.getByLabelText('New profile name')).toHaveAccessibleDescription(
-      /You can have up to 2 profiles\./,
+    await expect(canvas.getByLabelText('New nickname')).toHaveAccessibleDescription(
+      /You can have up to 2 nicknames\./,
     )
-    await expect(canvas.getByRole('button', { name: 'Add profile' })).toHaveAccessibleDescription(
-      'You can have up to 2 profiles.',
+    await expect(canvas.getByRole('button', { name: 'Add nickname' })).toHaveAccessibleDescription(
+      'You can have up to 2 nicknames.',
     )
   },
 }
@@ -103,10 +103,10 @@ export const LimitReachedTurnsAddingOffAndSaysWhy: Story = {
 export const RateLimitedWhenAddingDoesNotPromiseATime: Story = {
   args: { rateLimited: true },
   play: async ({ canvas, userEvent }) => {
-    await userEvent.type(await canvas.findByLabelText('New profile name'), 'Cy')
-    await userEvent.click(canvas.getByRole('button', { name: 'Add profile' }))
+    await userEvent.type(await canvas.findByLabelText('New nickname'), 'Cy')
+    await userEvent.click(canvas.getByRole('button', { name: 'Add nickname' }))
     await expect(await canvas.findByRole('alert')).toHaveTextContent(
-      'Too many profile changes. Try again later.',
+      'Too many nickname changes. Try again later.',
     )
   },
 }
@@ -115,12 +115,12 @@ export const RateLimitedWhenAddingDoesNotPromiseATime: Story = {
 export const ServerSaysLimitReachedWhileTheListLookedFree: Story = {
   args: { failNext: { create: 'AUTHOR_PROFILE.LIMIT_REACHED' } },
   play: async ({ canvas, userEvent }) => {
-    await userEvent.type(await canvas.findByLabelText('New profile name'), 'Cy')
-    await userEvent.click(canvas.getByRole('button', { name: 'Add profile' }))
+    await userEvent.type(await canvas.findByLabelText('New nickname'), 'Cy')
+    await userEvent.click(canvas.getByRole('button', { name: 'Add nickname' }))
     await expect(await canvas.findByRole('alert')).toHaveTextContent(
-      'You can have up to 5 profiles.',
+      'You can have up to 5 nicknames.',
     )
-    await expect(canvas.getByLabelText('New profile name')).toHaveValue('Cy') // 쓴 이름은 남는다
+    await expect(canvas.getByLabelText('New nickname')).toHaveValue('Cy') // 쓴 이름은 남는다
   },
 }
 
@@ -133,13 +133,14 @@ export const UnnamedAndTaglessProfilesReadNaturally: Story = {
     ],
   },
   play: async ({ canvas, userEvent }) => {
-    await expect(await canvas.findByRole('button', { name: 'Rename Unnamed' })).toBeVisible()
+    await expect(await canvas.findByRole('button', { name: 'Change Unnamed' })).toBeVisible()
     await expect(canvas.getByRole('button', { name: 'Delete Ann' })).toBeVisible()
     await expect(document.body).not.toHaveTextContent('null')
-    await expect(document.body).not.toHaveTextContent('#')
+    // 줄에는 꼬리표가 없다(설명 문장의 「#1234」 예시와 섞이지 않게 목록만 본다)
+    await expect(canvas.getByRole('list', { name: 'Your nicknames' })).not.toHaveTextContent('#')
     // 이름 없는 줄의 이름 바꾸기는 빈 칸으로 열린다(「null」 이 칸에 들어가지 않는다)
-    await userEvent.click(canvas.getByRole('button', { name: 'Rename Unnamed' }))
-    await expect(canvas.getByLabelText('New name for Unnamed')).toHaveValue('')
+    await userEvent.click(canvas.getByRole('button', { name: 'Change Unnamed' }))
+    await expect(canvas.getByLabelText('New nickname for Unnamed')).toHaveValue('')
   },
 }
 
@@ -174,19 +175,19 @@ export const ResendingTheSameNameReusesTheKey: Story = {
     return <Demo api={api} />
   },
   play: async ({ canvas, userEvent }) => {
-    const field = await canvas.findByLabelText('New profile name')
+    const field = await canvas.findByLabelText('New nickname')
     await userEvent.type(field, 'Cy')
-    await userEvent.click(canvas.getByRole('button', { name: 'Add profile' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Add nickname' }))
     await expect(await canvas.findByRole('alert')).toBeVisible() // 닿았는지 모르는 실패
-    await userEvent.click(canvas.getByRole('button', { name: 'Add profile' })) // 같은 이름 다시
-    await expect(await canvas.findByRole('button', { name: /Rename Cy#/ })).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Add nickname' })) // 같은 이름 다시
+    await expect(await canvas.findByRole('button', { name: /Change Cy#/ })).toBeVisible()
     await expect(keys).toHaveLength(2)
     await expect(keys[0]).toBeTruthy()
     await expect(keys[1]).toBe(keys[0])
     // 성공했으니 다음 제출은 새 키
     await userEvent.type(field, 'Di')
-    await userEvent.click(canvas.getByRole('button', { name: 'Add profile' }))
-    await expect(await canvas.findByRole('button', { name: /Rename Di#/ })).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Add nickname' }))
+    await expect(await canvas.findByRole('button', { name: /Change Di#/ })).toBeVisible()
     await expect(keys[2]).not.toBe(keys[0])
   },
 }

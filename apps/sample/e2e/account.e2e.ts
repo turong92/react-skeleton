@@ -363,12 +363,12 @@ describe('account lifecycle against the real backend', () => {
     await pwExpect(section.getByText('Third device')).toHaveCount(0)
   })
 
-  it('profile: language and time zone are saved to the account', async () => {
-    const section = region(auth.sectionProfile)
-    await section.getByLabel(auth.displayName).fill('E2E 사용자')
-    await section.getByLabel(auth.profileTimeZone).selectOption('Asia/Seoul')
+  it('language and time zone are saved to the account — and the account has no nickname line (the user has one nickname concept: the board ones)', async () => {
+    const section = region(ko('account.localeSection'))
+    await pwExpect(section.getByLabel(auth.displayName, { exact: true })).toHaveCount(0)
+    await section.getByLabel(auth.profileTimeZone, { exact: true }).selectOption('Asia/Seoul')
     await section.getByRole('button', { name: auth.save }).click()
-    await pwExpect(section.getByText(auth.profileSaved)).toBeVisible()
+    await pwExpect(section.getByText(ko('account.localeSaved'))).toBeVisible()
   })
 
   it('delete: password re-authentication, then a typed confirmation; afterwards the account cannot sign in', async () => {

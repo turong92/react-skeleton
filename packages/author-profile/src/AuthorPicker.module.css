@@ -25,9 +25,10 @@
   max-width: 100%;
 }
 
+/* 펼침 표시 — 본문 글자 크기 · 본문 글자색: 작은 점으로 묻히면 눌리는 단추로 안 보인다 */
 .chevron {
-  color: var(--text-muted);
-  font-size: var(--font-size-caption);
+  color: inherit;
+  font-size: inherit;
 }
 
 /* 칸 오류(authorRequired 인데 비었다) — 단추 테두리를 위험색으로. 문장은 보드가 role=alert 로 말한다 */
@@ -37,23 +38,27 @@
 }
 
 .notice {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  /* 선택기 단추 아래 한 줄을 통째로 쓴다 — 단추 옆에 끼어 문장이 좁게 접히지 않게 */
+  flex: 1 1 100%;
+  display: grid;
   gap: var(--space-sm);
   margin: 0;
   color: var(--text);
-  font-size: var(--font-size-caption);
+  font-size: var(--font-size-small);
 }
 
-.notice p {
+/* 문장 하나 — 한국어는 이름 한가운데서 끊기지 않고(keep-all), 한 낱말이 칸보다 길 때만 낱말 안에서 끊는다(좁은 화면에서 가로 스크롤이 생기지 않게) */
+.noticeText {
   margin: 0;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 
-/* 긴 이름의 확인 단추가 좁은 칸을 넘지 않게 */
-.notice > button {
-  min-width: 0;
-  max-width: 100%;
+/* 단추 둘 — 한 줄에 들어가면 나란히, 좁으면 줄이 바뀐다. 이름이 없는 고정 글자라 폭이 일정하다 */
+.noticeActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
 }
 
 /* 이름 + 꼬리표 — 이름만 넘치면 말줄임이고 꼬리표는 고정이다(접힌 단추 · 메뉴 항목 · 확인 단추가 같은 구조) */
@@ -81,15 +86,4 @@
   /* 바깥 글자색을 그대로 — 채운 단추(primary) 안에서도 단추의 대비를 따른다 */
   color: inherit;
   font-weight: 500;
-}
-
-/* 긴 이름(60자)이 좁은 화면에서 단추를 밀어내지 않게 — 단추 안의 글자 폭 상한. 전체 이름은 글자 그대로 남아 낭독된다 */
-.buttonText {
-  display: inline-flex;
-  align-items: baseline;
-  min-width: 0;
-  max-width: min(18rem, calc(100vw - var(--space-xl)));
-  overflow: hidden;
-  /* `pre`: 글자 노드가 익명 flex 항목이 되면 끝 공백이 접혀 「Use」 와 이름이 붙는다 — 공백을 그대로 둔다 */
-  white-space: pre;
 }

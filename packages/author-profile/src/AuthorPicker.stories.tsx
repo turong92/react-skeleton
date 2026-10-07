@@ -6,9 +6,9 @@ import { PickerDemo } from './stories/PickerDemo'
 import { profile } from './test/fixtures'
 
 /**
- * 작성자 선택기 — 게시판 글 · 댓글 폼의 `authorPicker` 에 꽂는다. 접힌 상태는 **지금 고른 `이름#꼬리표` 하나**만 제출 단추 옆에 늘 보이고(없으면 「프로필 고르기」 단추),
+ * 작성자 선택기 — 게시판 글 · 댓글 폼의 `authorPicker` 에 꽂는다. 접힌 상태는 **지금 고른 `이름#꼬리표` 하나**만 제출 단추 옆에 늘 보이고(없으면 「닉네임 고르기」 단추),
  * 목록은 눌러야 열린다(메뉴 단추 — ↑↓ Home End Esc). 처음 값은 ① 이 스레드에서 쓴 프로필 ② 이 기기가 이 게시판에서 기억하는 프로필 ③ 비어 있음.
- * **이 스레드에서 쓴 프로필과 다른 것으로 바꿀 때만** 한 줄 확인이 나온다 — 늘 떠 있는 경고는 없다. 프로필이 없으면 「프로필 만들기」 진입. 계정 id 는 화면 어디에도 없다.
+ * **이 스레드에서 쓴 프로필과 다른 것으로 바꿀 때만** 한 줄 확인이 나온다 — 늘 떠 있는 경고는 없다. 프로필이 없으면 「닉네임 만들기」 진입. 계정 id 는 화면 어디에도 없다.
  */
 const ann = profile('prf_a', 'Ann', '0001')
 const bea = profile('prf_b', 'Bea', '0002')
@@ -64,11 +64,24 @@ export const FoldedShowsOnlyTheRememberedProfile: Story = {
   },
 }
 
+/** 접힌 단추는 한눈에 눌리는 것으로 보인다 — 테두리가 있고, 펼침 표시(▾)는 본문 글자 크기에 본문 글자색이라 작은 점으로 묻히지 않는다 */
+export const TriggerLooksPressableWithAVisibleChevron: Story = {
+  args: { remembered: 'prf_b' },
+  play: async ({ canvas }) => {
+    const trigger = await canvas.findByRole('button', { name: /Writing as Bea#0002/ })
+    const style = getComputedStyle(trigger)
+    await expect(parseFloat(style.borderTopWidth)).toBeGreaterThan(0)
+    const chevron = trigger.querySelector<HTMLElement>('[aria-hidden="true"]')!
+    await expect(getComputedStyle(chevron).fontSize).toBe(style.fontSize)
+    await expect(getComputedStyle(chevron).color).toBe(style.color)
+  },
+}
+
 export const NothingToStartFromLeavesItEmpty: Story = {
   play: async ({ canvas }) => {
-    const button = await canvas.findByRole('button', { name: 'Choose a profile' })
+    const button = await canvas.findByRole('button', { name: 'Choose a nickname' })
     await expect(button).toBeVisible()
-    await expect(button).toHaveTextContent('Choose a profile')
+    await expect(button).toHaveTextContent('Choose a nickname')
     await expect(onChange).not.toHaveBeenCalled()
   },
 }
@@ -76,14 +89,14 @@ export const NothingToStartFromLeavesItEmpty: Story = {
 export const InvalidWhenTheFormAskedForAChoice: Story = {
   args: { invalid: true },
   play: async ({ canvas }) => {
-    await expect(await canvas.findByRole('button', { name: 'Choose a profile' })).toBeVisible()
+    await expect(await canvas.findByRole('button', { name: 'Choose a nickname' })).toBeVisible()
     await expect(document.querySelector('[data-invalid="true"]')).not.toBeNull()
   },
 }
 
 export const ChoosingWithNoThreadProfileAsksNothingAndIsRemembered: Story = {
   play: async ({ canvas, userEvent }) => {
-    await userEvent.click(await canvas.findByRole('button', { name: 'Choose a profile' }))
+    await userEvent.click(await canvas.findByRole('button', { name: 'Choose a nickname' }))
     await userEvent.click(await canvas.findByRole('menuitemradio', { name: 'Bea#0002' }))
     await expect(await canvas.findByRole('button', { name: /Writing as Bea#0002/ })).toBeVisible()
     await expect(canvas.queryByRole('status')).toBeNull()
@@ -109,7 +122,7 @@ export const NoProfilesOffersToCreateOne: Story = {
   args: { onCreateProfile: fn() },
   render: (args) => <PickerDemo {...args} api={createFakeAuthorProfiles().api} />,
   play: async ({ canvas, args, userEvent }) => {
-    const create = await canvas.findByRole('button', { name: 'Create a profile' })
+    const create = await canvas.findByRole('button', { name: 'Create a nickname' })
     await expect(canvas.queryByRole('button', { name: /Writing as/ })).toBeNull()
     await userEvent.click(create)
     await expect(args.onCreateProfile).toHaveBeenCalledTimes(1)
@@ -119,7 +132,7 @@ export const NoProfilesOffersToCreateOne: Story = {
 export const ADeletedRememberedProfileIsIgnored: Story = {
   args: { remembered: 'prf_gone' },
   play: async ({ canvas }) => {
-    await expect(await canvas.findByRole('button', { name: 'Choose a profile' })).toBeVisible()
+    await expect(await canvas.findByRole('button', { name: 'Choose a nickname' })).toBeVisible()
     await expect(onChange).not.toHaveBeenCalled()
   },
 }
@@ -139,8 +152,8 @@ export const LoadFailureCanBeRetried: Story = {
     )
   },
   play: async ({ canvas, userEvent }) => {
-    await userEvent.click(await canvas.findByRole('button', { name: /Could not load profiles/ }))
-    await expect(await canvas.findByRole('button', { name: 'Choose a profile' })).toBeVisible()
+    await userEvent.click(await canvas.findByRole('button', { name: /Could not load nicknames/ }))
+    await expect(await canvas.findByRole('button', { name: 'Choose a nickname' })).toBeVisible()
   },
 }
 
@@ -171,7 +184,7 @@ export const UnnamedAndTaglessProfilesReadNaturally: Story = {
   ),
   play: async ({ canvas, userEvent }) => {
     const trigger = await canvas.findByRole('button', {
-      name: 'Writing as Unnamed. Change profile',
+      name: 'Writing as Unnamed. Change nickname',
     })
     await expect(trigger).toHaveTextContent('Unnamed')
     await expect(trigger).not.toHaveTextContent('#')
@@ -217,8 +230,8 @@ export const LongNamesAreEllipsizedNotPushedOut: Story = {
   },
 }
 
-/** 확인 단추 안의 긴 이름도 이름만 말줄임이고 꼬리표는 고정이다 — 단추 이름(낭독)은 전체 */
-export const LongNameInTheConfirmationButtonKeepsTheTag: Story = {
+/** 확인 문장 안의 긴 이름은 줄을 바꿔 감싼다 — 문장도 두 단추(이름 없는 고정 글자)도 칸 밖으로 나가지 않는다 */
+export const LongNameInTheConfirmationSentenceWraps: Story = {
   args: { threadAuthorId: 'prf_a' },
   render: (args) => (
     <PickerDemo
@@ -233,29 +246,14 @@ export const LongNameInTheConfirmationButtonKeepsTheTag: Story = {
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(await canvas.findByRole('button', { name: /Writing as Ann#0001/ }))
     await userEvent.click(await canvas.findByRole('menuitemradio', { name: `${longName}#0009` }))
-    const use = await canvas.findByRole('button', { name: `Use ${longName}#0009` })
-    const name = use.querySelector<HTMLElement>('[class*="nameEllipsis"]')!
-    const tag = use.querySelector<HTMLElement>('[class*="tagFixed"]')!
-    await expect(name.scrollWidth).toBeGreaterThan(name.clientWidth)
-    await expect(tag.scrollWidth).toBeLessThanOrEqual(tag.clientWidth)
+    const sentence = await canvas.findByRole('status')
+    await expect(sentence).toHaveTextContent(`'${longName}#0009'`)
+    await expect(sentence.scrollWidth).toBeLessThanOrEqual(sentence.clientWidth)
+    const use = canvas.getByRole('button', { name: 'Use as is' })
     await expect(use.getBoundingClientRect().right).toBeLessThanOrEqual(window.innerWidth)
-  },
-}
-
-/** 확인 단추의 보이는 글자에서 문장과 이름 사이 공백이 살아 있다 — 「Use」 와 이름 상자 사이 간격이 0 보다 크다(공백이 접혀 「UseBea」 가 되지 않는다) */
-export const ConfirmationButtonKeepsTheSpaceBeforeTheName: Story = {
-  args: { threadAuthorId: 'prf_a' },
-  play: async ({ canvas, userEvent }) => {
-    await userEvent.click(await canvas.findByRole('button', { name: /Writing as Ann#0001/ }))
-    await userEvent.click(await canvas.findByRole('menuitemradio', { name: 'Bea#0002' }))
-    const use = await canvas.findByRole('button', { name: 'Use Bea#0002' })
-    const name = use.querySelector<HTMLElement>('[class*="nameEllipsis"]')!
-    const text = use.querySelector<HTMLElement>('[class*="buttonText"]')!.firstChild as Text
-    const range = document.createRange()
-    range.setStart(text, 0)
-    range.setEnd(text, 'Use'.length) // 「Use」 글자만
-    const gap = name.getBoundingClientRect().left - range.getBoundingClientRect().right
-    await expect(gap).toBeGreaterThan(0)
+    await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
+      document.documentElement.clientWidth,
+    )
   },
 }
 
@@ -278,7 +276,7 @@ export const NarrowColumnKeepsTheConfirmationInside: Story = {
     const narrow = canvasElement.querySelector<HTMLElement>('[data-narrow]')!
     await userEvent.click(await canvas.findByRole('button', { name: /Writing as Ann#0001/ }))
     await userEvent.click(await canvas.findByRole('menuitemradio', { name: `${longName}#0009` }))
-    await canvas.findByRole('button', { name: `Use ${longName}#0009` })
+    await canvas.findByRole('button', { name: 'Use as is' })
     await expect(narrow.scrollWidth).toBeLessThanOrEqual(narrow.clientWidth)
     await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
       document.documentElement.clientWidth,

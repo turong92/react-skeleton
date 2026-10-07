@@ -11,10 +11,10 @@ describe('the Notes catalogs', () => {
 
   it('the parity check really sees a drifting translation (guard against a vacuous pass)', async () => {
     const { default: en } = await import('./en')
-    const drifted = { ...en, 'dashboard.greeting': 'Hello', 'login.title': 'Sign in {oops}' }
+    const drifted = { ...en, 'author.remove': 'Delete', 'login.title': 'Sign in {oops}' }
     const problems = await catalogProblems({ ko, en: drifted }, { defaultLocale: 'ko' })
     expect([...problems].sort()).toEqual([
-      'en "dashboard.greeting": does not use {name}, which ko does',
+      'en "author.remove": does not use {name}, which ko does',
       'en "login.title": uses {oops}, which ko does not',
     ])
   })

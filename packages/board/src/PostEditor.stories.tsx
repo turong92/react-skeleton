@@ -168,7 +168,7 @@ export const SubmitIsBlockedWhileThePickerHasAnOpenQuestion: Story = {
     await userEvent.click(await canvas.findByRole('button', { name: 'Ask' }))
     await userEvent.click(canvas.getByRole('button', { name: 'Publish' }))
     await expect(canvas.getByRole('alert')).toHaveTextContent(
-      'Answer the question about which profile to use first.',
+      'Answer the question about which nickname to use first.',
     )
     await expect(args.onSubmit).not.toHaveBeenCalled()
     await expect(canvas.getByRole('button', { name: 'Ask' })).toHaveFocus() // 질문 요소 안의 첫 조작 요소

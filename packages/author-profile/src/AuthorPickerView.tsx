@@ -178,8 +178,8 @@ export function AuthorPickerView({
           describedBy={outerDescribedBy}
           labels={labels}
           thread={show(pending.thread)}
-          next={parts(pending.next)}
-          current={current ? parts(current) : undefined}
+          next={show(pending.next)}
+          hasCurrent={current !== undefined}
           onUse={() => apply(pending.next)}
           onKeep={() => {
             chosen() // 지금 값을 유지하기로 했다 — 사람의 결정

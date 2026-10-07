@@ -21,15 +21,6 @@
   gap: var(--space-sm);
 }
 
-.titleCell a {
-  color: var(--text-strong);
-  font-weight: 600;
-}
-
-.titleCell a:hover {
-  color: var(--teal);
-}
-
 @media (max-width: 720px) {
   .toolbar {
     grid-template-columns: minmax(0, 1fr);

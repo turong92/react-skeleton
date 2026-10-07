@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { AuthorProfileApi } from './authorProfileApi'
 import { AuthorProfileManager } from './AuthorProfileManager'
 import type { AuthorProfileLabels } from './labels'
+import styles from './ProfileDialog.module.css'
 
 /** `@skeleton/board` 폼의 선택기 자리(`data-author-slot`) 안의 첫 조작 요소 — board 의 `focusAuthorSlot` 과 같은 선택자 */
 const SLOT_CONTROL =
@@ -68,10 +69,10 @@ export function useProfileDialog({
     dialog: (
       <Dialog open={opened} onClose={() => setOpened(false)} title={title} closeLabel={closeLabel}>
         {opened && (
-          <>
+          <div className={styles.body}>
             {description}
             <AuthorProfileManager api={api} labels={labels} alsoInvalidate={alsoInvalidate} />
-          </>
+          </div>
         )}
       </Dialog>
     ),

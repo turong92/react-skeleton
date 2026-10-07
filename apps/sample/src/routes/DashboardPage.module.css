@@ -42,9 +42,7 @@
 }
 
 .more {
-  color: var(--teal);
   font-size: var(--font-size-small);
-  font-weight: 600;
 }
 
 @media (max-width: 960px) {

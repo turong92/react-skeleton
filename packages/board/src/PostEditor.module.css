@@ -14,5 +14,7 @@
   min-width: 0;
   display: flex;
   flex-wrap: wrap;
+  /* 선택기의 확인 줄이 펼쳐져 자리가 커져도 제출 단추는 제 키를 지킨다 */
+  align-items: flex-start;
   gap: var(--space-sm);
 }

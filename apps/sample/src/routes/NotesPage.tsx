@@ -14,12 +14,13 @@ import {
   type TableColumn,
 } from '@skeleton/ui'
 import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { LoadError } from '../components/LoadError'
 import { NoteStatusBadge } from '../components/NoteStatusBadge'
 import { hasFilters, queryFromSearch, searchFromQuery } from '../notes/listParams'
 import { useNotes } from '../notes/queries'
 import { NOTE_STATUSES, type Note, type NotesQuery } from '../notes/types'
+import { TextLink } from '../components/TextLink'
 import { useT } from '../i18n'
 import styles from './NotesPage.module.css'
 
@@ -33,7 +34,7 @@ function columnsOf(t: Translate): TableColumn<Note>[] {
       rowHeader: true,
       render: (note) => (
         <span className={styles.titleCell}>
-          <Link to={`/notes/${note.id}`}>{note.title}</Link>
+          <TextLink to={`/notes/${note.id}`}>{note.title}</TextLink>
           {note.pinned && <Badge tone="info">{t('notes.pinned')}</Badge>}
           {note.attachmentName && <Badge>{t('notes.hasAttachment')}</Badge>}
         </span>

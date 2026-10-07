@@ -653,7 +653,7 @@ export const SubmitIsBlockedWhileTheQuestionIsOpen: Story = {
     await expect(await canvas.findByRole('status')).toBeVisible()
     await userEvent.click(canvas.getByRole('button', { name: 'Post comment' }))
     await expect(await canvas.findByRole('alert')).toHaveTextContent(
-      'Answer the question about which profile to use first.',
+      'Answer the question about which nickname to use first.',
     )
     await expect(args.watchCreate).not.toHaveBeenCalled()
     await expect(canvas.getByRole('button', { name: 'Use Bea' })).toHaveFocus() // 확인 줄로

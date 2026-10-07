@@ -26,6 +26,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 전역 오류 토스트는 `AUTHOR_PROFILE.*` 오류를 건너뛰고(폼이 제자리에서 말한다) 게시판이 작성자를 거절하면(`BOARD.AUTHOR_NOT_ALLOWED`) `refreshProfilesOnAuthorRefusal` 로 프로필 목록을 다시 받게 하고(`app/queryClient.ts`), 계정이 바뀌거나 로그아웃하면 서버 상태 캐시와 함께 기기 기억(`forgetAuthorMemory`)을 한 곳(`onAccountChange`)에서 지운다.
 - e2e `authorProfiles.e2e.ts`(백엔드 `author-profile` 이 켜진 샘플 필요) · 기존 e2e 의 글쓰기 단계는 프로필이 필요하면 하나 만들어 고른다.
 
+### Changed — 닉네임 하나로 통일 · 눌리는 것은 눌려 보이게 · 닉네임 바꿀 때의 확인 문구(`@skeleton/author-profile` · `@skeleton/auth` · `apps/sample`)
+
+주인이 견본 앱을 써 보고 — 「닉네임 여러 개 해놓고 선택해서 쓸 수 있게」 · 「눌리는 것들은 다 눌리겠구나 하게」.
+
+- **화면에서 「프로필」이라는 낱말을 쓰지 않는다(코드 · 패키지 이름은 그대로)**. 사용자에게는 개념이 하나 — 「닉네임」. `@skeleton/author-profile` 의 기본 문구(영어)가 `profile` → `nickname`(`Choose a nickname` · `3 of 5 nicknames` · `New nickname` · `Add nickname` · 이름 바꾸기 → `Change`). sample 한국어: 구역 「내 닉네임」 · 「닉네임 {max}개 중 {n}개」 · 「새 닉네임」 · 「닉네임 추가」 · 「바꾸기」 · 꼬리표 설명 「같은 닉네임을 쓰는 다른 사람과 구분하려고 번호(#1234)가 붙을 수 있어요」.
+- **sample 이 계정 닉네임(`displayName`)을 화면에서 숨긴다**: 설정 「계정」 구역의 닉네임 줄 · 설명, 안내 띠의 계정용 「닉네임 정하기」 · 계정 닉네임 대화상자(`NicknameDialog`) · `/account` 의 닉네임 칸 · 대시보드 인사말(이제 중립 인사)을 없앴다. 가입의 「닉네임」 칸은 그대로(서버가 그 값으로 첫 닉네임을 만든다), 도움말만 「첫 닉네임이 돼요. 나중에 더 만들거나 바꿀 수 있어요.」. `/account` 의 남은 절은 「언어 · 시간대」(`appAuthLabels` 가 `sectionProfile` · `profileSaved` 를 덮는다).
+- **`@skeleton/auth` — `showDisplayName`**(`AccountSettings` · `ProfileSection` · `createAuthRoutes` 의 `settings`; 기본 `true` = 지금 동작 그대로): `false` 면 닉네임 줄(칸 · `닉네임#번호`)을 그리지 않고 저장 요청에도 싣지 않는다 — 언어 · 시간대만 남는다. 계정 닉네임 부품은 그대로 두고 starter 처럼 작성 닉네임을 쓰지 않는 앱의 계정 화면은 바뀌지 않는다.
+- **안내 띠(`NicknameNudge`)는 한 가지**: 「이름 없는 닉네임만 있을 때」(링크 가입 등)에만 — 「닉네임을 정해 주세요」 / 「닉네임이 없으면 게시판에서 「이름 없는 사용자」로 보여요.」 / 주 단추 하나 「닉네임 정하기」(그 자리 대화상자) / 「나중에」. 글쓰기 전 확인(`PROFILE_BEFORE_WRITE`)도 **같은 대화상자**(`useNicknameDialog`). `useNicknameGate().open` 은 포커스 복귀를 위해 클릭 이벤트를 받는다.
+- **눌리는 것은 눌려 보인다**: 설정의 「계정 관리 →」 는 줄 전체가 눌리는 링크 카드(`LinkCard` — 테두리 · 화살표 · hover/focus), 노트 · 글 제목 · 「모두 보기 →」 는 밑줄 글자 링크(`TextLink`). 작성자 선택기의 ▾ 는 본문 글자 크기 · 본문 글자색으로 키웠다(작은 회색 점이라 눌리는 단추로 안 보였다).
+- **닉네임을 바꿀 때의 확인 문구**(`AuthorPickerNotice`): 「이 글에서는 에이#2232(으)로 쓴 적이 있어요 [그래도 비#0614(으)로] [에이#2232 유지] [댓글 등록]」 이 조사가 어색하고 단추 셋이 한 줄에 몰렸다 → 한 문장 「이 글에는 ‘에이#2232’ 닉네임으로 쓴 적이 있어요. 지금은 ‘비#0614’ 닉네임을 골랐어요.」 + 이름 없는 단추 둘 「이대로 쓰기」 · 「되돌리기」(좁은 화면에서는 줄이 바뀐다). **`AuthorProfileLabels` 변경**: `switchNotice(threadName, nextName)`(인자 하나 더) · `switchConfirm` · `switchKeep` 은 함수가 아니라 문자열. `withProfile` 은 쓸 곳이 없어 없앴다.
+- e2e · 스토리 · 단위 테스트 · 카탈로그를 이에 맞췄다(`wording.test.ts` 가 한국어 · 영어 사전에 「프로필」/`profile` 이 없음을, `useAuthLabels.test.ts` 가 계정 화면 문구도 그러함을 지킨다).
+
 ### Changed — `apps/sample` 닉네임 안내 띠
 
 - 닉네임 없는 계정의 안내 띠: 조건(계정 닉네임이 없음)은 그대로이고, 제목 · 주 버튼은 「닉네임을 정해 주세요」 · 「닉네임 정하기」(나만 보는 계정 이름), 보조 링크 「프로필 이름 정하기」가 설정의 프로필 구역으로 간다. 본문은 「첫 프로필이 만들어질 때의 닉네임이 한 번 복사된다」로만 말한다. 프로필 이름은 쓰기 시점의 프로필 게이트가 묻는다.

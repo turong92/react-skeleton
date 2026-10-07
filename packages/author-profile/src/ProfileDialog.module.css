@@ -1,0 +1,9 @@
+/* 대화상자 안: 안내 문장과 관리 화면 사이에 간격 */
+.body {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.body > p {
+  margin: 0;
+}

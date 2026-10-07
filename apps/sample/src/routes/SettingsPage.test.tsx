@@ -50,10 +50,14 @@ function render(profile: object | undefined) {
 }
 
 describe('SettingsPage — account card', () => {
-  it('leads with the nickname#tag and the email', () => {
+  it('shows the email and role, and no account nickname (the user has one concept: the nicknames below)', () => {
     const html = render(me({ displayName: '수민', displayTag: '4821' }))
-    expect(html).toContain('수민#4821')
     expect(html).toContain('sumin@example.com')
+    expect(html).not.toContain('수민#4821')
+    expect(html).not.toContain('수민')
+    expect(html).not.toContain('나만 보는')
+    expect(html).not.toContain('아직 정하지 않았어요')
+    expect(html).not.toContain('href="/account#profile"')
   })
 
   it('draws the account id nowhere — not in the text, not in an attribute, not behind a collapsed section', () => {
@@ -64,29 +68,27 @@ describe('SettingsPage — account card', () => {
     expect(html).not.toContain('계정 ID')
   })
 
-  it('says the nickname is private and only seeds the first profile once — changing it later renames no profile', () => {
-    const html = render(me({ displayName: '수민' }))
-    expect(html).toContain('프로필 이름은 바뀌지 않아요')
-  })
-
-  it('without a nickname it says so and points at the account settings', () => {
+  it('leads to the account management with a boxed link card (not a bare line of text)', () => {
     const html = render(me({ displayName: null }))
-    expect(html).toContain('아직 정하지 않았어요')
-    expect(html).toContain('href="/account#profile"')
+    expect(html).toMatch(/<a [^>]*class="[^"]*card[^"]*"[^>]*href="\/account"/)
+    expect(html).toContain('계정 관리')
+    expect(html).toContain('비밀번호 · 이메일 · 로그인한 기기 · 삭제')
   })
 })
 
-describe('SettingsPage — author profiles section', () => {
-  it('has a profiles section other screens can link to (#profiles) that explains posts use a profile, not the account name', () => {
+describe('SettingsPage — nicknames section', () => {
+  it("has one section for the nicknames used in posts and comments, in the user's word", () => {
     const html = render(me({ displayName: '수민' }))
-    expect(html).toMatch(/id="profiles"/)
-    expect(html).toContain('글 · 댓글에 쓰는 프로필')
+    expect(html).toContain('내 닉네임')
+    expect(html).toContain('게시판에 글과 댓글을 쓸 때 쓸 닉네임이에요.')
+    expect(html).toContain('서로 다른 닉네임이 같은 사람이라는 건 다른 사람에게 보이지 않아요.')
+    expect(html).not.toContain('프로필')
   })
 
-  it('speaks English when the locale is en', async () => {
+  it('speaks English when the locale is en, with the same one word', async () => {
     await i18n.setLocale('en', { remember: false })
     const html = render(me({ displayName: 'Sumin' }))
-    expect(html).toContain('Profiles for posts and comments')
-    expect(html).toContain('does not rename any profile')
+    expect(html).toContain('My nicknames')
+    expect(html).not.toMatch(/profile/i)
   })
 })

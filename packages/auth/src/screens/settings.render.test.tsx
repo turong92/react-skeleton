@@ -100,6 +100,23 @@ describe('settings sections', () => {
     expect(out).toContain('>Nickname<')
   })
 
+  it('profile: an app whose posts use author nicknames can hide the account nickname (showDisplayName={false}) and keeps language and time zone', () => {
+    const out = html(
+      <ProfileSection
+        profile={{ displayName: 'Ann', displayTag: '4821', locale: 'ko', timeZone: 'Asia/Seoul' }}
+        locales={[{ value: 'ko', label: '한국어' }]}
+        timeZones={['Asia/Seoul']}
+        onSave={noop}
+        showDisplayName={false}
+      />,
+    )
+    expect(out).not.toContain('>Nickname<')
+    expect(out).not.toContain('Ann')
+    expect(out).not.toContain('#4821')
+    expect(out).toContain('한국어')
+    expect(out).toContain('Asia/Seoul')
+  })
+
   const password = (subject: ReauthSubject) =>
     html(
       <PasswordSection

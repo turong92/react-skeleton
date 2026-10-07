@@ -26,7 +26,7 @@ import {
 import { waitForCode, waitForLink } from './mail'
 
 /*
- * 닉네임 묶음의 새 흐름 — 가입에서 닉네임 → 게시판 글 · 댓글에 작성자 프로필 이름(계정 닉네임 · 계정 id 는 안 보인다 — 계정 이름은 나만 보는 이름) → 탈퇴 → 로그인 → 「탈퇴를 취소할까요?」 → 취소,
+ * 닉네임 묶음의 새 흐름 — 가입에서 닉네임(= 첫 닉네임) → 게시판 글 · 댓글에 작성 닉네임(계정 id 는 안 보인다 · 사용자에게 닉네임은 하나다) → 탈퇴 → 로그인 → 「탈퇴를 취소할까요?」 → 취소,
  * 링크 로그인은 redeem 요청이 한 번(200)뿐이고 오류가 안 보인다. 진짜 백엔드 · 진짜 브라우저 · 진짜 메일(mailpit). 앞 단계의 결과에 기댄다.
  */
 const pwExpect = baseExpect.configure({ timeout: 20_000 })
@@ -57,7 +57,7 @@ async function enterCode(scope: Page | Locator, code: string) {
 }
 
 describe('nickname: sign-up → board author → delete → cancel', () => {
-  it('sign-up asks for a nickname (required) and the greeting uses it', async () => {
+  it('sign-up asks for a nickname (required; the hint says it becomes the first nickname) and the greeting is neutral', async () => {
     await page.goto(`${baseUrl}/sign-up`)
     await dismissConsent(page)
     await page.getByLabel(auth.email).fill(email)
@@ -67,15 +67,16 @@ describe('nickname: sign-up → board author → delete → cancel', () => {
     // 닉네임은 필수 — 비우고 누르면 이유를 말하고 보내지 않는다
     await page.getByRole('button', { name: auth.signUpSubmit }).click()
     await pwExpect(page.getByText(auth.problemDisplayNameMissing).first()).toBeVisible()
+    await pwExpect(page.getByText(ko('signup.nicknameHint'))).toBeVisible()
     await page.getByLabel(auth.displayName).fill(nickname)
     await page.getByRole('button', { name: auth.signUpSubmit }).click()
     await pwExpect(heading(auth.codeTitle, 2)).toBeVisible()
     const code = await waitForCode(mailUrl, email, 'verify', { seen })
     await enterCode(page, code.code)
-    await pwExpect(heading(new RegExp(`안녕하세요, ${nickname}`))).toBeVisible()
+    await pwExpect(heading(ko('dashboard.greetingNeutral'))).toBeVisible() // 계정 이름으로 인사하지 않는다
   })
 
-  it('the first profile starts as a copy of the nickname; a post written as another profile shows that profile — never the nickname or the account id', async () => {
+  it('the first nickname is the sign-up one; a post written with another nickname shows that nickname — never the first one or the account id', async () => {
     // 백엔드는 첫 프로필을 자동으로 만든다 — 닉네임이 있는 계정은 그 이름을 한 번 복사한다(이후 따로 간다)
     pwExpect((await ensureProfile({ email, password }))?.name).toBe(nickname)
     const profileName = `프${String(stamp).slice(-6)}`
@@ -115,11 +116,14 @@ describe('nickname: sign-up → board author → delete → cancel', () => {
     await pwExpect(heading(auth.deletionPendingTitle)).toBeVisible()
     await page.getByRole('button', { name: auth.deletionCancelAction }).click()
     await pwExpect(heading(/안녕하세요/)).toBeVisible()
-    // 닉네임은 그대로다(탈퇴 유예는 이름을 지우지 않는다)
-    await page.goto(`${baseUrl}/account`)
+    // 닉네임은 그대로다(탈퇴 유예는 이름을 지우지 않는다) — 설정의 「내 닉네임」에 가입 때 닉네임이 있다. 계정 화면에는 닉네임 칸이 없다
+    await page.goto(`${baseUrl}/settings`)
     await pwExpect(
-      page.getByRole('form', { name: auth.sectionProfile }).getByLabel(auth.displayName),
-    ).toHaveValue(nickname)
+      page.getByRole('region', { name: ko('settings.nicknames') }).getByText(nickname),
+    ).toBeVisible()
+    await page.goto(`${baseUrl}/account`)
+    await pwExpect(page.getByRole('region', { name: ko('account.localeSection') })).toBeVisible()
+    await pwExpect(page.getByLabel(auth.displayName, { exact: true })).toHaveCount(0)
   })
 })
 
@@ -152,31 +156,34 @@ describe('a mailed sign-in link is redeemed exactly once', () => {
 })
 
 describe('an account made without a nickname (a mailed sign-in link) is asked for one — in place, never blocked', () => {
-  // 샘플 백엔드는 닉네임 자동 생성을 껐다(`fallback: NONE`) — 링크로 가입한 계정은 이름 없이 만들어진다. 앞의 링크 로그인 테스트의 그 계정으로 이어 간다
+  // 샘플 백엔드는 닉네임 자동 생성을 껐다(`fallback: NONE`) — 링크로 가입한 계정은 이름 없이 만들어진다(첫 닉네임도 이름이 없다). 앞의 링크 로그인 테스트의 그 계정으로 이어 간다
   const reminder = () => page.getByRole('region', { name: ko('nickname.bannerLabel') })
 
-  it('the band offers the nickname dialog (a secondary button) and the dialog sets the nickname in place — the band goes away and the greeting uses it', async () => {
+  it('the band has one primary button; the dialog names the unnamed first nickname in place — the band goes away', async () => {
     await pwExpect(reminder()).toBeVisible()
-    await pwExpect(
-      reminder().getByRole('button', { name: ko('nickname.nudgeAction') }),
-    ).toBeVisible()
+    await pwExpect(reminder().getByText(ko('nickname.bannerBody'))).toBeVisible()
     await reminder()
       .getByRole('button', { name: ko('nickname.nudgeAction') })
       .click()
     const dialog = page.getByRole('dialog')
     await pwExpect(dialog.getByRole('heading', { name: ko('nickname.dialogTitle') })).toBeVisible()
-    // 비우고 저장하면 이유를 말한다
-    await dialog.getByRole('button', { name: ko('nickname.save') }).click()
-    await pwExpect(dialog.getByText(auth.problemDisplayNameMissing)).toBeVisible()
+    // 이름 없는 첫 닉네임에 「바꾸기」로 이름을 붙인다 — 비우고 저장하면 이유를 말한다
+    const row = dialog.getByRole('listitem')
+    await pwExpect(row).toHaveCount(1)
+    await row.getByRole('button', { name: ko('author.renameAction') }).click()
+    await row.getByRole('button', { name: ko('author.save'), exact: true }).click()
+    await pwExpect(row.getByText(ko('author.nameRequired'))).toBeVisible()
     const chosen = `링크${String(Date.now()).slice(-6)}`
-    await dialog.getByLabel(auth.displayName).fill(chosen)
-    await dialog.getByRole('button', { name: ko('nickname.save') }).click()
+    await row.getByRole('textbox').fill(chosen)
+    await row.getByRole('button', { name: ko('author.save'), exact: true }).click()
+    await pwExpect(dialog.getByRole('listitem').filter({ hasText: chosen })).toBeVisible()
+    await closeDialog(dialog)
     await pwExpect(dialog).toHaveCount(0)
-    await pwExpect(reminder()).toHaveCount(0)
-    await pwExpect(heading(new RegExp(`안녕하세요, ${chosen}`))).toBeVisible()
+    await pwExpect(reminder()).toHaveCount(0) // 이름 있는 닉네임이 생겼다
+    await pwExpect(heading(ko('dashboard.greetingNeutral'))).toBeVisible()
   })
 
-  /** 링크 로그인으로 새 계정(닉네임 없음 — 백엔드의 첫 프로필은 이름이 없다)을 이 브라우저에 로그인한다 */
+  /** 링크 로그인으로 새 계정(닉네임 없음 — 백엔드의 첫 닉네임은 이름이 없다)을 이 브라우저에 로그인한다 */
   async function signInAsFreshAccount(label: string) {
     const email = `e2e-${label}-${stamp}@example.com`
     const requested = await fetch(`${apiUrl}/api/v1/auth/magic-link/request`, {
@@ -198,27 +205,31 @@ describe('an account made without a nickname (a mailed sign-in link) is asked fo
       .first()
       .click()
 
-  it('the band asks for the nickname and links on to naming the profiles (the board shows profile names)', async () => {
+  it('the band is one message with one way in (no link away, no word 「프로필」); "나중에" hides it until the next visit; settings says 「내 닉네임」', async () => {
     // 앞 테스트에서 닉네임을 정한 계정이라 띠는 이미 없다 — 새 계정으로
     await signInAsFreshAccount('band')
-    // 조건은 계정 닉네임이 없다는 것뿐 — 제목 · 주 버튼은 닉네임, 보조 링크가 프로필 구역으로 간다
     await pwExpect(reminder().getByText(ko('nickname.bannerTitle'))).toBeVisible()
-    await pwExpect(
-      reminder().getByRole('button', { name: ko('nickname.nudgeAction') }),
-    ).toBeVisible()
-    await pwExpect(
-      reminder().getByRole('link', { name: ko('nickname.profileAction') }),
-    ).toHaveAttribute('href', '/settings#profiles')
+    await pwExpect(reminder().getByRole('link')).toHaveCount(0)
+    await pwExpect(reminder().getByRole('button')).toHaveCount(2) // 「닉네임 정하기」 · 「나중에」
+    pwExpect(await reminder().innerText()).not.toContain('프로필')
     await reminder()
-      .getByRole('link', { name: ko('nickname.profileAction') })
+      .getByRole('button', { name: ko('nickname.later') })
       .click()
-    await pwExpect(page).toHaveURL(/\/settings#profiles$/)
-    await pwExpect(page.getByRole('region', { name: ko('settings.profiles') })).toBeVisible()
+    await pwExpect(reminder()).toHaveCount(0)
+    await page.reload()
+    await pwExpect(reminder()).toBeVisible() // 저장하지 않으니 다음 방문에는 다시 보인다
+    await page.getByRole('link', { name: ko('nav.settings'), exact: true }).click()
+    await pwExpect(page.getByRole('region', { name: ko('settings.nicknames') })).toBeVisible()
+    pwExpect(await page.locator('main').innerText()).not.toContain('프로필')
+    // 계정 카드에는 닉네임 줄이 없고, 계정 관리는 줄 전체가 눌리는 링크 카드다
+    await pwExpect(
+      page.getByRole('link', { name: new RegExp(ko('settings.manageAccount')) }),
+    ).toBeVisible()
   })
 
-  it('the write button asks to name a profile first when there is only the unnamed first one (the dialog), and once a named one exists the editor opens', async () => {
+  it('the write button asks to name a nickname first when there is only the unnamed first one (the same dialog), and once a named one exists the editor opens', async () => {
     await signInAsFreshAccount('nonick')
-    // 프로필 목록 응답이 와야 「이름 있는 프로필이 없다」를 안다 — 그 전에 누르면 막지 못한다
+    // 닉네임 목록 응답이 와야 「이름 있는 닉네임이 없다」를 안다 — 그 전에 누르면 막지 못한다
     const listed = page.waitForResponse(
       (r) =>
         new URL(r.url()).pathname === '/api/v1/author-profiles' && r.request().method() === 'GET',
@@ -227,13 +238,13 @@ describe('an account made without a nickname (a mailed sign-in link) is asked fo
     await (await listed).finished() // 응답 본문까지 끝나야 화면이 목록을 안다
     await page.getByRole('button', { name: ko('board.write') }).click()
     const dialog = page.getByRole('dialog')
-    await pwExpect(dialog.getByRole('heading', { name: ko('profileGate.title') })).toBeVisible()
+    await pwExpect(dialog.getByRole('heading', { name: ko('nickname.dialogTitle') })).toBeVisible()
     await pwExpect(page).toHaveURL(/\/board$/) // 글쓰기 화면으로 넘어가지 않았다
-    const profileName = `게이트${String(Date.now()).slice(-6)}`
-    await dialog.getByLabel(ko('author.nameLabel')).fill(profileName)
+    const nick = `게이트${String(Date.now()).slice(-6)}`
+    await dialog.getByLabel(ko('author.nameLabel')).fill(nick)
     await dialog.getByRole('button', { name: ko('author.add'), exact: true }).click()
-    // 닉네임 없는 계정의 자동 첫 프로필(이름 없음)과 방금 만든 프로필 — 둘
-    await pwExpect(dialog.getByRole('listitem').filter({ hasText: profileName })).toBeVisible()
+    // 닉네임 없는 계정의 자동 첫 닉네임(이름 없음)과 방금 만든 닉네임 — 둘
+    await pwExpect(dialog.getByRole('listitem').filter({ hasText: nick })).toBeVisible()
     await pwExpect(dialog.getByRole('listitem')).toHaveCount(2)
     await closeDialog(dialog)
     await pwExpect(dialog).toHaveCount(0)
@@ -241,24 +252,24 @@ describe('an account made without a nickname (a mailed sign-in link) is asked fo
     await pwExpect(page.getByLabel(new RegExp(ko('board.form.title')))).toBeVisible()
   })
 
-  it('/board/new opened directly: the picker offers "프로필 만들기"; naming the unnamed first profile in the dialog keeps the draft and moves the focus to the picker', async () => {
+  it('/board/new opened directly: the picker offers "닉네임 정하기"; naming the unnamed first nickname in the dialog keeps the draft and moves the focus to the picker', async () => {
     await signInAsFreshAccount('direct')
     await page.goto(`${baseUrl}/board/new`)
     const form = postForm(page)
     const draft = form.getByLabel(new RegExp(ko('board.form.title')))
     await draft.fill('쓰던 제목')
-    // 목록이 오면(= 이름 있는 프로필이 없음을 알면) 선택기가 「프로필 만들기」만 보인다 — 불러오는 동안은 단추 모양의 「불러오는 중」
+    // 목록이 오면(= 이름 있는 닉네임이 없음을 알면) 선택기가 「닉네임 정하기」만 보인다 — 불러오는 동안은 단추 모양의 「불러오는 중」
     const create = form.getByRole('button', { name: ko('author.createProfile') })
     await pwExpect(create).toBeVisible()
     await pwExpect(create).toHaveAttribute('aria-haspopup', 'dialog')
-    // 고르지 않고 보내면 「먼저 만들어 주세요」(고를 것이 없다)
+    // 고르지 않고 보내면 「먼저 정해 주세요」(고를 것이 없다)
     await form.getByLabel(new RegExp(ko('board.form.body'))).fill('본문')
     await page.getByRole('button', { name: ko('board.form.submitCreate') }).click()
     await pwExpect(page.getByText(ko('board.authorRequiredCreate'))).toBeVisible()
     await create.click()
     const dialog = page.getByRole('dialog')
-    await pwExpect(dialog.getByRole('heading', { name: ko('profileGate.title') })).toBeVisible()
-    // 이름 없는 첫 프로필에 이름을 붙인다(이름 바꾸기)
+    await pwExpect(dialog.getByRole('heading', { name: ko('nickname.dialogTitle') })).toBeVisible()
+    // 이름 없는 첫 닉네임에 이름을 붙인다(바꾸기)
     const row = dialog.getByRole('listitem')
     await pwExpect(row).toHaveCount(1)
     await row.getByRole('button', { name: ko('author.renameAction') }).click()
@@ -269,15 +280,15 @@ describe('an account made without a nickname (a mailed sign-in link) is asked fo
     await closeDialog(dialog)
     await pwExpect(dialog).toHaveCount(0)
     await pwExpect(draft).toHaveValue('쓰던 제목') // 쓰던 글이 남는다
-    await pwExpect(reminder()).toBeVisible() // 프로필에 이름을 붙여도 계정 닉네임이 없으면 띠는 그대로
-    // 「프로필 만들기」 단추는 사라졌고, 선택기 자리의 단추가 포커스를 받는다(body 로 떨어지지 않는다)
+    await pwExpect(reminder()).toHaveCount(0) // 이름 있는 닉네임이 생겼으니 띠도 사라진다
+    // 「닉네임 정하기」 단추는 사라졌고, 선택기 자리의 단추가 포커스를 받는다(body 로 떨어지지 않는다)
     await pwExpect(form.locator('[data-author-slot] button[aria-haspopup="menu"]')).toBeFocused()
     await chooseProfile(form, renamed)
     await page.getByRole('button', { name: ko('board.form.submitCreate') }).click()
     await page.getByRole('heading', { level: 2, name: '쓰던 제목' }).waitFor()
   })
 
-  it('the comment form without a named profile offers only "프로필 만들기" — its dialog keeps the comment', async () => {
+  it('the comment form without a named nickname offers only "닉네임 정하기" — its dialog keeps the comment', async () => {
     await signInAsFreshAccount('commenter')
     await openBoard(page)
     await openPost(page, '쓰던 제목')
@@ -289,13 +300,13 @@ describe('an account made without a nickname (a mailed sign-in link) is asked fo
     await pwExpect(page.getByText(ko('board.authorRequiredCreate'))).toBeVisible()
     await create.click()
     const dialog = page.getByRole('dialog')
-    await pwExpect(dialog.getByRole('heading', { name: ko('profileGate.title') })).toBeVisible()
+    await pwExpect(dialog.getByRole('heading', { name: ko('nickname.dialogTitle') })).toBeVisible()
     await closeDialog(dialog)
     await pwExpect(dialog).toHaveCount(0)
     await pwExpect(
       page.getByRole('textbox', { name: ko('board.comments.newComment') }),
     ).toHaveValue(text) // 쓰던 댓글이 남는다
-    // 아직 이름 있는 프로필이 없으니 「프로필 만들기」 단추가 그대로 있고, 닫으면 포커스가 거기로 돌아온다
+    // 아직 이름 있는 닉네임이 없으니 「닉네임 정하기」 단추가 그대로 있고, 닫으면 포커스가 거기로 돌아온다
     await pwExpect(create).toBeFocused()
   })
 })

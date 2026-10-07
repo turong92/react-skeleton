@@ -3,7 +3,7 @@ import type { useT } from '../i18n'
 
 type Translate = ReturnType<typeof useT>['t']
 
-/** `@skeleton/author-profile` 부품의 글자 — 부품은 i18n 을 모르고 글자는 prop 이라, 화면이 지금 언어의 사전(`t`)에서 골라 넘긴다 */
+/** `@skeleton/author-profile` 부품의 글자(화면에서는 「닉네임」 하나 — 「프로필」은 코드 이름이다) — 부품은 i18n 을 모르고 글자는 prop 이라, 화면이 지금 언어의 사전(`t`)에서 골라 넘긴다 */
 export const authorProfileLabels = (t: Translate): AuthorProfileLabels => ({
   choose: t('author.choose'),
   triggerLabel: (current) =>
@@ -14,9 +14,9 @@ export const authorProfileLabels = (t: Translate): AuthorProfileLabels => ({
   createProfile: t('author.createProfile'),
   unnamed: t('author.unnamed'),
   threadLoading: t('author.threadLoading'),
-  switchNotice: (name) => t('author.switchNotice', { name }),
-  switchConfirm: (name) => t('author.switchConfirm', { name }),
-  switchKeep: (name) => t('author.switchKeep', { name }),
+  switchNotice: (thread, next) => t('author.switchNotice', { thread, next }),
+  switchConfirm: t('author.switchConfirm'),
+  switchKeep: t('author.switchKeep'),
   listLabel: t('author.listLabel'),
   empty: t('author.empty'),
   count: (n, max) => t('author.count', { n, max }),

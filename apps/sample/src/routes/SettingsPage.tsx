@@ -3,37 +3,24 @@ import { AuthorProfileManager } from '@skeleton/author-profile'
 import { boardKeys } from '@skeleton/board'
 import { setTheme, THEMES, useTheme, type Theme } from '@skeleton/theme'
 import { Button, Card, Field, PageHeader, Select } from '@skeleton/ui'
-import { useEffect } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { profileApi } from '../author/api'
 import { authorProfileLabels } from '../author/profileLabels'
-import { shownName } from '../auth/profileDisplay'
 import { useMyProfile } from '../auth/useMyProfile'
+import { LinkCard } from '../components/LinkCard'
 import { useT } from '../i18n'
 import styles from './SettingsPage.module.css'
 
 /**
- * Patterns/Settings page — 즉시 적용(테마) 한 카드 · 읽기 전용 계정 카드 · 글 · 댓글에 쓰는 프로필 구역(`#profiles`) · 세션(로그아웃). 서버에 저장할 설정은 아직 없어 저장 폼은 두지 않았다.
- * 계정 id 는 화면 · aria 어디에도 그리지 않는다(프로필 뒤의 계정을 드러내는 값이라 접힌 구역에도 두지 않는다)
+ * Patterns/Settings page — 즉시 적용(테마) 한 카드 · 읽기 전용 계정 카드(이메일 · 권한 + 계정 관리 링크 카드) · 글 · 댓글에 쓰는 「내 닉네임」 구역 · 세션(로그아웃). 서버에 저장할 설정은 아직 없어 저장 폼은 두지 않았다.
+ * 사용자에게 닉네임은 하나다 — 계정에 붙은 이름(계정 닉네임)은 이 화면에 없다. 계정 id 는 화면 · aria 어디에도 그리지 않는다(닉네임 뒤의 계정을 드러내는 값이라 접힌 구역에도 두지 않는다)
  */
 export function SettingsPage() {
   const { t } = useT()
   const { principal, logout } = useAuth()
   const profile = useMyProfile().data
-  const nickname = shownName(profile)
   const theme = useTheme()
   const navigate = useNavigate()
-  const { hash } = useLocation()
-
-  // 안내 띠의 「프로필 이름 붙이기」가 `/settings#profiles` 로 보낸다 — 라우터는 해시로 스크롤하지 않으므로 그 구역으로 내린다(선택기의 「프로필 만들기」는 대화상자라 여기로 오지 않는다)
-  useEffect(() => {
-    if (hash !== '#profiles') return
-    const section = document.getElementById('profiles')
-    section?.scrollIntoView({ block: 'start' })
-    const heading = section?.querySelector('h2')
-    heading?.setAttribute('tabindex', '-1') // 구역 제목으로 포커스 — 낭독기가 어디에 왔는지 읽는다
-    heading?.focus()
-  }, [hash])
 
   function signOut() {
     logout()
@@ -63,18 +50,6 @@ export function SettingsPage() {
       <Card title={t('settings.account')}>
         <dl className={styles.list}>
           <div>
-            <dt>{t('settings.nickname')}</dt>
-            <dd>
-              {nickname ?? (
-                <>
-                  {t('settings.nicknameNone')} ·{' '}
-                  <Link to="/account#profile">{t('settings.nicknameSet')}</Link>
-                </>
-              )}
-              <small className={styles.hint}>{t('settings.nicknameHint')}</small>
-            </dd>
-          </div>
-          <div>
             <dt>{t('settings.email')}</dt>
             <dd>{profile?.email ?? principal?.email ?? t('common.none')}</dd>
           </div>
@@ -83,10 +58,12 @@ export function SettingsPage() {
             <dd>{principal?.roles.join(', ') || t('common.none')}</dd>
           </div>
         </dl>
-        <Link to="/account">{t('settings.manageAccount')}</Link>
+        <LinkCard to="/account" description={t('settings.manageAccountHint')}>
+          {t('settings.manageAccount')}
+        </LinkCard>
       </Card>
-      <Card id="profiles" title={t('settings.profiles')}>
-        <p>{t('settings.profilesHint')}</p>
+      <Card id="nicknames" title={t('settings.nicknames')}>
+        <p>{t('settings.nicknamesHint')}</p>
         <AuthorProfileManager
           api={profileApi}
           labels={authorProfileLabels(t)}

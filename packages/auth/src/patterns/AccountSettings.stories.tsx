@@ -55,6 +55,20 @@ export const Sections: Story = {
   },
 }
 
+/**
+ * 글 · 댓글의 이름을 작성 닉네임(`@skeleton/author-profile`)으로 따로 쓰는 앱 — 계정 닉네임 줄을 숨긴다(`showDisplayName={false}`): 사용자에게 닉네임이 둘이 되지 않는다.
+ * 언어 · 시간대는 남는다
+ */
+export const WithoutTheAccountNickname: Story = {
+  args: { showDisplayName: false },
+  play: async ({ canvas }) => {
+    const section = within(await canvas.findByRole('region', { name: 'Profile' }))
+    await expect(section.queryByLabelText(/Nickname/)).toBeNull()
+    await expect(section.getByLabelText('Language')).toBeVisible()
+    await expect(section.getByLabelText('Time zone')).toBeVisible()
+  },
+}
+
 export const ChangePassword: Story = {
   play: async ({ canvas, userEvent }) => {
     const section = within(await canvas.findByRole('region', { name: 'Password' }))

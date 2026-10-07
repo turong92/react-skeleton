@@ -91,7 +91,7 @@ async function signUpByLink(page: Page, email: string) {
   await pwExpect(page.getByRole('heading', { level: 1, name: /안녕하세요/ })).toBeVisible()
 }
 
-const profiles = (page: Page) => page.getByRole('region', { name: ko('settings.profiles') })
+const profiles = (page: Page) => page.getByRole('region', { name: ko('settings.nicknames') })
 const rowOf = (page: Page, name: string): Locator =>
   profiles(page).getByRole('listitem').filter({ hasText: name })
 
@@ -165,6 +165,8 @@ describe('author profiles — several names, none of them tied to the account', 
       }),
     )
     await signUpByLink(x, emailX)
+    // 대시보드는 계정 이름으로 인사하지 않아 계정 읽기를 하지 않는다 — 계정 읽기가 있는 설정 화면(이메일 줄)을 연다
+    await x.getByRole('link', { name: ko('nav.settings'), exact: true }).click()
     const mine = await me
     accountIdX = mine.id
     pwExpect(accountIdX).toMatch(/^acc_/)
@@ -216,9 +218,13 @@ describe('author profiles — several names, none of them tied to the account', 
     await pwExpect(trigger).toContainText(nameA) // 처음 값 = 이 스레드에서 쓴 프로필(글쓴이)
     await chooseProfile(form, nameB)
     const notice = form.getByRole('status') // <p> 하나 — 단추는 그 형제라 폼 범위에서 찾는다
-    await pwExpect(notice).toContainText(nameA) // 「이 글에서는 A(으)로 쓴 적이 있어요」
+    // 「이 글에는 ‘A’ 닉네임으로 쓴 적이 있어요. 지금은 ‘B’ 닉네임을 골랐어요.」 — 한 문장이 둘 다 말한다(조사에 기대지 않는다)
+    await pwExpect(notice).toContainText(nameA)
+    await pwExpect(notice).toContainText(nameB)
     await pwExpect(trigger).toContainText(nameA) // 확인하기 전까지 값은 그대로다
-    await form.getByRole('button', { name: new RegExp(`${nameB}.*로$|${nameB}$`) }).click()
+    // 단추는 이름 없는 고정 글자 둘 — 「이대로 쓰기」 · 「되돌리기」
+    await pwExpect(form.getByRole('button', { name: ko('author.switchKeep') })).toBeVisible()
+    await form.getByRole('button', { name: ko('author.switchConfirm') }).click()
     await pwExpect(trigger).toContainText(nameB)
     await pwExpect(notice).toHaveCount(0)
     await x.getByRole('button', { name: ko('board.comments.postComment') }).click()

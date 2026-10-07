@@ -1,0 +1,17 @@
+/* 표 · 목록 안의 글자 링크 — 밑줄이 쉬는 상태에서도 「누르면 간다」를 말한다 */
+.link {
+  color: var(--text-strong);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.link:hover {
+  color: var(--teal);
+}
+
+.link:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}

@@ -550,6 +550,7 @@ export type SettingsExtras = Partial<
     | 'formatDate'
     | 'timeZones'
     | 'onProfileChanged'
+    | 'showDisplayName'
   >
 > & {
   locales: AccountSettingsProps['locales']

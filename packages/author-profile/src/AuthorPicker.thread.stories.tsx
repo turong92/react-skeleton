@@ -8,7 +8,7 @@ import { profile } from './test/fixtures'
 
 /**
  * 작성자 선택기와 **이 스레드**(`AuthorPicker` 의 나머지) — 처음 값 ① 이 스레드에서 쓴 프로필이 ② 기기 기억을 이기고, 댓글을 받는 중(`threadLoading`)에는 확정하지 않고 단추를 잠근다.
- * 이 스레드에서 쓴 프로필과 **다른 것으로 바꿀 때만** 한 줄 확인이 나온다(「Keep ○○」 의 ○○ 는 **지금 고른** 프로필). 확인은 Esc · 바깥 포커스 · 잠금 · 값 변화로 닫힌다.
+ * 이 스레드에서 쓴 닉네임과 **다른 것으로 바꿀 때만** 한 줄 확인이 나온다(「Switch back」 은 **고르기 전의**(= 지금 쓰던) 닉네임으로 돌아간다). 확인은 Esc · 바깥 포커스 · 잠금 · 값 변화로 닫힌다.
  */
 const ann = profile('prf_a', 'Ann', '0001')
 const bea = profile('prf_b', 'Bea', '0002')
@@ -96,7 +96,7 @@ export const FormErrorIsTheTriggersDescription: Story = {
   args: { invalid: true, describedBy: 'author-error' },
   play: async ({ canvas }) => {
     await expect(
-      await canvas.findByRole('button', { name: 'Choose a profile' }),
+      await canvas.findByRole('button', { name: 'Choose a nickname' }),
     ).toHaveAccessibleDescription('Choose who to post as.')
   },
 }
@@ -116,28 +116,28 @@ export const SwitchingAwayFromTheThreadProfileAsksOnce: Story = {
     await userEvent.click(trigger)
     await userEvent.click(await canvas.findByRole('menuitemradio', { name: 'Bea#0002' }))
     await expect(await canvas.findByRole('status')).toHaveTextContent(
-      'You wrote in this thread as Ann#0001.',
+      "You wrote in this thread with the nickname 'Ann#0001'. You picked 'Bea#0002' now.",
     )
     await expect(canvas.getByRole('button', { name: /Writing as Ann#0001/ })).toBeVisible()
     await expect(storage.dump()).toEqual({})
 
     // 유지
-    await userEvent.click(canvas.getByRole('button', { name: 'Keep Ann#0001' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Switch back' }))
     await expect(canvas.queryByRole('status')).toBeNull()
     await expect(canvas.getByRole('button', { name: /Writing as Ann#0001/ })).toHaveFocus()
 
     // 다시 골라 확인
     await userEvent.click(canvas.getByRole('button', { name: /Writing as Ann#0001/ }))
     await userEvent.click(await canvas.findByRole('menuitemradio', { name: 'Bea#0002' }))
-    await userEvent.click(await canvas.findByRole('button', { name: 'Use Bea#0002' }))
+    await userEvent.click(await canvas.findByRole('button', { name: 'Use as is' }))
     await expect(await canvas.findByRole('button', { name: /Writing as Bea#0002/ })).toHaveFocus()
     await expect(canvas.queryByRole('status')).toBeNull()
     await expect(Object.values(storage.dump())).toEqual(['prf_b'])
   },
 }
 
-/** 프로필이 셋일 때 「유지」 는 **지금 고른** 프로필이다 — 이 스레드의 프로필(Ann)이 아니라 지금 값(Cy). 눌러도 값은 그대로 */
-export const KeepNamesTheCurrentValueNotTheThreadProfile: Story = {
+/** 닉네임이 셋일 때 「Switch back」 은 **지금 고른** 닉네임으로 돌아간다 — 이 스레드의 닉네임(Ann)이 아니라 지금 값(Cy). 눌러도 값은 그대로 */
+export const SwitchBackKeepsTheCurrentValueNotTheThreadNickname: Story = {
   args: { threadAuthorId: 'prf_a' },
   render: (args) => (
     <Changing {...args} api={createFakeAuthorProfiles({ profiles: [ann, bea, cy] }).api} />
@@ -146,18 +146,17 @@ export const KeepNamesTheCurrentValueNotTheThreadProfile: Story = {
     // 이 스레드의 Ann 으로 시작 → Cy 로 바꾼다(확인 거침)
     await userEvent.click(await canvas.findByRole('button', { name: /Writing as Ann#0001/ }))
     await userEvent.click(await canvas.findByRole('menuitemradio', { name: 'Cy#0003' }))
-    await userEvent.click(await canvas.findByRole('button', { name: 'Use Cy#0003' }))
+    await userEvent.click(await canvas.findByRole('button', { name: 'Use as is' }))
     await expect(await canvas.findByRole('button', { name: /Writing as Cy#0003/ })).toBeVisible()
 
     // 이제 Bea 를 고르면: 이 스레드는 Ann, 지금 값은 Cy
     await userEvent.click(canvas.getByRole('button', { name: /Writing as Cy#0003/ }))
     await userEvent.click(await canvas.findByRole('menuitemradio', { name: 'Bea#0002' }))
     await expect(await canvas.findByRole('status')).toHaveTextContent(
-      'You wrote in this thread as Ann#0001.',
+      "You wrote in this thread with the nickname 'Ann#0001'. You picked 'Bea#0002' now.",
     )
-    await expect(canvas.getByRole('button', { name: 'Use Bea#0002' })).toBeVisible()
-    await expect(canvas.queryByRole('button', { name: 'Keep Ann#0001' })).toBeNull()
-    await userEvent.click(canvas.getByRole('button', { name: 'Keep Cy#0003' }))
+    await expect(canvas.getByRole('button', { name: 'Use as is' })).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Switch back' }))
     await expect(canvas.queryByRole('status')).toBeNull()
     await expect(canvas.getByRole('button', { name: /Writing as Cy#0003/ })).toHaveFocus()
   },
@@ -174,7 +173,9 @@ export const NoticeIsAnnouncedOnceAndEscapeClosesIt: Story = {
     await expect(canvas.getAllByRole('status')).toHaveLength(1)
     // 묶음의 이름은 질문 문장 — 낭독이 묶음에 들어올 때 질문이 들린다
     await expect(
-      canvas.getByRole('group', { name: 'You wrote in this thread as Ann#0001.' }),
+      canvas.getByRole('group', {
+        name: "You wrote in this thread with the nickname 'Ann#0001'. You picked 'Bea#0002' now.",
+      }),
     ).toBeVisible()
     // 메뉴에서 고른 직후의 실제 포커스(선택기 단추)에서 Esc — 확인 줄로 포커스를 옮기지 않는다
     await expect(trigger).toHaveFocus()
@@ -214,10 +215,14 @@ export const TheOpenQuestionIsReportedToTheForm: Story = {
     await userEvent.click(await canvas.findByRole('menuitemradio', { name: 'Bea#0002' }))
     await expect(await canvas.findByRole('status')).toBeVisible()
     await expect(unsettled).toHaveBeenLastCalledWith(true)
-    await expect(trigger).toHaveAccessibleDescription('You wrote in this thread as Ann#0001.')
-    await userEvent.click(canvas.getByRole('button', { name: 'Keep Ann#0001' }))
+    await expect(trigger).toHaveAccessibleDescription(
+      "You wrote in this thread with the nickname 'Ann#0001'. You picked 'Bea#0002' now.",
+    )
+    await userEvent.click(canvas.getByRole('button', { name: 'Switch back' }))
     await expect(unsettled).toHaveBeenLastCalledWith(false)
-    await expect(trigger).not.toHaveAccessibleDescription('You wrote in this thread as Ann#0001.')
+    await expect(trigger).not.toHaveAccessibleDescription(
+      "You wrote in this thread with the nickname 'Ann#0001'. You picked 'Bea#0002' now.",
+    )
   },
 }
 
@@ -254,7 +259,7 @@ export const AutoFilledValueFollowsTheThreadWhenItArrivesLater: Story = {
 /** 사람이 고른 값(Bea)은 스레드가 나중에 Ann 을 가리켜도 그대로다 */
 export const ChosenValueStaysWhenTheThreadArrivesLater: Story = {
   play: async ({ canvas, canvasElement, userEvent }) => {
-    await userEvent.click(await canvas.findByRole('button', { name: 'Choose a profile' }))
+    await userEvent.click(await canvas.findByRole('button', { name: 'Choose a nickname' }))
     await userEvent.click(await canvas.findByRole('menuitemradio', { name: 'Bea#0002' }))
     await expect(await canvas.findByRole('button', { name: /Writing as Bea#0002/ })).toBeVisible()
     document.dispatchEvent(new CustomEvent('story:thread', { detail: 'prf_a' }))

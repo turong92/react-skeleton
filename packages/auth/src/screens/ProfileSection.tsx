@@ -22,6 +22,11 @@ export type ProfileSectionProps = {
   timeZones: string[]
   onSave: (patch: ProfilePatch) => Promise<unknown>
   labels?: Partial<AuthLabels>
+  /**
+   * 닉네임 줄(칸 · `닉네임#번호`)을 보인다(기본 true). 글 · 댓글의 이름을 작성자 닉네임(`@skeleton/author-profile`)으로 따로 쓰는 앱은 끈다 —
+   * 계정 이름이 화면에 둘이 되지 않게. 끄면 언어 · 시간대만 남고 닉네임은 저장 요청에도 실리지 않는다
+   */
+  showDisplayName?: boolean
 }
 
 /** 프로필 절 — 닉네임(꼬리표가 있으면 `닉네임#번호` 와 복사) · 언어 · 시간대 */
@@ -31,6 +36,7 @@ export function ProfileSection({
   timeZones,
   onSave,
   labels: given,
+  showDisplayName = true,
 }: ProfileSectionProps) {
   const labels = mergeLabels(given)
   const [displayName, setDisplayName] = useState(profile.displayName ?? '')
@@ -54,11 +60,13 @@ export function ProfileSection({
   async function submit(event: FormEvent) {
     event.preventDefault()
     setSaved(false)
-    const problem = displayNameProblem(displayName, 'optional', labels)
+    const problem = showDisplayName
+      ? displayNameProblem(displayName, 'optional', labels)
+      : undefined
     setLocalProblem(problem)
     if (problem) return
     const patch: ProfilePatch = {}
-    if (displayName.trim() && displayName !== (profile.displayName ?? ''))
+    if (showDisplayName && displayName.trim() && displayName !== (profile.displayName ?? ''))
       patch.displayName = displayName.trim()
     if (locale && locale !== (profile.locale ?? '')) patch.locale = locale
     if (timeZone && timeZone !== (profile.timeZone ?? '')) patch.timeZone = timeZone
@@ -71,25 +79,27 @@ export function ProfileSection({
       <form className={styles.form} onSubmit={submit} aria-label={labels.sectionProfile}>
         {action.error && !nameTaken && <Alert tone="danger">{action.error.message}</Alert>}
         {saved && <Alert tone="success">{labels.profileSaved}</Alert>}
-        <Field
-          label={labels.displayName}
-          hint={labels.displayNameHint}
-          error={localProblem ?? (nameTaken ? nameMessage : undefined)}
-        >
-          {(control) => (
-            <Input
-              {...control}
-              autoComplete="nickname"
-              value={displayName}
-              onChange={(e) => {
-                setDisplayName(e.target.value)
-                setLocalProblem(undefined)
-                if (nameTaken) action.clear()
-              }}
-            />
-          )}
-        </Field>
-        {fullName && (
+        {showDisplayName && (
+          <Field
+            label={labels.displayName}
+            hint={labels.displayNameHint}
+            error={localProblem ?? (nameTaken ? nameMessage : undefined)}
+          >
+            {(control) => (
+              <Input
+                {...control}
+                autoComplete="nickname"
+                value={displayName}
+                onChange={(e) => {
+                  setDisplayName(e.target.value)
+                  setLocalProblem(undefined)
+                  if (nameTaken) action.clear()
+                }}
+              />
+            )}
+          </Field>
+        )}
+        {showDisplayName && fullName && (
           <p className={styles.shownAs}>
             <span>{labels.displayNameShownAs}</span> <strong>{fullName}</strong>{' '}
             <CopyButton value={fullName} label={labels.copyHint} />

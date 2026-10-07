@@ -1,0 +1,51 @@
+.card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  min-height: 44px;
+  padding: var(--space-md) var(--space-lg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-strong);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.card:hover {
+  border-color: var(--teal);
+  background: var(--teal-wash);
+}
+
+.card:active {
+  background: var(--teal-soft);
+}
+
+.card:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}
+
+.text {
+  display: grid;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.title {
+  font-weight: 650;
+}
+
+.description {
+  color: var(--text-muted);
+  font-size: var(--font-size-caption);
+  overflow-wrap: anywhere;
+}
+
+/* 오른쪽 화살표 — 「누르면 다른 화면으로 간다」 */
+.arrow {
+  flex: none;
+  font-size: var(--font-size-subheading);
+  color: var(--teal);
+}

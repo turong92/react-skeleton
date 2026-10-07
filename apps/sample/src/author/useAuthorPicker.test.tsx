@@ -48,9 +48,9 @@ function render(mustCreate: boolean) {
 }
 
 describe('the board author picker of the sample', () => {
-  it('with no named profile it offers only "프로필 만들기" (it opens the gate dialog) — no list to choose from', () => {
+  it('with no named profile it offers only "닉네임 정하기" (it opens the gate dialog) — no list to choose from', () => {
     const html = render(true)
-    expect(html).toContain('프로필 만들기')
+    expect(html).toContain('닉네임 정하기')
     expect(html).toContain('aria-haspopup="dialog"')
     expect(html).not.toContain('aria-haspopup="menu"')
     expect(html).not.toContain('Ann')
@@ -59,7 +59,7 @@ describe('the board author picker of the sample', () => {
   it('with a named profile it is the real picker: a menu button, no create button', () => {
     const html = render(false)
     expect(html).toContain('aria-haspopup="menu"')
-    expect(html).not.toContain('프로필 만들기')
+    expect(html).not.toContain('닉네임 정하기')
   })
 
   it('source guard — the post page hands the board no `beforeWrite` (the board would run it for comment edits too)', () => {

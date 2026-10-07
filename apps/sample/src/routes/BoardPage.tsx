@@ -1,12 +1,13 @@
 import { PostList, useBoardConfig, usePosts } from '@skeleton/board'
 import { Button, EmptyState, PageHeader, Spinner } from '@skeleton/ui'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useProfileGate } from '../author/useProfileGate'
 import { boardApi } from '../board/api'
 import { paramsFromSearch, searchFromParams } from '../board/boardParams'
 import { useBoardCode } from '../board/useBoardCode'
 import { LoadError } from '../components/LoadError'
 import { postListLabels } from '../board/labels'
+import { TextLink } from '../components/TextLink'
 import { useT } from '../i18n'
 import styles from './BoardPage.module.css'
 
@@ -38,7 +39,7 @@ function Posts({ code }: { code: string }) {
         onSortChange={(sort) => change({ sort, page: 0 })}
         query={params.q}
         onSearch={(q) => change({ q, page: 0 })}
-        renderTitle={(post) => <Link to={`/board/${post.id}`}>{post.title}</Link>}
+        renderTitle={(post) => <TextLink to={`/board/${post.id}`}>{post.title}</TextLink>}
         actions={<Button onClick={write}>{t('board.write')}</Button>}
         emptyAction={<Button onClick={write}>{t('board.writeFirst')}</Button>}
         labels={postListLabels(t)}

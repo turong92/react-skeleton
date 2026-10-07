@@ -14,20 +14,23 @@ export type AuthorProfileLabels = {
   loading: string
   /** 불러오기에 실패 — 누르면 다시 시도하는 단추의 글자 */
   loadFailed: string
-  /** 프로필이 하나도 없을 때(만들기 진입이 없는 앱) */
+  /** 닉네임이 하나도 없을 때(만들기 진입이 없는 앱) */
   noProfiles: string
-  /** 프로필이 하나도 없을 때 만들기로 가는 단추 */
+  /** 닉네임이 하나도 없을 때 만들기로 가는 단추 */
   createProfile: string
-  /** 이름이 없는 프로필(이름 없는 옛 글을 넘겨받은 첫 프로필)을 가리키는 말 */
+  /** 이름이 없는 닉네임(이름 없는 옛 글을 넘겨받은 첫 닉네임)을 가리키는 말 */
   unnamed: string
   /** 이 스레드의 댓글을 아직 받는 중 — 선택기 단추가 잠기고 이 글이 보인다(보이는 글자 = 낭독 이름) */
   threadLoading: string
-  /** 이 스레드에서 다른 프로필로 쓴 적이 있을 때 한 줄 — `threadName` 은 그 프로필 */
-  switchNotice: (threadName: string) => string
-  /** 바꾸기를 확인하는 단추 */
-  switchConfirm: (nextName: string) => string
-  /** 바꾸지 않고 **지금 고른 프로필**을 유지하는 단추 — `currentName` 은 지금 값(이 스레드의 프로필과 다를 수 있다) */
-  switchKeep: (currentName: string) => string
+  /**
+   * 이 스레드에서 다른 닉네임으로 쓴 적이 있을 때 한 줄 — `threadName` 은 쓴 적 있는 닉네임, `nextName` 은 지금 고른 것.
+   * 조사(「(으)로」)에 기대지 않고 이름을 따옴표로 감싸 한 문장 안에 둘 다 말한다
+   */
+  switchNotice: (threadName: string, nextName: string) => string
+  /** 고른 대로 쓰는 단추 — 이름 없는 고정 글자(어느 닉네임인지는 위 문장이 말한다) */
+  switchConfirm: string
+  /** 고르기 전의 닉네임으로 되돌리는 단추 — 이름 없는 고정 글자 */
+  switchKeep: string
   // ── 관리
   /** 목록의 낭독 이름 */
   listLabel: string
@@ -50,7 +53,7 @@ export type AuthorProfileLabels = {
   remove: (name: string) => string
   // 삭제 확인 창
   deleteTitle: (name: string) => string
-  /** 되돌릴 수 없고 이 프로필의 글 · 댓글은 「삭제된 사용자」로 남는다는 것을 말한다 */
+  /** 되돌릴 수 없고 이 닉네임의 글 · 댓글은 「삭제된 사용자」로 남는다는 것을 말한다 */
   deleteDescription: (name: string) => string
   deleteConfirm: string
   deleteCancel: string
@@ -69,29 +72,31 @@ export type AuthorProfileLabels = {
 }
 
 export const defaultAuthorProfileLabels: AuthorProfileLabels = {
-  choose: 'Choose a profile',
+  choose: 'Choose a nickname',
   unnamed: 'Unnamed',
   threadLoading: 'Loading this thread',
   triggerLabel: (current) =>
-    current ? `Writing as ${current}. Change profile` : 'Choose a profile',
-  loading: 'Loading profiles',
-  loadFailed: 'Could not load profiles. Try again',
-  noProfiles: 'No profiles yet',
-  createProfile: 'Create a profile',
-  switchNotice: (threadName) => `You wrote in this thread as ${threadName}.`,
-  switchConfirm: (nextName) => `Use ${nextName}`,
-  switchKeep: (currentName) => `Keep ${currentName}`,
-  listLabel: 'Your profiles',
-  empty: 'You have no profiles yet.',
-  count: (n, max) => `${n} of ${max} profiles`,
-  nameLabel: 'New profile name',
-  nameHint: (max) => `Up to ${max} characters. A tag may be added to tell same names apart.`,
-  add: 'Add profile',
+    current ? `Writing as ${current}. Change nickname` : 'Choose a nickname',
+  loading: 'Loading nicknames',
+  loadFailed: 'Could not load nicknames. Try again',
+  noProfiles: 'No nicknames yet',
+  createProfile: 'Create a nickname',
+  switchNotice: (threadName, nextName) =>
+    `You wrote in this thread with the nickname '${threadName}'. You picked '${nextName}' now.`,
+  switchConfirm: 'Use as is',
+  switchKeep: 'Switch back',
+  listLabel: 'Your nicknames',
+  empty: 'You have no nicknames yet.',
+  count: (n, max) => `${n} of ${max} nicknames`,
+  nameLabel: 'New nickname',
+  nameHint: (max) =>
+    `Up to ${max} characters. A number (#1234) may be added to tell people with the same nickname apart.`,
+  add: 'Add nickname',
   adding: 'Adding',
-  renameAction: 'Rename',
+  renameAction: 'Change',
   removeAction: 'Delete',
-  rename: (name) => `Rename ${name}`,
-  renameLabel: (name) => `New name for ${name}`,
+  rename: (name) => `Change ${name}`,
+  renameLabel: (name) => `New nickname for ${name}`,
   save: 'Save',
   saving: 'Saving',
   cancel: 'Cancel',
@@ -99,7 +104,7 @@ export const defaultAuthorProfileLabels: AuthorProfileLabels = {
   deleteTitle: (name) => `Delete ${name}?`,
   deleteDescription: (name) =>
     `This cannot be undone. Posts and comments written as ${name} stay, shown as "Deleted user".`,
-  deleteConfirm: 'Delete profile',
+  deleteConfirm: 'Delete nickname',
   deleteCancel: 'Cancel',
   deleteClose: 'Close',
   nameRequired: 'Enter a name.',
@@ -107,12 +112,12 @@ export const defaultAuthorProfileLabels: AuthorProfileLabels = {
   nameReserved: 'That name is not available.',
   nameTooLong: (max) => `Use ${max} characters or fewer.`,
   nameTaken: 'That name is taken.',
-  limitReached: (max) => `You can have up to ${max} profiles.`,
+  limitReached: (max) => `You can have up to ${max} nicknames.`,
   rateLimited: (wait) =>
     wait === undefined
-      ? 'Too many profile changes. Try again later.'
-      : `Too many profile changes. Try again in ${wait.value} ${wait.unit}${wait.value === 1 ? '' : 's'}.`,
-  notFound: 'That profile no longer exists.',
+      ? 'Too many nickname changes. Try again later.'
+      : `Too many nickname changes. Try again in ${wait.value} ${wait.unit}${wait.value === 1 ? '' : 's'}.`,
+  notFound: 'That nickname no longer exists.',
   failed: 'Something went wrong. Try again.',
 }
 

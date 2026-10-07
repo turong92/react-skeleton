@@ -31,7 +31,7 @@ describe('AuthorPickerView — the folded state', () => {
     expect(html).toContain('aria-expanded="false"')
   })
 
-  it('with nothing chosen it is a button that looks pressable and says so ("Choose a profile")', () => {
+  it('with nothing chosen it is a button that looks pressable and says so ("Choose a nickname")', () => {
     const html = renderToStaticMarkup(<AuthorPickerView {...view} value={undefined} />)
     expect(html).toContain(defaultAuthorProfileLabels.choose)
     expect(html).toContain('<button')
@@ -47,7 +47,7 @@ describe('AuthorPickerView — the folded state', () => {
     expect(html).not.toContain('secret')
   })
 
-  it('no profiles at all → a "Create a profile" button calling the app\'s entry, not an empty menu', () => {
+  it('no profiles at all → a "Create a nickname" button calling the app\'s entry, not an empty menu', () => {
     const html = renderToStaticMarkup(
       <AuthorPickerView {...view} profiles={[]} value={undefined} onCreateProfile={noop} />,
     )
@@ -56,7 +56,7 @@ describe('AuthorPickerView — the folded state', () => {
     expect(html).not.toContain('aria-haspopup') // 기본은 화면 이동 등 — 창을 연다고 말하지 않는다
   })
 
-  it('"Create a profile" says it opens a dialog when the app opens one (createOpensDialog)', () => {
+  it('"Create a nickname" says it opens a dialog when the app opens one (createOpensDialog)', () => {
     const html = renderToStaticMarkup(
       <AuthorPickerView
         {...view}

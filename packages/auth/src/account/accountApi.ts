@@ -32,7 +32,7 @@ export type ReauthCredential = {
  * 6자리 코드를 보내는 요청(`email/change` · `reauth/confirmation` · `delete/confirmation`)의 응답 — 백엔드가 만료 · 재요청 가능 시각(ISO-8601)을 주면 남은 시간을 서버 값으로 센다.
  * 옛 서버는 본문이 없다(undefined) — 화면이 문서화된 유효 시간으로 어림한다(`codeWindowOf`)
  */
-export type CodeSent = { expiresAt?: string; resendAvailableAt?: string } | undefined
+export type CodeSent = { expiresAt?: string; resendAvailableAt?: string | null } | undefined
 
 export type AccountApi = {
   /** `202 {status:'VERIFICATION_SENT', signUpId}` — 계정은 아직 없고 6자리 코드가 메일로 갔다(`verifySignUpCode`). 메일 인증을 끈 앱은 `201 {status:'CREATED'}`(signUpId 없음) */
@@ -41,10 +41,15 @@ export type AccountApi = {
     signUpId?: string
     /** 최신 백엔드가 준다(ISO-8601) — 없으면(옛 서버) 화면이 문서화된 유효 시간으로 어림한다 */
     expiresAt?: string
-    resendAvailableAt?: string
+    /** `null` 이면 이 시도는 더 다시 보낼 수 없다 */
+    resendAvailableAt?: string | null
   }>
-  /** `POST /auth/verify-email {signUpId, code}` → 이 시도에 입력한 비밀번호로 계정이 만들어지고 **바로 로그인**(토큰 응답). 400 `ACCOUNT.CODE_INVALID`(`data.attemptsLeft`) · 410 `ACCOUNT.CODE_EXPIRED` · 429 */
-  verifySignUpCode(signUpId: string, code: string): Promise<AuthTokenResponse>
+  /** `POST /auth/verify-email {signUpId, code, displayName?}`(409 `DISPLAY_NAME_TAKEN` 은 시도를 닫지 않는다 — 같은 코드로 다른 닉네임을 다시) → 이 시도에 입력한 비밀번호로 계정이 만들어지고 **바로 로그인**(토큰 응답). 400 `ACCOUNT.CODE_INVALID`(`data.attemptsLeft`) · 410 `ACCOUNT.CODE_EXPIRED` · 429 */
+  verifySignUpCode(
+    signUpId: string,
+    code: string,
+    options?: { displayName?: string },
+  ): Promise<AuthTokenResponse>
   /** `POST /account/verification/resend {signUpId}` — 같은 시도에 새 코드(늘 202 — 쿨다운 · 횟수 초과는 조용히 무시, 429 는 IP 한도뿐) */
   resendSignUpCode(signUpId: string, captchaToken?: string): Promise<unknown>
   forgotPassword(email: string, captchaToken?: string): Promise<void>
@@ -106,9 +111,9 @@ export function createAccountApi(
   const publicPost = (json: unknown) => ({ method: 'POST' as const, json, skipAuth: true })
   return {
     signUp: (request) => client.value('/account/sign-up', publicPost(request)),
-    verifySignUpCode: (signUpId, code) =>
+    verifySignUpCode: (signUpId, code, options) =>
       client.value<AuthTokenResponse>('/auth/verify-email', {
-        ...publicPost({ signUpId, code }),
+        ...publicPost(compact({ signUpId, code, displayName: options?.displayName })),
         ...(deviceName ? { headers: { 'X-Device-Name': deviceName } } : {}),
       }),
     resendSignUpCode: (signUpId, captchaToken) =>

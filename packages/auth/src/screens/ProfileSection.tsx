@@ -3,6 +3,8 @@ import { Alert, Button, CopyButton, Field, Input, Select, SectionCard } from '@s
 import { useState, type FormEvent } from 'react'
 import type { ProfilePatch } from '../account/types'
 import styles from './auth.module.css'
+import { displayNameFieldError, displayNameProblem } from './displayName'
+import { displayNameRateLimited } from './errors'
 import { mergeLabels, type AuthLabels } from './labels'
 import { useAction } from './useAction'
 
@@ -36,7 +38,14 @@ export function ProfileSection({
   const [timeZone, setTimeZone] = useState(profile.timeZone ?? '')
   const [saved, setSaved] = useState(false)
   const action = useAction(labels)
-  const nameTaken = action.error?.code === ErrorCodes.ACCOUNT_DISPLAY_NAME_TAKEN
+  const [localProblem, setLocalProblem] = useState<string>()
+  // 닉네임 칸 아래에 말하는 서버 답: 겹침(409) · 변경 한도(429) · 규칙 위반(400 필드 오류) — 서버의 영어 문장은 보이지 않는다. 전역 토스트는 앱이 이 코드들을 뺀다
+  const nameMessage = action.error
+    ? action.error.code === ErrorCodes.ACCOUNT_DISPLAY_NAME_TAKEN
+      ? action.error.message
+      : (displayNameRateLimited(action.raw, labels) ?? displayNameFieldError(action.raw, labels))
+    : undefined
+  const nameTaken = nameMessage !== undefined
   const fullName =
     profile.displayName && profile.displayTag
       ? `${profile.displayName}#${profile.displayTag}`
@@ -45,6 +54,9 @@ export function ProfileSection({
   async function submit(event: FormEvent) {
     event.preventDefault()
     setSaved(false)
+    const problem = displayNameProblem(displayName, 'optional', labels)
+    setLocalProblem(problem)
+    if (problem) return
     const patch: ProfilePatch = {}
     if (displayName.trim() && displayName !== (profile.displayName ?? ''))
       patch.displayName = displayName.trim()
@@ -62,7 +74,7 @@ export function ProfileSection({
         <Field
           label={labels.displayName}
           hint={labels.displayNameHint}
-          error={nameTaken ? action.error?.message : undefined}
+          error={localProblem ?? (nameTaken ? nameMessage : undefined)}
         >
           {(control) => (
             <Input
@@ -72,6 +84,7 @@ export function ProfileSection({
               value={displayName}
               onChange={(e) => {
                 setDisplayName(e.target.value)
+                setLocalProblem(undefined)
                 if (nameTaken) action.clear()
               }}
             />

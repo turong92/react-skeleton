@@ -1,5 +1,11 @@
 import { ErrorCodes, isErrorCode } from '@skeleton/api-client'
-import { authErrorMessage, displayNameProblem, mergeLabels } from '@skeleton/auth'
+import {
+  authErrorMessage,
+  displayNameFieldError,
+  displayNameProblem,
+  displayNameRateLimited,
+  mergeLabels,
+} from '@skeleton/auth'
 import { Button, Dialog, Field, Input } from '@skeleton/ui'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useId, useState, type FormEvent } from 'react'
@@ -32,9 +38,13 @@ export function NicknameDialog({ open, onClose }: { open: boolean; onClose: () =
       close()
     },
     onError: (error) => {
-      // 그 밖의 실패는 앱의 전역 오류 토스트가 맡는다
+      // 칸 아래에 말하는 것(겹침 · 변경 한도 · 규칙 위반)은 전역 토스트가 뺀다 — 그 밖의 실패는 앱의 전역 오류 토스트가 맡는다
       if (isErrorCode(error, ErrorCodes.ACCOUNT_DISPLAY_NAME_TAKEN))
         setServerError(authErrorMessage(error, labels).message)
+      else
+        setServerError(
+          displayNameRateLimited(error, labels) ?? displayNameFieldError(error, labels),
+        )
     },
   })
   const problem = displayNameProblem(value, 'required', labels)

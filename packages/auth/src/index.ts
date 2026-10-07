@@ -148,11 +148,15 @@ export type {
 export { defaultAuthLabels, mergeLabels } from './screens/labels'
 export { koAuthLabels } from './screens/labels.ko'
 export type { AuthLabels } from './screens/labels'
-export { DISPLAY_NAME_MAX_LENGTH, displayNameProblem } from './screens/displayName'
+export {
+  DISPLAY_NAME_MAX_LENGTH,
+  displayNameFieldError,
+  displayNameProblem,
+} from './screens/displayName'
 export type { DisplayNameMode } from './screens/displayName'
 export { resolveMethods } from './screens/methods'
 export type { SignInMethodsConfig, SocialProviderButton } from './screens/methods'
-export { authErrorMessage } from './screens/errors'
+export { authErrorMessage, displayNameRateLimited, formatWait } from './screens/errors'
 export type { AuthErrorInfo } from './screens/errors'
 export { readLinkToken } from './screens/linkToken'
 export { AuthLayout } from './screens/AuthLayout'

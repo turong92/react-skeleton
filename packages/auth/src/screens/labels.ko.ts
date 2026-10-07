@@ -13,10 +13,25 @@ export const koAuthLabels: AuthLabels = {
   displayNameHint: '다른 사람에게 보이는 이름이에요.',
   displayNameShownAs: '다른 사람에게 보이는 이름',
   errorDisplayNameTaken: '이미 쓰고 있는 닉네임이에요',
-  displayNameTakenRestart:
-    '닉네임을 바꿔 처음부터 다시 시작해 주세요. 비밀번호는 다시 입력해야 해요.',
+  problemDisplayNamePattern: '#, @ 같은 일부 기호와 보이지 않는 문자는 쓸 수 없어요',
+  problemDisplayNameReserved: '쓸 수 없는 닉네임이에요',
+  errorDisplayNameRateLimited: (wait) =>
+    `닉네임을 너무 자주 바꿨어요. ${wait} 뒤에 다시 해 주세요.`,
+  durationHours: (n) => `${n}시간`,
+  durationMinutes: (n) => `${n}분`,
+  durationSeconds: (n) => `${n}초`,
+  nicknameRetryHint:
+    '다른 닉네임을 정하고 같은 인증번호로 확인해요. 비밀번호는 다시 입력하지 않아도 돼요.',
+  nicknameRetryAction: '이 닉네임으로 계속',
+  codeNoMoreResends: '이 번호는 더 다시 보낼 수 없어요. 만료되면 처음부터 다시 해 주세요.',
+  codeNoMoreResendsSignUp:
+    '이 번호는 더 다시 보낼 수 없어요. 만료되면 처음부터 다시 가입해 주세요.',
+  errorErased: '이미 지워진 계정이에요.',
+  errorErasureInProgress: '이 계정을 지우는 중이에요. 같은 삭제를 다시 눌러 마저 끝내 주세요.',
+  errorErasureRetry: '삭제가 다 끝나지 않았어요. 같은 삭제를 다시 해 주세요.',
+  errorNotSuspended: '정지된 계정만 지울 수 있어요.',
   problemDisplayNameMissing: '닉네임을 입력해 주세요',
-  problemDisplayNameTooLong: (max) => `닉네임은 ${max}자까지 쓸 수 있어요`,
+  problemDisplayNameTooLong: (max) => `1~${max}자로 입력해 주세요`,
   or: '또는',
   back: '뒤로',
   continue: '계속',

@@ -663,3 +663,88 @@ export const NicknameSaves: Story = {
     await expect(await profile.findByText('Profile saved.')).toBeVisible()
   },
 }
+
+/** 닉네임 변경 한도(FINAL-5 R3, `429 ACCOUNT.RATE_LIMITED` + `retryAfterSeconds`) — 칸 아래에 기다릴 시간과 함께(서버의 영어 문장이 아니라 우리 문구) */
+export const NicknameChangeLimitNamesTheWait: Story = {
+  args: { fake: { nicknameChangeLimit: 1 } },
+  play: async ({ canvas, userEvent }) => {
+    const field = await canvas.findByLabelText('Nickname')
+    const profile = within(canvas.getByRole('form', { name: 'Profile' }))
+    await userEvent.clear(field)
+    await userEvent.type(field, 'Annie')
+    await userEvent.click(profile.getByRole('button', { name: 'Save' }))
+    await expect(await profile.findByText('Profile saved.')).toBeVisible()
+    await userEvent.clear(field)
+    await userEvent.type(field, 'Anna')
+    await userEvent.click(profile.getByRole('button', { name: 'Save' }))
+    await expect(
+      await profile.findByText('You changed your nickname too often. Try again in 3 h 12 min.'),
+    ).toBeVisible()
+    await expect(field).toHaveValue('Anna')
+    await expect(field).toHaveAttribute('aria-invalid', 'true')
+  },
+}
+
+/** `#` · `@` 는 보내기 전에 서버 규칙과 같은 문구로 바로 알린다 — 👩‍💻 같은 조합 이모지는 막지 않는다 */
+export const NicknameSymbolsAreRefusedAtOnceEmojiAreFine: Story = {
+  play: async ({ canvas, userEvent }) => {
+    const field = await canvas.findByLabelText('Nickname')
+    const profile = within(canvas.getByRole('form', { name: 'Profile' }))
+    await userEvent.clear(field)
+    await userEvent.type(field, 'an#na')
+    await userEvent.click(profile.getByRole('button', { name: 'Save' }))
+    await expect(
+      await profile.findByText('Characters like # and @ and invisible characters are not allowed'),
+    ).toBeVisible()
+    await userEvent.clear(field)
+    await userEvent.type(field, '👩‍💻 anna')
+    await userEvent.click(profile.getByRole('button', { name: 'Save' }))
+    await expect(await profile.findByText('Profile saved.')).toBeVisible()
+  },
+}
+
+/** 서버의 규칙 위반(`400`, 필드 `displayName`, 코드 `Reserved`)도 서버의 영어 message 가 아니라 우리 문구로 */
+export const NicknameReservedByTheServerUsesOurSentence: Story = {
+  args: { fake: { reservedNicknames: ['admin'] } },
+  play: async ({ canvas, userEvent }) => {
+    const field = await canvas.findByLabelText('Nickname')
+    const profile = within(canvas.getByRole('form', { name: 'Profile' }))
+    await userEvent.clear(field)
+    await userEvent.type(field, 'admin')
+    await userEvent.click(profile.getByRole('button', { name: 'Save' }))
+    await expect(await profile.findByText('That nickname cannot be used')).toBeVisible()
+    await expect(profile.queryByText(/English from the server/)).toBeNull()
+  },
+}
+
+/** 서버가 이 시도는 더 다시 보낼 수 없다고 알렸다(`resendAvailableAt: null`) — 이메일 변경의 인증번호 단계 */
+export const EmailChangeCodeWithNoMoreResends: Story = {
+  args: { fake: { resendExhausted: true, codeWindowMinutes: 10 } },
+  play: async ({ canvas, userEvent }) => {
+    const section = within(await canvas.findByRole('region', { name: 'Email address' }))
+    await userEvent.type(section.getByLabelText(/^New email/), 'next@example.com')
+    await userEvent.type(section.getByLabelText(/^Current password/), 'old-password-1')
+    await userEvent.click(section.getByRole('button', { name: 'Change email' }))
+    await expect(
+      await section.findByText(/We sent a 6-digit code to next@example.com/),
+    ).toBeVisible()
+    await expect(
+      await section.findByText(/This code cannot be sent again\. When it expires, start over/),
+    ).toBeVisible()
+    await expect(section.queryByRole('button', { name: /Send a new code/ })).toBeNull()
+  },
+}
+
+/** 삭제 확인 코드도 같다 — 더 다시 보낼 수 없으면 「다시 받기」는 없고 안내만(다시 인증 · 삭제 확인 모두 `ReauthProof`) */
+export const DeleteCodeWithNoMoreResends: Story = {
+  args: { fake: { passwordless: true, resendExhausted: true, codeWindowMinutes: 10 } },
+  play: async ({ canvas, userEvent }) => {
+    const section = within(await canvas.findByRole('region', { name: 'Delete account' }))
+    await userEvent.click(section.getByRole('button', { name: 'Email me a code' }))
+    await expect(await section.findByLabelText('Digit 1 of 6')).toBeVisible()
+    await expect(
+      await section.findByText(/This code cannot be sent again\. When it expires, start over/),
+    ).toBeVisible()
+    await expect(section.queryByRole('button', { name: /Send a new code/ })).toBeNull()
+  },
+}

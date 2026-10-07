@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, waitFor } from 'storybook/test'
+import { expect, fn, waitFor, within } from 'storybook/test'
 import { koAuthLabels } from '../screens/labels.ko'
 import { SignUpScreen } from '../screens/SignUpScreen'
 import { FAKE_POLICY, apiError } from '../stories/fakeAccountApi'
@@ -682,15 +682,30 @@ export const NicknameIsOptionalWhenAskedNicely: Story = {
   },
 }
 
-/** 닉네임 중복 금지(서버 선택 기능)에서 인증번호 단계가 409 를 받으면 — 양식으로 돌아가 닉네임만 바꿔 다시 시작한다(이메일 · 닉네임은 남는다) */
-export const NicknameTakenAtTheCodeStepReturnsToTheForm: Story = {
+/**
+ * 닉네임 중복 금지(서버 선택 기능)에서 인증번호 단계가 409 를 받아도 **시도는 닫히지 않는다**(FINAL-5 R1) — 양식으로 돌려보내지 않고 그 자리에서 닉네임만 다시 입력받아
+ * 같은 `signUpId` · 같은 인증번호로 다시 확인한다. 비밀번호는 다시 묻지 않고, 인증번호 남은 시간은 계속 흐른다.
+ */
+const verifyCalls: Array<[string, string, { displayName?: string } | undefined]> = []
+const verifyWithNickname = async (
+  signUpId: string,
+  code: string,
+  options?: { displayName?: string },
+) => {
+  verifyCalls.push([signUpId, code, options])
+  if (options?.displayName === undefined || options.displayName === '수민')
+    throw apiError('ACCOUNT.DISPLAY_NAME_TAKEN', 409)
+  return undefined
+}
+export const NicknameTakenAtTheCodeStepAsksForAnotherInPlace: Story = {
   args: {
     displayName: 'required',
     labels: koAuthLabels,
-    onVerifyCode: fn(async () => {
-      throw apiError('ACCOUNT.DISPLAY_NAME_TAKEN', 409)
-    }),
+    onVerifyCode: verifyWithNickname,
     onPendingChange: fn(),
+  },
+  beforeEach: () => {
+    verifyCalls.length = 0
   },
   play: async ({ canvas, args, userEvent }) => {
     await userEvent.type(canvas.getByLabelText(/^이메일/), 'ann@example.com')
@@ -701,11 +716,52 @@ export const NicknameTakenAtTheCodeStepReturnsToTheForm: Story = {
     await canvas.findByLabelText('6자리 중 1번째')
     await userEvent.click(canvas.getByLabelText('6자리 중 1번째'))
     await userEvent.paste('123456')
-    const nickname = await canvas.findByLabelText(/^닉네임/)
-    await expect(nickname).toHaveValue('수민')
-    await expect(canvas.getAllByText('이미 쓰고 있는 닉네임이에요').length).toBeGreaterThan(0)
-    await expect(canvas.getByLabelText(/^이메일/)).toHaveValue('ann@example.com')
-    await expect(args.onPendingChange).toHaveBeenLastCalledWith(null)
+    // 양식으로 돌아가지 않는다 — 인증번호 단계 그대로, 닉네임 칸만 작게 열린다
+    const retry = await canvas.findByRole('form', { name: '닉네임' })
+    await expect(within(retry).getByText('이미 쓰고 있는 닉네임이에요')).toBeVisible()
+    await expect(canvas.queryByLabelText(/^비밀번호/)).toBeNull() // 비밀번호는 다시 묻지 않는다
+    await expect(canvas.getByText(/남은 시간|\d+:\d\d/)).toBeVisible() // 남은 시간은 계속 흐른다
+    await expect(args.onPendingChange).not.toHaveBeenCalledWith(null)
+    const field = within(retry).getByLabelText(/^닉네임/)
+    await userEvent.clear(field)
+    await userEvent.type(field, '다른수민')
+    await userEvent.click(within(retry).getByRole('button', { name: '이 닉네임으로 계속' }))
+    await waitFor(() => expect(args.onPendingChange).toHaveBeenLastCalledWith(null))
+    // 같은 시도 · 같은 코드, 다른 닉네임
+    await new Promise((resolve) => setTimeout(resolve, 300))
+    await expect(verifyCalls).toEqual([
+      ['sid-1', '123456', undefined], // 처음 한 번(겹침)
+      ['sid-1', '123456', { displayName: '다른수민' }], // 같은 시도 · 같은 코드로 닉네임만 바꿔 다시
+    ])
+  },
+}
+
+/** 서버가 더 다시 보낼 수 없다고 알렸다(`resendAvailableAt: null`, FINAL-5 R2) — 「다시 받기」는 숨기고 안내, 시간이 다 되면 처음부터 */
+export const CodeStepWithNoMoreResendsHidesTheButtonAndSaysWhatNext: Story = {
+  args: codeArgs(),
+  render: (args) => (
+    <SignUpScreen
+      {...args}
+      initialPending={{
+        email: 'ann@example.com',
+        signUpId: 'sid-1',
+        expiresAt: Date.now() + 2_000,
+        resendExhausted: true,
+      }}
+    />
+  ),
+  play: async ({ canvas, userEvent }) => {
+    await expect(
+      await canvas.findByText(
+        /This code cannot be sent again\. When it expires, please sign up again/,
+      ),
+    ).toBeVisible()
+    await expect(canvas.queryByRole('button', { name: /Send a new code/ })).toBeNull()
+    await expect(
+      await canvas.findByRole('button', { name: 'Start over' }, { timeout: 6000 }),
+    ).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Start over' }))
+    await expect(await canvas.findByRole('button', { name: 'Create account' })).toBeVisible()
   },
 }
 

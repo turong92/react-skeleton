@@ -33,6 +33,12 @@ describe('FINAL-3: codes in session', () => {
     expect(result).toBe(tokens)
   })
 
+  it('verifySignUpCode may carry a replacement nickname (after a DISPLAY_NAME_TAKEN, same signUpId and code)', async () => {
+    const { client, calls } = fakeClient({})
+    await createAccountApi(client).verifySignUpCode('sid', '123456', { displayName: '수민' })
+    expect(calls[0].request?.json).toEqual({ signUpId: 'sid', code: '123456', displayName: '수민' })
+  })
+
   it('resendSignUpCode → POST /account/verification/resend {signUpId}', async () => {
     const { client, calls } = fakeClient()
     await createAccountApi(client).resendSignUpCode('sid', 'cap')

@@ -156,6 +156,7 @@ export function EmailSection({
               labels={given}
               expiresAt={serverExpiry ?? localWindow?.expiresAt}
               expirySource={serverExpiry ? 'server' : (localWindow?.source ?? 'estimate')}
+              resendExhausted={localWindow?.resendExhausted === true}
               // 이 요청은 다시 인증이 드니(비밀번호 · 메일 코드) 조용히 다시 보낼 수 없다 — 시간이 다 되면 「다시 받기 · 다른 주소로」로 포커스
               onExpire={() => againBox.current?.querySelector<HTMLButtonElement>('button')?.focus()}
               onVerify={async (code) => {

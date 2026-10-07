@@ -17,7 +17,23 @@ export type AuthLabels = {
   displayNameShownAs: string
   errorDisplayNameTaken: string
   /** 가입 인증 단계에서 닉네임이 겹쳤을 때 — 닉네임만 바꿔 처음부터 */
-  displayNameTakenRestart: string
+  problemDisplayNamePattern: string
+  problemDisplayNameReserved: string
+  /** 닉네임 변경 한도(`429 ACCOUNT.RATE_LIMITED`) — `{wait}` 는 `durationHours` · `durationMinutes` · `durationSeconds` 로 만든 글자 */
+  errorDisplayNameRateLimited: (wait: string) => string
+  durationHours: (n: number) => string
+  durationMinutes: (n: number) => string
+  durationSeconds: (n: number) => string
+  /** 가입 인증번호 단계에서 닉네임이 겹쳤을 때, 그 자리에서 닉네임만 다시 받는 칸 */
+  nicknameRetryHint: string
+  nicknameRetryAction: string
+  /** 서버가 더 다시 보낼 수 없다고 알렸다(`resendAvailableAt: null`) */
+  codeNoMoreResends: string
+  codeNoMoreResendsSignUp: string
+  errorErased: string
+  errorErasureInProgress: string
+  errorErasureRetry: string
+  errorNotSuspended: string
   problemDisplayNameMissing: string
   problemDisplayNameTooLong: (max: number) => string
   or: string
@@ -327,10 +343,25 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   displayNameHint: 'This is the name other people see.',
   displayNameShownAs: 'Shown to others as',
   errorDisplayNameTaken: 'That nickname is already taken.',
-  displayNameTakenRestart:
-    'Change the nickname and start over. You will need to enter your password again.',
+  problemDisplayNamePattern: 'Characters like # and @ and invisible characters are not allowed',
+  problemDisplayNameReserved: 'That nickname cannot be used',
+  errorDisplayNameRateLimited: (wait) =>
+    `You changed your nickname too often. Try again in ${wait}.`,
+  durationHours: (n) => `${n} h`,
+  durationMinutes: (n) => `${n} min`,
+  durationSeconds: (n) => `${n} s`,
+  nicknameRetryHint:
+    'Pick another nickname, then confirm with the same code. You do not need to enter your password again.',
+  nicknameRetryAction: 'Continue with this nickname',
+  codeNoMoreResends: 'This code cannot be sent again. When it expires, start over.',
+  codeNoMoreResendsSignUp:
+    'This code cannot be sent again. When it expires, please sign up again from the start.',
+  errorErased: 'This account has already been erased.',
+  errorErasureInProgress: 'This account is being erased. Repeat the erase to finish it.',
+  errorErasureRetry: 'The erase did not finish. Repeat it to continue.',
+  errorNotSuspended: 'Only suspended accounts can be erased.',
   problemDisplayNameMissing: 'Enter a nickname',
-  problemDisplayNameTooLong: (max) => `Use ${max} characters or fewer`,
+  problemDisplayNameTooLong: (max) => `Use 1 to ${max} characters`,
   or: 'or',
   back: 'Back',
   continue: 'Continue',

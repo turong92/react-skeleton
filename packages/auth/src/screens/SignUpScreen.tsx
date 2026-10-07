@@ -27,7 +27,14 @@ import { NewPasswordFields } from './NewPasswordFields'
 import { PasswordHints } from './PasswordHints'
 import { SocialButtons } from './SocialButtons'
 import styles from './auth.module.css'
-import { displayNameProblem, resolveDisplayNameMode, type DisplayNameMode } from './displayName'
+import {
+  displayNameFieldError,
+  displayNameProblem,
+  resolveDisplayNameMode,
+  type DisplayNameMode,
+} from './displayName'
+import { NicknameRetry } from './NicknameRetry'
+import { codeFailureOf } from './codeErrors'
 import { authErrorMessage, type AuthErrorInfo } from './errors'
 import { mergeLabels, type AuthLabels } from './labels'
 import { resolveMethods, type SignInMethodsConfig } from './methods'
@@ -74,10 +81,15 @@ export type SignUpScreenProps = {
     signUpId?: string
     /** 서버가 주면 그 값이 이긴다 — 없으면(옛 서버) `codeTtlSeconds` 로 어림 */
     expiresAt?: string | number
-    resendAvailableAt?: string | number
+    /** `null` 이면 이 시도는 더 다시 보낼 수 없다 */
+    resendAvailableAt?: string | number | null
   }>
   /** 가입 응답에 `signUpId` 가 오면 같은 화면에서 6자리 인증번호를 받는다. 이 함수가 코드를 서버에 내고(성공하면 가입이 끝나고 바로 로그인) 그 뒤의 이동은 호출자가 한다 */
-  onVerifyCode: (signUpId: string, code: string) => Promise<unknown>
+  onVerifyCode: (
+    signUpId: string,
+    code: string,
+    options?: { displayName?: string },
+  ) => Promise<unknown>
   /** 코드 단계의 「새 코드 받기」(같은 시도에 새 코드) */
   onResendCode?: (signUpId: string) => Promise<unknown>
   /** 새로고침해도 코드 단계가 이어지도록 앱이 보관해 둔 진행 중 가입(탭 하나의 sessionStorage 등) */
@@ -186,6 +198,13 @@ export function SignUpScreen({
   const [serverViolations, setServerViolations] = useState<PasswordViolation[]>([])
   const [emailError, setEmailError] = useState<string | undefined>()
   const [pending, setPending] = useState(initialPending ?? null)
+  /** 인증번호 단계에서 닉네임이 겹쳤다 — 같은 시도 · 같은 코드로 닉네임만 다시 보낸다(`code` 는 방금 낸 번호, 메모리에만) */
+  const [retry, setRetry] = useState<{
+    code: string
+    name: string
+    error?: string
+    busy?: boolean
+  } | null>(null)
   const wait = useCountdown()
 
   function toggleConsent(item: ConsentItem, value: boolean) {
@@ -290,7 +309,7 @@ export function SignUpScreen({
           // 서버 설정으로 닉네임이 필수가 되면 빠진 가입은 필드 `displayName` 의 검증 오류로 온다
           const nameField = error.apiError.errors?.find((e) => e.field === 'displayName')
           if (nameField) {
-            setDisplayNameError(nameField.message ?? labels.errorValidation)
+            setDisplayNameError(displayNameFieldError(error, labels) ?? labels.errorValidation)
             attempt.fail(ids.displayName)
           }
         }
@@ -311,6 +330,7 @@ export function SignUpScreen({
 
   if (pending) {
     const leave = () => {
+      setRetry(null)
       setPending(null)
       onPendingChange?.(null)
     }
@@ -322,19 +342,56 @@ export function SignUpScreen({
           expiresAt={pending.expiresAt}
           expirySource={pending.estimated ? 'estimate' : 'server'}
           resendAvailableAt={pending.resendAvailableAt}
+          resendExhausted={pending.resendExhausted}
+          resendExhaustedNote={labels.codeNoMoreResendsSignUp}
           codeTtlSeconds={codeTtlSeconds}
           resendCooldownSeconds={resendCooldownSeconds}
           expiredResend="restart" // 만료 뒤의 다시 받기: 새 서버는 새 `expiresAt` 을 주고(그 자리에서 다시 센다), 옛 서버는 조용히 무시한다(시각이 없으면 처음부터)
+          above={
+            retry && (
+              <NicknameRetry
+                value={retry.name}
+                error={retry.error}
+                busy={retry.busy}
+                labels={labels}
+                onChange={(name) => setRetry({ ...retry, name, error: undefined })}
+                onSubmit={async () => {
+                  const problem = displayNameProblem(retry.name, 'required', labels)
+                  if (problem) return setRetry({ ...retry, error: problem })
+                  setRetry({ ...retry, busy: true, error: undefined })
+                  try {
+                    await onVerifyCode(pending.signUpId, retry.code, {
+                      displayName: retry.name.trim(),
+                    })
+                    onPendingChange?.(null)
+                  } catch (error) {
+                    const failure = codeFailureOf(error)
+                    const message =
+                      authErrorMessage(error, labels).code === ErrorCodes.ACCOUNT_DISPLAY_NAME_TAKEN
+                        ? labels.errorDisplayNameTaken
+                        : (displayNameFieldError(error, labels) ??
+                          (failure.kind === 'invalid'
+                            ? labels.codeInvalid(failure.attemptsLeft)
+                            : authErrorMessage(error, labels).message))
+                    setRetry({ ...retry, busy: false, error: message })
+                  }
+                }}
+              />
+            )
+          }
           onVerify={async (code) => {
             try {
-              await onVerifyCode(pending.signUpId, code)
+              await (retry
+                ? onVerifyCode(pending.signUpId, code, { displayName: retry.name.trim() })
+                : onVerifyCode(pending.signUpId, code))
             } catch (error) {
-              // 닉네임 중복 금지 서버: 인증이 끝나는 순간에야 겹침을 안다 — 양식으로 돌아가 닉네임만 바꿔 다시 시작한다(이메일 · 닉네임은 남는다)
+              // 닉네임 중복 금지 서버: 인증이 끝나는 순간에야 겹침을 안다. **시도는 닫히지 않는다** — 그 자리에서 닉네임만 다시 입력받아 같은 코드로 다시 확인한다
               if (authErrorMessage(error, labels).code === ErrorCodes.ACCOUNT_DISPLAY_NAME_TAKEN) {
-                leave()
-                setDisplayNameError(labels.errorDisplayNameTaken)
-                setFailure({ message: labels.displayNameTakenRestart })
-                attempt.fail(ids.displayName)
+                setRetry({
+                  code,
+                  name: retry?.name ?? displayName,
+                  error: labels.errorDisplayNameTaken,
+                })
                 return
               }
               throw error
@@ -355,6 +412,7 @@ export function SignUpScreen({
                       ...(window.resendAvailableAt
                         ? { resendAvailableAt: window.resendAvailableAt }
                         : {}),
+                      ...(window.resendExhausted ? { resendExhausted: true as const } : {}),
                     }
                     setPending(next)
                     onPendingChange?.(next)

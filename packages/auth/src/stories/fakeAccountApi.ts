@@ -11,6 +11,21 @@ export const FAKE_POLICY: PasswordPolicy = {
   forbidEmailLocalPart: true,
 }
 
+/** 필드 오류가 있는 400(`errors[]`) — 서버의 message 는 영어다(화면은 그대로 보이지 않는다) */
+export const fieldError = (field: string, code: string, message: string) =>
+  new ApiRequestError(
+    {
+      code: 'COMMON.VALIDATION_FAILED',
+      title: 'Validation failed',
+      status: 400,
+      timestamp: '2026-01-01T00:00:00Z',
+      errors: [{ field, code, message }],
+    } as never,
+    'trace-demo',
+    'span-demo',
+    '00-trace-demo-span-demo-01',
+  )
+
 export const apiError = (code: string, status: number, data?: unknown) =>
   new ApiRequestError(
     { code, title: code, status, timestamp: '2026-01-01T00:00:00Z', data },
@@ -61,6 +76,12 @@ export type FakeAccountOptions = {
   displayTag?: string
   /** 이미 쓰고 있는 닉네임들 — 프로필 수정이 409 `ACCOUNT.DISPLAY_NAME_TAKEN`(닉네임 중복 금지 서버). 앞뒤 공백을 뗀 값으로 견준다 */
   takenNicknames?: string[]
+  /** 닉네임을 이만큼 바꾸면 다음 변경이 429 `ACCOUNT.RATE_LIMITED`(`retryAfterSeconds` 3시간 12분) — 서버의 `display-name.change-limit` */
+  nicknameChangeLimit?: number
+  /** 서버 규칙으로 쓸 수 없는 닉네임(400, 필드 `displayName`, 코드 `Reserved`, 영어 message) */
+  reservedNicknames?: string[]
+  /** 코드를 보내는 요청의 응답이 `resendAvailableAt: null` — 이 시도는 더 다시 보낼 수 없다(FINAL-5 R2) */
+  resendExhausted?: boolean
 }
 
 /** 가짜 서버가 받아 주는 6자리 코드(가입 · 이메일 변경 · 다시 인증 · 삭제 모두) */
@@ -120,7 +141,9 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
       ? undefined
       : {
           expiresAt: inMinutes(options.codeWindowMinutes),
-          resendAvailableAt: new Date(Date.now() + 30_000).toISOString(),
+          resendAvailableAt: options.resendExhausted
+            ? null
+            : new Date(Date.now() + 30_000).toISOString(),
         }
   const notSuspended = () => {
     if (options.suspended) throw apiError('ACCOUNT.SUSPENDED_CANNOT_DELETE', 403)
@@ -178,6 +201,7 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
       current: false,
     },
   ]
+  let nicknameChanges = 0
   const track = <T>(name: string, value: T) => {
     calls.push(name)
     return Promise.resolve(value)
@@ -217,6 +241,20 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
     updateProfile: (patch) => {
       if (patch.displayName && options.takenNicknames?.includes(patch.displayName.trim()))
         return Promise.reject(apiError('ACCOUNT.DISPLAY_NAME_TAKEN', 409))
+      if (patch.displayName && options.reservedNicknames?.includes(patch.displayName.trim()))
+        return Promise.reject(
+          fieldError('displayName', 'Reserved', 'English from the server: reserved nickname'),
+        )
+      if (patch.displayName && patch.displayName.trim() !== me.displayName) {
+        if (
+          options.nicknameChangeLimit !== undefined &&
+          nicknameChanges >= options.nicknameChangeLimit
+        )
+          return Promise.reject(
+            apiError('ACCOUNT.RATE_LIMITED', 429, { retryAfterSeconds: 3 * 3600 + 12 * 60 }),
+          )
+        nicknameChanges += 1
+      }
       Object.assign(me, patch)
       return track('updateProfile', { ...me })
     },

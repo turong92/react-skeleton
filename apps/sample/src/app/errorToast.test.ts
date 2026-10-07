@@ -18,6 +18,12 @@ describe('toastUnlessValidation', () => {
     expect(show).not.toHaveBeenCalled()
   })
 
+  it('leaves the nickname change limit to the field that names the wait', () => {
+    const show = vi.fn()
+    toastUnlessValidation(show)(apiError(ErrorCodes.ACCOUNT_RATE_LIMITED))
+    expect(show).not.toHaveBeenCalled()
+  })
+
   it('toasts every other error', () => {
     const show = vi.fn()
     const error = apiError(ErrorCodes.COMMON_INTERNAL_SERVER_ERROR)

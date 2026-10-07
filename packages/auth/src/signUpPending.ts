@@ -8,6 +8,8 @@ export type PendingSignUp = {
   signUpId: string
   expiresAt?: number
   resendAvailableAt?: number
+  /** 서버가 이 시도는 더 다시 보낼 수 없다고 알렸다(`resendAvailableAt: null`) */
+  resendExhausted?: true
   /** `expiresAt` 이 서버 값이 아니라 문서화된 유효 시간으로 어림한 값이다 */
   estimated?: boolean
 }
@@ -72,6 +74,7 @@ export function createSignUpPending({
           ...(typeof parsed.resendAvailableAt === 'number'
             ? { resendAvailableAt: parsed.resendAvailableAt }
             : {}),
+          ...(parsed.resendExhausted === true ? { resendExhausted: true as const } : {}),
           ...(parsed.estimated === true ? { estimated: true } : {}),
         }
       } catch {

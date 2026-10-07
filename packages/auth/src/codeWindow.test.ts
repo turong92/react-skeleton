@@ -30,3 +30,14 @@ describe('where the expiry of a code comes from', () => {
     })
   })
 })
+
+describe('resendAvailableAt: null — no further resend for this attempt', () => {
+  it('an explicit null marks the window as resend-exhausted; an absent key does not', () => {
+    expect(codeWindowOf({ expiresAt: '2026-10-07T00:10:00Z', resendAvailableAt: null })).toEqual({
+      expiresAt: Date.parse('2026-10-07T00:10:00Z'),
+      resendExhausted: true,
+      source: 'server',
+    })
+    expect(codeWindowOf({ expiresAt: '2026-10-07T00:10:00Z' })?.resendExhausted).toBeUndefined()
+  })
+})

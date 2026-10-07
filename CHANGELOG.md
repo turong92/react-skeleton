@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — 백엔드 FINAL-5 리뷰 계약(R1–R9) 반영 (2026-10-07)
+
+- **R1 가입 인증번호 단계의 닉네임 겹침**: `verifySignUpCode(signUpId, code, { displayName? })`. `409 ACCOUNT.DISPLAY_NAME_TAKEN` 이어도 시도가 닫히지 않으므로 **양식으로 돌려보내지 않고** 그 자리에서 닉네임만 다시 입력받아(`NicknameRetry` — 「이미 쓰고 있는 닉네임이에요」) 같은 `signUpId` · 같은 인증번호로 다시 확인한다. 비밀번호 재입력 없음, 인증번호 남은 시간은 계속 흐른다. (이전 동작 「양식으로 돌아가 처음부터」는 없어졌다 — 라벨 `displayNameTakenRestart` 삭제, `nicknameRetryHint` · `nicknameRetryAction` 추가.)
+- **R2 `resendAvailableAt: null`**: `CodeWindow.resendExhausted` · `PendingSignUp.resendExhausted`. 이 시도는 더 다시 보낼 수 없으니 「다시 받기」를 숨기고 안내(가입 「만료되면 처음부터 다시 가입해 주세요」), 시간이 다 되면 「처음부터 다시」 버튼 — 가입 · 이메일 변경 · 다시 인증 · 삭제 확인 모두(`VerifyCodePanel` · `ReauthProof`). 응답 타입 `resendAvailableAt?: string | null`.
+- **R3 닉네임 변경 한도**: `429 ACCOUNT.RATE_LIMITED`(`retryAfterSeconds`) → 프로필 칸 아래 「닉네임을 너무 자주 바꿨어요. 3시간 12분 뒤에 다시 해 주세요.」(`displayNameRateLimited` · `formatWait` export, 전역 토스트는 샘플이 뺀다). 샘플 닉네임 대화상자도 같다.
+- **R4 닉네임 필드 오류**: 서버 `Required` · `Size` · `Pattern` · `Reserved` 를 우리 문구로(`displayNameFieldError` — 서버의 영어 message 는 보이지 않는다). 사전 검증: `#` · `@` 는 같은 문구로 바로 안내하고, 길이는 **코드 포인트**로 센다(👩‍💻 같은 조합 이모지는 막지 않는다). 「1~60자로 입력해 주세요」.
+- **R5 「이미 계정이 있어요」 메일의 링크**: `/login` · `/forgot-password` 는 샘플 · 스타터 · SSR 스타터에 있고 로그아웃 상태에서 열린다(스타터 라우트 테스트에 추가). 로그인된 채 `/login` 은 가려던 곳(대시보드)으로 이동한다.
+- **R6 댓글 알림 payload**: 프런트(`@skeleton/notifications` · 샘플)는 payload 의 `authorName` 을 읽지 않는다 — 변경 없음. 계정 id 는 화면에 그리지 않는다.
+- **R7 IPv6 압축 표기**: `formatIp` 가 `::1` 도 「이 기기(로컬)」로 처리하는지 테스트 추가.
+- **R9 관리자 오류**: `ErrorCodes.ACCOUNT_ERASURE_IN_PROGRESS` · `ACCOUNT_ERASURE_RETRY` 와 문구(`errorErased` · `errorErasureInProgress` · `errorErasureRetry` · `errorNotSuspended`).
+- 가짜: `createFakeAccountApi({ nicknameChangeLimit, reservedNicknames, resendExhausted })`, `fieldError`. 스토리: `NicknameTakenAtTheCodeStepAsksForAnotherInPlace` · `CodeStepWithNoMoreResends…` · `NicknameChangeLimitNamesTheWait` · `NicknameReservedByTheServerUsesOurSentence` · `NicknameSymbolsAreRefusedAtOnceEmojiAreFine` · `EmailChangeCodeWithNoMoreResends` · `DeleteCodeWithNoMoreResends`.
+
 ### Fixed — 실제 백엔드 QA: 링크 이중 redeem · 탈퇴 직후 화면 · 기기 목록 IP (2026-10-07)
 
 - **링크 로그인이 두 번 redeem 되던 것**: 원인은 ref 가 아니라 **화면이 새 인스턴스로 다시 마운트**되는 것이었다(StrictMode 는 ref 가 이어져 막힌다 — 실측: 첫 인스턴스가 정리된 뒤 새 인스턴스가 `started=false` 로 효과를 돌렸다. 로그인되는 순간 위쪽이 화면을 다시 그린다). 같은 토큰의 호출을 모듈 수준에서 한 번만 보내고 결과(성공 · 실패)를 나눠 쓴다(`runOnce`, 1분 보관). `TokenLanding`(링크 로그인 · 확인이 필요한 링크의 「계속」)과 소셜 연결의 「두 인가 코드로 연결」에 적용. 소셜 로그인 콜백은 `flow.complete` 가 이미 state 별로 한 번(모듈이 아니라 flow 인스턴스 기준). 비밀번호 재설정 · 탈퇴 취소 · 인증번호는 사람이 누르는 호출이라 자동 제출이 아니다. 같은 링크를 일부러 새로고침해 다시 열면 서버가 410 으로 답하는 것은 정상(일회용).

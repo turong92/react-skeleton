@@ -6,7 +6,7 @@ import {
   secondsRemaining,
   type ExpiryInput,
 } from '@skeleton/ui'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useCodeClock } from '../codeClockContext'
 import { codeWindowOf, estimateCodeWindow, type CodeWindow } from '../codeWindow'
 import styles from './auth.module.css'
@@ -32,6 +32,12 @@ export type VerifyCodePanelProps = {
   expirySource?: 'server' | 'estimate'
   /** 다시 받기가 다시 눌리는 절대 시각(새로고침 뒤 쿨다운 이어 가기) */
   resendAvailableAt?: ExpiryInput
+  /** 서버가 `resendAvailableAt: null` 을 줬다 — 이 시도는 더 다시 보낼 수 없다: 「다시 받기」를 숨기고 안내, 시간이 다 되면 처음부터 다시 */
+  resendExhausted?: boolean
+  /** 다시 받을 수 없을 때의 안내(기본 일반 문구 — 가입은 「처음부터 다시 가입해 주세요」) */
+  resendExhaustedNote?: string
+  /** 안내 문장과 인증번호 칸 사이(예: 닉네임이 겹쳐 그 자리에서 다시 입력받는 작은 칸) — 남은 시간은 계속 흐른다 */
+  above?: ReactNode
   /** 문서화된 유효 시간(초) — 서버가 새 만료 시각을 안 줄 때 「다시 받기」 뒤의 어림에 쓴다. 가입 코드는 600(10분) */
   codeTtlSeconds?: number
   /**
@@ -64,6 +70,9 @@ export function VerifyCodePanel({
   expiresAt: givenExpiresAt,
   expirySource = 'estimate',
   resendAvailableAt,
+  resendExhausted: givenExhausted = false,
+  resendExhaustedNote,
+  above,
   codeTtlSeconds = 600,
   expiredResend = 'resend',
   onExpire,
@@ -82,6 +91,7 @@ export function VerifyCodePanel({
   }
   const expiresAt = renewed?.expiresAt ?? expiryMillis(givenExpiresAt) ?? undefined
   const source = renewed ? renewed.source : expirySource
+  const exhausted = renewed ? renewed.resendExhausted === true : givenExhausted
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | undefined>(undefined)
   const [expired, setExpired] = useState(false)
@@ -165,6 +175,7 @@ export function VerifyCodePanel({
       <h2>{title ?? labels.codeTitle}</h2>
       <p>{description ?? labels.codeBody(email)}</p>
       <p className={styles.muted}>{labels.checkEmailSpam}</p>
+      {above}
       <CodeEntry
         label={labels.codeGroupLabel}
         digitLabel={labels.codeDigit}
@@ -185,7 +196,7 @@ export function VerifyCodePanel({
           onExpire?.()
         }}
         resend={
-          onResend
+          onResend && !exhausted
             ? {
                 label: labels.codeResend,
                 onResend: () => void resend(),
@@ -195,6 +206,16 @@ export function VerifyCodePanel({
             : undefined
         }
       />
+      {exhausted && (
+        <p role="status" className={styles.muted}>
+          {resendExhaustedNote ?? labels.codeNoMoreResends}
+        </p>
+      )}
+      {exhausted && timedOut && (
+        <div>
+          <Button onClick={onStartOver}>{labels.codeRestart}</Button>
+        </div>
+      )}
       {busy && (
         <p role="status" className={styles.muted}>
           {labels.codeChecking}

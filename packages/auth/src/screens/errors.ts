@@ -31,6 +31,10 @@ const byCode = (labels: AuthLabels): Record<string, string> => ({
   [ErrorCodes.ACCOUNT_LAST_SIGN_IN_METHOD]: labels.errorLastMethod,
   [ErrorCodes.ACCOUNT_LAST_ADMIN]: labels.errorLastAdmin,
   [ErrorCodes.ACCOUNT_SELF_ACTION_FORBIDDEN]: labels.errorSelfAction,
+  [ErrorCodes.ACCOUNT_ERASED]: labels.errorErased,
+  [ErrorCodes.ACCOUNT_ERASURE_IN_PROGRESS]: labels.errorErasureInProgress,
+  [ErrorCodes.ACCOUNT_ERASURE_RETRY]: labels.errorErasureRetry,
+  [ErrorCodes.ACCOUNT_NOT_SUSPENDED]: labels.errorNotSuspended,
   [ErrorCodes.ACCOUNT_IDENTITY_TAKEN]: labels.errorIdentityTaken,
   [ErrorCodes.ACCOUNT_IDENTITY_EXISTS]: labels.errorIdentityExists,
   [ErrorCodes.ACCOUNT_SOCIAL_EMAIL_CONFLICT]: labels.errorSocialConflict,
@@ -66,6 +70,27 @@ export function authErrorMessage(error: unknown, labels: AuthLabels): AuthErrorI
   const known = byCode(labels)[code]
   if (known) return { code, message: known }
   return { code, message: labels.errorGeneric, reference: error.traceId }
+}
+
+/** 기다릴 시간을 「3시간 12분」 · 「5분」 · 「40초」 로 — 초는 한 시간 · 한 분 아래에서만 */
+export function formatWait(seconds: number, labels: AuthLabels): string {
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.ceil((seconds % 3600) / 60)
+  if (hours > 0)
+    return minutes > 0 && minutes < 60
+      ? `${labels.durationHours(hours)} ${labels.durationMinutes(minutes)}`
+      : labels.durationHours(minutes === 60 ? hours + 1 : hours)
+  if (seconds >= 60) return labels.durationMinutes(Math.ceil(seconds / 60))
+  return labels.durationSeconds(Math.max(1, Math.ceil(seconds)))
+}
+
+/** 닉네임을 고치다 한도(`429 ACCOUNT.RATE_LIMITED`)에 걸렸다 — 「닉네임을 너무 자주 바꿨어요. {시간} 뒤에 다시 해 주세요」. 그 밖의 오류는 undefined */
+export function displayNameRateLimited(error: unknown, labels: AuthLabels): string | undefined {
+  if (!(error instanceof ApiRequestError) || error.apiError.status !== 429) return undefined
+  const wait = retryAfterSeconds(error)
+  return labels.errorDisplayNameRateLimited(
+    wait === undefined ? labels.durationMinutes(1) : formatWait(wait, labels),
+  )
 }
 
 /** `until`(밀리초 시각)까지 남은 초 — 올림, 0 아래로 내려가지 않는다 */

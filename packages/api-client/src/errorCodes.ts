@@ -62,6 +62,10 @@ export const ErrorCodes = {
   ACCOUNT_SUSPENDED_CANNOT_DELETE: 'ACCOUNT.SUSPENDED_CANNOT_DELETE',
   /** 관리자 삭제(erase)는 정지된 계정만(409) */
   ACCOUNT_NOT_SUSPENDED: 'ACCOUNT.NOT_SUSPENDED',
+  /** 지우기(erase)가 이미 이 계정을 잡았다 — 정지 · 정지 해제가 409. 같은 `POST /admin/accounts/{id}/erase` 를 다시 불러 끝낸다 */
+  ACCOUNT_ERASURE_IN_PROGRESS: 'ACCOUNT.ERASURE_IN_PROGRESS',
+  /** 지우기가 일부만 끝나 503 — 같은 호출을 다시 하면 이어서 끝난다 */
+  ACCOUNT_ERASURE_RETRY: 'ACCOUNT.ERASURE_RETRY',
   /** 메일함 · 제공자 계정을 증명한 사람에게만 — 재가입이 막힌 주소(`verify-email` · 링크 로그인 · 소셜, 403) */
   ACCOUNT_REGISTRATION_BLOCKED: 'ACCOUNT.REGISTRATION_BLOCKED',
   ACCOUNT_RATE_LIMITED: 'ACCOUNT.RATE_LIMITED',

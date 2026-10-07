@@ -1,6 +1,6 @@
 import { ApiRequestError } from '@skeleton/api-client'
 import { describe, expect, it } from 'vitest'
-import { authErrorMessage, secondsLeft } from './errors'
+import { authErrorMessage, displayNameRateLimited, secondsLeft } from './errors'
 import { PkceUnavailableError } from '../pkce'
 import { defaultAuthLabels as L } from './labels'
 
@@ -92,5 +92,30 @@ describe('secondsLeft', () => {
     expect(secondsLeft(10_000, 8_200)).toBe(2)
     expect(secondsLeft(10_000, 10_000)).toBe(0)
     expect(secondsLeft(10_000, 12_000)).toBe(0)
+  })
+})
+
+describe('FINAL-5 review: nickname change limit and admin erase codes', () => {
+  it('a 429 on a nickname change names the wait in hours and minutes (displayNameRateLimited)', () => {
+    const message = displayNameRateLimited(
+      err('ACCOUNT.RATE_LIMITED', 429, { retryAfterSeconds: 3 * 3600 + 12 * 60 }),
+      L,
+    )
+    expect(message).toBe(
+      L.errorDisplayNameRateLimited(`${L.durationHours(3)} ${L.durationMinutes(12)}`),
+    )
+    expect(
+      displayNameRateLimited(err('ACCOUNT.RATE_LIMITED', 429, { retryAfterSeconds: 40 }), L),
+    ).toBe(L.errorDisplayNameRateLimited(L.durationSeconds(40)))
+    expect(displayNameRateLimited(err('ACCOUNT.DISPLAY_NAME_TAKEN', 409), L)).toBeUndefined()
+  })
+
+  it.each([
+    ['ACCOUNT.ERASURE_IN_PROGRESS', 409, L.errorErasureInProgress],
+    ['ACCOUNT.ERASURE_RETRY', 503, L.errorErasureRetry],
+    ['ACCOUNT.NOT_SUSPENDED', 409, L.errorNotSuspended],
+    ['ACCOUNT.ERASED', 410, L.errorErased],
+  ])('%s → its label', (code, status, label) => {
+    expect(authErrorMessage(err(code, status), L).message).toBe(label)
   })
 })

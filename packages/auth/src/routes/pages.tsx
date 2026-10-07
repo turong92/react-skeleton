@@ -208,9 +208,9 @@ export function SignUpPage({
       onPendingChange={(next) =>
         next ? ctx.signUpPending?.save(next) : ctx.signUpPending?.clear()
       }
-      onVerifyCode={async (signUpId, code) => {
+      onVerifyCode={async (signUpId, code, options) => {
         // 인증이 끝나면 가입도 끝나고 바로 로그인한다(토큰 응답) — 이어서 원래 가려던 곳으로
-        auth.signIn(await ctx.accountApi.verifySignUpCode(signUpId, code))
+        auth.signIn(await ctx.accountApi.verifySignUpCode(signUpId, code, options))
         navigate(ctx.afterSignIn, { replace: true })
       }}
       onResendCode={(signUpId) => ctx.accountApi.resendSignUpCode(signUpId)}

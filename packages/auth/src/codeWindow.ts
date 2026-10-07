@@ -7,6 +7,8 @@ import { expiryMillis } from '@skeleton/ui'
 export type CodeWindow = {
   expiresAt: number
   resendAvailableAt?: number
+  /** 서버가 `resendAvailableAt: null` 을 줬다 — 이 시도는 더 다시 보낼 수 없다(만료되면 처음부터) */
+  resendExhausted?: true
   source: 'server' | 'estimate'
 }
 
@@ -24,9 +26,11 @@ export function codeWindowOf(response: unknown): CodeWindow | null {
     typeof resendAvailableAt === 'string' || typeof resendAvailableAt === 'number'
       ? expiryMillis(resendAvailableAt)
       : null
+  const exhausted = 'resendAvailableAt' in response && resendAvailableAt === null
   return {
     expiresAt: expires,
     ...(resend === null ? {} : { resendAvailableAt: resend }),
+    ...(exhausted ? { resendExhausted: true as const } : {}),
     source: 'server',
   }
 }

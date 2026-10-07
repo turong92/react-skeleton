@@ -52,7 +52,20 @@ describe('AuthorPickerView — the folded state', () => {
     )
     expect(html).toContain(defaultAuthorProfileLabels.createProfile)
     expect(html).not.toContain('aria-haspopup="menu"') // 열 목록이 없다
-    expect(html).toContain('aria-haspopup="dialog"') // 「프로필 만들기」는 창을 연다
+    expect(html).not.toContain('aria-haspopup') // 기본은 화면 이동 등 — 창을 연다고 말하지 않는다
+  })
+
+  it('"Create a profile" says it opens a dialog when the app opens one (createOpensDialog)', () => {
+    const html = renderToStaticMarkup(
+      <AuthorPickerView
+        {...view}
+        profiles={[]}
+        value={undefined}
+        onCreateProfile={noop}
+        createOpensDialog
+      />,
+    )
+    expect(html).toContain('aria-haspopup="dialog"')
   })
 
   it('the trigger carries the chosen name in its accessible name, and the invalid state reaches the markup', () => {

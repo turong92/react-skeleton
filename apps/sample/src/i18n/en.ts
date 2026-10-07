@@ -48,14 +48,14 @@ const en: Record<keyof typeof ko, string> = {
   'login.demoPassword': 'password',
   'dashboard.greeting': 'Hello, {name}',
   'nickname.nudgeAction': 'Pick a nickname',
-  'nickname.bannerTitle': 'Give your profile a name',
+  'nickname.bannerTitle': 'Pick a nickname',
   'nickname.bannerBody':
-    'The board shows profile names. If your account had no nickname, your first profile has no name. A nickname is a private account name.',
-  'nickname.profileAction': 'Name a profile',
+    'A nickname is a private account name. The board shows profile names. The nickname you have when your first profile is created is copied once; profile names are set separately.',
+  'nickname.profileAction': 'Set profile names',
   'nickname.bannerLabel': 'Nickname reminder',
   'nickname.dialogTitle': 'Pick a nickname',
   'nickname.dialogBody':
-    'Only you see this account name. Your first profile is created the first time profiles load, with a one-time copy of the nickname if there was one; setting it now does not rename a profile that already exists. Name the profile you write as in the settings.',
+    'Only you see this account name. Your first profile only copies the nickname it had when it was created, so a profile that already exists keeps its name. Set the names shown on the board in the profiles section of the settings.',
   'nickname.later': 'Later',
   'nickname.save': 'Save',
   'nickname.saving': 'Saving',
@@ -63,13 +63,13 @@ const en: Record<keyof typeof ko, string> = {
   'settings.nicknameNone': 'Not set yet',
   'settings.nicknameSet': 'Pick a nickname',
   'settings.nicknameHint':
-    'Only you see this. Your first profile is created the first time profiles load, with a one-time copy of the nickname if there was one; changing the nickname later does not rename any profile.',
+    'Only you see this. Your first profile only copies the nickname it had when it was created, so changing the nickname later does not rename any profile.',
   'settings.profiles': 'Profiles for posts and comments',
   'settings.profilesHint':
     'On the board you write as a profile. If your account has no nickname, your first profile has no name yet — give it one. Other people cannot tell that two profiles are the same person.',
   'profileGate.title': 'Create a named profile first',
   'profileGate.body':
-    'On the board you write as a named profile. Create one below or name your first profile, then close this and try again.',
+    'On the board you write as a named profile. Create one below or name your first profile, then close this window.',
   'board.authorRequired': 'Choose which profile to write as.',
   'board.authorRequiredCreate': 'Create a named profile first.',
   'author.choose': 'Choose a profile',

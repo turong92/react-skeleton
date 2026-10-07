@@ -25,6 +25,7 @@ function Slot({ api }: { api: AuthorProfileApi }) {
             invalid={false}
             disabled={false}
             onCreateProfile={open}
+            createOpensDialog
           />
         </div>
         <Button type="submit">Post</Button>

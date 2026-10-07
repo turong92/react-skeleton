@@ -11,7 +11,7 @@ const meta = {
   title: 'Packages/author-profile/ProfileDialog',
   component: CreateFlowDemo,
   parameters: { layout: 'padded' },
-  render: () => <CreateFlowDemo api={createFakeAuthorProfiles().api} />,
+  render: (args) => <CreateFlowDemo {...args} />,
 } satisfies Meta<typeof CreateFlowDemo>
 export default meta
 type Story = StoryObj<typeof meta>

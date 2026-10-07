@@ -56,13 +56,15 @@ export function PostEditor({
   const [values, setValues] = useState(initial)
   const [problems, setProblems] = useState<Partial<Record<keyof PostEditorValues, string>>>({})
   const [authorId, setAuthorId] = useState<string>()
+  /** 「작성자를 안 골랐다」는 사실만 보관한다 — 문구는 그릴 때 지금의 `labels.authorRequired` 에서 읽는다(앱이 문구를 바꿔도 낡은 문장이 남지 않게) */
+  const [authorMissing, setAuthorMissing] = useState(false)
   const authorErrorId = useId()
   const withAuthor = authorRequired === true && authorPicker !== undefined
-  const authorProblem = problems.authorId ?? fieldErrors?.authorId
+  const authorProblem = authorMissing ? labels.authorRequired : fieldErrors?.authorId
   // 안정된 함수 — 선택기가 effect 의존에 넣어도 매 렌더 다시 돌지 않는다
   const changeAuthor = useCallback((next: string | undefined) => {
     setAuthorId(next)
-    if (next) setProblems((current) => ({ ...current, authorId: undefined }))
+    if (next) setAuthorMissing(false)
   }, [])
 
   function check(): typeof problems {
@@ -75,7 +77,7 @@ export function PostEditor({
     if (!body) found.body = labels.bodyRequired
     else if (body.length > limits.bodyMaxLength)
       found.body = labels.bodyTooLong(limits.bodyMaxLength)
-    if (withAuthor && !authorId) found.authorId = labels.authorRequired
+    if (withAuthor && !authorId) found.authorId = labels.authorRequired // 첫 오류 칸을 가리는 표식 — 그릴 때는 `authorMissing` 으로
     return found
   }
 
@@ -84,6 +86,7 @@ export function PostEditor({
     const form = event.currentTarget
     const found = check()
     setProblems(found)
+    setAuthorMissing(found.authorId !== undefined)
     const first = Object.keys(found)[0]
     if (first === 'authorId') {
       focusAuthorSlot(form)

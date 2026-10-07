@@ -29,7 +29,7 @@ export const DEFAULT_AUTH_METHODS = ''
 export const DEFAULT_REFRESH_DELIVERY: RefreshDelivery = 'body'
 
 /**
- * 닉네임이 없는 로그인 사용자(소셜 · 링크 가입, 옛 계정)에게 계정 설정으로 가는 눈에 띄는 안내 띠(주 버튼 「닉네임 정하기」 → 그 자리의 대화상자)를 보인다 — 닫을 수 있고 다음 방문에 다시 보인다. 끄려면 `false`.
+ * 닉네임이 없는 로그인 사용자(소셜 · 링크 가입, 옛 계정)에게 계정 설정으로 가는 눈에 띄는 안내 띠(주 버튼 「닉네임 정하기」 → 그 자리의 대화상자, 보조 링크 「프로필 이름 정하기」 → 설정의 프로필 구역)를 보인다 — 조건은 계정 닉네임이 없다는 것뿐이다(프로필 이름은 쓰기 시점의 프로필 게이트가 맡는다) — 닫을 수 있고 다음 방문에 다시 보인다. 끄려면 `false`.
  * 가입에서 닉네임을 필수로 받는 앱(`authRoutes.tsx` 의 `signUp.displayName`)이라도 다른 길로 들어온 계정이 있어 기본은 켠다.
  */
 export const NICKNAME_NUDGE = true

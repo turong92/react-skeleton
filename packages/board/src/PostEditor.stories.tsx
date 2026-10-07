@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { useState, type ComponentProps } from 'react'
 import { expect, fn } from 'storybook/test'
 import { PostEditor } from './PostEditor'
 import { demoAuthorPicker } from './stories/demoAuthorPicker'
@@ -151,6 +152,38 @@ export const AuthorRequiredMessageIsAProp: Story = {
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(canvas.getByRole('button', { name: 'Publish' }))
     await expect(canvas.getByRole('alert')).toHaveTextContent('누구로 쓸지 골라 주세요.')
+  },
+}
+
+/** 보관하는 것은 「작성자를 안 골랐다」는 사실뿐이다 — 문구는 그릴 때 지금의 `labels` 에서 읽는다. 앱이 문구를 바꾸면(예: 프로필을 만들고 돌아와 「골라 주세요」로) 낡은 문장이 남지 않는다 */
+function MessageDemo(args: ComponentProps<typeof PostEditor>) {
+  const [made, setMade] = useState(false)
+  return (
+    <>
+      <button type="button" onClick={() => setMade(true)}>
+        profile made
+      </button>
+      <PostEditor
+        {...args}
+        labels={{ authorRequired: made ? '골라 주세요.' : '먼저 만들어 주세요.' }}
+      />
+    </>
+  )
+}
+
+export const AuthorMessageFollowsTheCurrentLabels: Story = {
+  args: {
+    authorRequired: true,
+    authorPicker: demoAuthorPicker([{ id: 'prf_a', name: '하늘' }], '작성자', '고르세요'),
+    initial: { title: 'T', body: 'B' },
+  },
+  render: (args) => <MessageDemo {...args} />,
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole('button', { name: 'Publish' }))
+    await expect(canvas.getByRole('alert')).toHaveTextContent('먼저 만들어 주세요.')
+    await userEvent.click(canvas.getByRole('button', { name: 'profile made' }))
+    await expect(canvas.getByRole('alert')).toHaveTextContent('골라 주세요.')
+    await expect(canvas.queryByText('먼저 만들어 주세요.')).toBeNull()
   },
 }
 

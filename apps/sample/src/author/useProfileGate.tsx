@@ -15,7 +15,7 @@ export type ProfileGate = {
   /** 쓰기 직전에 부른다 — 이름 있는 프로필이 없으면 대화상자를 열고 false(쓰던 글은 호출한 쪽이 그대로 둔다) */
   ensure: () => boolean
   /** 대화상자를 연다(선택기의 「프로필 만들기」) — 쓰던 글은 그대로 남는다 */
-  open: () => void
+  open: (event?: { currentTarget: Element }) => void
   /** 폼 **밖**(페이지)에 그려 둔다 — 대화상자 안의 폼이 글쓰기 폼에 중첩되지 않게 */
   dialog: ReactNode
 }

@@ -46,10 +46,12 @@ function render(profile: object | undefined) {
 describe('NicknameNudge', () => {
   it('shows a conspicuous band with a filled primary button when the account has no nickname', () => {
     const html = render({ id: 'acc_1', displayName: null })
-    expect(html).toContain('프로필에 이름을 붙여 주세요')
-    expect(html).toMatch(/data-variant="primary"[^>]*>프로필 이름 붙이기</) // 주 버튼 — 게시판에 보이는 이름은 프로필 이름이다
-    expect(html).toContain('href="/settings#profiles"')
-    expect(html).toMatch(/data-variant="secondary"[^>]*>[^<]*(<[^>]*>)*[^<]*닉네임 정하기/)
+    expect(html).toContain('닉네임을 정해 주세요')
+    expect(html).toMatch(/data-variant="primary"[^>]*>닉네임 정하기</)
+    // 보조 링크 — 게시판에 보이는 이름은 프로필 이름이라 그 구역으로도 보낸다
+    expect(html).toMatch(
+      /data-variant="secondary"[^>]*href="\/settings#profiles"[^>]*>프로필 이름 정하기</,
+    )
     expect(html).toContain('aria-label="닉네임 안내"')
   })
 
@@ -61,9 +63,7 @@ describe('NicknameNudge', () => {
   })
 
   it('stays out of the way once there is a nickname, and while the profile is unknown', () => {
-    expect(render({ id: 'acc_1', displayName: '수민' })).not.toContain(
-      '프로필에 이름을 붙여 주세요',
-    )
-    expect(render(undefined)).not.toContain('프로필에 이름을 붙여 주세요')
+    expect(render({ id: 'acc_1', displayName: '수민' })).not.toContain('닉네임을 정해 주세요')
+    expect(render(undefined)).not.toContain('닉네임을 정해 주세요')
   })
 })

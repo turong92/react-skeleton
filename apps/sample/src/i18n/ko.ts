@@ -49,14 +49,14 @@ export default {
   'login.demoPassword': 'password',
   'dashboard.greeting': '안녕하세요, {name}님',
   'nickname.nudgeAction': '닉네임 정하기',
-  'nickname.bannerTitle': '프로필에 이름을 붙여 주세요',
+  'nickname.bannerTitle': '닉네임을 정해 주세요',
   'nickname.bannerBody':
-    '게시판에는 프로필 이름이 보여요. 닉네임이 없던 계정의 첫 프로필은 이름이 없어요. 닉네임은 나만 보는 계정 이름이에요.',
-  'nickname.profileAction': '프로필 이름 붙이기',
+    '닉네임은 나만 보는 계정 이름이에요. 게시판에는 프로필 이름이 보여요. 첫 프로필이 만들어질 때의 닉네임이 한 번 복사돼요(프로필 이름은 따로 정해요).',
+  'nickname.profileAction': '프로필 이름 정하기',
   'nickname.bannerLabel': '닉네임 안내',
   'nickname.dialogTitle': '닉네임 정하기',
   'nickname.dialogBody':
-    '나만 보는 계정 이름이에요. 첫 프로필은 처음 불러올 때 닉네임이 있었으면 한 번 복사돼 만들어지고, 지금 정해도 이미 만들어진 프로필 이름은 바뀌지 않아요. 게시판에 보일 이름은 설정의 프로필에서 붙여 주세요.',
+    '나만 보는 계정 이름이에요. 첫 프로필은 만들어질 때의 닉네임을 한 번 복사할 뿐이라, 이미 만들어진 프로필의 이름은 바뀌지 않아요. 게시판에 보일 이름은 설정의 프로필에서 정해요.',
   'nickname.later': '나중에',
   'nickname.save': '저장',
   'nickname.saving': '저장 중',
@@ -64,13 +64,13 @@ export default {
   'settings.nicknameNone': '아직 정하지 않았어요',
   'settings.nicknameSet': '닉네임 정하기',
   'settings.nicknameHint':
-    '나만 보는 이름이에요. 첫 프로필은 처음 불러올 때 닉네임이 있었으면 한 번 복사돼 만들어지고, 그 뒤 닉네임을 바꿔도 프로필 이름은 바뀌지 않아요.',
+    '나만 보는 이름이에요. 첫 프로필은 만들어질 때의 닉네임을 한 번 복사할 뿐이라, 그 뒤 닉네임을 바꿔도 프로필 이름은 바뀌지 않아요.',
   'settings.profiles': '글 · 댓글에 쓰는 프로필',
   'settings.profilesHint':
     '게시판에는 프로필 이름으로 글과 댓글을 써요. 닉네임이 없는 계정의 첫 프로필은 이름이 없으니 이름을 붙여 주세요. 같은 사람이 쓴 글이라는 사실은 다른 사람에게 보이지 않아요.',
   'profileGate.title': '이름 있는 프로필을 먼저 만들어 주세요',
   'profileGate.body':
-    '게시판에는 이름 있는 프로필로 글과 댓글을 써요. 아래에서 프로필을 만들거나 이름을 붙인 뒤 닫고 다시 눌러 주세요.',
+    '게시판에는 이름 있는 프로필로 글과 댓글을 써요. 아래에서 프로필을 만들거나 이름을 붙인 뒤 이 창을 닫아 주세요.',
   'board.authorRequired': '어느 프로필로 쓸지 골라 주세요.',
   'board.authorRequiredCreate': '먼저 이름 있는 프로필을 만들어 주세요.',
   'author.choose': '프로필 고르기',

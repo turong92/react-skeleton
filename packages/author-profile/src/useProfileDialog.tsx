@@ -32,7 +32,10 @@ export function useProfileDialog({
   description,
   closeLabel,
   alsoInvalidate,
-}: UseProfileDialogOptions): { open: () => void; dialog: ReactNode } {
+}: UseProfileDialogOptions): {
+  open: (event?: { currentTarget: Element }) => void
+  dialog: ReactNode
+} {
   const [opened, setOpened] = useState(false)
   const origin = useRef<{ opener: Element | null; form: Element | null }>({
     opener: null,
@@ -40,9 +43,10 @@ export function useProfileDialog({
   })
   const wasOpened = useRef(false)
 
-  function open() {
-    const active = document.activeElement
-    origin.current = { opener: active, form: active?.closest('form') ?? null }
+  /** 클릭 이벤트를 받으면 그 `currentTarget` 이 연 단추다(Safari 는 단추를 눌러도 포커스를 주지 않아 `activeElement` 가 body 일 수 있다) */
+  function open(event?: { currentTarget: Element }) {
+    const opener = event?.currentTarget ?? document.activeElement
+    origin.current = { opener, form: opener?.closest('form') ?? null }
     setOpened(true)
   }
 

@@ -198,9 +198,14 @@ describe('an account made without a nickname (a mailed sign-in link) is asked fo
       .first()
       .click()
 
-  it('the band leads to naming a profile (the board shows profile names) and still offers the nickname dialog', async () => {
+  it('the band asks for the nickname and links on to naming the profiles (the board shows profile names)', async () => {
     // 앞 테스트에서 닉네임을 정한 계정이라 띠는 이미 없다 — 새 계정으로
     await signInAsFreshAccount('band')
+    // 조건은 계정 닉네임이 없다는 것뿐 — 제목 · 주 버튼은 닉네임, 보조 링크가 프로필 구역으로 간다
+    await pwExpect(reminder().getByText(ko('nickname.bannerTitle'))).toBeVisible()
+    await pwExpect(
+      reminder().getByRole('button', { name: ko('nickname.nudgeAction') }),
+    ).toBeVisible()
     await pwExpect(
       reminder().getByRole('link', { name: ko('nickname.profileAction') }),
     ).toHaveAttribute('href', '/settings#profiles')
@@ -219,7 +224,7 @@ describe('an account made without a nickname (a mailed sign-in link) is asked fo
         new URL(r.url()).pathname === '/api/v1/author-profiles' && r.request().method() === 'GET',
     )
     await openBoard(page)
-    await listed
+    await (await listed).finished() // 응답 본문까지 끝나야 화면이 목록을 안다
     await page.getByRole('button', { name: ko('board.write') }).click()
     const dialog = page.getByRole('dialog')
     await pwExpect(dialog.getByRole('heading', { name: ko('profileGate.title') })).toBeVisible()
@@ -264,6 +269,7 @@ describe('an account made without a nickname (a mailed sign-in link) is asked fo
     await closeDialog(dialog)
     await pwExpect(dialog).toHaveCount(0)
     await pwExpect(draft).toHaveValue('쓰던 제목') // 쓰던 글이 남는다
+    await pwExpect(reminder()).toBeVisible() // 프로필에 이름을 붙여도 계정 닉네임이 없으면 띠는 그대로
     // 「프로필 만들기」 단추는 사라졌고, 선택기 자리의 단추가 포커스를 받는다(body 로 떨어지지 않는다)
     await pwExpect(form.locator('[data-author-slot] button[aria-haspopup="menu"]')).toBeFocused()
     await chooseProfile(form, renamed)

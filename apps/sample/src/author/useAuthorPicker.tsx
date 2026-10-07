@@ -38,6 +38,7 @@ export function useAuthorPicker(
         boardCode={boardCode}
         labels={labels}
         onCreateProfile={gate.open}
+        createOpensDialog
       />
     ) : (
       <AuthorPicker
@@ -47,6 +48,7 @@ export function useAuthorPicker(
         memory={memory}
         labels={labels}
         onCreateProfile={gate.open}
+        createOpensDialog
       />
     )
 }

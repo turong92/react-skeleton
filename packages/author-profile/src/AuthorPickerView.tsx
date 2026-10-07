@@ -31,8 +31,8 @@ export type AuthorPickerViewProps = AuthorPickerSlotProps & {
   /** 있으면 처음 값(②)을 읽고 사람이 고른 것을 쓴다 */
   memory?: AuthorMemory
   /** 프로필이 하나도 없을 때 「프로필 만들기」 단추가 부르는 앱의 진입(관리 화면으로 가기 · 만들기 창 열기) */
-  onCreateProfile?: () => void
-  /** 「프로필 만들기」가 창(대화상자)을 여는가 — 기본 true(`useProfileDialog`). 화면 이동이면 false 로 줘서 낭독기에 창이 열린다고 말하지 않게 한다 */
+  onCreateProfile?: (event: { currentTarget: Element }) => void
+  /** 「프로필 만들기」가 창(대화상자)을 여는가 — 기본 false(화면 이동 · 다른 동작). `useProfileDialog` 로 창을 여는 앱은 true 로 줘서 낭독기에 창이 열린다고 말하게 한다(`aria-haspopup="dialog"`) */
   createOpensDialog?: boolean
   labels?: Partial<AuthorProfileLabels>
 }
@@ -49,7 +49,7 @@ export function AuthorPickerView({
   boardCode,
   memory,
   onCreateProfile,
-  createOpensDialog = true,
+  createOpensDialog = false,
   labels: given,
   value,
   onChange,

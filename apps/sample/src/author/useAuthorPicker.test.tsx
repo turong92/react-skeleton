@@ -61,7 +61,7 @@ describe('the board author picker of the sample', () => {
     expect(html).not.toContain('프로필 만들기')
   })
 
-  it('a comment can always be edited: the post page hands the board no `beforeWrite` gate (it would block edits too)', () => {
+  it('source guard — the post page hands the board no `beforeWrite` (the board would run it for comment edits too)', () => {
     const page = readFileSync(new URL('../routes/BoardPostPage.tsx', import.meta.url), 'utf8')
     expect(page).not.toContain('beforeWrite')
   })

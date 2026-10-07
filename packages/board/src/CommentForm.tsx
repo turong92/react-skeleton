@@ -63,13 +63,14 @@ export function CommentForm({
   const [error, setError] = useState<string>()
   const [pending, setPending] = useState(false)
   const [authorId, setAuthorId] = useState<string>()
-  const [authorError, setAuthorError] = useState<string>()
+  /** 「작성자를 안 골랐다」는 사실만 보관한다 — 문구는 그릴 때 지금의 `authorRequiredMessage` 에서 읽는다(앱이 문구를 바꿔도 낡은 문장이 남지 않게) */
+  const [authorMissing, setAuthorMissing] = useState(false)
   const authorErrorId = useId()
   const withAuthor = authorRequired === true && authorPicker !== undefined
   // 안정된 함수 — 선택기가 effect 의존에 넣어도 매 렌더 다시 돌지 않는다
   const changeAuthor = useCallback((next: string | undefined) => {
     setAuthorId(next)
-    if (next) setAuthorError(undefined)
+    if (next) setAuthorMissing(false)
   }, [])
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -82,9 +83,9 @@ export function CommentForm({
         : body.length > maxLength
           ? tooLongMessage(maxLength)
           : undefined
-    const authorProblem = withAuthor && !authorId ? authorRequiredMessage : undefined
+    const authorProblem = withAuthor && !authorId
     setError(problem)
-    setAuthorError(authorProblem)
+    setAuthorMissing(authorProblem)
     if (problem) {
       ;(form.elements.namedItem('body') as HTMLElement | null)?.focus()
       return
@@ -126,7 +127,7 @@ export function CommentForm({
             onChange={changeAuthor}
             threadAuthorId={threadAuthorId}
             threadLoading={threadLoading}
-            error={authorError}
+            error={authorMissing ? authorRequiredMessage : undefined}
             errorId={authorErrorId}
             disabled={pending}
           />
@@ -140,7 +141,12 @@ export function CommentForm({
           </Button>
         )}
       </div>
-      {withAuthor && <AuthorError id={authorErrorId} message={authorError} />}
+      {withAuthor && (
+        <AuthorError
+          id={authorErrorId}
+          message={authorMissing ? authorRequiredMessage : undefined}
+        />
+      )}
     </form>
   )
 }

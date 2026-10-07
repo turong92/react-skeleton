@@ -20,9 +20,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 전역 오류 토스트는 `AUTHOR_PROFILE.*` 오류를 건너뛰고(폼이 제자리에서 말한다), 계정이 바뀌거나 로그아웃하면 서버 상태 캐시와 함께 기기 기억(`forgetAuthorMemory`)을 한 곳(`onAccountChange`)에서 지운다.
 - e2e `authorProfiles.e2e.ts`(백엔드 `author-profile` 이 켜진 샘플 필요) · 기존 e2e 의 글쓰기 단계는 프로필이 필요하면 하나 만들어 고른다.
 
+### Changed — `apps/sample` 안내 띠 · `@skeleton/board` 폼의 작성자 오류
+
+- 닉네임 없는 계정의 안내 띠: 조건(계정 닉네임이 없음)은 그대로이고, 제목 · 주 버튼은 「닉네임을 정해 주세요」 · 「닉네임 정하기」(나만 보는 계정 이름), 보조 링크 「프로필 이름 정하기」가 설정의 프로필 구역으로 간다. 본문은 「첫 프로필이 만들어질 때의 닉네임이 한 번 복사된다」로만 말한다. 프로필 이름은 쓰기 시점의 프로필 게이트가 묻는다.
+- `@skeleton/board` `PostEditor` · `CommentForm`: 작성자를 안 골랐다는 **사실**만 보관하고 오류 문장은 그릴 때 지금의 `labels.authorRequired` 에서 읽는다(제출 시점 문자열을 보관하지 않는다 — 문구가 바뀌어도 낡은 문장이 남지 않는다). 스토리 `AuthorMessageFollowsTheCurrentLabels`.
+- `AuthorPickerView.createOpensDialog` 의 기본값은 false(창을 여는 앱이 true 를 준다 — 샘플은 true). `useProfileDialog().open` 은 클릭 이벤트의 `currentTarget` 을 연 단추로 받는다.
+
 ### Added — `@skeleton/author-profile`: 프로필 만들기 대화상자
 
-- `useProfileDialog({ api, title, … })` → `{ open, dialog }`: 선택기의 「프로필 만들기」가 여는 프로필 관리 대화상자(쓰던 글 유지 · 열렸을 때만 마운트 · 닫을 때 연 단추가 사라졌으면 선택기 자리로 포커스). `AuthorPickerView.createOpensDialog`(기본 true → 「프로필 만들기」 단추 `aria-haspopup="dialog"`). 스토리 `ProfileDialog`.
+- `useProfileDialog({ api, title, … })` → `{ open, dialog }`: 선택기의 「프로필 만들기」가 여는 프로필 관리 대화상자(쓰던 글 유지 · 열렸을 때만 마운트 · 닫을 때 연 단추가 사라졌으면 선택기 자리로 포커스). `AuthorPickerView.createOpensDialog`(「프로필 만들기」 단추 `aria-haspopup="dialog"`). 스토리 `ProfileDialog`.
 
 ### Added — `@skeleton/ui`
 

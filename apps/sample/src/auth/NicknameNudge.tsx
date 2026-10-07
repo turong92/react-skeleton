@@ -9,7 +9,7 @@ import { useMyProfile } from './useMyProfile'
 import styles from './NicknameNudge.module.css'
 
 /**
- * 닉네임이 없는 로그인 사용자에게 — 화면 위쪽의 눈에 띄는 띠(강조색 바탕 · 굵은 제목 · 채워진 주 버튼). 주 버튼은 프로필 이름을 붙이는 설정 구역으로 가고(게시판에 보이는 이름은 프로필 이름이다), 보조 버튼은 그 자리의 대화상자에서 계정 닉네임을 정한다.
+ * 닉네임이 없는 로그인 사용자에게 — 화면 위쪽의 눈에 띄는 띠(강조색 바탕 · 굵은 제목 · 채워진 주 버튼). 주 버튼은 그 자리의 대화상자에서 계정 닉네임(나만 보는 이름)을 정하고, 보조 링크는 프로필 이름을 정하는 설정 구역으로 간다(프로필 이름은 쓰기 시점의 프로필 게이트가 먼저 묻는다). 띠의 조건은 계정 닉네임이 없다는 것뿐이다.
  * 닫을 수 있지만 저장하지 않고 이 화면 상태에만 두므로 다음 방문(새로고침 · 다시 로그인)에는 다시 보인다. 색만으로 강조하지 않는다 — 제목 · 굵은 왼쪽 막대 · 버튼이 함께
  */
 export function NicknameNudge() {
@@ -25,10 +25,10 @@ export function NicknameNudge() {
         <span>{t('nickname.bannerBody')}</span>
       </div>
       <div className={styles.actions}>
-        <LinkButton to="/settings#profiles">{t('nickname.profileAction')}</LinkButton>
-        <Button variant="secondary" onClick={gate.open}>
-          {t('nickname.nudgeAction')}
-        </Button>
+        <Button onClick={gate.open}>{t('nickname.nudgeAction')}</Button>
+        <LinkButton to="/settings#profiles" variant="secondary">
+          {t('nickname.profileAction')}
+        </LinkButton>
         <Button variant="ghost" onClick={() => setDismissed(true)}>
           {t('nickname.later')}
         </Button>

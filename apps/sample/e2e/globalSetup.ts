@@ -73,10 +73,13 @@ export default async function setup(project: TestProject) {
       await freePort(),
     ]
     if (process.env.E2E_FAKE_PROVIDERS === '1') fake = await startFakeProviders()
+    // 링크 로그인 요청은 같은 IP(::1)에서 시간당 10번(`skeleton.auth-magic-link.per-ip`, 넘으면 429)이 한도다 — 이 실행의 시나리오는 한 백엔드에 새 계정을 여럿 만들어 10번을 넘는다. e2e 백엔드에서만 올린다
+    const e2eLimits = { 'auth-magic-link': { 'per-ip': 100 } }
     const fakeConfig = fake
       ? {
           SPRING_APPLICATION_JSON: JSON.stringify({
             skeleton: {
+              ...e2eLimits,
               'auth-social-oidc': {
                 providers: {
                   line: {
@@ -108,7 +111,7 @@ export default async function setup(project: TestProject) {
             },
           }),
         }
-      : {}
+      : { SPRING_APPLICATION_JSON: JSON.stringify({ skeleton: e2eLimits }) }
     backendEnv = {
       ...process.env,
       ...fakeConfig,

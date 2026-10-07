@@ -151,7 +151,8 @@ describe('Notes — the main journey against the real backend', () => {
     const opened = await popup
     // presigned 주소로 열린다(로컬 S3)
     await opened.waitForLoadState('domcontentloaded')
-    pwExpect(opened.url()).toContain('agenda.txt')
+    // 백엔드가 파일 키를 불투명하게 만든다(`key-owner=OPAQUE`: `uploads/o/<uuid>.<mac>/file.txt`) — 원래 파일 이름은 주소에 없고 확장자만 남는다. 이름은 위의 첨부 목록으로 확인했다
+    pwExpect(new URL(opened.url()).pathname).toMatch(/\/file\.txt$/)
     await opened.close()
   })
 

@@ -11,6 +11,15 @@ export type AuthLabels = {
   newPassword: string
   currentPassword: string
   displayName: string
+  /** 닉네임 칸 아래 안내 */
+  displayNameHint: string
+  /** 설정 · 프로필에서 `닉네임#번호` 를 보여 주는 줄의 이름 */
+  displayNameShownAs: string
+  errorDisplayNameTaken: string
+  /** 가입 인증 단계에서 닉네임이 겹쳤을 때 — 닉네임만 바꿔 처음부터 */
+  displayNameTakenRestart: string
+  problemDisplayNameMissing: string
+  problemDisplayNameTooLong: (max: number) => string
   or: string
   back: string
   continue: string
@@ -307,7 +316,14 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   password: 'Password',
   newPassword: 'New password',
   currentPassword: 'Current password',
-  displayName: 'Display name',
+  displayName: 'Nickname',
+  displayNameHint: 'This is the name other people see.',
+  displayNameShownAs: 'Shown to others as',
+  errorDisplayNameTaken: 'That nickname is already taken.',
+  displayNameTakenRestart:
+    'Change the nickname and start over. You will need to enter your password again.',
+  problemDisplayNameMissing: 'Enter a nickname',
+  problemDisplayNameTooLong: (max) => `Use ${max} characters or fewer`,
   or: 'or',
   back: 'Back',
   continue: 'Continue',

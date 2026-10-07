@@ -190,3 +190,17 @@
 .matches {
   border-color: var(--teal);
 }
+
+.shownAs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.shownAs strong {
+  color: var(--text-strong);
+  overflow-wrap: anywhere;
+}

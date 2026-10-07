@@ -1,7 +1,9 @@
 import { useAuth } from '@skeleton/auth'
 import { setTheme, THEMES, useTheme, type Theme } from '@skeleton/theme'
-import { Button, Card, Field, PageHeader, Select } from '@skeleton/ui'
+import { Button, Card, CopyButton, Field, PageHeader, SectionCard, Select } from '@skeleton/ui'
 import { Link, useNavigate } from 'react-router-dom'
+import { shownName } from '../auth/profileDisplay'
+import { useMyProfile } from '../auth/useMyProfile'
 import { useT } from '../i18n'
 import styles from './SettingsPage.module.css'
 
@@ -9,6 +11,9 @@ import styles from './SettingsPage.module.css'
 export function SettingsPage() {
   const { t } = useT()
   const { principal, logout } = useAuth()
+  const profile = useMyProfile().data
+  const nickname = shownName(profile)
+  const accountId = profile?.id ?? principal?.accountId
   const theme = useTheme()
   const navigate = useNavigate()
 
@@ -40,12 +45,19 @@ export function SettingsPage() {
       <Card title={t('settings.account')}>
         <dl className={styles.list}>
           <div>
-            <dt>{t('settings.email')}</dt>
-            <dd>{principal?.email ?? t('common.none')}</dd>
+            <dt>{t('settings.nickname')}</dt>
+            <dd>
+              {nickname ?? (
+                <>
+                  {t('settings.nicknameNone')} ·{' '}
+                  <Link to="/account#profile">{t('settings.nicknameSet')}</Link>
+                </>
+              )}
+            </dd>
           </div>
           <div>
-            <dt>{t('settings.accountId')}</dt>
-            <dd>{principal?.accountId ?? t('common.none')}</dd>
+            <dt>{t('settings.email')}</dt>
+            <dd>{profile?.email ?? principal?.email ?? t('common.none')}</dd>
           </div>
           <div>
             <dt>{t('settings.roles')}</dt>
@@ -54,6 +66,23 @@ export function SettingsPage() {
         </dl>
         <Link to="/account">{t('settings.manageAccount')}</Link>
       </Card>
+      <SectionCard
+        id="support"
+        title={t('settings.support')}
+        description={t('settings.supportHint')}
+        collapsible
+        defaultExpanded={false}
+      >
+        <dl className={styles.list}>
+          <div>
+            <dt>{t('settings.accountId')}</dt>
+            <dd className={styles.idRow}>
+              <code>{accountId ?? t('common.none')}</code>
+              {accountId && <CopyButton value={accountId} label={t('common.copy')} />}
+            </dd>
+          </div>
+        </dl>
+      </SectionCard>
       <Card title={t('settings.session')}>
         <div className={styles.session}>
           <p>{t('settings.sessionHint')}</p>

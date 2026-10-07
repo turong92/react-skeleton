@@ -10,6 +10,8 @@ import {
   type TableColumn,
 } from '@skeleton/ui'
 import type { ReactNode } from 'react'
+import { AuthorName } from './AuthorName'
+import { collidingNames, type AuthorTagMode } from './authorDisplay'
 import { resolvePostListLabels, type PostListLabelsInput } from './postListLabels'
 import { PostListToolbar } from './PostListToolbar'
 import { POST_SORTS, type PostSort, type PostSummary } from './types'
@@ -39,6 +41,8 @@ export type PostListProps = {
   onRetry?: () => void
   formatTime?: (iso: string) => string
   labels?: PostListLabelsInput
+  /** 작성자 꼬리표(`#4821`)를 보일 때 — 기본은 같은 목록에서 닉네임이 겹칠 때만 */
+  authorTag?: AuthorTagMode
 }
 
 const total = (counts: PostSummary['reactionCounts']) =>
@@ -63,8 +67,10 @@ export function PostList({
   onRetry,
   formatTime = (iso) => formatInstant(iso),
   labels: input,
+  authorTag,
 }: PostListProps) {
   const labels = resolvePostListLabels(input)
+  const colliding = collidingNames(posts)
   const columns: TableColumn<PostSummary>[] = [
     {
       key: 'title',
@@ -82,6 +88,20 @@ export function PostList({
             )}
           </span>
           {post.excerpt && <span className={styles.excerpt}>{post.excerpt}</span>}
+        </span>
+      ),
+    },
+    {
+      key: 'author',
+      header: labels.author,
+      render: (post) => (
+        <span className={styles.nowrap}>
+          <AuthorName
+            author={post}
+            labels={labels}
+            tag={authorTag}
+            collides={colliding.has(post.authorName?.trim() ?? '')}
+          />
         </span>
       ),
     },

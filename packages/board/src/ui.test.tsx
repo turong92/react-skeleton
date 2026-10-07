@@ -86,13 +86,16 @@ describe('CommentThread', () => {
         onReply={noop}
         onEdit={noop}
         onDelete={noop}
-        thread={thread(1, [comment(2, 1, { authorId: 'me' })], { authorId: 'other' })}
+        thread={thread(1, [comment(2, 1, { authorId: 'me', authorName: 'Me' })], {
+          authorId: 'other',
+          authorName: 'Other',
+        })}
       />,
     )
-    expect(html).toContain('aria-label="Reply: other"')
-    expect(html).not.toContain('aria-label="Reply: me"') // 최대 깊이
-    expect(html).toContain('aria-label="Edit: me"')
-    expect(html).not.toContain('aria-label="Edit: other"')
+    expect(html).toContain('aria-label="Reply: Other"')
+    expect(html).not.toContain('aria-label="Reply: Me"') // 최대 깊이
+    expect(html).toContain('aria-label="Edit: Me"')
+    expect(html).not.toContain('aria-label="Edit: Other"')
   })
 
   it('moderator buttons appear only when canModerate', () => {

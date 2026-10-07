@@ -1,0 +1,28 @@
+.author {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-width: 0;
+  max-width: 100%;
+}
+
+.avatar {
+  display: inline-flex;
+  flex: none;
+}
+
+.name {
+  overflow-wrap: anywhere;
+  font-weight: 650;
+}
+
+.author[data-kind='deleted'] .name,
+.author[data-kind='unnamed'] .name {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.tag {
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+}

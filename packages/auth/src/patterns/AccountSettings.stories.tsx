@@ -626,3 +626,40 @@ export const DeletionNoticeMentionsSelfRestoreOnlyWhenOn: Story = {
     ).toBeVisible()
   },
 }
+
+/** 프로필 — 서버가 꼬리표를 붙이면 「다른 사람에게 보이는 이름」 줄에 `닉네임#번호` 가 한 덩어리로 보이고 복사할 수 있다 */
+export const NicknameWithTheServerTag: Story = {
+  args: { fake: { displayTag: '4821' } },
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByText('Ann#4821')).toBeVisible()
+    await expect(canvas.getByLabelText('Nickname')).toHaveValue('Ann')
+    await expect(canvas.getByRole('button', { name: 'Copy' })).toBeVisible()
+  },
+}
+
+/** 닉네임 중복 금지(서버 선택 기능) — 저장하면 409 `ACCOUNT.DISPLAY_NAME_TAKEN` 이 칸 아래에 그대로 보이고 입력은 남는다 */
+export const NicknameTakenShowsUnderTheField: Story = {
+  args: { fake: { takenNicknames: ['Bob'] } },
+  play: async ({ canvas, userEvent }) => {
+    const field = await canvas.findByLabelText('Nickname')
+    await userEvent.clear(field)
+    await userEvent.type(field, '  Bob  ')
+    const profile = within(canvas.getByRole('form', { name: 'Profile' }))
+    await userEvent.click(profile.getByRole('button', { name: 'Save' }))
+    await expect(await profile.findByText('That nickname is already taken.')).toBeVisible()
+    await expect(field).toHaveValue('  Bob  ')
+    await expect(field).toHaveAccessibleDescription(/already taken/)
+    await expect(field).toHaveAttribute('aria-invalid', 'true')
+  },
+}
+
+export const NicknameSaves: Story = {
+  play: async ({ canvas, userEvent }) => {
+    const field = await canvas.findByLabelText('Nickname')
+    await userEvent.clear(field)
+    await userEvent.type(field, '  Annie  ')
+    const profile = within(canvas.getByRole('form', { name: 'Profile' }))
+    await userEvent.click(profile.getByRole('button', { name: 'Save' }))
+    await expect(await profile.findByText('Profile saved.')).toBeVisible()
+  },
+}

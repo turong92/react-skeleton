@@ -1,6 +1,7 @@
 import { PostList, usePosts } from '@skeleton/board'
 import { Button, EmptyState, PageHeader, Spinner } from '@skeleton/ui'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useNicknameGate } from '../auth/nicknameGateContext'
 import { boardApi } from '../board/api'
 import { paramsFromSearch, searchFromParams } from '../board/boardParams'
 import { useBoardCode } from '../board/useBoardCode'
@@ -13,6 +14,11 @@ import styles from './BoardPage.module.css'
 function Posts({ code }: { code: string }) {
   const { t } = useT()
   const navigate = useNavigate()
+  const gate = useNicknameGate()
+  const write = () => {
+    // 닉네임이 없으면 먼저 정하게 한다(대화상자) — 정한 뒤 다시 누른다
+    if (gate.ensure()) navigate('/board/new')
+  }
   const [search, setSearch] = useSearchParams()
   const params = paramsFromSearch(search)
   const posts = usePosts(boardApi, code, params)
@@ -32,8 +38,8 @@ function Posts({ code }: { code: string }) {
       query={params.q}
       onSearch={(q) => change({ q, page: 0 })}
       renderTitle={(post) => <Link to={`/board/${post.id}`}>{post.title}</Link>}
-      actions={<Button onClick={() => navigate('/board/new')}>{t('board.write')}</Button>}
-      emptyAction={<Button onClick={() => navigate('/board/new')}>{t('board.writeFirst')}</Button>}
+      actions={<Button onClick={write}>{t('board.write')}</Button>}
+      emptyAction={<Button onClick={write}>{t('board.writeFirst')}</Button>}
       labels={postListLabels(t)}
     />
   )

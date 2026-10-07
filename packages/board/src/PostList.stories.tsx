@@ -10,13 +10,26 @@ import { summary } from './test/fixtures'
 const posts = [
   summary(1, {
     title: 'Welcome to the board',
+    authorId: 'acc_a1',
+    authorName: 'Admin',
     pinned: true,
     commentCount: 2,
     viewCount: 40,
     reactionCounts: { LIKE: 12, EMPATHY: 3 },
   }),
-  summary(2, { title: 'How do you organize notes?', commentCount: 7, viewCount: 9 }),
-  summary(3, { title: 'A draft of mine', status: 'DRAFT' }),
+  summary(2, {
+    title: 'How do you organize notes?',
+    authorId: 'acc_b2',
+    authorName: null,
+    commentCount: 7,
+    viewCount: 9,
+  }),
+  summary(3, {
+    title: 'A draft of mine',
+    status: 'DRAFT',
+    authorId: 'deleted:7f3a',
+    authorDeleted: true,
+  }),
 ]
 
 const meta = {
@@ -139,5 +152,44 @@ export const Dark: Story = {
   play: async ({ canvas }) => {
     await expect(document.documentElement).toHaveAttribute('data-theme', 'dark')
     await expect(canvas.getByRole('table', { name: 'Posts' })).toBeVisible()
+  },
+}
+
+/** 작성자 열 — 닉네임 · 이름 없음 · 탈퇴(계정 id 는 어디에도 없다). 한국어 문구는 `labels` 로 */
+export const Authors: Story = {
+  args: {
+    labels: {
+      caption: '글 목록',
+      author: '작성자',
+      authorDeleted: '탈퇴한 사용자',
+      authorUnnamed: '이름 없는 사용자',
+    },
+    posts: [
+      ...posts,
+      summary(4, {
+        title: '같은 닉네임 첫째',
+        authorId: 'acc_x',
+        authorName: '수민',
+        authorTag: '4821',
+      }),
+      summary(5, {
+        title: '같은 닉네임 둘째',
+        authorId: 'acc_y',
+        authorName: '수민',
+        authorTag: '0097',
+      }),
+    ],
+  },
+  play: async ({ canvas }) => {
+    const table = canvas.getByRole('table', { name: '글 목록' })
+    await expect(within(table).getByRole('columnheader', { name: '작성자' })).toBeVisible()
+    await expect(within(table).getByText('Admin')).toBeVisible()
+    await expect(within(table).getByText('이름 없는 사용자')).toBeVisible()
+    await expect(within(table).getByText('탈퇴한 사용자')).toBeVisible()
+    // 겹치는 닉네임에만 꼬리표
+    await expect(within(table).getByText('#4821')).toBeVisible()
+    await expect(within(table).getByText('#0097')).toBeVisible()
+    await expect(document.body.innerHTML).not.toContain('acc_')
+    await expect(document.body.innerHTML).not.toContain('deleted:')
   },
 }

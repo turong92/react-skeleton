@@ -26,7 +26,7 @@
 .titleCell {
   display: grid;
   gap: var(--space-xs);
-  min-width: 0;
+  min-width: 12rem; /* 좁은 화면에서 제목이 글자 단위로 꺾이지 않게 — 표가 가로로 스크롤된다 */
 }
 
 .titleLine {

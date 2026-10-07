@@ -113,6 +113,7 @@ describe('sign-up by a 6-digit code, signed in at once', () => {
   it('sign-up shows the password policy hints, then asks for the code (no account exists yet)', async () => {
     await page.goto(`${baseUrl}/sign-up`)
     await page.getByLabel(auth.email).fill(email)
+    await page.getByLabel(auth.displayName).fill('가입 시험 사용자') // 샘플 앱은 가입에서 닉네임을 받는다
     await page.getByLabel(auth.password).first().fill('abc')
     // 서버 정책(`GET /account/password/policy`)에서 읽은 규칙이 미충족으로 보인다
     await pwExpect(page.getByText(auth.passwordRule.TOO_SHORT)).toBeVisible()
@@ -520,6 +521,7 @@ describe('pre-hijack: an attacker who starts a sign-up for someone else’s addr
     // 주인 — 같은 주소로 화면에서 가입하고 자기 메일의 새 코드로 끝낸다
     await page.goto(`${baseUrl}/sign-up`)
     await page.getByLabel(auth.email).fill(victim)
+    await page.getByLabel(auth.displayName).fill('가입 시험 사용자') // 샘플 앱은 가입에서 닉네임을 받는다
     await page.getByLabel(auth.password).first().fill(ownerPassword)
     await page.getByLabel(auth.passwordConfirm).fill(ownerPassword)
     await agreeToLegal(page, apiUrl)
@@ -549,6 +551,7 @@ describe('pre-hijack: an attacker who starts a sign-up for someone else’s addr
   it('signing up with an address that is already registered looks the same as a new one (a code prompt), and no code is mailed to it', async () => {
     await page.goto(`${baseUrl}/sign-up`)
     await page.getByLabel(auth.email).fill(victim)
+    await page.getByLabel(auth.displayName).fill('가입 시험 사용자') // 샘플 앱은 가입에서 닉네임을 받는다
     await page.getByLabel(auth.password).first().fill('Whatever-pass-2026')
     await page.getByLabel(auth.passwordConfirm).fill('Whatever-pass-2026')
     await agreeToLegal(page, apiUrl)

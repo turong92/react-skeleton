@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { collidingNames } from './authorDisplay'
 import { defaultCommentLabels } from './commentLabels'
 import type { CommentOptions } from './commentThreadContext'
 import { nestThread } from './commentTree'
@@ -16,6 +17,7 @@ export type CommentThreadProps = CommentOptions & {
  */
 export function CommentThread({ thread, ...options }: CommentThreadProps) {
   const tree = useMemo(() => nestThread(thread), [thread])
+  const colliding = useMemo(() => collidingNames([thread, ...thread.replies]), [thread])
   const [replyingTo, setReplyingTo] = useState<BoardId | null>(null)
   const [editing, setEditing] = useState<BoardId | null>(null)
   const [expanded, setExpanded] = useState<ReadonlySet<BoardId>>(new Set())
@@ -24,6 +26,7 @@ export function CommentThread({ thread, ...options }: CommentThreadProps) {
     ...options,
     labels: { ...defaultCommentLabels, ...options.labels },
     collapseFromDepth: options.collapseFromDepth ?? 2,
+    collidingNames: colliding,
     replyingTo,
     editing,
     expanded,

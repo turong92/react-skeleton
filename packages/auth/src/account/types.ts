@@ -55,6 +55,8 @@ export type AccountMe = {
   email: string | null
   emailVerified: boolean
   displayName: string | null
+  /** 서버가 붙이는 4자리 꼬리표(`수민#4821`) — 꼬리표 방식이 꺼진 서버 · 옛 서버는 null · 없음 */
+  displayTag?: string | null
   locale: string | null
   timeZone: string | null
   roles: string[]

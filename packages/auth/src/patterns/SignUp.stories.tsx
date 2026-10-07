@@ -642,3 +642,87 @@ export const KoreanLabels: Story = {
     await expect(canvas.getByText('아래 항목을 확인해 주세요')).toBeVisible()
   },
 }
+
+/** 닉네임 — `displayName="required"` 면 비우고 제출할 수 없다(요약 + 칸 오류 + 포커스). 앞뒤 공백은 떼고 보낸다 */
+export const NicknameRequiredBlocksAnEmptyOne: Story = {
+  args: { displayName: 'required' },
+  play: async ({ canvas, args, userEvent }) => {
+    const nickname = canvas.getByLabelText(/^Nickname/)
+    await expect(canvas.getByLabelText(/^Nickname\s*\*/)).toBe(nickname) // 필수 표시(*)
+    await userEvent.type(canvas.getByLabelText(/^Email/), 'new@example.com')
+    await userEvent.type(canvas.getByLabelText(/^Password/), 'Correct-horse-battery-9')
+    await userEvent.type(canvas.getByLabelText(/^Confirm password/), 'Correct-horse-battery-9')
+    await userEvent.type(nickname, '   ')
+    await userEvent.click(canvas.getByRole('button', { name: 'Create account' }))
+    await expect(
+      await canvas.findByText('Enter a nickname', { selector: 'p, span, div' }),
+    ).toBeVisible()
+    await expect(args.onSignUp).not.toHaveBeenCalled()
+    await expect(nickname).toHaveFocus()
+    await userEvent.type(nickname, '  수민  ')
+    await userEvent.click(canvas.getByRole('button', { name: 'Create account' }))
+    await waitFor(() =>
+      expect(args.onSignUp).toHaveBeenCalledWith(expect.objectContaining({ displayName: '수민' })),
+    )
+  },
+}
+
+export const NicknameIsOptionalWhenAskedNicely: Story = {
+  args: { displayName: 'optional' },
+  play: async ({ canvas, args, userEvent }) => {
+    await expect(canvas.getByLabelText(/^Nickname\s*$/)).toBeVisible() // 필수 표시(*)가 없다
+    await userEvent.type(canvas.getByLabelText(/^Email/), 'new@example.com')
+    await userEvent.type(canvas.getByLabelText(/^Password/), 'Correct-horse-battery-9')
+    await userEvent.type(canvas.getByLabelText(/^Confirm password/), 'Correct-horse-battery-9')
+    await userEvent.click(canvas.getByRole('button', { name: 'Create account' }))
+    await waitFor(() => expect(args.onSignUp).toHaveBeenCalledTimes(1))
+    await expect(args.onSignUp).toHaveBeenCalledWith(
+      expect.not.objectContaining({ displayName: expect.anything() }),
+    )
+  },
+}
+
+/** 닉네임 중복 금지(서버 선택 기능)에서 인증번호 단계가 409 를 받으면 — 양식으로 돌아가 닉네임만 바꿔 다시 시작한다(이메일 · 닉네임은 남는다) */
+export const NicknameTakenAtTheCodeStepReturnsToTheForm: Story = {
+  args: {
+    displayName: 'required',
+    labels: koAuthLabels,
+    onVerifyCode: fn(async () => {
+      throw apiError('ACCOUNT.DISPLAY_NAME_TAKEN', 409)
+    }),
+    onPendingChange: fn(),
+  },
+  play: async ({ canvas, args, userEvent }) => {
+    await userEvent.type(canvas.getByLabelText(/^이메일/), 'ann@example.com')
+    await userEvent.type(canvas.getByLabelText(/^닉네임/), '수민')
+    await userEvent.type(canvas.getByLabelText(/^비밀번호\s*\*?$/), 'Correct-horse-battery-9')
+    await userEvent.type(canvas.getByLabelText(/^비밀번호 확인/), 'Correct-horse-battery-9')
+    await userEvent.click(canvas.getByRole('button', { name: '가입하기' }))
+    await canvas.findByLabelText('6자리 중 1번째')
+    await userEvent.click(canvas.getByLabelText('6자리 중 1번째'))
+    await userEvent.paste('123456')
+    const nickname = await canvas.findByLabelText(/^닉네임/)
+    await expect(nickname).toHaveValue('수민')
+    await expect(canvas.getAllByText('이미 쓰고 있는 닉네임이에요').length).toBeGreaterThan(0)
+    await expect(canvas.getByLabelText(/^이메일/)).toHaveValue('ann@example.com')
+    await expect(args.onPendingChange).toHaveBeenLastCalledWith(null)
+  },
+}
+
+export const NicknameTakenOnSubmitShowsUnderTheField: Story = {
+  args: {
+    displayName: 'required',
+    onSignUp: fn(async () => {
+      throw apiError('ACCOUNT.DISPLAY_NAME_TAKEN', 409)
+    }),
+  },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.type(canvas.getByLabelText(/^Email/), 'new@example.com')
+    await userEvent.type(canvas.getByLabelText(/^Nickname/), 'Ann')
+    await userEvent.type(canvas.getByLabelText(/^Password/), 'Correct-horse-battery-9')
+    await userEvent.type(canvas.getByLabelText(/^Confirm password/), 'Correct-horse-battery-9')
+    await userEvent.click(canvas.getByRole('button', { name: 'Create account' }))
+    await expect(await canvas.findByText('That nickname is already taken.')).toBeVisible()
+    await expect(canvas.getByLabelText(/^Nickname/)).toHaveFocus()
+  },
+}

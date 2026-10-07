@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState, type ComponentProps } from 'react'
-import { expect, screen, waitFor, within } from 'storybook/test'
+import { expect, fn, screen, waitFor, within } from 'storybook/test'
 import { BoardComments } from './BoardComments'
 import { createFakeBoard, type FakeBoardOptions } from './stories/fakeBoard'
 import { WithQuery } from './stories/WithQuery'
@@ -71,18 +71,18 @@ export const WriteACommentThenReplyAtEveryLevel: Story = {
     await expect(canvas.getByRole('textbox', { name: 'Write a comment' })).toHaveValue('') // 보낸 뒤 비운다
 
     // 대댓글(깊이 1) — 자리에서 바로 보인다
-    await userEvent.click(canvas.getByRole('button', { name: 'Reply: me' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Reply: Me' }))
     await userEvent.type(canvas.getByRole('textbox', { name: 'Your reply' }), 'A reply of mine')
     await userEvent.click(canvas.getByRole('button', { name: 'Post reply' }))
     await expect(await canvas.findByText('A reply of mine')).toBeVisible()
 
     // 깊이 2 로 답하면 접힌 칸을 펼쳐 새 답글이 보인다
-    await userEvent.click(canvas.getByRole('button', { name: 'Reply: bob' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Reply: Bob' }))
     await userEvent.type(canvas.getByRole('textbox', { name: 'Your reply' }), 'Deepest reply')
     await userEvent.click(canvas.getByRole('button', { name: 'Post reply' }))
     await expect(await canvas.findByText('Deepest reply')).toBeVisible()
     // 최대 깊이의 댓글에는 더 답할 수 없다
-    await expect(canvas.queryByRole('button', { name: 'Reply: carol' })).toBeNull()
+    await expect(canvas.queryByRole('button', { name: 'Reply: Carol' })).toBeNull()
   },
 }
 
@@ -167,18 +167,18 @@ export const OwnCommentEditThenDeleteWithConfirmation: Story = {
   args: { fake: { me: 'alice' } },
   play: async ({ canvas, userEvent }) => {
     await canvas.findByText('Spaces, always.')
-    await userEvent.click(canvas.getByRole('button', { name: 'Edit: alice' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Edit: Alice' }))
     const box = canvas.getByRole('textbox', { name: 'Edit comment' })
     await userEvent.clear(box)
     await userEvent.type(box, 'Spaces, mostly.')
     await userEvent.click(canvas.getByRole('button', { name: 'Save' }))
     await expect(await canvas.findByText('Spaces, mostly.')).toBeVisible()
 
-    await userEvent.click(canvas.getByRole('button', { name: 'Delete: alice' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Delete: Alice' }))
     const dialog = await screen.findByRole('dialog', { name: 'Delete this comment?' })
     await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
     await expect(canvas.getByText('Spaces, mostly.')).toBeVisible()
-    await userEvent.click(canvas.getByRole('button', { name: 'Delete: alice' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Delete: Alice' }))
     await userEvent.click(
       within(await screen.findByRole('dialog')).getByRole('button', { name: 'Delete' }),
     )
@@ -191,9 +191,9 @@ export const ModeratorHidesAndRestores: Story = {
   args: { fake: { canModerate: true } },
   play: async ({ canvas, userEvent }) => {
     await canvas.findByText('Spaces, always.')
-    await userEvent.click(canvas.getByRole('button', { name: 'Hide: alice' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Hide: Alice' }))
     await waitFor(() => expect(canvas.queryByText('Spaces, always.')).toBeNull())
-    await userEvent.click(canvas.getByRole('button', { name: 'Restore: alice' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Restore: Alice' }))
     await expect(await canvas.findByText('Spaces, always.')).toBeVisible()
   },
 }
@@ -242,5 +242,35 @@ export const Dark: Story = {
   play: async ({ canvas }) => {
     await expect(document.documentElement).toHaveAttribute('data-theme', 'dark')
     await expect(await canvas.findByText('Spaces, always.')).toBeVisible()
+  },
+}
+
+/** `beforeWrite` — 쓰기 직전에 앱이 막을 수 있다(예: 닉네임이 없으면 먼저 정하게). false 면 보내지 않고 쓴 글은 그대로 남는다 */
+export const BeforeWriteCanBlockAndKeepsTheText: Story = {
+  args: { beforeWrite: fn(() => false) },
+  play: async ({ canvas, userEvent, args }) => {
+    await canvas.findByText('Spaces, always.')
+    const field = canvas.getByRole('textbox', { name: 'Write a comment' })
+    await userEvent.type(field, 'Held back')
+    await userEvent.click(canvas.getByRole('button', { name: 'Post comment' }))
+    await waitFor(() => expect(args.beforeWrite).toHaveBeenCalled())
+    await expect(field).toHaveValue('Held back')
+    await expect(canvas.queryByText('Held back', { selector: 'p' })).toBeNull()
+    // 답글도 같다
+    await userEvent.click(canvas.getByRole('button', { name: 'Reply: Alice' }))
+    await userEvent.type(canvas.getByRole('textbox', { name: 'Your reply' }), 'Held reply')
+    await userEvent.click(canvas.getByRole('button', { name: 'Post reply' }))
+    await expect(args.beforeWrite).toHaveBeenCalledTimes(2)
+    await expect(canvas.getByRole('textbox', { name: 'Your reply' })).toHaveValue('Held reply')
+  },
+}
+
+export const BeforeWriteThatAllowsPostsAsUsual: Story = {
+  args: { beforeWrite: fn(() => true) },
+  play: async ({ canvas, userEvent }) => {
+    await canvas.findByText('Spaces, always.')
+    await userEvent.type(canvas.getByRole('textbox', { name: 'Write a comment' }), 'Allowed one')
+    await userEvent.click(canvas.getByRole('button', { name: 'Post comment' }))
+    await expect(await canvas.findByText('Allowed one')).toBeVisible()
   },
 }

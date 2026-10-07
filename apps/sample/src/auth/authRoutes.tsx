@@ -84,7 +84,11 @@ export const accountRoutes = createAuthRoutes({
   useLabels: useAuthLabels,
   signInNotice: undefined,
   // 약관 동의 — 가입 폼의 체크박스(서버 문서) · 설정의 동의 이력 · 선택 동의 철회
-  signUp: { renderConsents: (slot) => <SignUpConsentsSlot slot={slot} /> },
+  // 가입에서 닉네임을 필수로 받는다(`displayName: 'required'`) — 서버가 필수로 켜지 않은 환경에서도 게시판 작성자가 이름 없이 보이지 않게
+  signUp: {
+    displayName: 'required',
+    renderConsents: (slot) => <SignUpConsentsSlot slot={slot} />,
+  },
   settings: {
     locales: [
       { value: 'ko', label: '한국어' },

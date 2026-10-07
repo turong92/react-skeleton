@@ -1,4 +1,3 @@
-import { useAuth } from '@skeleton/auth'
 import { NotificationList, useMarkRead, useNotifications } from '@skeleton/notifications'
 import { formatRelative } from '@skeleton/time'
 import {
@@ -17,6 +16,8 @@ import { NoteStatusBadge } from '../components/NoteStatusBadge'
 import { notificationsApi } from '../notifications/api'
 import { useNotes, useNoteSummary } from '../notes/queries'
 import type { Note } from '../notes/types'
+import { greetingOf } from '../auth/profileDisplay'
+import { useMyProfile } from '../auth/useMyProfile'
 import { useT } from '../i18n'
 import styles from './DashboardPage.module.css'
 
@@ -46,13 +47,12 @@ function columnsOf(t: Translate): TableColumn<Note>[] {
 /** Patterns/Dashboard page — 현황 타일 · 최근 노트(표 + 빈 · 로딩 · 오류) · 안 읽은 알림 */
 export function DashboardPage() {
   const { t } = useT()
-  const { principal } = useAuth()
   const navigate = useNavigate()
   const summary = useNoteSummary()
   const recent = useNotes({ page: 0, size: 5 })
   const unread = useNotifications(notificationsApi, { unreadOnly: true, size: 3 })
   const markRead = useMarkRead(notificationsApi)
-  const name = principal?.username ?? principal?.email ?? principal?.accountId ?? ''
+  const { name } = greetingOf(useMyProfile().data)
   const create = <Button onClick={() => navigate('/notes/new')}>{t('dashboard.create')}</Button>
 
   const stats = summary.data
@@ -61,7 +61,7 @@ export function DashboardPage() {
   return (
     <div className={styles.page}>
       <PageHeader
-        title={t('dashboard.greeting', { name })}
+        title={name ? t('dashboard.greeting', { name }) : t('dashboard.greetingNeutral')}
         description={t('dashboard.subtitle')}
         actions={create}
       />

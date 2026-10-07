@@ -150,3 +150,43 @@ describe('fake board — comments are a tree', () => {
     expect(isErrorCode(error, ErrorCodes.BOARD_FORBIDDEN)).toBe(true)
   })
 })
+
+describe('fake board — authors', () => {
+  it('answers authorName like the server: a nickname, null when the account has none, and a deleted flag for withdrawn authors', async () => {
+    const { api, newPost } = createFakeBoard({ seed: false, nicknames: { me: '수민', bob: null } })
+    newPost('mine', 'x')
+    newPost('anonymous', 'x', 'bob')
+    newPost('gone', 'x', 'deleted:7f3a')
+    const byTitle = Object.fromEntries(
+      (await api.listPosts('free')).values.map((post) => [post.title, post]),
+    )
+    expect(byTitle.mine).toMatchObject({ authorId: 'me', authorName: '수민', authorDeleted: false })
+    expect(byTitle.anonymous).toMatchObject({ authorName: null, authorDeleted: false })
+    expect(byTitle.gone).toMatchObject({
+      authorId: 'deleted:7f3a',
+      authorName: null,
+      authorDeleted: true,
+    })
+  })
+
+  it('stamps the caller nickname on what they create, comments included', async () => {
+    const { api } = createFakeBoard({ seed: false, nicknames: { me: '수민' } })
+    const post = await api.createPost('free', { title: 't', body: 'b' })
+    expect(post.authorName).toBe('수민')
+    const created = await api.createComment('free', post.id, { body: 'hi' })
+    expect(created.authorName).toBe('수민')
+  })
+})
+
+describe('fake board — author tags', () => {
+  it('answers authorTag from the tags option, null otherwise', async () => {
+    const { api, newPost } = createFakeBoard({ seed: false, tags: { me: '4821' } })
+    newPost('mine', 'x')
+    newPost('other', 'x', 'bob')
+    const byTitle = Object.fromEntries(
+      (await api.listPosts('free')).values.map((post) => [post.title, post]),
+    )
+    expect(byTitle.mine.authorTag).toBe('4821')
+    expect(byTitle.other.authorTag).toBeNull()
+  })
+})

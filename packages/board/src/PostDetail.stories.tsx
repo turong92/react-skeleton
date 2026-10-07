@@ -122,3 +122,27 @@ export const Dark: Story = {
     await expect(canvas.getByRole('button', { name: 'Edit' })).toBeVisible()
   },
 }
+
+/** 제목 아래 작성자 — 닉네임(+ 설정에 따라 꼬리표), 탈퇴했으면 「탈퇴한 사용자」. 계정 id 는 그리지 않는다 */
+export const Author: Story = {
+  args: {
+    post: { ...post, authorId: 'acc_317e90ab', authorName: '수민', authorTag: '4821' },
+    authorTag: 'always',
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText('수민')).toBeVisible()
+    await expect(canvas.getByText('#4821')).toBeVisible()
+    await expect(document.body.innerHTML).not.toContain('acc_')
+  },
+}
+
+export const WithdrawnAuthor: Story = {
+  args: {
+    post: { ...post, authorId: 'deleted:9f2a41c7', authorDeleted: true },
+    labels: { authorDeleted: '탈퇴한 사용자' },
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText('탈퇴한 사용자')).toBeVisible()
+    await expect(document.body.innerHTML).not.toContain('deleted:')
+  },
+}

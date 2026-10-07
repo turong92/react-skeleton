@@ -90,6 +90,21 @@ describe('SignUpScreen', () => {
     expect(out).not.toContain('A symbol')
   })
 
+  it('asks for a nickname only when told to: required marks the field, the old askDisplayName still works, the default asks nothing', () => {
+    const base = {
+      policy,
+      onSignUp: async () => ({ status: 'VERIFICATION_SENT' as const }),
+      onVerifyCode: noop,
+    }
+    expect(html(<SignUpScreen {...base} />)).not.toContain('Nickname')
+    expect(html(<SignUpScreen {...base} askDisplayName />)).toContain('Nickname')
+    const required = html(<SignUpScreen {...base} displayName="required" />)
+    expect(required).toMatch(/Nickname[^<]*<[^>]*>[^<]*\*|Nickname\s*\*/)
+    expect(html(<SignUpScreen {...base} displayName="off" askDisplayName />)).not.toContain(
+      'Nickname',
+    )
+  })
+
   it('renders the captcha slot and the consent slot when given', () => {
     const out = html(
       <SignUpScreen

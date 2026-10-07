@@ -1,9 +1,11 @@
+import { defaultAuthorLabels, type AuthorLabels } from './authorDisplay'
 import type { PostSort, PostStatus } from './types'
 
 /** 글 목록의 글자 전부 — 기본은 영어. 일부만 덮어쓰려면 `labels={{ caption: '글 목록' }}`(`sorts` · `pagination` 은 안쪽도 일부만 가능) */
-export type PostListLabels = {
+export type PostListLabels = AuthorLabels & {
   caption: string
   title: string
+  author: string
   comments: string
   reactions: string
   views: string
@@ -36,8 +38,10 @@ export type PostListLabelsInput = Partial<
 }
 
 export const defaultPostListLabels: PostListLabels = {
+  ...defaultAuthorLabels,
   caption: 'Posts',
   title: 'Title',
+  author: 'Author',
   comments: 'Comments',
   reactions: 'Reactions',
   views: 'Views',

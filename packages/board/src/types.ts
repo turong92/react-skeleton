@@ -48,6 +48,12 @@ export type PostSummary = {
   id: BoardId
   boardCode: string
   authorId: string
+  /** 작성자 닉네임 — 닉네임이 없는 계정이거나 옛 서버면 null · 없음. 화면은 계정 id 를 그리지 않고 `authorName` 만 쓴다 */
+  authorName?: string | null
+  /** 작성자가 탈퇴했는가(그때 `authorId` 는 `deleted:<해시>`) */
+  authorDeleted?: boolean
+  /** 서버가 붙이는 4자리 꼬리표 — 닉네임 뒤 `#4821`. 꼬리표 방식이 꺼진 서버 · 옛 서버는 null · 없음 */
+  authorTag?: string | null
   title: string
   excerpt: string
   status: PostStatus
@@ -102,6 +108,10 @@ export type Comment = {
   /** 0 = 최상위 */
   depth: number
   authorId: string
+  /** 작성자 닉네임 — 글의 `authorName` 과 같다 */
+  authorName?: string | null
+  authorDeleted?: boolean
+  authorTag?: string | null
   body: string | null
   status: CommentStatus
   reactionCounts: Record<ReactionType, number>

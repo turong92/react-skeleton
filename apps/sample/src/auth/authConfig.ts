@@ -28,6 +28,15 @@ export const DEFAULT_AUTH_METHODS = ''
  */
 export const DEFAULT_REFRESH_DELIVERY: RefreshDelivery = 'body'
 
+/**
+ * 닉네임이 없는 로그인 사용자(소셜 · 링크 가입, 옛 계정)에게 계정 설정으로 가는 눈에 띄는 안내 띠(주 버튼 「닉네임 정하기」 → 그 자리의 대화상자)를 보인다 — 닫을 수 있고 다음 방문에 다시 보인다. 끄려면 `false`.
+ * 가입에서 닉네임을 필수로 받는 앱(`authRoutes.tsx` 의 `signUp.displayName`)이라도 다른 길로 들어온 계정이 있어 기본은 켠다.
+ */
+export const NICKNAME_NUDGE = true
+
+/** 닉네임이 없으면 게시판에서 글 · 댓글을 쓰려 할 때 닉네임을 정하는 대화상자가 먼저 뜬다(그 자리에서 입력 · 저장). 끄려면 `false` */
+export const NICKNAME_BEFORE_WRITE = true
+
 const isMagicLink = (item: string) => item === 'magic-link' || item === 'magic_link'
 
 /** 환경변수 목록 → 방법 설정. 비어 있으면 undefined(= 백엔드에 묻는다) */

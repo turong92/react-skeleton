@@ -39,6 +39,11 @@ export type BoardCommentsProps = Omit<
   /** false 면 새 댓글 칸이 없다(글이 숨김 · 초안일 때) */
   commentable?: boolean
   labels?: BoardCommentsLabelsInput
+  /**
+   * 새 댓글 · 답글 · 수정을 보내기 직전에 불린다 — `false` 를 돌려주면 보내지 않고 쓴 글은 그대로 남는다.
+   * 앱이 먼저 해야 할 일이 있을 때(예: 닉네임이 없으면 정하는 대화상자를 띄우고 막는다)
+   */
+  beforeWrite?: () => boolean
 }
 
 /**
@@ -53,6 +58,7 @@ export function BoardComments({
   pageSize = 20,
   commentable = true,
   labels: input,
+  beforeWrite,
   ...options
 }: BoardCommentsProps) {
   const labels = resolveBoardCommentsLabels(input)
@@ -65,6 +71,10 @@ export function BoardComments({
   const remove = useRemoveComment(api, boardCode, postId)
   const moderate = useModerateComment(api, boardCode, postId)
   const react = useReaction(api, boardCode, config.reactionMode)
+  /** 막히면 던진다 — `CommentForm` 이 조용히 받아 쓴 글을 남긴다 */
+  const allowed = async () => {
+    if (beforeWrite && !beforeWrite()) throw new Error('write blocked by beforeWrite')
+  }
 
   return (
     <Card title={labels.heading}>
@@ -77,7 +87,10 @@ export function BoardComments({
             maxLength={config.commentMaxLength}
             requiredMessage={labels.required}
             tooLongMessage={labels.tooLong}
-            onSubmit={(body) => create.mutateAsync({ input: { body } })}
+            onSubmit={async (body) => {
+              await allowed()
+              return create.mutateAsync({ input: { body } })
+            }}
           />
         )}
         <Field label={labels.sort}>
@@ -126,10 +139,16 @@ export function BoardComments({
                   reactionTypes={config.reactionTypes}
                   onReply={
                     commentable
-                      ? (parentId, body) => create.mutateAsync({ input: { body, parentId } })
+                      ? async (parentId, body) => {
+                          await allowed()
+                          return create.mutateAsync({ input: { body, parentId } })
+                        }
                       : undefined
                   }
-                  onEdit={(id, body) => update.mutateAsync({ id, body })}
+                  onEdit={async (id, body) => {
+                    await allowed()
+                    return update.mutateAsync({ id, body })
+                  }}
                   onDelete={setDeleting}
                   onModerate={(id, status) => moderate.mutate({ id, status })}
                   onReact={(id, type, active) =>

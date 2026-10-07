@@ -18,6 +18,7 @@ describe('authErrorMessage', () => {
     ['ACCOUNT.TOKEN_INVALID', 410, L.errorTokenInvalid],
     ['ACCOUNT.EMAIL_TAKEN', 409, L.errorEmailTaken],
     ['ACCOUNT.SIGN_UP_CLOSED', 403, L.errorSignUpClosed],
+    ['ACCOUNT.DISPLAY_NAME_TAKEN', 409, L.errorDisplayNameTaken],
     ['ACCOUNT.CAPTCHA_FAILED', 400, L.errorCaptcha],
     ['ACCOUNT.CURRENT_PASSWORD_INVALID', 400, L.errorCurrentPassword],
     ['ACCOUNT.REAUTH_FAILED', 400, L.errorReauth],

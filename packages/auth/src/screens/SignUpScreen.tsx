@@ -27,6 +27,7 @@ import { NewPasswordFields } from './NewPasswordFields'
 import { PasswordHints } from './PasswordHints'
 import { SocialButtons } from './SocialButtons'
 import styles from './auth.module.css'
+import { displayNameProblem, resolveDisplayNameMode, type DisplayNameMode } from './displayName'
 import { authErrorMessage, type AuthErrorInfo } from './errors'
 import { mergeLabels, type AuthLabels } from './labels'
 import { resolveMethods, type SignInMethodsConfig } from './methods'
@@ -99,7 +100,9 @@ export type SignUpScreenProps = {
   /** 동의 자리를 통째로 슬롯에 맡긴다(서버가 문서를 쥘 때) — 있으면 `consents` 대신 쓰이고, 슬롯이 「완료」를 알리기 전에는 제출하지 않는다 */
   renderConsents?: (api: ConsentSlotApi) => ReactNode
   onConsentsChange?: (accepted: AcceptedConsent[]) => void
-  /** 표시 이름을 묻는다(기본 안 묻는다 — 가입은 짧을수록 좋다) */
+  /** 닉네임을 묻는다(기본 `off` — 가입은 짧을수록 좋다). `optional` 비워도 된다 · `required` 비우면 막힌다 */
+  displayName?: DisplayNameMode
+  /** 옛 이름 — `true` 면 `displayName="optional"`. `displayName` 이 있으면 그쪽이 이긴다 */
   askDisplayName?: boolean
   /** 비밀번호를 한 번 더 입력받는다(기본 true) — 다르면 제출하지 않는다. 확인 값은 서버로 보내지 않는다 */
   confirmPassword?: boolean
@@ -127,7 +130,8 @@ export function SignUpScreen({
   consents = [],
   renderConsents,
   onConsentsChange,
-  askDisplayName = false,
+  displayName: displayNameMode,
+  askDisplayName,
   confirmPassword = true,
   signInTo,
   locale,
@@ -138,7 +142,9 @@ export function SignUpScreen({
   const enabled = resolveMethods(methods)
   const [email, setEmail] = useState(initialPending?.email ?? '') // 새로고침 뒤 「처음부터」로 돌아와도 주소는 남는다
   const [password, setPassword] = useState('')
+  const nicknameMode = resolveDisplayNameMode(displayNameMode, askDisplayName)
   const [displayName, setDisplayName] = useState('')
+  const [displayNameError, setDisplayNameError] = useState<string | undefined>()
   const [captchaToken, setCaptchaToken] = useState<string | null>(null)
   const [checked, setChecked] = useState<Record<string, boolean>>({})
   const [slotAccepted, setSlotAccepted] = useState<AcceptedConsent[]>([])
@@ -148,6 +154,7 @@ export function SignUpScreen({
   const ids = {
     email: `${uid}-email`,
     password: `${uid}-password`,
+    displayName: `${uid}-display-name`,
     confirm: `${uid}-confirm`,
     consents: `${uid}-consents`,
   }
@@ -196,8 +203,12 @@ export function SignUpScreen({
       : undefined
   const passwordCheck = passwordProblems({ labels, password, email, policy, confirm, ids })
   const passwordProblem = passwordCheck.passwordError
+  const nicknameProblem = displayNameProblem(displayName, nicknameMode, labels)
   const problems: FormProblem[] = [
     ...(emailProblem ? [{ key: 'email', message: emailProblem, target: ids.email }] : []),
+    ...(nicknameProblem
+      ? [{ key: 'displayName', message: nicknameProblem, target: ids.displayName }]
+      : []),
     ...passwordCheck.problems.filter((p) => p.key === 'password'),
     ...serverViolations.map((code) => ({
       key: `violation-${code}`,
@@ -215,6 +226,7 @@ export function SignUpScreen({
     event.preventDefault()
     setFailure(null)
     setEmailError(undefined)
+    setDisplayNameError(undefined)
     setServerViolations([])
     // 막힌 이유는 버튼 위 요약 + 칸 옆 오류로 보이고, 첫 틀린 칸으로 포커스가 간다. 버튼은 늘 눌린다(꺼진 버튼은 이유를 말하지 못한다)
     const blocking = problems.filter((p) => !p.key.startsWith('violation-'))
@@ -227,7 +239,9 @@ export function SignUpScreen({
       const result = await onSignUp({
         email,
         password,
-        ...(askDisplayName && displayName ? { displayName } : {}),
+        ...(nicknameMode !== 'off' && displayName.trim()
+          ? { displayName: displayName.trim() }
+          : {}),
         ...(locale ? { locale } : {}),
         ...(timeZone ? { timeZone } : {}),
         ...(captchaToken ? { captchaToken } : {}),
@@ -273,11 +287,20 @@ export function SignUpScreen({
             setEmailError(emailField.message ?? labels.errorValidation)
             attempt.fail(ids.email)
           }
+          // 서버 설정으로 닉네임이 필수가 되면 빠진 가입은 필드 `displayName` 의 검증 오류로 온다
+          const nameField = error.apiError.errors?.find((e) => e.field === 'displayName')
+          if (nameField) {
+            setDisplayNameError(nameField.message ?? labels.errorValidation)
+            attempt.fail(ids.displayName)
+          }
         }
         if (info.code === ErrorCodes.LEGAL_CONSENT_REQUIRED) setConsentRefresh((n) => n + 1)
         if (info.code === ErrorCodes.ACCOUNT_EMAIL_TAKEN) {
           setEmailError(info.message)
           attempt.fail(ids.email)
+        } else if (info.code === ErrorCodes.ACCOUNT_DISPLAY_NAME_TAKEN) {
+          setDisplayNameError(info.message)
+          attempt.fail(ids.displayName)
         } else setFailure(info)
         if (info.retryAfterSeconds) wait.start(info.retryAfterSeconds)
       }
@@ -303,7 +326,19 @@ export function SignUpScreen({
           resendCooldownSeconds={resendCooldownSeconds}
           expiredResend="restart" // 만료 뒤의 다시 받기: 새 서버는 새 `expiresAt` 을 주고(그 자리에서 다시 센다), 옛 서버는 조용히 무시한다(시각이 없으면 처음부터)
           onVerify={async (code) => {
-            await onVerifyCode(pending.signUpId, code)
+            try {
+              await onVerifyCode(pending.signUpId, code)
+            } catch (error) {
+              // 닉네임 중복 금지 서버: 인증이 끝나는 순간에야 겹침을 안다 — 양식으로 돌아가 닉네임만 바꿔 다시 시작한다(이메일 · 닉네임은 남는다)
+              if (authErrorMessage(error, labels).code === ErrorCodes.ACCOUNT_DISPLAY_NAME_TAKEN) {
+                leave()
+                setDisplayNameError(labels.errorDisplayNameTaken)
+                setFailure({ message: labels.displayNameTakenRestart })
+                attempt.fail(ids.displayName)
+                return
+              }
+              throw error
+            }
             onPendingChange?.(null)
           }}
           onResend={
@@ -380,15 +415,23 @@ export function SignUpScreen({
               />
             )}
           </Field>
-          {askDisplayName && (
-            <Field label={labels.displayName}>
+          {nicknameMode !== 'off' && (
+            <Field
+              id={ids.displayName}
+              label={labels.displayName}
+              hint={labels.displayNameHint}
+              required={nicknameMode === 'required'}
+              error={displayNameError ?? (attempt.attempted ? nicknameProblem : undefined)}
+            >
               {(control) => (
                 <Input
                   {...control}
-                  autoComplete="name"
-                  maxLength={60}
+                  autoComplete="nickname"
                   value={displayName}
-                  onChange={(event) => setDisplayName(event.target.value)}
+                  onChange={(event) => {
+                    setDisplayName(event.target.value)
+                    setDisplayNameError(undefined)
+                  }}
                 />
               )}
             </Field>

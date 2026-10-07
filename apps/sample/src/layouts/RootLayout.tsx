@@ -5,6 +5,8 @@ import { ThemeToggle } from '@skeleton/theme'
 import { AppShell, Button, LanguageMenu } from '@skeleton/ui'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import type { ReactNode } from 'react'
+import { NicknameGateProvider } from '../auth/NicknameGate'
+import { NicknameNudge } from '../auth/NicknameNudge'
 import { LinkButton } from '../components/LinkButton'
 import { consent } from '../consent/consent'
 import { notificationsApi } from '../notifications/api'
@@ -141,7 +143,14 @@ export function RootLayout() {
           </>
         }
       >
-        <Outlet />
+        {signedIn ? (
+          <NicknameGateProvider>
+            <NicknameNudge />
+            <Outlet />
+          </NicknameGateProvider>
+        ) : (
+          <Outlet />
+        )}
       </AppShell>
       <ConsentBanner
         store={consent}

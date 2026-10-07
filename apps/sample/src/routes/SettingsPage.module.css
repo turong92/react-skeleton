@@ -28,3 +28,10 @@
   gap: var(--space-md);
   color: var(--text-muted);
 }
+
+.idRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+}

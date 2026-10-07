@@ -57,6 +57,10 @@ export type FakeAccountOptions = {
    * 지금부터 n분 뒤 만료. 없으면 옛 서버처럼 본문이 없다(화면이 어림한다)
    */
   codeWindowMinutes?: number
+  /** 서버가 붙인 4자리 꼬리표(`Ann#4821`) — `GET /account/me` 의 `displayTag` */
+  displayTag?: string
+  /** 이미 쓰고 있는 닉네임들 — 프로필 수정이 409 `ACCOUNT.DISPLAY_NAME_TAKEN`(닉네임 중복 금지 서버). 앞뒤 공백을 뗀 값으로 견준다 */
+  takenNicknames?: string[]
 }
 
 /** 가짜 서버가 받아 주는 6자리 코드(가입 · 이메일 변경 · 다시 인증 · 삭제 모두) */
@@ -97,6 +101,7 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
     email: options.noAddress ? null : 'ann@example.com',
     emailVerified: !options.noAddress,
     displayName: 'Ann',
+    displayTag: options.displayTag ?? null,
     locale: 'en',
     timeZone: 'Asia/Seoul',
     roles: ['USER'],
@@ -210,6 +215,8 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
     passwordPolicy: () => track('passwordPolicy', FAKE_POLICY),
     me: () => track('me', { ...me, methods: [...methods] }),
     updateProfile: (patch) => {
+      if (patch.displayName && options.takenNicknames?.includes(patch.displayName.trim()))
+        return Promise.reject(apiError('ACCOUNT.DISPLAY_NAME_TAKEN', 409))
       Object.assign(me, patch)
       return track('updateProfile', { ...me })
     },

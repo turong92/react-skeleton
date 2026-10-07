@@ -1,11 +1,13 @@
 import { formatInstant } from '@skeleton/time'
 import { Badge, Button } from '@skeleton/ui'
 import type { ReactNode } from 'react'
+import { AuthorName } from './AuthorName'
+import { defaultAuthorLabels, type AuthorLabels, type AuthorTagMode } from './authorDisplay'
 import type { PostDetail as PostDetailData, PostModeration, PostStatus } from './types'
 import styles from './PostDetail.module.css'
 
 /** 글 상세의 글자 — 기본은 영어. 일부만 덮어쓰려면 `labels={{ edit: '수정' }}` */
-export type PostDetailLabels = {
+export type PostDetailLabels = AuthorLabels & {
   edit: string
   delete: string
   pin: string
@@ -19,6 +21,7 @@ export type PostDetailLabels = {
 }
 
 const defaultLabels: PostDetailLabels = {
+  ...defaultAuthorLabels,
   edit: 'Edit',
   delete: 'Delete',
   pin: 'Pin',
@@ -41,6 +44,8 @@ export type PostDetailProps = {
   /** 운영자 — 고정/해제 · 숨김/복구 */
   onModerate?: (moderation: PostModeration) => void
   formatTime?: (iso: string) => string
+  /** 작성자 꼬리표 — 글 한 건에는 겹칠 상대가 없어 기본은 안 보인다. 보이려면 `always` */
+  authorTag?: AuthorTagMode
   labels?: Partial<Omit<PostDetailLabels, 'status'>> & {
     status?: Partial<PostDetailLabels['status']>
   }
@@ -55,6 +60,7 @@ export function PostDetail({
   onModerate,
   formatTime = (iso) => formatInstant(iso),
   labels: input,
+  authorTag,
 }: PostDetailProps) {
   const labels: PostDetailLabels = {
     ...defaultLabels,
@@ -74,6 +80,7 @@ export function PostDetail({
               {labels.status[post.status]}
             </Badge>
           )}
+          <AuthorName author={post} labels={labels} tag={authorTag} />
           <time dateTime={post.createdAt}>{formatTime(post.createdAt)}</time>
           <span>{labels.views(post.viewCount)}</span>
           {post.attachmentCount > 0 && <span>{labels.attachments(post.attachmentCount)}</span>}

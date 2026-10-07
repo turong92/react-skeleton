@@ -14,6 +14,7 @@ import {
 import { Button, Dialog, EmptyState, PageHeader, Spinner } from '@skeleton/ui'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useNicknameGate } from '../auth/nicknameGateContext'
 import { boardApi } from '../board/api'
 import { REACTION_ICONS, commentLabels, postDetailLabels, reactionLabels } from '../board/labels'
 import { useBoardCode } from '../board/useBoardCode'
@@ -37,6 +38,7 @@ function PostView({
   const navigate = useNavigate()
   const labelsOfReactions = reactionLabels(t)
   const { principal } = useAuth()
+  const gate = useNicknameGate()
   const remove = useRemovePost(boardApi, code)
   const moderate = useModeratePost(boardApi, code, id)
   const [confirming, setConfirming] = useState(false)
@@ -78,6 +80,7 @@ function PostView({
         reactionLabels={labelsOfReactions}
         reactionIcons={REACTION_ICONS}
         labels={commentLabels(t)}
+        beforeWrite={gate.ensure}
       />
       <Dialog
         open={confirming}

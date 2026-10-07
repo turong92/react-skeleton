@@ -66,6 +66,17 @@ export {
   useUpdateComment,
   useUpdatePost,
 } from './hooks'
+export { AuthorName } from './AuthorName'
+export type { AuthorNameProps } from './AuthorName'
+export { collidingNames, defaultAuthorLabels, resolveAuthor } from './authorDisplay'
+export type {
+  AuthorFields,
+  AuthorInfo,
+  AuthorKind,
+  AuthorLabels,
+  AuthorTagMode,
+  ResolvedAuthor,
+} from './authorDisplay'
 export { ReactionBar } from './ReactionBar'
 export type { ReactionBarProps } from './ReactionBar'
 export { PostList } from './PostList'

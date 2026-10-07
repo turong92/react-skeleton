@@ -1,3 +1,5 @@
+import { AuthorName } from './AuthorName'
+import { resolveAuthor } from './authorDisplay'
 import { formatInstant } from '@skeleton/time'
 import { Button } from '@skeleton/ui'
 import type { CommentLabels } from './commentLabels'
@@ -12,6 +14,8 @@ import styles from './CommentItem.module.css'
 export type ThreadContext = CommentOptions & {
   labels: CommentLabels
   collapseFromDepth: number
+  /** 이 스레드에서 서로 다른 계정이 같이 쓰는 닉네임 */
+  collidingNames: ReadonlySet<string>
   replyingTo: BoardId | null
   editing: BoardId | null
   expanded: ReadonlySet<BoardId>
@@ -28,9 +32,21 @@ export function CommentItem({ node, ctx }: { node: CommentNode; ctx: ThreadConte
   const { labels: L } = ctx
   const published = comment.status === 'PUBLISHED'
   const own = ctx.currentUserId !== undefined && comment.authorId === ctx.currentUserId
-  const author = ctx.renderAuthor ? ctx.renderAuthor(comment.authorId) : comment.authorId
+  const resolved = resolveAuthor(comment, L)
+  const author = ctx.renderAuthor ? (
+    <strong>
+      {ctx.renderAuthor(comment.authorId, { ...resolved, deleted: resolved.kind === 'deleted' })}
+    </strong>
+  ) : (
+    <AuthorName
+      author={comment}
+      labels={L}
+      tag={ctx.authorTag}
+      collides={ctx.collidingNames.has(resolved.name)}
+    />
+  )
   const format = ctx.formatTime ?? ((iso: string) => formatInstant(iso))
-  const named = (label: string) => `${label}: ${comment.authorId}`
+  const named = (label: string) => `${label}: ${resolved.name}`
   const collapsible = children.length > 0 && children[0].comment.depth >= ctx.collapseFromDepth
   const open = !collapsible || ctx.expanded.has(comment.id)
   const reactionTypes = ctx.reactionTypes ?? []
@@ -44,7 +60,7 @@ export function CommentItem({ node, ctx }: { node: CommentNode; ctx: ThreadConte
   return (
     <div className={styles.comment} data-depth={comment.depth} data-status={comment.status}>
       <div className={styles.head}>
-        <strong>{author}</strong>
+        {author}
         <time dateTime={comment.createdAt} className={styles.time}>
           {format(comment.createdAt)}
         </time>

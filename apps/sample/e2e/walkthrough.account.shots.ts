@@ -46,6 +46,7 @@ describe('account walkthrough (FINAL-3 codes)', () => {
       await page.goto(`${baseUrl}/sign-up`)
       await dismissConsent(page)
       await page.getByLabel(auth.email).fill(email)
+      await page.getByLabel(auth.displayName).fill('가입 시험 사용자') // 샘플 앱은 가입에서 닉네임을 받는다
       await page.getByLabel(auth.password).first().fill(password)
       await page.getByLabel(auth.passwordConfirm).fill(password)
       await shot(

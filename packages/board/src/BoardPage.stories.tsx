@@ -196,7 +196,7 @@ export const BrowseReadReactAndComeBack: Story = {
     await userEvent.click(canvas.getByRole('button', { name: '← Posts' }))
     // 목록의 같은 글도 반응 1 개 — 한 번의 누름이 상세와 목록 캐시에 같이 반영된다
     await canvas.findByRole('table')
-    const [, reactions] = rowOf(canvasElement, 'Tabs or spaces?').getAllByRole('cell') // 댓글 · 반응 · 조회 · 날짜
+    const [, , reactions] = rowOf(canvasElement, 'Tabs or spaces?').getAllByRole('cell') // 작성자 · 댓글 · 반응 · 조회 · 날짜
     await expect(reactions).toHaveTextContent('1')
   },
 }

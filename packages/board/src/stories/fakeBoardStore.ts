@@ -22,11 +22,35 @@ export type FakeBoardOptions = {
   maxCommentDepth?: number
   /** true 면 반응 요청을 서버 오류로 거절한다(낙관적 갱신의 되돌리기를 본다) */
   failReactions?: boolean
+  /**
+   * 계정 id → 닉네임(null = 닉네임 없는 계정). 목록에 없는 id 도 닉네임 없음으로 읽는다.
+   * `deleted:` 로 시작하는 id 는 탈퇴한 작성자(`authorDeleted: true`). 기본은 데모 시드의 작성자들.
+   */
+  nicknames?: Record<string, string | null>
+  /** 계정 id → 꼬리표(4자리, 꼬리표 방식 서버). 없으면 null */
+  tags?: Record<string, string>
+}
+
+const DEFAULT_NICKNAMES: Record<string, string | null> = {
+  me: 'Me',
+  admin: 'Admin',
+  alice: 'Alice',
+  bob: 'Bob',
+  carol: 'Carol',
+  dave: 'Dave',
 }
 
 /** 가짜 서버의 상태 — 글 · 댓글(만든 순서는 행 밖의 `order` 에 둬서 응답 모양이 계약 그대로다) · 만들기 · 보이기 · 반응 세기 */
 export function createStore(options: FakeBoardOptions) {
   const { mode = 'SINGLE', me = 'me', canModerate = false } = options
+  const nicknames = options.nicknames ?? DEFAULT_NICKNAMES
+  /** 서버가 글 · 댓글 응답에 붙이는 작성자 필드 */
+  const authorFields = (id: string) => ({
+    authorId: id,
+    authorName: id.startsWith('deleted:') ? null : (nicknames[id] ?? null),
+    authorDeleted: id.startsWith('deleted:'),
+    authorTag: options.tags?.[id] ?? null,
+  })
   const types = options.types ?? ['LIKE', 'DISLIKE']
   const config: BoardConfig = {
     reactionTypes: types,
@@ -57,7 +81,7 @@ export function createStore(options: FakeBoardOptions) {
     const row: PostDetail = {
       id: seq,
       boardCode: 'free',
-      authorId: author,
+      ...authorFields(author),
       title,
       excerpt: body.slice(0, 80),
       body,
@@ -89,7 +113,7 @@ export function createStore(options: FakeBoardOptions) {
       parentId,
       rootId: parent ? parent.rootId : seq,
       depth,
-      authorId: author,
+      ...authorFields(author),
       body,
       status: 'PUBLISHED',
       reactionCounts: zero(),

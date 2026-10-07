@@ -1,5 +1,7 @@
+import { defaultAuthorLabels, type AuthorLabels } from './authorDisplay'
+
 /** 댓글 영역의 글자 전부 — 기본은 영어. 일부만 덮어쓰려면 `labels={{ reply: '답글' }}` */
-export type CommentLabels = {
+export type CommentLabels = AuthorLabels & {
   reply: string
   edit: string
   delete: string
@@ -25,6 +27,7 @@ export type CommentLabels = {
 }
 
 export const defaultCommentLabels: CommentLabels = {
+  ...defaultAuthorLabels,
   reply: 'Reply',
   edit: 'Edit',
   delete: 'Delete',

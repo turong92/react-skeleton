@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import type { AuthorInfo, AuthorTagMode } from './authorDisplay'
 import type { CommentLabels } from './commentLabels'
 import type { BoardId, CommentStatus, ReactionType } from './types'
 
@@ -20,8 +21,10 @@ export type CommentOptions = {
   reactionIcons?: Partial<Record<ReactionType, ReactNode>>
   /** 시각 글자(기본 `@skeleton/time` 의 `formatInstant`) */
   formatTime?: (iso: string) => string
-  /** 작성자 표시(기본 계정 id 그대로) — 서버 계약에는 이름이 없으니 앱이 id → 이름을 안다면 여기서 */
-  renderAuthor?: (authorId: string) => ReactNode
+  /** 작성자 표시(기본 아바타 + 닉네임). 두 번째 인자로 화면에 보일 이름 · 종류가 온다 — `(authorId) => …` 꼴의 옛 호출부도 그대로 동작한다 */
+  renderAuthor?: (authorId: string, author: AuthorInfo) => ReactNode
+  /** 작성자 꼬리표를 보일 때 — 기본은 이 스레드에서 닉네임이 겹칠 때만 */
+  authorTag?: AuthorTagMode
   labels?: Partial<CommentLabels>
   /** 콜백을 주어야 그 단추가 생긴다. 약속을 돌려주면 끝날 때까지 폼이 「보내는 중」 */
   onReply?: (parentId: BoardId, body: string) => Promise<unknown> | void

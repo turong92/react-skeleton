@@ -23,11 +23,11 @@
 ## 기능 한눈에 (id: 요약 [키워드] → 켜는 조각)
 
 - api-client: 백엔드 REST 호출 한 곳 — 응답 envelope 벗기기 · 표준 에러(ApiRequestError · 에러 코드) · traceparent · 멱등 키 · 서버 시각 연결점을 갖춘 클라이언트. [API 호출, 백엔드 연결, 에러 처리, 에러 코드; api client, rest, http client] → react 기본 포함 · kotlin 기본 포함
-- auth: 로그인 · 계정 수명주기 — 토큰 갱신(401 → 갱신 한 번 → 재시도, 회전 안전 · 탭 락) · 가입 · 메일 인증 · 비밀번호 재설정 · 링크 로그인 · 소셜 · 계정 설정(비밀번호 · 이메일 · 로그인 수단 · 세션 · 삭제) · 탈퇴 유예 중 로그인의 「탈퇴를 취소할까요?」 화면과 라우트 한 벌, 방법은 설정으로 켜고 끈다. [로그인, 로그아웃, 인증, 토큰; login, logout, auth] → react 기본 포함 · kotlin 기본 포함
+- auth: 로그인 · 계정 수명주기 — 토큰 갱신(401 → 갱신 한 번 → 재시도, 회전 안전 · 탭 락) · 가입(닉네임 칸: 끔 · 선택 · 필수) · 메일 인증 · 비밀번호 재설정 · 링크 로그인 · 소셜 · 계정 설정(비밀번호 · 이메일 · 로그인 수단 · 세션 · 삭제) · 탈퇴 유예 중 로그인의 「탈퇴를 취소할까요?」 화면과 라우트 한 벌, 방법은 설정으로 켜고 끈다. [로그인, 로그아웃, 인증, 토큰; login, logout, auth] → react 기본 포함 · kotlin 기본 포함
 - realtime: 서버가 밀어 주는 실시간 연결 — SSE(탭 숨김 일시정지 · 유휴 감시 · 재연결)와 STOMP WebSocket 알림 클라이언트. [실시간, 실시간 알림, SSE, 웹소켓; realtime, sse, server-sent events] → react `--packages realtime` · kotlin `--modules notification-sse` (notification-sse | notification-websocket 중 고른다)
 - i18n: 화면 문구 다국어 — ICU 메시지 · 브라우저 언어 감지/저장 · 지연 로딩 사전 · useT() · 사전 짝 맞춤 테스트 도구. [다국어, 번역, 언어 전환, 한국어 영어; i18n, internationalization, localization] → react `--packages i18n`
 - notifications: 알림 받은편지함 — 목록 · 안 읽은 수 · 읽음/모두 읽음 · 실시간 이벤트로 캐시 갱신, NotificationBell/List 부품과 TanStack Query 훅. [알림, 알림 목록, 알림 종, 안 읽은 알림; notifications, inbox, notification bell] → react `--packages notifications` · kotlin `--modules notification,notification-jdbc`
-- board: 게시판 — 글 · 중첩 댓글(대댓글) · 서버 설정으로 늘어나는 반응(좋아요 · 공감 …) · 운영자 숨김/고정, 목록 · 상세 · 편집기 · 댓글 · 반응 부품과 훅(반응은 낙관적 갱신). [게시판, 커뮤니티, 글쓰기, 댓글; board, forum, community] → react `--packages board` · kotlin `--modules board,board-jdbc`
+- board: 게시판 — 글 · 중첩 댓글(대댓글) · 서버 설정으로 늘어나는 반응(좋아요 · 공감 …) · 운영자 숨김/고정, 작성자 표시(닉네임 · 탈퇴한 사용자 · 이름 없는 사용자 — 계정 id 는 그리지 않는다) · 목록 · 상세 · 편집기 · 댓글 · 반응 부품과 훅(반응은 낙관적 갱신). [게시판, 커뮤니티, 글쓰기, 댓글; board, forum, community] → react `--packages board` · kotlin `--modules board,board-jdbc`
 - storage: 파일 업로드 — 검증 → presign → 브라우저에서 스토리지로 직접 PUT(진행률 · 취소 · 멀티파트)과 useUpload 훅. [파일 업로드, 이미지 업로드, 첨부파일, 프리사인; file upload, image upload, attachment] → react `--packages storage` · kotlin `--modules storage,storage-s3`
 - payment: 결제 계약 — 토스 성공 리다이렉트를 승인 요청으로 바꾸고 승인/취소/환불을 부르는 얇은 클라이언트(경로는 앱이 정한다). [결제, 토스, 스트라이프, 환불; payment, toss, stripe] → react `--packages payment` · kotlin `--modules payment,payment-toss` (payment-toss | payment-stripe 중 고른다)
 - captcha-turnstile: 봇 방지 — Cloudflare Turnstile 스크립트 로더 · <Turnstile> · 토큰 훅 · 요청에 토큰 붙이기. [캡차, 봇 방지, 스팸 방지, 로봇 확인; captcha, turnstile, bot protection] → react `--packages captcha-turnstile` · kotlin 기본 포함

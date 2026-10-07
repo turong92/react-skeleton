@@ -1,4 +1,5 @@
-import { Alert, Button, Field, Input, Select, SectionCard } from '@skeleton/ui'
+import { ErrorCodes } from '@skeleton/api-client'
+import { Alert, Button, CopyButton, Field, Input, Select, SectionCard } from '@skeleton/ui'
 import { useState, type FormEvent } from 'react'
 import type { ProfilePatch } from '../account/types'
 import styles from './auth.module.css'
@@ -6,7 +7,13 @@ import { mergeLabels, type AuthLabels } from './labels'
 import { useAction } from './useAction'
 
 export type ProfileSectionProps = {
-  profile: { displayName: string | null; locale: string | null; timeZone: string | null }
+  profile: {
+    displayName: string | null
+    /** 서버가 붙인 꼬리표 — 있으면 `닉네임#번호` 줄을 보여 준다 */
+    displayTag?: string | null
+    locale: string | null
+    timeZone: string | null
+  }
   /** 고를 수 있는 언어(백엔드가 허용하는 BCP47 목록과 맞춘다) */
   locales: Array<{ value: string; label: string }>
   /** 고를 수 있는 시간대(IANA). 보통 `Intl.supportedValuesOf('timeZone')` */
@@ -15,7 +22,7 @@ export type ProfileSectionProps = {
   labels?: Partial<AuthLabels>
 }
 
-/** 프로필 절 — 표시 이름 · 언어 · 시간대 */
+/** 프로필 절 — 닉네임(꼬리표가 있으면 `닉네임#번호` 와 복사) · 언어 · 시간대 */
 export function ProfileSection({
   profile,
   locales,
@@ -29,6 +36,11 @@ export function ProfileSection({
   const [timeZone, setTimeZone] = useState(profile.timeZone ?? '')
   const [saved, setSaved] = useState(false)
   const action = useAction(labels)
+  const nameTaken = action.error?.code === ErrorCodes.ACCOUNT_DISPLAY_NAME_TAKEN
+  const fullName =
+    profile.displayName && profile.displayTag
+      ? `${profile.displayName}#${profile.displayTag}`
+      : null
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -45,18 +57,32 @@ export function ProfileSection({
   return (
     <SectionCard id="profile" title={labels.sectionProfile}>
       <form className={styles.form} onSubmit={submit} aria-label={labels.sectionProfile}>
-        {action.error && <Alert tone="danger">{action.error.message}</Alert>}
+        {action.error && !nameTaken && <Alert tone="danger">{action.error.message}</Alert>}
         {saved && <Alert tone="success">{labels.profileSaved}</Alert>}
-        <Field label={labels.displayName}>
+        <Field
+          label={labels.displayName}
+          hint={labels.displayNameHint}
+          error={nameTaken ? action.error?.message : undefined}
+        >
           {(control) => (
             <Input
               {...control}
+              autoComplete="nickname"
               maxLength={60}
               value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
+              onChange={(e) => {
+                setDisplayName(e.target.value)
+                if (nameTaken) action.clear()
+              }}
             />
           )}
         </Field>
+        {fullName && (
+          <p className={styles.shownAs}>
+            <span>{labels.displayNameShownAs}</span> <strong>{fullName}</strong>{' '}
+            <CopyButton value={fullName} label={labels.copyHint} />
+          </p>
+        )}
         <Field label={labels.profileLocale}>
           {(control) => (
             <Select {...control} value={locale} onChange={(e) => setLocale(e.target.value)}>

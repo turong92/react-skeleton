@@ -1,0 +1,32 @@
+.band {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  margin-bottom: var(--space-lg);
+  border: 1px solid var(--teal);
+  border-inline-start-width: var(--space-sm);
+  border-radius: var(--radius-md);
+  background: var(--teal-soft);
+  color: var(--text);
+}
+
+.text {
+  display: grid;
+  flex: 1 1 16rem;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.title {
+  color: var(--text-strong);
+  font-size: var(--font-size-subheading);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}

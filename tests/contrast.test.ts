@@ -25,6 +25,10 @@ const PAIRS: Pair[] = [
     (bg): Pair => ({ fg: '--text-muted', bg, min: BODY, use: 'secondary text' }),
   ),
   { fg: '--text', bg: '--header-bg', min: BODY, use: 'header links' },
+  // 강조 띠(apps/sample 의 닉네임 안내 — 강조색 바탕 위의 본문 · 제목)
+  ...['--text', '--text-strong'].map(
+    (fg): Pair => ({ fg, bg: '--teal-soft', min: BODY, use: 'text on the accent callout band' }),
+  ),
   // 상태 글자
   ...['--bg', '--surface', '--surface-alt', '--teal-soft', '--code-bg'].map(
     (bg): Pair => ({ fg: '--teal', bg, min: BODY, use: 'accent text / pills' }),

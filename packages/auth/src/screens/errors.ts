@@ -23,6 +23,7 @@ const byCode = (labels: AuthLabels): Record<string, string> => ({
   [ErrorCodes.ACCOUNT_TOKEN_INVALID]: labels.errorTokenInvalid,
   [ErrorCodes.ACCOUNT_EMAIL_TAKEN]: labels.errorEmailTaken,
   [ErrorCodes.ACCOUNT_SIGN_UP_CLOSED]: labels.errorSignUpClosed,
+  [ErrorCodes.ACCOUNT_DISPLAY_NAME_TAKEN]: labels.errorDisplayNameTaken,
   [ErrorCodes.ACCOUNT_CAPTCHA_FAILED]: labels.errorCaptcha,
   [ErrorCodes.ACCOUNT_CURRENT_PASSWORD_INVALID]: labels.errorCurrentPassword,
   [ErrorCodes.ACCOUNT_REAUTH_FAILED]: labels.errorReauth,

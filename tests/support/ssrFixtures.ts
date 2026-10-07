@@ -526,6 +526,10 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
     labels: { EMPATHY: '공감' },
     icons: { LIKE: '👍' },
   }),
+  'board#AuthorName': () => ({
+    author: { authorId: 'a1', authorName: 'Ann', authorTag: '4821' },
+    tag: 'always',
+  }),
   'board#PostList': () => ({
     posts: [boardPost],
     page: 0,

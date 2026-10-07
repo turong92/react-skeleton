@@ -20,11 +20,19 @@ export const REACTION_ICONS: Record<string, string> = { LIKE: '👍', DISLIKE: '
 export const reactionLabels = (t: Translate): Record<string, string> =>
   Object.fromEntries(REACTION_CODES.map((code) => [code, t(`board.reactions.${code}`)]))
 
+/** 작성자 자리의 글자 — 탈퇴한 사용자 · 이름 없는 사용자(계정 id 는 어디에도 그리지 않는다) */
+const authorLabels = (t: Translate) => ({
+  authorDeleted: t('board.author.deleted'),
+  authorUnnamed: t('board.author.unnamed'),
+})
+
 const pageLabel = (t: Translate) => (page: number) => t('board.page', { page })
 
 export const postListLabels = (t: Translate): PostListLabelsInput => ({
   caption: t('board.list.caption'),
   title: t('board.list.title'),
+  author: t('board.list.author'),
+  ...authorLabels(t),
   comments: t('board.list.comments'),
   reactions: t('board.list.reactions'),
   views: t('board.list.views'),
@@ -65,6 +73,7 @@ const postStatusLabels = (t: Translate): PostDetailLabels['status'] => ({
 })
 
 export const postDetailLabels = (t: Translate): PostDetailLabels => ({
+  ...authorLabels(t),
   edit: t('board.detail.edit'),
   delete: t('board.detail.delete'),
   pin: t('board.detail.pin'),
@@ -92,6 +101,7 @@ export const postEditorLabels = (t: Translate): Partial<PostEditorLabels> => ({
 })
 
 export const commentLabels = (t: Translate): BoardCommentsLabelsInput => ({
+  ...authorLabels(t),
   heading: t('board.comments.heading'),
   sort: t('board.comments.sort'),
   sorts: {

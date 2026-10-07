@@ -71,6 +71,35 @@ describe('settings sections', () => {
     expect(out).toContain('Asia/Seoul')
   })
 
+  it('profile: shows the nickname with the server tag as one copyable name, and nothing when there is no tag', () => {
+    const profile = { displayName: 'Ann', locale: 'ko', timeZone: 'Asia/Seoul' }
+    const props = { locales: [], timeZones: [], onSave: noop }
+    const tagged = html(<ProfileSection {...props} profile={{ ...profile, displayTag: '4821' }} />)
+    expect(tagged).toContain('Ann#4821')
+    expect(tagged).toContain('Copy')
+    expect(html(<ProfileSection {...props} profile={profile} />)).not.toContain('#')
+    expect(
+      html(
+        <ProfileSection
+          {...props}
+          profile={{ ...profile, displayName: null, displayTag: '4821' }}
+        />,
+      ),
+    ).not.toContain('#4821')
+  })
+
+  it('profile: the nickname field is labelled Nickname (the same word as sign-up)', () => {
+    const out = html(
+      <ProfileSection
+        profile={{ displayName: 'Ann', locale: null, timeZone: null }}
+        locales={[]}
+        timeZones={[]}
+        onSave={noop}
+      />,
+    )
+    expect(out).toContain('>Nickname<')
+  })
+
   const password = (subject: ReauthSubject) =>
     html(
       <PasswordSection

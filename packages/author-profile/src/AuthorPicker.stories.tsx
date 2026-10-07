@@ -202,8 +202,40 @@ export const LongNamesAreEllipsizedNotPushedOut: Story = {
     const menu = await canvas.findByRole('menu')
     await expect(menu.getBoundingClientRect().width).toBeLessThanOrEqual(24 * 16 + 2) // 폭 상한
     const item = await canvas.findByRole('menuitemradio', { name: `${longName}#0009` }) // 전체 이름이 낭독 이름
-    const label = item.querySelector('span:not([aria-hidden])') as HTMLElement
-    await expect(getComputedStyle(label).textOverflow).toBe('ellipsis')
-    await expect(item.getBoundingClientRect().right).toBeLessThanOrEqual(window.innerWidth)
+    const box = menu.getBoundingClientRect()
+    await expect(item.getBoundingClientRect().right).toBeLessThanOrEqual(box.right + 1) // 상자 안
+    const name = item.querySelector<HTMLElement>('[class*="nameEllipsis"]')!
+    const tag = item.querySelector<HTMLElement>('[class*="tagFixed"]')!
+    await expect(name.scrollWidth).toBeGreaterThan(name.clientWidth) // 이름이 잘렸다
+    await expect(tag.scrollWidth).toBeLessThanOrEqual(tag.clientWidth) // 꼬리표는 온전하다
+    await expect(tag).toHaveTextContent('#0009')
+    await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
+      document.documentElement.clientWidth,
+    ) // 문서 가로 스크롤 없음
+  },
+}
+
+/** 확인 단추 안의 긴 이름도 이름만 말줄임이고 꼬리표는 고정이다 — 단추 이름(낭독)은 전체 */
+export const LongNameInTheConfirmationButtonKeepsTheTag: Story = {
+  args: { threadAuthorId: 'prf_a' },
+  render: (args) => (
+    <PickerDemo
+      {...args}
+      api={
+        createFakeAuthorProfiles({
+          profiles: [ann, { ...bea, id: 'prf_long', name: longName, tag: '0009' }],
+        }).api
+      }
+    />
+  ),
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(await canvas.findByRole('button', { name: /Writing as Ann#0001/ }))
+    await userEvent.click(await canvas.findByRole('menuitemradio', { name: `${longName}#0009` }))
+    const use = await canvas.findByRole('button', { name: `Use ${longName}#0009` })
+    const name = use.querySelector<HTMLElement>('[class*="nameEllipsis"]')!
+    const tag = use.querySelector<HTMLElement>('[class*="tagFixed"]')!
+    await expect(name.scrollWidth).toBeGreaterThan(name.clientWidth)
+    await expect(tag.scrollWidth).toBeLessThanOrEqual(tag.clientWidth)
+    await expect(use.getBoundingClientRect().right).toBeLessThanOrEqual(window.innerWidth)
   },
 }

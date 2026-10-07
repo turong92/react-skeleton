@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { resolveInitialAuthor, switchNotice, threadOverridesAuto } from './initialAuthor'
+import {
+  resolveInitial,
+  resolveInitialAuthor,
+  switchNotice,
+  threadOverridesAuto,
+} from './initialAuthor'
 
 const profiles = [
   { id: 'prf_a', name: 'Ann', tag: '0001', createdAt: '2026-01-01T00:00:00Z' },
@@ -88,19 +93,62 @@ describe('switchNotice — the one-line confirmation, only when leaving the prof
   })
 })
 
-describe('threadOverridesAuto — a value the picker filled in by itself gives way to what the thread says; a value a person chose never does', () => {
-  const base = { profiles, value: 'prf_b', autoValue: 'prf_b', threadLoading: false }
+describe('resolveInitial — the same three steps, and where the value came from', () => {
+  it("names the source: the thread (1), or this device's memory (2); nothing when neither", () => {
+    expect(resolveInitial({ profiles, threadAuthorId: 'prf_a', remembered: 'prf_b' })).toEqual({
+      id: 'prf_a',
+      source: 'thread',
+    })
+    expect(resolveInitial({ profiles, threadAuthorId: undefined, remembered: 'prf_b' })).toEqual({
+      id: 'prf_b',
+      source: 'memory',
+    })
+    expect(
+      resolveInitial({ profiles, threadAuthorId: undefined, remembered: undefined }),
+    ).toBeUndefined()
+    expect(
+      resolveInitial({
+        profiles,
+        threadAuthorId: 'prf_a',
+        remembered: 'prf_b',
+        threadLoading: true,
+      }),
+    ).toBeUndefined()
+  })
+})
 
-  it('auto value + the thread now names another live profile of mine → that profile', () => {
+describe('threadOverridesAuto — only a value that came from the device memory gives way to the thread; a value the thread chose is fixed, and a value a person chose is never touched', () => {
+  const base = {
+    profiles,
+    value: 'prf_b',
+    auto: { id: 'prf_b', source: 'memory' as const },
+    threadLoading: false,
+  }
+
+  it('memory-sourced auto value + the thread now names another live profile of mine → that profile', () => {
     expect(threadOverridesAuto({ ...base, threadAuthorId: 'prf_a' })).toBe('prf_a')
   })
 
-  it('a value the person chose (not the auto one) is left alone', () => {
+  it('a value the thread chose (1) does not move when the thread later names another profile (paging, sorting)', () => {
     expect(
-      threadOverridesAuto({ ...base, autoValue: undefined, threadAuthorId: 'prf_a' }),
+      threadOverridesAuto({
+        ...base,
+        auto: { id: 'prf_b', source: 'thread' },
+        threadAuthorId: 'prf_a',
+      }),
+    ).toBeUndefined()
+  })
+
+  it('a value the person chose (no auto record, or a record for another value) is left alone', () => {
+    expect(
+      threadOverridesAuto({ ...base, auto: undefined, threadAuthorId: 'prf_a' }),
     ).toBeUndefined()
     expect(
-      threadOverridesAuto({ ...base, autoValue: 'prf_a', threadAuthorId: 'prf_a' }),
+      threadOverridesAuto({
+        ...base,
+        auto: { id: 'prf_a', source: 'memory' },
+        threadAuthorId: 'prf_a',
+      }),
     ).toBeUndefined()
   })
 

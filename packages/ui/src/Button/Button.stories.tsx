@@ -88,6 +88,22 @@ export const Sizes: Story = {
   },
 }
 
+/** `aria-disabled` — 포커스는 받되 비활성으로 보인다(흐림 · not-allowed). hover 로 색이 바뀌지 않는다. 눌러도 하는 일이 없는 것은 호출한 쪽의 몫 */
+export const AriaDisabledLooksDisabledAndIgnoresHover: Story = {
+  args: { 'aria-disabled': 'true', variant: 'secondary' },
+  play: async ({ canvas, userEvent }) => {
+    const button = canvas.getByRole('button', { name: 'Save' })
+    await expect(button).toBeEnabled() // 진짜 disabled 가 아니라 포커스를 받는다
+    button.focus()
+    await expect(button).toHaveFocus()
+    await expect(getComputedStyle(button).cursor).toBe('not-allowed')
+    await expect(Number(getComputedStyle(button).opacity)).toBeLessThan(1)
+    const resting = getComputedStyle(button).backgroundColor
+    await userEvent.hover(button)
+    await expect(getComputedStyle(button).backgroundColor).toBe(resting)
+  },
+}
+
 export const Disabled: Story = {
   args: { disabled: true },
   play: async ({ canvas, args, userEvent }) => {

@@ -15,7 +15,7 @@ const BOARD = {
 }
 const PICKER = {
   dir: 'packages/author-profile',
-  file: 'packages/author-profile/src/AuthorPickerView.tsx',
+  file: 'packages/author-profile/src/authorPickerTypes.ts',
   type: 'AuthorPickerSlotProps',
 }
 
@@ -47,6 +47,17 @@ describe.skipIf(!existsSync(join(REPO, BOARD.dir)) || !existsSync(join(REPO, PIC
       const picker = props(PICKER)
       expect(board.size).toBeGreaterThan(5)
       expect(Object.fromEntries(picker)).toEqual(Object.fromEntries(board))
+    })
+
+    it('the seam attribute: the picker marks its open question with data-author-notice and the board form looks for exactly that', () => {
+      // 선택기(author-profile)와 폼(board)은 서로를 import 하지 않는다 — 질문 요소 표지 한 글자열이 둘의 이음매다
+      const notice = readFileSync(
+        join(REPO, 'packages/author-profile/src/AuthorPickerNotice.tsx'),
+        'utf8',
+      )
+      const focus = readFileSync(join(REPO, 'packages/board/src/focusAuthorSlot.ts'), 'utf8')
+      expect(notice).toContain('data-author-notice=""')
+      expect(focus).toContain('[data-author-notice]')
     })
   },
 )

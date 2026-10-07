@@ -666,3 +666,28 @@ export const SubmitIsBlockedWhileTheQuestionIsOpen: Story = {
     )
   },
 }
+
+/** 스레드(①)가 정한 값은 쪽을 넘겨도 고정이다 — 0쪽에 내 Ann 댓글이 있어 Ann 으로 정해진 뒤, 다음 쪽에 내 Bea 댓글이 보여도 바뀌지 않는다(기억 Bea 에서 온 값이 아니다) */
+export const ValueTheThreadChoseStaysAcrossPages: Story = {
+  args: {
+    fake: { ...profileServer, seed: false },
+    postId: 1,
+    pageSize: 2,
+    authorPicker: demoAuthorPicker(undefined, undefined, undefined, 'prf_b'),
+    setup: (board) => {
+      board.newPost('Thread', 'Body')
+      board.newComment(1, 'Mine as Ann', null, 'prf_a')
+      board.newComment(1, 'Somebody else', null, 'alice')
+      board.newComment(1, 'Mine as Bea', null, 'prf_b')
+    },
+  },
+  play: async ({ canvas, userEvent }) => {
+    await canvas.findByText('Mine as Ann', { selector: 'p' })
+    const picker = () => canvas.getByRole('combobox', { name: 'Post as' })
+    await waitFor(() => expect(picker()).toHaveDisplayValue('Ann')) // 스레드가 정했다(기억 Bea 가 아니다)
+    await userEvent.click(canvas.getByRole('button', { name: 'Next page' }))
+    await canvas.findByText('Mine as Bea', { selector: 'p' })
+    await expect(picker()).toHaveDisplayValue('Ann') // 스레드가 이제 Bea 를 가리켜도 고정
+    await expect(canvas.queryByRole('status')).toBeNull()
+  },
+}

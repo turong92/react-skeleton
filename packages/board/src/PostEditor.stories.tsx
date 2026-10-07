@@ -142,6 +142,41 @@ export const AuthorRequiredWithoutAPickerDoesNotBlock: Story = {
   },
 }
 
+/** 선택기가 답이 필요한 질문을 알리는 동안(`onUnsettledChange(true)`) 보내기를 막는다 — 직접 만든 선택기로 이음매를 보인다: 질문 요소는 `data-author-notice` */
+export const SubmitIsBlockedWhileThePickerHasAnOpenQuestion: Story = {
+  args: {
+    authorRequired: true,
+    authorPicker: ({ onChange, onUnsettledChange }) => (
+      <span data-author-notice="">
+        <button
+          type="button"
+          onClick={() => {
+            onChange('prf_x') // 값은 있다 — 막는 것은 「답이 필요한 질문」 뿐
+            onUnsettledChange(true)
+          }}
+        >
+          Ask
+        </button>
+        <button type="button" onClick={() => onUnsettledChange(false)}>
+          Answer
+        </button>
+      </span>
+    ),
+    initial: { title: 'T', body: 'B' },
+  },
+  play: async ({ canvas, args, userEvent }) => {
+    await userEvent.click(await canvas.findByRole('button', { name: 'Ask' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Publish' }))
+    await expect(canvas.getByRole('alert')).toHaveTextContent(
+      'Answer the question about which profile to use first.',
+    )
+    await expect(args.onSubmit).not.toHaveBeenCalled()
+    await expect(canvas.getByRole('button', { name: 'Ask' })).toHaveFocus() // 질문 요소 안의 첫 조작 요소
+    await userEvent.click(canvas.getByRole('button', { name: 'Answer' }))
+    await expect(canvas.queryByRole('alert')).toBeNull() // 풀리면 문장도 사라진다
+  },
+}
+
 export const AuthorRequiredMessageIsAProp: Story = {
   args: {
     authorRequired: true,

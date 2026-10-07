@@ -14,19 +14,6 @@
   max-width: 100%;
 }
 
-.name {
-  overflow: hidden;
-  max-width: 14rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.tag {
-  /* 눌린 단추 바탕(--surface-muted)에서도 AA — 흐린 색(--text-muted)은 거기서 4.5 에 못 미친다 */
-  color: var(--text);
-  font-weight: 500;
-}
-
 .chevron {
   color: var(--text-muted);
   font-size: var(--font-size-caption);
@@ -52,12 +39,39 @@
   margin: 0;
 }
 
-/* 긴 이름(60자)이 좁은 화면에서 줄을 밀어내지 않게 — 말줄임. 전체 이름은 글자 그대로 남아 낭독된다 */
-.ellipsis {
-  display: inline-block;
-  max-width: min(18rem, calc(100vw - var(--space-xl)));
+/* 이름 + 꼬리표 — 이름만 넘치면 말줄임이고 꼬리표는 고정이다(접힌 단추 · 메뉴 항목 · 확인 단추가 같은 구조) */
+.identity {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-xs);
+  min-width: 0;
+  max-width: 100%;
+}
+
+.current .nameEllipsis {
+  max-width: 14rem;
+}
+
+.nameEllipsis {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  vertical-align: bottom;
+  white-space: nowrap;
+}
+
+.tagFixed {
+  flex: none;
+  /* 바깥 글자색을 그대로 — 채운 단추(primary) 안에서도 단추의 대비를 따른다 */
+  color: inherit;
+  font-weight: 500;
+}
+
+/* 긴 이름(60자)이 좁은 화면에서 단추를 밀어내지 않게 — 단추 안의 글자 폭 상한. 전체 이름은 글자 그대로 남아 낭독된다 */
+.buttonText {
+  display: inline-flex;
+  align-items: baseline;
+  min-width: 0;
+  max-width: min(18rem, calc(100vw - var(--space-xl)));
+  overflow: hidden;
   white-space: nowrap;
 }

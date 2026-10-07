@@ -21,6 +21,11 @@ export type RowMenuItem = {
   checked?: boolean
   /** 앞에 구분선 */
   separatorBefore?: boolean
+  /**
+   * 보이는 모양을 `label` 대신 이것으로 — 이름 일부만 말줄임하고 꼬리표는 고정하는 것처럼 구조가 필요할 때. 접근 가능한 이름은 그대로 `label` 이다(`aria-label`).
+   * 말줄임이 필요한 자식은 스스로 `min-width: 0; overflow: hidden; text-overflow: ellipsis` 를 갖는다
+   */
+  content?: ReactNode
 }
 
 export type RowMenuProps = {
@@ -183,6 +188,7 @@ export function RowMenu({
                 role={item.checked === undefined ? 'menuitem' : 'menuitemradio'}
                 aria-checked={item.checked}
                 aria-disabled={item.disabled ? true : undefined}
+                aria-label={item.content === undefined ? undefined : item.label}
                 tabIndex={-1}
                 className={styles.item}
                 data-danger={item.danger ? 'true' : undefined}
@@ -196,7 +202,7 @@ export function RowMenu({
                 <span className={styles.check} aria-hidden="true">
                   {item.checked ? '✓' : ''}
                 </span>
-                <span className={styles.itemLabel}>{item.label}</span>
+                <span className={styles.itemLabel}>{item.content ?? item.label}</span>
               </button>
             </div>
           ))}

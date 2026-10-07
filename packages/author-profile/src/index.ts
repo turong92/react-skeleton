@@ -13,7 +13,13 @@ export {
 } from './hooks'
 export { browserLocalStorage, createAuthorMemory, forgetAuthorMemory } from './authorMemory'
 export type { AuthorMemory, StorageLike } from './authorMemory'
-export { resolveInitialAuthor, switchNotice, threadOverridesAuto } from './initialAuthor'
+export {
+  resolveInitial,
+  resolveInitialAuthor,
+  switchNotice,
+  threadOverridesAuto,
+} from './initialAuthor'
+export type { AutoValue } from './initialAuthor'
 export { defaultAuthorProfileLabels } from './labels'
 export type { AuthorProfileLabels } from './labels'
 export {

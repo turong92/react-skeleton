@@ -48,7 +48,7 @@
   color: var(--on-inverse);
 }
 
-.button[data-variant='primary']:hover:not(:disabled) {
+.button[data-variant='primary']:hover:not(:disabled):not([aria-disabled='true']) {
   border-color: var(--teal);
   background: var(--teal);
   color: var(--on-inverse);
@@ -60,7 +60,7 @@
   color: var(--text-strong);
 }
 
-.button[data-variant='secondary']:hover:not(:disabled) {
+.button[data-variant='secondary']:hover:not(:disabled):not([aria-disabled='true']) {
   border-color: var(--teal);
   background: var(--teal-wash);
   color: var(--text-strong);
@@ -73,7 +73,7 @@
   color: var(--text-strong);
 }
 
-.button[data-variant='ghost']:hover:not(:disabled) {
+.button[data-variant='ghost']:hover:not(:disabled):not([aria-disabled='true']) {
   border-color: var(--teal);
   background: var(--teal-wash);
   color: var(--text-strong);
@@ -85,7 +85,7 @@
   color: var(--text-strong);
 }
 
-.button[data-variant='danger']:hover:not(:disabled) {
+.button[data-variant='danger']:hover:not(:disabled):not([aria-disabled='true']) {
   border-color: var(--red);
   color: var(--red);
 }
@@ -100,21 +100,21 @@
   font-weight: 600;
 }
 
-.button[data-variant='link']:hover:not(:disabled) {
+.button[data-variant='link']:hover:not(:disabled):not([aria-disabled='true']) {
   color: var(--text-strong);
 }
 
-.button:active:not(:disabled) {
+.button:active:not(:disabled):not([aria-disabled='true']) {
   transform: translateY(1px);
 }
 
-.button[data-variant='secondary']:active:not(:disabled),
-.button[data-variant='ghost']:active:not(:disabled) {
+.button[data-variant='secondary']:active:not(:disabled):not([aria-disabled='true']),
+.button[data-variant='ghost']:active:not(:disabled):not([aria-disabled='true']) {
   border-color: var(--teal);
   background: var(--teal-soft);
 }
 
-.button[data-variant='primary']:active:not(:disabled) {
+.button[data-variant='primary']:active:not(:disabled):not([aria-disabled='true']) {
   border-color: var(--text-strong);
   background: var(--text-strong);
 }
@@ -125,6 +125,12 @@
 }
 
 .button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* 포커스는 받되 비활성으로 보이는 단추(`aria-disabled`) — hover · active 효과는 위에서 이미 빠진다 */
+.button[aria-disabled='true'] {
   opacity: 0.55;
   cursor: not-allowed;
 }

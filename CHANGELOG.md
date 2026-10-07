@@ -9,10 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added — `@skeleton/author-profile` (작성자 프로필)
 
-새 패키지. 백엔드 짝 `author-profile` 모듈(`/author-profiles`). 문구는 모두 `labels` prop(기본 영어). 다른 패키지를 import 하지 않는다 — `@skeleton/board` 와는 `authorPicker` 렌더 prop 한 곳(`AuthorPickerSlotProps` ↔ 보드의 `AuthorPickerArgs`)에서 만난다.
+새 패키지. 백엔드 짝 `author-profile` 모듈(`/author-profiles`). 문구는 모두 `labels` prop(기본 영어). **`@skeleton/board` 를 import 하지 않는다**(`@skeleton/api-client` · `@skeleton/ui` 에 기댄다) — 보드와는 `authorPicker` 렌더 prop 한 곳(`AuthorPickerSlotProps` ↔ 보드의 `AuthorPickerArgs`)에서 만난다.
 
 - **API · 훅**: `createAuthorProfileApi` · `useAuthorProfiles` · 만들기 · 이름 바꾸기 · 삭제 훅(끝나면 목록 무효화, `alsoInvalidate` 로 게시판 캐시도). `name` · `tag` 는 `string | null`(이름 없는 옛 글의 첫 프로필 · 꼬리표가 꺼진 서버) — `profileDisplay(profile, unnamed?)`. `ErrorCodes.AUTHOR_PROFILE_*`.
-- **`AuthorPicker`**(게시판 `authorPicker` 에 꽂는다): 접힌 상태는 고른 `이름#꼬리표` 하나, 긴 이름은 말줄임. 처음 값은 이 스레드에서 쓴 프로필 → 이 기기가 기억하는 프로필 → 비어 있음 — 단 댓글을 받는 중(`threadLoading`)에는 확정하지 않고 단추를 잠근다. **스스로 채운 값**은 스레드가 나중에 다른 내 프로필을 가리키면(첫 불러오기 재시도 · 쪽 넘김) 그쪽으로 다시 정하고, 사람이 고른 값은 건드리지 않는다. 이 스레드의 프로필과 다른 것으로 바꿀 때만 한 줄 확인(`Use ○○` / `Keep 지금 값`) — 떠 있는 동안 폼에 알려(`onUnsettledChange`) 제출을 막고, Esc · 폼 밖 포커스 · 잠금 · 값 변화로 닫히며, 누른 뒤 포커스는 선택기 단추로 돌아온다. 폼의 칸 오류 문장은 `aria-describedby` 로 이어진다. `AuthorPickerView.createOpensDialog` · `useProfileDialog({ api, title, … })`(선택기의 「프로필 만들기」가 여는 프로필 관리 대화상자 — 쓰던 글 유지, 닫을 때 포커스는 선택기 자리).
+- **`AuthorPicker`**(게시판 `authorPicker` 에 꽂는다): 접힌 상태는 고른 `이름#꼬리표` 하나 — 긴 이름은 이름만 말줄임이고 꼬리표는 고정(접힌 단추 · 메뉴 항목 · 확인 단추 같은 구조). 처음 값은 이 스레드에서 쓴 프로필(①) → 이 기기가 기억하는 프로필(②) → 비어 있음 — 단 댓글을 받는 중(`threadLoading`)에는 확정하지 않고 단추를 잠근다. 스스로 채운 값은 출처를 기억해, **기억(②)에서 온 값만** 스레드가 나중에 다른 내 프로필을 가리키면(첫 불러오기 재시도 · 쪽 넘김) 그쪽으로 다시 정한다. 스레드(①)가 정한 값 · 사람이 고른 값은 건드리지 않는다. 이 스레드의 프로필과 다른 것으로 바꿀 때만 한 줄 확인(`Use ○○` / `Keep 지금 값`) — 떠 있는 동안 폼에 알려(`onUnsettledChange`) 제출을 막고, Esc · 폼 밖 포커스 · 잠금 · 값 변화로 닫히며, 누른 뒤 포커스는 선택기 단추로 돌아온다. 폼의 칸 오류 문장은 `aria-describedby` 로 이어진다. `AuthorPickerView.createOpensDialog` · `useProfileDialog({ api, title, … })`(선택기의 「프로필 만들기」가 여는 프로필 관리 대화상자 — 쓰던 글 유지, 닫을 때 포커스는 선택기 자리).
 - **`AuthorProfileManager`**: 목록 · 추가 · 이름 바꾸기(한 번에 한 줄) · 삭제 확인. 저장 · 취소 · 삭제 뒤 포커스를 옮기고, 상한 문장은 추가 칸의 설명이다. 추가가 네트워크 오류(status 0)로 끝난 뒤 같은 이름을 다시 보내면 같은 `Idempotency-Key`. 429 는 이름 바꾸기만 `foldDuration`(초 · 분 · 시간 · 일, `labels.rateLimited` 가 `{ unit, value }` 를 받는다)로 시간을 말하고 추가는 시간을 약속하지 않는다.
 - **기기 기억**: `createAuthorMemory(storage, accountId)`(키에만 계정 id, 만들 때 다른 계정의 키를 지운다) · `forgetAuthorMemory(storage)`(계정 id 없이 지우기 — 앱의 계정 변경 핸들러 한 곳에서 쿼리 캐시 비우기와 함께).
 - **오류**: `isAuthorProfileFormError` 는 `AUTHOR_PROFILE.` 코드만 가린다(400 이름 칸 오류는 앱의 검증 실패 필터 몫 — sample 의 `errorToast.ts`). `refreshProfilesOnAuthorRefusal(client, error)` — 게시판이 작성자 id 를 거절하면(`BOARD.AUTHOR_NOT_ALLOWED`) 프로필 목록 캐시를 낡았다고 표시. 모르는 이름 칸 오류 코드는 일반 문구.
@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 게시판: 글쓰기 · 댓글 · 답글에 선택기(`authorPicker`, 고치기에는 없음), 글 상세의 내 글 판정은 `isOwn`(서버의 `mine`), `<BoardComments key={post.id} postAuthor>`. 작성자 자리의 삭제 문구는 「삭제된 사용자」.
 - **동작 변경**: 「닉네임이 없으면 쓰기 전에 닉네임 대화상자」(`NICKNAME_BEFORE_WRITE`)는 「서버가 작성자를 요구하는데 **이름 있는** 프로필이 하나도 없으면(백엔드가 자동으로 만든 이름 없는 첫 프로필뿐이어도) 쓰기 전에 프로필 만들기 대화상자」(`PROFILE_BEFORE_WRITE`)로 바뀌었다. 선택기가 이름 있는 프로필이 없을 때 「프로필 만들기」를 보이고 그 단추가 같은 대화상자를 연다(쓰던 글 유지) — 새 글 · 새 댓글 · 답글만 막히고 댓글 수정은 걸리지 않는다. `useNicknameGate().ensure` 는 없어졌다(`open` 만). 샘플은 `author-profile` 모듈이 필수다.
 - **동작 변경**: 설정의 접힌 「문의용 정보」(계정 id + 복사)를 없앴다 — 계정 id 는 화면 · aria 어디에도 그리지 않는다.
-- 전역 오류 토스트는 `AUTHOR_PROFILE.*` 오류를 건너뛰고(폼이 제자리에서 말한다), 계정이 바뀌거나 로그아웃하면 서버 상태 캐시와 함께 기기 기억(`forgetAuthorMemory`)을 한 곳(`onAccountChange`)에서 지운다.
+- 전역 오류 토스트는 `AUTHOR_PROFILE.*` 오류를 건너뛰고(폼이 제자리에서 말한다) 게시판이 작성자를 거절하면(`BOARD.AUTHOR_NOT_ALLOWED`) `refreshProfilesOnAuthorRefusal` 로 프로필 목록을 다시 받게 하고(`app/queryClient.ts`), 계정이 바뀌거나 로그아웃하면 서버 상태 캐시와 함께 기기 기억(`forgetAuthorMemory`)을 한 곳(`onAccountChange`)에서 지운다.
 - e2e `authorProfiles.e2e.ts`(백엔드 `author-profile` 이 켜진 샘플 필요) · 기존 e2e 의 글쓰기 단계는 프로필이 필요하면 하나 만들어 고른다.
 
 ### Changed — `apps/sample` 닉네임 안내 띠
@@ -32,7 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added — `@skeleton/ui`
 
-- `RowMenu` 에 `describedBy`(버튼의 `aria-describedby` — 메뉴 칸 밖의 설명 · 폼 오류 문장의 id). 이름(`label`)은 그대로. 스토리 `DescribedByTiesAnOutsideDescriptionToTheButton`. 메뉴는 폭 상한(`min(24rem, 100vw − 여백)`)을 갖고 항목 글자는 넘치면 말줄임(전체 이름은 글자 그대로 낭독 이름).
+- `RowMenu` 에 `describedBy`(버튼의 `aria-describedby` — 메뉴 칸 밖의 설명 · 폼 오류 문장의 id). 이름(`label`)은 그대로. 스토리 `DescribedByTiesAnOutsideDescriptionToTheButton`. 메뉴는 폭 상한(`min(24rem, 100vw − 여백)`)을 갖고 긴 항목은 상자 안에서 말줄임(전체 이름은 글자 그대로 낭독 이름), 항목의 `content` 로 보이는 모양을 직접 정할 수 있다(이름은 `label` 그대로). `Button` 의 `aria-disabled` 는 `:disabled` 처럼 흐리고 hover · active 효과가 없다.
 
 ### Changed — `@skeleton/board`: 작성자 선택기 자리 · `mine` 소유 판정 · `authorRequired` (작성자 프로필을 쓰는 서버)
 

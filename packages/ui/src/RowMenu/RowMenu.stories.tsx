@@ -203,6 +203,72 @@ export const DescribedByTiesAnOutsideDescriptionToTheButton: Story = {
   },
 }
 
+const veryLong = '가나다라마바사아자차카타파하'.repeat(10)
+
+/** 긴 항목은(폭 상한 `min(24rem, 100vw − 여백)` — 시험 브라우저의 뷰포트에서는 24rem 이 상한이고, 320~414px 화면에서는 화면 폭 − 여백이 상한이다) **상자 안에서** 말줄임이다 — 항목이 상자 밖으로 밀려 나가거나 문서에 가로 스크롤이 생기지 않는다 */
+export const LongItemsAreEllipsizedInsideTheMenu: Story = {
+  args: {
+    items: [
+      { key: 'long', label: veryLong, onSelect: fn(), checked: true },
+      { key: 'short', label: 'Short', onSelect: fn(), checked: false },
+    ],
+  },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(trigger(canvas))
+    const menu = canvas.getByRole('menu')
+    const item = canvas.getByRole('menuitemradio', { name: veryLong }) // 전체 글자가 낭독 이름
+    const label = item.querySelector('span:not([aria-hidden])') as HTMLElement
+    const box = menu.getBoundingClientRect()
+    await expect(box.width).toBeLessThanOrEqual(Math.min(24 * 16, window.innerWidth) + 1)
+    await expect(box.right).toBeLessThanOrEqual(window.innerWidth)
+    await expect(item.getBoundingClientRect().right).toBeLessThanOrEqual(box.right + 1)
+    await expect(item.getBoundingClientRect().width).toBeLessThanOrEqual(box.width)
+    await expect(label.scrollWidth).toBeGreaterThan(label.clientWidth) // 실제로 잘렸다
+    await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
+      document.documentElement.clientWidth,
+    ) // 문서 가로 스크롤 없음
+  },
+}
+
+/** `content` — 보이는 모양을 직접 정한다: 이름은 말줄임, 꼬리표는 고정(잘리지 않는다). 이름(`label`)은 그대로 낭독 이름 */
+export const ContentKeepsTheTagWhileTheNameIsEllipsized: Story = {
+  args: {
+    items: [
+      {
+        key: 'long',
+        label: `${veryLong}#0042`,
+        checked: true,
+        onSelect: fn(),
+        content: (
+          <span style={{ display: 'flex', minWidth: 0, gap: 'var(--space-xs)' }}>
+            <span
+              data-testid="name"
+              style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}
+            >
+              {veryLong}
+            </span>
+            <span data-testid="tag" style={{ flex: 'none' }}>
+              #0042
+            </span>
+          </span>
+        ),
+      },
+    ],
+  },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(trigger(canvas))
+    const item = canvas.getByRole('menuitemradio', { name: `${veryLong}#0042` })
+    const name = item.querySelector('[data-testid="name"]') as HTMLElement
+    const tag = item.querySelector('[data-testid="tag"]') as HTMLElement
+    await expect(name.scrollWidth).toBeGreaterThan(name.clientWidth) // 이름은 잘렸고
+    await expect(tag.scrollWidth).toBeLessThanOrEqual(tag.clientWidth) // 꼬리표는 온전하다
+    await expect(tag.getBoundingClientRect().right).toBeLessThanOrEqual(
+      canvas.getByRole('menu').getBoundingClientRect().right + 1,
+    )
+    await expect(item.getBoundingClientRect().right).toBeLessThanOrEqual(window.innerWidth)
+  },
+}
+
 export const OpensUpwardWhenThereIsNoRoomBelow: Story = {
   render: (args) => (
     <div

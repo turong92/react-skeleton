@@ -167,7 +167,10 @@ export const NoticeIsAnnouncedOnceAndEscapeClosesIt: Story = {
     await userEvent.click(await canvas.findByRole('menuitemradio', { name: 'Bea#0002' }))
     await expect(await canvas.findByRole('status')).toBeVisible()
     await expect(canvas.getAllByRole('status')).toHaveLength(1)
-    await expect(canvas.queryByRole('group')).toBeNull()
+    // 묶음의 이름은 질문 문장 — 낭독이 묶음에 들어올 때 질문이 들린다
+    await expect(
+      canvas.getByRole('group', { name: 'You wrote in this thread as Ann#0001.' }),
+    ).toBeVisible()
     // 메뉴에서 고른 직후의 실제 포커스(선택기 단추)에서 Esc — 확인 줄로 포커스를 옮기지 않는다
     await expect(trigger).toHaveFocus()
     await userEvent.keyboard('{Escape}')
@@ -248,6 +251,31 @@ export const ChosenValueStaysWhenTheThreadArrivesLater: Story = {
     await userEvent.click(await canvas.findByRole('menuitemradio', { name: 'Bea#0002' }))
     await expect(await canvas.findByRole('button', { name: /Writing as Bea#0002/ })).toBeVisible()
     document.dispatchEvent(new CustomEvent('story:thread', { detail: 'prf_a' }))
+    await expect(canvas.getByRole('button', { name: /Writing as Bea#0002/ })).toBeVisible()
+    await expect(canvas.queryByRole('status')).toBeNull()
+  },
+}
+
+/** 스레드(①)가 정한 값은 고정이다 — 쪽 · 정렬을 넘겨 스레드가 다른 프로필(Bea)을 가리켜도 바뀌지 않는다(기억 ② 에서 온 값과 다르다) */
+export const ValueTheThreadChoseIsFixed: Story = {
+  args: { threadAuthorId: 'prf_a' },
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByRole('button', { name: /Writing as Ann#0001/ })).toBeVisible()
+    document.dispatchEvent(new CustomEvent('story:thread', { detail: 'prf_b' }))
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)))
+    await expect(canvas.getByRole('button', { name: /Writing as Ann#0001/ })).toBeVisible()
+    await expect(onChange).toHaveBeenCalledTimes(1) // 처음 채운 한 번뿐
+  },
+}
+
+/** 지금 값을 사람이 다시 고르면(같은 값) 사람의 값이 된다 — 기억에서 온 자동 값이었어도 이제 스레드가 덮지 않는다 */
+export const PickingTheCurrentValueAgainMakesItTheirs: Story = {
+  args: { remembered: 'prf_b' },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(await canvas.findByRole('button', { name: /Writing as Bea#0002/ }))
+    await userEvent.click(await canvas.findByRole('menuitemradio', { name: 'Bea#0002' }))
+    document.dispatchEvent(new CustomEvent('story:thread', { detail: 'prf_a' }))
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)))
     await expect(canvas.getByRole('button', { name: /Writing as Bea#0002/ })).toBeVisible()
     await expect(canvas.queryByRole('status')).toBeNull()
   },

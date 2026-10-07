@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { RowMenu } from './RowMenu'
@@ -38,5 +40,12 @@ describe('RowMenu', () => {
     expect(renderToStaticMarkup(<RowMenu label="m" items={items} />)).not.toContain(
       'aria-describedby',
     )
+  })
+
+  it('menu tracks may shrink (minmax(0, 1fr)) — the root cause of long labels pushing out of the box', () => {
+    const css = readFileSync(join(__dirname, 'RowMenu.module.css'), 'utf8')
+    expect(css).toMatch(/\.menu\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/)
+    expect(css).toMatch(/\.entry\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/)
+    expect(css).toMatch(/\.menu\s*\{[^}]*max-width:[^;]*100vw/)
   })
 })

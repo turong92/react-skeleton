@@ -49,8 +49,10 @@ describe('Button affordance', () => {
   })
 
   it('every state is distinguishable: hover, active, focus-visible, and a dimmed disabled', () => {
-    expect(body(`.button[data-variant='ghost']:hover:not(:disabled)`)).not.toBe('')
-    expect(body('.button:active:not(:disabled)')).not.toBe('')
+    expect(
+      body(`.button[data-variant='ghost']:hover:not(:disabled):not([aria-disabled='true'])`),
+    ).not.toBe('')
+    expect(body("..button:active:not(:disabled):not([aria-disabled='true'])".slice(1))).not.toBe('')
     expect(body('.button:focus-visible')).toMatch(/outline/)
     expect(value(body('.button:disabled'), 'opacity')).toBeDefined()
     expect(value(body('.button'), 'cursor')).toBe('pointer')
@@ -102,5 +104,12 @@ describe('icon buttons and small controls: boxed at rest, 44px targets', () => {
       expect(border, 'has a visible border').toMatch(/solid/)
       expect(border).not.toMatch(/transparent/)
     }
+  })
+
+  it('aria-disabled looks disabled like :disabled, and hover / active effects skip it', () => {
+    expect(value(body(".button[aria-disabled='true']"), 'cursor')).toBe('not-allowed')
+    expect(value(body(".button[aria-disabled='true']"), 'opacity')).toBeDefined()
+    for (const line of css.split('\n').filter((l) => /:(hover|active)/.test(l)))
+      expect(line, line).toContain(":not([aria-disabled='true'])")
   })
 })

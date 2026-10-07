@@ -51,10 +51,26 @@ describe('createAuthorMemory — which profile this device wrote with last, per 
     expect(storage.length).toBe(0)
   })
 
-  it('a board code with the key separator in it cannot collide with another account', () => {
+  it('the key separator inside an account id or a board code cannot make two different (account, board) pairs share a key', () => {
+    const keyFor = (account: string, board: string) => {
+      const storage = memoryStorage()
+      createAuthorMemory(storage, account).set(board, 'prf_x')
+      return Object.keys(storage.dump())
+    }
+    // ('a', 'b:c') 와 ('a:b', 'c') 는 구분자를 붙여 쓰면 같은 글자열이 된다
+    const one = keyFor('a', 'b:c')
+    const two = keyFor('a:b', 'c')
+    expect(one).toHaveLength(1)
+    expect(two).toHaveLength(1)
+    expect(one[0]).not.toBe(two[0])
+    // 같은 계정이 두 게시판을 쓸 때도 다른 키
     const storage = memoryStorage()
-    createAuthorMemory(storage, 'acc_1').set('x:acc_2:y', 'prf_a')
-    expect(createAuthorMemory(storage, 'acc_2').get('y')).toBeUndefined()
+    const memory = createAuthorMemory(storage, 'a')
+    memory.set('b:c', 'prf_1')
+    memory.set('b', 'prf_2')
+    expect(Object.keys(storage.dump())).toHaveLength(2)
+    expect(memory.get('b:c')).toBe('prf_1')
+    expect(memory.get('b')).toBe('prf_2')
   })
 
   it('set with undefined clears that board', () => {

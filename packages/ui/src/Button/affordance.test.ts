@@ -52,7 +52,7 @@ describe('Button affordance', () => {
     expect(
       body(`.button[data-variant='ghost']:hover:not(:disabled):not([aria-disabled='true'])`),
     ).not.toBe('')
-    expect(body("..button:active:not(:disabled):not([aria-disabled='true'])".slice(1))).not.toBe('')
+    expect(body(".button:active:not(:disabled):not([aria-disabled='true'])")).not.toBe('')
     expect(body('.button:focus-visible')).toMatch(/outline/)
     expect(value(body('.button:disabled'), 'opacity')).toBeDefined()
     expect(value(body('.button'), 'cursor')).toBe('pointer')

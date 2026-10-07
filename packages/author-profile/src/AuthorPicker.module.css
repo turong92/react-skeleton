@@ -11,6 +11,17 @@
   display: inline-flex;
   align-items: baseline;
   gap: var(--space-xs);
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* 좁은 칸(들여쓴 답글 폼)에서 긴 이름이 가로 스크롤을 만들지 않게 — 단추도 칸 폭을 넘지 않는다 */
+.root > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.root button[aria-haspopup] {
   max-width: 100%;
 }
 
@@ -41,9 +52,9 @@
 
 /* 이름 + 꼬리표 — 이름만 넘치면 말줄임이고 꼬리표는 고정이다(접힌 단추 · 메뉴 항목 · 확인 단추가 같은 구조) */
 .identity {
+  /* 이름과 꼬리표 사이에 간격이 없다 — 문장 속 `이름#꼬리표` 와 같은 표기 */
   display: inline-flex;
   align-items: baseline;
-  gap: var(--space-xs);
   min-width: 0;
   max-width: 100%;
 }
@@ -73,5 +84,6 @@
   min-width: 0;
   max-width: min(18rem, calc(100vw - var(--space-xl)));
   overflow: hidden;
-  white-space: nowrap;
+  /* `pre`: 글자 노드가 익명 flex 항목이 되면 끝 공백이 접혀 「Use」 와 이름이 붙는다 — 공백을 그대로 둔다 */
+  white-space: pre;
 }

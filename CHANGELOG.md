@@ -32,7 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added — `@skeleton/ui`
 
-- `RowMenu` 에 `describedBy`(버튼의 `aria-describedby` — 메뉴 칸 밖의 설명 · 폼 오류 문장의 id). 이름(`label`)은 그대로. 스토리 `DescribedByTiesAnOutsideDescriptionToTheButton`. 메뉴는 폭 상한(`min(24rem, 100vw − 여백)`)을 갖고 긴 항목은 상자 안에서 말줄임(전체 이름은 글자 그대로 낭독 이름), 항목의 `content` 로 보이는 모양을 직접 정할 수 있다(이름은 `label` 그대로). `Button` 의 `aria-disabled` 는 `:disabled` 처럼 흐리고 hover · active 효과가 없다.
+- `RowMenu` 에 `describedBy`(버튼의 `aria-describedby` — 메뉴 칸 밖의 설명 · 폼 오류 문장의 id). 이름(`label`)은 그대로. 스토리 `DescribedByTiesAnOutsideDescriptionToTheButton`. 메뉴는 폭이 내용에 맞춰 넓어지고(`width: max-content`, 최소 12rem) 상한은 `min(24rem, 100vw − 여백)` — 상한을 넘는 항목만 상자 안에서 말줄임(전체 이름은 글자 그대로 낭독 이름), 항목의 `content` 로 보이는 모양을 직접 정할 수 있다(이름은 `label` 그대로). `Button` 의 `aria-disabled` 는 `:disabled` 처럼 흐리고 hover · active 효과가 없다.
 
 ### Changed — `@skeleton/board`: 작성자 선택기 자리 · `mine` 소유 판정 · `authorRequired` (작성자 프로필을 쓰는 서버)
 

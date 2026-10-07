@@ -41,7 +41,12 @@ function Changing({
       document.removeEventListener('story:lock', lock)
     }
   }, [])
-  return <PickerDemo {...rest} threadAuthorId={thread} threadLoading={loading} disabled={sending} />
+  return (
+    // 스토리가 「이 신호가 반영됐다」를 기다릴 수 있게 지금 스레드를 드러낸다 — 부정 단정은 이 표지를 기다린 뒤에
+    <div data-thread={thread ?? ''} style={{ display: 'contents' }}>
+      <PickerDemo {...rest} threadAuthorId={thread} threadLoading={loading} disabled={sending} />
+    </div>
+  )
 }
 
 const meta = {
@@ -246,11 +251,12 @@ export const AutoFilledValueFollowsTheThreadWhenItArrivesLater: Story = {
 
 /** 사람이 고른 값(Bea)은 스레드가 나중에 Ann 을 가리켜도 그대로다 */
 export const ChosenValueStaysWhenTheThreadArrivesLater: Story = {
-  play: async ({ canvas, userEvent }) => {
+  play: async ({ canvas, canvasElement, userEvent }) => {
     await userEvent.click(await canvas.findByRole('button', { name: 'Choose a profile' }))
     await userEvent.click(await canvas.findByRole('menuitemradio', { name: 'Bea#0002' }))
     await expect(await canvas.findByRole('button', { name: /Writing as Bea#0002/ })).toBeVisible()
     document.dispatchEvent(new CustomEvent('story:thread', { detail: 'prf_a' }))
+    await waitFor(() => expect(canvasElement.querySelector('[data-thread="prf_a"]')).not.toBeNull())
     await expect(canvas.getByRole('button', { name: /Writing as Bea#0002/ })).toBeVisible()
     await expect(canvas.queryByRole('status')).toBeNull()
   },
@@ -259,10 +265,10 @@ export const ChosenValueStaysWhenTheThreadArrivesLater: Story = {
 /** 스레드(①)가 정한 값은 고정이다 — 쪽 · 정렬을 넘겨 스레드가 다른 프로필(Bea)을 가리켜도 바뀌지 않는다(기억 ② 에서 온 값과 다르다) */
 export const ValueTheThreadChoseIsFixed: Story = {
   args: { threadAuthorId: 'prf_a' },
-  play: async ({ canvas }) => {
+  play: async ({ canvas, canvasElement }) => {
     await expect(await canvas.findByRole('button', { name: /Writing as Ann#0001/ })).toBeVisible()
     document.dispatchEvent(new CustomEvent('story:thread', { detail: 'prf_b' }))
-    await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)))
+    await waitFor(() => expect(canvasElement.querySelector('[data-thread="prf_b"]')).not.toBeNull())
     await expect(canvas.getByRole('button', { name: /Writing as Ann#0001/ })).toBeVisible()
     await expect(onChange).toHaveBeenCalledTimes(1) // 처음 채운 한 번뿐
   },
@@ -271,11 +277,11 @@ export const ValueTheThreadChoseIsFixed: Story = {
 /** 지금 값을 사람이 다시 고르면(같은 값) 사람의 값이 된다 — 기억에서 온 자동 값이었어도 이제 스레드가 덮지 않는다 */
 export const PickingTheCurrentValueAgainMakesItTheirs: Story = {
   args: { remembered: 'prf_b' },
-  play: async ({ canvas, userEvent }) => {
+  play: async ({ canvas, canvasElement, userEvent }) => {
     await userEvent.click(await canvas.findByRole('button', { name: /Writing as Bea#0002/ }))
     await userEvent.click(await canvas.findByRole('menuitemradio', { name: 'Bea#0002' }))
     document.dispatchEvent(new CustomEvent('story:thread', { detail: 'prf_a' }))
-    await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)))
+    await waitFor(() => expect(canvasElement.querySelector('[data-thread="prf_a"]')).not.toBeNull())
     await expect(canvas.getByRole('button', { name: /Writing as Bea#0002/ })).toBeVisible()
     await expect(canvas.queryByRole('status')).toBeNull()
   },

@@ -203,9 +203,42 @@ export const DescribedByTiesAnOutsideDescriptionToTheButton: Story = {
   },
 }
 
+/** 루트 글자 크기 기준 rem → px */
+const rem = (n: number) => parseFloat(getComputedStyle(document.documentElement).fontSize) * n
 const veryLong = '가나다라마바사아자차카타파하'.repeat(10)
 
 /** 긴 항목은(폭 상한 `min(24rem, 100vw − 여백)` — 시험 브라우저의 뷰포트에서는 24rem 이 상한이고, 320~414px 화면에서는 화면 폭 − 여백이 상한이다) **상자 안에서** 말줄임이다 — 항목이 상자 밖으로 밀려 나가거나 문서에 가로 스크롤이 생기지 않는다 */
+/** 메뉴는 **내용에 맞춰** 넓어진다 — 짧은 메뉴는 최소폭(12rem), 34자 항목은 잘리지 않고 그만큼 넓어지며, 상한(24rem)을 넘는 것만 말줄임 */
+export const MenuWidthFollowsItsContent: Story = {
+  args: {
+    items: [
+      { key: 'edit', label: 'Edit', onSelect: fn() },
+      { key: 'delete', label: 'Delete', onSelect: fn(), danger: true },
+    ],
+  },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(trigger(canvas))
+    const short = canvas.getByRole('menu').getBoundingClientRect()
+    await expect(Math.abs(short.width - rem(12))).toBeLessThanOrEqual(1) // 짧은 내용 → 최소폭
+  },
+}
+
+export const ThirtyFourCharacterItemIsShownInFull: Story = {
+  args: {
+    items: [{ key: 'mid', label: 'A thirty-four character menu item!', onSelect: fn() }],
+  },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(trigger(canvas))
+    const menu = canvas.getByRole('menu').getBoundingClientRect()
+    const label = canvas
+      .getByRole('menuitem')
+      .querySelector('span:not([aria-hidden])') as HTMLElement
+    await expect(label.scrollWidth).toBeLessThanOrEqual(label.clientWidth) // 잘리지 않았다
+    await expect(menu.width).toBeGreaterThan(rem(12)) // 최소폭보다 넓어졌다
+    await expect(menu.width).toBeLessThanOrEqual(rem(24) + 1)
+  },
+}
+
 export const LongItemsAreEllipsizedInsideTheMenu: Story = {
   args: {
     items: [
@@ -219,7 +252,7 @@ export const LongItemsAreEllipsizedInsideTheMenu: Story = {
     const item = canvas.getByRole('menuitemradio', { name: veryLong }) // 전체 글자가 낭독 이름
     const label = item.querySelector('span:not([aria-hidden])') as HTMLElement
     const box = menu.getBoundingClientRect()
-    await expect(box.width).toBeLessThanOrEqual(Math.min(24 * 16, window.innerWidth) + 1)
+    await expect(Math.abs(box.width - rem(24))).toBeLessThanOrEqual(1) // 내용이 길면 정확히 상한(24rem)까지 넓어진다
     await expect(box.right).toBeLessThanOrEqual(window.innerWidth)
     await expect(item.getBoundingClientRect().right).toBeLessThanOrEqual(box.right + 1)
     await expect(item.getBoundingClientRect().width).toBeLessThanOrEqual(box.width)

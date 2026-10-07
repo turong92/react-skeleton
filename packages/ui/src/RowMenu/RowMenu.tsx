@@ -7,6 +7,7 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from 'react'
+import { RowMenuEntry } from './RowMenuEntry'
 import styles from './RowMenu.module.css'
 
 export type RowMenuItem = {
@@ -178,33 +179,18 @@ export function RowMenu({
           onKeyDown={onMenuKeyDown}
         >
           {items.map((item, index) => (
-            <div key={item.key} className={styles.entry}>
-              {item.separatorBefore && <div role="separator" className={styles.separator} />}
-              <button
-                ref={(node) => {
-                  itemRefs.current[index] = node
-                }}
-                type="button"
-                role={item.checked === undefined ? 'menuitem' : 'menuitemradio'}
-                aria-checked={item.checked}
-                aria-disabled={item.disabled ? true : undefined}
-                aria-label={item.content === undefined ? undefined : item.label}
-                tabIndex={-1}
-                className={styles.item}
-                data-danger={item.danger ? 'true' : undefined}
-                onClick={() => {
-                  if (item.disabled) return
-                  // 먼저 닫고 버튼으로 포커스 — onSelect 가 대화상자를 열면 그 창이 포커스를 가져간다
-                  close()
-                  item.onSelect()
-                }}
-              >
-                <span className={styles.check} aria-hidden="true">
-                  {item.checked ? '✓' : ''}
-                </span>
-                <span className={styles.itemLabel}>{item.content ?? item.label}</span>
-              </button>
-            </div>
+            <RowMenuEntry
+              key={item.key}
+              item={item}
+              register={(node) => {
+                itemRefs.current[index] = node
+              }}
+              onPick={() => {
+                // 먼저 닫고 버튼으로 포커스 — onSelect 가 대화상자를 열면 그 창이 포커스를 가져간다
+                close()
+                item.onSelect()
+              }}
+            />
           ))}
         </div>
       )}

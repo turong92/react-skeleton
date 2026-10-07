@@ -45,7 +45,9 @@
   display: grid;
   /* 트랙의 최솟값을 0 으로 — 안 그러면 grid 항목이 내용의 고유 폭(min-width:auto)까지 늘어 긴 이름이 말줄임 없이 상자 밖으로 밀려 나간다 */
   grid-template-columns: minmax(0, 1fr);
-  min-width: min(16rem, calc(100vw - var(--space-lg)));
+  /* 내용에 맞춰 넓어진다(트랙 최솟값이 0 이어도 절대 배치 상자의 shrink-to-fit 폭이 단추 폭으로 떨어지지 않게) — 상한까지 */
+  width: max-content;
+  min-width: min(12rem, calc(100vw - var(--space-lg)));
   /* 화면 폭에서 여백을 뺀 값이 상한 — 좁은 화면(320~414px)에서도 상자가 화면 안에 있다 */
   max-width: min(24rem, calc(100vw - var(--space-lg)));
   padding: var(--space-xs);

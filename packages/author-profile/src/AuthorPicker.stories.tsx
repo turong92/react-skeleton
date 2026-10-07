@@ -239,3 +239,20 @@ export const LongNameInTheConfirmationButtonKeepsTheTag: Story = {
     await expect(use.getBoundingClientRect().right).toBeLessThanOrEqual(window.innerWidth)
   },
 }
+
+/** 확인 단추의 보이는 글자에서 문장과 이름 사이 공백이 살아 있다 — 「Use」 와 이름 상자 사이 간격이 0 보다 크다(공백이 접혀 「UseBea」 가 되지 않는다) */
+export const ConfirmationButtonKeepsTheSpaceBeforeTheName: Story = {
+  args: { threadAuthorId: 'prf_a' },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(await canvas.findByRole('button', { name: /Writing as Ann#0001/ }))
+    await userEvent.click(await canvas.findByRole('menuitemradio', { name: 'Bea#0002' }))
+    const use = await canvas.findByRole('button', { name: 'Use Bea#0002' })
+    const name = use.querySelector<HTMLElement>('[class*="nameEllipsis"]')!
+    const text = use.querySelector<HTMLElement>('[class*="buttonText"]')!.firstChild as Text
+    const range = document.createRange()
+    range.setStart(text, 0)
+    range.setEnd(text, 'Use'.length) // 「Use」 글자만
+    const gap = name.getBoundingClientRect().left - range.getBoundingClientRect().right
+    await expect(gap).toBeGreaterThan(0)
+  },
+}

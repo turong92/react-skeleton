@@ -33,13 +33,21 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-sm);
+  min-height: 44px;
   max-width: 100%;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: inherit;
+  padding: 0 var(--space-md);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-strong);
   font: inherit;
   text-align: left;
+  cursor: pointer;
+}
+
+.toggle:hover {
+  border-color: var(--teal);
+  background: var(--teal-wash);
 }
 
 .toggle:focus-visible {
@@ -50,7 +58,7 @@
 
 .chevron {
   flex: none;
-  color: var(--text-muted);
+  color: var(--text-strong);
   transition: transform 120ms ease;
 }
 

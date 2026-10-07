@@ -22,8 +22,9 @@
 }
 
 .close {
-  width: 30px;
-  height: 30px;
+  width: 44px;
+  height: 44px;
+  cursor: pointer;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
   background: var(--surface);

@@ -29,6 +29,11 @@ const PAIRS: Pair[] = [
   ...['--text', '--text-strong'].map(
     (fg): Pair => ({ fg, bg: '--teal-soft', min: BODY, use: 'text on the accent callout band' }),
   ),
+  // 눌리는 것의 hover · active 바탕(Button · SectionCard 토글 · 헤더 내비)
+  ...['--teal-wash', '--teal-soft'].map(
+    (bg): Pair => ({ fg: '--text-strong', bg, min: BODY, use: 'pressable hover / active surface' }),
+  ),
+  { fg: '--on-inverse', bg: '--text-strong', min: BODY, use: 'primary button while pressed' },
   // 상태 글자
   ...['--bg', '--surface', '--surface-alt', '--teal-soft', '--code-bg'].map(
     (bg): Pair => ({ fg: '--teal', bg, min: BODY, use: 'accent text / pills' }),

@@ -105,7 +105,7 @@ export function SignInMethodsSection({
                 <div className={styles.row}>
                   {!identity.verified && <Badge tone="warning">{labels.emailUnverified}</Badge>}
                   {removable && (
-                    <Button variant="secondary" size="sm" onClick={() => setTarget(identity)}>
+                    <Button variant="danger" size="sm" onClick={() => setTarget(identity)}>
                       {labels.methodUnlink}
                     </Button>
                   )}

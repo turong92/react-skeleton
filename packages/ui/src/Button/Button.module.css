@@ -1,26 +1,45 @@
+/*
+ * 눌리는 것은 한눈에 눌리는 것으로 보인다(affordance.test.ts 가 지킨다):
+ * 쉬는 상태에서도 테두리나 채움이 있고(글자만 있는 버튼 금지), hover · active · focus-visible 이 서로 다르며,
+ * 높이는 터치 대상 44px(작은 크기는 36px, 거친 포인터에서는 44px). 비활성은 흐리고 `not-allowed`.
+ * 한 구역의 주된 행동은 채운 `primary` 하나, 나머지는 테두리(`secondary` · `ghost`), 위험한 행동은 위험색 테두리(`danger`).
+ * 정말 글 사이의 링크여야 하는 것만 `link`(밑줄 + 링크색).
+ */
 .button {
-  min-height: 38px;
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-sm);
-  padding: 0 var(--space-md);
+  padding: 0 var(--space-lg);
   border: 1px solid transparent;
   border-radius: var(--radius-md);
   font-weight: 650;
   white-space: nowrap;
   line-height: 1;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease,
+    transform 60ms ease;
 }
 
 .button[data-size='sm'] {
-  min-height: 30px;
+  min-height: 36px;
   padding: 0 var(--space-md);
   font-size: var(--font-size-small);
 }
 
 .button[data-size='lg'] {
-  min-height: 46px;
+  min-height: 52px;
   padding: 0 var(--space-xl);
+}
+
+@media (pointer: coarse) {
+  .button[data-size='sm'] {
+    min-height: 44px;
+  }
 }
 
 .button[data-variant='primary'] {
@@ -43,16 +62,21 @@
 
 .button[data-variant='secondary']:hover:not(:disabled) {
   border-color: var(--teal);
-  color: var(--teal);
+  background: var(--teal-wash);
+  color: var(--text-strong);
 }
 
+/* 덜 중요한 행동(취소 · 나중에 · 보기) — 채우지 않되 테두리는 있다 */
 .button[data-variant='ghost'] {
+  border-color: var(--border-strong);
   background: transparent;
-  color: var(--text);
+  color: var(--text-strong);
 }
 
 .button[data-variant='ghost']:hover:not(:disabled) {
-  color: var(--teal);
+  border-color: var(--teal);
+  background: var(--teal-wash);
+  color: var(--text-strong);
 }
 
 .button[data-variant='danger'] {
@@ -61,7 +85,46 @@
   color: var(--text-strong);
 }
 
-.button:focus-visible {
-  outline: 3px solid var(--teal-soft);
+.button[data-variant='danger']:hover:not(:disabled) {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+/* 글 사이의 링크처럼 보여야 하는 행동 — 밑줄 + 링크색(상자는 없다) */
+.button[data-variant='link'] {
+  min-height: 0;
+  padding: var(--space-xs) 0;
+  color: var(--teal);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  font-weight: 600;
+}
+
+.button[data-variant='link']:hover:not(:disabled) {
+  color: var(--text-strong);
+}
+
+.button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.button[data-variant='secondary']:active:not(:disabled),
+.button[data-variant='ghost']:active:not(:disabled) {
   border-color: var(--teal);
+  background: var(--teal-soft);
+}
+
+.button[data-variant='primary']:active:not(:disabled) {
+  border-color: var(--text-strong);
+  background: var(--text-strong);
+}
+
+.button:focus-visible {
+  outline: 3px solid var(--teal);
+  outline-offset: 2px;
+}
+
+.button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }

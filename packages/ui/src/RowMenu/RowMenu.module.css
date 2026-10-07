@@ -4,19 +4,20 @@
 }
 
 .button {
-  min-width: 30px;
-  min-height: 30px;
+  min-width: 44px;
+  min-height: 44px;
   padding: 0 var(--space-sm);
-  border: 1px solid transparent;
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
-  background: transparent;
+  background: var(--surface);
+  cursor: pointer;
   color: var(--text-strong);
   font-weight: 650;
   line-height: 1;
 }
 
 .button:hover {
-  border-color: var(--border-strong);
+  border-color: var(--teal);
   background: var(--surface-muted);
 }
 

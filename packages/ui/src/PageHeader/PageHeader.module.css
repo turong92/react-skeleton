@@ -8,6 +8,11 @@
   font-size: var(--font-size-small);
 }
 
+.back a {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
 .back a:hover {
   color: var(--teal);
 }

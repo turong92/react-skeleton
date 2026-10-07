@@ -2,7 +2,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 38px;
+  min-height: 44px;
+  cursor: pointer;
   padding: 0 var(--space-lg);
   border: 1px solid transparent;
   border-radius: var(--radius-md);
@@ -38,11 +39,13 @@
 }
 
 .link[data-variant='ghost'] {
+  border-color: var(--border-strong);
   color: var(--text-strong);
 }
 
 .link[data-variant='ghost']:hover {
-  background: var(--surface-muted);
+  border-color: var(--teal);
+  background: var(--teal-wash);
 }
 
 /* 어두운 면(CtaBand) 위 — 면의 색을 뒤집는다 */

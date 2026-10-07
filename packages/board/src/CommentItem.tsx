@@ -51,8 +51,8 @@ export function CommentItem({ node, ctx }: { node: CommentNode; ctx: ThreadConte
   const open = !collapsible || ctx.expanded.has(comment.id)
   const reactionTypes = ctx.reactionTypes ?? []
 
-  const action = (label: string, onClick: () => void) => (
-    <Button size="sm" variant="ghost" aria-label={named(label)} onClick={onClick}>
+  const action = (label: string, onClick: () => void, variant: 'ghost' | 'danger' = 'ghost') => (
+    <Button size="sm" variant={variant} aria-label={named(label)} onClick={onClick}>
       {label}
     </Button>
   )
@@ -110,7 +110,7 @@ export function CommentItem({ node, ctx }: { node: CommentNode; ctx: ThreadConte
         {comment.status !== 'DELETED' &&
           (own || ctx.canModerate) &&
           ctx.onDelete &&
-          action(L.delete, () => ctx.onDelete?.(comment.id))}
+          action(L.delete, () => ctx.onDelete?.(comment.id), 'danger')}
         {ctx.canModerate &&
           ctx.onModerate &&
           published &&

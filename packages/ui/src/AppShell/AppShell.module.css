@@ -37,7 +37,10 @@
 }
 
 .nav a {
-  padding: var(--space-xs) var(--space-md);
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--space-md);
   border-radius: var(--radius-md);
   color: var(--text-muted);
   font-weight: 600;
@@ -45,7 +48,10 @@
 }
 
 .nav a:hover {
+  background: var(--surface-alt);
   color: var(--text-strong);
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
 }
 
 .nav a[aria-current='page'] {

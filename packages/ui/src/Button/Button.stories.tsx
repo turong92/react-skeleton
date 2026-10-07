@@ -11,7 +11,10 @@ const meta = {
   component: Button,
   args: { children: 'Save', onClick: fn() },
   argTypes: {
-    variant: { control: 'inline-radio', options: ['primary', 'secondary', 'ghost', 'danger'] },
+    variant: {
+      control: 'inline-radio',
+      options: ['primary', 'secondary', 'ghost', 'danger', 'link'],
+    },
     size: { control: 'inline-radio', options: ['sm', 'md', 'lg'] },
   },
 } satisfies Meta<typeof Button>
@@ -30,6 +33,37 @@ export const Primary: Story = {
 
 export const Secondary: Story = { args: { variant: 'secondary' } }
 export const Ghost: Story = { args: { variant: 'ghost' } }
+export const Link: Story = {
+  args: { variant: 'link', children: 'Forgot your password?' },
+  play: async ({ canvas }) => {
+    await expect(getComputedStyle(canvas.getByRole('button')).textDecorationLine).toBe('underline')
+  },
+}
+
+/** 눌리는 것은 쉬는 상태에서도 눌리는 것으로 보인다 — 글자만 있는 버튼은 없다(`link` 만 밑줄로 링크처럼) */
+export const EveryVariantLooksPressableAtRest: Story = {
+  render: (args) => (
+    <div style={{ display: 'flex', gap: 'var(--space-md)', alignItems: 'center' }}>
+      {(['primary', 'secondary', 'ghost', 'danger'] as const).map((variant) => (
+        <Button key={variant} {...args} variant={variant}>
+          {variant}
+        </Button>
+      ))}
+    </div>
+  ),
+  play: async ({ canvas }) => {
+    for (const name of ['primary', 'secondary', 'ghost', 'danger']) {
+      const style = getComputedStyle(canvas.getByRole('button', { name }))
+      const transparent = (c: string) => c === 'rgba(0, 0, 0, 0)' || c === 'transparent'
+      await expect(
+        !transparent(style.borderTopColor) || !transparent(style.backgroundColor),
+        name,
+      ).toBe(true)
+      await expect(style.cursor).toBe('pointer')
+      await expect(parseFloat(style.minHeight)).toBeGreaterThanOrEqual(44)
+    }
+  },
+}
 export const Danger: Story = { args: { variant: 'danger', children: 'Delete' } }
 
 export const Sizes: Story = {
@@ -51,6 +85,18 @@ export const Sizes: Story = {
       canvas.getByRole('button', { name }).getBoundingClientRect().height
     await expect(height('Small')).toBeLessThan(height('Medium'))
     await expect(height('Medium')).toBeLessThan(height('Large'))
+  },
+}
+
+export const DisabledExplainsWhy: Story = {
+  args: { disabled: true, disabledReason: 'Fill in the required fields first' },
+  play: async ({ canvas }) => {
+    const button = canvas.getByRole('button', { name: 'Save' })
+    await expect(button).toBeDisabled()
+    await expect(button).toHaveAttribute('title', 'Fill in the required fields first')
+    await expect(button).toHaveAccessibleDescription('Fill in the required fields first')
+    await expect(getComputedStyle(button).cursor).toBe('not-allowed')
+    await expect(parseFloat(getComputedStyle(button).opacity)).toBeLessThan(1)
   },
 }
 

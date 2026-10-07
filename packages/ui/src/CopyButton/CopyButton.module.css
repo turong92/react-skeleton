@@ -3,7 +3,8 @@
 }
 
 .button {
-  min-height: 30px;
+  min-height: 44px;
+  cursor: pointer;
   padding: 0 var(--space-md);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);

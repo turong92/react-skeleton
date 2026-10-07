@@ -22,7 +22,8 @@
 }
 
 .tab {
-  min-height: 38px;
+  min-height: 44px;
+  cursor: pointer;
   padding: 0 var(--space-lg);
   border: 0;
   border-bottom: 2px solid transparent;

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — 눌리는 것은 한눈에 눌리는 것으로 보인다 (2026-10-07)
+
+주인 피드백 — 「계정 설정의 닉네임 정하기 같은 버튼도 고치라는 건데. 눌리는 것들은 다 눌리겠구나 하게 디자인하라고」. 글자만 있던 버튼(`ghost`)이 원인이었다.
+
+- **`@skeleton/ui` `Button`**: `ghost` 에 쉬는 상태의 테두리(`--border-strong`) + hover 바탕. 새 변형 `link`(밑줄 + 링크색, 상자 없음 — 글 사이 링크용). 높이 md 44px · sm 36px(거친 포인터 44px) · lg 52px. `:active`(눌림) · 더 또렷한 `:focus-visible` · 흐린 비활성 + `not-allowed` · `disabledReason`(title + `aria-description`). 위험은 위험색 테두리 + hover.
+- 같은 원칙으로: `SectionCard` 펼침 머리(테두리 상자 + 화살표) · `AppShell` 내비(44px · hover 바탕 + 밑줄) · `PageHeader` 뒤로 링크(밑줄) · `RowMenu` ⋯(테두리 상자 · 이전에는 투명) · 알림 종 · 테마 토글 · 복사 · 목차 알약 · 대화상자 닫기 · 쪽 이동 · 탭이 44px, 샘플 `LinkButton`(ghost 테두리).
+- **동작 변경(모양)**: 취소 · 보기 · 답글/수정/삭제 · 로그아웃 · 쿠키 설정 같은 `ghost` 버튼이 테두리 상자로 보인다. 버튼이 커져(38 → 44px) 줄 높이가 늘 수 있다. 입력칸 · 셀렉트(38px)는 그대로.
+- 가드: `packages/ui/src/Button/affordance.test.ts`(모든 변형의 쉬는 상태 테두리/채움 · 높이 · 상태 · 아이콘 버튼 표) · `apps/sample/src/components/LinkButton.affordance.test.ts` · 스토리 `EveryVariantLooksPressableAtRest` · `DisabledExplainsWhy`. 새 대비 짝(`--text-strong` on `--teal-wash` · `--teal-soft`, 눌린 주 버튼)을 `tests/contrast.test.ts` 에 등록. 원칙은 `docs/ui-catalog.md` 맨 위.
+
 ### Added — 닉네임: 게시판 작성자 표시 · 가입 닉네임 칸 · 꼬리표 (2026-10-07)
 
 주인이 견본 앱을 써 보고 — 「게시판에 작성자가 없어서 뭐가 뭔지 모르겠다」 · 「계정 ID `acc_317e…` 가 박혀서 보기 싫다」. 백엔드 계약 가정: 글 요약 · 상세 · 댓글 응답에 `authorName`(닉네임 · null) · `authorTag`(4자리 문자열 · null) 추가(`authorId` · `authorDeleted` 유지), `GET /account/me` 에 `displayTag`, 닉네임 중복 금지 서버의 `409 ACCOUNT.DISPLAY_NAME_TAKEN`. 필드가 없는 옛 서버에서도 깨지지 않는다(모두 「이름 없는 사용자」).

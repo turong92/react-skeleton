@@ -92,3 +92,19 @@ describe('refresh back-off code', () => {
     expect(ErrorCodes.AUTH_TOO_MANY_REFRESHES).toBe('AUTH.TOO_MANY_REFRESHES')
   })
 })
+
+describe('author-profile codes (kotlin-skeleton modules/author-profile)', () => {
+  it('carries the four codes the module sends', () => {
+    expect([
+      ErrorCodes.AUTHOR_PROFILE_NAME_TAKEN,
+      ErrorCodes.AUTHOR_PROFILE_LIMIT_REACHED,
+      ErrorCodes.AUTHOR_PROFILE_RATE_LIMITED,
+      ErrorCodes.AUTHOR_PROFILE_NOT_FOUND,
+    ]).toEqual([
+      'AUTHOR_PROFILE.NAME_TAKEN',
+      'AUTHOR_PROFILE.LIMIT_REACHED',
+      'AUTHOR_PROFILE.RATE_LIMITED',
+      'AUTHOR_PROFILE.NOT_FOUND',
+    ])
+  })
+})

@@ -113,6 +113,12 @@ export const ErrorCodes = {
   BOARD_POST_NOT_COMMENTABLE: 'BOARD.POST_NOT_COMMENTABLE',
   BOARD_CODE_TAKEN: 'BOARD.CODE_TAKEN',
   BOARD_RATE_LIMITED: 'BOARD.RATE_LIMITED',
+
+  // modules/author-profile — AuthorProfileErrorCode (kotlin-skeleton docs/author-profile-http-contract.md). NAME_TAKEN · LIMIT_REACHED 409 · RATE_LIMITED 429 · NOT_FOUND 404(남의 · 없는 · 지워진 id 모두 같은 코드). 이름 칸 오류(400)는 닉네임과 같은 필드 코드(Required · Size · Pattern · Reserved)
+  AUTHOR_PROFILE_NAME_TAKEN: 'AUTHOR_PROFILE.NAME_TAKEN',
+  AUTHOR_PROFILE_LIMIT_REACHED: 'AUTHOR_PROFILE.LIMIT_REACHED',
+  AUTHOR_PROFILE_RATE_LIMITED: 'AUTHOR_PROFILE.RATE_LIMITED',
+  AUTHOR_PROFILE_NOT_FOUND: 'AUTHOR_PROFILE.NOT_FOUND',
 } as const
 
 export type ErrorCodeValue = (typeof ErrorCodes)[keyof typeof ErrorCodes]

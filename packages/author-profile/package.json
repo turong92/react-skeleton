@@ -1,0 +1,31 @@
+{
+  "name": "@skeleton/author-profile",
+  "version": "1.1.0",
+  "private": true,
+  "type": "module",
+  "description": "작성자 프로필 — 한 계정의 여러 닉네임(서로 이어지지 않는다) 클라이언트 + TanStack Query 훅 + AuthorPicker(게시판 authorPicker 렌더 prop 에 꽂는 선택기 — 지금 고른 이름#꼬리표 하나만 늘 보인다) · AuthorProfileManager(목록 · 추가 · 이름 바꾸기 · 삭제) · 기기 기억(createAuthorMemory). 백엔드 modules/author-profile 짝",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "types": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run --pool forks --testTimeout 30000 --hookTimeout 60000",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@skeleton/api-client": "workspace:*",
+    "@skeleton/ui": "workspace:*"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "^5.0.0",
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@tanstack/react-query": "^5.99.2",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
+  }
+}

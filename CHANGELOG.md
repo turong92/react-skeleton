@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — `@skeleton/author-profile` (작성자 프로필)
+
+- 새 패키지: `createAuthorProfileApi`(`/author-profiles`) · `useAuthorProfiles` 등 훅(변경 뒤 목록 무효화, `alsoInvalidate` 로 게시판 캐시도) · `AuthorPicker`(board 의 `authorPicker` 에 꽂는 선택기 — 접힌 상태는 고른 이름#꼬리표 하나, 처음 값 스레드 → 기기 → 비어 있음, 이 스레드의 프로필과 다른 것으로 바꿀 때만 한 줄 확인) · `AuthorProfileManager`(목록 · 추가 · 이름 바꾸기 · 삭제 확인) · `createAuthorMemory`(기기 기억 — 키에만 계정 id, `forget()`). 문구는 `labels` prop. `ErrorCodes.AUTHOR_PROFILE_*` 추가. 백엔드 짝 `author-profile` 모듈.
+
 ### Fixed — 독립 코드 리뷰 반영 (2026-10-07)
 
 - **`/account-deleted`**: 열린 라우트라 아무 길로나 열려도 로그아웃되던 것 — 탈퇴 흐름이 넘긴 `state.purgeAfter` 가 있을 때만 안내하고 로그아웃한다. 아니면 로그인한 사람은 홈으로, 아닌 사람은 로그인으로(`accountDeletedDestination`).

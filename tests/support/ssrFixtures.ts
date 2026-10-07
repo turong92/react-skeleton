@@ -61,6 +61,25 @@ const fakeBoardApi = () =>
       },
     },
   )
+/** 작성자 프로필 api — 서버 렌더에서는 아무것도 부르지 않는다 */
+const fakeAuthorProfileApi = () =>
+  new Proxy(
+    {},
+    {
+      get: () => async () => {
+        throw new Error('unused in the server render')
+      },
+    },
+  )
+const authorProfile = { id: 'prf_a', name: 'Ann', tag: '0001', createdAt: '2026-01-01T00:00:00Z' }
+const authorPickerSlot = {
+  boardCode: 'free',
+  value: undefined,
+  onChange: noop,
+  threadAuthorId: undefined,
+  invalid: false,
+  disabled: false,
+}
 const fakeLegalApi = () =>
   new Proxy(
     {},
@@ -518,6 +537,13 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
   'legal#ConsentSettings': () => ({ api: fakeLegalApi(), locale: 'ko' }),
   'notifications#NotificationBell': () => ({ api: fakeNotificationsApi() }),
   'notifications#NotificationList': () => ({ items: [notification] }),
+  'author-profile#AuthorPicker': () => ({ api: fakeAuthorProfileApi(), ...authorPickerSlot }),
+  'author-profile#AuthorPickerView': () => ({
+    profiles: [authorProfile],
+    ...authorPickerSlot,
+    value: 'prf_a',
+  }),
+  'author-profile#AuthorProfileManager': () => ({ api: fakeAuthorProfileApi() }),
   'board#ReactionBar': () => ({
     types: ['LIKE', 'EMPATHY'],
     counts: { LIKE: 2 },
@@ -589,6 +615,11 @@ export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
   'notifications#useMarkRead': () => [fakeNotificationsApi()],
   'notifications#useMarkAllRead': () => [fakeNotificationsApi()],
   'notifications#useNotificationIngest': () => [],
+  'author-profile#useAuthorProfiles': () => [fakeAuthorProfileApi()],
+  'author-profile#useAuthorProfileConfig': () => [fakeAuthorProfileApi()],
+  'author-profile#useCreateAuthorProfile': () => [fakeAuthorProfileApi()],
+  'author-profile#useRenameAuthorProfile': () => [fakeAuthorProfileApi()],
+  'author-profile#useRemoveAuthorProfile': () => [fakeAuthorProfileApi()],
   'board#useBoardConfig': () => [fakeBoardApi()],
   'board#useBoards': () => [fakeBoardApi()],
   'board#useBoard': () => [fakeBoardApi(), 'free'],

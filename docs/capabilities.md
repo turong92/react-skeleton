@@ -24,6 +24,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 | 로그인 (이메일 · 비밀번호) · 로그인한 사람만 보는 화면 | `auth` | (기본 포함 — 덧붙일 것 없음) | (모듈 없음) | 기본 포함. 로그인 · 가입 · 메일 확인 · 비밀번호 재설정 · 계정 설정은 createAuthRoutes 한 번(account-lifecycle). 어떤 방법이 열려 있는지는 백엔드(GET /auth/methods)가 알려 준다. 화면의 모양은 Patterns/Auth/* 스토리를 보고 labels · 설정으로 맞춘다. |
 | 소셜 로그인 (구글 · LINE · X · 카카오 · 네이버) | `social-login` | (기본 포함 — 덧붙일 것 없음) | `--modules auth-social-google` — `auth-social-google` \| `auth-social-kakao` \| `auth-social-naver` \| `auth-social-oidc` \| `auth-social-x` 중 고른다 | 백엔드가 켠 제공자와 공개 clientId 는 GET /auth/methods 가 알려 줘 로그인 화면에 버튼이, /auth/callback 라우트가 생긴다(백엔드가 clientId 를 모르면 VITE_SOCIAL_<제공자>_CLIENT_ID). clientSecret 은 백엔드 skeleton.auth-social.providers.* 에만. |
 | 게시판 · 글쓰기 · 댓글 · 대댓글 · 공감(반응) | `board` | `--packages board` | `--modules board,board-jdbc` | 게시판 코드 만들기(운영자 API), 목록 · 상세 · 글쓰기 라우트(apps/sample 의 BoardPage · BoardPostPage · BoardFormPage 를 복사), 반응 라벨 · 아이콘 맵, 반응 종류는 백엔드 yml(skeleton.board.reaction.types). |
+| 한 사람이 여러 닉네임(프로필)으로 글 · 댓글을 쓰고, 서로 같은 사람인 줄 모르게 (팬덤 · 익명 커뮤니티) | `board` + `author-profile` | `--packages board,author-profile` | `--modules board,board-jdbc,author-profile,author-profile-jdbc` | 백엔드에 author-profile 모듈을 끼우면(board 는 빈의 유무가 스위치) GET /boards/config 의 authorRequired 가 켜진다. 글쓰기 · 댓글 폼의 authorPicker 렌더 prop 에 <AuthorPicker {...args} api boardCode memory/> 를 꽂고, 설정 화면에 <AuthorProfileManager alsoInvalidate={[boardKeys.all]}/>, 로그아웃 때 memory.forget(). 전역 오류 토스트는 isAuthorProfileFormError 를 건너뛴다. 문구(ko/en)는 labels prop 으로 앱이 공급. |
 | 알림 (종 · 목록 · 안 읽은 수) | `notifications` | `--packages notifications` | `--modules notification,notification-jdbc` | 헤더에 NotificationBell 배치와 알림 API 인스턴스(앱이 한 번 만든다). 알림을 만드는 쪽은 백엔드 코드(NotificationPublisher.publish). |
 | 알림이 즉시 뜬다 (실시간) | `live-notifications` | `--packages notifications,realtime` | `--modules notification,notification-jdbc,notification-sse` — `notification-sse` \| `notification-websocket` 중 고른다 | 연결 훅 한 개(apps/sample/src/notifications/useLiveNotifications.ts 를 복사)와 백엔드의 SSE 또는 WebSocket 모듈 선택. |
 | 다국어 (한국어 · 영어 전환) | `i18n` | `--packages i18n` | (모듈 없음) | 문구 사전(ko.ts · en.ts)과 부품 prop 에 t() 로 문구 넘기기, 헤더의 LanguageMenu 배치(apps/sample/src/i18n 을 복사). |
@@ -63,6 +64,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 | `i18n` | 화면 문구 다국어 — ICU 메시지 · 브라우저 언어 감지/저장 · 지연 로딩 사전 · useT() · 사전 짝 맞춤 테스트 도구. | --packages i18n | — | stable | 다국어, 번역, 언어 전환, 한국어 영어, 국제화, 로케일 / i18n, internationalization, localization, translation, locale, multi-language |
 | `notifications` | 알림 받은편지함 — 목록 · 안 읽은 수 · 읽음/모두 읽음 · 실시간 이벤트로 캐시 갱신, NotificationBell/List 부품과 TanStack Query 훅. | --packages notifications | notification, notification-jdbc | stable | 알림, 알림 목록, 알림 종, 안 읽은 알림, 읽음 처리, 받은편지함 / notifications, inbox, notification bell, unread count, mark as read |
 | `board` | 게시판 — 글 · 중첩 댓글(대댓글) · 서버 설정으로 늘어나는 반응(좋아요 · 공감 …) · 운영자 숨김/고정, 작성자 표시(닉네임 · 탈퇴한 사용자 · 이름 없는 사용자 — 작성자 id 는 그리지 않는다) · 내 것 판정(서버의 mine) · 작성자 선택기 자리(authorPicker 렌더 prop — 작성자 프로필을 쓰는 서버에서 authorRequired 가 켜지면 고른 authorId 를 싣는다) · 목록 · 상세 · 편집기 · 댓글 · 반응 부품과 훅(반응은 낙관적 갱신). | --packages board | board, board-jdbc | stable | 게시판, 커뮤니티, 글쓰기, 댓글, 대댓글, 공감 / board, forum, community, post, comment, reply |
+| `author-profile` | 작성자 프로필 — 한 계정의 여러 닉네임(서로 이어지지 않는다)을 글 · 댓글마다 골라 쓰기. AuthorPicker(게시판 authorPicker 렌더 prop 에 꽂는 선택기 — 접힌 상태는 고른 이름#꼬리표 하나 · 처음 값은 이 스레드 → 이 기기 기억 → 비어 있음 · 이 스레드의 프로필과 다른 것으로 바꿀 때만 한 줄 확인) · AuthorProfileManager(목록 · 추가 · 이름 바꾸기 · 삭제 확인 · 상한 · 오류) · createAuthorMemory(기기 기억 — 계정 id 는 저장소 키에만) · 클라이언트와 TanStack Query 훅. 계정 id 는 화면 어디에도 그리지 않는다. | --packages author-profile | author-profile, author-profile-jdbc | stable | 작성자 프로필, 프로필 선택, 부계정, 다중 닉네임, 익명 닉네임, 닉네임 여러 개 / author profile, profile picker, multiple nicknames, alias, pseudonym, persona |
 | `storage` | 파일 업로드 — 검증 → presign → 브라우저에서 스토리지로 직접 PUT(진행률 · 취소 · 멀티파트)과 useUpload 훅. | --packages storage | storage, storage-s3 | stable | 파일 업로드, 이미지 업로드, 첨부파일, 프리사인, 대용량 업로드, 멀티파트 / file upload, image upload, attachment, presigned url, multipart, s3 |
 | `payment` | 결제 계약 — 토스 성공 리다이렉트를 승인 요청으로 바꾸고 승인/취소/환불을 부르는 얇은 클라이언트(경로는 앱이 정한다). | --packages payment | payment | experimental | 결제, 토스, 스트라이프, 환불, 카드 결제, 결제 승인 / payment, toss, stripe, checkout, refund, billing |
 | `captcha-turnstile` | 봇 방지 — Cloudflare Turnstile 스크립트 로더 · <Turnstile> · 토큰 훅 · 요청에 토큰 붙이기. | --packages captcha-turnstile | captcha-turnstile | stable | 캡차, 봇 방지, 스팸 방지, 로봇 확인, 가입 폼 보호 / captcha, turnstile, bot protection, cloudflare, spam protection |
@@ -187,6 +189,19 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 - 문서: `packages/board/README.md`
 - 쓰지 않는 경우: 채팅 · 피드 · 실시간 대화 — 글 + 댓글 트리 모델이다 / 반응의 글자 · 아이콘은 패키지가 모른다 — 서버가 준 코드에 labels/icons 맵 prop 을 앱이 준다 / 게시판 만들기(관리)는 운영자 API — 화면은 없다
 - 키워드: 게시판, 커뮤니티, 글쓰기, 댓글, 대댓글, 공감, 좋아요, 반응, 게시글, 운영자 숨김, 공지 고정, 작성자, 닉네임, 탈퇴한 사용자, 작성자 선택기 / board, forum, community, post, comment, reply, thread, reaction, like, moderation, bulletin board, author, nickname, deleted user, author picker
+
+### `author-profile` — 작성자 프로필 — 한 계정의 여러 닉네임(서로 이어지지 않는다)을 글 · 댓글마다 골라 쓰기. AuthorPicker(게시판 authorPicker 렌더 prop 에 꽂는 선택기 — 접힌 상태는 고른 이름#꼬리표 하나 · 처음 값은 이 스레드 → 이 기기 기억 → 비어 있음 · 이 스레드의 프로필과 다른 것으로 바꿀 때만 한 줄 확인) · AuthorProfileManager(목록 · 추가 · 이름 바꾸기 · 삭제 확인 · 상한 · 오류) · createAuthorMemory(기기 기억 — 계정 id 는 저장소 키에만) · 클라이언트와 TanStack Query 훅. 계정 id 는 화면 어디에도 그리지 않는다.
+
+- 종류 · 상태: package · stable
+- 위치: `@skeleton/author-profile` (`packages/author-profile`)
+- 켜는 법: `--packages author-profile` — 함께 따라오는 패키지 `api-client` · `auth` · `legal` · `theme` · `time` · `tokens` · `ui`
+- 필요한 것: `api-client` · `ui`
+- 백엔드: 모듈 `author-profile` · `author-profile-jdbc` · 있으면 더 켜지는 `board` · 경로 `/api/v1/author-profiles`
+- 주요 진입점: `createAuthorProfileApi` · `useAuthorProfiles` · `useCreateAuthorProfile` · `useRenameAuthorProfile` · `useRemoveAuthorProfile` · `AuthorPicker` · `AuthorProfileManager` · `createAuthorMemory` · `isAuthorProfileFormError`
+- 보고 따라 할 스토리: `packages/author-profile/src/AuthorPicker.stories.tsx` · `packages/author-profile/src/AuthorProfileManager.stories.tsx`
+- 문서: `packages/author-profile/README.md`
+- 쓰지 않는 경우: 게시판 화면 자체 → board (이 패키지는 board 를 모른 채 authorPicker 자리에 꽂힌다) / 계정의 닉네임(가입 · 설정) → auth 의 계정 화면 — 이 패키지는 글에 붙는 별도 프로필이다 / 프로필 아바타 · 소개글 · 공개 프로필 페이지 → 만들지 않는다(표 구조만 막지 않는다) / 관리자가 프로필로 계정을 찾는 화면 → 없다(백엔드 admin 조회만)
+- 키워드: 작성자 프로필, 프로필 선택, 부계정, 다중 닉네임, 익명 닉네임, 닉네임 여러 개, 프로필 관리, 기기 기억 / author profile, profile picker, multiple nicknames, alias, pseudonym, persona, profile manager, remembered profile
 
 ### `storage` — 파일 업로드 — 검증 → presign → 브라우저에서 스토리지로 직접 PUT(진행률 · 취소 · 멀티파트)과 useUpload 훅.
 

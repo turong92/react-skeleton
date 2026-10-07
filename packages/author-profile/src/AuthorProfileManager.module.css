@@ -1,0 +1,76 @@
+.root {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.count {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-caption);
+}
+
+.list {
+  display: grid;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.identity {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.name {
+  overflow-wrap: anywhere;
+  color: var(--text-strong);
+  font-weight: 650;
+}
+
+.tag {
+  color: var(--text-muted);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.form {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.renameForm {
+  display: grid;
+  flex: 1 1 100%;
+  gap: var(--space-sm);
+}
+
+.formActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.note {
+  margin: 0;
+  color: var(--text);
+  font-size: var(--font-size-caption);
+}

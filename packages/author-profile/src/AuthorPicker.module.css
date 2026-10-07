@@ -1,0 +1,52 @@
+.root {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  min-width: 0;
+}
+
+/* 접힌 단추 안: 이름 + 꼬리표 + 열림 표시. 긴 이름은 잘려도 꼬리표는 남는다 */
+.current {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-xs);
+  max-width: 100%;
+}
+
+.name {
+  overflow: hidden;
+  max-width: 14rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tag {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.chevron {
+  color: var(--text-muted);
+  font-size: var(--font-size-caption);
+}
+
+/* 칸 오류(authorRequired 인데 비었다) — 단추 테두리를 위험색으로. 문장은 보드가 role=alert 로 말한다 */
+.root[data-invalid='true'] button[aria-haspopup],
+.root[data-invalid='true'] > button {
+  border-color: var(--red);
+}
+
+.notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  margin: 0;
+  color: var(--text);
+  font-size: var(--font-size-caption);
+}
+
+.notice p {
+  margin: 0;
+}

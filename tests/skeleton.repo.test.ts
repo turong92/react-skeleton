@@ -20,7 +20,7 @@ const dirs = (kind: 'app' | 'package') =>
     .sort()
 
 describe('the skeleton repo', () => {
-  it('has the five apps and the sixteen packages', () => {
+  it('has the five apps and the seventeen packages', () => {
     expect(dirs('app')).toEqual([
       'apps/sample',
       'apps/starter',
@@ -31,6 +31,7 @@ describe('the skeleton repo', () => {
     expect(dirs('package')).toEqual([
       'packages/api-client',
       'packages/auth',
+      'packages/author-profile',
       'packages/board',
       'packages/captcha-turnstile',
       'packages/i18n',
@@ -89,6 +90,7 @@ describe('the skeleton repo', () => {
       .sort()
     expect(withStories).toEqual([
       'packages/auth',
+      'packages/author-profile',
       'packages/board',
       'packages/captcha-turnstile',
       'packages/i18n',
@@ -131,6 +133,7 @@ describe('the skeleton repo', () => {
         'packages/theme',
         'packages/notifications',
         'packages/board',
+        'packages/author-profile',
         'packages/auth', // 계정 화면(로그인 · 가입 · 설정)이 CSS 모듈을 쓴다 — 스타터는 이제 그 화면을 가져다 쓸 뿐이라 자기 CSS 가 없다
       ]),
     )

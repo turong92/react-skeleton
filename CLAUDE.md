@@ -1,6 +1,6 @@
 # react-skeleton — Claude Code 컨텍스트
 
-React + TypeScript + Vite 프론트엔드 스켈레톤. pnpm 워크스페이스 — 캡슐화된 패키지 16개 + 앱 5개(SPA 스타터 · SSR 스타터 · 참조 앱 샘플 · 스토리집 · 워크벤치). REST 백엔드(kotlin-skeleton)와 통신하는 SPA 출발점이고, 백엔드 `modules/` 처럼 프로젝트가 필요한 패키지만 한 줄씩 골라 쓴다.
+React + TypeScript + Vite 프론트엔드 스켈레톤. pnpm 워크스페이스 — 캡슐화된 패키지 17개 + 앱 5개(SPA 스타터 · SSR 스타터 · 참조 앱 샘플 · 스토리집 · 워크벤치). REST 백엔드(kotlin-skeleton)와 통신하는 SPA 출발점이고, 백엔드 `modules/` 처럼 프로젝트가 필요한 패키지만 한 줄씩 골라 쓴다.
 
 ## 만들기 전에 — 무엇이 이미 있는지부터 (에이전트 필독)
 
@@ -63,6 +63,7 @@ packages/                     # 서로를 이름으로만 부른다. 각자 pack
 ├── i18n/                     # createI18n(ICU · 감지 · 저장 · 지연 사전) · I18nProvider/useT · detectLocale · @skeleton/i18n/testing(catalogProblems) — 부품은 i18n 을 모르고 라벨은 prop, 앱이 번역해 넘긴다
 ├── notifications/            # createNotificationsApi(목록 · 읽음 · 모두 읽음) · useNotifications/useUnreadCount/useMarkRead · useNotificationIngest(실시간 → 캐시) · NotificationBell/List
 ├── board/                    # createBoardApi · useBoardConfig/usePosts/usePost/useComments/글·댓글 쓰기 · useReaction(낙관적 갱신 + 되돌리기) · nestThread · PostList/PostDetail/PostEditor/CommentThread/ReactionBar(+ 서버와 이은 BoardComments/PostReactionBar). 반응 종류는 서버가 알려 주는 코드, 문구 · 아이콘은 labels/icons 맵 prop
+├── author-profile/           # createAuthorProfileApi(`/author-profiles`) · useAuthorProfiles/Config/Create/Rename/Remove · AuthorPicker(board 의 `authorPicker` 에 꽂는 선택기: 접힌 상태는 고른 이름#꼬리표 하나 · 처음 값 스레드→기기→비어 있음 · 다른 프로필로 바꿀 때만 한 줄 확인) · AuthorProfileManager(목록 · 추가 · 이름 바꾸기 · 삭제 확인) · createAuthorMemory(기기 기억 — 키에만 계정 id, `forget()`). 백엔드 modules/author-profile 짝, 문구는 labels prop
 ├── storage/                  # createStorageApi · createUploader(검증 → presign → 직접 PUT, 멀티파트) · useUpload · validateFile
 ├── payment/                  # PaymentContracts 타입 · createPaymentApi(경로는 앱이 준다) · confirmRequestFromTossRedirect — 일부러 얇다
 ├── captcha-turnstile/        # loadTurnstile · <Turnstile> · useTurnstileToken · attachTurnstileToken

@@ -2,6 +2,7 @@ import { formatInstant } from '@skeleton/time'
 import { Badge, Button } from '@skeleton/ui'
 import type { ReactNode } from 'react'
 import { AuthorName } from './AuthorName'
+import { useAuthorScope } from './authorScopeContext'
 import { defaultAuthorLabels, type AuthorLabels, type AuthorTagMode } from './authorDisplay'
 import type { PostDetail as PostDetailData, PostModeration, PostStatus } from './types'
 import styles from './PostDetail.module.css'
@@ -67,6 +68,7 @@ export function PostDetail({
     ...input,
     status: { ...defaultLabels.status, ...input?.status },
   }
+  const scopeNames = useAuthorScope('post', [post])
   const hidden = post.status === 'HIDDEN'
   const hasActions = onEdit || onDelete || onModerate
   return (
@@ -80,7 +82,12 @@ export function PostDetail({
               {labels.status[post.status]}
             </Badge>
           )}
-          <AuthorName author={post} labels={labels} tag={authorTag} />
+          <AuthorName
+            author={post}
+            labels={labels}
+            tag={authorTag}
+            collides={scopeNames?.has(post.authorName?.trim() ?? '') ?? false}
+          />
           <time dateTime={post.createdAt}>{formatTime(post.createdAt)}</time>
           <span>{labels.views(post.viewCount)}</span>
           {post.attachmentCount > 0 && <span>{labels.attachments(post.attachmentCount)}</span>}

@@ -1,7 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, within } from 'storybook/test'
 import { CommentThread } from './CommentThread'
-import { comment, thread } from './test/fixtures'
+import { AuthorScope } from './authorScope'
+import { PostDetail } from './PostDetail'
+import { comment, detail, thread } from './test/fixtures'
 
 /**
  * 댓글 한 줄기(최상위 + 대댓글) — 서버가 평평하게 준 자손을 트리로 그린다(`nestThread`).
@@ -316,5 +318,52 @@ export const DifferentNicknamesShowNoTags: Story = {
   },
   play: async ({ canvas }) => {
     await expect(canvas.queryByText(/^#\d{4}$/)).toBeNull()
+  },
+}
+
+/** 글 상세 화면 — `AuthorScope` 로 감싸면 글쓴이와 그 글의 댓글 작성자를 한 범위로 묶어 겹침을 본다(글쓴이와 댓글 작성자가 다른 계정인데 닉네임이 같으면 양쪽에 꼬리표) */
+export const SameNicknameAcrossThePostAndItsComments: Story = {
+  render: (args) => (
+    <AuthorScope>
+      <PostDetail
+        post={detail(1, { authorId: 'acc_a', authorName: '수민', authorTag: '4821' })}
+        formatTime={() => '2026-01-01'}
+      />
+      <CommentThread
+        {...args}
+        collapseFromDepth={99}
+        thread={thread(1, [], {
+          authorId: 'acc_b',
+          authorName: '수민',
+          authorTag: '0097',
+          body: '다른 계정의 수민',
+        })}
+      />
+    </AuthorScope>
+  ),
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByText('#4821')).toBeVisible() // 글쓴이
+    await expect(canvas.getByText('#0097')).toBeVisible() // 댓글 작성자
+  },
+}
+
+export const WithoutAScopeEachAreaJudgesAlone: Story = {
+  render: (args) => (
+    <>
+      <PostDetail
+        post={detail(1, { authorId: 'acc_a', authorName: '수민', authorTag: '4821' })}
+        formatTime={() => '2026-01-01'}
+      />
+      <CommentThread
+        {...args}
+        collapseFromDepth={99}
+        thread={thread(1, [], { authorId: 'acc_b', authorName: '수민', authorTag: '0097' })}
+      />
+    </>
+  ),
+  play: async ({ canvas }) => {
+    await expect(canvas.getAllByText('수민')).toHaveLength(2)
+    await expect(canvas.queryByText('#4821')).toBeNull()
+    await expect(canvas.queryByText('#0097')).toBeNull()
   },
 }

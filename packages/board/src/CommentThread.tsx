@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { collidingNames } from './authorDisplay'
+import { useAuthorScope } from './authorScopeContext'
 import { defaultCommentLabels } from './commentLabels'
 import type { CommentOptions } from './commentThreadContext'
 import { nestThread } from './commentTree'
@@ -17,7 +18,9 @@ export type CommentThreadProps = CommentOptions & {
  */
 export function CommentThread({ thread, ...options }: CommentThreadProps) {
   const tree = useMemo(() => nestThread(thread), [thread])
-  const colliding = useMemo(() => collidingNames([thread, ...thread.replies]), [thread])
+  const own = useMemo(() => collidingNames([thread, ...thread.replies]), [thread])
+  const scoped = useAuthorScope(`thread-${thread.id}`, [thread, ...thread.replies])
+  const colliding = useMemo(() => (scoped ? new Set([...own, ...scoped]) : own), [own, scoped])
   const [replyingTo, setReplyingTo] = useState<BoardId | null>(null)
   const [editing, setEditing] = useState<BoardId | null>(null)
   const [expanded, setExpanded] = useState<ReadonlySet<BoardId>>(new Set())

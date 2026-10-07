@@ -66,6 +66,7 @@ export {
   useUpdateComment,
   useUpdatePost,
 } from './hooks'
+export { AuthorScope } from './authorScope'
 export { AuthorName } from './AuthorName'
 export type { AuthorNameProps } from './AuthorName'
 export { collidingNames, defaultAuthorLabels, resolveAuthor } from './authorDisplay'

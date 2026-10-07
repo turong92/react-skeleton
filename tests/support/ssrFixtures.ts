@@ -530,6 +530,7 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
     author: { authorId: 'a1', authorName: 'Ann', authorTag: '4821' },
     tag: 'always',
   }),
+  'board#AuthorScope': () => ({ children: 'inside' }),
   'board#PostList': () => ({
     posts: [boardPost],
     page: 0,

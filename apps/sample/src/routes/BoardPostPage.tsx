@@ -1,6 +1,7 @@
 import { isErrorCode, ErrorCodes } from '@skeleton/api-client'
 import { useAuth } from '@skeleton/auth'
 import {
+  AuthorScope,
   BoardComments,
   PostDetail,
   PostReactionBar,
@@ -51,7 +52,7 @@ function PostView({
   }
 
   return (
-    <>
+    <AuthorScope>
       <PostDetail
         post={post}
         labels={postDetailLabels(t)}
@@ -104,7 +105,7 @@ function PostView({
       >
         <p>{t('board.detail.deleteBody')}</p>
       </Dialog>
-    </>
+    </AuthorScope>
   )
 }
 

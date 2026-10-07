@@ -1,5 +1,9 @@
 import { onAccountChange } from '@skeleton/auth'
-import { browserLocalStorage, forgetAuthorMemory } from '@skeleton/author-profile'
+import {
+  browserLocalStorage,
+  forgetAuthorMemory,
+  refreshProfilesOnAuthorRefusal,
+} from '@skeleton/author-profile'
 import { showApiError } from '@skeleton/ui'
 import { authSession } from '../auth/session'
 import { i18n } from '../i18n'
@@ -9,15 +13,17 @@ import { toastUnlessValidation } from './errorToast'
 // 쿼리/뮤테이션 에러는 전부 토스트로 — 폼 검증 실패(400)만 칸 아래에 보이므로 뺀다
 export const queryClient = createQueryClient({
   // 문구는 부를 때 `i18n.t` 로 채운다 — 그 시점의 화면 언어로 나온다(@skeleton/ui 는 번역을 모른다)
-  onError: toastUnlessValidation((error) =>
+  onError: toastUnlessValidation((error) => {
+    // 게시판이 작성자 id 를 거절했다(다른 탭에서 프로필을 지웠다) — 선택기가 낡은 목록을 그리지 않게 목록을 다시 받는다. 토스트는 그대로 뜬다
+    refreshProfilesOnAuthorRefusal(queryClient, error)
     showApiError(error, {
       messages: {
         copy: i18n.t('common.copy'),
         traceIdCopied: i18n.t('error.traceCopied'),
         clickToCopy: i18n.t('error.clickToCopy'),
       },
-    }),
-  ),
+    })
+  }),
 })
 
 // 로그인한 계정이 사라지거나 바뀔 때마다 — 로그아웃 버튼 · 다른 탭의 로그아웃 · 갱신 실패 · 401 · 다른 계정의 링크 로그인 — 서버 상태를 비운다.

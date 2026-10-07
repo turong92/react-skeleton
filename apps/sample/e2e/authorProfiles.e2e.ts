@@ -225,7 +225,7 @@ describe('author profiles — several names, none of them tied to the account', 
     await pwExpect(commentOf(x, COMMENT_B).getByText(nameB)).toBeVisible()
   })
 
-  it('Y sees two different people, and nothing in anything Y received ties them to each other or to X', async () => {
+  it('Y sees two different people, and none of the board pages and responses Y loaded here ties them to each other or to X', async () => {
     await openBoard(y)
     await pwExpect(listRow(y, POST_A).getByText(nameA)).toBeVisible()
     await pwExpect(listRow(y, POST_B).getByText(nameB)).toBeVisible()

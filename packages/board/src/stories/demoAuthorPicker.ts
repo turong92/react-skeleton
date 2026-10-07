@@ -9,12 +9,13 @@ const DEMO_PROFILES: readonly DemoProfile[] = [
   { id: 'prf_b', name: 'Bea' },
 ]
 
-/** 스토리 · 시험용 `authorPicker` — `Select` 하나. 계약 설명은 `DemoPicker.tsx` */
+/** 스토리 · 시험용 `authorPicker` — `Select` 하나(+ 한 줄 확인). `remembered` 는 기기 기억 흉내. 계약 설명은 `DemoPicker.tsx` */
 export const demoAuthorPicker =
   (
     profiles: readonly DemoProfile[] = DEMO_PROFILES,
     label = 'Post as',
     placeholder = 'Choose…',
+    remembered?: string,
   ): AuthorPicker =>
   (args) =>
-    createElement(DemoPicker, { ...args, profiles, label, placeholder })
+    createElement(DemoPicker, { ...args, profiles, label, placeholder, remembered })

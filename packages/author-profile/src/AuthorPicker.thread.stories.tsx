@@ -17,26 +17,31 @@ const storage = createMemoryStorage()
 const onChange = fn()
 
 /**
- * 밖에서 바뀌는 props — 시간이 아니라 **신호**로 바꾼다(스토리가 `document` 에 `story:settle`(댓글을 다 받음) · `story:lock`(보내는 중)을 보낸다).
+ * 밖에서 바뀌는 props — 시간이 아니라 **신호**로 바꾼다(스토리가 `document` 에 `story:settle`(댓글을 다 받음) · `story:lock`(보내는 중) · `story:thread`(스레드가 가리키는 프로필, `detail`)를 보낸다).
  * 이 신호는 포커스 · 누르기가 아니라서 떠 있는 확인을 건드리지 않는다.
  */
 function Changing({
   loadingAtStart,
+  threadAuthorId,
   ...rest
 }: ComponentProps<typeof PickerDemo> & { loadingAtStart?: boolean }) {
   const [loading, setLoading] = useState(loadingAtStart === true)
+  const [thread, setThread] = useState(threadAuthorId)
   const [sending, setSending] = useState(false)
   useEffect(() => {
     const settle = () => setLoading(false)
     const lock = () => setSending(true)
+    const named = (event: Event) => setThread((event as CustomEvent<string>).detail)
+    document.addEventListener('story:thread', named)
     document.addEventListener('story:settle', settle)
     document.addEventListener('story:lock', lock)
     return () => {
+      document.removeEventListener('story:thread', named)
       document.removeEventListener('story:settle', settle)
       document.removeEventListener('story:lock', lock)
     }
   }, [])
-  return <PickerDemo {...rest} threadLoading={loading} disabled={sending} />
+  return <PickerDemo {...rest} threadAuthorId={thread} threadLoading={loading} disabled={sending} />
 }
 
 const meta = {
@@ -172,16 +177,38 @@ export const NoticeIsAnnouncedOnceAndEscapeClosesIt: Story = {
   },
 }
 
-/** 확인이 떠 있는데 바깥으로 포커스가 가면 낡은 질문이라 닫힌다(고르지도 유지하지도 않고 떠난 것) */
-export const NoticeClosesWhenFocusLeaves: Story = {
+/** 확인이 떠 있는데 폼 **밖**으로 포커스가 가면 낡은 질문이라 닫힌다(고르지도 유지하지도 않고 떠난 것). 같은 폼 안(제출 단추 포함)은 떠난 것이 아니다 */
+export const NoticeClosesWhenFocusLeavesTheForm: Story = {
   args: { threadAuthorId: 'prf_a' },
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(await canvas.findByRole('button', { name: /Writing as Ann#0001/ }))
     await userEvent.click(await canvas.findByRole('menuitemradio', { name: 'Bea#0002' }))
     await expect(await canvas.findByRole('status')).toBeVisible()
-    canvas.getByRole('button', { name: 'Send' }).focus() // 선택기 밖
+    canvas.getByRole('button', { name: 'Send' }).focus() // 같은 폼 안 — 떠난 것이 아니다
+    await userEvent.click(canvas.getByRole('button', { name: 'Send' })) // 제출 단추를 눌러도 질문은 그대로(막는 것은 폼의 몫)
+    await expect(canvas.getByRole('status')).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Elsewhere' })) // 폼 밖
     await waitFor(() => expect(canvas.queryByRole('status')).toBeNull())
     await expect(canvas.getByRole('button', { name: /Writing as Ann#0001/ })).toBeVisible() // 값은 그대로
+  },
+}
+
+/** 떠 있는 질문은 폼에 알려진다(`onUnsettledChange`) — 폼이 제출을 막는 근거. 답하거나 접히면 풀린다. 그동안 선택기 단추의 설명이 그 문장이다 */
+const unsettled = fn()
+export const TheOpenQuestionIsReportedToTheForm: Story = {
+  args: { threadAuthorId: 'prf_a', onUnsettledChange: unsettled },
+  beforeEach: () => unsettled.mockClear(),
+  play: async ({ canvas, userEvent }) => {
+    const trigger = await canvas.findByRole('button', { name: /Writing as Ann#0001/ })
+    await expect(unsettled).toHaveBeenLastCalledWith(false)
+    await userEvent.click(trigger)
+    await userEvent.click(await canvas.findByRole('menuitemradio', { name: 'Bea#0002' }))
+    await expect(await canvas.findByRole('status')).toBeVisible()
+    await expect(unsettled).toHaveBeenLastCalledWith(true)
+    await expect(trigger).toHaveAccessibleDescription('You wrote in this thread as Ann#0001.')
+    await userEvent.click(canvas.getByRole('button', { name: 'Keep Ann#0001' }))
+    await expect(unsettled).toHaveBeenLastCalledWith(false)
+    await expect(trigger).not.toHaveAccessibleDescription('You wrote in this thread as Ann#0001.')
   },
 }
 
@@ -198,5 +225,30 @@ export const NoticeClosesWhenTheFormGetsLocked: Story = {
       'aria-disabled',
       'true',
     )
+  },
+}
+
+/** 스스로 채운 값(기기 기억 Bea)은 스레드가 나중에 Ann 을 가리키면(재시도 · 쪽 넘김) Ann 으로 다시 정한다 — 확인 없이. 스레드 ① 이 기기 기억 ② 를 이긴다 */
+export const AutoFilledValueFollowsTheThreadWhenItArrivesLater: Story = {
+  args: { remembered: 'prf_b' },
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByRole('button', { name: /Writing as Bea#0002/ })).toBeVisible()
+    document.dispatchEvent(new CustomEvent('story:thread', { detail: 'prf_a' }))
+    await expect(await canvas.findByRole('button', { name: /Writing as Ann#0001/ })).toBeVisible()
+    await expect(canvas.queryByRole('status')).toBeNull() // 사람이 고른 값이 아니었으니 묻지 않는다
+    await expect(onChange).toHaveBeenLastCalledWith('prf_a')
+    await expect(storage.dump()).toEqual({ [Object.keys(storage.dump())[0]]: 'prf_b' }) // 자동 값은 기억에 쓰지 않는다 — 처음 기억 그대로
+  },
+}
+
+/** 사람이 고른 값(Bea)은 스레드가 나중에 Ann 을 가리켜도 그대로다 */
+export const ChosenValueStaysWhenTheThreadArrivesLater: Story = {
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(await canvas.findByRole('button', { name: 'Choose a profile' }))
+    await userEvent.click(await canvas.findByRole('menuitemradio', { name: 'Bea#0002' }))
+    await expect(await canvas.findByRole('button', { name: /Writing as Bea#0002/ })).toBeVisible()
+    document.dispatchEvent(new CustomEvent('story:thread', { detail: 'prf_a' }))
+    await expect(canvas.getByRole('button', { name: /Writing as Bea#0002/ })).toBeVisible()
+    await expect(canvas.queryByRole('status')).toBeNull()
   },
 }

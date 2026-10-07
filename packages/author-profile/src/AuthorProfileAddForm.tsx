@@ -32,7 +32,8 @@ export function AuthorProfileAddForm({
   const [local, setLocal] = useState<string>()
   const limitId = useId()
   const retry = useRef<{ name: string; key: string }>(undefined)
-  const problem = profileFormProblem(create.error, labels, config)
+  // 만들기의 429 는 시간을 약속하지 않는다(계정 전체 한도와 창을 나눠 쓸 수 있다) — 이름 바꾸기만 정확한 시간
+  const problem = profileFormProblem(create.error, labels, config, { showWait: false })
 
   async function add(event: FormEvent) {
     event.preventDefault()

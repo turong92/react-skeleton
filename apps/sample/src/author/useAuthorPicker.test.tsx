@@ -31,6 +31,7 @@ function Slot({ mustCreate }: { mustCreate: boolean }) {
     threadLoading: false,
     invalid: false,
     disabled: false,
+    onUnsettledChange: () => undefined,
   })
 }
 

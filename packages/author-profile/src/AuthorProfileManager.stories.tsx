@@ -57,7 +57,9 @@ export const ClientChecksTheNameFirst: Story = {
   play: async ({ canvas, userEvent }) => {
     await userEvent.type(await canvas.findByLabelText('New profile name'), 'a#b')
     await userEvent.click(canvas.getByRole('button', { name: 'Add profile' }))
-    await expect(await canvas.findByText('Names cannot contain # or @.')).toBeVisible()
+    await expect(
+      await canvas.findByText('That name has characters that are not allowed.'),
+    ).toBeVisible()
     await expect(canvas.getByLabelText('New profile name')).toHaveAttribute('aria-invalid', 'true')
     await expect(canvas.getAllByRole('listitem')).toHaveLength(2)
   },
@@ -98,13 +100,13 @@ export const LimitReachedTurnsAddingOffAndSaysWhy: Story = {
   },
 }
 
-export const RateLimitedShowsTheWait: Story = {
+export const RateLimitedWhenAddingDoesNotPromiseATime: Story = {
   args: { rateLimited: true },
   play: async ({ canvas, userEvent }) => {
     await userEvent.type(await canvas.findByLabelText('New profile name'), 'Cy')
     await userEvent.click(canvas.getByRole('button', { name: 'Add profile' }))
     await expect(await canvas.findByRole('alert')).toHaveTextContent(
-      'Too many profile changes. Try again in 2 minutes.',
+      'Too many profile changes. Try again later.',
     )
   },
 }

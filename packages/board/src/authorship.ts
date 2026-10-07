@@ -92,5 +92,10 @@ export type AuthorPickerArgs = {
   invalid: boolean
   /** 보내는 중 */
   disabled: boolean
+  /**
+   * 선택기가 **답이 필요한 질문**(예: 「이 스레드에서는 ○○로 썼어요」 한 줄 확인)을 띄웠다/풀었다를 폼에 알린다. true 인 동안 폼은 제출을 막고
+   * (확정되지 않은 값으로 글이 나가지 않게) 포커스를 질문으로 보낸다 — 질문 요소에 `data-author-notice` 를 달면 거기로, 없으면 선택기의 첫 조작 요소로. 폼은 안정된 함수를 준다
+   */
+  onUnsettledChange: (unsettled: boolean) => void
 }
 export type AuthorPicker = (args: AuthorPickerArgs) => ReactNode

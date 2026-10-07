@@ -80,6 +80,7 @@ const authorPickerSlot = {
   threadLoading: false,
   invalid: false,
   disabled: false,
+  onUnsettledChange: noop,
 }
 const fakeLegalApi = () =>
   new Proxy(

@@ -90,7 +90,7 @@ export function BoardComments({
     [comments.data, postAuthor],
   )
   const authorRequired = config.authorRequired === true
-  /** 현재 쪽의 댓글을 아직 모른다(받는 중 · 이전 쪽 placeholder · 첫 불러오기 실패) — 이때의 undefined 는 「쓴 적 없음」이 아니다 */
+  /** 현재 쪽의 댓글을 아직 모른다(받는 중 · 이전 쪽 placeholder) — 이때의 undefined 는 「쓴 적 없음」이 아니다. 첫 불러오기 **실패**는 모름이 아니라 실패라 여기 들지 않는다 */
   const threadLoading = threadIsUnknown(comments)
   const create = useCreateComment(api, boardCode, postId)
   const update = useUpdateComment(api, boardCode, postId)
@@ -116,6 +116,7 @@ export function BoardComments({
             authorPicker={options.authorPicker}
             authorRequired={authorRequired}
             authorRequiredMessage={labels.authorRequired}
+            authorUnsettledMessage={labels.authorUnsettled}
             threadAuthorId={threadAuthorId}
             threadLoading={threadLoading}
             onSubmit={async (body, authorId) => {

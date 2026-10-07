@@ -182,3 +182,28 @@ export const UnnamedAndTaglessProfilesReadNaturally: Story = {
     await expect(document.body).not.toHaveTextContent('#')
   },
 }
+
+/** 긴 이름(60자) — 메뉴 항목과 확인 단추 안에서 말줄임(줄을 밀어내지 않는다), 메뉴는 폭 상한이 있다. 전체 이름은 글자 그대로 남아 낭독 이름이다 */
+const longName = '가나다라마바사아자차카타파하'.repeat(5).slice(0, 60)
+export const LongNamesAreEllipsizedNotPushedOut: Story = {
+  args: { remembered: 'prf_long', threadAuthorId: 'prf_a' },
+  render: (args) => (
+    <PickerDemo
+      {...args}
+      api={
+        createFakeAuthorProfiles({
+          profiles: [ann, { ...bea, id: 'prf_long', name: longName, tag: '0009' }],
+        }).api
+      }
+    />
+  ),
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(await canvas.findByRole('button', { name: /Writing as/ }))
+    const menu = await canvas.findByRole('menu')
+    await expect(menu.getBoundingClientRect().width).toBeLessThanOrEqual(24 * 16 + 2) // 폭 상한
+    const item = await canvas.findByRole('menuitemradio', { name: `${longName}#0009` }) // 전체 이름이 낭독 이름
+    const label = item.querySelector('span:not([aria-hidden])') as HTMLElement
+    await expect(getComputedStyle(label).textOverflow).toBe('ellipsis')
+    await expect(item.getBoundingClientRect().right).toBeLessThanOrEqual(window.innerWidth)
+  },
+}

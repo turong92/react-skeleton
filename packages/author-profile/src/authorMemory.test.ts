@@ -44,9 +44,11 @@ describe('createAuthorMemory — which profile this device wrote with last, per 
   it('keeps accounts apart: the account id is inside the storage key only, the value is the profile id and nothing else', () => {
     const storage = memoryStorage()
     createAuthorMemory(storage, 'acc_1').set('free', 'prf_a')
-    expect(createAuthorMemory(storage, 'acc_2').get('free')).toBeUndefined()
     expect(Object.values(storage.dump())).toEqual(['prf_a'])
     expect(Object.keys(storage.dump()).join('')).toContain('acc_1')
+    // 다른 계정이 이 기기를 쓰기 시작하면 앞 계정의 것은 보이지도 남지도 않는다
+    expect(createAuthorMemory(storage, 'acc_2').get('free')).toBeUndefined()
+    expect(storage.length).toBe(0)
   })
 
   it('a board code with the key separator in it cannot collide with another account', () => {
@@ -94,5 +96,28 @@ describe('createAuthorMemory — which profile this device wrote with last, per 
     expect(storage.dump()).toEqual({ theme: 'dark' })
     expect(() => forgetAuthorMemory(undefined)).not.toThrow()
     expect(() => forgetAuthorMemory(throwing)).not.toThrow()
+  })
+
+  it("creating a memory for an account removes the other accounts' entries of this module (the device keeps only the current account's), and nothing else", () => {
+    const storage = memoryStorage()
+    storage.setItem('theme', 'dark')
+    createAuthorMemory(storage, 'acc_old').set('free', 'prf_old')
+    createAuthorMemory(storage, 'acc_old').set('news', 'prf_old2')
+    const mine = createAuthorMemory(storage, 'acc_me')
+    mine.set('free', 'prf_a')
+    expect(Object.keys(storage.dump()).some((key) => key.includes('acc_old'))).toBe(false)
+    expect(mine.get('free')).toBe('prf_a')
+    // 다시 만들어도(렌더 · 탭) 현재 계정의 것은 남는다
+    expect(createAuthorMemory(storage, 'acc_me').get('free')).toBe('prf_a')
+    expect(storage.getItem('theme')).toBe('dark')
+  })
+
+  it('matches the account part exactly: acc_10 is not "acc_1 plus a bit" — creating for acc_1 clears acc_10\'s entry', () => {
+    const storage = memoryStorage()
+    createAuthorMemory(storage, 'acc_10').set('free', 'prf_a')
+    const one = createAuthorMemory(storage, 'acc_1')
+    expect(Object.keys(storage.dump())).toEqual([])
+    one.set('free', 'prf_b')
+    expect(createAuthorMemory(storage, 'acc_1').get('free')).toBe('prf_b')
   })
 })

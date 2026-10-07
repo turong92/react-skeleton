@@ -13,15 +13,17 @@ export {
 } from './hooks'
 export { browserLocalStorage, createAuthorMemory, forgetAuthorMemory } from './authorMemory'
 export type { AuthorMemory, StorageLike } from './authorMemory'
-export { resolveInitialAuthor, switchNotice } from './initialAuthor'
+export { resolveInitialAuthor, switchNotice, threadOverridesAuto } from './initialAuthor'
 export { defaultAuthorProfileLabels } from './labels'
 export type { AuthorProfileLabels } from './labels'
 export {
+  isAuthorNotAllowedError,
   isAuthorProfileFormError,
   nameProblem,
   profileFormProblem,
   shouldReuseIdempotencyKey,
 } from './errors'
+export { refreshProfilesOnAuthorRefusal } from './authorRefusal'
 export { foldDuration } from './duration'
 export type { Duration } from './duration'
 export type { ProfileFormProblem } from './errors'

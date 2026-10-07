@@ -26,6 +26,8 @@ export type CommentLabels = AuthorLabels & {
   reactionGroup: string
   /** `authorRequired` 인데 작성자를 고르지 않고 보낼 때 칸 아래에 */
   authorRequired: string
+  /** 선택기에 답이 필요한 질문이 떠 있는데 보내려 할 때 칸 아래에 */
+  authorUnsettled: string
 }
 
 export const defaultCommentLabels: CommentLabels = {
@@ -50,4 +52,5 @@ export const defaultCommentLabels: CommentLabels = {
   tooLong: (max) => `Keep it within ${max} characters.`,
   reactionGroup: 'Reactions',
   authorRequired: 'Choose who to post as.',
+  authorUnsettled: 'Answer the question about which profile to use first.',
 }

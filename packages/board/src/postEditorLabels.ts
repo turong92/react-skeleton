@@ -15,6 +15,8 @@ export type PostEditorLabels = {
   formLabel: string
   /** `authorRequired` 인데 작성자를 고르지 않았을 때 */
   authorRequired: string
+  /** 선택기에 답이 필요한 질문이 떠 있는데 보내려 할 때 */
+  authorUnsettled: string
 }
 
 export const defaultPostEditorLabels: PostEditorLabels = {
@@ -30,4 +32,5 @@ export const defaultPostEditorLabels: PostEditorLabels = {
   cancel: 'Cancel',
   formLabel: 'Post',
   authorRequired: defaultCommentLabels.authorRequired,
+  authorUnsettled: defaultCommentLabels.authorUnsettled,
 }

@@ -18,6 +18,7 @@ const view = {
   threadLoading: false,
   invalid: false,
   disabled: false,
+  onUnsettledChange: noop,
 }
 
 describe('AuthorPickerView — the folded state', () => {
@@ -150,6 +151,7 @@ describe('AuthorPicker — connected to the list query', () => {
           onChange={noop}
           threadAuthorId={undefined}
           threadLoading={false}
+          onUnsettledChange={noop}
           invalid={false}
           disabled={false}
         />
@@ -168,6 +170,7 @@ describe('AuthorPicker — connected to the list query', () => {
           onChange={noop}
           threadAuthorId={undefined}
           threadLoading={false}
+          onUnsettledChange={noop}
           invalid={false}
           disabled={false}
         />

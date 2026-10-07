@@ -66,12 +66,13 @@ const en: Record<keyof typeof ko, string> = {
     'Only you see this. Your first profile only copies the nickname it had when it was created, so changing the nickname later does not rename any profile.',
   'settings.profiles': 'Profiles for posts and comments',
   'settings.profilesHint':
-    'On the board you write as a profile. If your account has no nickname, your first profile has no name yet — give it one. Other people cannot tell that two profiles are the same person.',
+    'On the board you write as a profile. If your account has no nickname, your first profile has no name yet — give it one. The board does not show that two of your profiles are the same person.',
   'profileGate.title': 'Create a named profile first',
   'profileGate.body':
     'On the board you write as a named profile. Create one below or name your first profile, then close this window.',
   'board.authorRequired': 'Choose which profile to write as.',
   'board.authorRequiredCreate': 'Create a named profile first.',
+  'board.authorUnsettled': 'Answer the question about which profile to use first.',
   'author.choose': 'Choose a profile',
   'author.triggerLabel': 'Writing as {current}. Change profile',
   'author.triggerChoose': 'Choose a profile',
@@ -89,7 +90,7 @@ const en: Record<keyof typeof ko, string> = {
   'author.count': '{n} of {max} profiles',
   'author.nameLabel': 'New profile name',
   'author.nameHint':
-    'Up to {max} characters. If the name is already in use, a tag (#number) may be added.',
+    'Up to {max} characters. A tag (#number) may be added to tell same names apart.',
   'author.add': 'Add profile',
   'author.adding': 'Adding',
   'author.renameAction': 'Rename',
@@ -107,7 +108,7 @@ const en: Record<keyof typeof ko, string> = {
   'author.deleteCancel': 'Cancel',
   'author.deleteClose': 'Close',
   'author.nameRequired': 'Enter a name.',
-  'author.namePattern': 'Names cannot contain # or @.',
+  'author.namePattern': 'That name has characters that are not allowed.',
   'author.nameReserved': 'That name is not available.',
   'author.nameTooLong': 'Use {max} characters or fewer.',
   'author.nameTaken': 'That name is taken.',

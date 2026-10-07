@@ -566,3 +566,103 @@ export const AuthorRequiredWithoutAPickerIsLeftToTheServer: Story = {
     await expect(field).toHaveValue('No picker')
   },
 }
+
+/** 스스로 채운 값(기기 기억 Bea)은 내 댓글(Ann)이 있는 쪽으로 넘어가면 스레드 값으로 다시 정한다 — 확인 없이. 새 댓글 칸과 답글 칸이 같은 프로필로 시작한다 */
+export const AutoFilledValueFollowsTheThreadWhenPagingToMyComment: Story = {
+  args: {
+    fake: profileServer,
+    pageSize: 3,
+    authorPicker: demoAuthorPicker(undefined, undefined, undefined, 'prf_b'),
+    setup: (board) => {
+      board.newComment(3, 'Mine on the second page', null, 'prf_a')
+    },
+  },
+  play: async ({ canvas, userEvent }) => {
+    await canvas.findByText('Spaces, always.')
+    const picker = () => canvas.getByRole('combobox', { name: 'Post as' })
+    await waitFor(() => expect(picker()).toHaveDisplayValue('Bea')) // 0쪽엔 내 댓글이 없다 → 기억 Bea
+    await userEvent.click(canvas.getByRole('button', { name: 'Next page' }))
+    await canvas.findByText('Mine on the second page', { selector: 'p' })
+    await waitFor(() => expect(picker()).toHaveDisplayValue('Ann')) // 스레드가 이긴다
+    await expect(canvas.queryByRole('status')).toBeNull() // 자동 값이었으므로 확인은 없다
+    await userEvent.click(canvas.getByRole('button', { name: 'Reply: Ann' }))
+    const pickers = canvas.getAllByRole('combobox', { name: 'Post as' })
+    await expect(pickers).toHaveLength(2)
+    await waitFor(() => expect(pickers[1]).toHaveDisplayValue('Ann')) // 답글 칸도 같은 프로필로
+  },
+}
+
+/** 사람이 고른 값(Bea)은 쪽을 넘겨도 건드리지 않는다 — 스레드가 Ann 을 가리켜도 */
+export const ChosenValueIsNotOverriddenByPaging: Story = {
+  args: {
+    fake: profileServer,
+    pageSize: 3,
+    authorPicker: demoAuthorPicker(),
+    setup: (board) => {
+      board.newComment(3, 'Mine on the second page', null, 'prf_a')
+    },
+  },
+  play: async ({ canvas, userEvent }) => {
+    await canvas.findByText('Spaces, always.')
+    const picker = () => canvas.getByRole('combobox', { name: 'Post as' })
+    await userEvent.selectOptions(picker(), 'Bea') // 스레드에 쓴 적 없음 → 확인 없이 사람이 고른 값
+    await userEvent.click(canvas.getByRole('button', { name: 'Next page' }))
+    await canvas.findByText('Mine on the second page', { selector: 'p' })
+    await expect(picker()).toHaveDisplayValue('Bea')
+    await expect(canvas.queryByRole('status')).toBeNull()
+  },
+}
+
+/** 첫 불러오기가 실패해 기기 기억으로 채웠다가(자동 값), 「다시 시도」로 내 댓글이 도착하면 스레드 값으로 다시 정한다 */
+export const AutoFilledAfterAFailedLoadIsRedecidedOnRetry: Story = {
+  args: {
+    fake: profileServer,
+    failFirstList: true,
+    authorPicker: demoAuthorPicker(undefined, undefined, undefined, 'prf_b'),
+    setup: (board) => {
+      board.newComment(3, 'Mine, written as Ann', null, 'prf_a')
+    },
+  },
+  play: async ({ canvas, userEvent }) => {
+    const retry = await canvas.findByRole('button', { name: 'Try again' })
+    const picker = () => canvas.getByRole('combobox', { name: 'Post as' })
+    await waitFor(() => expect(picker()).toHaveDisplayValue('Bea')) // 실패 — 기기 기억으로
+    await userEvent.click(retry)
+    await canvas.findByText('Mine, written as Ann', { selector: 'p' })
+    await waitFor(() => expect(picker()).toHaveDisplayValue('Ann'))
+  },
+}
+
+/** 한 줄 확인이 떠 있는 채 보내면 막는다 — 서버에 가지 않고(0회), 짧은 문장이 읽히고, 포커스는 확인 줄로. 답한 뒤에는 보내진다 */
+export const SubmitIsBlockedWhileTheQuestionIsOpen: Story = {
+  args: {
+    fake: profileServer,
+    authorPicker: demoAuthorPicker(),
+    watchCreate: fn(),
+    setup: (board) => {
+      board.newComment(3, 'Mine, written as Ann', null, 'prf_a')
+    },
+  },
+  play: async ({ canvas, userEvent, args }) => {
+    await canvas.findByText('Mine, written as Ann', { selector: 'p' })
+    const picker = () => canvas.getAllByRole('combobox', { name: 'Post as' })[0]
+    await waitFor(() => expect(picker()).toHaveDisplayValue('Ann'))
+    await userEvent.type(canvas.getByRole('textbox', { name: 'Write a comment' }), 'Hello')
+    await userEvent.selectOptions(picker(), 'Bea') // 이 스레드에서 쓴 Ann 과 다르다 → 한 줄 확인
+    await expect(await canvas.findByRole('status')).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Post comment' }))
+    await expect(await canvas.findByRole('alert')).toHaveTextContent(
+      'Answer the question about which profile to use first.',
+    )
+    await expect(args.watchCreate).not.toHaveBeenCalled()
+    await expect(canvas.getByRole('button', { name: 'Use Bea' })).toHaveFocus() // 확인 줄로
+    await expect(canvas.getByRole('textbox', { name: 'Write a comment' })).toHaveValue('Hello')
+
+    await userEvent.click(canvas.getByRole('button', { name: 'Use Bea' }))
+    await expect(canvas.queryByRole('alert')).toBeNull() // 질문이 풀리면 막은 문장도 사라진다
+    await userEvent.click(canvas.getByRole('button', { name: 'Post comment' }))
+    await waitFor(() =>
+      expect(args.watchCreate).toHaveBeenCalledWith({ body: 'Hello', authorId: 'prf_b' }),
+    )
+  },
+}

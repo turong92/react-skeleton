@@ -35,8 +35,14 @@ export function AuthorPicker({ api, ...rest }: AuthorPickerProps) {
         {labels.loadFailed}
       </Button>
     )
+  // 불러오는 중 — 꺼진(disabled) 단추가 아니라 포커스를 받는 aria-disabled 단추(눌러도 아무 일 없고, 오류 설명은 읽힌다)
   return (
-    <Button variant="secondary" loading loadingLabel="" aria-describedby={rest['aria-describedby']}>
+    <Button
+      variant="secondary"
+      aria-disabled="true"
+      aria-busy="true"
+      aria-describedby={rest['aria-describedby']}
+    >
       {labels.loading}
     </Button>
   )

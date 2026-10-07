@@ -196,7 +196,7 @@ export function RowMenu({
                 <span className={styles.check} aria-hidden="true">
                   {item.checked ? '✓' : ''}
                 </span>
-                {item.label}
+                <span className={styles.itemLabel}>{item.label}</span>
               </button>
             </div>
           ))}

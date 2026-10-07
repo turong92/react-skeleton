@@ -100,6 +100,7 @@ export const postEditorLabels = (t: Translate, mustCreate = false): Partial<Post
   cancel: t('common.cancel'),
   formLabel: t('board.form.formLabel'),
   authorRequired: t(mustCreate ? 'board.authorRequiredCreate' : 'board.authorRequired'),
+  authorUnsettled: t('board.authorUnsettled'),
 })
 
 export const commentLabels = (t: Translate, mustCreate = false): BoardCommentsLabelsInput => ({
@@ -139,5 +140,6 @@ export const commentLabels = (t: Translate, mustCreate = false): BoardCommentsLa
   cancel: t('common.cancel'),
   close: t('common.close'),
   authorRequired: t(mustCreate ? 'board.authorRequiredCreate' : 'board.authorRequired'),
+  authorUnsettled: t('board.authorUnsettled'),
   pagination: { label: t('notes.pagination.label'), page: pageLabel(t) },
 })

@@ -58,13 +58,25 @@ export function PostEditor({
   const [authorId, setAuthorId] = useState<string>()
   /** 「작성자를 안 골랐다」는 사실만 보관한다 — 문구는 그릴 때 지금의 `labels.authorRequired` 에서 읽는다(앱이 문구를 바꿔도 낡은 문장이 남지 않게) */
   const [authorMissing, setAuthorMissing] = useState(false)
+  /** 선택기에 답이 필요한 질문이 떠 있다(`onUnsettledChange`) / 그 때문에 보내기를 막았다 */
+  const [unsettled, setUnsettled] = useState(false)
+  const [blockedUnsettled, setBlockedUnsettled] = useState(false)
   const authorErrorId = useId()
   const withAuthor = authorRequired === true && authorPicker !== undefined
-  const authorProblem = authorMissing ? labels.authorRequired : fieldErrors?.authorId
+  const authorProblem =
+    unsettled && blockedUnsettled
+      ? labels.authorUnsettled
+      : authorMissing
+        ? labels.authorRequired
+        : fieldErrors?.authorId
   // 안정된 함수 — 선택기가 effect 의존에 넣어도 매 렌더 다시 돌지 않는다
   const changeAuthor = useCallback((next: string | undefined) => {
     setAuthorId(next)
     if (next) setAuthorMissing(false)
+  }, [])
+  const changeUnsettled = useCallback((next: boolean) => {
+    setUnsettled(next)
+    if (!next) setBlockedUnsettled(false)
   }, [])
 
   function check(): typeof problems {
@@ -77,7 +89,8 @@ export function PostEditor({
     if (!body) found.body = labels.bodyRequired
     else if (body.length > limits.bodyMaxLength)
       found.body = labels.bodyTooLong(limits.bodyMaxLength)
-    if (withAuthor && !authorId) found.authorId = labels.authorRequired // 첫 오류 칸을 가리는 표식 — 그릴 때는 `authorMissing` 으로
+    // 첫 오류 칸을 가리는 표식 — 그릴 때는 `authorMissing` · `blockedUnsettled` 로
+    if (withAuthor && (!authorId || unsettled)) found.authorId = labels.authorRequired
     return found
   }
 
@@ -86,7 +99,8 @@ export function PostEditor({
     const form = event.currentTarget
     const found = check()
     setProblems(found)
-    setAuthorMissing(found.authorId !== undefined)
+    setAuthorMissing(found.authorId !== undefined && !authorId)
+    setBlockedUnsettled(found.authorId !== undefined && authorId !== undefined)
     const first = Object.keys(found)[0]
     if (first === 'authorId') {
       focusAuthorSlot(form)
@@ -155,6 +169,7 @@ export function PostEditor({
             onChange={changeAuthor}
             threadAuthorId={undefined}
             threadLoading={false}
+            onUnsettledChange={changeUnsettled}
             error={authorProblem}
             errorId={authorErrorId}
             disabled={submitting === true}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { resolveInitialAuthor, switchNotice } from './initialAuthor'
+import { resolveInitialAuthor, switchNotice, threadOverridesAuto } from './initialAuthor'
 
 const profiles = [
   { id: 'prf_a', name: 'Ann', tag: '0001', createdAt: '2026-01-01T00:00:00Z' },
@@ -85,5 +85,31 @@ describe('switchNotice — the one-line confirmation, only when leaving the prof
     expect(switchNotice({ profiles, threadAuthorId: 'prf_a', nextId: 'prf_a' })).toBeUndefined()
     expect(switchNotice({ profiles, threadAuthorId: undefined, nextId: 'prf_b' })).toBeUndefined()
     expect(switchNotice({ profiles, threadAuthorId: 'prf_gone', nextId: 'prf_b' })).toBeUndefined()
+  })
+})
+
+describe('threadOverridesAuto — a value the picker filled in by itself gives way to what the thread says; a value a person chose never does', () => {
+  const base = { profiles, value: 'prf_b', autoValue: 'prf_b', threadLoading: false }
+
+  it('auto value + the thread now names another live profile of mine → that profile', () => {
+    expect(threadOverridesAuto({ ...base, threadAuthorId: 'prf_a' })).toBe('prf_a')
+  })
+
+  it('a value the person chose (not the auto one) is left alone', () => {
+    expect(
+      threadOverridesAuto({ ...base, autoValue: undefined, threadAuthorId: 'prf_a' }),
+    ).toBeUndefined()
+    expect(
+      threadOverridesAuto({ ...base, autoValue: 'prf_a', threadAuthorId: 'prf_a' }),
+    ).toBeUndefined()
+  })
+
+  it('nothing to do while the thread is loading, when it names nobody, the same profile, or a profile that is gone', () => {
+    expect(
+      threadOverridesAuto({ ...base, threadLoading: true, threadAuthorId: 'prf_a' }),
+    ).toBeUndefined()
+    expect(threadOverridesAuto({ ...base, threadAuthorId: undefined })).toBeUndefined()
+    expect(threadOverridesAuto({ ...base, threadAuthorId: 'prf_b' })).toBeUndefined()
+    expect(threadOverridesAuto({ ...base, threadAuthorId: 'prf_gone' })).toBeUndefined()
   })
 })

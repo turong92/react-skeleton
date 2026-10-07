@@ -23,6 +23,28 @@ export function resolveInitialAuthor({
 }
 
 /**
+ * 선택기가 **스스로 채운** 값(`autoValue` — 사람이 고르지 않았다)은 스레드가 나중에 다른 내 프로필을 가리키면 그쪽으로 다시 정한다(스레드 ① 이 기기 기억 ② 를 이긴다).
+ * 첫 불러오기가 실패했다 재시도로 도착하거나 쪽 · 정렬을 넘겨 내 댓글이 있는 쪽이 보일 때가 그 경우다. 사람이 고른 값이면 undefined(건드리지 않는다 — 바꾸는 쪽은 한 줄 확인).
+ */
+export function threadOverridesAuto({
+  profiles,
+  value,
+  autoValue,
+  threadAuthorId,
+  threadLoading,
+}: {
+  profiles: readonly Pick<AuthorProfile, 'id'>[]
+  value: string | undefined
+  autoValue: string | undefined
+  threadAuthorId: string | undefined
+  threadLoading: boolean
+}): string | undefined {
+  if (threadLoading || value === undefined || value !== autoValue) return undefined
+  if (threadAuthorId === undefined || threadAuthorId === value) return undefined
+  return profiles.some((profile) => profile.id === threadAuthorId) ? threadAuthorId : undefined
+}
+
+/**
  * 한 줄 확인이 필요한가 — 이 스레드에서 쓴 프로필을 두고 **다른 것으로** 바꿀 때만, 그 스레드 프로필을 돌려준다.
  * 같은 프로필로 바꾸거나, 이 스레드에 쓴 적이 없거나, 쓴 프로필이 지워졌으면 undefined.
  */

@@ -43,7 +43,8 @@
   top: calc(100% + var(--space-xs));
   z-index: 10;
   display: grid;
-  min-width: 12rem;
+  min-width: min(12rem, calc(100vw - var(--space-lg)));
+  max-width: min(24rem, calc(100vw - var(--space-lg)));
   padding: var(--space-xs);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
@@ -97,6 +98,12 @@
 .item[aria-disabled='true'] {
   opacity: 0.48;
   cursor: not-allowed;
+}
+
+.itemLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .check {

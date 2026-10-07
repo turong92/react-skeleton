@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { defaultAuthorProfileLabels as L } from './labels'
 import { foldDuration } from './duration'
 import {
+  isAuthorNotAllowedError,
   isAuthorProfileFormError,
   nameProblem,
   profileFormProblem,
@@ -146,5 +147,48 @@ describe('shouldReuseIdempotencyKey — a resend keeps its key only when the fir
     ).toBe(false)
     expect(shouldReuseIdempotencyKey(err({ status: 400 }))).toBe(false)
     expect(shouldReuseIdempotencyKey(new Error('offline'))).toBe(false)
+  })
+})
+
+describe("rate limit wait — only where the server's time is trustworthy", () => {
+  const tooMany = err({
+    code: ErrorCodes.AUTHOR_PROFILE_RATE_LIMITED,
+    status: 429,
+    data: { retryAfterSeconds: 90 },
+  })
+
+  it('renaming shows the exact wait', () => {
+    expect(profileFormProblem(tooMany, L, limits)).toEqual({
+      where: 'form',
+      message: L.rateLimited(foldDuration(90)),
+    })
+  })
+
+  it('creating does not promise a time (the window is shared with the account-wide limit)', () => {
+    expect(profileFormProblem(tooMany, L, limits, { showWait: false })).toEqual({
+      where: 'form',
+      message: L.rateLimited(undefined),
+    })
+  })
+})
+
+describe('an unknown field code is the generic sentence, never "too long"', () => {
+  it('Size is too long; a code we do not know says something went wrong', () => {
+    const at = (code: string) =>
+      profileFormProblem(err({ errors: [{ field: 'name', code, message: 'x' }] }), L, limits)
+    expect(at('Size')).toEqual({ where: 'name', message: L.nameTooLong(60) })
+    expect(at('SomethingNew')).toEqual({ where: 'name', message: L.failed })
+  })
+})
+
+describe('isAuthorNotAllowedError — the board refused the author id (a profile deleted elsewhere)', () => {
+  it('only BOARD.AUTHOR_NOT_ALLOWED', () => {
+    expect(
+      isAuthorNotAllowedError(err({ code: ErrorCodes.BOARD_AUTHOR_NOT_ALLOWED, status: 403 })),
+    ).toBe(true)
+    expect(isAuthorNotAllowedError(err({ code: ErrorCodes.BOARD_FORBIDDEN, status: 403 }))).toBe(
+      false,
+    )
+    expect(isAuthorNotAllowedError(new Error('x'))).toBe(false)
   })
 })

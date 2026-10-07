@@ -11,6 +11,7 @@ export function AuthorSlot({
   onChange,
   threadAuthorId,
   threadLoading,
+  onUnsettledChange,
   error,
   errorId,
   disabled,
@@ -20,6 +21,7 @@ export function AuthorSlot({
   onChange: (authorId: string | undefined) => void
   threadAuthorId: string | undefined
   threadLoading: boolean
+  onUnsettledChange: (unsettled: boolean) => void
   /** 칸 오류 문장(없으면 오류 없음) */
   error: string | undefined
   errorId: string
@@ -34,6 +36,7 @@ export function AuthorSlot({
         threadLoading,
         invalid: error !== undefined,
         disabled,
+        onUnsettledChange,
         'aria-describedby': error ? errorId : undefined,
       })}
     </div>

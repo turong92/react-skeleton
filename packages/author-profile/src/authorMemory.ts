@@ -43,14 +43,32 @@ export function forgetAuthorMemory(storage: StorageLike | undefined): void {
   }
 }
 
+/** 이 모듈의 키 중 `accountId` 의 것이 아닌 것을 지운다 — 기기를 같이 쓴 이전 계정의 기억이 남지 않게(만들 때마다 한 번) */
+function forgetOtherAccounts(storage: StorageLike | undefined, accountId: string): void {
+  try {
+    if (!storage) return
+    const own = `${PREFIX}${encodeURIComponent(accountId)}:`
+    const others: string[] = []
+    for (let i = 0; i < storage.length; i += 1) {
+      const key = storage.key(i)
+      if (key?.startsWith(PREFIX) && !key.startsWith(own)) others.push(key)
+    }
+    for (const key of others) storage.removeItem(key)
+  } catch {
+    // 기억은 편의일 뿐이다
+  }
+}
+
 /**
  * 기기 기억 — `localStorage` 한 겹. 키 `skeleton.author-profile:<계정 id>:<게시판 코드>`(둘 다 인코딩) 의 **키에만** 계정 id 가 있고(화면에는 어디에도 없다),
- * 값은 프로필 id 하나뿐이다. 저장소가 없거나 던지면 아무것도 기억하지 않고 조용히 넘어간다.
+ * 값은 프로필 id 하나뿐이다. **만들 때 이 모듈이 쓴 다른 계정의 키를 지운다**(기기에는 현재 계정의 것만 남는다 — 그래서 계정 id 를 아는 로그인 뒤에 만든다).
+ * 저장소가 없거나 던지면 아무것도 기억하지 않고 조용히 넘어간다.
  */
 export function createAuthorMemory(
   storage: StorageLike | undefined,
   accountId: string,
 ): AuthorMemory {
+  forgetOtherAccounts(storage, accountId)
   const keyOf = (boardCode: string) =>
     `${PREFIX}${encodeURIComponent(accountId)}:${encodeURIComponent(boardCode)}`
   return {

@@ -1,7 +1,7 @@
 import { Button, RowMenu } from '@skeleton/ui'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import type { AuthorMemory } from './authorMemory'
-import { resolveInitialAuthor, switchNotice } from './initialAuthor'
+import { resolveInitialAuthor, switchNotice, threadOverridesAuto } from './initialAuthor'
 import { mergeLabels, type AuthorProfileLabels } from './labels'
 import { profileDisplay, type AuthorProfile } from './types'
 import { AuthorPickerNotice } from './AuthorPickerNotice'
@@ -19,6 +19,11 @@ export type AuthorPickerSlotProps = {
   /** 칸 오류 문장이 보이는 중인가 */
   invalid: boolean
   disabled: boolean
+  /**
+   * 선택기에 **답이 필요한 질문**(한 줄 확인)이 떠 있는가를 폼에 알린다 — true 인 동안 폼은 제출을 막고 포커스를 확인 줄로 보낸다
+   * (확정되지 않은 값으로 글이 나가지 않게). 선택기가 스스로 닫거나 풀리면 false. 폼은 안정된 함수를 준다
+   */
+  onUnsettledChange: (unsettled: boolean) => void
   /** 칸 오류 문장의 id — 선택기 단추에 `aria-describedby` 로 잇는다 */
   'aria-describedby'?: string
 }
@@ -57,11 +62,15 @@ export function AuthorPickerView({
   threadLoading,
   invalid,
   disabled,
-  'aria-describedby': describedBy,
+  onUnsettledChange,
+  'aria-describedby': outerDescribedBy,
 }: AuthorPickerViewProps) {
   const labels = mergeLabels(given)
   const [question, setQuestion] = useState<Question>()
   const rootRef = useRef<HTMLDivElement>(null)
+  const noticeId = useId()
+  // 선택기가 스스로 채운 값(사람이 고르지 않았다) — 스레드가 나중에 다른 프로필을 가리키면 그쪽으로 다시 정한다
+  const autoValue = useRef<string>(undefined)
   const current = profiles.find((profile) => profile.id === value)
   const show = (profile: Pick<AuthorProfile, 'name' | 'tag'>) =>
     profileDisplay(profile, labels.unnamed)
@@ -72,11 +81,28 @@ export function AuthorPickerView({
   const pending = question?.premise === premise ? question : undefined
   if (question && !pending) setQuestion(undefined) // 낡은 질문은 보이지 않는 데 그치지 않고 비운다(전제가 되돌아와도 되살아나지 않게)
 
-  // 바깥으로 포커스가 가거나 바깥을 누르면 닫는다(고르지도 유지하지도 않고 떠난 것)
+  // 확인이 떠 있는 동안 선택기 단추는 그 문장도 설명으로 가진다
+  const describedBy =
+    [outerDescribedBy, pending ? noticeId : undefined].filter(Boolean).join(' ') || undefined
+
+  // 폼에 「답이 필요한 질문이 떠 있다」를 알린다(제출을 막게) — 선택기가 사라질 때는 푼다
+  const unsettled = pending !== undefined
+  const latestUnsettled = useRef(onUnsettledChange)
+  useEffect(() => {
+    latestUnsettled.current = onUnsettledChange
+  })
+  useEffect(() => {
+    onUnsettledChange(unsettled)
+  }, [unsettled, onUnsettledChange])
+  useEffect(() => () => latestUnsettled.current(false), [])
+
+  // 다른 곳으로 포커스가 가거나 거기를 누르면 닫는다(고르지도 유지하지도 않고 떠난 것). **같은 폼 안**(제출 단추 포함)은 떠난 것이 아니다 —
+  // 제출은 폼이 「확인이 떠 있다」며 막고 포커스를 확인 줄로 보낸다
   useEffect(() => {
     if (!pending) return
     const outside = (event: Event) => {
-      if (!rootRef.current?.contains(event.target as Node)) setQuestion(undefined)
+      const scope = rootRef.current?.closest('form') ?? rootRef.current
+      if (!scope?.contains(event.target as Node)) setQuestion(undefined)
     }
     document.addEventListener('focusin', outside)
     document.addEventListener('pointerdown', outside)
@@ -89,6 +115,7 @@ export function AuthorPickerView({
   // 처음 값 — 비어 있으면 ①② 로 채우고, 값이 더는 내 프로필이 아니면(다른 탭에서 지움) 비운다
   useEffect(() => {
     if (value !== undefined && !current) {
+      autoValue.current = undefined
       onChange(undefined)
       return
     }
@@ -99,7 +126,23 @@ export function AuthorPickerView({
         remembered: memory?.get(boardCode),
         threadLoading,
       })
-      if (initial !== undefined) onChange(initial)
+      if (initial !== undefined) {
+        autoValue.current = initial
+        onChange(initial)
+      }
+      return
+    }
+    // 스스로 채운 값이 있는 동안 스레드가 다른 내 프로필을 알려 오면(재시도 · 쪽 넘김) 스레드 값으로 다시 정한다
+    const overriding = threadOverridesAuto({
+      profiles,
+      value,
+      autoValue: autoValue.current,
+      threadAuthorId,
+      threadLoading,
+    })
+    if (overriding !== undefined) {
+      autoValue.current = overriding
+      onChange(overriding)
     }
   }, [value, current, profiles, threadAuthorId, threadLoading, memory, boardCode, onChange])
 
@@ -108,13 +151,17 @@ export function AuthorPickerView({
 
   function apply(profile: AuthorProfile) {
     setQuestion(undefined)
+    autoValue.current = undefined // 사람이 고른 값
     onChange(profile.id)
     memory?.set(boardCode, profile.id)
     focusTrigger() // 확인 줄이 사라지므로 포커스를 단추로 — body 로 떨어지지 않게
   }
 
   function choose(profile: AuthorProfile) {
-    if (profile.id === value) return setQuestion(undefined)
+    if (profile.id === value) {
+      autoValue.current = undefined // 지금 값을 사람이 다시 골랐다 — 스레드가 덮지 않는다
+      return setQuestion(undefined)
+    }
     const thread = switchNotice({ profiles, threadAuthorId, nextId: profile.id })
     if (thread) setQuestion({ next: profile, thread, premise })
     else apply(profile)
@@ -184,12 +231,14 @@ export function AuthorPickerView({
       />
       {pending && (
         <AuthorPickerNotice
+          id={noticeId}
           labels={labels}
           thread={show(pending.thread)}
           next={show(pending.next)}
           current={current ? show(current) : undefined}
           onUse={() => apply(pending.next)}
           onKeep={() => {
+            autoValue.current = undefined // 지금 값을 유지하기로 했다 — 사람의 결정
             setQuestion(undefined)
             focusTrigger()
           }}

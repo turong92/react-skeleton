@@ -25,7 +25,7 @@
 // src/author/api.ts — 앱이 한 번 만든다
 export const profileApi = createAuthorProfileApi(apiClient)
 
-// 게시판 폼에 선택기 꽂기 — board 의 authorPicker 렌더 prop 이 { value, onChange, threadAuthorId, threadLoading, invalid, disabled, 'aria-describedby' } 를 준다
+// 게시판 폼에 선택기 꽂기 — board 의 authorPicker 렌더 prop 이 { value, onChange, threadAuthorId, threadLoading, invalid, disabled, onUnsettledChange, 'aria-describedby' } 를 준다
 const memory = useMemo(() => createAuthorMemory(browserLocalStorage(), me.id), [me.id])
 <PostEditor authorRequired={config.authorRequired}
   authorPicker={(args) => <AuthorPicker {...args} api={profileApi} boardCode={code} memory={memory}
@@ -70,6 +70,10 @@ memory.forget()
 
 - 접힌 상태는 **지금 고른 `이름#꼬리표` 하나**만 늘 보인다(제출 단추 옆, 테두리가 있는 단추 모양 + ▾). 목록은 눌러야 열린다 — 메뉴 단추 패턴(`menuitemradio` · ↑↓ Home End · Esc 는 단추로 포커스 복귀). 고르지 않았으면 「프로필 고르기」 단추.
 - **처음 값**(**댓글을 받는 중(`threadLoading`)에는 확정하지 않는다** — 「쓴 적 없음」과 「아직 모름」이 다르다. 기기 기억으로 넘어가지도 않는다): ① 이 스레드에서 쓴 프로필(`threadAuthorId`, 현재 불러온 쪽 기준) → ② 이 기기가 기억하는 이 게시판의 마지막 프로필 → ③ 비어 있음(`authorRequired` 면 골라야 보낼 수 있다 — 막는 것은 board). 프로필이 하나뿐이어도 추측해서 채우지 않는다. 지운 프로필 id 는 건너뛴다.
+- **스스로 채운 값 vs 사람이 고른 값**: 선택기는 값을 자동으로 채웠는지(처음 값 ①②) 사람이 골랐는지를 기억한다. 자동 값인 동안 스레드가 다른 내 프로필을 가리키면(첫 불러오기 실패 뒤 재시도 · 쪽/정렬을 넘겨 내 댓글이 있는 쪽이 보임) 스레드 값으로 다시 정한다 — 확인 없이. 사람이 고른 값(「유지」 포함)은 건드리지 않는다. 자동 값은 기기 기억에 쓰지 않는다.
+- **떠 있는 질문은 미확정이다**: 한 줄 확인이 떠 있는 동안 `onUnsettledChange(true)` 로 폼에 알린다 — 폼은 제출을 막고 포커스를 확인 줄(`data-author-notice`)로 보낸다. 확인은 **다른 곳**으로 포커스가 가거나 누를 때만 버려진다(같은 폼 안, 제출 단추 포함은 아니다). 질문이 떠 있는 동안 선택기 단추의 `aria-describedby` 에 그 문장이 더해진다.
+- **긴 이름**은 메뉴 항목과 확인 단추 안에서 말줄임이고(전체는 글자 그대로 낭독된다) 메뉴에는 폭 상한이 있다.
+- **게시판이 작성자를 거절하면**(`BOARD.AUTHOR_NOT_ALLOWED`) 앱의 전역 오류 처리에서 `refreshProfilesOnAuthorRefusal(queryClient, error)` 를 불러 프로필 목록을 다시 받는다(다른 탭에서 지운 프로필로 쓰려 한 경우).
 - **이 스레드에서 쓴 프로필과 다른 것으로 바꿀 때만** 한 줄 확인(`labels.switchNotice` · 「그래도 ○○로」 · 「○○ 유지」). 같은 프로필이면 묻지 않고, 확인 전까지 값은 그대로다. 확인은 값 · 이 스레드의 프로필 · 잠금이 바뀌거나 Esc · 바깥 포커스 · 바깥 누르기가 오면 닫힌다. **늘 떠 있는 경고는 없다** — 그 자체가 노출이다.
 - **댓글을 받는 중**(`threadLoading`)에는 단추가 잠기고(`aria-disabled`) 고른 값이 없으면 `labels.threadLoading` 을 보인다(보이는 글자 = 낭독 이름). 이미 고른 이름은 그대로 보인다.
 - **오류 연결**: 폼이 칸 오류를 보이면 그 문장의 id 가 `aria-describedby` 로 오고, 선택기 단추(프로필이 없을 때는 「프로필 만들기」 단추)에 이어진다.
@@ -85,6 +89,7 @@ memory.forget()
 
 - 키 `skeleton.author-profile:<계정 id>:<게시판 코드>`(둘 다 URL 인코딩) — **계정 id 는 저장소 키 안에만** 있고 값은 프로필 id 하나다. 계정이 바뀌어도 서로 섞이지 않는다.
 - `forget()` 은 **로그아웃 때** 부른다 — 이 모듈이 쓴 키를 모든 계정 · 모든 게시판 만큼 지운다(기기를 같이 쓰는 사람에게 남기지 않는다). 다른 저장 값은 건드리지 않는다.
+- **만들 때 다른 계정의 키를 지운다** — 기기에는 현재 계정의 기억만 남는다. 그래서 계정 id 를 아는 로그인 **뒤에** 만들고(`useMemo(() => accountId ? createAuthorMemory(…, accountId) : undefined, [accountId])`), id 를 모를 때는 만들지 않는다(그 순간의 다른 계정 기억을 지우지 않게). 같은 기기에서 계정이 바뀌어도 앞 계정의 마지막 프로필이 다음 사람에게 보이지 않는다.
 - `forgetAuthorMemory(storage)` 는 같은 일을 **계정 id 없이** 한다 — 로그아웃 · 계정 바뀜 핸들러는 이전 계정 id 를 이미 잃었을 수 있다. **앱은 한 곳**(예: 인증 상태가 바뀌는 `onAccountChange` 하나)에서 `forgetAuthorMemory(browserLocalStorage())` 와 쿼리 캐시 비우기를 함께 부른다.
 - 저장소 접근 예외(차단 · 가득 참)는 삼킨다 — 기억은 편의다. `browserLocalStorage()` 는 접근만으로 던지는 환경과 서버 렌더에서 `undefined`(그러면 아무것도 기억하지 않는다). 모듈을 불러올 때는 저장소를 건드리지 않는다(SSR 안전).
 

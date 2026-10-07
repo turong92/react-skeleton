@@ -144,6 +144,7 @@ export function CommentItem({ node, ctx }: { node: CommentNode; ctx: ThreadConte
           authorPicker={ctx.authorPicker}
           authorRequired={ctx.authorRequired}
           authorRequiredMessage={L.authorRequired}
+          authorUnsettledMessage={L.authorUnsettled}
           threadAuthorId={ctx.threadAuthorId}
           threadLoading={ctx.threadLoading}
           onCancel={() => ctx.setReplyingTo(null)}

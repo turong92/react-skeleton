@@ -24,6 +24,7 @@ function Slot({ api }: { api: AuthorProfileApi }) {
             threadLoading={false}
             invalid={false}
             disabled={false}
+            onUnsettledChange={() => undefined}
             onCreateProfile={open}
             createOpensDialog
           />

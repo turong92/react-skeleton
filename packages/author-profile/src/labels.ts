@@ -103,7 +103,7 @@ export const defaultAuthorProfileLabels: AuthorProfileLabels = {
   deleteCancel: 'Cancel',
   deleteClose: 'Close',
   nameRequired: 'Enter a name.',
-  namePattern: 'Names cannot contain # or @.',
+  namePattern: 'That name has characters that are not allowed.',
   nameReserved: 'That name is not available.',
   nameTooLong: (max) => `Use ${max} characters or fewer.`,
   nameTaken: 'That name is taken.',

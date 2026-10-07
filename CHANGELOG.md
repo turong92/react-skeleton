@@ -9,7 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added — `@skeleton/author-profile` (작성자 프로필)
 
-- 새 패키지: `createAuthorProfileApi`(`/author-profiles`) · `useAuthorProfiles` 등 훅(변경 뒤 목록 무효화, `alsoInvalidate` 로 게시판 캐시도) · `AuthorPicker`(board 의 `authorPicker` 에 꽂는 선택기 — 접힌 상태는 고른 이름#꼬리표 하나, 처음 값 스레드 → 기기 → 비어 있음, 이 스레드의 프로필과 다른 것으로 바꿀 때만 한 줄 확인) · `AuthorProfileManager`(목록 · 추가 · 이름 바꾸기 · 삭제 확인) · `createAuthorMemory`(기기 기억 — 키에만 계정 id, `forget()`). 문구는 `labels` prop. 처음 값은 댓글을 받는 중(`threadLoading`)에는 확정하지 않고(단추도 잠근다), 선택기 단추는 폼의 칸 오류 문장을 `aria-describedby` 로 잇는다. `name` · `tag` 는 `string | null`(이름 없는 옛 글의 첫 프로필 · 꼬리표가 꺼진 서버) — `profileDisplay(profile, unnamed?)`, 새 라벨 `unnamed` · `threadLoading`. 「Keep ○○」 는 지금 고른 프로필, 한 줄 확인은 Esc · 바깥 포커스 · 잠금 · 값 변화로 닫힌다. 이름 바꾸기는 한 번에 한 줄, 저장 · 취소 · 삭제 뒤 포커스를 옮긴다. `forgetAuthorMemory(storage)`(계정 id 없이 지우기) · `foldDuration`(대기 시간을 초 · 분 · 시간 · 일로, `labels.rateLimited` 가 `{ unit, value }` 를 받는다 — **번역을 쓰는 앱은 이 라벨의 시그니처가 바뀌었다**) · `shouldReuseIdempotencyKey`. `isAuthorProfileFormError` 는 이제 `AUTHOR_PROFILE.` 코드만(400 이름 칸 오류는 앱의 검증 실패 필터 몫 — sample 의 `errorToast.ts`). 추가를 같은 이름으로 다시 보낼 때 `Idempotency-Key` 를 재사용하는 것은 네트워크 오류(status 0)일 때만이다. 한 줄 확인은 `Use`/`Keep` 뒤 포커스를 선택기 단추로 돌린다. 문구: 상한 안내에서 삭제 권유를 뺐고, `NAME_TAKEN` 은 중립("That name is taken."). `ErrorCodes.AUTHOR_PROFILE_*` 추가. 백엔드 짝 `author-profile` 모듈.
+새 패키지. 백엔드 짝 `author-profile` 모듈(`/author-profiles`). 문구는 모두 `labels` prop(기본 영어). 다른 패키지를 import 하지 않는다 — `@skeleton/board` 와는 `authorPicker` 렌더 prop 한 곳(`AuthorPickerSlotProps` ↔ 보드의 `AuthorPickerArgs`)에서 만난다.
+
+- **API · 훅**: `createAuthorProfileApi` · `useAuthorProfiles` · 만들기 · 이름 바꾸기 · 삭제 훅(끝나면 목록 무효화, `alsoInvalidate` 로 게시판 캐시도). `name` · `tag` 는 `string | null`(이름 없는 옛 글의 첫 프로필 · 꼬리표가 꺼진 서버) — `profileDisplay(profile, unnamed?)`. `ErrorCodes.AUTHOR_PROFILE_*`.
+- **`AuthorPicker`**(게시판 `authorPicker` 에 꽂는다): 접힌 상태는 고른 `이름#꼬리표` 하나, 긴 이름은 말줄임. 처음 값은 이 스레드에서 쓴 프로필 → 이 기기가 기억하는 프로필 → 비어 있음 — 단 댓글을 받는 중(`threadLoading`)에는 확정하지 않고 단추를 잠근다. **스스로 채운 값**은 스레드가 나중에 다른 내 프로필을 가리키면(첫 불러오기 재시도 · 쪽 넘김) 그쪽으로 다시 정하고, 사람이 고른 값은 건드리지 않는다. 이 스레드의 프로필과 다른 것으로 바꿀 때만 한 줄 확인(`Use ○○` / `Keep 지금 값`) — 떠 있는 동안 폼에 알려(`onUnsettledChange`) 제출을 막고, Esc · 폼 밖 포커스 · 잠금 · 값 변화로 닫히며, 누른 뒤 포커스는 선택기 단추로 돌아온다. 폼의 칸 오류 문장은 `aria-describedby` 로 이어진다. `AuthorPickerView.createOpensDialog` · `useProfileDialog({ api, title, … })`(선택기의 「프로필 만들기」가 여는 프로필 관리 대화상자 — 쓰던 글 유지, 닫을 때 포커스는 선택기 자리).
+- **`AuthorProfileManager`**: 목록 · 추가 · 이름 바꾸기(한 번에 한 줄) · 삭제 확인. 저장 · 취소 · 삭제 뒤 포커스를 옮기고, 상한 문장은 추가 칸의 설명이다. 추가가 네트워크 오류(status 0)로 끝난 뒤 같은 이름을 다시 보내면 같은 `Idempotency-Key`. 429 는 이름 바꾸기만 `foldDuration`(초 · 분 · 시간 · 일, `labels.rateLimited` 가 `{ unit, value }` 를 받는다)로 시간을 말하고 추가는 시간을 약속하지 않는다.
+- **기기 기억**: `createAuthorMemory(storage, accountId)`(키에만 계정 id, 만들 때 다른 계정의 키를 지운다) · `forgetAuthorMemory(storage)`(계정 id 없이 지우기 — 앱의 계정 변경 핸들러 한 곳에서 쿼리 캐시 비우기와 함께).
+- **오류**: `isAuthorProfileFormError` 는 `AUTHOR_PROFILE.` 코드만 가린다(400 이름 칸 오류는 앱의 검증 실패 필터 몫 — sample 의 `errorToast.ts`). `refreshProfilesOnAuthorRefusal(client, error)` — 게시판이 작성자 id 를 거절하면(`BOARD.AUTHOR_NOT_ALLOWED`) 프로필 목록 캐시를 낡았다고 표시. 모르는 이름 칸 오류 코드는 일반 문구.
 
 ### Changed — `apps/sample`: 작성자 프로필 연결
 
@@ -20,29 +26,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 전역 오류 토스트는 `AUTHOR_PROFILE.*` 오류를 건너뛰고(폼이 제자리에서 말한다), 계정이 바뀌거나 로그아웃하면 서버 상태 캐시와 함께 기기 기억(`forgetAuthorMemory`)을 한 곳(`onAccountChange`)에서 지운다.
 - e2e `authorProfiles.e2e.ts`(백엔드 `author-profile` 이 켜진 샘플 필요) · 기존 e2e 의 글쓰기 단계는 프로필이 필요하면 하나 만들어 고른다.
 
-### Changed — `apps/sample` 안내 띠 · `@skeleton/board` 폼의 작성자 오류
+### Changed — `apps/sample` 닉네임 안내 띠
 
 - 닉네임 없는 계정의 안내 띠: 조건(계정 닉네임이 없음)은 그대로이고, 제목 · 주 버튼은 「닉네임을 정해 주세요」 · 「닉네임 정하기」(나만 보는 계정 이름), 보조 링크 「프로필 이름 정하기」가 설정의 프로필 구역으로 간다. 본문은 「첫 프로필이 만들어질 때의 닉네임이 한 번 복사된다」로만 말한다. 프로필 이름은 쓰기 시점의 프로필 게이트가 묻는다.
-- `@skeleton/board` `PostEditor` · `CommentForm`: 작성자를 안 골랐다는 **사실**만 보관하고 오류 문장은 그릴 때 지금의 `labels.authorRequired` 에서 읽는다(제출 시점 문자열을 보관하지 않는다 — 문구가 바뀌어도 낡은 문장이 남지 않는다). 스토리 `AuthorMessageFollowsTheCurrentLabels`.
-- `AuthorPickerView.createOpensDialog` 의 기본값은 false(창을 여는 앱이 true 를 준다 — 샘플은 true). `useProfileDialog().open` 은 클릭 이벤트의 `currentTarget` 을 연 단추로 받는다.
-
-### Added — `@skeleton/author-profile`: 프로필 만들기 대화상자
-
-- `useProfileDialog({ api, title, … })` → `{ open, dialog }`: 선택기의 「프로필 만들기」가 여는 프로필 관리 대화상자(쓰던 글 유지 · 열렸을 때만 마운트 · 닫을 때 연 단추가 사라졌으면 선택기 자리로 포커스). `AuthorPickerView.createOpensDialog`(「프로필 만들기」 단추 `aria-haspopup="dialog"`). 스토리 `ProfileDialog`.
 
 ### Added — `@skeleton/ui`
 
-- `RowMenu` 에 `describedBy`(버튼의 `aria-describedby` — 메뉴 칸 밖의 설명 · 폼 오류 문장의 id). 이름(`label`)은 그대로. 스토리 `DescribedByTiesAnOutsideDescriptionToTheButton`.
+- `RowMenu` 에 `describedBy`(버튼의 `aria-describedby` — 메뉴 칸 밖의 설명 · 폼 오류 문장의 id). 이름(`label`)은 그대로. 스토리 `DescribedByTiesAnOutsideDescriptionToTheButton`. 메뉴는 폭 상한(`min(24rem, 100vw − 여백)`)을 갖고 항목 글자는 넘치면 말줄임(전체 이름은 글자 그대로 낭독 이름).
 
 ### Changed — `@skeleton/board`: 작성자 선택기 자리 · `mine` 소유 판정 · `authorRequired` (작성자 프로필을 쓰는 서버)
 
-다른 패키지를 모른 채, 작성자 id 가 계정 id 가 아닌 서버를 받을 수 있게 했다. 옛 서버(필드 없음)는 그대로 동작한다.
+다른 패키지를 모른 채, 작성자 id 가 계정 id 가 아닌 서버를 받을 수 있다. 옛 서버(필드 없음)는 그대로 동작한다.
 
-- **타입**: 글 · 댓글 응답 `mine?`, `BoardConfig.authorRequired?`, 생성 입력 `authorId?`. 응답의 `authorId` 는 프로필 id(`prf_…`) 또는 켜기 전 옛 행의 `pending:p<id>` · `pending:c<id>`. **`PostPatch` 가 좁아졌다**(`Partial<Omit<PostInput, 'authorId'>>` — 작성자는 불변, 서버는 수정의 `authorId` 를 무시한다).
-- **소유 판정**: `isOwn(item, currentUserId)` = `mine ?? (authorId === currentUserId)` — `CommentItem` 이 쓴다. 앱의 글 쪽 비교(`authorId === accountId`)도 이것으로 바꾼다. `mine` 은 호출자마다 달라 계정이 바뀌면 앱이 쿼리 캐시를 비운다.
-- **선택기 자리**: `PostEditor` · `CommentForm`(답글) · `BoardComments` 의 `authorPicker` 렌더 prop(`AuthorPicker` · `AuthorPickerArgs` = `{ value, onChange, threadAuthorId, threadLoading, invalid, disabled, 'aria-describedby' }`). **`authorRequired === true` 일 때만 그려지고 `authorId` 를 싣는다**(서버는 필수가 아닐 때 보낸 `authorId` 를 403 으로 거절한다). 값이 없으면 칸 오류로 막고 선택기로 포커스, 오류 문장은 `aria-describedby` 로 선택기에 이어진다. 고치기 폼에는 주지 않는다. **필수인데 `authorPicker` 를 꽂지 않았으면 막지 않는다**(고를 수단이 없는 막다른 길이 되므로 — 서버가 400 `BOARD.AUTHOR_REQUIRED` 로 답한다). 선택기는 현재 쪽의 댓글이 오는 중이거나 이전 쪽이 placeholder 인 동안 처음 값을 확정하지 않고 잠긴다(`threadLoading`). 첫 불러오기가 **실패**한 것은 「모름」이 아니라 「실패」라 잠기지 않는다(수동 선택 · 기기 기억 가능, 목록에는 「다시 시도」).
-- **`lastOwnAuthorId(comments)`**: 현재 쪽의 `mine` 댓글 중 마지막 `authorId`(탈퇴 · `pending:` 건너뜀, 시각은 `Date.parse`). `BoardComments` 의 `postAuthor` 로 글 작성자를 대체 단서로 더할 수 있다.
-- **이식할 때 주의**: 새 필수 라벨 키 `authorRequired`(`CommentLabels` · `PostEditorLabels` — 번역을 쓰는 앱은 키를 더한다, 없으면 영어 기본값) · `CommentForm.onSubmit` 이 `(body, authorId?)` · `onReply` 가 `(parentId, body, authorId?)`(옛 호출부는 그대로 동작) · `PostEditorValues` 에 선택 `authorId` · 가짜 서버 `createFakeBoard({ authorRequired, owned })`(`mine` 을 응답에 싣고, 필수가 아닐 때 `authorId` 를 보내면 403).
+- **타입**: 글 · 댓글 응답 `mine?`, `BoardConfig.authorRequired?`, 생성 입력 `authorId?`(고칠 때는 없다 — `PostPatch` 는 `Partial<Omit<PostInput, 'authorId'>>`). 응답의 `authorId` 는 프로필 id(`prf_…`) 또는 켜기 전 옛 행의 `pending:p<id>` · `pending:c<id>`.
+- **소유 판정**: `isOwn(item, currentUserId)` = `mine ?? (authorId === currentUserId)` — `CommentItem` 이 쓴다(글 쪽도 같은 함수). `mine` 은 호출자마다 달라 계정이 바뀌면 앱이 쿼리 캐시를 비운다.
+- **선택기 자리**: `PostEditor` · `CommentForm`(답글) · `BoardComments` 의 `authorPicker` 렌더 prop(`AuthorPicker` · `AuthorPickerArgs` = `{ value, onChange, threadAuthorId, threadLoading, invalid, disabled, onUnsettledChange, 'aria-describedby' }`). **`authorRequired === true` 일 때만 그려지고 `authorId` 를 싣는다**(서버는 필수가 아닐 때 보낸 `authorId` 를 403 으로 거절한다). 고치기 폼에는 주지 않는다. 값이 없으면 칸 오류로 막고 선택기로 포커스, 선택기가 답이 필요한 질문을 띄웠다고 알리면(`onUnsettledChange`) 그동안도 제출을 막고 포커스를 질문(`data-author-notice`)으로 보낸다 — 오류 문장은 `aria-describedby` 로 선택기에 이어진다. 필수인데 선택기를 꽂지 않았으면 막지 않는다(고를 수단이 없는 막다른 길이 되므로 서버가 400 `BOARD.AUTHOR_REQUIRED` 로 답한다).
+- **스레드 단서**: `lastOwnAuthorId(comments)` — 현재 쪽의 `mine` 댓글 중 마지막 `authorId`(탈퇴 · `pending:` 건너뜀, 시각은 `Date.parse`). `BoardComments` 의 `postAuthor` 로 글 작성자를 대체 단서로 더한다. 현재 쪽의 댓글이 오는 중이거나 이전 쪽이 placeholder 인 동안은 `threadLoading`(첫 불러오기 **실패**는 아니다 — 선택기는 잠기지 않고 목록의 「다시 시도」가 있다).
+- **폼의 작성자 오류**: 「안 골랐다」 · 「질문에 먼저 답해 달라」는 **사실**만 보관하고 문장은 그릴 때 지금의 `labels.authorRequired` · `labels.authorUnsettled` 에서 읽는다(문구가 바뀌어도 낡은 문장이 남지 않는다).
+- **이식할 때 주의**: 새 라벨 키 `authorRequired` · `authorUnsettled`(`CommentLabels` · `PostEditorLabels` — 번역을 쓰는 앱은 키를 더한다, 없으면 영어 기본값) · `CommentForm.onSubmit` 이 `(body, authorId?)` · `onReply` 가 `(parentId, body, authorId?)`(옛 호출부는 그대로) · `PostEditorValues` 에 선택 `authorId` · 가짜 서버 `createFakeBoard({ authorRequired, owned })`(`mine` 을 싣고, 필수가 아닐 때 `authorId` 를 보내면 403).
 - `@skeleton/api-client`: `ErrorCodes.BOARD_AUTHOR_REQUIRED`(400) · `BOARD_AUTHOR_NOT_ALLOWED`(403).
 
 ### Fixed — 독립 코드 리뷰 반영 (2026-10-07)

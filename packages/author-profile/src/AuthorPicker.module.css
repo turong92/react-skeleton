@@ -22,7 +22,8 @@
 }
 
 .tag {
-  color: var(--text-muted);
+  /* 눌린 단추 바탕(--surface-muted)에서도 AA — 흐린 색(--text-muted)은 거기서 4.5 에 못 미친다 */
+  color: var(--text);
   font-weight: 500;
 }
 
@@ -49,4 +50,14 @@
 
 .notice p {
   margin: 0;
+}
+
+/* 긴 이름(60자)이 좁은 화면에서 줄을 밀어내지 않게 — 말줄임. 전체 이름은 글자 그대로 남아 낭독된다 */
+.ellipsis {
+  display: inline-block;
+  max-width: min(18rem, calc(100vw - var(--space-xl)));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+  white-space: nowrap;
 }

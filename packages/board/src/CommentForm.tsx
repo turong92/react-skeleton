@@ -34,6 +34,8 @@ export type CommentFormProps = {
    */
   authorRequired?: boolean
   authorRequiredMessage?: string
+  /** 선택기에 답이 필요한 질문이 떠 있는데 보내려 할 때의 문장 */
+  authorUnsettledMessage?: string
   /** 이 스레드에서 내가 마지막으로 쓴 작성자 id — 선택기에 그대로 넘긴다 */
   threadAuthorId?: string
   /** 댓글을 아직 불러오는 중 — 선택기가 처음 값을 확정하지 않고 기다린다 */
@@ -56,6 +58,7 @@ export function CommentForm({
   authorPicker,
   authorRequired,
   authorRequiredMessage = defaultCommentLabels.authorRequired,
+  authorUnsettledMessage = defaultCommentLabels.authorUnsettled,
   threadAuthorId,
   threadLoading = false,
 }: CommentFormProps) {
@@ -65,6 +68,9 @@ export function CommentForm({
   const [authorId, setAuthorId] = useState<string>()
   /** 「작성자를 안 골랐다」는 사실만 보관한다 — 문구는 그릴 때 지금의 `authorRequiredMessage` 에서 읽는다(앱이 문구를 바꿔도 낡은 문장이 남지 않게) */
   const [authorMissing, setAuthorMissing] = useState(false)
+  /** 선택기에 답이 필요한 질문이 떠 있다(`onUnsettledChange`) / 그 때문에 보내기를 막았다 */
+  const [unsettled, setUnsettled] = useState(false)
+  const [blockedUnsettled, setBlockedUnsettled] = useState(false)
   const authorErrorId = useId()
   const withAuthor = authorRequired === true && authorPicker !== undefined
   // 안정된 함수 — 선택기가 effect 의존에 넣어도 매 렌더 다시 돌지 않는다
@@ -72,6 +78,16 @@ export function CommentForm({
     setAuthorId(next)
     if (next) setAuthorMissing(false)
   }, [])
+  const changeUnsettled = useCallback((next: boolean) => {
+    setUnsettled(next)
+    if (!next) setBlockedUnsettled(false)
+  }, [])
+  const authorMessage =
+    unsettled && blockedUnsettled
+      ? authorUnsettledMessage
+      : authorMissing
+        ? authorRequiredMessage
+        : undefined
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -84,13 +100,15 @@ export function CommentForm({
           ? tooLongMessage(maxLength)
           : undefined
     const authorProblem = withAuthor && !authorId
+    const blocked = withAuthor && !authorProblem && unsettled
     setError(problem)
     setAuthorMissing(authorProblem)
+    setBlockedUnsettled(blocked)
     if (problem) {
       ;(form.elements.namedItem('body') as HTMLElement | null)?.focus()
       return
     }
-    if (authorProblem) {
+    if (authorProblem || blocked) {
       focusAuthorSlot(form)
       return
     }
@@ -127,7 +145,8 @@ export function CommentForm({
             onChange={changeAuthor}
             threadAuthorId={threadAuthorId}
             threadLoading={threadLoading}
-            error={authorMissing ? authorRequiredMessage : undefined}
+            onUnsettledChange={changeUnsettled}
+            error={authorMessage}
             errorId={authorErrorId}
             disabled={pending}
           />
@@ -141,12 +160,7 @@ export function CommentForm({
           </Button>
         )}
       </div>
-      {withAuthor && (
-        <AuthorError
-          id={authorErrorId}
-          message={authorMissing ? authorRequiredMessage : undefined}
-        />
-      )}
+      {withAuthor && <AuthorError id={authorErrorId} message={authorMessage} />}
     </form>
   )
 }

@@ -36,6 +36,7 @@ export function profileFormProblem(
   error: unknown,
   labels: AuthorProfileLabels,
   limits: AuthorProfileConfig,
+  { showWait = true }: { showWait?: boolean } = {},
 ): ProfileFormProblem | undefined {
   if (error === null || error === undefined) return undefined
   if (error instanceof ApiRequestError) {
@@ -46,11 +47,10 @@ export function profileFormProblem(
         Required: labels.nameRequired,
         Pattern: labels.namePattern,
         Reserved: labels.nameReserved,
+        Size: labels.nameTooLong(limits.nameMaxLength),
       }
-      return {
-        where: 'name',
-        message: message[field.code] ?? labels.nameTooLong(limits.nameMaxLength),
-      }
+      // 모르는 코드를 「너무 길다」로 읽지 않는다 — 일반 문장
+      return { where: 'name', message: message[field.code] ?? labels.failed }
     }
     switch (code) {
       case ErrorCodes.AUTHOR_PROFILE_NAME_TAKEN:
@@ -61,7 +61,10 @@ export function profileFormProblem(
         const seconds = retryAfterSeconds(error)
         return {
           where: 'form',
-          message: labels.rateLimited(seconds === undefined ? undefined : foldDuration(seconds)),
+          // 만들기의 429 는 계정 전체 한도와 창을 나눠 쓸 수 있어 시간을 약속하지 않는다(`showWait: false`) — 이름 바꾸기만 정확한 시간
+          message: labels.rateLimited(
+            showWait && seconds !== undefined ? foldDuration(seconds) : undefined,
+          ),
         }
       }
       case ErrorCodes.AUTHOR_PROFILE_NOT_FOUND:
@@ -86,4 +89,14 @@ export function isAuthorProfileFormError(error: unknown): boolean {
  */
 export function shouldReuseIdempotencyKey(error: unknown): boolean {
   return error instanceof ApiRequestError && error.apiError.status === 0
+}
+
+/**
+ * 게시판이 작성자 id 를 거절했는가(403 `BOARD.AUTHOR_NOT_ALLOWED`) — 다른 탭에서 지운 프로필로 쓰려 한 경우다.
+ * 앱의 전역 오류 처리가 이것을 보면 프로필 목록 캐시(`authorProfileKeys.list()`)를 무효화해 선택기가 낡은 목록을 그리지 않게 한다.
+ */
+export function isAuthorNotAllowedError(error: unknown): boolean {
+  return (
+    error instanceof ApiRequestError && error.apiError.code === ErrorCodes.BOARD_AUTHOR_NOT_ALLOWED
+  )
 }

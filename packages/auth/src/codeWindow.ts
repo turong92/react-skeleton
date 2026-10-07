@@ -11,8 +11,8 @@ export type CodeWindow = {
 }
 
 /**
- * 응답 본문에서 서버가 준 만료 · 재요청 가능 시각을 읽는다. **오늘 백엔드는 둘 다 안 준다**(`me.pendingEmailExpiresAt` 만 있다) —
- * 없으면 null 이고 호출자가 `estimateCodeWindow` 로 대신한다. 백엔드가 `expiresAt` · `resendAvailableAt`(ISO-8601) 을 응답에 더하면 코드를 안 고쳐도 서버 값이 이긴다.
+ * 응답 본문에서 서버가 준 만료 · 재요청 가능 시각을 읽는다. 최신 백엔드는 코드를 보내는 응답에 `expiresAt` · `resendAvailableAt`(ISO-8601)을 준다 —
+ * 없으면(옛 서버) null 이고 호출자가 `estimateCodeWindow` 로 문서화된 유효 시간으로 어림한다. 서버 값이 있으면 항상 그것이 이긴다.
  */
 export function codeWindowOf(response: unknown): CodeWindow | null {
   if (typeof response !== 'object' || response === null) return null

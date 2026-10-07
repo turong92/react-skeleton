@@ -259,6 +259,8 @@ export type AuthLabels = {
   sessionsRevokeOthers: string
   sessionsRevoked: string
   sessionsUnknownDevice: string
+  /** IP 가 루프백일 때 — 이 기기에서 연 세션(개발 · 같은 컴퓨터) */
+  sessionsLocalDevice: string
   sessionsLastUsed: (when: string) => string
   sessionsEmpty: string
   deleteTitle: string
@@ -275,6 +277,11 @@ export type AuthLabels = {
   deleteDoneAction: string
   /** 서버가 self-restore 를 켰다고 앱이 알려 줄 때(`selfRestore`)만 — 삭제 예약 안내 아래 */
   deleteSelfRestoreNote: string
+  /** 삭제를 마친 직후의 로그아웃 상태 안내 화면 */
+  accountDeletedTitle: string
+  accountDeletedBody: (date: string | null) => string
+  accountDeletedAction: string
+  accountDeletedRestoreNote: string
   // 탈퇴 대기 중인 계정의 로그인(403 AUTH.ACCOUNT_DELETION_PENDING)
   deletionPendingTitle: string
   deletionPendingBody: (date: string | null) => string
@@ -565,6 +572,7 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   sessionsRevokeOthers: 'Sign out all other devices',
   sessionsRevoked: 'Signed out.',
   sessionsUnknownDevice: 'Unknown device',
+  sessionsLocalDevice: 'This device (local)',
   sessionsLastUsed: (when) => `Last active ${when}`,
   sessionsEmpty: 'No other sessions.',
   deleteTitle: 'Delete account',
@@ -581,6 +589,11 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   deleteScheduled: (date) => `Your account is scheduled for erasure on ${date}.`,
   deleteDoneAction: 'Sign out',
   deleteSelfRestoreNote: 'Sign in again within that time and you can cancel the deletion.',
+  accountDeletedTitle: 'Your deletion request was received',
+  accountDeletedBody: (date) =>
+    date ? `Your data will be erased on ${date}.` : 'Your data will be erased soon.',
+  accountDeletedAction: 'Go to sign in',
+  accountDeletedRestoreNote: 'Sign in again before then and you can cancel it.',
   deletionPendingTitle: 'Cancel the deletion?',
   deletionPendingBody: (date) =>
     date

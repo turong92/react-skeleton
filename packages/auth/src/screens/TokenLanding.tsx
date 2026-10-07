@@ -5,6 +5,7 @@ import { AuthLayout } from './AuthLayout'
 import styles from './auth.module.css'
 import { authErrorMessage } from './errors'
 import { mergeLabels, type AuthLabels } from './labels'
+import { runOnce } from './runOnce'
 import { useOnceOnMount } from './useOnceOnMount'
 
 export type TokenLandingProps = {
@@ -79,7 +80,8 @@ export function TokenLanding({
 
   // 확인 없이 도착하는 링크: 마운트 때 한 번(StrictMode 에서도 한 번)
   useOnceOnMount(
-    async () => (token && !requireConfirm ? run(token) : undefined),
+    // 같은 토큰은 화면이 다시 마운트돼도 모듈 수준에서 한 번만 보낸다(`runOnce`)
+    async () => (token && !requireConfirm ? runOnce(token, () => run(token)) : undefined),
     (outcome) => {
       if (!token || requireConfirm) return
       settle(outcome)
@@ -92,7 +94,7 @@ export function TokenLanding({
     if (!token || clicked.current) return
     clicked.current = true
     setPhase('checking')
-    run(token).then(
+    runOnce(token, () => run(token)).then(
       (value) => settle({ ok: true, value }),
       (error: unknown) => settle({ ok: false, error }),
     )

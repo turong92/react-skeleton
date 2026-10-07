@@ -241,6 +241,22 @@ describe('settings sections', () => {
     expect(out.match(/>Sign out</g)).toHaveLength(1)
   })
 
+  it('sessions: a loopback IP reads as this device, other IPv6 is compressed', () => {
+    const out = html(
+      <SessionsSection
+        sessions={[
+          session({ ip: '0:0:0:0:0:0:0:1' }),
+          session({ id: 'ses_2', ip: '2001:0db8:0000:0000:0000:0000:0000:0001' }),
+        ]}
+        onRevoke={noop}
+        onRevokeOthers={noop}
+      />,
+    )
+    expect(out).toContain('This device (local)')
+    expect(out).toContain('2001:db8::1')
+    expect(out).not.toContain('0:0:0:0:0:0:0:1')
+  })
+
   const del = (subject: ReauthSubject) =>
     html(
       <DeleteAccountSection

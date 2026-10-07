@@ -33,6 +33,17 @@ const paths = (options: Parameters<typeof createAuthRoutes>[0]) =>
     .flatMap((r) => [r.path, ...(r.children?.map((c) => c.path) ?? [])])
     .filter(Boolean)
 
+describe('createAuthRoutes — account deleted', () => {
+  it('has an open (unguarded) landing for a just-deleted account, so the header and the page are signed-out', () => {
+    const routes = createAuthRoutes({ ...base })
+    const open = routes.filter((r) => r.path).map((r) => r.path)
+    expect(open).toContain('/account-deleted')
+    expect(routes.find((r) => r.children)?.children?.map((c) => c.path)).not.toContain(
+      '/account-deleted',
+    )
+  })
+})
+
 describe('createAuthRoutes', () => {
   it('ships the whole lifecycle when every method is on', () => {
     expect(

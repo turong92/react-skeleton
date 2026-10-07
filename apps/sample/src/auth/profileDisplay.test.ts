@@ -31,3 +31,11 @@ describe('greetingOf', () => {
     expect(greetingOf(undefined)).toEqual({ name: null })
   })
 })
+
+describe('a profile that is not there (signed out in the middle of a refetch)', () => {
+  it('has no name, needs no nickname prompt and greets neutrally', () => {
+    expect(shownName(null)).toBeNull()
+    expect(needsNickname(null)).toBe(false)
+    expect(greetingOf(null)).toEqual({ name: null })
+  })
+})

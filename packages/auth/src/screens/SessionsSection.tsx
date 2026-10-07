@@ -2,6 +2,7 @@ import { Alert, Badge, Button, SectionCard } from '@skeleton/ui'
 import { useState } from 'react'
 import type { AccountSession } from '../account/types'
 import styles from './auth.module.css'
+import { formatIp } from './formatIp'
 import { mergeLabels, type AuthLabels } from './labels'
 import { useAction } from './useAction'
 
@@ -63,7 +64,10 @@ export function SessionsSection({
               <div className={styles.itemText}>
                 <strong>{session.deviceName ?? labels.sessionsUnknownDevice}</strong>
                 <span className={styles.muted}>
-                  {[session.ip, labels.sessionsLastUsed(formatDate(session.lastUsedAt))]
+                  {[
+                    formatIp(session.ip, labels.sessionsLocalDevice),
+                    labels.sessionsLastUsed(formatDate(session.lastUsedAt)),
+                  ]
                     .filter(Boolean)
                     .join(' · ')}
                 </span>

@@ -90,6 +90,8 @@ export const accountRoutes = createAuthRoutes({
     renderConsents: (slot) => <SignUpConsentsSlot slot={slot} />,
   },
   settings: {
+    // 서버(kotlin-skeleton `skeleton.account.deletion.self-restore`)가 켜져 있다 — 삭제 안내에 「다시 로그인하면 취소」를 말한다
+    selfRestore: true,
     locales: [
       { value: 'ko', label: '한국어' },
       { value: 'en', label: 'English' },

@@ -8,7 +8,7 @@ import { withRouter } from '../stories/withRouter'
 /**
  * 가입 화면 — 비밀번호 규칙은 서버 정책(`GET /account/password/policy`)에서 읽어 체크리스트 · 강도 막대로 보여 준다.
  * 응답은 늘 같은 모양(서버가 주소의 존재를 숨긴다) — 메일로 받은 6자리 인증번호를 **같은 화면에서** 입력하면 가입이 끝나고 바로 로그인한다. 캡차(`renderCaptcha`)와 약관 동의(`consents`)는 슬롯이다 —
- * 동의는 체크한 판(`id` + `version`)을 콜백으로 보고한다(백엔드 동의 모듈은 아직 없다).
+ * 동의는 체크한 판(`id` + `version`)을 콜백으로 보고한다(서버 문서와 이어 쓰는 모양은 `@skeleton/legal` 의 `SignUpConsents`).
  */
 const meta = {
   title: 'Patterns/Auth/Sign up',
@@ -331,7 +331,7 @@ export const CodeStepResendHasACooldown: Story = {
   },
 }
 
-/* 인증번호 남은 시간 — 서버가 만료 시각을 안 줘서(오늘 백엔드) 가입 직후는 문서화된 10분으로 **어림**하고 `data-expiry-source="estimate"` 로 남긴다 */
+/* 인증번호 남은 시간 — 옛 서버처럼 응답에 만료 시각이 없으면 가입 직후는 문서화된 10분으로 **어림**하고 `data-expiry-source="estimate"` 로 남긴다 */
 export const CodeStepCountsDownFromAnEstimatedTenMinutes: Story = {
   args: codeArgs(),
   play: async ({ canvas, userEvent, canvasElement }) => {

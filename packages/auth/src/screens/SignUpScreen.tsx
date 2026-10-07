@@ -35,7 +35,7 @@ import { usePasswordConfirm } from './passwordConfirm'
 import { passwordProblems } from './passwordProblems'
 import { useCountdown } from './useCountdown'
 
-/** 동의 항목 하나 — 약관 · 방침의 판(version)을 함께 넘긴다. 백엔드 동의 모듈은 아직 없어 화면은 체크한 판을 콜백으로 보고만 한다 */
+/** 동의 항목 하나 — 약관 · 방침의 판(version)을 함께 넘긴다. 화면은 체크한 판을 콜백으로 보고만 한다(서버 문서와 저장은 `@skeleton/legal`) */
 export type ConsentItem = {
   id: string
   version: string
@@ -72,7 +72,7 @@ export type SignUpScreenProps = {
   onSignUp: (request: SignUpSubmit) => Promise<{
     status: SignUpStatus
     signUpId?: string
-    /** 서버가 주면(오늘은 안 준다) 그 값이 이긴다 — 없으면 `codeTtlSeconds` 로 어림 */
+    /** 서버가 주면 그 값이 이긴다 — 없으면(옛 서버) `codeTtlSeconds` 로 어림 */
     expiresAt?: string | number
     resendAvailableAt?: string | number
   }>
@@ -253,7 +253,7 @@ export function SignUpScreen({
         attempt.reset()
         // 메일 인증이 켜져 있으면 늘 signUpId 가 온다(주소가 새것이든 이미 있든 같은 모양) — 코드 입력 단계로
         if (result.signUpId) {
-          // 만료 · 재요청 시각: 서버가 응답에 주면 그 값(오늘 백엔드는 안 준다), 아니면 문서화된 유효 시간으로 어림한다. 코드는 저장하지 않는다
+          // 만료 · 재요청 시각: 서버가 응답에 주면 그 값, 아니면(옛 서버) 문서화된 유효 시간으로 어림한다. 코드는 저장하지 않는다
           const sent =
             codeWindowOf(result) ??
             estimateCodeWindow(now(), {

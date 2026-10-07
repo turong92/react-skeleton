@@ -12,6 +12,7 @@ import { ResetPasswordScreen } from '../screens/ResetPasswordScreen'
 import { SignInScreen } from '../screens/SignInScreen'
 import { SignUpScreen, type SignUpScreenProps } from '../screens/SignUpScreen'
 import { LegacyLinkNotice } from '../screens/LegacyLinkNotice'
+import { AccountDeletedScreen } from '../screens/AccountDeletedScreen'
 import { SocialLinkProofScreen } from '../screens/SocialLinkProofScreen'
 import { reauthKindOf, reauthSubjectOf } from '../reauth/kind'
 import { SocialCallbackScreen } from '../screens/SocialCallbackScreen'
@@ -38,6 +39,7 @@ import type { AuthStorageKeys } from '../storageKeys'
 import { scrubUrlParams } from '../scrubUrl'
 import { CodeClockProvider } from '../codeClock'
 import type { SignUpPendingStore } from '../signUpPending'
+import { runOnce } from '../screens/runOnce'
 import { useSocialLoginCallback } from '../useSocialLoginCallback'
 
 export type AuthPaths = {
@@ -49,6 +51,8 @@ export type AuthPaths = {
   socialCallback: string
   socialLinkCallback: string
   account: string
+  /** 삭제를 마친 직후의 안내(로그아웃 상태) */
+  accountDeleted: string
 }
 
 /** 콜백이 돌려준 그 시도의 PKCE verifier · nonce — 제공자가 쓴 것만(없으면 undefined: 서버로 아무것도 더 보내지 않는다) */
@@ -398,20 +402,23 @@ function SocialLinkCallbackInner({ flow, ctx }: { flow: SocialLinkFlow; ctx: Pag
     if (!callback || foreign || action?.kind !== 'link-reauth' || started.current) return
     started.current = true
     const { target } = action
-    linkSocial(
-      ctx.accountApi,
-      target.provider,
-      target.authorizationCode,
-      target.redirectUri,
-      {
-        socialReauth: {
-          provider: callback.provider,
-          authorizationCode: callback.authorizationCode,
-          redirectUri: callback.redirectUri,
-          ...proofOf(callback),
+    // 두 인가 코드는 한 번씩만 쓸 수 있다 — 화면이 다시 마운트돼 `started` 가 새것이어도 같은 코드 쌍은 한 번만 보낸다
+    void runOnce(`link-reauth:${target.authorizationCode}:${callback.authorizationCode}`, () =>
+      linkSocial(
+        ctx.accountApi,
+        target.provider,
+        target.authorizationCode,
+        target.redirectUri,
+        {
+          socialReauth: {
+            provider: callback.provider,
+            authorizationCode: callback.authorizationCode,
+            redirectUri: callback.redirectUri,
+            ...proofOf(callback),
+          },
         },
-      },
-      proofOf(target),
+        proofOf(target),
+      ),
     ).then(() => setDone(true), setFailure)
   }, [callback, foreign, action, ctx.accountApi])
 
@@ -544,6 +551,32 @@ type AccountRouteState = {
   resume?: AccountSettingsProps['resume']
 } | null
 
+/** 삭제를 마친 직후 — 서버는 세션을 이미 닫았다. 이 기기의 로컬 세션도 여기서 지운다(머리글이 로그아웃 상태가 되게). 보호되지 않은 화면이다 */
+export function AccountDeletedPage({
+  ctx,
+  settings,
+}: {
+  ctx: PageContext
+  settings: SettingsExtras
+}) {
+  const auth = useAuth()
+  const location = useLocation()
+  const { logout } = auth
+  const purgeAfter = (location.state as { purgeAfter?: string } | null)?.purgeAfter
+  useEffect(() => {
+    void logout()
+  }, [logout])
+  return (
+    <AccountDeletedScreen
+      purgeAfter={purgeAfter}
+      selfRestore={settings.selfRestore}
+      signInTo={ctx.paths.signIn}
+      formatDate={ctx.formatDate ?? settings.formatDate}
+      labels={ctx.labels}
+    />
+  )
+}
+
 export function AccountPage({
   ctx,
   settings: given,
@@ -572,12 +605,33 @@ export function AccountPage({
       setStartError(authErrorMessage(error, mergeLabels(ctx.labels)).message)
     }
   }
+  // 삭제가 받아들여지면 바로 로그아웃 상태의 안내 화면으로 — 서버는 이미 모든 세션을 닫았다(이 화면에 남으면 로그인된 것처럼 보인다).
+  // `api` 의 정체성이 바뀌면 설정 화면이 프로필을 다시 읽는다(죽은 토큰으로 401) — 그래서 `navigate` 는 ref 로 쥐고 `api` 는 안정적으로 둔다
+  const navigateRef = useRef(navigate)
+  useEffect(() => {
+    navigateRef.current = navigate
+  })
+  const deletedPath = ctx.paths.accountDeleted
+  const api = useMemo(
+    () => ({
+      ...ctx.accountApi,
+      deleteAccount: async (credential: Parameters<AccountApi['deleteAccount']>[0]) => {
+        const result = await ctx.accountApi.deleteAccount(credential)
+        navigateRef.current(deletedPath, {
+          replace: true,
+          state: { purgeAfter: result.purgeAfter },
+        })
+        return result
+      },
+    }),
+    [ctx.accountApi, deletedPath],
+  )
   if (!mounted) return null
   return (
     <>
       {startError && <Alert tone="danger">{startError}</Alert>}
       <AccountSettings
-        api={ctx.accountApi}
+        api={api}
         labels={ctx.labels}
         confirmPassword={ctx.confirmPassword}
         socialProviders={resolveMethods(ctx.methods).social}

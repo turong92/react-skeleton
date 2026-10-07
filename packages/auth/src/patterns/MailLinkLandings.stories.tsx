@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { StrictMode } from 'react'
+import { StrictMode, useEffect, useState } from 'react'
 import { expect, fn, waitFor } from 'storybook/test'
 import { LegacyLinkNotice } from '../screens/LegacyLinkNotice'
 import { SocialLinkProofScreen } from '../screens/SocialLinkProofScreen'
@@ -42,7 +42,12 @@ export const MagicLinkRedeemsOnce: Story = {
   beforeEach: () => redeemOnce.mockClear(),
   render: () => (
     <StrictMode>
-      <MagicLinkLanding token="tok" onRedeem={redeemOnce} onDone={fn()} requestTo="/login" />
+      <MagicLinkLanding
+        token="tok-MagicLinkRedeemsOnce"
+        onRedeem={redeemOnce}
+        onDone={fn()}
+        requestTo="/login"
+      />
     </StrictMode>
   ),
   play: async () => {
@@ -52,11 +57,42 @@ export const MagicLinkRedeemsOnce: Story = {
   },
 }
 
+/** 실제 앱에서 두 번 나가던 경로 — 로그인되는 순간 위쪽(동의 게이트 등)이 화면을 다시 마운트해 **새 인스턴스**가 같은 토큰으로 또 부른다. 같은 토큰의 호출은 모듈 수준에서 한 번이다 */
+const redeemAcrossRemount = fn(async () => undefined)
+function RemountsOnce() {
+  const [round, setRound] = useState(0)
+  useEffect(() => {
+    const timer = setTimeout(() => setRound(1), 50) // 첫 호출이 진행 중일 때 인스턴스가 바뀐다
+    return () => clearTimeout(timer)
+  }, [])
+  return (
+    <MagicLinkLanding
+      key={round}
+      token="tok-remount"
+      onRedeem={redeemAcrossRemount}
+      onDone={fn()}
+      requestTo="/login"
+    />
+  )
+}
+export const MagicLinkRedeemsOnceAcrossARemount: Story = {
+  beforeEach: () => redeemAcrossRemount.mockClear(),
+  render: () => (
+    <StrictMode>
+      <RemountsOnce />
+    </StrictMode>
+  ),
+  play: async () => {
+    await new Promise((resolve) => setTimeout(resolve, 300))
+    await expect(redeemAcrossRemount).toHaveBeenCalledTimes(1)
+  },
+}
+
 export const MagicLinkSignsIn: Story = {
   args: {},
   render: () => (
     <MagicLinkLanding
-      token="tok"
+      token="tok-MagicLinkSignsIn"
       onRedeem={async () => undefined}
       onDone={fn()}
       requestTo="/login"
@@ -90,7 +126,7 @@ export const MagicLinkExpired: Story = {
 export const MagicLinkBlockedAddress: Story = {
   render: () => (
     <MagicLinkLanding
-      token="tok"
+      token="tok-MagicLinkBlockedAddress"
       requestTo="/login"
       onDone={fn()}
       onRedeem={async () => {
@@ -135,7 +171,7 @@ export const ResetPassword: Story = {
     const onReset = fn(async () => undefined)
     return (
       <ResetPasswordScreen
-        token="tok"
+        token="tok-ResetPassword"
         policy={FAKE_POLICY}
         onReset={onReset}
         signInTo="/login"
@@ -160,7 +196,7 @@ export const ResetMismatchBlocksAndSaysWhy: Story = {
     const onReset = fn(async () => undefined)
     return (
       <ResetPasswordScreen
-        token="tok"
+        token="tok-ResetMismatchBlocksAndSaysWhy"
         policy={FAKE_POLICY}
         onReset={onReset}
         signInTo="/login"

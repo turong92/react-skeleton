@@ -134,7 +134,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 - 보고 따라 할 스토리: `packages/auth/src/RequireAuth.stories.tsx`
 - 복사해 시작할 Patterns: `apps/storybook/src/patterns/LoginPage.stories.tsx` · `apps/storybook/src/patterns/ForbiddenPage.stories.tsx` · `packages/auth/src/patterns/SignIn.stories.tsx` · `packages/auth/src/patterns/SignUp.stories.tsx` · `packages/auth/src/patterns/MailLinkLandings.stories.tsx` · `packages/auth/src/patterns/DeletionPending.stories.tsx` · `packages/auth/src/patterns/AccountSettings.stories.tsx`
 - 문서: `packages/auth/README.md`
-- 쓰지 않는 경우: 권한(roles) 정책 자체는 백엔드 — 이 패키지는 토큰 · 라우트 가드(RequireAuth · RequireRole)만 / 약관 동의 저장은 없다 — 가입 화면의 동의 슬롯은 체크한 판을 콜백으로 보고할 뿐(백엔드 동의 모듈이 아직 없다) / 로그인 화면의 모양(색 · 로고 · 문구 톤)은 앱의 몫 — 문구는 labels prop(기본 영어, koAuthLabels 한국어)
+- 쓰지 않는 경우: 권한(roles) 정책 자체는 백엔드 — 이 패키지는 토큰 · 라우트 가드(RequireAuth · RequireRole)만 / 약관 동의 저장은 없다 — 가입 화면의 동의 슬롯은 체크한 판을 콜백으로 보고할 뿐(문서 · 저장은 @skeleton/legal) / 로그인 화면의 모양(색 · 로고 · 문구 톤)은 앱의 몫 — 문구는 labels prop(기본 영어, koAuthLabels 한국어)
 - 키워드: 로그인, 로그아웃, 인증, 토큰, JWT, 보호 라우트, 로그인 상태, 세션, 회원가입, 가입, 이메일 인증, 비밀번호 재설정, 비밀번호 찾기, 계정 설정, 계정 삭제, 탈퇴 취소, 탈퇴 유예, 토큰 갱신, 리프레시 토큰, 세션 목록, 닉네임, 표시 이름 / login, logout, auth, authentication, jwt, token, session, protected route, sign in, sign up, registration, email verification, password reset, forgot password, account settings, delete account, cancel deletion, deletion grace, refresh token, token refresh, active sessions, nickname, display name
 
 ### `realtime` — 서버가 밀어 주는 실시간 연결 — SSE(탭 숨김 일시정지 · 유휴 감시 · 재연결)와 STOMP WebSocket 알림 클라이언트.

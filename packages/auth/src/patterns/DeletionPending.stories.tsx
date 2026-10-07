@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, waitFor } from 'storybook/test'
+import { AccountDeletedScreen } from '../screens/AccountDeletedScreen'
 import { DeletionPendingScreen } from '../screens/DeletionPendingScreen'
 import { MagicLinkLanding } from '../screens/MagicLinkLanding'
 import { SignInScreen } from '../screens/SignInScreen'
@@ -236,5 +237,27 @@ export const SocialCallbackPendingWithoutToken: Story = {
       await canvas.findByRole('heading', { name: 'This account is being deleted' }),
     ).toBeVisible()
     await expect(canvas.queryByRole('button')).toBeNull()
+  },
+}
+
+/** 삭제를 마친 직후 — 서버가 세션을 이미 닫았고 로컬 세션도 지웠다. 보호되지 않은 안내(머리글도 로그아웃 상태) */
+export const AccountDeletedLanding: Story = {
+  render: () => (
+    <AccountDeletedScreen
+      purgeAfter={PURGE}
+      selfRestore
+      signInTo="/login"
+      labels={koAuthLabels}
+      formatDate={() => '2026. 11. 5.'}
+    />
+  ),
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByRole('heading', { name: '탈퇴가 접수됐어요' })).toBeVisible()
+    await expect(canvas.getByText(/2026\. 11\. 5\.에 지워져요/)).toBeVisible()
+    await expect(canvas.getByText(/그 전에 다시 로그인하면 취소할 수 있어요/)).toBeVisible()
+    await expect(canvas.getByRole('link', { name: '로그인 화면으로' })).toHaveAttribute(
+      'href',
+      '/login',
+    )
   },
 }

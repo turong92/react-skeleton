@@ -262,6 +262,7 @@ export const koAuthLabels: AuthLabels = {
   sessionsRevokeOthers: '다른 모든 기기 로그아웃',
   sessionsRevoked: '로그아웃했어요.',
   sessionsUnknownDevice: '알 수 없는 기기',
+  sessionsLocalDevice: '이 기기(로컬)',
   sessionsLastUsed: (when) => `마지막 사용 ${when}`,
   sessionsEmpty: '다른 세션이 없어요.',
   deleteTitle: '계정 삭제',
@@ -277,6 +278,10 @@ export const koAuthLabels: AuthLabels = {
   deleteScheduled: (date) => `${date} 에 계정 데이터가 지워질 예정이에요.`,
   deleteDoneAction: '로그아웃',
   deleteSelfRestoreNote: '기간 안에 다시 로그인하면 탈퇴를 취소할 수 있어요.',
+  accountDeletedTitle: '탈퇴가 접수됐어요',
+  accountDeletedBody: (date) => (date ? `${date}에 지워져요.` : '곧 지워져요.'),
+  accountDeletedAction: '로그인 화면으로',
+  accountDeletedRestoreNote: '그 전에 다시 로그인하면 취소할 수 있어요.',
   deletionPendingTitle: '탈퇴를 취소할까요?',
   deletionPendingBody: (date) =>
     date

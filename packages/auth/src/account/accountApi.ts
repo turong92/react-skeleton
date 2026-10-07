@@ -39,7 +39,7 @@ export type AccountApi = {
   signUp(request: SignUpRequest): Promise<{
     status: SignUpStatus
     signUpId?: string
-    /** 오늘 백엔드는 안 준다 — 주면(ISO-8601) 화면이 어림 대신 쓴다 */
+    /** 최신 백엔드가 준다(ISO-8601) — 없으면(옛 서버) 화면이 문서화된 유효 시간으로 어림한다 */
     expiresAt?: string
     resendAvailableAt?: string
   }>

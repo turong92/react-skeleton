@@ -493,7 +493,8 @@
         "packages/author-profile/src/AuthorPicker.stories.tsx",
         "packages/author-profile/src/AuthorPicker.thread.stories.tsx",
         "packages/author-profile/src/AuthorProfileManager.stories.tsx",
-        "packages/author-profile/src/AuthorProfileManager.edit.stories.tsx"
+        "packages/author-profile/src/AuthorProfileManager.edit.stories.tsx",
+        "packages/author-profile/src/ProfileDialog.stories.tsx"
       ],
       "docs": ["packages/author-profile/README.md"],
       "entryPoints": [

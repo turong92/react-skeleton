@@ -20,6 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 전역 오류 토스트는 `AUTHOR_PROFILE.*` 오류를 건너뛰고(폼이 제자리에서 말한다), 계정이 바뀌거나 로그아웃하면 서버 상태 캐시와 함께 기기 기억(`forgetAuthorMemory`)을 한 곳(`onAccountChange`)에서 지운다.
 - e2e `authorProfiles.e2e.ts`(백엔드 `author-profile` 이 켜진 샘플 필요) · 기존 e2e 의 글쓰기 단계는 프로필이 필요하면 하나 만들어 고른다.
 
+### Added — `@skeleton/author-profile`: 프로필 만들기 대화상자
+
+- `useProfileDialog({ api, title, … })` → `{ open, dialog }`: 선택기의 「프로필 만들기」가 여는 프로필 관리 대화상자(쓰던 글 유지 · 열렸을 때만 마운트 · 닫을 때 연 단추가 사라졌으면 선택기 자리로 포커스). `AuthorPickerView.createOpensDialog`(기본 true → 「프로필 만들기」 단추 `aria-haspopup="dialog"`). 스토리 `ProfileDialog`.
+
 ### Added — `@skeleton/ui`
 
 - `RowMenu` 에 `describedBy`(버튼의 `aria-describedby` — 메뉴 칸 밖의 설명 · 폼 오류 문장의 id). 이름(`label`)은 그대로. 스토리 `DescribedByTiesAnOutsideDescriptionToTheButton`.

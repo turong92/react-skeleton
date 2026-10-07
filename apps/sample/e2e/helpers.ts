@@ -204,16 +204,15 @@ async function postProfile(headers: Record<string, string>, name: string): Promi
 /**
  * 이 계정에 **이름 있는** 작성자 프로필을 보장한다 — 화면을 거치지 않고 API 로. 백엔드는 첫 프로필을 자동으로 만든다(닉네임이 있으면 그 이름을 복사, 없으면 이름 없는 프로필)이고,
  * 샘플은 이름 있는 프로필이 없으면 쓰기 전에 만들게 하므로, 글 · 댓글을 쓰는 시나리오는 이름 있는 프로필이 하나는 있어야 한다. 이미 있으면 그것을, 없으면 `name` 으로 만든다.
- * 404 는 「`author-profile` 모듈이 없는 백엔드」라 undefined — 그 밖의 실패는 던진다
+ * 샘플은 `author-profile` 모듈이 필수다 — 404 를 포함해 어떤 실패도 던진다(건너뛰지 않는다)
  */
 export async function ensureProfile(
   account: { email: string; password: string },
   name = `e2e${Date.now().toString(36)}`,
-): Promise<E2eProfile | undefined> {
+): Promise<E2eProfile> {
   const headers = await profileHeaders(account)
   if (!headers) throw new Error(`could not sign in as ${account.email} to seed a profile`)
   const listed = await fetch(`${inject('apiUrl')}/api/v1/author-profiles`, { headers })
-  if (listed.status === 404) return undefined
   if (!listed.ok) throw new Error(`GET /author-profiles → ${listed.status}`)
   const existing = ((await listed.json()) as { values: E2eProfile[] }).values
   return existing.find((profile) => profile.name?.trim()) ?? postProfile(headers, name)

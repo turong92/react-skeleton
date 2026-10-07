@@ -86,7 +86,8 @@ export const postDetailLabels = (t: Translate): PostDetailLabels => ({
   attachments: (count) => t('board.detail.attachments', { count }),
 })
 
-export const postEditorLabels = (t: Translate): Partial<PostEditorLabels> => ({
+/** `mustCreate` — 이름 있는 프로필이 하나도 없어 고를 것이 없다: 「골라 주세요」 대신 「먼저 만들어 주세요」 */
+export const postEditorLabels = (t: Translate, mustCreate = false): Partial<PostEditorLabels> => ({
   title: t('board.form.title'),
   body: t('board.form.body'),
   requiredMark: t('board.form.required'),
@@ -98,10 +99,10 @@ export const postEditorLabels = (t: Translate): Partial<PostEditorLabels> => ({
   bodyTooLong: (max) => t('board.form.bodyTooLong', { max }),
   cancel: t('common.cancel'),
   formLabel: t('board.form.formLabel'),
-  authorRequired: t('board.authorRequired'),
+  authorRequired: t(mustCreate ? 'board.authorRequiredCreate' : 'board.authorRequired'),
 })
 
-export const commentLabels = (t: Translate): BoardCommentsLabelsInput => ({
+export const commentLabels = (t: Translate, mustCreate = false): BoardCommentsLabelsInput => ({
   ...authorLabels(t),
   heading: t('board.comments.heading'),
   sort: t('board.comments.sort'),
@@ -137,6 +138,6 @@ export const commentLabels = (t: Translate): BoardCommentsLabelsInput => ({
   retry: t('common.retry'),
   cancel: t('common.cancel'),
   close: t('common.close'),
-  authorRequired: t('board.authorRequired'),
+  authorRequired: t(mustCreate ? 'board.authorRequiredCreate' : 'board.authorRequired'),
   pagination: { label: t('notes.pagination.label'), page: pageLabel(t) },
 })

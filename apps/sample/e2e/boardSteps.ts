@@ -36,7 +36,7 @@ type BoardConfigJson = {
 /** 로그인 화면에서 이메일 · 비밀번호로(체험 계정 채우기 버튼이 아니라) */
 export async function signInAs(page: Page, baseUrl: string, account: Account) {
   await consentViaApi(account) // legal 모듈이 있는 백엔드: 시드 계정은 동의 기록이 없다(없으면 아무 일도 안 한다)
-  await ensureProfile(account) // author-profile 모듈이 있는 백엔드: 글 · 댓글을 쓰려면 프로필이 하나는 있어야 한다(없는 백엔드에서는 아무 일도 안 한다)
+  await ensureProfile(account) // 샘플은 author-profile 모듈이 필수다: 글 · 댓글을 쓰려면 이름 있는 프로필이 하나는 있어야 한다
   await page.goto(`${baseUrl}/login`)
   await dismissConsent(page)
   await page.getByLabel(ko('login.email')).fill(account.email)
@@ -195,7 +195,7 @@ export async function seedPosts(
   const config = (await (await fetch(`${apiUrl}/api/v1/boards/config`, { headers })).json()) as {
     value: { authorRequired?: boolean }
   }
-  const profile = config.value.authorRequired ? await ensureProfile(account) : undefined
+  const profile = config.value.authorRequired ? await ensureProfile(account) : undefined // 작성자를 요구하지 않는 서버에서는 싣지 않는다
   const ids: number[] = []
   for (const [index, post] of posts.entries()) {
     const response = await fetch(`${apiUrl}/api/v1/boards/${code}/posts`, {

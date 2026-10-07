@@ -26,6 +26,7 @@ import styles from './BoardFormPage.module.css'
 function Editor({
   config,
   authorPicker,
+  mustCreateProfile,
   initial,
   submitLabel,
   onCancel,
@@ -34,6 +35,8 @@ function Editor({
   config: BoardConfig
   /** 만들 때만 — 작성자는 불변이라 고치는 폼에는 선택기도 `authorRequired` 도 주지 않는다 */
   authorPicker?: AuthorPicker
+  /** 이름 있는 프로필이 없어 고를 것이 없다 — 칸 오류 문구가 「먼저 만들어 주세요」 */
+  mustCreateProfile?: boolean
   initial?: PostEditorValues
   submitLabel: string
   onCancel: () => void
@@ -53,7 +56,7 @@ function Editor({
       submitting={pending}
       error={failed ? t('board.form.failure') : undefined}
       fieldErrors={fieldErrors}
-      labels={postEditorLabels(t)}
+      labels={postEditorLabels(t, mustCreateProfile)}
       onCancel={onCancel}
       onSubmit={async (values) => {
         setPending(true)
@@ -88,6 +91,7 @@ function CreatePost({ code, config }: { code: string; config: BoardConfig }) {
       <Editor
         config={config}
         authorPicker={authorPicker}
+        mustCreateProfile={gate.mustCreate}
         submitLabel={t('board.form.submitCreate')}
         onCancel={() => navigate('/board')}
         onSubmit={async (values) => {

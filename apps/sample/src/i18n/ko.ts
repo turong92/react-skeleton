@@ -49,13 +49,14 @@ export default {
   'login.demoPassword': 'password',
   'dashboard.greeting': '안녕하세요, {name}님',
   'nickname.nudgeAction': '닉네임 정하기',
-  'nickname.bannerTitle': '닉네임을 정해 주세요',
+  'nickname.bannerTitle': '프로필에 이름을 붙여 주세요',
   'nickname.bannerBody':
-    '닉네임은 나만 보는 계정 이름이에요. 첫 프로필이 이 닉네임으로 시작하고, 게시판에는 프로필 이름이 보여요.',
+    '게시판에는 프로필 이름이 보여요. 닉네임이 없던 계정의 첫 프로필은 이름이 없어요. 닉네임은 나만 보는 계정 이름이에요.',
+  'nickname.profileAction': '프로필 이름 붙이기',
   'nickname.bannerLabel': '닉네임 안내',
   'nickname.dialogTitle': '닉네임 정하기',
   'nickname.dialogBody':
-    '나만 보는 계정 이름이에요. 첫 프로필은 이 닉네임으로 시작해요(한 번 복사되고 이후 따로 가요). 나중에 계정 설정에서 바꿀 수 있어요.',
+    '나만 보는 계정 이름이에요. 첫 프로필은 처음 불러올 때 닉네임이 있었으면 한 번 복사돼 만들어지고, 지금 정해도 이미 만들어진 프로필 이름은 바뀌지 않아요. 게시판에 보일 이름은 설정의 프로필에서 붙여 주세요.',
   'nickname.later': '나중에',
   'nickname.save': '저장',
   'nickname.saving': '저장 중',
@@ -63,7 +64,7 @@ export default {
   'settings.nicknameNone': '아직 정하지 않았어요',
   'settings.nicknameSet': '닉네임 정하기',
   'settings.nicknameHint':
-    '나만 보는 이름이에요. 첫 프로필은 이 닉네임으로 시작해요(한 번 복사되고 이후 따로 가요).',
+    '나만 보는 이름이에요. 첫 프로필은 처음 불러올 때 닉네임이 있었으면 한 번 복사돼 만들어지고, 그 뒤 닉네임을 바꿔도 프로필 이름은 바뀌지 않아요.',
   'settings.profiles': '글 · 댓글에 쓰는 프로필',
   'settings.profilesHint':
     '게시판에는 프로필 이름으로 글과 댓글을 써요. 닉네임이 없는 계정의 첫 프로필은 이름이 없으니 이름을 붙여 주세요. 같은 사람이 쓴 글이라는 사실은 다른 사람에게 보이지 않아요.',
@@ -71,6 +72,7 @@ export default {
   'profileGate.body':
     '게시판에는 이름 있는 프로필로 글과 댓글을 써요. 아래에서 프로필을 만들거나 이름을 붙인 뒤 닫고 다시 눌러 주세요.',
   'board.authorRequired': '어느 프로필로 쓸지 골라 주세요.',
+  'board.authorRequiredCreate': '먼저 이름 있는 프로필을 만들어 주세요.',
   'author.choose': '프로필 고르기',
   'author.triggerLabel': '{current}(으)로 쓰는 중. 프로필 바꾸기',
   'author.triggerChoose': '프로필 고르기',
@@ -109,8 +111,7 @@ export default {
   'author.nameReserved': '쓸 수 없는 이름이에요.',
   'author.nameTooLong': '{max}자 이하로 써 주세요.',
   'author.nameTaken': '이미 있는 이름이에요.',
-  'author.limitReached':
-    '더 만들 수 없어요. 프로필은 최대 {max}개이고, 일정 기간에 만들 수 있는 횟수도 정해져 있어요.',
+  'author.limitReached': '프로필은 최대 {max}개까지 만들 수 있어요.',
   'author.rateLimited': '프로필을 너무 자주 바꿨어요. 잠시 뒤에 다시 해 주세요.',
   'author.rateLimitedIn':
     '프로필을 너무 자주 바꿨어요. {value}{unit, select, second {초} minute {분} hour {시간} day {일} other {}} 뒤에 다시 해 주세요.',

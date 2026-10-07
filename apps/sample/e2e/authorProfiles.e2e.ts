@@ -47,7 +47,7 @@ let y: Page
 let accountIdX = ''
 
 /** Y 가 받은 `/api/v1/` JSON 응답의 본문 전체 — 스트림(SSE)은 끝나지 않으니 뺀다 */
-const received: Array<{ url: string; method: string; text: string }> = []
+const received: Array<{ url: string; method: string; status: number; text: string }> = []
 const reading: Array<Promise<void>> = []
 
 beforeAll(async () => {
@@ -59,7 +59,12 @@ beforeAll(async () => {
     reading.push(
       response.text().then(
         (text) =>
-          void received.push({ url: response.url(), method: response.request().method(), text }),
+          void received.push({
+            url: response.url(),
+            method: response.request().method(),
+            status: response.status(),
+            text,
+          }),
         () => undefined, // 이동으로 끊긴 응답
       ),
     )
@@ -119,8 +124,14 @@ const jsonOf = (r: { text: string }) =>
 const objectsOfPost = (post: PostJson): unknown[] => [
   post,
   ...received
-    .filter((r) => r.method === 'GET' && new URL(r.url).pathname.endsWith(`/posts/${post.id}`))
-    .map((r) => jsonOf(r).value),
+    .filter(
+      (r) =>
+        r.method === 'GET' &&
+        r.status === 200 && // 오류 본문(문제 객체)은 글 응답이 아니다
+        new URL(r.url).pathname.endsWith(`/posts/${post.id}`),
+    )
+    .map((r) => jsonOf(r).value)
+    .filter((value): value is object => typeof value === 'object' && value !== null),
 ]
 /** 그 글의 댓글 응답(`…/posts/{id}/comments`)에서 본문이 `body` 인 댓글 */
 function commentSeenBy(post: PostJson, body: string): { authorId: string } | undefined {

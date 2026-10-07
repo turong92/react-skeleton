@@ -84,7 +84,7 @@ function PostView({
         currentUserId={principal?.accountId}
         reactionLabels={labelsOfReactions}
         reactionIcons={REACTION_ICONS}
-        labels={commentLabels(t)}
+        labels={commentLabels(t, gate.mustCreate)}
         authorPicker={authorPicker}
         postAuthor={{
           authorId: post.authorId,

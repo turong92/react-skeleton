@@ -1,7 +1,17 @@
 import { expect as baseExpect } from 'playwright/test'
 import type { Browser, Locator, Page } from 'playwright/test'
 import { afterAll, beforeAll, describe, inject, it } from 'vitest'
-import { article, commentOf, openBoard, postComment, writePost } from './boardSteps'
+import {
+  article,
+  chooseProfile,
+  commentForm,
+  commentOf,
+  openBoard,
+  openPost,
+  postComment,
+  postForm,
+  writePost,
+} from './boardSteps'
 import {
   acceptLegalGate,
   agreeToLegal,
@@ -145,7 +155,7 @@ describe('an account made without a nickname (a mailed sign-in link) is asked fo
   // 샘플 백엔드는 닉네임 자동 생성을 껐다(`fallback: NONE`) — 링크로 가입한 계정은 이름 없이 만들어진다. 앞의 링크 로그인 테스트의 그 계정으로 이어 간다
   const reminder = () => page.getByRole('region', { name: ko('nickname.bannerLabel') })
 
-  it('the band is conspicuous (a filled primary button) and the dialog sets the nickname in place — the band goes away and the greeting uses it', async () => {
+  it('the band offers the nickname dialog (a secondary button) and the dialog sets the nickname in place — the band goes away and the greeting uses it', async () => {
     await pwExpect(reminder()).toBeVisible()
     await pwExpect(
       reminder().getByRole('button', { name: ko('nickname.nudgeAction') }),
@@ -166,21 +176,50 @@ describe('an account made without a nickname (a mailed sign-in link) is asked fo
     await pwExpect(heading(new RegExp(`안녕하세요, ${chosen}`))).toBeVisible()
   })
 
-  it('writing on the board with only the unnamed first profile asks to name one first (the dialog), and once a named one exists the editor opens', async () => {
-    const second = `e2e-nonick-${stamp}@example.com`
+  /** 링크 로그인으로 새 계정(닉네임 없음 — 백엔드의 첫 프로필은 이름이 없다)을 이 브라우저에 로그인한다 */
+  async function signInAsFreshAccount(label: string) {
+    const email = `e2e-${label}-${stamp}@example.com`
     const requested = await fetch(`${apiUrl}/api/v1/auth/magic-link/request`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: second }),
+      body: JSON.stringify({ email }),
     })
     pwExpect(requested.status).toBe(202)
-    const link = await waitForLink(mailUrl, second, 'magic-link', { seen })
+    const link = await waitForLink(mailUrl, email, 'magic-link', { seen })
     await page.goto(baseUrl)
     await page.evaluate(() => window.localStorage.clear())
     await page.goto(`${baseUrl}${link.path}`)
     await acceptLegalGate(page, apiUrl)
     await pwExpect(heading(/안녕하세요/)).toBeVisible()
+  }
+  const closeDialog = (dialog: Locator) =>
+    dialog
+      .getByRole('button', { name: ko('common.close') })
+      .first()
+      .click()
+
+  it('the band leads to naming a profile (the board shows profile names) and still offers the nickname dialog', async () => {
+    // 앞 테스트에서 닉네임을 정한 계정이라 띠는 이미 없다 — 새 계정으로
+    await signInAsFreshAccount('band')
+    await pwExpect(
+      reminder().getByRole('link', { name: ko('nickname.profileAction') }),
+    ).toHaveAttribute('href', '/settings#profiles')
+    await reminder()
+      .getByRole('link', { name: ko('nickname.profileAction') })
+      .click()
+    await pwExpect(page).toHaveURL(/\/settings#profiles$/)
+    await pwExpect(page.getByRole('region', { name: ko('settings.profiles') })).toBeVisible()
+  })
+
+  it('the write button asks to name a profile first when there is only the unnamed first one (the dialog), and once a named one exists the editor opens', async () => {
+    await signInAsFreshAccount('nonick')
+    // 프로필 목록 응답이 와야 「이름 있는 프로필이 없다」를 안다 — 그 전에 누르면 막지 못한다
+    const listed = page.waitForResponse(
+      (r) =>
+        new URL(r.url()).pathname === '/api/v1/author-profiles' && r.request().method() === 'GET',
+    )
     await openBoard(page)
+    await listed
     await page.getByRole('button', { name: ko('board.write') }).click()
     const dialog = page.getByRole('dialog')
     await pwExpect(dialog.getByRole('heading', { name: ko('profileGate.title') })).toBeVisible()
@@ -191,12 +230,66 @@ describe('an account made without a nickname (a mailed sign-in link) is asked fo
     // 닉네임 없는 계정의 자동 첫 프로필(이름 없음)과 방금 만든 프로필 — 둘
     await pwExpect(dialog.getByRole('listitem').filter({ hasText: profileName })).toBeVisible()
     await pwExpect(dialog.getByRole('listitem')).toHaveCount(2)
-    await dialog
-      .getByRole('button', { name: ko('common.close') })
-      .first()
-      .click()
+    await closeDialog(dialog)
     await pwExpect(dialog).toHaveCount(0)
     await page.getByRole('button', { name: ko('board.write') }).click()
     await pwExpect(page.getByLabel(new RegExp(ko('board.form.title')))).toBeVisible()
+  })
+
+  it('/board/new opened directly: the picker offers "프로필 만들기"; naming the unnamed first profile in the dialog keeps the draft and moves the focus to the picker', async () => {
+    await signInAsFreshAccount('direct')
+    await page.goto(`${baseUrl}/board/new`)
+    const form = postForm(page)
+    const draft = form.getByLabel(new RegExp(ko('board.form.title')))
+    await draft.fill('쓰던 제목')
+    // 목록이 오면(= 이름 있는 프로필이 없음을 알면) 선택기가 「프로필 만들기」만 보인다 — 불러오는 동안은 단추 모양의 「불러오는 중」
+    const create = form.getByRole('button', { name: ko('author.createProfile') })
+    await pwExpect(create).toBeVisible()
+    await pwExpect(create).toHaveAttribute('aria-haspopup', 'dialog')
+    // 고르지 않고 보내면 「먼저 만들어 주세요」(고를 것이 없다)
+    await form.getByLabel(new RegExp(ko('board.form.body'))).fill('본문')
+    await page.getByRole('button', { name: ko('board.form.submitCreate') }).click()
+    await pwExpect(page.getByText(ko('board.authorRequiredCreate'))).toBeVisible()
+    await create.click()
+    const dialog = page.getByRole('dialog')
+    await pwExpect(dialog.getByRole('heading', { name: ko('profileGate.title') })).toBeVisible()
+    // 이름 없는 첫 프로필에 이름을 붙인다(이름 바꾸기)
+    const row = dialog.getByRole('listitem')
+    await pwExpect(row).toHaveCount(1)
+    await row.getByRole('button', { name: ko('author.renameAction') }).click()
+    const renamed = `직행${String(Date.now()).slice(-6)}`
+    await row.getByRole('textbox').fill(renamed)
+    await row.getByRole('button', { name: ko('author.save'), exact: true }).click()
+    await pwExpect(dialog.getByRole('listitem').filter({ hasText: renamed })).toBeVisible()
+    await closeDialog(dialog)
+    await pwExpect(dialog).toHaveCount(0)
+    await pwExpect(draft).toHaveValue('쓰던 제목') // 쓰던 글이 남는다
+    // 「프로필 만들기」 단추는 사라졌고, 선택기 자리의 단추가 포커스를 받는다(body 로 떨어지지 않는다)
+    await pwExpect(form.locator('[data-author-slot] button[aria-haspopup="menu"]')).toBeFocused()
+    await chooseProfile(form, renamed)
+    await page.getByRole('button', { name: ko('board.form.submitCreate') }).click()
+    await page.getByRole('heading', { level: 2, name: '쓰던 제목' }).waitFor()
+  })
+
+  it('the comment form without a named profile offers only "프로필 만들기" — its dialog keeps the comment', async () => {
+    await signInAsFreshAccount('commenter')
+    await openBoard(page)
+    await openPost(page, '쓰던 제목')
+    const text = `쓰던 댓글 ${stamp}`
+    await page.getByRole('textbox', { name: ko('board.comments.newComment') }).fill(text)
+    const create = commentForm(page).getByRole('button', { name: ko('author.createProfile') })
+    await pwExpect(create).toBeVisible()
+    await page.getByRole('button', { name: ko('board.comments.postComment') }).click()
+    await pwExpect(page.getByText(ko('board.authorRequiredCreate'))).toBeVisible()
+    await create.click()
+    const dialog = page.getByRole('dialog')
+    await pwExpect(dialog.getByRole('heading', { name: ko('profileGate.title') })).toBeVisible()
+    await closeDialog(dialog)
+    await pwExpect(dialog).toHaveCount(0)
+    await pwExpect(
+      page.getByRole('textbox', { name: ko('board.comments.newComment') }),
+    ).toHaveValue(text) // 쓰던 댓글이 남는다
+    // 아직 이름 있는 프로필이 없으니 「프로필 만들기」 단추가 그대로 있고, 닫으면 포커스가 거기로 돌아온다
+    await pwExpect(create).toBeFocused()
   })
 })

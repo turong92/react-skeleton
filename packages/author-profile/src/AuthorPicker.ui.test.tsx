@@ -51,7 +51,8 @@ describe('AuthorPickerView — the folded state', () => {
       <AuthorPickerView {...view} profiles={[]} value={undefined} onCreateProfile={noop} />,
     )
     expect(html).toContain(defaultAuthorProfileLabels.createProfile)
-    expect(html).not.toContain('aria-haspopup')
+    expect(html).not.toContain('aria-haspopup="menu"') // 열 목록이 없다
+    expect(html).toContain('aria-haspopup="dialog"') // 「프로필 만들기」는 창을 연다
   })
 
   it('the trigger carries the chosen name in its accessible name, and the invalid state reaches the markup', () => {

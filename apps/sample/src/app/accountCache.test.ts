@@ -59,12 +59,12 @@ describe('author-profile device memory — dropped in the same place as the cach
     expect(store.get('skeleton.author-profile:B:general')).toBe('prf_b')
   })
 
-  it('a sign-out forgets the remembered profile too (the button, another tab, a failed refresh all end here)', async () => {
+  it('a sign-out forgets the remembered profile too (the button, another tab, a failed refresh all end here)', () => {
     vi.stubGlobal('localStorage', fake)
     authSession.signIn(login('C'))
     store.set('skeleton.author-profile:C:general', 'prf_c')
     store.set('theme', 'dark')
-    await authSession.logout().catch(() => undefined) // 서버 폐기 알림이 실패해도 이 기기의 로그아웃은 유지된다
+    void authSession.logout().catch(() => undefined) // 이 기기의 로그아웃은 동기로 끝난다(서버 폐기 알림은 기다리지 않는다)
     expect([...store.keys()]).toEqual(['theme'])
   })
 })

@@ -33,3 +33,5 @@ export type {
 } from './AuthorPicker'
 export { AuthorProfileManager } from './AuthorProfileManager'
 export type { AuthorProfileManagerProps } from './AuthorProfileManager'
+export { useProfileDialog } from './useProfileDialog'
+export type { UseProfileDialogOptions } from './useProfileDialog'

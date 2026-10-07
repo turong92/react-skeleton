@@ -25,7 +25,7 @@ export function SettingsPage() {
   const navigate = useNavigate()
   const { hash } = useLocation()
 
-  // 선택기의 「프로필 만들기」가 `/settings#profiles` 로 보낸다 — 라우터는 해시로 스크롤하지 않으므로 그 구역으로 내린다
+  // 안내 띠의 「프로필 이름 붙이기」가 `/settings#profiles` 로 보낸다 — 라우터는 해시로 스크롤하지 않으므로 그 구역으로 내린다(선택기의 「프로필 만들기」는 대화상자라 여기로 오지 않는다)
   useEffect(() => {
     if (hash !== '#profiles') return
     const section = document.getElementById('profiles')

@@ -617,6 +617,7 @@ export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
   'notifications#useMarkAllRead': () => [fakeNotificationsApi()],
   'notifications#useNotificationIngest': () => [],
   'author-profile#useAuthorProfiles': () => [fakeAuthorProfileApi()],
+  'author-profile#useProfileDialog': () => [{ api: fakeAuthorProfileApi(), title: 'Profiles' }],
   'author-profile#useAuthorProfileConfig': () => [fakeAuthorProfileApi()],
   'author-profile#useCreateAuthorProfile': () => [fakeAuthorProfileApi()],
   'author-profile#useRenameAuthorProfile': () => [fakeAuthorProfileApi()],

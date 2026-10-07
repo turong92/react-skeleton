@@ -110,12 +110,55 @@ export const ResetPassword: Story = {
   },
   play: async ({ canvas, userEvent }) => {
     await userEvent.type(canvas.getByLabelText(/^New password/), 'Correct-horse-battery-9')
+    await userEvent.type(canvas.getByLabelText(/^Confirm password/), 'Correct-horse-battery-9')
     await userEvent.click(canvas.getByRole('button', { name: 'Set the password' }))
     await expect(await canvas.findByRole('heading', { name: 'Password changed' })).toBeVisible()
     await expect(canvas.getByRole('link', { name: 'Back to sign in' })).toHaveAttribute(
       'href',
       '/login',
     )
+  },
+}
+
+export const ResetMismatchBlocksAndSaysWhy: Story = {
+  render: () => {
+    const onReset = fn(async () => undefined)
+    return (
+      <ResetPasswordScreen
+        token="tok"
+        policy={FAKE_POLICY}
+        onReset={onReset}
+        signInTo="/login"
+        forgotTo="/forgot-password"
+      />
+    )
+  },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.type(canvas.getByLabelText(/^New password/), 'Correct-horse-battery-9')
+    await userEvent.type(canvas.getByLabelText(/^Confirm password/), 'Correct-horse-battery-8')
+    await expect(await canvas.findByText('Passwords do not match')).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Set the password' }))
+    await expect(
+      await canvas.findByRole('button', { name: 'Passwords do not match' }),
+    ).toBeVisible()
+    await waitFor(() => expect(canvas.getByLabelText(/^Confirm password/)).toHaveFocus())
+    await expect(canvas.queryByRole('heading', { name: 'Password changed' })).toBeNull()
+  },
+}
+
+export const ForgotWithoutAnAddressExplainsItself: Story = {
+  render: () => <ForgotPasswordScreen onSubmit={async () => undefined} signInTo="/login" />,
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole('button', { name: 'Send the link' }))
+    await expect(
+      await canvas.findByRole('button', { name: 'Enter your email address' }),
+    ).toBeVisible()
+    await waitFor(() => expect(canvas.getByLabelText(/Email/)).toHaveFocus())
+    await userEvent.type(canvas.getByLabelText(/Email/), 'not-an-address')
+    await userEvent.click(canvas.getByRole('button', { name: 'Send the link' }))
+    await expect(
+      await canvas.findByRole('button', { name: 'Enter a valid email address' }),
+    ).toBeVisible()
   },
 }
 
@@ -175,6 +218,28 @@ export const SocialLinkNeedsPassword: Story = {
     await userEvent.click(canvas.getByRole('button', { name: 'Link Kakao' }))
     await expect(await canvas.findByText('The current password is not correct.')).toBeVisible()
     await expect(canvas.getByRole('link', { name: 'Cancel' })).toHaveAttribute('href', '/account')
+  },
+}
+
+export const SocialLinkWithoutTheProofExplainsItself: Story = {
+  render: () => (
+    <SocialLinkProofScreen
+      provider="Kakao"
+      kind="password"
+      email="ann@example.com"
+      requestCode={async () => undefined}
+      backTo="/account"
+      onSubmit={async () => undefined}
+    />
+  ),
+  play: async ({ canvas, userEvent }) => {
+    const submit = canvas.getByRole('button', { name: 'Link Kakao' })
+    await expect(submit).toBeEnabled()
+    await userEvent.click(submit)
+    await expect(
+      await canvas.findByRole('button', { name: 'Confirm it is you first (see above)' }),
+    ).toBeVisible()
+    await waitFor(() => expect(canvas.getByLabelText(/^Current password/)).toHaveFocus())
   },
 }
 

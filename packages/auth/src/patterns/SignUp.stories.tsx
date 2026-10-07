@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, waitFor } from 'storybook/test'
+import { koAuthLabels } from '../screens/labels.ko'
 import { SignUpScreen } from '../screens/SignUpScreen'
 import { FAKE_POLICY, apiError } from '../stories/fakeAccountApi'
 import { withRouter } from '../stories/withRouter'
@@ -48,6 +49,7 @@ export const AsksForTheCodeRightAfterSigningUp: Story = {
   play: async ({ canvas, args, userEvent }) => {
     await userEvent.type(canvas.getByLabelText(/Email/), 'new@example.com')
     await userEvent.type(canvas.getByLabelText(/^Password/), 'Correct-horse-battery-9')
+    await userEvent.type(canvas.getByLabelText(/^Confirm password/), 'Correct-horse-battery-9')
     await userEvent.click(canvas.getByRole('button', { name: 'Create account' }))
     await expect(
       await canvas.findByRole('heading', { name: 'Enter the 6-digit code' }),
@@ -77,6 +79,7 @@ export const ConsentAndCaptchaSlots: Story = {
   play: async ({ canvas, args, userEvent }) => {
     await userEvent.type(canvas.getByLabelText(/Email/), 'new@example.com')
     await userEvent.type(canvas.getByLabelText(/^Password/), 'Correct-horse-battery-9')
+    await userEvent.type(canvas.getByLabelText(/^Confirm password/), 'Correct-horse-battery-9')
     // 필수 동의를 안 하면 보내지 않는다
     await userEvent.click(canvas.getByRole('button', { name: 'Create account' }))
     await expect(args.onSignUp).not.toHaveBeenCalled()
@@ -113,9 +116,10 @@ export const ConsentSlotFromTheBackend: Story = {
   play: async ({ canvas, args, userEvent }) => {
     await userEvent.type(canvas.getByLabelText(/Email/), 'new@example.com')
     await userEvent.type(canvas.getByLabelText(/^Password/), 'Correct-horse-battery-9')
+    await userEvent.type(canvas.getByLabelText(/^Confirm password/), 'Correct-horse-battery-9')
     await userEvent.click(canvas.getByRole('button', { name: 'Create account' }))
     await expect(args.onSignUp).not.toHaveBeenCalled() // 슬롯이 아직 「완료」를 알리지 않았다
-    await expect(await canvas.findByRole('alert')).toHaveTextContent('Needs the terms')
+    await expect(await canvas.findByText('Needs the terms')).toBeVisible()
     await userEvent.click(canvas.getByRole('button', { name: 'Agree to the terms' }))
     await userEvent.click(canvas.getByRole('button', { name: 'Create account' }))
     await expect(args.onSignUp).toHaveBeenCalledWith(
@@ -145,6 +149,7 @@ export const ConsentRequiredAsksTheSlotToReload: Story = {
   play: async ({ canvas, userEvent }) => {
     await userEvent.type(canvas.getByLabelText(/Email/), 'new@example.com')
     await userEvent.type(canvas.getByLabelText(/^Password/), 'Correct-horse-battery-9')
+    await userEvent.type(canvas.getByLabelText(/^Confirm password/), 'Correct-horse-battery-9')
     await userEvent.click(canvas.getByRole('button', { name: 'Ready' }))
     await userEvent.click(canvas.getByRole('button', { name: 'Create account' }))
     await expect(await canvas.findByText(/agreements changed/i)).toBeVisible()
@@ -161,9 +166,16 @@ export const ServerRejectsPassword: Story = {
   play: async ({ canvas, userEvent }) => {
     await userEvent.type(canvas.getByLabelText(/Email/), 'new@example.com')
     await userEvent.type(canvas.getByLabelText(/^Password/), 'Correct-horse-battery-9')
+    await userEvent.type(canvas.getByLabelText(/^Confirm password/), 'Correct-horse-battery-9')
     await userEvent.click(canvas.getByRole('button', { name: 'Create account' }))
     // 서버만 아는 규칙(유출 검사)도 체크리스트에 올라온다
-    await expect(await canvas.findByText(/Not in a known data breach/)).toBeVisible()
+    const lines = await canvas.findAllByText(/Not in a known data breach/)
+    await expect(lines.length).toBeGreaterThanOrEqual(1)
+    // 요약에도 같은 이유가 올라오고 비밀번호 칸으로 포커스가 간다
+    await expect(
+      await canvas.findByRole('button', { name: /Not in a known data breach/ }),
+    ).toBeVisible()
+    await waitFor(() => expect(canvas.getByLabelText(/^Password/)).toHaveFocus())
   },
 }
 
@@ -176,6 +188,7 @@ export const SignUpClosed: Story = {
   play: async ({ canvas, userEvent }) => {
     await userEvent.type(canvas.getByLabelText(/Email/), 'new@example.com')
     await userEvent.type(canvas.getByLabelText(/^Password/), 'Correct-horse-battery-9')
+    await userEvent.type(canvas.getByLabelText(/^Confirm password/), 'Correct-horse-battery-9')
     await userEvent.click(canvas.getByRole('button', { name: 'Create account' }))
     await expect(await canvas.findByRole('heading', { name: 'Sign-up is closed' })).toBeVisible()
   },
@@ -197,6 +210,7 @@ async function fillAndSubmit(
 ) {
   await userEvent.type(canvas.getByLabelText(/^Email/), 'ann@example.com')
   await userEvent.type(canvas.getByLabelText(/^Password/), 'Correct-horse-battery-9')
+  await userEvent.type(canvas.getByLabelText(/^Confirm password/), 'Correct-horse-battery-9')
   await userEvent.click(canvas.getByRole('button', { name: /Create account|Sign up/ }))
 }
 
@@ -293,5 +307,167 @@ export const Dark: Story = {
   globals: { theme: 'dark' },
   play: async ({ canvas }) => {
     await expect(canvas.getByRole('form', { name: 'Create your account' })).toBeVisible()
+  },
+}
+
+/** 필수 약관을 안 체크하고 「가입하기」 — 아무 일도 없어 보이면 안 된다(실제로 겪은 문제). 요약 · 포커스 · 표시가 모두 뜨고, 체크하면 바로 사라진다 */
+export const SubmitWithoutTheRequiredConsentExplainsItself: Story = {
+  args: {
+    consents: [
+      { id: 'terms', version: '2.0', label: 'I accept the Terms of Service', required: true },
+      { id: 'marketing', version: '1.0', label: 'Send me product news' },
+    ],
+  },
+  play: async ({ canvas, args, userEvent }) => {
+    await userEvent.type(canvas.getByLabelText(/Email/), 'new@example.com')
+    await userEvent.type(canvas.getByLabelText(/^Password/), 'Correct-horse-battery-9')
+    await userEvent.type(canvas.getByLabelText(/^Confirm password/), 'Correct-horse-battery-9')
+    const submit = canvas.getByRole('button', { name: 'Create account' })
+    await expect(submit).toBeEnabled() // 꺼진 버튼은 이유를 말하지 못한다
+    await userEvent.click(submit)
+    await expect(args.onSignUp).not.toHaveBeenCalled()
+    // ① 버튼 바로 위 요약
+    const summary = await canvas.findByRole('button', { name: 'Agree to the required terms' })
+    await expect(summary.closest('[role="alert"]')).toHaveTextContent('Please check the following')
+    await expect(
+      summary.compareDocumentPosition(submit) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    // ② 틀린 칸으로 포커스 ③ 틀린 칸 표시
+    const terms = canvas.getByRole('checkbox', { name: /Terms of Service/ })
+    await waitFor(() => expect(terms).toHaveFocus())
+    await expect(terms).toHaveAttribute('aria-invalid', 'true')
+    await expect(canvas.getByRole('checkbox', { name: /product news/ })).not.toHaveAttribute(
+      'aria-invalid',
+    )
+    // ④ 요약의 줄은 그 칸으로 데려간다
+    await userEvent.click(canvas.getByLabelText(/^Password/))
+    await userEvent.click(summary)
+    await waitFor(() => expect(terms).toHaveFocus())
+    // ⑤ 체크하면 바로 사라지고 제출된다
+    await userEvent.click(terms)
+    await waitFor(() => expect(canvas.queryByText('Please check the following')).toBeNull())
+    await expect(terms).not.toHaveAttribute('aria-invalid')
+    await userEvent.click(submit)
+    await waitFor(() => expect(args.onSignUp).toHaveBeenCalledTimes(1))
+  },
+}
+
+export const EmptyFormListsEverythingThatIsMissing: Story = {
+  args: { consents: [{ id: 'terms', version: '2.0', label: 'Terms', required: true }] },
+  play: async ({ canvas, args, userEvent }) => {
+    await userEvent.click(canvas.getByRole('button', { name: 'Create account' }))
+    await expect(args.onSignUp).not.toHaveBeenCalled()
+    for (const name of [
+      'Enter your email address',
+      'Enter your password',
+      'Agree to the required terms',
+    ])
+      await expect(await canvas.findByRole('button', { name })).toBeVisible()
+    await waitFor(() => expect(canvas.getByLabelText(/Email/)).toHaveFocus()) // 첫 틀린 칸
+    await expect(canvas.getByLabelText(/Email/)).toHaveAttribute('aria-invalid', 'true')
+    // 이메일을 채우면 그 줄만 사라진다
+    await userEvent.type(canvas.getByLabelText(/Email/), 'new@example.com')
+    await waitFor(() =>
+      expect(canvas.queryByRole('button', { name: 'Enter your email address' })).toBeNull(),
+    )
+    await expect(canvas.getByRole('button', { name: 'Enter your password' })).toBeVisible()
+  },
+}
+
+export const ConfirmShowsMismatchLiveAndBlocksSubmit: Story = {
+  play: async ({ canvas, args, userEvent }) => {
+    await userEvent.type(canvas.getByLabelText(/Email/), 'new@example.com')
+    await userEvent.type(canvas.getByLabelText(/^Password/), 'Correct-horse-battery-9')
+    const confirm = canvas.getByLabelText(/^Confirm password/)
+    // 건드리기 전에는 조용하다
+    await expect(canvas.queryByText('Passwords do not match')).toBeNull()
+    await userEvent.type(confirm, 'Correct-horse-battery-')
+    await expect(await canvas.findByText('Passwords do not match')).toBeVisible()
+    await expect(confirm).toHaveAttribute('aria-invalid', 'true')
+    // 제출은 막히고 요약이 이유를 말한다
+    await userEvent.click(canvas.getByRole('button', { name: 'Create account' }))
+    await expect(args.onSignUp).not.toHaveBeenCalled()
+    await expect(
+      await canvas.findByRole('button', { name: 'Passwords do not match' }),
+    ).toBeVisible()
+    await waitFor(() => expect(confirm).toHaveFocus())
+    // 맞게 고치면 일치 표시, 오류 · 요약은 사라진다
+    await userEvent.type(confirm, '9')
+    await expect(await canvas.findByText('Passwords match')).toBeVisible()
+    await expect(canvas.queryByText('Passwords do not match')).toBeNull()
+    // 비밀번호를 바꾸면 곧바로 다시 어긋난다
+    await userEvent.type(canvas.getByLabelText(/^Password/), 'x')
+    await expect((await canvas.findAllByText('Passwords do not match')).length).toBeGreaterThan(0)
+  },
+}
+
+export const ConfirmFieldBehavesLikeAPasswordField: Story = {
+  play: async ({ canvas, userEvent }) => {
+    const password = canvas.getByLabelText(/^Password/)
+    const confirm = canvas.getByLabelText(/^Confirm password/)
+    await expect(password).toHaveAttribute('autocomplete', 'new-password')
+    await expect(confirm).toHaveAttribute('autocomplete', 'new-password')
+    await expect(confirm).toHaveAttribute('type', 'password')
+    // 붙여넣기를 막지 않는다
+    await userEvent.click(confirm)
+    await userEvent.paste('Pasted-secret-1')
+    await expect(confirm).toHaveValue('Pasted-secret-1')
+    // 「보기」 하나가 두 칸을 함께 보인다
+    await userEvent.type(password, 'abc')
+    await userEvent.click(canvas.getByRole('button', { name: 'Show' }))
+    await expect(password).toHaveAttribute('type', 'text')
+    await expect(confirm).toHaveAttribute('type', 'text')
+    await userEvent.click(canvas.getByRole('button', { name: 'Hide' }))
+    await expect(confirm).toHaveAttribute('type', 'password')
+  },
+}
+
+export const ConfirmValueIsNeverSentAndBothAreClearedAfterwards: Story = {
+  args: {
+    onSignUp: fn(async () => ({ status: 'VERIFICATION_SENT' as const, signUpId: 'sid-1' })),
+  },
+  play: async ({ canvas, args, userEvent }) => {
+    await userEvent.type(canvas.getByLabelText(/Email/), 'new@example.com')
+    await userEvent.type(canvas.getByLabelText(/^Password/), 'Correct-horse-battery-9')
+    await userEvent.type(canvas.getByLabelText(/^Confirm password/), 'Correct-horse-battery-9')
+    await userEvent.click(canvas.getByRole('button', { name: 'Create account' }))
+    await waitFor(() => expect(args.onSignUp).toHaveBeenCalledTimes(1))
+    const sent = (args.onSignUp as ReturnType<typeof fn>).mock.calls[0][0] as Record<
+      string,
+      unknown
+    >
+    await expect(Object.keys(sent).sort()).toEqual(['consents', 'email', 'password'])
+    // 코드 단계에서 「처음부터」 로 돌아오면 두 칸 모두 비어 있다
+    await userEvent.click(await canvas.findByRole('button', { name: 'Wrong address? Start over' }))
+    await expect(await canvas.findByLabelText(/^Password/)).toHaveValue('')
+    await expect(canvas.getByLabelText(/^Confirm password/)).toHaveValue('')
+  },
+}
+
+export const ConfirmCanBeTurnedOff: Story = {
+  args: { confirmPassword: false },
+  play: async ({ canvas, args, userEvent }) => {
+    await expect(canvas.queryByLabelText(/Confirm password/)).toBeNull()
+    await userEvent.type(canvas.getByLabelText(/Email/), 'new@example.com')
+    await userEvent.type(canvas.getByLabelText(/^Password/), 'Correct-horse-battery-9')
+    await userEvent.click(canvas.getByRole('button', { name: 'Create account' }))
+    await waitFor(() => expect(args.onSignUp).toHaveBeenCalledTimes(1))
+  },
+}
+
+export const KoreanLabels: Story = {
+  args: {
+    labels: koAuthLabels,
+    consents: [{ id: 'terms', version: '2.0', label: '이용약관에 동의', required: true }],
+  },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.type(canvas.getByLabelText(/^비밀번호\s*\*?$/), 'Correct-horse-battery-9')
+    await userEvent.type(canvas.getByLabelText(/^비밀번호 확인/), 'Correct-horse-battery-8')
+    await expect(await canvas.findByText('비밀번호가 일치하지 않아요')).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: '가입하기' }))
+    await expect(
+      await canvas.findByRole('button', { name: '필수 약관에 동의해 주세요' }),
+    ).toBeVisible()
+    await expect(canvas.getByText('아래 항목을 확인해 주세요')).toBeVisible()
   },
 }

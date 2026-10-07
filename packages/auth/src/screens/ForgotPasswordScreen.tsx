@@ -1,5 +1,5 @@
-import { Alert, Button, Field, Input } from '@skeleton/ui'
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { Alert, Button, Field, FormProblems, Input, useSubmitAttempt } from '@skeleton/ui'
+import { useId, useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { AuthLayout } from './AuthLayout'
 import { CheckEmailPanel } from './CheckEmailPanel'
@@ -32,9 +32,17 @@ export function ForgotPasswordScreen({
   const [failure, setFailure] = useState<AuthErrorInfo | null>(null)
   const [captcha, setCaptcha] = useState<string | null>(null)
   const wait = useCountdown()
+  const emailId = `${useId()}-email`
+  const attempt = useSubmitAttempt()
+  const emailProblem = !email.trim()
+    ? labels.problemEmailMissing
+    : !/^[^\s@]+@[^\s@]+$/.test(email.trim())
+      ? labels.problemEmailInvalid
+      : undefined
 
   async function submit(event: FormEvent) {
     event.preventDefault()
+    if (emailProblem) return attempt.fail(emailId)
     setBusy(true)
     setFailure(null)
     try {
@@ -71,9 +79,14 @@ export function ForgotPasswordScreen({
     )
   return (
     <AuthLayout title={labels.forgotTitle} subtitle={labels.forgotSubtitle} footer={back}>
-      <form className={styles.form} onSubmit={submit} aria-label={labels.forgotTitle}>
+      <form className={styles.form} onSubmit={submit} aria-label={labels.forgotTitle} noValidate>
         {failure && <Alert tone="danger">{failure.message}</Alert>}
-        <Field label={labels.email} required>
+        <Field
+          id={emailId}
+          label={labels.email}
+          required
+          error={attempt.attempted ? emailProblem : undefined}
+        >
           {(control) => (
             <Input
               {...control}
@@ -85,6 +98,14 @@ export function ForgotPasswordScreen({
           )}
         </Field>
         {renderCaptcha?.({ onToken: setCaptcha })}
+        <FormProblems
+          title={labels.formProblemsTitle}
+          problems={
+            attempt.attempted && emailProblem
+              ? [{ key: 'email', message: emailProblem, target: emailId }]
+              : []
+          }
+        />
         <Button
           type="submit"
           loading={busy}

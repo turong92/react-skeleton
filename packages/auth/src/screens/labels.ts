@@ -64,6 +64,19 @@ export type AuthLabels = {
   requirementUnmet: string
   show: string
   hide: string
+  /** 비밀번호 확인 칸의 라벨(가입 · 재설정 · 변경 · 첫 설정) */
+  passwordConfirm: string
+  passwordMismatch: string
+  passwordConfirmMissing: string
+  passwordMatches: string
+  /** 제출이 막혔을 때 버튼 위 오류 요약(`role="alert"`)의 머리글과 줄 */
+  formProblemsTitle: string
+  problemEmailMissing: string
+  problemEmailInvalid: string
+  problemPasswordMissing: string
+  problemPasswordRules: string
+  problemConsentMissing: string
+  problemProofMissing: string
   // 로그인
   signInTitle: string
   signInSubtitle: string
@@ -332,6 +345,17 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   requirementUnmet: 'not met yet',
   show: 'Show',
   hide: 'Hide',
+  passwordConfirm: 'Confirm password',
+  passwordMismatch: 'Passwords do not match',
+  passwordConfirmMissing: 'Enter the password again to confirm it',
+  passwordMatches: 'Passwords match',
+  formProblemsTitle: 'Please check the following',
+  problemEmailMissing: 'Enter your email address',
+  problemEmailInvalid: 'Enter a valid email address',
+  problemPasswordMissing: 'Enter your password',
+  problemPasswordRules: 'Meet all the password rules',
+  problemConsentMissing: 'Agree to the required terms',
+  problemProofMissing: 'Confirm it is you first (see above)',
   signInTitle: 'Sign in',
   signInSubtitle: 'Welcome back.',
   signInSubmit: 'Sign in',

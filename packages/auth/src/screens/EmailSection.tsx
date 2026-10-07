@@ -1,5 +1,15 @@
-import { Alert, Badge, Button, Field, Input, SectionCard } from '@skeleton/ui'
-import { useState, type FormEvent } from 'react'
+import {
+  Alert,
+  Badge,
+  Button,
+  Field,
+  FormProblems,
+  Input,
+  SectionCard,
+  useSubmitAttempt,
+  type FormProblem,
+} from '@skeleton/ui'
+import { useId, useState, type FormEvent } from 'react'
 import type { ReauthCredential } from '../account/accountApi'
 import { reauthKindOf, isReauthFailure, type ReauthSubject } from '../reauth/kind'
 import { ReauthProof } from './ReauthProof'
@@ -65,10 +75,15 @@ export function EmailSection({
   const action = useAction(labels)
   const waiting = local ?? pendingEmail ?? null
   const showCode = !!waiting && !editing
+  const uid = useId()
+  const ids = { email: `${uid}-email`, proof: `${uid}-proof` }
+  const attempt = useSubmitAttempt()
 
   async function submit(event: FormEvent) {
     event.preventDefault()
     if (kind === 'provider') return
+    // 버튼은 늘 눌린다 — 새 주소가 비었거나 본인 확인이 모자라면 이유를 말하고 그 칸으로 간다
+    if (problems.length > 0) return attempt.fail(problems[0].target)
     const ok = await action.run(async () => {
       await onChangeEmail({ newEmail, ...proof })
     })
@@ -78,10 +93,22 @@ export function EmailSection({
       setProof(null)
       setEditing(false)
       setChanged(false)
+      attempt.reset()
     }
   }
 
   const proofReady = kind === 'password' || kind === 'code' ? proof !== null : true
+  const newEmailProblem = !newEmail.trim()
+    ? labels.problemEmailMissing
+    : !/^[^\s@]+@[^\s@]+$/.test(newEmail.trim())
+      ? labels.problemEmailInvalid
+      : undefined
+  const problems: FormProblem[] = [
+    ...(newEmailProblem ? [{ key: 'email', message: newEmailProblem, target: ids.email }] : []),
+    ...(proofReady
+      ? []
+      : [{ key: 'proof', message: labels.problemProofMissing, target: ids.proof }]),
+  ]
   return (
     <SectionCard id="email" title={labels.sectionEmail}>
       <div className={styles.stack}>
@@ -138,11 +165,21 @@ export function EmailSection({
             </div>
           </div>
         ) : (
-          <form className={styles.form} onSubmit={submit} aria-label={labels.emailChangeSubmit}>
+          <form
+            className={styles.form}
+            onSubmit={submit}
+            aria-label={labels.emailChangeSubmit}
+            noValidate
+          >
             {action.error && !isReauthFailure(action.raw) && (
               <Alert tone="danger">{action.error.message}</Alert>
             )}
-            <Field label={labels.emailNew} required>
+            <Field
+              id={ids.email}
+              label={labels.emailNew}
+              required
+              error={attempt.attempted ? newEmailProblem : undefined}
+            >
               {(control) => (
                 <Input
                   {...control}
@@ -153,29 +190,32 @@ export function EmailSection({
                 />
               )}
             </Field>
-            <ReauthProof
-              kind={kind}
-              email={subject.email}
-              providers={subject.providers}
-              requestCode={requestReauthCode}
-              onChange={setProof}
-              failure={isReauthFailure(action.raw) ? action.raw : undefined}
-              onProvider={
-                onProviderReauth && newEmail.trim()
-                  ? (provider) => onProviderReauth(provider, newEmail.trim())
-                  : undefined
-              }
-              confirmedWith={resume?.provider}
-              labels={given}
-            />
+            <div id={ids.proof}>
+              <ReauthProof
+                kind={kind}
+                email={subject.email}
+                providers={subject.providers}
+                requestCode={requestReauthCode}
+                onChange={setProof}
+                failure={isReauthFailure(action.raw) ? action.raw : undefined}
+                onProvider={
+                  onProviderReauth && newEmail.trim()
+                    ? (provider) => onProviderReauth(provider, newEmail.trim())
+                    : undefined
+                }
+                confirmedWith={resume?.provider}
+                labels={given}
+              />
+            </div>
+            {kind !== 'provider' && (
+              <FormProblems
+                title={labels.formProblemsTitle}
+                problems={attempt.attempted ? problems : []}
+              />
+            )}
             {kind !== 'provider' && (
               <div className={styles.row}>
-                <Button
-                  type="submit"
-                  disabled={!proofReady}
-                  loading={action.busy}
-                  loadingLabel={labels.submitting}
-                >
+                <Button type="submit" loading={action.busy} loadingLabel={labels.submitting}>
                   {email ? labels.emailChangeSubmit : labels.emailAddSubmit}
                 </Button>
                 {editing && (

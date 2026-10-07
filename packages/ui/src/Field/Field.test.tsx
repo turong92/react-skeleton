@@ -8,6 +8,16 @@ function idOf(html: string, tag: string) {
 }
 
 describe('Field', () => {
+  it('uses the id the caller gives, so an error summary can point at the control', () => {
+    const html = renderToStaticMarkup(
+      <Field label="Email" id="signup-email">
+        {(control) => <Input {...control} />}
+      </Field>,
+    )
+    expect(html).toContain('<label for="signup-email"')
+    expect(html).toContain('id="signup-email"')
+  })
+
   it('ties the label to the control through a generated id', () => {
     const html = renderToStaticMarkup(
       <Field label="Email">{(control) => <Input {...control} />}</Field>,

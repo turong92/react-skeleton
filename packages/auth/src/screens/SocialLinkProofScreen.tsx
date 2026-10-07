@@ -1,5 +1,5 @@
-import { Alert, Button } from '@skeleton/ui'
-import { useState, type FormEvent } from 'react'
+import { Alert, Button, FormProblems, useSubmitAttempt } from '@skeleton/ui'
+import { useId, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import type { ReauthCredential } from '../account/accountApi'
 import { isReauthFailure, type ReauthKind } from '../reauth/kind'
@@ -43,37 +43,47 @@ export function SocialLinkProofScreen({
   const labels = mergeLabels(given)
   const [proof, setProof] = useState<ReauthCredential | null>(null)
   const action = useAction(labels)
+  const proofId = `${useId()}-proof`
+  const attempt = useSubmitAttempt()
 
   async function submit(event: FormEvent) {
     event.preventDefault()
-    if (proof) await action.run(() => onSubmit(proof))
+    if (!proof) return attempt.fail(proofId) // 버튼은 늘 눌린다 — 본인 확인이 모자라면 이유를 말한다
+    await action.run(() => onSubmit(proof))
   }
 
   return (
     <AuthLayout title={labels.reauthTitle}>
-      <form className={styles.form} onSubmit={submit} aria-label={labels.reauthTitle}>
+      <form className={styles.form} onSubmit={submit} aria-label={labels.reauthTitle} noValidate>
         <p className={styles.muted}>{labels.linkReauthHint(provider)}</p>
         {action.error && !isReauthFailure(action.raw) && (
           <Alert tone="danger">{action.error.message}</Alert>
         )}
-        <ReauthProof
-          kind={kind}
-          email={email}
-          providers={reauthProviders}
-          requestCode={requestCode}
-          onChange={setProof}
-          failure={isReauthFailure(action.raw) ? action.raw : undefined}
-          onProvider={onProvider}
-          labels={given}
-        />
+        <div id={proofId}>
+          <ReauthProof
+            kind={kind}
+            email={email}
+            providers={reauthProviders}
+            requestCode={requestCode}
+            onChange={setProof}
+            failure={isReauthFailure(action.raw) ? action.raw : undefined}
+            onProvider={onProvider}
+            labels={given}
+          />
+        </div>
+        {kind !== 'provider' && (
+          <FormProblems
+            title={labels.formProblemsTitle}
+            problems={
+              attempt.attempted && proof === null
+                ? [{ key: 'proof', message: labels.problemProofMissing, target: proofId }]
+                : []
+            }
+          />
+        )}
         <div className={styles.row}>
           {kind !== 'provider' && (
-            <Button
-              type="submit"
-              disabled={proof === null}
-              loading={action.busy}
-              loadingLabel={labels.submitting}
-            >
+            <Button type="submit" loading={action.busy} loadingLabel={labels.submitting}>
               {labels.methodLink(provider)}
             </Button>
           )}

@@ -43,6 +43,7 @@ export function ConsentChecklist({
         <Checkbox
           className={styles.all}
           label={labels.agreeAll}
+          description={labels.agreeAllHint}
           checked={all}
           indeterminate={some}
           disabled={disabled}
@@ -54,7 +55,7 @@ export function ConsentChecklist({
           const required = row.kind === 'required'
           const missing = showError && required && !checked[row.type]
           return (
-            <li key={row.type} className={styles.row}>
+            <li key={row.type} className={styles.row} data-invalid={missing || undefined}>
               <Checkbox
                 label={
                   <>

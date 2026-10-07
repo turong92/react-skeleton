@@ -24,11 +24,20 @@
   gap: var(--space-sm);
 }
 
+.row[data-invalid] {
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--red);
+  border-radius: var(--radius-md);
+  background: var(--red-soft);
+}
+
 .tag {
   color: var(--text-muted);
   font-size: var(--font-size-small);
 }
 
+/* 필수는 한눈에 — 굵게. 선택은 흐리게. 색만이 아니라 글자(「필수」 · 「선택」)가 말한다 */
 .tagRequired {
-  color: var(--text);
+  color: var(--text-strong);
+  font-weight: 700;
 }

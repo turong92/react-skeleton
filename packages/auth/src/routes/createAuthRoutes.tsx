@@ -107,6 +107,8 @@ export type AuthRoutesOptions = {
   /** 소셜 계정 연결 흐름(`createSocialLinkFlow`) */
   socialLinkFlow?: SocialLinkFlow
   labels?: Partial<AuthLabels>
+  /** 새 비밀번호를 한 번 더 입력받는다(가입 · 재설정 · 변경 · 첫 설정, 기본 true) — 끄면 비밀번호 칸 하나. 가입만 따로 바꾸려면 `signUp: { confirmPassword }` */
+  confirmPassword?: boolean
   /** 화면 언어에 따라 문구가 바뀌는 앱: 렌더 때 부르는 훅(보통 `useT()` 로 고른 사전). 있으면 `labels` 보다 먼저 */
   useLabels?: () => Partial<AuthLabels> | undefined
   paths?: Partial<AuthPaths>
@@ -148,6 +150,7 @@ export function createAuthRoutes(options: AuthRoutesOptions): RouteObject[] {
     authApi: options.authApi as AuthApi,
     accountApi: options.accountApi as AccountApi,
     labels: options.labels,
+    confirmPassword: options.confirmPassword,
     paths,
     afterSignIn: options.afterSignIn ?? '/',
     methods: options.methods,

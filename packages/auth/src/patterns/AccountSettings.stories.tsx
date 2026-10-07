@@ -59,6 +59,7 @@ export const ChangePassword: Story = {
     const section = within(await canvas.findByRole('region', { name: 'Password' }))
     await userEvent.type(section.getByLabelText(/^Current password/), 'wrong-old-1')
     await userEvent.type(section.getByLabelText(/^New password/), 'Correct-horse-battery-9')
+    await userEvent.type(section.getByLabelText(/^Confirm password/), 'Correct-horse-battery-9')
     await userEvent.click(section.getByRole('button', { name: 'Change password' }))
     await expect(await section.findByText('The current password is not correct.')).toBeVisible()
     await userEvent.clear(section.getByLabelText(/^Current password/))
@@ -69,6 +70,78 @@ export const ChangePassword: Story = {
 }
 
 /** 비밀번호 계정: 새 주소 + 현재 비밀번호 → 새 주소로 간 6자리를 같은 자리에서 입력 → 바뀐다(다른 기기는 로그아웃) */
+export const ChangePasswordMismatchBlocksAndSaysWhy: Story = {
+  play: async ({ canvas, userEvent }) => {
+    const section = within(await canvas.findByRole('region', { name: 'Password' }))
+    await userEvent.type(section.getByLabelText(/^Current password/), 'old-password-1')
+    await userEvent.type(section.getByLabelText(/^New password/), 'Correct-horse-battery-9')
+    const confirm = section.getByLabelText(/^Confirm password/)
+    await expect(confirm).toHaveAttribute('autocomplete', 'new-password')
+    await userEvent.type(confirm, 'Correct-horse-battery-8')
+    await expect(await section.findByText('Passwords do not match')).toBeVisible()
+    await userEvent.click(section.getByRole('button', { name: 'Change password' }))
+    await expect(
+      await section.findByRole('button', { name: 'Passwords do not match' }),
+    ).toBeVisible()
+    await waitFor(() => expect(confirm).toHaveFocus())
+    await expect(section.queryByText(/Password changed/)).toBeNull() // 서버로 가지 않았다
+    // 보기 하나가 새 비밀번호 두 칸을 함께 보인다
+    // (현재 비밀번호 칸의 토글이 먼저 있다 — 새 비밀번호 칸의 것은 마지막)
+    await userEvent.click(section.getAllByRole('button', { name: 'Show' }).at(-1)!)
+    await expect(confirm).toHaveAttribute('type', 'text')
+    await expect(section.getByLabelText(/^New password/)).toHaveAttribute('type', 'text')
+    // 맞게 고치면 바뀌고 두 칸이 함께 비워진다
+    await userEvent.clear(confirm)
+    await userEvent.type(confirm, 'Correct-horse-battery-9')
+    await userEvent.click(section.getByRole('button', { name: 'Change password' }))
+    await expect(await section.findByText(/Password changed/)).toBeVisible()
+    await expect(section.getByLabelText(/^New password/)).toHaveValue('')
+    await expect(section.getByLabelText(/^Confirm password/)).toHaveValue('')
+  },
+}
+
+/** 현재 비밀번호 없이 「비밀번호 변경」 — 꺼진 버튼이 아니라 이유를 말하고 그 칸으로 데려간다 */
+export const ChangePasswordWithoutTheProofExplainsItself: Story = {
+  play: async ({ canvas, userEvent }) => {
+    const section = within(await canvas.findByRole('region', { name: 'Password' }))
+    const submit = section.getByRole('button', { name: 'Change password' })
+    await expect(submit).toBeEnabled()
+    await userEvent.click(submit)
+    await expect(
+      await section.findByRole('button', { name: 'Confirm it is you first (see above)' }),
+    ).toBeVisible()
+    await expect(section.getByRole('button', { name: 'Enter your password' })).toBeVisible()
+    await waitFor(() => expect(section.getByLabelText(/^Current password/)).toHaveFocus())
+  },
+}
+
+export const ChangeEmailWithoutAddressOrProofExplainsItself: Story = {
+  play: async ({ canvas, userEvent }) => {
+    const section = within(await canvas.findByRole('region', { name: 'Email address' }))
+    await userEvent.click(section.getByRole('button', { name: 'Change email' }))
+    await expect(
+      await section.findByRole('button', { name: 'Enter your email address' }),
+    ).toBeVisible()
+    await expect(
+      section.getByRole('button', { name: 'Confirm it is you first (see above)' }),
+    ).toBeVisible()
+    await waitFor(() => expect(section.getByLabelText(/^New email/)).toHaveFocus())
+    await expect(section.getByLabelText(/^New email/)).toHaveAttribute('aria-invalid', 'true')
+  },
+}
+
+export const DeleteBeforeTheProofExplainsItself: Story = {
+  play: async ({ canvas, userEvent }) => {
+    const section = within(await canvas.findByRole('region', { name: 'Delete account' }))
+    await userEvent.click(section.getByRole('button', { name: 'Delete my account' }))
+    await expect(
+      await section.findByRole('button', { name: 'Confirm it is you first (see above)' }),
+    ).toBeVisible()
+    await waitFor(() => expect(section.getByLabelText(/^Current password/)).toHaveFocus())
+    await expect(canvas.queryByRole('dialog')).toBeNull() // 확인 창은 아직
+  },
+}
+
 export const ChangeEmailWithCode: Story = {
   play: async ({ canvas, userEvent }) => {
     const section = within(await canvas.findByRole('region', { name: 'Email address' }))
@@ -157,6 +230,7 @@ export const PasswordlessFirstPasswordByCode: Story = {
     await userEvent.click(await section.findByLabelText('Digit 1 of 6'))
     await userEvent.paste(FAKE_CODE)
     await userEvent.type(section.getByLabelText(/^New password/), 'Correct-horse-battery-9')
+    await userEvent.type(section.getByLabelText(/^Confirm password/), 'Correct-horse-battery-9')
     await userEvent.click(section.getByRole('button', { name: 'Change password' }))
     await expect(await section.findByText(/Password changed/)).toBeVisible()
   },
@@ -347,7 +421,8 @@ export const DeletePasswordlessByCode: Story = {
   play: async ({ canvas, userEvent }) => {
     const section = within(await canvas.findByRole('region', { name: 'Delete account' }))
     await expect(section.queryByLabelText(/^Current password/)).toBeNull()
-    await expect(section.getByRole('button', { name: 'Delete my account' })).toBeDisabled()
+    // 꺼져 있지 않다 — 본인 확인 전에 누르면 이유를 말한다
+    await expect(section.getByRole('button', { name: 'Delete my account' })).toBeEnabled()
     await userEvent.click(section.getByRole('button', { name: 'Email me a code' }))
     await userEvent.click(await section.findByLabelText('Digit 1 of 6'))
     await userEvent.paste(FAKE_CODE)

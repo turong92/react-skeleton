@@ -1,7 +1,8 @@
 import { Button, Switch } from '@skeleton/ui'
-import { useId, useState, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import type { ConsentStore } from './consentStore'
 import styles from './ConsentBanner.module.css'
+import { reserveBottomSpace } from './reserveSpace'
 import { useConsent } from './useConsent'
 
 export type ConsentCategoryInfo = {
@@ -39,6 +40,11 @@ export type ConsentBannerProps = {
   labels?: Partial<ConsentBannerLabels>
   /** 개인정보 처리방침 링크 */
   policyLink?: ReactNode
+  /**
+   * 배너가 떠 있는 동안 페이지 아래를 배너 높이만큼 비워 둔다(기본 true) — 맨 끝까지 스크롤하면 폼 · 오류 문구 · 제출 버튼이 모두 배너 위에 오고,
+   * `focus` · `scrollIntoView` 도 배너 밑으로 숨지 않는다(`html` 의 `scroll-padding-bottom`). 끄면 배너는 그대로 위에 겹친다.
+   */
+  reserveSpace?: boolean
 }
 
 /**
@@ -51,17 +57,40 @@ export function ConsentBanner({
   categories,
   labels: given,
   policyLink,
+  reserveSpace = true,
 }: ConsentBannerProps) {
   const labels = { ...DEFAULT_LABELS, ...given }
   const state = useConsent(store)
   const titleId = useId()
   const [choosing, setChoosing] = useState(false)
   const [draft, setDraft] = useState<Record<string, boolean>>({})
+  const ref = useRef<HTMLElement>(null)
+  const shown = state.status === 'undecided'
+  useEffect(() => {
+    const banner = ref.current
+    if (!shown || !reserveSpace || !banner) return
+    // 배너 높이 + 화면 아래에서 띄운 간격(`bottom`)
+    const height = () =>
+      Math.ceil(
+        banner.getBoundingClientRect().height + (parseFloat(getComputedStyle(banner).bottom) || 0),
+      )
+    const space = reserveBottomSpace(
+      { body: document.body, root: document.documentElement },
+      height(),
+    )
+    const watcher =
+      typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(() => space.set(height()))
+    watcher?.observe(banner)
+    return () => {
+      watcher?.disconnect()
+      space.release()
+    }
+  }, [shown, reserveSpace])
   if (state.status !== 'undecided') return null
   const on = (category: ConsentCategoryInfo) => category.required || (draft[category.id] ?? false)
 
   return (
-    <section className={styles.banner} role="region" aria-labelledby={titleId}>
+    <section ref={ref} className={styles.banner} role="region" aria-labelledby={titleId}>
       <div className={styles.text}>
         <h2 id={titleId} className={styles.title}>
           {labels.title}

@@ -1,8 +1,17 @@
 import { ApiRequestError, ErrorCodes } from '@skeleton/api-client'
-import { Alert, Button, Checkbox, Field, Input } from '@skeleton/ui'
-import { useMemo, useState, type FormEvent, type ReactNode } from 'react'
+import {
+  Alert,
+  Button,
+  Checkbox,
+  Field,
+  FormProblems,
+  Input,
+  useSubmitAttempt,
+  type FormProblem,
+} from '@skeleton/ui'
+import { useId, useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { passwordRequirements, violationsOf } from '../account/passwordRules'
+import { violationsOf } from '../account/passwordRules'
 import type {
   PasswordPolicy,
   PasswordViolation,
@@ -11,13 +20,15 @@ import type {
 } from '../account/types'
 import { AuthLayout } from './AuthLayout'
 import { VerifyCodePanel } from './VerifyCodePanel'
-import { PasswordField } from './PasswordField'
+import { NewPasswordFields } from './NewPasswordFields'
 import { PasswordHints } from './PasswordHints'
 import { SocialButtons } from './SocialButtons'
 import styles from './auth.module.css'
 import { authErrorMessage, type AuthErrorInfo } from './errors'
 import { mergeLabels, type AuthLabels } from './labels'
 import { resolveMethods, type SignInMethodsConfig } from './methods'
+import { usePasswordConfirm } from './passwordConfirm'
+import { passwordProblems } from './passwordProblems'
 import { useCountdown } from './useCountdown'
 
 /** 동의 항목 하나 — 약관 · 방침의 판(version)을 함께 넘긴다. 백엔드 동의 모듈은 아직 없어 화면은 체크한 판을 콜백으로 보고만 한다 */
@@ -77,6 +88,8 @@ export type SignUpScreenProps = {
   onConsentsChange?: (accepted: AcceptedConsent[]) => void
   /** 표시 이름을 묻는다(기본 안 묻는다 — 가입은 짧을수록 좋다) */
   askDisplayName?: boolean
+  /** 비밀번호를 한 번 더 입력받는다(기본 true) — 다르면 제출하지 않는다. 확인 값은 서버로 보내지 않는다 */
+  confirmPassword?: boolean
   signInTo?: string
   /** 가입 요청에 실어 보낼 로케일 · 시간대 */
   locale?: string
@@ -100,6 +113,7 @@ export function SignUpScreen({
   renderConsents,
   onConsentsChange,
   askDisplayName = false,
+  confirmPassword = true,
   signInTo,
   locale,
   timeZone,
@@ -111,16 +125,33 @@ export function SignUpScreen({
   const [displayName, setDisplayName] = useState('')
   const [captchaToken, setCaptchaToken] = useState<string | null>(null)
   const [checked, setChecked] = useState<Record<string, boolean>>({})
-  const [consentError, setConsentError] = useState(false)
   const [slotAccepted, setSlotAccepted] = useState<AcceptedConsent[]>([])
   const [slotComplete, setSlotComplete] = useState(!renderConsents)
   const [consentRefresh, setConsentRefresh] = useState(0)
+  const uid = useId()
+  const ids = {
+    email: `${uid}-email`,
+    password: `${uid}-password`,
+    confirm: `${uid}-confirm`,
+    consents: `${uid}-consents`,
+  }
+  const attempt = useSubmitAttempt()
+  const confirm = usePasswordConfirm({
+    enabled: confirmPassword,
+    password,
+    attempted: attempt.attempted,
+    labels,
+  })
+  const consentsMissing = renderConsents
+    ? !slotComplete
+    : consents.some((c) => c.required && !checked[c.id])
+  // 제출을 시도한 뒤에는 이 값이 곧바로 따라 바뀐다 — 모자란 동의를 체크하면 오류가 바로 사라진다
+  const consentError = attempt.attempted && consentsMissing
   const slotApi = useMemo<ConsentSlotApi>(
     () => ({
       onChange: (accepted, complete) => {
         setSlotAccepted(accepted)
         setSlotComplete(complete)
-        if (complete) setConsentError(false)
       },
       showError: consentError,
       refreshKey: consentRefresh,
@@ -137,24 +168,41 @@ export function SignUpScreen({
   function toggleConsent(item: ConsentItem, value: boolean) {
     const next = { ...checked, [item.id]: value }
     setChecked(next)
-    setConsentError(false)
     onConsentsChange?.(
       consents.filter((c) => next[c.id]).map(({ id, version }) => ({ id, version })),
     )
   }
+
+  const emailProblem = !email.trim()
+    ? labels.problemEmailMissing
+    : !/^[^\s@]+@[^\s@]+$/.test(email.trim())
+      ? labels.problemEmailInvalid
+      : undefined
+  const passwordCheck = passwordProblems({ labels, password, email, policy, confirm, ids })
+  const passwordProblem = passwordCheck.passwordError
+  const problems: FormProblem[] = [
+    ...(emailProblem ? [{ key: 'email', message: emailProblem, target: ids.email }] : []),
+    ...passwordCheck.problems.filter((p) => p.key === 'password'),
+    ...serverViolations.map((code) => ({
+      key: `violation-${code}`,
+      message: labels.passwordRule[code],
+      target: ids.password,
+    })),
+    ...passwordCheck.problems.filter((p) => p.key === 'confirm'),
+    ...(consentsMissing
+      ? [{ key: 'consents', message: labels.problemConsentMissing, target: ids.consents }]
+      : []),
+  ]
+  const shownProblems = attempt.attempted ? problems : []
 
   async function submit(event: FormEvent) {
     event.preventDefault()
     setFailure(null)
     setEmailError(undefined)
     setServerViolations([])
-    if (renderConsents ? !slotComplete : consents.some((c) => c.required && !checked[c.id])) {
-      setConsentError(true)
-      return
-    }
-    if (policy && passwordRequirements(policy, password, email).some((r) => !r.met)) {
-      return // 체크리스트가 이미 어느 규칙이 부족한지 보여 준다
-    }
+    // 막힌 이유는 버튼 위 요약 + 칸 옆 오류로 보이고, 첫 틀린 칸으로 포커스가 간다. 버튼은 늘 눌린다(꺼진 버튼은 이유를 말하지 못한다)
+    const blocking = problems.filter((p) => !p.key.startsWith('violation-'))
+    if (blocking.length > 0) return attempt.fail(blocking[0].target)
     setBusy(true)
     try {
       const accepted = renderConsents
@@ -171,6 +219,8 @@ export function SignUpScreen({
       })
       if (result.status === 'VERIFICATION_SENT') {
         setPassword('') // 메일 확인 화면에 남아 「주소가 틀렸어요」로 돌아와도 비밀번호는 다시 받는다
+        confirm.reset()
+        attempt.reset()
         // 메일 인증이 켜져 있으면 늘 signUpId 가 온다(주소가 새것이든 이미 있든 같은 모양) — 코드 입력 단계로
         if (result.signUpId) {
           const next = { email, signUpId: result.signUpId }
@@ -180,19 +230,26 @@ export function SignUpScreen({
       } else onCreated?.()
     } catch (error) {
       const violations = violationsOf(error)
-      if (violations.length > 0) setServerViolations(violations)
-      else {
+      if (violations.length > 0) {
+        setServerViolations(violations)
+        attempt.fail(ids.password)
+      } else {
         const info = authErrorMessage(error, labels)
         if (
           error instanceof ApiRequestError &&
           error.apiError.code === ErrorCodes.COMMON_VALIDATION_FAILED
         ) {
           const emailField = error.apiError.errors?.find((e) => e.field === 'email')
-          if (emailField) setEmailError(emailField.message ?? labels.errorValidation)
+          if (emailField) {
+            setEmailError(emailField.message ?? labels.errorValidation)
+            attempt.fail(ids.email)
+          }
         }
         if (info.code === ErrorCodes.LEGAL_CONSENT_REQUIRED) setConsentRefresh((n) => n + 1)
-        if (info.code === ErrorCodes.ACCOUNT_EMAIL_TAKEN) setEmailError(info.message)
-        else setFailure(info)
+        if (info.code === ErrorCodes.ACCOUNT_EMAIL_TAKEN) {
+          setEmailError(info.message)
+          attempt.fail(ids.email)
+        } else setFailure(info)
         if (info.retryAfterSeconds) wait.start(info.retryAfterSeconds)
       }
     } finally {
@@ -249,9 +306,14 @@ export function SignUpScreen({
             <div className={styles.divider}>{labels.or}</div>
           </>
         )}
-        <form className={styles.form} onSubmit={submit} aria-label={labels.signUpTitle}>
+        <form className={styles.form} onSubmit={submit} aria-label={labels.signUpTitle} noValidate>
           {failure && <Alert tone="danger">{failure.message}</Alert>}
-          <Field label={labels.email} required error={emailError}>
+          <Field
+            id={ids.email}
+            label={labels.email}
+            required
+            error={emailError ?? (attempt.attempted ? emailProblem : undefined)}
+          >
             {(control) => (
               <Input
                 {...control}
@@ -275,12 +337,14 @@ export function SignUpScreen({
               )}
             </Field>
           )}
-          <PasswordField
+          <NewPasswordFields
             label={labels.password}
             labels={labels}
-            autoComplete="new-password"
             value={password}
             onChange={setPassword}
+            confirm={confirm}
+            ids={ids}
+            error={attempt.attempted ? passwordProblem : undefined}
           />
           {policy && (
             <PasswordHints
@@ -296,9 +360,13 @@ export function SignUpScreen({
               {renderCaptcha({ onToken: setCaptchaToken })}
             </div>
           )}
-          {renderConsents && <div className={styles.stack}>{renderConsents(slotApi)}</div>}
+          {renderConsents && (
+            <div id={ids.consents} className={styles.stack}>
+              {renderConsents(slotApi)}
+            </div>
+          )}
           {!renderConsents && consents.length > 0 && (
-            <div className={styles.stack}>
+            <div id={ids.consents} className={styles.stack}>
               {consents.map((item) => (
                 <Checkbox
                   key={item.id}
@@ -321,6 +389,7 @@ export function SignUpScreen({
               ))}
             </div>
           )}
+          <FormProblems title={labels.formProblemsTitle} problems={shownProblems} />
           <Button
             type="submit"
             loading={busy}

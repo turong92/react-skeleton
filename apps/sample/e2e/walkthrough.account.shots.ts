@@ -47,6 +47,7 @@ describe('account walkthrough (FINAL-3 codes)', () => {
       await dismissConsent(page)
       await page.getByLabel(auth.email).fill(email)
       await page.getByLabel(auth.password).first().fill(password)
+      await page.getByLabel(auth.passwordConfirm).fill(password)
       await shot(
         page,
         '01-sign-up-form.png',

@@ -307,7 +307,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 - 켜는 법: 모든 프로젝트에 들어간다
 - 필요한 것: `api-client` · `time`
 - 백엔드: 없음(프런트만)
-- 주요 진입점: `Button` · `Input` · `Field` · `Select` · `Table` · `Pagination` · `Dialog` · `Tabs` · `AppShell` · `PageHeader` · `EmptyState` · `showApiError` · `toastPromise`
+- 주요 진입점: `Button` · `Input` · `Field` · `FormProblems` · `Select` · `Table` · `Pagination` · `Dialog` · `Tabs` · `AppShell` · `PageHeader` · `EmptyState` · `showApiError` · `toastPromise`
 - 보고 따라 할 스토리: `packages/ui/src/Button/Button.stories.tsx` · `packages/ui/src/Field/Field.stories.tsx` · `packages/ui/src/Table/Table.stories.tsx` · `packages/ui/src/Dialog/Dialog.stories.tsx` · `packages/ui/src/AppShell/AppShell.stories.tsx`
 - 복사해 시작할 Patterns: `apps/storybook/src/patterns/DashboardPage.stories.tsx` · `apps/storybook/src/patterns/ListPage.stories.tsx` · `apps/storybook/src/patterns/FormPage.stories.tsx` · `apps/storybook/src/patterns/DetailPage.stories.tsx` · `apps/storybook/src/patterns/LoginPage.stories.tsx` · `apps/storybook/src/patterns/SettingsPage.stories.tsx`
 - 문서: `packages/ui/README.md` · `docs/ui-catalog.md`

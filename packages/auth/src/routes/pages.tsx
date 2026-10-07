@@ -91,6 +91,8 @@ export type PageContext = {
   socialLinkFlow?: SocialLinkFlow
   /** 백엔드에 로그인 방법을 묻는 앱의 설정(없으면 `methods` 가 정한다) */
   discovery?: DiscoveryOptions
+  /** 새 비밀번호를 한 번 더 입력받는가(가입 · 재설정 · 변경 · 첫 설정) — 기본 true */
+  confirmPassword?: boolean
   /** 진행 중인 가입 시도(코드 입력 단계가 새로고침을 견딘다) */
   signUpPending?: SignUpPendingStore
   /** 저장 키 · 락 · 채널 이름(앱 이름공간) */
@@ -181,6 +183,7 @@ export function SignUpPage({
   }
   return (
     <SignUpScreen
+      confirmPassword={ctx.confirmPassword}
       {...signUp}
       policy={policy}
       labels={ctx.labels}
@@ -252,6 +255,7 @@ export function ResetPage({ ctx }: { ctx: PageContext }) {
           labels={ctx.labels}
           signInTo={ctx.paths.signIn}
           forgotTo={ctx.paths.forgotPassword}
+          confirmPassword={ctx.confirmPassword}
           onReset={(t, newPassword) => ctx.accountApi.resetPassword(t, newPassword)}
         />
       )}
@@ -542,6 +546,7 @@ export function AccountPage({
       <AccountSettings
         api={ctx.accountApi}
         labels={ctx.labels}
+        confirmPassword={ctx.confirmPassword}
         socialProviders={resolveMethods(ctx.methods).social}
         onLinkSocial={flow && ((provider) => beginRoundTrip(provider, { kind: 'link' }))}
         onProviderReauth={flow && beginRoundTrip}

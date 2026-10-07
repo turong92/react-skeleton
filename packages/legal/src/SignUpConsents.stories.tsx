@@ -83,6 +83,29 @@ export const ReadingTheDocumentInADialog: Story = {
   },
 }
 
+/** 「보기」 는 같은 화면 위의 창이다 — 가입 폼에 이미 친 글자는 그대로 남는다 */
+export const TypedInputSurvivesReadingADocument: Story = {
+  args: { slot: slot() },
+  render: (args) => (
+    <>
+      <label>
+        이메일 칸
+        <input defaultValue="" />
+      </label>
+      <Demo {...args} />
+    </>
+  ),
+  play: async ({ canvas, userEvent }) => {
+    const email = canvas.getByLabelText('이메일 칸')
+    await userEvent.type(email, 'typed@example.com')
+    await userEvent.click(await canvas.findByRole('button', { name: '이용약관 보기' }))
+    const dialog = await screen.findByRole('dialog', { name: '이용약관' })
+    await userEvent.click(within(dialog).getByRole('button', { name: '닫기' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    await expect(email).toHaveValue('typed@example.com')
+  },
+}
+
 export const EnglishUsesTheEnglishTexts: Story = {
   args: { slot: slot(), locale: 'en' },
   render: (args) => <Demo {...args} />,

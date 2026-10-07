@@ -185,3 +185,8 @@
   block-size: 1.25em;
   flex: none;
 }
+
+/* 비밀번호 확인 칸이 맞게 입력됐다 — 색만이 아니라 도움말 글자(「일치해요」)가 함께 말한다 */
+.matches {
+  border-color: var(--teal);
+}

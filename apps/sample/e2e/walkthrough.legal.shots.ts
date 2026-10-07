@@ -35,6 +35,7 @@ describe('legal walkthrough', () => {
       await dismissConsent(page)
       await page.getByLabel(auth.email).fill(email)
       await page.getByLabel(auth.password).first().fill('Correct-horse-9')
+      await page.getByLabel(auth.passwordConfirm).fill('Correct-horse-9')
       await page.getByRole('checkbox', { name: /\[필수\] .*이용약관/ }).check()
       await shot(
         page,

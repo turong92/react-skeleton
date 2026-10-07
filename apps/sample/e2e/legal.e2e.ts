@@ -43,6 +43,7 @@ describe('sign-up consent checklist', () => {
       await dismissConsent(page)
       await page.getByLabel(auth.email).fill(email)
       await page.getByLabel(auth.password).first().fill(password)
+      await page.getByLabel(auth.passwordConfirm).fill(password)
       await pwExpect(page.getByRole('checkbox', { name: legal.agreeAll })).toBeVisible()
       await pwExpect(page.getByRole('checkbox', { name: /\[필수\] .*이용약관/ })).toBeVisible()
       await pwExpect(page.getByRole('checkbox', { name: /\[필수\] .*개인정보/ })).toBeVisible()

@@ -120,6 +120,7 @@ describe('sign-up by a 6-digit code, signed in at once', () => {
       page.getByRole('img', { name: new RegExp(auth.passwordStrength[1]) }),
     ).toBeVisible()
     await page.getByLabel(auth.password).first().fill(password)
+    await page.getByLabel(auth.passwordConfirm).fill(password)
     await pwExpect(
       page.getByRole('img', { name: new RegExp(auth.passwordStrength[4]) }),
     ).toBeVisible()
@@ -279,6 +280,7 @@ describe('account lifecycle against the real backend', () => {
     const section = region(auth.sectionPassword)
     await section.getByLabel(auth.currentPassword).fill('wrong-password-1')
     await section.getByLabel(auth.newPassword).fill(nextPassword)
+    await section.getByLabel(auth.passwordConfirm).fill(nextPassword)
     await section.getByRole('button', { name: auth.passwordChangeSubmit }).click()
     await pwExpect(section.getByText(auth.errorCurrentPassword)).toBeVisible()
     await section.getByLabel(auth.currentPassword).fill(password)
@@ -423,6 +425,7 @@ describe('a passwordless account (email link) re-authenticates by a mailed code,
     const reauth = await waitForCode(mailUrl, linkNext, 'reauth', { seen })
     await enterCode(section, reauth.code)
     await section.getByLabel(auth.newPassword).fill(firstPassword)
+    await section.getByLabel(auth.passwordConfirm).fill(firstPassword)
     await section.getByRole('button', { name: auth.passwordChangeSubmit }).click()
     // 계정이 비밀번호를 갖게 되면 절 제목이 「비밀번호 정하기」 → 「비밀번호」 로 바뀐다 — 절이 아니라 페이지에서 찾는다
     await pwExpect(page.getByText(auth.passwordChanged)).toBeVisible()
@@ -518,6 +521,7 @@ describe('pre-hijack: an attacker who starts a sign-up for someone else’s addr
     await page.goto(`${baseUrl}/sign-up`)
     await page.getByLabel(auth.email).fill(victim)
     await page.getByLabel(auth.password).first().fill(ownerPassword)
+    await page.getByLabel(auth.passwordConfirm).fill(ownerPassword)
     await agreeToLegal(page, apiUrl)
     await page.getByRole('button', { name: auth.signUpSubmit }).click()
     await pwExpect(heading(auth.codeTitle, 2)).toBeVisible()
@@ -546,6 +550,7 @@ describe('pre-hijack: an attacker who starts a sign-up for someone else’s addr
     await page.goto(`${baseUrl}/sign-up`)
     await page.getByLabel(auth.email).fill(victim)
     await page.getByLabel(auth.password).first().fill('Whatever-pass-2026')
+    await page.getByLabel(auth.passwordConfirm).fill('Whatever-pass-2026')
     await agreeToLegal(page, apiUrl)
     await page.getByRole('button', { name: auth.signUpSubmit }).click()
     await pwExpect(heading(auth.codeTitle, 2)).toBeVisible() // 존재 여부를 숨긴다

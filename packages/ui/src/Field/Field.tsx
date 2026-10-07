@@ -12,6 +12,8 @@ export type FieldProps = {
   hint?: string
   error?: string
   required?: boolean
+  /** 칸의 `id` 를 정한다(기본은 자동) — 오류 요약이 이 칸으로 데려갈 수 있게 */
+  id?: string
   /** 필수 표시 글자(기본 `*`) */
   requiredMark?: string
   /** 입력 부품에 펼쳐 준다: `{(control) => <Input {...control} />}` */
@@ -19,8 +21,17 @@ export type FieldProps = {
 }
 
 /** 라벨 · 도움말 · 오류를 입력 부품에 `id` / `aria-describedby` / `invalid` 로 이어 준다 */
-export function Field({ label, hint, error, required, requiredMark = '*', children }: FieldProps) {
-  const id = useId()
+export function Field({
+  label,
+  hint,
+  error,
+  required,
+  id: given,
+  requiredMark = '*',
+  children,
+}: FieldProps) {
+  const generated = useId()
+  const id = given ?? generated
   const hintId = `${id}-hint`
   const errorId = `${id}-error`
   const describedBy = [error ? errorId : null, hint ? hintId : null].filter(Boolean).join(' ')

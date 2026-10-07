@@ -1,14 +1,16 @@
-import { Alert, Button } from '@skeleton/ui'
-import { useState, type FormEvent } from 'react'
+import { Alert, Button, FormProblems, useSubmitAttempt } from '@skeleton/ui'
+import { useId, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { passwordRequirements, violationsOf } from '../account/passwordRules'
+import { violationsOf } from '../account/passwordRules'
 import type { PasswordPolicy, PasswordViolation } from '../account/types'
 import { AuthLayout } from './AuthLayout'
-import { PasswordField } from './PasswordField'
+import { NewPasswordFields } from './NewPasswordFields'
 import { PasswordHints } from './PasswordHints'
 import styles from './auth.module.css'
 import { authErrorMessage } from './errors'
 import { mergeLabels, type AuthLabels } from './labels'
+import { usePasswordConfirm } from './passwordConfirm'
+import { passwordProblems } from './passwordProblems'
 import { ErrorCodes } from '@skeleton/api-client'
 
 export type ResetPasswordScreenProps = {
@@ -19,6 +21,8 @@ export type ResetPasswordScreenProps = {
   /** 새 링크를 요청하는 곳 */
   forgotTo: string
   labels?: Partial<AuthLabels>
+  /** 비밀번호를 한 번 더 입력받는다(기본 true) — 다르면 제출하지 않는다. 확인 값은 서버로 보내지 않는다 */
+  confirmPassword?: boolean
 }
 
 /** `/reset-password?token=` — 성공하면 모든 세션이 끊기므로 로그인으로 보낸다(자동 로그인 없음) */
@@ -29,6 +33,7 @@ export function ResetPasswordScreen({
   signInTo,
   forgotTo,
   labels: given,
+  confirmPassword = true,
 }: ResetPasswordScreenProps) {
   const labels = mergeLabels(given)
   const [password, setPassword] = useState('')
@@ -36,21 +41,34 @@ export function ResetPasswordScreen({
   const [phase, setPhase] = useState<'form' | 'done' | 'invalid'>(token ? 'form' : 'invalid')
   const [failure, setFailure] = useState<string | null>(null)
   const [violations, setViolations] = useState<PasswordViolation[]>([])
+  const uid = useId()
+  const ids = { password: `${uid}-password`, confirm: `${uid}-confirm` }
+  const attempt = useSubmitAttempt()
+  const confirm = usePasswordConfirm({
+    enabled: confirmPassword,
+    password,
+    attempted: attempt.attempted,
+    labels,
+  })
+  const check = passwordProblems({ labels, password, policy, confirm, ids })
 
   async function submit(event: FormEvent) {
     event.preventDefault()
     if (!token) return
     setFailure(null)
     setViolations([])
-    if (policy && passwordRequirements(policy, password).some((r) => !r.met)) return
+    if (check.problems.length > 0) return attempt.fail(check.problems[0].target)
     setBusy(true)
     try {
       await onReset(token, password)
+      confirm.reset()
       setPhase('done')
     } catch (error) {
       const server = violationsOf(error)
-      if (server.length > 0) setViolations(server)
-      else {
+      if (server.length > 0) {
+        setViolations(server)
+        attempt.fail(ids.password)
+      } else {
         const info = authErrorMessage(error, labels)
         if (info.code === ErrorCodes.ACCOUNT_TOKEN_INVALID) setPhase('invalid')
         else setFailure(info.message)
@@ -84,14 +102,16 @@ export function ResetPasswordScreen({
     )
   return (
     <AuthLayout title={labels.resetTitle} subtitle={labels.resetSubtitle}>
-      <form className={styles.form} onSubmit={submit} aria-label={labels.resetTitle}>
+      <form className={styles.form} onSubmit={submit} aria-label={labels.resetTitle} noValidate>
         {failure && <Alert tone="danger">{failure}</Alert>}
-        <PasswordField
+        <NewPasswordFields
           label={labels.newPassword}
           labels={labels}
-          autoComplete="new-password"
           value={password}
           onChange={setPassword}
+          confirm={confirm}
+          ids={ids}
+          error={attempt.attempted ? check.passwordError : undefined}
         />
         {policy && (
           <PasswordHints
@@ -101,6 +121,10 @@ export function ResetPasswordScreen({
             serverViolations={violations}
           />
         )}
+        <FormProblems
+          title={labels.formProblemsTitle}
+          problems={attempt.attempted ? check.problems : []}
+        />
         <Button type="submit" loading={busy} loadingLabel={labels.submitting}>
           {labels.resetSubmit}
         </Button>

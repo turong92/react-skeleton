@@ -26,6 +26,8 @@ Patterns: `Patterns/Landing` · `Patterns/Pricing` · `Patterns/LegalDocument` �
 
 const consent = createConsentStore({ categories: ['necessary', 'analytics'], version: '2026-10', onChange: (s) => s.choices.analytics ? startAnalytics() : stopAnalytics() })
 <ConsentBanner store={consent} categories={[{ id: 'necessary', label: '…', required: true }, { id: 'analytics', label: '…' }]} />
+// 배너가 떠 있는 동안 페이지 아래를 배너 높이만큼 비운다(`reserveSpace`, 기본 켜짐 — 끄면 겹친다):
+// body padding-bottom + html scroll-padding-bottom 이라 맨 끝까지 스크롤하면 폼 · 오류 · 제출 버튼이 배너 위에 오고, focus / scrollIntoView 도 배너 밑으로 숨지 않는다
 // 푸터의 「쿠키 설정」: <Button onClick={() => consent.reset()}>…</Button>
 ```
 

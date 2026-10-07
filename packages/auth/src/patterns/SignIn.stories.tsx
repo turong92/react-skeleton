@@ -23,6 +23,22 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof SignInScreen>
 
+/** 비어 있는 채로 「로그인」 — 서버로 가지 않고, 이유가 버튼 위에 뜨고, 첫 빈 칸으로 포커스가 간다 */
+export const EmptySubmitExplainsItself: Story = {
+  play: async ({ canvas, args, userEvent }) => {
+    await userEvent.click(canvas.getByRole('button', { name: 'Sign in' }))
+    await expect(args.onPasswordSignIn).not.toHaveBeenCalled()
+    await expect(
+      await canvas.findByRole('button', { name: 'Enter your email address' }),
+    ).toBeVisible()
+    await expect(canvas.getByRole('button', { name: 'Enter your password' })).toBeVisible()
+    await waitFor(() => expect(canvas.getByLabelText(/Email/)).toHaveFocus())
+    await userEvent.type(canvas.getByLabelText(/Email/), 'ann@example.com')
+    await userEvent.click(canvas.getByRole('button', { name: 'Enter your password' }))
+    await waitFor(() => expect(canvas.getByLabelText(/^Password/)).toHaveFocus())
+  },
+}
+
 export const PasswordOnly: Story = {
   play: async ({ canvas, args, userEvent }) => {
     await expect(canvas.queryByRole('button', { name: /Continue with/ })).toBeNull()

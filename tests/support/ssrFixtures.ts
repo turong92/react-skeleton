@@ -255,6 +255,10 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
     label: 'Breadcrumb',
     items: [{ label: 'Home', href: '/' }, { label: 'Notes' }],
   }),
+  'ui#FormProblems': () => ({
+    title: 'Check these',
+    problems: [{ key: 'email', message: 'Enter your email', target: 'email' }],
+  }),
   'ui#Alert': () => ({ tone: 'warning', title: 'Heads up', children: 'Details' }),
   'ui#CopyButton': () => ({ value: 'abc', label: 'Copy' }),
   'ui#Stepper': () => ({
@@ -562,6 +566,7 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
 /** 훅 — 작은 컴포넌트 안에서 이 인자로 불러 본다 */
 export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
   'theme#useTheme': () => [],
+  'ui#useSubmitAttempt': () => [],
   'auth#useAuth': () => [],
   'auth#useCountdown': () => [],
   'auth#useAuthMethods': () => [{ methods: () => new Promise(noop) }, true],

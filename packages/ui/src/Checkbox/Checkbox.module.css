@@ -21,6 +21,11 @@
   cursor: inherit;
 }
 
+.input[aria-invalid='true'] {
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+}
+
 .input:focus-visible {
   outline: 2px solid var(--teal);
   outline-offset: 2px;

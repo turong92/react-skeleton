@@ -92,6 +92,36 @@ export const ErrorOnRequiredRowsOnly: Story = {
   },
 }
 
+export const AgreeAllIsExplained: Story = {
+  play: async ({ canvas }) => {
+    // 「전체 동의」 가 무엇을 하는지 — 선택 항목까지 켠다는 것을 줄 아래 설명이 말한다
+    await expect(canvas.getByRole('checkbox', { name: '전체 동의' })).toHaveAccessibleDescription(
+      koLegalLabels.agreeAllHint,
+    )
+  },
+}
+
+export const MissingRequiredRowsAreMarkedAndTheOptionalOneIsNot: Story = {
+  args: { showError: true },
+  play: async ({ canvas, userEvent }) => {
+    const terms = canvas.getByRole('checkbox', { name: /\[필수\] 이용약관/ })
+    await expect(terms).toHaveAttribute('aria-invalid', 'true')
+    await expect(terms.closest('li')).toHaveAttribute('data-invalid', 'true') // 줄 테두리
+    await expect(getComputedStyle(terms).outlineStyle).toBe('solid') // 체크 상자 윤곽
+    await expect(canvas.getByRole('checkbox', { name: /\[선택\]/ })).not.toHaveAttribute(
+      'aria-invalid',
+    )
+    // 모자란 것을 체크하면 그 줄의 표시가 바로 사라진다(다른 필수 줄은 그대로)
+    await userEvent.click(terms)
+    await expect(terms).not.toHaveAttribute('aria-invalid')
+    await expect(terms.closest('li')).not.toHaveAttribute('data-invalid')
+    await expect(canvas.getByRole('checkbox', { name: /\[필수\] 개인정보/ })).toHaveAttribute(
+      'aria-invalid',
+      'true',
+    )
+  },
+}
+
 export const EnglishLabels: Story = {
   args: { labels: undefined },
   play: async ({ canvas }) => {

@@ -1,5 +1,12 @@
-import { Alert, Button, ConfirmDialog, SectionCard } from '@skeleton/ui'
-import { useState } from 'react'
+import {
+  Alert,
+  Button,
+  ConfirmDialog,
+  FormProblems,
+  SectionCard,
+  useSubmitAttempt,
+} from '@skeleton/ui'
+import { useId, useState } from 'react'
 import type { ReauthCredential, SocialReauth } from '../account/accountApi'
 import type { DeletionResult } from '../account/types'
 import { isReauthFailure, reauthKindOf, type ReauthSubject } from '../reauth/kind'
@@ -51,6 +58,8 @@ export function DeleteAccountSection({
   const del = useAction(labels)
   const credential: ReauthCredential | null = resume ? { socialReauth: resume } : proof
   const ready = credential !== null
+  const proofId = `${useId()}-proof`
+  const attempt = useSubmitAttempt()
 
   async function confirm() {
     if (!credential) return
@@ -86,19 +95,30 @@ export function DeleteAccountSection({
       <div className={styles.stack}>
         {del.error && !isReauthFailure(del.raw) && <Alert tone="danger">{del.error.message}</Alert>}
         {kind === 'password' && <p className={styles.muted}>{labels.deletePasswordHint}</p>}
-        <ReauthProof
-          kind={kind}
-          email={subject.email}
-          providers={subject.providers}
-          requestCode={requestDeleteCode}
-          onChange={setProof}
-          failure={isReauthFailure(del.raw) ? del.raw : undefined}
-          onProvider={onProviderReauth}
-          confirmedWith={resume?.provider}
-          labels={given}
+        <div id={proofId}>
+          <ReauthProof
+            kind={kind}
+            email={subject.email}
+            providers={subject.providers}
+            requestCode={requestDeleteCode}
+            onChange={setProof}
+            failure={isReauthFailure(del.raw) ? del.raw : undefined}
+            onProvider={onProviderReauth}
+            confirmedWith={resume?.provider}
+            labels={given}
+          />
+        </div>
+        <FormProblems
+          title={labels.formProblemsTitle}
+          problems={
+            attempt.attempted && !ready
+              ? [{ key: 'proof', message: labels.problemProofMissing, target: proofId }]
+              : []
+          }
         />
         <div>
-          <Button variant="danger" disabled={!ready} onClick={() => setOpen(true)}>
+          {/* 꺼 두지 않는다 — 본인 확인 전에 누르면 이유를 말하고 그 칸으로 데려간다 */}
+          <Button variant="danger" onClick={() => (ready ? setOpen(true) : attempt.fail(proofId))}>
             {labels.deleteButton}
           </Button>
         </div>

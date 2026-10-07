@@ -964,6 +964,7 @@
         "Button",
         "Input",
         "Field",
+        "FormProblems",
         "Select",
         "Table",
         "Pagination",

@@ -1,5 +1,13 @@
-import { Alert, Button, Field, Input } from '@skeleton/ui'
-import { useState, type FormEvent, type ReactNode } from 'react'
+import {
+  Alert,
+  Button,
+  Field,
+  FormProblems,
+  Input,
+  useSubmitAttempt,
+  type FormProblem,
+} from '@skeleton/ui'
+import { useId, useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { AuthLayout } from './AuthLayout'
 import { CheckEmailPanel } from './CheckEmailPanel'
@@ -56,6 +64,18 @@ export function SignInScreen({
   const [failure, setFailure] = useState<AuthErrorInfo | null>(null)
   const [magicSentTo, setMagicSentTo] = useState<string | null>(null)
   const wait = useCountdown()
+  const uid = useId()
+  const ids = { email: `${uid}-email`, password: `${uid}-password` }
+  const attempt = useSubmitAttempt()
+  const emailProblem = email.trim() ? undefined : labels.problemEmailMissing
+  const passwordProblem =
+    mode === 'password' && !password ? labels.problemPasswordMissing : undefined
+  const problems: FormProblem[] = [
+    ...(emailProblem ? [{ key: 'email', message: emailProblem, target: ids.email }] : []),
+    ...(passwordProblem
+      ? [{ key: 'password', message: passwordProblem, target: ids.password }]
+      : []),
+  ]
 
   function fail(error: unknown) {
     const info = authErrorMessage(error, labels)
@@ -65,6 +85,7 @@ export function SignInScreen({
 
   async function submit(event: FormEvent) {
     event.preventDefault()
+    if (problems.length > 0) return attempt.fail(problems[0].target) // 막힌 이유를 버튼 위에 말한다 — 버튼은 늘 눌린다
     setBusy(true)
     setFailure(null)
     try {
@@ -122,14 +143,24 @@ export function SignInScreen({
           </Alert>
         )}
         {(hasPassword || hasMagic) && (
-          <form className={styles.form} onSubmit={submit} aria-label={labels.signInTitle}>
+          <form
+            className={styles.form}
+            onSubmit={submit}
+            aria-label={labels.signInTitle}
+            noValidate
+          >
             {failure && (
               <Alert tone="danger">
                 {message}
                 {failure.reference && ` (${labels.errorReference(failure.reference)})`}
               </Alert>
             )}
-            <Field label={labels.email} required>
+            <Field
+              id={ids.email}
+              label={labels.email}
+              required
+              error={attempt.attempted ? emailProblem : undefined}
+            >
               {(control) => (
                 <Input
                   {...control}
@@ -142,6 +173,8 @@ export function SignInScreen({
             </Field>
             {mode === 'password' && (
               <PasswordField
+                id={ids.password}
+                error={attempt.attempted ? passwordProblem : undefined}
                 label={labels.password}
                 labels={labels}
                 autoComplete="current-password"
@@ -150,6 +183,10 @@ export function SignInScreen({
               />
             )}
             {mode === 'magic' && <p className={styles.muted}>{labels.signInMagicLinkHelp}</p>}
+            <FormProblems
+              title={labels.formProblemsTitle}
+              problems={attempt.attempted ? problems : []}
+            />
             <Button
               type="submit"
               loading={busy}

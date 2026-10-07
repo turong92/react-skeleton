@@ -31,6 +31,8 @@ export type AccountSectionName =
 export type AccountSettingsProps = {
   api: AccountApi
   labels?: Partial<AuthLabels>
+  /** 새 비밀번호를 한 번 더 입력받는다(기본 true) */
+  confirmPassword?: boolean
   /** 끄고 싶은 절만 `false` — 기본은 모두 켠다 */
   sections?: Partial<Record<AccountSectionName, boolean>>
   /** 이 앱이 켜 둔 소셜 제공자(계정 연결 버튼) */
@@ -68,6 +70,7 @@ const ALL: AccountSectionName[] = ['profile', 'password', 'email', 'methods', 's
 export function AccountSettings({
   api,
   labels: given,
+  confirmPassword,
   sections,
   socialProviders,
   onLinkSocial,
@@ -198,6 +201,7 @@ export function AccountSettings({
           email={account.email ?? undefined}
           requestReauthCode={requestReauthCode}
           labels={given}
+          confirmPassword={confirmPassword}
           onChange={async (request) => {
             await api.changePassword(request)
             me.reload()

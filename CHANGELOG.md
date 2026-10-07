@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — 가입 폼 사용성: 비밀번호 확인 · 놓칠 수 없는 제출 피드백 · 쿠키 배너가 폼을 가리지 않는다 (2026-10-07)
+
+주인이 실제로 써 보다 겪은 문제 — 「이메일로 가입하기 눌렀는데 먹통」(필수 약관을 안 켠 채 눌러도 요청이 안 나가고 체크박스 옆 작은 글자뿐 · 아래 쿠키 배너가 그것을 가렸다) · 「비번 일치하는지 보는 거 넣어야지」.
+
+- **비밀번호 확인 칸**(`confirmPassword`, 기본 켜짐): 가입 · 재설정 · 변경 · 첫 설정. 건드린 뒤부터 일치 여부 실시간 안내 · 다르면 제출 막힘 · 「보기」가 두 칸 함께 · `new-password` 둘 · 붙여넣기 허용 · 성공하면 함께 비움 · **확인 값은 API 로 안 간다**. 끄기: 화면 prop · `AccountSettings` · `createAuthRoutes({ confirmPassword })`. 라벨 ko · en. **깨지는 변경(동작)**: 기본이 켜져 있어 이 화면들의 e2e · 스토리는 확인 칸도 채워야 한다(샘플 e2e · 스토리 갱신).
+- **`@skeleton/ui` — `FormProblems` · `useSubmitAttempt` · `revealControl`**: 제출 버튼 바로 위 `role="alert"` 오류 요약(줄 = 그 칸으로 데려가는 버튼) + 첫 틀린 칸으로 포커스 · 스크롤(움직임 줄이기 존중) + 틀린 칸 오류 테두리(`Checkbox` `aria-invalid` 윤곽). `Field` 가 `id` 를 받는다. 제출 버튼은 꺼 두지 않는다 — 막힌 이유를 말해야 하니까.
+- **적용한 폼**: 가입(이메일 · 비밀번호 · 규칙 · 확인 · 필수 약관 · 서버가 거절한 규칙) · 로그인 · 비밀번호 찾기 · 재설정 · 비밀번호 변경 · 이메일 변경 · 소셜 연결 본인 확인 · 계정 삭제(`disabled` 버튼이던 곳 — 이제 눌리고 「먼저 본인 확인을 해 주세요」) · 재동의 화면. 고치면 그 줄이 곧바로 사라진다(체크하면 약관 오류가 즉시 풀린다).
+- **`@skeleton/marketing` `ConsentBanner`**: `reserveSpace`(기본 켜짐) — 배너가 떠 있는 동안 `body` 아래 여백 + `html` `scroll-padding-bottom` 을 배너 높이만큼 잡아(크기가 바뀌면 따라가고 사라지면 되돌린다) 맨 끝까지 스크롤하면 폼 · 오류 · 제출 버튼이 배너 위에 오고 포커스 · `scrollIntoView` 도 배너 밑으로 숨지 않는다. 모든 페이지에 통한다(페이지별 예외 없음). 끄면 예전처럼 겹친다.
+- **동의 체크리스트**: 필수 줄은 굵게 · 못 채우면 줄 테두리 + `aria-invalid` · 「전체 동의」 아래 설명(`agreeAllHint`) · 「보기」는 같은 화면 위의 창이라 친 입력이 남는다(스토리로 확인).
+
 ### Added — 글로벌 소셜 로그인(Google · LINE · X, PKCE S256 · nonce)과 법적 문서 · 동의(`@skeleton/legal`) (2026-10-07)
 
 - **소셜 로그인은 발견이 이끈다**: `GET /auth/methods` 의 제공자마다 `pkce`/`nonce`(REQUIRED · SUPPORTED · UNSUPPORTED) · `authorize {url, scopes, params}` 를 읽어 authorize 주소를 만든다 — 프런트에 제공자 주소가 없다(`SOCIAL_AUTHORIZE_PRESETS` 는 authorize 정보를 안 보내는 옛 백엔드용 **LEGACY** 대체 표 — kakao · naver). 순서는 백엔드가 준 순서. **깨지는 변경**: `createSocialLoginFlow(...).start` / `createSocialLinkFlow(...).start` 가 `Promise` 를 돌려준다(WebCrypto SHA-256) · `session.socialLogin` / `authApi.socialLogin` 의 네 번째 인자 `{ codeVerifier, nonce }`.

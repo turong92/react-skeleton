@@ -234,7 +234,10 @@ describe('settings sections', () => {
     expect(del(noAddress)).toContain('Confirm with Naver')
   })
 
-  it('delete: the button stays off until the proof is there (a typed phrase follows in the dialog)', () => {
-    expect(del(withPassword)).toMatch(/disabled=""[^>]*>[^<]*Delete my account/)
+  it('delete: the button is never switched off before the proof (a disabled button cannot say why; pressing it explains — see the story), and says nothing until pressed', () => {
+    const html = del(withPassword)
+    expect(html).not.toMatch(/disabled=""[^>]*>[^<]*Delete my account/)
+    expect(html).toMatch(/<button[^>]*>Delete my account<\/button>/)
+    expect(html).not.toContain('Confirm it is you first')
   })
 })

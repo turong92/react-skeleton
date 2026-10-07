@@ -1,4 +1,4 @@
-import { Alert, Button } from '@skeleton/ui'
+import { Alert, Button, FormProblems, useSubmitAttempt } from '@skeleton/ui'
 import { useId, useState } from 'react'
 import { ConsentChecklist } from './ConsentChecklist'
 import { consentRequestsOf, type ConsentRow } from './consentLogic'
@@ -38,11 +38,14 @@ export function ReconsentScreen({
   const titleId = useId()
   const [checked, setChecked] = useState<Record<string, boolean>>({})
   const [busy, setBusy] = useState(false)
-  const [showError, setShowError] = useState(false)
+  const attempt = useSubmitAttempt()
+  const consentsId = `${titleId}-consents`
   const complete = rows.every((r) => checked[r.type])
+  const showError = attempt.attempted && !complete
 
   async function submit() {
-    if (!complete) return setShowError(true)
+    // 버튼은 늘 눌린다 — 모자라면 이유를 요약으로 말하고 첫 빈 줄로 포커스가 간다
+    if (!complete) return attempt.fail(consentsId)
     setBusy(true)
     try {
       await onAgree(consentRequestsOf(rows, checked))
@@ -59,16 +62,23 @@ export function ReconsentScreen({
         <p>{firstSignIn ? labels.reconsentBodyFirstSignIn : labels.reconsentBody}</p>
         {failure === 'stale' && <Alert tone="warning">{labels.reconsentStale}</Alert>}
         {failure === 'failed' && <Alert tone="danger">{labels.reconsentFailed}</Alert>}
-        <ConsentChecklist
-          rows={rows}
-          checked={checked}
-          onChange={(next) => {
-            setChecked(next)
-            setShowError(false)
-          }}
-          onOpen={onOpen}
-          showError={showError}
-          labels={given}
+        <div id={consentsId}>
+          <ConsentChecklist
+            rows={rows}
+            checked={checked}
+            onChange={setChecked}
+            onOpen={onOpen}
+            showError={showError}
+            labels={given}
+          />
+        </div>
+        <FormProblems
+          title={labels.problemsTitle}
+          problems={
+            showError
+              ? [{ key: 'consents', message: labels.consentMissing, target: consentsId }]
+              : []
+          }
         />
         <div className={styles.actions}>
           <Button onClick={() => void submit()} loading={busy} loadingLabel={labels.submitting}>

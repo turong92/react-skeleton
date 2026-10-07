@@ -171,3 +171,29 @@ export const NewerVersionPublishedMeanwhile: Story = {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
   },
 }
+
+/** 체크 없이 「동의하고 계속하기」 — 버튼은 눌리고, 이유가 버튼 위에 요약으로 뜨고, 첫 칸으로 포커스가 간다. 체크하면 요약이 바로 사라진다 */
+export const SubmitWithNothingTickedExplainsItself: Story = {
+  args: { fake: { blocked: true }, accountId: 'acc-1' },
+  play: async ({ userEvent }) => {
+    const dialog = await screen.findByRole('dialog', { name: '약관 동의' })
+    const submit = within(dialog).getByRole('button', { name: '동의하고 계속하기' })
+    await expect(submit).toBeEnabled()
+    await userEvent.click(submit)
+    const summary = await within(dialog).findByRole('button', { name: '필수 약관에 동의해 주세요' })
+    await expect(summary.closest('[role="alert"]')).toHaveTextContent('아래 항목을 확인해 주세요')
+    await waitFor(() =>
+      expect(within(dialog).getAllByRole('checkbox', { name: /\[필수\]/ })[0]).toHaveFocus(),
+    )
+    // 요약은 버튼 바로 위에 있다
+    await expect(
+      summary.compareDocumentPosition(submit) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    await userEvent.click(within(dialog).getByRole('checkbox', { name: '전체 동의' }))
+    await waitFor(() =>
+      expect(
+        within(dialog).queryByRole('button', { name: '필수 약관에 동의해 주세요' }),
+      ).toBeNull(),
+    )
+  },
+}

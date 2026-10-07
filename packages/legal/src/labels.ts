@@ -10,6 +10,11 @@ export type LegalLabels = {
   view: (title: string) => string
   viewShort: string
   requiredError: string
+  /** 「전체 동의」 줄 아래 설명 */
+  agreeAllHint: string
+  /** 제출이 막혔을 때 버튼 위 오류 요약의 머리글 · 줄 */
+  problemsTitle: string
+  consentMissing: string
   loadingDocuments: string
   documentsFailed: string
   retry: string
@@ -67,6 +72,9 @@ export const defaultLegalLabels: LegalLabels = {
   view: (title) => `View ${title}`,
   viewShort: 'View',
   requiredError: 'Please agree to the required items to continue.',
+  agreeAllHint: 'Ticks every item below, including the optional ones. You can untick any of them.',
+  problemsTitle: 'Please check the following',
+  consentMissing: 'Agree to the required items',
   loadingDocuments: 'Loading the agreements',
   documentsFailed: 'We could not load the agreements.',
   retry: 'Try again',
@@ -128,6 +136,9 @@ export const koLegalLabels: LegalLabels = {
   view: (title) => `${title} 보기`,
   viewShort: '보기',
   requiredError: '필수 항목에 동의해 주세요.',
+  agreeAllHint: '아래 항목을 한 번에 모두 체크해요. 선택 항목은 따로 풀 수 있어요.',
+  problemsTitle: '아래 항목을 확인해 주세요',
+  consentMissing: '필수 약관에 동의해 주세요',
   loadingDocuments: '약관을 불러오는 중',
   documentsFailed: '약관을 불러오지 못했어요.',
   retry: '다시 시도',

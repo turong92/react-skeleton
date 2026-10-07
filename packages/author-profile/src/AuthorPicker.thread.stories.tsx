@@ -201,8 +201,9 @@ export const NoticeClosesWhenFocusLeavesTheForm: Story = {
   },
 }
 
-/** 떠 있는 질문은 폼에 알려진다(`onUnsettledChange`) — 폼이 제출을 막는 근거. 답하거나 접히면 풀린다. 그동안 선택기 단추의 설명이 그 문장이다 */
 const unsettled = fn()
+
+/** 떠 있는 질문은 폼에 알려진다(`onUnsettledChange`) — 폼이 제출을 막는 근거. 답하거나 접히면 풀린다. 그동안 선택기 단추의 설명이 그 문장이다 */
 export const TheOpenQuestionIsReportedToTheForm: Story = {
   args: { threadAuthorId: 'prf_a', onUnsettledChange: unsettled },
   beforeEach: () => unsettled.mockClear(),
@@ -245,6 +246,7 @@ export const AutoFilledValueFollowsTheThreadWhenItArrivesLater: Story = {
     await expect(await canvas.findByRole('button', { name: /Writing as Ann#0001/ })).toBeVisible()
     await expect(canvas.queryByRole('status')).toBeNull() // 사람이 고른 값이 아니었으니 묻지 않는다
     await expect(onChange).toHaveBeenLastCalledWith('prf_a')
+    await expect(onChange).toHaveBeenCalledTimes(2) // 기억 Bea 로 한 번, 스레드 Ann 으로 한 번
     await expect(storage.dump()).toEqual({ [Object.keys(storage.dump())[0]]: 'prf_b' }) // 자동 값은 기억에 쓰지 않는다 — 처음 기억 그대로
   },
 }

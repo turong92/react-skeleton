@@ -426,12 +426,13 @@ export const PickerStartsOnTheAuthorOfMyEarlierComment: Story = {
   },
 }
 
+const pickedSpy = fn()
+const spyingPicker = demoAuthorPicker()
+
 /**
  * 댓글을 받는 동안(`threadLoading`)에는 처음 값을 확정하지 않는다 — 단서(글 작성자 Ann)가 먼저 있어도 **Ann 을 거치지 않고**, 내 댓글(Bea)이 도착한 뒤 Bea 로 시작한다.
  * 선택기가 `onChange` 로 받은 값을 전부 센다(spy).
  */
-const pickedSpy = fn()
-const spyingPicker = demoAuthorPicker()
 export const PickerNeverPassesThroughTheFallbackWhileLoading: Story = {
   beforeEach: () => pickedSpy.mockClear(),
   args: {
@@ -689,5 +690,42 @@ export const ValueTheThreadChoseStaysAcrossPages: Story = {
     await canvas.findByText('Mine as Bea', { selector: 'p' })
     await expect(picker()).toHaveDisplayValue('Ann') // 스레드가 이제 Bea 를 가리켜도 고정
     await expect(canvas.queryByRole('status')).toBeNull()
+  },
+}
+
+/** 좁은 칸(228px — 깊게 들여쓴 답글 폼 정도)에서 긴 이름의 프로필이 있어도 폼이 칸 밖으로 나가 가로 스크롤을 만들지 않는다 */
+export const NarrowColumnWithLongProfileNamesDoesNotScrollSideways: Story = {
+  args: {
+    fake: profileServer,
+    // 이름이 긴 줄임표 선택기 — 안쪽은 스스로 줄지만 바깥 상자의 최소 내용 폭은 이름 전체라서, 폼의 `.actions` 가 줄어들 수 있어야 한다
+    authorPicker: () => (
+      <span style={{ display: 'inline-flex', minWidth: 0, maxWidth: '100%' }}>
+        <button
+          type="button"
+          style={{
+            minWidth: 0,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {'가나다라마바사아자차카타파하'.repeat(5).slice(0, 60)}
+        </button>
+      </span>
+    ),
+  },
+  render: (args) => (
+    <div data-narrow="" style={{ width: '228px' }}>
+      <Demo {...args} />
+    </div>
+  ),
+  play: async ({ canvas, canvasElement }) => {
+    await canvas.findByText('Spaces, always.')
+    await canvas.findByRole('button', { name: /^가나다/ })
+    const narrow = canvasElement.querySelector<HTMLElement>('[data-narrow]')!
+    await expect(narrow.scrollWidth).toBeLessThanOrEqual(narrow.clientWidth)
+    await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
+      document.documentElement.clientWidth,
+    )
   },
 }

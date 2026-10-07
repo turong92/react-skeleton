@@ -4,6 +4,8 @@
 }
 
 .actions {
+  /* form 의 grid 항목이라 min-width:auto 면 선택기의 최소 내용 폭이 트랙을 밀어 좁은 칸에서 가로 스크롤이 생긴다 */
+  min-width: 0;
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-sm);

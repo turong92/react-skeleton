@@ -239,6 +239,33 @@ export const ThirtyFourCharacterItemIsShownInFull: Story = {
   },
 }
 
+/**
+ * 뒤집어도 화면 폭에 안 들어가면 **넘친 만큼 화면 안으로 당긴다** — 좁은 화면에서 단추가 한가운데쯤이면 끝 정렬은 왼쪽으로, 시작 정렬은 오른쪽으로 넘친다.
+ * 시험 브라우저의 뷰포트는 못 바꾸니 3배로 확대한 칸(`transform: scale(3)`) 안에 단추를 두어 같은 상황을 만든다(메뉴 상자 ≈ 화면 폭의 절반 이상).
+ */
+export const StaysInsideTheViewportWhenNeitherAlignmentFits: Story = {
+  args: {
+    items: [
+      { key: 'long', label: veryLong, onSelect: fn(), checked: true },
+      { key: 'short', label: 'Short', onSelect: fn(), checked: false },
+    ],
+  },
+  render: (args) => (
+    <div style={{ transform: 'scale(3)', transformOrigin: '0 0', width: '1px', height: '1px' }}>
+      <div style={{ marginInlineStart: `${400 / 3}px` }}>
+        <RowMenu {...args} />
+      </div>
+    </div>
+  ),
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(trigger(canvas))
+    const box = canvas.getByRole('menu').getBoundingClientRect()
+    await expect(box.width).toBeGreaterThan(window.innerWidth / 2) // 좁은 화면 상황
+    await expect(box.left).toBeGreaterThanOrEqual(-1)
+    await expect(box.right).toBeLessThanOrEqual(window.innerWidth + 1)
+  },
+}
+
 export const LongItemsAreEllipsizedInsideTheMenu: Story = {
   args: {
     items: [

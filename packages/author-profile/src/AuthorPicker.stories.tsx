@@ -200,7 +200,9 @@ export const LongNamesAreEllipsizedNotPushedOut: Story = {
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(await canvas.findByRole('button', { name: /Writing as/ }))
     const menu = await canvas.findByRole('menu')
-    await expect(menu.getBoundingClientRect().width).toBeLessThanOrEqual(24 * 16 + 2) // 폭 상한
+    await expect(menu.getBoundingClientRect().width).toBeLessThanOrEqual(
+      parseFloat(getComputedStyle(document.documentElement).fontSize) * 24 + 2,
+    ) // 폭 상한(24rem)
     const item = await canvas.findByRole('menuitemradio', { name: `${longName}#0009` }) // 전체 이름이 낭독 이름
     const box = menu.getBoundingClientRect()
     await expect(item.getBoundingClientRect().right).toBeLessThanOrEqual(box.right + 1) // 상자 안
@@ -254,5 +256,32 @@ export const ConfirmationButtonKeepsTheSpaceBeforeTheName: Story = {
     range.setEnd(text, 'Use'.length) // 「Use」 글자만
     const gap = name.getBoundingClientRect().left - range.getBoundingClientRect().right
     await expect(gap).toBeGreaterThan(0)
+  },
+}
+
+/** 아주 좁은 칸(228px — 깊게 들여쓴 답글 폼 정도)에서 긴 이름으로 바꾸려 해도 확인 줄이 칸 밖으로 나가 가로 스크롤을 만들지 않는다 */
+export const NarrowColumnKeepsTheConfirmationInside: Story = {
+  args: { threadAuthorId: 'prf_a' },
+  render: (args) => (
+    <div data-narrow="" style={{ width: '228px' }}>
+      <PickerDemo
+        {...args}
+        api={
+          createFakeAuthorProfiles({
+            profiles: [ann, { ...bea, id: 'prf_long', name: longName, tag: '0009' }],
+          }).api
+        }
+      />
+    </div>
+  ),
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    const narrow = canvasElement.querySelector<HTMLElement>('[data-narrow]')!
+    await userEvent.click(await canvas.findByRole('button', { name: /Writing as Ann#0001/ }))
+    await userEvent.click(await canvas.findByRole('menuitemradio', { name: `${longName}#0009` }))
+    await canvas.findByRole('button', { name: `Use ${longName}#0009` })
+    await expect(narrow.scrollWidth).toBeLessThanOrEqual(narrow.clientWidth)
+    await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
+      document.documentElement.clientWidth,
+    )
   },
 }

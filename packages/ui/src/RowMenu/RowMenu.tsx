@@ -7,6 +7,7 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from 'react'
+import { placeMenu } from './placeMenu'
 import { RowMenuEntry } from './RowMenuEntry'
 import styles from './RowMenu.module.css'
 
@@ -75,15 +76,7 @@ export function RowMenu({
     const menu = menuRef.current
     const button = buttonRef.current
     if (!open || !menu || !button) return
-    const anchor = button.getBoundingClientRect()
-    const below = window.innerHeight - anchor.bottom
-    const needed = menu.getBoundingClientRect().height
-    menu.dataset.placement = needed > below && anchor.top > below ? 'top' : 'bottom'
-    // 원하는 쪽(기본 끝)에 맞추고, 그쪽 화면 밖으로 넘치면 반대로 맞춘다(왼쪽 끝 버튼의 메뉴가 잘리지 않게)
-    menu.dataset.align = align
-    const box = menu.getBoundingClientRect()
-    if (box.left < 0 || box.right > window.innerWidth)
-      menu.dataset.align = align === 'end' ? 'start' : 'end'
+    placeMenu(menu, button, align)
   }, [open, align])
 
   useEffect(() => {

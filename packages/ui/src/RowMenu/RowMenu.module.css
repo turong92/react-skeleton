@@ -116,6 +116,7 @@
 }
 
 .check {
+  flex: none;
   display: inline-block;
   width: 1ch;
   color: var(--teal);

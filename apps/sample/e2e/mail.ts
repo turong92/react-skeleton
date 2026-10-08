@@ -104,3 +104,18 @@ export async function subjectsFor(mailUrl: string, to: string): Promise<string[]
     .filter((m) => m.To.some((t) => t.Address.toLowerCase() === to.toLowerCase()))
     .map((m) => m.Subject)
 }
+
+/** `to` 로 제목이 `subject` 인 메일이 올 때까지 기다린다 — 「이 요청은 끝까지 처리됐다」는 신호로 쓴다(그 뒤에 「다른 메일은 안 갔다」를 단언하면 고정 대기가 필요 없다) */
+export async function waitForSubject(
+  mailUrl: string,
+  to: string,
+  subject: RegExp,
+  { timeoutMs = 30_000 }: { timeoutMs?: number } = {},
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    if ((await subjectsFor(mailUrl, to)).some((s) => subject.test(s))) return
+    await new Promise((r) => setTimeout(r, 500))
+  }
+  throw new Error(`no mail with subject ${subject} for ${to} within ${timeoutMs / 1000}s`)
+}

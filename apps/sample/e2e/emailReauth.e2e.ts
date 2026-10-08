@@ -5,9 +5,9 @@ import { waitForCode } from './mail'
 
 /*
  * 첫 이메일 등록이 다시 인증(제공자 재동의)을 요구하는 길 — 마지막 로그인이 `email.first-registration-window`(기본 1시간)를 넘었을 때.
- * 그 시각은 서버가 로그인 때 적으므로 표준 실행으로는 만들 수 없다: 백엔드를 `E2E_EMAIL_REAUTH_WINDOW=PT0S`(면제 없음)로 띄운 실행에서만 돈다 —
- *   E2E_EMAIL_REAUTH_WINDOW=PT0S pnpm e2e:sample -- emailReauth
- * (그 실행에서는 면제를 시험하는 다른 파일이 맞지 않으므로 이 파일만 돌린다. 표준 실행에서는 건너뛴다.)
+ * 그 시각은 서버가 로그인 때 적으므로 표준 구성으로는 만들 수 없다: 백엔드를 `E2E_EMAIL_REAUTH_WINDOW=PT0S`(면제 없음)로 띄우는 두 번째 판이 이 파일만 돈다 —
+ * `pnpm e2e` 가 `e2e:main` 다음 `e2e:reauth` 로 차례로 돈다(CI 의 `pnpm e2e:sample` 도 같다). 한 판만: `pnpm --filter sample e2e:reauth`.
+ * (그 구성에서는 면제를 시험하는 다른 파일이 맞지 않아 이 파일만 돈다. 가짜 제공자를 끄면 건너뛴다.)
  * 흐름: 주소 입력 → 서버가 REAUTH_REQUIRED → 「보안을 위해 LINE 로 한 번 더 확인해 주세요」 → 단추 → 계정 설정이 열리자마자 LINE 동의(새 PKCE verifier) →
  * 돌아오면 설정의 이메일 구역이 인증번호를 보낸다 → 메일함의 번호 → 막이 걷히고 모든 구역이 열린다.
  */
@@ -16,7 +16,7 @@ const baseUrl = inject('baseUrl')
 const apiUrl = inject('apiUrl')
 const mailUrl = inject('mailUrl')
 const fakeUrl = inject('fakeUrl')
-const on = !!process.env.E2E_EMAIL_REAUTH_WINDOW && !!fakeUrl
+const on = !!fakeUrl
 const stamp = Date.now()
 const address = `e2e-reauth-${stamp}@example.com`
 const seen = new Set<string>()

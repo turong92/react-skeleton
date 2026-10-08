@@ -2,7 +2,7 @@ import { expect as baseExpect, type Browser, type Page } from 'playwright/test'
 import { afterAll, beforeAll, describe, inject, it } from 'vitest'
 import { acceptLegalGate, agreeToLegal, auth, dismissConsent, ko, launch, legal } from './helpers'
 import { signOut } from './boardSteps'
-import { subjectsFor, waitForCode, waitForLink } from './mail'
+import { subjectsFor, waitForCode, waitForLink, waitForSubject } from './mail'
 
 /*
  * 이메일 필수(`skeleton.account.email.required`) + 연락받을 이메일(`contact-email.enabled`) — 백엔드 샘플이 둘 다 켜 둔다.
@@ -11,9 +11,10 @@ import { subjectsFor, waitForCode, waitForLink } from './mail'
  *     → 번호가 안 오는 주소(이미 남이 쓰는 주소) 안내 → 메일함의 인증번호 → 약관 → 홈 → 이제 게시판 API 가 열린다.
  *  2) 연락받을 이메일: 설정에서 등록(그 주소로 간 인증번호) → 설정 요약에 보인다 → **비밀번호 찾기에 그 주소를 넣으면 메일이 가지 않는다**(계정 이메일은 간다) → 지운다.
  * 가짜 제공자가 없으면(`fakeUrl` 빈 문자열) 1) 은 건너뛴다.
- * 1시간이 지난 첫 등록의 제공자 재동의(`REAUTH_REQUIRED`)는 마지막 로그인 시각에 달려 있어 표준 실행으로는 만들 수 없다 — `E2E_EMAIL_REAUTH_WINDOW=PT0S` 로 백엔드를 띄운 실행에서만 도는 `emailReauth.e2e.ts` 가 시험한다.
+ * 1시간이 지난 첫 등록의 제공자 재동의(`REAUTH_REQUIRED`)는 마지막 로그인 시각에 달려 있어 표준 구성으로는 만들 수 없다 — `E2E_EMAIL_REAUTH_WINDOW=PT0S` 로 백엔드를 띄우는 두 번째 판(`pnpm e2e:reauth`)의 `emailReauth.e2e.ts` 가 시험한다.
  */
-const pwExpect = baseExpect.configure({ timeout: 20_000 })
+// 막이 뜨는 데는 부하가 큰 기계에서 한참 걸릴 수 있다 - 통과하는 단언은 이 한도를 쓰지 않는다
+const pwExpect = baseExpect.configure({ timeout: 45_000 })
 const baseUrl = inject('baseUrl')
 const apiUrl = inject('apiUrl')
 const mailUrl = inject('mailUrl')
@@ -105,7 +106,7 @@ describe('an address-less account (LINE gives no email) is stopped by the regist
     await page.goto(`${baseUrl}/board`)
     await pwExpect(gate()).toBeVisible()
     pwExpect(await topDialogTitle()).toBe(auth.emailRequiredTitle)
-    await page.waitForTimeout(1500) // 뒤 화면의 쿼리가 403 을 쏟아냈다면 토스트가 떴을 시간
+    await page.waitForLoadState('networkidle') // 뒤 화면의 쿼리가 모두 끝났다 - 403 을 쏟아냈다면 토스트가 이미 떴다
     await pwExpect(page.locator('[data-sonner-toast]')).toHaveCount(0)
     // 약관은 이메일 다음 — 이메일을 등록하기 전에는 약관 막이 아예 뜨지 않는다
     await pwExpect(
@@ -141,7 +142,8 @@ describe('an address-less account (LINE gives no email) is stopped by the regist
         gate().getByText(/번호가 안 오면 그 주소로 이미 가입한 계정이 있을 수 있어요/),
       ).toBeVisible()
       // 메일함에는 인증번호가 가지 않는다 — 가입된 주소에는 「이미 계정이 있어요」 메일만
-      await page.waitForTimeout(2500)
+      // 요청이 끝까지 처리됐다는 신호: 가입된 주소로는 「이미 계정이 있어요」 메일이 간다 - 그 다음에 인증번호 메일이 없음을 본다
+      await waitForSubject(mailUrl, taken, /^(?:이미 계정이 있어요|You already have an account)$/)
       const subjects = await subjectsFor(mailUrl, taken)
       pwExpect(
         subjects.some((s) => /^새 이메일 확인 인증번호|Your code to confirm the new email/.test(s)),
@@ -256,19 +258,18 @@ describe('contact email: a second, optional address for notices (never for sign-
     await page.getByLabel(auth.email).fill(contact)
     await page.getByRole('button', { name: auth.forgotSubmit }).click()
     await pwExpect(page.getByText(auth.forgotSentBody(contact))).toBeVisible() // 화면은 늘 같은 말(계정이 있는지 알려 주지 않는다)
-    await page.waitForTimeout(3000)
-    const subjects = await subjectsFor(mailUrl, contact)
-    // 이 주소로 간 메일은 연락받을 이메일 확인 인증번호 하나뿐 — 재설정 메일은 없다
-    pwExpect(subjects).toHaveLength(1)
-    pwExpect(subjects[0]).toMatch(
-      /연락받을 이메일 확인 인증번호|Your code to confirm the contact email/,
-    )
-    // 대조: 같은 요청을 계정 이메일로 하면 재설정 메일이 온다(메일 경로가 살아 있다는 증거)
+    // 대조: 같은 요청을 계정 이메일로 하면 재설정 메일이 온다(메일 경로가 살아 있다는 증거) - 그 메일이 오면 앞 요청도 끝까지 처리된 것이다
     await page.goto(`${baseUrl}/forgot-password`)
     await page.getByLabel(auth.email).fill(account)
     await page.getByRole('button', { name: auth.forgotSubmit }).click()
     const link = await waitForLink(mailUrl, account, 'reset-password', { seen })
     pwExpect(link.path).toContain('/reset-password?token=')
+    const subjects = await subjectsFor(mailUrl, contact)
+    // 이 주소로 간 메일은 연락받을 이메일 확인 인증번호 하나뿐 - 재설정 메일은 없다
+    pwExpect(subjects).toHaveLength(1)
+    pwExpect(subjects[0]).toMatch(
+      /연락받을 이메일 확인 인증번호|Your code to confirm the contact email/,
+    )
   })
 
   it('remove: signing in again, the address is still there; one press removes it and notices go back to the account email', async () => {
@@ -291,4 +292,40 @@ describe('contact email: a second, optional address for notices (never for sign-
     await page.goto(baseUrl)
     await signOut(page)
   })
+})
+
+describe('the ways out of the register-your-email screen work when pressed', () => {
+  const signInWithLine = async () => {
+    await control({
+      line: { sub: `U-out-${stamp}`, name: '떠날 사용자', email: '' },
+      deny: false,
+    })
+    await page.goto(`${baseUrl}/login`)
+    await page.getByRole('button', { name: 'LINE으로 계속하기' }).click()
+    await pwExpect(gate()).toBeVisible()
+  }
+
+  run('"sign out" ends the session: the login page, no screen, no token', async () => {
+    await page.evaluate(() => window.localStorage.clear())
+    await signInWithLine()
+    await gate().getByRole('button', { name: auth.emailRequiredSignOut }).click()
+    await pwExpect(page).toHaveURL(/\/login$/)
+    await pwExpect(gate()).toHaveCount(0)
+    pwExpect(
+      await page.evaluate(() => window.localStorage.getItem('sample.accessToken')),
+    ).toBeNull()
+  })
+
+  run(
+    '"delete my account" opens the delete section of the settings, which is reachable and focused',
+    async () => {
+      await signInWithLine()
+      await gate().getByRole('button', { name: auth.emailRequiredDelete }).click()
+      await pwExpect(page).toHaveURL(/\/account#delete$/)
+      await pwExpect(gate()).toHaveCount(0) // 계정 설정에서는 막이 걷힌다
+      const section = page.getByRole('region', { name: auth.sectionDelete })
+      await pwExpect(section).toBeVisible()
+      await pwExpect(section).toBeInViewport()
+    },
+  )
 })

@@ -137,17 +137,54 @@ export async function agreeToLegal(page: Page, apiUrl: string) {
   await all.check()
 }
 
-/** 링크 · 소셜로 처음 들어온 계정은 동의가 없어 동의 화면이 앞을 막는다 — 있으면 모두 동의하고 이어 간다(legal 모듈이 없으면 아무 일도 하지 않는다) */
+/** 앱이 액세스 토큰을 두는 곳(`src/auth/authConfig.ts` 의 `authKeys.accessToken`) — 이 탭이 로그인을 마쳤는지 읽는다 */
+const ACCESS_TOKEN_KEY = 'sample.accessToken'
+
+/** 막이 뜰 때까지 기다리는 시간 — 부하가 큰 기계에서도 서버가 「뜬다」고 말한 막은 뜬다. 넘으면 실패다(조용히 지나가지 않는다) */
+const GATE_TIMEOUT_MS = 45_000
+
+/**
+ * 이 탭의 로그인 계정이 지금 어떤 막을 만나는가 — **화면이 아니라 서버가** 말한다(`GET /account/me` 의 `emailRequired`, `GET /legal/consents/me` 의 `blocked`).
+ * 막이 뜰지를 화면 대기 시간으로 짐작하면 부하에서 「안 뜬다」로 잘못 읽고 지나가 뒤에서 연쇄 실패한다. 로그인이 끝나(토큰이 저장돼) 있을 때까지 기다린 뒤 묻는다.
+ */
+export async function gatesOf(
+  page: Page,
+  apiUrl: string,
+): Promise<{ emailRequired: boolean; consentRequired: boolean }> {
+  await page.waitForFunction((key) => !!window.localStorage.getItem(key), ACCESS_TOKEN_KEY, {
+    timeout: GATE_TIMEOUT_MS,
+  })
+  const token = await page.evaluate((key) => window.localStorage.getItem(key), ACCESS_TOKEN_KEY)
+  const headers = { Authorization: `Bearer ${token}` }
+  const me = await fetch(`${apiUrl}/api/v1/account/me`, { headers })
+  if (!me.ok) throw new Error(`GET /account/me → ${me.status}`)
+  const emailRequired = ((await me.json()) as { value: { emailRequired?: boolean } }).value
+    .emailRequired
+  let consentRequired = false
+  if (await legalOn(apiUrl)) {
+    const mine = await fetch(`${apiUrl}/api/v1/legal/consents/me`, { headers })
+    if (!mine.ok) throw new Error(`GET /legal/consents/me → ${mine.status}`)
+    consentRequired = ((await mine.json()) as { value: { blocked: boolean } }).value.blocked
+  }
+  return { emailRequired: emailRequired === true, consentRequired }
+}
+
+/**
+ * 링크 · 소셜로 처음 들어온 계정은 동의가 없어 동의 화면이 앞을 막는다 — 서버가 「동의가 필요하다」고 말하면(`blocked`) 화면이 뜰 때까지 **기다렸다가** 모두 동의하고 이어 간다.
+ * 안 뜨면 실패한다. 서버가 필요 없다고 하면(이미 동의한 계정 · legal 모듈이 없는 백엔드) 아무 일도 하지 않는다. 이메일 등록이 남아 있으면 약관 막은 아직 안 뜨는 순서라 먼저 `registerEmailViaGate` 를 불러야 한다
+ */
 export async function acceptLegalGate(page: Page, apiUrl: string) {
   if (!(await legalOn(apiUrl))) return
+  const { emailRequired, consentRequired } = await gatesOf(page, apiUrl)
+  if (!consentRequired) return
+  if (emailRequired)
+    throw new Error(
+      'acceptLegalGate: the email gate comes first - call registerEmailViaGate before',
+    )
   const gate = page.getByRole('dialog', {
     name: new RegExp(`${legal.reconsentTitle}|${legal.firstConsentTitle}`),
   })
-  try {
-    await gate.waitFor({ timeout: 10_000 })
-  } catch {
-    return // 이미 동의한 계정
-  }
+  await gate.waitFor({ timeout: GATE_TIMEOUT_MS })
   await gate.getByRole('checkbox', { name: legal.agreeAll }).check()
   await gate.getByRole('button', { name: legal.reconsentSubmit }).click()
   await gate.waitFor({ state: 'detached' })
@@ -230,20 +267,18 @@ export async function createProfile(
 
 /**
  * 주소 없는 계정(LINE · X 가 주소를 안 준다)이 로그인하면 앱 대신 「이메일을 등록해 주세요」가 덮는다 — 주소를 적고 메일함의 인증번호로 통과한다.
- * 이 백엔드(`email.required`)가 아니면 막이 안 뜬다 → 아무것도 하지 않는다
+ * 막이 뜰지는 서버가 말한다(`me.emailRequired`): true 면 뜰 때까지 기다리고(안 뜨면 실패), false 면(이메일 필수가 아닌 백엔드 · 주소가 있는 계정) 아무것도 하지 않는다
  */
 export async function registerEmailViaGate(
   page: Page,
   mailUrl: string,
   address: string,
   seen: Set<string>,
+  apiUrl = inject('apiUrl'),
 ) {
+  if (!(await gatesOf(page, apiUrl)).emailRequired) return
   const gate = page.getByRole('dialog', { name: auth.emailRequiredTitle })
-  try {
-    await gate.waitFor({ timeout: 15_000 })
-  } catch {
-    return
-  }
+  await gate.waitFor({ timeout: GATE_TIMEOUT_MS })
   await gate.getByRole('textbox', { name: new RegExp(`^${auth.emailRequiredField}`) }).fill(address)
   await gate.getByRole('button', { name: auth.emailRequiredSend }).click()
   const { waitForCode } = await import('./mail')

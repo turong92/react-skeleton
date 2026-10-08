@@ -10,6 +10,7 @@ import type { AuthApi } from '../authApi'
 import { linkIntentOf, linkIntentState } from '../linkIntent'
 import { postSignInTarget, rememberReturnTo, consumeReturnTo } from '../returnTo'
 import { AccountSettings, type AccountSettingsProps } from '../screens/AccountSettings'
+import { ForgotLoginIdScreen } from '../screens/ForgotLoginIdScreen'
 import { ForgotPasswordScreen } from '../screens/ForgotPasswordScreen'
 import { MagicLinkLanding } from '../screens/MagicLinkLanding'
 import { ResetPasswordScreen } from '../screens/ResetPasswordScreen'
@@ -51,6 +52,8 @@ export type AuthPaths = {
   signIn: string
   signUp: string
   forgotPassword: string
+  /** 아이디 찾기(로그인 아이디를 켠 서버에서만 살아 있다) */
+  forgotLoginId: string
   resetPassword: string
   magicLink: string
   socialCallback: string
@@ -165,6 +168,7 @@ export function SignInPage({
       }
       signUpTo={ctx.paths.signUp}
       forgotPasswordTo={ctx.paths.forgotPassword}
+      {...(ctx.loginId ? { loginId: true, forgotLoginIdTo: ctx.paths.forgotLoginId } : {})}
       onPasswordSignIn={async (credentials) => {
         await auth.login(credentials)
         navigate(target, { replace: true, ...(arrival ? { state: arrival } : {}) })
@@ -262,6 +266,22 @@ export function ForgotPage({ ctx }: { ctx: PageContext }) {
       labels={ctx.labels}
       signInTo={ctx.paths.signIn}
       onSubmit={(email) => ctx.accountApi.forgotPassword(email)}
+    />
+  )
+}
+
+/** 아이디 찾기 — 발견의 `loginId` 키가 있을 때만 산다. 답이 오기 전엔 로딩, 키가 없으면(꺼진 · 옛 서버) 로그인으로 보낸다 */
+export function ForgotLoginIdPage({ ctx }: { ctx: PageContext }) {
+  if (ctx.discovered?.status === 'loading')
+    return (
+      <DiscoveryLoading title={mergeLabels(ctx.labels).forgotLoginIdTitle} labels={ctx.labels} />
+    )
+  if (!ctx.loginId) return <Navigate to={ctx.paths.signIn} replace />
+  return (
+    <ForgotLoginIdScreen
+      labels={ctx.labels}
+      signInTo={ctx.paths.signIn}
+      onSubmit={(email) => ctx.accountApi.forgotLoginId(email)}
     />
   )
 }

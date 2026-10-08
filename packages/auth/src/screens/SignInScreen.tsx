@@ -19,20 +19,28 @@ import styles from './auth.module.css'
 import { authErrorMessage, type AuthErrorInfo } from './errors'
 import { mergeLabels, type AuthLabels } from './labels'
 import { resolveMethods, type SignInMethodsConfig } from './methods'
+import { identifierProblem, signInCredentials, type SignInCredentials } from './signInIdentifier'
 import { useCountdown } from './useCountdown'
 
 export type SignInScreenProps = {
   /** 켜 둔 로그인 방법 — 기본은 이메일 + 비밀번호만 */
   methods?: SignInMethodsConfig
   labels?: Partial<AuthLabels>
-  /** 이메일 + 비밀번호. 실패는 던진다(화면이 문구로 바꾼다) — 성공 뒤 이동은 호출자가 */
-  onPasswordSignIn?: (credentials: { email: string; password: string }) => Promise<void>
+  /**
+   * 이메일 + 비밀번호. 실패는 던진다(화면이 문구로 바꾼다) — 성공 뒤 이동은 호출자가.
+   * `loginId` 를 켠 화면에서 `@` 없는 입력만 `{ username, password }` 로 온다(그대로 `auth.login` 에 넘기면 된다)
+   */
+  onPasswordSignIn?: (credentials: SignInCredentials) => Promise<void>
   /** 이메일 링크 요청(항상 성공처럼 보인다 — 서버가 존재 여부를 숨긴다) */
   onMagicLinkRequest?: (email: string) => Promise<void>
   /** 소셜 제공자로 보낸다(보통 `flow.start(provider)` 뒤 `window.location.assign(url)`). 못 시작하면(WebCrypto 없음 …) 던진다 — 화면이 문구로 바꾼다 */
   onSocialSignIn?: (provider: string) => void | Promise<unknown>
   signUpTo?: string
   forgotPasswordTo?: string
+  /** 로그인 아이디를 켠 서버일 때(발견에 `loginId` 키) true — 칸이 「아이디 또는 이메일」(text)이 되고, `@` 없는 입력은 `username` 으로 간다. 기본 꺼짐 = 예전 화면 그대로 */
+  loginId?: boolean
+  /** 「아이디 찾기」 링크의 도착지 — `loginId` 가 켜져 있을 때만 그린다 */
+  forgotLoginIdTo?: string
   /** 폼 위 안내(세션이 끝난 이유 …) */
   notice?: string
   /** 안내 옆 동작(방법을 못 불러왔을 때 「다시 시도」) */
@@ -54,6 +62,8 @@ export function SignInScreen({
   onSocialSignIn,
   signUpTo,
   forgotPasswordTo,
+  loginId = false,
+  forgotLoginIdTo,
   notice,
   noticeAction,
   initialEmail = '',
@@ -77,7 +87,7 @@ export function SignInScreen({
   const uid = useId()
   const ids = { email: `${uid}-email`, password: `${uid}-password` }
   const attempt = useSubmitAttempt()
-  const emailProblem = email.trim() ? undefined : labels.problemEmailMissing
+  const emailProblem = identifierProblem(email, mode, loginId, labels)
   const passwordProblem =
     mode === 'password' && !password ? labels.problemPasswordMissing : undefined
   const problems: FormProblem[] = [
@@ -109,7 +119,7 @@ export function SignInScreen({
         await onMagicLinkRequest(email)
         setMagicSentTo(email)
       } else if (onPasswordSignIn) {
-        await onPasswordSignIn({ email, password })
+        await onPasswordSignIn(signInCredentials(email, password, loginId))
       }
     } catch (error) {
       fail(error)
@@ -147,6 +157,8 @@ export function SignInScreen({
   const message = failure?.message
   const showSocial = enabled.social.length > 0 && !!onSocialSignIn
   const otherMethodAbove = hasPassword || hasMagic
+  /** 「아이디 찾기」 — 아이디를 켠 화면에서만 */
+  const idLink = loginId ? forgotLoginIdTo : undefined
 
   return (
     <AuthLayout
@@ -184,14 +196,14 @@ export function SignInScreen({
             )}
             <Field
               id={ids.email}
-              label={labels.email}
+              label={loginId ? labels.signInIdentifier : labels.email}
               required
               error={attempt.attempted ? emailProblem : undefined}
             >
               {(control) => (
                 <Input
                   {...control}
-                  type="email"
+                  type={loginId ? 'text' : 'email'}
                   autoComplete="username"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
@@ -227,10 +239,22 @@ export function SignInScreen({
                   : labels.signInSubmit}
             </Button>
             <div className={[styles.row, styles.between].join(' ')}>
-              {mode === 'password' && forgotPasswordTo && (
+              {mode === 'password' && forgotPasswordTo && !idLink && (
                 <Link className={styles.link} to={forgotPasswordTo}>
                   {labels.signInForgot}
                 </Link>
+              )}
+              {mode === 'password' && idLink && (
+                <span className={styles.row}>
+                  {forgotPasswordTo && (
+                    <Link className={styles.link} to={forgotPasswordTo}>
+                      {labels.signInForgot}
+                    </Link>
+                  )}
+                  <Link className={styles.link} to={idLink}>
+                    {labels.forgotLoginIdLink}
+                  </Link>
+                </span>
               )}
               {hasPassword && hasMagic && (
                 <Button

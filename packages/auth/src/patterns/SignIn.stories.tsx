@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, waitFor } from 'storybook/test'
+import { koAuthLabels } from '../screens/labels.ko'
 import { SignInScreen } from '../screens/SignInScreen'
 import { apiError } from '../stories/fakeAccountApi'
 import { withRouter } from '../stories/withRouter'
@@ -186,3 +187,113 @@ export const Dark: Story = {
     await expect(canvas.getByRole('form', { name: 'Sign in' })).toBeVisible()
   },
 }
+
+/**
+ * 로그인 아이디를 켠 서버(발견에 `loginId` 키) — 칸이 「Username or email」 이고 `type="text"`(브라우저의 이메일 검사가 아이디를 막지 않는다).
+ * 입력을 본문으로 바꾸는 곳은 한 군데: `@` 가 있으면 `email`, 없으면 `username`(trim). 비밀번호 찾기 옆에 밑줄 링크 「아이디 찾기」. 키가 없으면 위의 이메일 로그인 그대로
+ */
+export const LoginIdOnEmailOrId: Story = {
+  args: { loginId: true, forgotLoginIdTo: '/forgot-id' },
+  play: async ({ canvas, args, userEvent }) => {
+    const field = canvas.getByLabelText(/Username or email/)
+    await expect(field).toHaveAttribute('type', 'text')
+    await expect(canvas.queryByLabelText(/^Email/)).toBeNull()
+    // 아이디 - `username`, 앞뒤 공백은 없앤다(대문자 · 정규화는 서버)
+    await userEvent.type(field, '  Sumin.Kim ')
+    await userEvent.type(canvas.getByLabelText(/^Password/), 'secret-pass{Enter}')
+    await expect(args.onPasswordSignIn).toHaveBeenLastCalledWith({
+      username: 'Sumin.Kim',
+      password: 'secret-pass',
+    })
+    // 이메일 - `email`
+    await userEvent.clear(field)
+    await userEvent.type(field, 'ann@example.com')
+    await userEvent.click(canvas.getByRole('button', { name: 'Sign in' }))
+    await expect(args.onPasswordSignIn).toHaveBeenLastCalledWith({
+      email: 'ann@example.com',
+      password: 'secret-pass',
+    })
+  },
+}
+
+export const LoginIdOnForgotLinks: Story = {
+  args: { loginId: true, forgotLoginIdTo: '/forgot-id' },
+  play: async ({ canvas }) => {
+    const idLink = canvas.getByRole('link', { name: 'Forgot your username?' })
+    await expect(idLink).toHaveAttribute('href', '/forgot-id')
+    await expect(getComputedStyle(idLink).textDecorationLine).toBe('underline')
+    await expect(canvas.getByRole('link', { name: 'Forgot your password?' })).toHaveAttribute(
+      'href',
+      '/forgot-password',
+    )
+  },
+}
+
+/** 켜져 있어도 링크를 걸 곳을 안 주면 링크는 없다. 꺼져 있으면(`loginId` 없음) 주어도 없다 */
+export const LoginIdLinkOnlyWhenOnAndGiven: Story = {
+  args: { loginId: false, forgotLoginIdTo: '/forgot-id' },
+  play: async ({ canvas }) => {
+    await expect(canvas.queryByRole('link', { name: 'Forgot your username?' })).toBeNull()
+    await expect(canvas.getByLabelText(/^Email/)).toHaveAttribute('type', 'email')
+  },
+}
+
+/** 아이디를 켜도 이메일 링크 방식은 주소로 보내는 것이라 `@` 가 없으면 서버에 묻지 않고 「이메일을 입력해 주세요」 */
+export const LoginIdOnMagicLinkNeedsAnEmail: Story = {
+  args: {
+    loginId: true,
+    forgotLoginIdTo: '/forgot-id',
+    labels: koAuthLabels,
+    methods: { magicLink: true },
+  },
+  play: async ({ canvas, args, userEvent }) => {
+    await userEvent.click(canvas.getByRole('button', { name: '이메일로 로그인 링크 받기' }))
+    await userEvent.type(canvas.getByLabelText(/아이디 또는 이메일/), 'sumin.kim')
+    await userEvent.click(canvas.getByRole('button', { name: '링크 보내기' }))
+    await expect(args.onMagicLinkRequest).not.toHaveBeenCalled()
+    await expect(
+      await canvas.findByRole('button', { name: '이메일을 입력해 주세요' }),
+    ).toBeVisible()
+    await userEvent.clear(canvas.getByLabelText(/아이디 또는 이메일/))
+    await userEvent.type(canvas.getByLabelText(/아이디 또는 이메일/), 'sumin@kim.dev')
+    await userEvent.click(canvas.getByRole('button', { name: '링크 보내기' }))
+    await expect(args.onMagicLinkRequest).toHaveBeenCalledWith('sumin@kim.dev')
+  },
+}
+
+/** 비어 있으면 「아이디 또는 이메일을 입력해 주세요」, 첫 빈 칸으로 포커스 */
+export const LoginIdOnEmptySubmitExplainsItself: Story = {
+  args: { loginId: true, forgotLoginIdTo: '/forgot-id', labels: koAuthLabels },
+  play: async ({ canvas, args, userEvent }) => {
+    await userEvent.click(canvas.getByRole('button', { name: '로그인' }))
+    await expect(args.onPasswordSignIn).not.toHaveBeenCalled()
+    await expect(
+      await canvas.findByRole('button', { name: '아이디 또는 이메일을 입력해 주세요' }),
+    ).toBeVisible()
+    await waitFor(() => expect(canvas.getByLabelText(/아이디 또는 이메일/)).toHaveFocus())
+  },
+}
+
+/** 375px · 320px - 두 링크와 방법 바꾸기 단추가 가로로 밀리지 않고 줄을 바꾼다 */
+const narrow = (width: number): Story => ({
+  args: {
+    loginId: true,
+    forgotLoginIdTo: '/forgot-id',
+    labels: koAuthLabels,
+    methods: { magicLink: true, social: [{ provider: 'google' }] },
+  },
+  decorators: [
+    (Story) => (
+      <div data-narrow style={{ width, maxWidth: '100%' }}>
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvas, canvasElement }) => {
+    await expect(canvas.getByRole('link', { name: '아이디 찾기' })).toBeVisible()
+    const box = canvasElement.querySelector<HTMLElement>('[data-narrow]')!
+    await expect(box.scrollWidth).toBeLessThanOrEqual(box.clientWidth)
+  },
+})
+export const LoginIdNarrow375: Story = narrow(375)
+export const LoginIdNarrow320: Story = narrow(320)

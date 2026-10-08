@@ -18,6 +18,7 @@ import { createSignUpPending } from '../signUpPending'
 import {
   AccountDeletedPage,
   AccountPage,
+  ForgotLoginIdPage,
   ForgotPage,
   LegacyLinkPage,
   MagicLinkPage,
@@ -60,6 +61,7 @@ export const DEFAULT_AUTH_PATHS: AuthPaths = {
   signIn: '/login',
   signUp: '/sign-up',
   forgotPassword: '/forgot-password',
+  forgotLoginId: '/forgot-id',
   resetPassword: '/reset-password',
   magicLink: '/magic-link',
   socialCallback: '/auth/callback',
@@ -80,6 +82,7 @@ export type AuthPageName =
   | 'signIn'
   | 'signUp'
   | 'forgotPassword'
+  | 'forgotLoginId'
   | 'resetPassword'
   | 'magicLink'
   | 'socialCallback'
@@ -215,6 +218,13 @@ export function createAuthRoutes(options: AuthRoutesOptions): RouteObject[] {
         ...handle('resetPassword'),
       },
     )
+  // 아이디를 켠 서버인지는 발견의 답이 와야 안다 — 발견을 켠 라우트에서만 경로를 두고, 키가 없으면 페이지가 로그인으로 돌려보낸다
+  if (discoveryOn)
+    open.push({
+      path: paths.forgotLoginId,
+      element: page((c) => <ForgotLoginIdPage ctx={c} />),
+      ...handle('forgotLoginId'),
+    })
   if (methods.magicLink || discoveryOn)
     open.push({
       path: paths.magicLink,

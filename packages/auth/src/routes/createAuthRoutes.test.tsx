@@ -238,3 +238,37 @@ describe('createAuthRoutes — pending provider round trips follow the session',
     }
   })
 })
+
+describe('createAuthRoutes — the "forgot username" page', () => {
+  const discovery = { social: { session } }
+
+  it('is registered with discovery (the answer that switches the login id on comes later) and not without it', () => {
+    expect(paths({ ...base, discovery })).toContain('/forgot-id')
+    expect(paths({ ...base })).not.toContain('/forgot-id')
+    expect(paths({ ...base, discovery, methods: { password: true } })).not.toContain('/forgot-id')
+  })
+
+  it('the path is configurable', () => {
+    expect(paths({ ...base, discovery, paths: { forgotLoginId: '/find-id' } })).toContain(
+      '/find-id',
+    )
+  })
+
+  it('waits for the answer like the sign-in page: no form before the server has said it is on', () => {
+    const route = createAuthRoutes({ ...base, discovery }).find((r) => r.path === '/forgot-id')
+    const out = renderToStaticMarkup(
+      <MemoryRouter>
+        <AuthProvider session={session}>{route?.element}</AuthProvider>
+      </MemoryRouter>,
+    )
+    expect(out).toContain('Checking how you can sign in')
+    expect(out).not.toContain('type="email"')
+  })
+
+  it('carries the app handle', () => {
+    const route = createAuthRoutes({ ...base, discovery, handle: (page) => ({ page }) }).find(
+      (r) => r.path === '/forgot-id',
+    )
+    expect(route?.handle).toEqual({ page: 'forgotLoginId' })
+  })
+})

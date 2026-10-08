@@ -474,6 +474,7 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
   }),
   'auth#DiscoveryLoading': () => ({}),
   'auth#ForgotPasswordScreen': () => ({ onSubmit: asyncNoop, signInTo: '/login' }),
+  'auth#ForgotLoginIdScreen': () => ({ onSubmit: asyncNoop, signInTo: '/login' }),
   'auth#ResetPasswordScreen': () => ({
     token: 't',
     policy: authPolicy,

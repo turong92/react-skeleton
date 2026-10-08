@@ -3,6 +3,7 @@ import { StrictMode, useEffect, useState } from 'react'
 import { expect, fn, waitFor } from 'storybook/test'
 import { LegacyLinkNotice } from '../screens/LegacyLinkNotice'
 import { SocialLinkProofScreen } from '../screens/SocialLinkProofScreen'
+import { ForgotLoginIdScreen } from '../screens/ForgotLoginIdScreen'
 import { ForgotPasswordScreen } from '../screens/ForgotPasswordScreen'
 import { createOnceRunner } from '../screens/runOnce'
 import { MagicLinkLanding } from '../screens/MagicLinkLanding'
@@ -168,6 +169,79 @@ export const ForgotThenSent: Story = {
     await expect(await canvas.findByText(/If ann@example.com has an account/)).toBeVisible()
   },
 }
+
+/** 아이디 찾기 - 이메일 칸 하나 + 채워진 단추. 보낸 뒤에는 「있다면 보냈다」만 말한다(비밀번호 찾기와 같은 틀) */
+export const ForgotLoginIdThenSent: Story = {
+  render: () => {
+    const onSubmit = fn(async () => undefined)
+    return <ForgotLoginIdScreen onSubmit={onSubmit} signInTo="/login" />
+  },
+  play: async ({ canvas, userEvent }) => {
+    await expect(canvas.getByRole('heading', { name: 'Find your username' })).toBeVisible()
+    await userEvent.type(canvas.getByLabelText(/Email/), 'ann@example.com')
+    await userEvent.click(canvas.getByRole('button', { name: 'Send my username' }))
+    await expect(
+      await canvas.findByText(
+        'If ann@example.com has an account, we have sent the username there.',
+      ),
+    ).toBeVisible()
+    await expect(canvas.getByRole('link', { name: 'Back to sign in' })).toBeVisible()
+  },
+}
+
+export const ForgotLoginIdWithoutAnAddressExplainsItself: Story = {
+  render: () => <ForgotLoginIdScreen onSubmit={async () => undefined} signInTo="/login" />,
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole('button', { name: 'Send my username' }))
+    await expect(
+      await canvas.findByRole('button', { name: 'Enter your email address' }),
+    ).toBeVisible()
+    await waitFor(() => expect(canvas.getByLabelText(/Email/)).toHaveFocus())
+  },
+}
+
+/** 한도(429)는 카운트다운으로, 캡차 자리는 비밀번호 찾기와 같은 곳 */
+export const ForgotLoginIdRateLimitedWithCaptcha: Story = {
+  render: () => (
+    <ForgotLoginIdScreen
+      signInTo="/login"
+      onSubmit={async () => undefined}
+      onSubmitWithCaptcha={async () => {
+        throw apiError('ACCOUNT.RATE_LIMITED', 429, { retryAfterSeconds: 30 })
+      }}
+      renderCaptcha={({ onToken }) => (
+        <button type="button" onClick={() => onToken('captcha-ok')}>
+          Solve captcha
+        </button>
+      )}
+    />
+  ),
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.type(canvas.getByLabelText(/Email/), 'ann@example.com')
+    await userEvent.click(canvas.getByRole('button', { name: 'Solve captcha' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Send my username' }))
+    await expect(await canvas.findByRole('alert')).toBeVisible()
+    await waitFor(() =>
+      expect(canvas.getByRole('button', { name: /Try again in \d+ s/ })).toBeDisabled(),
+    )
+  },
+}
+
+/** 375px · 320px - 가로로 밀리지 않는다 */
+const forgotIdNarrow = (width: number): Story => ({
+  render: () => (
+    <div data-narrow style={{ width, maxWidth: '100%' }}>
+      <ForgotLoginIdScreen onSubmit={async () => undefined} signInTo="/login" />
+    </div>
+  ),
+  play: async ({ canvas, canvasElement }) => {
+    await expect(canvas.getByRole('button', { name: 'Send my username' })).toBeVisible()
+    const box = canvasElement.querySelector<HTMLElement>('[data-narrow]')!
+    await expect(box.scrollWidth).toBeLessThanOrEqual(box.clientWidth)
+  },
+})
+export const ForgotLoginIdNarrow375: Story = forgotIdNarrow(375)
+export const ForgotLoginIdNarrow320: Story = forgotIdNarrow(320)
 
 export const ResetPassword: Story = {
   render: () => {

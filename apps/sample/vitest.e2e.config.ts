@@ -5,6 +5,10 @@ import { defineConfig } from 'vitest/config'
  * `pnpm e2e`(핵심 여정 검증) · `pnpm walkthrough`(같은 서버로 증거 스크린샷 · 녹화). 준비 · 정리는 e2e/globalSetup.ts.
  */
 const walkthrough = process.env.E2E_WALKTHROUGH === '1'
+// 파일은 한 번에 하나씩 돈다: 가짜 제공자의 「다음 사용자」(`/control`) · 메일함 · 백엔드 한도는 파일 사이에 공유되는 상태다.
+// `fileParallelism: false` 만으로는 모자란다 - 환경변수 `VITEST_MAX_WORKERS`(이 레포의 빌드 · 테스트 줄서기 훅이 4 로 준다)가 설정을 덮어써 파일이 나란히 돌았고,
+// 한 파일의 `control` 이 다른 파일의 소셜 로그인 사용자를 바꿔 어쩌다 실패했다. 설정을 읽는 시점에 1 로 고정한다
+process.env.VITEST_MAX_WORKERS = '1'
 
 export default defineConfig({
   test: {

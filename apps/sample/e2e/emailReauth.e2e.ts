@@ -106,7 +106,7 @@ describe('the first email after the exemption window: the provider confirms once
       await page.keyboard.type(code.code)
       await pwExpect(page.getByText(auth.emailChanged)).toBeVisible()
       await pwExpect(page.getByRole('heading', { name: auth.sectionMethods })).toBeVisible()
-      await acceptLegalGate(page, apiUrl)
+      await acceptLegalGate(page, apiUrl, true)
       await page.goto(baseUrl)
       await pwExpect(page.getByRole('heading', { level: 1, name: /안녕하세요/ })).toBeVisible()
     },

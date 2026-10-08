@@ -526,7 +526,7 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   signUpCaptcha: 'Security check',
   codeTitle: 'Enter the 6-digit code',
   codeBody: (email) =>
-    `We sent a 6-digit code to ${email}. It works for 10 minutes — never tell it to anyone.`,
+    `We sent a 6-digit code to ${email}. Enter it before the time runs out — never tell it to anyone.`,
   codeGroupLabel: 'Verification code',
   codeDigit: (position, total) => `Digit ${position} of ${total}`,
   codeInvalid: (left) =>
@@ -560,7 +560,7 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   reauthCodeHint: (email) => `To confirm it is you we email a 6-digit code to ${email}.`,
   reauthCodeSend: 'Email me a code',
   reauthCodeSent: (email) =>
-    `We sent a 6-digit code to ${email}. It works for 10 minutes — never tell it to anyone.`,
+    `We sent a 6-digit code to ${email}. Enter it before the time runs out — never tell it to anyone.`,
   reauthCodeEntered: 'Code entered — finish below.',
   reauthCodeExpired: 'This code has expired or was used up. Ask for a new one.',
   reauthProviderHint:

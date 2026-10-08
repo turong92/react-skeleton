@@ -7,7 +7,7 @@ import {
   dismissConsent,
   fillSignIn,
   launch,
-  gatesOf,
+  meOf,
   registerEmailViaGate,
 } from './helpers'
 import { signOut } from './boardSteps'
@@ -83,6 +83,8 @@ describe('sign-in buttons come from discovery', () => {
   )
 })
 
+let lineAccountId = ''
+
 describe('LINE: PKCE + nonce on the way out and back, an address-less account registers its email first', () => {
   const lineEmail = `e2e-line-${stamp}@example.com`
 
@@ -105,9 +107,10 @@ describe('LINE: PKCE + nonce on the way out and back, an address-less account re
       pwExpect(body.codeVerifier).toMatch(/^[A-Za-z0-9_-]{43}$/)
       pwExpect(body.nonce).toBe(q.get('nonce'))
       pwExpect(body.redirectUri).toBe(q.get('redirect_uri')) // 인가 요청과 글자까지 같다
-      await registerEmailViaGate(page, mailUrl, lineEmail, seen) // 주소 없는 계정: 이메일 등록 → 약관 → 홈(서버 인터셉터와 같은 순서)
-      await acceptLegalGate(page, apiUrl) // legal 모듈이 있는 백엔드: 소셜로 처음 들어오면 동의부터
+      await registerEmailViaGate(page, mailUrl, lineEmail, seen, true) // 주소 없는 계정: 이메일 등록 → 약관 → 홈(서버 인터셉터와 같은 순서)
+      await acceptLegalGate(page, apiUrl, true) // legal 모듈이 있는 백엔드: 소셜로 처음 들어오면 동의부터
       await pwExpect(page.getByRole('heading', { level: 1, name: /안녕하세요/ })).toBeVisible()
+      lineAccountId = (await meOf(page, apiUrl)).me.id // 이 LINE 사용자의 계정 - 두 번째 로그인이 같은 계정인지 가린다
       // 인가 코드 · state 는 주소창에 남지 않는다
       pwExpect(page.url()).not.toContain('code=')
       // sessionStorage 의 state · verifier 는 한 번 쓰고 지워졌다
@@ -137,8 +140,11 @@ describe('LINE: PKCE + nonce on the way out and back, an address-less account re
       await page.evaluate(() => window.localStorage.clear())
       await page.goto(`${baseUrl}/login`)
       await page.getByRole('button', { name: 'LINE으로 계속하기' }).click()
-      // 같은 계정이면 서버가 「주소가 있다」고 말한다 - 화면(뒤에 깔린 홈 제목)이 아니라 서버 상태로 가린다
-      pwExpect((await gatesOf(page, apiUrl)).emailRequired).toBe(false)
+      // 같은 LINE 사용자의 두 번째 로그인은 **같은 계정**이고 주소가 있다 - 계정이 둘 만들어졌거나 등록이 확정되지 않았으면 여기서 실패한다
+      const { me } = await meOf(page, apiUrl)
+      pwExpect(me.id).toBe(lineAccountId)
+      pwExpect(me.email).toBe(lineEmail)
+      pwExpect(me.emailRequired).not.toBe(true)
       await pwExpect(page.getByRole('heading', { level: 1, name: /안녕하세요/ })).toBeVisible()
       await page.goto(`${baseUrl}/account`)
       await pwExpect(
@@ -170,8 +176,8 @@ describe('X: PKCE without a nonce, 30-second codes are exchanged at once', () =>
       pwExpect(body.codeVerifier).toMatch(/^[A-Za-z0-9_-]{43}$/)
       pwExpect('nonce' in body).toBe(false)
       await pwExpect(page.getByRole('dialog', { name: auth.emailRequiredTitle })).toBeVisible() // X 도 주소를 주지 않는다
-      await registerEmailViaGate(page, mailUrl, xEmail, seen)
-      await acceptLegalGate(page, apiUrl)
+      await registerEmailViaGate(page, mailUrl, xEmail, seen, true)
+      await acceptLegalGate(page, apiUrl, true)
       await pwExpect(page.getByRole('heading', { level: 1, name: /안녕하세요/ })).toBeVisible() // 콜백이 끝나고 토큰이 저장될 때까지
       await page.goto(`${baseUrl}/account`)
       await pwExpect(
@@ -222,7 +228,7 @@ describe('callback robustness', () => {
       await control({ line: { sub: `U-line-${stamp}`, name: 'LINE 사용자' }, deny: false })
       await page.goto(`${baseUrl}/login`)
       await page.getByRole('button', { name: 'LINE으로 계속하기' }).click()
-      await acceptLegalGate(page, apiUrl)
+      await acceptLegalGate(page, apiUrl, false)
       await pwExpect(page.getByRole('heading', { level: 1, name: /안녕하세요/ })).toBeVisible()
       await page.goto(`${baseUrl}/auth/callback`)
       await pwExpect(page.getByRole('heading', { name: auth.callbackFailedTitle })).toHaveCount(0)
@@ -277,7 +283,7 @@ describe('a social sign-in with the email of an existing account is guided, not 
     // 로그인 화면의 이메일 칸은 비어 있다(콜백이 이메일을 주지 않는다)
     await pwExpect(page.getByLabel(auth.email)).toHaveValue('')
     await fillSignIn(page, account)
-    await acceptLegalGate(page, apiUrl)
+    await acceptLegalGate(page, apiUrl, false)
     await pwExpect(page).toHaveURL(/\/account#methods$/)
     await pwExpect(page.getByText(auth.methodLinkContinue('LINE'))).toBeVisible()
     await pwExpect(page.getByRole('button', { name: auth.methodLink('LINE') })).toBeFocused()
@@ -302,7 +308,7 @@ describe('a social sign-in with the email of an existing account is guided, not 
     await page.evaluate(() => window.localStorage.clear())
     await page.goto(`${baseUrl}/login`)
     await page.getByRole('button', { name: 'LINE으로 계속하기' }).click()
-    await acceptLegalGate(page, apiUrl)
+    await acceptLegalGate(page, apiUrl, false)
     await pwExpect(page.getByRole('heading', { level: 1, name: /안녕하세요/ })).toBeVisible()
     await pwExpect(page.getByRole('heading', { name: auth.callbackFailedTitle })).toHaveCount(0)
     pwExpect(new URL(page.url()).pathname).toBe('/')

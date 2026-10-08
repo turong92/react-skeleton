@@ -9,6 +9,7 @@ import {
   ko,
   launch,
   legal,
+  meOf,
 } from './helpers'
 import { signOut } from './boardSteps'
 import {
@@ -186,7 +187,7 @@ describe('an address-less account (LINE gives no email) is stopped by the regist
       await page.keyboard.type(code.code)
       await pwExpect(gate()).toHaveCount(0)
       // 이메일이 끝나면 약관(있는 백엔드) — 이메일 막이 걷힌 뒤에 보인다
-      await acceptLegalGate(page, apiUrl)
+      await acceptLegalGate(page, apiUrl, true)
       await pwExpect(page.getByRole('dialog')).toHaveCount(0)
     },
   )
@@ -293,7 +294,7 @@ describe('contact email: a second, optional address for notices (never for sign-
     await page.getByLabel(auth.email).fill(account)
     await page.getByLabel(auth.password, { exact: false }).first().fill(password)
     await page.getByRole('button', { name: auth.signInSubmit, exact: true }).click()
-    await acceptLegalGate(page, apiUrl)
+    await acceptLegalGate(page, apiUrl, false)
     await pwExpect(page.getByRole('heading', { level: 1, name: /안녕하세요/ })).toBeVisible()
     await page.goto(`${baseUrl}/account`)
     const section = page.getByRole('region', { name: auth.sectionContactEmail })
@@ -341,6 +342,7 @@ describe('already have an account: the empty social account is discarded and the
   const mail = `e2e-discard-${stamp}@example.com`
   const mailPassword = 'Passw0rd!x9'
   const sub = `U-discard-${stamp}`
+  let mailAccountId = ''
   const lineSignIn = async () => {
     await page.goto(`${baseUrl}/login`)
     await page.getByRole('button', { name: 'LINE으로 계속하기' }).click()
@@ -360,6 +362,7 @@ describe('already have an account: the empty social account is discarded and the
     await page.getByLabel(auth.codeDigit(1, 6)).click()
     await page.keyboard.type(code.code)
     await pwExpect(page.getByRole('heading', { level: 1, name: /안녕하세요/ })).toBeVisible()
+    mailAccountId = (await meOf(page, apiUrl)).me.id
     await signOut(page)
   })
 
@@ -407,7 +410,7 @@ describe('already have an account: the empty social account is discarded and the
     'sign in to the real account: the settings continue the LINE link; linking works now',
     async () => {
       await fillSignIn(page, { email: mail, password: mailPassword })
-      await acceptLegalGate(page, apiUrl)
+      await acceptLegalGate(page, apiUrl, false)
       await pwExpect(page).toHaveURL(/\/account#methods$/)
       await pwExpect(page.getByText(auth.methodLinkContinue('LINE'))).toBeVisible()
       await page.getByRole('button', { name: auth.methodLink('LINE') }).click()
@@ -423,9 +426,10 @@ describe('already have an account: the empty social account is discarded and the
   run('the same LINE sign-in now opens the real account', async () => {
     await page.evaluate(() => window.localStorage.clear())
     await lineSignIn()
-    await acceptLegalGate(page, apiUrl)
+    await acceptLegalGate(page, apiUrl, false)
     await pwExpect(page.getByRole('heading', { level: 1, name: /안녕하세요/ })).toBeVisible()
     await pwExpect(gate()).toHaveCount(0)
+    pwExpect((await meOf(page, apiUrl)).me.id).toBe(mailAccountId) // 새 계정이 아니라 메일 계정이다
     await page.goto(`${baseUrl}/account`)
     await pwExpect(
       page.getByRole('region', { name: auth.sectionEmail }).getByText(mail),

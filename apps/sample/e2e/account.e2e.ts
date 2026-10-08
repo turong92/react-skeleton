@@ -416,7 +416,7 @@ describe('a passwordless account (email link) re-authenticates by a mailed code,
     await pwExpect(heading(auth.magicLinkSentTitle, 2)).toBeVisible()
     const link = await waitForLink(mailUrl, linkEmail, 'magic-link', { seen })
     await page.goto(`${baseUrl}${link.path}`)
-    await acceptLegalGate(page, apiUrl) // legal 모듈이 있는 백엔드: 링크로 처음 들어온 계정은 동의부터
+    await acceptLegalGate(page, apiUrl, true) // legal 모듈이 있는 백엔드: 링크로 처음 들어온 계정은 동의부터
     await pwExpect(heading(/안녕하세요/)).toBeVisible()
   })
 
@@ -506,7 +506,7 @@ describe('delete a passwordless account with a mailed code and a typed phrase', 
     await page.getByRole('button', { name: auth.signInMagicLinkSubmit }).click()
     const link = await waitForLink(mailUrl, goneEmail, 'magic-link', { seen })
     await page.goto(`${baseUrl}${link.path}`)
-    await acceptLegalGate(page, apiUrl)
+    await acceptLegalGate(page, apiUrl, true)
     await pwExpect(heading(/안녕하세요/)).toBeVisible()
     await page.goto(`${baseUrl}/account`)
     const section = region(auth.sectionDelete)

@@ -145,7 +145,7 @@ describe('a mailed sign-in link is redeemed exactly once', () => {
     await page.goto(baseUrl)
     await page.evaluate(() => window.localStorage.clear()) // 앞 계정의 세션을 비운다
     await page.goto(`${baseUrl}${link.path}`)
-    await acceptLegalGate(page, apiUrl)
+    await acceptLegalGate(page, apiUrl, true)
     await pwExpect(heading(/안녕하세요/)).toBeVisible()
     await pwExpect(page.getByText(auth.magicLinkInvalidTitle)).toHaveCount(0)
     // 실시간 알림(SSE)이 연결을 열어 두어 네트워크가 잠잠해지지 않는다 — 대신 늦게 나가는 두 번째 호출이 있다면 잡히도록 잠시 지켜본다
@@ -196,7 +196,7 @@ describe('an account made without a nickname (a mailed sign-in link) is asked fo
     await page.goto(baseUrl)
     await page.evaluate(() => window.localStorage.clear())
     await page.goto(`${baseUrl}${link.path}`)
-    await acceptLegalGate(page, apiUrl)
+    await acceptLegalGate(page, apiUrl, true)
     await pwExpect(heading(/안녕하세요/)).toBeVisible()
   }
   const closeDialog = (dialog: Locator) =>

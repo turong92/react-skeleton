@@ -93,7 +93,7 @@ async function signUpByLink(page: Page, email: string) {
   await page.goto(baseUrl)
   await dismissConsent(page)
   await page.goto(`${baseUrl}${link.path}`)
-  await acceptLegalGate(page, apiUrl)
+  await acceptLegalGate(page, apiUrl, true)
   await pwExpect(page.getByRole('heading', { level: 1, name: /안녕하세요/ })).toBeVisible()
 }
 

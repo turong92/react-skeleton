@@ -147,7 +147,7 @@ describe('email required walkthrough', () => {
       await gate(page).getByLabel(auth.codeDigit(1, 6)).click()
       await page.keyboard.type(code.code)
       await gate(page).waitFor({ state: 'detached' })
-      await acceptLegalGate(page, apiUrl)
+      await acceptLegalGate(page, apiUrl, true)
       await page.getByRole('heading', { level: 1, name: /안녕하세요/ }).waitFor()
 
       // 설정의 두 이메일 구역

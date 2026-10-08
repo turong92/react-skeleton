@@ -151,31 +151,45 @@ export async function gatesOf(
   page: Page,
   apiUrl: string,
 ): Promise<{ emailRequired: boolean; consentRequired: boolean }> {
-  await page.waitForFunction((key) => !!window.localStorage.getItem(key), ACCESS_TOKEN_KEY, {
-    timeout: GATE_TIMEOUT_MS,
-  })
-  const token = await page.evaluate((key) => window.localStorage.getItem(key), ACCESS_TOKEN_KEY)
-  const headers = { Authorization: `Bearer ${token}` }
-  const me = await fetch(`${apiUrl}/api/v1/account/me`, { headers })
-  if (!me.ok) throw new Error(`GET /account/me → ${me.status}`)
-  const emailRequired = ((await me.json()) as { value: { emailRequired?: boolean } }).value
-    .emailRequired
+  const { me, headers } = await meOf(page, apiUrl)
   let consentRequired = false
   if (await legalOn(apiUrl)) {
     const mine = await fetch(`${apiUrl}/api/v1/legal/consents/me`, { headers })
     if (!mine.ok) throw new Error(`GET /legal/consents/me → ${mine.status}`)
     consentRequired = ((await mine.json()) as { value: { blocked: boolean } }).value.blocked
   }
-  return { emailRequired: emailRequired === true, consentRequired }
+  return { emailRequired: me.emailRequired === true, consentRequired }
+}
+
+/** 이 탭의 로그인 계정의 `GET /account/me` - 로그인이 끝나(토큰이 저장돼) 있을 때까지 기다린 뒤 묻는다. 같은 계정인지 가리는 데는 `id` */
+export async function meOf(page: Page, apiUrl: string) {
+  await page.waitForFunction((key) => !!window.localStorage.getItem(key), ACCESS_TOKEN_KEY, {
+    timeout: GATE_TIMEOUT_MS,
+  })
+  const token = await page.evaluate((key) => window.localStorage.getItem(key), ACCESS_TOKEN_KEY)
+  const headers = { Authorization: `Bearer ${token}` }
+  const response = await fetch(`${apiUrl}/api/v1/account/me`, { headers })
+  if (!response.ok) throw new Error(`GET /account/me → ${response.status}`)
+  const me = (
+    (await response.json()) as {
+      value: { id: string; email: string | null; emailRequired?: boolean }
+    }
+  ).value
+  return { me, headers }
 }
 
 /**
  * 링크 · 소셜로 처음 들어온 계정은 동의가 없어 동의 화면이 앞을 막는다 — 서버가 「동의가 필요하다」고 말하면(`blocked`) 화면이 뜰 때까지 **기다렸다가** 모두 동의하고 이어 간다.
  * 안 뜨면 실패한다. 서버가 필요 없다고 하면(이미 동의한 계정 · legal 모듈이 없는 백엔드) 아무 일도 하지 않는다. 이메일 등록이 남아 있으면 약관 막은 아직 안 뜨는 순서라 먼저 `registerEmailViaGate` 를 불러야 한다
  */
-export async function acceptLegalGate(page: Page, apiUrl: string) {
+export async function acceptLegalGate(page: Page, apiUrl: string, expectGate: boolean) {
   if (!(await legalOn(apiUrl))) return
   const { emailRequired, consentRequired } = await gatesOf(page, apiUrl)
+  // 시나리오가 약관 막을 기대하는지(처음 들어온 계정) 아닌지(이미 동의한 계정)를 말한다 - 서버의 답이 다르면 건너뛰지 않고 실패한다
+  if (consentRequired !== expectGate)
+    throw new Error(
+      `acceptLegalGate: the scenario expects the consent gate = ${expectGate}, the server says blocked = ${consentRequired}`,
+    )
   if (!consentRequired) return
   if (emailRequired)
     throw new Error(
@@ -267,16 +281,23 @@ export async function createProfile(
 
 /**
  * 주소 없는 계정(LINE · X 가 주소를 안 준다)이 로그인하면 앱 대신 「이메일을 등록해 주세요」가 덮는다 — 주소를 적고 메일함의 인증번호로 통과한다.
- * 막이 뜰지는 서버가 말한다(`me.emailRequired`): true 면 뜰 때까지 기다리고(안 뜨면 실패), false 면(이메일 필수가 아닌 백엔드 · 주소가 있는 계정) 아무것도 하지 않는다
+ * 막이 뜰지는 서버가 말한다(`me.emailRequired`) - 호출하는 시나리오가 `expectGate` 로 기대를 적고, 서버의 답이 다르면 실패한다. 뜬다고 하면 뜰 때까지 기다린다(안 뜨면 실패)
  */
 export async function registerEmailViaGate(
   page: Page,
   mailUrl: string,
   address: string,
   seen: Set<string>,
+  expectGate: boolean,
   apiUrl = inject('apiUrl'),
 ) {
-  if (!(await gatesOf(page, apiUrl)).emailRequired) return
+  const { emailRequired } = await gatesOf(page, apiUrl)
+  // 시나리오의 기대와 서버의 답이 다르면(주소 없는 계정이어야 하는데 서버는 필요 없다고 한다 …) 건너뛰지 않고 실패한다
+  if (emailRequired !== expectGate)
+    throw new Error(
+      `registerEmailViaGate: the scenario expects the email gate = ${expectGate}, the server says emailRequired = ${emailRequired}`,
+    )
+  if (!emailRequired) return
   const gate = page.getByRole('dialog', { name: auth.emailRequiredTitle })
   await gate.waitFor({ timeout: GATE_TIMEOUT_MS })
   await gate.getByRole('textbox', { name: new RegExp(`^${auth.emailRequiredField}`) }).fill(address)

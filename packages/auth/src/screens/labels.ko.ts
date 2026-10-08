@@ -141,7 +141,7 @@ export const koAuthLabels: AuthLabels = {
   signUpCaptcha: '보안 확인',
   codeTitle: '인증번호 6자리를 입력해 주세요',
   codeBody: (email) =>
-    `${email} 로 인증번호를 보냈어요. 10분 안에 입력해 주세요 — 다른 사람에게 알려 주지 마세요.`,
+    `${email} 로 인증번호를 보냈어요. 아래 남은 시간 안에 입력해 주세요 — 다른 사람에게 알려 주지 마세요.`,
   codeGroupLabel: '인증번호',
   codeDigit: (position, total) => `${total}자리 중 ${position}번째`,
   codeInvalid: (left) =>
@@ -175,7 +175,7 @@ export const koAuthLabels: AuthLabels = {
   reauthCodeHint: (email) => `본인 확인을 위해 ${email} 로 인증번호 6자리를 보내 드려요.`,
   reauthCodeSend: '인증번호 받기',
   reauthCodeSent: (email) =>
-    `${email} 로 인증번호 6자리를 보냈어요. 10분 동안 쓸 수 있어요 — 누구에게도 알려 주지 마세요.`,
+    `${email} 로 인증번호 6자리를 보냈어요. 남은 시간 안에 입력해 주세요 — 누구에게도 알려 주지 마세요.`,
   reauthCodeEntered: '인증번호를 입력했어요 — 아래에서 마무리하세요.',
   reauthCodeExpired: '인증번호가 만료됐거나 다 썼어요. 새로 받아 주세요.',
   reauthProviderHint:

@@ -58,8 +58,10 @@ export async function startFakeProviders(): Promise<FakeProviders> {
 
     if (path === '/control' && req.method === 'POST') {
       const patch = JSON.parse((await body(req)) || '{}')
-      if (patch.line) Object.assign(state.line, patch.line)
-      if (patch.x) Object.assign(state.x, patch.x)
+      // 사용자는 통째로 바꾼다(합치지 않는다) - 앞 시나리오의 이름 · 주소(`email: ''` · 남의 주소)가 다음 시나리오의 사용자에게 남지 않게
+      if (patch.line)
+        state.line = { sub: 'U-e2e-line-1', name: 'LINE Tester', email: undefined, ...patch.line }
+      if (patch.x) state.x = { id: 'x-e2e-1', username: 'x_tester', ...patch.x }
       if ('deny' in patch) state.deny = !!patch.deny
       return json(res, 200, state)
     }

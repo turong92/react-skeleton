@@ -56,7 +56,7 @@ export type SseClientOptions = {
    */
   recoverUnauthorized?: (failedAuthorization: string | undefined) => Promise<boolean>
   /**
-   * 토큰이 바뀔 때(다른 요청이 갱신했다 · 다른 탭이 로그인했다) 부를 처리기를 등록한다 — `start()` 부터 `stop()` 까지.
+   * 다시 이어도 되는 때(토큰이 바뀌었다 — 다른 요청이 갱신했다 · 다른 탭이 로그인했다. 또는 403 의 이유가 풀렸다 — 이메일 등록 · 약관 동의가 끝났다) 부를 처리기를 등록한다 — `start()` 부터 `stop()` 까지.
    * 스트림이 죽어 있으면(`off` · `error`) 다시 잇는다. 정상이면 건드리지 않는다
    */
   subscribeAuthChanges?: (onChange: () => void) => () => void

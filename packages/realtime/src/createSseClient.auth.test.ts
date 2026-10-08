@@ -107,4 +107,21 @@ describe('I7 — live notifications recover after the access token expired', () 
     ctx.client.stop()
     expect(unsubscribe).toHaveBeenCalled()
   })
+
+  it('a stream stopped by a 403 (a gate such as "register your email" was up) goes on once the owner signals the gate lifted - the token did not change', async () => {
+    let fire: () => void = () => undefined
+    const ctx = setup([() => status(403)], {
+      subscribeAuthChanges: (onChange) => {
+        fire = onChange
+        return () => undefined
+      },
+    })
+    void ctx.client.start()
+    await vi.advanceTimersByTimeAsync(10)
+    expect(ctx.client.getStatus()).toBe('off')
+    fire()
+    await vi.advanceTimersByTimeAsync(10)
+    expect(ctx.sent).toEqual(['Bearer old', 'Bearer old'])
+    expect(ctx.client.getStatus()).toBe('open')
+  })
 })

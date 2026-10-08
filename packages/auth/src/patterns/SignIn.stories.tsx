@@ -274,9 +274,9 @@ export const LoginIdOnMagicLinkNeedsAnEmail: Story = {
       await canvas.findByRole('button', { name: '이메일을 입력해 주세요' }),
     ).toBeVisible()
     await userEvent.clear(canvas.getByLabelText(/아이디 또는 이메일/))
-    await userEvent.type(canvas.getByLabelText(/아이디 또는 이메일/), 'sumin@kim.dev')
+    await userEvent.type(canvas.getByLabelText(/아이디 또는 이메일/), 'sumin@example.com')
     await userEvent.click(canvas.getByRole('button', { name: '링크 보내기' }))
-    await expect(args.onMagicLinkRequest).toHaveBeenCalledWith('sumin@kim.dev')
+    await expect(args.onMagicLinkRequest).toHaveBeenCalledWith('sumin@example.com')
   },
 }
 

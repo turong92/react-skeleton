@@ -17,6 +17,10 @@ import { LoginIdRequiredScreen } from './LoginIdRequiredScreen'
 import { useRestoreFocus } from './useRestoreFocus'
 import { mergeLabels, type AuthLabels } from './labels'
 
+/** `me` 에서 읽어 둔 것과 그것이 누구의 것인가(계정 id) */
+type AccountReads = { for: string | null; providers: string[]; discardable: boolean }
+const NO_READS: AccountReads = { for: null, providers: [], discardable: false }
+
 export type LoginIdGateProps = {
   controller: LoginIdRequiredController
   /** 쓰는 호출: `me`(로그인 직후 `loginId` 확인 · 제공자 목록) · `setLoginId` · `checkLoginId` · `discardAccount` — 모두 서버의 허용 목록에 있다 */
@@ -67,16 +71,18 @@ export function LoginIdGate({
 }: LoginIdGateProps) {
   const state = useSyncExternalStore(controller.subscribe, controller.getState, controller.getState)
   const required = state.status === 'required'
-  const [allProviders, setProviders] = useState<string[]>([])
-  /** 주소 없는 계정이 이메일 필수를 켠 앱에 있다 → 「이미 계정이 있나요?」 길(`DiscardPath` 의 조건 그대로) */
-  const [discardable, setDiscardable] = useState(false)
+  // `me` 에서 읽은 것(소셜 제공자 · 버리기 길)은 **그 계정의 것**이다 - 계정이 바뀌면(다음 계정의 `me` 가 실패하거나 아직 오지 않았어도) 이전 계정의 것이 남지 않게 계정 id 와 함께 둔다
+  const [reads, setReads] = useState<AccountReads>(NO_READS)
+  const mine = reads.for === accountId ? reads : NO_READS
+  const { providers: allProviders, discardable } = mine
   const providers = useMemo(
     () =>
       enabledProviders ? allProviders.filter((p) => enabledProviders.includes(p)) : allProviders,
     [allProviders, enabledProviders],
   )
-  /** 「다른 탭에서 이미 정했다」 뒤 `me` 를 다시 읽지 못했다 - 아무 말 없이 멈추지 않게 화면의 오류 줄이 말한다 */
-  const [recheckError, setRecheckError] = useState<string | undefined>()
+  /** 「다른 탭에서 이미 정했다」 뒤 `me` 를 다시 읽지 못했다 - 아무 말 없이 멈추지 않게 화면의 오류 줄이 말한다(그 계정의 것) */
+  const [recheckFailure, setRecheckFailure] = useState<{ for: string | null; message: string }>()
+  const recheckError = recheckFailure?.for === accountId ? recheckFailure.message : undefined
   // 늦게 온 `me` 의 답이 **지금 계정**의 것인지 가린다 - A 의 답이 떠 있는 동안 B 로 바뀌면 A 의 답은 B 에 적용하지 않는다
   const accountRef = useRef(accountId)
   const labelsRef = useRef(labels) // 앱이 매 렌더 새 객체를 줘도 아래 확인 효과를 다시 돌리지 않는다
@@ -84,9 +90,13 @@ export function LoginIdGate({
     accountRef.current = accountId
     labelsRef.current = labels
   })
-  const readMe = useCallback((me: AccountMe) => {
-    setProviders(reauthSubjectOf(me).providers)
-    setDiscardable(!me.email && (me.emailRequired === true || me.emailRequiredToWrite === true))
+  const readMe = useCallback((me: AccountMe, forAccount: string) => {
+    setReads({
+      for: forAccount,
+      providers: reauthSubjectOf(me).providers,
+      // 주소 없는 계정이 이메일 필수를 켠 앱에 있다 → 「이미 계정이 있나요?」 길(`DiscardPath` 의 조건 그대로)
+      discardable: !me.email && (me.emailRequired === true || me.emailRequiredToWrite === true),
+    })
   }, [])
 
   // 지금 계정을 컨트롤러에 알린다 — 계정이 바뀌면 이전 계정의 화면 · 붙잡은 호출은 접히고(원래 403 으로 끝난다), 로그아웃 뒤에 늦게 온 403 은 화면을 다시 세우지 않는다
@@ -101,7 +111,7 @@ export function LoginIdGate({
       (me) => {
         if (!live) return
         if (me.loginId === null) controller.require()
-        readMe(me)
+        readMe(me, accountId)
         controller.setReady(true) // 이제 다음 단계(이메일 · 약관 …)가 물어도 된다
       },
       () => live && controller.setReady(true), // 못 읽어도 다음 단계를 막아 두지 않는다
@@ -121,13 +131,16 @@ export function LoginIdGate({
       return api.me().then(
         (me) => {
           if (!current()) return // 그 사이 계정이 바뀌었다 - 이 답은 이 계정의 것이 아니다
-          setRecheckError(undefined)
+          setRecheckFailure(undefined)
           if (typeof me.loginId === 'string') controller.chosen()
-          else readMe(me)
+          else if (asked) readMe(me, asked)
         },
         (error: unknown) => {
           if (current() && loud)
-            setRecheckError(authErrorMessage(error, mergeLabels(labelsRef.current)).message)
+            setRecheckFailure({
+              for: asked,
+              message: authErrorMessage(error, mergeLabels(labelsRef.current)).message,
+            })
         },
       )
     },

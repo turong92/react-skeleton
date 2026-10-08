@@ -743,12 +743,14 @@ export function AccountPage({
         onEmailRegistered={ctx.emailRequired && (() => ctx.emailRequired?.registered())}
         {...loginIdSettingsProps(ctx)}
         onDiscarded={(provider) => {
-          // 서버가 모든 세션을 닫았다 - 이 기기의 세션도 지우고, 로그인한 뒤 설정에서 그 제공자 연결을 이어 가게 한다
-          void auth.logout()
-          navigate(ctx.paths.signIn, {
-            replace: true,
-            state: linkIntentState(provider, { pathname: ctx.paths.account, hash: '#methods' }),
-          })
+          // 서버가 모든 세션을 닫았다 - 이 기기의 세션도 지우고, 로그인한 뒤 설정에서 그 제공자 연결을 이어 가게 한다.
+          // 로그아웃이 **끝난 뒤에** 이동한다 - `/account` 는 `RequireAuth` 아래라 로그아웃이 끝나기 전에 이동하면 가드의 「돌아올 곳」 state 가 이 연결 의도를 덮는다
+          void auth.logout().finally(() =>
+            navigate(ctx.paths.signIn, {
+              replace: true,
+              state: linkIntentState(provider, { pathname: ctx.paths.account, hash: '#methods' }),
+            }),
+          )
         }}
         linkedProvider={state?.linked}
         linkIntent={linkIntentOf(state)}

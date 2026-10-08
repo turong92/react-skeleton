@@ -17,12 +17,26 @@ import { EmailRequiredScreen } from './EmailRequiredScreen'
 import { useRestoreFocus } from './useRestoreFocus'
 import type { AuthLabels } from './labels'
 
+/** `me` 에서 읽어 둔 것과 그것이 누구의 것인가(계정 id) */
+type AccountReads = {
+  for: string | null
+  loginId: string | null
+  providers: string[]
+  pending: { email: string; window: CodeWindow } | null
+}
+const NO_READS: AccountReads = { for: null, loginId: null, providers: [], pending: null }
+
 export type EmailRequiredGateProps = {
   controller: EmailRequiredController
   /** 쓰는 호출: `me`(로그인 직후 `emailRequired` 확인 · 제공자 목록) · `changeEmail` · `confirmEmailChangeCode` — 모두 서버의 허용 목록에 있다 */
   api: Pick<AccountApi, 'me' | 'changeEmail' | 'confirmEmailChangeCode' | 'discardAccount'>
   /** 로그인한 계정 id(없으면 null) — 바뀌어 생기면 한 번 `me.emailRequired` 를 확인한다(비밀번호 · 소셜 · 링크 로그인 모두 같은 길) */
   accountId: string | null
+  /**
+   * true 인 동안 로그인 직후의 `me` 확인을 미룬다(`isReady` 도 false 라 약관 같은 다음 단계도 기다린다) - 바깥 막(아이디 막 `LoginIdGate`)이 아직 확인하는 중이거나 열려 있을 때.
+   * 두 막이 함께 열리면 안쪽 화면이 바깥 막의 `inert` 아래에서 떠 첫 포커스를 잃는다. 풀리면 그때 한 번 묻는다. 계정이 없는(로그아웃한) 동안은 풀려도 묻지 않는다 - 취소할 수 없는 대기자를 두지 않는다
+   */
+  deferCheck?: boolean
   onSignOut: () => void
   /** 「이 계정 지우고 로그인 화면으로」가 끝났다(`POST /account/discard` 204 - 서버가 모든 세션을 닫았다) - 앱이 로컬 세션을 지우고 로그인 화면으로 보낸다. 인자는 로그인 뒤 설정에서 연결을 이어 갈 제공자 */
   onDiscarded: (provider?: string) => void
@@ -53,6 +67,7 @@ export function EmailRequiredGate({
   controller,
   api,
   accountId,
+  deferCheck = false,
   onSignOut,
   onDiscarded,
   onDiscardReauth,
@@ -69,9 +84,10 @@ export function EmailRequiredGate({
   const required = state.status === 'required'
   // 서버가 주소를 언제 요구하는가(`me` 가 알려 준다): 쓰기 때 방식이면 쓰기용 모습. 아직 모르면 로그인 직후 모습으로 열고, 열리면 곧 `me` 를 다시 읽어 맞춘다
   const when = useSyncExternalStore(controller.subscribe, controller.getWhen, controller.getWhen)
-  const [loginId, setLoginId] = useState<string | null>(null)
-  const [allProviders, setProviders] = useState<string[]>([])
-  const [pending, setPending] = useState<{ email: string; window: CodeWindow } | null>(null)
+  // `me` 에서 읽은 것은 **그 계정의 것**이다 - 계정이 바뀌면(다음 계정의 `me` 가 실패하거나 아직 오지 않았어도) 이전 계정의 아이디 · 제공자 · 대기 중 인증번호 단계가 남지 않게 계정 id 와 함께 둔다
+  const [reads, setReads] = useState<AccountReads>(NO_READS)
+  const mine = reads.for === accountId ? reads : NO_READS
+  const { loginId, providers: allProviders, pending } = mine
   const providers = useMemo(
     () =>
       enabledProviders ? allProviders.filter((p) => enabledProviders.includes(p)) : allProviders,
@@ -82,16 +98,18 @@ export function EmailRequiredGate({
     nowRef.current = now
   })
   /** `me` 에서 읽을 것: 재동의에 쓸 제공자 목록, 서버에 남아 있는 대기 중 이메일 변경(만료 전인 것만) */
-  const readMe = useCallback((me: AccountMe) => {
-    setLoginId(me.loginId ?? null)
-    setProviders(reauthSubjectOf(me).providers)
+  const readMe = useCallback((me: AccountMe, forAccount: string) => {
     const window = codeWindowOf({ expiresAt: me.pendingEmailExpiresAt })
     const clock = nowRef.current?.() ?? Date.now()
-    setPending(
-      me.pendingEmail && window && window.expiresAt > clock
-        ? { email: me.pendingEmail, window }
-        : null,
-    )
+    setReads({
+      for: forAccount,
+      loginId: me.loginId ?? null,
+      providers: reauthSubjectOf(me).providers,
+      pending:
+        me.pendingEmail && window && window.expiresAt > clock
+          ? { email: me.pendingEmail, window }
+          : null,
+    })
   }, [])
 
   // 지금 계정을 컨트롤러에 알린다 — 계정이 바뀌면(다른 탭에서 다른 계정으로 로그인 · 로그아웃) 이전 계정의 화면 · 붙잡은 호출은 접히고(원래 403 으로 끝난다), 로그아웃 뒤에 늦게 온 403 은 화면을 다시 세우지 않는다
@@ -101,7 +119,7 @@ export function EmailRequiredGate({
   }, [accountId, controller])
   // 로그인 직후: 이 계정이 주소를 요구받는가. 실패해도 조용히 — 막히면 호출이 403 으로 말한다
   useEffect(() => {
-    if (!accountId) return
+    if (!accountId || deferCheck) return
     let live = true
     api.me().then(
       (me) => {
@@ -109,7 +127,7 @@ export function EmailRequiredGate({
         const asked = emailWhenOf(me)
         controller.setWhen(asked)
         if (asked === 'login') controller.require() // 쓰기 때 방식은 여기서 열지 않는다 - 쓰기의 403 이나 쓰기 전 확인이 연다
-        readMe(me)
+        readMe(me, accountId)
         controller.setReady(true) // 이제 다음 단계(약관 …)가 물어도 된다
       },
       () => live && controller.setReady(true), // 못 읽어도 다음 단계를 막아 두지 않는다
@@ -118,7 +136,7 @@ export function EmailRequiredGate({
       live = false
       controller.setReady(false) // 계정이 바뀌거나 로그아웃 — 다음 계정은 다시 물어봐야 안다
     }
-  }, [accountId, api, controller, readMe])
+  }, [accountId, deferCheck, api, controller, readMe])
   // 막이 열려 있는 동안: 열릴 때와 탭이 다시 보일 때마다 서버에 다시 묻는다 — 다른 탭에서 이미 등록했으면 접고 붙잡은 호출을 보낸다. 재동의에 쓸 제공자 목록도 이때 새로 읽는다
   useEffect(() => {
     if (!required || !accountId) return
@@ -131,7 +149,7 @@ export function EmailRequiredGate({
           if (!stillNeedsAddress(me)) controller.registered()
           else {
             controller.setWhen(emailWhenOf(me))
-            readMe(me)
+            readMe(me, accountId)
           }
         },
         () => undefined,

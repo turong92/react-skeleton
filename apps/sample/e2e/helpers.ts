@@ -210,11 +210,11 @@ export function uniqueLoginId(prefix = 'e2e') {
 
 /**
  * 가입 양식의 아이디 칸을 채우고 실시간 확인이 「쓸 수 있는 아이디예요」라고 답할 때까지 기다린다 - 입력을 멈춘 뒤에야 답이 오고, 그 전에 내면 서버의 판정이 아니라 대기 중인 상태로 낸다.
- * 아이디를 안 쓰는 서버(칸이 없다)에서는 아무 일도 하지 않는다
+ * 견본 백엔드는 늘 아이디를 켠다 - 칸이 없으면 건너뛰지 않고 실패한다(칸이 안 보이는 회귀를 조용히 넘기지 않는다)
  */
 export async function fillLoginId(page: Page, loginId: string) {
   const field = page.getByRole('textbox', { name: new RegExp(`^${auth.loginId}`) })
-  if ((await field.count()) === 0) return
+  await field.waitFor({ timeout: GATE_TIMEOUT_MS })
   await field.fill(loginId)
   await page.getByText(auth.loginIdAvailable).first().waitFor({ timeout: GATE_TIMEOUT_MS })
 }
@@ -391,15 +391,27 @@ export async function registerEmailViaGate(
 
 /**
  * 게시판 목록을 **새로** 열고 앱이 이 계정의 요구(`GET /account/me`)를 읽을 때까지 기다린다 - 읽기 전에 글쓰기를 누르면 앱은 아직 이메일이 필요한지 모른다(그래도 쓰기 화면에 들어서면 막이 스스로 뜬다 -
- * 시험이 「단추에서 막힌다」를 가리려면 읽은 뒤에 눌러야 한다)
+ * 시험이 「단추에서 막힌다」를 가리려면 읽은 뒤에 눌러야 한다).
+ * `me` 는 두 번 나간다 - 아이디 막이 먼저, 걷히면 이메일 막이(`emailRequiredToWrite`). 이메일 막의 답이 컨트롤러 상태로 옮겨졌다는 신호는 **그 뒤의 요청**이다:
+ * 약관 막은 이메일 막이 준비된 뒤에야 `GET /consents/me` 를 묻는다. 고정 시간을 기다리지 않고 그 요청이 나가는 것을 기다린다(약관 모듈이 없는 백엔드는 두 번째 `me` 응답까지만)
  */
 export async function openBoardReady(page: Page) {
-  const read = page.waitForResponse(
-    (r) => new URL(r.url()).pathname === '/api/v1/account/me' && r.request().method() === 'GET',
+  let meCount = 0
+  const emailGateRead = page.waitForResponse(
+    (r) =>
+      new URL(r.url()).pathname === '/api/v1/account/me' &&
+      r.request().method() === 'GET' &&
+      ++meCount === 2,
+    { timeout: GATE_TIMEOUT_MS },
   )
+  const nextStepAsked = (await legalOn(inject('apiUrl')))
+    ? page.waitForRequest((r) => new URL(r.url()).pathname.endsWith('/consents/me'), {
+        timeout: GATE_TIMEOUT_MS,
+      })
+    : Promise.resolve()
   await page.goto(`${inject('baseUrl')}/board`)
-  await read
-  await page.waitForTimeout(250) // 응답이 컨트롤러 상태로 옮겨지는 짧은 틈
+  await (await emailGateRead).finished()
+  await nextStepAsked
 }
 
 /** 게시판에서 「글쓰기」를 눌러 쓰기용 이메일 막을 연다 - 막이 뜰 때까지 기다린다(안 뜨면 실패). 뜬 막을 돌려준다 */

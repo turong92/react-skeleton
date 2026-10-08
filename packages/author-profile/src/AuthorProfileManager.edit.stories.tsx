@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, screen, waitFor, within } from 'storybook/test'
+import { expect, fn, screen, waitFor, within } from 'storybook/test'
 import { ManagerDemo as Demo } from './stories/ManagerDemo'
 import { profile } from './test/fixtures'
 
@@ -110,6 +110,17 @@ export const DeleteAsksFirstAndSaysPostsStay: Story = {
     await waitFor(() =>
       expect(canvas.getByRole('button', { name: 'Delete Ann#0001' })).toHaveFocus(),
     )
+  },
+}
+
+/** `beforeRemove` - 삭제 확인 창(네이티브 모달)을 열기 전에 앱이 막을 수 있다. 창 안에서 막힌 쓰기의 막 화면은 창 밑에 깔리므로 막힐 일은 창을 열기 전에 푼다 */
+export const BeforeRemoveCanKeepTheConfirmationFromOpening: Story = {
+  args: { beforeRemove: fn(() => false) },
+  play: async ({ canvas, userEvent, args }) => {
+    await userEvent.click(await canvas.findByRole('button', { name: 'Delete Ann#0001' }))
+    await waitFor(() => expect(args.beforeRemove).toHaveBeenCalledTimes(1))
+    await expect(screen.queryByRole('dialog')).toBeNull()
+    await expect(canvas.getAllByRole('listitem')).toHaveLength(2)
   },
 }
 

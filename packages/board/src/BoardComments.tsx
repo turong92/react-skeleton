@@ -50,6 +50,11 @@ export type BoardCommentsProps = Omit<
    */
   beforeWrite?: () => boolean
   /**
+   * 삭제 확인 창을 열기 직전에 불린다 — `false` 를 돌려주면 창을 열지 않는다. 확인 창은 네이티브 모달이라 그 안에서 막힌 쓰기(예: 이메일 등록이 필요해 403)의 화면이 창 **밑**에 깔린다 -
+   * 막힐 일(이메일 등록 등)은 창을 열기 전에 푼다. `beforeWrite` 와 따로다: 지우는 것은 글을 쓰는 것이 아니라 닉네임 확인이 필요 없다
+   */
+  beforeDelete?: () => boolean
+  /**
    * 이 댓글 영역이 달린 글의 작성자 — 글이 내 것(`mine`)이면 그 `authorId` 가 선택기의 처음 값 후보가 된다
    * (이 글에 댓글을 쓴 적이 없어도 같은 이름으로 이어 쓰게). 내 댓글이 있으면 댓글이 먼저다. 탈퇴 · `pending:` id 는 건너뛴다
    */
@@ -69,6 +74,7 @@ export function BoardComments({
   commentable = true,
   labels: input,
   beforeWrite,
+  beforeDelete,
   postAuthor,
   ...options
 }: BoardCommentsProps) {
@@ -187,7 +193,9 @@ export function BoardComments({
                     await allowed()
                     return update.mutateAsync({ id, body })
                   }}
-                  onDelete={setDeleting}
+                  onDelete={(id) => {
+                    if (!beforeDelete || beforeDelete()) setDeleting(id)
+                  }}
                   onModerate={(id, status) => moderate.mutate({ id, status })}
                   onReact={(id, type, active) =>
                     react.mutate({

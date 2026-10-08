@@ -2,13 +2,17 @@ import { expect as baseExpect, type Browser, type Page } from 'playwright/test'
 import { afterAll, beforeAll, describe, inject, it } from 'vitest'
 import {
   acceptLegalGate,
+  agreeToLegal,
   auth,
   chooseLoginIdViaGate,
   dismissConsent,
+  fillLoginId,
+  fillSignIn,
   ko,
   launch,
   uniqueLoginId,
 } from './helpers'
+import { signOut } from './boardSteps'
 import { waitForCode } from './mail'
 
 /*
@@ -127,6 +131,92 @@ describe('the first email after the exemption window: the provider confirms once
       await pwExpect(page.getByText(auth.settingsNeedsEmail)).toHaveCount(0)
       await page.goto(baseUrl)
       await pwExpect(page.getByRole('heading', { level: 1, name: /안녕하세요/ })).toBeVisible()
+    },
+  )
+})
+
+/*
+ * 오래된 세션에서 「이 계정 지우고 로그인 화면으로」: 서버가 버리기에도 제공자 재동의를 요구한다(스펙 9.5 - 쓰기 때 방식에서는 보통 이 길이다).
+ * 막 -> 계정 설정 -> LINE 동의 -> 돌아오면 설정이 버리기를 이어 부르고, 끝나면 **패키지의 `AccountPage`** 가 로그아웃하고 로그인 화면으로 보낸다.
+ * `/account` 는 `RequireAuth` 아래라 로그아웃이 끝나기 전에 이동하면 가드가 「돌아올 곳」 state 로 연결 의도를 덮는다 - 로그인하면 설정의 로그인 방법(`#methods`)에서 LINE 연결을 이어 가야 한다.
+ */
+describe('discarding after the exemption window: the provider confirms, then the sign-in carries the link intent to the settings', () => {
+  const mail = `e2e-reauth-discard-${stamp}@example.com`
+  const mailPassword = 'Passw0rd!x9'
+  const sub = `U-reauth-discard-${stamp}`
+
+  run('a mail account exists to sign back into', async () => {
+    await page.evaluate(() => window.localStorage.clear())
+    await page.goto(`${baseUrl}/sign-up`)
+    await dismissConsent(page)
+    await page.getByLabel(auth.email).fill(mail)
+    await page.getByLabel(auth.displayName).fill('재동의 버리기')
+    await fillLoginId(page, uniqueLoginId('rdmail'))
+    await page.getByLabel(auth.password).first().fill(mailPassword)
+    await page.getByLabel(auth.passwordConfirm).fill(mailPassword)
+    await agreeToLegal(page, apiUrl)
+    await page.getByRole('button', { name: auth.signUpSubmit }).click()
+    const code = await waitForCode(mailUrl, mail, 'verify', { seen })
+    await page.getByLabel(auth.codeDigit(1, 6)).click()
+    await page.keyboard.type(code.code)
+    await pwExpect(page.getByRole('heading', { level: 1, name: /안녕하세요/ })).toBeVisible()
+    await signOut(page)
+  })
+
+  run(
+    'an old LINE session discards: the screen sends it to LINE, and after the round trip the sign-in page remembers the link',
+    async () => {
+      await fetch(`${fakeUrl}/control`, {
+        method: 'POST',
+        body: JSON.stringify({ line: { sub, name: '재동의 버리기', email: '' }, deny: false }),
+      })
+      await page.goto(`${baseUrl}/login`)
+      await page.getByRole('button', { name: 'LINE으로 계속하기' }).click()
+      await chooseLoginIdViaGate(page, apiUrl, uniqueLoginId('rdline'), true)
+      await acceptLegalGate(page, apiUrl, true)
+      await pwExpect(page.getByRole('heading', { level: 1, name: /안녕하세요/ })).toBeVisible()
+      // 다른 기기가 같은 계정으로 로그인해 이 세션을 닫는다 - 이 세션은 「열린 지 1시간」 밖이다
+      const other = await browser.newContext({ locale: 'ko-KR', timezoneId: 'Asia/Seoul' })
+      try {
+        const otherPage = await other.newPage()
+        await otherPage.goto(`${baseUrl}/login`)
+        await dismissConsent(otherPage)
+        await otherPage.getByRole('button', { name: 'LINE으로 계속하기' }).click()
+        await otherPage.waitForFunction(() => !!window.localStorage.getItem('sample.accessToken'))
+        const token = await otherPage.evaluate(() =>
+          window.localStorage.getItem('sample.accessToken'),
+        )
+        const closed = await fetch(`${apiUrl}/api/v1/auth/sessions?keepCurrent=true`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        pwExpect(closed.status).toBe(204)
+      } finally {
+        await other.close()
+      }
+      await page.goto(`${baseUrl}/board`)
+      await page
+        .getByRole('button', { name: ko('board.write'), exact: true })
+        .first()
+        .click()
+      const gate = page.getByRole('dialog', { name: auth.emailRequiredWriteTitle })
+      await gate.getByRole('button', { name: auth.emailRequiredDiscard }).click()
+      await page
+        .getByRole('dialog', { name: auth.emailRequiredDiscardConfirmTitle })
+        .getByRole('button', { name: auth.emailRequiredDiscardConfirm })
+        .click()
+      // 오래된 세션이라 버리기가 제공자 재동의를 요구한다 - 확인 창이 닫히고 그 제공자 단추가 나온다
+      await gate.getByRole('button', { name: auth.reauthProviderButton('LINE') }).click()
+      // 설정 -> LINE 동의 -> 돌아와 버리기를 이어 부르면 `AccountPage` 가 로그아웃하고 로그인 화면으로 보낸다
+      await pwExpect(page).toHaveURL(/\/login/)
+      pwExpect(
+        await page.evaluate(() => window.localStorage.getItem('sample.accessToken')),
+      ).toBeNull()
+      await fillSignIn(page, { email: mail, password: mailPassword })
+      await acceptLegalGate(page, apiUrl, false)
+      // 연결 의도가 가드의 「돌아올 곳」에 덮이지 않았다 - 설정의 로그인 방법에서 LINE 연결을 이어 간다
+      await pwExpect(page).toHaveURL(/\/account#methods$/)
+      await pwExpect(page.getByText(auth.methodLinkContinue('LINE'))).toBeVisible()
     },
   )
 })

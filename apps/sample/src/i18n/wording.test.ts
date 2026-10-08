@@ -24,3 +24,10 @@ describe('the Notes dictionaries never say "profile" — one concept for the use
     }
   })
 })
+
+describe('the login id has one English name - "username" (the package screens say so)', () => {
+  it('en never calls it an "ID"', () => {
+    const found = Object.entries(en).filter(([, text]) => /\bIDs?\b/.test(text))
+    expect(found.map(([key]) => key)).toEqual([])
+  })
+})

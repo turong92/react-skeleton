@@ -1,11 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { useState } from 'react'
 import { expect, fn, waitFor, within } from 'storybook/test'
 import { ApiRequestError } from '@skeleton/api-client'
 import type { AdminAccount } from '../account/types'
 import { koAuthLabels } from '../screens/labels.ko'
 import { AdminAccounts } from './AdminAccounts'
 import type { AdminAccountsApi } from './adminApi'
-import { AdminAccountsTable } from './AdminAccountsTable'
+import { AdminAccountsTable, type AdminAccountsTableProps } from './AdminAccountsTable'
 import type { ApiPageResponse } from '@skeleton/api-client'
 
 /**
@@ -169,6 +170,56 @@ export const NoLoginIdColumnWhenTheServerHasItOff: Story = {
     await expect(canvas.queryByRole('columnheader', { name: 'Username' })).toBeNull()
     await expect(canvas.queryByRole('searchbox', { name: /Find by username/ })).toBeNull()
     await expect(canvas.getByRole('searchbox', { name: 'Search by email' })).toBeVisible()
+  },
+}
+
+/** 밖에서 질의가 바뀌면(필터 초기화 · 주소로 들어온 검색) 찾기 칸의 초안도 따라간다 - 낡은 값이 남아 질의와 다른 글자를 보이지 않게 */
+function ControlledLookup() {
+  const [query, setQuery] = useState<AdminAccountsTableProps['query']>({
+    email: '',
+    status: '',
+    loginId: 'bob_kim',
+  })
+  return (
+    <>
+      <button type="button" onClick={() => setQuery({ email: '', status: '', loginId: '' })}>
+        필터 초기화
+      </button>
+      <AdminAccountsTable
+        accounts={withIds}
+        pagination={{
+          page: 0,
+          size: 20,
+          totalElements: 3,
+          totalPages: 1,
+          hasNext: false,
+          hasPrevious: false,
+        }}
+        assignableRoles={['ADMIN']}
+        query={query}
+        onQueryChange={setQuery}
+        onPage={fn()}
+        onSuspend={fn(async () => undefined)}
+        onUnsuspend={fn(async () => undefined)}
+        onRestore={fn(async () => undefined)}
+        onGrantRole={fn(async () => undefined)}
+        onRevokeRole={fn(async () => undefined)}
+        showLoginId
+      />
+    </>
+  )
+}
+
+export const LookupBoxFollowsAQueryChangedFromOutside: StoryObj = {
+  render: () => <ControlledLookup />,
+  play: async ({ canvas, userEvent }) => {
+    const box = canvas.getByRole('searchbox', { name: /^Find by username/ })
+    await expect(box).toHaveValue('bob_kim')
+    await userEvent.click(canvas.getByRole('button', { name: '필터 초기화' }))
+    await waitFor(() => expect(box).toHaveValue(''))
+    // 입력 중인 초안은 질의가 그대로인 동안 남는다
+    await userEvent.type(box, 'ab')
+    await expect(box).toHaveValue('ab')
   },
 }
 

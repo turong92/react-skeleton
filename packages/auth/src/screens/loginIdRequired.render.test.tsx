@@ -83,6 +83,17 @@ describe('LoginIdRequiredScreen (the full-screen "choose your username" step)', 
     expect(out).not.toContain('다시 쓸 수 없어요')
   })
 
+  it('the discard text does not presume an address - the username screen comes before the email is asked for', () => {
+    const discard = { providers: ['kakao'], onDiscard: noop, onDiscarded: () => undefined }
+    const ko = screen({ discard })
+    expect(ko).not.toContain('이 주소로')
+    expect(ko).toContain('이미 만들어 둔 계정이 있다면')
+    expect(ko).toContain('연결을 눌러 주세요')
+    const en = screen({ labels: undefined, discard })
+    expect(en).not.toMatch(/your address/i)
+    expect(en).toContain('If you already have an account')
+  })
+
   it('reads in English by default', () => {
     const out = screen({ labels: undefined })
     expect(out).toContain('Choose your username')

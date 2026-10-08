@@ -389,6 +389,71 @@ export const LateAnswerOfAnotherAccountIsIgnored: StoryObj<typeof SwitchedAccoun
 }
 
 /**
+ * 막이 읽어 둔 것(버리기 길 · 제공자 목록)은 **그 계정의 것**이다 - A 의 답으로 연 「이미 계정이 있나요?」가 B 로 바뀐 뒤 B 의 `me` 가 실패해도 남아 있으면 B 의 화면에 A 의 길이 뜬다
+ */
+function ReadFailsForTheNextAccountDemo() {
+  const [accountId, setAccountId] = useState('acc_a')
+  const base = useMemo(() => createFakeAccountApi({ loginId: {}, emailRequired: true }), [])
+  const api = useMemo(
+    () => ({
+      ...base,
+      me: async () => {
+        if (accountId !== 'acc_a') throw new Error('offline') // B 의 답은 오지 않는다
+        return base.me()
+      },
+    }),
+    [base, accountId],
+  )
+  const controller = useMemo(() => createLoginIdRequiredController(), [])
+  return (
+    <>
+      <button type="button" onClick={() => setAccountId('acc_b')}>
+        다른 탭에서 B 로 로그인
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          void controller.recover({
+            path: '/notes',
+            method: 'POST',
+            error: apiError('ACCOUNT.LOGIN_ID_REQUIRED', 403),
+          })
+        }
+      >
+        B 의 쓰기가 막혔다
+      </button>
+      <LoginIdGate
+        controller={controller}
+        api={api}
+        accountId={accountId}
+        onSignOut={() => undefined}
+        onDiscarded={() => undefined}
+      >
+        <AppBehind />
+      </LoginIdGate>
+    </>
+  )
+}
+
+export const ThePreviousAccountsDiscardPathDoesNotLinger: StoryObj<
+  typeof ReadFailsForTheNextAccountDemo
+> = {
+  render: () => <ReadFailsForTheNextAccountDemo />,
+  play: async ({ canvas, userEvent }) => {
+    const first = within(await dialog(canvas))
+    await expect(
+      await first.findByRole('heading', { name: 'Already have an account?' }),
+    ).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: '다른 탭에서 B 로 로그인' }))
+    await waitFor(() => expect(canvas.queryByRole('dialog')).toBeNull()) // A 의 화면은 접혔다
+    await userEvent.click(canvas.getByRole('button', { name: 'B 의 쓰기가 막혔다' }))
+    const next = within(await dialog(canvas))
+    // B 의 `me` 는 읽지 못했다 - A 에게서 읽은 길이 B 에게 보이면 안 된다
+    await expect(next.queryByRole('heading', { name: 'Already have an account?' })).toBeNull()
+  },
+}
+
+/**
  * 설정(`/account`)에서 막이 걷혀 있는 동안 아이디가 정해졌다 - 설정을 떠나 막이 다시 덮이는 순간 서버에 다시 물어 접는다(창 포커스를 기다리지 않는다).
  */
 function LeavesSettingsDemo({ onHeldCall }: { onHeldCall: (result: boolean) => void }) {

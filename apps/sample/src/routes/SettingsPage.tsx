@@ -1,9 +1,10 @@
-import { useAuth } from '@skeleton/auth'
+import { useAuth, useEmailBeforeWrite } from '@skeleton/auth'
 import { AuthorProfileManager } from '@skeleton/author-profile'
 import { boardKeys } from '@skeleton/board'
 import { setTheme, THEMES, useTheme, type Theme } from '@skeleton/theme'
 import { Button, Card, Field, PageHeader, Select } from '@skeleton/ui'
 import { useNavigate } from 'react-router-dom'
+import { emailRequired } from '../api/emailRequired'
 import { profileApi } from '../author/api'
 import { authorProfileLabels } from '../author/profileLabels'
 import { useMyProfile } from '../auth/useMyProfile'
@@ -21,6 +22,7 @@ export function SettingsPage() {
   const profile = useMyProfile().data
   const theme = useTheme()
   const navigate = useNavigate()
+  const emailBeforeWrite = useEmailBeforeWrite(emailRequired)
   const email = profile?.email ?? principal?.email ?? null
 
   function signOut() {
@@ -85,6 +87,7 @@ export function SettingsPage() {
           api={profileApi}
           labels={authorProfileLabels(t)}
           alsoInvalidate={[boardKeys.all]}
+          beforeRemove={emailBeforeWrite.ensure} // 삭제 확인 창을 열기 전에 이메일부터(창 안에서 막히면 이메일 화면이 창 밑에 깔린다)
         />
       </Card>
       <Card title={t('settings.session')}>

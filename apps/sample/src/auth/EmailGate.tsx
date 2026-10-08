@@ -6,10 +6,9 @@ import {
   linkIntentState,
   useAuth,
 } from '@skeleton/auth'
-import type { ReactNode } from 'react'
+import { useSyncExternalStore, type ReactNode } from 'react'
 import { toast } from 'sonner'
 import { emailRequired } from '../api/emailRequired'
-import { whenOuterGateSettled } from '../api/gateOrder'
 import { loginIdRequired } from '../api/loginIdRequired'
 import { serverClock } from '../api/serverClock'
 import { queryClient } from '../app/queryClient'
@@ -19,15 +18,6 @@ import { refreshAfterProfileChange } from './profileCache'
 import { ACCOUNT_PATH, useEnabledProviders, useOnAccountPages } from './gateShared'
 import { accountApi } from './session'
 import { useAuthLabels } from './useAuthLabels'
-
-/** 이 막이 서버에 묻는 `me` 는 아이디 막이 확인을 마치고 걷힌 뒤에 나간다 — 두 막이 함께 열리면 안쪽 화면이 `inert` 아래에서 떠 첫 포커스를 잃는다(아이디 → 이메일 → 약관) */
-const afterLoginId: typeof accountApi = {
-  ...accountApi,
-  async me() {
-    await whenOuterGateSettled(loginIdRequired)
-    return accountApi.me()
-  },
-}
 
 /** 「나중에 하기」로 닫았다 - 붙잡은 쓰기는 403 으로 끝났고 전역 토스트는 이 코드를 거르므로, 아무 말 없이 실패하지 않게 한 줄로 알린다. 같은 id 라 여러 번 눌러도 한 줄이다 */
 const DECLINED_TOAST_ID = 'email-required-declined'
@@ -42,11 +32,19 @@ export function EmailGate({ children }: { children: ReactNode }) {
   const labels = useAuthLabels()
   const standAside = useOnAccountPages()
   const enabledProviders = useEnabledProviders()
+  // 이 막이 서버에 묻는 `me` 는 아이디 막이 확인을 마치고 걷힌 뒤에 나간다 - 두 막이 함께 열리면 안쪽 화면이 `inert` 아래에서 떠 첫 포커스를 잃는다(아이디 → 이메일 → 약관).
+  // `deferCheck` 가 그동안 확인을 미룬다: 아이디 막에서 로그아웃하면 계정이 없어져 묻지 않는다(토큰 없는 `me` 가 401 → 「계속하려면 로그인해 주세요」 로 이어지지 않는다)
+  const idFirst = useSyncExternalStore(
+    loginIdRequired.subscribe,
+    () => loginIdRequired.getState().status === 'required' || !loginIdRequired.isReady(),
+    () => false,
+  )
   return (
     <EmailRequiredGate
       controller={emailRequired}
-      api={afterLoginId}
+      api={accountApi}
       accountId={auth.principal?.accountId ?? null}
+      deferCheck={idFirst}
       labels={labels}
       now={() => serverClock.now().getTime()}
       standAside={standAside}

@@ -91,6 +91,7 @@ export function LoginIdRequiredScreen({
             discard={discard.onDiscard}
             onDiscarded={discard.onDiscarded}
             onProviderReauth={discard.onDiscardReauth}
+            body={labels.loginIdRequiredDiscardBody}
           />
         )}
         <div className={styles.leave}>

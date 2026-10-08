@@ -1,8 +1,10 @@
+import { useEmailBeforeWrite } from '@skeleton/auth'
 import { formatInstant } from '@skeleton/time'
 import { Badge, Button, Card, Dialog, EmptyState, PageHeader, Spinner, Tabs } from '@skeleton/ui'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { emailRequired } from '../api/emailRequired'
 import { AttachmentPanel } from '../components/AttachmentPanel'
 import { LoadError } from '../components/LoadError'
 import { NoteStatusBadge } from '../components/NoteStatusBadge'
@@ -18,6 +20,7 @@ function NoteDetail({ note }: { note: Note }) {
   const remove = useDeleteNote()
   const exportNote = useExportNote()
   const [confirming, setConfirming] = useState(false)
+  const emailBeforeWrite = useEmailBeforeWrite(emailRequired)
 
   async function confirmDelete() {
     await remove.mutateAsync(note.id)
@@ -92,7 +95,8 @@ function NoteDetail({ note }: { note: Note }) {
       <Card title={t('detail.deleteSection')}>
         <div className={styles.danger}>
           <p>{t('detail.deleteHint')}</p>
-          <Button variant="danger" onClick={() => setConfirming(true)}>
+          {/* 확인 창(네이티브 모달) 안에서 삭제가 이메일 403 에 붙잡히면 이메일 화면이 창 밑에 깔린다 - 창을 열기 전에 이메일부터 */}
+          <Button variant="danger" onClick={() => emailBeforeWrite.ensure() && setConfirming(true)}>
             {t('detail.deleteButton')}
           </Button>
         </div>

@@ -23,6 +23,11 @@ export type AuthorProfileManagerProps = {
    * 안 주면 이 패키지의 목록만 갱신한다.
    */
   alsoInvalidate?: readonly QueryKey[]
+  /**
+   * 삭제 확인 창을 열기 직전에 불린다 — `false` 를 돌려주면 창을 열지 않는다. 확인 창은 네이티브 모달이라 그 안에서 막힌 쓰기(예: 이메일 등록이 필요해 403)의 막 화면이
+   * 창 **밑**에 깔려 눌리지 않는다 - 막힐 일은 창을 열기 전에 푼다
+   */
+  beforeRemove?: () => boolean
 }
 
 /**
@@ -36,6 +41,7 @@ export function AuthorProfileManager({
   api,
   labels: given,
   alsoInvalidate,
+  beforeRemove,
 }: AuthorProfileManagerProps) {
   const labels = mergeLabels(given)
   const list = useAuthorProfiles(api)
@@ -116,6 +122,7 @@ export function AuthorProfileManager({
               onEdit={() => setEditingId(profile.id)}
               onClose={() => setEditingId(undefined)}
               onDelete={(picked) => {
+                if (beforeRemove && !beforeRemove()) return
                 remove.reset()
                 rename.reset() // 사라진 줄의 낡은 오류 알림을 거둔다
                 focusAfterRemoval.current = {

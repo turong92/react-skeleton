@@ -75,6 +75,12 @@ export function AdminAccountsTable({
   const [reason, setReason] = useState('')
   /** 아이디 찾기 칸에 쓰는 중인 값 - 낼 때(Enter · 단추)만 `query.loginId` 가 된다 */
   const [idDraft, setIdDraft] = useState(query.loginId ?? '')
+  // 밖에서 질의가 바뀌면(필터 초기화 · 주소로 들어온 검색) 초안도 따라간다 - 낡은 글자가 질의와 다르게 남지 않게. 질의가 그대로인 동안은 쓰는 중인 초안을 건드리지 않는다
+  const [queriedId, setQueriedId] = useState(query.loginId ?? '')
+  if ((query.loginId ?? '') !== queriedId) {
+    setQueriedId(query.loginId ?? '')
+    setIdDraft(query.loginId ?? '')
+  }
   const action = useAction(labels)
 
   function items(account: AdminAccount) {

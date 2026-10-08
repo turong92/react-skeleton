@@ -18,6 +18,7 @@ export function DiscardPath({
   onDiscarded,
   onProviderReauth,
   loginId,
+  body,
 }: {
   labels: AuthLabels
   /** 이 계정이 로그인에 쓰는 소셜 제공자 - 안내 문장의 이름과 재동의 단추 */
@@ -29,6 +30,8 @@ export function DiscardPath({
   onProviderReauth?: (provider: string) => void
   /** 이 계정이 이미 정한 로그인 아이디 - 있으면 확인 문구가 「아이디 … 도 함께 사라지고 다시 쓸 수 없어요」를 덧붙인다. 아이디 게이트(아직 없다) · 아이디를 끈 서버는 비운다 */
   loginId?: string | null
+  /** 안내 문장(제공자 이름을 받는다). 기본은 이메일 화면의 것(`emailRequiredDiscardBody` - 「이 주소로 …」): 아직 주소를 받기 전의 화면(아이디 막)은 주소를 전제하지 않는 문장을 준다 */
+  body?: (provider?: string) => string
 }) {
   const [open, setOpen] = useState(false)
   const [reauth, setReauth] = useState(false)
@@ -53,7 +56,7 @@ export function DiscardPath({
   return (
     <section className={styles.discard} aria-labelledby="discard-title">
       <h2 id="discard-title">{labels.emailRequiredDiscardTitle}</h2>
-      <p>{labels.emailRequiredDiscardBody(providerName)}</p>
+      <p>{(body ?? labels.emailRequiredDiscardBody)(providerName)}</p>
       {reauth ? (
         <div className={styles.providers} data-testid="discard-reauth">
           <Alert tone="warning">

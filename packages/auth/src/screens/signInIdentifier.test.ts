@@ -18,8 +18,8 @@ describe('signInCredentials — the one place that turns the sign-in input into 
   })
 
   it('on, with an @: it is an email (the 254-character field)', () => {
-    expect(signInCredentials('sumin@kim.dev', 'pw', true)).toEqual({
-      email: 'sumin@kim.dev',
+    expect(signInCredentials('sumin@example.com', 'pw', true)).toEqual({
+      email: 'sumin@example.com',
       password: 'pw',
     })
   })
@@ -59,7 +59,7 @@ describe('identifierProblem', () => {
   it('on, magic link: a link goes to an address, so a value without @ asks for an email', () => {
     expect(identifierProblem('', 'magic', true, labels)).toBe(labels.problemEmailMissing)
     expect(identifierProblem('sumin.kim', 'magic', true, labels)).toBe(labels.problemEmailMissing)
-    expect(identifierProblem('sumin@kim.dev', 'magic', true, labels)).toBeUndefined()
+    expect(identifierProblem('sumin@example.com', 'magic', true, labels)).toBeUndefined()
   })
 })
 

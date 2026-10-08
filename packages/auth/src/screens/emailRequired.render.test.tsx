@@ -50,6 +50,10 @@ describe('EmailRequiredScreen (the full-screen "register your email" step)', () 
     )
   })
 
+  it('keeps the address-based discard text (the email screen knows the address was asked for)', () => {
+    expect(screen()).toContain('이 주소로 이미 가입한 계정이 있다면')
+  })
+
   it('shows the same in English by default', () => {
     const out = screen({} as typeof koAuthLabels)
     expect(out).toContain('Add your email address')

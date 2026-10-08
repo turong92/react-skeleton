@@ -342,6 +342,33 @@ describe('a first social sign-in chooses an ID in a full-screen step, with a con
   )
 
   run(
+    'signing out from the ID gate is quiet: no "please sign in" toast, and no request to /account/me goes out after the click',
+    async () => {
+      await page.goto(baseUrl)
+      await page.evaluate(() => window.localStorage.clear())
+      await startLineSignIn(page, fakeUrl, { sub: `U-id-quiet-${stamp}`, name: '조용한 로그아웃' })
+      await pwExpect(gate()).toBeVisible()
+      const afterClick: string[] = []
+      let clicked = false
+      page.on('request', (r) => {
+        if (clicked && new URL(r.url()).pathname === '/api/v1/account/me')
+          afterClick.push(r.method())
+      })
+      clicked = true
+      await gate().getByRole('button', { name: auth.emailRequiredSignOut }).click()
+      await pwExpect(page).toHaveURL(/\/login$/)
+      // 늦게 나가는 요청(토큰 없는 `me`)이 있다면 잡히도록 잠시 지켜본다 - 실시간 알림(SSE)이 있어 네트워크가 잠잠해지지 않는다
+      await new Promise((resolve) => setTimeout(resolve, 2_000))
+      page.removeAllListeners('request')
+      pwExpect(afterClick).toEqual([])
+      await pwExpect(
+        page.locator('[data-sonner-toast]').filter({ hasText: auth.sessionEnded.unauthenticated }),
+      ).toHaveCount(0)
+      pwExpect(await token()).toBeNull()
+    },
+  )
+
+  run(
     '"already have an account?" before choosing: the account is discarded without spending an ID, and the next sign-in is a brand-new account',
     async () => {
       await page.goto(baseUrl)

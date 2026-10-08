@@ -1,5 +1,5 @@
 import { isErrorCode, ErrorCodes } from '@skeleton/api-client'
-import { EmailWriteNotice, useAuth } from '@skeleton/auth'
+import { EmailWriteNotice, useAuth, useEmailBeforeWrite } from '@skeleton/auth'
 import {
   AuthorScope,
   BoardComments,
@@ -49,6 +49,7 @@ function PostView({
   const remove = useRemovePost(boardApi, code)
   const moderate = useModeratePost(boardApi, code, id)
   const [confirming, setConfirming] = useState(false)
+  const emailBeforeWrite = useEmailBeforeWrite(emailRequired)
   const mine = isOwn(post, principal?.accountId) // 서버가 준 `mine`(작성자 id 는 프로필 id 라 계정 id 와 비교하지 않는다)
 
   async function confirmDelete() {
@@ -63,7 +64,12 @@ function PostView({
         post={post}
         labels={postDetailLabels(t)}
         onEdit={mine ? () => navigate(`/board/${id}/edit`) : undefined}
-        onDelete={mine || config.canModerate ? () => setConfirming(true) : undefined}
+        // 확인 창(네이티브 모달) 안에서 삭제가 이메일 403 에 붙잡히면 이메일 화면이 창 밑에 깔린다 - 창을 열기 전에 이메일부터
+        onDelete={
+          mine || config.canModerate
+            ? () => emailBeforeWrite.ensure() && setConfirming(true)
+            : undefined
+        }
         onModerate={config.canModerate ? (moderation) => moderate.mutate(moderation) : undefined}
         reactions={
           <PostReactionBar
@@ -91,6 +97,7 @@ function PostView({
         reactionIcons={REACTION_ICONS}
         labels={commentLabels(t, gate.mustCreate)}
         authorPicker={authorPicker}
+        beforeDelete={emailBeforeWrite.ensure} // 삭제 확인 창을 열기 전에 이메일부터(창 안에서 막히면 이메일 화면이 창 밑에 깔린다)
         postAuthor={{
           authorId: post.authorId,
           mine: post.mine,

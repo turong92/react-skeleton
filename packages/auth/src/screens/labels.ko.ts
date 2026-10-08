@@ -334,6 +334,9 @@ export const koAuthLabels: AuthLabels = {
   loginIdConfirm: '정하기',
   loginIdConfirmBack: '다시 입력',
   loginIdRequiredSettings: '계정 설정',
+  // 이름 뒤에 조사를 붙이지 않는다
+  loginIdRequiredDiscardBody: (provider) =>
+    `이미 만들어 둔 계정이 있다면, 지금 만든 빈 계정을 지우고 그 계정으로 로그인한 뒤 설정에서 '${provider ?? '이 로그인'}' 연결을 눌러 주세요.`,
   settingsLoginIdFixed: '바꿀 수 없어요',
   settingsLoginIdNoPassword: (provider) =>
     `지금은 ${provider}(으)로 로그인해요. 비밀번호를 만들면 아이디나 이메일로도 로그인할 수 있어요.`,

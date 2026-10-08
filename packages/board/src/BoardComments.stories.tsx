@@ -305,6 +305,27 @@ export const BeforeWriteCanBlockAndKeepsTheText: Story = {
   },
 }
 
+/** `beforeDelete` - 삭제 확인 창(네이티브 모달)을 열기 전에 앱이 막을 수 있다. 창 안에서 막힌 쓰기는 앱의 막 화면이 창 밑에 깔리므로, 막힐 일은 창을 열기 전에 푼다 */
+export const BeforeDeleteCanKeepTheConfirmationFromOpening: Story = {
+  args: { fake: { me: 'alice' }, beforeDelete: fn(() => false) },
+  play: async ({ canvas, userEvent, args }) => {
+    await canvas.findByText('Spaces, always.')
+    await userEvent.click(canvas.getByRole('button', { name: 'Delete: Alice' }))
+    await waitFor(() => expect(args.beforeDelete).toHaveBeenCalledTimes(1))
+    await expect(screen.queryByRole('dialog', { name: 'Delete this comment?' })).toBeNull()
+  },
+}
+
+export const BeforeDeleteThatAllowsOpensTheConfirmationAsUsual: Story = {
+  args: { fake: { me: 'alice' }, beforeDelete: fn(() => true) },
+  play: async ({ canvas, userEvent, args }) => {
+    await canvas.findByText('Spaces, always.')
+    await userEvent.click(canvas.getByRole('button', { name: 'Delete: Alice' }))
+    await expect(await screen.findByRole('dialog', { name: 'Delete this comment?' })).toBeVisible()
+    await expect(args.beforeDelete).toHaveBeenCalledTimes(1)
+  },
+}
+
 export const BeforeWriteThatAllowsPostsAsUsual: Story = {
   args: { beforeWrite: fn(() => true) },
   play: async ({ canvas, userEvent }) => {

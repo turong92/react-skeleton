@@ -491,6 +491,142 @@ export const SigningOutEndsTheHeldCalls: StoryObj<typeof SignOutThroughTheGateDe
   },
 }
 
+/**
+ * 막이 읽어 둔 것(대기 중인 인증번호 단계 · 제공자 목록 · 아이디)은 **그 계정의 것**이다 - A 의 `me` 로 연 인증번호 단계가 B 로 바뀐 뒤 B 의 `me` 가 실패해도 남아 있으면 B 의 화면이 A 의 주소로 열린다
+ */
+function ReadFailsForTheNextAccountDemo() {
+  const [accountId, setAccountId] = useState('acc_a')
+  const base = useMemo(
+    () =>
+      createFakeAccountApi({
+        emailRequired: true,
+        pendingEmail: 'a-waiting@example.com',
+        pendingExpiresInMinutes: 7,
+      }),
+    [],
+  )
+  const api = useMemo(
+    () => ({
+      ...base,
+      me: async () => {
+        if (accountId !== 'acc_a') throw new Error('offline') // B 의 답은 오지 않는다
+        return base.me()
+      },
+    }),
+    [base, accountId],
+  )
+  const controller = useMemo(() => createEmailRequiredController(), [])
+  return (
+    <>
+      <button type="button" onClick={() => setAccountId('acc_b')}>
+        다른 탭에서 B 로 로그인
+      </button>
+      <button type="button" onClick={() => controller.require()}>
+        B 의 쓰기가 막혔다
+      </button>
+      <EmailRequiredGate
+        controller={controller}
+        api={api}
+        accountId={accountId}
+        onSignOut={() => undefined}
+        onDiscarded={() => undefined}
+      >
+        <AppBehind />
+      </EmailRequiredGate>
+    </>
+  )
+}
+
+export const ThePreviousAccountsCodeStepDoesNotLinger: StoryObj<
+  typeof ReadFailsForTheNextAccountDemo
+> = {
+  render: () => <ReadFailsForTheNextAccountDemo />,
+  play: async ({ canvas, userEvent }) => {
+    const first = within(await dialog(canvas))
+    await expect(await first.findByText(/a-waiting@example.com/)).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: '다른 탭에서 B 로 로그인' }))
+    await waitFor(() => expect(canvas.queryByRole('dialog')).toBeNull()) // A 의 화면은 접혔다
+    await userEvent.click(canvas.getByRole('button', { name: 'B 의 쓰기가 막혔다' }))
+    const next = within(await dialog(canvas))
+    // B 의 `me` 는 읽지 못했다 - A 의 대기 중 주소로 인증번호 단계가 열리면 안 된다: 주소 입력으로 시작한다
+    await expect(next.queryByText(/a-waiting@example.com/)).toBeNull()
+    await expect(next.getByRole('textbox', { name: /^Email/ })).toBeVisible()
+  },
+}
+
+/**
+ * 바깥 막(아이디 막)이 아직 확인하는 동안 `deferCheck` 로 로그인 직후의 `me` 를 미룬다 - 두 막이 함께 열리면 안쪽 화면이 바깥 막의 `inert` 아래에서 떠 첫 포커스를 잃는다.
+ * 미루는 동안은 아무것도 묻지 않고(`isReady` 도 false 라 약관 같은 다음 단계도 기다린다), 풀리면 그때 한 번 묻는다. 계정이 없는 동안(로그아웃)은 풀려도 묻지 않는다
+ */
+function DeferredCheckDemo({ onMe }: { onMe: () => void }) {
+  const [deferred, setDeferred] = useState(true)
+  const [accountId, setAccountId] = useState<string | null>('acc_a')
+  const base = useMemo(() => createFakeAccountApi({ emailRequired: false }), [])
+  const api = useMemo(
+    () => ({
+      ...base,
+      me: async () => {
+        onMe()
+        return base.me()
+      },
+    }),
+    [base, onMe],
+  )
+  const controller = useMemo(() => createEmailRequiredController(), [])
+  const ready = useSyncExternalStore(controller.subscribe, controller.isReady, controller.isReady)
+  return (
+    <>
+      <output aria-label="ready">{String(ready)}</output>
+      <button type="button" onClick={() => setDeferred(false)}>
+        바깥 막이 걷혔다
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          // 아이디 막의 「로그아웃」 - 막을 접으며(바깥 막이 걷힌다) 로그아웃한다
+          setAccountId(null)
+          setDeferred(false)
+        }}
+      >
+        바깥 막에서 로그아웃
+      </button>
+      <EmailRequiredGate
+        controller={controller}
+        api={api}
+        accountId={accountId}
+        deferCheck={deferred}
+        onSignOut={() => undefined}
+        onDiscarded={() => undefined}
+      >
+        <AppBehind />
+      </EmailRequiredGate>
+    </>
+  )
+}
+
+export const DeferCheckAsksNothingUntilTheOuterGateIsDone: StoryObj<typeof DeferredCheckDemo> = {
+  render: (args) => <DeferredCheckDemo {...args} />,
+  args: { onMe: fn() },
+  play: async ({ canvas, args, userEvent }) => {
+    await new Promise((resolve) => setTimeout(resolve, 200)) // 미루는 동안은 아무것도 나가지 않는다
+    await expect(args.onMe).not.toHaveBeenCalled()
+    await expect(canvas.getByLabelText('ready')).toHaveTextContent('false')
+    await userEvent.click(canvas.getByRole('button', { name: '바깥 막이 걷혔다' }))
+    await waitFor(() => expect(canvas.getByLabelText('ready')).toHaveTextContent('true'))
+    await expect(args.onMe).toHaveBeenCalledTimes(1)
+  },
+}
+
+export const DeferCheckNeverAsksAfterSigningOut: StoryObj<typeof DeferredCheckDemo> = {
+  render: (args) => <DeferredCheckDemo {...args} />,
+  args: { onMe: fn() },
+  play: async ({ canvas, args, userEvent }) => {
+    await userEvent.click(canvas.getByRole('button', { name: '바깥 막에서 로그아웃' }))
+    await new Promise((resolve) => setTimeout(resolve, 300)) // 토큰 없는 `me` 가 늦게 나가는지 지켜본다
+    await expect(args.onMe).not.toHaveBeenCalled()
+  },
+}
+
 /** 한국어 */
 export const Korean: Story = {
   args: { korean: true },

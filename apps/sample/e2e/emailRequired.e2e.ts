@@ -669,3 +669,72 @@ describe('already have an account: the account without an email is discarded and
     ).toBeVisible()
   })
 })
+
+/*
+ * 닉네임 띠 - 주소 없는 소셜 계정이 앱에서 **처음 권유받는 행동**이다(견본은 `import-display-name: false`: 이름 없는 첫 프로필로 시작한다).
+ * 닉네임 저장은 쓰기(`PATCH /author-profiles/{id}`)라 쓰기 때 방식의 서버가 403 을 준다. 그 저장이 네이티브 모달(`<dialog>`) 안에서 붙잡히면 이메일 화면은 모달 **밑**에 깔려 눌리지 않는다 -
+ * 그래서 띠(와 선택기)의 「닉네임 정하기」는 대화상자를 열기 **전에** 이메일부터 받는다(스펙 9.5 의 이메일 -> 닉네임 순서).
+ * 도우미의 우회(`signInWithLineNamed` 가 `PATCH /account/me` 로 이름을 미리 넣는 것)를 쓰지 않는다 - 실제 사용자는 그 길로 갈 수 없다.
+ */
+describe('the nickname band on an address-less account: the email screen comes first, on top and pressable', () => {
+  const band = () => page.getByRole('region', { name: ko('nickname.bannerLabel') })
+  const nicknameDialog = () => page.getByRole('dialog', { name: ko('nickname.dialogTitle') })
+  const address = `e2e-band-${stamp}@example.com`
+  const nickname = `띠${tail}`
+
+  run(
+    'the band button opens the email screen (not the nickname dialog) on top - its field is the element under the pointer',
+    async () => {
+      await page.goto(baseUrl)
+      await page.evaluate(() => window.localStorage.clear())
+      await startLineSignIn(page, fakeUrl, { sub: `U-band-${stamp}`, name: '띠 시험' })
+      await chooseLoginIdViaGate(page, apiUrl, uniqueLoginId('band'), true)
+      await acceptLegalGate(page, apiUrl, true)
+      await pwExpect(page.getByRole('heading', { level: 1, name: /안녕하세요/ })).toBeVisible()
+      await pwExpect(band()).toBeVisible()
+      await band()
+        .getByRole('button', { name: ko('nickname.nudgeAction') })
+        .click()
+      await pwExpect(gate()).toBeVisible()
+      await pwExpect(page.locator('dialog[open]')).toHaveCount(0) // 닉네임 대화상자는 아직 열리지 않았다
+      pwExpect(await topDialogTitle()).toBe(auth.emailRequiredWriteTitle)
+      const onTop = await field().evaluate((el) => {
+        const box = el.getBoundingClientRect()
+        return document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2) === el
+      })
+      pwExpect(onTop).toBe(true)
+    },
+  )
+
+  run(
+    'registering the address finishes the screen; pressing the band again opens the dialog; the nickname saves',
+    async () => {
+      await field().click({ timeout: 5_000 }) // 가려져 있으면 여기서 걸린다(Playwright 는 눌리는 자리를 확인한다)
+      await field().fill(address)
+      await gate().getByRole('button', { name: auth.emailRequiredSend }).click()
+      const code = await waitForCode(mailUrl, address, 'email-change', { seen })
+      await gate().getByLabel(auth.codeDigit(1, 6)).click()
+      await page.keyboard.type(code.code)
+      await pwExpect(gate()).toHaveCount(0)
+      await band()
+        .getByRole('button', { name: ko('nickname.nudgeAction') })
+        .click()
+      await pwExpect(nicknameDialog()).toBeVisible()
+      const row = nicknameDialog().getByRole('listitem')
+      await pwExpect(row).toHaveCount(1) // 이름 없는 첫 닉네임
+      await row.getByRole('button', { name: ko('author.renameAction') }).click()
+      await row.getByRole('textbox').fill(nickname)
+      await row.getByRole('button', { name: ko('author.save'), exact: true }).click()
+      await pwExpect(
+        nicknameDialog().getByRole('listitem').filter({ hasText: nickname }),
+      ).toBeVisible()
+      await pwExpect(errorToasts()).toHaveCount(0)
+      await pwExpect(gate()).toHaveCount(0) // 저장이 이메일 화면에 걸리지 않았다
+      await nicknameDialog()
+        .getByRole('button', { name: ko('common.close') })
+        .first()
+        .click()
+      await pwExpect(band()).toHaveCount(0) // 이름 있는 닉네임이 생겼다
+    },
+  )
+})

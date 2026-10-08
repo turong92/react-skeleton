@@ -341,6 +341,8 @@ export type AuthLabels = {
   loginIdConfirmBack: string
   /** 아이디 게이트의 밑줄 링크 - 계정 설정(`/account`)으로 간다(막이 걷힌다) */
   loginIdRequiredSettings: string
+  /** 아이디 화면의 「이미 계정이 있나요?」 안내 - 아직 주소를 받기 전이라 주소를 전제하지 않는다(이메일 화면의 `emailRequiredDiscardBody` 는 「이 주소로 …」). 제공자 이름을 모르면 undefined */
+  loginIdRequiredDiscardBody: (provider?: string) => string
   // 설정
   settingsLoginIdFixed: string
   settingsLoginIdNoPassword: (provider: string) => string
@@ -782,6 +784,8 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   loginIdConfirm: 'Confirm',
   loginIdConfirmBack: 'Edit',
   loginIdRequiredSettings: 'Account settings',
+  loginIdRequiredDiscardBody: (provider) =>
+    `If you already have an account, delete this empty one, sign in to that account and link ${provider ?? 'this sign-in'} in its settings.`,
   settingsLoginIdFixed: 'Cannot be changed',
   settingsLoginIdNoPassword: (provider) =>
     `You sign in with ${provider} now. Set a password to sign in with your username or email too.`,

@@ -68,11 +68,11 @@ export function EmailRequiredGate({
       enabledProviders ? allProviders.filter((p) => enabledProviders.includes(p)) : allProviders,
     [allProviders, enabledProviders],
   )
-  /** `me` 에서 읽을 것: 재동의에 쓸 제공자 목록, 서버에 남아 있는 대기 중 이메일 변경(만료 전인 것만) */
   const nowRef = useRef(now) // 앱이 매 렌더 새 함수를 줘도 아래 효과를 다시 돌리지 않는다
   useEffect(() => {
     nowRef.current = now
   })
+  /** `me` 에서 읽을 것: 재동의에 쓸 제공자 목록, 서버에 남아 있는 대기 중 이메일 변경(만료 전인 것만) */
   const readMe = useCallback((me: AccountMe) => {
     setProviders(reauthSubjectOf(me).providers)
     const window = codeWindowOf({ expiresAt: me.pendingEmailExpiresAt })

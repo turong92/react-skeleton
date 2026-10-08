@@ -133,6 +133,14 @@ describe('email required walkthrough', () => {
       // 돌아가 통과
       await page.goto(baseUrl)
       await gate(page).waitFor()
+      // 새로고침해도 서버가 기억한 대기 중 변경(`me.pendingEmail`)으로 인증번호 단계가 돌아온다 - 주소 입력으로 돌아가지 않는다
+      await gate(page).getByText(auth.emailRequiredCodeTitle).waitFor()
+      await shot(
+        page,
+        '07f-code-step-restored-after-reload.png',
+        '새로고침한 뒤 - 서버가 기억한 대기 중 이메일 변경으로 인증번호 단계가 그대로 돌아온다.',
+      )
+      await gate(page).getByRole('button', { name: auth.emailRequiredFixAddress }).click()
       await field(page).fill(address)
       await gate(page).getByRole('button', { name: auth.emailRequiredSend }).click()
       const code = await waitForCode(mailUrl, address, 'email-change', { seen })

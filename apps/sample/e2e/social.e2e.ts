@@ -215,6 +215,8 @@ describe('callback robustness', () => {
     'back to the callback address after a successful sign-in goes on instead of showing an error',
     async () => {
       await page.evaluate(() => window.localStorage.clear())
+      // 앞 시나리오가 제공자의 사용자를 바꿨을 수 있다 - 이 시나리오의 주인공은 이미 주소가 있는 첫 LINE 사용자다(그래서 이메일 막이 없다)
+      await control({ line: { sub: `U-line-${stamp}`, name: 'LINE 사용자' }, deny: false })
       await page.goto(`${baseUrl}/login`)
       await page.getByRole('button', { name: 'LINE으로 계속하기' }).click()
       await acceptLegalGate(page, apiUrl)

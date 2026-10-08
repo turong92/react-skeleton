@@ -1,8 +1,12 @@
-import { useEmailBeforeWrite } from '@skeleton/auth'
+import { defaultAuthLabels, useEmailBeforeWrite } from '@skeleton/auth'
 import { useProfileDialog } from '@skeleton/author-profile'
 import { boardKeys } from '@skeleton/board'
 import { useCallback } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
 import { emailRequired } from '../api/emailRequired'
+import { ACCOUNT_PATH, DECLINED_TOAST_ID, onAccountPages } from '../auth/accountPath'
+import { useAuthLabels } from '../auth/useAuthLabels'
 import { useT } from '../i18n'
 import { profileApi } from './api'
 import { authorProfileLabels } from './profileLabels'
@@ -18,6 +22,9 @@ import { authorProfileLabels } from './profileLabels'
 export function useNicknameDialog() {
   const { t } = useT()
   const { ensure: ensureEmail } = useEmailBeforeWrite(emailRequired)
+  const { pathname } = useLocation()
+  const navigate = useNavigate()
+  const labels = useAuthLabels()
   const { open: openDialog, dialog } = useProfileDialog({
     api: profileApi,
     labels: authorProfileLabels(t),
@@ -28,9 +35,17 @@ export function useNicknameDialog() {
   })
   const open = useCallback(
     (event?: { currentTarget: Element }) => {
-      if (ensureEmail()) openDialog(event)
+      if (ensureEmail()) return openDialog(event)
+      // 계정 설정(`/account`)은 이메일 막이 걷혀 있어 `ensure()` 가 화면을 열지 못한다 - 말없이 끝나지 않게 이유 한 줄과 같은 화면의 이메일 구역으로 데려간다
+      if (onAccountPages(pathname)) {
+        toast.info(labels.emailRequiredDeclined ?? defaultAuthLabels.emailRequiredDeclined, {
+          id: DECLINED_TOAST_ID,
+        })
+        void navigate(`${ACCOUNT_PATH}#email`)
+        document.getElementById('email')?.scrollIntoView({ block: 'start' }) // 이미 그 해시면 주소가 바뀌지 않아 구역 이동이 따로 일어나지 않는다
+      }
     },
-    [ensureEmail, openDialog],
+    [ensureEmail, openDialog, pathname, navigate, labels],
   )
   return { open, dialog }
 }

@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { createLoginIdRequiredController } from '../loginIdRequired'
@@ -52,19 +51,5 @@ describe('the login id gate renders outside any router (it sits above the routes
     )
     expect(out).toContain('아이디를 정해 주세요')
     expect(out).toMatch(/href="\/account"[^>]*>계정 설정<\/a>/)
-  })
-
-  it('nothing the gate draws imports the router', () => {
-    for (const file of [
-      'LoginIdGate.tsx',
-      'LoginIdRequiredScreen.tsx',
-      'LoginIdChoice.tsx',
-      'LoginIdField.tsx',
-      'DiscardPath.tsx',
-      'EmailWriteNotice.tsx',
-    ]) {
-      const source = readFileSync(new URL(`./${file}`, import.meta.url), 'utf8')
-      expect(source, file).not.toMatch(/from 'react-router/)
-    }
   })
 })

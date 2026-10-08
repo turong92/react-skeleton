@@ -6,13 +6,11 @@ import {
 } from '@skeleton/auth'
 import { useMemo, useSyncExternalStore } from 'react'
 import { router } from '../routes'
+import { ACCOUNT_PATH, onAccountPages } from './accountPath'
 import { authMethodsOverride, socialClientIds, socialProviderConfigs } from './authConfig'
 import { authApi } from './session'
 
-export const ACCOUNT_PATH = '/account'
-/** 계정 설정과 그 제공자 콜백(`/account/link-callback`) — 이메일을 등록하거나 아이디를 정하거나 계정을 지우는 길이라 막을 걷는다. `/account-deleted` 는 해당 없다 */
-export const onAccountPages = (pathname: string) =>
-  pathname === ACCOUNT_PATH || pathname.startsWith(`${ACCOUNT_PATH}/`)
+export { ACCOUNT_PATH, onAccountPages }
 
 /** 라우터의 지금 경로 — 아이디 · 이메일 막은 라우터 바깥(`main.tsx`)에 있어 훅 대신 구독한다 */
 export function usePathname() {

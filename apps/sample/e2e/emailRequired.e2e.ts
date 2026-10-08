@@ -738,3 +738,36 @@ describe('the nickname band on an address-less account: the email screen comes f
     },
   )
 })
+
+/*
+ * 계정 설정(`/account`)에서는 이메일 막이 걷혀 있다(`standAside` - 거기서 등록한다). 띠는 로그인한 모든 화면에 뜨므로 거기서도 눌린다 -
+ * 눌러서 아무 일도 없으면 안 된다: 한 줄(「이메일을 등록한 뒤에 …」)로 이유를 말하고 같은 화면의 이메일 구역으로 데려간다. 다이얼로그는 열리지 않는다.
+ */
+describe('the nickname band on account settings: pressing it says why and goes to the email section', () => {
+  const band = () => page.getByRole('region', { name: ko('nickname.bannerLabel') })
+
+  run(
+    'on /account the band button answers with the one-line reason and the email section - not silence',
+    async () => {
+      await page.goto(baseUrl)
+      await page.evaluate(() => window.localStorage.clear())
+      await startLineSignIn(page, fakeUrl, { sub: `U-acct-${stamp}`, name: '설정 시험' })
+      await chooseLoginIdViaGate(page, apiUrl, uniqueLoginId('acct'), true)
+      await acceptLegalGate(page, apiUrl, true)
+      await pwExpect(page.getByRole('heading', { level: 1, name: /안녕하세요/ })).toBeVisible()
+      await page.goto(`${baseUrl}/account`)
+      await pwExpect(band()).toBeVisible()
+      await pwExpect(page.locator('#email')).toBeVisible()
+      await page.evaluate(() => window.scrollTo(0, 0))
+      await band()
+        .getByRole('button', { name: ko('nickname.nudgeAction') })
+        .click()
+      await pwExpect(declinedLine()).toHaveCount(1) // 말없이 죽지 않는다
+      await pwExpect(page.locator('dialog[open]')).toHaveCount(0) // 닉네임 대화상자는 열리지 않는다
+      await pwExpect(gate()).toHaveCount(0) // 이 화면은 막이 걷혀 있다
+      pwExpect(new URL(page.url()).hash).toBe('#email') // 이메일 구역으로
+      await pwExpect(page.locator('#email')).toBeInViewport()
+      await pwExpect(errorToasts()).toHaveCount(0)
+    },
+  )
+})

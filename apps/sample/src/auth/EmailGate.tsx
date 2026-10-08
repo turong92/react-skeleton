@@ -15,12 +15,10 @@ import { queryClient } from '../app/queryClient'
 import { useT } from '../i18n'
 import { router } from '../routes'
 import { refreshAfterProfileChange } from './profileCache'
+import { DECLINED_TOAST_ID } from './accountPath'
 import { ACCOUNT_PATH, useEnabledProviders, useOnAccountPages } from './gateShared'
 import { accountApi } from './session'
 import { useAuthLabels } from './useAuthLabels'
-
-/** 「나중에 하기」로 닫았다 - 붙잡은 쓰기는 403 으로 끝났고 전역 토스트는 이 코드를 거르므로, 아무 말 없이 실패하지 않게 한 줄로 알린다. 같은 id 라 여러 번 눌러도 한 줄이다 */
-const DECLINED_TOAST_ID = 'email-required-declined'
 
 /**
  * 주소 없는 계정이 앱 대신 보는 「이메일을 등록해 주세요」 막(`@skeleton/auth` 의 `EmailRequiredGate`). `main.tsx` 가 `AuthProvider` 안, 약관 막(`LegalGate`) 바깥에 둔다 —

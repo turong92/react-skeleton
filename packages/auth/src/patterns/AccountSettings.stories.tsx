@@ -1273,16 +1273,16 @@ export const LoginIdAlreadySetInAnotherTabTellsTheApp: StoryObj<typeof AlreadySe
 function SlowReloadDemo() {
   const api = useMemo(() => {
     const fake = createFakeAccountApi({ loginId: {} })
-    let chosen = false
+    const state = { chosen: false }
     return {
       ...fake,
       setLoginId: async (loginId: string) => {
         const result = await fake.setLoginId(loginId)
-        chosen = true
+        state.chosen = true
         return result
       },
       me: async () => {
-        if (chosen) await new Promise((resolve) => setTimeout(resolve, 1500))
+        if (state.chosen) await new Promise((resolve) => setTimeout(resolve, 1500))
         return fake.me()
       },
     }

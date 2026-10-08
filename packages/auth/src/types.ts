@@ -52,8 +52,11 @@ export type SocialAuthorizeInfo = {
   params: Record<string, string>
 }
 
-/** 인가 코드와 함께 서버로 가는, 그 **시도** 의 PKCE verifier · nonce — 쓰지 않는 제공자에는 없다 */
-export type SocialProof = { codeVerifier?: string; nonce?: string }
+/**
+ * 인가 코드와 함께 서버로 가는, 그 **시도** 의 PKCE verifier · nonce — 쓰지 않는 제공자에는 없다. `state` 는 콜백 주소로 돌아온 값(이미 비교를 마친 것)을
+ * 모든 제공자에 그대로 싣는다 — 서버가 토큰 요청에 필요한 제공자(Naver)에만 쓰고 나머지는 무시한다. 로그 · 저장소 · 오류 보고에는 남기지 않는다
+ */
+export type SocialProof = { codeVerifier?: string; nonce?: string; state?: string }
 
 /** 백엔드 `OAuthSocialLoginRequest` */
 export type SocialLoginRequest = {

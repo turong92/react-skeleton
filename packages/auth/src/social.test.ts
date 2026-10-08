@@ -134,7 +134,14 @@ describe('createSocialLoginFlow', () => {
     const { state } = await flow.start('google')
     const result = await flow.complete(`?code=the-code&state=${state}`)
     expect(result).toEqual({ provider: 'google', token, action: 'login' })
-    expect(socialLogin).toHaveBeenCalledWith('google', 'the-code', 'https://app.test/auth/callback')
+    expect(socialLogin).toHaveBeenCalledWith(
+      'google',
+      'the-code',
+      'https://app.test/auth/callback',
+      {
+        state,
+      },
+    )
     expect(storage.data.size).toBe(0)
   })
 

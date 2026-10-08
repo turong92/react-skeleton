@@ -98,6 +98,18 @@ describe('createAuthApi (mirrors kotlin-skeleton modules/auth and auth-social)',
     })
   })
 
+  it('socialLogin sends the callback state next to the code, for any provider', async () => {
+    const { client, calls } = fakeClient(token)
+    await createAuthApi(client).socialLogin('naver', 'c', 'https://app/cb', {
+      state: 'st-0123456789abcdef',
+    })
+    expect(calls[0].request?.json).toEqual({
+      authorizationCode: 'c',
+      redirectUri: 'https://app/cb',
+      state: 'st-0123456789abcdef',
+    })
+  })
+
   it('socialLogin leaves redirectUri out when not given and encodes the provider segment', async () => {
     const { client, calls } = fakeClient(token)
     await createAuthApi(client).socialLogin('my provider', 'code-2')

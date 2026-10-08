@@ -108,12 +108,15 @@ export const SocialCallbackKeepsTheWantedPage: Story = {
     const flow = createSocialLoginFlow({
       providers: { google: { clientId: 'c', redirectUri: 'https://app.test/auth/callback' } },
       session: {
-        socialLogin: async () => ({
-          accessToken: 't',
-          tokenType: 'Bearer',
-          expiresAt: '2099-01-01T00:00:00Z',
-          principal: { accountId: 'a', roles: [] },
-        }),
+        socialLogin: async (...args) => {
+          ;(window as unknown as { __login: unknown[] }).__login = args
+          return {
+            accessToken: 't',
+            tokenType: 'Bearer',
+            expiresAt: '2099-01-01T00:00:00Z',
+            principal: { accountId: 'a', roles: [] },
+          }
+        },
       },
       storage,
       createState: () => 'st',
@@ -147,6 +150,13 @@ export const SocialCallbackKeepsTheWantedPage: Story = {
   play: async ({ canvas }) => {
     // 이동은 effect 한 번 · 「가려던 곳」은 한 번 읽히고 거기로 간다(렌더에서 읽고 이동하던 옛 방식은 이 스토리가 실패한다)
     await expect(await canvas.findByTestId('here')).toHaveTextContent('/notes')
+    // 콜백 주소로 돌아온 state 가 코드와 함께 서버로 간다(제공자가 쓰든 안 쓰든 — 서버가 필요한 제공자에만 쓴다)
+    await expect((window as unknown as { __login: unknown[] }).__login).toEqual([
+      'google',
+      'c',
+      'https://app.test/auth/callback',
+      { state: 'st' },
+    ])
     await expect(consumeReturnTo('/fallback', undefined, keys.returnTo)).toBe('/fallback') // 한 번 읽으면 지워진다
   },
 }
@@ -376,6 +386,7 @@ export const LinkCallbackCarriesTheProofBackToTheSettings: Story = {
     await expect(state.resume.socialReauth).toMatchObject({
       provider: 'naver',
       authorizationCode: 'fresh',
+      state: 'st', // 콜백 주소로 돌아온 state — 서버가 Naver 토큰 요청에 쓴다
     })
   },
 }
@@ -419,7 +430,9 @@ export const LinkAfterReconsentLinksOnceEvenUnderStrictMode: Story = {
       'google',
       'target-code',
       undefined,
-      expect.objectContaining({ socialReauth: expect.objectContaining({ provider: 'naver' }) }),
+      expect.objectContaining({
+        socialReauth: expect.objectContaining({ provider: 'naver', state: 'st' }),
+      }),
     )
   },
 }

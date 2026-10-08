@@ -267,6 +267,7 @@ export function createSocialLoginFlow({
         const proof: SocialProof = {
           ...(pending.codeVerifier ? { codeVerifier: pending.codeVerifier } : {}),
           ...(pending.nonce ? { nonce: pending.nonce } : {}),
+          ...(callback.state ? { state: callback.state } : {}),
         }
         const token = await (
           Object.keys(proof).length > 0

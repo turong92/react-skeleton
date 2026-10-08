@@ -154,6 +154,31 @@ describe('createAccountApi (mirrors kotlin-skeleton docs/account-http-contract.m
     expect(calls[3].request?.json).toEqual({ socialReauth })
   })
 
+  it('state: the callback state rides top level on link and inside socialReauth', async () => {
+    const { client, calls } = fakeClient()
+    const api = createAccountApi(client)
+    const socialReauth = {
+      provider: 'naver',
+      authorizationCode: 'fresh',
+      state: 'reauth-state-0123456789',
+    }
+    await api.linkSocial(
+      'naver',
+      'code',
+      'https://app/cb',
+      { socialReauth },
+      { state: 'link-state-0123456789' },
+    )
+    await api.deleteAccount({ socialReauth })
+    expect(calls[0].request?.json).toEqual({
+      authorizationCode: 'code',
+      redirectUri: 'https://app/cb',
+      socialReauth,
+      state: 'link-state-0123456789',
+    })
+    expect(calls[1].request?.json).toEqual({ socialReauth })
+  })
+
   it('requestReauthConfirmation → POST /account/reauth/confirmation (202, authenticated)', async () => {
     const { client, calls } = fakeClient({ status: 'ACCEPTED' })
     await createAccountApi(client).requestReauthConfirmation()

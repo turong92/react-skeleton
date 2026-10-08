@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — 소셜 로그인 · 연결 · 다시 인증이 콜백의 `state` 를 같이 보낸다(`@skeleton/auth`)
+
+백엔드(kotlin-skeleton `chore/ops-docs`, `docs/account-http-contract.md` 의 `state?`)가 로그인 · 연결 · `socialReauth` 요청 본문에 선택 필드 `state` 를 받는다. Naver 는 토큰 발급에 인가 단계의 `state` 가 필요할 수 있어 백엔드가 받은 값을 Naver 토큰 요청에만 싣고, 다른 제공자는 무시한다.
+
+- **모든 제공자에** 콜백 주소로 돌아온 `state`(비교를 마친 값)를 인가 코드와 함께 `state` 로 보낸다 — 로그인(`session.socialLogin` 의 `proof`), 연결(`accountApi.linkSocial` 의 `proof`, 최상위), 재인증(`socialReauth.state`). `SocialProof` 에 선택 필드 `state?` 가 늘었을 뿐 `AuthApi` · `AccountApi` 메서드 시그니처는 그대로(호환)다.
+- `state` 는 로그 · 오류 · 에러 리포트에 싣지 않는다. 다른 제공자의 다시 인증에 걸쳐 연결을 이어 가는 왕복(`link-reauth`)에서는 먼저 받은 코드와 함께 이미 쓰인 `state` 가 그 왕복의 세션 저장소 기록에만 잠깐 있고, 완료 때 지워진다.
+- 테스트: `social.test.ts` · `socialPkce.test.ts` · `socialLink.test.ts` · `authApi.test.ts` · `accountApi.test.ts`, 스토리 `SocialCallbackKeepsTheWantedPage` · `LinkCallbackCarriesTheProofBackToTheSettings` · `LinkAfterReconsentLinksOnceEvenUnderStrictMode`.
+
 ### Changed — 같은 이메일의 소셜 로그인은 자동으로 붙이지 않는다: 안내 화면과 연결 이어 주기(`@skeleton/auth` · `apps/sample`)
 
 백엔드(kotlin-skeleton `fix/google-email-authority`)가 메일로 가입한 사람이 같은 메일의 소셜로 처음 로그인하면 `409 ACCOUNT.SOCIAL_EMAIL_CONFLICT`(`data` 없음)를 주도록 바뀐 데 맞췄다. 주인 결정 — 「그냥 연동 안 해주고 지가 등록하게」.

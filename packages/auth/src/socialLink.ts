@@ -85,10 +85,11 @@ export function createSocialLinkFlow({
       const known = linked.get(state)
       if (known) return known
       const run = read(search).then(
-        async ({ provider, authorizationCode, redirectUri, codeVerifier, nonce }) => {
+        async ({ provider, authorizationCode, redirectUri, codeVerifier, nonce, state }) => {
           const proof: SocialProof = {
             ...(codeVerifier ? { codeVerifier } : {}),
             ...(nonce ? { nonce } : {}),
+            ...(state ? { state } : {}),
           }
           if (Object.keys(proof).length > 0)
             await accountApi.linkSocial(provider, authorizationCode, redirectUri, reauth, proof)

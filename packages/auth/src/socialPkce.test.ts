@@ -241,6 +241,7 @@ describe('a social attempt owns its verifier and nonce', () => {
     expect(socialLogin).toHaveBeenCalledWith('line', 'the-code', REDIRECT, {
       codeVerifier: stored.codeVerifier,
       nonce: stored.nonce,
+      state,
     })
     expect(storage.data.size).toBe(0)
     await expect(flow.complete(`?code=again&state=${state}`)).resolves.toBeTruthy() // double invocation: same login, not a second code

@@ -57,11 +57,12 @@ export type AuthPaths = {
   accountDeleted: string
 }
 
-/** 콜백이 돌려준 그 시도의 PKCE verifier · nonce — 제공자가 쓴 것만(없으면 undefined: 서버로 아무것도 더 보내지 않는다) */
+/** 콜백이 돌려준 그 시도의 PKCE verifier · nonce · 콜백의 state — verifier · nonce 는 제공자가 쓴 것만(없으면 undefined: 서버로 아무것도 더 보내지 않는다) */
 function proofOf(callback: SocialProof): SocialProof | undefined {
   const proof: SocialProof = {
     ...(callback.codeVerifier ? { codeVerifier: callback.codeVerifier } : {}),
     ...(callback.nonce ? { nonce: callback.nonce } : {}),
+    ...(callback.state ? { state: callback.state } : {}),
   }
   return Object.keys(proof).length > 0 ? proof : undefined
 }

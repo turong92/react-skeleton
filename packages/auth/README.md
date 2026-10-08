@@ -57,7 +57,7 @@ window.location.assign(url) // 로그인 버튼
 
 ## PKCE · nonce — 시도마다
 
-시작할 때마다 `state`(24바이트) · `codeVerifier`(32바이트 → 43자 base64url) · `nonce`(제공자가 쓸 때)를 CSPRNG 로 만들어 탭 `sessionStorage` 의 `state` 키 아래에 **제공자 · 종류(login · link · reauth) · 계정**과 함께 둔다 — 한 번 읽으면 지워진다. `code_challenge = BASE64URL(SHA-256(verifier))`(S256 뿐) 만 URL 에 간다. 로그인 · 연결(최상위) · `socialReauth`(이메일 변경 · 연결 해제 · 삭제)에 `codeVerifier` · `nonce` 를 싣는다. `pkce: UNSUPPORTED` 제공자에는 PKCE 파라미터를 보내지 않는다(모르는 파라미터를 거절하는 곳이 있다). 400 `AUTH.SOCIAL_PKCE_FAILED` · `AUTH.SOCIAL_NONCE_FAILED` 는 요청이 잘못 만들어진 것(아직 아무것도 쓰이지 않았다), 401 `AUTH_SOCIAL.INVALID_AUTHORIZATION_CODE` · `AUTH.SOCIAL_ID_TOKEN_INVALID` 는 동의를 처음부터 다시.
+시작할 때마다 `state`(24바이트) · `codeVerifier`(32바이트 → 43자 base64url) · `nonce`(제공자가 쓸 때)를 CSPRNG 로 만들어 탭 `sessionStorage` 의 `state` 키 아래에 **제공자 · 종류(login · link · reauth) · 계정**과 함께 둔다 — 한 번 읽으면 지워진다. `code_challenge = BASE64URL(SHA-256(verifier))`(S256 뿐) 만 URL 에 간다. 로그인 · 연결(최상위) · `socialReauth`(이메일 변경 · 연결 해제 · 삭제)에 `codeVerifier` · `nonce` 를 싣는다. 콜백 주소로 돌아온 `state`(비교를 마친 값)도 **모든 제공자에** 같은 자리에 `state` 로 싣는다 — 서버가 토큰 요청에 필요한 제공자(Naver)에만 쓰고 나머지는 무시한다. `state` 는 로그 · 오류 · 저장소에 따로 남기지 않는다. `pkce: UNSUPPORTED` 제공자에는 PKCE 파라미터를 보내지 않는다(모르는 파라미터를 거절하는 곳이 있다). 400 `AUTH.SOCIAL_PKCE_FAILED` · `AUTH.SOCIAL_NONCE_FAILED` 는 요청이 잘못 만들어진 것(아직 아무것도 쓰이지 않았다), 401 `AUTH_SOCIAL.INVALID_AUTHORIZATION_CODE` · `AUTH.SOCIAL_ID_TOKEN_INVALID` 는 동의를 처음부터 다시.
 
 ## 계정 수명주기 — 라우트 한 벌
 

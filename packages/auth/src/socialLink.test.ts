@@ -79,7 +79,15 @@ describe('createSocialLinkFlow (logged-in user adds a provider to the account)',
     })
     await flow.start('google')
     const result = await flow.complete('?code=abc&state=s')
-    expect(linkSocial).toHaveBeenCalledWith('google', 'abc', providers.google.redirectUri)
+    expect(linkSocial).toHaveBeenCalledWith(
+      'google',
+      'abc',
+      providers.google.redirectUri,
+      undefined,
+      {
+        state: 's',
+      },
+    )
     expect(result.provider).toBe('google')
   })
 
@@ -161,6 +169,7 @@ describe('createSocialLinkFlow (logged-in user adds a provider to the account)',
       provider: 'google',
       authorizationCode: 'abc',
       redirectUri: providers.google.redirectUri,
+      state: 's',
     })
     expect(await flow.read('?code=abc&state=s')).toEqual(first) // a double effect reads the same result
     expect(linkSocial).not.toHaveBeenCalled()
@@ -178,9 +187,13 @@ describe('createSocialLinkFlow (logged-in user adds a provider to the account)',
     })
     await flow.start('google')
     await flow.complete('?code=abc&state=s', { confirmationCode: '123456' })
-    expect(linkSocial).toHaveBeenCalledWith('google', 'abc', providers.google.redirectUri, {
-      confirmationCode: '123456',
-    })
+    expect(linkSocial).toHaveBeenCalledWith(
+      'google',
+      'abc',
+      providers.google.redirectUri,
+      { confirmationCode: '123456' },
+      { state: 's' },
+    )
   })
 
   describe('the state carries the pending action and the account (re-consent round trip)', () => {
@@ -278,7 +291,7 @@ describe('createSocialLinkFlow (logged-in user adds a provider to the account)',
         'abc',
         line.line.redirectUri,
         { currentPassword: 'pw' },
-        { codeVerifier: kept.codeVerifier, nonce: kept.nonce },
+        { codeVerifier: kept.codeVerifier, nonce: kept.nonce, state: 's' },
       )
     })
 

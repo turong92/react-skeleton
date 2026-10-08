@@ -260,6 +260,8 @@ export const koAuthLabels: AuthLabels = {
   emailNone: '이 계정에는 이메일 주소가 없어요',
   emailAddHint:
     '계정 안내를 받고 계정을 되찾으려면 이메일이 필요해요. 아래에 주소를 적으면 인증번호를 보내 드려요.',
+  emailAddHintReauth:
+    '계정 안내를 받고 계정을 되찾으려면 이메일이 필요해요. 아래에 주소를 적고 지금 쓰는 로그인 수단으로 본인임을 확인하면 인증번호를 보내 드려요.',
   emailAddSubmit: '이메일 추가',
   emailPendingTitle: '새 주소의 인증번호를 입력하세요',
   emailPendingBody: (email, until) =>
@@ -273,8 +275,9 @@ export const koAuthLabels: AuthLabels = {
     `번호가 안 오면 그 주소로 이미 가입한 계정이 있을 수 있어요. 그 계정으로 로그인해 설정에서 '${provider} 연결'을 눌러 주세요.`,
   emailNoCodeHintPlain:
     '번호가 안 오면 그 주소로 이미 가입한 계정이 있을 수 있어요. 그 계정으로 로그인해 설정에서 지금 쓰는 로그인 수단을 연결해 주세요.',
+  // 이름 뒤에 조사를 붙이지 않는다
   emailReauthNeeded: (provider) =>
-    `보안을 위해 ${provider}로 한 번 더 확인해 주세요. 확인하면 여기로 돌아와요.`,
+    `보안을 위해 한 번 더 확인해 주세요. 확인 방법은 '${provider}'이에요. 확인하면 여기로 돌아와요.`,
   emailRequiredTitle: '이메일을 등록해 주세요',
   emailRequiredBody: '계정을 되찾거나 중요한 안내를 받을 때 써요. 다른 사람에게는 보이지 않아요.',
   emailRequiredField: '이메일',

@@ -263,6 +263,8 @@ export type AuthLabels = {
   /** 주소가 없는 계정(LINE · X …)의 이메일 절 */
   emailNone: string
   emailAddHint: string
+  /** 주소 없는 소셜 계정이 먼저 제공자로 본인 확인을 해야 하는 앱 — 주소 단계 앞에 확인이 있다 */
+  emailAddHintReauth: string
   emailAddSubmit: string
   emailPendingTitle: string
   emailPendingBody: (email: string, until?: string) => string
@@ -635,6 +637,8 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   emailNone: 'No email address on this account',
   emailAddHint:
     'Add one to get account notices and to recover access. Type it below and we send you a code.',
+  emailAddHintReauth:
+    'Add one to get account notices and to recover access. Type it below, confirm it is you with your current sign-in, and we send you a code.',
   emailAddSubmit: 'Add email',
   emailPendingTitle: 'Enter the code for your new address',
   emailPendingBody: (email, until) =>

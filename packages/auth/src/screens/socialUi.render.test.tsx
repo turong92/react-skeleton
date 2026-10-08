@@ -191,7 +191,8 @@ describe('an account without an address (LINE / X)', () => {
     expect(out).toContain(L.emailNone)
     expect(out).not.toContain('<strong></strong>')
     expect(out).not.toContain(L.emailUnverified)
-    expect(out).toContain(L.emailAddHint)
+    // 이메일을 필수로 켜지 않은 앱: 제공자 확인이 먼저라 힌트도 그렇게 말한다
+    expect(out).toContain(L.emailAddHintReauth)
   })
 
   it('an account with an address keeps the change wording', () => {

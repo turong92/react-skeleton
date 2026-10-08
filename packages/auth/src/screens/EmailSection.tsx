@@ -95,10 +95,10 @@ export function EmailSection({
   const ids = { email: `${uid}-email`, proof: `${uid}-proof` }
   const attempt = useSubmitAttempt()
   /**
-   * 주소가 한 번도 없던 계정의 첫 등록은 다시 인증 없이 받는다(마지막 로그인 1시간 안). 서버가 `REAUTH_REQUIRED` 를 말하면(그 시간이 지났다)
-   * 그때 이미 연결된 제공자로 한 번 더 확인하게 한다 — 처음부터 제공자 단추를 내밀지 않는다
+   * 이메일을 필수로 켠 앱(`required`)에서 주소가 한 번도 없던 계정의 첫 등록은 다시 인증 없이 받는다(그 로그인이 연 세션 안). 서버가 `REAUTH_REQUIRED` 를 말하면
+   * 그때 이미 연결된 제공자로 한 번 더 확인하게 한다 — 처음부터 제공자 단추를 내밀지 않는다. 켜지 않은 앱은 서버가 그렇게 받아 준다고 약속하지 않으니 예전처럼 제공자 확인이 먼저다
    */
-  const firstRegistration = !email && kind === 'provider'
+  const firstRegistration = required && !email && kind === 'provider'
   const [reauthNeeded, setReauthNeeded] = useState(false)
   const needProof = !firstRegistration || reauthNeeded || !!resume
   const noCodeHint =
@@ -165,7 +165,11 @@ export function EmailSection({
         </div>
         <p className={styles.muted}>{labels.emailRole}</p>
         {email && required && <p className={styles.muted}>{labels.emailCannotRemove}</p>}
-        {!email && !showCode && <p className={styles.muted}>{labels.emailAddHint}</p>}
+        {!email && !showCode && (
+          <p className={styles.muted}>
+            {needProof && kind === 'provider' ? labels.emailAddHintReauth : labels.emailAddHint}
+          </p>
+        )}
         {changed && <Alert tone="success">{labels.emailChanged}</Alert>}
         {showCode ? (
           <div className={styles.stack}>

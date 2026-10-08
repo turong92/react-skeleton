@@ -145,9 +145,17 @@ describe('account email section on an app that requires one', () => {
     expect(optional).not.toContain('지울 수는 없고')
   })
 
-  it('first registration of an address-less account asks for the address only: no provider button until the server wants one', () => {
-    const out = html(<EmailSection {...base} email={null} subject={kakaoOnly} />)
+  it('first registration on an app that requires an address asks for the address only: no provider button until the server wants one', () => {
+    const out = html(<EmailSection {...base} email={null} required subject={kakaoOnly} />)
     expect(out).toContain('이메일 추가')
     expect(out).not.toContain('data-testid="reauth-provider"')
+    expect(out).toContain('아래에 주소를 적으면 인증번호를 보내 드려요')
+  })
+
+  it('an app that does not require one keeps the old order: the provider button comes first, with a hint that says so (no 403 needed)', () => {
+    const out = html(<EmailSection {...base} email={null} subject={kakaoOnly} />)
+    expect(out).toContain('data-testid="reauth-provider"')
+    expect(out).toContain('지금 쓰는 로그인 수단으로 본인임을 확인')
+    expect(out).not.toContain('아래에 주소를 적으면 인증번호를 보내 드려요')
   })
 })

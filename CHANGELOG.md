@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — 소셜 연결이 `ACCOUNT.IDENTITY_TAKEN` 으로 막히면 출구를 말한다 (`@skeleton/auth`)
 
-- 문구 `errorIdentityTaken` 이 막연한 「이미 다른 사람과 연결돼 있어요」 에서 「그 계정으로 로그인한 뒤 설정에서 연결을 끊거나 그 계정을 삭제하고 다시 시도해 주세요」 로 바뀌고, 제공자 이름을 아는 화면(연결 본인 확인 · 연결 콜백)은 새 라벨 `errorIdentityTakenFor(provider)` 로 「이 ○○ 계정은 …」 을 보여 준다. 소셜을 끊은 뒤 그 소셜로 다시 로그인하면 *내가 만든 다른 계정* 이 쥐고 있을 수 있다 (백엔드 `docs/accounts.md` "소셜을 끊은 뒤 다시 연결하려다 막힌 길"). 스토리 `SocialLinkTakenByAnotherAccount`.
+- 문구 `errorIdentityTaken` 이 막연한 「이미 다른 사람과 연결돼 있어요」 에서 「그 계정으로 로그인한 뒤 설정에서 연결을 끊거나 그 계정을 삭제하고 다시 시도해 주세요」 로 바뀌고, 제공자 이름을 아는 화면(연결 본인 확인 · 연결 콜백)은 새 라벨 `errorIdentityTakenFor(provider)` 로 「이 ○○ 계정은 …」 을 보여 준다. 소셜을 끊은 뒤 그 소셜로 다시 로그인하면 _내가 만든 다른 계정_ 이 쥐고 있을 수 있다 (백엔드 `docs/accounts.md` "소셜을 끊은 뒤 다시 연결하려다 막힌 길"). 스토리 `SocialLinkTakenByAnotherAccount`.
 
 ### Fixed — 이메일 등록 · 약관 재동의 막이 한 계정의 것이 된다, 독립 리뷰 반영(`@skeleton/auth` · `@skeleton/legal` · `@skeleton/realtime` · `apps/sample`)
 

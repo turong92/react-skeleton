@@ -136,6 +136,7 @@
         "packages/auth/src/patterns/DeletionPending.stories.tsx",
         "packages/auth/src/patterns/SocialEmailConflict.stories.tsx",
         "packages/auth/src/patterns/EmailRequired.stories.tsx",
+        "packages/auth/src/patterns/LoginIdField.stories.tsx",
         "packages/auth/src/patterns/LoginIdRequired.stories.tsx",
         "packages/auth/src/patterns/AccountSettings.stories.tsx"
       ],
@@ -190,7 +191,7 @@
         "alsoVia": [],
         "optOut": null
       },
-      "summary": "로그인 · 계정 수명주기 — 토큰 갱신(401 → 갱신 한 번 → 재시도, 회전 안전 · 탭 락) · 가입(닉네임 칸: 끔 · 선택 · 필수) · 메일 인증 · 비밀번호 재설정 · 링크 로그인 · 소셜 · 계정 설정(비밀번호 · 계정 이메일 · 연락받을 이메일 · 로그인 수단 · 세션 · 삭제) · 이메일을 필수로 켠 앱의 「이메일을 등록해 주세요」 전면 화면(주소 없는 계정이 앱 대신 본다) · 탈퇴 유예 중 로그인의 「탈퇴를 취소할까요?」 화면과 라우트 한 벌, 방법은 설정으로 켜고 끈다.",
+      "summary": "로그인 · 계정 수명주기 — 토큰 갱신(401 → 갱신 한 번 → 재시도, 회전 안전 · 탭 락) · 가입(닉네임 칸: 끔 · 선택 · 필수) · 메일 인증 · 비밀번호 재설정 · 링크 로그인 · 소셜 · 계정 설정(비밀번호 · 계정 이메일 · 연락받을 이메일 · 로그인 수단 · 세션 · 삭제) · 이메일을 필수로 켠 앱의 「이메일을 등록해 주세요」 전면 화면(주소 없는 계정이 앱 대신 본다 — 받는 시점은 로그인 직후 또는 쓰기 때, 쓰기 때는 `useEmailBeforeWrite` 와 「나중에 하기」) · 로그인 아이디(서버가 켠 앱만 — 가입의 아이디 칸과 실시간 확인 · 「아이디 또는 이메일」 로그인 · 아이디 찾기 `/forgot-id` · 아이디 없는 계정의 「아이디를 정해 주세요」 막 · 설정의 아이디 줄 · 관리자 표의 아이디 열과 찾기, 키가 없으면 화면은 예전 그대로) · 탈퇴 유예 중 로그인의 「탈퇴를 취소할까요?」 화면과 라우트 한 벌, 방법은 설정으로 켜고 끈다.",
       "notFor": [
         "권한(roles) 정책 자체는 백엔드 — 이 패키지는 토큰 · 라우트 가드(RequireAuth · RequireRole)만",
         "약관 동의 저장은 없다 — 가입 화면의 동의 슬롯은 체크한 판을 콜백으로 보고할 뿐(문서 · 저장은 @skeleton/legal)",
@@ -219,7 +220,10 @@
           "리프레시 토큰",
           "세션 목록",
           "닉네임",
-          "표시 이름"
+          "표시 이름",
+          "로그인 아이디",
+          "아이디 찾기",
+          "이메일 쓰기 때 받기"
         ],
         "en": [
           "login",
@@ -244,7 +248,11 @@
           "token refresh",
           "active sessions",
           "nickname",
-          "display name"
+          "display name",
+          "login id",
+          "username login",
+          "find my id",
+          "email on write"
         ]
       }
     },
@@ -1339,7 +1347,7 @@
       "kind": "app",
       "package": "sample",
       "path": "apps/sample",
-      "summary": "참조 앱 Notes — Patterns 로 조립한 작지만 실제 같은 제품(랜딩 · 로그인 · 대시보드 · 목록 · 상세 · 폼 · 첨부 · 알림 · 게시판 · 다국어 · 설정 · 404), 새 기능은 이 앱의 한 조각을 따라 한다.",
+      "summary": "참조 앱 Notes — Patterns 로 조립한 작지만 실제 같은 제품(랜딩 · 로그인 · 대시보드 · 목록 · 상세 · 폼 · 첨부 · 알림 · 게시판 · 다국어 · 설정 · 404 — 로그인 아이디를 켜고 이메일은 쓰기 때 받는 서버 짝), 새 기능은 이 앱의 한 조각을 따라 한다.",
       "stampFlag": {
         "flag": "--with-sample",
         "included": "flag",

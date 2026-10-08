@@ -415,6 +415,20 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
   'auth#ReauthProof': () => ({ kind: 'password', email: 'a@example.com', onChange: noop }),
   'auth#LegacyLinkNotice': () => ({ signInTo: '/login' }),
   'auth#CheckEmailPanel': () => ({ email: 'a@example.com' }),
+  'auth#LoginIdField': (ctx) => ({
+    value: 'Sumin',
+    onChange: noop,
+    check: {
+      status: 'checking',
+      normalized: 'sumin',
+      canSubmit: true,
+      showError: false,
+      savedAsNormalized: false,
+      touch: noop,
+    },
+    rules: { minLength: 4, maxLength: 20 },
+    labels: authLabels(ctx),
+  }),
   'auth#PasswordHints': (ctx) => ({ policy: authPolicy, password: '', labels: authLabels(ctx) }),
   'auth#PasswordField': (ctx) => ({
     label: 'Password',
@@ -630,6 +644,13 @@ export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
   'auth#useAuth': () => [],
   'auth#useCodeClock': () => [],
   'auth#useCountdown': () => [],
+  'auth#useLoginIdAvailability': () => [
+    {
+      api: { checkLoginId: () => new Promise(noop) },
+      value: 'sumin',
+      rules: { minLength: 4, maxLength: 20 },
+    },
+  ],
   'auth#useAuthMethods': () => [{ methods: () => new Promise(noop) }, true],
   'auth#useSocialLoginCallback': () => [{ complete: () => new Promise(noop) }, '?code=x'],
   'captcha-turnstile#useTurnstileToken': () => [],

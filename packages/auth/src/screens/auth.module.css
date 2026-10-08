@@ -210,3 +210,31 @@
   color: var(--text-strong);
   overflow-wrap: anywhere;
 }
+
+/* 아이디 칸의 상태 한 줄 — 글자가 말하고 색은 보조다. 긴 아이디도 좁은 화면에서 가로로 밀지 않는다 */
+.loginIdField {
+  display: grid;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.idStatus {
+  display: flex;
+  gap: var(--space-sm);
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-caption);
+  overflow-wrap: anywhere;
+}
+
+.idStatus:empty {
+  display: none;
+}
+
+.idStatus[data-status='available'] > span:first-child {
+  color: var(--teal);
+}
+
+.idStatus[data-status='unknown'] > span:first-child {
+  color: var(--amber);
+}

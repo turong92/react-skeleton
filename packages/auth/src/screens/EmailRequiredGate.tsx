@@ -151,6 +151,11 @@ export function EmailRequiredGate({
     if (!accountId && required) controller.decline()
   }, [accountId, required, controller])
 
+  // 쓰기 때 방식 + 막이 걷힌 계정 설정: 그려질 화면도 「나중에 하기」도 없어 붙잡힌 호출이 영영 끝나지 않는다 - 붙잡지 않고 원래 403 으로 끝낸다(구역이 이유를 말한다).
+  // 로그인 직후 방식은 그대로다(서버가 설정을 제한 모드로 줄여 이메일 구역만 열어 두고, 등록하면 풀린다)
+  useEffect(() => {
+    if (required && standAside && when === 'write') controller.decline()
+  }, [required, standAside, when, controller])
   const covered = required && !standAside
   useRestoreFocus(covered)
   const screen = (

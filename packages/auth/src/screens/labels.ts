@@ -347,6 +347,8 @@ export type AuthLabels = {
   settingsLoginIdSetPassword: string
   settingsLoginIdAddEmail: string
   settingsEmailToWrite: string
+  /** 쓰기 때 방식 + 주소 없음: 서버가 막는 설정 구역(비밀번호 · 연락받을 이메일 · 로그인 수단)을 접고 말하는 이유 */
+  settingsNeedsEmail: string
   // 이메일을 받는 시점 - "쓰기 때"
   emailRequiredWriteTitle: string
   emailRequiredWriteBody: string
@@ -429,6 +431,8 @@ export type AuthLabels = {
   adminSearch: string
   /** 관리자 표의 「아이디로 찾기」 칸 - 정확히 일치만 찾는다(조각 검색은 없다). 로그인 아이디를 켠 서버에서만 그린다 */
   adminSearchLoginId: string
+  /** 아이디로 찾기 - 정확히 일치라 입력 중이 아니라 이 단추(또는 Enter)로 낸다 */
+  adminFindLoginId: string
   adminStatusFilter: string
   adminStatusAll: string
   adminColumns: Record<
@@ -784,6 +788,7 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   settingsLoginIdSetPassword: 'Set a password',
   settingsLoginIdAddEmail: 'Register an email',
   settingsEmailToWrite: 'Register an email to start posting.',
+  settingsNeedsEmail: 'Register an email first, then you can do this.',
   emailRequiredWriteTitle: 'Register an email to post',
   emailRequiredWriteBody:
     'You can keep reading. To post, comment or react you need an email. Nobody else sees it.',
@@ -869,6 +874,7 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   adminTitle: 'Accounts',
   adminSearch: 'Search by email',
   adminSearchLoginId: 'Find by username (exact match)',
+  adminFindLoginId: 'Find',
   adminStatusFilter: 'Status',
   adminStatusAll: 'All',
   adminColumns: {

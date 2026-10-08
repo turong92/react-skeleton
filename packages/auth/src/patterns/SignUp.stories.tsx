@@ -1046,6 +1046,137 @@ export const LoginIdTakenAtTheCodeStepAsksForAnotherInPlace: Story = {
   },
 }
 
+/**
+ * 인증번호 단계에서 아이디와 닉네임이 **둘 다** 겹쳤다 - 하나를 고치면 다음 답이 다른 쪽이다. 두 칸이 함께 열리고, 마지막 제출에는 둘 다 실린다(한쪽만 열고 막히지 않는다)
+ */
+const nameAndId = (order: 'id-first' | 'name-first') => {
+  const calls: Array<{ loginId?: string; displayName?: string } | undefined> = []
+  return {
+    calls,
+    api: (): SignUpApi => {
+      const base = createFakeAccountApi({ loginId: idRules })
+      return {
+        ...base,
+        verifySignUpCode: async (signUpId, code, replacement) => {
+          calls.push(replacement)
+          const idTaken = replacement?.loginId === undefined
+          const nameTaken = replacement?.displayName === undefined
+          if (order === 'id-first') {
+            if (idTaken) throw apiError('ACCOUNT.LOGIN_ID_TAKEN', 409)
+            if (nameTaken) throw apiError('ACCOUNT.DISPLAY_NAME_TAKEN', 409)
+          } else {
+            if (nameTaken) throw apiError('ACCOUNT.DISPLAY_NAME_TAKEN', 409)
+            if (idTaken) throw apiError('ACCOUNT.LOGIN_ID_TAKEN', 409)
+          }
+          return base.verifySignUpCode(signUpId, code, replacement)
+        },
+      }
+    },
+  }
+}
+
+const toTheCodeStep = async (
+  canvas: Parameters<NonNullable<Story['play']>>[0]['canvas'],
+  userEvent: Parameters<NonNullable<Story['play']>>[0]['userEvent'],
+) => {
+  await userEvent.type(canvas.getByLabelText(/^이메일/), 'ann@example.com')
+  await userEvent.type(canvas.getByLabelText(/^닉네임/), '수민')
+  await userEvent.type(canvas.getByLabelText(/^아이디/), 'racer')
+  await userEvent.type(canvas.getByLabelText(/^비밀번호\s*\*?$/), 'Correct-horse-battery-9')
+  await userEvent.type(canvas.getByLabelText(/^비밀번호 확인/), 'Correct-horse-battery-9')
+  await userEvent.click(canvas.getByRole('button', { name: '가입하기' }))
+  await canvas.findByLabelText('6자리 중 1번째')
+  await userEvent.click(canvas.getByLabelText('6자리 중 1번째'))
+  await userEvent.paste('123456')
+}
+
+export const IdThenNicknameBothTakenAtTheCodeStep: Story = {
+  args: { ...withIdArgs, displayName: 'required' },
+  render: (args) => {
+    const { api } = nameAndId('id-first')
+    return <WithLoginId {...args} api={api()} />
+  },
+  play: async ({ canvas, args, userEvent }) => {
+    await toTheCodeStep(canvas, userEvent)
+    const idForm = await canvas.findByRole('form', { name: '아이디' })
+    await userEvent.clear(within(idForm).getByLabelText(/^아이디/))
+    await userEvent.type(within(idForm).getByLabelText(/^아이디/), 'racer.two')
+    await within(idForm).findByText(/쓸 수 있는 아이디예요/)
+    await userEvent.click(within(idForm).getByRole('button', { name: '이 아이디로 정하기' }))
+    // 아이디는 받아들여졌고 이번엔 닉네임이 겹친다 - 닉네임 칸이 열린다(아이디 칸은 그대로)
+    const nameForm = await canvas.findByRole('form', { name: '닉네임' })
+    await expect(within(nameForm).getByText('이미 쓰고 있는 닉네임이에요')).toBeVisible()
+    const field = within(nameForm).getByLabelText(/^닉네임/)
+    await userEvent.clear(field)
+    await userEvent.type(field, '다른수민')
+    await userEvent.click(within(nameForm).getByRole('button', { name: '이 닉네임으로 계속' }))
+    await waitFor(() => expect(args.onPendingChange).toHaveBeenLastCalledWith(null))
+    // 마지막 제출에는 둘 다 실린다
+    await expect(args.onVerifyCode).toHaveBeenLastCalledWith('sid-1', '123456', {
+      displayName: '다른수민',
+      loginId: 'racer.two',
+    })
+  },
+}
+
+export const NicknameThenIdBothTakenAtTheCodeStep: Story = {
+  args: { ...withIdArgs, displayName: 'required' },
+  render: (args) => {
+    const { api } = nameAndId('name-first')
+    return <WithLoginId {...args} api={api()} />
+  },
+  play: async ({ canvas, args, userEvent }) => {
+    await toTheCodeStep(canvas, userEvent)
+    const nameForm = await canvas.findByRole('form', { name: '닉네임' })
+    const field = within(nameForm).getByLabelText(/^닉네임/)
+    await userEvent.clear(field)
+    await userEvent.type(field, '다른수민')
+    await userEvent.click(within(nameForm).getByRole('button', { name: '이 닉네임으로 계속' }))
+    // 닉네임은 받아들여졌고 이번엔 아이디가 겹친다 - 「문제가 생겼어요」가 닉네임 칸에 뜨지 않고 아이디 칸이 열린다
+    const idForm = await canvas.findByRole('form', { name: '아이디' })
+    await expect(
+      within(idForm).getAllByText('이미 쓰고 있거나 쓸 수 없는 아이디예요').length,
+    ).toBeGreaterThan(0)
+    await expect(within(nameForm).queryByText(/문제가 생겼어요/)).toBeNull()
+    const id = within(idForm).getByLabelText(/^아이디/)
+    await userEvent.clear(id)
+    await userEvent.type(id, 'racer.two')
+    await within(idForm).findByText(/쓸 수 있는 아이디예요/)
+    await userEvent.click(within(idForm).getByRole('button', { name: '이 아이디로 정하기' }))
+    await waitFor(() => expect(args.onPendingChange).toHaveBeenLastCalledWith(null))
+    await expect(args.onVerifyCode).toHaveBeenLastCalledWith('sid-1', '123456', {
+      displayName: '다른수민',
+      loginId: 'racer.two',
+    })
+  },
+}
+
+/** 서버가 409 로 「쓸 수 없다」고 한 값은, 고쳤다가 같은 값으로 되돌려도 「쓸 수 있어요」로 돌아오지 않는다 */
+export const LoginIdServerConflictStaysTakenWhenTypedBack: Story = {
+  args: withIdArgs,
+  render: (args) => {
+    const api = {
+      ...createFakeAccountApi({ loginId: idRules }),
+      signUp: async () => {
+        throw apiError('ACCOUNT.LOGIN_ID_TAKEN', 409)
+      },
+    } as SignUpApi
+    return <WithLoginId {...args} api={api} />
+  },
+  play: async ({ canvas, userEvent }) => {
+    await fillIdForm(canvas, userEvent, 'sumin.kim')
+    await expect(await canvas.findByText(/쓸 수 있는 아이디예요/)).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: '가입하기' }))
+    const id = canvas.getByLabelText(/^아이디/)
+    await waitFor(() => expect(id).toBeInvalid())
+    await userEvent.type(id, '2')
+    await waitFor(() => expect(id).not.toBeInvalid())
+    await userEvent.type(id, '{Backspace}') // 서버가 거절한 값으로 돌아왔다
+    await waitFor(() => expect(id).toBeInvalid())
+    await expect(canvas.queryByText(/쓸 수 있는 아이디예요/)).toBeNull()
+  },
+}
+
 /** 375px · 320px - 긴 아이디 · 긴 안내도 가로로 밀리지 않는다 */
 const noSidewaysScroll = async (canvasElement: HTMLElement) => {
   const box = canvasElement.querySelector<HTMLElement>('[data-narrow]')!

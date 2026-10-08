@@ -1,3 +1,4 @@
+import { ErrorCodes, isErrorCode } from '@skeleton/api-client'
 import { Alert, Button, ConfirmDialog, FormProblems, useSubmitAttempt } from '@skeleton/ui'
 import { useId, useState, type FormEvent } from 'react'
 import type { LoginIdRules } from '../account/loginIdRules'
@@ -64,20 +65,22 @@ export function LoginIdChoice({
   }
 
   async function confirm() {
-    const result: { outcome?: LoginIdSubmitOutcome } = {}
+    const result: { outcome?: LoginIdSubmitOutcome; taken?: boolean } = {}
     const ok = await action.run(async () => {
       try {
         await onSubmit(check.normalized)
       } catch (caught) {
         result.outcome = loginIdSubmitOutcome(caught, { value, rules, labels })
+        result.taken = isErrorCode(caught, ErrorCodes.ACCOUNT_LOGIN_ID_TAKEN)
         if (result.outcome.kind === 'other') throw caught
       }
     })
     const { outcome } = result
+    setConfirming(false) // 정했을 때도 닫는다 - 부모가 `me` 를 다시 읽는 동안 열린 채 남지 않게. 칸 옆 오류 · 다른 오류(429 …)는 화면이 말한다
     if (ok && !outcome) return onChosen()
-    setConfirming(false) // 칸 옆 오류 · 다른 오류(429 …)는 대화상자를 닫고 화면이 말한다
     if (outcome?.kind === 'already-set') return onAlreadySet()
     if (outcome?.kind === 'field') {
+      if (result.taken) check.markTaken(check.normalized) // 서버가 쓸 수 없다고 한 값 - 같은 값으로 돌아와도 「쓸 수 있어요」가 아니다
       setServerError(outcome.message)
       attempt.fail(fieldId)
     }

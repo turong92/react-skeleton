@@ -1,11 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { expect, fn, waitFor, within } from 'storybook/test'
 import { createLoginIdRequiredController } from '../loginIdRequired'
 import { koAuthLabels } from '../screens/labels.ko'
 import { LoginIdGate } from '../screens/LoginIdGate'
 import { apiError, createFakeAccountApi, type FakeAccountOptions } from '../stories/fakeAccountApi'
-import { withRouter } from '../stories/withRouter'
 
 /**
  * 아이디 정하기 강제 — 아이디를 켠 앱에서 아이디가 없는 계정(소셜 첫 로그인 · 아이디를 켜기 전부터 있던 계정)이 로그인하면 앱 대신 전면 화면이 덮는다(`LoginIdGate`).
@@ -33,6 +32,8 @@ type DemoProps = {
   onChosen?: () => void
   onSignOut?: () => void
   onDiscarded?: (provider?: string) => void
+  /** 「계정 설정」 클릭을 앱의 SPA 이동으로 바꾼다 */
+  onOpenSettings?: () => void
   /** 화면 폭(px) — `transform` 이 `position: fixed` 의 기준을 이 칸으로 바꿔 작은 폭에서의 모습을 그대로 본다 */
   width?: number
 }
@@ -45,6 +46,7 @@ function Demo({
   onChosen,
   onSignOut = () => undefined,
   onDiscarded = () => undefined,
+  onOpenSettings,
   width,
 }: DemoProps) {
   const api = useMemo(() => createFakeAccountApi({ loginId: {}, ...fake }), [fake])
@@ -69,6 +71,7 @@ function Demo({
       onSignOut={onSignOut}
       onDiscarded={onDiscarded}
       onChosen={onChosen}
+      onOpenSettings={onOpenSettings}
     >
       <AppBehind />
     </LoginIdGate>
@@ -93,12 +96,12 @@ function Demo({
 const meta = {
   title: 'Patterns/Auth/Login id required',
   component: Demo,
-  decorators: [withRouter],
   args: {
     onHeldCall: fn(),
     onChosen: fn(),
     onSignOut: fn(),
     onDiscarded: fn(),
+    onOpenSettings: undefined,
   },
 } satisfies Meta<typeof Demo>
 export default meta
@@ -217,6 +220,30 @@ export const TakenWhileConfirming409: Story = {
   },
 }
 
+/** 서버가 409 로 「쓸 수 없다」고 한 값은 고쳤다가 같은 값으로 되돌려도 「쓸 수 있어요」로 돌아오지 않는다 */
+export const ServerConflictStaysTakenWhenTypedBack: Story = {
+  args: { fake: { loginId: { takenOnConfirm: ['race.winner'] } } },
+  play: async ({ canvas, userEvent }) => {
+    const screen = within(await dialog(canvas))
+    const input = screen.getByRole('textbox', { name: /^Username/ })
+    await userEvent.type(input, 'race.winner')
+    await screen.findByText(/This username is available/)
+    await userEvent.click(screen.getByRole('button', { name: SUBMIT }))
+    const confirm = await within(document.body).findByRole('dialog', { name: 'Use race.winner?' })
+    await userEvent.click(within(confirm).getByRole('button', { name: 'Confirm' }))
+    await screen.findAllByText('This username is taken or not available')
+    await userEvent.type(input, '2')
+    await waitFor(() =>
+      expect(screen.queryByText('This username is taken or not available')).toBeNull(),
+    )
+    await userEvent.type(input, '{Backspace}') // 서버가 거절한 값으로 돌아왔다
+    await expect(
+      (await screen.findAllByText('This username is taken or not available')).length,
+    ).toBeGreaterThan(0)
+    await expect(screen.queryByText(/This username is available/)).toBeNull()
+  },
+}
+
 /** 이미 쓰는 아이디는 내기 전에 실시간 확인이 말한다 — 낼 수 없다 */
 export const TakenIsToldBeforeSubmitting: Story = {
   args: { fake: { loginId: { taken: ['sumin.kim'] } } },
@@ -284,6 +311,190 @@ export const ChosenInAnotherTab409: StoryObj<typeof ChosenElsewhereDemo> = {
     await waitFor(() => expect(canvas.queryByRole('dialog')).toBeNull())
     await expect(canvas.getByText('앱 화면').closest('[inert]')).toBeNull()
     await waitFor(() => expect(args.onHeldCall).toHaveBeenCalledWith(true))
+  },
+}
+
+/** 막은 라우터 밖이다 - 「계정 설정」은 평범한 링크라 이 스토리집에는 Router 가 없다. 앱이 SPA 이동을 꽂으면 일반 클릭은 그것을 부르고 전체 이동은 하지 않는다(수정키 클릭은 그대로 링크) */
+export const OpenSettingsCanBeASinglePageNavigation: Story = {
+  args: { onOpenSettings: fn() },
+  play: async ({ canvas, args, userEvent }) => {
+    const screen = within(await dialog(canvas))
+    const link = screen.getByRole('link', { name: 'Account settings' })
+    await expect(link).toHaveAttribute('href', '/account')
+    await userEvent.click(link)
+    await expect(args.onOpenSettings).toHaveBeenCalledTimes(1)
+  },
+}
+
+/**
+ * 계정은 막의 일부다 - 계정 A 의 `me` 가 아직 떠 있는 동안 B 로 바뀌었다. A 의 늦은 답(아이디 있음)이 B 의 막을 접거나 B 의 호출을 풀면 안 된다.
+ */
+function SwitchedAccountDemo({ onHeldCall }: { onHeldCall: (result: boolean) => void }) {
+  const [accountId, setAccountId] = useState('acc_a')
+  const base = useMemo(() => createFakeAccountApi({ loginId: {} }), [])
+  const api = useMemo(
+    () => ({
+      ...base,
+      // A 의 답은 늦게 오고 "아이디 있음" - B 의 답은 곧바로 "아이디 없음"
+      me: async () => {
+        if (accountId !== 'acc_a') return base.me()
+        await new Promise((resolve) => setTimeout(resolve, 700))
+        return { ...(await base.me()), loginId: 'a.user' }
+      },
+    }),
+    [base, accountId],
+  )
+  const controller = useMemo(() => createLoginIdRequiredController(), [])
+  useEffect(() => {
+    void controller
+      .recover({
+        path: '/notes',
+        method: 'GET',
+        error: apiError('ACCOUNT.LOGIN_ID_REQUIRED', 403),
+      })
+      .then(onHeldCall)
+  }, [controller, onHeldCall])
+  return (
+    <>
+      <button type="button" onClick={() => setAccountId('acc_b')}>
+        다른 탭에서 B 로 로그인
+      </button>
+      <LoginIdGate
+        controller={controller}
+        api={api}
+        accountId={accountId}
+        onSignOut={() => undefined}
+        onDiscarded={() => undefined}
+      >
+        <AppBehind />
+      </LoginIdGate>
+    </>
+  )
+}
+
+export const LateAnswerOfAnotherAccountIsIgnored: StoryObj<typeof SwitchedAccountDemo> = {
+  render: (args) => <SwitchedAccountDemo {...args} />,
+  args: { onHeldCall: fn() },
+  play: async ({ canvas, args, userEvent }) => {
+    await dialog(canvas)
+    await userEvent.click(canvas.getByRole('button', { name: '다른 탭에서 B 로 로그인' }))
+    // A 가 붙잡은 호출은 원래 403 으로 끝나고, B 는 아이디가 없어 막이 다시 선다
+    await waitFor(() => expect(args.onHeldCall).toHaveBeenCalledWith(false))
+    await dialog(canvas)
+    // A 의 늦은 답("아이디 있음")이 도착할 때까지 기다려도 B 의 막은 그대로다
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+    await expect(canvas.getByRole('dialog', { name: 'Choose your username' })).toBeVisible()
+    await expect(canvas.getByText('앱 화면').closest('[inert]')).not.toBeNull()
+  },
+}
+
+/**
+ * 설정(`/account`)에서 막이 걷혀 있는 동안 아이디가 정해졌다 - 설정을 떠나 막이 다시 덮이는 순간 서버에 다시 물어 접는다(창 포커스를 기다리지 않는다).
+ */
+function LeavesSettingsDemo({ onHeldCall }: { onHeldCall: (result: boolean) => void }) {
+  const [standAside, setStandAside] = useState(true)
+  // `api` 는 그대로 두고 서버의 답만 바뀐다 - 막이 다시 덮이는 순간의 확인이 있어야 접힌다(`api` 가 바뀌어 효과가 다시 도는 것이 아니다)
+  const chosen = useRef(false)
+  const base = useMemo(() => createFakeAccountApi({ loginId: {} }), [])
+  const api = useMemo(
+    () => ({
+      ...base,
+      me: async () => ({ ...(await base.me()), loginId: chosen.current ? 'set.here' : null }),
+    }),
+    [base],
+  )
+  const controller = useMemo(() => createLoginIdRequiredController(), [])
+  useEffect(() => {
+    void controller
+      .recover({
+        path: '/notes',
+        method: 'GET',
+        error: apiError('ACCOUNT.LOGIN_ID_REQUIRED', 403),
+      })
+      .then(onHeldCall)
+  }, [controller, onHeldCall])
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          chosen.current = true
+          setStandAside(false)
+        }}
+      >
+        설정을 떠난다
+      </button>
+      <LoginIdGate
+        controller={controller}
+        api={api}
+        accountId="acc_demo"
+        standAside={standAside}
+        onSignOut={() => undefined}
+        onDiscarded={() => undefined}
+      >
+        <AppBehind />
+      </LoginIdGate>
+    </>
+  )
+}
+
+export const AsksAgainWhenTheScreenWouldCoverTheAppAgain: StoryObj<typeof LeavesSettingsDemo> = {
+  render: (args) => <LeavesSettingsDemo {...args} />,
+  args: { onHeldCall: fn() },
+  play: async ({ canvas, args, userEvent }) => {
+    await expect(await canvas.findByText('앱 화면')).toBeVisible()
+    await expect(canvas.queryByRole('dialog')).toBeNull()
+    await userEvent.click(canvas.getByRole('button', { name: '설정을 떠난다' }))
+    // 서버는 이미 아이디가 있다고 한다 - 막은 접히고 붙잡은 호출은 풀린다(포커스 이벤트 없이)
+    await waitFor(() => expect(args.onHeldCall).toHaveBeenCalledWith(true), { timeout: 2000 })
+    await expect(canvas.queryByRole('dialog')).toBeNull()
+    await expect(canvas.getByText('앱 화면').closest('[inert]')).toBeNull()
+  },
+}
+
+/** 다른 탭에서 이미 정했다(409)는데 `me` 를 다시 읽지 못했다 - 아무 말 없이 멈추지 않고 오류 줄이 말한다 */
+function ReadFailsAfterAlreadySetDemo() {
+  const base = useMemo(() => createFakeAccountApi({ loginId: {} }), [])
+  const elsewhere = useRef(false)
+  const api = useMemo(
+    () => ({
+      ...base,
+      setLoginId: async () => {
+        elsewhere.current = true
+        throw apiError('ACCOUNT.LOGIN_ID_ALREADY_SET', 409)
+      },
+      me: async () => {
+        if (elsewhere.current) throw apiError('COMMON.INTERNAL_SERVER_ERROR', 500)
+        return base.me()
+      },
+    }),
+    [base],
+  )
+  const controller = useMemo(() => createLoginIdRequiredController(), [])
+  return (
+    <LoginIdGate
+      controller={controller}
+      api={api}
+      accountId="acc_demo"
+      onSignOut={() => undefined}
+      onDiscarded={() => undefined}
+    >
+      <AppBehind />
+    </LoginIdGate>
+  )
+}
+
+export const AlreadySetButMeCannotBeRead: StoryObj<typeof ReadFailsAfterAlreadySetDemo> = {
+  render: () => <ReadFailsAfterAlreadySetDemo />,
+  play: async ({ canvas, userEvent }) => {
+    const screen = within(await dialog(canvas))
+    await userEvent.type(screen.getByRole('textbox', { name: /^Username/ }), 'sumin.kim')
+    await screen.findByText(/This username is available/)
+    await userEvent.click(screen.getByRole('button', { name: SUBMIT }))
+    const confirm = await within(document.body).findByRole('dialog', { name: 'Use sumin.kim?' })
+    await userEvent.click(within(confirm).getByRole('button', { name: 'Confirm' }))
+    await expect(await screen.findByRole('alert')).toHaveTextContent(/./)
+    await expect(canvas.getByText('앱 화면').closest('[inert]')).not.toBeNull()
   },
 }
 

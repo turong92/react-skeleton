@@ -8,9 +8,15 @@ import {
   type LoginIdCheckState,
 } from './loginIdAvailability'
 
-export type LoginIdCheck = LoginIdCheckState & {
+/** 칸이 읽는 쪽 - 상태와 `touch()` */
+export type LoginIdFieldCheck = LoginIdCheckState & {
   /** 칸을 벗어났거나 내려 한다 — 형식 오류를 칸 옆에 드러낸다. 칸이 `onBlur` 에서 부르고, 부모는 제출 단추에서 부른다 */
   touch: () => void
+}
+
+export type LoginIdCheck = LoginIdFieldCheck & {
+  /** 서버가 내는 순간 이 값을 쓸 수 없다고 했다(409) - 「쓸 수 있어요」가 남지 않게 그 값을 「쓸 수 없다」로 적는다. 인자는 정규화한 값 */
+  markTaken: (normalized: string) => void
 }
 
 export type UseLoginIdAvailabilityOptions = {
@@ -44,6 +50,8 @@ export function useLoginIdAvailability({
   const [touched, setTouched] = useState(false)
   const touch = useCallback(() => setTouched(true), [])
 
+  const markTaken = useCallback((normalized: string) => checker.markTaken(normalized), [checker])
+
   const state = loginIdCheckState({ value, rules, answers, touched })
   const ask = state.status !== 'invalid' ? state.normalized : null
   useEffect(() => {
@@ -52,5 +60,5 @@ export function useLoginIdAvailability({
   }, [checker, ask])
   useEffect(() => () => checker.cancel(), [checker])
 
-  return { ...state, touch }
+  return { ...state, touch, markTaken }
 }

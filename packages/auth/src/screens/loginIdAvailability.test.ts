@@ -101,6 +101,22 @@ describe('createLoginIdChecker', () => {
     expect(checker.getAnswers()).toEqual({ sumin: 'available' })
   })
 
+  it('markTaken writes what the SERVER said at submit time (409) over an earlier "available", and never asks again', async () => {
+    const check = vi.fn(async (id: string) => ok(id))
+    const checker = createLoginIdChecker({ check })
+    checker.request('race.winner')
+    await vi.advanceTimersByTimeAsync(400)
+    expect(checker.getAnswers()).toEqual({ 'race.winner': 'available' })
+    const listener = vi.fn()
+    checker.subscribe(listener)
+    checker.markTaken('race.winner')
+    expect(checker.getAnswers()).toEqual({ 'race.winner': 'taken' })
+    expect(listener).toHaveBeenCalledTimes(1)
+    checker.request('race.winner') // 같은 값으로 돌아와도 다시 묻지 않는다
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(check).toHaveBeenCalledTimes(1)
+  })
+
   it('cancel() stops a pending wait and drops an answer on its way', async () => {
     const pending = deferred()
     const check = vi.fn((id: string) =>

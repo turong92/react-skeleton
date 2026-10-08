@@ -340,6 +340,7 @@ export const koAuthLabels: AuthLabels = {
   settingsLoginIdSetPassword: '비밀번호 만들기',
   settingsLoginIdAddEmail: '이메일 등록하기',
   settingsEmailToWrite: '이메일을 등록하면 글을 쓸 수 있어요.',
+  settingsNeedsEmail: '이메일을 등록한 뒤에 할 수 있어요.',
   emailRequiredWriteTitle: '글을 쓰려면 이메일을 등록해 주세요',
   emailRequiredWriteBody:
     '읽기는 지금처럼 할 수 있어요. 글 · 댓글 · 반응을 남기려면 이메일이 필요해요. 다른 사람에게는 보이지 않아요.',
@@ -422,6 +423,7 @@ export const koAuthLabels: AuthLabels = {
   adminTitle: '계정 관리',
   adminSearch: '이메일로 찾기',
   adminSearchLoginId: '아이디로 찾기 (정확히 일치)',
+  adminFindLoginId: '찾기',
   adminStatusFilter: '상태',
   adminStatusAll: '전체',
   adminColumns: {

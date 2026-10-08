@@ -1,6 +1,5 @@
-import { Button } from '@skeleton/ui'
+import { Alert, Button } from '@skeleton/ui'
 import { useEffect, useId, useRef } from 'react'
-import { Link } from 'react-router-dom'
 import type { LoginIdRules } from '../account/loginIdRules'
 import type { LoginIdAvailability } from '../account/types'
 import authStyles from './auth.module.css'
@@ -21,8 +20,12 @@ export type LoginIdRequiredScreenProps = {
   /** 서버가 `409 LOGIN_ID_ALREADY_SET` 이라 했다 — 다른 탭에서 정했다. `me` 를 다시 읽고 접는다 */
   onAlreadySet: () => void
   onSignOut: () => void
-  /** 「계정 설정」 링크의 목적지(기본 `/account` — 이 경로에서는 막이 걷힌다) */
+  /** 화면이 말할 오류 한 줄(예: 다른 탭에서 정했는데 `me` 를 다시 읽지 못했다) - 아무 말 없이 멈추지 않게 */
+  error?: string
+  /** 「계정 설정」 링크의 목적지(기본 `/account` — 이 경로에서는 막이 걷힌다). 막은 라우터 밖에 있어 평범한 `<a href>` 의 전체 이동이다 */
   settingsTo?: string
+  /** 「계정 설정」을 눌렀다 - 앱이 SPA 이동(`navigate(settingsTo)`)을 꽂는다. 있으면 일반 클릭은 전체 이동 대신 이것을 부르고, 새 탭 · 수정키 클릭은 그대로 링크다 */
+  onOpenSettings?: () => void
   /** 「이미 계정이 있나요?」 — 이메일 필수를 켠 앱의 **주소 없는 계정**에게만 준다(`DiscardPath` 의 조건 그대로). 없으면 그 조각을 그리지 않는다 */
   discard?: {
     providers: string[]
@@ -45,7 +48,9 @@ export function LoginIdRequiredScreen({
   onChosen,
   onAlreadySet,
   onSignOut,
+  error,
   settingsTo = '/account',
+  onOpenSettings,
   discard,
   labels: given,
 }: LoginIdRequiredScreenProps) {
@@ -68,6 +73,7 @@ export function LoginIdRequiredScreen({
           </h1>
           <p className={styles.lead}>{labels.loginIdRequiredBody}</p>
         </div>
+        {error && <Alert tone="danger">{error}</Alert>}
         <LoginIdChoice
           rules={rules}
           api={api}
@@ -93,9 +99,18 @@ export function LoginIdRequiredScreen({
               {labels.emailRequiredSignOut}
             </Button>
           </div>
-          <Link className={authStyles.link} to={settingsTo}>
+          <a
+            className={authStyles.link}
+            href={settingsTo}
+            onClick={(event) => {
+              if (!onOpenSettings || event.defaultPrevented || event.button !== 0) return
+              if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+              event.preventDefault()
+              onOpenSettings()
+            }}
+          >
             {labels.loginIdRequiredSettings}
-          </Link>
+          </a>
         </div>
       </div>
     </div>

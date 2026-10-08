@@ -1,6 +1,7 @@
 import {
   Alert,
   Badge,
+  Button,
   ConfirmDialog,
   EmptyState,
   Field,
@@ -72,6 +73,8 @@ export function AdminAccountsTable({
   const showLoginId = showLoginIdProp ?? accounts.some((a) => a.loginId !== undefined)
   const [suspending, setSuspending] = useState<AdminAccount | null>(null)
   const [reason, setReason] = useState('')
+  /** 아이디 찾기 칸에 쓰는 중인 값 - 낼 때(Enter · 단추)만 `query.loginId` 가 된다 */
+  const [idDraft, setIdDraft] = useState(query.loginId ?? '')
   const action = useAction(labels)
 
   function items(account: AdminAccount) {
@@ -120,18 +123,36 @@ export function AdminAccountsTable({
           )}
         </Field>
         {showLoginId && (
-          <Field label={labels.adminSearchLoginId}>
-            {(control) => (
-              <Input
-                {...control}
-                type="search"
-                autoCapitalize="none"
-                spellCheck={false}
-                value={query.loginId ?? ''}
-                onChange={(e) => onQueryChange({ ...query, loginId: e.target.value })}
-              />
-            )}
-          </Field>
+          // 정확 일치라 입력 중에는 늘 빈 결과다 - 글자마다 묻지 않고 Enter 나 단추로 낸다(아이디 조각이 주소 · 로그에 남지 않는다)
+          <form
+            role="search"
+            className={styles.row}
+            onSubmit={(event) => {
+              event.preventDefault()
+              onQueryChange({ ...query, loginId: idDraft.trim() })
+            }}
+          >
+            <Field label={labels.adminSearchLoginId}>
+              {(control) => (
+                <Input
+                  {...control}
+                  type="search"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  value={idDraft}
+                  onChange={(e) => {
+                    setIdDraft(e.target.value)
+                    // 비우면 거름이 바로 풀린다(찾는 중이었을 때만)
+                    if (e.target.value === '' && query.loginId)
+                      onQueryChange({ ...query, loginId: '' })
+                  }}
+                />
+              )}
+            </Field>
+            <Button type="submit" variant="secondary">
+              {labels.adminFindLoginId}
+            </Button>
+          </form>
         )}
         <Field label={labels.adminStatusFilter}>
           {(control) => (

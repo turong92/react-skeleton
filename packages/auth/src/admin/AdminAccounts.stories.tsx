@@ -141,11 +141,24 @@ export const TableWithLoginIdColumn: Story = {
     await expect(table.getByText('ann.lee')).toBeVisible()
     await expect(table.getByText('bob_kim')).toBeVisible()
     const box = canvas.getByRole('searchbox', { name: /^Find by username/ })
+    // 입력하는 동안은 질의가 나가지 않는다 - Enter 나 「Find」 단추로 낸다
     await userEvent.type(box, 'a')
+    await expect(args.onQueryChange).not.toHaveBeenCalled()
+    await userEvent.keyboard('{Enter}')
     await expect(args.onQueryChange).toHaveBeenLastCalledWith({
       email: '',
       status: '',
       loginId: 'a',
+    })
+    // 단추도 같다: 눌리게 보이고(테두리) 같은 길로 낸다
+    const find = canvas.getByRole('button', { name: 'Find' })
+    await expect(find).toHaveAttribute('data-variant', 'secondary')
+    await userEvent.type(box, 'b')
+    await userEvent.click(find)
+    await expect(args.onQueryChange).toHaveBeenLastCalledWith({
+      email: '',
+      status: '',
+      loginId: 'ab',
     })
   },
 }
@@ -209,14 +222,44 @@ export const FindByExactLoginId: StoryObj = {
   play: async ({ canvas, userEvent }) => {
     const box = await canvas.findByRole('searchbox', { name: /^Find by username/ })
     await expect(await canvas.findByText('bob_kim')).toBeVisible()
-    await userEvent.type(box, 'bob_kim')
+    await userEvent.type(box, 'bob_kim{Enter}')
     await waitFor(() => expect(canvas.queryByText('ann.lee')).toBeNull())
     await expect(canvas.getByText('bob_kim')).toBeVisible()
     // 조각은 찾지 않는다 - 비면 비었다고 말하고, 찾기 칸은 그대로 남아 고칠 수 있다
     await userEvent.clear(box)
-    await userEvent.type(box, 'bob')
+    await userEvent.type(box, 'bob{Enter}')
     await expect(await canvas.findByText('No accounts match.')).toBeVisible()
     await expect(canvas.getByRole('searchbox', { name: /^Find by username/ })).toHaveValue('bob')
+  },
+}
+
+/** 입력 중에는 서버에 가지 않는다 - 정확 일치라 글자마다 묻는 질의는 늘 빈 결과이고, 아이디 조각이 주소 · 로그에 남는다 */
+export const TypingDoesNotQueryTheServerUntilEnter: StoryObj = {
+  render: () => {
+    const asked: Array<string | undefined> = []
+    const api = {
+      list: async (query?: { loginId?: string }) => {
+        asked.push(query?.loginId)
+        document.body.dataset.asked = JSON.stringify(asked)
+        return idPage(query?.loginId ? withIds.filter((a) => a.loginId === query.loginId) : withIds)
+      },
+    } as unknown as AdminAccountsApi
+    return <AdminAccounts api={api} assignableRoles={['ADMIN']} />
+  },
+  play: async ({ canvas, userEvent }) => {
+    const box = await canvas.findByRole('searchbox', { name: /^Find by username/ })
+    await canvas.findByText('bob_kim')
+    await userEvent.type(box, 'bob_kim')
+    await new Promise((resolve) => setTimeout(resolve, 300))
+    await expect(JSON.parse(document.body.dataset.asked ?? '[]')).toEqual([null]) // 처음 목록 한 번뿐
+    await userEvent.keyboard('{Enter}')
+    await waitFor(() =>
+      expect(JSON.parse(document.body.dataset.asked ?? '[]')).toEqual([null, 'bob_kim']),
+    )
+    // 비우면 거름이 풀린다
+    await userEvent.clear(box)
+    await waitFor(() => expect(JSON.parse(document.body.dataset.asked ?? '[]')).toHaveLength(3))
+    await expect(await canvas.findByText('ann.lee')).toBeVisible()
   },
 }
 

@@ -393,6 +393,7 @@ export function SignUpScreen({
           setDisplayNameError(info.message)
           attempt.fail(ids.displayName)
         } else if (idMessage) {
+          if (info.code === ErrorCodes.ACCOUNT_LOGIN_ID_TAKEN) idCheck.markTaken(idCheck.normalized) // 서버가 쓸 수 없다고 한 값 - 같은 값으로 돌아와도 「쓸 수 있어요」가 아니다
           setLoginIdError(idMessage)
           attempt.fail(ids.loginId)
         } else setFailure(info)
@@ -443,6 +444,21 @@ export function SignUpScreen({
                         await verifyCode(idRetry.code, pending.signUpId, { loginId: normalized })
                         onPendingChange?.(null)
                       } catch (error) {
+                        // 아이디는 받아들여졌고 이번엔 닉네임이 겹친다 - 닉네임 칸도 연다(마지막 제출에는 둘 다 실린다)
+                        if (
+                          authErrorMessage(error, labels).code ===
+                          ErrorCodes.ACCOUNT_DISPLAY_NAME_TAKEN
+                        ) {
+                          setRetry({
+                            code: idRetry.code,
+                            name: retry?.name ?? displayName,
+                            error: labels.errorDisplayNameTaken,
+                          })
+                          setIdRetry(
+                            (current) => current && { ...current, busy: false, error: undefined },
+                          )
+                          return
+                        }
                         const failure = codeFailureOf(error)
                         const message =
                           loginIdServerError(error, {
@@ -477,6 +493,21 @@ export function SignUpScreen({
                         })
                         onPendingChange?.(null)
                       } catch (error) {
+                        // 닉네임은 받아들여졌고 이번엔 아이디가 겹친다 - 아이디 칸을 연다(「문제가 생겼어요」를 닉네임 칸에 띄우지 않는다)
+                        if (
+                          loginIdOn &&
+                          authErrorMessage(error, labels).code === ErrorCodes.ACCOUNT_LOGIN_ID_TAKEN
+                        ) {
+                          setIdRetry({
+                            code: retry.code,
+                            value: idRetry?.value ?? idCheck.normalized,
+                            error: labels.errorLoginIdTaken,
+                          })
+                          setRetry(
+                            (current) => current && { ...current, busy: false, error: undefined },
+                          )
+                          return
+                        }
                         const failure = codeFailureOf(error)
                         const message =
                           authErrorMessage(error, labels).code ===

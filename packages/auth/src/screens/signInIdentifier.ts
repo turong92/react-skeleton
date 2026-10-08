@@ -11,15 +11,22 @@ export type SignInCredentials = { password: string } & (
 
 /**
  * 입력을 요청 본문으로 바꾸는 **한 군데**. 아이디를 켠 서버에서 `@` 가 있으면 이메일(`email` 은 254자), 없으면 아이디(`username` 은 64자 — 그래서 나눠 싣는다).
- * 아이디는 trim 만 한다 - 대문자 · 정규화는 서버가 한다. 꺼져 있으면 예전처럼 늘 `email` 에 입력 그대로
+ * 아이디는 trim 만 한다 - 대문자 · 정규화는 서버가 한다. 이메일도 켜진 화면에서는 trim 한다. 꺼져 있으면 예전처럼 늘 `email` 에 입력 그대로
  */
 export function signInCredentials(
   identifier: string,
   password: string,
   loginIdOn: boolean,
 ): SignInCredentials {
-  if (loginIdOn && !identifier.includes('@')) return { username: identifier.trim(), password }
-  return { email: identifier, password }
+  if (!loginIdOn) return { email: identifier, password }
+  // 칸이 `type="text"` 라 브라우저가 해 주던 앞뒤 공백 제거가 없다(모바일 자동완성이 흔히 붙인다) - 서버의 `@Email` 검증은 입력 그대로 본다
+  if (!identifier.includes('@')) return { username: identifier.trim(), password }
+  return { email: identifier.trim(), password }
+}
+
+/** 링크 로그인 요청의 주소 - 아이디를 켠 화면은 같은 이유로 trim 한다. 꺼져 있으면 입력 그대로(예전 그대로) */
+export function magicLinkAddress(identifier: string, loginIdOn: boolean): string {
+  return loginIdOn ? identifier.trim() : identifier
 }
 
 /**

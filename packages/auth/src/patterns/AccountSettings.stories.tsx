@@ -4,6 +4,7 @@ import { expect, fn, waitFor, within } from 'storybook/test'
 import { AccountStateNotice } from '../screens/AccountStateNotice'
 import { AccountSettings, type AccountSettingsProps } from '../screens/AccountSettings'
 import {
+  apiError,
   createFakeAccountApi,
   FAKE_CODE,
   FAKE_SOCIAL_REAUTH,
@@ -1151,6 +1152,51 @@ export const LoginIdSocialOnlyWithoutAnAddress: Story = {
   },
 }
 
+/**
+ * 쓰기 때 방식의 서버 + 주소 없는 계정: 비밀번호 · 연락받을 이메일 · 로그인 수단은 서버가 `403 ACCOUNT.EMAIL_REQUIRED` 로 막는다(주소가 먼저다).
+ * 눌러 보고 「문제가 생겼어요」를 보게 하지 않고, 그 구역을 이유 한 줄 + 테두리 단추 「이메일 등록」으로 접는다. 프로필 · 이메일 · 세션 · 삭제는 그대로 열려 있다
+ */
+export const WriteTimeWithoutAnAddressFoldsTheSectionsTheServerClosed: Story = {
+  args: {
+    fake: { noAddress: true, emailRequiredToWrite: true },
+    contactEmail: true,
+    socialProviders: [{ provider: 'kakao' }],
+  },
+  play: async ({ canvas, userEvent }) => {
+    for (const name of ['Password', 'Contact email', 'Sign-in methods']) {
+      const section = within(await canvas.findByRole('region', { name }))
+      await expect(
+        section.getByText('Register an email first, then you can do this.'),
+      ).toBeVisible()
+      await expect(section.queryByRole('textbox')).toBeNull()
+      await expect(section.getByRole('button', { name: 'Register email' })).toHaveAttribute(
+        'data-variant',
+        'secondary',
+      )
+    }
+    // 열려 있는 것: 프로필 · 이메일 · 세션 · 삭제
+    for (const name of ['Profile', 'Account email', 'Active sessions', 'Delete account'])
+      await expect(canvas.getByRole('heading', { name })).toBeVisible()
+    // 단추는 이메일 구역으로 데려가 제목에 포커스를 둔다
+    await userEvent.click(
+      within(canvas.getByRole('region', { name: 'Password' })).getByRole('button', {
+        name: 'Register email',
+      }),
+    )
+    const title = await canvas.findByRole('heading', { name: 'Account email' })
+    await waitFor(() => expect(title).toHaveFocus())
+  },
+}
+
+/** 주소가 있는 계정(또는 쓰기 때 방식이 아닌 서버)은 접히지 않는다 */
+export const SectionsStayOpenWithAnAddress: Story = {
+  args: { fake: { emailRequiredToWrite: false } },
+  play: async ({ canvas }) => {
+    await canvas.findByRole('heading', { name: 'Password' })
+    await expect(canvas.queryByText('Register an email first, then you can do this.')).toBeNull()
+  },
+}
+
 /** 이메일을 쓰기 때 받지 않는 앱에는 그 한 줄이 없다 */
 export const EmailToWriteLineOnlyWhenTheServerAsksForIt: Story = {
   args: { fake: { noAddress: true, loginId: { value: 'sumin.kim' } } },
@@ -1195,6 +1241,72 @@ export const LoginIdNotChosenYetOpensOnlyChooseEmailDelete: Story = {
   },
 }
 
+/** 다른 탭에서 이미 정했다(409 `LOGIN_ID_ALREADY_SET`) - 설정이 다시 읽을 뿐 아니라 앱의 막도 접게 알린다(`onLoginIdChosen`) */
+function AlreadySetElsewhereDemo({ onLoginIdChosen }: { onLoginIdChosen: () => void }) {
+  const api = useMemo(() => {
+    const fake = createFakeAccountApi({ loginId: {} })
+    return {
+      ...fake,
+      setLoginId: async () => {
+        throw apiError('ACCOUNT.LOGIN_ID_ALREADY_SET', 409)
+      },
+    }
+  }, [])
+  return <Demo api={api} onLoginIdChosen={onLoginIdChosen} />
+}
+
+export const LoginIdAlreadySetInAnotherTabTellsTheApp: StoryObj<typeof AlreadySetElsewhereDemo> = {
+  render: (args) => <AlreadySetElsewhereDemo {...args} />,
+  args: { onLoginIdChosen: fn() },
+  play: async ({ canvas, args, userEvent }) => {
+    const row = within(await canvas.findByRole('region', { name: 'Username' }))
+    await userEvent.type(row.getByRole('textbox', { name: /^Username/ }), 'sumin.kim')
+    await row.findByText(/This username is available/)
+    await userEvent.click(row.getByRole('button', { name: 'Use this username' }))
+    const confirm = await within(document.body).findByRole('dialog', { name: 'Use sumin.kim?' })
+    await userEvent.click(within(confirm).getByRole('button', { name: 'Confirm' }))
+    await waitFor(() => expect(args.onLoginIdChosen).toHaveBeenCalledTimes(1))
+  },
+}
+
+/** 정하고 나면 확인 대화상자는 바로 닫힌다 - 설정이 `me` 를 다시 읽는 동안(느린 서버)에도 열린 채 남지 않는다 */
+function SlowReloadDemo() {
+  const api = useMemo(() => {
+    const fake = createFakeAccountApi({ loginId: {} })
+    let chosen = false
+    return {
+      ...fake,
+      setLoginId: async (loginId: string) => {
+        const result = await fake.setLoginId(loginId)
+        chosen = true
+        return result
+      },
+      me: async () => {
+        if (chosen) await new Promise((resolve) => setTimeout(resolve, 1500))
+        return fake.me()
+      },
+    }
+  }, [])
+  return <Demo api={api} />
+}
+
+export const ConfirmationClosesAsSoonAsTheLoginIdIsSet: StoryObj<typeof SlowReloadDemo> = {
+  render: () => <SlowReloadDemo />,
+  play: async ({ canvas, userEvent }) => {
+    const row = within(await canvas.findByRole('region', { name: 'Username' }))
+    await userEvent.type(row.getByRole('textbox', { name: /^Username/ }), 'sumin.kim')
+    await row.findByText(/This username is available/)
+    await userEvent.click(row.getByRole('button', { name: 'Use this username' }))
+    const confirm = await within(document.body).findByRole('dialog', { name: 'Use sumin.kim?' })
+    await userEvent.click(within(confirm).getByRole('button', { name: 'Confirm' }))
+    await waitFor(
+      () =>
+        expect(within(document.body).queryByRole('dialog', { name: 'Use sumin.kim?' })).toBeNull(),
+      { timeout: 800 },
+    )
+  },
+}
+
 /** 이미 쓰는 아이디는 칸 옆 오류 - 대화상자가 닫히고 아직 정하지 않은 채 남는다 */
 export const LoginIdTakenOnTheLastStepStaysUnchosen: Story = {
   args: { fake: { loginId: { takenOnConfirm: ['race.winner'] } } },
@@ -1211,6 +1323,35 @@ export const LoginIdTakenOnTheLastStepStaysUnchosen: Story = {
     await expect(canvas.queryByRole('heading', { name: 'Password' })).toBeNull()
   },
 }
+
+/** 휴대폰 폭(320 · 375px) - 가장 긴 아이디(끊어 쓸 곳 없는 20자)와 「바꿀 수 없어요」가 가로로 밀리지 않고 줄을 바꾼다 */
+const narrowLoginId = (width: number): Story => ({
+  args: {
+    fake: { loginId: { value: 'abcdefghij0123456789', maxLength: 20 } },
+    labels: koAuthLabels,
+  },
+  decorators: [
+    (Story) => (
+      <div data-narrow style={{ width, maxWidth: '100%' }}>
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvas, canvasElement }) => {
+    const row = within(await canvas.findByRole('region', { name: '아이디' }))
+    const value = row.getByText('abcdefghij0123456789')
+    await expect(value).toBeVisible()
+    const box = canvasElement.querySelector<HTMLElement>('[data-narrow]')!
+    await expect(box.scrollWidth).toBeLessThanOrEqual(box.clientWidth)
+    // 줄이 카드 안에 있다
+    await expect(value.getBoundingClientRect().right).toBeLessThanOrEqual(
+      box.getBoundingClientRect().right,
+    )
+    await expect(getComputedStyle(value).overflowWrap).toBe('anywhere')
+  },
+})
+export const LoginIdFixedNarrow375: Story = narrowLoginId(375)
+export const LoginIdFixedNarrow320: Story = narrowLoginId(320)
 
 /** 한국어 */
 export const LoginIdKorean: Story = {

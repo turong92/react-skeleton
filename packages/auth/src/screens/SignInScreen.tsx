@@ -19,7 +19,12 @@ import styles from './auth.module.css'
 import { authErrorMessage, type AuthErrorInfo } from './errors'
 import { mergeLabels, type AuthLabels } from './labels'
 import { resolveMethods, type SignInMethodsConfig } from './methods'
-import { identifierProblem, signInCredentials, type SignInCredentials } from './signInIdentifier'
+import {
+  identifierProblem,
+  magicLinkAddress,
+  signInCredentials,
+  type SignInCredentials,
+} from './signInIdentifier'
 import { useCountdown } from './useCountdown'
 
 export type SignInScreenProps = {
@@ -87,6 +92,8 @@ export function SignInScreen({
   const uid = useId()
   const ids = { email: `${uid}-email`, password: `${uid}-password` }
   const attempt = useSubmitAttempt()
+  /** 아이디를 받는 칸 - 비밀번호 방식이 있을 때만(링크만 있는 화면에는 아이디로 할 수 있는 것이 없다) */
+  const idBox = loginId && hasPassword
   const emailProblem = identifierProblem(email, mode, loginId, labels)
   const passwordProblem =
     mode === 'password' && !password ? labels.problemPasswordMissing : undefined
@@ -116,8 +123,9 @@ export function SignInScreen({
     setFailure(null)
     try {
       if (mode === 'magic' && onMagicLinkRequest) {
-        await onMagicLinkRequest(email)
-        setMagicSentTo(email)
+        const address = magicLinkAddress(email, loginId)
+        await onMagicLinkRequest(address)
+        setMagicSentTo(address)
       } else if (onPasswordSignIn) {
         await onPasswordSignIn(signInCredentials(email, password, loginId))
       }
@@ -196,14 +204,15 @@ export function SignInScreen({
             )}
             <Field
               id={ids.email}
-              label={loginId ? labels.signInIdentifier : labels.email}
+              label={idBox ? labels.signInIdentifier : labels.email}
               required
               error={attempt.attempted ? emailProblem : undefined}
             >
               {(control) => (
                 <Input
                   {...control}
-                  type={loginId ? 'text' : 'email'}
+                  type={idBox ? 'text' : 'email'}
+                  {...(idBox ? { autoCapitalize: 'none', spellCheck: false } : {})}
                   autoComplete="username"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}

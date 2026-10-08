@@ -238,3 +238,9 @@
 .idStatus[data-status='unknown'] > span:first-child {
   color: var(--amber);
 }
+
+/* 설정의 아이디 줄 - 끊어 쓸 곳 없는 긴 아이디도 좁은 화면에서 줄을 바꾼다 */
+.loginIdValue {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

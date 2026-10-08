@@ -79,6 +79,16 @@ describe('admin table: login id column and exact lookup (design §11, §13.1)', 
     expect(out).toContain('value="zz"')
   })
 
+  it('the lookup is a search form with a bordered "Find" button - the exact id is sent on submit, not on every keystroke', () => {
+    const out = renderToStaticMarkup(
+      <AdminAccountsTable {...base} accounts={[account({ loginId: 'sumin.kim' })]} />,
+    )
+    expect(out).toMatch(/<form[^>]*role="search"[^>]*>/)
+    expect(out).toMatch(
+      /<button[^>]*type="submit"[^>]*data-variant="secondary"[^>]*>Find<\/button>/,
+    )
+  })
+
   it('speaks Korean with the same keys', () => {
     const out = renderToStaticMarkup(
       <AdminAccountsTable

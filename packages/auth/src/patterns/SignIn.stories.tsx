@@ -216,6 +216,25 @@ export const LoginIdOnEmailOrId: Story = {
   },
 }
 
+/** 아이디를 켠 칸은 글자 칸이라 브라우저가 해 주던 앞뒤 공백 제거가 없다 - 모바일 자동완성이 붙인 공백이 400 이 되지 않게 이메일도 다듬어 보낸다(링크 요청도) */
+export const LoginIdOnTrimsSpacesAroundAnEmail: Story = {
+  args: { loginId: true, forgotLoginIdTo: '/forgot-id', methods: { magicLink: true } },
+  play: async ({ canvas, args, userEvent }) => {
+    const field = canvas.getByLabelText(/Username or email/)
+    await expect(field).toHaveAttribute('autocapitalize', 'none')
+    await expect(field).toHaveAttribute('spellcheck', 'false')
+    await userEvent.type(field, 'ann@example.com ')
+    await userEvent.type(canvas.getByLabelText(/^Password/), 'secret-pass{Enter}')
+    await expect(args.onPasswordSignIn).toHaveBeenLastCalledWith({
+      email: 'ann@example.com',
+      password: 'secret-pass',
+    })
+    await userEvent.click(canvas.getByRole('button', { name: 'Email me a sign-in link' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Send the link' }))
+    await expect(args.onMagicLinkRequest).toHaveBeenLastCalledWith('ann@example.com')
+  },
+}
+
 export const LoginIdOnForgotLinks: Story = {
   args: { loginId: true, forgotLoginIdTo: '/forgot-id' },
   play: async ({ canvas }) => {

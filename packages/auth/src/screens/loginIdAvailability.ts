@@ -25,6 +25,8 @@ export type LoginIdChecker = {
   request(normalized: string): void
   /** 기다리던 것도 날아간 것도 접는다(형식이 틀려졌거나 화면이 닫힐 때) */
   cancel(): void
+  /** 서버가 내는 순간 「쓸 수 없다」(409 `LOGIN_ID_TAKEN`)고 했다 - 앞서 받은 「쓸 수 있다」를 덮어쓰고 같은 값은 다시 묻지 않는다 */
+  markTaken(normalized: string): void
   /** 묻는 함수를 바꾼다(부모가 새 api 를 넘겼을 때) — 받아 둔 답은 그대로 */
   replaceCheck(next: (normalized: string) => Promise<LoginIdAvailability>): void
   getAnswers(): LoginIdAnswers
@@ -72,6 +74,9 @@ export function createLoginIdChecker(options: {
       }, delayMs)
     },
     cancel,
+    markTaken(normalized) {
+      store(normalized, 'taken')
+    },
     replaceCheck(next) {
       check = next
     },

@@ -12,6 +12,7 @@ import { ContactEmailSection } from './ContactEmailSection'
 import { DeleteAccountSection } from './DeleteAccountSection'
 import { EmailSection } from './EmailSection'
 import { LoginIdSection } from './LoginIdSection'
+import { NeedsEmailCard } from './NeedsEmailCard'
 import { PasswordSection } from './PasswordSection'
 import { ProfileSection } from './ProfileSection'
 import { SessionsSection } from './SessionsSection'
@@ -45,7 +46,7 @@ export type AccountSettingsProps = {
   onLinkSocial?: (provider: string) => void
   /** `GET /auth/methods` 의 `loginId` 길이 규칙 — 아직 아이디를 안 정한 계정이 여기서 정할 때 쓴다. 없으면 서버의 기본(4~20) */
   loginIdRules?: LoginIdRules
-  /** 이 화면에서 아이디를 정했다(서버가 받았다) — 앱이 `loginIdRequired.chosen()` 을 불러 붙잡힌 호출을 풀고 게이트를 접는다 */
+  /** 이 계정의 아이디가 정해졌다(여기서 정했거나, 다른 탭에서 이미 정했다고 서버가 답했다) — 앱이 `loginIdRequired.chosen()` 을 불러 붙잡힌 호출을 풀고 게이트를 접는다. `createAuthRoutes({ loginIdRequired })` 가 이 길을 잇는다 */
   onLoginIdChosen?: () => void
   /** 프로필에서 고르는 언어(앱이 지원하는 것) */
   locales: Array<{ value: string; label: string }>
@@ -316,6 +317,13 @@ export function AccountSettings({
   const restricted = account.emailRequired === true || loginIdPending
   // 비밀번호 없는 계정의 단추가 갈 구역 - 주소가 있으면 비밀번호, 없으면 이메일(그 구역을 끈 앱이면 단추가 없다)
   const goTarget = account.email ? 'password' : 'email'
+  // 쓰기 때 방식 + 주소 없음: 비밀번호 · 연락받을 이메일 · 로그인 수단은 서버가 403 으로 막는다(스펙 §9.3 "주소가 먼저다") - 눌러 보게 하지 않고 이유와 함께 접는다
+  const needsAddress = account.emailRequiredToWrite === true
+  const goTo = (target: string) => {
+    window.history.replaceState(null, '', `#${target}`)
+    openSection(target)
+  }
+  const goEmail = on('email') ? () => goTo('email') : undefined
   const canGo = goTarget === 'password' ? !restricted && on('password') : restricted || on('email')
   return (
     <div className={styles.sections}>
@@ -361,18 +369,22 @@ export function AccountSettings({
             me.reload()
             onLoginIdChosen?.()
           }}
-          onAlreadySet={me.reload}
-          onGo={
-            canGo
-              ? () => {
-                  window.history.replaceState(null, '', `#${goTarget}`)
-                  openSection(goTarget)
-                }
-              : undefined
-          }
+          onAlreadySet={() => {
+            me.reload()
+            onLoginIdChosen?.() // 다른 탭에서 정했다 - 막도 접는다
+          }}
+          onGo={canGo ? () => goTo(goTarget) : undefined}
         />
       )}
-      {!restricted && on('password') && (
+      {!restricted && on('password') && needsAddress && (
+        <NeedsEmailCard
+          id="password"
+          title={labels.sectionPassword}
+          onGo={goEmail}
+          labels={given}
+        />
+      )}
+      {!restricted && on('password') && !needsAddress && (
         <PasswordSection
           subject={subject}
           policy={policy.data}
@@ -388,7 +400,15 @@ export function AccountSettings({
         />
       )}
       {(restricted || on('email')) && emailSection}
-      {!restricted && on('contact') && account.contactEmail !== undefined && (
+      {!restricted && on('contact') && account.contactEmail !== undefined && needsAddress && (
+        <NeedsEmailCard
+          id="contact"
+          title={labels.sectionContactEmail}
+          onGo={goEmail}
+          labels={given}
+        />
+      )}
+      {!restricted && on('contact') && account.contactEmail !== undefined && !needsAddress && (
         <ContactEmailSection
           contactEmail={account.contactEmail ?? null}
           labels={given}
@@ -404,7 +424,10 @@ export function AccountSettings({
           onChanged={me.reload}
         />
       )}
-      {!restricted && on('methods') && (
+      {!restricted && on('methods') && needsAddress && (
+        <NeedsEmailCard id="methods" title={labels.sectionMethods} onGo={goEmail} labels={given} />
+      )}
+      {!restricted && on('methods') && !needsAddress && (
         <SignInMethodsSection
           identities={account.methods}
           socialProviders={socialProviders}

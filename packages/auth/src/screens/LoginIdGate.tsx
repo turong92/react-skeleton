@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   useSyncExternalStore,
   type ReactNode,
@@ -11,9 +12,10 @@ import { DEFAULT_LOGIN_ID_RULES, type LoginIdRules } from '../account/loginIdRul
 import type { AccountMe } from '../account/types'
 import type { LoginIdRequiredController } from '../loginIdRequired'
 import { reauthSubjectOf } from '../reauth/kind'
+import { authErrorMessage } from './errors'
 import { LoginIdRequiredScreen } from './LoginIdRequiredScreen'
 import { useRestoreFocus } from './useRestoreFocus'
-import type { AuthLabels } from './labels'
+import { mergeLabels, type AuthLabels } from './labels'
 
 export type LoginIdGateProps = {
   controller: LoginIdRequiredController
@@ -36,6 +38,8 @@ export type LoginIdGateProps = {
   enabledProviders?: string[]
   /** 「계정 설정」 링크의 목적지(기본 `/account`) */
   settingsTo?: string
+  /** 「계정 설정」 클릭을 SPA 이동으로 바꾼다(`() => navigate(settingsTo)`) - 막은 라우터 밖이라 이 컴포넌트는 라우터를 쓰지 않는다. 없으면 전체 이동 */
+  onOpenSettings?: () => void
   labels?: Partial<AuthLabels>
   children: ReactNode
 }
@@ -57,6 +61,7 @@ export function LoginIdGate({
   standAside = false,
   enabledProviders,
   settingsTo,
+  onOpenSettings,
   labels,
   children,
 }: LoginIdGateProps) {
@@ -70,6 +75,15 @@ export function LoginIdGate({
       enabledProviders ? allProviders.filter((p) => enabledProviders.includes(p)) : allProviders,
     [allProviders, enabledProviders],
   )
+  /** 「다른 탭에서 이미 정했다」 뒤 `me` 를 다시 읽지 못했다 - 아무 말 없이 멈추지 않게 화면의 오류 줄이 말한다 */
+  const [recheckError, setRecheckError] = useState<string | undefined>()
+  // 늦게 온 `me` 의 답이 **지금 계정**의 것인지 가린다 - A 의 답이 떠 있는 동안 B 로 바뀌면 A 의 답은 B 에 적용하지 않는다
+  const accountRef = useRef(accountId)
+  const labelsRef = useRef(labels) // 앱이 매 렌더 새 객체를 줘도 아래 확인 효과를 다시 돌리지 않는다
+  useEffect(() => {
+    accountRef.current = accountId
+    labelsRef.current = labels
+  })
   const readMe = useCallback((me: AccountMe) => {
     setProviders(reauthSubjectOf(me).providers)
     setDiscardable(!me.email && (me.emailRequired === true || me.emailRequiredToWrite === true))
@@ -97,20 +111,30 @@ export function LoginIdGate({
       controller.setReady(false) // 계정이 바뀌거나 로그아웃 — 다음 계정은 다시 물어봐야 안다
     }
   }, [accountId, api, controller, readMe])
-  // 막이 열려 있는 동안: 열릴 때와 탭이 다시 보일 때마다 서버에 다시 묻는다 — 다른 탭에서 이미 정했으면(`loginId` 가 문자열) 접고 붙잡은 호출을 보낸다
+  // 막이 앱을 덮는 동안: 덮이는 순간(처음 · 설정에서 돌아와 다시)과 탭이 다시 보일 때마다 서버에 다시 묻는다 — 다른 탭에서 이미 정했으면(`loginId` 가 문자열) 접고 붙잡은 호출을 보낸다.
+  // 설정(`standAside`)에 있는 동안은 묻지 않는다 - 그 화면이 정하는 길이고, 떠나면 다시 덮이는 순간 묻는다
+  const covered = required && !standAside
   const recheck = useCallback(
-    () =>
-      api.me().then(
+    (loud = false) => {
+      const asked = accountRef.current
+      const current = () => accountRef.current === asked
+      return api.me().then(
         (me) => {
+          if (!current()) return // 그 사이 계정이 바뀌었다 - 이 답은 이 계정의 것이 아니다
+          setRecheckError(undefined)
           if (typeof me.loginId === 'string') controller.chosen()
           else readMe(me)
         },
-        () => undefined,
-      ),
+        (error: unknown) => {
+          if (current() && loud)
+            setRecheckError(authErrorMessage(error, mergeLabels(labelsRef.current)).message)
+        },
+      )
+    },
     [api, controller, readMe],
   )
   useEffect(() => {
-    if (!required || !accountId) return
+    if (!covered || !accountId) return
     let live = true
     const check = () => live && void recheck()
     check()
@@ -122,13 +146,12 @@ export function LoginIdGate({
       document.removeEventListener('visibilitychange', onVisible)
       window.removeEventListener('focus', onVisible)
     }
-  }, [required, accountId, recheck])
+  }, [covered, accountId, recheck])
   // 로그아웃 · 계정 삭제로 떠나면 접는다(붙잡힌 호출은 403 으로 끝난다)
   useEffect(() => {
     if (!accountId && required) controller.decline()
   }, [accountId, required, controller])
 
-  const covered = required && !standAside
   useRestoreFocus(covered)
   return (
     <>
@@ -141,12 +164,14 @@ export function LoginIdGate({
           api={api}
           labels={labels}
           settingsTo={settingsTo}
+          onOpenSettings={onOpenSettings}
           onSubmit={(loginId) => api.setLoginId(loginId)}
           onChosen={() => {
             controller.chosen()
             onChosen?.()
           }}
-          onAlreadySet={() => void recheck()}
+          onAlreadySet={() => void recheck(true)}
+          error={recheckError}
           onSignOut={() => {
             controller.decline()
             onSignOut()

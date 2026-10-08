@@ -568,11 +568,14 @@ function WriteDemo({
   korean,
   width,
   onLater,
+  standAside,
 }: {
   fake?: FakeAccountOptions
   korean?: boolean
   width?: number
   onLater?: () => void
+  /** 계정 설정(`/account`) - 막이 걷혀 있다 */
+  standAside?: boolean
 }) {
   const options = useMemo(() => ({ ...WRITE_SERVER, ...fake }), [fake])
   const api = useMemo(() => createFakeAccountApi(options), [options])
@@ -611,6 +614,7 @@ function WriteDemo({
       onSignOut={() => undefined}
       onDiscarded={() => undefined}
       onLater={onLater}
+      standAside={standAside}
     >
       <main>
         <h1>내 노트</h1>
@@ -650,6 +654,22 @@ type Typist = ReturnType<typeof userEvent.setup>
 const startPosting = async (canvas: ReturnType<typeof within>, userEvent: Typist) => {
   await userEvent.type(canvas.getByRole('textbox', { name: '글' }), '안녕하세요')
   await userEvent.click(canvas.getByRole('button', { name: '올리기' }))
+}
+
+/**
+ * 쓰기 때 방식의 서버 + 막이 걷힌 계정 설정(`/account`): 화면이 없으니 붙잡힌 호출을 풀어 줄 사람도 없다 - 붙잡지 않고 바로 원래 403 으로 끝나
+ * 구역이 이유를 말한다(단추가 진행 중에서 멈추지 않는다)
+ */
+export const WriteModeOnTheAccountPageDoesNotHoldTheCall: WriteStory = {
+  render: (args) => <WriteDemo {...args} />,
+  args: { standAside: true },
+  play: async ({ canvas, userEvent }) => {
+    await startPosting(canvas, userEvent)
+    await waitFor(() => expect(canvas.getByLabelText('status')).toHaveTextContent('declined'), {
+      timeout: 2000,
+    })
+    await expect(canvas.queryByRole('dialog')).toBeNull()
+  },
 }
 
 /** 쓰기의 403 이 연 막 — 제목 · 본문이 쓰기용이고 「나중에 하기」(테두리)가 로그아웃 옆에 있다. 읽기용 문구는 없다 */

@@ -4,14 +4,14 @@ import type { LoginIdRules } from '../account/loginIdRules'
 import styles from './auth.module.css'
 import type { AuthLabels } from './labels'
 import { loginIdFieldError } from './loginId'
-import type { LoginIdCheck } from './useLoginIdAvailability'
+import type { LoginIdFieldCheck } from './useLoginIdAvailability'
 
 export type LoginIdFieldProps = {
   /** 입력한 그대로의 값 — 부모가 쥔다(가입 · 인증 단계 재입력 · 게이트 · 설정이 같은 칸을 쓴다) */
   value: string
   onChange: (value: string) => void
   /** `useLoginIdAvailability({ api, value, rules })` 의 반환 — 부모가 `check.canSubmit` · `check.normalized` 로 내고, 제출 단추에서 `check.touch()` 를 부른다 */
-  check: LoginIdCheck
+  check: LoginIdFieldCheck
   rules: LoginIdRules
   labels: AuthLabels
   /** 서버가 돌려준 오류(`409 LOGIN_ID_TAKEN` · `errors[].field=loginId`)를 칸 옆에 꽂는다 — 있으면 실시간 확인의 오류보다 앞선다. 값이 바뀌면 부모가 비운다 */
@@ -100,7 +100,7 @@ export function LoginIdField({
 }
 
 function statusOf(
-  check: LoginIdCheck,
+  check: LoginIdFieldCheck,
   labels: AuthLabels,
 ): { kind: keyof typeof GLYPH; text: string } | undefined {
   switch (check.status) {

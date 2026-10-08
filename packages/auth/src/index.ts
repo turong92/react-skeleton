@@ -132,13 +132,8 @@ export { createAccountApi } from './account/accountApi'
 export type { AccountApi, CodeSent, ReauthCredential, SocialReauth } from './account/accountApi'
 export { passwordRequirements, passwordStrength, violationsOf } from './account/passwordRules'
 export type { PasswordRequirement } from './account/passwordRules'
-export {
-  DEFAULT_LOGIN_ID_RULES,
-  loginIdProblem,
-  loginIdServerCode,
-  normalizeLoginId,
-} from './account/loginIdRules'
-export type { LoginIdProblem, LoginIdRules, LoginIdServerCode } from './account/loginIdRules'
+export { DEFAULT_LOGIN_ID_RULES, loginIdProblem, normalizeLoginId } from './account/loginIdRules'
+export type { LoginIdProblem, LoginIdRules } from './account/loginIdRules'
 export { supportedTimeZones } from './account/timeZones'
 export type {
   AccountMe,

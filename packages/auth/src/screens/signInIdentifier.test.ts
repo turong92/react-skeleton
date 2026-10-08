@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { identifierProblem, signInCredentials } from './signInIdentifier'
+import { identifierProblem, magicLinkAddress, signInCredentials } from './signInIdentifier'
 import { koAuthLabels } from './labels.ko'
 import { mergeLabels } from './labels'
 
@@ -60,5 +60,30 @@ describe('identifierProblem', () => {
     expect(identifierProblem('', 'magic', true, labels)).toBe(labels.problemEmailMissing)
     expect(identifierProblem('sumin.kim', 'magic', true, labels)).toBe(labels.problemEmailMissing)
     expect(identifierProblem('sumin@kim.dev', 'magic', true, labels)).toBeUndefined()
+  })
+})
+
+describe('whitespace around an address (a text box no longer gets the trim the browser did for type="email")', () => {
+  it('on: an email with spaces around it is sent trimmed (the backend validates the address as typed)', () => {
+    expect(signInCredentials('sumin@example.com ', 'pw', true)).toEqual({
+      email: 'sumin@example.com',
+      password: 'pw',
+    })
+    expect(signInCredentials(' sumin@example.com', 'pw', true)).toEqual({
+      email: 'sumin@example.com',
+      password: 'pw',
+    })
+  })
+
+  it('off: the body is exactly what it was - the input goes in `email` untouched', () => {
+    expect(signInCredentials(' sumin@example.com ', 'pw', false)).toEqual({
+      email: ' sumin@example.com ',
+      password: 'pw',
+    })
+  })
+
+  it('the magic link request gets the same trimmed address when the id is on, and the raw input when off', () => {
+    expect(magicLinkAddress(' sumin@example.com ', true)).toBe('sumin@example.com')
+    expect(magicLinkAddress(' sumin@example.com ', false)).toBe(' sumin@example.com ')
   })
 })

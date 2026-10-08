@@ -64,7 +64,7 @@ export function LoginIdSection({
     <SectionCard id={id} title={labels.loginId}>
       <div className={styles.stack}>
         <div className={styles.row}>
-          <strong>{loginId}</strong>
+          <strong className={styles.loginIdValue}>{loginId}</strong>
           <span className={styles.muted}>{labels.settingsLoginIdFixed}</span>
         </div>
         {!hasPassword && (

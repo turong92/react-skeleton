@@ -81,3 +81,30 @@ describe('ForgotLoginIdScreen', () => {
     expect(out).toContain('captcha-slot')
   })
 })
+
+describe('SignInScreen with the login id on - the box is plain text now, so the phone must not touch it', () => {
+  const html2 = (extra = {}) =>
+    html(<SignInScreen loginId forgotLoginIdTo="/forgot-id" onPasswordSignIn={noop} {...extra} />)
+
+  it('does not capitalize or spell-check what is typed', () => {
+    const out = html2()
+    expect(out).toContain('autoCapitalize="none"')
+    expect(out).toContain('spellCheck="false"')
+  })
+
+  it('the off screen keeps its markup (no new attributes)', () => {
+    const off = html(<SignInScreen onPasswordSignIn={noop} />)
+    expect(off).not.toContain('autoCapitalize')
+    expect(off).not.toContain('spellCheck')
+  })
+
+  it('a sign-in that only has the email link keeps the email label and the email box (an id cannot be used there)', () => {
+    const out = html2({
+      methods: { password: false, magicLink: true },
+      onPasswordSignIn: undefined,
+      onMagicLinkRequest: noop,
+    })
+    expect(out).not.toContain('Username or email')
+    expect(out).toContain('type="email"')
+  })
+})

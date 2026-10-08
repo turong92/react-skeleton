@@ -1,5 +1,5 @@
 import { Alert, Button, Field, FormProblems, Input } from '@skeleton/ui'
-import type { FormEvent, Ref } from 'react'
+import type { FormEvent, ReactNode, Ref } from 'react'
 import styles from './auth.module.css'
 import type { AuthLabels } from './labels'
 
@@ -67,6 +67,7 @@ export function ContactEmailForm({
   attempted,
   error,
   busy,
+  extra,
   onSubmit,
   onCancel,
 }: {
@@ -80,6 +81,8 @@ export function ContactEmailForm({
   attempted: boolean
   error: { message: string } | null
   busy: boolean
+  /** 입력 아래에 더할 것 - 제공자 재동의 안내가 오면 보내기 단추 대신 이것이 선다 */
+  extra?: ReactNode
   onSubmit: (event: FormEvent) => void
   onCancel: () => void
 }) {
@@ -112,10 +115,13 @@ export function ContactEmailForm({
         title={labels.formProblemsTitle}
         problems={attempted && problem ? [{ key: 'email', message: problem, target: fieldId }] : []}
       />
+      {extra}
       <div className={styles.row}>
-        <Button type="submit" loading={busy} loadingLabel={labels.submitting}>
-          {labels.contactEmailSend}
-        </Button>
+        {!extra && (
+          <Button type="submit" loading={busy} loadingLabel={labels.submitting}>
+            {labels.contactEmailSend}
+          </Button>
+        )}
         <Button variant="secondary" onClick={onCancel}>
           {labels.cancel}
         </Button>

@@ -1,35 +1,23 @@
-import { ApiRequestError } from '@skeleton/api-client'
+import { ApiRequestError, ErrorCodes, isErrorCode } from '@skeleton/api-client'
 import { Alert, SectionCard, useSubmitAttempt } from '@skeleton/ui'
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
-import type { CodeSent } from '../account/accountApi'
+import type { CodeSent, SocialReauth } from '../account/accountApi'
 import { useCodeClock } from '../codeClockContext'
 import { codeWindowOf, estimateCodeWindow, type CodeWindow } from '../codeWindow'
 import styles from './auth.module.css'
+import { ReauthPrompt } from './EmailRequiredParts'
 import { ContactEmailForm, ContactEmailSummary } from './ContactEmailParts'
-import { mergeLabels, type AuthLabels } from './labels'
+import type { ContactEmailSectionProps, Step } from './contactEmailTypes'
+import { useStepFocus } from './useStepFocus'
+import { mergeLabels } from './labels'
 import { useAction } from './useAction'
 import { VerifyCodePanel } from './VerifyCodePanel'
-
-export type ContactEmailSectionProps = {
-  /** 확인된 연락받을 이메일(없으면 null) — `me.contactEmail` */
-  contactEmail: string | null
-  /** `POST /account/contact-email { email }` → 202. 인증번호가 그 주소로 간다(다시 인증 없음 · 남의 주소도 받는다) */
-  onRequestCode: (email: string) => Promise<CodeSent>
-  /** `POST /account/contact-email/confirm { code }` */
-  onConfirmCode: (code: string) => Promise<unknown>
-  /** `DELETE /account/contact-email` */
-  onRemove: () => Promise<unknown>
-  /** 등록 · 바꿈 · 지움이 끝났다 — 부모가 `me` 를 다시 읽는다 */
-  onChanged?: () => void
-  labels?: Partial<AuthLabels>
-}
 
 /** 서버가 이 기능을 껐다(404) */
 const isNotFound = (error: unknown) =>
   error instanceof ApiRequestError && error.apiError.status === 404
 
 const SHAPE = /^[^\s@]+@[^\s@]+$/
-type Step = 'idle' | 'entering' | 'code'
 
 /**
  * 연락받을 이메일 — 공지 · 서비스 알림을 받을 **선택** 주소. 로그인 · 비밀번호 찾기 · 보안 메일에는 쓰이지 않는다(그건 늘 계정 이메일).
@@ -41,6 +29,9 @@ export function ContactEmailSection({
   onConfirmCode,
   onRemove,
   onChanged,
+  providers = [],
+  onProviderReauth,
+  resume,
   labels: given,
 }: ContactEmailSectionProps) {
   const labels = mergeLabels(given)
@@ -56,21 +47,20 @@ export function ContactEmailSection({
   const [codeWin, setCodeWin] = useState<CodeWindow | null>(null)
   const [notice, setNotice] = useState<'saved' | 'removed' | null>(null)
   const [off, setOff] = useState(false)
+  /** 서버가 이 요청에 제공자 재동의를 요구했다(계정 이메일이 없는 계정) */
+  const [reauth, setReauth] = useState(false)
   const actions = useRef<HTMLDivElement>(null)
   const codeBox = useRef<HTMLDivElement>(null)
 
-  // 단계가 바뀌면 포커스가 사라지지 않게: 입력 단계는 주소 칸, 인증번호 단계는 첫 칸, 끝나면 이 구역의 첫 단추. 처음 그릴 때는 건드리지 않는다(같은 단계에서 효과가 다시 돌아도 마찬가지)
-  const seenStep = useRef<Step>('idle')
+  useStepFocus(step, fieldId, actions, codeBox)
+
+  // 제공자 동의에서 돌아왔다 - 한 번만(StrictMode 의 두 번째 효과가 쓴 인가 코드를 다시 내지 않게) 증명을 실어 요청한다
+  const resumed = useRef(false)
   useEffect(() => {
-    if (seenStep.current === step) return
-    seenStep.current = step
-    if (step === 'entering') document.getElementById(fieldId)?.focus()
-    if (step === 'idle') actions.current?.querySelector<HTMLButtonElement>('button')?.focus()
-    if (step === 'code')
-      codeBox.current
-        ?.querySelector<HTMLInputElement>('input[autocomplete="one-time-code"]')
-        ?.focus()
-  }, [step, fieldId])
+    if (!resume || resumed.current) return
+    resumed.current = true
+    void request(resume.email, { socialReauth: resume.socialReauth })
+  })
 
   if (off) return null
 
@@ -80,24 +70,30 @@ export function ContactEmailSection({
       ? labels.problemEmailInvalid
       : undefined
 
-  async function send(event: FormEvent) {
-    event.preventDefault()
-    if (problem) return attempt.fail(fieldId)
+  async function request(address: string, proof?: { socialReauth: SocialReauth }) {
     let response: CodeSent
     const ok = await action.run(async () => {
       try {
-        response = await onRequestCode(email.trim())
+        response = await onRequestCode(address, proof)
       } catch (caught) {
         if (isNotFound(caught)) setOff(true) // 이 서버는 기능을 껐다
+        if (isErrorCode(caught, ErrorCodes.ACCOUNT_REAUTH_REQUIRED)) setReauth(true)
         throw caught
       }
     })
     if (ok) {
+      setReauth(false)
       setCodeWin(codeWindowOf(response!) ?? estimateCodeWindow(now(), { ttlSeconds: 600 }))
-      setSentTo(email.trim())
+      setSentTo(address)
       setStep('code')
       attempt.reset()
     }
+  }
+
+  async function send(event: FormEvent) {
+    event.preventDefault()
+    if (problem) return attempt.fail(fieldId)
+    await request(email.trim())
   }
 
   async function remove() {
@@ -146,8 +142,22 @@ export function ContactEmailSection({
             onEmailChange={setEmail}
             problem={problem}
             attempted={attempt.attempted}
-            error={action.error}
+            error={reauth ? null : action.error}
             busy={action.busy}
+            extra={
+              reauth && (
+                <ReauthPrompt
+                  labels={labels}
+                  providers={providers}
+                  canContinue={!!onProviderReauth && !problem}
+                  onProvider={(provider) => onProviderReauth?.(provider, email.trim())}
+                  onRetry={() => {
+                    setReauth(false)
+                    action.clear()
+                  }}
+                />
+              )
+            }
             onSubmit={send}
             onCancel={() => {
               action.clear()

@@ -72,10 +72,14 @@ export type AccountApi = {
   ): Promise<CodeSent>
 
   /**
-   * 연락받을 이메일(선택 · 계정당 하나 · 로그인과 복구에는 쓰이지 않는다) — `POST /account/contact-email {email}` → 202. 인증번호가 **그 주소로** 간다. 다시 인증은 없다. 다시 보내기 = 다시 부른다.
-   * 앱이 기능을 끄면 404 — 화면은 그 구역을 그리지 않는다
+   * 연락받을 이메일(선택 · 계정당 하나 · 로그인과 복구에는 쓰이지 않는다) — `POST /account/contact-email {email}` → 202. 인증번호가 **그 주소로** 간다. 다시 보내기 = 다시 부른다.
+   * 다시 인증은 없다 - **계정 이메일이 없는 계정**(이메일을 필수로 켜지 않은 앱)만 `socialReauth` 가 든다(`403 REAUTH_REQUIRED` · `400 REAUTH_FAILED`).
+   * 앱이 기능을 끄면 `me.contactEmail` 키가 없고 요청은 404 다 - 화면은 그 구역을 그리지 않는다
    */
-  requestContactEmail(email: string): Promise<CodeSent>
+  requestContactEmail(
+    email: string,
+    reauth?: Pick<ReauthCredential, 'socialReauth'>,
+  ): Promise<CodeSent>
   /** `POST /account/contact-email/confirm {code}` → 204 — 바뀐다(이미 있던 주소를 대신한다). 400 `CODE_INVALID` · 410 `CODE_EXPIRED` · 429 */
   confirmContactEmail(code: string): Promise<void>
   /** `DELETE /account/contact-email` → 204 — 없을 때도 204. 이후 서비스 알림은 계정 이메일로 간다 */
@@ -96,6 +100,15 @@ export type AccountApi = {
   /** `POST /account/reauth/confirmation` (202) — 계정 주소로 6자리 코드를 보낸다(계정 + 이 세션에 묶임 · 10분 · 5번). 새 요청이 열린 코드를 대신한다 */
   requestReauthConfirmation(): Promise<CodeSent>
 
+  /**
+   * 등록 미완료 계정 버리기 - `POST /account/discard`: 주소를 한 번도 가진 적 없는 계정을 **유예 없이 즉시** 지우고 소셜 수단을 풀어 준다(같은 사람이 이미 메일 계정이 있는데 소셜로 들어와 빈 계정이 생겼을 때).
+   * 본문 `{}`(방금 로그인한 세션) 또는 `{ socialReauth }`(오래된 세션 - 아니면 403 `REAUTH_REQUIRED`). 204 = 모든 세션이 닫혔다(호출자가 로컬 세션을 지운다).
+   * 409 `DISCARD_NOT_ALLOWED`(주소가 있다 · 이메일 필수 아님 · 활성 아님) · 409 `LAST_ADMIN` · 503 `ERASURE_RETRY`(다시 부른다)
+   */
+  discardAccount(
+    reauth?: Pick<ReauthCredential, 'socialReauth'>,
+    idempotencyKey?: string,
+  ): Promise<void>
   /** 비밀번호가 없는 계정의 삭제 확인 코드 메일(계정 + 이 세션에 묶임 · 재인증 코드와 별개) */
   requestDeleteConfirmation(): Promise<CodeSent>
   /** 계정에 맞는 증거 하나: `currentPassword` · 메일로 받은 `confirmationCode` · (주소 없는 계정) `socialReauth` */
@@ -157,8 +170,11 @@ export function createAccountApi(
         idempotencyKey: idempotencyKey ?? newIdempotencyKey(),
       }),
 
-    requestContactEmail: (email) =>
-      client.value<CodeSent>('/account/contact-email', { method: 'POST', json: { email } }),
+    requestContactEmail: (email, reauth) =>
+      client.value<CodeSent>('/account/contact-email', {
+        method: 'POST',
+        json: compact({ email, ...reauth }),
+      }),
     confirmContactEmail: (code) =>
       client.noContent('/account/contact-email/confirm', { method: 'POST', json: { code } }),
     removeContactEmail: () => client.noContent('/account/contact-email', { method: 'DELETE' }),
@@ -179,6 +195,12 @@ export function createAccountApi(
 
     requestDeleteConfirmation: () =>
       client.value<CodeSent>('/account/delete/confirmation', { method: 'POST' }),
+    discardAccount: (reauth, idempotencyKey) =>
+      client.noContent('/account/discard', {
+        method: 'POST',
+        json: compact({ ...reauth }),
+        idempotencyKey: idempotencyKey ?? newIdempotencyKey(),
+      }),
     deleteAccount: (credential, idempotencyKey) =>
       client.value('/account/delete', {
         method: 'POST',

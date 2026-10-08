@@ -287,4 +287,26 @@ describe('createAccountApi (mirrors kotlin-skeleton docs/account-http-contract.m
       { kind: 'noContent', path: '/account/contact-email', request: { method: 'DELETE' } },
     ])
   })
+
+  it('contact email for an account without an address carries the provider proof (socialReauth)', async () => {
+    const { client, calls } = fakeClient()
+    const socialReauth = { provider: 'line', authorizationCode: 'c', redirectUri: 'https://app/cb' }
+    await createAccountApi(client).requestContactEmail('news@b.c', { socialReauth })
+    expect(calls[0].request?.json).toEqual({ email: 'news@b.c', socialReauth })
+  })
+
+  it('discard → POST /account/discard {} (204); an older session sends socialReauth; the idempotency key is kept', async () => {
+    const { client, calls } = fakeClient()
+    const api = createAccountApi(client)
+    await api.discardAccount()
+    const socialReauth = { provider: 'line', authorizationCode: 'c' }
+    await api.discardAccount({ socialReauth }, 'fixed-key')
+    expect(calls[0].kind).toBe('noContent')
+    expect(calls[0].path).toBe('/account/discard')
+    expect(calls[0].request?.method).toBe('POST')
+    expect(calls[0].request?.json).toEqual({})
+    expect(calls[0].request?.idempotencyKey).toMatch(/^[0-9a-f-]{20,}$/i)
+    expect(calls[1].request?.json).toEqual({ socialReauth })
+    expect(calls[1].request?.idempotencyKey).toBe('fixed-key')
+  })
 })

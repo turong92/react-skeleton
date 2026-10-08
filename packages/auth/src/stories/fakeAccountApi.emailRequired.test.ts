@@ -81,4 +81,34 @@ describe('fake account api: contact email', () => {
     expect(code(await rejects(api.requestContactEmail('x@example.com')))).toBe('COMMON.NOT_FOUND')
     expect((await api.me()).contactEmail).toBeNull()
   })
+
+  describe('discard (POST /account/discard)', () => {
+    it('right after the login: gone at once, recorded as a call', async () => {
+      const api = createFakeAccountApi({ emailRequired: true })
+      await api.discardAccount()
+      expect(api.calls).toContain('discardAccount')
+    })
+
+    it('an older session needs the provider again (403 REAUTH_REQUIRED), and a fresh proof lets it through', async () => {
+      const api = createFakeAccountApi({ emailRequired: true, reauthWindowExpired: true })
+      expect(code(await rejects(api.discardAccount()))).toBe('ACCOUNT.REAUTH_REQUIRED')
+      await api.discardAccount({ socialReauth: FAKE_SOCIAL_REAUTH })
+    })
+
+    it('an account with an address cannot be discarded (409 DISCARD_NOT_ALLOWED)', async () => {
+      const api = createFakeAccountApi()
+      expect(code(await rejects(api.discardAccount()))).toBe('ACCOUNT.DISCARD_NOT_ALLOWED')
+    })
+  })
+
+  it('contact email for an account without an address (app without required email) needs the provider proof', async () => {
+    const api = createFakeAccountApi({ noAddress: true })
+    expect(code(await rejects(api.requestContactEmail('news@example.com')))).toBe(
+      'ACCOUNT.REAUTH_REQUIRED',
+    )
+    const sent = await api.requestContactEmail('news@example.com', {
+      socialReauth: FAKE_SOCIAL_REAUTH,
+    })
+    expect(sent?.expiresAt).toBeTruthy()
+  })
 })

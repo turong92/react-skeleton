@@ -7,6 +7,7 @@ import { codeWindowOf, estimateCodeWindow, type CodeWindow } from '../codeWindow
 import authStyles from './auth.module.css'
 import styles from './EmailRequiredScreen.module.css'
 import { mergeLabels, type AuthLabels } from './labels'
+import { DiscardPath } from './DiscardPath'
 import { AddressField, LeaveActions, ReauthPrompt } from './EmailRequiredParts'
 import { labelOfMethod } from './methodsList'
 import { useAction } from './useAction'
@@ -26,8 +27,12 @@ export type EmailRequiredScreenProps = {
   /** 1시간이 지나 서버가 `REAUTH_REQUIRED` 를 말했다: 이 제공자의 동의 화면으로 보낸다(돌아오면 계정 설정에서 이어진다) */
   onProviderReauth?: (provider: string, newEmail: string) => void
   onSignOut: () => void
-  /** 「내 계정 삭제」 — 허용 목록에 있는 길이라 막다른 길이 되지 않는다. 보통 계정 설정의 삭제 구역으로 보낸다 */
-  onDelete: () => void
+  /** 「이 계정 지우고 로그인 화면으로」 - `POST /account/discard`(허용 목록에 있어 막다른 길이 되지 않는다). 던진 `REAUTH_REQUIRED` 는 제공자 재동의 단추가 된다 */
+  onDiscard: () => Promise<void>
+  /** 지웠다 - 앱이 로컬 세션을 지우고 로그인 화면으로 보낸다. 인자는 로그인 뒤 연결을 이어 갈 제공자 */
+  onDiscarded: (provider?: string) => void
+  /** 오래된 세션이라 버리기도 제공자 재동의를 요구했다 - 그 제공자의 동의 화면으로(돌아오면 설정이 이어서 부른다) */
+  onDiscardReauth?: (provider: string) => void
   labels?: Partial<AuthLabels>
 }
 
@@ -46,7 +51,9 @@ export function EmailRequiredScreen({
   onRegistered,
   onProviderReauth,
   onSignOut,
-  onDelete,
+  onDiscard,
+  onDiscarded,
+  onDiscardReauth,
   labels: given,
 }: EmailRequiredScreenProps) {
   const labels = mergeLabels(given)
@@ -185,7 +192,14 @@ export function EmailRequiredScreen({
             )}
           </form>
         )}
-        <LeaveActions labels={labels} onSignOut={onSignOut} onDelete={onDelete} />
+        <DiscardPath
+          labels={labels}
+          providers={providers}
+          discard={onDiscard}
+          onDiscarded={onDiscarded}
+          onProviderReauth={onDiscardReauth}
+        />
+        <LeaveActions labels={labels} onSignOut={onSignOut} />
       </div>
     </div>
   )

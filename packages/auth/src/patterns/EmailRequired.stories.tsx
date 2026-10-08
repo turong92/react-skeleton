@@ -36,7 +36,8 @@ type DemoProps = {
   korean?: boolean
   onRegistered?: () => void
   onSignOut?: () => void
-  onDelete?: () => void
+  onDiscarded?: (provider?: string) => void
+  onDiscardReauth?: (provider: string) => void
   onProviderReauth?: (provider: string, newEmail: string) => void
   /** 화면 폭(px) — `transform` 이 `position: fixed` 의 기준을 이 칸으로 바꿔 작은 폭에서의 모습을 그대로 본다 */
   width?: number
@@ -49,7 +50,8 @@ function Demo({
   korean,
   onRegistered,
   onSignOut = () => undefined,
-  onDelete = () => undefined,
+  onDiscarded = () => undefined,
+  onDiscardReauth,
   onProviderReauth,
   width,
 }: DemoProps) {
@@ -72,7 +74,8 @@ function Demo({
       standAside={standAside}
       enabledProviders={enabledProviders}
       onSignOut={onSignOut}
-      onDelete={onDelete}
+      onDiscarded={onDiscarded}
+      onDiscardReauth={onDiscardReauth}
       onRegistered={onRegistered}
       onProviderReauth={onProviderReauth}
     >
@@ -100,7 +103,13 @@ const meta = {
   title: 'Patterns/Auth/Email required',
   component: Demo,
   decorators: [withRouter],
-  args: { onRegistered: fn(), onSignOut: fn(), onDelete: fn(), onProviderReauth: fn() },
+  args: {
+    onRegistered: fn(),
+    onSignOut: fn(),
+    onDiscarded: fn(),
+    onDiscardReauth: fn(),
+    onProviderReauth: fn(),
+  },
 } satisfies Meta<typeof Demo>
 export default meta
 type Story = StoryObj<typeof Demo>
@@ -205,15 +214,66 @@ export const NoProviderLeftCanTryAgain: Story = {
   },
 }
 
-/** 막다른 길이 아니다 — 로그아웃 · 계정 삭제는 늘 눌린다 */
+/** 막다른 길이 아니다 - 로그아웃은 늘 눌리고, 이미 계정이 있으면 빈 계정을 지우는 길이 있다(확인 한 번) */
 export const WaysOutAreRealButtons: Story = {
   play: async ({ canvas, args, userEvent }) => {
     const screen = within(await dialog(canvas))
-    await expect(screen.getByText(/You can delete your account instead/)).toBeVisible()
-    await userEvent.click(screen.getByRole('button', { name: 'Delete my account' }))
-    await expect(args.onDelete).toHaveBeenCalledTimes(1)
+    await expect(screen.getByRole('heading', { name: 'Already have an account?' })).toBeVisible()
     await userEvent.click(screen.getByRole('button', { name: 'Sign out' }))
     await expect(args.onSignOut).toHaveBeenCalledTimes(1)
+  },
+}
+
+/** 「이 계정 지우고 로그인 화면으로」 - 한 번 확인한 뒤 지우고, 앱에 로그인 뒤 연결을 이어 갈 제공자를 알린다 */
+export const AlreadyHaveAnAccountDiscardsTheEmptyOneAfterOneConfirmation: Story = {
+  play: async ({ canvas, args, userEvent }) => {
+    const screen = within(await dialog(canvas))
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Delete this account and go to sign-in' }),
+    )
+    const confirm = await within(document.body).findByRole('dialog', {
+      name: 'Delete this account?',
+    })
+    await expect(args.onDiscarded).not.toHaveBeenCalled() // 눌렀다고 바로 지우지 않는다
+    await userEvent.click(within(confirm).getByRole('button', { name: 'Delete and go to sign-in' }))
+    await waitFor(() => expect(args.onDiscarded).toHaveBeenCalledWith('kakao'))
+  },
+}
+
+export const DiscardCanBeCancelled: Story = {
+  play: async ({ canvas, args, userEvent }) => {
+    const screen = within(await dialog(canvas))
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Delete this account and go to sign-in' }),
+    )
+    const confirm = await within(document.body).findByRole('dialog', {
+      name: 'Delete this account?',
+    })
+    await userEvent.click(within(confirm).getByRole('button', { name: 'Cancel' }))
+    await waitFor(() =>
+      expect(
+        within(document.body).queryByRole('dialog', { name: 'Delete this account?' }),
+      ).toBeNull(),
+    )
+    await expect(args.onDiscarded).not.toHaveBeenCalled()
+  },
+}
+
+/** 오래된 세션이라 서버가 제공자 재동의를 요구한다 - 확인 창이 닫히고 그 제공자 단추가 나온다 */
+export const DiscardOnAnOldSessionAsksTheProviderAgain: Story = {
+  args: { fake: { reauthWindowExpired: true } },
+  play: async ({ canvas, args, userEvent }) => {
+    const screen = within(await dialog(canvas))
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Delete this account and go to sign-in' }),
+    )
+    const confirm = await within(document.body).findByRole('dialog', {
+      name: 'Delete this account?',
+    })
+    await userEvent.click(within(confirm).getByRole('button', { name: 'Delete and go to sign-in' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Confirm with Kakao' }))
+    await expect(args.onDiscardReauth).toHaveBeenCalledWith('kakao')
+    await expect(args.onDiscarded).not.toHaveBeenCalled()
   },
 }
 
@@ -253,7 +313,7 @@ function SwitchedAccountDemo({ onSettled }: { onSettled: (result: boolean) => vo
         }}
         accountId={accountId}
         onSignOut={() => undefined}
-        onDelete={() => undefined}
+        onDiscarded={() => undefined}
       >
         <AppBehind />
       </EmailRequiredGate>
@@ -294,7 +354,7 @@ function RegisteredElsewhereDemo({ onSettled }: { onSettled: (result: boolean) =
         api={{ ...api, me: async () => ({ ...(await api.me()), emailRequired: serverRequires }) }}
         accountId="acc_a"
         onSignOut={() => undefined}
-        onDelete={() => undefined}
+        onDiscarded={() => undefined}
       >
         <AppBehind />
       </EmailRequiredGate>
@@ -327,7 +387,7 @@ function OpensFromMeDemo({ fake }: { fake: FakeAccountOptions }) {
         api={api}
         accountId="acc_a"
         onSignOut={() => undefined}
-        onDelete={() => undefined}
+        onDiscarded={() => undefined}
       >
         <AppBehind />
       </EmailRequiredGate>
@@ -373,7 +433,7 @@ function FocusBackDemo() {
       api={{ ...api, me: async () => ({ ...(await api.me()), emailRequired: true }) }}
       accountId="acc_a"
       onSignOut={() => undefined}
-      onDelete={() => undefined}
+      onDiscarded={() => undefined}
     >
       <button ref={button} type="button">
         연결하기
@@ -407,7 +467,7 @@ function SignOutThroughTheGateDemo({ onSettled }: { onSettled: (result: boolean)
       api={api}
       accountId={accountId}
       onSignOut={() => setAccountId(null)}
-      onDelete={() => undefined}
+      onDiscarded={() => undefined}
     >
       <AppBehind />
     </EmailRequiredGate>

@@ -11,6 +11,10 @@ export type ProviderAction =
   | { kind: 'email-change'; newEmail: string }
   | { kind: 'unlink'; identityId: string }
   | { kind: 'delete' }
+  /** 등록 미완료 계정 버리기(`POST /account/discard`)의 다시 인증 - 오래된 세션 */
+  | { kind: 'discard' }
+  /** 계정 이메일이 없는 계정의 연락받을 이메일 등록 - 새 주소를 들고 제공자 동의를 다녀온다 */
+  | { kind: 'contact-email'; email: string }
   /** 이 동의가 **연결할** 제공자의 것이다(비밀번호 · 코드로 다시 인증하는 계정) */
   | { kind: 'link' }
   /** 이 동의는 이미 연결된 제공자의 **다시 인증**이고, 연결하려던 제공자의 코드는 `target` 에 있다 */

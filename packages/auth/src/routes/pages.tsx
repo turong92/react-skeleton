@@ -3,10 +3,10 @@ import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { Alert, Button } from '@skeleton/ui'
 import { AuthLayout } from '../screens/AuthLayout'
 import type { AccountApi } from '../account/accountApi'
-import { emailReauthOf } from '../emailReauth'
+import { discardReauthOf, emailReauthOf } from '../emailReauth'
 import type { EmailRequiredController } from '../emailRequired'
 import type { AuthApi } from '../authApi'
-import { linkIntentOf } from '../linkIntent'
+import { linkIntentOf, linkIntentState } from '../linkIntent'
 import { postSignInTarget, rememberReturnTo, consumeReturnTo } from '../returnTo'
 import { AccountSettings, type AccountSettingsProps } from '../screens/AccountSettings'
 import { ForgotPasswordScreen } from '../screens/ForgotPasswordScreen'
@@ -469,7 +469,11 @@ function SocialLinkCallbackInner({ flow, ctx }: { flow: SocialLinkFlow; ctx: Pag
       />
     )
   // 이메일 변경 · 연결 해제 · 삭제의 다시 인증 — 새 인가 코드를 가지고 설정 화면으로 돌아가 하려던 작업을 이어서 한다
-  if (callback && action && ['email-change', 'unlink', 'delete'].includes(action.kind))
+  if (
+    callback &&
+    action &&
+    ['email-change', 'unlink', 'delete', 'discard', 'contact-email'].includes(action.kind)
+  )
     return (
       <Navigate
         to={ctx.paths.account}
@@ -641,6 +645,7 @@ export function AccountPage({
   }
   // 이메일 등록 화면에서 「{제공자}로 확인」을 눌러 왔다 — 한 번 더 누르게 하지 않고 바로 동의 화면으로(돌아오면 이메일 구역이 인증번호를 이어 보낸다)
   const [startReauth] = useState(() => emailReauthOf(state))
+  const [startDiscard] = useState(() => discardReauthOf(state))
   const started = useRef(false)
   const beginRef = useRef(beginRoundTrip)
   useEffect(() => {
@@ -655,6 +660,14 @@ export function AccountPage({
       newEmail: startReauth.newEmail,
     })
   }, [startReauth, flow, accountId, navigate, location.pathname])
+  // 「이 계정 지우고 …」 가 오래된 세션이라 제공자 재동의를 요구했다 - 바로 그 제공자의 동의 화면으로(돌아오면 설정이 버리기를 이어서 부른다)
+  const startedDiscard = useRef(false)
+  useEffect(() => {
+    if (!startDiscard || startedDiscard.current || !flow || !accountId) return
+    startedDiscard.current = true
+    navigate(location.pathname, { replace: true, state: null })
+    void beginRef.current(startDiscard.provider, { kind: 'discard' })
+  }, [startDiscard, flow, accountId, navigate, location.pathname])
   // 삭제가 받아들여지면 바로 로그아웃 상태의 안내 화면으로 — 서버는 이미 모든 세션을 닫았다(이 화면에 남으면 로그인된 것처럼 보인다).
   // `api` 의 정체성이 바뀌면 설정 화면이 프로필을 다시 읽는다(죽은 토큰으로 401) — 그래서 `navigate` 는 ref 로 쥐고 `api` 는 안정적으로 둔다
   const navigateRef = useRef(navigate)
@@ -699,6 +712,14 @@ export function AccountPage({
         }
         onDeleted={() => void auth.logout()}
         onEmailRegistered={ctx.emailRequired && (() => ctx.emailRequired?.registered())}
+        onDiscarded={(provider) => {
+          // 서버가 모든 세션을 닫았다 - 이 기기의 세션도 지우고, 로그인한 뒤 설정에서 그 제공자 연결을 이어 가게 한다
+          void auth.logout()
+          navigate(ctx.paths.signIn, {
+            replace: true,
+            state: linkIntentState(provider, { pathname: ctx.paths.account, hash: '#methods' }),
+          })
+        }}
         linkedProvider={state?.linked}
         linkIntent={linkIntentOf(state)}
         {...settings}

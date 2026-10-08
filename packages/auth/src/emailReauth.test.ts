@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { emailReauthOf, emailReauthState } from './emailReauth'
+import { discardReauthOf, discardReauthState, emailReauthOf, emailReauthState } from './emailReauth'
 
 describe('email re-confirmation hand-off (router state only)', () => {
   it('carries the provider and the typed address to the account page', () => {
@@ -20,5 +20,23 @@ describe('email re-confirmation hand-off (router state only)', () => {
     [{ emailReauth: 'kakao' }],
   ])('ignores a state that is not a provider code and an address: %j', (state) => {
     expect(emailReauthOf(state)).toBeUndefined()
+  })
+})
+
+describe('discard re-confirmation hand-off (router state only)', () => {
+  it('carries only the provider', () => {
+    expect(discardReauthOf(discardReauthState('line'))).toEqual({ provider: 'line' })
+  })
+
+  it.each([[null], [{}], [{ discardReauth: { provider: '<x>' } }], [{ discardReauth: 'line' }]])(
+    'ignores %j',
+    (state) => {
+      expect(discardReauthOf(state)).toBeUndefined()
+    },
+  )
+
+  it('is not mistaken for the email hand-off, nor the other way round', () => {
+    expect(emailReauthOf(discardReauthState('line'))).toBeUndefined()
+    expect(discardReauthOf(emailReauthState('line', 'a@b.c'))).toBeUndefined()
   })
 })

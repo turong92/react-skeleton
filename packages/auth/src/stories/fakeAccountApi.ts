@@ -294,11 +294,12 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
       emailGate()
       return track('requestReauthConfirmation', codeSent())
     },
-    requestContactEmail: async (email) => {
+    requestContactEmail: async (email, proof) => {
       calls.push('requestContactEmail')
       emailGate()
       if (options.contactEmailOff || options.contactEmailLegacyOff)
         throw apiError('COMMON.NOT_FOUND', 404)
+      if (!me.email) reauth(proof ?? {}, 'ACCOUNT.REAUTH_FAILED') // 계정 이메일이 없는 계정만 제공자 증명이 든다
       pendingContact = email.trim()
       codeAttempts = 5
       return codeSent() ?? { expiresAt: inMinutes(10), resendAvailableAt: inMinutes(0.5) }
@@ -341,6 +342,13 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
     requestDeleteConfirmation: async () => {
       notSuspended()
       return track('requestDeleteConfirmation', codeSent())
+    },
+    discardAccount: async (proof) => {
+      calls.push('discardAccount')
+      if (me.email || !options.emailRequired) throw apiError('ACCOUNT.DISCARD_NOT_ALLOWED', 409)
+      // 방금 로그인한 세션은 다시 인증 없이, 오래된 세션은 제공자 증명이 든다
+      if (options.reauthWindowExpired || proof?.socialReauth)
+        reauth(proof ?? {}, 'ACCOUNT.REAUTH_FAILED')
     },
     deleteAccount: async (proof) => {
       calls.push('deleteAccount')

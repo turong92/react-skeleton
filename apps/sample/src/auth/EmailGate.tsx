@@ -1,6 +1,8 @@
 import {
+  discardReauthState,
   emailReauthState,
   EmailRequiredGate,
+  linkIntentState,
   methodsFromInfo,
   useAuth,
   useAuthMethods,
@@ -69,7 +71,17 @@ export function EmailGate({ children }: { children: ReactNode }) {
         void auth.logout()
         void router.navigate('/login', { replace: true })
       }}
-      onDelete={() => void router.navigate(`${ACCOUNT_PATH}#delete`)}
+      // 이미 이 주소로 가입한 계정이 있다 - 서버가 빈 계정을 바로 지우고 모든 세션을 닫았다: 이 기기의 세션도 지우고 로그인 화면으로, 로그인하면 설정에서 그 제공자 연결을 이어 준다
+      onDiscarded={(provider) => {
+        void auth.logout()
+        void router.navigate('/login', {
+          replace: true,
+          state: linkIntentState(provider, { pathname: ACCOUNT_PATH, hash: '#methods' }),
+        })
+      }}
+      onDiscardReauth={(provider) =>
+        void router.navigate(ACCOUNT_PATH, { state: discardReauthState(provider) })
+      }
       // 마지막 로그인이 1시간을 넘었다 — 계정 설정이 열리자마자 그 제공자의 동의 화면으로 보낸다(돌아오면 거기서 인증번호를 이어 받는다)
       onProviderReauth={(provider, newEmail) =>
         void router.navigate(ACCOUNT_PATH, { state: emailReauthState(provider, newEmail) })

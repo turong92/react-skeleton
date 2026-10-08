@@ -288,13 +288,21 @@ export const koAuthLabels: AuthLabels = {
     `${email} 로 6자리 인증번호를 보냈어요. 아래 남은 시간 안에 입력해 주세요. 다른 사람에게는 알려 주지 마세요.`,
   emailRequiredFixAddress: '주소 고치기',
   emailRequiredSignOut: '로그아웃',
-  emailRequiredDeleteHint: '이메일을 등록하고 싶지 않다면 계정을 삭제할 수 있어요.',
-  emailRequiredDelete: '내 계정 삭제',
+  emailRequiredDiscardTitle: '이미 계정이 있나요?',
+  // 이름 뒤에 조사를 붙이지 않는다
+  emailRequiredDiscardBody: (provider) =>
+    `이 주소로 이미 가입한 계정이 있다면, 지금 만든 빈 계정을 지우고 그 계정으로 로그인한 뒤 설정에서 '${provider ?? '이 로그인'}' 연결을 눌러 주세요.`,
+  emailRequiredDiscard: '이 계정 지우고 로그인 화면으로',
+  emailRequiredDiscardConfirmTitle: '이 계정을 지울까요?',
+  emailRequiredDiscardConfirmBody:
+    '방금 만든 빈 계정을 바로 지워요. 유예 기간 없이 되돌릴 수 없어요. 지운 뒤에는 로그인 화면으로 가요.',
+  emailRequiredDiscardConfirm: '지우고 이동',
+  errorDiscardNotAllowed: '이 계정은 이렇게 지울 수 없어요.',
   emailRequiredSettingsNotice:
     '이메일을 등록하기 전에는 여기서 이메일 등록과 계정 삭제만 할 수 있어요.',
   sectionContactEmail: '연락받을 이메일',
   contactEmailRole:
-    '선택 사항이에요. 공지와 서비스 알림을 여기로 받아요. 로그인이나 비밀번호 찾기에는 쓰이지 않아요.',
+    '선택 사항이에요. 공지와 서비스 알림을 여기로 받아요. 로그인이나 비밀번호 찾기에는 쓰이지 않아요. 비밀번호를 재설정하거나 모든 기기에서 로그아웃하면 지워져요 — 다시 등록하면 돼요.',
   contactEmailNone: '계정 이메일로 받아요',
   contactEmailCurrent: '알림을 받는 곳',
   contactEmailAdd: '연락받을 이메일 등록',
@@ -325,6 +333,8 @@ export const koAuthLabels: AuthLabels = {
   sessionsCurrent: '이 기기',
   sessionsRevoke: '로그아웃',
   sessionsRevokeOthers: '다른 모든 기기 로그아웃',
+  sessionsContactNote:
+    '모든 기기에서 로그아웃하면 연락받을 이메일도 지워져요 - 다시 등록하면 돼요.',
   sessionsRevoked: '로그아웃했어요.',
   sessionsUnknownDevice: '알 수 없는 기기',
   sessionsLocalDevice: '로컬 주소',

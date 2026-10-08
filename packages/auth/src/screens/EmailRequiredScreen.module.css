@@ -47,6 +47,25 @@
   gap: var(--space-sm);
 }
 
+.discard {
+  display: grid;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  border: 1px solid var(--red-border);
+  border-radius: var(--radius-md);
+}
+
+.discard h2 {
+  margin: 0;
+  font-size: var(--font-size-body);
+}
+
+.discard p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+}
+
 .leave {
   display: grid;
   gap: var(--space-md);

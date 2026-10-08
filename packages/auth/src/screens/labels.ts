@@ -291,8 +291,15 @@ export type AuthLabels = {
   emailRequiredCodeBody: (email: string) => string
   emailRequiredFixAddress: string
   emailRequiredSignOut: string
-  emailRequiredDeleteHint: string
-  emailRequiredDelete: string
+  /** 「이미 계정이 있나요?」 - 이 주소로 이미 가입한 계정이 있을 때 지금 만든 빈 계정을 지우고 그 계정으로 로그인하는 길(`POST /account/discard`) */
+  emailRequiredDiscardTitle: string
+  /** 제공자 이름을 모르면 undefined */
+  emailRequiredDiscardBody: (provider?: string) => string
+  emailRequiredDiscard: string
+  emailRequiredDiscardConfirmTitle: string
+  emailRequiredDiscardConfirmBody: string
+  emailRequiredDiscardConfirm: string
+  errorDiscardNotAllowed: string
   /** 계정 설정을 이메일 등록 전에 열었다 */
   emailRequiredSettingsNotice: string
   // 연락받을 이메일
@@ -326,6 +333,8 @@ export type AuthLabels = {
   sessionsCurrent: string
   sessionsRevoke: string
   sessionsRevokeOthers: string
+  /** 연락받을 이메일을 켠 앱 - 모든 기기 로그아웃이 그 주소도 비운다 */
+  sessionsContactNote: string
   sessionsRevoked: string
   sessionsUnknownDevice: string
   /** IP 가 루프백일 때(개발 · 같은 컴퓨터) — 기기를 가리키는 말이 아니라 주소의 종류다 */
@@ -666,13 +675,20 @@ export const defaultAuthLabels: AuthLabels = asDefault({
     `We sent a 6-digit code to ${email}. Enter it before the time below runs out — never tell it to anyone.`,
   emailRequiredFixAddress: 'Fix the address',
   emailRequiredSignOut: 'Sign out',
-  emailRequiredDeleteHint: 'Do not want to add one? You can delete your account instead.',
-  emailRequiredDelete: 'Delete my account',
+  emailRequiredDiscardTitle: 'Already have an account?',
+  emailRequiredDiscardBody: (provider) =>
+    `If an account already exists for your address, delete this empty one, sign in to that account and link ${provider ?? 'this sign-in'} in its settings.`,
+  emailRequiredDiscard: 'Delete this account and go to sign-in',
+  emailRequiredDiscardConfirmTitle: 'Delete this account?',
+  emailRequiredDiscardConfirmBody:
+    'The account you just created is deleted right away - there is no grace period and it cannot be undone. You go to the sign-in page afterwards.',
+  emailRequiredDiscardConfirm: 'Delete and go to sign-in',
+  errorDiscardNotAllowed: 'This account cannot be discarded.',
   emailRequiredSettingsNotice:
     'Until you add an email address you can only add it here or delete your account.',
   sectionContactEmail: 'Contact email',
   contactEmailRole:
-    'Optional. Announcements and service notices come here. It is not used to sign in or to find your password.',
+    'Optional. Announcements and service notices come here. It is not used to sign in or to find your password. Resetting your password or signing out of all devices clears it - just add it again.',
   contactEmailNone: 'Notices go to your account email',
   contactEmailCurrent: 'Notices go to',
   contactEmailAdd: 'Add a contact email',
@@ -703,6 +719,8 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   sessionsCurrent: 'This device',
   sessionsRevoke: 'Sign out',
   sessionsRevokeOthers: 'Sign out all other devices',
+  sessionsContactNote:
+    'Signing out of all devices also clears your contact email - add it again afterwards.',
   sessionsRevoked: 'Signed out.',
   sessionsUnknownDevice: 'Unknown device',
   sessionsLocalDevice: 'Local address',

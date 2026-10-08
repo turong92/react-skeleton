@@ -979,6 +979,44 @@ export const ContactEmailLegacyServerOffHidesTheSectionOnThe404: Story = {
   },
 }
 
+/** 계정 이메일이 없는 계정(이메일을 필수로 켜지 않은 앱)은 연락받을 이메일 요청에도 제공자 재동의가 든다 - 서버가 `REAUTH_REQUIRED` 를 말하면 제공자 단추가 나온다 */
+export const ContactEmailWithoutAnAccountAddressAsksTheProvider: Story = {
+  args: {
+    contactEmail: true,
+    fake: { noAddress: true },
+    socialProviders: [{ provider: 'naver' }],
+  },
+  play: async ({ canvas, args, userEvent }) => {
+    const section = within(await canvas.findByRole('region', { name: 'Contact email' }))
+    await userEvent.click(section.getByRole('button', { name: 'Add a contact email' }))
+    await userEvent.type(await section.findByLabelText(/^Contact email/), 'news@example.com')
+    await userEvent.click(section.getByRole('button', { name: 'Send me a code' }))
+    await userEvent.click(await section.findByRole('button', { name: 'Confirm with Naver' }))
+    await expect(args.onProviderReauth).toHaveBeenCalledWith('naver', {
+      kind: 'contact-email',
+      email: 'news@example.com',
+    })
+  },
+}
+
+/** 제공자 동의에서 돌아왔다 - 증명을 실어 요청이 한 번 나가고 코드 단계가 열린다 */
+export const ContactEmailReturnsFromTheProviderAndSendsTheCode: Story = {
+  args: {
+    contactEmail: true,
+    fake: { noAddress: true },
+    socialProviders: [{ provider: 'naver' }],
+    resume: {
+      action: { kind: 'contact-email', email: 'news@example.com' },
+      socialReauth: FAKE_SOCIAL_REAUTH,
+    },
+  },
+  play: async ({ canvas }) => {
+    const section = within(await canvas.findByRole('region', { name: 'Contact email' }))
+    await expect(await section.findByText(/news@example.com/)).toBeVisible()
+    await expect(section.getByLabelText('Digit 1 of 6')).toBeVisible()
+  },
+}
+
 /** 앱이 안 켜면(기본) 구역이 없다 */
 export const ContactEmailIsOffByDefault: Story = {
   play: async ({ canvas }) => {

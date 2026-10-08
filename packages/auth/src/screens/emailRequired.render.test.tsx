@@ -23,7 +23,8 @@ const screen = (labels = koAuthLabels) =>
       onConfirmCode={noop}
       onRegistered={() => undefined}
       onSignOut={() => undefined}
-      onDelete={() => undefined}
+      onDiscard={noop}
+      onDiscarded={() => undefined}
     />,
   )
 
@@ -43,7 +44,11 @@ describe('EmailRequiredScreen (the full-screen "register your email" step)', () 
     expect(out).toContain('인증번호 받기')
     // 떠나는 길도 눌리는 단추(글자만 있는 링크가 아니다)
     expect(out).toMatch(/<button[^>]*data-variant="secondary"[^>]*>로그아웃<\/button>/)
-    expect(out).toMatch(/<button[^>]*data-variant="danger"[^>]*>내 계정 삭제<\/button>/)
+    // 이미 계정이 있을 때의 길 - 위험색 단추(누르면 한 번 확인한다)
+    expect(out).toContain('이미 계정이 있나요?')
+    expect(out).toMatch(
+      /<button[^>]*data-variant="danger"[^>]*>이 계정 지우고 로그인 화면으로<\/button>/,
+    )
   })
 
   it('shows the same in English by default', () => {
@@ -64,7 +69,7 @@ describe('EmailRequiredGate', () => {
         labels={koAuthLabels}
         standAside={standAside}
         onSignOut={() => undefined}
-        onDelete={() => undefined}
+        onDiscarded={() => undefined}
       >
         <p>앱 화면</p>
       </EmailRequiredGate>,
@@ -80,7 +85,7 @@ describe('EmailRequiredGate', () => {
         accountId="acc_secret_1234"
         labels={koAuthLabels}
         onSignOut={() => undefined}
-        onDelete={() => undefined}
+        onDiscarded={() => undefined}
       >
         <p>앱 화면</p>
       </EmailRequiredGate>,

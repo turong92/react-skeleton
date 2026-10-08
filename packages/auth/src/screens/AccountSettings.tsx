@@ -73,6 +73,8 @@ export type AccountSettingsProps = {
   onProviderReauth?: (provider: string, action: ProviderAction) => void
   /** 제공자 동의를 마치고 돌아왔다 — 하려던 작업과 그 제공자가 준 새 인가 코드. 이 화면이 한 번만 이어서 한다 */
   resume?: { action: ProviderAction; socialReauth: SocialReauth } | null
+  /** 등록 미완료 계정 버리기가 끝났다(제공자 재동의에서 돌아와 이어서 부른 `POST /account/discard` 가 204) - 서버가 모든 세션을 닫았다. 앱이 로컬 세션을 지우고 로그인 화면으로 보낸다. 인자는 그 제공자(로그인 뒤 연결을 이어 가려고) */
+  onDiscarded?: (provider: string) => void
   /** `resume` 을 읽었다(앱이 돌아온 주소의 state 를 비운다) */
   onResumeConsumed?: () => void
 }
@@ -114,6 +116,7 @@ export function AccountSettings({
   onProviderReauth,
   resume,
   onResumeConsumed,
+  onDiscarded,
 }: AccountSettingsProps) {
   const labels = mergeLabels(given)
   const on = (name: AccountSectionName) =>
@@ -132,6 +135,14 @@ export function AccountSettings({
   )
   const [deleteResume, setDeleteResume] = useState<SocialReauth | null>(() =>
     resume?.action.kind === 'delete' ? resume.socialReauth : null,
+  )
+  const [contactResume] = useState<{
+    email: string
+    socialReauth: SocialReauth
+  } | null>(() =>
+    resume?.action.kind === 'contact-email'
+      ? { email: resume.action.email, socialReauth: resume.socialReauth }
+      : null,
   )
   const resumed = useRef(false)
   const sessions = useResource(
@@ -164,12 +175,16 @@ export function AccountSettings({
           setResumeError(error)
         },
       )
+    } else if (action.kind === 'discard') {
+      api
+        .discardAccount({ socialReauth })
+        .then(() => onDiscarded?.(socialReauth.provider), setResumeError)
     } else if (action.kind === 'unlink')
       api.unlinkIdentity(action.identityId, { socialReauth }).then(() => {
         reloadMe()
         reloadSessions() // 서버가 이 계정의 다른 세션을 닫는다
       }, setResumeError)
-  }, [resume, api, reloadMe, reloadSessions, onResumeConsumed])
+  }, [resume, api, reloadMe, reloadSessions, onResumeConsumed, onDiscarded])
 
   // 주소의 해시(`#delete` · `#email` …)가 가리키는 구역으로 간다 — 구역이 그려진 뒤(`me` 를 읽은 뒤)에, 해시가 바뀔 때도. 제목에 포커스를 두어 낭독이 도착한 자리를 알린다
   const ready = !!me.data
@@ -319,7 +334,13 @@ export function AccountSettings({
         <ContactEmailSection
           contactEmail={account.contactEmail ?? null}
           labels={given}
-          onRequestCode={(email) => api.requestContactEmail(email)}
+          onRequestCode={(email, proof) => api.requestContactEmail(email, proof)}
+          providers={subject.providers}
+          onProviderReauth={
+            onProviderReauth &&
+            ((provider, email) => onProviderReauth(provider, { kind: 'contact-email', email }))
+          }
+          resume={contactResume}
           onConfirmCode={(code) => api.confirmContactEmail(code)}
           onRemove={() => api.removeContactEmail()}
           onChanged={me.reload}
@@ -360,9 +381,11 @@ export function AccountSettings({
             await api.revokeSession(id)
             sessions.reload()
           }}
+          contactNote={on('contact') && account.contactEmail !== undefined}
           onRevokeOthers={async () => {
             await api.revokeOtherSessions()
             sessions.reload()
+            me.reload() // 주인의 복구 동작이 연락받을 이메일을 비웠을 수 있다
           }}
         />
       )}

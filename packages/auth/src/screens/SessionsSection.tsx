@@ -11,6 +11,8 @@ export type SessionsSectionProps = {
   onRevoke: (sessionId: string) => Promise<unknown>
   /** 이 기기만 남기고 모두 로그아웃 */
   onRevokeOthers: () => Promise<unknown>
+  /** 이 앱은 연락받을 이메일을 켰다 - 모든 기기에서 로그아웃하면 그 주소도 지워진다는 한 줄을 더한다(주인의 복구 동작이 탈취된 세션이 심은 주소를 비운다) */
+  contactNote?: boolean
   formatDate?: (iso: string) => string
   labels?: Partial<AuthLabels>
 }
@@ -22,6 +24,7 @@ export function SessionsSection({
   sessions,
   onRevoke,
   onRevokeOthers,
+  contactNote = false,
   formatDate = defaultFormat,
   labels: given,
 }: SessionsSectionProps) {
@@ -57,6 +60,7 @@ export function SessionsSection({
       <div className={styles.stack}>
         {action.error && <Alert tone="danger">{action.error.message}</Alert>}
         {message && <Alert tone="success">{message}</Alert>}
+        {contactNote && <p className={styles.muted}>{labels.sessionsContactNote}</p>}
         {sessions.length === 0 && <p className={styles.muted}>{labels.sessionsEmpty}</p>}
         <ul className={styles.list}>
           {sessions.map((session) => (

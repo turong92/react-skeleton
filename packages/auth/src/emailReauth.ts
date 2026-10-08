@@ -23,3 +23,17 @@ export function emailReauthOf(state: unknown): EmailReauth | undefined {
     return undefined
   return { provider, newEmail }
 }
+
+/** 「이 계정 지우고 로그인 화면으로」 도 같은 길을 쓴다 - 오래된 세션이라 서버가 `REAUTH_REQUIRED` 를 말했을 때 그 제공자의 동의 화면으로 보내고, 돌아오면 설정이 `discard` 를 이어서 부른다 */
+export type DiscardReauth = { provider: string }
+
+export function discardReauthState(provider: string): { discardReauth: DiscardReauth } {
+  return { discardReauth: { provider } }
+}
+
+export function discardReauthOf(state: unknown): DiscardReauth | undefined {
+  const value = (state as { discardReauth?: unknown } | null | undefined)?.discardReauth
+  if (typeof value !== 'object' || value === null) return undefined
+  const { provider } = value as Record<string, unknown>
+  return typeof provider === 'string' && PROVIDER_CODE.test(provider) ? { provider } : undefined
+}

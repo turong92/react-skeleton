@@ -20,17 +20,19 @@ import type { AuthLabels } from './labels'
 export type EmailRequiredGateProps = {
   controller: EmailRequiredController
   /** 쓰는 호출: `me`(로그인 직후 `emailRequired` 확인 · 제공자 목록) · `changeEmail` · `confirmEmailChangeCode` — 모두 서버의 허용 목록에 있다 */
-  api: Pick<AccountApi, 'me' | 'changeEmail' | 'confirmEmailChangeCode'>
+  api: Pick<AccountApi, 'me' | 'changeEmail' | 'confirmEmailChangeCode' | 'discardAccount'>
   /** 로그인한 계정 id(없으면 null) — 바뀌어 생기면 한 번 `me.emailRequired` 를 확인한다(비밀번호 · 소셜 · 링크 로그인 모두 같은 길) */
   accountId: string | null
   onSignOut: () => void
-  /** 「내 계정 삭제」 — 계정 설정의 삭제 구역으로 보낸다(앱이 라우터로). 그동안 `standAside` 를 켠다 */
-  onDelete: () => void
+  /** 「이 계정 지우고 로그인 화면으로」가 끝났다(`POST /account/discard` 204 - 서버가 모든 세션을 닫았다) - 앱이 로컬 세션을 지우고 로그인 화면으로 보낸다. 인자는 로그인 뒤 설정에서 연결을 이어 갈 제공자 */
+  onDiscarded: (provider?: string) => void
+  /** 오래된 세션이라 버리기가 제공자 재동의를 요구했다 - 계정 설정으로 보내 그 제공자의 동의 화면을 연다(`discardReauthState`) */
+  onDiscardReauth?: (provider: string) => void
   /** 1시간 뒤 재동의: 제공자 동의 화면으로 보낸다 */
   onProviderReauth?: (provider: string, newEmail: string) => void
   /** 등록이 끝났다(토스트 · 캐시 새로고침) — 막혔던 호출은 컨트롤러가 이미 다시 보냈다 */
   onRegistered?: () => void
-  /** true 인 동안 막을 걷고 아래 화면을 살린다 — 계정 설정(`/account`)에서 이메일을 등록하거나 계정을 지우는 길. 컨트롤러 상태는 그대로다 */
+  /** true 인 동안 막을 걷고 아래 화면을 살린다 — 계정 설정(`/account`)에서 이메일을 등록하는 길. 컨트롤러 상태는 그대로다 */
   standAside?: boolean
   /** 이 앱이 로그인에 켠 소셜 제공자 코드들 — 계정에 연결된 제공자 중 이것만 재동의 단추가 된다(앱이 켜지 않은 제공자의 동의 화면은 열 수 없다). 없으면 거르지 않는다 */
   enabledProviders?: string[]
@@ -50,7 +52,8 @@ export function EmailRequiredGate({
   api,
   accountId,
   onSignOut,
-  onDelete,
+  onDiscarded,
+  onDiscardReauth,
   onProviderReauth,
   onRegistered,
   standAside = false,
@@ -152,7 +155,9 @@ export function EmailRequiredGate({
         controller.decline()
         onSignOut()
       }}
-      onDelete={onDelete}
+      onDiscard={() => api.discardAccount()}
+      onDiscarded={onDiscarded}
+      onDiscardReauth={onDiscardReauth}
     />
   )
   return (

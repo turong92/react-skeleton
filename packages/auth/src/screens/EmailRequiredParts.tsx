@@ -41,27 +41,13 @@ export function ReauthPrompt({
   )
 }
 
-/** 떠나는 길 - 로그아웃 · 계정 삭제는 허용 목록에 있어 막다른 길이 되지 않는다 */
-export function LeaveActions({
-  labels,
-  onSignOut,
-  onDelete,
-}: {
-  labels: AuthLabels
-  onSignOut: () => void
-  onDelete: () => void
-}) {
+/** 떠나는 길 - 로그아웃은 늘 있다(계정을 지우는 길은 `DiscardPath`) */
+export function LeaveActions({ labels, onSignOut }: { labels: AuthLabels; onSignOut: () => void }) {
   return (
     <div className={styles.leave}>
-      <p>{labels.emailRequiredDeleteHint}</p>
-      <div className={styles.leaveActions}>
-        <Button variant="secondary" onClick={onSignOut}>
-          {labels.emailRequiredSignOut}
-        </Button>
-        <Button variant="danger" onClick={onDelete}>
-          {labels.emailRequiredDelete}
-        </Button>
-      </div>
+      <Button variant="secondary" onClick={onSignOut}>
+        {labels.emailRequiredSignOut}
+      </Button>
     </div>
   )
 }

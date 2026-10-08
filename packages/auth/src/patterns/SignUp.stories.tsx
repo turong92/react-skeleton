@@ -784,7 +784,7 @@ export const NicknameTakenAtTheCodeStepAsksForAnotherInPlace: Story = {
     const retry = await canvas.findByRole('form', { name: '닉네임' })
     await expect(within(retry).getByText('이미 쓰고 있는 닉네임이에요')).toBeVisible()
     await expect(canvas.queryByLabelText(/^비밀번호/)).toBeNull() // 비밀번호는 다시 묻지 않는다
-    await expect(canvas.getByText(/남은 시간|\d+:\d\d/)).toBeVisible() // 남은 시간은 계속 흐른다
+    await expect(canvas.getByText(/^남은 시간 \d+:\d\d/)).toBeVisible() // 남은 시간은 계속 흐른다
     await expect(args.onPendingChange).not.toHaveBeenCalledWith(null)
     const field = within(retry).getByLabelText(/^닉네임/)
     await userEvent.clear(field)

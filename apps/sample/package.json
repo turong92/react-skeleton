@@ -9,9 +9,7 @@
     "preview": "vite preview",
     "test": "vitest run --pool forks --testTimeout 30000 --hookTimeout 60000",
     "typecheck": "tsc -b --noEmit",
-    "e2e": "pnpm run e2e:main && pnpm run e2e:reauth",
-    "e2e:main": "node ../../scripts/with-watchdog.mjs --wall 1800 --idle 600 --retries 1 -- vitest run --config vitest.e2e.config.ts",
-    "e2e:reauth": "E2E_PASS=reauth node ../../scripts/with-watchdog.mjs --wall 1200 --idle 600 --retries 1 -- vitest run --config vitest.e2e.config.ts",
+    "e2e": "node ../../scripts/with-watchdog.mjs --wall 1800 --idle 600 --retries 1 -- vitest run --config vitest.e2e.config.ts",
     "walkthrough": "E2E_WALKTHROUGH=1 vitest run --config vitest.e2e.config.ts"
   },
   "dependencies": {

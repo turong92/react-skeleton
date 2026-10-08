@@ -96,8 +96,33 @@ describe('email required walkthrough', () => {
       await shot(page, '07-code-entry-320.png', '인증번호 입력 320px.')
       await page.setViewportSize({ width: 1280, height: 800 })
 
+      // 이미 계정이 있나요? - 빈 계정을 지우는 길(위험색 테두리) · 확인 한 번
+      const discard = gate(page).getByRole('button', { name: auth.emailRequiredDiscard })
+      await discard.scrollIntoViewIfNeeded()
+      await shot(
+        page,
+        '07b-discard-path-desktop.png',
+        '「이미 계정이 있나요?」 - 이 주소로 이미 가입한 계정이 있으면 지금 만든 빈 계정을 지우고 그 계정으로 로그인해 설정에서 연결한다. 위험색 테두리.',
+      )
+      await page.setViewportSize({ width: 375, height: 800 })
+      await discard.scrollIntoViewIfNeeded()
+      await shot(page, '07c-discard-path-375.png', '「이미 계정이 있나요?」 375px.')
+      await discard.click()
+      await page.getByRole('dialog', { name: auth.emailRequiredDiscardConfirmTitle }).waitFor()
+      await shot(
+        page,
+        '07d-discard-confirm-375.png',
+        '지우기 확인 375px - 유예 없이 되돌릴 수 없다고 말하고 한 번 더 묻는다.',
+      )
+      await page.setViewportSize({ width: 1280, height: 800 })
+      await shot(page, '07e-discard-confirm-desktop.png', '지우기 확인.')
+      await page
+        .getByRole('dialog', { name: auth.emailRequiredDiscardConfirmTitle })
+        .getByRole('button', { name: auth.cancel })
+        .click()
+
       // 등록 전 설정: 이메일 등록과 삭제만
-      await gate(page).getByRole('button', { name: auth.emailRequiredDelete }).click()
+      await page.goto(`${baseUrl}/account`)
       await page.getByText(auth.emailRequiredSettingsNotice).waitFor()
       await shot(
         page,
@@ -167,6 +192,15 @@ describe('email required walkthrough', () => {
         window.scrollBy(0, -170)
       })
       await shot(page, '14-settings-two-emails-375.png', '같은 두 구역 375px.')
+      // 새 문구: 비밀번호 재설정 · 모든 기기 로그아웃이 연락받을 이메일을 지운다
+      const sessionsSection = page.getByRole('region', { name: auth.sectionSessions })
+      await sessionsSection.scrollIntoViewIfNeeded()
+      await shot(
+        page,
+        '15-sessions-contact-note-375.png',
+        '활성 세션 구역 375px - 모든 기기에서 로그아웃하면 연락받을 이메일도 지워진다는 한 줄.',
+        sessionsSection,
+      )
     } finally {
       await browser.close()
       writeFileSync(

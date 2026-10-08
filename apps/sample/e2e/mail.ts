@@ -119,3 +119,7 @@ export async function waitForSubject(
   }
   throw new Error(`no mail with subject ${subject} for ${to} within ${timeoutMs / 1000}s`)
 }
+
+/** 주소 없는 계정이 이미 계정이 있는 주소로 이메일을 등록하려 했다 - 그 주소의 주인에게 가는 안내(인증번호 메일이 아니다) */
+export const REGISTRATION_ATTEMPT_SUBJECT =
+  /^(?:이 주소로 이메일 등록을 시도했어요|Someone tried to register this email)$/

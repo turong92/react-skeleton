@@ -1,8 +1,24 @@
 import { expect as baseExpect, type Browser, type Page } from 'playwright/test'
 import { afterAll, beforeAll, describe, inject, it } from 'vitest'
-import { acceptLegalGate, agreeToLegal, auth, dismissConsent, ko, launch, legal } from './helpers'
+import {
+  acceptLegalGate,
+  agreeToLegal,
+  auth,
+  dismissConsent,
+  fillSignIn,
+  ko,
+  launch,
+  legal,
+} from './helpers'
 import { signOut } from './boardSteps'
-import { subjectsFor, waitForCode, waitForLink, waitForSubject } from './mail'
+import {
+  CODE_SUBJECT,
+  REGISTRATION_ATTEMPT_SUBJECT,
+  subjectsFor,
+  waitForCode,
+  waitForLink,
+  waitForSubject,
+} from './mail'
 
 /*
  * 이메일 필수(`skeleton.account.email.required`) + 연락받을 이메일(`contact-email.enabled`) — 백엔드 샘플이 둘 다 켜 둔다.
@@ -11,7 +27,7 @@ import { subjectsFor, waitForCode, waitForLink, waitForSubject } from './mail'
  *     → 번호가 안 오는 주소(이미 남이 쓰는 주소) 안내 → 메일함의 인증번호 → 약관 → 홈 → 이제 게시판 API 가 열린다.
  *  2) 연락받을 이메일: 설정에서 등록(그 주소로 간 인증번호) → 설정 요약에 보인다 → **비밀번호 찾기에 그 주소를 넣으면 메일이 가지 않는다**(계정 이메일은 간다) → 지운다.
  * 가짜 제공자가 없으면(`fakeUrl` 빈 문자열) 1) 은 건너뛴다.
- * 1시간이 지난 첫 등록의 제공자 재동의(`REAUTH_REQUIRED`)는 마지막 로그인 시각에 달려 있어 표준 구성으로는 만들 수 없다 — `E2E_EMAIL_REAUTH_WINDOW=PT0S` 로 백엔드를 띄우는 두 번째 판(`pnpm e2e:reauth`)의 `emailReauth.e2e.ts` 가 시험한다.
+ * 오래된 세션의 첫 등록(`REAUTH_REQUIRED` -> 제공자 재동의)은 `emailReauth.e2e.ts` 가 표준 구성에서 시험한다(두 번째 컨텍스트가 첫 세션을 닫는다).
  */
 // 막이 뜨는 데는 부하가 큰 기계에서 한참 걸릴 수 있다 - 통과하는 단언은 이 한도를 쓰지 않는다
 const pwExpect = baseExpect.configure({ timeout: 45_000 })
@@ -74,10 +90,10 @@ describe('an address-less account (LINE gives no email) is stopped by the regist
     await pwExpect(
       gate().getByRole('textbox', { name: new RegExp(`^${auth.emailRequiredField}`) }),
     ).toBeVisible()
-    // 눌리는 것은 모두 단추다 — 인증번호 받기(채움) · 로그아웃 · 계정 삭제
+    // 눌리는 것은 모두 단추다 — 인증번호 받기(채움) · 로그아웃 · 이 계정 지우기
     await pwExpect(gate().getByRole('button', { name: auth.emailRequiredSend })).toBeVisible()
     await pwExpect(gate().getByRole('button', { name: auth.emailRequiredSignOut })).toBeVisible()
-    await pwExpect(gate().getByRole('button', { name: auth.emailRequiredDelete })).toBeVisible()
+    await pwExpect(gate().getByRole('button', { name: auth.emailRequiredDiscard })).toBeVisible()
     // 제목에 포커스 — 낭독이 제목부터 읽는다
     await pwExpect(gate().getByRole('heading', { level: 1 })).toBeFocused()
   })
@@ -143,7 +159,7 @@ describe('an address-less account (LINE gives no email) is stopped by the regist
       ).toBeVisible()
       // 메일함에는 인증번호가 가지 않는다 — 가입된 주소에는 「이미 계정이 있어요」 메일만
       // 요청이 끝까지 처리됐다는 신호: 가입된 주소로는 「이미 계정이 있어요」 메일이 간다 - 그 다음에 인증번호 메일이 없음을 본다
-      await waitForSubject(mailUrl, taken, /^(?:이미 계정이 있어요|You already have an account)$/)
+      await waitForSubject(mailUrl, taken, REGISTRATION_ATTEMPT_SUBJECT)
       const subjects = await subjectsFor(mailUrl, taken)
       pwExpect(
         subjects.some((s) => /^새 이메일 확인 인증번호|Your code to confirm the new email/.test(s)),
@@ -315,17 +331,104 @@ describe('the ways out of the register-your-email screen work when pressed', () 
       await page.evaluate(() => window.localStorage.getItem('sample.accessToken')),
     ).toBeNull()
   })
+})
+
+/*
+ * 「이미 계정이 있나요?」 - 같은 사람이 메일 계정 A 가 있는데 이메일 없는 소셜(LINE)로 들어와 빈 계정이 생겼다. A 의 주소를 적으면 같은 202 인데 인증번호는 오지 않는다(A 의 주인에게 「등록 시도」 메일만).
+ * 끝까지: 빈 계정 지우기(확인 한 번 - 모든 세션 종료) -> 로그인 화면 -> A 로 로그인 -> 설정에서 LINE 연결 이어서 -> 로그아웃 -> LINE 으로 로그인하면 A.
+ */
+describe('already have an account: the empty social account is discarded and the real one gets the social login', () => {
+  const mail = `e2e-discard-${stamp}@example.com`
+  const mailPassword = 'Passw0rd!x9'
+  const sub = `U-discard-${stamp}`
+  const lineSignIn = async () => {
+    await page.goto(`${baseUrl}/login`)
+    await page.getByRole('button', { name: 'LINE으로 계속하기' }).click()
+  }
+
+  run('a mail account exists', async () => {
+    await page.evaluate(() => window.localStorage.clear())
+    await page.goto(`${baseUrl}/sign-up`)
+    await dismissConsent(page)
+    await page.getByLabel(auth.email).fill(mail)
+    await page.getByLabel(auth.displayName).fill('지우기 시험')
+    await page.getByLabel(auth.password).first().fill(mailPassword)
+    await page.getByLabel(auth.passwordConfirm).fill(mailPassword)
+    await agreeToLegal(page, apiUrl)
+    await page.getByRole('button', { name: auth.signUpSubmit }).click()
+    const code = await waitForCode(mailUrl, mail, 'verify', { seen })
+    await page.getByLabel(auth.codeDigit(1, 6)).click()
+    await page.keyboard.type(code.code)
+    await pwExpect(page.getByRole('heading', { level: 1, name: /안녕하세요/ })).toBeVisible()
+    await signOut(page)
+  })
 
   run(
-    '"delete my account" opens the delete section of the settings, which is reachable and focused',
+    'LINE without an address makes an empty account; its address is the real one: no code comes',
     async () => {
-      await signInWithLine()
-      await gate().getByRole('button', { name: auth.emailRequiredDelete }).click()
-      await pwExpect(page).toHaveURL(/\/account#delete$/)
-      await pwExpect(gate()).toHaveCount(0) // 계정 설정에서는 막이 걷힌다
-      const section = page.getByRole('region', { name: auth.sectionDelete })
-      await pwExpect(section).toBeVisible()
-      await pwExpect(section).toBeInViewport()
+      await control({ line: { sub, name: '빈 계정', email: '' }, deny: false })
+      await lineSignIn()
+      await pwExpect(gate()).toBeVisible()
+      await gate()
+        .getByRole('textbox', { name: new RegExp(`^${auth.emailRequiredField}`) })
+        .fill(mail)
+      await gate().getByRole('button', { name: auth.emailRequiredSend }).click()
+      await pwExpect(gate().getByText(auth.emailRequiredCodeTitle)).toBeVisible()
+      await waitForSubject(mailUrl, mail, REGISTRATION_ATTEMPT_SUBJECT) // 주인에게는 「등록 시도」 메일만
+      pwExpect(
+        (await subjectsFor(mailUrl, mail)).some((s) => CODE_SUBJECT['email-change'].test(s)),
+      ).toBe(false)
     },
   )
+
+  run('"delete this account" asks once, then deletes it at once and goes to sign-in', async () => {
+    await gate().getByRole('button', { name: auth.emailRequiredDiscard }).click()
+    const confirm = page.getByRole('dialog', { name: auth.emailRequiredDiscardConfirmTitle })
+    await pwExpect(confirm).toBeVisible()
+    // 눌렀다고 바로 지우지 않는다 - 취소하면 그대로다
+    await confirm.getByRole('button', { name: auth.cancel }).click()
+    await pwExpect(confirm).toBeHidden()
+    pwExpect(
+      await page.evaluate(() => window.localStorage.getItem('sample.accessToken')),
+    ).not.toBeNull()
+    await gate().getByRole('button', { name: auth.emailRequiredDiscard }).click()
+    await page
+      .getByRole('dialog', { name: auth.emailRequiredDiscardConfirmTitle })
+      .getByRole('button', { name: auth.emailRequiredDiscardConfirm })
+      .click()
+    await pwExpect(page).toHaveURL(/\/login$/)
+    await pwExpect(gate()).toHaveCount(0)
+    pwExpect(
+      await page.evaluate(() => window.localStorage.getItem('sample.accessToken')),
+    ).toBeNull()
+  })
+
+  run(
+    'sign in to the real account: the settings continue the LINE link; linking works now',
+    async () => {
+      await fillSignIn(page, { email: mail, password: mailPassword })
+      await acceptLegalGate(page, apiUrl)
+      await pwExpect(page).toHaveURL(/\/account#methods$/)
+      await pwExpect(page.getByText(auth.methodLinkContinue('LINE'))).toBeVisible()
+      await page.getByRole('button', { name: auth.methodLink('LINE') }).click()
+      await pwExpect(page.getByRole('heading', { name: auth.reauthTitle })).toBeVisible()
+      await page.getByLabel(auth.currentPassword).fill(mailPassword)
+      await page.getByRole('button', { name: auth.methodLink('LINE') }).click()
+      await pwExpect(page.getByText(auth.methodLinkedNotice('LINE'))).toBeVisible()
+      await page.goto(baseUrl)
+      await signOut(page)
+    },
+  )
+
+  run('the same LINE sign-in now opens the real account', async () => {
+    await page.evaluate(() => window.localStorage.clear())
+    await lineSignIn()
+    await acceptLegalGate(page, apiUrl)
+    await pwExpect(page.getByRole('heading', { level: 1, name: /안녕하세요/ })).toBeVisible()
+    await pwExpect(gate()).toHaveCount(0)
+    await page.goto(`${baseUrl}/account`)
+    await pwExpect(
+      page.getByRole('region', { name: auth.sectionEmail }).getByText(mail),
+    ).toBeVisible()
+  })
 })

@@ -1,6 +1,16 @@
 import { expect as baseExpect, type Browser, type Page } from 'playwright/test'
 import { afterAll, beforeAll, describe, inject, it } from 'vitest'
-import { auth, dismissConsent, ko, launch, legal, legalOn } from './helpers'
+import {
+  auth,
+  chooseLoginIdViaGate,
+  dismissConsent,
+  ko,
+  launch,
+  legal,
+  legalOn,
+  fillLoginId,
+  uniqueLoginId,
+} from './helpers'
 import { waitForCode, waitForLink } from './mail'
 
 /*
@@ -43,6 +53,7 @@ describe('sign-up consent checklist', () => {
       await dismissConsent(page)
       await page.getByLabel(auth.email).fill(email)
       await page.getByLabel(auth.displayName).fill('가입 시험 사용자') // 샘플 앱은 가입에서 닉네임을 받는다
+      await fillLoginId(page, uniqueLoginId()) // 샘플 백엔드는 가입에서 로그인 아이디를 받는다
       await page.getByLabel(auth.password).first().fill(password)
       await page.getByLabel(auth.passwordConfirm).fill(password)
       await pwExpect(page.getByRole('checkbox', { name: legal.agreeAll })).toBeVisible()
@@ -137,6 +148,7 @@ describe('first sign-in without a consent (link login creates the account with n
       await page.getByRole('button', { name: auth.signInMagicLinkSubmit }).click()
       const link = await waitForLink(mailUrl, first, 'magic-link', { seen })
       await page.goto(`${baseUrl}${link.path}`)
+      await chooseLoginIdViaGate(page, apiUrl, uniqueLoginId(), true) // 링크로 처음 들어온 계정은 아이디가 맨 앞이다(아이디 → 약관)
       const gate = page.getByRole('dialog', { name: legal.firstConsentTitle })
       await pwExpect(gate).toBeVisible()
       await pwExpect(gate.getByText(legal.reconsentBodyFirstSignIn)).toBeVisible()
@@ -171,6 +183,7 @@ describe('first sign-in without a consent (link login creates the account with n
     await page.getByRole('button', { name: auth.signInMagicLinkSubmit }).click()
     const link = await waitForLink(mailUrl, other, 'magic-link', { seen })
     await page.goto(`${baseUrl}${link.path}`)
+    await chooseLoginIdViaGate(page, apiUrl, uniqueLoginId(), true) // 링크로 처음 들어온 계정은 아이디가 맨 앞이다(아이디 → 약관)
     const gate = page.getByRole('dialog', { name: legal.firstConsentTitle })
     await pwExpect(gate).toBeVisible()
     await gate.getByRole('button', { name: legal.reconsentLeave }).click()
@@ -196,6 +209,7 @@ describe('re-consent filter (backend started with skeleton.legal.reconsent.enabl
     await page.getByRole('button', { name: auth.signInMagicLinkSubmit }).click()
     const link = await waitForLink(mailUrl, blocked, 'magic-link', { seen })
     await page.goto(`${baseUrl}${link.path}`)
+    await chooseLoginIdViaGate(page, apiUrl, uniqueLoginId(), true) // 링크로 처음 들어온 계정은 아이디가 맨 앞이다(아이디 → 약관)
     // 링크가 로그인시키고 대시보드로 보낸다 — 대시보드의 보호된 호출이 동의가 없어 403 으로 막힌다(첫 로그인 확인은 위에서 가렸다)
     const gate = page.getByRole('dialog', { name: legal.firstConsentTitle })
     await pwExpect(gate).toBeVisible()

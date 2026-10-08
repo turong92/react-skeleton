@@ -76,15 +76,15 @@ export default async function setup(project: TestProject) {
     if (process.env.E2E_FAKE_PROVIDERS !== '0') fake = await startFakeProviders()
     // 링크 로그인 요청은 같은 IP(::1)에서 시간당 10번(`skeleton.auth-magic-link.per-ip`, 넘으면 429)이 한도다 — 이 실행의 시나리오는 한 백엔드에 새 계정을 여럿 만들어 10번을 넘는다. e2e 백엔드에서만 올린다
     // E2E_EMAIL_REAUTH_WINDOW=PT0S: 첫 이메일 등록의 재인증 면제 창을 없앤다 — 「1시간이 지난」 제공자 재동의 길(emailReauth.e2e.ts)을 만들 수 있는 유일한 길. 표준 실행에서는 쓰지 않는다
+    // 아이디 정하기 한도(`login-id.claim-limit`: 계정마다 · IP 마다 시간당 10번 - 같은 IP 에서 계정을 여럿 만드는 이 실행은 넘는다)와 실시간 중복 확인의 IP 한도(`check-per-ip`)도 e2e 백엔드에서만 올린다
     const e2eLimits = {
       'auth-magic-link': { 'per-ip': 100 },
-      ...(process.env.E2E_EMAIL_REAUTH_WINDOW
-        ? {
-            account: {
-              email: { 'first-registration-window': process.env.E2E_EMAIL_REAUTH_WINDOW },
-            },
-          }
-        : {}),
+      account: {
+        'login-id': { 'claim-limit': 1000, 'check-per-ip': 5000 },
+        ...(process.env.E2E_EMAIL_REAUTH_WINDOW
+          ? { email: { 'first-registration-window': process.env.E2E_EMAIL_REAUTH_WINDOW } }
+          : {}),
+      },
     }
     const fakeConfig = fake
       ? {

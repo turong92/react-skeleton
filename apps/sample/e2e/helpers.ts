@@ -17,12 +17,17 @@ export const ko = (key: MessageKey, values?: Record<string, string | number>) =>
 export const DEMO = { email: 'user@example.com', password: 'password' }
 
 export async function launch(
-  options: { recordVideoDir?: string; colorScheme?: 'light' | 'dark' } = {},
+  options: {
+    recordVideoDir?: string
+    colorScheme?: 'light' | 'dark'
+    /** 브라우저 언어 - 앱이 이 언어로 그린다(기본 한국어). 증거 스크립트의 영어 화면용 */
+    locale?: 'ko-KR' | 'en-US'
+  } = {},
 ) {
   const browser: Browser = await chromium.launch()
   const context: BrowserContext = await browser.newContext({
-    locale: 'ko-KR',
-    timezoneId: 'Asia/Seoul',
+    locale: options.locale ?? 'ko-KR',
+    timezoneId: options.locale === 'en-US' ? 'UTC' : 'Asia/Seoul',
     viewport: { width: 1280, height: 800 },
     colorScheme: options.colorScheme ?? 'light',
     ...(options.recordVideoDir
@@ -35,8 +40,8 @@ export async function launch(
 }
 
 /** 동의 배너가 떠 있으면 「모두 거부」 — 새 브라우저의 첫 방문은 배너가 화면 아래를 덮어 클릭을 가로챈다(사람도 한 번은 답해야 한다) */
-export async function dismissConsent(page: Page) {
-  const reject = page.getByRole('button', { name: ko('consent.rejectAll') })
+export async function dismissConsent(page: Page, locale: 'ko' | 'en' = 'ko') {
+  const reject = page.getByRole('button', { name: i18n.tIn(locale, 'consent.rejectAll') })
   if (await reject.isVisible()) await reject.click()
 }
 
@@ -144,13 +149,19 @@ const ACCESS_TOKEN_KEY = 'sample.accessToken'
 const GATE_TIMEOUT_MS = 45_000
 
 /**
- * 이 탭의 로그인 계정이 지금 어떤 막을 만나는가 — **화면이 아니라 서버가** 말한다(`GET /account/me` 의 `emailRequired`, `GET /legal/consents/me` 의 `blocked`).
+ * 이 탭의 로그인 계정이 지금 어떤 막을 만나는가 — **화면이 아니라 서버가** 말한다(`GET /account/me` 의 `loginId` · `emailRequired` · `emailRequiredToWrite`, `GET /legal/consents/me` 의 `blocked`).
  * 막이 뜰지를 화면 대기 시간으로 짐작하면 부하에서 「안 뜬다」로 잘못 읽고 지나가 뒤에서 연쇄 실패한다. 로그인이 끝나(토큰이 저장돼) 있을 때까지 기다린 뒤 묻는다.
+ * 순서는 서버 인터셉터와 같다: 아이디 → (로그인 직후 방식이면) 이메일 → 약관. 견본 앱은 이메일을 **쓰기 때** 받으므로 로그인 직후에는 아이디 → 약관뿐이다(`emailMissingToWrite` 는 쓰려 할 때 뜨는 막)
  */
 export async function gatesOf(
   page: Page,
   apiUrl: string,
-): Promise<{ emailRequired: boolean; consentRequired: boolean }> {
+): Promise<{
+  loginIdRequired: boolean
+  emailRequired: boolean
+  emailMissingToWrite: boolean
+  consentRequired: boolean
+}> {
   const { me, headers } = await meOf(page, apiUrl)
   let consentRequired = false
   if (await legalOn(apiUrl)) {
@@ -158,7 +169,12 @@ export async function gatesOf(
     if (!mine.ok) throw new Error(`GET /legal/consents/me → ${mine.status}`)
     consentRequired = ((await mine.json()) as { value: { blocked: boolean } }).value.blocked
   }
-  return { emailRequired: me.emailRequired === true, consentRequired }
+  return {
+    loginIdRequired: me.loginId === null,
+    emailRequired: me.emailRequired === true,
+    emailMissingToWrite: me.emailRequiredToWrite === true && !me.email,
+    consentRequired,
+  }
 }
 
 /** 이 탭의 로그인 계정의 `GET /account/me` - 로그인이 끝나(토큰이 저장돼) 있을 때까지 기다린 뒤 묻는다. 같은 계정인지 가리는 데는 `id` */
@@ -172,35 +188,97 @@ export async function meOf(page: Page, apiUrl: string) {
   if (!response.ok) throw new Error(`GET /account/me → ${response.status}`)
   const me = (
     (await response.json()) as {
-      value: { id: string; email: string | null; emailRequired?: boolean }
+      value: {
+        id: string
+        email: string | null
+        /** 로그인 아이디 — 아이디를 켠 서버에서만 키가 있다(`null` = 아직 못 정했다) */
+        loginId?: string | null
+        emailRequired?: boolean
+        emailRequiredToWrite?: boolean
+      }
     }
   ).value
   return { me, headers }
 }
 
+let loginIdSeq = 0
+/** 시험마다 겹치지 않는 로그인 아이디(소문자 · 숫자 · 하이픈, 4~20자 안) - 한 백엔드에 계정이 여럿 생겨도 서로 선점하지 않는다 */
+export function uniqueLoginId(prefix = 'e2e') {
+  loginIdSeq += 1
+  return `${prefix}-${Date.now().toString(36)}${loginIdSeq.toString(36)}`.slice(0, 20)
+}
+
+/**
+ * 가입 양식의 아이디 칸을 채우고 실시간 확인이 「쓸 수 있는 아이디예요」라고 답할 때까지 기다린다 - 입력을 멈춘 뒤에야 답이 오고, 그 전에 내면 서버의 판정이 아니라 대기 중인 상태로 낸다.
+ * 아이디를 안 쓰는 서버(칸이 없다)에서는 아무 일도 하지 않는다
+ */
+export async function fillLoginId(page: Page, loginId: string) {
+  const field = page.getByRole('textbox', { name: new RegExp(`^${auth.loginId}`) })
+  if ((await field.count()) === 0) return
+  await field.fill(loginId)
+  await page.getByText(auth.loginIdAvailable).first().waitFor({ timeout: GATE_TIMEOUT_MS })
+}
+
+/**
+ * 소셜 · 링크로 처음 들어온 계정은 아이디가 없어 앱 대신 「아이디를 정해 주세요」가 덮는다(가장 바깥 막) - 서버가 아이디가 없다고 하면(`me.loginId === null`) 뜰 때까지 **기다렸다가**
+ * 아이디를 적고 「정하기」 확인까지 누른다. 안 뜨면 실패한다. 이미 있는 계정 · 아이디를 안 쓰는 서버는 아무 일도 하지 않는다. 시나리오가 `expectGate` 로 기대를 적고 서버의 답이 다르면 실패한다.
+ * 이메일 막(쓰기 때)은 이 뒤에도 뜨지 않는다 - 약관 → 쓰려 할 때 이메일(`registerEmailViaGate`)
+ */
+export async function chooseLoginIdViaGate(
+  page: Page,
+  apiUrl: string,
+  loginId: string,
+  expectGate: boolean,
+  labels: typeof auth = auth,
+) {
+  const { loginIdRequired } = await gatesOf(page, apiUrl)
+  if (loginIdRequired !== expectGate)
+    throw new Error(
+      `chooseLoginIdViaGate: the scenario expects the login id gate = ${expectGate}, the server says loginId missing = ${loginIdRequired}`,
+    )
+  if (!loginIdRequired) return
+  const gate = page.getByRole('dialog', { name: labels.loginIdRequiredTitle })
+  await gate.waitFor({ timeout: GATE_TIMEOUT_MS })
+  await gate.getByRole('textbox').fill(loginId)
+  await gate.getByText(labels.loginIdAvailable).waitFor({ timeout: GATE_TIMEOUT_MS })
+  await gate.getByRole('button', { name: labels.loginIdRequiredSubmit }).click()
+  const confirm = page.getByRole('dialog', { name: labels.loginIdConfirmTitle(loginId) })
+  await confirm.getByRole('button', { name: labels.loginIdConfirm, exact: true }).click()
+  await gate.waitFor({ state: 'detached', timeout: GATE_TIMEOUT_MS })
+}
+
 /**
  * 링크 · 소셜로 처음 들어온 계정은 동의가 없어 동의 화면이 앞을 막는다 — 서버가 「동의가 필요하다」고 말하면(`blocked`) 화면이 뜰 때까지 **기다렸다가** 모두 동의하고 이어 간다.
- * 안 뜨면 실패한다. 서버가 필요 없다고 하면(이미 동의한 계정 · legal 모듈이 없는 백엔드) 아무 일도 하지 않는다. 이메일 등록이 남아 있으면 약관 막은 아직 안 뜨는 순서라 먼저 `registerEmailViaGate` 를 불러야 한다
+ * 안 뜨면 실패한다. 서버가 필요 없다고 하면(이미 동의한 계정 · legal 모듈이 없는 백엔드) 아무 일도 하지 않는다. 이메일 등록이 남아 있으면 약관 막은 아직 안 뜨는 순서라 먼저 `registerEmailViaGate` 를 불러야 한다. 아이디가 없으면 그것이 맨 앞이다(`chooseLoginIdViaGate`)
  */
-export async function acceptLegalGate(page: Page, apiUrl: string, expectGate: boolean) {
+export async function acceptLegalGate(
+  page: Page,
+  apiUrl: string,
+  expectGate: boolean,
+  labels: typeof legal = legal,
+) {
   if (!(await legalOn(apiUrl))) return
-  const { emailRequired, consentRequired } = await gatesOf(page, apiUrl)
+  const { loginIdRequired, emailRequired, consentRequired } = await gatesOf(page, apiUrl)
   // 시나리오가 약관 막을 기대하는지(처음 들어온 계정) 아닌지(이미 동의한 계정)를 말한다 - 서버의 답이 다르면 건너뛰지 않고 실패한다
   if (consentRequired !== expectGate)
     throw new Error(
       `acceptLegalGate: the scenario expects the consent gate = ${expectGate}, the server says blocked = ${consentRequired}`,
     )
   if (!consentRequired) return
+  if (loginIdRequired)
+    throw new Error(
+      'acceptLegalGate: the login id gate comes first - call chooseLoginIdViaGate before',
+    )
   if (emailRequired)
     throw new Error(
       'acceptLegalGate: the email gate comes first - call registerEmailViaGate before',
     )
   const gate = page.getByRole('dialog', {
-    name: new RegExp(`${legal.reconsentTitle}|${legal.firstConsentTitle}`),
+    name: new RegExp(`${labels.reconsentTitle}|${labels.firstConsentTitle}`),
   })
   await gate.waitFor({ timeout: GATE_TIMEOUT_MS })
-  await gate.getByRole('checkbox', { name: legal.agreeAll }).check()
-  await gate.getByRole('button', { name: legal.reconsentSubmit }).click()
+  await gate.getByRole('checkbox', { name: labels.agreeAll }).check()
+  await gate.getByRole('button', { name: labels.reconsentSubmit }).click()
   await gate.waitFor({ state: 'detached' })
 }
 
@@ -280,8 +358,9 @@ export async function createProfile(
 }
 
 /**
- * 주소 없는 계정(LINE · X 가 주소를 안 준다)이 로그인하면 앱 대신 「이메일을 등록해 주세요」가 덮는다 — 주소를 적고 메일함의 인증번호로 통과한다.
- * 막이 뜰지는 서버가 말한다(`me.emailRequired`) - 호출하는 시나리오가 `expectGate` 로 기대를 적고, 서버의 답이 다르면 실패한다. 뜬다고 하면 뜰 때까지 기다린다(안 뜨면 실패)
+ * 주소 없는 계정(LINE · X 가 주소를 안 준다)은 견본 앱에서 **읽기는 그대로** 하고, 처음 **쓰려 할 때** 「글을 쓰려면 이메일을 등록해 주세요」가 뜬다 - 게시판의 글쓰기 단추를 눌러 막을 열고
+ * 주소를 적고 메일함의 인증번호로 통과한다(방금 연 세션이라 재인증은 없다). 끝나면 홈으로 돌아와 있다.
+ * 막이 뜰지는 서버가 말한다(`me.emailRequiredToWrite` + 주소 없음) - 호출하는 시나리오가 `expectGate` 로 기대를 적고, 서버의 답이 다르면 실패한다. 뜬다고 하면 뜰 때까지 기다린다(안 뜨면 실패)
  */
 export async function registerEmailViaGate(
   page: Page,
@@ -291,15 +370,15 @@ export async function registerEmailViaGate(
   expectGate: boolean,
   apiUrl = inject('apiUrl'),
 ) {
-  const { emailRequired } = await gatesOf(page, apiUrl)
+  const { emailMissingToWrite } = await gatesOf(page, apiUrl)
   // 시나리오의 기대와 서버의 답이 다르면(주소 없는 계정이어야 하는데 서버는 필요 없다고 한다 …) 건너뛰지 않고 실패한다
-  if (emailRequired !== expectGate)
+  if (emailMissingToWrite !== expectGate)
     throw new Error(
-      `registerEmailViaGate: the scenario expects the email gate = ${expectGate}, the server says emailRequired = ${emailRequired}`,
+      `registerEmailViaGate: the scenario expects the email gate = ${expectGate}, the server says an address is missing for writing = ${emailMissingToWrite}`,
     )
-  if (!emailRequired) return
-  const gate = page.getByRole('dialog', { name: auth.emailRequiredTitle })
-  await gate.waitFor({ timeout: GATE_TIMEOUT_MS })
+  if (!emailMissingToWrite) return
+  await openEmailGateByWriting(page)
+  const gate = page.getByRole('dialog', { name: auth.emailRequiredWriteTitle })
   await gate.getByRole('textbox', { name: new RegExp(`^${auth.emailRequiredField}`) }).fill(address)
   await gate.getByRole('button', { name: auth.emailRequiredSend }).click()
   const { waitForCode } = await import('./mail')
@@ -307,4 +386,91 @@ export async function registerEmailViaGate(
   await gate.getByLabel(auth.codeDigit(1, 6)).click()
   await page.keyboard.type(code.code)
   await gate.waitFor({ state: 'detached' })
+  await page.goto(inject('baseUrl')) // 홈으로 - 쓰려던 화면은 버리고 읽기로 돌아온다
+}
+
+/**
+ * 게시판 목록을 **새로** 열고 앱이 이 계정의 요구(`GET /account/me`)를 읽을 때까지 기다린다 - 읽기 전에 글쓰기를 누르면 앱은 아직 이메일이 필요한지 모른다(그래도 쓰기 화면에 들어서면 막이 스스로 뜬다 -
+ * 시험이 「단추에서 막힌다」를 가리려면 읽은 뒤에 눌러야 한다)
+ */
+export async function openBoardReady(page: Page) {
+  const read = page.waitForResponse(
+    (r) => new URL(r.url()).pathname === '/api/v1/account/me' && r.request().method() === 'GET',
+  )
+  await page.goto(`${inject('baseUrl')}/board`)
+  await read
+  await page.waitForTimeout(250) // 응답이 컨트롤러 상태로 옮겨지는 짧은 틈
+}
+
+/** 게시판에서 「글쓰기」를 눌러 쓰기용 이메일 막을 연다 - 막이 뜰 때까지 기다린다(안 뜨면 실패). 뜬 막을 돌려준다 */
+export async function openEmailGateByWriting(page: Page) {
+  await page.goto(`${inject('baseUrl')}/board`)
+  await dismissConsent(page)
+  await page
+    .getByRole('button', { name: ko('board.write'), exact: true })
+    .first()
+    .click()
+  const gate = page.getByRole('dialog', { name: auth.emailRequiredWriteTitle })
+  await gate.waitFor({ timeout: GATE_TIMEOUT_MS })
+  return gate
+}
+
+/** 로그인 화면의 LINE 단추 이름 — 가짜 LINE(`fakeProviders.ts`)을 켠 e2e 백엔드에서만 있다 */
+export const LINE_BUTTON = 'LINE으로 계속하기'
+
+/**
+ * 가짜 LINE 사용자(주소를 주지 않는다 = 카카오 · 네이버 · X 와 같은 주소 없는 계정)로 로그인 화면의 LINE 단추를 누른다. 이 뒤의 막(아이디 → 약관)은 호출하는 쪽이 지난다.
+ * `sub` 가 같으면 같은 계정이다(두 번째 로그인)
+ */
+export async function startLineSignIn(
+  page: Page,
+  fakeUrl: string,
+  user: { sub: string; name: string; email?: string },
+  locale: 'ko' | 'en' = 'ko',
+) {
+  await fetch(`${fakeUrl}/control`, {
+    method: 'POST',
+    body: JSON.stringify({
+      line: { sub: user.sub, name: user.name, email: user.email ?? '' },
+      deny: false,
+    }),
+  })
+  await page.goto(`${inject('baseUrl')}/login`)
+  await dismissConsent(page, locale)
+  await page.locator('button:has(svg[data-provider="line"])').click()
+}
+
+/**
+ * 주소 없는 소셜 계정으로 **이름 있는 닉네임까지** 갖춘 채 로그인한다 - 아이디 → 약관을 지나고, 닉네임은 `PATCH /account/me`(이메일 없이도 열린 변경)로 정한다.
+ * 백엔드는 `GET /author-profiles` 를 처음 부를 때 첫 프로필을 만들어 그때의 닉네임을 복사한다 - 앱이 로그인 직후 그 목록을 읽어 버리기 전에 정해야 하므로, 로그인하는 동안 프로필 요청을 붙잡아 두었다가 닉네임을 정한 뒤 푼다.
+ * (이름 있는 프로필이 있어야 글 · 댓글 폼이 작성자를 고를 수 있다. 이름 붙이기 자체는 쓰기라 이메일이 먼저다.) 끝나면 홈이다
+ */
+export async function signInWithLineNamed(
+  page: Page,
+  fakeUrl: string,
+  apiUrl: string,
+  user: { sub: string; name: string; nickname: string; loginId?: string },
+) {
+  let release: () => void = () => undefined
+  const held = new Promise<void>((resolve) => (release = resolve))
+  await page.route('**/api/v1/author-profiles**', async (route) => {
+    await held
+    await route.continue().catch(() => undefined)
+  })
+  try {
+    await startLineSignIn(page, fakeUrl, user)
+    await chooseLoginIdViaGate(page, apiUrl, user.loginId ?? uniqueLoginId('line'), true)
+    await acceptLegalGate(page, apiUrl, true)
+    await page.getByRole('heading', { level: 1, name: /안녕하세요/ }).waitFor()
+    const { headers } = await meOf(page, apiUrl)
+    const patched = await fetch(`${apiUrl}/api/v1/account/me`, {
+      method: 'PATCH',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ displayName: user.nickname }),
+    })
+    if (!patched.ok) throw new Error(`PATCH /account/me → ${patched.status}`)
+  } finally {
+    release()
+    await page.unroute('**/api/v1/author-profiles**').catch(() => undefined)
+  }
 }

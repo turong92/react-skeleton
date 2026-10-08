@@ -4,14 +4,28 @@ import {
   acceptLegalGate,
   agreeToLegal,
   auth,
+  chooseLoginIdViaGate,
+  consentViaApi,
   dismissConsent,
+  fillLoginId,
   fillSignIn,
   ko,
   launch,
-  legal,
   meOf,
+  openBoardReady,
+  signInWithLineNamed,
+  startLineSignIn,
+  uniqueLoginId,
 } from './helpers'
-import { signOut } from './boardSteps'
+import {
+  chooseProfile,
+  commentForm,
+  openBoard,
+  postForm,
+  seedPosts,
+  MODERATOR,
+  signOut,
+} from './boardSteps'
 import {
   CODE_SUBJECT,
   REGISTRATION_ATTEMPT_SUBJECT,
@@ -22,12 +36,13 @@ import {
 } from './mail'
 
 /*
- * 이메일 필수(`skeleton.account.email.required`) + 연락받을 이메일(`contact-email.enabled`) — 백엔드 샘플이 둘 다 켜 둔다.
- *  1) 주소를 주지 않는 가짜 LINE 사용자(= 카카오 · 네이버 · X 와 같은 주소 없는 계정)가 로그인하면 앱 대신 「이메일을 등록해 주세요」가 덮는다 —
- *     허용 목록 밖의 API 는 403 `ACCOUNT.EMAIL_REQUIRED` · 게시판 주소로 바로 들어가도 같은 화면 · 오류 토스트 없음 · 한 번에 하나(이메일 → 약관)
- *     → 번호가 안 오는 주소(이미 남이 쓰는 주소) 안내 → 메일함의 인증번호 → 약관 → 홈 → 이제 게시판 API 가 열린다.
+ * 이메일 필수(`skeleton.account.email.required` + `required-when: WRITE`) + 연락받을 이메일(`contact-email.enabled`) — 백엔드 샘플이 켜 둔다. 이메일은 **쓰려 할 때** 받는다.
+ *  1) 주소를 주지 않는 가짜 LINE 사용자(= 카카오 · 네이버 · X 와 같은 주소 없는 계정)는 로그인하면 아이디 → 약관만 지나고 **읽는 화면을 전부 돌아도 이메일 막이 뜨지 않는다**
+ *     (API 도 읽기는 열려 있고 변경만 403 `ACCOUNT.EMAIL_REQUIRED`). 글쓰기 단추를 누르면 그때 막이 뜨고(쓰기 모습 - 「나중에 하기」가 있다) 등록하면 쓰기 화면으로 간다.
+ *     댓글을 적고 내면 → 막 → 코드 → **다시 적지 않아도 같은 댓글이 올라간다**(붙잡았다 다시 보내는 호출은 같은 `Idempotency-Key` · 같은 본문). 「나중에 하기」 뒤에는 계속 읽고, 한 줄로 알린다.
  *  2) 연락받을 이메일: 설정에서 등록(그 주소로 간 인증번호) → 설정 요약에 보인다 → **비밀번호 찾기에 그 주소를 넣으면 메일이 가지 않는다**(계정 이메일은 간다) → 지운다.
- * 가짜 제공자가 없으면(`fakeUrl` 빈 문자열) 1) 은 건너뛴다.
+ *  3) 막에서 나가는 길(로그아웃 · 「이미 계정이 있나요?」 - 이 계정 지우고 로그인 화면으로)이 눌렀을 때 된다.
+ * 가짜 제공자가 없으면(`fakeUrl` 빈 문자열) 1) · 3) 은 건너뛴다.
  * 오래된 세션의 첫 등록(`REAUTH_REQUIRED` -> 제공자 재동의)은 `emailReauth.e2e.ts` 가 표준 구성에서 시험한다(두 번째 컨텍스트가 첫 세션을 닫는다).
  */
 // 막이 뜨는 데는 부하가 큰 기계에서 한참 걸릴 수 있다 - 통과하는 단언은 이 한도를 쓰지 않는다
@@ -37,6 +52,7 @@ const apiUrl = inject('apiUrl')
 const mailUrl = inject('mailUrl')
 const fakeUrl = inject('fakeUrl')
 const stamp = Date.now()
+const tail = String(stamp).slice(-6)
 const seen = new Set<string>()
 
 let browser: Browser
@@ -48,9 +64,6 @@ afterAll(async () => {
   await browser?.close()
 })
 
-const control = (patch: unknown) =>
-  fetch(`${fakeUrl}/control`, { method: 'POST', body: JSON.stringify(patch) })
-
 const run = (name: string, fn: () => Promise<void>) =>
   it(name, async (ctx) => {
     if (!fakeUrl) return ctx.skip()
@@ -58,15 +71,36 @@ const run = (name: string, fn: () => Promise<void>) =>
   })
 
 /** 로그인한 이 탭의 토큰으로 API 를 부른다 — 상태 코드와 오류 코드 */
-async function callApi(path: string) {
-  return page.evaluate(async (url) => {
-    const token = window.localStorage.getItem('sample.accessToken')
-    const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
-    const body = await response.json().catch(() => ({}))
-    return { status: response.status, code: (body as { code?: string }).code ?? null }
-  }, `${baseUrl}/api/v1${path}`)
+async function callApi(path: string, init: { method?: string; body?: unknown } = {}) {
+  return page.evaluate(
+    async ({ url, method, body }) => {
+      const token = window.localStorage.getItem('sample.accessToken')
+      const response = await fetch(url, {
+        method,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+        },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      })
+      const parsed = await response.json().catch(() => ({}))
+      return { status: response.status, code: (parsed as { code?: string }).code ?? null }
+    },
+    { url: `${baseUrl}/api/v1${path}`, method: init.method ?? 'GET', body: init.body },
+  )
 }
 
+/** 쓰기 모습의 이메일 막 - 「글을 쓰려면 이메일을 등록해 주세요」 */
+const gate = () => page.getByRole('dialog', { name: auth.emailRequiredWriteTitle })
+/** 로그인 직후 모습의 이메일 막 - 이 앱(쓰기 때)에서는 뜨지 않아야 한다 */
+const loginGate = () => page.getByRole('dialog', { name: auth.emailRequiredTitle })
+/** 화면의 아무 막(role=dialog)도 앱을 덮고 있지 않다 */
+const noDialog = () => pwExpect(page.getByRole('dialog')).toHaveCount(0)
+/** 「나중에 하기」 뒤의 한 줄 - 같은 줄이 두 번 뜨면 여기서 걸린다 */
+const declinedLine = () =>
+  page.locator('[data-sonner-toast]').filter({ hasText: auth.emailRequiredDeclined })
+/** 오류 토스트(전역 오류 알림) - 막이 말하는 403 은 여기 뜨지 않는다 */
+const errorToasts = () => page.locator('[data-sonner-toast][data-type="error"]')
 /** 화면에서 가장 위에 보이는 막(`role=dialog`)의 제목 — 한 번에 하나만 보이는지 */
 const topDialogTitle = () =>
   page.evaluate(() => {
@@ -74,131 +108,228 @@ const topDialogTitle = () =>
     return hit?.closest('[role="dialog"]')?.querySelector('h1,h2')?.textContent ?? null
   })
 
+const POST_TITLE = `읽기 시험 글 ${stamp}`
+const COMMENT = `이메일 없이 쓴 댓글 ${stamp}`
+let postId = 0
 const registered = `e2e-reg-${stamp}@example.com`
-const gate = () => page.getByRole('dialog', { name: auth.emailRequiredTitle })
+const field = () => gate().getByRole('textbox', { name: new RegExp(`^${auth.emailRequiredField}`) })
 
-describe('an address-less account (LINE gives no email) is stopped by the register-your-email screen', () => {
-  run('signing in with LINE shows the full-screen step instead of the app', async () => {
-    await control({
-      line: { sub: `U-req-${stamp}`, name: '주소 없는 사용자', email: '' },
-      deny: false,
-    })
-    await page.goto(`${baseUrl}/login`)
-    await dismissConsent(page)
-    await page.getByRole('button', { name: 'LINE으로 계속하기' }).click()
-    await pwExpect(gate()).toBeVisible()
-    await pwExpect(gate().getByText(auth.emailRequiredBody)).toBeVisible()
-    await pwExpect(
-      gate().getByRole('textbox', { name: new RegExp(`^${auth.emailRequiredField}`) }),
-    ).toBeVisible()
-    // 눌리는 것은 모두 단추다 — 인증번호 받기(채움) · 로그아웃 · 이 계정 지우기
-    await pwExpect(gate().getByRole('button', { name: auth.emailRequiredSend })).toBeVisible()
-    await pwExpect(gate().getByRole('button', { name: auth.emailRequiredSignOut })).toBeVisible()
-    await pwExpect(gate().getByRole('button', { name: auth.emailRequiredDiscard })).toBeVisible()
-    // 제목에 포커스 — 낭독이 제목부터 읽는다
-    await pwExpect(gate().getByRole('heading', { level: 1 })).toBeFocused()
+describe('an address-less account (LINE gives no email) reads everything; the email screen waits for the first write', () => {
+  it('a post exists to read and comment on', async () => {
+    await consentViaApi(MODERATOR) // 글쓴이는 운영자 시드 계정 - 댓글 알림이 다른 시험이 기대는 체험 계정(`user@…`)의 알림함에 쌓이지 않게
+    ;[postId] = await seedPosts(apiUrl, MODERATOR, [{ title: POST_TITLE, body: '읽기 시험 본문' }])
+    pwExpect(postId).toBeGreaterThan(0)
   })
 
   run(
-    'the server shut the API: 403 ACCOUNT.EMAIL_REQUIRED outside the allow list, me says emailRequired',
+    'signing in with LINE: the ID first, then terms - and the app opens with no email screen at all',
     async () => {
-      pwExpect(await callApi('/boards/config')).toEqual({
+      await signInWithLineNamed(page, fakeUrl, apiUrl, {
+        sub: `U-req-${stamp}`,
+        name: '주소 없는 사용자',
+        nickname: `쓰기${tail}`,
+      })
+      await noDialog()
+      await pwExpect(loginGate()).toHaveCount(0)
+      await pwExpect(gate()).toHaveCount(0)
+      const { me } = await meOf(page, apiUrl)
+      pwExpect(me.email).toBeNull()
+      pwExpect(me.emailRequired).not.toBe(true) // 로그인 직후 방식이 아니다
+      pwExpect(me.emailRequiredToWrite).toBe(true) // 쓰기 때 방식이다
+    },
+  )
+
+  run(
+    'the server shut only the writes: reads answer 200, a write answers 403 ACCOUNT.EMAIL_REQUIRED, the small writes the app listed stay open',
+    async () => {
+      for (const path of [
+        '/boards/config',
+        '/boards',
+        '/notes',
+        '/notifications',
+        '/auth/sessions',
+      ])
+        pwExpect((await callApi(path)).status, `GET ${path}`).toBe(200)
+      pwExpect(await callApi('/notes', { method: 'POST', body: {} })).toEqual({
         status: 403,
         code: 'ACCOUNT.EMAIL_REQUIRED',
       })
-      pwExpect(await callApi('/notes')).toEqual({ status: 403, code: 'ACCOUNT.EMAIL_REQUIRED' })
-      const me = await page.evaluate(async (url) => {
-        const token = window.localStorage.getItem('sample.accessToken')
-        const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
-        return (await response.json()).value as { emailRequired?: boolean; email: string | null }
-      }, `${baseUrl}/api/v1/account/me`)
-      pwExpect(me.emailRequired).toBe(true)
-      pwExpect(me.email).toBeNull()
-      // 허용 목록: 약관 조회 · 세션은 열려 있다
-      pwExpect((await callApi('/auth/sessions')).status).toBe(200)
+      // 허용: 닉네임 · 언어를 바꾸는 `PATCH /account/me`, 알림 읽음 표시(앱이 extra-exclude 로 열었다)
+      pwExpect((await callApi('/account/me', { method: 'PATCH', body: {} })).code).not.toBe(
+        'ACCOUNT.EMAIL_REQUIRED',
+      )
+      pwExpect((await callApi('/notifications/read-all', { method: 'PATCH' })).code).not.toBe(
+        'ACCOUNT.EMAIL_REQUIRED',
+      )
+      pwExpect((await callApi('/notifications/read-all', { method: 'PATCH' })).status).toBeLessThan(
+        300,
+      )
     },
   )
 
-  run('entering the board by its address shows the same screen, and no error toast', async () => {
-    await page.goto(`${baseUrl}/board`)
-    await pwExpect(gate()).toBeVisible()
-    pwExpect(await topDialogTitle()).toBe(auth.emailRequiredTitle)
-    await page.waitForLoadState('networkidle') // 뒤 화면의 쿼리가 모두 끝났다 - 403 을 쏟아냈다면 토스트가 이미 떴다
-    await pwExpect(page.locator('[data-sonner-toast]')).toHaveCount(0)
-    // 약관은 이메일 다음 — 이메일을 등록하기 전에는 약관 막이 아예 뜨지 않는다
-    await pwExpect(
-      page.getByRole('dialog', {
-        name: new RegExp(`${legal.reconsentTitle}|${legal.firstConsentTitle}`),
-      }),
-    ).toHaveCount(0)
+  run('walking every reading screen opens no email screen and shows no error', async () => {
+    const screens: Array<[string, () => Promise<unknown>]> = [
+      [
+        '/',
+        () => pwExpect(page.getByRole('heading', { level: 1, name: /안녕하세요/ })).toBeVisible(),
+      ],
+      [
+        '/notes',
+        () =>
+          pwExpect(page.getByRole('heading', { level: 1, name: ko('notes.title') })).toBeVisible(),
+      ],
+      ['/board', () => pwExpect(page.getByRole('link', { name: POST_TITLE })).toBeVisible()],
+      [
+        `/board/${postId}`,
+        () => pwExpect(page.getByRole('heading', { level: 2, name: POST_TITLE })).toBeVisible(),
+      ],
+      ['/settings', () => pwExpect(page.getByRole('heading', { level: 1 }).first()).toBeVisible()],
+      [
+        '/account',
+        () =>
+          pwExpect(page.getByRole('heading', { level: 1, name: auth.settingsTitle })).toBeVisible(),
+      ],
+    ]
+    for (const [path, shown] of screens) {
+      await page.goto(`${baseUrl}${path}`)
+      await shown()
+      await pwExpect(gate(), path).toHaveCount(0)
+      await pwExpect(loginGate(), path).toHaveCount(0)
+      await pwExpect(errorToasts(), path).toHaveCount(0)
+    }
+    // 머리글의 알림 종도 읽기다
+    await page.goto(baseUrl)
+    await page.getByRole('banner').getByRole('button', { name: /^알림/ }).click()
+    await pwExpect(gate()).toHaveCount(0)
+    await pwExpect(errorToasts()).toHaveCount(0)
+    await page.keyboard.press('Escape')
   })
 
   run(
-    'an address that cannot be right is explained in place, the button stays pressable',
+    'pressing "write" opens the write-time screen before the write screen: a title for writing, "not now", one at a time',
     async () => {
-      await gate().getByRole('button', { name: auth.emailRequiredSend }).click()
-      await pwExpect(gate().getByRole('button', { name: auth.problemEmailMissing })).toBeVisible()
-      await gate()
-        .getByRole('textbox', { name: new RegExp(`^${auth.emailRequiredField}`) })
-        .fill('nope')
-      await gate().getByRole('button', { name: auth.emailRequiredSend }).click()
-      await pwExpect(gate().getByRole('button', { name: auth.problemEmailInvalid })).toBeVisible()
+      await openBoardReady(page)
+      await dismissConsent(page)
+      await page
+        .getByRole('button', { name: ko('board.write'), exact: true })
+        .first()
+        .click()
+      await pwExpect(gate()).toBeVisible()
+      await pwExpect(gate().getByText(auth.emailRequiredWriteBody)).toBeVisible()
+      await pwExpect(field()).toBeVisible()
+      // 눌리는 것은 모두 단추다 — 인증번호 받기(채움) · 나중에 하기 · 로그아웃 · 이 계정 지우기
+      await pwExpect(gate().getByRole('button', { name: auth.emailRequiredSend })).toBeVisible()
+      await pwExpect(gate().getByRole('button', { name: auth.emailRequiredLater })).toBeVisible()
+      await pwExpect(gate().getByRole('button', { name: auth.emailRequiredSignOut })).toBeVisible()
+      await pwExpect(gate().getByRole('button', { name: auth.emailRequiredDiscard })).toBeVisible()
+      await pwExpect(gate().getByRole('heading', { level: 1 })).toBeFocused() // 제목에 포커스 — 낭독이 제목부터 읽는다
+      pwExpect(await topDialogTitle()).toBe(auth.emailRequiredWriteTitle)
+      pwExpect(new URL(page.url()).pathname).toBe('/board') // 쓰기 화면으로는 아직 가지 않았다
     },
   )
 
   run(
-    'an address another account owns: the same code screen, a hint, and no code arrives',
+    '"not now" closes it and says so in one line; reading goes on, nothing is signed out',
     async () => {
-      // 남이 쓰는 주소 — 백엔드가 시드한 체험 계정의 주소
-      const taken = 'user@example.com'
-      const field = gate().getByRole('textbox', { name: new RegExp(`^${auth.emailRequiredField}`) })
-      await field.fill(taken)
-      await gate().getByRole('button', { name: auth.emailRequiredSend }).click()
-      await pwExpect(gate().getByText(auth.emailRequiredCodeTitle)).toBeVisible()
-      await pwExpect(
-        gate().getByText(/번호가 안 오면 그 주소로 이미 가입한 계정이 있을 수 있어요/),
-      ).toBeVisible()
-      // 메일함에는 인증번호가 가지 않는다 — 가입된 주소에는 「이미 계정이 있어요」 메일만
-      // 요청이 끝까지 처리됐다는 신호: 가입된 주소로는 「이미 계정이 있어요」 메일이 간다 - 그 다음에 인증번호 메일이 없음을 본다
-      await waitForSubject(mailUrl, taken, REGISTRATION_ATTEMPT_SUBJECT)
-      const subjects = await subjectsFor(mailUrl, taken)
+      await gate().getByRole('button', { name: auth.emailRequiredLater }).click()
+      await pwExpect(gate()).toHaveCount(0)
+      await pwExpect(declinedLine()).toHaveCount(1)
+      await pwExpect(errorToasts()).toHaveCount(0)
+      await pwExpect(page.getByRole('link', { name: POST_TITLE })).toBeVisible()
+      pwExpect(new URL(page.url()).pathname).toBe('/board')
       pwExpect(
-        subjects.some((s) => /^새 이메일 확인 인증번호|Your code to confirm the new email/.test(s)),
-      ).toBe(false)
-      // 주소 고치기 — 입력 칸으로 돌아간다
-      await gate().getByRole('button', { name: auth.emailRequiredFixAddress }).click()
-      await pwExpect(
-        gate().getByRole('textbox', { name: new RegExp(`^${auth.emailRequiredField}`) }),
-      ).toBeFocused()
+        await page.evaluate(() => window.localStorage.getItem('sample.accessToken')),
+      ).not.toBeNull()
     },
   )
 
   run(
-    'the right address: the code from the mailbox ends it; terms come next, one at a time',
+    'a comment written without an address: the band says so above the box, the screen does not block typing',
     async () => {
-      await gate()
-        .getByRole('textbox', { name: new RegExp(`^${auth.emailRequiredField}`) })
-        .fill(registered)
+      await page.goto(`${baseUrl}/board/${postId}`)
+      await pwExpect(page.getByText(auth.emailRequiredWriteNotice)).toBeVisible()
+      await pwExpect(
+        page.getByRole('button', { name: auth.emailRequiredWriteNoticeAction }),
+      ).toBeVisible()
+      await pwExpect(gate()).toHaveCount(0) // 띠는 막지 않는다
+      await page.getByRole('textbox', { name: ko('board.comments.newComment') }).fill(COMMENT)
+      await chooseProfile(commentForm(page)) // 이름 있는 닉네임을 고른다 - 이메일과 별개의 쓰기 전 조건
+    },
+  )
+
+  /** 댓글 올리기 요청들 - 키 · 본문 · 상태를 모은다 */
+  const posts: Array<{ key: string | undefined; body: string | null; status?: number }> = []
+  const onRequest = (r: import('playwright/test').Request) => {
+    if (r.method() === 'POST' && /\/posts\/\d+\/comments$/.test(new URL(r.url()).pathname))
+      posts.push({ key: r.headers()['idempotency-key'], body: r.postData() })
+  }
+  const onResponse = (r: import('playwright/test').Response) => {
+    if (
+      r.request().method() === 'POST' &&
+      /\/posts\/\d+\/comments$/.test(new URL(r.url()).pathname)
+    ) {
+      const mine = posts.find(
+        (p) =>
+          p.status === undefined &&
+          p.body === r.request().postData() &&
+          p.key === r.request().headers()['idempotency-key'],
+      )
+      if (mine) mine.status = r.status()
+    }
+  }
+
+  run(
+    'posting it opens the screen; "not now" ends the held write as a 403, says so once, keeps the text',
+    async () => {
+      page.on('request', onRequest)
+      page.on('response', onResponse)
+      await page.getByRole('button', { name: ko('board.comments.postComment') }).click()
+      await pwExpect(gate()).toBeVisible()
+      await gate().getByRole('button', { name: auth.emailRequiredLater }).click()
+      await pwExpect(gate()).toHaveCount(0)
+      await pwExpect(declinedLine()).toHaveCount(1) // 같은 줄이 두 번 뜨지 않는다(붙잡은 호출의 실패도 이 한 줄이 말한다)
+      await pwExpect(errorToasts()).toHaveCount(0)
+      pwExpect(posts).toHaveLength(1)
+      pwExpect(posts[0].status).toBe(403)
+      // 쓰던 글은 그대로 있고, 올라가지 않았다
+      await pwExpect(
+        page.getByRole('textbox', { name: ko('board.comments.newComment') }),
+      ).toHaveValue(COMMENT)
+      await pwExpect(page.locator('[data-status] > p').filter({ hasText: COMMENT })).toHaveCount(0)
+    },
+  )
+
+  run(
+    'posting again: register the address with the mailed code - the SAME comment goes up without typing it again (same Idempotency-Key, same body)',
+    async () => {
+      posts.length = 0
+      await page.getByRole('button', { name: ko('board.comments.postComment') }).click()
+      await pwExpect(gate()).toBeVisible()
+      await field().fill(registered)
       await gate().getByRole('button', { name: auth.emailRequiredSend }).click()
       await pwExpect(gate().getByText(auth.emailRequiredCodeBody(registered))).toBeVisible()
-      await pwExpect(gate().getByText(/^남은 시간/)).toBeVisible()
       const code = await waitForCode(mailUrl, registered, 'email-change', { seen })
       await gate().getByLabel(auth.codeDigit(1, 6)).click()
       await page.keyboard.type(code.code)
       await pwExpect(gate()).toHaveCount(0)
-      // 이메일이 끝나면 약관(있는 백엔드) — 이메일 막이 걷힌 뒤에 보인다
-      await acceptLegalGate(page, apiUrl, true)
-      await pwExpect(page.getByRole('dialog')).toHaveCount(0)
+      // 입력 칸은 비워지고(올라갔다) 댓글이 목록에 한 번 보인다
+      await pwExpect(page.locator('[data-status] > p').filter({ hasText: COMMENT })).toHaveCount(1)
+      // 붙잡은 호출이 그대로 한 번 더 나갔다: 403 → 201, 같은 키 · 같은 본문
+      pwExpect(posts.map((p) => p.status)).toEqual([403, 201])
+      pwExpect(posts[0].key).toBeTruthy()
+      pwExpect(posts[1].key).toBe(posts[0].key)
+      pwExpect(posts[1].body).toBe(posts[0].body)
+      page.off('request', onRequest)
+      page.off('response', onResponse)
+      await pwExpect(page.locator('[inert]')).toHaveCount(0)
+      await pwExpect(page.getByText(auth.emailRequiredWriteNotice)).toHaveCount(0) // 주소가 생겨 띠가 사라진다
     },
   )
 
   run(
-    'now the app opens: the board and its API answer, the account shows the address',
+    'now the account is complete: the address is in the settings and every write opens',
     async () => {
-      await page.goto(`${baseUrl}/board`)
-      await pwExpect(page.getByRole('button', { name: ko('board.write') })).toBeVisible()
-      pwExpect((await callApi('/boards/config')).status).toBe(200)
-      await pwExpect(gate()).toHaveCount(0)
+      pwExpect((await meOf(page, apiUrl)).me.email).toBe(registered)
       await page.goto(`${baseUrl}/account`)
       await pwExpect(
         page
@@ -206,9 +337,86 @@ describe('an address-less account (LINE gives no email) is stopped by the regist
           .locator('strong')
           .filter({ hasText: registered }),
       ).toBeVisible()
-      // 계정 이메일은 지울 수 없다고 말한다 · 쓰임을 말한다
       await pwExpect(page.getByText(auth.emailCannotRemove)).toBeVisible()
       await pwExpect(page.getByText(auth.emailRole)).toBeVisible()
+      await page.goto(`${baseUrl}/board`)
+      await page
+        .getByRole('button', { name: ko('board.write'), exact: true })
+        .first()
+        .click()
+      await pwExpect(postForm(page)).toBeVisible() // 막 없이 쓰기 화면으로
+    },
+  )
+})
+
+describe('the write screen is reached through the email screen: the button first, then the form', () => {
+  const second = `e2e-reg-two-${stamp}@example.com`
+
+  run(
+    'entering the write screen by its address opens the email screen by itself, with the band above the form; "not now" leaves the form to type in',
+    async () => {
+      await page.evaluate(() => window.localStorage.clear())
+      await signInWithLineNamed(page, fakeUrl, apiUrl, {
+        sub: `U-form-${stamp}`,
+        name: '쓰기 화면 사용자',
+        nickname: `폼${tail}`,
+      })
+      await page.goto(`${baseUrl}/board/new`)
+      await pwExpect(gate()).toBeVisible() // 글을 다 쓴 뒤에야 막히면 글을 잃으니 들어서자마자 먼저 묻는다
+      await gate().getByRole('button', { name: auth.emailRequiredLater }).click()
+      await pwExpect(gate()).toHaveCount(0)
+      await pwExpect(declinedLine()).toHaveCount(1)
+      await pwExpect(page.getByText(auth.emailRequiredWriteNotice)).toBeVisible()
+      await pwExpect(postForm(page)).toBeVisible()
+      await pwExpect(page.getByLabel(new RegExp(ko('board.form.title')))).toBeEditable()
+    },
+  )
+
+  run(
+    'submitting the form anyway: the held write asks again, "not now" ends it as a 403 - the form keeps every field and says the post did not go up, the toast filter stays quiet',
+    async () => {
+      const title = `폼 시험 ${stamp}`
+      await page.getByLabel(new RegExp(ko('board.form.title'))).fill(title)
+      await page
+        .getByLabel(new RegExp(ko('board.form.body')))
+        .fill('나중에 하기를 눌러도 글은 남아요')
+      await chooseProfile(postForm(page))
+      await page.getByRole('button', { name: ko('board.form.submitCreate') }).click()
+      await pwExpect(gate()).toBeVisible() // 붙잡힌 쓰기가 같은 화면을 다시 연다
+      await gate().getByRole('button', { name: auth.emailRequiredLater }).click()
+      await pwExpect(gate()).toHaveCount(0)
+      await pwExpect(page.getByText(ko('board.form.failure'))).toBeVisible() // 폼이 받는 방식: 폼 위의 실패 한 줄
+      await pwExpect(declinedLine()).toHaveCount(1) // 전역 토스트는 이 403 을 거르고, 이 한 줄이 이유를 말한다
+      await pwExpect(errorToasts()).toHaveCount(0)
+      await pwExpect(page.getByLabel(new RegExp(ko('board.form.title')))).toHaveValue(title)
+      pwExpect(new URL(page.url()).pathname).toBe('/board/new') // 쓰던 폼에 그대로 있다
+    },
+  )
+
+  run(
+    'the "write" button asks first (the form is not entered), registering opens the way, the next press goes to the form',
+    async () => {
+      await openBoard(page)
+      await page
+        .getByRole('button', { name: ko('board.write'), exact: true })
+        .first()
+        .click()
+      await pwExpect(gate()).toBeVisible()
+      pwExpect(new URL(page.url()).pathname).toBe('/board')
+      await field().fill(second)
+      await gate().getByRole('button', { name: auth.emailRequiredSend }).click()
+      const code = await waitForCode(mailUrl, second, 'email-change', { seen })
+      await gate().getByLabel(auth.codeDigit(1, 6)).click()
+      await page.keyboard.type(code.code)
+      await pwExpect(gate()).toHaveCount(0)
+      pwExpect(new URL(page.url()).pathname).toBe('/board') // 등록했다고 저절로 가지 않는다 - 사용자가 다시 누른다
+      await page
+        .getByRole('button', { name: ko('board.write'), exact: true })
+        .first()
+        .click()
+      await pwExpect(page).toHaveURL(/\/board\/new$/)
+      await pwExpect(postForm(page)).toBeVisible()
+      await pwExpect(gate()).toHaveCount(0)
     },
   )
 })
@@ -224,6 +432,7 @@ describe('contact email: a second, optional address for notices (never for sign-
     await dismissConsent(page)
     await page.getByLabel(auth.email).fill(account)
     await page.getByLabel(auth.displayName).fill('연락 시험')
+    await fillLoginId(page, uniqueLoginId()) // 샘플 백엔드는 가입에서 로그인 아이디를 받는다
     await page.getByLabel(auth.password).first().fill(password)
     await page.getByLabel(auth.passwordConfirm).fill(password)
     await agreeToLegal(page, apiUrl)
@@ -311,20 +520,18 @@ describe('contact email: a second, optional address for notices (never for sign-
   })
 })
 
-describe('the ways out of the register-your-email screen work when pressed', () => {
-  const signInWithLine = async () => {
-    await control({
-      line: { sub: `U-out-${stamp}`, name: '떠날 사용자', email: '' },
-      deny: false,
-    })
-    await page.goto(`${baseUrl}/login`)
-    await page.getByRole('button', { name: 'LINE으로 계속하기' }).click()
-    await pwExpect(gate()).toBeVisible()
-  }
-
+describe('the ways out of the write-time email screen work when pressed', () => {
   run('"sign out" ends the session: the login page, no screen, no token', async () => {
     await page.evaluate(() => window.localStorage.clear())
-    await signInWithLine()
+    await startLineSignIn(page, fakeUrl, { sub: `U-out-${stamp}`, name: '떠날 사용자' })
+    await chooseLoginIdViaGate(page, apiUrl, uniqueLoginId('out'), true)
+    await acceptLegalGate(page, apiUrl, true)
+    await openBoard(page)
+    await page
+      .getByRole('button', { name: ko('board.write'), exact: true })
+      .first()
+      .click()
+    await pwExpect(gate()).toBeVisible()
     await gate().getByRole('button', { name: auth.emailRequiredSignOut }).click()
     await pwExpect(page).toHaveURL(/\/login$/)
     await pwExpect(gate()).toHaveCount(0)
@@ -335,13 +542,14 @@ describe('the ways out of the register-your-email screen work when pressed', () 
 })
 
 /*
- * 「이미 계정이 있나요?」 - 같은 사람이 메일 계정 A 가 있는데 이메일 없는 소셜(LINE)로 들어와 빈 계정이 생겼다. A 의 주소를 적으면 같은 202 인데 인증번호는 오지 않는다(A 의 주인에게 「등록 시도」 메일만).
- * 끝까지: 빈 계정 지우기(확인 한 번 - 모든 세션 종료) -> 로그인 화면 -> A 로 로그인 -> 설정에서 LINE 연결 이어서 -> 로그아웃 -> LINE 으로 로그인하면 A.
+ * 「이미 계정이 있나요?」 - 같은 사람이 메일 계정 A 가 있는데 이메일 없는 소셜(LINE)로 들어와 빈 계정이 생겼다. 아이디를 정하고 읽다가 처음 쓰려 할 때 A 의 주소를 적으면 같은 202 인데 인증번호는 오지 않는다(A 의 주인에게 「등록 시도」 메일만).
+ * 끝까지: 이메일 없는 계정 지우기(확인 한 번 - 정한 아이디도 함께 사라지고 다시 쓸 수 없다고 말한다 - 모든 세션 종료) -> 로그인 화면 -> A 로 로그인 -> 설정에서 LINE 연결 이어서 -> 로그아웃 -> LINE 으로 로그인하면 A.
  */
-describe('already have an account: the empty social account is discarded and the real one gets the social login', () => {
+describe('already have an account: the account without an email is discarded and the real one gets the social login', () => {
   const mail = `e2e-discard-${stamp}@example.com`
   const mailPassword = 'Passw0rd!x9'
   const sub = `U-discard-${stamp}`
+  const discardedLoginId = uniqueLoginId('gone')
   let mailAccountId = ''
   const lineSignIn = async () => {
     await page.goto(`${baseUrl}/login`)
@@ -354,6 +562,7 @@ describe('already have an account: the empty social account is discarded and the
     await dismissConsent(page)
     await page.getByLabel(auth.email).fill(mail)
     await page.getByLabel(auth.displayName).fill('지우기 시험')
+    await fillLoginId(page, uniqueLoginId('mail'))
     await page.getByLabel(auth.password).first().fill(mailPassword)
     await page.getByLabel(auth.passwordConfirm).fill(mailPassword)
     await agreeToLegal(page, apiUrl)
@@ -367,14 +576,18 @@ describe('already have an account: the empty social account is discarded and the
   })
 
   run(
-    'LINE without an address makes an empty account; its address is the real one: no code comes',
+    'LINE without an address makes an account without an email; it chooses an ID, tries to write, and its address is the real one: no code comes',
     async () => {
-      await control({ line: { sub, name: '빈 계정', email: '' }, deny: false })
-      await lineSignIn()
+      await startLineSignIn(page, fakeUrl, { sub, name: '빈 계정' })
+      await chooseLoginIdViaGate(page, apiUrl, discardedLoginId, true)
+      await acceptLegalGate(page, apiUrl, true)
+      await openBoard(page)
+      await page
+        .getByRole('button', { name: ko('board.write'), exact: true })
+        .first()
+        .click()
       await pwExpect(gate()).toBeVisible()
-      await gate()
-        .getByRole('textbox', { name: new RegExp(`^${auth.emailRequiredField}`) })
-        .fill(mail)
+      await field().fill(mail)
       await gate().getByRole('button', { name: auth.emailRequiredSend }).click()
       await pwExpect(gate().getByText(auth.emailRequiredCodeTitle)).toBeVisible()
       await waitForSubject(mailUrl, mail, REGISTRATION_ATTEMPT_SUBJECT) // 주인에게는 「등록 시도」 메일만
@@ -384,35 +597,55 @@ describe('already have an account: the empty social account is discarded and the
     },
   )
 
-  run('"delete this account" asks once, then deletes it at once and goes to sign-in', async () => {
-    await gate().getByRole('button', { name: auth.emailRequiredDiscard }).click()
-    const confirm = page.getByRole('dialog', { name: auth.emailRequiredDiscardConfirmTitle })
-    await pwExpect(confirm).toBeVisible()
-    // 눌렀다고 바로 지우지 않는다 - 취소하면 그대로다
-    await confirm.getByRole('button', { name: auth.cancel }).click()
-    await pwExpect(confirm).toBeHidden()
-    pwExpect(
-      await page.evaluate(() => window.localStorage.getItem('sample.accessToken')),
-    ).not.toBeNull()
-    await gate().getByRole('button', { name: auth.emailRequiredDiscard }).click()
-    await page
-      .getByRole('dialog', { name: auth.emailRequiredDiscardConfirmTitle })
-      .getByRole('button', { name: auth.emailRequiredDiscardConfirm })
-      .click()
-    await pwExpect(page).toHaveURL(/\/login$/)
-    await pwExpect(gate()).toHaveCount(0)
-    pwExpect(
-      await page.evaluate(() => window.localStorage.getItem('sample.accessToken')),
-    ).toBeNull()
-  })
+  run(
+    '"delete this account" asks once and names the ID that goes with it, then deletes it at once and goes to sign-in',
+    async () => {
+      await gate().getByRole('button', { name: auth.emailRequiredDiscard }).click()
+      const confirm = page.getByRole('dialog', { name: auth.emailRequiredDiscardConfirmTitle })
+      await pwExpect(confirm).toBeVisible()
+      // 정한 아이디가 함께 사라지고 다시 쓸 수 없다고 말한다
+      await pwExpect(
+        confirm.getByText(auth.emailRequiredDiscardConfirmLoginId(discardedLoginId)),
+      ).toBeVisible()
+      // 눌렀다고 바로 지우지 않는다 - 취소하면 그대로다
+      await confirm.getByRole('button', { name: auth.cancel }).click()
+      await pwExpect(confirm).toBeHidden()
+      pwExpect(
+        await page.evaluate(() => window.localStorage.getItem('sample.accessToken')),
+      ).not.toBeNull()
+      await gate().getByRole('button', { name: auth.emailRequiredDiscard }).click()
+      await page
+        .getByRole('dialog', { name: auth.emailRequiredDiscardConfirmTitle })
+        .getByRole('button', { name: auth.emailRequiredDiscardConfirm })
+        .click()
+      await pwExpect(page).toHaveURL(/\/login$/)
+      await pwExpect(gate()).toHaveCount(0)
+      pwExpect(
+        await page.evaluate(() => window.localStorage.getItem('sample.accessToken')),
+      ).toBeNull()
+    },
+  )
 
   run(
-    'sign in to the real account: the settings continue the LINE link; linking works now',
+    'sign in to the real account: the settings continue the LINE link; linking works now; the discarded ID is gone for good',
     async () => {
       await fillSignIn(page, { email: mail, password: mailPassword })
       await acceptLegalGate(page, apiUrl, false)
       await pwExpect(page).toHaveURL(/\/account#methods$/)
       await pwExpect(page.getByText(auth.methodLinkContinue('LINE'))).toBeVisible()
+      // 버린 계정의 아이디는 다시 쓸 수 없다 - 실시간 확인이 「쓸 수 없는 아이디」라고 답한다
+      const answer = await page.evaluate(
+        async ({ url, id }) => {
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ loginId: id }),
+          })
+          return (await response.json()) as { value: { available: boolean } }
+        },
+        { url: `${baseUrl}/api/v1/account/login-id/availability`, id: discardedLoginId },
+      )
+      pwExpect(answer.value.available).toBe(false)
       await page.getByRole('button', { name: auth.methodLink('LINE') }).click()
       await pwExpect(page.getByRole('heading', { name: auth.reauthTitle })).toBeVisible()
       await page.getByLabel(auth.currentPassword).fill(mailPassword)

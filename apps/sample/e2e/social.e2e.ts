@@ -4,11 +4,14 @@ import {
   acceptLegalGate,
   agreeToLegal,
   auth,
+  chooseLoginIdViaGate,
   dismissConsent,
   fillSignIn,
   launch,
   meOf,
   registerEmailViaGate,
+  fillLoginId,
+  uniqueLoginId,
 } from './helpers'
 import { signOut } from './boardSteps'
 import { waitForCode } from './mail'
@@ -85,11 +88,11 @@ describe('sign-in buttons come from discovery', () => {
 
 let lineAccountId = ''
 
-describe('LINE: PKCE + nonce on the way out and back, an address-less account registers its email first', () => {
+describe('LINE: PKCE + nonce on the way out and back, an address-less account chooses its ID, then registers its email at its first write', () => {
   const lineEmail = `e2e-line-${stamp}@example.com`
 
   run(
-    'the authorize request carries S256 challenge and nonce; the login request carries the verifier and nonce; the address-less account registers an email before anything else',
+    'the authorize request carries S256 challenge and nonce; the login request carries the verifier and nonce; the address-less account chooses its ID first and registers an email when it first writes',
     async () => {
       await control({ line: { sub: `U-line-${stamp}`, name: 'LINE 사용자' }, deny: false })
       await page.goto(`${baseUrl}/login`)
@@ -107,7 +110,8 @@ describe('LINE: PKCE + nonce on the way out and back, an address-less account re
       pwExpect(body.codeVerifier).toMatch(/^[A-Za-z0-9_-]{43}$/)
       pwExpect(body.nonce).toBe(q.get('nonce'))
       pwExpect(body.redirectUri).toBe(q.get('redirect_uri')) // 인가 요청과 글자까지 같다
-      await registerEmailViaGate(page, mailUrl, lineEmail, seen, true) // 주소 없는 계정: 이메일 등록 → 약관 → 홈(서버 인터셉터와 같은 순서)
+      // 소셜 첫 로그인: 아이디 → 약관 → 홈(서버 인터셉터와 같은 순서). 이메일은 로그인 직후에 묻지 않는다 - 읽기는 바로 된다
+      await chooseLoginIdViaGate(page, apiUrl, uniqueLoginId('line'), true)
       await acceptLegalGate(page, apiUrl, true) // legal 모듈이 있는 백엔드: 소셜로 처음 들어오면 동의부터
       await pwExpect(page.getByRole('heading', { level: 1, name: /안녕하세요/ })).toBeVisible()
       lineAccountId = (await meOf(page, apiUrl)).me.id // 이 LINE 사용자의 계정 - 두 번째 로그인이 같은 계정인지 가린다
@@ -119,6 +123,8 @@ describe('LINE: PKCE + nonce on the way out and back, an address-less account re
           Object.keys(window.sessionStorage).filter((k) => k.startsWith('sample.social')),
         ),
       ).toEqual([])
+      // 주소 없는 계정이 처음 쓰려 할 때 이메일 등록이 뜬다(방금 연 세션이라 재인증 없이 코드만) → 홈
+      await registerEmailViaGate(page, mailUrl, lineEmail, seen, true)
     },
   )
 
@@ -160,7 +166,7 @@ describe('LINE: PKCE + nonce on the way out and back, an address-less account re
 describe('X: PKCE without a nonce, 30-second codes are exchanged at once', () => {
   const xEmail = `e2e-x-${stamp}@example.com`
   run(
-    'the authorize request has S256 and NO nonce; sign-in works, the address-less account registers an email, then lands in the app',
+    'the authorize request has S256 and NO nonce; sign-in works, the new account chooses its ID, lands in the app and registers an email when it writes',
     async () => {
       await page.evaluate(() => window.localStorage.clear())
       await control({ x: { id: `x-${stamp}`, username: 'x_user' }, deny: false })
@@ -175,10 +181,11 @@ describe('X: PKCE without a nonce, 30-second codes are exchanged at once', () =>
       const body = (await login).postDataJSON() as Record<string, string>
       pwExpect(body.codeVerifier).toMatch(/^[A-Za-z0-9_-]{43}$/)
       pwExpect('nonce' in body).toBe(false)
-      await pwExpect(page.getByRole('dialog', { name: auth.emailRequiredTitle })).toBeVisible() // X 도 주소를 주지 않는다
-      await registerEmailViaGate(page, mailUrl, xEmail, seen, true)
+      await pwExpect(page.getByRole('dialog', { name: auth.loginIdRequiredTitle })).toBeVisible() // X 도 새 계정이라 아이디부터
+      await chooseLoginIdViaGate(page, apiUrl, uniqueLoginId('x'), true)
       await acceptLegalGate(page, apiUrl, true)
       await pwExpect(page.getByRole('heading', { level: 1, name: /안녕하세요/ })).toBeVisible() // 콜백이 끝나고 토큰이 저장될 때까지
+      await registerEmailViaGate(page, mailUrl, xEmail, seen, true) // X 도 주소를 주지 않는다 - 쓰려 할 때 이메일
       await page.goto(`${baseUrl}/account`)
       await pwExpect(
         page
@@ -254,6 +261,7 @@ describe('a social sign-in with the email of an existing account is guided, not 
     await dismissConsent(page)
     await page.getByLabel(auth.email).fill(mail)
     await page.getByLabel(auth.displayName).fill('병합 시험')
+    await fillLoginId(page, uniqueLoginId()) // 샘플 백엔드는 가입에서 로그인 아이디를 받는다
     await page.getByLabel(auth.password).first().fill(mailPassword)
     await page.getByLabel(auth.passwordConfirm).fill(mailPassword)
     await agreeToLegal(page, apiUrl)

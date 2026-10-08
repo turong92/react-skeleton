@@ -2,13 +2,25 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import type { Locator, Page } from 'playwright'
 import { describe, inject, it } from 'vitest'
-import { acceptLegalGate, auth, dismissConsent, launch } from './helpers'
+import {
+  acceptLegalGate,
+  auth,
+  chooseLoginIdViaGate,
+  consentViaApi,
+  ko,
+  launch,
+  startLineSignIn,
+  uniqueLoginId,
+} from './helpers'
+import { openBoard, seedPosts, USER } from './boardSteps'
 import { waitForCode } from './mail'
 
 /*
- * 이메일 필수 증거 — 진짜 백엔드(`email.required` · `contact-email.enabled`) · 진짜 메일(mailpit) · 가짜 LINE(주소를 안 준다)으로 밟으며 한국어 화면을 남긴다:
- * 강제 화면(데스크톱 · 375) → 이미 쓰인 주소 안내 → 인증번호 입력 → (등록 전) 설정: 이메일 등록과 삭제만 → 등록 뒤 설정의 두 이메일 구역(연락받을 이메일 없음 · 입력 중 · 있음).
- * 실행: `E2E_WALKTHROUGH=1 SAMPLE_EVIDENCE_DIR=<폴더> pnpm --filter sample walkthrough`. `captions-email.md` 에 파일 → 한 줄 설명.
+ * 이메일 필수(쓰기 때) 증거 — 진짜 백엔드(`email.required` + `required-when: WRITE` · `contact-email.enabled`) · 진짜 메일(mailpit) · 가짜 LINE(주소를 안 준다)으로 밟으며 한국어 화면을 남긴다:
+ * 읽기 화면(이메일 없이: 대시보드 · 게시판) → 댓글 칸 위의 띠(데스크톱 · 375) → 글쓰기를 누르면 뜨는 쓰기용 이메일 화면(데스크톱 · 375 · 「나중에 하기」) → 「나중에 하기」 뒤의 한 줄 →
+ * 이미 쓰인 주소 안내 → 인증번호 입력 → 이 계정 지우기 확인(정한 아이디도 사라진다고 말한다) → (등록 전) 설정: 이메일이 먼저라는 카드 → 등록 뒤 설정의 두 이메일 구역(연락받을 이메일 없음 · 입력 중 · 있음).
+ * 실행: `E2E_WALKTHROUGH=1 SAMPLE_EVIDENCE_DIR=<폴더> pnpm --filter sample walkthrough`. `captions.md` 에 파일 → 한 줄 설명.
+ * 아이디 쪽 화면(가입 양식 · 로그인 · 아이디 찾기 · 아이디 게이트 · 설정 · 관리자 표 · 메일)은 `walkthrough.loginId.shots.ts` 가 남긴다.
  */
 const baseUrl = inject('baseUrl')
 const apiUrl = inject('apiUrl')
@@ -25,7 +37,7 @@ async function shot(page: Page, file: string, caption: string, target?: Locator)
   captions.push([file, caption])
 }
 
-const gate = (page: Page) => page.getByRole('dialog', { name: auth.emailRequiredTitle })
+const gate = (page: Page) => page.getByRole('dialog', { name: auth.emailRequiredWriteTitle })
 const field = (page: Page) =>
   gate(page).getByRole('textbox', { name: new RegExp(`^${auth.emailRequiredField}`) })
 
@@ -36,23 +48,48 @@ describe('email required walkthrough', () => {
     const stamp = Date.now()
     const address = `evidence-reg-${stamp}@example.com`
     const contact = `evidence-news-${stamp}@example.com`
-    await fetch(`${fakeUrl}/control`, {
-      method: 'POST',
-      body: JSON.stringify({
-        line: { sub: `U-evidence-email-${stamp}`, name: '시험', email: '' },
-        deny: false,
-      }),
-    })
     const { browser, page } = await launch()
     try {
-      await page.goto(`${baseUrl}/login`)
-      await dismissConsent(page)
-      await page.getByRole('button', { name: 'LINE으로 계속하기' }).click()
+      // 글 하나 - 읽는 화면 · 댓글 띠를 보일 자리
+      await consentViaApi(USER)
+      const [postId] = await seedPosts(apiUrl, USER, [
+        { title: `증거 글 ${stamp}`, body: '이메일 없는 계정이 읽는 글' },
+      ])
+      await startLineSignIn(page, fakeUrl, { sub: `U-evidence-email-${stamp}`, name: '시험' })
+      const loginId = uniqueLoginId('shot')
+      await chooseLoginIdViaGate(page, apiUrl, loginId, true)
+      await acceptLegalGate(page, apiUrl, true)
+      await page.getByRole('heading', { level: 1, name: /안녕하세요/ }).waitFor()
+      await shot(
+        page,
+        '00-read-dashboard-no-email.png',
+        '이메일 없이 읽는 화면 — 주소 없는 계정(LINE)이 아이디 · 약관을 지나 들어온 대시보드. 이메일 화면은 없다(읽기는 그대로).',
+      )
+      await openBoard(page)
+      await page.getByRole('link', { name: `증거 글 ${stamp}` }).waitFor()
+      await shot(page, '00b-read-board-no-email.png', '게시판 목록도 이메일 없이 읽는다.')
+      await page.goto(`${baseUrl}/board/${postId}`)
+      await page.getByText(auth.emailRequiredWriteNotice).waitFor()
+      await shot(
+        page,
+        '00c-comment-band-desktop.png',
+        '글 아래 댓글 칸 위의 띠 — 「이메일을 등록하면 글을 쓸 수 있어요」 + 테두리 「이메일 등록」. 막지 않는다(입력은 그대로 쓸 수 있다).',
+      )
+      await page.setViewportSize({ width: 375, height: 800 })
+      await shot(page, '00d-comment-band-375.png', '같은 띠 375px — 가로로 밀리지 않는다.')
+      await page.setViewportSize({ width: 1280, height: 800 })
+
+      // 글쓰기를 누르면 그때 뜬다
+      await openBoard(page)
+      await page
+        .getByRole('button', { name: ko('board.write'), exact: true })
+        .first()
+        .click()
       await gate(page).waitFor()
       await shot(
         page,
         '01-email-required-desktop.png',
-        '이메일을 등록해 주세요 — 주소 없는 계정(LINE)이 로그인하면 앱 대신 덮는 전면 화면. 이유 한 줄 · 채운 「인증번호 받기」 · 로그아웃 · 내 계정 삭제.',
+        '글을 쓰려면 이메일을 등록해 주세요 — 글쓰기를 누르면 그때 뜨는 전면 화면(쓰기용). 이유 한 줄 · 채운 「인증번호 받기」 · 테두리 「나중에 하기」 · 로그아웃 · 내 계정 삭제.',
       )
       await page.setViewportSize({ width: 375, height: 760 })
       await shot(
@@ -61,6 +98,21 @@ describe('email required walkthrough', () => {
         '같은 화면 375px — 가로로 밀리지 않고 단추가 칸을 채운다.',
       )
       await page.setViewportSize({ width: 1280, height: 800 })
+
+      // 「나중에 하기」 - 닫고 계속 읽는다(한 줄로 알린다), 다시 글쓰기를 누르면 또 뜬다
+      await gate(page).getByRole('button', { name: auth.emailRequiredLater }).click()
+      await gate(page).waitFor({ state: 'detached' })
+      await page.getByText(auth.emailRequiredDeclined).first().waitFor()
+      await shot(
+        page,
+        '02b-later-declined-line.png',
+        '「나중에 하기」로 닫은 뒤 — 읽기를 계속하고, 아무 말 없이 실패하지 않게 「이메일을 등록한 뒤에 쓸 수 있어요」 한 줄만 알린다.',
+      )
+      await page
+        .getByRole('button', { name: ko('board.write'), exact: true })
+        .first()
+        .click()
+      await gate(page).waitFor()
 
       // 이미 남이 쓰는 주소
       await field(page).fill('user@example.com')
@@ -109,10 +161,11 @@ describe('email required walkthrough', () => {
       await shot(page, '07c-discard-path-375.png', '「이미 계정이 있나요?」 375px.')
       await discard.click()
       await page.getByRole('dialog', { name: auth.emailRequiredDiscardConfirmTitle }).waitFor()
+      await page.getByText(auth.emailRequiredDiscardConfirmLoginId(loginId)).waitFor() // 정한 아이디가 함께 사라지고 다시 쓸 수 없다고 말한다
       await shot(
         page,
         '07d-discard-confirm-375.png',
-        '지우기 확인 375px - 유예 없이 되돌릴 수 없다고 말하고 한 번 더 묻는다.',
+        '지우기 확인 375px - 유예 없이 되돌릴 수 없고 정한 아이디도 함께 사라진다고 말하고 한 번 더 묻는다.',
       )
       await page.setViewportSize({ width: 1280, height: 800 })
       await shot(page, '07e-discard-confirm-desktop.png', '지우기 확인.')
@@ -123,15 +176,19 @@ describe('email required walkthrough', () => {
 
       // 등록 전 설정: 이메일 등록과 삭제만
       await page.goto(`${baseUrl}/account`)
-      await page.getByText(auth.emailRequiredSettingsNotice).waitFor()
+      await page.getByText(auth.settingsNeedsEmail).first().waitFor()
       await shot(
         page,
         '08-settings-before-email.png',
-        '이메일 등록 전의 계정 설정 — 이메일 등록과 계정 삭제 구역만(나머지는 서버가 403).',
+        '이메일 등록 전의 계정 설정 — 아이디 줄(바꿀 수 없어요) · 이메일 구역 · 계정 삭제는 열려 있고, 비밀번호 · 로그인 수단 같은 구역은 「이메일을 등록한 뒤에 할 수 있어요」 + 테두리 「이메일 등록」 카드로 접힌다.',
       )
 
-      // 돌아가 통과
-      await page.goto(baseUrl)
+      // 돌아가 통과 - 글쓰기를 다시 누르면 막이 다시 뜬다
+      await openBoard(page)
+      await page
+        .getByRole('button', { name: ko('board.write'), exact: true })
+        .first()
+        .click()
       await gate(page).waitFor()
       // 새로고침해도 서버가 기억한 대기 중 변경(`me.pendingEmail`)으로 인증번호 단계가 돌아온다 - 주소 입력으로 돌아가지 않는다
       await gate(page).getByText(auth.emailRequiredCodeTitle).waitFor()
@@ -147,7 +204,7 @@ describe('email required walkthrough', () => {
       await gate(page).getByLabel(auth.codeDigit(1, 6)).click()
       await page.keyboard.type(code.code)
       await gate(page).waitFor({ state: 'detached' })
-      await acceptLegalGate(page, apiUrl, true)
+      await page.goto(baseUrl)
       await page.getByRole('heading', { level: 1, name: /안녕하세요/ }).waitFor()
 
       // 설정의 두 이메일 구역

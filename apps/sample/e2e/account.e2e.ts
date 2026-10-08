@@ -15,6 +15,9 @@ import {
   ko,
   launch,
   signUpConsents,
+  fillLoginId,
+  chooseLoginIdViaGate,
+  uniqueLoginId,
 } from './helpers'
 import { subjectsFor, waitForCode, waitForLink } from './mail'
 
@@ -140,6 +143,7 @@ describe('sign-up by a 6-digit code, signed in at once', () => {
     await page.goto(`${baseUrl}/sign-up`)
     await page.getByLabel(auth.email).fill(email)
     await page.getByLabel(auth.displayName).fill('가입 시험 사용자') // 샘플 앱은 가입에서 닉네임을 받는다
+    await fillLoginId(page, uniqueLoginId()) // 샘플 백엔드는 가입에서 로그인 아이디를 받는다
     await page.getByLabel(auth.password).first().fill('abc')
     // 서버 정책(`GET /account/password/policy`)에서 읽은 규칙이 미충족으로 보인다
     await pwExpect(page.getByText(auth.passwordRule.TOO_SHORT)).toBeVisible()
@@ -416,6 +420,7 @@ describe('a passwordless account (email link) re-authenticates by a mailed code,
     await pwExpect(heading(auth.magicLinkSentTitle, 2)).toBeVisible()
     const link = await waitForLink(mailUrl, linkEmail, 'magic-link', { seen })
     await page.goto(`${baseUrl}${link.path}`)
+    await chooseLoginIdViaGate(page, apiUrl, uniqueLoginId(), true) // 링크로 처음 들어온 계정은 아이디부터(가장 바깥 막)
     await acceptLegalGate(page, apiUrl, true) // legal 모듈이 있는 백엔드: 링크로 처음 들어온 계정은 동의부터
     await pwExpect(heading(/안녕하세요/)).toBeVisible()
   })
@@ -506,6 +511,7 @@ describe('delete a passwordless account with a mailed code and a typed phrase', 
     await page.getByRole('button', { name: auth.signInMagicLinkSubmit }).click()
     const link = await waitForLink(mailUrl, goneEmail, 'magic-link', { seen })
     await page.goto(`${baseUrl}${link.path}`)
+    await chooseLoginIdViaGate(page, apiUrl, uniqueLoginId(), true) // 링크로 처음 들어온 계정은 아이디부터(가장 바깥 막)
     await acceptLegalGate(page, apiUrl, true)
     await pwExpect(heading(/안녕하세요/)).toBeVisible()
     await page.goto(`${baseUrl}/account`)
@@ -547,6 +553,7 @@ describe('pre-hijack: an attacker who starts a sign-up for someone else’s addr
         email: victim,
         password: attackerPassword,
         displayName: '선점 시험', // 샘플 백엔드는 가입에서 닉네임이 필수다
+        loginId: uniqueLoginId(), // 로그인 아이디도 받는다
         ...(await signUpConsents(apiUrl)),
       }),
     })
@@ -558,6 +565,7 @@ describe('pre-hijack: an attacker who starts a sign-up for someone else’s addr
     await page.goto(`${baseUrl}/sign-up`)
     await page.getByLabel(auth.email).fill(victim)
     await page.getByLabel(auth.displayName).fill('가입 시험 사용자') // 샘플 앱은 가입에서 닉네임을 받는다
+    await fillLoginId(page, uniqueLoginId()) // 샘플 백엔드는 가입에서 로그인 아이디를 받는다
     await page.getByLabel(auth.password).first().fill(ownerPassword)
     await page.getByLabel(auth.passwordConfirm).fill(ownerPassword)
     await agreeToLegal(page, apiUrl)
@@ -588,6 +596,7 @@ describe('pre-hijack: an attacker who starts a sign-up for someone else’s addr
     await page.goto(`${baseUrl}/sign-up`)
     await page.getByLabel(auth.email).fill(victim)
     await page.getByLabel(auth.displayName).fill('가입 시험 사용자') // 샘플 앱은 가입에서 닉네임을 받는다
+    await fillLoginId(page, uniqueLoginId()) // 샘플 백엔드는 가입에서 로그인 아이디를 받는다
     await page.getByLabel(auth.password).first().fill('Whatever-pass-2026')
     await page.getByLabel(auth.passwordConfirm).fill('Whatever-pass-2026')
     await agreeToLegal(page, apiUrl)

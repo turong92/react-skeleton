@@ -15,7 +15,14 @@ import {
   openPost,
   writePost,
 } from './boardSteps'
-import { acceptLegalGate, dismissConsent, ko, launch } from './helpers'
+import {
+  acceptLegalGate,
+  dismissConsent,
+  ko,
+  launch,
+  chooseLoginIdViaGate,
+  uniqueLoginId,
+} from './helpers'
 import { waitForLink } from './mail'
 import { sharedLeafValues } from './valueScan'
 
@@ -93,6 +100,7 @@ async function signUpByLink(page: Page, email: string) {
   await page.goto(baseUrl)
   await dismissConsent(page)
   await page.goto(`${baseUrl}${link.path}`)
+  await chooseLoginIdViaGate(page, apiUrl, uniqueLoginId(), true) // 링크로 처음 들어온 계정은 아이디부터(가장 바깥 막)
   await acceptLegalGate(page, apiUrl, true)
   await pwExpect(page.getByRole('heading', { level: 1, name: /안녕하세요/ })).toBeVisible()
 }

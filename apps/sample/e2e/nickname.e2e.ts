@@ -17,11 +17,14 @@ import {
   agreeToLegal,
   auth,
   createProfile,
+  chooseLoginIdViaGate,
   dismissConsent,
   ensureProfile,
+  fillLoginId,
   fillSignIn,
   ko,
   launch,
+  uniqueLoginId,
 } from './helpers'
 import { waitForCode, waitForLink } from './mail'
 
@@ -61,6 +64,7 @@ describe('nickname: sign-up → board author → delete → cancel', () => {
     await page.goto(`${baseUrl}/sign-up`)
     await dismissConsent(page)
     await page.getByLabel(auth.email).fill(email)
+    await fillLoginId(page, uniqueLoginId()) // 샘플 백엔드는 가입에서 로그인 아이디를 받는다
     await page.getByLabel(auth.password).first().fill(password)
     await page.getByLabel(auth.passwordConfirm).fill(password)
     await agreeToLegal(page, apiUrl)
@@ -145,6 +149,7 @@ describe('a mailed sign-in link is redeemed exactly once', () => {
     await page.goto(baseUrl)
     await page.evaluate(() => window.localStorage.clear()) // 앞 계정의 세션을 비운다
     await page.goto(`${baseUrl}${link.path}`)
+    await chooseLoginIdViaGate(page, apiUrl, uniqueLoginId(), true) // 링크로 처음 들어온 계정은 아이디부터(가장 바깥 막)
     await acceptLegalGate(page, apiUrl, true)
     await pwExpect(heading(/안녕하세요/)).toBeVisible()
     await pwExpect(page.getByText(auth.magicLinkInvalidTitle)).toHaveCount(0)
@@ -196,6 +201,7 @@ describe('an account made without a nickname (a mailed sign-in link) is asked fo
     await page.goto(baseUrl)
     await page.evaluate(() => window.localStorage.clear())
     await page.goto(`${baseUrl}${link.path}`)
+    await chooseLoginIdViaGate(page, apiUrl, uniqueLoginId(), true) // 링크로 처음 들어온 계정은 아이디부터(가장 바깥 막)
     await acceptLegalGate(page, apiUrl, true)
     await pwExpect(heading(/안녕하세요/)).toBeVisible()
   }

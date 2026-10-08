@@ -123,3 +123,33 @@ export async function waitForSubject(
 /** 주소 없는 계정이 이미 계정이 있는 주소로 이메일을 등록하려 했다 - 그 주소의 주인에게 가는 안내(인증번호 메일이 아니다) */
 export const REGISTRATION_ATTEMPT_SUBJECT =
   /^(?:이 주소로 이메일 등록을 시도했어요|Someone tried to register this email)$/
+
+/** `to` 로 제목이 `subject` 인 메일의 본문 글자 - 메일이 올 때까지 기다린다(아이디 찾기 메일처럼 인증번호도 링크도 없는 메일) */
+export async function waitForMailText(
+  mailUrl: string,
+  to: string,
+  subject: RegExp,
+  { timeoutMs = 30_000 }: { timeoutMs?: number } = {},
+): Promise<{ text: string; id: string }> {
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    const list = (await (await fetch(`${mailUrl}/api/v1/messages`)).json()) as {
+      messages?: Summary[]
+    }
+    const hit = (list.messages ?? []).find(
+      (m) =>
+        subject.test(m.Subject) && m.To.some((t) => t.Address.toLowerCase() === to.toLowerCase()),
+    )
+    if (hit) {
+      const detail = (await (await fetch(`${mailUrl}/api/v1/message/${hit.ID}`)).json()) as {
+        Text?: string
+      }
+      return { text: detail.Text ?? '', id: hit.ID }
+    }
+    await new Promise((r) => setTimeout(r, 500))
+  }
+  throw new Error(`no mail with subject ${subject} for ${to} within ${timeoutMs / 1000}s`)
+}
+
+/** 아이디 찾기 메일의 제목 - 아이디가 있는 계정 · 없는 계정(본문만 다르다) */
+export const LOGIN_ID_REMINDER_SUBJECT = /^(?:아이디를 알려 드려요|Your login ID)$/

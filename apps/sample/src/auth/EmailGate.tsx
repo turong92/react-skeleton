@@ -56,12 +56,14 @@ export function EmailGate({ children }: { children: ReactNode }) {
         void router.navigate('/login', { replace: true })
       }}
       // 이미 이 주소로 가입한 계정이 있다 - 서버가 빈 계정을 바로 지우고 모든 세션을 닫았다: 이 기기의 세션도 지우고 로그인 화면으로, 로그인하면 설정에서 그 제공자 연결을 이어 준다
+      // 로그아웃이 **끝난 뒤에** 이동한다 - 보호된 화면(`/board` 같은 쓰기 화면)에서 로그아웃하면 라우트 가드가 「돌아올 곳」을 들고 로그인으로 보내는데, 그것이 아래 「설정에서 연결을 이어 가기」 의도를 덮지 않게
       onDiscarded={(provider) => {
-        void auth.logout()
-        void router.navigate('/login', {
-          replace: true,
-          state: linkIntentState(provider, { pathname: ACCOUNT_PATH, hash: '#methods' }),
-        })
+        void auth.logout().finally(() =>
+          router.navigate('/login', {
+            replace: true,
+            state: linkIntentState(provider, { pathname: ACCOUNT_PATH, hash: '#methods' }),
+          }),
+        )
       }}
       onDiscardReauth={(provider) =>
         void router.navigate(ACCOUNT_PATH, { state: discardReauthState(provider) })

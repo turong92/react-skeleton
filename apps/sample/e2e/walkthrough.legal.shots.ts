@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import type { Page } from 'playwright'
 import { describe, inject, it } from 'vitest'
-import { auth, dismissConsent, launch, legal, legalOn } from './helpers'
+import { auth, dismissConsent, launch, legal, legalOn, fillLoginId, uniqueLoginId } from './helpers'
 import { waitForCode, waitForLink } from './mail'
 
 /*
@@ -35,6 +35,7 @@ describe('legal walkthrough', () => {
       await dismissConsent(page)
       await page.getByLabel(auth.email).fill(email)
       await page.getByLabel(auth.displayName).fill('가입 시험 사용자') // 샘플 앱은 가입에서 닉네임을 받는다
+      await fillLoginId(page, uniqueLoginId()) // 샘플 백엔드는 가입에서 로그인 아이디를 받는다
       await page.getByLabel(auth.password).first().fill('Correct-horse-9')
       await page.getByLabel(auth.passwordConfirm).fill('Correct-horse-9')
       await page.getByRole('checkbox', { name: /\[필수\] .*이용약관/ }).check()

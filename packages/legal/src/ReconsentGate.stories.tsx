@@ -152,7 +152,7 @@ export const LeavingKeepsThe403: Story = {
 export const NewerVersionPublishedMeanwhile: Story = {
   args: {
     fake: { staleFirstAgree: true },
-    accountId: null,
+    accountId: 'acc-1',
     trigger: [{ type: 'terms', version: '2026-10-01', reason: 'STALE' }],
   },
   play: async ({ canvas, userEvent }) => {
@@ -195,5 +195,65 @@ export const SubmitWithNothingTickedExplainsItself: Story = {
         within(dialog).queryByRole('button', { name: '필수 약관에 동의해 주세요' }),
       ).toBeNull(),
     )
+  },
+}
+
+/** 다른 탭에서 다른 계정으로 로그인했다(토큰 저장소가 탭끼리 동기화된다) — A 가 묻던 동의 화면은 접히고, 기다리던 호출은 B 의 토큰으로 나가지 않고 원래 403 으로 끝난다 */
+function SwitchedAccountDemo() {
+  const [accountId, setAccountId] = useState('acc-a')
+  const api = useMemo(() => createFakeLegalApi(), [])
+  const controller = useMemo(() => createReconsentController({ api }), [api])
+  const [result, setResult] = useState('')
+  async function call() {
+    const error = new ApiRequestError(
+      {
+        code: 'LEGAL.RECONSENT_REQUIRED',
+        title: 'x',
+        status: 403,
+        timestamp: 't',
+        data: { missing: [{ type: 'terms', version: '2026-10-01', reason: 'STALE' }] },
+      },
+      't',
+      's',
+      'p',
+    )
+    setResult(
+      (await controller.recover({ error, path: '/notes', method: 'GET' }))
+        ? '이어졌다'
+        : '403 그대로',
+    )
+  }
+  return (
+    <WithQuery>
+      <button type="button" onClick={() => setAccountId('acc-b')}>
+        다른 탭에서 B 로 로그인
+      </button>
+      <ReconsentGate
+        controller={controller}
+        api={api}
+        accountId={accountId}
+        onLeave={() => undefined}
+        locale="ko"
+        labels={koLegalLabels}
+      >
+        <main>
+          <button type="button" onClick={() => void call()}>
+            노트 불러오기
+          </button>
+          <output>{result}</output>
+        </main>
+      </ReconsentGate>
+    </WithQuery>
+  )
+}
+
+export const AnotherAccountSignedInInAnotherTab: StoryObj<typeof SwitchedAccountDemo> = {
+  render: () => <SwitchedAccountDemo />,
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(await canvas.findByRole('button', { name: '노트 불러오기' }))
+    await screen.findByRole('dialog', { name: '약관이 바뀌었어요' })
+    await userEvent.click(canvas.getByRole('button', { name: '다른 탭에서 B 로 로그인' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    await expect(await canvas.findByText('403 그대로')).toBeVisible()
   },
 }

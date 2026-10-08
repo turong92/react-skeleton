@@ -15,6 +15,8 @@ export type ReconsentGateProps = {
   api: LegalApi
   /** 로그인한 계정 id(없으면 null) — 바뀌어 생기면 한 번 `GET /consents/me` 를 확인한다(소셜 · 링크 · 비밀번호 로그인 모두 같은 길) */
   accountId: string | null
+  /** true 인 동안 로그인 직후 확인(`GET /consents/me`)을 미룬다 — 앞 단계(이메일 등록)가 끝나야 묻는 앱이 쓴다. 계정 자체는 그대로 알려 두어 그 사이 도착한 403 은 놓치지 않는다 */
+  deferCheck?: boolean
   /** 「로그아웃」 — 보통 `auth.logout()` */
   onLeave: () => void
   locale: string
@@ -34,6 +36,7 @@ export function ReconsentGate({
   controller,
   api,
   accountId,
+  deferCheck = false,
   onLeave,
   locale,
   fallbackLocale,
@@ -50,13 +53,28 @@ export function ReconsentGate({
   const [failure, setFailure] = useState<'stale' | 'failed' | null>(null)
   const [open, setOpen] = useState<ConsentRow | null>(null)
 
+  // 지금 계정을 컨트롤러에 알린다 — 계정이 바뀌면(다른 탭에서 다른 계정으로 로그인 · 로그아웃) 이전 계정의 화면 · 기다리던 호출은 접히고(원래 403 으로 끝난다), 로그아웃 뒤에 늦게 온 403 은 화면을 다시 세우지 않는다
   useEffect(() => {
-    if (accountId) void controller.check()
+    controller.setAccount(accountId)
   }, [accountId, controller])
-  // 로그아웃하면 묻던 것을 접는다(기다리던 호출은 403 으로 끝난다)
   useEffect(() => {
-    if (!accountId && controller.getState().status === 'required') controller.decline()
-  }, [accountId, controller])
+    if (accountId && !deferCheck) void controller.check()
+  }, [accountId, deferCheck, controller])
+  // 동의 화면이 열려 있는 동안 탭이 다시 보이면 서버에 다시 묻는다 — 다른 탭에서 이미 동의했으면 접는다
+  useEffect(() => {
+    if (!required || !accountId) return
+    const onVisible = () => document.visibilityState === 'visible' && void controller.check()
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', onVisible)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', onVisible)
+    }
+  }, [required, accountId, controller])
+  // 로그아웃하면 묻던 것을 접는다(기다리던 호출은 403 으로 끝난다) — 접은 뒤에 열렸어도(`required` 가 의존)
+  useEffect(() => {
+    if (!accountId && required) controller.decline()
+  }, [accountId, required, controller])
 
   const rows = useMemo(
     () =>

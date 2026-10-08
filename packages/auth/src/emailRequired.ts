@@ -28,6 +28,11 @@ export type EmailRequiredController = {
   setReady(ready: boolean): void
   /** 등록하지 않고 떠난다(로그아웃 · 계정 삭제) — 붙잡은 호출은 원래 403 으로 끝난다 */
   decline(): void
+  /**
+   * 지금 로그인한 계정을 알린다(`EmailRequiredGate` 가 매번). 화면 · 붙잡은 호출은 한 계정의 것이다 — **계정이 바뀌면**(다른 탭에서 다른 계정으로 로그인 · 로그아웃) `decline()` 과 같이 접는다.
+   * 로그아웃한 뒤(`null`)에 늦게 도착한 403 은 화면을 다시 세우지 않는다. 한 번도 알리지 않은 컨트롤러는 예전처럼 계정을 가리지 않는다
+   */
+  setAccount(accountId: string | null): void
 }
 
 const IDLE: EmailRequiredState = { status: 'idle' }
@@ -40,6 +45,7 @@ const REQUIRED: EmailRequiredState = { status: 'required' }
 export function createEmailRequiredController(): EmailRequiredController {
   let state: EmailRequiredState = IDLE
   let ready = false
+  let account: string | null | undefined // undefined = 알린 적 없다
   const listeners = new Set<() => void>()
   let waiters: Array<(value: boolean) => void> = []
 
@@ -62,6 +68,7 @@ export function createEmailRequiredController(): EmailRequiredController {
     },
     async recover({ error }) {
       if (!isEmailRequiredError(error)) return false
+      if (account === null) return false // 로그아웃한 뒤에 도착한 403 — 로그인 화면 위에 막을 세우지 않는다
       set(REQUIRED)
       return new Promise<boolean>((resolve) => waiters.push(resolve))
     },
@@ -79,6 +86,16 @@ export function createEmailRequiredController(): EmailRequiredController {
     decline() {
       set(IDLE)
       release(false)
+    },
+    setAccount(next) {
+      if (next === account) return
+      const had = account !== undefined
+      account = next
+      // 이전 계정의 화면 · 붙잡은 호출은 새 계정의 것이 아니다(처음 알릴 때는 이미 열린 것이 있을 수 있어 그대로 둔다)
+      if (had) {
+        set(IDLE)
+        release(false)
+      }
     },
   }
 }

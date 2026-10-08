@@ -49,6 +49,10 @@ export function EmailRequiredGate({
   const required = state.status === 'required'
   const [providers, setProviders] = useState<string[]>([])
 
+  // 지금 계정을 컨트롤러에 알린다 — 계정이 바뀌면(다른 탭에서 다른 계정으로 로그인 · 로그아웃) 이전 계정의 화면 · 붙잡은 호출은 접히고(원래 403 으로 끝난다), 로그아웃 뒤에 늦게 온 403 은 화면을 다시 세우지 않는다
+  useEffect(() => {
+    controller.setAccount(accountId)
+  }, [accountId, controller])
   // 로그인 직후: 이 계정이 주소를 요구받는가. 실패해도 조용히 — 막히면 호출이 403 으로 말한다
   useEffect(() => {
     if (!accountId) return
@@ -67,22 +71,33 @@ export function EmailRequiredGate({
       controller.setReady(false) // 계정이 바뀌거나 로그아웃 — 다음 계정은 다시 물어봐야 안다
     }
   }, [accountId, api, controller])
-  // 막이 열릴 때 재동의에 쓸 제공자 목록을 다시 읽는다
+  // 막이 열려 있는 동안: 열릴 때와 탭이 다시 보일 때마다 서버에 다시 묻는다 — 다른 탭에서 이미 등록했으면 접고 붙잡은 호출을 보낸다. 재동의에 쓸 제공자 목록도 이때 새로 읽는다
   useEffect(() => {
     if (!required || !accountId) return
     let live = true
-    api.me().then(
-      (me) => live && setProviders(reauthSubjectOf(me).providers),
-      () => undefined,
-    )
+    const recheck = () =>
+      api.me().then(
+        (me) => {
+          if (!live) return
+          if (me.emailRequired !== true) controller.registered()
+          else setProviders(reauthSubjectOf(me).providers)
+        },
+        () => undefined,
+      )
+    void recheck()
+    const onVisible = () => document.visibilityState === 'visible' && void recheck()
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', onVisible)
     return () => {
       live = false
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', onVisible)
     }
-  }, [required, accountId, api])
-  // 로그아웃 · 계정 삭제로 떠나면 접는다(붙잡힌 호출은 403 으로 끝난다)
+  }, [required, accountId, api, controller])
+  // 로그아웃 · 계정 삭제로 떠나면 접는다(붙잡힌 호출은 403 으로 끝난다). 막이 열린 뒤에 로그아웃을 알게 돼도 접는다(`required` 가 의존)
   useEffect(() => {
-    if (!accountId && controller.getState().status === 'required') controller.decline()
-  }, [accountId, controller])
+    if (!accountId && required) controller.decline()
+  }, [accountId, required, controller])
 
   const covered = required && !standAside
   const screen = (

@@ -186,4 +186,34 @@ describe('createReconsentController', () => {
     await controller.agree([{ type: 'terms', version: '2026-12-01' }])
     expect(agree).toHaveBeenCalledTimes(1)
   })
+
+  describe('the prompt and the waiting calls belong to one account', () => {
+    it('switching to another account releases the waiting calls with false and closes the prompt', async () => {
+      const { controller } = controllerWith()
+      controller.setAccount('a')
+      const waiting = controller.recover(forbidden())
+      expect(controller.getState().status).toBe('required')
+      controller.setAccount('b')
+      await expect(waiting).resolves.toBe(false)
+      expect(controller.getState()).toEqual({ status: 'idle' })
+    })
+
+    it('after signing out a late 403 does not raise the prompt again', async () => {
+      const { controller } = controllerWith()
+      controller.setAccount('a')
+      controller.setAccount(null)
+      expect(await controller.recover(forbidden())).toBe(false)
+      expect(controller.getState()).toEqual({ status: 'idle' })
+    })
+
+    it('check() closes a prompt the server no longer asks for (agreed in another tab) and lets the waiting calls go on', async () => {
+      const { controller, myConsents } = controllerWith()
+      controller.setAccount('a')
+      const waiting = controller.recover(forbidden())
+      myConsents.mockResolvedValueOnce(settled)
+      await controller.check()
+      await expect(waiting).resolves.toBe(true)
+      expect(controller.getState()).toEqual({ status: 'idle' })
+    })
+  })
 })

@@ -23,6 +23,11 @@ export type ReconsentController = {
   agree(consents: ConsentRequest[], source?: ConsentSource): Promise<void>
   /** 사용자가 동의하지 않고 떠난다(로그아웃 등) — 기다리던 호출은 원래 403 으로 끝난다 */
   decline(): void
+  /**
+   * 지금 로그인한 계정을 알린다(`ReconsentGate` 가 매번). **계정이 바뀌면**(다른 탭에서 다른 계정으로 로그인 · 로그아웃) 묻던 것을 접고 기다리던 호출을 원래 403 으로 끝낸다.
+   * 로그아웃한 뒤(`null`)에 늦게 도착한 403 은 화면을 다시 세우지 않는다. 한 번도 알리지 않은 컨트롤러는 예전처럼 계정을 가리지 않는다
+   */
+  setAccount(accountId: string | null): void
 }
 
 type ConsentApi = Pick<LegalApi, 'agree' | 'myConsents'>
@@ -49,6 +54,7 @@ export function createReconsentController({
     myConsents: () => (typeof given === 'function' ? given() : given).myConsents(),
   }
   let state: ReconsentState = IDLE
+  let account: string | null | undefined // undefined = 알린 적 없다
   const listeners = new Set<() => void>()
   let waiters: Array<(value: boolean) => void> = []
 
@@ -81,6 +87,7 @@ export function createReconsentController({
       if (isReconsentExcluded(path, excludedPrefixes)) return false
       const missing = missingFromError(error)
       if (missing === null) return false
+      if (account === null) return false // 로그아웃한 뒤에 도착한 403 — 로그인 화면 위에 막을 세우지 않는다
       open(missing, 'forbidden')
       return new Promise<boolean>((resolve) => waiters.push(resolve))
     },
@@ -89,6 +96,11 @@ export function createReconsentController({
       try {
         const mine = await api.myConsents()
         if (mine.blocked) open(mine.missing, 'sign-in')
+        else if (state.status === 'required') {
+          // 서버가 더는 묻지 않는다(다른 탭에서 동의했다) — 접고 기다리던 호출을 보낸다
+          set(IDLE)
+          release(true)
+        }
       } catch {
         // legal 모듈이 없는 백엔드(404) · 네트워크 실패 — 이 검사는 서버 강제의 보조일 뿐이다(막히면 호출이 403 으로 말한다)
       }
@@ -126,6 +138,16 @@ export function createReconsentController({
     decline() {
       set(IDLE)
       release(false)
+    },
+
+    setAccount(next) {
+      if (next === account) return
+      const had = account !== undefined
+      account = next
+      if (had && (state.status === 'required' || waiters.length > 0)) {
+        set(IDLE)
+        release(false)
+      }
     },
   }
 }

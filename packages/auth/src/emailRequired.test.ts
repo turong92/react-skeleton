@@ -87,4 +87,43 @@ describe('createEmailRequiredController', () => {
     expect(controller.isReady()).toBe(false)
     expect(seen).toBe(2)
   })
+
+  describe('the screen and the held calls belong to one account', () => {
+    it("switching to another account (another tab signed in as B) releases A's held calls with false and closes the screen", async () => {
+      const controller = createEmailRequiredController()
+      controller.setAccount('a')
+      const held = controller.recover(forbidden())
+      expect(controller.getState()).toEqual({ status: 'required' })
+      controller.setAccount('b')
+      await expect(held).resolves.toBe(false)
+      expect(controller.getState()).toEqual({ status: 'idle' })
+      // B 가 나중에 등록해도 A 의 호출은 되살아나지 않는다
+      controller.registered()
+      await expect(held).resolves.toBe(false)
+    })
+
+    it('signing out drops the screen, and a 403 that arrives after the sign-out does not raise it again', async () => {
+      const controller = createEmailRequiredController()
+      controller.setAccount('a')
+      controller.require()
+      controller.setAccount(null)
+      expect(controller.getState()).toEqual({ status: 'idle' })
+      expect(await controller.recover(forbidden())).toBe(false)
+      expect(controller.getState()).toEqual({ status: 'idle' })
+    })
+
+    it('telling it the same account again changes nothing', () => {
+      const controller = createEmailRequiredController()
+      controller.setAccount('a')
+      controller.require()
+      controller.setAccount('a')
+      expect(controller.getState()).toEqual({ status: 'required' })
+    })
+
+    it('a controller nobody told about the account still holds calls (old behaviour)', () => {
+      const controller = createEmailRequiredController()
+      void controller.recover(forbidden())
+      expect(controller.getState()).toEqual({ status: 'required' })
+    })
+  })
 })

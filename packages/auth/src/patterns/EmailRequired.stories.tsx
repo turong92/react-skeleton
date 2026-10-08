@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { useEffect, useMemo, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { expect, fn, waitFor, within } from 'storybook/test'
 import { createEmailRequiredController } from '../emailRequired'
 import { EmailRequiredGate } from '../screens/EmailRequiredGate'
@@ -193,6 +193,127 @@ export const StandsAsideOnTheAccountPage: Story = {
     await expect(await canvas.findByText('앱 화면')).toBeVisible()
     await expect(canvas.queryByRole('dialog')).toBeNull()
     await expect(canvas.getByText('앱 화면').closest('[inert]')).toBeNull()
+  },
+}
+
+/**
+ * 계정은 막의 일부다 — 다른 탭에서 다른 계정으로 로그인하면(토큰 저장소가 탭끼리 동기화된다) 이 탭의 `accountId` 가 A → B 가 된다.
+ * A 가 붙잡아 둔 호출은 B 의 토큰으로 나가지 않고 원래 403 으로 끝나며, 막도 접힌다(B 가 주소를 가지고 있으면 그대로 앱이다)
+ */
+function SwitchedAccountDemo({ onSettled }: { onSettled: (result: boolean) => void }) {
+  const [accountId, setAccountId] = useState('acc_a')
+  const api = useMemo(() => createFakeAccountApi({ emailRequired: true }), [])
+  const controller = useMemo(() => createEmailRequiredController(), [])
+  useEffect(() => {
+    void controller
+      .recover({ path: '/notes', method: 'GET', error: apiError('ACCOUNT.EMAIL_REQUIRED', 403) })
+      .then(onSettled)
+  }, [controller, onSettled])
+  return (
+    <>
+      <button type="button" onClick={() => setAccountId('acc_b')}>
+        다른 탭에서 B 로 로그인
+      </button>
+      <EmailRequiredGate
+        controller={controller}
+        api={{
+          ...api,
+          me: async () => ({ ...(await api.me()), emailRequired: accountId === 'acc_a' }),
+        }}
+        accountId={accountId}
+        onSignOut={() => undefined}
+        onDelete={() => undefined}
+      >
+        <AppBehind />
+      </EmailRequiredGate>
+    </>
+  )
+}
+
+export const AnotherAccountSignedInInAnotherTab: StoryObj<typeof SwitchedAccountDemo> = {
+  render: (args) => <SwitchedAccountDemo {...args} />,
+  args: { onSettled: fn() },
+  play: async ({ canvas, args, userEvent }) => {
+    await dialog(canvas)
+    await userEvent.click(canvas.getByRole('button', { name: '다른 탭에서 B 로 로그인' }))
+    await waitFor(() => expect(canvas.queryByRole('dialog')).toBeNull())
+    // A 가 붙잡은 호출은 다시 나가지 않고(true 가 아니다) 원래 403 으로 끝난다
+    await waitFor(() => expect(args.onSettled).toHaveBeenCalledWith(false))
+    await expect(canvas.getByText('앱 화면').closest('[inert]')).toBeNull()
+  },
+}
+
+/** 같은 계정을 연 다른 탭에서 이미 등록했다 — 이 탭이 다시 보일 때(포커스) 서버에 묻고, 막을 접고, 붙잡은 호출을 보낸다 */
+function RegisteredElsewhereDemo({ onSettled }: { onSettled: (result: boolean) => void }) {
+  const [serverRequires, setServerRequires] = useState(true)
+  const api = useMemo(() => createFakeAccountApi({ emailRequired: true }), [])
+  const controller = useMemo(() => createEmailRequiredController(), [])
+  useEffect(() => {
+    void controller
+      .recover({ path: '/notes', method: 'GET', error: apiError('ACCOUNT.EMAIL_REQUIRED', 403) })
+      .then(onSettled)
+  }, [controller, onSettled])
+  return (
+    <>
+      <button type="button" onClick={() => setServerRequires(false)}>
+        다른 탭에서 등록 끝
+      </button>
+      <EmailRequiredGate
+        controller={controller}
+        api={{ ...api, me: async () => ({ ...(await api.me()), emailRequired: serverRequires }) }}
+        accountId="acc_a"
+        onSignOut={() => undefined}
+        onDelete={() => undefined}
+      >
+        <AppBehind />
+      </EmailRequiredGate>
+    </>
+  )
+}
+
+export const RegisteredInAnotherTabOfTheSameAccount: StoryObj<typeof RegisteredElsewhereDemo> = {
+  render: (args) => <RegisteredElsewhereDemo {...args} />,
+  args: { onSettled: fn() },
+  play: async ({ canvas, args, userEvent }) => {
+    await dialog(canvas)
+    await userEvent.click(canvas.getByRole('button', { name: '다른 탭에서 등록 끝' }))
+    window.dispatchEvent(new Event('focus')) // 탭이 다시 보인다
+    await waitFor(() => expect(canvas.queryByRole('dialog')).toBeNull())
+    await waitFor(() => expect(args.onSettled).toHaveBeenCalledWith(true))
+  },
+}
+
+/** 로그아웃 단추를 **눌러서** 끝까지 — 막이 접히고 붙잡힌 호출은 403 으로 끝나며 `onSignOut` 이 불린다 */
+function SignOutThroughTheGateDemo({ onSettled }: { onSettled: (result: boolean) => void }) {
+  const [accountId, setAccountId] = useState<string | null>('acc_a')
+  const api = useMemo(() => createFakeAccountApi({ emailRequired: true }), [])
+  const controller = useMemo(() => createEmailRequiredController(), [])
+  useEffect(() => {
+    void controller
+      .recover({ path: '/notes', method: 'GET', error: apiError('ACCOUNT.EMAIL_REQUIRED', 403) })
+      .then(onSettled)
+  }, [controller, onSettled])
+  return (
+    <EmailRequiredGate
+      controller={controller}
+      api={api}
+      accountId={accountId}
+      onSignOut={() => setAccountId(null)}
+      onDelete={() => undefined}
+    >
+      <AppBehind />
+    </EmailRequiredGate>
+  )
+}
+
+export const SigningOutEndsTheHeldCalls: StoryObj<typeof SignOutThroughTheGateDemo> = {
+  render: (args) => <SignOutThroughTheGateDemo {...args} />,
+  args: { onSettled: fn() },
+  play: async ({ canvas, args, userEvent }) => {
+    const screen = within(await dialog(canvas))
+    await userEvent.click(screen.getByRole('button', { name: 'Sign out' }))
+    await waitFor(() => expect(canvas.queryByRole('dialog')).toBeNull())
+    await expect(args.onSettled).toHaveBeenCalledWith(false)
   },
 }
 

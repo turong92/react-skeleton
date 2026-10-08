@@ -285,6 +285,8 @@ export type AuthLabels = {
   emailRequiredBody: string
   emailRequiredField: string
   emailRequiredSend: string
+  /** 쓸 수 있는 제공자가 없어 재동의를 못 할 때 - 처음 단계로 돌아가 다시 시도 */
+  emailRequiredRetry: string
   emailRequiredCodeTitle: string
   emailRequiredCodeBody: (email: string) => string
   emailRequiredFixAddress: string
@@ -293,7 +295,6 @@ export type AuthLabels = {
   emailRequiredDelete: string
   /** 계정 설정을 이메일 등록 전에 열었다 */
   emailRequiredSettingsNotice: string
-  emailRequiredDone: string
   // 연락받을 이메일
   sectionContactEmail: string
   contactEmailRole: string
@@ -659,16 +660,16 @@ export const defaultAuthLabels: AuthLabels = asDefault({
     'We use it when you need to get back into your account and for important notices. Nobody else can see it.',
   emailRequiredField: 'Email',
   emailRequiredSend: 'Send me a code',
+  emailRequiredRetry: 'Try again',
   emailRequiredCodeTitle: 'Enter the code',
   emailRequiredCodeBody: (email) =>
-    `We sent a 6-digit code to ${email}. It works for 10 minutes — never tell it to anyone.`,
+    `We sent a 6-digit code to ${email}. Enter it before the time below runs out — never tell it to anyone.`,
   emailRequiredFixAddress: 'Fix the address',
   emailRequiredSignOut: 'Sign out',
   emailRequiredDeleteHint: 'Do not want to add one? You can delete your account instead.',
   emailRequiredDelete: 'Delete my account',
   emailRequiredSettingsNotice:
     'Until you add an email address you can only add it here or delete your account.',
-  emailRequiredDone: 'Your email address is added. Your other devices were signed out.',
   sectionContactEmail: 'Contact email',
   contactEmailRole:
     'Optional. Announcements and service notices come here. It is not used to sign in or to find your password.',
@@ -681,7 +682,7 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   contactEmailSend: 'Send me a code',
   contactEmailCodeTitle: 'Enter the code for your contact email',
   contactEmailCodeBody: (email) =>
-    `We sent a 6-digit code to ${email}. It works for 10 minutes — never tell it to anyone.`,
+    `We sent a 6-digit code to ${email}. Enter it before the time below runs out — never tell it to anyone.`,
   contactEmailSaved: 'Your contact email is saved.',
   contactEmailRemoved: 'Your contact email is removed. Notices go to your account email again.',
   contactEmailCurrentIsAccount: 'Security mail always goes to your account email.',

@@ -41,7 +41,6 @@ export {
   buildAuthorizeUrl,
   createSocialLoginFlow,
   parseSocialCallback,
-  providerOfFailure,
   SOCIAL_AUTHORIZE_PRESETS,
   SocialLoginCallbackError,
 } from './social'

@@ -69,7 +69,7 @@ export type AccountMe = {
   pendingEmailExpiresAt?: string | null
   /** 이메일을 **필수**로 켠 앱에서만 키가 있다: 주소가 아직 없으면 true — 허용 목록 밖의 모든 호출이 403 `ACCOUNT.EMAIL_REQUIRED` 라 「이메일을 등록해 주세요」 화면이 앱을 덮는다. 키가 없으면 이 앱은 주소를 요구하지 않는다 */
   emailRequired?: boolean
-  /** 확인된 연락받을 이메일 — 없거나 앱이 기능을 끄면 null(키는 늘 있다 · 옛 서버에는 키가 없다). 서비스 알림 · 공지가 간다. 로그인 · 비밀번호 찾기에는 쓰이지 않는다 */
+  /** 확인된 연락받을 이메일 — **키가 없으면 서버가 이 기능을 껐다**(옛 서버 포함), null 은 켜져 있고 아직 등록하지 않았다는 뜻. 서비스 알림 · 공지가 간다. 로그인 · 비밀번호 찾기에는 쓰이지 않는다 */
   contactEmail?: string | null
 }
 

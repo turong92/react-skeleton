@@ -5,7 +5,11 @@ import { useSocialLoginCallback } from './useSocialLoginCallback'
 
 describe('useSocialLoginCallback', () => {
   it('starts pending on the callback page and does not run the login while rendering on the server', () => {
-    const flow: SocialLoginFlow = { start: vi.fn(), complete: vi.fn() }
+    const flow: SocialLoginFlow = {
+      start: vi.fn(),
+      complete: vi.fn(),
+      providerOfFailure: vi.fn(),
+    }
     function Probe() {
       return <p>{useSocialLoginCallback(flow, '?code=c&state=s').status}</p>
     }

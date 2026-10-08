@@ -282,16 +282,16 @@ export const koAuthLabels: AuthLabels = {
   emailRequiredBody: '계정을 되찾거나 중요한 안내를 받을 때 써요. 다른 사람에게는 보이지 않아요.',
   emailRequiredField: '이메일',
   emailRequiredSend: '인증번호 받기',
+  emailRequiredRetry: '다시 시도',
   emailRequiredCodeTitle: '인증번호를 입력해 주세요',
   emailRequiredCodeBody: (email) =>
-    `${email} 로 6자리 인증번호를 보냈어요. 10분 안에 입력해 주세요. 다른 사람에게는 알려 주지 마세요.`,
+    `${email} 로 6자리 인증번호를 보냈어요. 아래 남은 시간 안에 입력해 주세요. 다른 사람에게는 알려 주지 마세요.`,
   emailRequiredFixAddress: '주소 고치기',
   emailRequiredSignOut: '로그아웃',
   emailRequiredDeleteHint: '이메일을 등록하고 싶지 않다면 계정을 삭제할 수 있어요.',
   emailRequiredDelete: '내 계정 삭제',
   emailRequiredSettingsNotice:
     '이메일을 등록하기 전에는 여기서 이메일 등록과 계정 삭제만 할 수 있어요.',
-  emailRequiredDone: '이메일을 등록했어요. 다른 기기는 로그아웃됐어요.',
   sectionContactEmail: '연락받을 이메일',
   contactEmailRole:
     '선택 사항이에요. 공지와 서비스 알림을 여기로 받아요. 로그인이나 비밀번호 찾기에는 쓰이지 않아요.',
@@ -304,7 +304,7 @@ export const koAuthLabels: AuthLabels = {
   contactEmailSend: '인증번호 받기',
   contactEmailCodeTitle: '인증번호를 입력해 주세요',
   contactEmailCodeBody: (email) =>
-    `${email} 로 6자리 인증번호를 보냈어요. 10분 안에 입력해 주세요. 다른 사람에게는 알려 주지 마세요.`,
+    `${email} 로 6자리 인증번호를 보냈어요. 아래 남은 시간 안에 입력해 주세요. 다른 사람에게는 알려 주지 마세요.`,
   contactEmailSaved: '연락받을 이메일을 등록했어요.',
   contactEmailRemoved: '연락받을 이메일을 지웠어요. 이제 알림은 계정 이메일로 가요.',
   contactEmailCurrentIsAccount: '보안 메일은 늘 계정 이메일로만 가요.',

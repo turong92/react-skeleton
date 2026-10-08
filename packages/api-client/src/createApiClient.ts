@@ -50,8 +50,9 @@ export type ApiClientConfig = {
    */
   recoverUnauthorized?: (context: UnauthorizedContext) => Promise<boolean>
   /**
-   * 인증이 붙은 요청이 403 을 받았을 때 한 번 부른다 — 사용자에게 물어 풀 수 있는 403(법적 문서 재동의 `LEGAL.RECONSENT_REQUIRED`)을 여기서 푼다.
-   * true 면 같은 요청을 **한 번만** 다시 보낸다(무한 재시도 없음 — 401 복구를 했던 요청은 다시 복구하지 않는다), false 면 원래 403 이 나간다. 던지면 던진 에러가 나간다.
+   * 인증이 붙은 요청이 403 을 받았을 때 한 번 부른다 — 사용자에게 물어 풀 수 있는 403(이메일 등록 `ACCOUNT.EMAIL_REQUIRED`, 법적 문서 재동의 `LEGAL.RECONSENT_REQUIRED`)을 여기서 푼다. 둘 이상이면 `chainForbiddenRecovery` 로 묶는다.
+   * true 면 같은 요청을 **한 번만** 다시 보낸다(무한 재시도 없음), false 면 원래 403 이 나간다. 던지면 던진 에러가 나간다.
+   * 한 요청이 **401 복구(토큰 갱신) 뒤에 403 복구**를 이어서 받을 수 있다(갱신한 토큰으로 다시 보냈더니 이번엔 403) - 각 복구는 요청당 한 번씩, 같은 코드의 403 은 한 번 풀었으면 다시 풀지 않는다.
    * 로그아웃하지 않는다 — 403 은 세션이 끝난 것이 아니다. `skipAuth` 요청은 부르지 않는다.
    */
   recoverForbidden?: (context: ForbiddenContext) => Promise<boolean>

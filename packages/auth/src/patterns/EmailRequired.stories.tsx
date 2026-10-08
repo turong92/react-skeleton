@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { expect, fn, waitFor, within } from 'storybook/test'
 import { createEmailRequiredController } from '../emailRequired'
 import { EmailRequiredGate } from '../screens/EmailRequiredGate'
@@ -31,6 +31,8 @@ function AppBehind({ children }: { children?: ReactNode }) {
 type DemoProps = {
   fake?: FakeAccountOptions
   standAside?: boolean
+  /** 앱이 로그인에 켠 소셜 제공자 — 계정에 연결된 것 중 이것만 재동의에 쓴다(없으면 거르지 않는다) */
+  enabledProviders?: string[]
   korean?: boolean
   onRegistered?: () => void
   onSignOut?: () => void
@@ -43,6 +45,7 @@ type DemoProps = {
 function Demo({
   fake,
   standAside,
+  enabledProviders,
   korean,
   onRegistered,
   onSignOut = () => undefined,
@@ -67,6 +70,7 @@ function Demo({
       accountId="acc_demo"
       labels={korean ? koAuthLabels : undefined}
       standAside={standAside}
+      enabledProviders={enabledProviders}
       onSignOut={onSignOut}
       onDelete={onDelete}
       onRegistered={onRegistered}
@@ -171,6 +175,33 @@ export const MoreThanAnHourLaterAsksTheProviderAgain: Story = {
     await expect(await screen.findByText(/confirm once more with Kakao/)).toBeVisible()
     await userEvent.click(screen.getByRole('button', { name: 'Confirm with Kakao' }))
     await expect(args.onProviderReauth).toHaveBeenCalledWith('kakao', 'me@example.com')
+  },
+}
+
+/** 새로고침 · 다시 들어옴 — 서버가 대기 중인 변경(`me.pendingEmail`)을 알려 주면 주소 입력으로 돌아가지 않고 인증번호 단계가 열린다 */
+export const ReloadRestoresTheCodeStep: Story = {
+  args: { fake: { pendingEmail: 'waiting@example.com', pendingExpiresInMinutes: 7 } },
+  play: async ({ canvas }) => {
+    const screen = within(await dialog(canvas))
+    await expect(await screen.findByText(/waiting@example.com/)).toBeVisible()
+    await expect(screen.getByLabelText('Digit 1 of 6')).toBeVisible()
+    await expect(screen.getByText(/^Time left/)).toBeVisible()
+    await expect(screen.queryByRole('button', { name: 'Send me a code' })).toBeNull()
+  },
+}
+
+/** 서버가 재동의를 요구하는데 쓸 수 있는 제공자가 하나도 없다(앱이 켜지 않았다) - 「문의해 주세요」만 남지 않고 다시 시도할 수 있다 */
+export const NoProviderLeftCanTryAgain: Story = {
+  args: { fake: { reauthWindowExpired: true }, enabledProviders: ['line'] },
+  play: async ({ canvas, userEvent }) => {
+    const screen = within(await dialog(canvas))
+    await userEvent.type(screen.getByRole('textbox', { name: /^Email/ }), 'me@example.com')
+    await userEvent.click(screen.getByRole('button', { name: 'Send me a code' }))
+    await expect(await screen.findByText(/None of your sign-in methods/)).toBeVisible()
+    await expect(screen.queryByRole('button', { name: /Confirm with/ })).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
+    await expect(screen.getByRole('button', { name: 'Send me a code' })).toBeVisible()
+    await expect(screen.queryByText(/None of your sign-in methods/)).toBeNull()
   },
 }
 
@@ -283,6 +314,83 @@ export const RegisteredInAnotherTabOfTheSameAccount: StoryObj<typeof RegisteredE
   },
 }
 
+/** 로그인 직후 `me.emailRequired === true` 만으로 막이 열리고(403 호출 없이), 서버에 물어 답을 받으면 다음 단계(약관 …)가 물어도 된다고 알린다 */
+function OpensFromMeDemo({ fake }: { fake: FakeAccountOptions }) {
+  const api = useMemo(() => createFakeAccountApi(fake), [fake])
+  const controller = useMemo(() => createEmailRequiredController(), [])
+  const ready = useSyncExternalStore(controller.subscribe, controller.isReady, controller.isReady)
+  return (
+    <>
+      <output aria-label="ready">{String(ready)}</output>
+      <EmailRequiredGate
+        controller={controller}
+        api={api}
+        accountId="acc_a"
+        onSignOut={() => undefined}
+        onDelete={() => undefined}
+      >
+        <AppBehind />
+      </EmailRequiredGate>
+    </>
+  )
+}
+
+export const MeSaysRequiredOpensTheScreenAndTheNextStepWaitsForTheAnswer: StoryObj<
+  typeof OpensFromMeDemo
+> = {
+  render: (args) => <OpensFromMeDemo {...args} />,
+  args: { fake: { emailRequired: true } },
+  play: async ({ canvas }) => {
+    await dialog(canvas)
+    await waitFor(() => expect(canvas.getByLabelText('ready')).toHaveTextContent('true'))
+  },
+}
+
+export const MeSaysNotRequiredLeavesTheAppAlone: StoryObj<typeof OpensFromMeDemo> = {
+  render: (args) => <OpensFromMeDemo {...args} />,
+  args: { fake: {} },
+  play: async ({ canvas }) => {
+    await waitFor(() => expect(canvas.getByLabelText('ready')).toHaveTextContent('true'))
+    await expect(canvas.queryByRole('dialog')).toBeNull()
+    await expect(canvas.getByText('앱 화면').closest('[inert]')).toBeNull()
+  },
+}
+
+/** 막이 닫히면 포커스가 열리기 전의 자리로 돌아온다 - 뒤 화면의 단추에 있던 포커스가 문서 맨 앞으로 날아가지 않는다 */
+function FocusBackDemo() {
+  const api = useMemo(() => createFakeAccountApi({ emailRequired: true }), [])
+  const controller = useMemo(() => createEmailRequiredController(), [])
+  const button = useRef<HTMLButtonElement>(null)
+  useEffect(() => {
+    button.current?.focus()
+    controller.require()
+    const timer = window.setTimeout(() => controller.registered(), 800)
+    return () => window.clearTimeout(timer)
+  }, [controller])
+  return (
+    <EmailRequiredGate
+      controller={controller}
+      api={{ ...api, me: async () => ({ ...(await api.me()), emailRequired: true }) }}
+      accountId="acc_a"
+      onSignOut={() => undefined}
+      onDelete={() => undefined}
+    >
+      <button ref={button} type="button">
+        연결하기
+      </button>
+    </EmailRequiredGate>
+  )
+}
+
+export const ClosingGivesTheFocusBack: StoryObj<typeof FocusBackDemo> = {
+  render: () => <FocusBackDemo />,
+  play: async ({ canvas }) => {
+    await dialog(canvas)
+    await waitFor(() => expect(canvas.queryByRole('dialog')).toBeNull())
+    await waitFor(() => expect(canvas.getByRole('button', { name: '연결하기' })).toHaveFocus())
+  },
+}
+
 /** 로그아웃 단추를 **눌러서** 끝까지 — 막이 접히고 붙잡힌 호출은 403 으로 끝나며 `onSignOut` 이 불린다 */
 function SignOutThroughTheGateDemo({ onSettled }: { onSettled: (result: boolean) => void }) {
   const [accountId, setAccountId] = useState<string | null>('acc_a')
@@ -346,7 +454,7 @@ export const KoreanReauth: Story = {
     const screen = within(await dialog(canvas, '이메일을 등록해 주세요'))
     await userEvent.type(screen.getByRole('textbox', { name: /^이메일/ }), 'me@example.com')
     await userEvent.click(screen.getByRole('button', { name: '인증번호 받기' }))
-    await expect(await screen.findByText(/보안을 위해 .*로 한 번 더 확인해 주세요/)).toBeVisible()
+    await expect(await screen.findByText(/보안을 위해 한 번 더 확인해 주세요/)).toBeVisible()
   },
 }
 

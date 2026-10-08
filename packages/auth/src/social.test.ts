@@ -4,7 +4,6 @@ import {
   buildAuthorizeUrl,
   createSocialLoginFlow,
   parseSocialCallback,
-  providerOfFailure,
   SocialLoginCallbackError,
   type SocialProviderConfig,
 } from './social'
@@ -152,9 +151,53 @@ describe('createSocialLoginFlow', () => {
     const { state } = await flow.start('kakao')
     const caught = await flow.complete(`?code=c&state=${state}`).catch((error: unknown) => error)
     expect(caught).toBe(rejection)
-    expect(providerOfFailure(caught)).toBe('kakao')
-    expect(providerOfFailure(new Error('other'))).toBeUndefined()
-    expect(providerOfFailure('not an object')).toBeUndefined()
+    expect(flow.providerOfFailure(caught)).toBe('kakao')
+    expect(flow.providerOfFailure(new Error('other'))).toBeUndefined()
+    expect(flow.providerOfFailure('not an object')).toBeUndefined()
+  })
+
+  it('the memory of failures belongs to the flow: another flow does not know them', async () => {
+    const { flow, socialLogin } = flowWith()
+    const rejection = new Error('409')
+    socialLogin.mockRejectedValueOnce(rejection)
+    const { state } = await flow.start('kakao')
+    const caught = await flow.complete(`?code=c&state=${state}`).catch((error: unknown) => error)
+    expect(flowWith().flow.providerOfFailure(caught)).toBeUndefined()
+  })
+
+  it('the finished login is not kept after the session ends (the flow lives as long as the app)', async () => {
+    let signedIn = true
+    const listeners = new Set<() => void>()
+    const socialLogin = vi.fn<SocialLogin>(async () => token)
+    const flow = createSocialLoginFlow({
+      providers,
+      session: {
+        socialLogin,
+        getState: () => ({
+          status: signedIn ? 'authenticated' : 'anonymous',
+          token: signedIn ? 'jwt' : null,
+          principal: signedIn ? token.principal : null,
+        }),
+        subscribe: (listener) => {
+          listeners.add(listener)
+          return () => void listeners.delete(listener)
+        },
+      },
+      storage: memoryStorage(),
+      createState: () => 'state-1',
+    })
+    const { state } = await flow.start('google')
+    const first = await flow.complete(`?code=c&state=${state}`)
+    // 같은 콜백을 다시 불러도(재마운트) 로그인은 한 번, 같은 결과
+    expect(await flow.complete(`?code=c&state=${state}`)).toBe(first)
+    expect(socialLogin).toHaveBeenCalledTimes(1)
+    signedIn = false
+    for (const listener of listeners) listener()
+    // 로그아웃 뒤에는 그 응답을 쥐고 있지 않다 - 같은 콜백은 이제 낯선 것이다
+    await expect(flow.complete(`?code=c&state=${state}`)).rejects.toBeInstanceOf(
+      SocialLoginCallbackError,
+    )
+    expect(socialLogin).toHaveBeenCalledTimes(1)
   })
 
   it('completing the same callback twice (React StrictMode) logs in once', async () => {

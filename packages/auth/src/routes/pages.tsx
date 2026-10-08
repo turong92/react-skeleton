@@ -26,7 +26,7 @@ import { readLinkToken } from '../screens/linkToken'
 import { mergeLabels, type AuthLabels } from '../screens/labels'
 import { resolveMethods, type SignInMethodsConfig } from '../screens/methods'
 import { useResource } from '../screens/useResource'
-import { providerOfFailure, type SocialLoginFlow } from '../social'
+import type { SocialLoginFlow } from '../social'
 import type { SocialProof } from '../types'
 import type { ProviderAction, SocialLinkFlow } from '../socialLink'
 import { useAuth } from '../useAuth'
@@ -69,7 +69,7 @@ function proofOf(callback: SocialProof): SocialProof | undefined {
   return Object.keys(proof).length > 0 ? proof : undefined
 }
 
-/** `proof` 가 있을 때만 다섯 번째 인자로 보낸다 — PKCE 를 쓰지 않는 제공자의 호출은 이전과 똑같다 */
+/** `proof`(콜백의 state 는 늘 있다 · PKCE verifier / nonce 는 제공자가 쓴 것만)를 다섯 번째 인자로 보낸다. 증거가 하나도 없는 값(타입상 가능)만 예전 호출 모양을 지킨다 */
 function linkSocial(
   api: AccountApi,
   provider: string,
@@ -344,7 +344,7 @@ function SocialCallbackInner({ flow, ctx }: { flow: SocialLoginFlow; ctx: PageCo
       signInTo={ctx.paths.signIn}
       homeTo="/"
       linkTo={{ pathname: ctx.paths.account, hash: '#methods' }}
-      provider={state.status === 'error' ? providerOfFailure(state.error) : undefined}
+      provider={state.status === 'error' ? flow.providerOfFailure(state.error) : undefined}
       formatDate={ctx.formatDate}
       onCancelDeletion={async (restoreToken) => {
         // 탈퇴 대기 계정의 소셜 로그인 — 취소하면 일반 로그인 성공과 같은 이동(가려던 곳을 읽고 지운다)

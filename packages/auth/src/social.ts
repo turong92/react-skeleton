@@ -114,13 +114,6 @@ export function parseSocialCallback(search: string | URLSearchParams): SocialCal
   return result
 }
 
-const failedProviders = new WeakMap<object, string>()
-
-/** 거절된 로그인(`flow.complete` 의 오류)이 **어느 제공자의** 것이었는가 — 오류 객체는 그대로 두고 따로 기억한다(안내 화면이 제공자 이름을 말한다). 모르면 undefined */
-export function providerOfFailure(error: unknown): string | undefined {
-  return typeof error === 'object' && error !== null ? failedProviders.get(error) : undefined
-}
-
 export type SocialLoginCallbackFailure = 'state_mismatch' | 'provider_error' | 'missing_code'
 
 /** 콜백을 로그인으로 잇지 못했다(요청은 나가지 않았다). 백엔드가 거절한 경우는 `ApiRequestError` 가 그대로 나간다 */
@@ -142,8 +135,11 @@ export type SocialAction = 'login' | 'link' | 'reauth'
 
 export type SocialLoginFlowOptions = {
   providers: Record<string, SocialProviderConfig>
-  /** `createAuthSession` 의 세션(또는 `socialLogin` 만 가진 것) */
-  session: Pick<AuthSession, 'socialLogin'>
+  /**
+   * `createAuthSession` 의 세션(또는 `socialLogin` 만 가진 것). `getState` · `subscribe` 까지 있으면 로그아웃할 때 끝난 로그인의 응답(토큰)을 비운다 -
+   * 흐름은 앱이 사는 동안 살아 있어서, 같은 콜백을 다시 불러도(StrictMode · 재마운트) 로그인이 한 번이도록 쥐고 있던 응답이 로그아웃 뒤까지 남지 않게
+   */
+  session: Pick<AuthSession, 'socialLogin'> & Partial<Pick<AuthSession, 'getState' | 'subscribe'>>
   /**
    * `state` · verifier · nonce 를 보관한다. 제공자 화면에 다녀오면 페이지가 새로 뜨므로 `window.sessionStorage` 를 넘긴다
    * (생략하면 메모리 — 같은 페이지에서만 이어진다). 탭마다 따로이므로 다른 탭이 시작한 콜백은 거절된다.
@@ -177,6 +173,8 @@ export type SocialLoginFlow = {
     context?: unknown,
     options?: { action?: SocialAction },
   ): Promise<SocialStart>
+  /** 거절된 로그인(`complete` 의 오류)이 **어느 제공자의** 것이었는가 — 오류 객체는 그대로 두고 이 흐름이 따로 기억한다(안내 화면이 제공자 이름을 말한다). 이 흐름이 거절한 것이 아니면 undefined */
+  providerOfFailure(error: unknown): string | undefined
   /** 콜백 쿼리를 확인(state 일치 · 에러 · code)하고 `session.socialLogin(provider, code, redirectUri, { codeVerifier, nonce })` 를 **바로** 부른다(코드는 한 번 · 짧은 수명). 같은 콜백을 두 번 불러도 로그인은 한 번 */
   complete(search: string | URLSearchParams): Promise<SocialComplete>
 }
@@ -206,6 +204,13 @@ export function createSocialLoginFlow({
     removeItem: (key) => void memory.delete(key),
   }
   const inflight = new Map<string, ReturnType<SocialLoginFlow['complete']>>()
+  /** 이 흐름이 거절된 로그인의 오류에 붙여 둔 제공자 — 흐름마다 따로(모듈 전역이 아니다) */
+  const failedProviders = new WeakMap<object, string>()
+  // 로그아웃하면 끝난 로그인의 응답을 비운다(같은 콜백을 다시 부르는 것은 로그인 중에만 뜻이 있다)
+  if (purpose === 'login' && session.subscribe && session.getState)
+    session.subscribe(() => {
+      if (!session.getState?.().principal) inflight.clear()
+    })
 
   function readPending(state: string): Pending | null {
     try {
@@ -217,6 +222,9 @@ export function createSocialLoginFlow({
   }
 
   return {
+    providerOfFailure: (error) =>
+      typeof error === 'object' && error !== null ? failedProviders.get(error) : undefined,
+
     async start(provider, context, options) {
       const config = providers[provider]
       if (!config) throw new Error(`social provider "${provider}" is not configured`)
@@ -252,10 +260,11 @@ export function createSocialLoginFlow({
       const pending = callback.state ? readPending(callback.state) : null
       // 제공자가 에러만 돌려보내고 state 를 빼먹었다 — 서버로 나가는 것이 없으니 에러 그대로 보여 준다(취소를 「위조」로 읽지 않는다)
       if (!callback.state && callback.error) return Promise.reject(providerError(callback))
-      if (!callback.state) return Promise.reject(mismatch())
+      const state = callback.state
+      if (!state) return Promise.reject(mismatch())
       // 다른 종류의 왕복(연결 · 로그인)이 시작한 state 는 건드리지 않는다 — 그쪽 콜백이 쓴다
       if (!pending || pending.purpose !== purpose) return Promise.reject(mismatch())
-      store.removeItem(storagePrefix + callback.state)
+      store.removeItem(storagePrefix + state)
 
       const run = (async () => {
         if (callback.error) throw providerError(callback)
@@ -267,17 +276,15 @@ export function createSocialLoginFlow({
         const proof: SocialProof = {
           ...(pending.codeVerifier ? { codeVerifier: pending.codeVerifier } : {}),
           ...(pending.nonce ? { nonce: pending.nonce } : {}),
-          ...(callback.state ? { state: callback.state } : {}),
+          state,
         }
-        const token = await (
-          Object.keys(proof).length > 0
-            ? session.socialLogin(pending.provider, callback.code, pending.redirectUri, proof)
-            : session.socialLogin(pending.provider, callback.code, pending.redirectUri)
-        ).catch((error: unknown) => {
-          if (typeof error === 'object' && error !== null)
-            failedProviders.set(error, pending.provider)
-          throw error
-        })
+        const token = await session
+          .socialLogin(pending.provider, callback.code, pending.redirectUri, proof)
+          .catch((error: unknown) => {
+            if (typeof error === 'object' && error !== null)
+              failedProviders.set(error, pending.provider)
+            throw error
+          })
         return {
           provider: pending.provider,
           token,
@@ -285,7 +292,7 @@ export function createSocialLoginFlow({
           ...(pending.context === undefined ? {} : { context: pending.context }),
         }
       })()
-      inflight.set(callback.state, run)
+      inflight.set(state, run)
       return run
     },
   }

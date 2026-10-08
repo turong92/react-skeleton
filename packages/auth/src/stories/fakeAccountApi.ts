@@ -39,8 +39,10 @@ export type FakeAccountOptions = {
   takenEmails?: string[]
   /** 이미 등록된 연락받을 이메일 */
   contactEmail?: string
-  /** 연락받을 이메일 기능을 끈 서버 — 요청이 404, `me.contactEmail` 은 늘 null */
+  /** 연락받을 이메일 기능을 끈 서버 — 요청이 404, `me` 에 `contactEmail` 키가 없다(키 없음 = 꺼짐 · null = 켜져 있고 아직 없음) */
   contactEmailOff?: boolean
+  /** 같은 기능을 끈 **옛** 서버 — 요청이 404 인데 `me.contactEmail` 은 null 로 키가 남아 있다(구역이 그려졌다가 404 를 받고서야 사라진다) */
+  contactEmailLegacyOff?: boolean
   /** 로그인 수단이 하나뿐 */
   onlyMethod?: boolean
   /** 새 주소의 인증번호를 기다리는 이메일 변경이 이미 있다(새로고침 뒤) */
@@ -120,7 +122,11 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
     hasPassword: !options.passwordless && !noAddress,
     methods,
     ...(options.emailRequired ? { emailRequired: true } : {}),
-    contactEmail: options.contactEmailOff ? null : (options.contactEmail ?? null),
+    ...(options.contactEmailOff
+      ? {}
+      : {
+          contactEmail: options.contactEmailLegacyOff ? null : (options.contactEmail ?? null),
+        }),
     pendingEmail: options.pendingEmail ?? null,
     pendingEmailExpiresAt: options.pendingEmail
       ? inMinutes(options.pendingExpiresInMinutes ?? 10)
@@ -291,14 +297,16 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
     requestContactEmail: async (email) => {
       calls.push('requestContactEmail')
       emailGate()
-      if (options.contactEmailOff) throw apiError('COMMON.NOT_FOUND', 404)
+      if (options.contactEmailOff || options.contactEmailLegacyOff)
+        throw apiError('COMMON.NOT_FOUND', 404)
       pendingContact = email.trim()
       codeAttempts = 5
       return codeSent() ?? { expiresAt: inMinutes(10), resendAvailableAt: inMinutes(0.5) }
     },
     confirmContactEmail: async (code) => {
       calls.push('confirmContactEmail')
-      if (options.contactEmailOff) throw apiError('COMMON.NOT_FOUND', 404)
+      if (options.contactEmailOff || options.contactEmailLegacyOff)
+        throw apiError('COMMON.NOT_FOUND', 404)
       if (!pendingContact) throw apiError('ACCOUNT.CODE_EXPIRED', 410)
       if (code !== FAKE_CODE) wrongCode()
       me.contactEmail = pendingContact
@@ -306,7 +314,8 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
     },
     removeContactEmail: async () => {
       calls.push('removeContactEmail')
-      if (options.contactEmailOff) throw apiError('COMMON.NOT_FOUND', 404)
+      if (options.contactEmailOff || options.contactEmailLegacyOff)
+        throw apiError('COMMON.NOT_FOUND', 404)
       me.contactEmail = null
     },
     identities: async () => {

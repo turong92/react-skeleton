@@ -1,5 +1,5 @@
 import { isErrorCode, ErrorCodes } from '@skeleton/api-client'
-import { Alert, Button, Field, FormProblems, Input, useSubmitAttempt } from '@skeleton/ui'
+import { Alert, Button, useSubmitAttempt } from '@skeleton/ui'
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import type { CodeSent, SocialReauth } from '../account/accountApi'
 import { useCodeClock } from '../codeClockContext'
@@ -7,6 +7,7 @@ import { codeWindowOf, estimateCodeWindow, type CodeWindow } from '../codeWindow
 import authStyles from './auth.module.css'
 import styles from './EmailRequiredScreen.module.css'
 import { mergeLabels, type AuthLabels } from './labels'
+import { AddressField, LeaveActions, ReauthPrompt } from './EmailRequiredParts'
 import { labelOfMethod } from './methodsList'
 import { useAction } from './useAction'
 import { VerifyCodePanel } from './VerifyCodePanel'
@@ -14,6 +15,8 @@ import { VerifyCodePanel } from './VerifyCodePanel'
 export type EmailRequiredScreenProps = {
   /** 이 계정이 로그인에 쓰는 소셜 제공자 코드들 — 「번호가 안 오면」 안내와 1시간 뒤 재동의 단추에 쓴다 */
   providers?: string[]
+  /** 서버가 알려 주는 대기 중 변경(`me.pendingEmail` · `pendingEmailExpiresAt`) — 새로고침 · 다시 들어와도 주소 입력으로 돌아가지 않고 인증번호 단계를 연다. 입력을 시작했거나 이미 보낸 뒤에는 건드리지 않는다 */
+  pending?: { email: string; window: CodeWindow } | null
   /** `POST /account/email/change { newEmail }`(다시 인증 없이 · 마지막 로그인 1시간 안). 다시 보내기도 같은 호출이다 */
   onRequestCode: (request: { newEmail: string; socialReauth?: SocialReauth }) => Promise<CodeSent>
   /** `POST /account/email/change/confirm { code }` — 요청한 그 세션에서만 */
@@ -37,6 +40,7 @@ const SHAPE = /^[^\s@]+@[^\s@]+$/
  */
 export function EmailRequiredScreen({
   providers = [],
+  pending,
   onRequestCode,
   onConfirmCode,
   onRegistered,
@@ -52,8 +56,8 @@ export function EmailRequiredScreen({
   const action = useAction(labels)
   const attempt = useSubmitAttempt()
   const [email, setEmail] = useState('')
-  const [sentTo, setSentTo] = useState<string | null>(null)
-  const [codeWin, setWindow] = useState<CodeWindow | null>(null)
+  const [sentTo, setSentTo] = useState<string | null>(pending?.email ?? null)
+  const [codeWin, setWindow] = useState<CodeWindow | null>(pending?.window ?? null)
   /** 서버가 첫 등록에도 다시 인증을 요구했다(마지막 로그인 1시간 초과) */
   const [reauth, setReauth] = useState(false)
   const heading = useRef<HTMLHeadingElement>(null)
@@ -71,6 +75,17 @@ export function EmailRequiredScreen({
     else
       card.current?.querySelector<HTMLInputElement>('input[autocomplete="one-time-code"]')?.focus()
   }, [sentTo, ids.email])
+
+  // 서버가 대기 중 변경을 뒤늦게 알려 줬다(`me` 가 이 화면보다 늦게 읽혔다) - 아무것도 시작하지 않았으면 인증번호 단계로. 값이 바뀔 때 한 번만(렌더 중 상태 맞춤)
+  const pendingKey = pending ? `${pending.email}@${pending.window.expiresAt}` : null
+  const [appliedKey, setAppliedKey] = useState(pendingKey)
+  if (pendingKey !== appliedKey) {
+    setAppliedKey(pendingKey)
+    if (pending && email === '' && sentTo === null) {
+      setSentTo(pending.email)
+      setWindow(pending.window)
+    }
+  }
 
   const problem = !email.trim()
     ? labels.problemEmailMissing
@@ -139,48 +154,24 @@ export function EmailRequiredScreen({
         ) : (
           <form onSubmit={send} noValidate aria-labelledby={ids.title} className={authStyles.stack}>
             {action.error && !reauth && <Alert tone="danger">{action.error.message}</Alert>}
-            <Field
+            <AddressField
+              labels={labels}
               id={ids.email}
-              label={labels.emailRequiredField}
-              required
-              error={attempt.attempted ? problem : undefined}
-            >
-              {(control) => (
-                <Input
-                  {...control}
-                  type="email"
-                  autoComplete="email"
-                  inputMode="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              )}
-            </Field>
-            <FormProblems
-              title={labels.formProblemsTitle}
-              problems={
-                attempt.attempted && problem
-                  ? [{ key: 'email', message: problem, target: ids.email }]
-                  : []
-              }
+              value={email}
+              onChange={setEmail}
+              problem={attempt.attempted ? problem : undefined}
             />
             {reauth && (
-              <div className={styles.providers} data-testid="email-reauth">
-                <Alert tone="warning">
-                  {providerName
-                    ? labels.emailReauthNeeded(providerName)
-                    : labels.reauthProviderNone}
-                </Alert>
-                {providers.map((provider) => (
-                  <Button
-                    key={provider}
-                    disabled={!onProviderReauth || !email.trim() || !SHAPE.test(email.trim())}
-                    onClick={() => onProviderReauth?.(provider, email.trim())}
-                  >
-                    {labels.reauthProviderButton(labelOfMethod(provider, labels))}
-                  </Button>
-                ))}
-              </div>
+              <ReauthPrompt
+                labels={labels}
+                providers={providers}
+                canContinue={!!onProviderReauth && !!email.trim() && SHAPE.test(email.trim())}
+                onProvider={(provider) => onProviderReauth?.(provider, email.trim())}
+                onRetry={() => {
+                  setReauth(false)
+                  action.clear()
+                }}
+              />
             )}
             {!reauth && (
               <Button
@@ -194,17 +185,7 @@ export function EmailRequiredScreen({
             )}
           </form>
         )}
-        <div className={styles.leave}>
-          <p>{labels.emailRequiredDeleteHint}</p>
-          <div className={styles.leaveActions}>
-            <Button variant="secondary" onClick={onSignOut}>
-              {labels.emailRequiredSignOut}
-            </Button>
-            <Button variant="danger" onClick={onDelete}>
-              {labels.emailRequiredDelete}
-            </Button>
-          </div>
-        </div>
+        <LeaveActions labels={labels} onSignOut={onSignOut} onDelete={onDelete} />
       </div>
     </div>
   )

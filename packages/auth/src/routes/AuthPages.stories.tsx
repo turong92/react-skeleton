@@ -536,6 +536,7 @@ export const SocialSignInThatCannotStartShowsWhy: Story = {
           ctx={context({
             methods: { password: true, social: [{ provider: 'line' }] },
             socialFlow: {
+              providerOfFailure: () => undefined,
               start: async () => {
                 throw new PkceUnavailableError()
               },

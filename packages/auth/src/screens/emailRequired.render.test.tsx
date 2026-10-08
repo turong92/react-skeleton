@@ -46,10 +46,10 @@ describe('EmailRequiredScreen (the full-screen "register your email" step)', () 
     expect(out).toMatch(/<button[^>]*data-variant="danger"[^>]*>내 계정 삭제<\/button>/)
   })
 
-  it('shows the same in English by default and never draws an account id', () => {
+  it('shows the same in English by default', () => {
     const out = screen({} as typeof koAuthLabels)
     expect(out).toContain('Add your email address')
-    expect(out).not.toMatch(/acc_|prf_/)
+    expect(out).toContain('Send me a code')
   })
 })
 
@@ -69,6 +69,25 @@ describe('EmailRequiredGate', () => {
         <p>앱 화면</p>
       </EmailRequiredGate>,
     )
+
+  it('never draws the account id, on the screen or around it', () => {
+    const controller = createEmailRequiredController()
+    controller.require()
+    const out = html(
+      <EmailRequiredGate
+        controller={controller}
+        api={api}
+        accountId="acc_secret_1234"
+        labels={koAuthLabels}
+        onSignOut={() => undefined}
+        onDelete={() => undefined}
+      >
+        <p>앱 화면</p>
+      </EmailRequiredGate>,
+    )
+    expect(out).toContain('이메일을 등록해 주세요')
+    expect(out).not.toContain('acc_secret_1234')
+  })
 
   it('idle: only the app, nothing covers it', () => {
     const out = gate()

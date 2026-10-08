@@ -55,7 +55,7 @@ export type AccountSettingsProps = {
   onProfileChanged?: (profile: AccountMe) => void
   formatDate?: (iso: string) => string
   /**
-   * 「연락받을 이메일」 구역을 둔다(기본 false — 서버가 `skeleton.account.contact-email.enabled` 를 켠 앱만). 서버가 404 로 꺼져 있다고 답하면 구역은 스스로 사라진다
+   * 「연락받을 이메일」 구역을 둔다(기본 false — 서버가 `skeleton.account.contact-email.enabled` 를 켠 앱만). 서버가 기능을 껐으면 `me` 에 `contactEmail` 키가 없어 구역은 그려지지 않는다(옛 서버가 404 로 답하면 구역은 스스로 사라진다)
    */
   contactEmail?: boolean
   /** 주소가 없던 계정의 첫 이메일이 확인됐다(이메일 필수 앱의 막을 걷는다 — 보통 `emailRequired.registered()`) */
@@ -118,6 +118,7 @@ export function AccountSettings({
   const labels = mergeLabels(given)
   const on = (name: AccountSectionName) =>
     sections?.[name] !== false && (name !== 'contact' || contactOn)
+  // 연락받을 이메일 구역은 서버가 `me.contactEmail` 키를 줄 때만 그린다(키 없음 = 서버가 기능을 껐다 · 옛 서버) - 404 를 받아야 꺼진 줄 알게 두지 않는다
   const sessionsOn = sections?.sessions !== false
   const passwordOn = sections?.password !== false
   const me = useResource(useCallback(() => api.me(), [api]))
@@ -314,7 +315,7 @@ export function AccountSettings({
         />
       )}
       {(restricted || on('email')) && emailSection}
-      {!restricted && on('contact') && (
+      {!restricted && on('contact') && account.contactEmail !== undefined && (
         <ContactEmailSection
           contactEmail={account.contactEmail ?? null}
           labels={given}

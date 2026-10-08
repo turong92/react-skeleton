@@ -11,7 +11,7 @@
 scripts/dev-sample.sh        # DB · 로컬 S3 → 백엔드 :8080 → 이 앱 :5173.  로그인: user@example.com / password · 메일은 mailpit(http://localhost:8025, `docker compose --profile mail up -d`)
 ```
 
-이 레포에서 프론트만: `pnpm dev:sample`(백엔드는 `API_PROXY_TARGET=http://localhost:8080`, 기본값). 브라우저 e2e: `pnpm e2e:sample` — 백엔드까지 스스로 올렸다 내린다(Docker · JDK 필요, 아래 「테스트」).
+이 레포에서 프론트만: `pnpm dev:sample`(백엔드는 `API_PROXY_TARGET=http://localhost:8080`, 기본값). 브라우저 e2e: `pnpm e2e:sample` — 백엔드까지 스스로 올렸다 내린다(Docker · JDK 필요, 아래 「테스트」). 백엔드를 **두 번** 올려 차례로 돈다: `e2e:main`(표준 구성) 다음 `e2e:reauth`(첫 이메일 등록의 재인증 면제 창이 없는 구성 — 제공자 재동의 길, `emailReauth.e2e.ts` 만; 한 판만 `pnpm --filter sample e2e:reauth`).
 
 ## 화면 → Pattern 지도
 

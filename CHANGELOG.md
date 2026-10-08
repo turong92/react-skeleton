@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — 이메일 등록 · 약관 재동의 막이 한 계정의 것이 된다, 독립 리뷰 반영(`@skeleton/auth` · `@skeleton/legal` · `@skeleton/realtime` · `apps/sample`)
+
+- **계정 바뀜**: 두 컨트롤러에 `setAccount(accountId)` — 게이트가 매번 알린다. 계정이 **바뀌면**(다른 탭이 B 로 로그인 · 로그아웃; 토큰 저장소는 탭끼리 동기화된다) 이전 계정의 막이 접히고 붙잡힌 호출은 원래 403 으로 끝난다(B 의 토큰으로 나가지 않는다). 로그아웃 뒤에 늦게 온 403 은 막을 다시 세우지 않는다. 막이 열려 있는 동안 탭이 다시 보이면(visibilitychange · focus) 서버에 다시 묻는다 — 다른 탭에서 이미 등록 · 동의했으면 접고 붙잡은 호출을 보낸다(`reconsent.check()` 는 더는 묻지 않으면 닫는다). `ReconsentGate` 의 `deferCheck`: 앞 단계가 끝나야 묻는 앱이 계정을 숨기지 않고 확인만 미룬다.
+- **이메일 필수를 안 켠 앱**: 주소 없는 소셜 계정은 예전처럼 제공자 단추가 바로 나온다(403 을 한 번 맞고서야 나오지 않는다), 힌트 문구 `emailAddHintReauth`. 필수 앱의 「서버가 말할 때만 제공자」 순서는 그대로. ko `emailReauthNeeded` 는 조사를 붙이지 않는다.
+- **실시간 알림**: 막이 걷히면(`required → idle`) 403 으로 멈춘 스트림을 다시 잇는다(sample `subscribeGateRelease` — 토큰이 바뀌지 않는 이유로 풀린 403 이라 `subscribeAuthChanges` 만으로는 깨어나지 못했다). `subscribeAuthChanges` 의 뜻을 「다시 이어도 되는 때」로 넓혔다. 403 은 계속 `off`(진짜 권한 오류와 구분할 수 없다) — 풀렸다는 신호는 막의 주인이 준다.
+- **그 밖**: `/account#delete` 같은 해시가 가리키는 구역으로 스크롤하고 제목에 포커스 · 막이 닫히면 열리기 전의 포커스 복원(`useRestoreFocus`) · 새로고침해도 `me.pendingEmail` 로 인증번호 단계 복원 · 쓸 수 있는 제공자가 없으면 「다시 시도」 · 제공자 목록을 앱이 켠 것으로 거른다(`enabledProviders`) · 인증번호 안내문에서 하드코딩 「10분」 제거(남은 시간은 카운트다운이 말한다) · `me.contactEmail` 키가 없으면 연락받을 이메일 구역을 그리지 않는다(키 없음 = 꺼짐, null = 아직 없음; 옛 서버는 404 로 사라지던 길이 남아 있다) · `flow.providerOfFailure(error)`(모듈 전역 WeakMap 이던 `providerOfFailure` 를 흐름 인스턴스로) · 로그아웃하면 끝난 소셜 로그인의 응답을 비운다 · 안 쓰는 라벨 `emailRequiredDone` 삭제 · `ContactEmailSection` · `EmailRequiredScreen` 분리.
+- **api-client 동작 기록**: 한 요청은 **401 복구(토큰 갱신) 뒤에 403 복구**를 이어 받을 수 있다 — 갱신한 토큰으로 다시 보냈더니 이번엔 403(이메일 · 약관). 각 복구는 요청당 한 번, 같은 코드의 403 은 한 번 풀었으면 다시 풀지 않는다.
+- **e2e**: `registerEmailViaGate` · `acceptLegalGate` 는 막이 뜰지를 서버(`GET /account/me` 의 `emailRequired`, `GET /legal/consents/me` 의 `blocked`)에게 먼저 묻고, 뜬다고 하면 삼키지 않고 기다린다(안 뜨면 실패). 「없다」를 고정 대기로 확인하던 곳은 요청이 끝났다는 신호(네트워크 유휴 · 뒤따른 메일)로 바꿨다. 막의 로그아웃 · 계정 삭제 단추를 눌러 끝까지. `pnpm e2e` 는 `e2e:main` 다음 `e2e:reauth`(`E2E_PASS=reauth`, 면제 창 `PT0S`, `emailReauth.e2e.ts` 만)를 차례로 돌아 제공자 재동의 길이 표준 실행 · CI 에서 돈다.
+
 ### Added — 이메일 필수: 「이메일을 등록해 주세요」 전면 화면, 계정 이메일 · 연락받을 이메일 두 구역(`@skeleton/auth` · `@skeleton/api-client` · `@skeleton/ui` · `apps/sample`)
 
 백엔드(kotlin-skeleton `feat/email-required`, `docs/account-http-contract.md` 의 FINAL-6)에 맞췄다. 주인 결정: 「이메일은 받아야지. 있는 건 자동으로 등록하고, 없으면 강제로 입력하게 시키고, 추가 가능하게」 · 「복수 이메일이라는 건 연락받을 이메일」 · 「계정 이메일은 무조건 하나」. 둘 다 앱의 선택이라 **기본은 꺼짐**(sample 은 켠다).
@@ -32,7 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 백엔드(kotlin-skeleton `fix/google-email-authority`)가 메일로 가입한 사람이 같은 메일의 소셜로 처음 로그인하면 `409 ACCOUNT.SOCIAL_EMAIL_CONFLICT`(`data` 없음)를 주도록 바뀐 데 맞췄다. 주인 결정 — 「그냥 연동 안 해주고 지가 등록하게」.
 
 - **막다른 오류 → 안내 화면**: 전에는 일반 경고 한 줄(「같은 이메일의 계정이 이미 있어요 …」)과 글자 링크였다. 이제 제목 「이미 이 이메일로 가입한 계정이 있어요」 / 본문 「가입할 때 쓴 방법(이메일과 비밀번호, 이메일 링크, 다른 소셜)으로 로그인한 뒤, 계정 설정의 '로그인 수단'에서 'Google 연결'을 누르면, 다음부터 Google 로그인도 쓸 수 있어요.」(제공자 이름 뒤에 조사를 붙이지 않는 문장 구조) / 주 단추 「로그인하러 가기」 · 보조 단추 「처음으로」. `SocialCallbackScreen` 의 새 prop `homeTo` · `linkTo` · `provider`(없으면 옛 모양 — 계정 연결 콜백의 충돌은 뜻이 달라 그대로). **`AuthLabels` 변경**: `callbackConflictBody` 가 문자열이 아니라 `(providerName) => string`, 새 키 `callbackConflictSignIn` · `callbackConflictHome` · `callbackConflictUnknownProvider` · `methodLinkContinue`(번역을 쓰는 앱은 키를 더한다). 제목 문구도 바뀌었다.
-- **이어 주기**: 「로그인하러 가기」로 로그인하면 `/account#methods` 로 가고, 로그인 수단 구역이 「Google 연결을 이어서 하세요」 한 줄 + 강조 테두리와 포커스가 간 그 제공자의 「연결」 단추를 보인다(`AccountSettings.linkIntent` · `SignInMethodsSection.linkIntent` · `SocialButtons.highlight`). 의도(어느 제공자)는 router state(`linkIntentState` · `linkIntentOf`)로만 옮긴다 — 저장소 · 주소 쿼리에 넣지 않는다. 돌아갈 곳은 로그인 화면이 이미 읽는 `state.from` 이라 `safeReturnPath` 검사를 거친다. 이미 연결됐거나 앱이 안 켠 제공자면 아무것도 더하지 않는다. 어느 제공자였는지는 `providerOfFailure(error)`(거절된 `flow.complete` 의 오류를 제공자와 따로 기억한다).
+- **이어 주기**: 「로그인하러 가기」로 로그인하면 `/account#methods` 로 가고, 로그인 수단 구역이 「Google 연결을 이어서 하세요」 한 줄 + 강조 테두리와 포커스가 간 그 제공자의 「연결」 단추를 보인다(`AccountSettings.linkIntent` · `SignInMethodsSection.linkIntent` · `SocialButtons.highlight`). 의도(어느 제공자)는 router state(`linkIntentState` · `linkIntentOf`)로만 옮긴다 — 저장소 · 주소 쿼리에 넣지 않는다. 돌아갈 곳은 로그인 화면이 이미 읽는 `state.from` 이라 `safeReturnPath` 검사를 거친다. 이미 연결됐거나 앱이 안 켠 제공자면 아무것도 더하지 않는다. 어느 제공자였는지는 `flow.providerOfFailure(error)`(거절된 `flow.complete` 의 오류를 제공자와 따로 기억한다).
 - 로그인 화면의 이메일 칸은 미리 채우지 않는다(콜백이 이메일을 주지 않는다 — 테스트로 고정).
 - **이메일 없는 계정**(주소를 안 주는 Google 등 `me.email` null): 계정 설정은 이미 「이메일 주소가 없어요」 + 새 주소 추가(제공자 동의를 다시 거침)로 그렸다 — 스토리 `EmailLessGoogleAccount` 로 고정. `apps/sample` 의 설정 카드는 빈 줄(—)이었는데 「이메일 없음」 + 「이메일 추가」 단추(`/account#email`)로 바뀌었다.
 - 가짜 `createFakeAuthApi({ socialEmailConflict })`, 스토리 `Patterns/Auth/Social email conflict`, 라우트 스토리 `SocialEmailConflictGuidesToTheLinkInTheSettings`(콜백 → 로그인 → 강조된 연결 단추).

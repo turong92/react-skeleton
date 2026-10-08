@@ -1,0 +1,103 @@
+import { Alert, Button, Field, FormProblems, Input } from '@skeleton/ui'
+import styles from './EmailRequiredScreen.module.css'
+import type { AuthLabels } from './labels'
+import { labelOfMethod } from './methodsList'
+
+/**
+ * 서버가 1시간이 지난 첫 등록에 제공자 재동의를 요구했다: 한 줄 안내와 제공자마다 채운 단추.
+ * 쓸 수 있는 제공자가 없으면(계정에 연결된 것이 없거나 앱이 켜지 않았다) 「문의해 주세요」와 함께 처음 단계로 돌아가는 「다시 시도」가 남는다 - 막다른 길이 아니다
+ */
+export function ReauthPrompt({
+  labels,
+  providers,
+  canContinue,
+  onProvider,
+  onRetry,
+}: {
+  labels: AuthLabels
+  providers: string[]
+  /** 새 주소가 올바르게 적혔고 앱이 동의 화면을 열 수 있다 */
+  canContinue: boolean
+  onProvider: (provider: string) => void
+  onRetry: () => void
+}) {
+  const providerName = providers.length > 0 ? labelOfMethod(providers[0], labels) : null
+  return (
+    <div className={styles.providers} data-testid="email-reauth">
+      <Alert tone="warning">
+        {providerName ? labels.emailReauthNeeded(providerName) : labels.reauthProviderNone}
+      </Alert>
+      {providers.length === 0 && (
+        <Button variant="secondary" onClick={onRetry}>
+          {labels.emailRequiredRetry}
+        </Button>
+      )}
+      {providers.map((provider) => (
+        <Button key={provider} disabled={!canContinue} onClick={() => onProvider(provider)}>
+          {labels.reauthProviderButton(labelOfMethod(provider, labels))}
+        </Button>
+      ))}
+    </div>
+  )
+}
+
+/** 떠나는 길 - 로그아웃 · 계정 삭제는 허용 목록에 있어 막다른 길이 되지 않는다 */
+export function LeaveActions({
+  labels,
+  onSignOut,
+  onDelete,
+}: {
+  labels: AuthLabels
+  onSignOut: () => void
+  onDelete: () => void
+}) {
+  return (
+    <div className={styles.leave}>
+      <p>{labels.emailRequiredDeleteHint}</p>
+      <div className={styles.leaveActions}>
+        <Button variant="secondary" onClick={onSignOut}>
+          {labels.emailRequiredSignOut}
+        </Button>
+        <Button variant="danger" onClick={onDelete}>
+          {labels.emailRequiredDelete}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+/** 주소 칸 - 이유(`problem`)가 있으면 칸 아래와 요약에 같이 말하고 그 칸으로 데려간다(단추는 늘 눌린다) */
+export function AddressField({
+  labels,
+  id,
+  value,
+  onChange,
+  problem,
+}: {
+  labels: AuthLabels
+  id: string
+  value: string
+  onChange: (value: string) => void
+  problem: string | undefined
+}) {
+  return (
+    <>
+      <Field id={id} label={labels.emailRequiredField} required error={problem}>
+        {(control) => (
+          <Input
+            {...control}
+            type="email"
+            autoComplete="email"
+            inputMode="email"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+          />
+        )}
+      </Field>
+      <FormProblems
+        title={labels.formProblemsTitle}
+        problems={problem ? [{ key: 'email', message: problem, target: id }] : []}
+      />
+    </>
+  )
+}

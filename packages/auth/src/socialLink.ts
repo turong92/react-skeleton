@@ -91,12 +91,8 @@ export function createSocialLinkFlow({
             ...(nonce ? { nonce } : {}),
             ...(state ? { state } : {}),
           }
-          if (Object.keys(proof).length > 0)
-            await accountApi.linkSocial(provider, authorizationCode, redirectUri, reauth, proof)
-          else
-            await (reauth
-              ? accountApi.linkSocial(provider, authorizationCode, redirectUri, reauth)
-              : accountApi.linkSocial(provider, authorizationCode, redirectUri))
+          // 로그인 흐름이 콜백마다 state 를 싣는다 - 증거는 늘 있다
+          await accountApi.linkSocial(provider, authorizationCode, redirectUri, reauth, proof)
           return { provider }
         },
       )

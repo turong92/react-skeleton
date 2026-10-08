@@ -1,18 +1,11 @@
 import { ApiRequestError } from '@skeleton/api-client'
-import {
-  Alert,
-  Button,
-  Field,
-  FormProblems,
-  Input,
-  SectionCard,
-  useSubmitAttempt,
-} from '@skeleton/ui'
+import { Alert, SectionCard, useSubmitAttempt } from '@skeleton/ui'
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import type { CodeSent } from '../account/accountApi'
 import { useCodeClock } from '../codeClockContext'
 import { codeWindowOf, estimateCodeWindow, type CodeWindow } from '../codeWindow'
 import styles from './auth.module.css'
+import { ContactEmailForm, ContactEmailSummary } from './ContactEmailParts'
 import { mergeLabels, type AuthLabels } from './labels'
 import { useAction } from './useAction'
 import { VerifyCodePanel } from './VerifyCodePanel'
@@ -132,103 +125,35 @@ export function ContactEmailSection({
           </Alert>
         )}
         {step === 'idle' && (
-          <>
-            <div className={styles.row}>
-              {contactEmail ? (
-                <>
-                  <span className={styles.muted}>{labels.contactEmailCurrent}</span>
-                  <strong>{contactEmail}</strong>
-                </>
-              ) : (
-                <span>{labels.contactEmailNone}</span>
-              )}
-            </div>
-            {contactEmail && <p className={styles.muted}>{labels.contactEmailCurrentIsAccount}</p>}
-            {removal.error && <Alert tone="danger">{removal.error.message}</Alert>}
-            <div className={styles.row} ref={actions}>
-              {contactEmail ? (
-                <>
-                  <Button
-                    variant="secondary"
-                    onClick={() => {
-                      setNotice(null)
-                      setEmail('')
-                      setStep('entering')
-                    }}
-                  >
-                    {labels.contactEmailChange}
-                  </Button>
-                  <Button
-                    variant="danger"
-                    loading={removal.busy}
-                    loadingLabel={labels.submitting}
-                    onClick={() => void remove()}
-                  >
-                    {labels.contactEmailRemove}
-                  </Button>
-                </>
-              ) : (
-                <Button
-                  onClick={() => {
-                    setNotice(null)
-                    setEmail('')
-                    setStep('entering')
-                  }}
-                >
-                  {labels.contactEmailAdd}
-                </Button>
-              )}
-            </div>
-          </>
+          <ContactEmailSummary
+            contactEmail={contactEmail}
+            labels={labels}
+            actions={actions}
+            removal={removal}
+            onStart={() => {
+              setNotice(null)
+              setEmail('')
+              setStep('entering')
+            }}
+            onRemove={() => void remove()}
+          />
         )}
         {step === 'entering' && (
-          <form
-            className={styles.form}
+          <ContactEmailForm
+            labels={labels}
+            fieldId={fieldId}
+            email={email}
+            onEmailChange={setEmail}
+            problem={problem}
+            attempted={attempt.attempted}
+            error={action.error}
+            busy={action.busy}
             onSubmit={send}
-            noValidate
-            aria-label={labels.contactEmailSend}
-          >
-            {action.error && <Alert tone="danger">{action.error.message}</Alert>}
-            <Field
-              id={fieldId}
-              label={labels.contactEmailField}
-              required
-              error={attempt.attempted ? problem : undefined}
-            >
-              {(control) => (
-                <Input
-                  {...control}
-                  type="email"
-                  autoComplete="email"
-                  inputMode="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              )}
-            </Field>
-            <FormProblems
-              title={labels.formProblemsTitle}
-              problems={
-                attempt.attempted && problem
-                  ? [{ key: 'email', message: problem, target: fieldId }]
-                  : []
-              }
-            />
-            <div className={styles.row}>
-              <Button type="submit" loading={action.busy} loadingLabel={labels.submitting}>
-                {labels.contactEmailSend}
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  action.clear()
-                  setStep('idle')
-                }}
-              >
-                {labels.cancel}
-              </Button>
-            </div>
-          </form>
+            onCancel={() => {
+              action.clear()
+              setStep('idle')
+            }}
+          />
         )}
         {step === 'code' && (
           <div ref={codeBox}>

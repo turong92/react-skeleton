@@ -172,6 +172,23 @@ export const NewerVersionPublishedMeanwhile: Story = {
   },
 }
 
+/** 동의가 끝나 막이 닫히면 포커스가 막을 연 단추로 돌아온다 - 문서 맨 앞으로 날아가지 않는다 */
+export const AgreeingGivesTheFocusBack: Story = {
+  args: {
+    accountId: 'acc-1',
+    trigger: [{ type: 'terms', version: '2026-10-01', reason: 'STALE' }],
+  },
+  play: async ({ canvas, userEvent }) => {
+    const opener = await canvas.findByRole('button', { name: '노트 불러오기' })
+    await userEvent.click(opener)
+    const dialog = await screen.findByRole('dialog', { name: '약관이 바뀌었어요' })
+    await userEvent.click(within(dialog).getByRole('checkbox', { name: /이용약관/ }))
+    await userEvent.click(within(dialog).getByRole('button', { name: '동의하고 계속하기' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    await waitFor(() => expect(opener).toHaveFocus())
+  },
+}
+
 /** 체크 없이 「동의하고 계속하기」 — 버튼은 눌리고, 이유가 버튼 위에 요약으로 뜨고, 첫 칸으로 포커스가 간다. 체크하면 요약이 바로 사라진다 */
 export const SubmitWithNothingTickedExplainsItself: Story = {
   args: { fake: { blocked: true }, accountId: 'acc-1' },

@@ -28,7 +28,7 @@ export type SocialCallbackScreenProps = {
   homeTo?: string
   /** 안내 화면의 「로그인하러 가기」로 로그인에 성공하면 가는 곳 — 설정의 로그인 수단 구역(`{ pathname: '/account', hash: '#methods' }`). 어느 제공자를 연결하려 했는지는 router state 로만 따라간다 */
   linkTo?: { pathname: string; hash?: string }
-  /** 거절된 로그인의 제공자 코드(`providerOfFailure(error)`) — 안내 문장이 그 이름을 말한다 */
+  /** 거절된 로그인의 제공자 코드(`flow.providerOfFailure(error)`) — 안내 문장이 그 이름을 말한다 */
   provider?: string
   labels?: Partial<AuthLabels>
 }

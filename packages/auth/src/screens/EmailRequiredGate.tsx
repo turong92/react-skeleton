@@ -1,9 +1,20 @@
-import { useEffect, useState, useSyncExternalStore, type ReactNode } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from 'react'
 import type { AccountApi } from '../account/accountApi'
+import type { AccountMe } from '../account/types'
 import { CodeClockProvider } from '../codeClock'
+import { codeWindowOf, type CodeWindow } from '../codeWindow'
 import type { EmailRequiredController } from '../emailRequired'
 import { reauthSubjectOf } from '../reauth/kind'
 import { EmailRequiredScreen } from './EmailRequiredScreen'
+import { useRestoreFocus } from './useRestoreFocus'
 import type { AuthLabels } from './labels'
 
 export type EmailRequiredGateProps = {
@@ -21,6 +32,8 @@ export type EmailRequiredGateProps = {
   onRegistered?: () => void
   /** true 인 동안 막을 걷고 아래 화면을 살린다 — 계정 설정(`/account`)에서 이메일을 등록하거나 계정을 지우는 길. 컨트롤러 상태는 그대로다 */
   standAside?: boolean
+  /** 이 앱이 로그인에 켠 소셜 제공자 코드들 — 계정에 연결된 제공자 중 이것만 재동의 단추가 된다(앱이 켜지 않은 제공자의 동의 화면은 열 수 없다). 없으면 거르지 않는다 */
+  enabledProviders?: string[]
   /** 인증번호 남은 시간을 세는 시계(서버 보정 시계) */
   now?: () => number
   labels?: Partial<AuthLabels>
@@ -41,13 +54,35 @@ export function EmailRequiredGate({
   onProviderReauth,
   onRegistered,
   standAside = false,
+  enabledProviders,
   now,
   labels,
   children,
 }: EmailRequiredGateProps) {
   const state = useSyncExternalStore(controller.subscribe, controller.getState, controller.getState)
   const required = state.status === 'required'
-  const [providers, setProviders] = useState<string[]>([])
+  const [allProviders, setProviders] = useState<string[]>([])
+  const [pending, setPending] = useState<{ email: string; window: CodeWindow } | null>(null)
+  const providers = useMemo(
+    () =>
+      enabledProviders ? allProviders.filter((p) => enabledProviders.includes(p)) : allProviders,
+    [allProviders, enabledProviders],
+  )
+  /** `me` 에서 읽을 것: 재동의에 쓸 제공자 목록, 서버에 남아 있는 대기 중 이메일 변경(만료 전인 것만) */
+  const nowRef = useRef(now) // 앱이 매 렌더 새 함수를 줘도 아래 효과를 다시 돌리지 않는다
+  useEffect(() => {
+    nowRef.current = now
+  })
+  const readMe = useCallback((me: AccountMe) => {
+    setProviders(reauthSubjectOf(me).providers)
+    const window = codeWindowOf({ expiresAt: me.pendingEmailExpiresAt })
+    const clock = nowRef.current?.() ?? Date.now()
+    setPending(
+      me.pendingEmail && window && window.expiresAt > clock
+        ? { email: me.pendingEmail, window }
+        : null,
+    )
+  }, [])
 
   // 지금 계정을 컨트롤러에 알린다 — 계정이 바뀌면(다른 탭에서 다른 계정으로 로그인 · 로그아웃) 이전 계정의 화면 · 붙잡은 호출은 접히고(원래 403 으로 끝난다), 로그아웃 뒤에 늦게 온 403 은 화면을 다시 세우지 않는다
   useEffect(() => {
@@ -61,7 +96,7 @@ export function EmailRequiredGate({
       (me) => {
         if (!live) return
         if (me.emailRequired === true) controller.require()
-        setProviders(reauthSubjectOf(me).providers)
+        readMe(me)
         controller.setReady(true) // 이제 다음 단계(약관 …)가 물어도 된다
       },
       () => live && controller.setReady(true), // 못 읽어도 다음 단계를 막아 두지 않는다
@@ -70,7 +105,7 @@ export function EmailRequiredGate({
       live = false
       controller.setReady(false) // 계정이 바뀌거나 로그아웃 — 다음 계정은 다시 물어봐야 안다
     }
-  }, [accountId, api, controller])
+  }, [accountId, api, controller, readMe])
   // 막이 열려 있는 동안: 열릴 때와 탭이 다시 보일 때마다 서버에 다시 묻는다 — 다른 탭에서 이미 등록했으면 접고 붙잡은 호출을 보낸다. 재동의에 쓸 제공자 목록도 이때 새로 읽는다
   useEffect(() => {
     if (!required || !accountId) return
@@ -80,7 +115,7 @@ export function EmailRequiredGate({
         (me) => {
           if (!live) return
           if (me.emailRequired !== true) controller.registered()
-          else setProviders(reauthSubjectOf(me).providers)
+          else readMe(me)
         },
         () => undefined,
       )
@@ -93,16 +128,18 @@ export function EmailRequiredGate({
       document.removeEventListener('visibilitychange', onVisible)
       window.removeEventListener('focus', onVisible)
     }
-  }, [required, accountId, api, controller])
+  }, [required, accountId, api, controller, readMe])
   // 로그아웃 · 계정 삭제로 떠나면 접는다(붙잡힌 호출은 403 으로 끝난다). 막이 열린 뒤에 로그아웃을 알게 돼도 접는다(`required` 가 의존)
   useEffect(() => {
     if (!accountId && required) controller.decline()
   }, [accountId, required, controller])
 
   const covered = required && !standAside
+  useRestoreFocus(covered)
   const screen = (
     <EmailRequiredScreen
       providers={providers}
+      pending={pending}
       labels={labels}
       onRequestCode={(request) => api.changeEmail(request)}
       onConfirmCode={(code) => api.confirmEmailChangeCode(code)}

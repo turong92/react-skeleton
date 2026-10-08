@@ -179,12 +179,13 @@
   white-space: nowrap;
 }
 
-/* 소셜 제공자 마크(providers.tsx) — 글자 높이에 맞춘 작은 정사각형 */
+/* 「같은 이메일의 계정이 있다」 안내에서 이어 온 연결 단추(SignInMethodsSection) — 눈에 띄는 테두리 */
 .linkIntent {
   outline: 2px solid var(--teal);
   outline-offset: 2px;
 }
 
+/* 소셜 제공자 마크(providers.tsx) — 글자 높이에 맞춘 작은 정사각형 */
 .providerIcon {
   inline-size: 1.25em;
   block-size: 1.25em;

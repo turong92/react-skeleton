@@ -69,8 +69,15 @@ describe('fake account api: contact email', () => {
     expect((await api.me()).contactEmail).toBeNull()
   })
 
-  it('a server with the feature off answers 404 and me.contactEmail stays null', async () => {
+  it('a server with the feature off leaves the contactEmail key out of me (no key = off, null = none yet) and answers 404', async () => {
     const api = createFakeAccountApi({ contactEmailOff: true })
+    expect(code(await rejects(api.requestContactEmail('x@example.com')))).toBe('COMMON.NOT_FOUND')
+    expect('contactEmail' in (await api.me())).toBe(false)
+    expect('contactEmail' in (await createFakeAccountApi().me())).toBe(true)
+  })
+
+  it('an older server with the feature off still writes contactEmail: null and answers 404', async () => {
+    const api = createFakeAccountApi({ contactEmailLegacyOff: true })
     expect(code(await rejects(api.requestContactEmail('x@example.com')))).toBe('COMMON.NOT_FOUND')
     expect((await api.me()).contactEmail).toBeNull()
   })

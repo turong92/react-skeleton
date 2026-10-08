@@ -957,9 +957,18 @@ export const ContactEmailCancelKeepsWhatWas: Story = {
   },
 }
 
-/** 이 서버는 연락받을 이메일을 껐다(404) — 구역이 스스로 사라진다 */
+/** 이 서버는 연락받을 이메일을 껐다 - `me` 에 `contactEmail` 키가 없다(키 없음 = 꺼짐, null = 아직 없음). 앱이 켜 두어도 구역을 처음부터 그리지 않는다 */
 export const ContactEmailServerOffHidesTheSection: Story = {
   args: { contactEmail: true, fake: { contactEmailOff: true } },
+  play: async ({ canvas }) => {
+    await canvas.findByRole('region', { name: 'Account email' })
+    await expect(canvas.queryByRole('region', { name: 'Contact email' })).toBeNull()
+  },
+}
+
+/** 옛 서버는 꺼져 있어도 `contactEmail: null` 을 쓴다 - 구역이 그려지고 첫 요청이 404 를 받으면 스스로 사라진다 */
+export const ContactEmailLegacyServerOffHidesTheSectionOnThe404: Story = {
+  args: { contactEmail: true, fake: { contactEmailLegacyOff: true } },
   play: async ({ canvas, userEvent }) => {
     const section = within(await canvas.findByRole('region', { name: 'Contact email' }))
     await userEvent.click(section.getByRole('button', { name: 'Add a contact email' }))

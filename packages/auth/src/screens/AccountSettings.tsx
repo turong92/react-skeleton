@@ -170,6 +170,22 @@ export function AccountSettings({
       }, setResumeError)
   }, [resume, api, reloadMe, reloadSessions, onResumeConsumed])
 
+  // 주소의 해시(`#delete` · `#email` …)가 가리키는 구역으로 간다 — 구역이 그려진 뒤(`me` 를 읽은 뒤)에, 해시가 바뀔 때도. 제목에 포커스를 두어 낭독이 도착한 자리를 알린다
+  const ready = !!me.data
+  useEffect(() => {
+    if (!ready) return
+    const go = () => {
+      const id = window.location.hash.slice(1)
+      if (!(ALL as string[]).includes(id)) return
+      const section = document.getElementById(id)
+      section?.scrollIntoView({ block: 'start' })
+      document.getElementById(`${id}-title`)?.focus({ preventScroll: true })
+    }
+    go()
+    window.addEventListener('hashchange', go)
+    return () => window.removeEventListener('hashchange', go)
+  }, [ready])
+
   const requestReauthCode = useCallback(() => api.requestReauthConfirmation(), [api])
   const requestDeleteCode = useCallback(() => api.requestDeleteConfirmation(), [api])
   const subject = useMemo(() => {

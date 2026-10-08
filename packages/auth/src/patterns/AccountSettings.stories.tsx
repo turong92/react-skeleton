@@ -56,6 +56,22 @@ export const Sections: Story = {
   },
 }
 
+/** 주소의 해시(`/account#delete` · `#email`)가 가리키는 구역으로 스크롤하고 그 제목에 포커스를 둔다 — 「내 계정 삭제」 같은 딥링크가 도착한 자리를 낭독이 알린다 */
+export const OpensOnTheSectionTheHashNames: Story = {
+  beforeEach: () => {
+    const before = window.location.hash
+    window.history.replaceState(null, '', '#delete')
+    return () => window.history.replaceState(null, '', before || window.location.pathname)
+  },
+  play: async ({ canvas }) => {
+    const title = await canvas.findByRole('heading', { name: 'Delete account' })
+    await waitFor(() => expect(title).toHaveFocus())
+    const top = title.getBoundingClientRect().top
+    await expect(top).toBeGreaterThanOrEqual(0)
+    await expect(top).toBeLessThan(window.innerHeight)
+  },
+}
+
 /**
  * 글 · 댓글의 이름을 작성 닉네임(`@skeleton/author-profile`)으로 따로 쓰는 앱 — 계정 닉네임 줄을 숨긴다(`showDisplayName={false}`): 사용자에게 닉네임이 둘이 되지 않는다.
  * 언어 · 시간대는 남는다
@@ -300,19 +316,36 @@ export const PasswordlessFirstPasswordByCode: Story = {
   },
 }
 
-/** 주소가 없는 계정: 비밀번호는 정할 수 없다고 말하고, 이메일 변경은 이미 쓰는 제공자로 다시 동의한다(왕복은 앱이 state 에 묶는다) */
+/** 주소가 없는 계정(이메일을 필수로 켜지 않은 앱): 비밀번호는 정할 수 없다고 말하고, 이메일 추가는 이미 쓰는 제공자로 먼저 다시 동의한다 - 주소를 적으면 제공자 단추가 바로 나온다(왕복은 앱이 state 에 묶는다) */
 export const NoAddressAccountReconsents: Story = {
   args: { fake: { noAddress: true }, socialProviders: [{ provider: 'naver' }] },
   play: async ({ canvas, args, userEvent }) => {
     await expect(await canvas.findByText(/needs a verified email address/)).toBeVisible()
     const section = within(await canvas.findByRole('region', { name: 'Account email' }))
-    // 첫 등록은 다시 인증 없이 보낸다 — 이 가짜 서버는 1시간이 지난 것처럼 `REAUTH_REQUIRED` 로 답하고, 그제서야 제공자 동의를 안내한다
-    await expect(section.queryByRole('button', { name: 'Confirm with Naver' })).toBeNull()
+    await expect(section.getByText(/confirm it is you with your current sign-in/)).toBeVisible()
     await userEvent.type(section.getByLabelText(/^New email/), 'next@example.com')
-    await userEvent.click(section.getByRole('button', { name: 'Add email' }))
-    await expect(await section.findByText(/confirm once more with Naver/)).toBeVisible()
     await userEvent.click(await section.findByRole('button', { name: 'Confirm with Naver' }))
     await expect(args.onProviderReauth).toHaveBeenCalledWith('naver', {
+      kind: 'email-change',
+      newEmail: 'next@example.com',
+    })
+  },
+}
+
+/** 이메일을 필수로 켠 앱: 첫 등록은 다시 인증 없이 보낸다 - 이 가짜 서버는 1시간이 지난 것처럼 `REAUTH_REQUIRED` 로 답하고, 그제서야 제공자 동의를 안내한다 */
+export const RequiredAppAsksForTheProviderOnlyWhenTheServerSays: Story = {
+  args: {
+    fake: { emailRequired: true, reauthWindowExpired: true },
+    socialProviders: [{ provider: 'kakao' }],
+  },
+  play: async ({ canvas, args, userEvent }) => {
+    const section = within(await canvas.findByRole('region', { name: 'Account email' }))
+    await expect(section.queryByRole('button', { name: 'Confirm with Kakao' })).toBeNull()
+    await userEvent.type(section.getByLabelText(/^New email/), 'next@example.com')
+    await userEvent.click(section.getByRole('button', { name: 'Add email' }))
+    await expect(await section.findByText(/confirm once more with Kakao/)).toBeVisible()
+    await userEvent.click(await section.findByRole('button', { name: 'Confirm with Kakao' }))
+    await expect(args.onProviderReauth).toHaveBeenCalledWith('kakao', {
       kind: 'email-change',
       newEmail: 'next@example.com',
     })
@@ -333,7 +366,6 @@ export const AddressLessLineAccount: Story = {
     const methods = within(await canvas.findByRole('region', { name: 'Sign-in methods' }))
     await expect(methods.getByText('LINE')).toBeVisible()
     await userEvent.type(section.getByLabelText(/^New email/), 'me@example.com')
-    await userEvent.click(section.getByRole('button', { name: 'Add email' }))
     await userEvent.click(await section.findByRole('button', { name: 'Confirm with LINE' }))
     await expect(args.onProviderReauth).toHaveBeenCalledWith('line', {
       kind: 'email-change',
@@ -419,7 +451,6 @@ export const EmailLessGoogleAccount: Story = {
     await expect(section.getByText('No email address on this account')).toBeVisible()
     await expect(section.queryByText('Current address')).toBeNull()
     await userEvent.type(section.getByLabelText(/^New email/), 'me@example.com')
-    await userEvent.click(section.getByRole('button', { name: 'Add email' }))
     await expect(await section.findByRole('button', { name: 'Confirm with Google' })).toBeVisible()
   },
 }
@@ -963,7 +994,7 @@ export const EmailSectionsKorean: Story = {
 /** 주소가 없던 계정이 설정에서 첫 이메일을 등록한다 — 다시 인증 없이 주소 → 인증번호. 번호가 안 올 때의 안내가 같이 있다 */
 export const FirstEmailFromSettings: Story = {
   args: {
-    fake: { noAddress: true, firstRegistrationOpen: true },
+    fake: { emailRequired: true, firstRegistrationOpen: true },
     socialProviders: [{ provider: 'naver' }],
   },
   play: async ({ canvas, userEvent }) => {

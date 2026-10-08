@@ -1,13 +1,22 @@
 import { expect as baseExpect, type Browser, type BrowserContext, type Page } from 'playwright/test'
 import { afterAll, beforeAll, describe, inject, it } from 'vitest'
-import { acceptLegalGate, agreeToLegal, auth, dismissConsent, fillSignIn, launch } from './helpers'
+import {
+  acceptLegalGate,
+  agreeToLegal,
+  auth,
+  dismissConsent,
+  fillSignIn,
+  launch,
+  registerEmailViaGate,
+} from './helpers'
 import { signOut } from './boardSteps'
 import { waitForCode } from './mail'
 
 /*
  * 글로벌 소셜 로그인(LINE · X) 여정 — 가짜 제공자(`fakeProviders.ts`, 기본으로 올라오는 소셜 백엔드)를 브라우저로 끝까지:
  * 버튼은 `GET /auth/methods` 의 순서 · 제공자 → 인가 주소는 백엔드가 알려 준 것(authorize) + PKCE S256 challenge + nonce(LINE) → 콜백(state 확인) → 로그인 요청에
- * `codeVerifier` · `nonce` → 주소 없는 계정(설정에 주소 없음 · 로그인 수단 LINE) → 「이메일 추가」는 LINE 동의를 **다시** 거쳐(새 verifier) 새 주소로 인증번호 → 취소 · 다른 탭 · 뒤로 가기.
+ * `codeVerifier` · `nonce` → 주소 없는 계정은 앱 대신 「이메일을 등록해 주세요」가 덮는다(`email.required` — 상세는 `emailRequired.e2e.ts`) → 메일함의 인증번호로 통과 → 설정에 그 주소 · 로그인 수단 LINE →
+ * 취소 · 다른 탭 · 뒤로 가기. (1시간이 지난 첫 등록의 제공자 재동의 — 새 verifier — 는 `emailReauth.e2e.ts`.)
  * 가짜 제공자는 진짜처럼 엄격하다(PKCE 없으면 거절 · 코드 한 번 · redirect_uri 글자까지 일치). 가짜 제공자가 없으면(`fakeUrl` 빈 문자열) 통째로 건너뛴다.
  */
 const pwExpect = baseExpect.configure({ timeout: 20_000 })
@@ -73,11 +82,11 @@ describe('sign-in buttons come from discovery', () => {
   )
 })
 
-describe('LINE: PKCE + nonce on the way out and back, an address-less account, adding an email through a second consent', () => {
+describe('LINE: PKCE + nonce on the way out and back, an address-less account registers its email first', () => {
   const lineEmail = `e2e-line-${stamp}@example.com`
 
   run(
-    'the authorize request carries S256 challenge and nonce; the login request carries the verifier and nonce; the account has no address',
+    'the authorize request carries S256 challenge and nonce; the login request carries the verifier and nonce; the address-less account registers an email before anything else',
     async () => {
       await control({ line: { sub: `U-line-${stamp}`, name: 'LINE 사용자' }, deny: false })
       await page.goto(`${baseUrl}/login`)
@@ -95,6 +104,7 @@ describe('LINE: PKCE + nonce on the way out and back, an address-less account, a
       pwExpect(body.codeVerifier).toMatch(/^[A-Za-z0-9_-]{43}$/)
       pwExpect(body.nonce).toBe(q.get('nonce'))
       pwExpect(body.redirectUri).toBe(q.get('redirect_uri')) // 인가 요청과 글자까지 같다
+      await registerEmailViaGate(page, mailUrl, lineEmail, seen) // 주소 없는 계정: 이메일 등록 → 약관 → 홈(서버 인터셉터와 같은 순서)
       await acceptLegalGate(page, apiUrl) // legal 모듈이 있는 백엔드: 소셜로 처음 들어오면 동의부터
       await pwExpect(page.getByRole('heading', { level: 1, name: /안녕하세요/ })).toBeVisible()
       // 인가 코드 · state 는 주소창에 남지 않는다
@@ -109,36 +119,14 @@ describe('LINE: PKCE + nonce on the way out and back, an address-less account, a
   )
 
   run(
-    'settings of an address-less account: no empty email, LINE listed as the sign-in method',
+    'settings after the registration: the address is there, LINE is the sign-in method',
     async () => {
       await page.goto(`${baseUrl}/account`)
       const email = page.getByRole('region', { name: auth.sectionEmail })
-      await pwExpect(email.getByText(auth.emailNone)).toBeVisible()
-      await pwExpect(email.getByText(auth.emailUnverified)).toHaveCount(0)
+      await pwExpect(email.locator('strong').filter({ hasText: lineEmail })).toBeVisible()
+      await pwExpect(email.getByText(auth.emailNone)).toHaveCount(0)
       const methods = page.getByRole('region', { name: auth.sectionMethods })
       await pwExpect(methods.getByText('LINE', { exact: true }).first()).toBeVisible()
-    },
-  )
-
-  run(
-    '"이메일 추가" re-consents with LINE (a NEW verifier), then the code mailed to the new address finishes it',
-    async () => {
-      const email = page.getByRole('region', { name: auth.sectionEmail })
-      await email.getByLabel(auth.emailNew).fill(lineEmail)
-      const authorize = page.waitForRequest((r) => r.url().startsWith(`${fakeUrl}/line/authorize`))
-      await email.getByRole('button', { name: /LINE 로 확인/ }).click()
-      const q = new URL((await authorize).url()).searchParams
-      pwExpect(q.get('redirect_uri')).toBe(`${baseUrl}/account/link-callback`) // 연결 · 재인증 콜백은 따로 등록한다
-      pwExpect(q.get('code_challenge')).toMatch(/^[A-Za-z0-9_-]{43}$/)
-      const code = await waitForCode(mailUrl, lineEmail, 'email-change', { seen })
-      await page.getByLabel(auth.codeDigit(1, 6)).click()
-      await page.keyboard.type(code.code)
-      await pwExpect(
-        page
-          .getByRole('region', { name: auth.sectionEmail })
-          .locator('strong')
-          .filter({ hasText: lineEmail }),
-      ).toBeVisible()
     },
   )
 
@@ -161,8 +149,9 @@ describe('LINE: PKCE + nonce on the way out and back, an address-less account, a
 })
 
 describe('X: PKCE without a nonce, 30-second codes are exchanged at once', () => {
+  const xEmail = `e2e-x-${stamp}@example.com`
   run(
-    'the authorize request has S256 and NO nonce; sign-in works and the account has no address',
+    'the authorize request has S256 and NO nonce; sign-in works, the address-less account registers an email, then lands in the app',
     async () => {
       await page.evaluate(() => window.localStorage.clear())
       await control({ x: { id: `x-${stamp}`, username: 'x_user' }, deny: false })
@@ -177,11 +166,16 @@ describe('X: PKCE without a nonce, 30-second codes are exchanged at once', () =>
       const body = (await login).postDataJSON() as Record<string, string>
       pwExpect(body.codeVerifier).toMatch(/^[A-Za-z0-9_-]{43}$/)
       pwExpect('nonce' in body).toBe(false)
+      await pwExpect(page.getByRole('dialog', { name: auth.emailRequiredTitle })).toBeVisible() // X 도 주소를 주지 않는다
+      await registerEmailViaGate(page, mailUrl, xEmail, seen)
       await acceptLegalGate(page, apiUrl)
       await pwExpect(page.getByRole('heading', { level: 1, name: /안녕하세요/ })).toBeVisible() // 콜백이 끝나고 토큰이 저장될 때까지
       await page.goto(`${baseUrl}/account`)
       await pwExpect(
-        page.getByRole('region', { name: auth.sectionEmail }).getByText(auth.emailNone),
+        page
+          .getByRole('region', { name: auth.sectionEmail })
+          .locator('strong')
+          .filter({ hasText: xEmail }),
       ).toBeVisible()
       await pwExpect(
         page

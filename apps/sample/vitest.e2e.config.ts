@@ -15,6 +15,7 @@ export default defineConfig({
           'e2e/walkthrough.account.shots.ts',
           'e2e/walkthrough.social.shots.ts', // 가짜 제공자는 기본으로 켜져 있다(E2E_FAKE_PROVIDERS=0 이면 건너뛴다)
           'e2e/walkthrough.legal.shots.ts', // legal 모듈이 있는 백엔드일 때만 — 아니면 건너뛴다
+          'e2e/walkthrough.email.shots.ts', // 이메일 필수 — 가짜 LINE(주소 없음) · mailpit
         ]
       : ['e2e/**/*.e2e.ts'],
     globalSetup: ['e2e/globalSetup.ts'],

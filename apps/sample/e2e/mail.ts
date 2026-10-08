@@ -45,7 +45,7 @@ export async function waitForLink(
 }
 
 /** 인증번호 메일의 종류 — 제목으로 가른다(백엔드 기본 문구: ko · en) */
-export type CodeKind = 'verify' | 'email-change' | 'reauth' | 'delete'
+export type CodeKind = 'verify' | 'email-change' | 'reauth' | 'delete' | 'contact-email'
 
 // 제목에는 번호가 없다(백엔드 3b8a0b8 — 번호는 본문에만) — 제목으로 종류만 가르고 번호는 본문에서 읽는다
 export const CODE_SUBJECT: Record<CodeKind, RegExp> = {
@@ -53,6 +53,7 @@ export const CODE_SUBJECT: Record<CodeKind, RegExp> = {
   'email-change': /^(?:새 이메일 확인 인증번호|Your code to confirm the new email)$/,
   reauth: /^(?:보안 인증번호|Your security code)$/,
   delete: /^(?:계정 삭제 인증번호|Your code to delete the account)$/,
+  'contact-email': /^(?:연락받을 이메일 확인 인증번호|Your code to confirm the contact email)$/,
 }
 
 export type MailCode = {

@@ -377,3 +377,22 @@ export const ReloadRestoresTheRemainingTime: Story = {
     await expect(await canvas.findByText('Time left 08:20')).toBeVisible()
   },
 }
+
+/** 좁은 칸(320px 화면의 카드 안쪽 ≈ 250px) — 칸 여섯이 줄어들어 가로로 밀리지 않는다 */
+export const FitsAnArrowColumn: Story = {
+  decorators: [
+    (Story) => (
+      <div style={{ width: 250 }} data-testid="narrow">
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvas }) => {
+    const box = canvas.getByTestId('narrow')
+    await waitFor(() => expect(box.scrollWidth).toBeLessThanOrEqual(box.clientWidth))
+    for (let i = 1; i <= 6; i++)
+      expect(
+        canvas.getByLabelText(`Digit ${i} of 6`).getBoundingClientRect().width,
+      ).toBeGreaterThan(30) // 줄어도 손가락으로 누를 만하다
+  },
+}

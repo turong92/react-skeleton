@@ -259,4 +259,32 @@ describe('createAccountApi (mirrors kotlin-skeleton docs/account-http-contract.m
     expect(await api.requestReauthConfirmation()).toEqual(window)
     expect(await api.requestDeleteConfirmation()).toEqual(window)
   })
+
+  it('first email registration sends only the new address (no re-authentication fields)', async () => {
+    const { client, calls } = fakeClient()
+    await createAccountApi(client).changeEmail({ newEmail: 'first@b.c' })
+    expect(calls[0].path).toBe('/account/email/change')
+    expect(calls[0].request?.json).toEqual({ newEmail: 'first@b.c' })
+  })
+
+  it('contact email: request → POST /account/contact-email {email}, confirm → POST …/confirm {code}, remove → DELETE', async () => {
+    const { client, calls } = fakeClient({ expiresAt: '2026-10-08T00:10:00Z' })
+    const api = createAccountApi(client)
+    expect(await api.requestContactEmail('news@b.c')).toEqual({ expiresAt: '2026-10-08T00:10:00Z' })
+    await api.confirmContactEmail('123456')
+    await api.removeContactEmail()
+    expect(calls).toEqual([
+      {
+        kind: 'value',
+        path: '/account/contact-email',
+        request: { method: 'POST', json: { email: 'news@b.c' } },
+      },
+      {
+        kind: 'noContent',
+        path: '/account/contact-email/confirm',
+        request: { method: 'POST', json: { code: '123456' } },
+      },
+      { kind: 'noContent', path: '/account/contact-email', request: { method: 'DELETE' } },
+    ])
+  })
 })

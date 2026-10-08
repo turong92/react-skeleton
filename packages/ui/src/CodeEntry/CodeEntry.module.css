@@ -1,15 +1,18 @@
 .root {
   display: grid;
+  grid-template-columns: minmax(0, 1fr); /* 칸 여섯의 내용 크기가 열을 밀어 늘리지 않는다 */
   gap: var(--space-sm);
 }
 
 .cells {
   display: flex;
   gap: var(--space-sm);
+  min-width: 0;
 }
 
 .cell {
-  width: 44px;
+  flex: 0 1 44px; /* 좁은 칸에서는 줄어든다(320px 화면에서도 가로로 밀리지 않게) */
+  min-width: 0;
   min-height: 52px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);

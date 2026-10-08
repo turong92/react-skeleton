@@ -1,0 +1,114 @@
+import { useEffect, useState, useSyncExternalStore, type ReactNode } from 'react'
+import type { AccountApi } from '../account/accountApi'
+import { CodeClockProvider } from '../codeClock'
+import type { EmailRequiredController } from '../emailRequired'
+import { reauthSubjectOf } from '../reauth/kind'
+import { EmailRequiredScreen } from './EmailRequiredScreen'
+import type { AuthLabels } from './labels'
+
+export type EmailRequiredGateProps = {
+  controller: EmailRequiredController
+  /** 쓰는 호출: `me`(로그인 직후 `emailRequired` 확인 · 제공자 목록) · `changeEmail` · `confirmEmailChangeCode` — 모두 서버의 허용 목록에 있다 */
+  api: Pick<AccountApi, 'me' | 'changeEmail' | 'confirmEmailChangeCode'>
+  /** 로그인한 계정 id(없으면 null) — 바뀌어 생기면 한 번 `me.emailRequired` 를 확인한다(비밀번호 · 소셜 · 링크 로그인 모두 같은 길) */
+  accountId: string | null
+  onSignOut: () => void
+  /** 「내 계정 삭제」 — 계정 설정의 삭제 구역으로 보낸다(앱이 라우터로). 그동안 `standAside` 를 켠다 */
+  onDelete: () => void
+  /** 1시간 뒤 재동의: 제공자 동의 화면으로 보낸다 */
+  onProviderReauth?: (provider: string, newEmail: string) => void
+  /** 등록이 끝났다(토스트 · 캐시 새로고침) — 막혔던 호출은 컨트롤러가 이미 다시 보냈다 */
+  onRegistered?: () => void
+  /** true 인 동안 막을 걷고 아래 화면을 살린다 — 계정 설정(`/account`)에서 이메일을 등록하거나 계정을 지우는 길. 컨트롤러 상태는 그대로다 */
+  standAside?: boolean
+  /** 인증번호 남은 시간을 세는 시계(서버 보정 시계) */
+  now?: () => number
+  labels?: Partial<AuthLabels>
+  children: ReactNode
+}
+
+/**
+ * 앱 맨 위(`AuthProvider` 안, 약관 재동의 막 `ReconsentGate` 바깥)에 한 번 둔다. 주소 없는 계정(`me.emailRequired` 또는 403 `ACCOUNT.EMAIL_REQUIRED`)이면
+ * 아래를 `inert` 로 두고 「이메일을 등록해 주세요」 화면이 덮는다 — 아래 화면은 그대로 살아 있어(경로 · 입력 유지) 등록이 끝나면 막혔던 호출이 다시 나가 **가던 자리에서 이어진다**.
+ * 한 번에 하나만 보인다: 이 막이 약관 막보다 위라 순서는 이메일 → 약관 → 닉네임이다.
+ */
+export function EmailRequiredGate({
+  controller,
+  api,
+  accountId,
+  onSignOut,
+  onDelete,
+  onProviderReauth,
+  onRegistered,
+  standAside = false,
+  now,
+  labels,
+  children,
+}: EmailRequiredGateProps) {
+  const state = useSyncExternalStore(controller.subscribe, controller.getState, controller.getState)
+  const required = state.status === 'required'
+  const [providers, setProviders] = useState<string[]>([])
+
+  // 로그인 직후: 이 계정이 주소를 요구받는가. 실패해도 조용히 — 막히면 호출이 403 으로 말한다
+  useEffect(() => {
+    if (!accountId) return
+    let live = true
+    api.me().then(
+      (me) => {
+        if (!live) return
+        if (me.emailRequired === true) controller.require()
+        setProviders(reauthSubjectOf(me).providers)
+        controller.setReady(true) // 이제 다음 단계(약관 …)가 물어도 된다
+      },
+      () => live && controller.setReady(true), // 못 읽어도 다음 단계를 막아 두지 않는다
+    )
+    return () => {
+      live = false
+      controller.setReady(false) // 계정이 바뀌거나 로그아웃 — 다음 계정은 다시 물어봐야 안다
+    }
+  }, [accountId, api, controller])
+  // 막이 열릴 때 재동의에 쓸 제공자 목록을 다시 읽는다
+  useEffect(() => {
+    if (!required || !accountId) return
+    let live = true
+    api.me().then(
+      (me) => live && setProviders(reauthSubjectOf(me).providers),
+      () => undefined,
+    )
+    return () => {
+      live = false
+    }
+  }, [required, accountId, api])
+  // 로그아웃 · 계정 삭제로 떠나면 접는다(붙잡힌 호출은 403 으로 끝난다)
+  useEffect(() => {
+    if (!accountId && controller.getState().status === 'required') controller.decline()
+  }, [accountId, controller])
+
+  const covered = required && !standAside
+  const screen = (
+    <EmailRequiredScreen
+      providers={providers}
+      labels={labels}
+      onRequestCode={(request) => api.changeEmail(request)}
+      onConfirmCode={(code) => api.confirmEmailChangeCode(code)}
+      onRegistered={() => {
+        controller.registered()
+        onRegistered?.()
+      }}
+      onProviderReauth={onProviderReauth}
+      onSignOut={() => {
+        controller.decline()
+        onSignOut()
+      }}
+      onDelete={onDelete}
+    />
+  )
+  return (
+    <>
+      <div style={{ display: 'contents' }} inert={covered}>
+        {children}
+      </div>
+      {covered && (now ? <CodeClockProvider now={now}>{screen}</CodeClockProvider> : screen)}
+    </>
+  )
+}

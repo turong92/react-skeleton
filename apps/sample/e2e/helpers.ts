@@ -227,3 +227,28 @@ export async function createProfile(
   if (!headers) throw new Error(`could not sign in as ${account.email} to create a profile`)
   return postProfile(headers, name)
 }
+
+/**
+ * 주소 없는 계정(LINE · X 가 주소를 안 준다)이 로그인하면 앱 대신 「이메일을 등록해 주세요」가 덮는다 — 주소를 적고 메일함의 인증번호로 통과한다.
+ * 이 백엔드(`email.required`)가 아니면 막이 안 뜬다 → 아무것도 하지 않는다
+ */
+export async function registerEmailViaGate(
+  page: Page,
+  mailUrl: string,
+  address: string,
+  seen: Set<string>,
+) {
+  const gate = page.getByRole('dialog', { name: auth.emailRequiredTitle })
+  try {
+    await gate.waitFor({ timeout: 15_000 })
+  } catch {
+    return
+  }
+  await gate.getByRole('textbox', { name: new RegExp(`^${auth.emailRequiredField}`) }).fill(address)
+  await gate.getByRole('button', { name: auth.emailRequiredSend }).click()
+  const { waitForCode } = await import('./mail')
+  const code = await waitForCode(mailUrl, address, 'email-change', { seen })
+  await gate.getByLabel(auth.codeDigit(1, 6)).click()
+  await page.keyboard.type(code.code)
+  await gate.waitFor({ state: 'detached' })
+}

@@ -12,7 +12,7 @@ import { useT } from '../i18n'
 import styles from './SettingsPage.module.css'
 
 /**
- * Patterns/Settings page — 즉시 적용(테마) 한 카드 · 읽기 전용 계정 카드(이메일 · 권한 + 계정 관리 링크 카드) · 글 · 댓글에 쓰는 「내 닉네임」 구역 · 세션(로그아웃). 서버에 저장할 설정은 아직 없어 저장 폼은 두지 않았다.
+ * Patterns/Settings page — 즉시 적용(테마) 한 카드 · 읽기 전용 계정 카드(계정 이메일 · 연락받을 이메일 · 권한 + 계정 관리 링크 카드) · 글 · 댓글에 쓰는 「내 닉네임」 구역 · 세션(로그아웃). 서버에 저장할 설정은 아직 없어 저장 폼은 두지 않았다.
  * 사용자에게 닉네임은 하나다 — 계정에 붙은 이름(계정 닉네임)은 이 화면에 없다. 계정 id 는 화면 · aria 어디에도 그리지 않는다(닉네임 뒤의 계정을 드러내는 값이라 접힌 구역에도 두지 않는다)
  */
 export function SettingsPage() {
@@ -64,6 +64,12 @@ export function SettingsPage() {
               )}
             </dd>
           </div>
+          {profile?.contactEmail !== undefined && (
+            <div>
+              <dt>{t('settings.contactEmail')}</dt>
+              <dd>{profile.contactEmail ?? t('settings.contactEmailNone')}</dd>
+            </div>
+          )}
           <div>
             <dt>{t('settings.roles')}</dt>
             <dd>{principal?.roles.join(', ') || t('common.none')}</dd>

@@ -26,6 +26,21 @@ export type FakeAccountOptions = {
   noAddress?: boolean
   /** 주소 없는 계정의 유일한 로그인 수단(LINE · X). 없으면 naver + magic_link */
   noAddressProvider?: string
+  /**
+   * 이메일을 **필수**로 켠 앱에서 주소 없이 가입한 계정(카카오 · 네이버 · X …) — `me.emailRequired: true`, 허용 목록 밖의 호출은 403 `ACCOUNT.EMAIL_REQUIRED`,
+   * 첫 주소는 다시 인증 없이 받는다(주소 → 인증번호). 확인되면 `emailRequired: false`
+   */
+  emailRequired?: boolean
+  /** 주소 없는 계정이 첫 주소를 다시 인증 **없이** 등록한다(마지막 로그인 1시간 안). 기본은 꺼짐 — 지난 화면들이 제공자 재동의를 기대한다. `emailRequired` 는 켠다 */
+  firstRegistrationOpen?: boolean
+  /** 마지막 로그인이 1시간을 넘었다 — 첫 주소도 403 `ACCOUNT.REAUTH_REQUIRED`(제공자 재동의 `socialReauth` 를 싣고 다시) */
+  reauthWindowExpired?: boolean
+  /** 다른 계정이 쓰는 주소들 — 같은 202 가 오지만 인증번호는 가지 않는다(그 주소로는 「이미 계정이 있어요」 메일만 간다): 어떤 번호도 `CODE_INVALID` */
+  takenEmails?: string[]
+  /** 이미 등록된 연락받을 이메일 */
+  contactEmail?: string
+  /** 연락받을 이메일 기능을 끈 서버 — 요청이 404, `me.contactEmail` 은 늘 null */
+  contactEmailOff?: boolean
   /** 로그인 수단이 하나뿐 */
   onlyMethod?: boolean
   /** 새 주소의 인증번호를 기다리는 이메일 변경이 이미 있다(새로고침 뒤) */
@@ -66,6 +81,7 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
   calls: string[]
 } {
   const calls: string[] = []
+  const noAddress = options.noAddress || options.emailRequired
   const methods: SignInIdentity[] = options.noAddressProvider
     ? [
         identity({
@@ -75,23 +91,25 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
           removable: false,
         }),
       ]
-    : options.noAddress
-      ? [
-          identity({ id: 'idn_n', method: 'naver', subject: null }),
-          identity({ id: 'idn_m', method: 'magic_link' }),
-        ]
-      : options.passwordless
+    : options.emailRequired
+      ? [identity({ id: 'idn_k', method: 'kakao', subject: null, removable: false })]
+      : options.noAddress
         ? [
-            identity({ id: 'idn_g', method: 'google', subject: null }),
+            identity({ id: 'idn_n', method: 'naver', subject: null }),
             identity({ id: 'idn_m', method: 'magic_link' }),
           ]
-        : options.onlyMethod
-          ? [identity({ removable: false })]
-          : [identity({}), identity({ id: 'idn_g', method: 'google', subject: null })]
+        : options.passwordless
+          ? [
+              identity({ id: 'idn_g', method: 'google', subject: null }),
+              identity({ id: 'idn_m', method: 'magic_link' }),
+            ]
+          : options.onlyMethod
+            ? [identity({ removable: false })]
+            : [identity({}), identity({ id: 'idn_g', method: 'google', subject: null })]
   const me: AccountMe = {
     id: 'acc_demo',
-    email: options.noAddress ? null : 'ann@example.com',
-    emailVerified: !options.noAddress,
+    email: noAddress ? null : 'ann@example.com',
+    emailVerified: !noAddress,
     displayName: 'Ann',
     displayTag: options.displayTag ?? null,
     locale: 'en',
@@ -99,8 +117,10 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
     roles: ['USER'],
     status: 'ACTIVE',
     createdAt: '2026-01-01T00:00:00Z',
-    hasPassword: !options.passwordless && !options.noAddress,
+    hasPassword: !options.passwordless && !noAddress,
     methods,
+    ...(options.emailRequired ? { emailRequired: true } : {}),
+    contactEmail: options.contactEmailOff ? null : (options.contactEmail ?? null),
     pendingEmail: options.pendingEmail ?? null,
     pendingEmailExpiresAt: options.pendingEmail
       ? inMinutes(options.pendingExpiresInMinutes ?? 10)
@@ -119,6 +139,13 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
   const notSuspended = () => {
     if (options.suspended) throw apiError('ACCOUNT.SUSPENDED_CANNOT_DELETE', 403)
   }
+  /** 이메일 필수 앱에서 주소 없는 계정이 허용 목록 밖을 부르면 — 서버의 인터셉터와 같다 */
+  const emailGate = () => {
+    if (me.emailRequired === true) throw apiError('ACCOUNT.EMAIL_REQUIRED', 403)
+  }
+  const taken = new Set((options.takenEmails ?? []).map((e) => e.toLowerCase()))
+  let pendingTaken = false
+  let pendingContact: string | null = null
   let codeAttempts = 5
   const wrongCode = () => {
     codeAttempts -= 1
@@ -200,16 +227,20 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
     confirmEmailChangeCode: async (code) => {
       calls.push('confirmEmailChangeCode')
       if (!me.pendingEmail) throw apiError('ACCOUNT.CODE_EXPIRED', 410)
-      if (code !== FAKE_CODE) wrongCode()
+      if (code !== FAKE_CODE || pendingTaken) wrongCode()
       me.email = me.pendingEmail
+      me.emailVerified = true
       me.pendingEmail = null
       me.pendingEmailExpiresAt = null
+      if (me.emailRequired !== undefined) me.emailRequired = false
+      codeAttempts = 5
     },
     forgotPassword: () => track('forgotPassword', undefined),
     resetPassword: () => track('resetPassword', undefined),
     passwordPolicy: () => track('passwordPolicy', FAKE_POLICY),
     me: () => track('me', { ...me, methods: [...methods] }),
-    updateProfile: (patch) => {
+    updateProfile: async (patch) => {
+      emailGate()
       if (patch.displayName && options.takenNicknames?.includes(patch.displayName.trim()))
         return Promise.reject(apiError('ACCOUNT.DISPLAY_NAME_TAKEN', 409))
       if (patch.displayName && options.reservedNicknames?.includes(patch.displayName.trim()))
@@ -231,6 +262,7 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
     },
     changePassword: async ({ currentPassword, confirmationCode }) => {
       calls.push('changePassword')
+      emailGate()
       reauth({ currentPassword, confirmationCode })
       if (!me.hasPassword) {
         me.hasPassword = true
@@ -239,15 +271,51 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
     },
     changeEmail: async ({ newEmail, ...proof }) => {
       calls.push('changeEmail')
-      reauth(proof)
+      const firstRegistration =
+        !me.email && (options.emailRequired || options.firstRegistrationOpen)
+      if (firstRegistration && !options.reauthWindowExpired && !proof.socialReauth) {
+        // 첫 주소 · 마지막 로그인 1시간 안 — 다시 인증이 없다
+      } else if (!me.email && options.emailRequired && !proof.socialReauth)
+        throw apiError('ACCOUNT.REAUTH_REQUIRED', 403)
+      else reauth(proof)
+      pendingTaken = taken.has(newEmail.trim().toLowerCase())
+      codeAttempts = 5
       me.pendingEmail = newEmail
       me.pendingEmailExpiresAt = inMinutes(options.codeWindowMinutes ?? 10)
       return codeSent()
     },
-    requestReauthConfirmation: () => track('requestReauthConfirmation', codeSent()),
-    identities: () => track('identities', [...methods]),
+    requestReauthConfirmation: async () => {
+      emailGate()
+      return track('requestReauthConfirmation', codeSent())
+    },
+    requestContactEmail: async (email) => {
+      calls.push('requestContactEmail')
+      emailGate()
+      if (options.contactEmailOff) throw apiError('COMMON.NOT_FOUND', 404)
+      pendingContact = email.trim()
+      codeAttempts = 5
+      return codeSent() ?? { expiresAt: inMinutes(10), resendAvailableAt: inMinutes(0.5) }
+    },
+    confirmContactEmail: async (code) => {
+      calls.push('confirmContactEmail')
+      if (options.contactEmailOff) throw apiError('COMMON.NOT_FOUND', 404)
+      if (!pendingContact) throw apiError('ACCOUNT.CODE_EXPIRED', 410)
+      if (code !== FAKE_CODE) wrongCode()
+      me.contactEmail = pendingContact
+      pendingContact = null
+    },
+    removeContactEmail: async () => {
+      calls.push('removeContactEmail')
+      if (options.contactEmailOff) throw apiError('COMMON.NOT_FOUND', 404)
+      me.contactEmail = null
+    },
+    identities: async () => {
+      emailGate()
+      return track('identities', [...methods])
+    },
     unlinkIdentity: async (id, proof) => {
       calls.push(`unlink:${id}`)
+      emailGate()
       reauth(proof)
       if (methods.length <= 1) throw apiError('ACCOUNT.LAST_SIGN_IN_METHOD', 409)
       methods.splice(
@@ -257,6 +325,7 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
     },
     linkSocial: async (_provider, _code, _uri, c) => {
       calls.push('linkSocial')
+      emailGate()
       reauth(c)
       return identity({ id: 'idn_k', method: 'kakao', subject: null })
     },

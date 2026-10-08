@@ -1,6 +1,6 @@
 import type { AxiosAdapter } from 'axios'
 import { describe, expect, it, vi } from 'vitest'
-import { createApiClient, type ForbiddenContext } from './createApiClient'
+import { chainForbiddenRecovery, createApiClient, type ForbiddenContext } from './createApiClient'
 import { ErrorCodes } from './errorCodes'
 
 type Config = Parameters<AxiosAdapter>[0]
@@ -49,6 +49,7 @@ describe('recoverForbidden (a 403 the app can fix by asking the user — legal r
     expect(ErrorCodes.LEGAL_CONSENT_REQUIRED).toBe('LEGAL.CONSENT_REQUIRED')
     expect(ErrorCodes.LEGAL_VERSION_STALE).toBe('LEGAL.VERSION_STALE')
     expect(ErrorCodes.LEGAL_WITHDRAWAL_NOT_ALLOWED).toBe('LEGAL.WITHDRAWAL_NOT_ALLOWED')
+    expect(ErrorCodes.ACCOUNT_EMAIL_REQUIRED).toBe('ACCOUNT.EMAIL_REQUIRED')
   })
 
   it('true → the same request is sent once more and its answer is the call result', async () => {
@@ -76,6 +77,38 @@ describe('recoverForbidden (a 403 the app can fix by asking the user — legal r
     await expect(client.value('/notes')).rejects.toMatchObject({ apiError: { status: 403 } })
     expect(adapter).toHaveBeenCalledTimes(2)
     expect(recover).toHaveBeenCalledTimes(1)
+  })
+
+  it('a retry that is forbidden for a DIFFERENT reason is recovered again (email first, then re-consent); the same reason is not', async () => {
+    const emailRequired = (config: Config) => forbidden(config, 'ACCOUNT.EMAIL_REQUIRED')
+    const recover = vi.fn(async () => true)
+    const chained = clientWith([emailRequired, forbidden, ok], recover)
+    await expect(chained.client.value<string>('/notes')).resolves.toBe('done')
+    expect(chained.adapter).toHaveBeenCalledTimes(3)
+    expect(recover).toHaveBeenCalledTimes(2)
+    const same = clientWith([emailRequired], recover)
+    await expect(same.client.value('/notes')).rejects.toMatchObject({ apiError: { status: 403 } })
+    expect(same.adapter).toHaveBeenCalledTimes(2)
+  })
+
+  it('chainForbiddenRecovery asks each recoverer in turn and stops at the first that took the 403', async () => {
+    const calls: string[] = []
+    const never = async () => {
+      calls.push('never')
+      return false
+    }
+    const takes = async () => {
+      calls.push('takes')
+      return true
+    }
+    const after = async () => {
+      calls.push('after')
+      return true
+    }
+    const context = { error: {} as never, path: '/x', method: 'GET' }
+    await expect(chainForbiddenRecovery(never, takes, after)(context)).resolves.toBe(true)
+    expect(calls).toEqual(['never', 'takes'])
+    await expect(chainForbiddenRecovery(never)(context)).resolves.toBe(false)
   })
 
   it('is not asked for requests that carry no sign-in (skipAuth), nor for other statuses', async () => {

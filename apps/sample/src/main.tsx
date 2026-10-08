@@ -12,6 +12,7 @@ import { defaultAuthLabels, koAuthLabels } from '@skeleton/auth'
 import { toast } from 'sonner'
 import { onSessionEnded } from './auth/refresher'
 import { authSession } from './auth/session'
+import { EmailGate } from './auth/EmailGate'
 import { LegalGate } from './legal/LegalGate'
 import { i18n } from './i18n'
 import { router } from './routes'
@@ -31,9 +32,12 @@ function render() {
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <AuthProvider session={authSession}>
-            <LegalGate>
-              <RouterProvider router={router} />
-            </LegalGate>
+            {/* 한 번에 하나, 순서는 서버 인터셉터와 같다 — 이메일 등록 → 약관 동의 → (닉네임: 막지 않는 띠 + 글쓰기 전 확인) */}
+            <EmailGate>
+              <LegalGate>
+                <RouterProvider router={router} />
+              </LegalGate>
+            </EmailGate>
           </AuthProvider>
           {/* 헤더의 종 · 메뉴를 덮지 않게 아래쪽에 */}
           <ThemedToaster position="bottom-right" />

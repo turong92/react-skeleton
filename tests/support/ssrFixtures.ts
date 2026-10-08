@@ -491,6 +491,27 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
     onChangeEmail: asyncNoop,
     onConfirmCode: asyncNoop,
   }),
+  'auth#ContactEmailSection': () => ({
+    contactEmail: null,
+    onRequestCode: asyncNoop,
+    onConfirmCode: asyncNoop,
+    onRemove: asyncNoop,
+  }),
+  'auth#EmailRequiredScreen': () => ({
+    onRequestCode: asyncNoop,
+    onConfirmCode: asyncNoop,
+    onRegistered: noop,
+    onSignOut: noop,
+    onDelete: noop,
+  }),
+  'auth#EmailRequiredGate': (ctx) => ({
+    controller: call(ctx.mod('auth').createEmailRequiredController),
+    api: fakeAccountApi(),
+    accountId: null,
+    onSignOut: noop,
+    onDelete: noop,
+    children: createElement('p', null, 'app'),
+  }),
   'auth#SignInMethodsSection': () => ({
     identities: [],
     subject: authSubject,

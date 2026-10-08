@@ -1,0 +1,71 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100; /* 약관 재동의 막(1000)보다 위 — 순서는 이메일 → 약관 → 닉네임 */
+  display: grid;
+  align-items: start;
+  justify-items: center;
+  padding: clamp(var(--space-sm), 4vw, var(--space-lg));
+  background: var(--bg);
+  overflow-y: auto;
+}
+
+.card {
+  display: grid;
+  gap: var(--space-lg);
+  inline-size: min(100%, 30rem);
+  margin-block: auto;
+  padding: clamp(var(--space-md), 6vw, var(--space-xl));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  /* 한국어는 낱말 단위로 줄을 바꾼다 — 긴 주소는 어디서든 꺾는다 */
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.card h1 {
+  margin: 0;
+  font-size: var(--font-size-heading);
+}
+
+.card h1:focus {
+  outline: none;
+}
+
+.lead {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.submit {
+  inline-size: 100%;
+}
+
+.providers {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.leave {
+  display: grid;
+  gap: var(--space-md);
+  padding-block-start: var(--space-lg);
+  border-block-start: 1px solid var(--border);
+}
+
+.leave p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+}
+
+.leaveActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.leaveActions > * {
+  flex: 1 1 8rem;
+}

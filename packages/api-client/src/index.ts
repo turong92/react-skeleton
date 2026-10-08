@@ -1,4 +1,4 @@
-export { createApiClient } from './createApiClient'
+export { chainForbiddenRecovery, createApiClient } from './createApiClient'
 /** `ApiClientConfig.adapter` 를 가짜로 바꿀 때 쓰는 타입(테스트) */
 export type { AxiosAdapter, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
 export type {

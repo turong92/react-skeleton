@@ -3,6 +3,8 @@ import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { Alert, Button } from '@skeleton/ui'
 import { AuthLayout } from '../screens/AuthLayout'
 import type { AccountApi } from '../account/accountApi'
+import { emailReauthOf } from '../emailReauth'
+import type { EmailRequiredController } from '../emailRequired'
 import type { AuthApi } from '../authApi'
 import { linkIntentOf } from '../linkIntent'
 import { postSignInTarget, rememberReturnTo, consumeReturnTo } from '../returnTo'
@@ -105,6 +107,8 @@ export type PageContext = {
   discovery?: DiscoveryOptions
   /** 새 비밀번호를 한 번 더 입력받는가(가입 · 재설정 · 변경 · 첫 설정) — 기본 true */
   confirmPassword?: boolean
+  /** 이메일을 필수로 켠 앱의 컨트롤러 — 계정 설정에서 첫 이메일이 확인되면 막을 걷는다(`registered()`) */
+  emailRequired?: EmailRequiredController
   /** 진행 중인 가입 시도(코드 입력 단계가 새로고침을 견딘다) */
   signUpPending?: SignUpPendingStore
   /** 저장 키 · 락 · 채널 이름(앱 이름공간) */
@@ -561,6 +565,7 @@ export type SettingsExtras = Partial<
     | 'timeZones'
     | 'onProfileChanged'
     | 'showDisplayName'
+    | 'contactEmail'
   >
 > & {
   locales: AccountSettingsProps['locales']
@@ -571,6 +576,8 @@ export type SettingsExtras = Partial<
 type AccountRouteState = {
   linked?: string
   linkProvider?: string
+  /** 앱을 덮은 이메일 등록 화면이 넘긴 제공자 재동의(`emailReauthState`) — 열리자마자 그 제공자의 동의 화면으로 보낸다 */
+  emailReauth?: unknown
   resume?: AccountSettingsProps['resume']
 } | null
 
@@ -632,6 +639,22 @@ export function AccountPage({
       setStartError(authErrorMessage(error, mergeLabels(ctx.labels)).message)
     }
   }
+  // 이메일 등록 화면에서 「{제공자}로 확인」을 눌러 왔다 — 한 번 더 누르게 하지 않고 바로 동의 화면으로(돌아오면 이메일 구역이 인증번호를 이어 보낸다)
+  const [startReauth] = useState(() => emailReauthOf(state))
+  const started = useRef(false)
+  const beginRef = useRef(beginRoundTrip)
+  useEffect(() => {
+    beginRef.current = beginRoundTrip
+  })
+  useEffect(() => {
+    if (!startReauth || started.current || !flow || !accountId) return
+    started.current = true
+    navigate(location.pathname, { replace: true, state: null }) // 뒤로 가기가 같은 왕복을 다시 시작하지 않게
+    void beginRef.current(startReauth.provider, {
+      kind: 'email-change',
+      newEmail: startReauth.newEmail,
+    })
+  }, [startReauth, flow, accountId, navigate, location.pathname])
   // 삭제가 받아들여지면 바로 로그아웃 상태의 안내 화면으로 — 서버는 이미 모든 세션을 닫았다(이 화면에 남으면 로그인된 것처럼 보인다).
   // `api` 의 정체성이 바뀌면 설정 화면이 프로필을 다시 읽는다(죽은 토큰으로 401) — 그래서 `navigate` 는 ref 로 쥐고 `api` 는 안정적으로 둔다
   const navigateRef = useRef(navigate)
@@ -675,6 +698,7 @@ export function AccountPage({
           })
         }
         onDeleted={() => void auth.logout()}
+        onEmailRegistered={ctx.emailRequired && (() => ctx.emailRequired?.registered())}
         linkedProvider={state?.linked}
         linkIntent={linkIntentOf(state)}
         {...settings}

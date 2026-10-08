@@ -202,6 +202,12 @@ export type { AccountSectionName, AccountSettingsProps } from './screens/Account
 export { ProfileSection } from './screens/ProfileSection'
 export { PasswordSection } from './screens/PasswordSection'
 export { EmailSection } from './screens/EmailSection'
+export { ContactEmailSection } from './screens/ContactEmailSection'
+export type { ContactEmailSectionProps } from './screens/ContactEmailSection'
+export { EmailRequiredScreen } from './screens/EmailRequiredScreen'
+export type { EmailRequiredScreenProps } from './screens/EmailRequiredScreen'
+export { EmailRequiredGate } from './screens/EmailRequiredGate'
+export type { EmailRequiredGateProps } from './screens/EmailRequiredGate'
 export { SignInMethodsSection } from './screens/SignInMethodsSection'
 export { SessionsSection } from './screens/SessionsSection'
 export { DeleteAccountSection } from './screens/DeleteAccountSection'
@@ -214,3 +220,9 @@ export {
   DEFAULT_LEGACY_LINK_PATHS,
 } from './routes/createAuthRoutes'
 export type { AuthPageName, AuthPaths, AuthRoutesOptions } from './routes/createAuthRoutes'
+
+// 이메일 필수(주소 없는 계정 → 앱을 덮는 「이메일을 등록해 주세요」) · 연락받을 이메일
+export { createEmailRequiredController, isEmailRequiredError } from './emailRequired'
+export type { EmailRequiredController, EmailRequiredState } from './emailRequired'
+export { emailReauthOf, emailReauthState } from './emailReauth'
+export type { EmailReauth } from './emailReauth'

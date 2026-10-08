@@ -75,7 +75,17 @@ export default async function setup(project: TestProject) {
     // 가짜 소셜 제공자는 기본으로 켠다 — 표준 e2e 한 번이 소셜 여정까지 돌게(`E2E_FAKE_PROVIDERS=0` 이면 끈다: 소셜 없는 백엔드 구성)
     if (process.env.E2E_FAKE_PROVIDERS !== '0') fake = await startFakeProviders()
     // 링크 로그인 요청은 같은 IP(::1)에서 시간당 10번(`skeleton.auth-magic-link.per-ip`, 넘으면 429)이 한도다 — 이 실행의 시나리오는 한 백엔드에 새 계정을 여럿 만들어 10번을 넘는다. e2e 백엔드에서만 올린다
-    const e2eLimits = { 'auth-magic-link': { 'per-ip': 100 } }
+    // E2E_EMAIL_REAUTH_WINDOW=PT0S: 첫 이메일 등록의 재인증 면제 창을 없앤다 — 「1시간이 지난」 제공자 재동의 길(emailReauth.e2e.ts)을 만들 수 있는 유일한 길. 표준 실행에서는 쓰지 않는다
+    const e2eLimits = {
+      'auth-magic-link': { 'per-ip': 100 },
+      ...(process.env.E2E_EMAIL_REAUTH_WINDOW
+        ? {
+            account: {
+              email: { 'first-registration-window': process.env.E2E_EMAIL_REAUTH_WINDOW },
+            },
+          }
+        : {}),
+    }
     const fakeConfig = fake
       ? {
           SPRING_APPLICATION_JSON: JSON.stringify({

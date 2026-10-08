@@ -78,6 +78,16 @@ export type ForbiddenContext = {
   method: string
 }
 
+/** 403 을 풀어 주는 함수가 여럿일 때(이메일 등록 · 약관 재동의) 하나로 묶는다 — 차례로 물어 처음 「내가 풀었다(true)」 한 쪽에서 멈춘다 */
+export function chainForbiddenRecovery(
+  ...recoverers: Array<(context: ForbiddenContext) => Promise<boolean>>
+): (context: ForbiddenContext) => Promise<boolean> {
+  return async (context) => {
+    for (const recover of recoverers) if (await recover(context)) return true
+    return false
+  }
+}
+
 export type ApiRequestInterceptor = (
   config: AxiosRequestConfig,
 ) => AxiosRequestConfig | Promise<AxiosRequestConfig>
@@ -153,13 +163,15 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
     path: string,
     request: ApiRequest = {},
   ): Promise<ApiHttpResponse<TEnvelope>> {
-    return perform<TEnvelope>(path, request, true)
+    return perform<TEnvelope>(path, request, true, [])
   }
 
   async function perform<TEnvelope>(
     path: string,
     request: ApiRequest,
     mayRecover: boolean,
+    /** 이미 풀어 다시 보낸 403 의 코드들 — 다시 보낸 호출이 **다른** 이유로 막히면(이메일 등록 뒤 약관 재동의) 한 번 더 풀고, 같은 이유면 거기서 끝낸다 */
+    recoveredForbidden: string[],
   ): Promise<ApiHttpResponse<TEnvelope>> {
     const traceContext = createTraceContext(request.traceId)
     const method = request.method ?? 'GET'
@@ -216,13 +228,13 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
           notifyError(config.onError, surfaced)
           throw surfaced
         }
-        if (recovered) return perform<TEnvelope>(path, request, false)
+        if (recovered) return perform<TEnvelope>(path, request, false, recoveredForbidden)
       }
       if (
-        mayRecover &&
         config.recoverForbidden &&
         !request.skipAuth &&
-        failure.apiError.status === 403
+        failure.apiError.status === 403 &&
+        !recoveredForbidden.includes(failure.apiError.code)
       ) {
         let recovered: boolean
         try {
@@ -235,7 +247,11 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
           notifyError(config.onError, surfaced)
           throw surfaced
         }
-        if (recovered) return perform<TEnvelope>(path, request, false)
+        if (recovered)
+          return perform<TEnvelope>(path, request, false, [
+            ...recoveredForbidden,
+            failure.apiError.code,
+          ])
       }
       notifyError(config.onError, failure)
       throw failure

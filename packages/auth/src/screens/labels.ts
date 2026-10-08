@@ -266,6 +266,47 @@ export type AuthLabels = {
   emailAddSubmit: string
   emailPendingTitle: string
   emailPendingBody: (email: string, until?: string) => string
+  /** 같은 안내 — 주소가 한 번도 없던 계정의 **첫 등록**(「바뀌어요」가 아니라 「등록돼요」) */
+  emailPendingBodyFirst: (email: string, until?: string) => string
+  /** 계정 이메일 구역의 쓰임 한 줄 */
+  emailRole: string
+  /** 이메일을 필수로 켠 앱에서 — 지울 수 없다 */
+  emailCannotRemove: string
+  /** 인증번호가 안 올 때(남이 이미 쓰는 주소일 수 있다) — 첫 이메일 등록의 인증번호 화면. `provider` 는 이 계정이 로그인에 쓰는 제공자 이름 */
+  emailNoCodeHint: (provider: string) => string
+  /** 제공자를 모를 때의 같은 안내 */
+  emailNoCodeHintPlain: string
+  /** 첫 이메일 등록이 다시 인증을 요구했다(마지막 로그인 1시간 초과) */
+  emailReauthNeeded: (provider: string) => string
+  // 이메일 등록 강제 화면
+  emailRequiredTitle: string
+  emailRequiredBody: string
+  emailRequiredField: string
+  emailRequiredSend: string
+  emailRequiredCodeTitle: string
+  emailRequiredCodeBody: (email: string) => string
+  emailRequiredFixAddress: string
+  emailRequiredSignOut: string
+  emailRequiredDeleteHint: string
+  emailRequiredDelete: string
+  /** 계정 설정을 이메일 등록 전에 열었다 */
+  emailRequiredSettingsNotice: string
+  emailRequiredDone: string
+  // 연락받을 이메일
+  sectionContactEmail: string
+  contactEmailRole: string
+  contactEmailNone: string
+  contactEmailCurrent: string
+  contactEmailAdd: string
+  contactEmailChange: string
+  contactEmailRemove: string
+  contactEmailField: string
+  contactEmailSend: string
+  contactEmailCodeTitle: string
+  contactEmailCodeBody: (email: string) => string
+  contactEmailSaved: string
+  contactEmailRemoved: string
+  contactEmailCurrentIsAccount: string
   methodsDescription: string
   methodsLastProtected: string
   methodNames: Record<string, string>
@@ -573,7 +614,7 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   settingsIndexLabel: 'Account sections',
   sectionProfile: 'Profile',
   sectionPassword: 'Password',
-  sectionEmail: 'Email address',
+  sectionEmail: 'Account email',
   sectionMethods: 'Sign-in methods',
   sectionSessions: 'Active sessions',
   sectionDelete: 'Delete account',
@@ -593,11 +634,53 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   emailChangeSubmit: 'Change email',
   emailNone: 'No email address on this account',
   emailAddHint:
-    'Add one to get account notices and to recover access. Type it below, then confirm it is you with a sign-in method you already use.',
+    'Add one to get account notices and to recover access. Type it below and we send you a code.',
   emailAddSubmit: 'Add email',
   emailPendingTitle: 'Enter the code for your new address',
   emailPendingBody: (email, until) =>
     `We sent a 6-digit code to ${email}. Enter it here to switch your address${until ? ` (it works until ${until})` : ''}. No mail? Send the code again below.`,
+  emailPendingBodyFirst: (email, until) =>
+    `We sent a 6-digit code to ${email}. Enter it here to add this address${until ? ` (it works until ${until})` : ''}. No mail? Send the code again below.`,
+  emailRole: 'Used to sign in, to find your password and for security notices.',
+  emailCannotRemove:
+    'An account always keeps one email address, so you can change it but not remove it.',
+  emailNoCodeHint: (provider) =>
+    `No code? An account may already exist for that address. Sign in to that account and link ${provider} in its settings.`,
+  emailNoCodeHintPlain:
+    'No code? An account may already exist for that address. Sign in to that account and link this sign-in method in its settings.',
+  emailReauthNeeded: (provider) =>
+    `For your security, confirm once more with ${provider}. You come back here afterwards.`,
+  emailRequiredTitle: 'Add your email address',
+  emailRequiredBody:
+    'We use it when you need to get back into your account and for important notices. Nobody else can see it.',
+  emailRequiredField: 'Email',
+  emailRequiredSend: 'Send me a code',
+  emailRequiredCodeTitle: 'Enter the code',
+  emailRequiredCodeBody: (email) =>
+    `We sent a 6-digit code to ${email}. It works for 10 minutes — never tell it to anyone.`,
+  emailRequiredFixAddress: 'Fix the address',
+  emailRequiredSignOut: 'Sign out',
+  emailRequiredDeleteHint: 'Do not want to add one? You can delete your account instead.',
+  emailRequiredDelete: 'Delete my account',
+  emailRequiredSettingsNotice:
+    'Until you add an email address you can only add it here or delete your account.',
+  emailRequiredDone: 'Your email address is added. Your other devices were signed out.',
+  sectionContactEmail: 'Contact email',
+  contactEmailRole:
+    'Optional. Announcements and service notices come here. It is not used to sign in or to find your password.',
+  contactEmailNone: 'Notices go to your account email',
+  contactEmailCurrent: 'Notices go to',
+  contactEmailAdd: 'Add a contact email',
+  contactEmailChange: 'Change',
+  contactEmailRemove: 'Remove',
+  contactEmailField: 'Contact email',
+  contactEmailSend: 'Send me a code',
+  contactEmailCodeTitle: 'Enter the code for your contact email',
+  contactEmailCodeBody: (email) =>
+    `We sent a 6-digit code to ${email}. It works for 10 minutes — never tell it to anyone.`,
+  contactEmailSaved: 'Your contact email is saved.',
+  contactEmailRemoved: 'Your contact email is removed. Notices go to your account email again.',
+  contactEmailCurrentIsAccount: 'Security mail always goes to your account email.',
   methodsDescription: 'The ways you can sign in to this account.',
   methodsLastProtected: 'You need at least one way to sign in, so this one cannot be removed.',
   methodNames: { password: 'Password', magic_link: 'Email link' },

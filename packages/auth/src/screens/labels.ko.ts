@@ -239,7 +239,7 @@ export const koAuthLabels: AuthLabels = {
   settingsIndexLabel: '계정 항목',
   sectionProfile: '프로필',
   sectionPassword: '비밀번호',
-  sectionEmail: '이메일 주소',
+  sectionEmail: '계정 이메일',
   sectionMethods: '로그인 수단',
   sectionSessions: '로그인한 기기',
   sectionDelete: '계정 삭제',
@@ -259,11 +259,52 @@ export const koAuthLabels: AuthLabels = {
   emailChangeSubmit: '이메일 바꾸기',
   emailNone: '이 계정에는 이메일 주소가 없어요',
   emailAddHint:
-    '계정 안내와 접근 복구를 받으려면 이메일을 추가하세요. 아래에 주소를 적고, 이미 쓰는 로그인 수단으로 본인임을 확인해 주세요.',
+    '계정 안내를 받고 계정을 되찾으려면 이메일이 필요해요. 아래에 주소를 적으면 인증번호를 보내 드려요.',
   emailAddSubmit: '이메일 추가',
   emailPendingTitle: '새 주소의 인증번호를 입력하세요',
   emailPendingBody: (email, until) =>
     `${email} 로 인증번호 6자리를 보냈어요. 여기에 입력하면 주소가 바뀌어요${until ? ` (${until} 까지 유효해요)` : ''}. 메일이 안 오면 아래에서 다시 받으세요.`,
+  emailPendingBodyFirst: (email, until) =>
+    `${email} 로 인증번호 6자리를 보냈어요. 여기에 입력하면 이 주소가 등록돼요${until ? ` (${until} 까지 유효해요)` : ''}. 메일이 안 오면 아래에서 다시 받으세요.`,
+  emailRole: '로그인, 비밀번호 찾기, 보안 알림에 쓰여요.',
+  emailCannotRemove: '계정에는 이메일이 꼭 하나 있어야 해서 지울 수는 없고, 바꿀 수만 있어요.',
+  // 이름 뒤에 조사를 붙이지 않는다
+  emailNoCodeHint: (provider) =>
+    `번호가 안 오면 그 주소로 이미 가입한 계정이 있을 수 있어요. 그 계정으로 로그인해 설정에서 '${provider} 연결'을 눌러 주세요.`,
+  emailNoCodeHintPlain:
+    '번호가 안 오면 그 주소로 이미 가입한 계정이 있을 수 있어요. 그 계정으로 로그인해 설정에서 지금 쓰는 로그인 수단을 연결해 주세요.',
+  emailReauthNeeded: (provider) =>
+    `보안을 위해 ${provider}로 한 번 더 확인해 주세요. 확인하면 여기로 돌아와요.`,
+  emailRequiredTitle: '이메일을 등록해 주세요',
+  emailRequiredBody: '계정을 되찾거나 중요한 안내를 받을 때 써요. 다른 사람에게는 보이지 않아요.',
+  emailRequiredField: '이메일',
+  emailRequiredSend: '인증번호 받기',
+  emailRequiredCodeTitle: '인증번호를 입력해 주세요',
+  emailRequiredCodeBody: (email) =>
+    `${email} 로 6자리 인증번호를 보냈어요. 10분 안에 입력해 주세요. 다른 사람에게는 알려 주지 마세요.`,
+  emailRequiredFixAddress: '주소 고치기',
+  emailRequiredSignOut: '로그아웃',
+  emailRequiredDeleteHint: '이메일을 등록하고 싶지 않다면 계정을 삭제할 수 있어요.',
+  emailRequiredDelete: '내 계정 삭제',
+  emailRequiredSettingsNotice:
+    '이메일을 등록하기 전에는 여기서 이메일 등록과 계정 삭제만 할 수 있어요.',
+  emailRequiredDone: '이메일을 등록했어요. 다른 기기는 로그아웃됐어요.',
+  sectionContactEmail: '연락받을 이메일',
+  contactEmailRole:
+    '선택 사항이에요. 공지와 서비스 알림을 여기로 받아요. 로그인이나 비밀번호 찾기에는 쓰이지 않아요.',
+  contactEmailNone: '계정 이메일로 받아요',
+  contactEmailCurrent: '알림을 받는 곳',
+  contactEmailAdd: '연락받을 이메일 등록',
+  contactEmailChange: '바꾸기',
+  contactEmailRemove: '지우기',
+  contactEmailField: '연락받을 이메일',
+  contactEmailSend: '인증번호 받기',
+  contactEmailCodeTitle: '인증번호를 입력해 주세요',
+  contactEmailCodeBody: (email) =>
+    `${email} 로 6자리 인증번호를 보냈어요. 10분 안에 입력해 주세요. 다른 사람에게는 알려 주지 마세요.`,
+  contactEmailSaved: '연락받을 이메일을 등록했어요.',
+  contactEmailRemoved: '연락받을 이메일을 지웠어요. 이제 알림은 계정 이메일로 가요.',
+  contactEmailCurrentIsAccount: '보안 메일은 늘 계정 이메일로만 가요.',
   methodsDescription: '이 계정에 로그인할 수 있는 방법이에요.',
   methodsLastProtected: '로그인 수단은 하나 이상 있어야 해서 이 수단은 뗄 수 없어요.',
   methodNames: { password: '비밀번호', magic_link: '이메일 링크' },

@@ -2,14 +2,13 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import type { Page } from 'playwright'
 import { describe, inject, it } from 'vitest'
-import { acceptLegalGate, auth, dismissConsent, launch } from './helpers'
+import { auth, dismissConsent, launch } from './helpers'
 
 /*
  * 글로벌 소셜 로그인 증거 — 가짜 LINE · X(기본으로 올라오는 소셜 백엔드)로: 로그인 화면(Google · LINE · X — 라이트 · 다크 · 모바일 390) · 주소 없는 계정의 설정.
  * 실행: `E2E_WALKTHROUGH=1 SAMPLE_EVIDENCE_DIR=<폴더> pnpm --filter sample exec vitest run --config vitest.e2e.config.ts e2e/walkthrough.social.shots.ts`
  */
 const baseUrl = inject('baseUrl')
-const apiUrl = inject('apiUrl')
 const fakeUrl = inject('fakeUrl')
 const out = resolve(process.env.SAMPLE_EVIDENCE_DIR ?? 'evidence')
 const captions: Array<[string, string]> = []
@@ -58,11 +57,11 @@ describe('social sign-in walkthrough', () => {
       await dark.browser.close()
     }
 
-    // 주소 없는 LINE 계정의 설정
+    // 주소 없는 LINE 계정 — 이메일 필수 앱이면 앱 대신 「이메일을 등록해 주세요」
     await fetch(`${fakeUrl}/control`, {
       method: 'POST',
       body: JSON.stringify({
-        line: { sub: `U-evidence-${Date.now()}`, name: 'LINE 사용자' },
+        line: { sub: `U-evidence-${Date.now()}`, name: 'LINE 사용자', email: '' },
         deny: false,
       }),
     })
@@ -71,19 +70,11 @@ describe('social sign-in walkthrough', () => {
       await page.goto(`${baseUrl}/login`)
       await dismissConsent(page)
       await page.getByRole('button', { name: 'LINE으로 계속하기' }).click()
-      await acceptLegalGate(page, apiUrl)
-      await page.getByRole('heading', { level: 1, name: /안녕하세요/ }).waitFor()
-      await page.goto(`${baseUrl}/account`)
-      await page.getByRole('region', { name: auth.sectionEmail }).waitFor()
-      await page.getByRole('region', { name: auth.sectionEmail }).scrollIntoViewIfNeeded()
-      await page
-        .getByRole('region', { name: auth.sectionEmail })
-        .getByLabel(auth.emailNew)
-        .fill('me@example.com')
+      await page.getByRole('dialog', { name: auth.emailRequiredTitle }).waitFor()
       await shot(
         page,
-        '13-settings-address-less.png',
-        'LINE 으로만 가입한 계정의 설정 — 이메일 절은 빈 값 대신 「이 계정에는 이메일 주소가 없어요」, 「이메일 추가」는 LINE 동의를 다시 거친다(「LINE 로 확인」). 로그인 수단 목록에 LINE.',
+        '13-email-required.png',
+        'LINE 으로만 가입한 계정(주소 없음) — 이메일이 필수인 앱은 앱 대신 「이메일을 등록해 주세요」 전면 화면이 덮는다(주소 → 메일함의 인증번호 → 약관 → 홈).',
       )
     } finally {
       await browser.close()

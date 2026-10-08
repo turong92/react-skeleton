@@ -7,6 +7,7 @@ import {
 import type { MessageKey } from '../i18n'
 import type { SeoHandle } from '../seo/routeSeo'
 import { serverClock } from '../api/serverClock'
+import { emailRequired } from '../api/emailRequired'
 import { accountApi, authApi, authSession } from './session'
 import {
   authKeys,
@@ -68,6 +69,8 @@ export const accountRoutes = createAuthRoutes({
   now: () => serverClock.now().getTime(),
   authApi,
   accountApi,
+  // 이메일을 꼭 받는 앱 — 계정 설정에서 첫 이메일이 확인되면 앱을 덮은 「이메일을 등록해 주세요」 막(`EmailGate`)을 걷는다
+  emailRequired,
   confirmPassword: true, // 새 비밀번호를 한 번 더(모듈 기본은 꺼짐) — 가입 · 재설정 · 변경
   methods: authMethodsOverride && {
     ...authMethodsOverride,
@@ -95,6 +98,8 @@ export const accountRoutes = createAuthRoutes({
   settings: {
     // 서버(kotlin-skeleton `skeleton.account.deletion.self-restore`)가 켜져 있다 — 삭제 안내에 「다시 로그인하면 취소」를 말한다
     selfRestore: true,
+    // 「연락받을 이메일」(선택) 구역 — 서버가 `contact-email.enabled` 를 켠 앱. 꺼져 있으면(404) 구역이 스스로 사라진다
+    contactEmail: true,
     // 글 · 댓글의 이름은 작성 닉네임(`author/`)이 따로 맡는다 — 계정에 붙은 닉네임 줄은 이 앱의 계정 화면에 없다(사용자에게는 닉네임이 하나다). 언어 · 시간대만 남는다
     showDisplayName: false,
     // 계정 정보(언어 · 시간대)를 저장하면 내 계정 읽기와 게시판 화면을 다시 맞춘다

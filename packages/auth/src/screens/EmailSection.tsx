@@ -13,11 +13,13 @@ import { useId, useRef, useState, type FormEvent } from 'react'
 import type { ReauthCredential } from '../account/accountApi'
 import { useCodeClock } from '../codeClockContext'
 import { codeWindowOf, estimateCodeWindow, type CodeWindow } from '../codeWindow'
+import { ErrorCodes, isErrorCode } from '@skeleton/api-client'
 import { reauthKindOf, isReauthFailure, type ReauthSubject } from '../reauth/kind'
 import { ReauthProof } from './ReauthProof'
 import { VerifyCodePanel } from './VerifyCodePanel'
 import styles from './auth.module.css'
 import { mergeLabels, type AuthLabels } from './labels'
+import { labelOfMethod } from './methodsList'
 import { useAction } from './useAction'
 
 export type EmailSectionProps = {
@@ -43,6 +45,8 @@ export type EmailSectionProps = {
   /** 서버가 만료 시각을 안 줄 때(방금 요청한 직후 `me` 가 다시 읽히기 전) 어림하는 유효 시간(초) — 백엔드 `email-change.ttl` 기본 10분 */
   codeTtlSeconds?: number
   formatDate?: (iso: string) => string
+  /** 이 앱은 계정에 이메일을 꼭 요구한다(`me.emailRequired` 키가 있다) — 지울 수 없다는 문구를 더한다 */
+  required?: boolean
   labels?: Partial<AuthLabels>
 }
 
@@ -67,6 +71,7 @@ export function EmailSection({
   pendingEmailExpiresAt,
   codeTtlSeconds = 600,
   formatDate = defaultFormat,
+  required = false,
   labels: given,
 }: EmailSectionProps) {
   const labels = mergeLabels(given)
@@ -89,21 +94,39 @@ export function EmailSection({
   const uid = useId()
   const ids = { email: `${uid}-email`, proof: `${uid}-proof` }
   const attempt = useSubmitAttempt()
+  /**
+   * 주소가 한 번도 없던 계정의 첫 등록은 다시 인증 없이 받는다(마지막 로그인 1시간 안). 서버가 `REAUTH_REQUIRED` 를 말하면(그 시간이 지났다)
+   * 그때 이미 연결된 제공자로 한 번 더 확인하게 한다 — 처음부터 제공자 단추를 내밀지 않는다
+   */
+  const firstRegistration = !email && kind === 'provider'
+  const [reauthNeeded, setReauthNeeded] = useState(false)
+  const needProof = !firstRegistration || reauthNeeded || !!resume
+  const noCodeHint =
+    !email && subject.providers.length > 0
+      ? labels.emailNoCodeHint(labelOfMethod(subject.providers[0], labels))
+      : labels.emailNoCodeHintPlain
 
   async function submit(event: FormEvent) {
     event.preventDefault()
-    if (kind === 'provider') return
+    if (needProof && kind === 'provider') return
     // 버튼은 늘 눌린다 — 새 주소가 비었거나 본인 확인이 모자라면 이유를 말하고 그 칸으로 간다
     if (problems.length > 0) return attempt.fail(problems[0].target)
     let response: unknown
     const ok = await action.run(async () => {
-      response = await onChangeEmail({ newEmail, ...proof })
+      try {
+        response = await onChangeEmail({ newEmail: newEmail.trim(), ...proof })
+      } catch (caught) {
+        if (firstRegistration && isErrorCode(caught, ErrorCodes.ACCOUNT_REAUTH_REQUIRED))
+          setReauthNeeded(true)
+        throw caught
+      }
     })
     if (ok) {
       setLocalWindow(
         codeWindowOf(response) ?? estimateCodeWindow(now(), { ttlSeconds: codeTtlSeconds }),
       )
-      setLocal(newEmail)
+      setLocal(newEmail.trim())
+      setReauthNeeded(false)
       setNewEmail('')
       setProof(null)
       setEditing(false)
@@ -140,6 +163,8 @@ export function EmailSection({
             <span className={styles.muted}>{labels.emailNone}</span>
           )}
         </div>
+        <p className={styles.muted}>{labels.emailRole}</p>
+        {email && required && <p className={styles.muted}>{labels.emailCannotRemove}</p>}
         {!email && !showCode && <p className={styles.muted}>{labels.emailAddHint}</p>}
         {changed && <Alert tone="success">{labels.emailChanged}</Alert>}
         {showCode ? (
@@ -147,7 +172,7 @@ export function EmailSection({
             <VerifyCodePanel
               email={waiting}
               title={labels.emailPendingTitle}
-              description={labels.emailPendingBody(
+              description={(email ? labels.emailPendingBody : labels.emailPendingBodyFirst)(
                 waiting,
                 pendingEmailExpiresAt && pendingEmail === waiting
                   ? formatDate(pendingEmailExpiresAt)
@@ -171,6 +196,7 @@ export function EmailSection({
               }}
             />
             <p className={styles.muted}>{labels.emailPendingNote}</p>
+            {!email && <Alert tone="info">{noCodeHint}</Alert>}
             <div className={styles.row} ref={againBox}>
               <Button
                 variant="secondary"
@@ -210,30 +236,49 @@ export function EmailSection({
                 />
               )}
             </Field>
-            <div id={ids.proof}>
-              <ReauthProof
-                kind={kind}
-                email={subject.email}
-                providers={subject.providers}
-                requestCode={requestReauthCode}
-                onChange={setProof}
-                failure={isReauthFailure(action.raw) ? action.raw : undefined}
-                onProvider={
-                  onProviderReauth && newEmail.trim()
-                    ? (provider) => onProviderReauth(provider, newEmail.trim())
-                    : undefined
-                }
-                confirmedWith={resume?.provider}
-                labels={given}
-              />
-            </div>
-            {kind !== 'provider' && (
+            {needProof && (
+              <div id={ids.proof}>
+                <ReauthProof
+                  kind={kind}
+                  email={subject.email}
+                  providers={subject.providers}
+                  requestCode={requestReauthCode}
+                  onChange={setProof}
+                  failure={
+                    isReauthFailure(action.raw) &&
+                    !(
+                      firstRegistration &&
+                      isErrorCode(action.raw, ErrorCodes.ACCOUNT_REAUTH_REQUIRED)
+                    )
+                      ? action.raw
+                      : undefined
+                  }
+                  onProvider={
+                    onProviderReauth && newEmail.trim()
+                      ? (provider) => onProviderReauth(provider, newEmail.trim())
+                      : undefined
+                  }
+                  confirmedWith={resume?.provider}
+                  labels={
+                    firstRegistration && subject.providers.length > 0
+                      ? {
+                          ...given,
+                          reauthProviderHint: labels.emailReauthNeeded(
+                            labelOfMethod(subject.providers[0], labels),
+                          ),
+                        }
+                      : given
+                  }
+                />
+              </div>
+            )}
+            {(kind !== 'provider' || !needProof) && (
               <FormProblems
                 title={labels.formProblemsTitle}
                 problems={attempt.attempted ? problems : []}
               />
             )}
-            {kind !== 'provider' && (
+            {(kind !== 'provider' || !needProof) && (
               <div className={styles.row}>
                 <Button type="submit" loading={action.busy} loadingLabel={labels.submitting}>
                   {email ? labels.emailChangeSubmit : labels.emailAddSubmit}

@@ -38,13 +38,14 @@ const hello = await apiClient.value<{ message: string }>('/hello')
 
 ## 그 밖의 export
 
-| export                                                                    | 뜻                                                                                                                                                                                   |
-| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `ApiRequestError`                                                         | 4xx/5xx · 전송 실패. `apiError`(백엔드 `ApiError` 와 1:1) `traceId` `spanId` `traceparent`. 응답을 못 해석하면 `CLIENT.HTTP_ERROR`, 네트워크 실패는 `CLIENT.NETWORK_ERROR`(status 0) |
-| `ErrorCodes` · `ClientErrorCodes` · `isErrorCode(error, code \| codes[])` | 백엔드 Kotlin enum 에 있는 코드만                                                                                                                                                    |
-| `createTraceContext(traceId?)` · `createTraceId()`                        | W3C traceparent                                                                                                                                                                      |
-| `newIdempotencyKey()`                                                     | `Idempotency-Key` 용 — 같은 작업 재시도 때만 재사용                                                                                                                                  |
-| `apiConfigFromEnv(env)`                                                   | 위 환경변수 → 설정                                                                                                                                                                   |
-| 타입                                                                      | `ApiValueResponse` `ApiListResponse` `ApiPageResponse` `ApiCursorResponse` `ApiBasicResponse` `ApiError` `FieldError` …                                                              |
+| export                                                                    | 뜻                                                                                                                                                                                          |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ApiRequestError`                                                         | 4xx/5xx · 전송 실패. `apiError`(백엔드 `ApiError` 와 1:1) `traceId` `spanId` `traceparent`. 응답을 못 해석하면 `CLIENT.HTTP_ERROR`, 네트워크 실패는 `CLIENT.NETWORK_ERROR`(status 0)        |
+| `chainForbiddenRecovery(...recoverers)`                                   | `recoverForbidden` 를 여럿(이메일 등록 · 약관 재동의)으로 묶는다 — 차례로 물어 처음 true 에서 멈춘다. 다시 보낸 호출이 **다른** 이유로 또 403 이면 한 번 더 풀고, 같은 이유면 거기서 끝낸다 |
+| `ErrorCodes` · `ClientErrorCodes` · `isErrorCode(error, code \| codes[])` | 백엔드 Kotlin enum 에 있는 코드만                                                                                                                                                           |
+| `createTraceContext(traceId?)` · `createTraceId()`                        | W3C traceparent                                                                                                                                                                             |
+| `newIdempotencyKey()`                                                     | `Idempotency-Key` 용 — 같은 작업 재시도 때만 재사용                                                                                                                                         |
+| `apiConfigFromEnv(env)`                                                   | 위 환경변수 → 설정                                                                                                                                                                          |
+| 타입                                                                      | `ApiValueResponse` `ApiListResponse` `ApiPageResponse` `ApiCursorResponse` `ApiBasicResponse` `ApiError` `FieldError` …                                                                     |
 
 의존: `axios`(dependencies). 다른 `@skeleton/*` 를 쓰지 않는다.

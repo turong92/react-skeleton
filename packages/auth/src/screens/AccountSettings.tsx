@@ -7,6 +7,7 @@ import type { AccountMe, DeletionResult, PasswordPolicy } from '../account/types
 import { reauthSubjectOf } from '../reauth/kind'
 import type { ProviderAction } from '../socialLink'
 import { AccountStateNotice } from './AccountStateNotice'
+import { ContactEmailSection } from './ContactEmailSection'
 import { DeleteAccountSection } from './DeleteAccountSection'
 import { EmailSection } from './EmailSection'
 import { PasswordSection } from './PasswordSection'
@@ -24,6 +25,7 @@ export type AccountSectionName =
   | 'profile'
   | 'password'
   | 'email'
+  | 'contact'
   | 'methods'
   | 'sessions'
   | 'delete'
@@ -52,6 +54,12 @@ export type AccountSettingsProps = {
   /** 프로필(닉네임 · 언어 · 시간대)을 저장했다 — 저장된 프로필과 함께. 앱이 닉네임이 걸린 자기 캐시 · 화면(게시판 작성자 …)을 다시 읽게 한다 */
   onProfileChanged?: (profile: AccountMe) => void
   formatDate?: (iso: string) => string
+  /**
+   * 「연락받을 이메일」 구역을 둔다(기본 false — 서버가 `skeleton.account.contact-email.enabled` 를 켠 앱만). 서버가 404 로 꺼져 있다고 답하면 구역은 스스로 사라진다
+   */
+  contactEmail?: boolean
+  /** 주소가 없던 계정의 첫 이메일이 확인됐다(이메일 필수 앱의 막을 걷는다 — 보통 `emailRequired.registered()`) */
+  onEmailRegistered?: () => void
   /** 접근 불가 · 정지일 때 「문의」 링크 */
   supportHref?: string
   /** 방금 연결한 소셜 제공자(연결 콜백이 돌아온 직후) — 서버가 계정 주소로 알림 메일을 보냈다는 안내를 보인다 */
@@ -69,7 +77,15 @@ export type AccountSettingsProps = {
   onResumeConsumed?: () => void
 }
 
-const ALL: AccountSectionName[] = ['profile', 'password', 'email', 'methods', 'sessions', 'delete']
+const ALL: AccountSectionName[] = [
+  'profile',
+  'password',
+  'email',
+  'contact',
+  'methods',
+  'sessions',
+  'delete',
+]
 
 /**
  * 계정 설정 — `AccountApi` 하나로 프로필 · 비밀번호 · 이메일 · 로그인 수단 · 세션 · 삭제를 잇는다.
@@ -91,6 +107,8 @@ export function AccountSettings({
   onProfileChanged,
   formatDate,
   supportHref,
+  contactEmail: contactOn = false,
+  onEmailRegistered,
   linkedProvider,
   linkIntent,
   onProviderReauth,
@@ -98,7 +116,8 @@ export function AccountSettings({
   onResumeConsumed,
 }: AccountSettingsProps) {
   const labels = mergeLabels(given)
-  const on = (name: AccountSectionName) => sections?.[name] !== false
+  const on = (name: AccountSectionName) =>
+    sections?.[name] !== false && (name !== 'contact' || contactOn)
   const sessionsOn = sections?.sessions !== false
   const passwordOn = sections?.password !== false
   const me = useResource(useCallback(() => api.me(), [api]))
@@ -181,20 +200,75 @@ export function AccountSettings({
       profile: labels.sectionProfile,
       password: labels.sectionPassword,
       email: labels.sectionEmail,
+      contact: labels.sectionContactEmail,
       methods: labels.sectionMethods,
       sessions: labels.sectionSessions,
       delete: labels.sectionDelete,
     }[id],
   }))
 
+  const emailSection = (
+    <EmailSection
+      email={account.email}
+      verified={account.emailVerified}
+      subject={subject}
+      pendingEmail={account.pendingEmail}
+      pendingEmailExpiresAt={account.pendingEmailExpiresAt}
+      formatDate={formatDate}
+      requestReauthCode={requestReauthCode}
+      resume={emailResume}
+      required={account.emailRequired !== undefined}
+      onProviderReauth={
+        onProviderReauth &&
+        ((provider, newEmail) => onProviderReauth(provider, { kind: 'email-change', newEmail }))
+      }
+      labels={given}
+      onChangeEmail={async (request) => {
+        const sent = await api.changeEmail(request)
+        me.reload() // 대기 중인 새 주소(`pendingEmail`)는 요청이 끝나기 전에 서버에 저장된다
+        return sent // 응답의 `expiresAt` · `resendAvailableAt` 이 있으면 인증번호 남은 시간이 그 값을 쓴다
+      }}
+      onConfirmCode={(code) => api.confirmEmailChangeCode(code)}
+      onConfirmed={() => {
+        me.reload()
+        sessions.reload() // 서버가 이 세션만 남기고 다른 세션을 닫는다
+        onEmailRegistered?.()
+      }}
+    />
+  )
+  const deleteSection = (
+    <DeleteAccountSection
+      subject={subject}
+      graceDays={graceDays}
+      selfRestore={selfRestore}
+      formatDate={formatDate}
+      labels={given}
+      requestDeleteCode={requestDeleteCode}
+      onDelete={(credential) => api.deleteAccount(credential)}
+      onProviderReauth={
+        onProviderReauth && ((provider) => onProviderReauth(provider, { kind: 'delete' }))
+      }
+      resume={deleteResume}
+      onResumeSpent={() => setDeleteResume(null)}
+      onDeleted={onDeleted}
+    />
+  )
+
+  // 이메일이 필수인 앱에서 아직 주소가 없다 — 서버가 이 두 가지(이메일 등록 · 계정 삭제)만 열어 둔다. 나머지 구역은 호출이 403 이라 그리지 않는다.
+  // 같은 자리(순서)에 그려서 등록이 끝나 모든 구역이 열려도 이메일 구역이 그대로 남아 「등록했어요」 안내를 이어 보인다
+  const restricted = account.emailRequired === true
   return (
     <div className={styles.sections}>
-      <PageHeader title={labels.settingsTitle} description={account.email ?? undefined} />
-      <SectionIndex items={items} label={labels.settingsIndexLabel} />
+      <PageHeader
+        title={labels.settingsTitle}
+        description={restricted ? undefined : (account.email ?? undefined)}
+      />
+      {restricted && <Alert tone="warning">{labels.emailRequiredSettingsNotice}</Alert>}
+      {!restricted && <SectionIndex items={items} label={labels.settingsIndexLabel} />}
       {resumeError !== null && (
         <Alert tone="danger">{authErrorMessage(resumeError, labels).message}</Alert>
       )}
-      {on('profile') && (
+      {!restricted && on('profile') && (
         <ProfileSection
           profile={account}
           locales={locales}
@@ -208,7 +282,7 @@ export function AccountSettings({
           }}
         />
       )}
-      {on('password') && (
+      {!restricted && on('password') && (
         <PasswordSection
           subject={subject}
           policy={policy.data}
@@ -223,34 +297,18 @@ export function AccountSettings({
           }}
         />
       )}
-      {on('email') && (
-        <EmailSection
-          email={account.email}
-          verified={account.emailVerified}
-          subject={subject}
-          pendingEmail={account.pendingEmail}
-          pendingEmailExpiresAt={account.pendingEmailExpiresAt}
-          formatDate={formatDate}
-          requestReauthCode={requestReauthCode}
-          resume={emailResume}
-          onProviderReauth={
-            onProviderReauth &&
-            ((provider, newEmail) => onProviderReauth(provider, { kind: 'email-change', newEmail }))
-          }
+      {(restricted || on('email')) && emailSection}
+      {!restricted && on('contact') && (
+        <ContactEmailSection
+          contactEmail={account.contactEmail ?? null}
           labels={given}
-          onChangeEmail={async (request) => {
-            const sent = await api.changeEmail(request)
-            me.reload() // 대기 중인 새 주소(`pendingEmail`)는 요청이 끝나기 전에 서버에 저장된다
-            return sent // 응답의 `expiresAt` · `resendAvailableAt` 이 있으면 인증번호 남은 시간이 그 값을 쓴다
-          }}
-          onConfirmCode={(code) => api.confirmEmailChangeCode(code)}
-          onConfirmed={() => {
-            me.reload()
-            sessions.reload() // 서버가 이 세션만 남기고 다른 세션을 닫는다
-          }}
+          onRequestCode={(email) => api.requestContactEmail(email)}
+          onConfirmCode={(code) => api.confirmContactEmail(code)}
+          onRemove={() => api.removeContactEmail()}
+          onChanged={me.reload}
         />
       )}
-      {on('methods') && (
+      {!restricted && on('methods') && (
         <SignInMethodsSection
           identities={account.methods}
           socialProviders={socialProviders}
@@ -276,7 +334,7 @@ export function AccountSettings({
           }}
         />
       )}
-      {on('sessions') && (
+      {!restricted && on('sessions') && (
         <SessionsSection
           sessions={sessions.data ?? []}
           formatDate={formatDate}
@@ -291,23 +349,7 @@ export function AccountSettings({
           }}
         />
       )}
-      {on('delete') && (
-        <DeleteAccountSection
-          subject={subject}
-          graceDays={graceDays}
-          selfRestore={selfRestore}
-          formatDate={formatDate}
-          labels={given}
-          requestDeleteCode={requestDeleteCode}
-          onDelete={(credential) => api.deleteAccount(credential)}
-          onProviderReauth={
-            onProviderReauth && ((provider) => onProviderReauth(provider, { kind: 'delete' }))
-          }
-          resume={deleteResume}
-          onResumeSpent={() => setDeleteResume(null)}
-          onDeleted={onDeleted}
-        />
-      )}
+      {(restricted || on('delete')) && deleteSection}
     </div>
   )
 }

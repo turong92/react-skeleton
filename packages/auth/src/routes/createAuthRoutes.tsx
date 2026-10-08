@@ -1,6 +1,7 @@
 import type { RouteObject } from 'react-router-dom'
 import type { AccountApi } from '../account/accountApi'
 import type { AuthApi } from '../authApi'
+import type { EmailRequiredController } from '../emailRequired'
 import { RequireAuth } from '../RequireAuth'
 import type { SignUpScreenProps } from '../screens/SignUpScreen'
 import type { ReactElement, ReactNode } from 'react'
@@ -111,6 +112,11 @@ export type AuthRoutesOptions = {
   /** 소셜 계정 연결 흐름(`createSocialLinkFlow`) */
   socialLinkFlow?: SocialLinkFlow
   labels?: Partial<AuthLabels>
+  /**
+   * 이메일을 필수로 켠 앱(`skeleton.account.email.required`)의 컨트롤러(`createEmailRequiredController()`) — 계정 설정에서 첫 이메일이 확인되면 앱을 덮은
+   * 「이메일을 등록해 주세요」 막(`EmailRequiredGate`)을 걷는다. 기본 꺼짐(주면 켜진다) — 켠 앱은 `createApiClient({ recoverForbidden: emailRequired.recover })` 와 막을 따로 둔다
+   */
+  emailRequired?: EmailRequiredController
   /** 새 비밀번호를 한 번 더 입력받는다(가입 · 재설정 · 변경 · 첫 설정, 기본 false — 모듈은 중립이라 앱이 켠다). 가입만 따로 바꾸려면 `signUp: { confirmPassword }` */
   confirmPassword?: boolean
   /**
@@ -160,6 +166,7 @@ export function createAuthRoutes(options: AuthRoutesOptions): RouteObject[] {
     authApi: options.authApi as AuthApi,
     accountApi: options.accountApi as AccountApi,
     labels: options.labels,
+    emailRequired: options.emailRequired,
     confirmPassword: options.confirmPassword,
     now: options.now,
     formatDate: options.settings?.formatDate,

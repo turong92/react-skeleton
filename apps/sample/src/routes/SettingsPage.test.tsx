@@ -98,6 +98,34 @@ describe('SettingsPage — an account without an email address (Google with a no
   })
 })
 
+describe('SettingsPage — two emails: the account email and where notices go', () => {
+  it('names the account email as such and says notices go to it when no contact email is set', () => {
+    const html = render(me({ contactEmail: null }))
+    expect(html).toContain('계정 이메일')
+    expect(html).toContain('연락받을 이메일')
+    expect(html).toContain('계정 이메일로 받아요')
+  })
+
+  it('shows the contact email when there is one', () => {
+    const html = render(me({ contactEmail: 'news@example.com' }))
+    expect(html).toContain('news@example.com')
+    expect(html).not.toContain('계정 이메일로 받아요')
+  })
+
+  it('draws no contact row for a server that does not know the feature (no key at all)', () => {
+    const html = render(me({}))
+    expect(html).not.toContain('연락받을 이메일')
+  })
+
+  it('English: Account email / Contact email', async () => {
+    await i18n.setLocale('en', { remember: false })
+    const html = render(me({ contactEmail: null }))
+    expect(html).toContain('Account email')
+    expect(html).toContain('Contact email')
+    expect(html).toContain('Sent to your account email')
+  })
+})
+
 describe('SettingsPage — nicknames section', () => {
   it("has one section for the nicknames used in posts and comments, in the user's word", () => {
     const html = render(me({ displayName: '수민' }))

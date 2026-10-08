@@ -190,7 +190,7 @@ describe('account walkthrough (FINAL-3 codes)', () => {
         en,
         '11-english-code-step.png',
         '영어 — 브라우저 언어가 영어면 같은 코드 단계가 영어로(문구는 labels prop, 앱이 번역해 넘긴다).',
-        en.getByRole('region', { name: 'Email address' }),
+        en.getByRole('region', { name: 'Account email' }),
       )
     } finally {
       writeFileSync(

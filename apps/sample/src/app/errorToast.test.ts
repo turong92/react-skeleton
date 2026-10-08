@@ -24,6 +24,18 @@ describe('toastUnlessValidation', () => {
     expect(show).not.toHaveBeenCalled()
   })
 
+  it('leaves ACCOUNT.EMAIL_REQUIRED to the full-screen "register your email" step (no toast from a query or a mutation)', () => {
+    const show = vi.fn()
+    const blocked = new ApiRequestError(
+      { code: ErrorCodes.ACCOUNT_EMAIL_REQUIRED, title: 't', status: 403, timestamp: 'x' },
+      'a',
+      'b',
+      'c',
+    )
+    toastUnlessValidation(show)(blocked)
+    expect(show).not.toHaveBeenCalled()
+  })
+
   it('toasts every other error', () => {
     const show = vi.fn()
     const error = apiError(ErrorCodes.COMMON_INTERNAL_SERVER_ERROR)

@@ -67,6 +67,10 @@ export type AccountMe = {
   /** 새 주소의 확인을 기다리는 이메일 변경(만료 · 대체 · 확정 전까지) — 새로고침 뒤에도 서버가 알려 준다. 남의 주소로 요청했으면 null(존재 여부를 숨긴다) */
   pendingEmail?: string | null
   pendingEmailExpiresAt?: string | null
+  /** 이메일을 **필수**로 켠 앱에서만 키가 있다: 주소가 아직 없으면 true — 허용 목록 밖의 모든 호출이 403 `ACCOUNT.EMAIL_REQUIRED` 라 「이메일을 등록해 주세요」 화면이 앱을 덮는다. 키가 없으면 이 앱은 주소를 요구하지 않는다 */
+  emailRequired?: boolean
+  /** 확인된 연락받을 이메일 — 없거나 앱이 기능을 끄면 null(키는 늘 있다 · 옛 서버에는 키가 없다). 서비스 알림 · 공지가 간다. 로그인 · 비밀번호 찾기에는 쓰이지 않는다 */
+  contactEmail?: string | null
 }
 
 export type ProfilePatch = { displayName?: string; locale?: string; timeZone?: string }

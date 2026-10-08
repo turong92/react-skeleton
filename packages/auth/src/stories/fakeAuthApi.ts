@@ -25,11 +25,11 @@ export const FAKE_ACCESS_TOKEN = `header.${btoa(
   .replaceAll('/', '_')
   .replaceAll('=', '')}.signature`
 
-const token = (): AuthTokenResponse => ({
+const token = (withoutAddress = false): AuthTokenResponse => ({
   accessToken: FAKE_ACCESS_TOKEN,
   tokenType: 'Bearer',
   expiresAt: '2099-01-01T00:00:00Z',
-  principal,
+  principal: withoutAddress ? { ...principal, email: null } : principal,
 })
 
 const invalidCredentials = () =>
@@ -58,6 +58,8 @@ export type FakeAuthOptions = {
   cancelExpired?: boolean
   /** 소셜 로그인이 「같은 이메일로 메일 가입한 계정이 있다」로 거절된다 — `409 ACCOUNT.SOCIAL_EMAIL_CONFLICT`(본문 `data` 없음: 어떤 방법으로 가입했는지는 알려 주지 않는다) */
   socialEmailConflict?: boolean
+  /** 소셜 로그인이 주소 없는 계정을 연다(카카오 · 네이버 · X · LINE 이 이메일을 주지 않았다) — 이메일이 필수인 앱이면 `GET /account/me` 의 `emailRequired` 가 true 인 계정(`createFakeAccountApi({ emailRequired })`) */
+  socialWithoutAddress?: boolean
 }
 
 const apiFailure = (code: string, status: number, data?: unknown) =>
@@ -73,6 +75,7 @@ export function createFakeAuthApi({
   pendingDeletion,
   cancelExpired,
   socialEmailConflict,
+  socialWithoutAddress,
 }: FakeAuthOptions = {}): AuthApi {
   /** 맞는 증거로 들어왔다 — 유예 중이면 세션 대신 403 */
   const admit = (): AuthTokenResponse => {
@@ -99,9 +102,9 @@ export function createFakeAuthApi({
     },
     socialLogin: async () => {
       if (socialEmailConflict) throw apiFailure('ACCOUNT.SOCIAL_EMAIL_CONFLICT', 409)
-      return admit()
+      return socialWithoutAddress && !pendingDeletion ? token(true) : admit()
     },
-    me: async () => principal,
+    me: async () => (socialWithoutAddress ? { ...principal, email: null } : principal),
     refresh: async () => token(),
     logout: async () => undefined,
     methods: async () => ({

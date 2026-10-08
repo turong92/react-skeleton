@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — 이메일 필수: 「이메일을 등록해 주세요」 전면 화면, 계정 이메일 · 연락받을 이메일 두 구역(`@skeleton/auth` · `@skeleton/api-client` · `@skeleton/ui` · `apps/sample`)
+
+백엔드(kotlin-skeleton `feat/email-required`, `docs/account-http-contract.md` 의 FINAL-6)에 맞췄다. 주인 결정: 「이메일은 받아야지. 있는 건 자동으로 등록하고, 없으면 강제로 입력하게 시키고, 추가 가능하게」 · 「복수 이메일이라는 건 연락받을 이메일」 · 「계정 이메일은 무조건 하나」. 둘 다 앱의 선택이라 **기본은 꺼짐**(sample 은 켠다).
+
+- **등록 강제 화면** — `createEmailRequiredController()`(403 `ACCOUNT.EMAIL_REQUIRED` 를 붙잡았다가 등록되면 같은 호출을 다시 보낸다) · `<EmailRequiredGate>`(아래를 `inert` 로 두고 `EmailRequiredScreen` 이 덮는다 — 제목 「이메일을 등록해 주세요」 · 주소 → 인증번호(서버 `expiresAt`/`resendAvailableAt`) → 끝 · 「번호가 안 오면…」 안내 · 주소 고치기 · 로그아웃 · 「내 계정 삭제」) · `isEmailRequiredError`(전역 토스트에서 뺀다 — 쿼리 · 뮤테이션 모두). 이메일 막은 약관 막 바깥이라 한 번에 하나, 순서는 서버와 같은 이메일 → 약관 → 닉네임(약관 막은 `emailRequired.isReady()` · 등록 여부를 보고 그 뒤에 묻는다 — sample `LegalGate`). 현재 세션은 유지되고 다른 세션만 닫힌다(서버 `revokeAll(account, currentSession)` 로 확인).
+- **1시간이 지난 첫 등록** — `403 REAUTH_REQUIRED` → 「보안을 위해 {제공자}로 한 번 더 확인해 주세요」 + 채운 단추 → 계정 설정이 열리자마자 제공자 동의(`emailReauthState`) → 돌아오면 이메일 구역이 인증번호를 이어 보낸다. `EmailSection` 은 주소 없는 계정의 첫 등록에 다시 인증을 먼저 내밀지 않는다(전에는 제공자 단추가 먼저였다).
+- **api-client**: `ErrorCodes.ACCOUNT_EMAIL_REQUIRED` · `chainForbiddenRecovery(...)`(이메일 → 약관을 한 `recoverForbidden` 으로) · **다시 보낸 호출이 다른 이유로 또 403 이면 한 번 더 푼다**(전에는 어떤 403 이든 한 번뿐이라, 이메일 등록 뒤에 약관 403 이 오면 막혔다. 같은 이유는 여전히 한 번).
+- **설정의 두 구역** — 「계정 이메일」(로그인 · 비밀번호 찾기 · 보안 알림에 쓰인다는 한 줄 · 이메일 필수 앱은 「지울 수 없고 바꿀 수만」) / 「연락받을 이메일」(`ContactEmailSection`, `settings.contactEmail`: 선택 · 공지/서비스 알림용 · 등록 = 주소 → 그 주소로 간 인증번호 · 바꾸기 · 지우기 · 없으면 「계정 이메일로 받아요」 · 서버 404 면 구역이 사라진다). `me.contactEmail` · `me.emailRequired` · `accountApi.requestContactEmail/confirmContactEmail/removeContactEmail`. 이메일 등록 전에 설정을 열면 이메일 등록과 계정 삭제 구역만(나머지는 서버가 403).
+- **ui**: `CodeEntry` 의 여섯 칸이 좁은 폭에서 줄어든다(320px 화면의 카드 안쪽 ≈ 250px 에서 가로로 밀렸다) — 스토리 `FitsAnArrowColumn`.
+- **sample**: 앱 맨 위 `EmailGate`(+`api/emailRequired.ts`), 설정 요약에 「계정 이메일」 · 「연락받을 이메일」, 소셜 가입 직후는 이메일 → 약관 → (닉네임: 막지 않는 띠 + 글쓰기 전 확인) 한 줄. 라벨 `sectionEmail` 은 「계정 이메일」(영어 Account email)로 바뀌었다.
+- 가짜 `createFakeAccountApi({ emailRequired, takenEmails, reauthWindowExpired, firstRegistrationOpen, contactEmail, contactEmailOff })`, 스토리 `Patterns/Auth/Email required`(입력 → 코드 → 완료 · 이미 쓰인 주소 · 1시간 뒤 재동의 · 길 · 한국어 · 320/375px) 와 `Account settings` 의 새 스토리, e2e `emailRequired.e2e.ts`(가짜 LINE 주소 없음 → 강제 화면 → 메일함 코드 → 약관 → 홈 → 게시판 API · 연락받을 이메일 등록 · 삭제 · 비밀번호 찾기에 연락받을 이메일을 넣으면 메일이 안 온다) · `emailReauth.e2e.ts`(`E2E_EMAIL_REAUTH_WINDOW=PT0S` 실행에서만) · 기존 `social.e2e.ts` 는 주소 없는 LINE · X 가 먼저 이메일을 등록하도록 고쳤다.
+
 ### Changed — 소셜 로그인 · 연결 · 다시 인증이 콜백의 `state` 를 같이 보낸다(`@skeleton/auth`)
 
 백엔드(kotlin-skeleton `chore/ops-docs`, `docs/account-http-contract.md` 의 `state?`)가 로그인 · 연결 · `socialReauth` 요청 본문에 선택 필드 `state` 를 받는다. Naver 는 토큰 발급에 인가 단계의 `state` 가 필요할 수 있어 백엔드가 받은 값을 Naver 토큰 요청에만 싣고, 다른 제공자는 무시한다.

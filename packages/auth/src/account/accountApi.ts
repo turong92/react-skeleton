@@ -71,6 +71,16 @@ export type AccountApi = {
     idempotencyKey?: string,
   ): Promise<CodeSent>
 
+  /**
+   * 연락받을 이메일(선택 · 계정당 하나 · 로그인과 복구에는 쓰이지 않는다) — `POST /account/contact-email {email}` → 202. 인증번호가 **그 주소로** 간다. 다시 인증은 없다. 다시 보내기 = 다시 부른다.
+   * 앱이 기능을 끄면 404 — 화면은 그 구역을 그리지 않는다
+   */
+  requestContactEmail(email: string): Promise<CodeSent>
+  /** `POST /account/contact-email/confirm {code}` → 204 — 바뀐다(이미 있던 주소를 대신한다). 400 `CODE_INVALID` · 410 `CODE_EXPIRED` · 429 */
+  confirmContactEmail(code: string): Promise<void>
+  /** `DELETE /account/contact-email` → 204 — 없을 때도 204. 이후 서비스 알림은 계정 이메일로 간다 */
+  removeContactEmail(): Promise<void>
+
   identities(): Promise<SignInIdentity[]>
   /** 다시 인증이 필요하다(비밀번호 · 코드 · socialReauth) — DELETE 의 JSON 본문에 싣는다. 마지막 수단은 409 `LAST_SIGN_IN_METHOD` */
   unlinkIdentity(id: string, reauth?: ReauthCredential): Promise<void>
@@ -146,6 +156,12 @@ export function createAccountApi(
         json: compact(request),
         idempotencyKey: idempotencyKey ?? newIdempotencyKey(),
       }),
+
+    requestContactEmail: (email) =>
+      client.value<CodeSent>('/account/contact-email', { method: 'POST', json: { email } }),
+    confirmContactEmail: (code) =>
+      client.noContent('/account/contact-email/confirm', { method: 'POST', json: { code } }),
+    removeContactEmail: () => client.noContent('/account/contact-email', { method: 'DELETE' }),
 
     identities: () => client.list('/account/identities'),
     unlinkIdentity: (id, reauth) =>

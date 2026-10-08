@@ -429,6 +429,13 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
     rules: { minLength: 4, maxLength: 20 },
     labels: authLabels(ctx),
   }),
+  'auth#LoginIdRetry': (ctx) => ({
+    initialValue: 'sumin',
+    rules: { minLength: 4, maxLength: 20 },
+    api: { checkLoginId: async (id: string) => ({ normalized: id, available: true }) },
+    onSubmit: noop,
+    labels: authLabels(ctx),
+  }),
   'auth#PasswordHints': (ctx) => ({ policy: authPolicy, password: '', labels: authLabels(ctx) }),
   'auth#PasswordField': (ctx) => ({
     label: 'Password',

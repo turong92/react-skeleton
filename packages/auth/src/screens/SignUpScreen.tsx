@@ -11,18 +11,25 @@ import {
 } from '@skeleton/ui'
 import { useId, useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import type { LoginIdRules } from '../account/loginIdRules'
 import { violationsOf } from '../account/passwordRules'
 import { useCodeClock } from '../codeClockContext'
 import { codeWindowOf, estimateCodeWindow } from '../codeWindow'
 import type { PendingSignUp } from '../signUpPending'
 import type {
   PasswordPolicy,
+  LoginIdAvailability,
   PasswordViolation,
   SignUpRequest,
   SignUpStatus,
 } from '../account/types'
 import { AuthLayout } from './AuthLayout'
 import { VerifyCodePanel } from './VerifyCodePanel'
+import { LoginIdField } from './LoginIdField'
+import { LoginIdRetry } from './LoginIdRetry'
+import { loginIdProblemText } from './loginId'
+import { loginIdServerError } from './loginIdServerError'
+import { useLoginIdAvailability } from './useLoginIdAvailability'
 import { NewPasswordFields } from './NewPasswordFields'
 import { PasswordHints } from './PasswordHints'
 import { SocialButtons } from './SocialButtons'
@@ -66,6 +73,20 @@ export type CaptchaSlotApi = {
   onToken: (token: string | null) => void
 }
 
+/** 로그인 아이디를 켠 서버(발견에 `loginId` 키가 있을 때)에서 가입이 아이디를 받는 데 필요한 것 */
+export type SignUpLoginId = {
+  /** `GET /auth/methods` 의 `loginId` 규칙 */
+  rules: LoginIdRules
+  /** 실시간 확인 - `accountApi` 를 그대로 넘기면 된다 */
+  api: { checkLoginId: (loginId: string) => Promise<LoginIdAvailability> }
+}
+
+// 꺼진 서버에서도 훅은 늘 불린다 - 값이 늘 비어 있어 아무것도 묻지 않는다
+const NO_LOGIN_ID: SignUpLoginId = {
+  rules: { minLength: 1, maxLength: 1 },
+  api: { checkLoginId: () => Promise.reject(new Error('login id is off')) },
+}
+
 export type SignUpSubmit = Omit<SignUpRequest, 'captchaToken' | 'consents'> & {
   captchaToken?: string
   /** 체크한 동의 항목과 그 판 */
@@ -88,7 +109,7 @@ export type SignUpScreenProps = {
   onVerifyCode: (
     signUpId: string,
     code: string,
-    options?: { displayName?: string },
+    options?: { displayName?: string; loginId?: string },
   ) => Promise<unknown>
   /** 코드 단계의 「새 코드 받기」(같은 시도에 새 코드) */
   onResendCode?: (signUpId: string) => Promise<unknown>
@@ -107,6 +128,8 @@ export type SignUpScreenProps = {
   onSocialSignIn?: (provider: string) => void
   /** 캡차 자리 — 위젯을 그리고 토큰을 `onToken` 으로 올린다(Turnstile 같은 캡차 위젯) */
   renderCaptcha?: (api: CaptchaSlotApi) => ReactNode
+  /** 로그인 아이디를 받는다(서버가 켰을 때만 - 키가 없으면 화면은 지금과 같다). 이메일 다음, 비밀번호 앞에 아이디 칸과 실시간 확인이 생기고 요청에 `loginId` 가 실린다 */
+  loginId?: SignUpLoginId
   /** 약관 · 방침 동의 자리 — 체크한 판을 `onSignUp` 의 `consents` 와 `onConsentsChange` 로 보고한다 */
   consents?: ConsentItem[]
   /** 동의 자리를 통째로 슬롯에 맡긴다(서버가 문서를 쥘 때) — 있으면 `consents` 대신 쓰이고, 슬롯이 「완료」를 알리기 전에는 제출하지 않는다 */
@@ -144,6 +167,7 @@ export function SignUpScreen({
   onConsentsChange,
   displayName: displayNameMode,
   askDisplayName,
+  loginId: loginIdOn,
   confirmPassword = false,
   signInTo,
   locale,
@@ -157,6 +181,14 @@ export function SignUpScreen({
   const nicknameMode = resolveDisplayNameMode(displayNameMode, askDisplayName)
   const [displayName, setDisplayName] = useState('')
   const [displayNameError, setDisplayNameError] = useState<string | undefined>()
+  const [loginIdValue, setLoginIdValue] = useState('')
+  const [loginIdError, setLoginIdError] = useState<string | undefined>()
+  const loginIdSetup = loginIdOn ?? NO_LOGIN_ID
+  const idCheck = useLoginIdAvailability({
+    api: loginIdSetup.api,
+    value: loginIdOn ? loginIdValue : '',
+    rules: loginIdSetup.rules,
+  })
   const [captchaToken, setCaptchaToken] = useState<string | null>(null)
   const [checked, setChecked] = useState<Record<string, boolean>>({})
   const [slotAccepted, setSlotAccepted] = useState<AcceptedConsent[]>([])
@@ -165,6 +197,7 @@ export function SignUpScreen({
   const uid = useId()
   const ids = {
     email: `${uid}-email`,
+    loginId: `${uid}-login-id`,
     password: `${uid}-password`,
     displayName: `${uid}-display-name`,
     confirm: `${uid}-confirm`,
@@ -205,7 +238,30 @@ export function SignUpScreen({
     error?: string
     busy?: boolean
   } | null>(null)
+  /** 인증번호 단계에서 아이디가 그 사이 나갔다 - 같은 시도 · 같은 코드로 아이디만 다시 보낸다(`value` 는 마지막으로 낸 정규화한 아이디) */
+  const [idRetry, setIdRetry] = useState<{
+    code: string
+    value: string
+    error?: string
+    busy?: boolean
+  } | null>(null)
   const wait = useCountdown()
+
+  /** 인증번호를 낸다 - 이미 다시 받은 닉네임 · 아이디가 있으면 함께 싣는다(없으면 인수 둘, 지금과 같다) */
+  function verifyCode(
+    code: string,
+    signUpId: string,
+    over: { displayName?: string; loginId?: string } = {},
+  ) {
+    const options = {
+      ...(retry ? { displayName: retry.name.trim() } : {}),
+      ...(idRetry ? { loginId: idRetry.value } : {}),
+      ...over,
+    }
+    return Object.keys(options).length > 0
+      ? onVerifyCode(signUpId, code, options)
+      : onVerifyCode(signUpId, code)
+  }
 
   function toggleConsent(item: ConsentItem, value: boolean) {
     const next = { ...checked, [item.id]: value }
@@ -220,11 +276,20 @@ export function SignUpScreen({
     : !/^[^\s@]+@[^\s@]+$/.test(email.trim())
       ? labels.problemEmailInvalid
       : undefined
+  const loginIdProblemMessage =
+    loginIdOn && !idCheck.canSubmit
+      ? idCheck.status === 'taken'
+        ? labels.errorLoginIdTaken
+        : idCheck.problem && loginIdProblemText(idCheck.problem, loginIdOn.rules, labels)
+      : undefined
   const passwordCheck = passwordProblems({ labels, password, email, policy, confirm, ids })
   const passwordProblem = passwordCheck.passwordError
   const nicknameProblem = displayNameProblem(displayName, nicknameMode, labels)
   const problems: FormProblem[] = [
     ...(emailProblem ? [{ key: 'email', message: emailProblem, target: ids.email }] : []),
+    ...(loginIdProblemMessage
+      ? [{ key: 'loginId', message: loginIdProblemMessage, target: ids.loginId }]
+      : []),
     ...(nicknameProblem
       ? [{ key: 'displayName', message: nicknameProblem, target: ids.displayName }]
       : []),
@@ -246,7 +311,9 @@ export function SignUpScreen({
     setFailure(null)
     setEmailError(undefined)
     setDisplayNameError(undefined)
+    setLoginIdError(undefined)
     setServerViolations([])
+    if (loginIdOn) idCheck.touch()
     // 막힌 이유는 버튼 위 요약 + 칸 옆 오류로 보이고, 첫 틀린 칸으로 포커스가 간다. 버튼은 늘 눌린다(꺼진 버튼은 이유를 말하지 못한다)
     const blocking = problems.filter((p) => !p.key.startsWith('violation-'))
     if (blocking.length > 0) return attempt.fail(blocking[0].target)
@@ -257,6 +324,7 @@ export function SignUpScreen({
         : consents.filter((c) => checked[c.id]).map(({ id, version }) => ({ id, version }))
       const result = await onSignUp({
         email,
+        ...(loginIdOn ? { loginId: idCheck.normalized } : {}),
         password,
         ...(nicknameMode !== 'off' && displayName.trim()
           ? { displayName: displayName.trim() }
@@ -298,6 +366,9 @@ export function SignUpScreen({
         attempt.fail(ids.password)
       } else {
         const info = authErrorMessage(error, labels)
+        const idMessage = loginIdOn
+          ? loginIdServerError(error, { value: loginIdValue, rules: loginIdOn.rules, labels })
+          : undefined
         if (
           error instanceof ApiRequestError &&
           error.apiError.code === ErrorCodes.COMMON_VALIDATION_FAILED
@@ -321,6 +392,9 @@ export function SignUpScreen({
         } else if (info.code === ErrorCodes.ACCOUNT_DISPLAY_NAME_TAKEN) {
           setDisplayNameError(info.message)
           attempt.fail(ids.displayName)
+        } else if (idMessage) {
+          setLoginIdError(idMessage)
+          attempt.fail(ids.loginId)
         } else setFailure(info)
         if (info.retryAfterSeconds) wait.start(info.retryAfterSeconds)
       }
@@ -332,6 +406,7 @@ export function SignUpScreen({
   if (pending) {
     const leave = () => {
       setRetry(null)
+      setIdRetry(null)
       setPending(null)
       onPendingChange?.(null)
     }
@@ -349,43 +424,94 @@ export function SignUpScreen({
           resendCooldownSeconds={resendCooldownSeconds}
           expiredResend="restart" // 만료 뒤의 다시 받기: 새 서버는 새 `expiresAt` 을 주고(그 자리에서 다시 센다), 옛 서버는 조용히 무시한다(시각이 없으면 처음부터)
           above={
-            retry && (
-              <NicknameRetry
-                value={retry.name}
-                error={retry.error}
-                busy={retry.busy}
-                labels={labels}
-                onChange={(name) => setRetry({ ...retry, name, error: undefined })}
-                onSubmit={async () => {
-                  const problem = displayNameProblem(retry.name, 'required', labels)
-                  if (problem) return setRetry({ ...retry, error: problem })
-                  setRetry({ ...retry, busy: true, error: undefined })
-                  try {
-                    await onVerifyCode(pending.signUpId, retry.code, {
-                      displayName: retry.name.trim(),
-                    })
-                    onPendingChange?.(null)
-                  } catch (error) {
-                    const failure = codeFailureOf(error)
-                    const message =
-                      authErrorMessage(error, labels).code === ErrorCodes.ACCOUNT_DISPLAY_NAME_TAKEN
-                        ? labels.errorDisplayNameTaken
-                        : (displayNameFieldError(error, labels) ??
+            (idRetry && loginIdOn) || retry ? (
+              <>
+                {idRetry && loginIdOn && (
+                  <LoginIdRetry
+                    initialValue={idRetry.value}
+                    rules={loginIdOn.rules}
+                    api={loginIdOn.api}
+                    error={idRetry.error}
+                    busy={idRetry.busy}
+                    labels={labels}
+                    onChange={() =>
+                      setIdRetry((current) => current && { ...current, error: undefined })
+                    }
+                    onSubmit={async (normalized) => {
+                      setIdRetry({ ...idRetry, value: normalized, busy: true, error: undefined })
+                      try {
+                        await verifyCode(idRetry.code, pending.signUpId, { loginId: normalized })
+                        onPendingChange?.(null)
+                      } catch (error) {
+                        const failure = codeFailureOf(error)
+                        const message =
+                          loginIdServerError(error, {
+                            value: normalized,
+                            rules: loginIdOn.rules,
+                            labels,
+                          }) ??
                           (failure.kind === 'invalid'
                             ? labels.codeInvalid(failure.attemptsLeft)
-                            : authErrorMessage(error, labels).message))
-                    setRetry((current) => current && { ...current, busy: false, error: message }) // await 뒤: 그 사이 고친 입력을 낡은 값으로 덮지 않는다
-                  }
-                }}
-              />
-            )
+                            : authErrorMessage(error, labels).message)
+                        setIdRetry(
+                          (current) => current && { ...current, busy: false, error: message },
+                        ) // await 뒤: 그 사이 고친 입력을 낡은 값으로 덮지 않는다
+                      }
+                    }}
+                  />
+                )}
+                {retry && (
+                  <NicknameRetry
+                    value={retry.name}
+                    error={retry.error}
+                    busy={retry.busy}
+                    labels={labels}
+                    onChange={(name) => setRetry({ ...retry, name, error: undefined })}
+                    onSubmit={async () => {
+                      const problem = displayNameProblem(retry.name, 'required', labels)
+                      if (problem) return setRetry({ ...retry, error: problem })
+                      setRetry({ ...retry, busy: true, error: undefined })
+                      try {
+                        await verifyCode(retry.code, pending.signUpId, {
+                          displayName: retry.name.trim(),
+                        })
+                        onPendingChange?.(null)
+                      } catch (error) {
+                        const failure = codeFailureOf(error)
+                        const message =
+                          authErrorMessage(error, labels).code ===
+                          ErrorCodes.ACCOUNT_DISPLAY_NAME_TAKEN
+                            ? labels.errorDisplayNameTaken
+                            : (displayNameFieldError(error, labels) ??
+                              (failure.kind === 'invalid'
+                                ? labels.codeInvalid(failure.attemptsLeft)
+                                : authErrorMessage(error, labels).message))
+                        setRetry(
+                          (current) => current && { ...current, busy: false, error: message },
+                        ) // await 뒤: 그 사이 고친 입력을 낡은 값으로 덮지 않는다
+                      }
+                    }}
+                  />
+                )}
+              </>
+            ) : undefined
           }
           onVerify={async (code) => {
             try {
-              await (retry
-                ? onVerifyCode(pending.signUpId, code, { displayName: retry.name.trim() })
-                : onVerifyCode(pending.signUpId, code))
+              await verifyCode(code, pending.signUpId)
             } catch (error) {
+              // 아이디가 그 사이 나갔다: 시도는 닫히지 않는다 - 그 자리에서 아이디만 다시 받아 같은 코드로 다시 확인한다
+              if (
+                loginIdOn &&
+                authErrorMessage(error, labels).code === ErrorCodes.ACCOUNT_LOGIN_ID_TAKEN
+              ) {
+                setIdRetry({
+                  code,
+                  value: idRetry?.value ?? idCheck.normalized,
+                  error: labels.errorLoginIdTaken,
+                })
+                return
+              }
               // 닉네임 중복 금지 서버: 인증이 끝나는 순간에야 겹침을 안다. **시도는 닫히지 않는다** — 그 자리에서 닉네임만 다시 입력받아 같은 코드로 다시 확인한다
               if (authErrorMessage(error, labels).code === ErrorCodes.ACCOUNT_DISPLAY_NAME_TAKEN) {
                 setRetry({
@@ -474,6 +600,20 @@ export function SignUpScreen({
               />
             )}
           </Field>
+          {loginIdOn && (
+            <LoginIdField
+              id={ids.loginId}
+              value={loginIdValue}
+              onChange={(next) => {
+                setLoginIdValue(next)
+                setLoginIdError(undefined)
+              }}
+              check={idCheck}
+              rules={loginIdOn.rules}
+              labels={labels}
+              serverError={loginIdError}
+            />
+          )}
           {nicknameMode !== 'off' && (
             <Field
               id={ids.displayName}

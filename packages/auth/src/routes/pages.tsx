@@ -3,6 +3,7 @@ import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { Alert, Button } from '@skeleton/ui'
 import { AuthLayout } from '../screens/AuthLayout'
 import type { AccountApi } from '../account/accountApi'
+import type { LoginIdRules } from '../account/loginIdRules'
 import { discardReauthOf, emailReauthOf } from '../emailReauth'
 import type { EmailRequiredController } from '../emailRequired'
 import type { AuthApi } from '../authApi'
@@ -103,6 +104,8 @@ export type PageContext = {
   methods?: SignInMethodsConfig
   socialFlow?: SocialLoginFlow
   socialLinkFlow?: SocialLinkFlow
+  /** 발견에 `loginId` 키가 있을 때만 - 가입이 아이디를 받는다 */
+  loginId?: LoginIdRules
   /** 백엔드에 로그인 방법을 묻는 앱의 설정(없으면 `methods` 가 정한다) */
   discovery?: DiscoveryOptions
   /** 새 비밀번호를 한 번 더 입력받는가(가입 · 재설정 · 변경 · 첫 설정) — 기본 true */
@@ -214,6 +217,7 @@ export function SignUpPage({
     <SignUpScreen
       confirmPassword={ctx.confirmPassword}
       {...signUp}
+      {...(ctx.loginId ? { loginId: { rules: ctx.loginId, api: ctx.accountApi } } : {})}
       policy={policy}
       labels={ctx.labels}
       methods={ctx.methods}

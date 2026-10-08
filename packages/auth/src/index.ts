@@ -160,7 +160,10 @@ export {
 } from './screens/displayName'
 export type { DisplayNameMode } from './screens/displayName'
 export { loginIdFieldError, loginIdProblemText } from './screens/loginId'
+export { loginIdServerError } from './screens/loginIdServerError'
 export { LoginIdField } from './screens/LoginIdField'
+export { LoginIdRetry } from './screens/LoginIdRetry'
+export type { LoginIdRetryProps } from './screens/LoginIdRetry'
 export type { LoginIdFieldProps } from './screens/LoginIdField'
 export { useLoginIdAvailability } from './screens/useLoginIdAvailability'
 export type { LoginIdCheck, UseLoginIdAvailabilityOptions } from './screens/useLoginIdAvailability'
@@ -179,6 +182,7 @@ export type {
   AcceptedConsent,
   CaptchaSlotApi,
   ConsentItem,
+  SignUpLoginId,
   SignUpScreenProps,
   ConsentSlotApi,
   SignUpSubmit,

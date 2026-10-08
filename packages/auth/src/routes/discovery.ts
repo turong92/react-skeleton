@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import type { LoginIdRules } from '../account/loginIdRules'
 import type { AccountApi } from '../account/accountApi'
 import type { AuthApi, RefreshDelivery } from '../authApi'
 import { deliveryMismatch, methodsFromInfo, redirectUriProblems } from '../discovery'
@@ -34,6 +35,8 @@ export type DiscoveredState = {
 
 export type DiscoveredContext = {
   methods: SignInMethodsConfig
+  /** 로그인 아이디를 켠 서버일 때만 있다(발견에 `loginId` 키) - 길이 규칙. 없으면 화면은 아이디를 모른다 */
+  loginId?: LoginIdRules
   socialFlow?: SocialLoginFlow
   socialLinkFlow?: SocialLinkFlow
   discovered: DiscoveredState
@@ -187,6 +190,7 @@ export function useDiscoveredContext({
   if (state.status === 'ready' && resolved)
     return {
       methods: resolved.found.methods,
+      ...(resolved.found.loginId ? { loginId: resolved.found.loginId } : {}),
       socialFlow: resolved.socialFlow,
       socialLinkFlow: resolved.socialLinkFlow,
       discovered: { status: 'ready', signUp: resolved.found.signUp, retry },

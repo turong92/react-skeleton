@@ -1,8 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { useMemo } from 'react'
 import { expect, fn, waitFor, within } from 'storybook/test'
 import { koAuthLabels } from '../screens/labels.ko'
 import { SignUpScreen } from '../screens/SignUpScreen'
-import { FAKE_POLICY, apiError } from '../stories/fakeAccountApi'
+import { FAKE_POLICY, apiError, createFakeAccountApi, fieldError } from '../stories/fakeAccountApi'
 import { withRouter } from '../stories/withRouter'
 
 /**
@@ -844,5 +845,228 @@ export const NicknameTakenOnSubmitShowsUnderTheField: Story = {
     await userEvent.click(canvas.getByRole('button', { name: 'Create account' }))
     await expect(await canvas.findByText('That nickname is already taken.')).toBeVisible()
     await expect(canvas.getByLabelText(/^Nickname/)).toHaveFocus()
+  },
+}
+
+/*
+ * 로그인 아이디(서버가 켰을 때만 - 발견에 `loginId` 키가 있을 때 `loginId` prop 이 생긴다): 이메일 다음, 비밀번호 앞에 칸 하나와 실시간 확인.
+ * 키가 없으면(꺼진 서버 · 옛 서버) 화면도 요청 본문도 지금과 같다. 인증번호 단계에서 아이디가 그 사이 나가면 그 자리에서 아이디만 다시 받는다.
+ */
+const idRules = { minLength: 4, maxLength: 20 }
+type SignUpApi = ReturnType<typeof createFakeAccountApi>
+
+/** 아이디를 켠 서버 - 가입 · 인증 · 실시간 확인이 모두 가짜 `AccountApi` 하나를 거친다(`onSignUp` · `onVerifyCode` 는 부른 값을 기록하는 `fn`) */
+function WithLoginId(
+  args: Parameters<typeof SignUpScreen>[0] & { width?: number; api?: SignUpApi },
+) {
+  const { width, api: given, onSignUp, onVerifyCode, ...rest } = args
+  const api = useMemo(
+    () =>
+      given ??
+      createFakeAccountApi({
+        loginId: { ...idRules, taken: ['admin'], takenOnConfirm: ['racer'] },
+      }),
+    [given],
+  )
+  return (
+    <div data-narrow="" style={width ? { width, maxWidth: '100%' } : undefined}>
+      <SignUpScreen
+        {...rest}
+        labels={koAuthLabels}
+        loginId={{ rules: idRules, api }}
+        onSignUp={async (submit) => {
+          onSignUp(submit)
+          return api.signUp({ ...submit, consents: [] })
+        }}
+        onVerifyCode={async (signUpId, code, options) => {
+          onVerifyCode(signUpId, code, options)
+          return api.verifySignUpCode(signUpId, code, options)
+        }}
+      />
+    </div>
+  )
+}
+const withIdArgs = { onSignUp: fn(), onVerifyCode: fn(), onPendingChange: fn() }
+
+const fillIdForm = async (
+  canvas: Parameters<NonNullable<Story['play']>>[0]['canvas'],
+  userEvent: Parameters<NonNullable<Story['play']>>[0]['userEvent'],
+  loginId: string,
+) => {
+  await userEvent.type(canvas.getByLabelText(/^이메일/), 'ann@example.com')
+  await userEvent.type(canvas.getByLabelText(/^아이디/), loginId)
+  await userEvent.type(canvas.getByLabelText(/^비밀번호\s*\*?$/), 'Correct-horse-battery-9')
+  await userEvent.type(canvas.getByLabelText(/^비밀번호 확인/), 'Correct-horse-battery-9')
+}
+
+/** 키가 없는 서버 - 아이디 칸이 없고, 요청 본문에도 `loginId` 가 없다(지금과 같다) */
+export const LoginIdOffLeavesTheFormAsItWas: Story = {
+  args: { ...codeArgs() },
+  play: async ({ canvas, userEvent, args }) => {
+    await expect(canvas.queryByLabelText(/Username/)).toBeNull()
+    await expect(canvas.getByLabelText(/^Email/)).toHaveAttribute('autocomplete', 'email')
+    await fillAndSubmit(canvas, userEvent)
+    await waitFor(() => expect(args.onSignUp).toHaveBeenCalledTimes(1))
+    const request = (args.onSignUp as ReturnType<typeof fn>).mock.calls[0][0]
+    await expect(Object.keys(request)).not.toContain('loginId')
+  },
+}
+
+export const LoginIdFieldBetweenEmailAndPassword: Story = {
+  args: withIdArgs,
+  render: (args) => <WithLoginId {...args} />,
+  play: async ({ canvas, userEvent, args }) => {
+    const email = canvas.getByLabelText(/^이메일/)
+    const id = canvas.getByLabelText(/^아이디/)
+    const password = canvas.getByLabelText(/^비밀번호\s*\*?$/)
+    await expect(email.compareDocumentPosition(id) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    await expect(
+      id.compareDocumentPosition(password) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    await expect(email).toHaveAttribute('autocomplete', 'email')
+    await expect(id).toHaveAttribute('autocomplete', 'username')
+    await fillIdForm(canvas, userEvent, 'Sumin.Kim')
+    await expect(await canvas.findByText(/쓸 수 있는 아이디예요/)).toBeVisible()
+    await expect(canvas.getByText(/sumin\.kim \(으\)로 저장돼요/)).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: '가입하기' }))
+    await waitFor(() =>
+      expect(args.onSignUp).toHaveBeenCalledWith(
+        expect.objectContaining({ email: 'ann@example.com', loginId: 'sumin.kim' }),
+      ),
+    )
+    await expect(
+      await canvas.findByRole('heading', { name: '인증번호 6자리를 입력해 주세요' }),
+    ).toBeVisible()
+  },
+}
+
+export const LoginIdTakenBlocksTheSubmit: Story = {
+  args: withIdArgs,
+  render: (args) => <WithLoginId {...args} />,
+  play: async ({ canvas, userEvent, args }) => {
+    await fillIdForm(canvas, userEvent, 'admin')
+    const id = canvas.getByLabelText(/^아이디/)
+    await waitFor(() => expect(id).toBeInvalid())
+    await expect(
+      canvas.getAllByText('이미 쓰고 있거나 쓸 수 없는 아이디예요').length,
+    ).toBeGreaterThan(0)
+    await userEvent.click(canvas.getByRole('button', { name: '가입하기' }))
+    await expect(args.onSignUp).not.toHaveBeenCalled()
+    await waitFor(() => expect(id).toHaveFocus()) // 첫 틀린 칸으로
+  },
+}
+
+export const LoginIdFormatProblemOnSubmit: Story = {
+  args: withIdArgs,
+  render: (args) => <WithLoginId {...args} />,
+  play: async ({ canvas, userEvent, args }) => {
+    await fillIdForm(canvas, userEvent, 'ab')
+    await userEvent.click(canvas.getByRole('button', { name: '가입하기' }))
+    await expect(args.onSignUp).not.toHaveBeenCalled()
+    await expect(await canvas.findAllByText('아이디는 4~20자로 정해 주세요')).not.toHaveLength(0)
+  },
+}
+
+/** 실시간 확인은 「쓸 수 있다」였는데 서버가 가입 요청에서 409 - 같은 칸 옆 오류, 값을 고치면 사라진다 */
+export const LoginIdServerConflictSitsBesideTheField: Story = {
+  args: withIdArgs,
+  render: (args) => {
+    const api = {
+      ...createFakeAccountApi({ loginId: idRules }),
+      signUp: async () => {
+        throw apiError('ACCOUNT.LOGIN_ID_TAKEN', 409)
+      },
+    } as SignUpApi
+    return <WithLoginId {...args} api={api} />
+  },
+  play: async ({ canvas, userEvent }) => {
+    await fillIdForm(canvas, userEvent, 'sumin.kim')
+    await expect(await canvas.findByText(/쓸 수 있는 아이디예요/)).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: '가입하기' }))
+    const id = canvas.getByLabelText(/^아이디/)
+    await waitFor(() => expect(id).toBeInvalid())
+    await expect(
+      canvas.getAllByText('이미 쓰고 있거나 쓸 수 없는 아이디예요').length,
+    ).toBeGreaterThan(0)
+    await waitFor(() => expect(id).toHaveFocus())
+    await userEvent.type(id, '2')
+    await waitFor(() => expect(id).not.toBeInvalid())
+  },
+}
+
+/** 서버의 필드 오류(`errors[].field = loginId`)도 칸 옆에 - 서버의 영어 message 는 보이지 않는다 */
+export const LoginIdServerFieldError: Story = {
+  args: withIdArgs,
+  render: (args) => {
+    const api = {
+      ...createFakeAccountApi({ loginId: idRules }),
+      signUp: async () => {
+        throw fieldError('loginId', 'Pattern', 'English from the server')
+      },
+    } as SignUpApi
+    return <WithLoginId {...args} api={api} />
+  },
+  play: async ({ canvas, userEvent }) => {
+    await fillIdForm(canvas, userEvent, 'sumin.kim')
+    await userEvent.click(canvas.getByRole('button', { name: '가입하기' }))
+    await waitFor(() => expect(canvas.getByLabelText(/^아이디/)).toBeInvalid())
+    await expect(canvas.queryByText(/English from the server/)).toBeNull()
+  },
+}
+
+/** 코드는 맞았는데 아이디가 그 사이 나갔다(409) - 양식으로 돌아가지 않고 그 자리에서 아이디만 다시 받아 같은 코드로 낸다 */
+export const LoginIdTakenAtTheCodeStepAsksForAnotherInPlace: Story = {
+  args: withIdArgs,
+  render: (args) => <WithLoginId {...args} />,
+  play: async ({ canvas, args, userEvent }) => {
+    await fillIdForm(canvas, userEvent, 'racer')
+    await userEvent.click(canvas.getByRole('button', { name: '가입하기' }))
+    await canvas.findByLabelText('6자리 중 1번째')
+    await userEvent.click(canvas.getByLabelText('6자리 중 1번째'))
+    await userEvent.paste('123456')
+    const retry = await canvas.findByRole('form', { name: '아이디' })
+    await expect(within(retry).getByText(/그 사이 다른 분이 이 아이디를 정했어요/)).toBeVisible()
+    await expect(
+      within(retry).getAllByText('이미 쓰고 있거나 쓸 수 없는 아이디예요').length,
+    ).toBeGreaterThan(0)
+    await expect(canvas.queryByLabelText(/^비밀번호/)).toBeNull() // 비밀번호는 다시 묻지 않는다
+    await expect(canvas.getByText(/^남은 시간 \d+:\d\d/)).toBeVisible()
+    await expect(args.onPendingChange).not.toHaveBeenCalledWith(null)
+    const field = within(retry).getByLabelText(/^아이디/)
+    await userEvent.clear(field)
+    await userEvent.type(field, 'racer.two')
+    await expect(await within(retry).findByText(/쓸 수 있는 아이디예요/)).toBeVisible() // 실시간 확인이 여기서도
+    await userEvent.click(within(retry).getByRole('button', { name: '이 아이디로 정하기' }))
+    await waitFor(() => expect(args.onPendingChange).toHaveBeenLastCalledWith(null))
+    // 같은 시도 · 같은 코드, 다른 아이디
+    await expect(args.onVerifyCode).toHaveBeenNthCalledWith(1, 'sid-1', '123456', undefined)
+    await expect(args.onVerifyCode).toHaveBeenNthCalledWith(2, 'sid-1', '123456', {
+      loginId: 'racer.two',
+    })
+  },
+}
+
+/** 375px · 320px - 긴 아이디 · 긴 안내도 가로로 밀리지 않는다 */
+const noSidewaysScroll = async (canvasElement: HTMLElement) => {
+  const box = canvasElement.querySelector<HTMLElement>('[data-narrow]')!
+  await waitFor(() => expect(box.scrollWidth).toBeLessThanOrEqual(box.clientWidth))
+}
+export const LoginIdNarrow375: Story = {
+  args: { ...withIdArgs, width: 375 } as never,
+  render: (args) => <WithLoginId {...args} />,
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    await userEvent.type(canvas.getByLabelText(/^아이디/), 'Sumin.Kim.With.A.Rather.Lng')
+    await userEvent.tab()
+    await canvas.findAllByRole('alert')
+    await noSidewaysScroll(canvasElement)
+  },
+}
+export const LoginIdNarrow320: Story = {
+  args: { ...withIdArgs, width: 320 } as never,
+  render: (args) => <WithLoginId {...args} />,
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    await userEvent.type(canvas.getByLabelText(/^아이디/), 'Sumin.Kim.Lng')
+    await expect(await canvas.findByText(/으\)로 저장돼요/)).toBeVisible()
+    await noSidewaysScroll(canvasElement)
   },
 }

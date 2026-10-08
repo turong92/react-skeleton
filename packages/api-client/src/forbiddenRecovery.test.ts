@@ -111,6 +111,25 @@ describe('recoverForbidden (a 403 the app can fix by asking the user — legal r
     await expect(chainForbiddenRecovery(never)(context)).resolves.toBe(false)
   })
 
+  it('the held write is sent again as the same request: same method, body and Idempotency-Key (a new trace, though)', async () => {
+    const { client, adapter } = clientWith(
+      [(c) => forbidden(c, 'ACCOUNT.EMAIL_REQUIRED'), ok],
+      async () => true,
+    )
+    await client.value('/posts', {
+      method: 'POST',
+      json: { title: 'hello' },
+      idempotencyKey: 'idem-write-1',
+    })
+    expect(adapter).toHaveBeenCalledTimes(2)
+    const [first, second] = adapter.mock.calls.map(([config]) => config)
+    expect(second.method).toBe(first.method)
+    expect(second.data).toBe(first.data)
+    expect(second.headers.get('Idempotency-Key')).toBe('idem-write-1')
+    expect(first.headers.get('Idempotency-Key')).toBe('idem-write-1')
+    expect(second.headers.get('X-Trace-Id')).not.toBe(first.headers.get('X-Trace-Id'))
+  })
+
   it('is not asked for requests that carry no sign-in (skipAuth), nor for other statuses', async () => {
     const recover = vi.fn(async () => true)
     const { client } = clientWith([forbidden], recover)

@@ -11,6 +11,7 @@ export function ReauthPrompt({
   labels,
   providers,
   canContinue,
+  losesDraft = false,
   onProvider,
   onRetry,
 }: {
@@ -18,6 +19,8 @@ export function ReauthPrompt({
   providers: string[]
   /** 새 주소가 올바르게 적혔고 앱이 동의 화면을 열 수 있다 */
   canContinue: boolean
+  /** 쓰기용 모습 - 제공자 화면에 다녀오면 쓰던 내용이 사라진다(붙잡은 호출도 함께). 떠나기 전에 한 줄로 말한다 */
+  losesDraft?: boolean
   onProvider: (provider: string) => void
   onRetry: () => void
 }) {
@@ -27,6 +30,7 @@ export function ReauthPrompt({
       <Alert tone="warning">
         {providerName ? labels.emailReauthNeeded(providerName) : labels.reauthProviderNone}
       </Alert>
+      {losesDraft && providerName && <p>{labels.emailRequiredReauthLosesDraft(providerName)}</p>}
       {providers.length === 0 && (
         <Button variant="secondary" onClick={onRetry}>
           {labels.emailRequiredRetry}
@@ -41,13 +45,28 @@ export function ReauthPrompt({
   )
 }
 
-/** 떠나는 길 - 로그아웃은 늘 있다(계정을 지우는 길은 `DiscardPath`) */
-export function LeaveActions({ labels, onSignOut }: { labels: AuthLabels; onSignOut: () => void }) {
+/** 떠나는 길 - 로그아웃은 늘 있다(계정을 지우는 길은 `DiscardPath`). 쓰기용 모습에는 「나중에 하기」(닫고 읽기를 계속한다)가 하나 더 있다 */
+export function LeaveActions({
+  labels,
+  onSignOut,
+  onLater,
+}: {
+  labels: AuthLabels
+  onSignOut: () => void
+  onLater?: () => void
+}) {
   return (
     <div className={styles.leave}>
-      <Button variant="secondary" onClick={onSignOut}>
-        {labels.emailRequiredSignOut}
-      </Button>
+      <div className={styles.leaveActions}>
+        {onLater && (
+          <Button variant="secondary" onClick={onLater}>
+            {labels.emailRequiredLater}
+          </Button>
+        )}
+        <Button variant="secondary" onClick={onSignOut}>
+          {labels.emailRequiredSignOut}
+        </Button>
+      </div>
     </div>
   )
 }

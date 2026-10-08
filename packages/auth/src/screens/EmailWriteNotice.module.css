@@ -1,0 +1,21 @@
+.notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm) var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  /* 한국어는 낱말 단위로 줄을 바꾼다 */
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.notice p {
+  margin: 0;
+  flex: 1 1 12rem;
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+}

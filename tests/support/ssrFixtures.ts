@@ -534,6 +534,9 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
     onDelete: noop,
     children: createElement('p', null, 'app'),
   }),
+  'auth#EmailWriteNotice': (ctx) => ({
+    controller: call(ctx.mod('auth').createEmailRequiredController),
+  }),
   'auth#LoginIdRequiredScreen': (ctx) => ({
     rules: { minLength: 4, maxLength: 20 },
     api: { checkLoginId: async (id: string) => ({ normalized: id, available: true }) },
@@ -669,6 +672,7 @@ export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
   'auth#useAuth': () => [],
   'auth#useCodeClock': () => [],
   'auth#useCountdown': () => [],
+  'auth#useEmailBeforeWrite': (ctx) => [call(ctx.mod('auth').createEmailRequiredController)],
   'auth#useLoginIdAvailability': () => [
     {
       api: { checkLoginId: () => new Promise(noop) },

@@ -73,7 +73,7 @@ export type AccountSettingsProps = {
   onProviderReauth?: (provider: string, action: ProviderAction) => void
   /** 제공자 동의를 마치고 돌아왔다 — 하려던 작업과 그 제공자가 준 새 인가 코드. 이 화면이 한 번만 이어서 한다 */
   resume?: { action: ProviderAction; socialReauth: SocialReauth } | null
-  /** 등록 미완료 계정 버리기가 끝났다(제공자 재동의에서 돌아와 이어서 부른 `POST /account/discard` 가 204) - 서버가 모든 세션을 닫았다. 앱이 로컬 세션을 지우고 로그인 화면으로 보낸다. 인자는 그 제공자(로그인 뒤 연결을 이어 가려고) */
+  /** 이메일 없는 계정 버리기가 끝났다(제공자 재동의에서 돌아와 이어서 부른 `POST /account/discard` 가 204) - 서버가 모든 세션을 닫았다. 앱이 로컬 세션을 지우고 로그인 화면으로 보낸다. 인자는 그 제공자(로그인 뒤 연결을 이어 가려고) */
   onDiscarded?: (provider: string) => void
   /** `resume` 을 읽었다(앱이 돌아온 주소의 state 를 비운다) */
   onResumeConsumed?: () => void

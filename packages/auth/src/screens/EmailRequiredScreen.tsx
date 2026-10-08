@@ -33,6 +33,12 @@ export type EmailRequiredScreenProps = {
   onDiscarded: (provider?: string) => void
   /** 오래된 세션이라 버리기도 제공자 재동의를 요구했다 - 그 제공자의 동의 화면으로(돌아오면 설정이 이어서 부른다) */
   onDiscardReauth?: (provider: string) => void
+  /** `login` 로그인 직후(기본) · `write` 쓰기 때 - 제목 · 본문이 쓰기용이고 「나중에 하기」가 있다(`onLater` 와 함께). 서버가 `me.emailRequiredToWrite` 로 알린 방식이다 */
+  variant?: 'login' | 'write'
+  /** 「나중에 하기」 - 쓰기용 모습에서만 그린다. 앱이 화면을 닫는다(붙잡은 호출은 원래 403 으로 끝난다) */
+  onLater?: () => void
+  /** 이 계정이 이미 정한 로그인 아이디 - 있으면 「계정 지우기」 확인 창이 아이디도 함께 사라진다고 말한다 */
+  loginId?: string | null
   labels?: Partial<AuthLabels>
 }
 
@@ -54,9 +60,13 @@ export function EmailRequiredScreen({
   onDiscard,
   onDiscarded,
   onDiscardReauth,
+  variant = 'login',
+  onLater,
+  loginId,
   labels: given,
 }: EmailRequiredScreenProps) {
   const labels = mergeLabels(given)
+  const writing = variant === 'write'
   const uid = useId()
   const ids = { title: `${uid}-title`, email: `${uid}-email` }
   const now = useCodeClock()
@@ -128,9 +138,11 @@ export function EmailRequiredScreen({
       <div className={styles.card} ref={card}>
         <div>
           <h1 id={ids.title} ref={heading} tabIndex={-1}>
-            {labels.emailRequiredTitle}
+            {writing ? labels.emailRequiredWriteTitle : labels.emailRequiredTitle}
           </h1>
-          <p className={styles.lead}>{labels.emailRequiredBody}</p>
+          <p className={styles.lead}>
+            {writing ? labels.emailRequiredWriteBody : labels.emailRequiredBody}
+          </p>
         </div>
         {sentTo ? (
           <div className={authStyles.stack}>
@@ -173,6 +185,7 @@ export function EmailRequiredScreen({
                 labels={labels}
                 providers={providers}
                 canContinue={!!onProviderReauth && !!email.trim() && SHAPE.test(email.trim())}
+                losesDraft={writing}
                 onProvider={(provider) => onProviderReauth?.(provider, email.trim())}
                 onRetry={() => {
                   setReauth(false)
@@ -198,8 +211,13 @@ export function EmailRequiredScreen({
           discard={onDiscard}
           onDiscarded={onDiscarded}
           onProviderReauth={onDiscardReauth}
+          loginId={loginId}
         />
-        <LeaveActions labels={labels} onSignOut={onSignOut} />
+        <LeaveActions
+          labels={labels}
+          onSignOut={onSignOut}
+          onLater={writing ? onLater : undefined}
+        />
       </div>
     </div>
   )

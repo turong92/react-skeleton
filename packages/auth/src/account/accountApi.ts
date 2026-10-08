@@ -114,7 +114,7 @@ export type AccountApi = {
   requestReauthConfirmation(): Promise<CodeSent>
 
   /**
-   * 등록 미완료 계정 버리기 - `POST /account/discard`: 주소를 한 번도 가진 적 없는 계정을 **유예 없이 즉시** 지우고 소셜 수단을 풀어 준다(같은 사람이 이미 메일 계정이 있는데 소셜로 들어와 빈 계정이 생겼을 때).
+   * 이메일 없는 계정 버리기 - `POST /account/discard`: 주소를 한 번도 가진 적 없는 계정을 **유예 없이 즉시** 지우고 소셜 수단을 풀어 준다(같은 사람이 이미 메일 계정이 있는데 소셜로 들어와 빈 계정이 생겼을 때).
    * 본문 `{}`(방금 로그인한 세션) 또는 `{ socialReauth }`(오래된 세션 - 아니면 403 `REAUTH_REQUIRED`). 204 = 모든 세션이 닫혔다(호출자가 로컬 세션을 지운다).
    * 409 `DISCARD_NOT_ALLOWED`(주소가 있다 · 이메일 필수 아님 · 활성 아님) · 409 `LAST_ADMIN` · 503 `ERASURE_RETRY`(다시 부른다)
    */

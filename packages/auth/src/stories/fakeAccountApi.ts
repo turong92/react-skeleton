@@ -49,6 +49,11 @@ export type FakeAccountOptions = {
    * 첫 주소는 다시 인증 없이 받는다(주소 → 인증번호). 확인되면 `emailRequired: false`
    */
   emailRequired?: boolean
+  /**
+   * 이메일을 **쓰기 때** 받는 앱(`required-when: WRITE`)에서 주소 없이 가입한 계정 — `me.emailRequired: false`(키는 있다) · `me.emailRequiredToWrite: true`.
+   * 읽기(GET)는 통과하고 변경 요청은 403 `ACCOUNT.EMAIL_REQUIRED`, 허용 목록(내 정보 고치기 · 세션 · 이메일 등록 · 버리기)은 통과한다. 등록이 끝나면 `emailRequiredToWrite: false`
+   */
+  emailRequiredToWrite?: boolean
   /** 주소 없는 계정이 첫 주소를 다시 인증 **없이** 등록한다(마지막 로그인 1시간 안). 기본은 꺼짐 — 지난 화면들이 제공자 재동의를 기대한다. `emailRequired` 는 켠다 */
   firstRegistrationOpen?: boolean
   /** 마지막 로그인이 1시간을 넘었다 — 첫 주소도 403 `ACCOUNT.REAUTH_REQUIRED`(제공자 재동의 `socialReauth` 를 싣고 다시) */
@@ -101,7 +106,9 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
   calls: string[]
 } {
   const calls: string[] = []
-  const noAddress = options.noAddress || options.emailRequired
+  /** 주소를 요구하는 앱(로그인 직후 · 쓰기 때)에서 주소 없이 가입한 계정 */
+  const addressless = options.emailRequired || options.emailRequiredToWrite
+  const noAddress = options.noAddress || addressless
   const methods: SignInIdentity[] = options.noAddressProvider
     ? [
         identity({
@@ -111,7 +118,7 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
           removable: false,
         }),
       ]
-    : options.emailRequired
+    : addressless
       ? [identity({ id: 'idn_k', method: 'kakao', subject: null, removable: false })]
       : options.noAddress
         ? [
@@ -139,7 +146,11 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
     createdAt: '2026-01-01T00:00:00Z',
     hasPassword: !options.passwordless && !noAddress,
     methods,
-    ...(options.emailRequired ? { emailRequired: true } : {}),
+    ...(options.emailRequired
+      ? { emailRequired: true }
+      : options.emailRequiredToWrite
+        ? { emailRequired: false, emailRequiredToWrite: true }
+        : {}),
     ...(options.contactEmailOff
       ? {}
       : {
@@ -164,9 +175,13 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
     if (options.suspended) throw apiError('ACCOUNT.SUSPENDED_CANNOT_DELETE', 403)
   }
   /** 이메일 필수 앱에서 주소 없는 계정이 허용 목록 밖을 부르면 — 서버의 인터셉터와 같다 */
-  const emailGate = () => {
+  /** `passesWhenWriting`: 쓰기 때 방식에서도 통과하는 호출(읽기 · `PATCH /account/me`) */
+  const emailGate = (passesWhenWriting = false) => {
     loginIdGate()
     if (me.emailRequired === true) throw apiError('ACCOUNT.EMAIL_REQUIRED', 403)
+    // 쓰기 때 방식: 읽기와 내 정보 고치기는 통과, 나머지 변경 요청만 막는다
+    if (me.emailRequiredToWrite === true && !passesWhenWriting)
+      throw apiError('ACCOUNT.EMAIL_REQUIRED', 403)
   }
   const idOptions = options.loginId
   const idRules: LoginIdRules = {
@@ -297,6 +312,7 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
       me.pendingEmail = null
       me.pendingEmailExpiresAt = null
       if (me.emailRequired !== undefined) me.emailRequired = false
+      if (me.emailRequiredToWrite !== undefined) me.emailRequiredToWrite = false
       codeAttempts = 5
     },
     forgotPassword: () => track('forgotPassword', undefined),
@@ -334,7 +350,7 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
     passwordPolicy: () => track('passwordPolicy', FAKE_POLICY),
     me: () => track('me', { ...me, methods: [...methods] }),
     updateProfile: async (patch) => {
-      emailGate()
+      emailGate(true)
       if (patch.displayName && options.takenNicknames?.includes(patch.displayName.trim()))
         return Promise.reject(apiError('ACCOUNT.DISPLAY_NAME_TAKEN', 409))
       if (patch.displayName && options.reservedNicknames?.includes(patch.displayName.trim()))
@@ -365,11 +381,10 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
     },
     changeEmail: async ({ newEmail, ...proof }) => {
       calls.push('changeEmail')
-      const firstRegistration =
-        !me.email && (options.emailRequired || options.firstRegistrationOpen)
+      const firstRegistration = !me.email && (addressless || options.firstRegistrationOpen)
       if (firstRegistration && !options.reauthWindowExpired && !proof.socialReauth) {
         // 첫 주소 · 마지막 로그인 1시간 안 — 다시 인증이 없다
-      } else if (!me.email && options.emailRequired && !proof.socialReauth)
+      } else if (!me.email && addressless && !proof.socialReauth)
         throw apiError('ACCOUNT.REAUTH_REQUIRED', 403)
       else reauth(proof)
       pendingTaken = taken.has(newEmail.trim().toLowerCase())
@@ -408,7 +423,7 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
       me.contactEmail = null
     },
     identities: async () => {
-      emailGate()
+      emailGate(true)
       return track('identities', [...methods])
     },
     unlinkIdentity: async (id, proof) => {
@@ -433,7 +448,7 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
     },
     discardAccount: async (proof) => {
       calls.push('discardAccount')
-      if (me.email || !options.emailRequired) throw apiError('ACCOUNT.DISCARD_NOT_ALLOWED', 409)
+      if (me.email || !addressless) throw apiError('ACCOUNT.DISCARD_NOT_ALLOWED', 409)
       // 방금 로그인한 세션은 다시 인증 없이, 오래된 세션은 제공자 증명이 든다
       if (options.reauthWindowExpired || proof?.socialReauth)
         reauth(proof ?? {}, 'ACCOUNT.REAUTH_FAILED')

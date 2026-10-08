@@ -11,7 +11,7 @@ import type { AccountApi } from '../account/accountApi'
 import type { AccountMe } from '../account/types'
 import { CodeClockProvider } from '../codeClock'
 import { codeWindowOf, type CodeWindow } from '../codeWindow'
-import type { EmailRequiredController } from '../emailRequired'
+import { emailWhenOf, stillNeedsAddress, type EmailRequiredController } from '../emailRequired'
 import { reauthSubjectOf } from '../reauth/kind'
 import { EmailRequiredScreen } from './EmailRequiredScreen'
 import { useRestoreFocus } from './useRestoreFocus'
@@ -30,6 +30,8 @@ export type EmailRequiredGateProps = {
   onDiscardReauth?: (provider: string) => void
   /** 1시간 뒤 재동의: 제공자 동의 화면으로 보낸다 */
   onProviderReauth?: (provider: string, newEmail: string) => void
+  /** 「나중에 하기」를 눌렀다(쓰기 때 방식) - 막은 이미 닫혔고 붙잡은 호출은 원래 403 으로 끝났다. 앱이 `labels.emailRequiredDeclined` 같은 한 줄을 낸다 */
+  onLater?: () => void
   /** 등록이 끝났다(토스트 · 캐시 새로고침) — 막혔던 호출은 컨트롤러가 이미 다시 보냈다 */
   onRegistered?: () => void
   /** true 인 동안 막을 걷고 아래 화면을 살린다 — 계정 설정(`/account`)에서 이메일을 등록하는 길. 컨트롤러 상태는 그대로다 */
@@ -56,6 +58,7 @@ export function EmailRequiredGate({
   onDiscardReauth,
   onProviderReauth,
   onRegistered,
+  onLater,
   standAside = false,
   enabledProviders,
   now,
@@ -64,6 +67,9 @@ export function EmailRequiredGate({
 }: EmailRequiredGateProps) {
   const state = useSyncExternalStore(controller.subscribe, controller.getState, controller.getState)
   const required = state.status === 'required'
+  // 서버가 주소를 언제 요구하는가(`me` 가 알려 준다): 쓰기 때 방식이면 쓰기용 모습. 아직 모르면 로그인 직후 모습으로 열고, 열리면 곧 `me` 를 다시 읽어 맞춘다
+  const when = useSyncExternalStore(controller.subscribe, controller.getWhen, controller.getWhen)
+  const [loginId, setLoginId] = useState<string | null>(null)
   const [allProviders, setProviders] = useState<string[]>([])
   const [pending, setPending] = useState<{ email: string; window: CodeWindow } | null>(null)
   const providers = useMemo(
@@ -77,6 +83,7 @@ export function EmailRequiredGate({
   })
   /** `me` 에서 읽을 것: 재동의에 쓸 제공자 목록, 서버에 남아 있는 대기 중 이메일 변경(만료 전인 것만) */
   const readMe = useCallback((me: AccountMe) => {
+    setLoginId(me.loginId ?? null)
     setProviders(reauthSubjectOf(me).providers)
     const window = codeWindowOf({ expiresAt: me.pendingEmailExpiresAt })
     const clock = nowRef.current?.() ?? Date.now()
@@ -90,6 +97,7 @@ export function EmailRequiredGate({
   // 지금 계정을 컨트롤러에 알린다 — 계정이 바뀌면(다른 탭에서 다른 계정으로 로그인 · 로그아웃) 이전 계정의 화면 · 붙잡은 호출은 접히고(원래 403 으로 끝난다), 로그아웃 뒤에 늦게 온 403 은 화면을 다시 세우지 않는다
   useEffect(() => {
     controller.setAccount(accountId)
+    return () => controller.setWhen('unknown') // 다른 계정의 답은 이 계정의 것이 아니다
   }, [accountId, controller])
   // 로그인 직후: 이 계정이 주소를 요구받는가. 실패해도 조용히 — 막히면 호출이 403 으로 말한다
   useEffect(() => {
@@ -98,7 +106,9 @@ export function EmailRequiredGate({
     api.me().then(
       (me) => {
         if (!live) return
-        if (me.emailRequired === true) controller.require()
+        const asked = emailWhenOf(me)
+        controller.setWhen(asked)
+        if (asked === 'login') controller.require() // 쓰기 때 방식은 여기서 열지 않는다 - 쓰기의 403 이나 쓰기 전 확인이 연다
         readMe(me)
         controller.setReady(true) // 이제 다음 단계(약관 …)가 물어도 된다
       },
@@ -117,8 +127,12 @@ export function EmailRequiredGate({
       api.me().then(
         (me) => {
           if (!live) return
-          if (me.emailRequired !== true) controller.registered()
-          else readMe(me)
+          // 「주소가 생겼나」로 본다 - 쓰기 때 방식에서는 `emailRequired` 가 늘 false 다
+          if (!stillNeedsAddress(me)) controller.registered()
+          else {
+            controller.setWhen(emailWhenOf(me))
+            readMe(me)
+          }
         },
         () => undefined,
       )
@@ -158,6 +172,12 @@ export function EmailRequiredGate({
       onDiscard={() => api.discardAccount()}
       onDiscarded={onDiscarded}
       onDiscardReauth={onDiscardReauth}
+      variant={when === 'write' ? 'write' : 'login'}
+      onLater={() => {
+        controller.decline() // 붙잡은 호출은 원래 403 으로 끝난다
+        onLater?.()
+      }}
+      loginId={loginId}
     />
   )
   return (

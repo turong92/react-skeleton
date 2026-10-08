@@ -1,9 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
-import { expect, fn, waitFor, within } from 'storybook/test'
+import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
 import { createEmailRequiredController } from '../emailRequired'
 import { EmailRequiredGate } from '../screens/EmailRequiredGate'
+import { EmailWriteNotice } from '../screens/EmailWriteNotice'
+import { mergeLabels } from '../screens/labels'
 import { koAuthLabels } from '../screens/labels.ko'
+import { useEmailBeforeWrite } from '../useEmailBeforeWrite'
 import {
   apiError,
   createFakeAccountApi,
@@ -16,6 +19,9 @@ import { withRouter } from '../stories/withRouter'
  * 이메일 등록 강제 — 이메일이 필수인 앱에서 주소 없는 계정(카카오 · 네이버 · X · 비-Gmail 구글 가입)이 로그인하면 앱 대신 전면 화면이 덮는다(`EmailRequiredGate`).
  * 주소 → 6자리 인증번호(서버의 `expiresAt` · `resendAvailableAt` 로 센다) → 끝나면 막혔던 호출이 다시 나가 가던 자리에서 이어진다. 떠나는 길(로그아웃 · 계정 삭제)이 늘 있다.
  * 약관 재동의 막(`ReconsentGate`) 바깥에 둔다 — 한 번에 하나, 순서는 이메일 → 약관 → 닉네임.
+ *
+ * **쓰기 때 모습**(아래 `Write…` 스토리): 서버가 주소를 글을 쓸 때 받으면(`me.emailRequiredToWrite`) 로그인 직후에는 열리지 않고, 쓰기의 403 이나 쓰기 전 확인(`useEmailBeforeWrite`)이 열 때
+ * 제목 · 본문이 쓰기용이고 「나중에 하기」가 있다 - 닫으면 붙잡은 호출은 원래 403 으로 끝나고 읽기를 계속한다. 댓글 칸 위에는 막지 않는 띠(`EmailWriteNotice`).
  */
 
 function AppBehind({ children }: { children?: ReactNode }) {
@@ -544,5 +550,421 @@ export const Narrow375: Story = {
   args: { width: 375, korean: true },
   play: async ({ canvas }) => {
     await noHorizontalScroll(canvas)
+  },
+}
+
+// ───────────────────────── 쓰기 때 (서버가 주소를 글을 쓸 때 받는다: me.emailRequiredToWrite) ─────────────────────────
+
+const WRITE_SERVER: FakeAccountOptions = { emailRequired: false, emailRequiredToWrite: true }
+const WRITE_TITLE = 'Register an email to post'
+const KO_WRITE_TITLE = '글을 쓰려면 이메일을 등록해 주세요'
+
+/**
+ * 글쓰기 폼(뒤의 앱)이 쓰기를 보낸다: 서버는 주소가 없으면 403 `ACCOUNT.EMAIL_REQUIRED` → 컨트롤러가 붙잡고(`recover`) 막을 연다.
+ * 등록이 끝나면 **같은 쓰기를 한 번 더** 보내고(`attempts` 가 늘어난다), 「나중에 하기」면 원래 403 으로 끝나 폼이 한 줄로 말한다. 쓰던 글은 어느 쪽이든 그대로다
+ */
+function WriteDemo({
+  fake,
+  korean,
+  width,
+  onLater,
+}: {
+  fake?: FakeAccountOptions
+  korean?: boolean
+  width?: number
+  onLater?: () => void
+}) {
+  const options = useMemo(() => ({ ...WRITE_SERVER, ...fake }), [fake])
+  const api = useMemo(() => createFakeAccountApi(options), [options])
+  const controller = useMemo(() => createEmailRequiredController(), [])
+  const labels = mergeLabels(korean ? koAuthLabels : undefined)
+  const [attempts, setAttempts] = useState(0)
+  const [status, setStatus] = useState<'idle' | 'declined' | 'posted'>('idle')
+  const [draft, setDraft] = useState('')
+  /** 서버가 받는 쓰기 호출 - 주소가 없으면 403 */
+  const write = async () => {
+    setAttempts((n) => n + 1)
+    if ((await api.me()).emailRequiredToWrite === true)
+      throw apiError('ACCOUNT.EMAIL_REQUIRED', 403)
+  }
+  const post = async () => {
+    setStatus('idle')
+    try {
+      await write()
+    } catch (error) {
+      const recovered = await controller.recover({
+        path: '/posts',
+        method: 'POST',
+        error: error as never,
+      })
+      if (!recovered) return setStatus('declined')
+      await write() // 붙잡았던 호출을 그대로 한 번 더
+    }
+    setStatus('posted')
+  }
+  const gate = (
+    <EmailRequiredGate
+      controller={controller}
+      api={api}
+      accountId="acc_demo"
+      labels={korean ? koAuthLabels : undefined}
+      onSignOut={() => undefined}
+      onDiscarded={() => undefined}
+      onLater={onLater}
+    >
+      <main>
+        <h1>내 노트</h1>
+        <label>
+          글
+          <textarea value={draft} onChange={(e) => setDraft(e.target.value)} />
+        </label>
+        <button type="button" onClick={() => void post()}>
+          올리기
+        </button>
+        <output aria-label="status">{status}</output>
+        <output aria-label="attempts">{attempts}</output>
+        {status === 'declined' && <p role="status">{labels.emailRequiredDeclined}</p>}
+      </main>
+    </EmailRequiredGate>
+  )
+  return width ? (
+    <div
+      style={{
+        width,
+        height: 700,
+        transform: 'translateZ(0)',
+        overflow: 'hidden',
+        border: '1px solid var(--border)',
+      }}
+    >
+      {gate}
+    </div>
+  ) : (
+    gate
+  )
+}
+
+type WriteStory = StoryObj<typeof WriteDemo>
+
+type Typist = ReturnType<typeof userEvent.setup>
+const startPosting = async (canvas: ReturnType<typeof within>, userEvent: Typist) => {
+  await userEvent.type(canvas.getByRole('textbox', { name: '글' }), '안녕하세요')
+  await userEvent.click(canvas.getByRole('button', { name: '올리기' }))
+}
+
+/** 쓰기의 403 이 연 막 — 제목 · 본문이 쓰기용이고 「나중에 하기」(테두리)가 로그아웃 옆에 있다. 읽기용 문구는 없다 */
+export const WriteLookHasNotNow: WriteStory = {
+  render: (args) => <WriteDemo {...args} />,
+  play: async ({ canvas, userEvent }) => {
+    await startPosting(canvas, userEvent)
+    const screen = within(await dialog(canvas, WRITE_TITLE))
+    await waitFor(() => expect(screen.getByRole('heading', { name: WRITE_TITLE })).toHaveFocus())
+    await expect(screen.getByText(/You can keep reading/)).toBeVisible()
+    await expect(screen.getByRole('button', { name: 'Not now' })).toHaveAttribute(
+      'data-variant',
+      'secondary',
+    )
+    await expect(screen.getByRole('button', { name: 'Sign out' })).toBeVisible()
+    await expect(screen.getByRole('button', { name: 'Send me a code' })).toHaveAttribute(
+      'data-variant',
+      'primary',
+    )
+    await expect(canvas.queryByRole('dialog', { name: 'Add your email address' })).toBeNull()
+    // 이 서버는 `emailRequired` 가 늘 false - 「주소가 생겼나」로 보니 막이 뜨자마자 접히지 않는다(탭이 다시 보일 때 서버에 다시 물어도)
+    window.dispatchEvent(new Event('focus'))
+    await new Promise((resolve) => setTimeout(resolve, 200))
+    await expect(canvas.getByRole('dialog', { name: WRITE_TITLE })).toBeVisible()
+  },
+}
+
+/** 「나중에 하기」 — 막이 닫히고 붙잡은 호출은 원래 403 으로 끝난다. 폼이 한 줄로 말하고, 쓰던 글은 그대로, 읽기를 계속한다 */
+export const NotNowEndsTheHeldWriteAs403AndKeepsTheDraft: WriteStory = {
+  render: (args) => <WriteDemo {...args} />,
+  args: { onLater: fn() },
+  play: async ({ canvas, args, userEvent }) => {
+    await startPosting(canvas, userEvent)
+    const screen = within(await dialog(canvas, WRITE_TITLE))
+    await userEvent.click(screen.getByRole('button', { name: 'Not now' }))
+    await waitFor(() => expect(canvas.queryByRole('dialog')).toBeNull())
+    await waitFor(() => expect(canvas.getByLabelText('status')).toHaveTextContent('declined'))
+    await expect(canvas.getByText('You can post after registering an email')).toBeVisible()
+    await expect(canvas.getByRole('textbox', { name: '글' })).toHaveValue('안녕하세요')
+    await expect(canvas.getByLabelText('attempts')).toHaveTextContent('1') // 다시 보내지 않았다
+    await expect(canvas.getByRole('main').closest('[inert]')).toBeNull()
+    await expect(args.onLater).toHaveBeenCalledTimes(1)
+  },
+}
+
+/** 등록이 끝나면 붙잡은 호출이 **같은 호출 그대로 한 번 더** 나간다 - 쓰던 글이 그대로라 올려진다 */
+export const RegisteringSendsTheHeldWriteOnceMore: WriteStory = {
+  render: (args) => <WriteDemo {...args} />,
+  play: async ({ canvas, userEvent }) => {
+    await startPosting(canvas, userEvent)
+    const screen = within(await dialog(canvas, WRITE_TITLE))
+    await userEvent.type(screen.getByRole('textbox', { name: /^Email/ }), 'me@example.com')
+    await userEvent.click(screen.getByRole('button', { name: 'Send me a code' }))
+    await expect(await screen.findByText(/We sent a 6-digit code to me@example.com/)).toBeVisible()
+    await userEvent.click(screen.getAllByLabelText('Digit 1 of 6')[0])
+    await userEvent.paste(FAKE_CODE)
+    await waitFor(() => expect(canvas.queryByRole('dialog')).toBeNull())
+    await waitFor(() => expect(canvas.getByLabelText('status')).toHaveTextContent('posted'))
+    await expect(canvas.getByLabelText('attempts')).toHaveTextContent('2') // 403 한 번 + 다시 보낸 한 번
+    await expect(canvas.getByRole('textbox', { name: '글' })).toHaveValue('안녕하세요')
+  },
+}
+
+/** 제공자 화면에 다녀오면 쓰던 글이 사라진다 - 떠나기 전에 한 줄로 말한다(쓰기용 모습에서만) */
+export const LeavingForTheProviderWarnsTheDraftIsLost: WriteStory = {
+  render: (args) => <WriteDemo {...args} />,
+  args: { fake: { reauthWindowExpired: true } },
+  play: async ({ canvas, userEvent }) => {
+    await startPosting(canvas, userEvent)
+    const screen = within(await dialog(canvas, WRITE_TITLE))
+    await userEvent.type(screen.getByRole('textbox', { name: /^Email/ }), 'me@example.com')
+    await userEvent.click(screen.getByRole('button', { name: 'Send me a code' }))
+    await expect(await screen.findByText(/confirm once more with Kakao/)).toBeVisible()
+    await expect(screen.getByText('Going to Kakao discards what you were writing.')).toBeVisible()
+    await expect(screen.getByRole('button', { name: 'Confirm with Kakao' })).toBeVisible()
+  },
+}
+
+/** 다른 탭에서 등록했다 - 이 서버는 `emailRequired` 가 false 라 **주소가 생겼는지**로 안다. 탭이 다시 보이면 접고 붙잡은 호출을 보낸다 */
+function WriteRegisteredElsewhereDemo({ onSettled }: { onSettled: (result: boolean) => void }) {
+  const [address, setAddress] = useState<string | null>(null)
+  const api = useMemo(() => createFakeAccountApi(WRITE_SERVER), [])
+  const controller = useMemo(() => createEmailRequiredController(), [])
+  useEffect(() => {
+    void controller
+      .recover({ path: '/posts', method: 'POST', error: apiError('ACCOUNT.EMAIL_REQUIRED', 403) })
+      .then(onSettled)
+  }, [controller, onSettled])
+  return (
+    <>
+      <button type="button" onClick={() => setAddress('me@example.com')}>
+        다른 탭에서 등록 끝
+      </button>
+      <EmailRequiredGate
+        controller={controller}
+        api={{
+          ...api,
+          me: async () => ({
+            ...(await api.me()),
+            email: address,
+            emailRequiredToWrite: address === null,
+          }),
+        }}
+        accountId="acc_a"
+        onSignOut={() => undefined}
+        onDiscarded={() => undefined}
+      >
+        <AppBehind />
+      </EmailRequiredGate>
+    </>
+  )
+}
+
+export const WriteRegisteredInAnotherTabFoldsByTheAddress: StoryObj<
+  typeof WriteRegisteredElsewhereDemo
+> = {
+  render: (args) => <WriteRegisteredElsewhereDemo {...args} />,
+  args: { onSettled: fn() },
+  play: async ({ canvas, args, userEvent }) => {
+    await dialog(canvas, WRITE_TITLE)
+    await userEvent.click(canvas.getByRole('button', { name: '다른 탭에서 등록 끝' }))
+    window.dispatchEvent(new Event('focus'))
+    await waitFor(() => expect(canvas.queryByRole('dialog')).toBeNull())
+    await waitFor(() => expect(args.onSettled).toHaveBeenCalledWith(true))
+  },
+}
+
+/** 로그인 직후에는 열리지 않는다(`emailRequired` 가 false) - 읽기는 그대로, 다음 단계(약관 …)는 물어도 된다 */
+export const WriteServerDoesNotOpenAtSignIn: StoryObj<typeof OpensFromMeDemo> = {
+  render: (args) => <OpensFromMeDemo {...args} />,
+  args: { fake: { emailRequiredToWrite: true } },
+  play: async ({ canvas }) => {
+    await waitFor(() => expect(canvas.getByLabelText('ready')).toHaveTextContent('true'))
+    await expect(canvas.queryByRole('dialog')).toBeNull()
+    await expect(canvas.getByText('앱 화면').closest('[inert]')).toBeNull()
+  },
+}
+
+/**
+ * 쓰기 전 확인(`useEmailBeforeWrite`) + 댓글 칸 위의 띠(`EmailWriteNotice`). 띠는 막지 않는다 - 입력은 그대로 쓸 수 있고 단추가 막을 연다.
+ * 「글쓰기」 단추는 먼저 `ensure()` 를 불러 false 면 쓰기 화면으로 가지 않는다(등록한 뒤 다시 누른다). 등록이 끝나면 띠가 사라진다
+ */
+function BeforeWriteDemo({ width }: { width?: number }) {
+  const api = useMemo(() => createFakeAccountApi(WRITE_SERVER), [])
+  const controller = useMemo(() => createEmailRequiredController(), [])
+  const { ensure } = useEmailBeforeWrite(controller)
+  const [opened, setOpened] = useState(false)
+  const body = (
+    <EmailRequiredGate
+      controller={controller}
+      api={api}
+      accountId="acc_demo"
+      onSignOut={() => undefined}
+      onDiscarded={() => undefined}
+    >
+      <main>
+        <h1>게시판</h1>
+        <button
+          type="button"
+          onClick={() => {
+            if (!ensure()) return
+            setOpened(true)
+          }}
+        >
+          글쓰기
+        </button>
+        {opened && <p role="status">글쓰기 화면</p>}
+        <EmailWriteNotice controller={controller} />
+        <label>
+          댓글
+          <textarea />
+        </label>
+      </main>
+    </EmailRequiredGate>
+  )
+  return width ? (
+    <div style={{ width, height: 700, transform: 'translateZ(0)', overflow: 'auto' }}>{body}</div>
+  ) : (
+    body
+  )
+}
+
+export const NoticeBandAboveTheCommentBoxDoesNotBlock: StoryObj<typeof BeforeWriteDemo> = {
+  render: (args) => <BeforeWriteDemo {...args} />,
+  play: async ({ canvas, userEvent }) => {
+    const band = await canvas.findByText('Register an email to start posting')
+    await expect(band).toBeVisible()
+    const action = canvas.getByRole('button', { name: 'Register email' })
+    await expect(action).toHaveAttribute('data-variant', 'secondary')
+    // 막지 않는다: 댓글 칸에 그대로 쓴다
+    await userEvent.type(canvas.getByRole('textbox', { name: '댓글' }), '먼저 써 볼게요')
+    await expect(canvas.getByRole('textbox', { name: '댓글' })).toHaveValue('먼저 써 볼게요')
+    await expect(canvas.queryByRole('dialog')).toBeNull()
+    // 단추는 쓰기용 막을 연다 - 「나중에 하기」로 닫으면 띠는 그대로, 쓰던 댓글도 그대로
+    await userEvent.click(action)
+    const screen = within(await dialog(canvas, WRITE_TITLE))
+    await userEvent.click(screen.getByRole('button', { name: 'Not now' }))
+    await waitFor(() => expect(canvas.queryByRole('dialog')).toBeNull())
+    await expect(canvas.getByText('Register an email to start posting')).toBeVisible()
+    await expect(canvas.getByRole('textbox', { name: '댓글' })).toHaveValue('먼저 써 볼게요')
+  },
+}
+
+/** 「글쓰기」 단추가 쓰기 화면으로 가기 **전에** 묻는다 - false 면 가지 않고, 등록한 뒤 다시 누르면 간다(띠도 사라진다) */
+export const WriteButtonAsksBeforeGoingToTheWritingScreen: StoryObj<typeof BeforeWriteDemo> = {
+  render: (args) => <BeforeWriteDemo {...args} />,
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(await canvas.findByRole('button', { name: '글쓰기' }))
+    const screen = within(await dialog(canvas, WRITE_TITLE))
+    await expect(canvas.queryByText('글쓰기 화면')).toBeNull() // 아직 쓰기 화면으로 가지 않았다
+    await userEvent.type(screen.getByRole('textbox', { name: /^Email/ }), 'me@example.com')
+    await userEvent.click(screen.getByRole('button', { name: 'Send me a code' }))
+    await screen.findByText(/We sent a 6-digit code/)
+    await userEvent.click(screen.getAllByLabelText('Digit 1 of 6')[0])
+    await userEvent.paste(FAKE_CODE)
+    await waitFor(() => expect(canvas.queryByRole('dialog')).toBeNull())
+    await expect(canvas.queryByText('Register an email to start posting')).toBeNull() // 띠가 사라졌다
+    await userEvent.click(canvas.getByRole('button', { name: '글쓰기' }))
+    await expect(await canvas.findByText('글쓰기 화면')).toBeVisible()
+  },
+}
+
+/** 320px — 띠가 줄을 바꿔 단추가 아래로 내려가고 가로로 밀리지 않는다 */
+export const NoticeBandNarrow320: StoryObj<typeof BeforeWriteDemo> = {
+  render: (args) => <BeforeWriteDemo {...args} />,
+  args: { width: 320 },
+  play: async ({ canvas }) => {
+    const band = (await canvas.findByText('Register an email to start posting')).parentElement!
+    await expect(canvas.getByRole('button', { name: 'Register email' })).toBeVisible()
+    await waitFor(() => expect(band.scrollWidth).toBeLessThanOrEqual(band.clientWidth))
+  },
+}
+
+/** 버리기 확인 — 아이디를 정한 계정이면 「아이디 … 도 함께 사라지고 다시 쓸 수 없어요」 한 줄이 더 붙는다 */
+export const DiscardConfirmationNamesTheUsername: WriteStory = {
+  render: (args) => <WriteDemo {...args} />,
+  args: { fake: { loginId: { value: 'Sumin.Kim' } } },
+  play: async ({ canvas, userEvent }) => {
+    await startPosting(canvas, userEvent)
+    const screen = within(await dialog(canvas, WRITE_TITLE))
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Delete this account and go to sign-in' }),
+    )
+    const confirm = await within(document.body).findByRole('dialog', {
+      name: 'Delete this account?',
+    })
+    await expect(
+      within(confirm).getByText('The username sumin.kim goes with it and can never be used again.'),
+    ).toBeVisible()
+  },
+}
+
+/** 아이디가 없는 서버(키 없음)에서는 그 줄이 없다 */
+export const DiscardConfirmationHasNoUsernameLineWithoutOne: WriteStory = {
+  render: (args) => <WriteDemo {...args} />,
+  play: async ({ canvas, userEvent }) => {
+    await startPosting(canvas, userEvent)
+    const screen = within(await dialog(canvas, WRITE_TITLE))
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Delete this account and go to sign-in' }),
+    )
+    const confirm = await within(document.body).findByRole('dialog', {
+      name: 'Delete this account?',
+    })
+    await expect(within(confirm).queryByText(/The username/)).toBeNull()
+  },
+}
+
+/** 한국어 */
+export const WriteLookKorean: WriteStory = {
+  render: (args) => <WriteDemo {...args} />,
+  args: { korean: true },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.type(canvas.getByRole('textbox', { name: '글' }), '안녕하세요')
+    await userEvent.click(canvas.getByRole('button', { name: '올리기' }))
+    const screen = within(await dialog(canvas, KO_WRITE_TITLE))
+    await expect(
+      screen.getByText(
+        '읽기는 지금처럼 할 수 있어요. 글 · 댓글 · 반응을 남기려면 이메일이 필요해요. 다른 사람에게는 보이지 않아요.',
+      ),
+    ).toBeVisible()
+    await expect(screen.getByRole('button', { name: '나중에 하기' })).toBeVisible()
+    await userEvent.click(screen.getByRole('button', { name: '나중에 하기' }))
+    await expect(await canvas.findByText('이메일을 등록한 뒤에 쓸 수 있어요')).toBeVisible()
+  },
+}
+
+const writeNoHorizontalScroll = async (canvas: ReturnType<typeof within>) => {
+  const screen = await dialog(canvas, KO_WRITE_TITLE)
+  await waitFor(() => expect(screen.scrollWidth).toBeLessThanOrEqual(screen.clientWidth))
+  // 「나중에 하기」와 「로그아웃」이 칸 안에 들어온다
+  const later = within(screen).getByRole('button', { name: '나중에 하기' })
+  await expect(later.getBoundingClientRect().right).toBeLessThanOrEqual(
+    screen.getBoundingClientRect().right,
+  )
+}
+
+/** 320px · 쓰기 모습 */
+export const WriteLookNarrow320: WriteStory = {
+  render: (args) => <WriteDemo {...args} />,
+  args: { width: 320, korean: true },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.type(canvas.getByRole('textbox', { name: '글' }), '안녕하세요')
+    await userEvent.click(canvas.getByRole('button', { name: '올리기' }))
+    await writeNoHorizontalScroll(canvas)
+  },
+}
+
+/** 375px · 쓰기 모습 */
+export const WriteLookNarrow375: WriteStory = {
+  render: (args) => <WriteDemo {...args} />,
+  args: { width: 375, korean: true },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.type(canvas.getByRole('textbox', { name: '글' }), '안녕하세요')
+    await userEvent.click(canvas.getByRole('button', { name: '올리기' }))
+    await writeNoHorizontalScroll(canvas)
   },
 }

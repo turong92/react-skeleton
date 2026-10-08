@@ -1,4 +1,5 @@
 import { ApiRequestError, ErrorCodes, type ForbiddenContext } from '@skeleton/api-client'
+import type { AccountMe } from './account/types'
 import { createGateCore, type GateState } from './gateController'
 
 /** 이 오류는 「이메일을 등록해 주세요」 화면이 말한다 — 전역 오류 토스트에서 뺀다 */
@@ -12,6 +13,33 @@ export function isEmailRequiredError(error: unknown): boolean {
 
 export type EmailRequiredState = GateState
 
+/**
+ * 서버가 주소를 **언제** 요구하는가 — `me` 에서 읽는다.
+ * `login` 로그인 직후(허용 목록 밖은 읽기도 403) · `write` 쓰기 때(읽기는 되고 변경 요청만 403) · `none` 요구하지 않는다(주소가 있거나 이 앱은 안 받는다) · `unknown` 아직 `me` 를 못 읽었다
+ */
+export type EmailRequiredWhen = 'unknown' | 'none' | 'login' | 'write'
+
+type EmailRequirementFields = Pick<AccountMe, 'email' | 'emailRequired' | 'emailRequiredToWrite'>
+
+/** `me` 가 말하는 방식. 두 키가 모두 true 로 오면(없는 일) 로그인 직후가 이긴다 — 더 센 쪽이다 */
+export function emailWhenOf(
+  me: Partial<EmailRequirementFields>,
+): Exclude<EmailRequiredWhen, 'unknown'> {
+  if (me.emailRequired === true) return 'login'
+  if (me.emailRequiredToWrite === true) return 'write'
+  return 'none'
+}
+
+/**
+ * 「다른 탭에서 등록했나」를 보는 판정 — 이 계정에 주소가 **없고** 서버가 아직 요구하는가.
+ * 쓰기 때 방식에서는 `emailRequired` 가 늘 false 라 그 값만 보면 막이 뜨자마자 접힌다 — 주소가 생겼는지가 먼저다.
+ * 요구하는 키가 하나도 없는 응답(옛 서버 · `emailRequired: false`)은 예전처럼 접는다
+ */
+export function stillNeedsAddress(me: Partial<EmailRequirementFields>): boolean {
+  if (me.email) return false
+  return emailWhenOf(me) !== 'none'
+}
+
 export type EmailRequiredController = {
   getState(): EmailRequiredState
   subscribe(listener: () => void): () => void
@@ -19,8 +47,11 @@ export type EmailRequiredController = {
   recover(context: ForbiddenContext): Promise<boolean>
   /** 로그인 직후 `me.emailRequired === true` 를 알았다 — 붙잡을 호출 없이 화면만 연다 */
   require(): void
-  /** 주소가 등록됐다 — 화면을 닫고 붙잡은 호출을 그대로 한 번 더 보낸다 */
+  /** 주소가 등록됐다 — 화면을 닫고 붙잡은 호출을 그대로 한 번 더 보낸다. 서버가 요구하는 것도 이제 없다(`none`) */
   registered(): void
+  /** 서버가 주소를 언제 요구하는가(`EmailRequiredGate` 가 `me` 를 읽고 알린다) - 화면의 모습(`write` 면 「나중에 하기」가 있는 쓰기용)과 `useEmailBeforeWrite` 가 읽는다. 처음엔 `unknown` */
+  getWhen(): EmailRequiredWhen
+  setWhen(when: EmailRequiredWhen): void
   /**
    * 이 계정이 주소를 요구받는지 서버에 물어 답을 받았는가(`EmailRequiredGate` 가 정한다) — 아니면 약관 막 같은 **다음 단계**가 아직 묻기 시작하면 안 된다(순서는 이메일 → 약관).
    * 처음에는 false, 게이트가 `me` 를 읽고 나서 true, 계정이 바뀌거나 로그아웃하면 다시 false
@@ -43,5 +74,29 @@ export type EmailRequiredController = {
  */
 export function createEmailRequiredController(): EmailRequiredController {
   const { resolve, ...core } = createGateCore(isEmailRequiredError)
-  return { ...core, registered: resolve }
+  let when: EmailRequiredWhen = 'unknown'
+  const listeners = new Set<() => void>()
+  const setWhen = (next: EmailRequiredWhen) => {
+    if (next === when) return
+    when = next
+    for (const listener of [...listeners]) listener()
+  }
+  return {
+    ...core,
+    subscribe(listener) {
+      listeners.add(listener)
+      const stopCore = core.subscribe(listener)
+      return () => {
+        listeners.delete(listener)
+        stopCore()
+      }
+    },
+    registered() {
+      // 먼저 알려 둔다 - 붙잡힌 호출이 풀려 다시 나갈 때 이미 요구가 없다(모르던 것은 그대로 모른다)
+      if (when === 'login' || when === 'write') setWhen('none')
+      resolve()
+    },
+    getWhen: () => when,
+    setWhen,
+  }
 }

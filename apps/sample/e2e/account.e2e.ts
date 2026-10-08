@@ -95,31 +95,43 @@ describe('sign-in methods are discovered from the backend', () => {
       await gate // 답을 붙잡아 둔다
       await route.continue()
     })
-    await page.goto(`${baseUrl}/login`)
-    await dismissConsent(page)
-    await pwExpect(page.getByText(auth.methodsLoading)).toBeAttached()
-    await pwExpect(page.getByLabel(auth.password)).toHaveCount(0) // 환경변수 기본값 같은 것을 깜박이지 않는다
-    await pwExpect(page.getByRole('button', { name: auth.signInMagicLink })).toHaveCount(0)
-    release()
-    // 샘플 백엔드는 비밀번호 + 이메일 링크(소셜 제공자 없음)
-    await pwExpect(page.getByLabel(auth.password).first()).toBeVisible()
-    await pwExpect(page.getByRole('button', { name: auth.signInMagicLink })).toBeVisible()
-    await pwExpect(page.getByRole('button', { name: /Google|구글/ })).toHaveCount(0)
-    pwExpect(asked).toHaveLength(1)
-    await page.unroute('**/api/v1/auth/methods')
+    try {
+      await page.goto(`${baseUrl}/login`)
+      await dismissConsent(page)
+      await pwExpect(page.getByText(auth.methodsLoading)).toBeAttached()
+      await pwExpect(page.getByLabel(auth.password)).toHaveCount(0) // 환경변수 기본값 같은 것을 깜박이지 않는다
+      await pwExpect(page.getByRole('button', { name: auth.signInMagicLink })).toHaveCount(0)
+      release()
+      // 샘플 백엔드는 비밀번호 + 이메일 링크 — 소셜 버튼은 백엔드가 알려 주는 제공자(가짜 제공자 구성이면 LINE · X · Google)만큼, 없으면 0개
+      await pwExpect(page.getByLabel(auth.password).first()).toBeVisible()
+      await pwExpect(page.getByRole('button', { name: auth.signInMagicLink })).toBeVisible()
+      const methods = await (await fetch(`${apiUrl}/api/v1/auth/methods`)).json()
+      const listed = (methods.value.social as Array<{ provider: string }>).map((s) => s.provider)
+      await pwExpect(page.getByRole('button', { name: /Google|구글/ })).toHaveCount(
+        listed.includes('google') ? 1 : 0,
+      )
+      pwExpect(asked).toHaveLength(1)
+    } finally {
+      release() // 어느 단계에서 실패해도 붙잡은 답을 풀고 가로채기를 걷는다 — 뒤 시나리오가 이어서 돈다
+      await page.unroute('**/api/v1/auth/methods')
+    }
   })
 
   it('when the answer cannot be had, a default is shown with a retry — and the retry finds the real methods', async () => {
     await page.route('**/api/v1/auth/methods', (route) => route.abort('failed'))
-    await page.goto(`${baseUrl}/sign-up`)
-    await page.goto(`${baseUrl}/login`)
-    await pwExpect(page.getByText(auth.methodsFailed)).toBeVisible()
-    await pwExpect(page.getByLabel(auth.password).first()).toBeVisible() // 기본: 비밀번호만
-    await pwExpect(page.getByRole('button', { name: auth.signInMagicLink })).toHaveCount(0)
-    await page.unroute('**/api/v1/auth/methods')
-    await page.getByRole('button', { name: auth.methodsRetry }).click()
-    await pwExpect(page.getByRole('button', { name: auth.signInMagicLink })).toBeVisible()
-    await pwExpect(page.getByText(auth.methodsFailed)).toHaveCount(0)
+    try {
+      await page.goto(`${baseUrl}/sign-up`)
+      await page.goto(`${baseUrl}/login`)
+      await pwExpect(page.getByText(auth.methodsFailed)).toBeVisible()
+      await pwExpect(page.getByLabel(auth.password).first()).toBeVisible() // 기본: 비밀번호만
+      await pwExpect(page.getByRole('button', { name: auth.signInMagicLink })).toHaveCount(0)
+      await page.unroute('**/api/v1/auth/methods')
+      await page.getByRole('button', { name: auth.methodsRetry }).click()
+      await pwExpect(page.getByRole('button', { name: auth.signInMagicLink })).toBeVisible()
+      await pwExpect(page.getByText(auth.methodsFailed)).toHaveCount(0)
+    } finally {
+      await page.unroute('**/api/v1/auth/methods') // 실패해도 가로채기를 걷는다
+    }
   })
 })
 

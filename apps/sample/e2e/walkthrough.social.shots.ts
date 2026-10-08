@@ -5,8 +5,8 @@ import { describe, inject, it } from 'vitest'
 import { acceptLegalGate, auth, dismissConsent, launch } from './helpers'
 
 /*
- * 글로벌 소셜 로그인 증거 — 가짜 LINE · X(`E2E_FAKE_PROVIDERS=1` 로 올린 소셜 백엔드)로: 로그인 화면(Google · LINE · X — 라이트 · 다크 · 모바일 390) · 주소 없는 계정의 설정.
- * 실행: `E2E_FAKE_PROVIDERS=1 E2E_WALKTHROUGH=1 SAMPLE_EVIDENCE_DIR=<폴더> pnpm --filter sample exec vitest run --config vitest.e2e.config.ts e2e/walkthrough.social.shots.ts`
+ * 글로벌 소셜 로그인 증거 — 가짜 LINE · X(기본으로 올라오는 소셜 백엔드)로: 로그인 화면(Google · LINE · X — 라이트 · 다크 · 모바일 390) · 주소 없는 계정의 설정.
+ * 실행: `E2E_WALKTHROUGH=1 SAMPLE_EVIDENCE_DIR=<폴더> pnpm --filter sample exec vitest run --config vitest.e2e.config.ts e2e/walkthrough.social.shots.ts`
  */
 const baseUrl = inject('baseUrl')
 const apiUrl = inject('apiUrl')

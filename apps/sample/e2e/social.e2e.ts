@@ -1,10 +1,11 @@
 import { expect as baseExpect, type Browser, type BrowserContext, type Page } from 'playwright/test'
 import { afterAll, beforeAll, describe, inject, it } from 'vitest'
-import { acceptLegalGate, auth, DEMO, dismissConsent, fillSignIn, launch } from './helpers'
+import { acceptLegalGate, agreeToLegal, auth, dismissConsent, fillSignIn, launch } from './helpers'
+import { signOut } from './boardSteps'
 import { waitForCode } from './mail'
 
 /*
- * 글로벌 소셜 로그인(LINE · X) 여정 — 가짜 제공자(`fakeProviders.ts`, `E2E_FAKE_PROVIDERS=1` 로 올린 소셜 백엔드)를 브라우저로 끝까지:
+ * 글로벌 소셜 로그인(LINE · X) 여정 — 가짜 제공자(`fakeProviders.ts`, 기본으로 올라오는 소셜 백엔드)를 브라우저로 끝까지:
  * 버튼은 `GET /auth/methods` 의 순서 · 제공자 → 인가 주소는 백엔드가 알려 준 것(authorize) + PKCE S256 challenge + nonce(LINE) → 콜백(state 확인) → 로그인 요청에
  * `codeVerifier` · `nonce` → 주소 없는 계정(설정에 주소 없음 · 로그인 수단 LINE) → 「이메일 추가」는 LINE 동의를 **다시** 거쳐(새 verifier) 새 주소로 인증번호 → 취소 · 다른 탭 · 뒤로 가기.
  * 가짜 제공자는 진짜처럼 엄격하다(PKCE 없으면 거절 · 코드 한 번 · redirect_uri 글자까지 일치). 가짜 제공자가 없으면(`fakeUrl` 빈 문자열) 통째로 건너뛴다.
@@ -233,13 +234,35 @@ describe('callback robustness', () => {
 
 /*
  * 같은 이메일로 메일 가입한 계정이 있는데 그 이메일을 가진 소셜 사용자가 처음 로그인한다 — 자동으로 합치지 않는다(`409 ACCOUNT.SOCIAL_EMAIL_CONFLICT`).
- * 백엔드가 그 제공자의 이메일을 믿고 충돌로 보는 설정일 때만 일어난다(kotlin-skeleton `fix/google-email-authority` 이후의 견본 앱 · 가짜 제공자가 DEMO 계정의 이메일을 준다). 가짜 제공자가 없으면 건너뛴다.
+ * 백엔드가 그 제공자의 이메일을 믿는 구성일 때만 일어난다 — e2e 백엔드는 가짜 LINE 의 `email_verified` 클레임을 믿도록(`email-trust: CLAIM`, 이 실행에서만) 올라가고,
+ * 가짜 LINE 은 주소를 주는 사용자의 주소를 확인된 것으로 내보낸다. 끝까지: 메일 가입 → 같은 메일로 소셜 로그인(안내) → 로그인하러 가기 → 설정의 「연결을 이어서」 →
+ * 연결(본인 확인: 현재 비밀번호) → 로그아웃 → 소셜로 로그인 → 홈. 가짜 제공자를 끄면(`E2E_FAKE_PROVIDERS=0`) 건너뛴다.
  */
 describe('a social sign-in with the email of an existing account is guided, not merged', () => {
-  run('shows the guide, and signing in the old way ends at the link to continue', async () => {
+  const mail = `e2e-merge-${stamp}@example.com`
+  const mailPassword = 'Passw0rd!x9'
+  const account = { email: mail, password: mailPassword }
+
+  run('a mail sign-up account exists (signed in at the end of the sign-up)', async () => {
     await page.evaluate(() => window.localStorage.clear())
+    await page.goto(`${baseUrl}/sign-up`)
+    await dismissConsent(page)
+    await page.getByLabel(auth.email).fill(mail)
+    await page.getByLabel(auth.displayName).fill('병합 시험')
+    await page.getByLabel(auth.password).first().fill(mailPassword)
+    await page.getByLabel(auth.passwordConfirm).fill(mailPassword)
+    await agreeToLegal(page, apiUrl)
+    await page.getByRole('button', { name: auth.signUpSubmit }).click()
+    const code = await waitForCode(mailUrl, mail, 'verify', { seen })
+    await page.getByLabel(auth.codeDigit(1, 6)).click()
+    await page.keyboard.type(code.code)
+    await pwExpect(page.getByRole('heading', { level: 1, name: /안녕하세요/ })).toBeVisible()
+    await signOut(page)
+  })
+
+  run('the same address through LINE shows the guide - no account is made or merged', async () => {
     await control({
-      line: { sub: `U-conflict-${stamp}`, name: '충돌 사용자', email: DEMO.email },
+      line: { sub: `U-conflict-${stamp}`, name: '충돌 사용자', email: mail },
       deny: false,
     })
     await page.goto(`${baseUrl}/login`)
@@ -247,14 +270,50 @@ describe('a social sign-in with the email of an existing account is guided, not 
     await pwExpect(page.getByRole('heading', { name: auth.callbackConflictTitle })).toBeVisible()
     await pwExpect(page.getByText(auth.callbackConflictBody('LINE'))).toBeVisible()
     await pwExpect(page.getByRole('button', { name: auth.callbackConflictHome })).toBeVisible()
-    // 로그인 화면의 이메일 칸은 비어 있다(콜백이 이메일을 주지 않는다)
+    await pwExpect(page.getByRole('heading', { name: auth.callbackFailedTitle })).toHaveCount(0)
+  })
+
+  run('"로그인하러 가기" → sign in the old way → settings continues the LINE link', async () => {
     await page.getByRole('button', { name: auth.callbackConflictSignIn }).click()
+    // 로그인 화면의 이메일 칸은 비어 있다(콜백이 이메일을 주지 않는다)
     await pwExpect(page.getByLabel(auth.email)).toHaveValue('')
-    await fillSignIn(page, DEMO)
+    await fillSignIn(page, account)
     await acceptLegalGate(page, apiUrl)
+    await pwExpect(page).toHaveURL(/\/account#methods$/)
     await pwExpect(page.getByText(auth.methodLinkContinue('LINE'))).toBeVisible()
-    const link = page.getByRole('button', { name: auth.methodLink('LINE') })
-    await pwExpect(link).toBeFocused()
+    await pwExpect(page.getByRole('button', { name: auth.methodLink('LINE') })).toBeFocused()
+  })
+
+  run(
+    'linking asks for the current password (proof) and ends in the settings with LINE linked',
+    async () => {
+      await page.getByRole('button', { name: auth.methodLink('LINE') }).click()
+      await pwExpect(page.getByRole('heading', { name: auth.reauthTitle })).toBeVisible()
+      await page.getByLabel(auth.currentPassword).fill(mailPassword)
+      await page.getByRole('button', { name: auth.methodLink('LINE') }).click()
+      await pwExpect(page.getByText(auth.methodLinkedNotice('LINE'))).toBeVisible()
+      await pwExpect(page).toHaveURL(/\/account$/)
+      // 보호된 화면(/account)에서 로그아웃하면 로그인 뒤 그 화면으로 돌아오는 것이 제품 동작이다(가려던 곳) — 홈에서 로그아웃해야 다음 로그인이 홈으로 끝난다
+      await page.goto(baseUrl)
+      await signOut(page)
+    },
+  )
+
+  run('now the same LINE sign-in succeeds into the same account and ends at the home', async () => {
+    await page.evaluate(() => window.localStorage.clear())
+    await page.goto(`${baseUrl}/login`)
+    await page.getByRole('button', { name: 'LINE으로 계속하기' }).click()
+    await acceptLegalGate(page, apiUrl)
+    await pwExpect(page.getByRole('heading', { level: 1, name: /안녕하세요/ })).toBeVisible()
+    await pwExpect(page.getByRole('heading', { name: auth.callbackFailedTitle })).toHaveCount(0)
+    pwExpect(new URL(page.url()).pathname).toBe('/')
+    // 로그인 수단에 메일(비밀번호)과 LINE 이 함께 있다 — 새 계정이 아니라 같은 계정
+    await page.goto(`${baseUrl}/account`)
+    const methods = page.getByRole('region', { name: auth.sectionMethods })
+    await pwExpect(methods.getByText('LINE', { exact: true }).first()).toBeVisible()
+    await pwExpect(
+      page.getByRole('region', { name: auth.sectionEmail }).getByText(mail),
+    ).toBeVisible()
     await control({ deny: false })
   })
 })

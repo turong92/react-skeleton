@@ -145,7 +145,8 @@ export async function startFakeProviders(): Promise<FakeProviders> {
         nonce: grant.nonce,
         name: grant.user.name,
         amr: ['pwd'],
-        ...(grant.user.email ? { email: grant.user.email } : {}),
+        // 주소를 주는 사용자는 확인된 주소다(진짜 LINE 도 확인된 주소만 준다) — 백엔드의 e2e 설정이 `email-trust: CLAIM` 으로 이 클레임을 믿는다
+        ...(grant.user.email ? { email: grant.user.email, email_verified: true } : {}),
       }
       const head = b64(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
       const payload = b64(JSON.stringify(claims))

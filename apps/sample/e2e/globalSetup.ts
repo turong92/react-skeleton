@@ -13,8 +13,8 @@ import { FAKE_LINE, FAKE_X, startFakeProviders, type FakeProviders } from './fak
  *   이 준비 단계는 빈 포트(`MAIL_SMTP_PORT` · `MAIL_HTTP_PORT`)를 넘겨 그 줄의 api 주소를 테스트에 주고, 테스트는 그 HTTP API 에서 링크를 읽는다(자체 캐처를 띄우지 않는다).
  *   E2E_MAIL_URL 을 주면 이미 떠 있는 캐처를 쓴다(그때는 백엔드의 메일 포트를 E2E_MAIL_SMTP_PORT 로 맞춘다).
  *
- * 가짜 소셜 제공자: `E2E_FAKE_PROVIDERS=1` 이면 백엔드를 올리기 전에 가짜 LINE · X 를 띄우고 그 주소로 백엔드의 LINE · X 설정(`SPRING_APPLICATION_JSON`)을 덮는다 —
- *   소셜 백엔드(`feat/social-oidc-x`)용. 약관 재동의 필터를 시험하려면 `SKELETON_LEGAL_RECONSENT_ENABLED=true`(로컬 프로필은 꺼 둔다).
+ * 가짜 소셜 제공자: 기본으로 켠다 — 백엔드를 올리기 전에 가짜 LINE · X 를 띄우고 그 주소로 백엔드의 LINE · X 설정(`SPRING_APPLICATION_JSON`)을 덮는다
+ *   (`auth-social-oidc` · `auth-social-x` 모듈이 있는 백엔드용; `E2E_FAKE_PROVIDERS=0` 이면 끄고 소셜 시나리오는 건너뛴다). 약관 재동의 필터를 시험하려면 `SKELETON_LEGAL_RECONSENT_ENABLED=true`(로컬 프로필은 꺼 둔다).
  *
  * 환경변수: E2E_API_URL — 이미 떠 있는 백엔드를 쓴다(기동 · 정리를 건너뜀) · SAMPLE_API_DIR — 백엔드 레포 위치(기본: 이 레포 옆 ../kotlin-skeleton)
  */
@@ -24,7 +24,7 @@ declare module 'vitest' {
     apiUrl: string
     /** 메일 캐처(mailpit)의 HTTP API 주소 — 백엔드가 보낸 메일의 링크를 읽는다 */
     mailUrl: string
-    /** 가짜 LINE · X(`fakeProviders.ts`) — `E2E_FAKE_PROVIDERS=1` 일 때만, 아니면 빈 문자열 */
+    /** 가짜 LINE · X(`fakeProviders.ts`) — `E2E_FAKE_PROVIDERS=0` 이면 빈 문자열 */
     fakeUrl: string
   }
 }
@@ -72,7 +72,8 @@ export default async function setup(project: TestProject) {
       Number(process.env.E2E_MAIL_SMTP_PORT) || (await freePort()),
       await freePort(),
     ]
-    if (process.env.E2E_FAKE_PROVIDERS === '1') fake = await startFakeProviders()
+    // 가짜 소셜 제공자는 기본으로 켠다 — 표준 e2e 한 번이 소셜 여정까지 돌게(`E2E_FAKE_PROVIDERS=0` 이면 끈다: 소셜 없는 백엔드 구성)
+    if (process.env.E2E_FAKE_PROVIDERS !== '0') fake = await startFakeProviders()
     // 링크 로그인 요청은 같은 IP(::1)에서 시간당 10번(`skeleton.auth-magic-link.per-ip`, 넘으면 429)이 한도다 — 이 실행의 시나리오는 한 백엔드에 새 계정을 여럿 만들어 10번을 넘는다. e2e 백엔드에서만 올린다
     const e2eLimits = { 'auth-magic-link': { 'per-ip': 100 } }
     const fakeConfig = fake
@@ -86,6 +87,8 @@ export default async function setup(project: TestProject) {
                     'client-id': FAKE_LINE.clientId,
                     'client-secret': FAKE_LINE.clientSecret,
                     scopes: ['openid', 'profile', 'email'],
+                    // LINE 프리셋은 주소를 믿지 않는다(NEVER) — e2e 백엔드만 가짜 LINE 의 `email_verified` 클레임을 믿어, 같은 이메일 병합 안내(409) 여정을 시험한다
+                    'email-trust': 'CLAIM',
                     issuer: `${fake.url}/line`,
                     'authorization-endpoint': `${fake.url}/line/authorize`,
                     'token-endpoint': `${fake.url}/line/token`,

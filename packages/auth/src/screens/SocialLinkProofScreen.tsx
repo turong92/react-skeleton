@@ -1,3 +1,4 @@
+import { ErrorCodes } from '@skeleton/api-client'
 import { Alert, Button, FormProblems, useSubmitAttempt } from '@skeleton/ui'
 import { useId, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
@@ -57,7 +58,11 @@ export function SocialLinkProofScreen({
       <form className={styles.form} onSubmit={submit} aria-label={labels.reauthTitle} noValidate>
         <p className={styles.muted}>{labels.linkReauthHint(provider)}</p>
         {action.error && !isReauthFailure(action.raw) && (
-          <Alert tone="danger">{action.error.message}</Alert>
+          <Alert tone="danger">
+            {action.error.code === ErrorCodes.ACCOUNT_IDENTITY_TAKEN
+              ? labels.errorIdentityTakenFor(provider)
+              : action.error.message}
+          </Alert>
         )}
         <div id={proofId}>
           <ReauthProof

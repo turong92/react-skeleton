@@ -34,8 +34,11 @@ export type SocialCallbackScreenProps = {
 }
 
 /** 백엔드 코드가 정확히 말해 주는 실패는 그 문구, 그 밖에는 일반 「로그인을 마치지 못했어요」 */
-function known(error: unknown, labels: AuthLabels): string {
-  const { message } = authErrorMessage(error, labels)
+function known(error: unknown, labels: AuthLabels, provider?: string): string {
+  const { message, code } = authErrorMessage(error, labels)
+  // 다른 계정이 쥔 소셜 — 어느 제공자인지 알면 그 이름으로 출구(그 계정에서 끊기 · 삭제)를 말한다
+  if (code === ErrorCodes.ACCOUNT_IDENTITY_TAKEN && provider)
+    return labels.errorIdentityTakenFor(labels.providerNames[provider] ?? provider)
   return message === labels.errorGeneric ? labels.callbackFailedBody : message
 }
 
@@ -110,7 +113,7 @@ export function SocialCallbackScreen({
           ? labels.callbackStateBody
           : callbackError
             ? labels.callbackFailedBody
-            : known(state.error, labels)
+            : known(state.error, labels, provider)
     return (
       <AuthLayout title={title}>
         <div className={styles.stack}>

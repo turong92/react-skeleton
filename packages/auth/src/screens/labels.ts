@@ -70,7 +70,10 @@ export type AuthLabels = {
   errorLastMethod: string
   errorLastAdmin: string
   errorSelfAction: string
+  /** 다른 계정이 그 소셜을 쥐고 있다(내가 끊은 뒤 그 소셜로 다시 로그인해 생긴 계정일 수 있다) — 제공자 이름을 모를 때 */
   errorIdentityTaken: string
+  /** 같은 말, 제공자 이름을 아는 화면(연결 화면 · 연결 콜백)에서 */
+  errorIdentityTakenFor: (provider: string) => string
   errorIdentityExists: string
   errorSocialConflict: string
   /** 400 `LEGAL.CONSENT_REQUIRED` — 가입하는 사이 약관이 바뀌었다 */
@@ -454,7 +457,10 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   errorLastMethod: 'This is your last sign-in method. Add another one first.',
   errorLastAdmin: 'There must be at least one administrator.',
   errorSelfAction: 'You cannot do that to your own account.',
-  errorIdentityTaken: 'That account is already linked to someone else.',
+  errorIdentityTaken:
+    'This account is already linked to another account. Sign in with that account, unlink it in settings or delete that account, then try again.',
+  errorIdentityTakenFor: (provider) =>
+    `This ${provider} account is already linked to another account. Sign in with that ${provider} account, unlink it in settings or delete that account, then try again.`,
   errorIdentityExists: 'That sign-in method is already linked.',
   errorSocialConflict:
     'An account with that email already exists. Sign in with it, then link this provider in settings.',

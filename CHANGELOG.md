@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — 소셜 연결이 `ACCOUNT.IDENTITY_TAKEN` 으로 막히면 출구를 말한다 (`@skeleton/auth`)
+
+- 문구 `errorIdentityTaken` 이 막연한 「이미 다른 사람과 연결돼 있어요」 에서 「그 계정으로 로그인한 뒤 설정에서 연결을 끊거나 그 계정을 삭제하고 다시 시도해 주세요」 로 바뀌고, 제공자 이름을 아는 화면(연결 본인 확인 · 연결 콜백)은 새 라벨 `errorIdentityTakenFor(provider)` 로 「이 ○○ 계정은 …」 을 보여 준다. 소셜을 끊은 뒤 그 소셜로 다시 로그인하면 *내가 만든 다른 계정* 이 쥐고 있을 수 있다 (백엔드 `docs/accounts.md` "소셜을 끊은 뒤 다시 연결하려다 막힌 길"). 스토리 `SocialLinkTakenByAnotherAccount`.
+
 ### Fixed — 이메일 등록 · 약관 재동의 막이 한 계정의 것이 된다, 독립 리뷰 반영(`@skeleton/auth` · `@skeleton/legal` · `@skeleton/realtime` · `apps/sample`)
 
 - **계정 바뀜**: 두 컨트롤러에 `setAccount(accountId)` — 게이트가 매번 알린다. 계정이 **바뀌면**(다른 탭이 B 로 로그인 · 로그아웃; 토큰 저장소는 탭끼리 동기화된다) 이전 계정의 막이 접히고 붙잡힌 호출은 원래 403 으로 끝난다(B 의 토큰으로 나가지 않는다). 로그아웃 뒤에 늦게 온 403 은 막을 다시 세우지 않는다. 막이 열려 있는 동안 탭이 다시 보이면(visibilitychange · focus) 서버에 다시 묻는다 — 다른 탭에서 이미 등록 · 동의했으면 접고 붙잡은 호출을 보낸다(`reconsent.check()` 는 더는 묻지 않으면 닫는다). `ReconsentGate` 의 `deferCheck`: 앞 단계가 끝나야 묻는 앱이 계정을 숨기지 않고 확인만 미룬다.

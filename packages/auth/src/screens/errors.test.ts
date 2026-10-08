@@ -42,6 +42,15 @@ describe('authErrorMessage', () => {
     expect(authErrorMessage(err(code, status), L).message).toBe(label)
   })
 
+  it('IDENTITY_TAKEN tells the way out - sign in with that social account, unlink it or delete that account, try again', () => {
+    expect(L.errorIdentityTaken).toMatch(/Sign in with that account/)
+    expect(L.errorIdentityTaken).toMatch(/unlink it in settings or delete that account/)
+    expect(L.errorIdentityTakenFor('Kakao')).toMatch(
+      /^This Kakao account is already linked to another account\./,
+    )
+    expect(L.errorIdentityTakenFor('Kakao')).toMatch(/unlink it in settings or delete that account/)
+  })
+
   it('a browser without WebCrypto gets a clear message, not the generic one', () => {
     expect(authErrorMessage(new PkceUnavailableError(), L).message).toBe(L.errorPkceUnavailable)
   })

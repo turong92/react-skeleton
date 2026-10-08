@@ -458,6 +458,7 @@ function SocialLinkCallbackInner({ flow, ctx }: { flow: SocialLinkFlow; ctx: Pag
         state={{ status: 'error', error }}
         labels={ctx.labels}
         signInTo={ctx.paths.account}
+        provider={action?.kind === 'link-reauth' ? action.target.provider : callback?.provider}
       />
     )
   if (callback && foreign)

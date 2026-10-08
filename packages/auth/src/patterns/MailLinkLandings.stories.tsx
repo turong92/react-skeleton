@@ -299,6 +299,31 @@ export const SocialLinkNeedsPassword: Story = {
   },
 }
 
+/** 소셜을 끊은 뒤 그 소셜로 다시 로그인해 만들어진 다른 계정이 쥐고 있다 — 막다른 길이 아니라 출구(그 계정에서 끊거나 삭제)를 말한다 */
+export const SocialLinkTakenByAnotherAccount: Story = {
+  render: () => (
+    <SocialLinkProofScreen
+      provider="Kakao"
+      kind="password"
+      email="ann@example.com"
+      requestCode={async () => undefined}
+      backTo="/account"
+      onSubmit={async () => {
+        throw apiError('ACCOUNT.IDENTITY_TAKEN', 409)
+      }}
+    />
+  ),
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.type(canvas.getByLabelText(/^Current password/), 'old-password-1')
+    await userEvent.click(canvas.getByRole('button', { name: 'Link Kakao' }))
+    await expect(
+      await canvas.findByText(/This Kakao account is already linked to another account\./),
+    ).toBeVisible()
+    await expect(canvas.getByText(/unlink it in settings or delete that account/)).toBeVisible()
+    await expect(canvas.getByRole('link', { name: 'Cancel' })).toHaveAttribute('href', '/account')
+  },
+}
+
 export const SocialLinkWithoutTheProofExplainsItself: Story = {
   render: () => (
     <SocialLinkProofScreen

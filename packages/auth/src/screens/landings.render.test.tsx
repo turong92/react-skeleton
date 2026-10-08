@@ -148,6 +148,26 @@ describe('social callback', () => {
     expect(out).toContain('An account with this email already exists')
     expect(out).toContain('href="/login"')
   })
+
+  it('a social that another account holds (IDENTITY_TAKEN) names the provider and the way out, not a bare refusal', () => {
+    const taken = apiError('ACCOUNT.IDENTITY_TAKEN', 409)
+    const named = html(
+      <SocialCallbackScreen
+        state={{ status: 'error', error: taken }}
+        signInTo="/account"
+        provider="kakao"
+        labels={koAuthLabels}
+      />,
+    )
+    expect(named).toContain(koAuthLabels.errorIdentityTakenFor('카카오').replace(/'/g, '&#x27;'))
+    expect(named).toContain('카카오 계정은 이미 다른 계정에 연결돼 있어요')
+    expect(named).toContain('연결을 끊거나 그 계정을 삭제하고 다시 시도')
+    const unnamed = html(
+      <SocialCallbackScreen state={{ status: 'error', error: taken }} signInTo="/account" />,
+    )
+    expect(unnamed).toContain('already linked to another account')
+    expect(unnamed).toContain('unlink it in settings or delete that account')
+  })
 })
 
 describe('AccountStateNotice', () => {

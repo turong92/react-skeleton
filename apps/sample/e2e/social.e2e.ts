@@ -7,6 +7,7 @@ import {
   dismissConsent,
   fillSignIn,
   launch,
+  gatesOf,
   registerEmailViaGate,
 } from './helpers'
 import { signOut } from './boardSteps'
@@ -136,6 +137,8 @@ describe('LINE: PKCE + nonce on the way out and back, an address-less account re
       await page.evaluate(() => window.localStorage.clear())
       await page.goto(`${baseUrl}/login`)
       await page.getByRole('button', { name: 'LINE으로 계속하기' }).click()
+      // 같은 계정이면 서버가 「주소가 있다」고 말한다 - 화면(뒤에 깔린 홈 제목)이 아니라 서버 상태로 가린다
+      pwExpect((await gatesOf(page, apiUrl)).emailRequired).toBe(false)
       await pwExpect(page.getByRole('heading', { level: 1, name: /안녕하세요/ })).toBeVisible()
       await page.goto(`${baseUrl}/account`)
       await pwExpect(

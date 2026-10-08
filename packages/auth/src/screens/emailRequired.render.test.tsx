@@ -2,7 +2,6 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import { createEmailRequiredController } from '../emailRequired'
-import { createFakeAccountApi } from '../stories/fakeAccountApi'
 import { ContactEmailSection } from './ContactEmailSection'
 import { EmailRequiredGate } from './EmailRequiredGate'
 import { EmailRequiredScreen } from './EmailRequiredScreen'
@@ -59,7 +58,13 @@ describe('EmailRequiredScreen (the full-screen "register your email" step)', () 
 })
 
 describe('EmailRequiredGate', () => {
-  const api = createFakeAccountApi({ emailRequired: true })
+  // 정적 렌더라 효과(`me` 읽기)는 돌지 않는다 - 게이트가 받는 모양만 맞춘 가짜
+  const api = {
+    me: async () => ({ emailRequired: true }) as never,
+    changeEmail: noop,
+    confirmEmailChangeCode: noop,
+    discardAccount: noop,
+  }
   const gate = (controller = createEmailRequiredController(), standAside = false) =>
     html(
       <EmailRequiredGate

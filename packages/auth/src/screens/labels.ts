@@ -427,6 +427,8 @@ export type AuthLabels = {
   // 관리자
   adminTitle: string
   adminSearch: string
+  /** 관리자 표의 「아이디로 찾기」 칸 - 정확히 일치만 찾는다(조각 검색은 없다). 로그인 아이디를 켠 서버에서만 그린다 */
+  adminSearchLoginId: string
   adminStatusFilter: string
   adminStatusAll: string
   adminColumns: Record<
@@ -866,6 +868,7 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   deletionExpiredBody: 'Time ran out. Please sign in again.',
   adminTitle: 'Accounts',
   adminSearch: 'Search by email',
+  adminSearchLoginId: 'Find by username (exact match)',
   adminStatusFilter: 'Status',
   adminStatusAll: 'All',
   adminColumns: {

@@ -1,11 +1,10 @@
 import { Alert, PageHeader, Skeleton } from '@skeleton/ui'
 import { useCallback, useState } from 'react'
-import type { AccountStatus } from '../account/types'
 import { authErrorMessage } from '../screens/errors'
 import { mergeLabels, type AuthLabels } from '../screens/labels'
 import { useResource } from '../screens/useResource'
 import { AccountStateNotice } from '../screens/AccountStateNotice'
-import { AdminAccountsTable } from './AdminAccountsTable'
+import { AdminAccountsTable, type AdminAccountsQueryState } from './AdminAccountsTable'
 import { adminBlocked } from './adminErrors'
 import type { AdminAccountsApi } from './adminApi'
 
@@ -29,15 +28,15 @@ export function AdminAccounts({
   labels: given,
 }: AdminAccountsProps) {
   const labels = mergeLabels(given)
-  const [query, setQuery] = useState<{ email: string; status: AccountStatus | '' }>({
-    email: '',
-    status: '',
-  })
+  const [query, setQuery] = useState<AdminAccountsQueryState>({ email: '', status: '' })
+  // 아이디를 켠 서버는 응답에 `loginId` 키를 싣는다. 한 번 본 뒤에는 결과가 비어도 열 · 찾기 칸을 지키지 않으면 아이디를 찾다 실패한 순간 칸이 사라진다
+  const [loginIdOn, setLoginIdOn] = useState(false)
   const [page, setPage] = useState(0)
   const load = useCallback(
     () =>
       api.list({
         email: query.email.trim(),
+        loginId: query.loginId?.trim() || undefined,
         status: query.status || undefined,
         page,
         size: pageSize,
@@ -45,6 +44,8 @@ export function AdminAccounts({
     [api, query, page, pageSize],
   )
   const list = useResource(load)
+  const sawLoginId = list.data?.values.some((a) => a.loginId !== undefined) === true
+  if (sawLoginId && !loginIdOn) setLoginIdOn(true) // 렌더 중 같은 컴포넌트의 상태를 맞추는 정해진 방법
   const after = (task: () => Promise<unknown>) => async () => {
     await task()
     list.reload()
@@ -76,6 +77,7 @@ export function AdminAccounts({
           onGrantRole={(id, role) => after(() => api.grantRole(id, role))()}
           onRevokeRole={(id, role) => after(() => api.revokeRole(id, role))()}
           formatDate={formatDate}
+          showLoginId={loginIdOn}
           labels={given}
         />
       )}

@@ -3,6 +3,8 @@ import type { AccountStatus, AdminAccount } from '../account/types'
 
 export type AdminAccountQuery = {
   email?: string
+  /** 로그인 아이디로 찾기 - **정확히 일치**만(조각 검색은 없다). 아이디를 켠 서버에서만 뜻이 있다 */
+  loginId?: string
   status?: AccountStatus
   page?: number
   size?: number

@@ -1,7 +1,7 @@
 export { AdminAccounts } from './AdminAccounts'
 export type { AdminAccountsProps } from './AdminAccounts'
 export { AdminAccountsTable } from './AdminAccountsTable'
-export type { AdminAccountsTableProps } from './AdminAccountsTable'
+export type { AdminAccountsQueryState, AdminAccountsTableProps } from './AdminAccountsTable'
 export { rowActions } from './rowActions'
 export type { AdminRowAction } from './rowActions'
 export { createAdminAccountsApi } from './adminApi'

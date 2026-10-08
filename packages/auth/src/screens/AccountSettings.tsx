@@ -2,6 +2,7 @@ import { ErrorCodes, isErrorCode } from '@skeleton/api-client'
 import { Alert, PageHeader, SectionIndex, Skeleton } from '@skeleton/ui'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { AccountApi, SocialReauth } from '../account/accountApi'
+import { DEFAULT_LOGIN_ID_RULES, type LoginIdRules } from '../account/loginIdRules'
 import { supportedTimeZones, withCurrent } from '../account/timeZones'
 import type { AccountMe, DeletionResult, PasswordPolicy } from '../account/types'
 import { reauthSubjectOf } from '../reauth/kind'
@@ -10,6 +11,7 @@ import { AccountStateNotice } from './AccountStateNotice'
 import { ContactEmailSection } from './ContactEmailSection'
 import { DeleteAccountSection } from './DeleteAccountSection'
 import { EmailSection } from './EmailSection'
+import { LoginIdSection } from './LoginIdSection'
 import { PasswordSection } from './PasswordSection'
 import { ProfileSection } from './ProfileSection'
 import { SessionsSection } from './SessionsSection'
@@ -23,6 +25,7 @@ import { useResource } from './useResource'
 
 export type AccountSectionName =
   | 'profile'
+  | 'loginId'
   | 'password'
   | 'email'
   | 'contact'
@@ -40,6 +43,10 @@ export type AccountSettingsProps = {
   /** 이 앱이 켜 둔 소셜 제공자(계정 연결 버튼) */
   socialProviders?: SocialProviderButton[]
   onLinkSocial?: (provider: string) => void
+  /** `GET /auth/methods` 의 `loginId` 길이 규칙 — 아직 아이디를 안 정한 계정이 여기서 정할 때 쓴다. 없으면 서버의 기본(4~20) */
+  loginIdRules?: LoginIdRules
+  /** 이 화면에서 아이디를 정했다(서버가 받았다) — 앱이 `loginIdRequired.chosen()` 을 불러 붙잡힌 호출을 풀고 게이트를 접는다 */
+  onLoginIdChosen?: () => void
   /** 프로필에서 고르는 언어(앱이 지원하는 것) */
   locales: Array<{ value: string; label: string }>
   /** 기본: 브라우저가 아는 시간대 */
@@ -81,6 +88,7 @@ export type AccountSettingsProps = {
 
 const ALL: AccountSectionName[] = [
   'profile',
+  'loginId',
   'password',
   'email',
   'contact',
@@ -88,6 +96,9 @@ const ALL: AccountSectionName[] = [
   'sessions',
   'delete',
 ]
+
+/** 구역의 DOM id(주소의 `#해시` · 목차 앵커) — 나머지는 이름 그대로 */
+const domId = (name: AccountSectionName): string => (name === 'loginId' ? 'login-id' : name)
 
 /**
  * 계정 설정 — `AccountApi` 하나로 프로필 · 비밀번호 · 이메일 · 로그인 수단 · 세션 · 삭제를 잇는다.
@@ -102,6 +113,8 @@ export function AccountSettings({
   onLinkSocial,
   locales,
   timeZones,
+  loginIdRules = DEFAULT_LOGIN_ID_RULES,
+  onLoginIdChosen,
   graceDays = 30,
   selfRestore = false,
   showDisplayName,
@@ -121,6 +134,7 @@ export function AccountSettings({
   const labels = mergeLabels(given)
   const on = (name: AccountSectionName) =>
     sections?.[name] !== false && (name !== 'contact' || contactOn)
+  // 아이디 줄도 같다: 서버가 `me.loginId` 키를 줄 때만 그린다(키 없음 = 꺼진 서버 · 옛 서버) - 아래 `loginIdShown`
   // 연락받을 이메일 구역은 서버가 `me.contactEmail` 키를 줄 때만 그린다(키 없음 = 서버가 기능을 껐다 · 옛 서버) - 404 를 받아야 꺼진 줄 알게 두지 않는다
   const sessionsOn = sections?.sessions !== false
   const passwordOn = sections?.password !== false
@@ -186,21 +200,25 @@ export function AccountSettings({
       }, setResumeError)
   }, [resume, api, reloadMe, reloadSessions, onResumeConsumed, onDiscarded])
 
+  // 구역으로 간다 - 스크롤하고 제목에 포커스를 두어 낭독이 도착한 자리를 알린다
+  const openSection = useCallback((id: string) => {
+    document.getElementById(id)?.scrollIntoView({ block: 'start' })
+    document.getElementById(`${id}-title`)?.focus({ preventScroll: true })
+  }, [])
+
   // 주소의 해시(`#delete` · `#email` …)가 가리키는 구역으로 간다 — 구역이 그려진 뒤(`me` 를 읽은 뒤)에, 해시가 바뀔 때도. 제목에 포커스를 두어 낭독이 도착한 자리를 알린다
   const ready = !!me.data
   useEffect(() => {
     if (!ready) return
     const go = () => {
       const id = window.location.hash.slice(1)
-      if (!(ALL as string[]).includes(id)) return
-      const section = document.getElementById(id)
-      section?.scrollIntoView({ block: 'start' })
-      document.getElementById(`${id}-title`)?.focus({ preventScroll: true })
+      if (!ALL.some((name) => domId(name) === id)) return
+      openSection(id)
     }
     go()
     window.addEventListener('hashchange', go)
     return () => window.removeEventListener('hashchange', go)
-  }, [ready])
+  }, [ready, openSection])
 
   const requestReauthCode = useCallback(() => api.requestReauthConfirmation(), [api])
   const requestDeleteCode = useCallback(() => api.requestDeleteConfirmation(), [api])
@@ -226,10 +244,15 @@ export function AccountSettings({
   if (!me.data || !subject) return <Skeleton />
   const account = me.data
   const zones = withCurrent(timeZones ?? supportedTimeZones(), account.timeZone)
-  const items = ALL.filter(on).map((id) => ({
-    id,
+  // 아직 아이디를 안 정한 계정 - 서버가 허용 목록 밖의 호출을 403 으로 막는다. 아래 `restricted` 가 이메일 필수 앱과 같은 방식으로 구역을 줄인다.
+  // (설정이 부르는 `me` · `/auth/sessions` 는 허용 목록 안이고 비밀번호 정책은 로그인 없는 호출이라 이 모드에서도 403 이 나지 않는다)
+  const loginIdPending = account.loginId === null
+  const loginIdShown = account.loginId !== undefined && (loginIdPending || on('loginId'))
+  const items = ALL.filter((name) => (name === 'loginId' ? loginIdShown : on(name))).map((id) => ({
+    id: domId(id),
     label: {
       profile: labels.sectionProfile,
+      loginId: labels.loginId,
       password: labels.sectionPassword,
       email: labels.sectionEmail,
       contact: labels.sectionContactEmail,
@@ -250,6 +273,7 @@ export function AccountSettings({
       requestReauthCode={requestReauthCode}
       resume={emailResume}
       required={account.emailRequired !== undefined}
+      registerToWrite={account.emailRequiredToWrite === true}
       onProviderReauth={
         onProviderReauth &&
         ((provider, newEmail) => onProviderReauth(provider, { kind: 'email-change', newEmail }))
@@ -287,15 +311,21 @@ export function AccountSettings({
   )
 
   // 이메일이 필수인 앱에서 아직 주소가 없다 — 서버가 이 두 가지(이메일 등록 · 계정 삭제)만 열어 둔다. 나머지 구역은 호출이 403 이라 그리지 않는다.
+  // 아이디를 아직 안 정한 계정도 같다(이메일 등록 · 삭제 + 아이디 정하기). 순서: 아이디 → 이메일 → 삭제.
   // 같은 자리(순서)에 그려서 등록이 끝나 모든 구역이 열려도 이메일 구역이 그대로 남아 「등록했어요」 안내를 이어 보인다
-  const restricted = account.emailRequired === true
+  const restricted = account.emailRequired === true || loginIdPending
+  // 비밀번호 없는 계정의 단추가 갈 구역 - 주소가 있으면 비밀번호, 없으면 이메일(그 구역을 끈 앱이면 단추가 없다)
+  const goTarget = account.email ? 'password' : 'email'
+  const canGo = goTarget === 'password' ? !restricted && on('password') : restricted || on('email')
   return (
     <div className={styles.sections}>
       <PageHeader
         title={labels.settingsTitle}
         description={restricted ? undefined : (account.email ?? undefined)}
       />
-      {restricted && <Alert tone="warning">{labels.emailRequiredSettingsNotice}</Alert>}
+      {account.emailRequired === true && (
+        <Alert tone="warning">{labels.emailRequiredSettingsNotice}</Alert>
+      )}
       {!restricted && <SectionIndex items={items} label={labels.settingsIndexLabel} />}
       {resumeError !== null && (
         <Alert tone="danger">{authErrorMessage(resumeError, labels).message}</Alert>
@@ -312,6 +342,34 @@ export function AccountSettings({
             me.reload()
             onProfileChanged?.(saved)
           }}
+        />
+      )}
+      {loginIdShown && account.loginId !== undefined && (
+        <LoginIdSection
+          loginId={account.loginId}
+          hasPassword={account.hasPassword}
+          email={subject.email}
+          provider={
+            reauthSubjectOf(account).providers[0] ??
+            account.methods.find((m) => m.method !== 'password')?.method
+          }
+          rules={loginIdRules}
+          api={api}
+          labels={given}
+          onSubmit={(loginId) => api.setLoginId(loginId)}
+          onChosen={() => {
+            me.reload()
+            onLoginIdChosen?.()
+          }}
+          onAlreadySet={me.reload}
+          onGo={
+            canGo
+              ? () => {
+                  window.history.replaceState(null, '', `#${goTarget}`)
+                  openSection(goTarget)
+                }
+              : undefined
+          }
         />
       )}
       {!restricted && on('password') && (

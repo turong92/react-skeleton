@@ -1,10 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn } from 'storybook/test'
+import { expect, fn, waitFor, within } from 'storybook/test'
 import { ApiRequestError } from '@skeleton/api-client'
 import type { AdminAccount } from '../account/types'
+import { koAuthLabels } from '../screens/labels.ko'
 import { AdminAccounts } from './AdminAccounts'
 import type { AdminAccountsApi } from './adminApi'
 import { AdminAccountsTable } from './AdminAccountsTable'
+import type { ApiPageResponse } from '@skeleton/api-client'
 
 /**
  * 운영자 계정 표(`@skeleton/auth/admin` — 선택). 검색 · 상태 필터 · 줄 메뉴(정지 · 해제 · 복구 · 역할). 백엔드는 `skeleton.account.admin.enabled=true` + ADMIN 역할일 때만 연다.
@@ -119,5 +121,110 @@ export const BlockedAdmin: StoryObj = {
   play: async ({ canvas }) => {
     await expect(await canvas.findByRole('heading', { name: 'Access blocked' })).toBeVisible()
     await expect(canvas.queryByRole('table')).toBeNull()
+  },
+}
+
+// ───────────────────────── 로그인 아이디 (서버가 켠 앱: 응답에 loginId 키가 있다) ─────────────────────────
+
+const withIds: AdminAccount[] = [
+  account({ loginId: 'ann.lee' }),
+  account({ id: 'acc_2', email: null, displayName: 'Bob', loginId: 'bob_kim' }),
+  account({ id: 'acc_3', email: 'cat@example.com', displayName: 'Cat', loginId: null }),
+]
+
+/** 표에 「아이디」 열(아직 안 정한 계정은 `-`)과 「아이디로 찾기」 칸이 생긴다 — 응답에 키가 있을 때만 */
+export const TableWithLoginIdColumn: Story = {
+  args: { accounts: withIds, query: { email: '', status: '', loginId: '' } },
+  play: async ({ canvas, args, userEvent }) => {
+    const table = within(canvas.getByRole('table', { name: 'Accounts' }))
+    await expect(table.getByRole('columnheader', { name: 'Username' })).toBeVisible()
+    await expect(table.getByText('ann.lee')).toBeVisible()
+    await expect(table.getByText('bob_kim')).toBeVisible()
+    const box = canvas.getByRole('searchbox', { name: /^Find by username/ })
+    await userEvent.type(box, 'a')
+    await expect(args.onQueryChange).toHaveBeenLastCalledWith({
+      email: '',
+      status: '',
+      loginId: 'a',
+    })
+  },
+}
+
+/** 키가 없는 서버(아이디를 안 쓴다)에서는 열도 찾기 칸도 없다 — 지금 표 그대로 */
+export const NoLoginIdColumnWhenTheServerHasItOff: Story = {
+  play: async ({ canvas }) => {
+    await expect(canvas.queryByRole('columnheader', { name: 'Username' })).toBeNull()
+    await expect(canvas.queryByRole('searchbox', { name: /Find by username/ })).toBeNull()
+    await expect(canvas.getByRole('searchbox', { name: 'Search by email' })).toBeVisible()
+  },
+}
+
+/** 한국어 */
+export const LoginIdColumnKorean: Story = {
+  args: { accounts: withIds, labels: koAuthLabels },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('columnheader', { name: '아이디' })).toBeVisible()
+    await expect(canvas.getByRole('searchbox', { name: /^아이디로 찾기/ })).toBeVisible()
+  },
+}
+
+/** 휴대폰 폭(320px) — 열이 늘어도 페이지가 가로로 밀리지 않는다(표는 자기 칸 안에서 가로로 움직인다) */
+export const LoginIdColumnFitsTheNarrowestPhone: Story = {
+  args: { accounts: withIds },
+  decorators: [
+    (Story) => (
+      <div data-testid="phone" style={{ inlineSize: 320, overflow: 'hidden' }}>
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvas }) => {
+    const phone = canvas.getByTestId('phone')
+    await expect(phone.scrollWidth).toBeLessThanOrEqual(phone.clientWidth)
+    await expect(canvas.getByRole('searchbox', { name: /^Find by username/ })).toBeVisible()
+  },
+}
+
+const idPage = (values: AdminAccount[]): ApiPageResponse<AdminAccount> => ({
+  values,
+  pagination: {
+    page: 0,
+    size: 20,
+    totalElements: values.length,
+    totalPages: 1,
+    hasNext: false,
+    hasPrevious: false,
+  },
+  meta: { timestamp: '2026-01-01T00:00:00Z' },
+})
+/** 정확히 일치만 돌려주는 가짜 서버 — 화면이 바뀌어도 같은 객체라 목록을 다시 부르는 루프가 생기지 않는다 */
+const exactLookupApi = {
+  list: async (query?: { loginId?: string }) =>
+    idPage(query?.loginId ? withIds.filter((a) => a.loginId === query.loginId) : withIds),
+} as unknown as AdminAccountsApi
+
+/** 목록을 부르는 화면: 아이디로 찾기는 **정확히 일치**만 — 조각은 찾지 않는다. 결과가 비어도 찾기 칸은 남는다 */
+export const FindByExactLoginId: StoryObj = {
+  render: () => <AdminAccounts api={exactLookupApi} assignableRoles={['ADMIN']} />,
+  play: async ({ canvas, userEvent }) => {
+    const box = await canvas.findByRole('searchbox', { name: /^Find by username/ })
+    await expect(await canvas.findByText('bob_kim')).toBeVisible()
+    await userEvent.type(box, 'bob_kim')
+    await waitFor(() => expect(canvas.queryByText('ann.lee')).toBeNull())
+    await expect(canvas.getByText('bob_kim')).toBeVisible()
+    // 조각은 찾지 않는다 - 비면 비었다고 말하고, 찾기 칸은 그대로 남아 고칠 수 있다
+    await userEvent.clear(box)
+    await userEvent.type(box, 'bob')
+    await expect(await canvas.findByText('No accounts match.')).toBeVisible()
+    await expect(canvas.getByRole('searchbox', { name: /^Find by username/ })).toHaveValue('bob')
+  },
+}
+
+/** 표만 쓸 때도 같다 - 정확히 일치하는 아이디가 없어 비었어도 찾기 칸과 입력한 값이 남는다 */
+export const EmptyLookupKeepsTheBox: Story = {
+  args: { accounts: [], showLoginId: true, query: { email: '', status: '', loginId: 'nobody' } },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText('No accounts match.')).toBeVisible()
+    await expect(canvas.getByRole('searchbox', { name: /^Find by username/ })).toHaveValue('nobody')
   },
 }

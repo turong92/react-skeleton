@@ -18,13 +18,20 @@ import { mergeLabels, type AuthLabels } from '../screens/labels'
 import { useAction } from '../screens/useAction'
 import { rowActions } from './rowActions'
 
+/** 표 위 검색 · 필터의 값. `loginId` 는 아이디를 켠 서버에서만 쓴다(비어 있으면 거르지 않는다) */
+export type AdminAccountsQueryState = {
+  email: string
+  status: AccountStatus | ''
+  loginId?: string
+}
+
 export type AdminAccountsTableProps = {
   accounts: AdminAccount[]
   pagination: PaginationMeta
   /** 운영자가 줄 수 있는 역할(예 `['ADMIN','MODERATOR']`) */
   assignableRoles: string[]
-  query: { email: string; status: AccountStatus | '' }
-  onQueryChange: (query: { email: string; status: AccountStatus | '' }) => void
+  query: AdminAccountsQueryState
+  onQueryChange: (query: AdminAccountsQueryState) => void
   onPage: (page: number) => void
   onSuspend: (id: string, reason?: string) => Promise<unknown>
   onUnsuspend: (id: string) => Promise<unknown>
@@ -32,6 +39,11 @@ export type AdminAccountsTableProps = {
   onGrantRole: (id: string, role: string) => Promise<unknown>
   onRevokeRole: (id: string, role: string) => Promise<unknown>
   formatDate?: (iso: string) => string
+  /**
+   * 「아이디」 열과 「아이디로 찾기」 칸을 그린다. 기본은 목록에 `loginId` 키가 하나라도 있는지(= 서버가 아이디를 켰는지) —
+   * 정확히 일치하는 아이디를 찾다가 결과가 비면 키를 볼 줄이 없어 칸이 사라지므로, 목록을 부르는 화면(`AdminAccounts`)이 한 번 켜지면 계속 켠다
+   */
+  showLoginId?: boolean
   labels?: Partial<AuthLabels>
 }
 
@@ -53,9 +65,11 @@ export function AdminAccountsTable({
   onGrantRole,
   onRevokeRole,
   formatDate = defaultFormat,
+  showLoginId: showLoginIdProp,
   labels: given,
 }: AdminAccountsTableProps) {
   const labels = mergeLabels(given)
+  const showLoginId = showLoginIdProp ?? accounts.some((a) => a.loginId !== undefined)
   const [suspending, setSuspending] = useState<AdminAccount | null>(null)
   const [reason, setReason] = useState('')
   const action = useAction(labels)
@@ -105,6 +119,20 @@ export function AdminAccountsTable({
             />
           )}
         </Field>
+        {showLoginId && (
+          <Field label={labels.adminSearchLoginId}>
+            {(control) => (
+              <Input
+                {...control}
+                type="search"
+                autoCapitalize="none"
+                spellCheck={false}
+                value={query.loginId ?? ''}
+                onChange={(e) => onQueryChange({ ...query, loginId: e.target.value })}
+              />
+            )}
+          </Field>
+        )}
         <Field label={labels.adminStatusFilter}>
           {(control) => (
             <Select
@@ -129,9 +157,19 @@ export function AdminAccountsTable({
         caption={labels.adminCaption}
         rows={accounts}
         rowKey={(a) => a.id}
-        empty={<EmptyState title={labels.adminEmpty} />}
+        // 쪽 제목(`AdminAccounts` 의 h1) 바로 아래라 h2 - 아이디 정확 일치는 결과가 비는 일이 흔하다
+        empty={<EmptyState title={labels.adminEmpty} headingLevel={2} />}
         columns={[
           { key: 'email', header: labels.adminColumns.email, render: (a) => a.email ?? '-' },
+          ...(showLoginId
+            ? [
+                {
+                  key: 'loginId',
+                  header: labels.loginId,
+                  render: (a: AdminAccount) => a.loginId ?? '-',
+                },
+              ]
+            : []),
           { key: 'name', header: labels.adminColumns.name, render: (a) => a.displayName ?? '-' },
           {
             key: 'status',

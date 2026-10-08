@@ -47,6 +47,8 @@ export type EmailSectionProps = {
   formatDate?: (iso: string) => string
   /** 이 앱은 계정에 이메일을 꼭 요구한다(`me.emailRequired` 키가 있다) — 지울 수 없다는 문구를 더한다 */
   required?: boolean
+  /** 이 앱은 주소를 **글을 쓸 때** 받는다(`me.emailRequiredToWrite === true`) — 「이메일을 등록하면 글을 쓸 수 있어요」 한 줄을 더한다 */
+  registerToWrite?: boolean
   labels?: Partial<AuthLabels>
 }
 
@@ -72,6 +74,7 @@ export function EmailSection({
   codeTtlSeconds = 600,
   formatDate = defaultFormat,
   required = false,
+  registerToWrite = false,
   labels: given,
 }: EmailSectionProps) {
   const labels = mergeLabels(given)
@@ -164,6 +167,7 @@ export function EmailSection({
           )}
         </div>
         <p className={styles.muted}>{labels.emailRole}</p>
+        {registerToWrite && <p>{labels.settingsEmailToWrite}</p>}
         {email && required && <p className={styles.muted}>{labels.emailCannotRemove}</p>}
         {!email && !showCode && (
           <p className={styles.muted}>

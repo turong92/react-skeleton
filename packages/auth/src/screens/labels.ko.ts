@@ -421,6 +421,7 @@ export const koAuthLabels: AuthLabels = {
   deletionExpiredBody: '시간이 지났어요. 다시 로그인해 주세요.',
   adminTitle: '계정 관리',
   adminSearch: '이메일로 찾기',
+  adminSearchLoginId: '아이디로 찾기 (정확히 일치)',
   adminStatusFilter: '상태',
   adminStatusAll: '전체',
   adminColumns: {

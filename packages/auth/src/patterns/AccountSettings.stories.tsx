@@ -1084,3 +1084,148 @@ export const RequiredEmailOpensOnlyRegisterAndDelete: Story = {
     await expect(canvas.getByRole('heading', { name: 'Contact email' })).toBeVisible()
   },
 }
+
+// ───────────────────────── 로그인 아이디 (서버가 켠 앱: me.loginId 키가 있다) ─────────────────────────
+
+/**
+ * 정한 아이디: 값 + 「바꿀 수 없어요」 — 고치는 입력도 단추도 없다. 아이디를 켜지 않은 서버(키 없음)에서는 이 줄 자체가 없다.
+ * 비밀번호가 있으니 안내도 없다.
+ */
+export const LoginIdFixed: Story = {
+  args: { fake: { loginId: { value: 'Sumin.Kim' } } },
+  play: async ({ canvas }) => {
+    const row = within(await canvas.findByRole('region', { name: 'Username' }))
+    await expect(row.getByText('sumin.kim')).toBeVisible()
+    await expect(row.getByText('Cannot be changed')).toBeVisible()
+    await expect(row.queryByRole('textbox')).toBeNull()
+    await expect(row.queryByRole('button')).toBeNull()
+    await expect(row.queryByText(/You sign in with/)).toBeNull()
+    // 나머지 구역은 그대로 열려 있다
+    await expect(canvas.getByRole('heading', { name: 'Password' })).toBeVisible()
+  },
+}
+
+/** 키가 없는 서버(꺼진 서버 · 옛 서버) — 아이디 줄도 목차 항목도 없다. 지금 화면 그대로 */
+export const NoLoginIdWhenTheServerHasItOff: Story = {
+  play: async ({ canvas }) => {
+    await canvas.findByRole('heading', { name: 'Profile' })
+    await expect(canvas.queryByRole('region', { name: 'Username' })).toBeNull()
+    await expect(canvas.queryByRole('link', { name: 'Username' })).toBeNull()
+  },
+}
+
+/** 소셜로만 들어온 계정(주소는 있다): 안내 + 테두리 단추 「비밀번호 만들기」 → 비밀번호 구역으로 가서 제목에 포커스 */
+export const LoginIdSocialOnlyWithAnAddress: Story = {
+  args: { fake: { passwordless: true, loginId: { value: 'sumin.kim' } } },
+  play: async ({ canvas, userEvent }) => {
+    const row = within(await canvas.findByRole('region', { name: 'Username' }))
+    await expect(
+      row.getByText(
+        'You sign in with Google now. Set a password to sign in with your username or email too.',
+      ),
+    ).toBeVisible()
+    await expect(row.queryByRole('button', { name: 'Register an email' })).toBeNull()
+    const button = row.getByRole('button', { name: 'Set a password' })
+    await expect(button).toHaveAttribute('data-variant', 'secondary') // 글자만 있는 단추가 아니다
+    await userEvent.click(button)
+    const title = await canvas.findByRole('heading', { name: 'Set a password' }) // 비밀번호가 없는 계정의 구역 제목
+    await waitFor(() => expect(title).toHaveFocus())
+  },
+}
+
+/** 소셜로만 들어오고 주소도 없는 계정(쓰기 때 방식): 「이메일 등록하기」 → 이메일 구역 · 그 구역은 왜 필요한지 한 줄을 말한다 */
+export const LoginIdSocialOnlyWithoutAnAddress: Story = {
+  args: {
+    fake: { emailRequiredToWrite: true, loginId: { value: 'sumin.kim' } },
+    socialProviders: [{ provider: 'kakao' }],
+  },
+  play: async ({ canvas, userEvent }) => {
+    const row = within(await canvas.findByRole('region', { name: 'Username' }))
+    await expect(row.getByText(/You sign in with Kakao now\./)).toBeVisible()
+    await expect(row.queryByRole('button', { name: 'Set a password' })).toBeNull()
+    await userEvent.click(row.getByRole('button', { name: 'Register an email' }))
+    const title = await canvas.findByRole('heading', { name: 'Account email' })
+    await waitFor(() => expect(title).toHaveFocus())
+    const email = within(canvas.getByRole('region', { name: 'Account email' }))
+    await expect(email.getByText('Register an email to start posting.')).toBeVisible()
+  },
+}
+
+/** 이메일을 쓰기 때 받지 않는 앱에는 그 한 줄이 없다 */
+export const EmailToWriteLineOnlyWhenTheServerAsksForIt: Story = {
+  args: { fake: { noAddress: true, loginId: { value: 'sumin.kim' } } },
+  play: async ({ canvas }) => {
+    const email = within(await canvas.findByRole('region', { name: 'Account email' }))
+    await expect(email.queryByText('Register an email to start posting.')).toBeNull()
+  },
+}
+
+/**
+ * 아직 안 정한 계정이 막이 걷힌 `/account` 를 열었다 — 제한 모드: 아이디 정하기 · 이메일 · 계정 삭제만.
+ * (설정이 부르는 `me` · `/auth/sessions` · 비밀번호 정책은 모두 서버의 허용 목록 안이거나 로그인 없는 호출이라 403 없이 그려진다 — 오류 줄이 없다.)
+ * 같은 칸 · 같은 확인 대화상자로 여기서 정하면 나머지 구역이 열린다.
+ */
+export const LoginIdNotChosenYetOpensOnlyChooseEmailDelete: Story = {
+  args: { fake: { loginId: {} }, onLoginIdChosen: fn() },
+  play: async ({ canvas, args, userEvent }) => {
+    const row = within(await canvas.findByRole('region', { name: 'Username' }))
+    await expect(canvas.queryByRole('alert')).toBeNull()
+    await expect(canvas.queryByRole('heading', { name: 'Profile' })).toBeNull()
+    await expect(canvas.queryByRole('heading', { name: 'Password' })).toBeNull()
+    await expect(canvas.queryByRole('heading', { name: 'Sign-in methods' })).toBeNull()
+    await expect(canvas.queryByRole('heading', { name: 'Active sessions' })).toBeNull()
+    await expect(canvas.getByRole('heading', { name: 'Account email' })).toBeVisible()
+    await expect(canvas.getByRole('heading', { name: 'Delete account' })).toBeVisible()
+    const submit = row.getByRole('button', { name: 'Use this username' })
+    await expect(submit).toHaveAttribute('data-variant', 'primary')
+    await userEvent.type(row.getByRole('textbox', { name: /^Username/ }), 'Sumin.Kim')
+    await expect(await row.findByText(/This username is available/)).toBeVisible()
+    await userEvent.click(submit)
+    const confirm = await within(document.body).findByRole('dialog', { name: 'Use sumin.kim?' })
+    await expect(within(confirm).getByText('You cannot change it afterwards.')).toBeVisible()
+    await expect(args.onLoginIdChosen).not.toHaveBeenCalled()
+    await userEvent.click(within(confirm).getByRole('button', { name: 'Confirm' }))
+    // 정했다 - 값이 바뀌고(고치는 요소 없음) 나머지 구역이 열린다
+    const fixed = within(await canvas.findByRole('region', { name: 'Username' }))
+    await expect(await fixed.findByText('sumin.kim')).toBeVisible()
+    await expect(fixed.queryByRole('textbox')).toBeNull()
+    await expect(await canvas.findByRole('heading', { name: 'Password' })).toBeVisible()
+    await expect(canvas.getByRole('heading', { name: 'Profile' })).toBeVisible()
+    await expect(args.onLoginIdChosen).toHaveBeenCalledTimes(1)
+  },
+}
+
+/** 이미 쓰는 아이디는 칸 옆 오류 - 대화상자가 닫히고 아직 정하지 않은 채 남는다 */
+export const LoginIdTakenOnTheLastStepStaysUnchosen: Story = {
+  args: { fake: { loginId: { takenOnConfirm: ['race.winner'] } } },
+  play: async ({ canvas, userEvent }) => {
+    const row = within(await canvas.findByRole('region', { name: 'Username' }))
+    await userEvent.type(row.getByRole('textbox', { name: /^Username/ }), 'race.winner')
+    await userEvent.click(row.getByRole('button', { name: 'Use this username' }))
+    const confirm = await within(document.body).findByRole('dialog', { name: 'Use race.winner?' })
+    await userEvent.click(within(confirm).getByRole('button', { name: 'Confirm' }))
+    // 칸 옆 오류와 위쪽 요약이 같은 말을 한다
+    await expect(
+      (await row.findAllByText('This username is taken or not available'))[0],
+    ).toBeVisible()
+    await expect(canvas.queryByRole('heading', { name: 'Password' })).toBeNull()
+  },
+}
+
+/** 한국어 */
+export const LoginIdKorean: Story = {
+  args: {
+    fake: { passwordless: true, loginId: { value: 'sumin.kim' } },
+    labels: koAuthLabels,
+  },
+  play: async ({ canvas }) => {
+    const row = within(await canvas.findByRole('region', { name: '아이디' }))
+    await expect(row.getByText('바꿀 수 없어요')).toBeVisible()
+    await expect(
+      row.getByText(
+        '지금은 Google(으)로 로그인해요. 비밀번호를 만들면 아이디나 이메일로도 로그인할 수 있어요.',
+      ),
+    ).toBeVisible()
+    await expect(row.getByRole('button', { name: '비밀번호 만들기' })).toBeVisible()
+  },
+}

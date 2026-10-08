@@ -4,6 +4,7 @@ import type {
   AccountMe,
   AccountSession,
   DeletionResult,
+  LoginIdAvailability,
   PasswordPolicy,
   ProfilePatch,
   SignInIdentity,
@@ -44,15 +45,27 @@ export type AccountApi = {
     /** `null` 이면 이 시도는 더 다시 보낼 수 없다 */
     resendAvailableAt?: string | null
   }>
-  /** `POST /auth/verify-email {signUpId, code, displayName?}`(409 `DISPLAY_NAME_TAKEN` 은 시도를 닫지 않는다 — 같은 코드로 다른 닉네임을 다시) → 이 시도에 입력한 비밀번호로 계정이 만들어지고 **바로 로그인**(토큰 응답). 400 `ACCOUNT.CODE_INVALID`(`data.attemptsLeft`) · 410 `ACCOUNT.CODE_EXPIRED` · 429 */
+  /** `POST /auth/verify-email {signUpId, code, displayName?}`(409 `DISPLAY_NAME_TAKEN` · `LOGIN_ID_TAKEN` 은 시도를 닫지 않는다 — 같은 코드로 다른 닉네임 · 아이디를 다시 `{displayName?, loginId?}`) → 이 시도에 입력한 비밀번호로 계정이 만들어지고 **바로 로그인**(토큰 응답). 400 `ACCOUNT.CODE_INVALID`(`data.attemptsLeft`) · 410 `ACCOUNT.CODE_EXPIRED` · 429 */
   verifySignUpCode(
     signUpId: string,
     code: string,
-    options?: { displayName?: string },
+    options?: { displayName?: string; loginId?: string },
   ): Promise<AuthTokenResponse>
   /** `POST /account/verification/resend {signUpId}` — 같은 시도에 새 코드(늘 202 — 쿨다운 · 횟수 초과는 조용히 무시, 429 는 IP 한도뿐) */
   resendSignUpCode(signUpId: string, captchaToken?: string): Promise<unknown>
   forgotPassword(email: string, captchaToken?: string): Promise<void>
+  /**
+   * 로그인 아이디(서버가 켠 앱만 - 꺼져 있으면 아래 셋은 404) 실시간 확인 - `POST /account/login-id/availability {loginId}`. 로그인 없이 부른다(가입 양식)
+   * 로그인한 계정도 부른다. 형식 오류도 200 이다(`reason: 'INVALID'` + `code`). 429 `ACCOUNT.RATE_LIMITED` 는 「확인 못 함」이지 거절이 아니다
+   */
+  checkLoginId(loginId: string): Promise<LoginIdAvailability>
+  /**
+   * `POST /account/login-id {loginId}` → `me` 와 같은 본문 - 아이디를 **한 번** 정한다(이메일이 없어도 된다). 400(필드 `loginId`) · 409 `LOGIN_ID_TAKEN` ·
+   * 409 `LOGIN_ID_ALREADY_SET` · 403 `NOT_ACTIVE` · 429. 바꾸는 API 는 없다
+   */
+  setLoginId(loginId: string): Promise<AccountMe>
+  /** `POST /account/login-id/forgot {email, captchaToken?}` → 늘 202(계정이 있든 없든 같다) - 그 주소가 계정 이메일이면 아이디를 메일로 보낸다. 429 는 IP 한도 */
+  forgotLoginId(email: string, captchaToken?: string): Promise<void>
   resetPassword(token: string, newPassword: string): Promise<void>
   passwordPolicy(): Promise<PasswordPolicy>
   /** `POST /account/email/change/confirm {code}` → 204 — 새 주소로 간 6자리 코드를 **요청한 그 세션**에서 입력한다(다른 세션은 끊긴다). 400 `CODE_INVALID`(`attemptsLeft`) · 410 `CODE_EXPIRED` · 409 `EMAIL_TAKEN` */
@@ -136,13 +149,27 @@ export function createAccountApi(
     signUp: (request) => client.value('/account/sign-up', publicPost(request)),
     verifySignUpCode: (signUpId, code, options) =>
       client.value<AuthTokenResponse>('/auth/verify-email', {
-        ...publicPost(compact({ signUpId, code, displayName: options?.displayName })),
+        ...publicPost(
+          compact({
+            signUpId,
+            code,
+            displayName: options?.displayName,
+            loginId: options?.loginId,
+          }),
+        ),
         ...(deviceName ? { headers: { 'X-Device-Name': deviceName } } : {}),
       }),
     resendSignUpCode: (signUpId, captchaToken) =>
       client.value('/account/verification/resend', publicPost(compact({ signUpId, captchaToken }))),
     forgotPassword: async (email, captchaToken) => {
       await client.value('/account/password/forgot', publicPost(compact({ email, captchaToken })))
+    },
+    checkLoginId: (loginId) =>
+      client.value('/account/login-id/availability', publicPost({ loginId })),
+    setLoginId: (loginId) =>
+      client.value('/account/login-id', { method: 'POST', json: { loginId } }),
+    forgotLoginId: async (email, captchaToken) => {
+      await client.value('/account/login-id/forgot', publicPost(compact({ email, captchaToken })))
     },
     resetPassword: (token, newPassword) =>
       client.noContent('/account/password/reset', publicPost({ token, newPassword })),

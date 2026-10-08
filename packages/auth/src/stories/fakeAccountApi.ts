@@ -1,6 +1,12 @@
 import type { AccountApi, ReauthCredential } from '../account/accountApi'
 import type { AccountMe, AccountSession, SignInIdentity } from '../account/types'
 
+import {
+  loginIdProblem,
+  loginIdServerCode,
+  normalizeLoginId,
+  type LoginIdRules,
+} from '../account/loginIdRules'
 import { FAKE_POLICY, apiError, fieldError } from '../test/apiFixtures'
 
 export { FAKE_POLICY, apiError, fieldError }
@@ -19,7 +25,19 @@ const identity = (over: Partial<SignInIdentity>): SignInIdentity => ({
   ...over,
 })
 
+/** 로그인 아이디를 **켠** 서버 — 이 객체가 있으면 `me.loginId` 키가 생기고(없으면 옛 서버처럼 키 · 세 호출 모두 없다) */
+export type FakeLoginIdOptions = Partial<LoginIdRules> & {
+  /** 이미 정한 아이디(대문자도 되고 소문자로 저장된다). 없으면 아직 안 정했다 - `me.loginId` null, 허용 목록 밖의 호출은 403 `ACCOUNT.LOGIN_ID_REQUIRED` */
+  value?: string
+  /** 이미 쓰고 있는 · 탈퇴한 · 예약된 아이디(이유는 구분하지 않는다) */
+  taken?: string[]
+  /** 가입 요청 때는 비어 있었는데 인증번호 단계에서 남이 가져간 아이디 - 그 단계가 409 `LOGIN_ID_TAKEN`(시도는 닫히지 않는다), 같은 코드로 다른 아이디를 싣고 다시 */
+  takenOnConfirm?: string[]
+}
+
 export type FakeAccountOptions = {
+  /** 로그인 아이디를 켠 서버(기본은 꺼짐 - 키 없는 서버와 같다) */
+  loginId?: FakeLoginIdOptions
   /** 비밀번호 없이 소셜 · 링크로만 가입한 계정(주소는 있다) */
   passwordless?: boolean
   /** 이메일 주소가 없는 계정(Naver 등) — 이미 연결된 제공자로 다시 동의해 본인 확인 */
@@ -147,8 +165,32 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
   }
   /** 이메일 필수 앱에서 주소 없는 계정이 허용 목록 밖을 부르면 — 서버의 인터셉터와 같다 */
   const emailGate = () => {
+    loginIdGate()
     if (me.emailRequired === true) throw apiError('ACCOUNT.EMAIL_REQUIRED', 403)
   }
+  const idOptions = options.loginId
+  const idRules: LoginIdRules = {
+    minLength: idOptions?.minLength ?? 4,
+    maxLength: idOptions?.maxLength ?? 20,
+  }
+  const takenIds = new Set((idOptions?.taken ?? []).map(normalizeLoginId))
+  const takenOnConfirm = new Set((idOptions?.takenOnConfirm ?? []).map(normalizeLoginId))
+  if (idOptions) me.loginId = idOptions.value ? normalizeLoginId(idOptions.value) : null
+  /** 아이디를 켜지 않은 서버에서는 세 호출이 없다(404) */
+  const loginIdOn = () => {
+    if (!idOptions) throw apiError('COMMON.NOT_FOUND', 404)
+  }
+  /** 서버의 인터셉터 - 아이디가 없는 계정은 허용 목록 밖이 403 `ACCOUNT.LOGIN_ID_REQUIRED`(이메일 · 약관 막보다 먼저) */
+  const loginIdGate = () => {
+    if (idOptions && me.loginId === null) throw apiError('ACCOUNT.LOGIN_ID_REQUIRED', 403)
+  }
+  /** 형식이 틀리면 필드 오류(400) - 서버의 message 는 영어다 */
+  const checkLoginIdFormat = (value: string) => {
+    const problem = loginIdProblem(value, idRules)
+    if (problem)
+      throw fieldError('loginId', loginIdServerCode(problem), 'English from the server: login id')
+  }
+  let signUpLoginId: string | undefined
   const taken = new Set((options.takenEmails ?? []).map((e) => e.toLowerCase()))
   let pendingTaken = false
   let pendingContact: string | null = null
@@ -212,16 +254,32 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
   }
   return {
     calls,
-    signUp: () =>
-      track('signUp', {
+    signUp: async (request) => {
+      calls.push('signUp')
+      if (idOptions && request.loginId !== undefined) {
+        checkLoginIdFormat(request.loginId)
+        const id = normalizeLoginId(request.loginId)
+        if (takenIds.has(id)) throw apiError('ACCOUNT.LOGIN_ID_TAKEN', 409)
+        signUpLoginId = id
+      }
+      return {
         ...(options.verificationOff
           ? { status: 'CREATED' as const }
           : { status: 'VERIFICATION_SENT' as const, signUpId: 'sid-1' }),
-      }),
-    verifySignUpCode: async (_signUpId, code) => {
+      }
+    },
+    verifySignUpCode: async (_signUpId, code, replacement) => {
       calls.push('verifySignUpCode')
       if (code !== FAKE_CODE) wrongCode()
       if (options.registrationBlocked) throw apiError('ACCOUNT.REGISTRATION_BLOCKED', 403)
+      if (idOptions) {
+        if (replacement?.loginId !== undefined) checkLoginIdFormat(replacement.loginId)
+        const id =
+          replacement?.loginId !== undefined ? normalizeLoginId(replacement.loginId) : signUpLoginId
+        // 남이 가져갔으면 409 - 시도는 닫히지 않는다(같은 코드로 다른 아이디를 다시)
+        if (id && (takenIds.has(id) || takenOnConfirm.has(id)))
+          throw apiError('ACCOUNT.LOGIN_ID_TAKEN', 409)
+      }
       return {
         accessToken: 'fake',
         tokenType: 'Bearer',
@@ -242,6 +300,36 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
       codeAttempts = 5
     },
     forgotPassword: () => track('forgotPassword', undefined),
+    checkLoginId: async (loginId) => {
+      calls.push('checkLoginId')
+      loginIdOn()
+      const normalized = normalizeLoginId(loginId)
+      const problem = loginIdProblem(loginId, idRules)
+      if (problem)
+        return {
+          normalized,
+          available: false,
+          reason: 'INVALID' as const,
+          code: loginIdServerCode(problem),
+        }
+      if (takenIds.has(normalized) || me.loginId === normalized)
+        return { normalized, available: false, reason: 'TAKEN' as const }
+      return { normalized, available: true }
+    },
+    setLoginId: async (loginId) => {
+      calls.push('setLoginId')
+      loginIdOn()
+      if (me.loginId) throw apiError('ACCOUNT.LOGIN_ID_ALREADY_SET', 409)
+      checkLoginIdFormat(loginId)
+      const id = normalizeLoginId(loginId)
+      if (takenIds.has(id) || takenOnConfirm.has(id)) throw apiError('ACCOUNT.LOGIN_ID_TAKEN', 409)
+      me.loginId = id
+      return { ...me, methods: [...methods] }
+    },
+    forgotLoginId: async () => {
+      calls.push('forgotLoginId')
+      loginIdOn()
+    },
     resetPassword: () => track('resetPassword', undefined),
     passwordPolicy: () => track('passwordPolicy', FAKE_POLICY),
     me: () => track('me', { ...me, methods: [...methods] }),

@@ -1,3 +1,4 @@
+import type { LoginIdRules } from './account/loginIdRules'
 import type { AuthApi, RefreshDelivery } from './authApi'
 import type { SignInMethodsConfig } from './screens/methods'
 import type { SocialProviderConfig } from './social'
@@ -26,10 +27,21 @@ function readAuthorize(value: unknown): SocialAuthorizeInfo | undefined {
   return { url: value.url, scopes: value.scopes as string[], params }
 }
 
+/** 길이 규칙이 쓸 만한 정수 `1 ≤ min ≤ max` 일 때만 — 아니면 키가 없는 것으로 읽는다(기능이 꺼진 쪽이 안전하다) */
+function readLoginId(value: unknown): AuthMethodsWire['loginId'] {
+  if (!isRecord(value)) return undefined
+  const { minLength, maxLength } = value
+  if (!Number.isInteger(minLength) || !Number.isInteger(maxLength)) return undefined
+  const min = minLength as number
+  const max = maxLength as number
+  return min >= 1 && min <= max ? { minLength: min, maxLength: max } : undefined
+}
+
 export function normalizeMethodsInfo(raw: unknown): AuthMethodsWire {
   const source = isRecord(raw) ? raw : {}
   const signUp = isRecord(source.signUp) ? source.signUp : {}
   const social = Array.isArray(source.social) ? source.social : []
+  const loginId = readLoginId(source.loginId)
   return {
     methods: Array.isArray(source.methods)
       ? source.methods.filter((m): m is string => typeof m === 'string')
@@ -58,6 +70,7 @@ export function normalizeMethodsInfo(raw: unknown): AuthMethodsWire {
         }
       }),
     captchaRequired: source.captchaRequired === true,
+    ...(loginId ? { loginId } : {}),
     refreshDelivery:
       source.refreshDelivery === 'body' || source.refreshDelivery === 'cookie'
         ? source.refreshDelivery
@@ -71,6 +84,8 @@ export type DiscoveredMethods = {
   signUp: boolean
   /** 소셜 리다이렉트에 필요한 공개 값 — 제공자 코드 → `createSocialLoginFlow` 설정 */
   providers: Record<string, SocialProviderConfig>
+  /** 로그인 아이디를 켠 서버일 때만 키가 있다 - 길이 규칙(`loginIdProblem` 에 그대로 넘긴다) */
+  loginId?: LoginIdRules
 }
 
 export type MethodsFromInfoOptions = {
@@ -105,6 +120,7 @@ export function methodsFromInfo(
     },
     signUp: info.signUp.password,
     providers,
+    ...(info.loginId ? { loginId: info.loginId } : {}),
   }
 }
 

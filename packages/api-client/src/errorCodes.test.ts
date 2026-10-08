@@ -110,3 +110,11 @@ describe('author-profile codes (kotlin-skeleton modules/author-profile)', () => 
     ])
   })
 })
+
+describe('login id codes (account contract FINAL-7 L12)', () => {
+  it('names the three codes the login id endpoints answer with', () => {
+    expect(ErrorCodes.ACCOUNT_LOGIN_ID_TAKEN).toBe('ACCOUNT.LOGIN_ID_TAKEN') // 409
+    expect(ErrorCodes.ACCOUNT_LOGIN_ID_REQUIRED).toBe('ACCOUNT.LOGIN_ID_REQUIRED') // 403
+    expect(ErrorCodes.ACCOUNT_LOGIN_ID_ALREADY_SET).toBe('ACCOUNT.LOGIN_ID_ALREADY_SET') // 409
+  })
+})

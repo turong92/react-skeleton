@@ -7,6 +7,8 @@ export type SignUpRequest = {
   locale?: string
   timeZone?: string
   captchaToken?: string
+  /** 로그인 아이디 — 서버가 켰을 때(`GET /auth/methods` 에 `loginId` 키)만 필수, 꺼져 있으면 서버가 읽지 않는다. 대문자도 받는다(소문자로 저장) */
+  loginId?: string
   /** 체크한 약관 · 방침 — `{종류, 판, 언어}`(백엔드 legal 모듈이 있을 때. 없으면 서버가 무시한다) */
   consents?: Array<{ type: string; version: string; locale?: string }>
 }
@@ -69,8 +71,22 @@ export type AccountMe = {
   pendingEmailExpiresAt?: string | null
   /** 이메일을 **필수**로 켠 앱에서만 키가 있다: 주소가 아직 없으면 true — 허용 목록 밖의 모든 호출이 403 `ACCOUNT.EMAIL_REQUIRED` 라 「이메일을 등록해 주세요」 화면이 앱을 덮는다. 키가 없으면 이 앱은 주소를 요구하지 않는다 */
   emailRequired?: boolean
+  /** "쓰기 때" 방식의 이메일(`required-when: WRITE`)에서만 키가 있다: 주소가 없으면 true - 읽기는 되고 변경 요청이 403 `ACCOUNT.EMAIL_REQUIRED` 다. 그 앱에서 `emailRequired` 는 늘 false */
+  emailRequiredToWrite?: boolean
+  /** 로그인 아이디(비공개 · 바꿀 수 없다) - **키가 있으면 서버가 이 기능을 켰다**, null 은 아직 안 정했다(허용 목록 밖의 호출이 403 `ACCOUNT.LOGIN_ID_REQUIRED` 라 아이디 화면이 앱을 덮는다). 키가 없으면 이 앱은 아이디를 쓰지 않는다 */
+  loginId?: string | null
   /** 확인된 연락받을 이메일 — **키가 없으면 서버가 이 기능을 껐다**(옛 서버 포함), null 은 켜져 있고 아직 등록하지 않았다는 뜻. 서비스 알림 · 공지가 간다. 로그인 · 비밀번호 찾기에는 쓰이지 않는다 */
   contactEmail?: string | null
+}
+
+/** `POST /account/login-id/availability` 의 값 - 「쓸 수 있음」은 예약이 아니다(내는 순간 서버가 다시 판정한다). `TAKEN` 은 쓰는 · 탈퇴한 · 예약된 아이디를 구분하지 않는다 */
+export type LoginIdAvailability = {
+  /** 서버가 정규화한 값(앞뒤 공백 제거 + 소문자) - 저장될 모양 */
+  normalized: string
+  available: boolean
+  reason?: 'INVALID' | 'TAKEN'
+  /** `reason: 'INVALID'` 일 때 - `Pattern` 은 맨 앞뒤 · 연속 기호 · 숫자만을 모두 포함한다 */
+  code?: 'Required' | 'Size' | 'Pattern'
 }
 
 export type ProfilePatch = { displayName?: string; locale?: string; timeZone?: string }
@@ -97,4 +113,6 @@ export type AdminAccount = {
   lastLoginAt: string | null
   suspendedReason: string | null
   purgeAfter: string | null
+  /** 로그인 아이디를 켠 앱에서만 키가 있다(null = 아직 안 정했다) */
+  loginId?: string | null
 }

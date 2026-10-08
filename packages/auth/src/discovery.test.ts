@@ -159,3 +159,40 @@ describe('redirectUriProblems (the exact-match pitfalls of provider consoles)', 
     )
   })
 })
+
+describe('login id discovery (GET /auth/methods → loginId: { minLength, maxLength }; the key switches the feature on)', () => {
+  it('reads the length rule when the key is there', () => {
+    const info = normalizeMethodsInfo({ ...wire, loginId: { minLength: 4, maxLength: 20 } })
+    expect(info.loginId).toEqual({ minLength: 4, maxLength: 20 })
+    expect(methodsFromInfo(info).loginId).toEqual({ minLength: 4, maxLength: 20 })
+  })
+  it('without the key (older or switched-off server) nothing changes: no loginId property at all', () => {
+    const info = normalizeMethodsInfo(wire)
+    expect('loginId' in info).toBe(false)
+    expect(info).toEqual({
+      methods: ['password', 'magic_link'],
+      signUp: { password: true, emailVerification: true, social: true },
+      social: wire.social,
+      captchaRequired: false,
+      refreshDelivery: 'body',
+    })
+    expect('loginId' in methodsFromInfo(info)).toBe(false)
+  })
+  it('a key that is not a usable rule counts as absent (safe side: the feature stays off)', () => {
+    for (const odd of [
+      null,
+      true,
+      'x',
+      {},
+      { minLength: 4 },
+      { minLength: '4', maxLength: '20' },
+      { minLength: 0, maxLength: 20 },
+      { minLength: 5, maxLength: 4 },
+      { minLength: 4.5, maxLength: 20 },
+    ])
+      expect(
+        'loginId' in normalizeMethodsInfo({ ...wire, loginId: odd }),
+        JSON.stringify(odd),
+      ).toBe(false)
+  })
+})

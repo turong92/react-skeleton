@@ -87,6 +87,8 @@ export type AuthMethodsWire = {
     authorize?: SocialAuthorizeInfo
   }>
   captchaRequired: boolean
+  /** **키가 있으면 서버가 로그인 아이디를 켰다**(없으면 모든 화면이 지금과 같다) - 길이 규칙이 들어 있다 */
+  loginId?: { minLength: number; maxLength: number }
   /** auth-session 이 없으면 null */
   refreshDelivery: 'body' | 'cookie' | null
 }

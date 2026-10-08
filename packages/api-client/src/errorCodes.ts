@@ -45,6 +45,12 @@ export const ErrorCodes = {
   ACCOUNT_REAUTH_REQUIRED: 'ACCOUNT.REAUTH_REQUIRED',
   /** 계정에 이메일 주소가 없다(403, `data` 없음) — 허용 목록(`/account/me` · 이메일 등록 · 삭제 · `/auth/**` · `/legal/**`) 밖의 모든 호출이 막힌다: 「이메일을 등록해 주세요」 화면 */
   ACCOUNT_EMAIL_REQUIRED: 'ACCOUNT.EMAIL_REQUIRED',
+  /** 계정에 로그인 아이디가 없다(403, `data` 없음) — 로그인 아이디를 켠 앱에서 허용 목록 밖의 모든 호출이 막힌다: 「아이디를 정해 주세요」 화면. 이메일 · 약관 막보다 먼저 온다 */
+  ACCOUNT_LOGIN_ID_REQUIRED: 'ACCOUNT.LOGIN_ID_REQUIRED',
+  /** 이미 쓰고 있거나 · 탈퇴한 · 예약된 아이디(409) — 가입 · 가입 인증(시도는 닫히지 않는다) · 아이디 정하기. 이유는 구분해 알리지 않는다 */
+  ACCOUNT_LOGIN_ID_TAKEN: 'ACCOUNT.LOGIN_ID_TAKEN',
+  /** 이 계정은 이미 아이디를 정했다(409) — 아이디는 바꿀 수 없다 */
+  ACCOUNT_LOGIN_ID_ALREADY_SET: 'ACCOUNT.LOGIN_ID_ALREADY_SET',
   ACCOUNT_CAPTCHA_FAILED: 'ACCOUNT.CAPTCHA_FAILED',
   ACCOUNT_EMAIL_TAKEN: 'ACCOUNT.EMAIL_TAKEN',
   ACCOUNT_SIGN_UP_CLOSED: 'ACCOUNT.SIGN_UP_CLOSED',

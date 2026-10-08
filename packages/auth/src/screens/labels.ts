@@ -305,6 +305,56 @@ export type AuthLabels = {
   errorDiscardNotAllowed: string
   /** 계정 설정을 이메일 등록 전에 열었다 */
   emailRequiredSettingsNotice: string
+  // 로그인 아이디(비공개 · 바꿀 수 없다) - 켠 서버에서만 쓰인다
+  loginId: string
+  /** 칸 아래 안내 - 서버가 알려 준 길이 범위 */
+  loginIdHint: (min: number, max: number) => string
+  problemLoginIdMissing: string
+  problemLoginIdSize: (min: number, max: number) => string
+  problemLoginIdChars: string
+  problemLoginIdSymbols: string
+  problemLoginIdDigitsOnly: string
+  /** 실시간 확인의 상태 줄 */
+  loginIdChecking: string
+  loginIdAvailable: string
+  /** 대문자를 넣었을 때 덧붙인다 - 저장될 모양(`sumin.kim`) */
+  loginIdSavedAs: (id: string) => string
+  errorLoginIdTaken: string
+  loginIdCheckUnknown: string
+  /** 가입 인증번호 단계에서 아이디가 겹쳤을 때, 그 자리에서 아이디만 다시 받는 칸 */
+  loginIdRetryHint: string
+  // 로그인 · 아이디 찾기
+  signInIdentifier: string
+  problemIdentifierMissing: string
+  forgotLoginIdLink: string
+  forgotLoginIdTitle: string
+  forgotLoginIdSubtitle: string
+  forgotLoginIdSubmit: string
+  forgotLoginIdSentBody: (email: string) => string
+  // 아이디 게이트 · 확인 대화상자
+  loginIdRequiredTitle: string
+  loginIdRequiredBody: string
+  loginIdRequiredSubmit: string
+  loginIdConfirmTitle: (id: string) => string
+  loginIdConfirmBody: string
+  loginIdConfirm: string
+  loginIdConfirmBack: string
+  // 설정
+  settingsLoginIdFixed: string
+  settingsLoginIdNoPassword: (provider: string) => string
+  settingsLoginIdSetPassword: string
+  settingsLoginIdAddEmail: string
+  settingsEmailToWrite: string
+  // 이메일을 받는 시점 - "쓰기 때"
+  emailRequiredWriteTitle: string
+  emailRequiredWriteBody: string
+  emailRequiredLater: string
+  emailRequiredWriteNotice: string
+  emailRequiredWriteNoticeAction: string
+  emailRequiredDeclined: string
+  emailRequiredReauthLosesDraft: (provider: string) => string
+  /** 버리기 확인 문구에 아이디가 있을 때 덧붙인다 */
+  emailRequiredDiscardConfirmLoginId: (id: string) => string
   // 연락받을 이메일
   sectionContactEmail: string
   contactEmailRole: string
@@ -692,6 +742,54 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   errorDiscardNotAllowed: 'This account cannot be discarded.',
   emailRequiredSettingsNotice:
     'Until you add an email address you can only add it here or delete your account.',
+  loginId: 'Username',
+  loginIdHint: (min, max) =>
+    `Letters, numbers, periods, hyphens and underscores, ${min}–${max} characters. Capitals are saved as lowercase. Nobody else sees it, and it cannot be changed later.`,
+  problemLoginIdMissing: 'Enter a username',
+  problemLoginIdSize: (min, max) => `Use ${min} to ${max} characters`,
+  problemLoginIdChars: 'Use only letters, numbers, periods, hyphens and underscores',
+  problemLoginIdSymbols:
+    'It cannot start or end with a symbol, and symbols cannot sit next to each other',
+  problemLoginIdDigitsOnly: 'It cannot be numbers only — add a letter',
+  loginIdChecking: 'Checking…',
+  loginIdAvailable: 'This username is available',
+  loginIdSavedAs: (id) => `It will be saved as ${id}`,
+  errorLoginIdTaken: 'This username is taken or not available',
+  loginIdCheckUnknown: "We can't check right now — it will be checked when you submit.",
+  loginIdRetryHint:
+    'Someone took this username meanwhile. Pick another one — you do not need a new code.',
+  signInIdentifier: 'Username or email',
+  problemIdentifierMissing: 'Enter your username or email',
+  forgotLoginIdLink: 'Forgot your username?',
+  forgotLoginIdTitle: 'Find your username',
+  forgotLoginIdSubtitle: 'Enter your account email and we will send your username there.',
+  forgotLoginIdSubmit: 'Send my username',
+  forgotLoginIdSentBody: (email) => `If ${email} has an account, we have sent the username there.`,
+  loginIdRequiredTitle: 'Choose your username',
+  loginIdRequiredBody:
+    'The name of your account that never changes — for signing in and for support. Nobody else sees it.',
+  loginIdRequiredSubmit: 'Use this username',
+  loginIdConfirmTitle: (id) => `Use ${id}?`,
+  loginIdConfirmBody: 'You cannot change it afterwards.',
+  loginIdConfirm: 'Confirm',
+  loginIdConfirmBack: 'Edit',
+  settingsLoginIdFixed: 'Cannot be changed',
+  settingsLoginIdNoPassword: (provider) =>
+    `You sign in with ${provider} now. Set a password to sign in with your username or email too.`,
+  settingsLoginIdSetPassword: 'Set a password',
+  settingsLoginIdAddEmail: 'Register an email',
+  settingsEmailToWrite: 'Register an email to start posting.',
+  emailRequiredWriteTitle: 'Register an email to post',
+  emailRequiredWriteBody:
+    'You can keep reading. To post, comment or react you need an email. Nobody else sees it.',
+  emailRequiredLater: 'Not now',
+  emailRequiredWriteNotice: 'Register an email to start posting',
+  emailRequiredWriteNoticeAction: 'Register email',
+  emailRequiredDeclined: 'You can post after registering an email',
+  emailRequiredReauthLosesDraft: (provider) =>
+    `Going to ${provider} discards what you were writing.`,
+  emailRequiredDiscardConfirmLoginId: (id) =>
+    `The username ${id} goes with it and can never be used again.`,
   sectionContactEmail: 'Contact email',
   contactEmailRole:
     'Optional. Announcements and service notices come here. It is not used to sign in or to find your password. Resetting your password or signing out of all devices clears it - just add it again.',

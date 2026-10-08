@@ -132,12 +132,15 @@ export { createAccountApi } from './account/accountApi'
 export type { AccountApi, CodeSent, ReauthCredential, SocialReauth } from './account/accountApi'
 export { passwordRequirements, passwordStrength, violationsOf } from './account/passwordRules'
 export type { PasswordRequirement } from './account/passwordRules'
+export { loginIdProblem, loginIdServerCode, normalizeLoginId } from './account/loginIdRules'
+export type { LoginIdProblem, LoginIdRules, LoginIdServerCode } from './account/loginIdRules'
 export { supportedTimeZones } from './account/timeZones'
 export type {
   AccountMe,
   AccountSession,
   AccountStatus,
   DeletionResult,
+  LoginIdAvailability,
   PasswordPolicy,
   PasswordViolation,
   ProfilePatch,
@@ -156,6 +159,7 @@ export {
   displayNameProblem,
 } from './screens/displayName'
 export type { DisplayNameMode } from './screens/displayName'
+export { loginIdProblemText } from './screens/loginId'
 export { resolveMethods } from './screens/methods'
 export type { SignInMethodsConfig, SocialProviderButton } from './screens/methods'
 export { authErrorMessage, displayNameRateLimited, formatWait } from './screens/errors'

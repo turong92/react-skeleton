@@ -6,6 +6,7 @@ import { useEffect } from 'react'
 import { apiClient } from '../api/client'
 import { emailRequired } from '../api/emailRequired'
 import { subscribeGateRelease } from '../api/gateRelease'
+import { loginIdRequired } from '../api/loginIdRequired'
 import { reconsent } from '../api/reconsent'
 import { refresher } from '../auth/refresher'
 import { tokenStore } from '../auth/tokenStore'
@@ -27,10 +28,10 @@ export function useLiveNotifications() {
     getAuthHeaders,
     // 액세스 토큰이 만료돼 401 이면 갱신하고 다시 잇는다 · 다른 요청이 토큰을 갱신하면 죽은 스트림을 다시 잇는다
     recoverUnauthorized: (failed) => refresher.refresh(failed),
-    // 이메일 등록 · 약관 재동의 막이 열린 동안엔 이 스트림도 403 으로 멈춘다 — 막이 걷히면(토큰은 그대로다) 다시 잇는다
+    // 아이디 정하기 · 이메일 등록 · 약관 재동의 막이 열린 동안엔 이 스트림도 403 으로 멈춘다 — 막이 걷히면(토큰은 그대로다) 다시 잇는다
     subscribeAuthChanges: (onChange) => {
       const offToken = tokenStore.subscribe(onChange)
-      const offGates = subscribeGateRelease([emailRequired, reconsent], onChange)
+      const offGates = subscribeGateRelease([loginIdRequired, emailRequired, reconsent], onChange)
       return () => {
         offToken()
         offGates()

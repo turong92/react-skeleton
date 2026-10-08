@@ -1,6 +1,9 @@
 import { PostList, useBoardConfig, usePosts } from '@skeleton/board'
 import { Button, EmptyState, PageHeader, Spinner } from '@skeleton/ui'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useEmailBeforeWrite } from '@skeleton/auth'
+import { emailRequired } from '../api/emailRequired'
+import { ensureInOrder } from '../author/ensureInOrder'
 import { useProfileGate } from '../author/useProfileGate'
 import { boardApi } from '../board/api'
 import { paramsFromSearch, searchFromParams } from '../board/boardParams'
@@ -16,9 +19,10 @@ function Posts({ code }: { code: string }) {
   const { t } = useT()
   const navigate = useNavigate()
   const gate = useProfileGate(useBoardConfig(boardApi).data)
+  const emailBeforeWrite = useEmailBeforeWrite(emailRequired)
   const write = () => {
-    // 쓸 수 있는 프로필이 없으면 먼저 만들게 한다(대화상자) — 만든 뒤 다시 누른다
-    if (gate.ensure()) navigate('/board/new')
+    // 쓰기 전 확인은 차례로 하나씩: 이메일(쓰기 때 방식의 서버에서 주소가 없으면 등록 화면) → 닉네임(쓸 수 있는 프로필이 없으면 만들게 하는 대화상자) — 끝낸 뒤 다시 누른다
+    if (ensureInOrder(emailBeforeWrite.ensure, gate.ensure)) navigate('/board/new')
   }
   const [search, setSearch] = useSearchParams()
   const params = paramsFromSearch(search)

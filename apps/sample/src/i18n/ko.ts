@@ -220,6 +220,7 @@ export default {
   'settings.contactEmail': '연락받을 이메일',
   'settings.contactEmailNone': '계정 이메일로 받아요',
   'emailRequired.done': '이메일을 등록했어요. 다른 기기는 로그아웃됐어요.',
+  'loginId.done': '아이디를 정했어요.',
   'settings.emailAdd': '이메일 추가',
   'settings.roles': '권한',
   'settings.session': '로그아웃',

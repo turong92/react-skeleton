@@ -221,6 +221,7 @@ const en: Record<keyof typeof ko, string> = {
   'settings.contactEmail': 'Contact email',
   'settings.contactEmailNone': 'Sent to your account email',
   'emailRequired.done': 'Your email address is added. Your other devices were signed out.',
+  'loginId.done': 'Your ID is set.',
   'settings.emailAdd': 'Add email',
   'settings.roles': 'Roles',
   'settings.session': 'Sign out',

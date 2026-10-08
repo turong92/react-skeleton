@@ -8,6 +8,7 @@ import type { MessageKey } from '../i18n'
 import type { SeoHandle } from '../seo/routeSeo'
 import { serverClock } from '../api/serverClock'
 import { emailRequired } from '../api/emailRequired'
+import { loginIdRequired } from '../api/loginIdRequired'
 import { accountApi, authApi, authSession } from './session'
 import {
   authKeys,
@@ -71,6 +72,8 @@ export const accountRoutes = createAuthRoutes({
   accountApi,
   // 이메일을 꼭 받는 앱 — 계정 설정에서 첫 이메일이 확인되면 앱을 덮은 「이메일을 등록해 주세요」 막(`EmailGate`)을 걷는다
   emailRequired,
+  // 아이디를 정해야 하는 앱 - 계정 설정에서 아이디를 정하면 앱을 덮은 「아이디를 정해 주세요」 막(`LoginIdGate`)을 걷는다. 길이 규칙은 발견(`GET /auth/methods`)이 알려 준다
+  loginIdRequired,
   confirmPassword: true, // 새 비밀번호를 한 번 더(모듈 기본은 꺼짐) — 가입 · 재설정 · 변경
   methods: authMethodsOverride && {
     ...authMethodsOverride,

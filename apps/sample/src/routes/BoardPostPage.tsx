@@ -1,5 +1,5 @@
 import { isErrorCode, ErrorCodes } from '@skeleton/api-client'
-import { useAuth } from '@skeleton/auth'
+import { EmailWriteNotice, useAuth } from '@skeleton/auth'
 import {
   AuthorScope,
   BoardComments,
@@ -16,7 +16,9 @@ import {
 import { Button, Dialog, EmptyState, PageHeader, Spinner } from '@skeleton/ui'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { emailRequired } from '../api/emailRequired'
 import { useAuthorPicker } from '../author/useAuthorPicker'
+import { useAuthLabels } from '../auth/useAuthLabels'
 import { useProfileGate } from '../author/useProfileGate'
 import { boardApi } from '../board/api'
 import { REACTION_ICONS, commentLabels, postDetailLabels, reactionLabels } from '../board/labels'
@@ -42,6 +44,7 @@ function PostView({
   const labelsOfReactions = reactionLabels(t)
   const { principal } = useAuth()
   const gate = useProfileGate(config)
+  const authLabels = useAuthLabels()
   const authorPicker = useAuthorPicker(code, gate)
   const remove = useRemovePost(boardApi, code)
   const moderate = useModeratePost(boardApi, code, id)
@@ -74,6 +77,8 @@ function PostView({
           />
         }
       />
+      {/* 쓰기 때 방식의 서버에서 주소가 없는 계정에게만 보이는, 막지 않는 띠 - 댓글은 그대로 쓸 수 있고 내면 이메일 등록 뒤 같은 댓글이 올라간다 */}
+      <EmailWriteNotice controller={emailRequired} labels={authLabels} />
       <BoardComments
         key={post.id} // 선택기가 있는 폼은 값을 쥐고 있다 — 글이 바뀌면 고른 값 · 오류가 남지 않게 새로 만든다
         api={boardApi}

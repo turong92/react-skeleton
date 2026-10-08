@@ -27,6 +27,7 @@ describe('routes', () => {
     expect(leaf('/sign-up')?.path).toBe('/sign-up')
     expect(leaf('/verify-email')?.path).toBe('/verify-email')
     expect(leaf('/forgot-password')?.path).toBe('/forgot-password')
+    expect(leaf('/forgot-id')?.path).toBe('/forgot-id') // 아이디 찾기 - 로그인 아이디를 켠 백엔드(발견)일 때의 화면
     expect(leaf('/reset-password')?.path).toBe('/reset-password')
     expect(leaf('/magic-link')?.path).toBe('/magic-link')
     // old mailed links (now codes) land on one friendly page instead of a 404
@@ -63,6 +64,7 @@ describe('routes', () => {
       '/confirm-reauth',
       '/confirm-delete',
       '/forgot-password',
+      '/forgot-id',
       '/magic-link',
       '/terms',
       '/privacy',
@@ -80,6 +82,7 @@ describe('routes', () => {
       '/sign-up',
       '/verify-email',
       '/forgot-password',
+      '/forgot-id',
       '/reset-password',
       '/magic-link',
       '/account',

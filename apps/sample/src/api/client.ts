@@ -3,6 +3,7 @@ import { createAppApiClient } from './createAppApiClient'
 import { refreshDelivery } from '../auth/authConfig'
 import { refresher } from '../auth/refresher'
 import { emailRequired } from './emailRequired'
+import { loginIdRequired } from './loginIdRequired'
 import { reconsent } from './reconsent'
 import { refreshStore, tokenStore } from '../auth/tokenStore'
 
@@ -12,8 +13,12 @@ export const apiClient = createAppApiClient({
   tokenStore,
   refreshStore,
   recoverUnauthorized: refresher.recover,
-  // 막힌 403 은 사용자에게 물어 푼다 → 풀리면 같은 호출을 다시 보낸다. 순서는 서버와 같다: 이메일 등록(ACCOUNT.EMAIL_REQUIRED) → 약관 동의(LEGAL.RECONSENT_REQUIRED)
-  recoverForbidden: chainForbiddenRecovery(emailRequired.recover, reconsent.recover),
+  // 막힌 403 은 사용자에게 물어 푼다 → 풀리면 같은 호출을 다시 보낸다. 순서는 서버와 같다: 아이디 정하기(ACCOUNT.LOGIN_ID_REQUIRED) → 이메일 등록(ACCOUNT.EMAIL_REQUIRED) → 약관 동의(LEGAL.RECONSENT_REQUIRED)
+  recoverForbidden: chainForbiddenRecovery(
+    loginIdRequired.recover,
+    emailRequired.recover,
+    reconsent.recover,
+  ),
   withCredentials: refreshDelivery === 'cookie',
   debug: import.meta.env.DEV,
 })

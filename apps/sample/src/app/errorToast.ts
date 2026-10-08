@@ -1,5 +1,5 @@
 import { isErrorCode, ErrorCodes } from '@skeleton/api-client'
-import { isEmailRequiredError } from '@skeleton/auth'
+import { isEmailRequiredError, isLoginIdRequiredError } from '@skeleton/auth'
 import { isAuthorProfileFormError } from '@skeleton/author-profile'
 
 /**
@@ -13,6 +13,8 @@ export function toastUnlessValidation(show: (error: unknown) => void) {
     if (isAuthorProfileFormError(error)) return
     // 주소 없는 계정의 403 — 앱을 덮은 「이메일을 등록해 주세요」 화면이 말한다(쿼리도 뮤테이션도 같다)
     if (isEmailRequiredError(error)) return
+    // 아이디 없는 계정의 403 — 「아이디를 정해 주세요」 화면이 말한다
+    if (isLoginIdRequiredError(error)) return
     show(error)
   }
 }

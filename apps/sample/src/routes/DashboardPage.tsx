@@ -1,3 +1,4 @@
+import { useEmailBeforeWrite } from '@skeleton/auth'
 import { NotificationList, useMarkRead, useNotifications } from '@skeleton/notifications'
 import { formatRelative } from '@skeleton/time'
 import {
@@ -11,6 +12,7 @@ import {
   type TableColumn,
 } from '@skeleton/ui'
 import { Link, useNavigate } from 'react-router-dom'
+import { emailRequired } from '../api/emailRequired'
 import { LoadError } from '../components/LoadError'
 import { NoteStatusBadge } from '../components/NoteStatusBadge'
 import { notificationsApi } from '../notifications/api'
@@ -51,7 +53,13 @@ export function DashboardPage() {
   const recent = useNotes({ page: 0, size: 5 })
   const unread = useNotifications(notificationsApi, { unreadOnly: true, size: 3 })
   const markRead = useMarkRead(notificationsApi)
-  const create = <Button onClick={() => navigate('/notes/new')}>{t('dashboard.create')}</Button>
+  // 쓰기 때 방식의 서버(주소 없는 계정은 읽기만)에서는 만들기 화면으로 가기 전에 이메일 등록을 먼저 묻는다 - 등록한 뒤 사용자가 다시 누른다
+  const emailBeforeWrite = useEmailBeforeWrite(emailRequired)
+  const create = (
+    <Button onClick={() => emailBeforeWrite.ensure() && navigate('/notes/new')}>
+      {t('dashboard.create')}
+    </Button>
+  )
 
   const stats = summary.data
   const noNotes = recent.data !== undefined && recent.data.pagination.totalElements === 0

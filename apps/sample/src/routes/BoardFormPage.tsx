@@ -10,9 +10,12 @@ import {
   type PostEditorValues,
 } from '@skeleton/board'
 import { EmptyState, PageHeader, Spinner } from '@skeleton/ui'
-import { useRef, useState } from 'react'
+import { EmailWriteNotice, useEmailBeforeWrite } from '@skeleton/auth'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { emailRequired } from '../api/emailRequired'
 import { useAuthorPicker } from '../author/useAuthorPicker'
+import { useAuthLabels } from '../auth/useAuthLabels'
 import { useProfileGate } from '../author/useProfileGate'
 import { boardApi } from '../board/api'
 import { postEditorLabels } from '../board/labels'
@@ -82,12 +85,20 @@ function CreatePost({ code, config }: { code: string; config: BoardConfig }) {
   const navigate = useNavigate()
   const create = useCreatePost(boardApi, code)
   const keyFor = useRef(createKeyRing(newIdempotencyKey))
+  // 주소를 입력하는 길로 곧장 들어온 사람(글쓰기 단추는 이미 이메일을 먼저 물었다)에게는 글을 쓰기 **전에** 알린다 - 다 쓴 뒤에야 막히면 제공자 왕복에서 글을 잃는다.
+  // 「나중에 하기」로 닫으면 다시 열지 않는다(글을 내면 서버의 403 이 받는다). 띠는 늘 보이고 단추가 같은 화면을 연다
+  const { needed, ensure } = useEmailBeforeWrite(emailRequired)
+  const authLabels = useAuthLabels()
+  useEffect(() => {
+    if (needed) ensure()
+  }, [needed, ensure])
   return (
     <>
       <PageHeader
         title={t('board.form.createTitle')}
         description={t('board.form.createSubtitle')}
       />
+      <EmailWriteNotice controller={emailRequired} labels={authLabels} />
       <Editor
         config={config}
         authorPicker={authorPicker}

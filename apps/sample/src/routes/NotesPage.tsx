@@ -1,3 +1,4 @@
+import { useEmailBeforeWrite } from '@skeleton/auth'
 import { formatRelative } from '@skeleton/time'
 import {
   Badge,
@@ -15,6 +16,7 @@ import {
 } from '@skeleton/ui'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { emailRequired } from '../api/emailRequired'
 import { LoadError } from '../components/LoadError'
 import { NoteStatusBadge } from '../components/NoteStatusBadge'
 import { hasFilters, queryFromSearch, searchFromQuery } from '../notes/listParams'
@@ -92,7 +94,13 @@ export function NotesPage() {
   function change(patch: Partial<NotesQuery>) {
     setSearch(searchFromQuery({ ...query, ...patch }))
   }
-  const create = <Button onClick={() => navigate('/notes/new')}>{t('notes.create')}</Button>
+  // 쓰기 때 방식의 서버(주소 없는 계정은 읽기만)에서는 만들기 화면으로 가기 전에 이메일 등록을 먼저 묻는다 - 등록한 뒤 사용자가 다시 누른다
+  const emailBeforeWrite = useEmailBeforeWrite(emailRequired)
+  const create = (
+    <Button onClick={() => emailBeforeWrite.ensure() && navigate('/notes/new')}>
+      {t('notes.create')}
+    </Button>
+  )
   const filtered = hasFilters(query)
 
   return (

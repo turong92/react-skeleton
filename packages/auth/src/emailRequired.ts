@@ -1,4 +1,5 @@
 import { ApiRequestError, ErrorCodes, type ForbiddenContext } from '@skeleton/api-client'
+import { createGateCore, type GateState } from './gateController'
 
 /** 이 오류는 「이메일을 등록해 주세요」 화면이 말한다 — 전역 오류 토스트에서 뺀다 */
 export function isEmailRequiredError(error: unknown): boolean {
@@ -9,7 +10,7 @@ export function isEmailRequiredError(error: unknown): boolean {
   )
 }
 
-export type EmailRequiredState = { status: 'idle' } | { status: 'required' }
+export type EmailRequiredState = GateState
 
 export type EmailRequiredController = {
   getState(): EmailRequiredState
@@ -35,67 +36,12 @@ export type EmailRequiredController = {
   setAccount(accountId: string | null): void
 }
 
-const IDLE: EmailRequiredState = { status: 'idle' }
-const REQUIRED: EmailRequiredState = { status: 'required' }
-
 /**
  * 이메일 등록 강제의 상태 기계 — UI 가 없다(`EmailRequiredGate` 가 이 상태를 그린다). 같은 때에 막힌 호출들은 하나의 화면을 공유한다.
  * 403 은 로그아웃도 토큰 갱신도 아니다: 등록이 끝나면 막혔던 호출을 **그대로 한 번 더** 보내 가던 자리에서 이어진다(api-client 의 `recoverForbidden`).
+ * 아이디 막(`createLoginIdRequiredController`)과 같은 상태 기계(`gateController`)를 쓴다.
  */
 export function createEmailRequiredController(): EmailRequiredController {
-  let state: EmailRequiredState = IDLE
-  let ready = false
-  let account: string | null | undefined // undefined = 알린 적 없다
-  const listeners = new Set<() => void>()
-  let waiters: Array<(value: boolean) => void> = []
-
-  const set = (next: EmailRequiredState) => {
-    if (next === state) return
-    state = next
-    for (const listener of [...listeners]) listener()
-  }
-  const release = (value: boolean) => {
-    const done = waiters
-    waiters = []
-    for (const resolve of done) resolve(value)
-  }
-
-  return {
-    getState: () => state,
-    subscribe(listener) {
-      listeners.add(listener)
-      return () => void listeners.delete(listener)
-    },
-    async recover({ error }) {
-      if (!isEmailRequiredError(error)) return false
-      if (account === null) return false // 로그아웃한 뒤에 도착한 403 — 로그인 화면 위에 막을 세우지 않는다
-      set(REQUIRED)
-      return new Promise<boolean>((resolve) => waiters.push(resolve))
-    },
-    isReady: () => ready,
-    setReady(next) {
-      if (next === ready) return
-      ready = next
-      for (const listener of [...listeners]) listener()
-    },
-    require: () => set(REQUIRED),
-    registered() {
-      set(IDLE)
-      release(true)
-    },
-    decline() {
-      set(IDLE)
-      release(false)
-    },
-    setAccount(next) {
-      if (next === account) return
-      const had = account !== undefined
-      account = next
-      // 이전 계정의 화면 · 붙잡은 호출은 새 계정의 것이 아니다(처음 알릴 때는 이미 열린 것이 있을 수 있어 그대로 둔다)
-      if (had) {
-        set(IDLE)
-        release(false)
-      }
-    },
-  }
+  const { resolve, ...core } = createGateCore(isEmailRequiredError)
+  return { ...core, registered: resolve }
 }

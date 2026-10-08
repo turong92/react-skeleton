@@ -136,6 +136,7 @@
         "packages/auth/src/patterns/DeletionPending.stories.tsx",
         "packages/auth/src/patterns/SocialEmailConflict.stories.tsx",
         "packages/auth/src/patterns/EmailRequired.stories.tsx",
+        "packages/auth/src/patterns/LoginIdRequired.stories.tsx",
         "packages/auth/src/patterns/AccountSettings.stories.tsx"
       ],
       "stories": ["packages/auth/src/RequireAuth.stories.tsx"],

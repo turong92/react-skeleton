@@ -17,6 +17,7 @@ export function DiscardPath({
   discard,
   onDiscarded,
   onProviderReauth,
+  loginId,
 }: {
   labels: AuthLabels
   /** 이 계정이 로그인에 쓰는 소셜 제공자 - 안내 문장의 이름과 재동의 단추 */
@@ -26,6 +27,8 @@ export function DiscardPath({
   onDiscarded: (provider?: string) => void
   /** 재동의 단추를 눌렀다 */
   onProviderReauth?: (provider: string) => void
+  /** 이 계정이 이미 정한 로그인 아이디 - 있으면 확인 문구가 「아이디 … 도 함께 사라지고 다시 쓸 수 없어요」를 덧붙인다. 아이디 게이트(아직 없다) · 아이디를 끈 서버는 비운다 */
+  loginId?: string | null
 }) {
   const [open, setOpen] = useState(false)
   const [reauth, setReauth] = useState(false)
@@ -82,6 +85,7 @@ export function DiscardPath({
         description={
           <>
             <p>{labels.emailRequiredDiscardConfirmBody}</p>
+            {loginId && <p>{labels.emailRequiredDiscardConfirmLoginId(loginId)}</p>}
             {action.error && <Alert tone="danger">{action.error.message}</Alert>}
           </>
         }

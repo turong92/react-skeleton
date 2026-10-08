@@ -339,6 +339,8 @@ export type AuthLabels = {
   loginIdConfirmBody: string
   loginIdConfirm: string
   loginIdConfirmBack: string
+  /** 아이디 게이트의 밑줄 링크 - 계정 설정(`/account`)으로 간다(막이 걷힌다) */
+  loginIdRequiredSettings: string
   // 설정
   settingsLoginIdFixed: string
   settingsLoginIdNoPassword: (provider: string) => string
@@ -773,6 +775,7 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   loginIdConfirmBody: 'You cannot change it afterwards.',
   loginIdConfirm: 'Confirm',
   loginIdConfirmBack: 'Edit',
+  loginIdRequiredSettings: 'Account settings',
   settingsLoginIdFixed: 'Cannot be changed',
   settingsLoginIdNoPassword: (provider) =>
     `You sign in with ${provider} now. Set a password to sign in with your username or email too.`,

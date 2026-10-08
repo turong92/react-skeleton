@@ -132,7 +132,12 @@ export { createAccountApi } from './account/accountApi'
 export type { AccountApi, CodeSent, ReauthCredential, SocialReauth } from './account/accountApi'
 export { passwordRequirements, passwordStrength, violationsOf } from './account/passwordRules'
 export type { PasswordRequirement } from './account/passwordRules'
-export { loginIdProblem, loginIdServerCode, normalizeLoginId } from './account/loginIdRules'
+export {
+  DEFAULT_LOGIN_ID_RULES,
+  loginIdProblem,
+  loginIdServerCode,
+  normalizeLoginId,
+} from './account/loginIdRules'
 export type { LoginIdProblem, LoginIdRules, LoginIdServerCode } from './account/loginIdRules'
 export { supportedTimeZones } from './account/timeZones'
 export type {
@@ -225,6 +230,12 @@ export { EmailRequiredScreen } from './screens/EmailRequiredScreen'
 export type { EmailRequiredScreenProps } from './screens/EmailRequiredScreen'
 export { EmailRequiredGate } from './screens/EmailRequiredGate'
 export type { EmailRequiredGateProps } from './screens/EmailRequiredGate'
+export { LoginIdRequiredScreen } from './screens/LoginIdRequiredScreen'
+export type { LoginIdRequiredScreenProps } from './screens/LoginIdRequiredScreen'
+export { LoginIdGate } from './screens/LoginIdGate'
+export type { LoginIdGateProps } from './screens/LoginIdGate'
+export { loginIdSubmitOutcome } from './screens/loginIdRequiredOutcome'
+export type { LoginIdSubmitOutcome } from './screens/loginIdRequiredOutcome'
 export { SignInMethodsSection } from './screens/SignInMethodsSection'
 export { SessionsSection } from './screens/SessionsSection'
 export { DeleteAccountSection } from './screens/DeleteAccountSection'
@@ -241,5 +252,7 @@ export type { AuthPageName, AuthPaths, AuthRoutesOptions } from './routes/create
 // 이메일 필수(주소 없는 계정 → 앱을 덮는 「이메일을 등록해 주세요」) · 연락받을 이메일
 export { createEmailRequiredController, isEmailRequiredError } from './emailRequired'
 export type { EmailRequiredController, EmailRequiredState } from './emailRequired'
+export { createLoginIdRequiredController, isLoginIdRequiredError } from './loginIdRequired'
+export type { LoginIdRequiredController, LoginIdRequiredState } from './loginIdRequired'
 export { discardReauthOf, discardReauthState, emailReauthOf, emailReauthState } from './emailReauth'
 export type { DiscardReauth, EmailReauth } from './emailReauth'

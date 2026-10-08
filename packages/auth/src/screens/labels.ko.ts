@@ -333,6 +333,7 @@ export const koAuthLabels: AuthLabels = {
   loginIdConfirmBody: '정한 뒤에는 바꿀 수 없어요.',
   loginIdConfirm: '정하기',
   loginIdConfirmBack: '다시 입력',
+  loginIdRequiredSettings: '계정 설정',
   settingsLoginIdFixed: '바꿀 수 없어요',
   settingsLoginIdNoPassword: (provider) =>
     `지금은 ${provider}(으)로 로그인해요. 비밀번호를 만들면 아이디나 이메일로도 로그인할 수 있어요.`,

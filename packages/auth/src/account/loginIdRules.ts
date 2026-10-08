@@ -7,6 +7,9 @@
 /** `GET /auth/methods` 의 `loginId: { minLength, maxLength }` */
 export type LoginIdRules = { minLength: number; maxLength: number }
 
+/** 서버의 기본 길이(`skeleton.account.login-id.min-length` · `max-length`) - 규칙을 받지 못했을 때(`LoginIdGate` 의 `rules` 를 앱이 안 줬을 때)의 값 */
+export const DEFAULT_LOGIN_ID_RULES: LoginIdRules = { minLength: 4, maxLength: 20 }
+
 /**
  * 문제의 종류 — 문구를 고르는 기준.
  * `missing` 없음 · `size` 길이 · `chars` 쓸 수 없는 글자(`@` · 공백 · 한글 · 전각 …) · `symbols` 맨 앞뒤 기호 또는 연달아 온 기호 · `digitsOnly` 숫자만

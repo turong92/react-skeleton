@@ -534,6 +534,23 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
     onDelete: noop,
     children: createElement('p', null, 'app'),
   }),
+  'auth#LoginIdRequiredScreen': (ctx) => ({
+    rules: { minLength: 4, maxLength: 20 },
+    api: { checkLoginId: async (id: string) => ({ normalized: id, available: true }) },
+    onSubmit: asyncNoop,
+    onChosen: noop,
+    onAlreadySet: noop,
+    onSignOut: noop,
+    labels: authLabels(ctx),
+  }),
+  'auth#LoginIdGate': (ctx) => ({
+    controller: call(ctx.mod('auth').createLoginIdRequiredController),
+    api: fakeAccountApi(),
+    accountId: null,
+    onSignOut: noop,
+    onDiscarded: noop,
+    children: createElement('p', null, 'app'),
+  }),
   'auth#SignInMethodsSection': () => ({
     identities: [],
     subject: authSubject,

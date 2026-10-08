@@ -1,9 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { createOnceRunner } from '../screens/runOnce'
-import { StrictMode } from 'react'
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
+import { StrictMode, useMemo, type ReactNode } from 'react'
+import { MemoryRouter, Route, Routes, useLocation, useRoutes } from 'react-router-dom'
 import { expect, fn } from 'storybook/test'
 import { AuthProvider } from '../AuthProvider'
+import { useAuth } from '../useAuth'
 import { createAuthSession } from '../session'
 import { createSocialLinkFlow, type SocialLinkContext } from '../socialLink'
 import { createTokenStore } from '../tokenStore'
@@ -11,7 +12,7 @@ import { consumeReturnTo, rememberReturnTo } from '../returnTo'
 import { createSocialLoginFlow } from '../social'
 import { authStorageKeys } from '../storageKeys'
 import { createFakeAccountApi } from '../stories/fakeAccountApi'
-import { DEFAULT_AUTH_PATHS } from './createAuthRoutes'
+import { createAuthRoutes, DEFAULT_AUTH_PATHS } from './createAuthRoutes'
 import { createFakeAuthApi, FAKE_ACCESS_TOKEN, type FakeAuthOptions } from '../stories/fakeAuthApi'
 import { PkceUnavailableError } from '../pkce'
 import {
@@ -147,6 +148,137 @@ export const SocialCallbackKeepsTheWantedPage: Story = {
     // 이동은 effect 한 번 · 「가려던 곳」은 한 번 읽히고 거기로 간다(렌더에서 읽고 이동하던 옛 방식은 이 스토리가 실패한다)
     await expect(await canvas.findByTestId('here')).toHaveTextContent('/notes')
     await expect(consumeReturnTo('/fallback', undefined, keys.returnTo)).toBe('/fallback') // 한 번 읽으면 지워진다
+  },
+}
+
+/*
+ * 발견(`GET /auth/methods`)으로 켜진 라우트 — 소셜 흐름은 발견이 끝난 뒤 라우트가 만든다. 앱의 레이아웃은 로그인하면 본문을 다른 껍데기(닉네임 게이트 등)로 감싸
+ * 라우트 페이지가 **새로 마운트**된다. 새로 마운트된 페이지가 흐름을 새로 만들면 새 흐름은 이미 쓰인 state 를 몰라 성공한 로그인이
+ * 「이 탭에서 시작한 로그인이 아니다」 오류로 뒤집힌다(메일 링크 로그인이 겪어 `createOnceRunner` 로 막았던 것과 같은 모양).
+ */
+function SignedInShell({ children }: { children: ReactNode }) {
+  const auth = useAuth()
+  return auth.status === 'authenticated' ? <section>{children}</section> : children
+}
+function DiscoveredRoutes({
+  start = '/auth/callback?code=c&state=st',
+  options,
+  onMagicLinkRedeem,
+}: {
+  start?: string
+  options?: FakeAuthOptions
+  onMagicLinkRedeem?: () => void
+}) {
+  const setup = useMemo(() => {
+    const fake = createFakeAuthApi(options)
+    const api = {
+      ...fake,
+      magicLinkRedeem: async (token: string) => {
+        onMagicLinkRedeem?.()
+        return fake.magicLinkRedeem(token)
+      },
+      methods: async () => ({
+        methods: ['password'],
+        signUp: { password: true, emailVerification: true, social: true },
+        social: [
+          { provider: 'google', clientId: 'c', redirectUri: `${location.origin}/auth/callback` },
+        ],
+        captchaRequired: false,
+        refreshDelivery: 'body' as const,
+      }),
+    }
+    const session = createAuthSession({ api, store: createTokenStore() })
+    const routes = [
+      ...createAuthRoutes({
+        session,
+        namespace: 'stories',
+        authApi: api,
+        accountApi: createFakeAccountApi(),
+        discovery: { social: { session, storage: window.sessionStorage } },
+      }),
+      { path: '*', element: <Here /> },
+    ]
+    return { session, routes }
+  }, [])
+  return (
+    <AuthProvider session={setup.session}>
+      <MemoryRouter initialEntries={[start]}>
+        <SignedInShell>
+          <Routed routes={setup.routes} />
+        </SignedInShell>
+      </MemoryRouter>
+    </AuthProvider>
+  )
+}
+function Routed({ routes }: { routes: Parameters<typeof useRoutes>[0] }) {
+  return useRoutes(routes)
+}
+
+/** 구글 로그인을 시작해 둔 탭 — 시작은 비동기(WebCrypto)라 스토리는 시작해 둔 state 를 저장소에 직접 놓는다 */
+function startedGoogleLogin() {
+  sessionStorage.clear()
+  sessionStorage.setItem(
+    `${keys.social}st`,
+    JSON.stringify({
+      provider: 'google',
+      redirectUri: `${location.origin}/auth/callback`,
+      purpose: 'login',
+      action: 'login',
+    }),
+  )
+}
+
+export const SocialLoginSurvivesTheCallbackPageRemountingAfterSuccess: Story = {
+  beforeEach: startedGoogleLogin,
+  render: () => (
+    <StrictMode>
+      <DiscoveredRoutes />
+    </StrictMode>
+  ),
+  play: async ({ canvas }) => {
+    // 로그인은 성공했다 — 오류 화면이 아니라 가려던 곳(기본 `/`)으로 간다
+    await expect(await canvas.findByTestId('here')).toHaveTextContent('/')
+    await expect(canvas.queryByRole('heading', { name: 'Sign-in did not finish' })).toBeNull()
+  },
+}
+
+/* 같은 껍데기 바꿈(로그인 → 본문이 다른 껍데기로 감싸짐)에서 탈퇴 대기 계정의 소셜 로그인 취소도 가려던 곳으로 간다 */
+export const SocialCancelDeletionSurvivesTheCallbackPageRemounting: Story = {
+  beforeEach: startedGoogleLogin,
+  render: () => (
+    <StrictMode>
+      <DiscoveredRoutes options={{ pendingDeletion: 'with-token' }} />
+    </StrictMode>
+  ),
+  play: async ({ canvas, userEvent }) => {
+    await expect(await canvas.findByRole('heading', { name: 'Cancel the deletion?' })).toBeVisible()
+    await userEvent.click(
+      canvas.getByRole('button', { name: 'Cancel the deletion and keep using it' }),
+    )
+    await expect(await canvas.findByTestId('here')).toHaveTextContent('/')
+    await expect(canvas.queryByRole('heading', { name: 'Sign-in did not finish' })).toBeNull()
+  },
+}
+
+/* 메일 링크 로그인도 같은 껍데기 바꿈에서 한 번만 보내고, 성공한 채 끝난다 */
+const magicLinkRedeemed = fn()
+export const MagicLinkLoginSurvivesTheLandingRemountingAfterSuccess: Story = {
+  beforeEach: () => {
+    sessionStorage.clear()
+    magicLinkRedeemed.mockClear()
+  },
+  render: () => (
+    <StrictMode>
+      <DiscoveredRoutes
+        start="/magic-link?token=tok-remount"
+        onMagicLinkRedeem={magicLinkRedeemed}
+      />
+    </StrictMode>
+  ),
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByTestId('here')).toHaveTextContent('/')
+    await expect(magicLinkRedeemed).toHaveBeenCalledTimes(1)
+    await expect(canvas.queryByRole('heading', { name: /link/i })).toBeNull()
   },
 }
 

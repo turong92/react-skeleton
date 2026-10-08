@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect } from 'react'
 import type { AccountApi } from '../account/accountApi'
 import type { AuthApi, RefreshDelivery } from '../authApi'
 import { deliveryMismatch, methodsFromInfo, redirectUriProblems } from '../discovery'
@@ -39,8 +39,83 @@ export type DiscoveredContext = {
   discovered: DiscoveredState
 }
 
-/** 경고를 한 번만 하려는 기억 — 라우트 한 벌(`createAuthRoutes`)마다 하나(모듈 전역이 아니다) */
-export type DiscoveryNotes = { warned: boolean; warnedRedirect?: boolean }
+/** 경고를 한 번만 하려는 기억 + 발견으로 만든 소셜 흐름 — 라우트 한 벌(`createAuthRoutes`)마다 하나(모듈 전역이 아니다) */
+export type DiscoveryNotes = {
+  warned: boolean
+  warnedRedirect?: boolean
+  /** 마지막으로 만든 흐름 한 벌과 그 재료 — 같은 재료면 같은 흐름을 돌려준다(`resolveDiscoveredFlows`) */
+  flows?: { deps: readonly unknown[]; value: ResolvedDiscovery }
+}
+
+type ResolvedDiscovery = {
+  found: ReturnType<typeof methodsFromInfo>
+  socialFlow: SocialLoginFlow | undefined
+  socialLinkFlow: SocialLinkFlow | undefined
+}
+
+/**
+ * 발견한 방법으로 소셜 로그인 · 연결 흐름을 만든다. 흐름은 「이 콜백의 state 를 이미 썼다」는 기억(진행 중인 로그인 하나만 서버로 나가게 하는 것)을 들고 있어서,
+ * **같은 라우트 한 벌 안에서는 재료가 같은 동안 같은 흐름**이어야 한다. 컴포넌트 안(`useMemo`)에 두면 로그인 성공으로 앱의 레이아웃이 본문을 다른 껍데기로 감싸 콜백 페이지가
+ * 다시 마운트될 때 흐름이 새로 만들어지고, 새 흐름은 이미 쓰인 state 를 몰라 성공한 로그인이 「이 탭에서 시작한 로그인이 아니다」 오류로 뒤집힌다.
+ * 그래서 라우트 한 벌이 쥔 `notes` 에 둔다(모듈 전역이 아니다).
+ */
+export function resolveDiscoveredFlows(
+  notes: DiscoveryNotes,
+  input: {
+    info: AuthMethodsWire
+    social: DiscoveryOptions['social']
+    accountApi: AccountApi
+    paths: { socialCallback: string; socialLinkCallback: string }
+    statePrefixes?: { social: string; socialLink: string }
+    origin: string
+  },
+): ResolvedDiscovery {
+  const { info, social, accountApi, paths, statePrefixes, origin } = input
+  const deps = [
+    info,
+    social,
+    accountApi,
+    paths.socialCallback,
+    paths.socialLinkCallback,
+    statePrefixes?.social,
+    statePrefixes?.socialLink,
+    origin,
+  ]
+  const cached = notes.flows
+  if (cached && cached.deps.length === deps.length && cached.deps.every((d, i) => d === deps[i]))
+    return cached.value
+  const found = methodsFromInfo(info, {
+    clientIds: social?.clientIds,
+    defaultRedirectUri: origin + paths.socialCallback,
+  })
+  const on = !!social && Object.keys(found.providers).length > 0
+  const value: ResolvedDiscovery = {
+    found,
+    socialFlow: on
+      ? createSocialLoginFlow({
+          providers: found.providers,
+          session: social.session,
+          storage: social.storage,
+          ...(statePrefixes ? { storagePrefix: statePrefixes.social } : {}),
+        })
+      : undefined,
+    socialLinkFlow: on
+      ? createSocialLinkFlow({
+          providers: Object.fromEntries(
+            Object.entries(found.providers).map(([name, config]) => [
+              name,
+              { ...config, redirectUri: origin + paths.socialLinkCallback },
+            ]),
+          ),
+          accountApi,
+          storage: social.storage,
+          ...(statePrefixes ? { storagePrefix: statePrefixes.socialLink } : {}),
+        })
+      : undefined,
+  }
+  notes.flows = { deps, value }
+  return value
+}
 
 export function warnDeliveryOnce(
   info: AuthMethodsWire,
@@ -96,40 +171,16 @@ export function useDiscoveredContext({
     warnRedirectOnce(info, window.location.origin + paths.socialCallback, notes)
   }, [info, paths.socialCallback, notes])
 
-  const social = discovery?.social
-  const resolved = useMemo(() => {
-    if (!info) return undefined
-    const origin = typeof window === 'undefined' ? '' : window.location.origin
-    const found = methodsFromInfo(info, {
-      clientIds: social?.clientIds,
-      defaultRedirectUri: origin + paths.socialCallback,
-    })
-    const on = !!social && Object.keys(found.providers).length > 0
-    return {
-      found,
-      socialFlow: on
-        ? createSocialLoginFlow({
-            providers: found.providers,
-            session: social.session,
-            storage: social.storage,
-            ...(statePrefixes ? { storagePrefix: statePrefixes.social } : {}),
-          })
-        : undefined,
-      socialLinkFlow: on
-        ? createSocialLinkFlow({
-            providers: Object.fromEntries(
-              Object.entries(found.providers).map(([name, config]) => [
-                name,
-                { ...config, redirectUri: origin + paths.socialLinkCallback },
-              ]),
-            ),
-            accountApi,
-            storage: social.storage,
-            ...(statePrefixes ? { storagePrefix: statePrefixes.socialLink } : {}),
-          })
-        : undefined,
-    }
-  }, [info, social, accountApi, paths.socialCallback, paths.socialLinkCallback, statePrefixes])
+  const resolved = info
+    ? resolveDiscoveredFlows(notes, {
+        info,
+        social: discovery?.social,
+        accountApi,
+        paths,
+        statePrefixes,
+        origin: typeof window === 'undefined' ? '' : window.location.origin,
+      })
+    : undefined
 
   if (!discovery || !state) return undefined
   const retry = state.status === 'failed' ? state.retry : () => undefined

@@ -1,6 +1,6 @@
 import { ErrorCodes, isErrorCode } from '@skeleton/api-client'
 import { Alert, Button, Spinner } from '@skeleton/ui'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { deletionPendingOf } from '../pendingDeletion'
 import { SocialLoginCallbackError } from '../social'
 import type { SocialCallbackState } from '../useSocialLoginCallback'
@@ -8,6 +8,7 @@ import { AuthLayout } from './AuthLayout'
 import { DeletionPendingScreen } from './DeletionPendingScreen'
 import styles from './auth.module.css'
 import { authErrorMessage } from './errors'
+import { linkIntentState } from '../linkIntent'
 import { mergeLabels, type AuthLabels } from './labels'
 
 export type SocialCallbackScreenProps = {
@@ -20,6 +21,15 @@ export type SocialCallbackScreenProps = {
   onCancelDeletion?: (restoreToken: string) => Promise<unknown>
   /** 삭제 예정일 표기 */
   formatDate?: (iso: string) => string
+  /**
+   * 있으면 「같은 이메일의 계정이 이미 있다」(409)를 막다른 오류가 아니라 **안내 화면**으로 그린다 — 「로그인하러 가기」 · 「처음으로」(이 주소).
+   * 소셜 로그인 콜백만 준다(계정 연결 콜백의 충돌은 뜻이 다르다)
+   */
+  homeTo?: string
+  /** 안내 화면의 「로그인하러 가기」로 로그인에 성공하면 가는 곳 — 설정의 로그인 수단 구역(`{ pathname: '/account', hash: '#methods' }`). 어느 제공자를 연결하려 했는지는 router state 로만 따라간다 */
+  linkTo?: { pathname: string; hash?: string }
+  /** 거절된 로그인의 제공자 코드(`providerOfFailure(error)`) — 안내 문장이 그 이름을 말한다 */
+  provider?: string
   labels?: Partial<AuthLabels>
 }
 
@@ -36,9 +46,13 @@ export function SocialCallbackScreen({
   onRetry,
   onCancelDeletion,
   formatDate,
+  homeTo,
+  linkTo,
+  provider,
   labels: given,
 }: SocialCallbackScreenProps) {
   const labels = mergeLabels(given)
+  const navigate = useNavigate()
   const pendingDeletion = state.status === 'error' ? deletionPendingOf(state.error) : null
   if (pendingDeletion)
     return (
@@ -56,13 +70,40 @@ export function SocialCallbackScreen({
     // 사용자가 제공자 화면에서 취소했다 — 실패가 아니다
     const cancelled =
       callbackError?.reason === 'provider_error' && callbackError.providerError === 'access_denied'
+    if (conflict && homeTo) {
+      const name = provider
+        ? (labels.providerNames[provider] ?? provider)
+        : labels.callbackConflictUnknownProvider
+      return (
+        <AuthLayout focusTitle title={labels.callbackConflictTitle}>
+          <div className={styles.stack}>
+            <p>{labels.callbackConflictBody(name)}</p>
+            <div className={styles.row}>
+              <Button
+                onClick={() =>
+                  navigate(
+                    signInTo,
+                    linkTo ? { state: linkIntentState(provider, linkTo) } : undefined,
+                  )
+                }
+              >
+                {labels.callbackConflictSignIn}
+              </Button>
+              <Button variant="secondary" onClick={() => navigate(homeTo)}>
+                {labels.callbackConflictHome}
+              </Button>
+            </div>
+          </div>
+        </AuthLayout>
+      )
+    }
     const title = conflict
       ? labels.callbackConflictTitle
       : cancelled
         ? labels.callbackCancelledTitle
         : labels.callbackFailedTitle
     const body = conflict
-      ? labels.callbackConflictBody
+      ? labels.errorSocialConflict
       : cancelled
         ? labels.callbackCancelledBody
         : callbackError?.reason === 'state_mismatch'

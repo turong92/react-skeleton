@@ -145,7 +145,7 @@ describe('social callback', () => {
     const out = html(
       <SocialCallbackScreen state={{ status: 'error', error: conflict }} signInTo="/login" />,
     )
-    expect(out).toContain('You already have an account')
+    expect(out).toContain('An account with this email already exists')
     expect(out).toContain('href="/login"')
   })
 })

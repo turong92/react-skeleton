@@ -219,7 +219,14 @@ export type AuthLabels = {
   callbackFailedTitle: string
   callbackFailedBody: string
   callbackConflictTitle: string
-  callbackConflictBody: string
+  /** 같은 이메일의 계정이 이미 있다(`409 ACCOUNT.SOCIAL_EMAIL_CONFLICT`) — 제공자 이름 뒤에 조사를 붙이지 않는 문장 구조로 쓴다 */
+  callbackConflictBody: (providerName: string) => string
+  callbackConflictSignIn: string
+  callbackConflictHome: string
+  /** 제공자를 알 수 없을 때 `callbackConflictBody` 의 이름 자리에 */
+  callbackConflictUnknownProvider: string
+  /** 로그인 수단 구역의 이어 주기 줄 — 그 제공자의 「연결」 단추가 바로 아래 강조된다 */
+  methodLinkContinue: (providerName: string) => string
   callbackCancelledTitle: string
   callbackCancelledBody: string
   /** state 가 이 탭에 없다 — 다른 탭 · 브라우저가 시작했거나 이미 쓰였거나 오래됐다 */
@@ -545,9 +552,13 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   callbackChecking: 'Finishing sign-in',
   callbackFailedTitle: 'Sign-in did not finish',
   callbackFailedBody: 'The provider did not confirm the sign-in. Try again.',
-  callbackConflictTitle: 'You already have an account',
-  callbackConflictBody:
-    'That email is already registered with another sign-in method. Sign in with it, then link this provider in your account settings.',
+  callbackConflictTitle: 'An account with this email already exists',
+  callbackConflictBody: (name) =>
+    `Sign in the way you signed up (email and password, an email link, or another social account), then press "Link ${name}" under "Sign-in methods" in your account settings. After that you can sign in with ${name} too.`,
+  callbackConflictSignIn: 'Go to sign in',
+  callbackConflictHome: 'Back to start',
+  callbackConflictUnknownProvider: 'this social account',
+  methodLinkContinue: (name) => `Continue linking ${name}`,
   callbackCancelledTitle: 'Sign-in cancelled',
   callbackCancelledBody:
     'You cancelled at the provider, so nothing changed. Start again whenever you like.',

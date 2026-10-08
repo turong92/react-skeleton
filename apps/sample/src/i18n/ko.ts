@@ -216,6 +216,8 @@ export default {
   'settings.themes.dark': '다크',
   'settings.account': '계정',
   'settings.email': '이메일',
+  'settings.emailNone': '이메일 없음',
+  'settings.emailAdd': '이메일 추가',
   'settings.roles': '권한',
   'settings.session': '로그아웃',
   'settings.manageAccount': '계정 관리',

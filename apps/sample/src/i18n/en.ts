@@ -217,6 +217,8 @@ const en: Record<keyof typeof ko, string> = {
   'settings.themes.dark': 'Dark',
   'settings.account': 'Account',
   'settings.email': 'Email',
+  'settings.emailNone': 'No email',
+  'settings.emailAdd': 'Add email',
   'settings.roles': 'Roles',
   'settings.session': 'Sign out',
   'settings.manageAccount': 'Manage account',

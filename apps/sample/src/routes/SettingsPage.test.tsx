@@ -76,6 +76,28 @@ describe('SettingsPage — account card', () => {
   })
 })
 
+describe('SettingsPage — an account without an email address (Google with a non-Gmail address, LINE, X)', () => {
+  it('says "no email" instead of a bare dash and offers a real button that adds one', () => {
+    const html = render(me({ email: null, emailVerified: false }))
+    expect(html).toContain('이메일 없음')
+    expect(html).not.toContain('null')
+    expect(html).toMatch(/<button[^>]*>[^<]*이메일 추가/)
+  })
+
+  it('an account with an address shows it and no add button', () => {
+    const html = render(me({}))
+    expect(html).toContain('sumin@example.com')
+    expect(html).not.toContain('이메일 추가')
+  })
+
+  it('English: "No email" and "Add email"', async () => {
+    await i18n.setLocale('en', { remember: false })
+    const html = render(me({ email: null }))
+    expect(html).toContain('No email')
+    expect(html).toMatch(/<button[^>]*>[^<]*Add email/)
+  })
+})
+
 describe('SettingsPage — nicknames section', () => {
   it("has one section for the nicknames used in posts and comments, in the user's word", () => {
     const html = render(me({ displayName: '수민' }))

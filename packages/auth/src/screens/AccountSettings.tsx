@@ -56,6 +56,8 @@ export type AccountSettingsProps = {
   supportHref?: string
   /** 방금 연결한 소셜 제공자(연결 콜백이 돌아온 직후) — 서버가 계정 주소로 알림 메일을 보냈다는 안내를 보인다 */
   linkedProvider?: string
+  /** 「같은 이메일의 계정이 있다」 안내에서 로그인하고 온 사용자 — 로그인 수단 구역이 그 제공자의 「연결」을 이어서 하라고 강조한다 */
+  linkIntent?: { provider: string }
   /**
    * 주소가 없는 계정의 다시 인증 — 이 제공자의 동의 화면으로 보낸다(앱이 `socialLinkFlow.start(provider, { accountId, action })` 로 state 에 하려던 작업과 계정을 묶는다).
    * 없으면 그 계정은 이메일 변경 · 연결 해제 · 삭제를 못 한다(서버가 `403 ACCOUNT.REAUTH_REQUIRED`)
@@ -90,6 +92,7 @@ export function AccountSettings({
   formatDate,
   supportHref,
   linkedProvider,
+  linkIntent,
   onProviderReauth,
   resume,
   onResumeConsumed,
@@ -258,6 +261,7 @@ export function AccountSettings({
             ((provider, identityId) => onProviderReauth(provider, { kind: 'unlink', identityId }))
           }
           onLink={onLinkSocial}
+          linkIntent={linkIntent}
           notice={
             linkedProvider
               ? labels.methodLinkedNotice(labelOfMethod(linkedProvider, labels))

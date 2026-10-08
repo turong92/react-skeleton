@@ -1,5 +1,5 @@
 import { Alert, Badge, Button, ConfirmDialog, SectionCard } from '@skeleton/ui'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ReauthCredential } from '../account/accountApi'
 import type { SignInIdentity } from '../account/types'
 import { isReauthFailure, reauthKindOf, type ReauthSubject } from '../reauth/kind'
@@ -27,6 +27,11 @@ export type SignInMethodsSectionProps = {
   requestReauthCode: () => Promise<unknown>
   /** 주소가 없는 계정: 이 제공자의 동의를 다시 거친 뒤 이어서 뗀다(하려던 작업은 부모가 state 에 묶는다) */
   onProviderReauth?: (provider: string, identityId: string) => void
+  /**
+   * 소셜 로그인이 「같은 이메일의 계정이 있다」(409)로 막혀 로그인하고 온 사용자 — 「{제공자} 연결을 이어서 하세요」 한 줄과 그 제공자의 「연결」 단추를 강조하고(화면에 들어오면 포커스) 보인다.
+   * 이미 연결됐거나 이 앱이 안 켠 제공자면 아무것도 더하지 않는다
+   */
+  linkIntent?: { provider: string }
   formatDate?: (iso: string) => string
   labels?: Partial<AuthLabels>
 }
@@ -43,6 +48,7 @@ export function SignInMethodsSection({
   requestReauthCode,
   onProviderReauth,
   notice,
+  linkIntent,
   formatDate = defaultFormat,
   labels: given,
 }: SignInMethodsSectionProps) {
@@ -53,6 +59,19 @@ export function SignInMethodsSection({
   const action = useAction(labels)
   const kind = reauthKindOf(subject)
   const linkable = socialProviders.filter((p) => !identities.some((i) => i.method === p.provider))
+
+  const resuming =
+    linkIntent && onLink && linkable.some((p) => p.provider === linkIntent.provider)
+      ? linkIntent.provider
+      : undefined
+  const section = useRef<HTMLDivElement | null>(null)
+  // 이어서 할 단추로 데려온다 — 구역이 화면에 들어오고 그 단추에 포커스가 있다(한 번만)
+  useEffect(() => {
+    if (!resuming) return
+    const button = section.current?.querySelector<HTMLElement>('[data-link-intent]')
+    button?.scrollIntoView?.({ block: 'center' })
+    button?.focus({ preventScroll: true })
+  }, [resuming])
 
   const close = () => {
     setTarget(null)
@@ -79,10 +98,13 @@ export function SignInMethodsSection({
 
   return (
     <SectionCard id="methods" title={labels.sectionMethods} description={labels.methodsDescription}>
-      <div className={styles.stack}>
+      <div className={styles.stack} ref={section}>
         {action.error && !target && <Alert tone="danger">{action.error.message}</Alert>}
         {message && <Alert tone="success">{message}</Alert>}
         {notice && <Alert tone="info">{notice}</Alert>}
+        {resuming && (
+          <Alert tone="info">{labels.methodLinkContinue(labelOfMethod(resuming, labels))}</Alert>
+        )}
         <ul className={styles.list}>
           {identities.map((identity) => {
             const removable = canUnlink(identity, identities)
@@ -119,6 +141,7 @@ export function SignInMethodsSection({
             providers={linkable}
             labels={labels}
             onSelect={onLink}
+            highlight={resuming}
             textOf={(_, name) => labels.methodLink(name)}
           />
         )}

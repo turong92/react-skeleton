@@ -4,6 +4,7 @@ import {
   buildAuthorizeUrl,
   createSocialLoginFlow,
   parseSocialCallback,
+  providerOfFailure,
   SocialLoginCallbackError,
   type SocialProviderConfig,
 } from './social'
@@ -135,6 +136,18 @@ describe('createSocialLoginFlow', () => {
     expect(result).toEqual({ provider: 'google', token, action: 'login' })
     expect(socialLogin).toHaveBeenCalledWith('google', 'the-code', 'https://app.test/auth/callback')
     expect(storage.data.size).toBe(0)
+  })
+
+  it('a rejected login remembers which provider it was for (the conflict screen names it) without changing the error', async () => {
+    const { flow, socialLogin } = flowWith()
+    const rejection = new Error('409')
+    socialLogin.mockRejectedValueOnce(rejection)
+    const { state } = await flow.start('kakao')
+    const caught = await flow.complete(`?code=c&state=${state}`).catch((error: unknown) => error)
+    expect(caught).toBe(rejection)
+    expect(providerOfFailure(caught)).toBe('kakao')
+    expect(providerOfFailure(new Error('other'))).toBeUndefined()
+    expect(providerOfFailure('not an object')).toBeUndefined()
   })
 
   it('completing the same callback twice (React StrictMode) logs in once', async () => {

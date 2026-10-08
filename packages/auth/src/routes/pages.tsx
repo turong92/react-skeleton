@@ -4,6 +4,7 @@ import { Alert, Button } from '@skeleton/ui'
 import { AuthLayout } from '../screens/AuthLayout'
 import type { AccountApi } from '../account/accountApi'
 import type { AuthApi } from '../authApi'
+import { linkIntentOf } from '../linkIntent'
 import { postSignInTarget, rememberReturnTo, consumeReturnTo } from '../returnTo'
 import { AccountSettings, type AccountSettingsProps } from '../screens/AccountSettings'
 import { ForgotPasswordScreen } from '../screens/ForgotPasswordScreen'
@@ -23,7 +24,7 @@ import { readLinkToken } from '../screens/linkToken'
 import { mergeLabels, type AuthLabels } from '../screens/labels'
 import { resolveMethods, type SignInMethodsConfig } from '../screens/methods'
 import { useResource } from '../screens/useResource'
-import type { SocialLoginFlow } from '../social'
+import { providerOfFailure, type SocialLoginFlow } from '../social'
 import type { SocialProof } from '../types'
 import type { ProviderAction, SocialLinkFlow } from '../socialLink'
 import { useAuth } from '../useAuth'
@@ -133,7 +134,12 @@ export function SignInPage({
   const auth = useAuth()
   const navigate = useNavigate()
   const target = useTarget(ctx.afterSignIn)
-  if (auth.status === 'authenticated') return <Navigate to={target} replace />
+  const location = useLocation()
+  // 「같은 이메일 계정이 있다」 안내에서 온 사람의 연결 의도 — 로그인에 성공하면 목적지(설정의 로그인 수단)까지 router state 로만 따라간다
+  const carried = linkIntentOf(location.state)
+  const arrival = carried ? { linkProvider: carried.provider } : undefined
+  if (auth.status === 'authenticated')
+    return <Navigate to={target} replace {...(arrival ? { state: arrival } : {})} />
   if (ctx.discovered?.status === 'loading') return <DiscoveryLoading labels={ctx.labels} />
   const failed = ctx.discovered?.status === 'failed'
   const labels = mergeLabels(ctx.labels)
@@ -153,14 +159,14 @@ export function SignInPage({
       forgotPasswordTo={ctx.paths.forgotPassword}
       onPasswordSignIn={async (credentials) => {
         await auth.login(credentials)
-        navigate(target, { replace: true })
+        navigate(target, { replace: true, ...(arrival ? { state: arrival } : {}) })
       }}
       onMagicLinkRequest={(email) => ctx.authApi.magicLinkRequest(email)}
       formatDate={ctx.formatDate}
       onCancelDeletion={async (restoreToken) => {
         // 일반 로그인과 같은 처리 — 세션을 저장하고 가려던 곳으로(약관 재동의 등은 그 뒤 첫 호출의 가드가 이어 받는다)
         await auth.cancelDeletion(restoreToken)
-        navigate(target, { replace: true })
+        navigate(target, { replace: true, ...(arrival ? { state: arrival } : {}) })
       }}
       onSocialSignIn={async (provider) => {
         if (!ctx.socialFlow) return
@@ -331,6 +337,9 @@ function SocialCallbackInner({ flow, ctx }: { flow: SocialLoginFlow; ctx: PageCo
       state={state}
       labels={ctx.labels}
       signInTo={ctx.paths.signIn}
+      homeTo="/"
+      linkTo={{ pathname: ctx.paths.account, hash: '#methods' }}
+      provider={state.status === 'error' ? providerOfFailure(state.error) : undefined}
       formatDate={ctx.formatDate}
       onCancelDeletion={async (restoreToken) => {
         // 탈퇴 대기 계정의 소셜 로그인 — 취소하면 일반 로그인 성공과 같은 이동(가려던 곳을 읽고 지운다)
@@ -560,6 +569,7 @@ export type SettingsExtras = Partial<
 
 type AccountRouteState = {
   linked?: string
+  linkProvider?: string
   resume?: AccountSettingsProps['resume']
 } | null
 
@@ -665,6 +675,7 @@ export function AccountPage({
         }
         onDeleted={() => void auth.logout()}
         linkedProvider={state?.linked}
+        linkIntent={linkIntentOf(state)}
         {...settings}
       />
       {after}

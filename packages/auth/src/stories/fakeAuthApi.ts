@@ -56,6 +56,8 @@ export type FakeAuthOptions = {
   pendingDeletion?: 'with-token' | 'no-token'
   /** 취소하려는 사이 토큰이 만료됐다 — `delete/cancel` 이 410 `ACCOUNT.TOKEN_INVALID` */
   cancelExpired?: boolean
+  /** 소셜 로그인이 「같은 이메일로 메일 가입한 계정이 있다」로 거절된다 — `409 ACCOUNT.SOCIAL_EMAIL_CONFLICT`(본문 `data` 없음: 어떤 방법으로 가입했는지는 알려 주지 않는다) */
+  socialEmailConflict?: boolean
 }
 
 const apiFailure = (code: string, status: number, data?: unknown) =>
@@ -70,6 +72,7 @@ const apiFailure = (code: string, status: number, data?: unknown) =>
 export function createFakeAuthApi({
   pendingDeletion,
   cancelExpired,
+  socialEmailConflict,
 }: FakeAuthOptions = {}): AuthApi {
   /** 맞는 증거로 들어왔다 — 유예 중이면 세션 대신 403 */
   const admit = (): AuthTokenResponse => {
@@ -94,7 +97,10 @@ export function createFakeAuthApi({
         throw apiFailure('ACCOUNT.TOKEN_INVALID', 410)
       return token()
     },
-    socialLogin: async () => admit(),
+    socialLogin: async () => {
+      if (socialEmailConflict) throw apiFailure('ACCOUNT.SOCIAL_EMAIL_CONFLICT', 409)
+      return admit()
+    },
     me: async () => principal,
     refresh: async () => token(),
     logout: async () => undefined,

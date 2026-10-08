@@ -257,6 +257,7 @@ export const ResetLinkInvalid: Story = {
   },
 }
 
+/** 안내 화면(`homeTo` 를 줄 때)이 아닌 옛 모양 — 경고 한 줄 + 로그인으로 돌아가기. 안내 화면은 `Patterns/Auth/Social email conflict` */
 export const SocialCallbackConflict: Story = {
   render: () => (
     <SocialCallbackScreen
@@ -266,7 +267,7 @@ export const SocialCallbackConflict: Story = {
   ),
   play: async ({ canvas }) => {
     await expect(
-      await canvas.findByRole('heading', { name: 'You already have an account' }),
+      await canvas.findByRole('heading', { name: 'An account with this email already exists' }),
     ).toBeVisible()
     await expect(canvas.getByRole('link', { name: 'Back to sign in' })).toBeVisible()
   },

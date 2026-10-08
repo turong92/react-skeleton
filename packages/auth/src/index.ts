@@ -41,6 +41,7 @@ export {
   buildAuthorizeUrl,
   createSocialLoginFlow,
   parseSocialCallback,
+  providerOfFailure,
   SOCIAL_AUTHORIZE_PRESETS,
   SocialLoginCallbackError,
 } from './social'
@@ -102,6 +103,8 @@ export {
   rememberReturnTo,
   safeReturnPath,
 } from './returnTo'
+export { linkIntentOf, linkIntentState } from './linkIntent'
+export type { LinkIntent } from './linkIntent'
 
 // 로그인 방법 발견(`GET /auth/methods`)
 export {

@@ -15,6 +15,7 @@ import { DEFAULT_AUTH_PATHS } from './createAuthRoutes'
 import { createFakeAuthApi, FAKE_ACCESS_TOKEN, type FakeAuthOptions } from '../stories/fakeAuthApi'
 import { PkceUnavailableError } from '../pkce'
 import {
+  AccountPage,
   MagicLinkPage,
   ResetPage,
   SignInPage,
@@ -539,5 +540,100 @@ export const SocialCallbackOfAPendingDeletionCancelsAndKeepsTheWantedPage: Story
     )
     await expect(await canvas.findByTestId('here')).toHaveTextContent('/notes')
     await expect(canvas.getByTestId('token')).toHaveTextContent(FAKE_ACCESS_TOKEN)
+  },
+}
+
+/* 같은 이메일로 메일 가입한 사람이 Google 로 처음 로그인하면 409 — 안내 화면에서 로그인하고 오면 로그인 수단 구역이 그 연결을 이어서 하라고 한다 */
+export const SocialEmailConflictGuidesToTheLinkInTheSettings: Story = {
+  beforeEach: () => sessionStorage.clear(),
+  render: () => {
+    const storage = memoryStorage()
+    const api = createFakeAuthApi({ socialEmailConflict: true })
+    const session = createAuthSession({ api, store: createTokenStore() })
+    const flow = createSocialLoginFlow({
+      providers: { google: { clientId: 'c', redirectUri: 'https://app.test/auth/callback' } },
+      session,
+      storage,
+      createState: () => 'st',
+    })
+    storage.setItem(
+      'skeleton.social.st',
+      JSON.stringify({
+        provider: 'google',
+        redirectUri: 'https://app.test/auth/callback',
+        purpose: 'login',
+        action: 'login',
+      }),
+    )
+    const ctx = context({
+      authApi: api,
+      // 메일(비밀번호)로만 가입한 계정 — Google 은 아직 안 붙어 있다
+      accountApi: createFakeAccountApi({ onlyMethod: true }),
+      socialFlow: flow,
+      socialLinkFlow: createSocialLinkFlow({
+        providers: { google: { clientId: 'c', redirectUri: 'https://app.test/account/link' } },
+        accountApi: createFakeAccountApi({ onlyMethod: true }),
+        storage: memoryStorage(),
+      }),
+      methods: { password: true, social: [{ provider: 'google' }] },
+      paths: { ...DEFAULT_AUTH_PATHS, account: '/account' },
+    })
+    return (
+      <AuthProvider session={session}>
+        <MemoryRouter initialEntries={['/auth/callback?code=c&state=st']}>
+          <Routes>
+            <Route path="/auth/callback" element={<SocialCallbackPage ctx={ctx} />} />
+            <Route path="/login" element={<SignInPage ctx={ctx} />} />
+            <Route
+              path="/account"
+              element={
+                <AccountPage
+                  ctx={ctx}
+                  settings={{ locales: [{ value: 'en', label: 'English' }] }}
+                />
+              }
+            />
+            <Route path="*" element={<Here />} />
+          </Routes>
+        </MemoryRouter>
+      </AuthProvider>
+    )
+  },
+  play: async ({ canvas, userEvent }) => {
+    await expect(
+      await canvas.findByRole('heading', { name: 'An account with this email already exists' }),
+    ).toBeVisible()
+    await expect(canvas.getByText(/press "Link Google"/)).toBeVisible()
+    // 막다른 길이 아니다 — 누르는 단추 둘
+    await expect(canvas.getByRole('button', { name: 'Back to start' })).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Go to sign in' }))
+    await userEvent.type(await canvas.findByLabelText(/^Email/), 'demo@example.com')
+    await userEvent.type(canvas.getByLabelText(/^Password/), 'demo')
+    await userEvent.click(canvas.getByRole('button', { name: 'Sign in' }))
+    // 로그인에 성공하면 설정의 로그인 수단 구역 — 「Google 연결을 이어서」 + 강조된 Google 단추(포커스)
+    await expect(await canvas.findByText('Continue linking Google')).toBeVisible()
+    const link = await canvas.findByRole('button', { name: 'Link Google' })
+    await expect(link).toHaveAttribute('data-link-intent', 'true')
+    await expect(link).toHaveFocus()
+  },
+}
+
+export const SocialEmailConflictSignInPageDoesNotPrefillTheEmail: Story = {
+  render: () => (
+    <AuthProvider session={anonymous()}>
+      <MemoryRouter
+        initialEntries={[
+          {
+            pathname: '/login',
+            state: { from: { pathname: '/account', hash: '#methods' }, linkProvider: 'google' },
+          },
+        ]}
+      >
+        <SignInPage ctx={context()} />
+      </MemoryRouter>
+    </AuthProvider>
+  ),
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByLabelText(/^Email/)).toHaveValue('')
   },
 }

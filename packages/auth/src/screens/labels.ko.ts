@@ -218,13 +218,18 @@ export const koAuthLabels: AuthLabels = {
   callbackChecking: '로그인을 마무리하는 중',
   callbackFailedTitle: '로그인을 마치지 못했어요',
   callbackFailedBody: '제공자가 로그인을 확인해 주지 않았어요. 다시 시도해 주세요.',
-  callbackConflictTitle: '이미 계정이 있어요',
+  callbackConflictTitle: '이미 이 이메일로 가입한 계정이 있어요',
   callbackCancelledTitle: '로그인을 취소했어요',
   callbackCancelledBody: '제공자 화면에서 취소해서 바뀐 것은 없어요. 원할 때 다시 시작하세요.',
   callbackStateBody:
     '이 탭에서 시작한 로그인이 아니거나 이미 끝난 로그인이에요. 로그인 화면에서 다시 시작하고, 같은 탭에서 끝내 주세요.',
-  callbackConflictBody:
-    '그 이메일은 다른 로그인 수단으로 이미 가입돼 있어요. 그 수단으로 로그인한 뒤 계정 설정에서 이 서비스를 연결해 주세요.',
+  // 이름 뒤에 조사를 붙이지 않는다 — 「'{이름} 연결'을 누르면」(단추 글자 그대로) · 「{이름} 로그인도」
+  callbackConflictBody: (name) =>
+    `가입할 때 쓴 방법(이메일과 비밀번호, 이메일 링크, 다른 소셜)으로 로그인한 뒤, 계정 설정의 '로그인 수단'에서 '${name} 연결'을 누르면, 다음부터 ${name} 로그인도 쓸 수 있어요.`,
+  callbackConflictSignIn: '로그인하러 가기',
+  callbackConflictHome: '처음으로',
+  callbackConflictUnknownProvider: '이 소셜',
+  methodLinkContinue: (name) => `${name} 연결을 이어서 하세요`,
   suspendedTitle: '정지된 계정이에요',
   suspendedBody: '이 계정은 정지됐어요. 잘못이라고 생각하면 문의해 주세요.',
   blockedTitle: '접근할 수 없어요',

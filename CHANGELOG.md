@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — 같은 이메일의 소셜 로그인은 자동으로 붙이지 않는다: 안내 화면과 연결 이어 주기(`@skeleton/auth` · `apps/sample`)
+
+백엔드(kotlin-skeleton `fix/google-email-authority`)가 메일로 가입한 사람이 같은 메일의 소셜로 처음 로그인하면 `409 ACCOUNT.SOCIAL_EMAIL_CONFLICT`(`data` 없음)를 주도록 바뀐 데 맞췄다. 주인 결정 — 「그냥 연동 안 해주고 지가 등록하게」.
+
+- **막다른 오류 → 안내 화면**: 전에는 일반 경고 한 줄(「같은 이메일의 계정이 이미 있어요 …」)과 글자 링크였다. 이제 제목 「이미 이 이메일로 가입한 계정이 있어요」 / 본문 「가입할 때 쓴 방법(이메일과 비밀번호, 이메일 링크, 다른 소셜)으로 로그인한 뒤, 계정 설정의 '로그인 수단'에서 'Google 연결'을 누르면, 다음부터 Google 로그인도 쓸 수 있어요.」(제공자 이름 뒤에 조사를 붙이지 않는 문장 구조) / 주 단추 「로그인하러 가기」 · 보조 단추 「처음으로」. `SocialCallbackScreen` 의 새 prop `homeTo` · `linkTo` · `provider`(없으면 옛 모양 — 계정 연결 콜백의 충돌은 뜻이 달라 그대로). **`AuthLabels` 변경**: `callbackConflictBody` 가 문자열이 아니라 `(providerName) => string`, 새 키 `callbackConflictSignIn` · `callbackConflictHome` · `callbackConflictUnknownProvider` · `methodLinkContinue`(번역을 쓰는 앱은 키를 더한다). 제목 문구도 바뀌었다.
+- **이어 주기**: 「로그인하러 가기」로 로그인하면 `/account#methods` 로 가고, 로그인 수단 구역이 「Google 연결을 이어서 하세요」 한 줄 + 강조 테두리와 포커스가 간 그 제공자의 「연결」 단추를 보인다(`AccountSettings.linkIntent` · `SignInMethodsSection.linkIntent` · `SocialButtons.highlight`). 의도(어느 제공자)는 router state(`linkIntentState` · `linkIntentOf`)로만 옮긴다 — 저장소 · 주소 쿼리에 넣지 않는다. 돌아갈 곳은 로그인 화면이 이미 읽는 `state.from` 이라 `safeReturnPath` 검사를 거친다. 이미 연결됐거나 앱이 안 켠 제공자면 아무것도 더하지 않는다. 어느 제공자였는지는 `providerOfFailure(error)`(거절된 `flow.complete` 의 오류를 제공자와 따로 기억한다).
+- 로그인 화면의 이메일 칸은 미리 채우지 않는다(콜백이 이메일을 주지 않는다 — 테스트로 고정).
+- **이메일 없는 계정**(주소를 안 주는 Google 등 `me.email` null): 계정 설정은 이미 「이메일 주소가 없어요」 + 새 주소 추가(제공자 동의를 다시 거침)로 그렸다 — 스토리 `EmailLessGoogleAccount` 로 고정. `apps/sample` 의 설정 카드는 빈 줄(—)이었는데 「이메일 없음」 + 「이메일 추가」 단추(`/account#email`)로 바뀌었다.
+- 가짜 `createFakeAuthApi({ socialEmailConflict })`, 스토리 `Patterns/Auth/Social email conflict`, 라우트 스토리 `SocialEmailConflictGuidesToTheLinkInTheSettings`(콜백 → 로그인 → 강조된 연결 단추).
+
 ### Added — `@skeleton/author-profile` (작성자 프로필)
 
 새 패키지. 백엔드 짝 `author-profile` 모듈(`/author-profiles`). 문구는 모두 `labels` prop(기본 영어). **`@skeleton/board` 를 import 하지 않는다**(`@skeleton/api-client` · `@skeleton/ui` 에 기댄다) — 보드와는 `authorPicker` 렌더 prop 한 곳(`AuthorPickerSlotProps` ↔ 보드의 `AuthorPickerArgs`)에서 만난다.

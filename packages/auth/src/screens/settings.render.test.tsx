@@ -234,6 +234,41 @@ describe('settings sections', () => {
     expect(out).not.toContain('Link Google')
   })
 
+  describe('methods: resuming a link the sign-in conflict interrupted', () => {
+    const resumed = (linkIntent: { provider: string } | undefined, linked = ['password']) =>
+      html(
+        <SignInMethodsSection
+          identities={linked.map((method, i) => identity({ id: `idn_${i}`, method }))}
+          socialProviders={[{ provider: 'google' }, { provider: 'kakao' }]}
+          onLink={() => undefined}
+          linkIntent={linkIntent}
+          subject={withPassword}
+          requestReauthCode={noop}
+          onUnlink={noop}
+        />,
+      )
+
+    it('says which link to continue and marks exactly that provider button', () => {
+      const out = resumed({ provider: 'google' })
+      expect(out).toContain('Continue linking Google')
+      expect(out.match(/data-link-intent="true"/g)).toHaveLength(1)
+      expect(out).toMatch(/data-link-intent="true"[^>]*>(?:(?!<\/button>).)*Link Google/s)
+    })
+
+    it('shows nothing extra without an intent', () => {
+      const out = resumed(undefined)
+      expect(out).not.toContain('Continue linking')
+      expect(out).not.toContain('data-link-intent')
+    })
+
+    it('an already linked or not offered provider gives no dead promise', () => {
+      expect(resumed({ provider: 'google' }, ['password', 'google'])).not.toContain(
+        'Continue linking',
+      )
+      expect(resumed({ provider: 'naver' })).not.toContain('Continue linking')
+    })
+  })
+
   const session = (over: Partial<AccountSession>): AccountSession => ({
     id: 'ses_1',
     deviceName: 'Pixel',

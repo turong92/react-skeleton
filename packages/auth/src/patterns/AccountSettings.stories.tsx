@@ -9,6 +9,7 @@ import {
   FAKE_SOCIAL_REAUTH,
   type FakeAccountOptions,
 } from '../stories/fakeAccountApi'
+import { koAuthLabels } from '../screens/labels.ko'
 import { withRouter } from '../stories/withRouter'
 
 /**
@@ -369,6 +370,59 @@ export const PasswordlessLinkAsksForTheProofAfterTheProvider: Story = {
   play: async ({ canvas, args, userEvent }) => {
     await userEvent.click(await canvas.findByRole('button', { name: 'Link Kakao' }))
     await expect(args.onLinkSocial).toHaveBeenCalledWith('kakao') // 증거는 제공자에 다녀온 뒤 콜백 화면이 받는다
+  },
+}
+
+/** 「같은 이메일의 계정이 있다」 안내에서 로그인하고 온 사용자: 그 제공자의 「연결」 한 줄 + 강조된 단추(포커스) — 이미 연결됐거나 안 켠 제공자면 아무것도 더하지 않는다 */
+export const ContinueLinkingAfterEmailConflict: Story = {
+  args: {
+    fake: { onlyMethod: true },
+    socialProviders: [{ provider: 'google' }, { provider: 'kakao' }],
+    onLinkSocial: fn(),
+    linkIntent: { provider: 'google' },
+  },
+  play: async ({ canvas, args, userEvent }) => {
+    await expect(await canvas.findByText('Continue linking Google')).toBeVisible()
+    const link = await canvas.findByRole('button', { name: 'Link Google' })
+    await expect(link).toHaveAttribute('data-link-intent', 'true')
+    await expect(link).toHaveFocus()
+    await expect(canvas.getByRole('button', { name: 'Link Kakao' })).not.toHaveAttribute(
+      'data-link-intent',
+    )
+    await userEvent.click(link)
+    await expect(args.onLinkSocial).toHaveBeenCalledWith('google')
+  },
+}
+
+/** 같은 화면의 한국어 */
+export const ContinueLinkingAfterEmailConflictKorean: Story = {
+  args: { ...ContinueLinkingAfterEmailConflict.args, labels: koAuthLabels },
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByText('Google 연결을 이어서 하세요')).toBeVisible()
+    await expect(await canvas.findByRole('button', { name: 'Google 연결' })).toHaveFocus()
+  },
+}
+
+/** Google 로 가입했는데 주소를 주지 않았다(Gmail 이 아닌 주소) — 이메일 자리는 빈칸이 아니라 「이메일 주소가 없어요」, 추가는 Google 동의를 다시 거친다 */
+export const EmailLessGoogleAccount: Story = {
+  args: {
+    fake: { noAddress: true, noAddressProvider: 'google' },
+    socialProviders: [{ provider: 'google' }],
+  },
+  play: async ({ canvas }) => {
+    const section = within(await canvas.findByRole('region', { name: 'Email address' }))
+    await expect(section.getByText('No email address on this account')).toBeVisible()
+    await expect(section.queryByText('Current address')).toBeNull()
+    await expect(section.getByRole('button', { name: 'Confirm with Google' })).toBeVisible()
+  },
+}
+
+/** 같은 화면의 한국어 */
+export const EmailLessGoogleAccountKorean: Story = {
+  args: { ...EmailLessGoogleAccount.args, labels: koAuthLabels },
+  play: async ({ canvas }) => {
+    const section = within(await canvas.findByRole('region', { name: '이메일 주소' }))
+    await expect(section.getByText('이 계정에는 이메일 주소가 없어요')).toBeVisible()
   },
 }
 

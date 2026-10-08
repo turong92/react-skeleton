@@ -123,10 +123,56 @@ describe('SocialCallbackScreen tells the real reasons', () => {
     )
   })
 
-  it('the existing-account conflict is unchanged', () => {
-    expect(screen(apiError('ACCOUNT.SOCIAL_EMAIL_CONFLICT', 409))).toContain(
-      L.callbackConflictTitle,
+  it('the existing-account conflict (no way home given, e.g. the link flow) keeps its alert and the way back', () => {
+    const out = screen(apiError('ACCOUNT.SOCIAL_EMAIL_CONFLICT', 409))
+    expect(out).toContain(L.callbackConflictTitle)
+    expect(out).toContain(L.backToSignIn)
+  })
+})
+
+describe('the same-email conflict is a guide, not a dead end', () => {
+  const esc = (text: string) => text.replaceAll('"', '&quot;').replaceAll("'", '&#x27;')
+  const conflict = (provider: string | undefined, labels = L) => {
+    const error = apiError('ACCOUNT.SOCIAL_EMAIL_CONFLICT', 409)
+    return html(
+      <SocialCallbackScreen
+        state={{ status: 'error', error }}
+        signInTo="/login"
+        homeTo="/"
+        linkTo={{ pathname: '/account', hash: '#methods' }}
+        provider={provider}
+        labels={labels}
+      />,
     )
+  }
+
+  it('names the provider, says what to do, and offers two real buttons (not bare text)', () => {
+    const out = conflict('google')
+    expect(out).toContain(L.callbackConflictTitle)
+    expect(out).toContain(esc(L.callbackConflictBody('Google')))
+    expect(out).toMatch(/<button[^>]*>[^<]*Go to sign in/)
+    expect(out).toMatch(/<button[^>]*>[^<]*Back to start/)
+    expect(out).not.toContain('<a ')
+  })
+
+  it('Korean copy: title, body without particles attached to the provider name, two buttons', () => {
+    const ko = mergeLabels(koAuthLabels)
+    const out = conflict('google', ko)
+    expect(out).toContain('이미 이 이메일로 가입한 계정이 있어요')
+    expect(out).toContain(
+      esc(
+        "가입할 때 쓴 방법(이메일과 비밀번호, 이메일 링크, 다른 소셜)으로 로그인한 뒤, 계정 설정의 '로그인 수단'에서 'Google 연결'을 누르면, 다음부터 Google 로그인도 쓸 수 있어요.",
+      ),
+    )
+    expect(out).toContain('로그인하러 가기')
+    expect(out).toContain('처음으로')
+    // 이름 뒤에 바로 조사를 붙이지 않는다 — 「Google을(를)」 · 「Google(으)로」 식의 문장 금지
+    expect(out).not.toMatch(/Google(을|를|으로|로|이|가)[( ]/)
+  })
+
+  it('an unknown provider still reads as a sentence', () => {
+    const out = conflict(undefined)
+    expect(out).toContain(esc(L.callbackConflictBody(L.callbackConflictUnknownProvider)))
   })
 })
 

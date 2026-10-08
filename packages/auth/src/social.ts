@@ -114,6 +114,13 @@ export function parseSocialCallback(search: string | URLSearchParams): SocialCal
   return result
 }
 
+const failedProviders = new WeakMap<object, string>()
+
+/** 거절된 로그인(`flow.complete` 의 오류)이 **어느 제공자의** 것이었는가 — 오류 객체는 그대로 두고 따로 기억한다(안내 화면이 제공자 이름을 말한다). 모르면 undefined */
+export function providerOfFailure(error: unknown): string | undefined {
+  return typeof error === 'object' && error !== null ? failedProviders.get(error) : undefined
+}
+
 export type SocialLoginCallbackFailure = 'state_mismatch' | 'provider_error' | 'missing_code'
 
 /** 콜백을 로그인으로 잇지 못했다(요청은 나가지 않았다). 백엔드가 거절한 경우는 `ApiRequestError` 가 그대로 나간다 */
@@ -261,9 +268,15 @@ export function createSocialLoginFlow({
           ...(pending.codeVerifier ? { codeVerifier: pending.codeVerifier } : {}),
           ...(pending.nonce ? { nonce: pending.nonce } : {}),
         }
-        const token = await (Object.keys(proof).length > 0
-          ? session.socialLogin(pending.provider, callback.code, pending.redirectUri, proof)
-          : session.socialLogin(pending.provider, callback.code, pending.redirectUri))
+        const token = await (
+          Object.keys(proof).length > 0
+            ? session.socialLogin(pending.provider, callback.code, pending.redirectUri, proof)
+            : session.socialLogin(pending.provider, callback.code, pending.redirectUri)
+        ).catch((error: unknown) => {
+          if (typeof error === 'object' && error !== null)
+            failedProviders.set(error, pending.provider)
+          throw error
+        })
         return {
           provider: pending.provider,
           token,

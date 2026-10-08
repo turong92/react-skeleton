@@ -21,6 +21,7 @@ export function SettingsPage() {
   const profile = useMyProfile().data
   const theme = useTheme()
   const navigate = useNavigate()
+  const email = profile?.email ?? principal?.email ?? null
 
   function signOut() {
     logout()
@@ -51,7 +52,17 @@ export function SettingsPage() {
         <dl className={styles.list}>
           <div>
             <dt>{t('settings.email')}</dt>
-            <dd>{profile?.email ?? principal?.email ?? t('common.none')}</dd>
+            <dd>
+              {email ?? (
+                // 이메일이 없는 계정(주소를 안 주는 소셜 로그인) — 빈칸이 아니라 말로, 그리고 추가하는 길은 눌리는 단추로
+                <span className={styles.noEmail}>
+                  <span>{t('settings.emailNone')}</span>
+                  <Button variant="secondary" size="sm" onClick={() => navigate('/account#email')}>
+                    {t('settings.emailAdd')}
+                  </Button>
+                </span>
+              )}
+            </dd>
           </div>
           <div>
             <dt>{t('settings.roles')}</dt>

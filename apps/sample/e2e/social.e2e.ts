@@ -1,6 +1,6 @@
 import { expect as baseExpect, type Browser, type BrowserContext, type Page } from 'playwright/test'
 import { afterAll, beforeAll, describe, inject, it } from 'vitest'
-import { acceptLegalGate, auth, dismissConsent, launch } from './helpers'
+import { acceptLegalGate, auth, DEMO, dismissConsent, fillSignIn, launch } from './helpers'
 import { waitForCode } from './mail'
 
 /*
@@ -229,4 +229,32 @@ describe('callback robustness', () => {
       await pwExpect(page.getByRole('heading', { level: 1, name: /안녕하세요/ })).toBeVisible()
     },
   )
+})
+
+/*
+ * 같은 이메일로 메일 가입한 계정이 있는데 그 이메일을 가진 소셜 사용자가 처음 로그인한다 — 자동으로 합치지 않는다(`409 ACCOUNT.SOCIAL_EMAIL_CONFLICT`).
+ * 백엔드가 그 제공자의 이메일을 믿고 충돌로 보는 설정일 때만 일어난다(kotlin-skeleton `fix/google-email-authority` 이후의 견본 앱 · 가짜 제공자가 DEMO 계정의 이메일을 준다). 가짜 제공자가 없으면 건너뛴다.
+ */
+describe('a social sign-in with the email of an existing account is guided, not merged', () => {
+  run('shows the guide, and signing in the old way ends at the link to continue', async () => {
+    await page.evaluate(() => window.localStorage.clear())
+    await control({
+      line: { sub: `U-conflict-${stamp}`, name: '충돌 사용자', email: DEMO.email },
+      deny: false,
+    })
+    await page.goto(`${baseUrl}/login`)
+    await page.getByRole('button', { name: 'LINE으로 계속하기' }).click()
+    await pwExpect(page.getByRole('heading', { name: auth.callbackConflictTitle })).toBeVisible()
+    await pwExpect(page.getByText(auth.callbackConflictBody('LINE'))).toBeVisible()
+    await pwExpect(page.getByRole('button', { name: auth.callbackConflictHome })).toBeVisible()
+    // 로그인 화면의 이메일 칸은 비어 있다(콜백이 이메일을 주지 않는다)
+    await page.getByRole('button', { name: auth.callbackConflictSignIn }).click()
+    await pwExpect(page.getByLabel(auth.email)).toHaveValue('')
+    await fillSignIn(page, DEMO)
+    await acceptLegalGate(page, apiUrl)
+    await pwExpect(page.getByText(auth.methodLinkContinue('LINE'))).toBeVisible()
+    const link = page.getByRole('button', { name: auth.methodLink('LINE') })
+    await pwExpect(link).toBeFocused()
+    await control({ deny: false })
+  })
 })

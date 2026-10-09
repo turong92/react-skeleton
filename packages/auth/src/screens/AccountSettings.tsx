@@ -317,7 +317,7 @@ export function AccountSettings({
   const restricted = account.emailRequired === true || loginIdPending
   // 비밀번호 없는 계정의 단추가 갈 구역 - 주소가 있으면 비밀번호, 없으면 이메일(그 구역을 끈 앱이면 단추가 없다)
   const goTarget = account.email ? 'password' : 'email'
-  // 쓰기 때 방식 + 주소 없음: 비밀번호 · 연락받을 이메일 · 로그인 수단은 서버가 403 으로 막는다(스펙 §9.3 "주소가 먼저다") - 눌러 보게 하지 않고 이유와 함께 접는다
+  // 쓰기 때 방식 + 주소 없음: 비밀번호 · 연락받을 이메일은 서버가 403 으로 막는다(소셜 로그인 수단의 연결 · 해제는 열려 있다)(스펙 §9.3 "주소가 먼저다") - 눌러 보게 하지 않고 이유와 함께 접는다
   const needsAddress = account.emailRequiredToWrite === true
   const goTo = (target: string) => {
     window.history.replaceState(null, '', `#${target}`)
@@ -424,10 +424,7 @@ export function AccountSettings({
           onChanged={me.reload}
         />
       )}
-      {!restricted && on('methods') && needsAddress && (
-        <NeedsEmailCard id="methods" title={labels.sectionMethods} onGo={goEmail} labels={given} />
-      )}
-      {!restricted && on('methods') && !needsAddress && (
+      {!restricted && on('methods') && (
         <SignInMethodsSection
           identities={account.methods}
           socialProviders={socialProviders}

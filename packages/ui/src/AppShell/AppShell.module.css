@@ -1,7 +1,5 @@
 /* 컨테이너 쿼리 — 뷰포트가 아니라 셸 자신의 너비를 본다(좁은 틀 안에서도 같은 모양) */
 .shell {
-  /* 고정 머리의 높이 — 기본은 한 줄(60px + 테두리 1px), 실제 높이는 AppShell 이 잰 값으로 덮는다 */
-  --header-height: 61px;
   min-height: 100svh;
   display: flex;
   flex-direction: column;

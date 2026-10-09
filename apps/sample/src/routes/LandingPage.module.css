@@ -7,7 +7,7 @@
 
 .band {
   padding-block: var(--space-lg);
-  scroll-margin-top: calc(var(--header-height, 0px) + var(--space-xl));
+  scroll-margin-top: var(--space-xl);
 }
 
 .anchor {

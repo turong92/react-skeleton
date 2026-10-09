@@ -7,8 +7,8 @@
   background: var(--surface);
   color: var(--text);
   box-shadow: var(--shadow);
-  /* 목차가 눌러 가져온 절이 고정 머리에 가리지 않게 */
-  scroll-margin-top: var(--space-xl);
+  /* 목차가 눌러 가져온 절이 고정 머리에 가리지 않게(머리 높이 + 여유) */
+  scroll-margin-top: calc(var(--header-height, 0px) + var(--space-xl));
 }
 
 .head {

@@ -1,9 +1,11 @@
-import { Alert, Badge, Button, ConfirmDialog, SectionCard } from '@skeleton/ui'
+import { Alert, Badge, Button, ConfirmDialog, SettingsRow } from '@skeleton/ui'
 import { useEffect, useRef, useState } from 'react'
 import type { ReauthCredential } from '../account/accountApi'
 import type { SignInIdentity } from '../account/types'
 import { isReauthFailure, reauthKindOf, type ReauthSubject } from '../reauth/kind'
 import { ReauthProof } from './ReauthProof'
+import { SectionShell } from './SectionShell'
+import { SettingsDialog } from './SettingsDialog'
 import { SocialButtons } from './SocialButtons'
 import styles from './auth.module.css'
 import { mergeLabels, type AuthLabels } from './labels'
@@ -35,6 +37,10 @@ export type SignInMethodsSectionProps = {
    */
   linkIntent?: { provider: string }
   formatDate?: (iso: string) => string
+  /** 첫 렌더부터 목록 대화상자가 열려 있다 - 제공자 왕복(연결 · 해제)에서 돌아온 결과를 그 안에서 말한다 */
+  initiallyOpen?: boolean
+  /** 줄만 그린다(`AccountSettings` 의 카드 안) - 아니면 제목 있는 카드 한 장에 담는다 */
+  row?: boolean
   labels?: Partial<AuthLabels>
 }
 
@@ -53,6 +59,8 @@ export function SignInMethodsSection({
   failure,
   linkIntent,
   formatDate = defaultFormat,
+  initiallyOpen = false,
+  row,
   labels: given,
 }: SignInMethodsSectionProps) {
   const labels = mergeLabels(given)
@@ -67,14 +75,16 @@ export function SignInMethodsSection({
     linkIntent && onLink && linkable.some((p) => p.provider === linkIntent.provider)
       ? linkIntent.provider
       : undefined
+  // 이어서 할 연결이 있으면 목록 대화상자가 처음부터 열려 있다
+  const [open, setOpen] = useState(initiallyOpen || !!resuming)
   const section = useRef<HTMLDivElement | null>(null)
   // 이어서 할 단추로 데려온다 — 구역이 화면에 들어오고 그 단추에 포커스가 있다(한 번만)
   useEffect(() => {
-    if (!resuming) return
+    if (!resuming || !open) return
     const button = section.current?.querySelector<HTMLElement>('[data-link-intent]')
     button?.scrollIntoView?.({ block: 'center' })
     button?.focus({ preventScroll: true })
-  }, [resuming])
+  }, [resuming, open])
 
   const close = () => {
     setTarget(null)
@@ -100,90 +110,122 @@ export function SignInMethodsSection({
   }
 
   return (
-    <SectionCard id="methods" title={labels.sectionMethods} description={labels.methodsDescription}>
-      <div className={styles.stack} ref={section}>
-        {action.error && !target && <Alert tone="danger">{action.error.message}</Alert>}
-        {message && <Alert tone="success">{message}</Alert>}
-        {failure && <Alert tone="danger">{failure}</Alert>}
-        {notice && <Alert tone="info">{notice}</Alert>}
-        {resuming && (
-          <Alert tone="info">{labels.methodLinkContinue(labelOfMethod(resuming, labels))}</Alert>
-        )}
-        <ul className={styles.list}>
-          {identities.map((identity) => {
-            const removable = canUnlink(identity, identities)
-            return (
-              <li key={identity.id} className={styles.item}>
-                <div className={styles.itemText}>
-                  <strong>
-                    {labelOfMethod(identity.method, labels)}
-                    {identity.subject && <span className={styles.muted}> {identity.subject}</span>}
-                  </strong>
-                  <span className={styles.muted}>
-                    {identity.lastUsedAt
-                      ? labels.methodLastUsed(formatDate(identity.lastUsedAt))
-                      : labels.methodNeverUsed}
-                  </span>
-                  {!removable && (
-                    <span className={styles.muted}>{labels.methodsLastProtected}</span>
-                  )}
-                </div>
-                <div className={styles.row}>
-                  {!identity.verified && <Badge tone="warning">{labels.emailUnverified}</Badge>}
-                  {removable && (
-                    <Button variant="danger" size="sm" onClick={() => setTarget(identity)}>
-                      {labels.methodUnlink}
-                    </Button>
-                  )}
-                </div>
-              </li>
-            )
-          })}
-        </ul>
-        {linkable.length > 0 && onLink && (
-          <SocialButtons
-            providers={linkable}
-            labels={labels}
-            onSelect={onLink}
-            highlight={resuming}
-            textOf={(_, name) => labels.methodLink(name)}
-          />
-        )}
-      </div>
-      <ConfirmDialog
-        open={target !== null}
-        onClose={close}
-        onConfirm={confirm}
-        confirmDisabled={kind === 'provider' || proof === null}
-        title={labels.methodUnlinkTitle(target ? labelOfMethod(target.method, labels) : '')}
-        description={
-          <div className={styles.stack}>
-            <p>{labels.methodUnlinkBody}</p>
-            {action.error && !isReauthFailure(action.raw) && (
-              <Alert tone="danger">{action.error.message}</Alert>
-            )}
-            <ReauthProof
-              key={target?.id}
-              kind={kind}
-              email={subject.email}
-              providers={subject.providers}
-              requestCode={requestReauthCode}
-              onChange={setProof}
-              failure={isReauthFailure(action.raw) ? action.raw : undefined}
-              onProvider={
-                onProviderReauth && target
-                  ? (provider) => onProviderReauth(provider, target.id)
-                  : undefined
-              }
-              labels={given}
-            />
-          </div>
+    <SectionShell row={row} id="methods" title={labels.sectionMethods}>
+      <SettingsRow
+        label={labels.sectionMethods}
+        value={identities.map((i) => labelOfMethod(i.method, labels)).join(' · ')}
+        action={
+          <Button
+            variant="secondary"
+            size="sm"
+            aria-label={`${labels.sectionMethods} ${labels.rowManage}`}
+            onClick={() => setOpen(true)}
+          >
+            {labels.rowManage}
+          </Button>
         }
-        confirmLabel={labels.methodUnlink}
-        cancelLabel={labels.cancel}
-        closeLabel={labels.cancel}
-        busy={action.busy}
+        dialogs={
+          <>
+            <SettingsDialog
+              open={open}
+              onClose={() => setOpen(false)}
+              title={labels.sectionMethods}
+              closeLabel={labels.dialogClose}
+            >
+              <div className={styles.stack} ref={section}>
+                <p className={styles.muted}>{labels.methodsDescription}</p>
+                {action.error && !target && <Alert tone="danger">{action.error.message}</Alert>}
+                {message && <Alert tone="success">{message}</Alert>}
+                {failure && <Alert tone="danger">{failure}</Alert>}
+                {notice && <Alert tone="info">{notice}</Alert>}
+                {resuming && (
+                  <Alert tone="info">
+                    {labels.methodLinkContinue(labelOfMethod(resuming, labels))}
+                  </Alert>
+                )}
+                <ul className={styles.list}>
+                  {identities.map((identity) => {
+                    const removable = canUnlink(identity, identities)
+                    return (
+                      <li key={identity.id} className={styles.item}>
+                        <div className={styles.itemText}>
+                          <strong>
+                            {labelOfMethod(identity.method, labels)}
+                            {identity.subject && (
+                              <span className={styles.muted}> {identity.subject}</span>
+                            )}
+                          </strong>
+                          <span className={styles.muted}>
+                            {identity.lastUsedAt
+                              ? labels.methodLastUsed(formatDate(identity.lastUsedAt))
+                              : labels.methodNeverUsed}
+                          </span>
+                          {!removable && (
+                            <span className={styles.muted}>{labels.methodsLastProtected}</span>
+                          )}
+                        </div>
+                        <div className={styles.row}>
+                          {!identity.verified && (
+                            <Badge tone="warning">{labels.emailUnverified}</Badge>
+                          )}
+                          {removable && (
+                            <Button variant="danger" size="sm" onClick={() => setTarget(identity)}>
+                              {labels.methodUnlink}
+                            </Button>
+                          )}
+                        </div>
+                      </li>
+                    )
+                  })}
+                </ul>
+                {linkable.length > 0 && onLink && (
+                  <SocialButtons
+                    providers={linkable}
+                    labels={labels}
+                    onSelect={onLink}
+                    highlight={resuming}
+                    textOf={(_, name) => labels.methodLink(name)}
+                  />
+                )}
+              </div>
+            </SettingsDialog>
+            <ConfirmDialog
+              open={target !== null}
+              onClose={close}
+              onConfirm={confirm}
+              confirmDisabled={kind === 'provider' || proof === null}
+              title={labels.methodUnlinkTitle(target ? labelOfMethod(target.method, labels) : '')}
+              description={
+                <div className={styles.stack}>
+                  <p>{labels.methodUnlinkBody}</p>
+                  {action.error && !isReauthFailure(action.raw) && (
+                    <Alert tone="danger">{action.error.message}</Alert>
+                  )}
+                  <ReauthProof
+                    key={target?.id}
+                    kind={kind}
+                    email={subject.email}
+                    providers={subject.providers}
+                    requestCode={requestReauthCode}
+                    onChange={setProof}
+                    failure={isReauthFailure(action.raw) ? action.raw : undefined}
+                    onProvider={
+                      onProviderReauth && target
+                        ? (provider) => onProviderReauth(provider, target.id)
+                        : undefined
+                    }
+                    labels={given}
+                  />
+                </div>
+              }
+              confirmLabel={labels.methodUnlink}
+              cancelLabel={labels.cancel}
+              closeLabel={labels.cancel}
+              busy={action.busy}
+            />
+          </>
+        }
       />
-    </SectionCard>
+    </SectionShell>
   )
 }

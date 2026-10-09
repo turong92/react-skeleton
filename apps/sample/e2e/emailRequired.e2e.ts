@@ -333,12 +333,17 @@ describe('an address-less account (LINE gives no email) reads everything; the em
       await page.goto(`${baseUrl}/account`)
       await pwExpect(
         page
-          .getByRole('region', { name: auth.sectionEmail })
+          .getByRole('group', { name: auth.sectionEmail })
           .locator('strong')
           .filter({ hasText: registered }),
       ).toBeVisible()
+      await page
+        .getByRole('group', { name: auth.sectionEmail })
+        .getByRole('button', { name: auth.emailChangeSubmit })
+        .click()
       await pwExpect(page.getByText(auth.emailCannotRemove)).toBeVisible()
       await pwExpect(page.getByText(auth.emailRole)).toBeVisible()
+      await page.keyboard.press('Escape')
       await page.goto(`${baseUrl}/board`)
       await page
         .getByRole('button', { name: ko('board.write'), exact: true })
@@ -446,16 +451,19 @@ describe('contact email: a second, optional address for notices (never for sign-
 
   it('settings: two sections - the account email says what it is for, the contact email is optional and empty', async () => {
     await page.goto(`${baseUrl}/account`)
-    const accountEmail = page.getByRole('region', { name: auth.sectionEmail })
+    const accountEmail = page.getByRole('group', { name: auth.sectionEmail })
     await pwExpect(accountEmail.getByText(account)).toBeVisible()
+    // 무엇에 쓰이는지는 「바꾸기」가 여는 대화상자에 있다
+    await accountEmail.getByRole('button', { name: auth.emailChangeSubmit }).click()
     await pwExpect(accountEmail.getByText(auth.emailRole)).toBeVisible()
-    const section = page.getByRole('region', { name: auth.sectionContactEmail })
+    await page.keyboard.press('Escape')
+    const section = page.getByRole('group', { name: auth.sectionContactEmail })
     await pwExpect(section.getByText(auth.contactEmailNone)).toBeVisible()
     await pwExpect(section.getByRole('button', { name: auth.contactEmailAdd })).toBeVisible()
   })
 
   it('register: address → the code goes to THAT address → saved', async () => {
-    const section = page.getByRole('region', { name: auth.sectionContactEmail })
+    const section = page.getByRole('group', { name: auth.sectionContactEmail })
     await section.getByRole('button', { name: auth.contactEmailAdd }).click()
     const dialog = page.getByRole('dialog')
     await dialog.getByLabel(auth.contactEmailField).fill(contact)
@@ -468,7 +476,7 @@ describe('contact email: a second, optional address for notices (never for sign-
     await pwExpect(section.locator('strong').filter({ hasText: contact })).toBeVisible()
     // 계정 이메일은 그대로
     await pwExpect(
-      page.getByRole('region', { name: auth.sectionEmail }).getByText(account),
+      page.getByRole('group', { name: auth.sectionEmail }).getByText(account),
     ).toBeVisible()
   })
 
@@ -507,7 +515,7 @@ describe('contact email: a second, optional address for notices (never for sign-
     await acceptLegalGate(page, apiUrl, false)
     await pwExpect(page.getByRole('heading', { level: 1, name: /안녕하세요/ })).toBeVisible()
     await page.goto(`${baseUrl}/account`)
-    const section = page.getByRole('region', { name: auth.sectionContactEmail })
+    const section = page.getByRole('group', { name: auth.sectionContactEmail })
     await pwExpect(section.locator('strong').filter({ hasText: contact })).toBeVisible()
     await section.getByRole('button', { name: auth.contactEmailRemove }).click()
     await page.getByRole('dialog').getByRole('button', { name: auth.contactEmailRemove }).click() // 지우기는 확인을 거친다
@@ -515,7 +523,7 @@ describe('contact email: a second, optional address for notices (never for sign-
     await pwExpect(section.getByText(auth.contactEmailNone)).toBeVisible()
     await page.reload()
     await pwExpect(
-      page.getByRole('region', { name: auth.sectionContactEmail }).getByText(auth.contactEmailNone),
+      page.getByRole('group', { name: auth.sectionContactEmail }).getByText(auth.contactEmailNone),
     ).toBeVisible()
     await page.goto(baseUrl)
     await signOut(page)
@@ -667,7 +675,7 @@ describe('already have an account: the account without an email is discarded and
     pwExpect((await meOf(page, apiUrl)).me.id).toBe(mailAccountId) // 새 계정이 아니라 메일 계정이다
     await page.goto(`${baseUrl}/account`)
     await pwExpect(
-      page.getByRole('region', { name: auth.sectionEmail }).getByText(mail),
+      page.getByRole('group', { name: auth.sectionEmail }).getByText(mail),
     ).toBeVisible()
   })
 })
@@ -759,7 +767,7 @@ describe('the nickname band on account settings: pressing it says why and goes t
       await pwExpect(page.getByRole('heading', { level: 1, name: /안녕하세요/ })).toBeVisible()
       await page.goto(`${baseUrl}/account`)
       await pwExpect(band()).toBeVisible()
-      await pwExpect(page.locator('#email')).toBeVisible()
+      await pwExpect(page.locator('#account')).toBeVisible()
       await page.evaluate(() => window.scrollTo(0, 0))
       await band()
         .getByRole('button', { name: ko('nickname.nudgeAction') })
@@ -768,7 +776,7 @@ describe('the nickname band on account settings: pressing it says why and goes t
       await pwExpect(page.locator('dialog[open]')).toHaveCount(0) // 닉네임 대화상자는 열리지 않는다
       await pwExpect(gate()).toHaveCount(0) // 이 화면은 막이 걷혀 있다
       pwExpect(new URL(page.url()).hash).toBe('#email') // 이메일 구역으로
-      await pwExpect(page.locator('#email')).toBeInViewport()
+      await pwExpect(page.locator('#account')).toBeInViewport()
       await pwExpect(errorToasts()).toHaveCount(0)
     },
   )

@@ -1,14 +1,16 @@
-import { Alert, Button, Field, FormProblems, Input } from '@skeleton/ui'
+import { Alert, Button, Field, FormProblems, Input, SettingsRow } from '@skeleton/ui'
 import type { FormEvent, ReactNode, Ref } from 'react'
 import styles from './auth.module.css'
 import type { AuthLabels } from './labels'
 
-/** 연락받을 이메일 구역의 한눈에 보기 - 지금 주소(또는 「계정 이메일로 받아요」)와 등록 · 바꾸기 · 지우기 단추 */
+/** 연락받을 이메일 줄 - 지금 주소(또는 「계정 이메일로 받아요」)와 등록 · 바꾸기 · 지우기 단추. 결과 알림(`notice`)은 줄 아래에 붙는다 */
 export function ContactEmailSummary({
   contactEmail,
   labels,
   actions,
   removal,
+  notice,
+  dialogs,
   onStart,
   onRemove,
 }: {
@@ -16,49 +18,63 @@ export function ContactEmailSummary({
   labels: AuthLabels
   actions: Ref<HTMLDivElement>
   removal: { error: { message: string } | null; busy: boolean }
+  notice?: ReactNode
+  /** 이 줄이 여는 대화상자들 */
+  dialogs?: ReactNode
   /** 주소 입력 단계로 간다 */
   onStart: () => void
   onRemove: () => void
 }) {
   return (
-    <>
-      <div className={styles.row}>
-        {contactEmail ? (
-          <>
-            <span className={styles.muted}>{labels.contactEmailCurrent}</span>
-            <strong>{contactEmail}</strong>
-          </>
-        ) : (
-          <span>{labels.contactEmailNone}</span>
-        )}
-      </div>
-      {contactEmail && <p className={styles.muted}>{labels.contactEmailCurrentIsAccount}</p>}
-      {removal.error && <Alert tone="danger">{removal.error.message}</Alert>}
-      <div className={styles.row} ref={actions}>
-        {contactEmail ? (
-          <>
-            <Button variant="secondary" onClick={onStart}>
-              {labels.contactEmailChange}
-            </Button>
+    <SettingsRow
+      dialogs={dialogs}
+      label={labels.sectionContactEmail}
+      value={contactEmail ? <strong>{contactEmail}</strong> : labels.contactEmailNone}
+      action={
+        <div className={styles.row} ref={actions}>
+          {contactEmail ? (
+            <>
+              <Button
+                variant="secondary"
+                size="sm"
+                aria-label={`${labels.sectionContactEmail} ${labels.rowChange}`}
+                onClick={onStart}
+              >
+                {labels.rowChange}
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                aria-label={`${labels.sectionContactEmail} ${labels.contactEmailRemove}`}
+                loading={removal.busy}
+                loadingLabel={labels.submitting}
+                onClick={onRemove}
+              >
+                {labels.contactEmailRemove}
+              </Button>
+            </>
+          ) : (
             <Button
-              variant="danger"
-              loading={removal.busy}
-              loadingLabel={labels.submitting}
-              onClick={onRemove}
+              variant="secondary"
+              size="sm"
+              aria-label={`${labels.sectionContactEmail} ${labels.rowRegister}`}
+              onClick={onStart}
             >
-              {labels.contactEmailRemove}
+              {labels.rowRegister}
             </Button>
-          </>
-        ) : (
-          <Button onClick={onStart}>{labels.contactEmailAdd}</Button>
-        )}
-      </div>
-    </>
+          )}
+        </div>
+      }
+    >
+      {notice}
+      {removal.error && <Alert tone="danger">{removal.error.message}</Alert>}
+    </SettingsRow>
   )
 }
 
 /** 연락받을 이메일 구역의 주소 입력 단계 */
 export function ContactEmailForm({
+  intro,
   labels,
   fieldId,
   email,
@@ -71,6 +87,8 @@ export function ContactEmailForm({
   onSubmit,
   onCancel,
 }: {
+  /** 입력 위의 설명 - 이 주소가 어디에 쓰이는지 */
+  intro?: ReactNode
   labels: AuthLabels
   fieldId: string
   email: string
@@ -93,6 +111,7 @@ export function ContactEmailForm({
       noValidate
       aria-label={labels.contactEmailSend}
     >
+      {intro}
       {error && <Alert tone="danger">{error.message}</Alert>}
       <Field
         id={fieldId}

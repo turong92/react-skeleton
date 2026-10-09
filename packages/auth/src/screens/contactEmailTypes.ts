@@ -20,5 +20,7 @@ export type ContactEmailSectionProps = {
   onProviderReauth?: (provider: string, email: string) => void
   /** 제공자 동의를 마치고 돌아왔다 - 새 주소와 그 증명으로 요청을 한 번 내고 코드 단계를 연다 */
   resume?: { email: string; socialReauth: SocialReauth } | null
+  /** 줄만 그린다(`AccountSettings` 의 카드 안) - 아니면 제목 있는 카드 한 장에 담는다 */
+  row?: boolean
   labels?: Partial<AuthLabels>
 }

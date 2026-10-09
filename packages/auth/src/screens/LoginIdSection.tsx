@@ -1,9 +1,10 @@
-import { Alert, Button, SectionCard } from '@skeleton/ui'
+import { Alert, Button, SettingsRow } from '@skeleton/ui'
 import type { LoginIdRules } from '../account/loginIdRules'
 import type { LoginIdAvailability } from '../account/types'
 import styles from './auth.module.css'
 import { mergeLabels, type AuthLabels } from './labels'
 import { LoginIdChoice } from './LoginIdChoice'
+import { SectionShell } from './SectionShell'
 import { labelOfMethod } from './methodsList'
 
 export type LoginIdSectionProps = {
@@ -23,6 +24,8 @@ export type LoginIdSectionProps = {
   /** 비밀번호 없는 계정의 단추 - 그 구역으로 간다. 없으면(그 구역을 끈 앱) 단추를 그리지 않는다 */
   onGo?: (target: 'password' | 'email') => void
   labels?: Partial<AuthLabels>
+  /** 줄만 그린다(`AccountSettings` 의 카드 안) - 아니면 제목 있는 카드 한 장에 담는다 */
+  row?: boolean
 }
 
 /**
@@ -42,46 +45,53 @@ export function LoginIdSection({
   onAlreadySet,
   onGo,
   labels: given,
+  row,
 }: LoginIdSectionProps) {
   const labels = mergeLabels(given)
   const id = 'login-id'
   if (loginId === null)
     return (
-      <SectionCard id={id} title={labels.loginId} description={labels.loginIdRequiredBody}>
-        <LoginIdChoice
-          rules={rules}
-          api={api}
-          onSubmit={onSubmit}
-          onChosen={onChosen}
-          onAlreadySet={onAlreadySet}
-          labelledBy={`${id}-title`}
-          labels={labels}
-        />
-      </SectionCard>
+      <SectionShell row={row} id={id} title={labels.loginId}>
+        <SettingsRow label={labels.loginId} labelId={`${id}-title`}>
+          <p className={styles.muted}>{labels.loginIdRequiredBody}</p>
+          <LoginIdChoice
+            rules={rules}
+            api={api}
+            onSubmit={onSubmit}
+            onChosen={onChosen}
+            onAlreadySet={onAlreadySet}
+            labelledBy={`${id}-title`}
+            labels={labels}
+          />
+        </SettingsRow>
+      </SectionShell>
     )
   const target = email ? 'password' : 'email'
   return (
-    <SectionCard id={id} title={labels.loginId}>
-      <div className={styles.stack}>
-        <div className={styles.row}>
-          <strong className={styles.loginIdValue}>{loginId}</strong>
-          <span className={styles.muted}>{labels.settingsLoginIdFixed}</span>
-        </div>
-        {!hasPassword && (
+    <SectionShell row={row} id={id} title={labels.loginId}>
+      <SettingsRow
+        label={labels.loginId}
+        value={
           <>
-            <Alert tone="info">
-              {labels.settingsLoginIdNoPassword(labelOfMethod(provider ?? 'magic_link', labels))}
-            </Alert>
-            {onGo && (
-              <div className={styles.row}>
-                <Button variant="secondary" onClick={() => onGo(target)}>
-                  {email ? labels.settingsLoginIdSetPassword : labels.settingsLoginIdAddEmail}
-                </Button>
-              </div>
-            )}
+            <strong className={styles.loginIdValue}>{loginId}</strong>
+            <span className={styles.muted}>{labels.settingsLoginIdFixed}</span>
           </>
+        }
+        action={
+          !hasPassword &&
+          onGo && (
+            <Button variant="secondary" size="sm" onClick={() => onGo(target)}>
+              {email ? labels.settingsLoginIdSetPassword : labels.settingsLoginIdAddEmail}
+            </Button>
+          )
+        }
+      >
+        {!hasPassword && (
+          <Alert tone="info">
+            {labels.settingsLoginIdNoPassword(labelOfMethod(provider ?? 'magic_link', labels))}
+          </Alert>
         )}
-      </div>
-    </SectionCard>
+      </SettingsRow>
+    </SectionShell>
   )
 }

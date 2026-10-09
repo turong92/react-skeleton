@@ -298,6 +298,8 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
     collapsible: true,
     children: 'body',
   }),
+  'ui#SettingsGroup': () => ({ id: 'account', title: 'Account', children: 'rows' }),
+  'ui#SettingsRow': () => ({ label: 'Password', value: 'In use' }),
   'ui#SectionIndex': () => ({
     label: 'On this page',
     items: [{ id: 'profile', label: 'Profile' }],

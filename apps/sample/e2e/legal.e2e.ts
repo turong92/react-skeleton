@@ -112,7 +112,11 @@ describe('sign-up consent checklist', () => {
     'settings: agreed documents with their version, optional consent can be withdrawn and given again, history lists both',
     async () => {
       await page.goto(`${baseUrl}/account`)
-      const section = page.getByRole('region', { name: legal.settingsTitle })
+      // 「환경」 카드의 「약관 동의」 줄 - 「보기」가 목록 · 토글 · 이력이 든 대화상자를 연다
+      const section = page.getByRole('group', { name: legal.settingsTitle })
+      await section
+        .getByRole('button', { name: `${legal.settingsTitle} ${legal.viewShort}`, exact: true })
+        .click()
       await pwExpect(section.getByText(legal.state.CURRENT).first()).toBeVisible()
       await pwExpect(section.getByText(legal.cannotWithdraw).first()).toBeVisible() // 필수는 철회 불가
       const toggle = section.getByRole('switch')

@@ -111,7 +111,7 @@ export const accountRoutes = createAuthRoutes({
       { value: 'ko', label: '한국어' },
       { value: 'en', label: 'English' },
     ],
-    after: <ConsentSettingsSection />,
+    preferenceRows: <ConsentSettingsSection />,
   },
   handle: hidden,
 })

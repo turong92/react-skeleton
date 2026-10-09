@@ -52,7 +52,13 @@ afterAll(async () => {
 })
 
 const heading = (name: string | RegExp, level = 1) => page.getByRole('heading', { level, name })
-const region = (name: string, on: Page = page) => on.getByRole('region', { name })
+/** 설정의 한 항목 줄(이름 · 값 · 단추) - 카드 안의 `role=group` */
+const region = (name: string, on: Page = page) => on.getByRole('group', { name })
+/** 목록형 항목(로그인 수단 · 기기)의 단추를 눌러 연 대화상자 */
+const openList = async (rowName: string, on: Page = page) => {
+  await region(rowName, on).getByRole('button').first().click()
+  return on.getByRole('dialog').first()
+}
 const token = (key: string) => page.evaluate((k) => window.localStorage.getItem(k), key)
 const refreshToken = async () =>
   JSON.parse((await token('sample.refresh')) ?? '{}').refreshToken as string
@@ -362,7 +368,8 @@ describe('account lifecycle against the real backend', () => {
     // 이 세션은 로그인된 채다 — 새로고침해도 설정이 열린다
     await page.reload()
     await pwExpect(heading(auth.settingsTitle)).toBeVisible()
-    await pwExpect(region(auth.sectionSessions).getByText('Second device')).toHaveCount(0)
+    await pwExpect((await openList(auth.sectionSessions)).getByText('Second device')).toHaveCount(0)
+    await page.keyboard.press('Escape')
     // 옛 주소로는 로그인할 수 없고 새 주소로는 된다
     pwExpect((await apiLogin({ email, password: nextPassword })).status).toBe(401)
     pwExpect((await apiLogin({ email: emailNext, password: nextPassword })).status).toBe(200)
@@ -373,7 +380,7 @@ describe('account lifecycle against the real backend', () => {
       (await apiLogin({ email: emailNext, password: nextPassword }, 'Third device')).status,
     ).toBe(200)
     await page.goto(`${baseUrl}/account`)
-    const section = region(auth.sectionSessions)
+    const section = await openList(auth.sectionSessions)
     await pwExpect(section.getByText('Third device')).toBeVisible()
     // 「이 기기」 배지(정확히) — 로컬 IP 는 「이 기기(로컬)」 로 읽혀 부분 일치로는 여럿이 걸린다
     await pwExpect(section.getByText(auth.sessionsCurrent, { exact: true })).toBeVisible()
@@ -386,9 +393,11 @@ describe('account lifecycle against the real backend', () => {
     await section.getByRole('button', { name: auth.sessionsRevoke, exact: true }).first().click()
     await page
       .getByRole('dialog')
+      .last()
       .getByRole('button', { name: auth.sessionsRevoke, exact: true })
       .click() // 로그아웃은 확인을 거친다
     await pwExpect(section.getByText('Third device')).toHaveCount(0)
+    await page.keyboard.press('Escape') // 목록 대화상자를 닫는다
   })
 
   it('language and time zone are saved to the account — and the account has no nickname line (the user has one nickname concept: the board ones)', async () => {
@@ -404,9 +413,9 @@ describe('account lifecycle against the real backend', () => {
 
   it('delete: password re-authentication, then a typed confirmation; afterwards the account cannot sign in', async () => {
     const section = region(auth.sectionDelete)
-    await pwExpect(section.getByText(/30/)).toBeVisible() // 유예 기간 안내
     await section.getByRole('button', { name: auth.deleteButton }).click()
     const dialog = page.getByRole('dialog')
+    await pwExpect(dialog.getByText(/30/).first()).toBeVisible() // 유예 기간 안내
     await dialog.getByLabel(auth.currentPassword).fill(nextPassword)
     const confirm = dialog.getByRole('button', { name: auth.deleteConfirm })
     await pwExpect(confirm).toBeDisabled()
@@ -442,7 +451,7 @@ describe('a passwordless account (email link) re-authenticates by a mailed code,
 
   it('settings know there is no password (no "current password" field) and offer the mailed code instead', async () => {
     await page.goto(`${baseUrl}/account`)
-    const passwordSection = region(auth.passwordSetTitle)
+    const passwordSection = region(auth.sectionPassword)
     await pwExpect(passwordSection).toBeVisible()
     await passwordSection.getByRole('button', { name: auth.passwordSetTitle }).click()
     const dialog = page.getByRole('dialog')
@@ -479,7 +488,7 @@ describe('a passwordless account (email link) re-authenticates by a mailed code,
   })
 
   it('first password: a new mailed code is typed in place, then the password is set; the account then signs in with it', async () => {
-    const section = region(auth.passwordSetTitle)
+    const section = region(auth.sectionPassword)
     await section.getByRole('button', { name: auth.passwordSetTitle }).click()
     const dialog = page.getByRole('dialog')
     await dialog.getByRole('button', { name: auth.reauthCodeSend }).click()
@@ -501,10 +510,10 @@ describe('a passwordless account (email link) re-authenticates by a mailed code,
   })
 
   it('unlink: removing a sign-in method needs re-authentication — the dialog asks for the password and stays open on a wrong one', async () => {
-    const section = region(auth.sectionMethods)
+    const section = await openList(auth.sectionMethods)
     const mail = section.getByRole('listitem').filter({ hasText: auth.methodNames.magic_link })
     await mail.getByRole('button', { name: auth.methodUnlink }).click()
-    const dialog = page.getByRole('dialog')
+    const dialog = page.getByRole('dialog').last()
     await pwExpect(dialog.getByRole('button', { name: auth.methodUnlink })).toBeDisabled()
     await dialog.getByLabel(auth.currentPassword).fill('wrong-password-1')
     await dialog.getByRole('button', { name: auth.methodUnlink }).click()
@@ -515,6 +524,7 @@ describe('a passwordless account (email link) re-authenticates by a mailed code,
     await pwExpect(
       section.getByRole('listitem').filter({ hasText: auth.methodNames.magic_link }),
     ).toHaveCount(0)
+    await page.keyboard.press('Escape')
   })
 
   it('the account can still be deleted with its password (the code route is shown with the next account)', async () => {

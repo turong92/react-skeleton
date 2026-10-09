@@ -107,7 +107,7 @@ describe('nickname: sign-up → board author → delete → cancel', () => {
 
   it('delete the account → signed-out landing → sign in again → "cancel the deletion?" → cancel → signed in', async () => {
     await page.goto(`${baseUrl}/account`)
-    const section = page.getByRole('region', { name: auth.sectionDelete })
+    const section = page.getByRole('group', { name: auth.sectionDelete })
     await section.getByRole('button', { name: auth.deleteButton }).click()
     const dialog = page.getByRole('dialog')
     await dialog.getByLabel(auth.currentPassword).fill(password)
@@ -126,7 +126,7 @@ describe('nickname: sign-up → board author → delete → cancel', () => {
       page.getByRole('region', { name: ko('settings.nicknames') }).getByText(nickname),
     ).toBeVisible()
     await page.goto(`${baseUrl}/account`)
-    await pwExpect(page.getByRole('region', { name: ko('account.localeSection') })).toBeVisible()
+    await pwExpect(page.getByRole('group', { name: ko('account.localeSection') })).toBeVisible()
     await pwExpect(page.getByLabel(auth.displayName, { exact: true })).toHaveCount(0)
   })
 })

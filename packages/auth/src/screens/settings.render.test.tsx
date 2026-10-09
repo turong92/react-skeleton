@@ -95,6 +95,7 @@ describe('settings sections', () => {
         locales={[]}
         timeZones={[]}
         onSave={noop}
+        initiallyOpen
       />,
     )
     expect(out).toContain('>Nickname<')
@@ -193,6 +194,7 @@ describe('settings sections', () => {
       <SignInMethodsSection
         identities={[identity()]}
         notice="Linked: check your inbox"
+        initiallyOpen
         subject={withPassword}
         requestReauthCode={noop}
         onUnlink={noop}
@@ -205,6 +207,7 @@ describe('settings sections', () => {
     const only = html(
       <SignInMethodsSection
         identities={[identity()]}
+        initiallyOpen
         subject={withPassword}
         requestReauthCode={noop}
         onUnlink={noop}
@@ -217,6 +220,7 @@ describe('settings sections', () => {
     const two = html(
       <SignInMethodsSection
         identities={[identity(), identity({ id: 'idn_2', method: 'google', subject: null })]}
+        initiallyOpen
         subject={withPassword}
         requestReauthCode={noop}
         onUnlink={noop}
@@ -231,6 +235,7 @@ describe('settings sections', () => {
         identities={[identity(), identity({ id: 'idn_2', method: 'google', subject: null })]}
         socialProviders={[{ provider: 'google' }, { provider: 'kakao' }]}
         onLink={() => undefined}
+        initiallyOpen
         subject={withPassword}
         requestReauthCode={noop}
         onUnlink={noop}
@@ -291,6 +296,7 @@ describe('settings sections', () => {
         sessions={[session({ current: true }), session({ id: 'ses_2', deviceName: null })]}
         onRevoke={noop}
         onRevokeOthers={noop}
+        initiallyOpen
       />,
     )
     expect(out).toContain('This device')
@@ -308,6 +314,7 @@ describe('settings sections', () => {
         ]}
         onRevoke={noop}
         onRevokeOthers={noop}
+        initiallyOpen
       />,
     )
     expect(out).toContain('Local address')

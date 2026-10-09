@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — 설정은 카드 3장 · 항목 한 줄씩(`@skeleton/auth` · `@skeleton/ui` · `@skeleton/legal` · `apps/sample`)
+
+- **설정(`/account`)이 카드 9장에서 3장(계정 · 로그인 · 보안 · 환경)이 되고, 카드 안은 항목 한 줄씩이다**(이름 · 현재 값 · 오른쪽 테두리 단추; 375 · 320px 에서는 이름이 위, 값과 단추가 아래 줄). 긴 설명은 그 항목의 대화상자 안으로 옮겼고, 로그인 수단 · 로그인한 기기 · 약관 동의는 목록이 줄에 펼쳐져 있지 않고 「관리」 · 「보기」가 여는 대화상자 안에 있다. 구역 칩과 `#email` 같은 해시는 그 항목이 든 카드로 간다. 제공자 왕복 뒤 재개(연결 · 해제)는 로그인 수단 대화상자를 다시 열어 결과를 그 안에 보인다.
+- **새 부품**: `@skeleton/ui` 의 `SettingsGroup`(카드 한 장) · `SettingsRow`(한 줄 — `role="group"` 에 이름, 줄의 대화상자는 `dialogs` 로 줄 안에 둔다). 구역 부품(`ProfileSection` · `PasswordSection` · `EmailSection` · `ContactEmailSection` · `SignInMethodsSection` · `SessionsSection` · `DeleteAccountSection` · `LoginIdSection` · `NeedsEmailCard`)의 이름은 그대로고 `row` prop 이 줄만 그리게 한다(없으면 제목 있는 카드 한 장에 그 줄 하나). `SessionsSection` · `SignInMethodsSection` · `ProfileSection` 의 `initiallyOpen`(서버 렌더 시험 · 스토리용).
+- **`AccountSettings` 의 `preferenceRows`**(`createAuthRoutes({ settings })` 도 받는다) — 「환경」 카드에 더할 줄. 견본 앱은 `after`(설정 아래에 이어 붙임) 대신 `<ConsentSettings row />` 를 여기에 건다. `@skeleton/legal` 의 `ConsentSettings` 는 `row` 이면 「약관 동의」 줄 + 「보기」 대화상자.
+- **`AuthLabels` 키 10개 추가**: `groupAccount` · `groupSecurity` · `groupPreferences` · `rowChange` · `rowManage` · `rowView` · `rowRegister` · `rowNone` · `sessionsCount`.
+
 ### Changed — 설정의 입력은 대화상자로(`@skeleton/auth` · `@skeleton/ui` · `apps/sample`)
 
 - **설정 구역은 현재 값 + 단추만 보이고, 입력 양식은 모달 대화상자로 뜬다**(프로필 · 계정 이메일 · 연락받을 이메일 · 비밀번호 · 계정 삭제). 세션 로그아웃 · 연락받을 이메일 지우기에는 확인 단계가 생겼다. 제공자 왕복에서 돌아오면 그 구역으로 스크롤하고 같은 대화상자가 그 단계로 다시 열린다. 새로고침 뒤 대기 중인 이메일 변경은 구역의 「인증번호 입력 이어 하기」 단추로 보인다(팝업이 저절로 뜨지 않는다).

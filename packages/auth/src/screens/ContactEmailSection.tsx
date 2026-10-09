@@ -1,5 +1,5 @@
 import { ApiRequestError, ErrorCodes, isErrorCode } from '@skeleton/api-client'
-import { Alert, ConfirmDialog, SectionCard, useSubmitAttempt } from '@skeleton/ui'
+import { Alert, ConfirmDialog, useSubmitAttempt } from '@skeleton/ui'
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import type { CodeSent, SocialReauth } from '../account/accountApi'
 import { useCodeClock } from '../codeClockContext'
@@ -8,6 +8,7 @@ import styles from './auth.module.css'
 import { ReauthPrompt } from './EmailRequiredParts'
 import { ContactEmailForm, ContactEmailSummary } from './ContactEmailParts'
 import type { ContactEmailSectionProps, Step } from './contactEmailTypes'
+import { SectionShell } from './SectionShell'
 import { SettingsDialog } from './SettingsDialog'
 import { useStepFocus } from './useStepFocus'
 import { mergeLabels } from './labels'
@@ -33,6 +34,7 @@ export function ContactEmailSection({
   providers = [],
   onProviderReauth,
   resume,
+  row,
   labels: given,
 }: ContactEmailSectionProps) {
   const labels = mergeLabels(given)
@@ -122,99 +124,110 @@ export function ContactEmailSection({
     setStep('idle')
   }
   return (
-    <SectionCard id="contact" title={labels.sectionContactEmail}>
-      <div className={styles.stack}>
-        <p className={styles.muted}>{labels.contactEmailRole}</p>
-        {notice && (
-          <Alert tone="success">
-            {notice === 'saved' ? labels.contactEmailSaved : labels.contactEmailRemoved}
-          </Alert>
-        )}
-        <ContactEmailSummary
-          contactEmail={contactEmail}
-          labels={labels}
-          actions={actions}
-          removal={removal}
-          onStart={() => {
-            setNotice(null)
-            setEmail('')
-            setStep('entering')
-          }}
-          onRemove={() => setConfirmingRemove(true)}
-        />
-      </div>
-      <SettingsDialog
-        open={step !== 'idle'}
-        onClose={closeDialog}
-        title={dialogTitle}
-        closeLabel={labels.dialogClose}
-      >
-        {step === 'entering' && (
-          <ContactEmailForm
-            labels={labels}
-            fieldId={fieldId}
-            email={email}
-            onEmailChange={setEmail}
-            problem={problem}
-            attempted={attempt.attempted}
-            error={reauth ? null : action.error}
-            busy={action.busy}
-            extra={
-              reauth && (
-                <ReauthPrompt
+    <SectionShell row={row} id="contact" title={labels.sectionContactEmail}>
+      <ContactEmailSummary
+        contactEmail={contactEmail}
+        labels={labels}
+        actions={actions}
+        removal={removal}
+        notice={
+          notice && (
+            <Alert tone="success">
+              {notice === 'saved' ? labels.contactEmailSaved : labels.contactEmailRemoved}
+            </Alert>
+          )
+        }
+        onStart={() => {
+          setNotice(null)
+          setEmail('')
+          setStep('entering')
+        }}
+        onRemove={() => setConfirmingRemove(true)}
+        dialogs={
+          <>
+            <SettingsDialog
+              open={step !== 'idle'}
+              onClose={closeDialog}
+              title={dialogTitle}
+              closeLabel={labels.dialogClose}
+            >
+              {step === 'entering' && (
+                <ContactEmailForm
+                  intro={
+                    <>
+                      <p className={styles.muted}>{labels.contactEmailRole}</p>
+                      {contactEmail && (
+                        <p className={styles.muted}>{labels.contactEmailCurrentIsAccount}</p>
+                      )}
+                    </>
+                  }
                   labels={labels}
-                  providers={providers}
-                  canContinue={!!onProviderReauth && !problem}
-                  onProvider={(provider) => onProviderReauth?.(provider, email.trim())}
-                  onRetry={() => {
-                    setReauth(false)
-                    action.clear()
-                  }}
+                  fieldId={fieldId}
+                  email={email}
+                  onEmailChange={setEmail}
+                  problem={problem}
+                  attempted={attempt.attempted}
+                  error={reauth ? null : action.error}
+                  busy={action.busy}
+                  extra={
+                    reauth && (
+                      <ReauthPrompt
+                        labels={labels}
+                        providers={providers}
+                        canContinue={!!onProviderReauth && !problem}
+                        onProvider={(provider) => onProviderReauth?.(provider, email.trim())}
+                        onRetry={() => {
+                          setReauth(false)
+                          action.clear()
+                        }}
+                      />
+                    )
+                  }
+                  onSubmit={send}
+                  onCancel={closeDialog}
                 />
-              )
-            }
-            onSubmit={send}
-            onCancel={closeDialog}
-          />
-        )}
-        {step === 'code' && (
-          <div ref={codeBox}>
-            <VerifyCodePanel
-              email={sentTo}
-              title={labels.contactEmailCodeTitle}
-              description={labels.contactEmailCodeBody(sentTo)}
-              labels={{ ...given, checkEmailWrongAddress: labels.emailRequiredFixAddress }}
-              expiresAt={codeWin?.expiresAt}
-              expirySource={codeWin?.source ?? 'estimate'}
-              resendAvailableAt={codeWin?.resendAvailableAt}
-              resendExhausted={codeWin?.resendExhausted === true}
-              onVerify={async (code) => {
-                await onConfirmCode(code)
-                setNotice('saved')
-                setStep('idle')
-                onChanged?.()
-              }}
-              onResend={() => onRequestCode(sentTo)}
-              onStartOver={() => {
-                setEmail(sentTo)
-                action.clear()
-                setStep('entering')
-              }}
+              )}
+              {step === 'code' && (
+                <div ref={codeBox}>
+                  <VerifyCodePanel
+                    email={sentTo}
+                    title={labels.contactEmailCodeTitle}
+                    description={labels.contactEmailCodeBody(sentTo)}
+                    labels={{ ...given, checkEmailWrongAddress: labels.emailRequiredFixAddress }}
+                    expiresAt={codeWin?.expiresAt}
+                    expirySource={codeWin?.source ?? 'estimate'}
+                    resendAvailableAt={codeWin?.resendAvailableAt}
+                    resendExhausted={codeWin?.resendExhausted === true}
+                    onVerify={async (code) => {
+                      await onConfirmCode(code)
+                      setNotice('saved')
+                      setStep('idle')
+                      onChanged?.()
+                    }}
+                    onResend={() => onRequestCode(sentTo)}
+                    onStartOver={() => {
+                      setEmail(sentTo)
+                      action.clear()
+                      setStep('entering')
+                    }}
+                  />
+                </div>
+              )}
+            </SettingsDialog>
+            <ConfirmDialog
+              open={confirmingRemove}
+              onClose={() => setConfirmingRemove(false)}
+              onConfirm={() => void remove()}
+              title={labels.contactEmailRemoveTitle}
+              description={labels.contactEmailRemoveBody}
+              confirmLabel={labels.contactEmailRemove}
+              cancelLabel={labels.cancel}
+              closeLabel={labels.cancel}
+              busy={removal.busy}
             />
-          </div>
-        )}
-      </SettingsDialog>
-      <ConfirmDialog
-        open={confirmingRemove}
-        onClose={() => setConfirmingRemove(false)}
-        onConfirm={() => void remove()}
-        title={labels.contactEmailRemoveTitle}
-        description={labels.contactEmailRemoveBody}
-        confirmLabel={labels.contactEmailRemove}
-        cancelLabel={labels.cancel}
-        closeLabel={labels.cancel}
-        busy={removal.busy}
+          </>
+        }
       />
-    </SectionCard>
+    </SectionShell>
   )
 }

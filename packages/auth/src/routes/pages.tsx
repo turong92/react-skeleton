@@ -625,6 +625,7 @@ export type SettingsExtras = Partial<
     | 'onProfileChanged'
     | 'showDisplayName'
     | 'contactEmail'
+    | 'preferenceRows'
   >
 > & {
   locales: AccountSettingsProps['locales']

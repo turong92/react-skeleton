@@ -132,11 +132,11 @@ describe('LINE: PKCE + nonce on the way out and back, an address-less account ch
     'settings after the registration: the address is there, LINE is the sign-in method',
     async () => {
       await page.goto(`${baseUrl}/account`)
-      const email = page.getByRole('region', { name: auth.sectionEmail })
+      const email = page.getByRole('group', { name: auth.sectionEmail })
       await pwExpect(email.locator('strong').filter({ hasText: lineEmail })).toBeVisible()
       await pwExpect(email.getByText(auth.emailNone)).toHaveCount(0)
-      const methods = page.getByRole('region', { name: auth.sectionMethods })
-      await pwExpect(methods.getByText('LINE', { exact: true }).first()).toBeVisible()
+      const methods = page.getByRole('group', { name: auth.sectionMethods })
+      await pwExpect(methods.getByText(/LINE/).first()).toBeVisible()
     },
   )
 
@@ -155,7 +155,7 @@ describe('LINE: PKCE + nonce on the way out and back, an address-less account ch
       await page.goto(`${baseUrl}/account`)
       await pwExpect(
         page
-          .getByRole('region', { name: auth.sectionEmail })
+          .getByRole('group', { name: auth.sectionEmail })
           .locator('strong')
           .filter({ hasText: lineEmail }),
       ).toBeVisible()
@@ -189,15 +189,12 @@ describe('X: PKCE without a nonce, 30-second codes are exchanged at once', () =>
       await page.goto(`${baseUrl}/account`)
       await pwExpect(
         page
-          .getByRole('region', { name: auth.sectionEmail })
+          .getByRole('group', { name: auth.sectionEmail })
           .locator('strong')
           .filter({ hasText: xEmail }),
       ).toBeVisible()
       await pwExpect(
-        page
-          .getByRole('region', { name: auth.sectionMethods })
-          .getByText('X', { exact: true })
-          .first(),
+        page.getByRole('group', { name: auth.sectionMethods }).getByText(/\bX\b/).first(),
       ).toBeVisible()
     },
   )
@@ -322,10 +319,10 @@ describe('a social sign-in with the email of an existing account is guided, not 
     pwExpect(new URL(page.url()).pathname).toBe('/')
     // 로그인 수단에 메일(비밀번호)과 LINE 이 함께 있다 — 새 계정이 아니라 같은 계정
     await page.goto(`${baseUrl}/account`)
-    const methods = page.getByRole('region', { name: auth.sectionMethods })
-    await pwExpect(methods.getByText('LINE', { exact: true }).first()).toBeVisible()
+    const methods = page.getByRole('group', { name: auth.sectionMethods })
+    await pwExpect(methods.getByText(/LINE/).first()).toBeVisible()
     await pwExpect(
-      page.getByRole('region', { name: auth.sectionEmail }).getByText(mail),
+      page.getByRole('group', { name: auth.sectionEmail }).getByText(mail),
     ).toBeVisible()
     await control({ deny: false })
   })

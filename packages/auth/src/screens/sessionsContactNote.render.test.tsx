@@ -20,6 +20,7 @@ const html = (contactNote: boolean) =>
       onRevoke={async () => undefined}
       onRevokeOthers={async () => undefined}
       contactNote={contactNote}
+      initiallyOpen
       labels={koAuthLabels}
     />,
   )

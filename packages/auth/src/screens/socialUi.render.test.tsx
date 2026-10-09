@@ -188,7 +188,7 @@ describe('an account without an address (LINE / X)', () => {
 
   it('shows "no email address" instead of an empty value, and invites to add one', () => {
     const out = html(<EmailSection {...base} email={null} initiallyOpen />)
-    expect(out).toContain(L.emailNone)
+    expect(out).toContain(L.rowNone)
     expect(out).not.toContain('<strong></strong>')
     expect(out).not.toContain(L.emailUnverified)
     // 이메일을 필수로 켜지 않은 앱: 제공자 확인이 먼저라 힌트도 그렇게 말한다

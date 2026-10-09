@@ -130,12 +130,11 @@ describe('EmailRequiredGate', () => {
 describe('contact email section', () => {
   const props = { onRequestCode: noop, onConfirmCode: noop, onRemove: noop, labels: koAuthLabels }
 
-  it('none: says where notices go, optional, and offers one filled "register" button', () => {
+  it('none: says where notices go and offers an outlined "register" button (the explanation lives in the dialog)', () => {
     const out = html(<ContactEmailSection {...props} contactEmail={null} />)
     expect(out).toContain('연락받을 이메일')
     expect(out).toContain('계정 이메일로 받아요')
-    expect(out).toContain('로그인이나 비밀번호 찾기에는 쓰이지 않아요')
-    expect(out).toMatch(/<button[^>]*data-variant="primary"[^>]*>연락받을 이메일 등록<\/button>/)
+    expect(out).toMatch(/<button[^>]*data-variant="secondary"[^>]*>등록<\/button>/)
   })
 
   it('set: shows the address and change / remove as buttons that look pressable', () => {
@@ -143,7 +142,6 @@ describe('contact email section', () => {
     expect(out).toContain('news@example.com')
     expect(out).toMatch(/<button[^>]*data-variant="secondary"[^>]*>바꾸기<\/button>/)
     expect(out).toMatch(/<button[^>]*data-variant="danger"[^>]*>지우기<\/button>/)
-    expect(out).toContain('보안 메일은 늘 계정 이메일로만 가요')
   })
 })
 
@@ -162,6 +160,7 @@ describe('account email section on an app that requires one', () => {
         {...base}
         email="a@example.com"
         required
+        initiallyOpen
         subject={{ hasPassword: true, email: 'a@example.com', providers: [] }}
       />,
     )
@@ -172,6 +171,7 @@ describe('account email section on an app that requires one', () => {
       <EmailSection
         {...base}
         email="a@example.com"
+        initiallyOpen
         subject={{ hasPassword: true, email: 'a@example.com', providers: [] }}
       />,
     )

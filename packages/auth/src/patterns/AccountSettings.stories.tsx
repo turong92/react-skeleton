@@ -31,6 +31,22 @@ async function openDialog(
   return within(await canvas.findByRole('dialog'))
 }
 
+/** 열려 있는 대화상자 중 맨 위 것(확인 대화상자가 목록 대화상자 위에 뜰 수 있다) */
+async function topDialog(canvas: Scope) {
+  const dialogs = await canvas.findAllByRole('dialog')
+  return within(dialogs[dialogs.length - 1])
+}
+
+/** 줄의 단추(이름으로)를 눌러 맨 위에 뜬 대화상자의 질의 도구를 돌려준다 - 목록형 항목(로그인 수단 · 기기)이 쓴다 */
+async function openList(
+  canvas: Scope,
+  userEvent: { click: (element: Element) => Promise<void> },
+  button: string | RegExp,
+) {
+  await userEvent.click(await canvas.findByRole('button', { name: button }))
+  return topDialog(canvas)
+}
+
 function Demo({ fake, ...props }: { fake?: FakeAccountOptions } & Partial<AccountSettingsProps>) {
   const api = useMemo(() => createFakeAccountApi(fake), [fake])
   return (
@@ -58,15 +74,23 @@ type Story = StoryObj<typeof Demo>
 
 export const Sections: Story = {
   play: async ({ canvas }) => {
-    for (const name of [
-      'Profile',
-      'Password',
-      'Account email',
-      'Sign-in methods',
-      'Active sessions',
-      'Delete account',
-    ])
-      await expect(await canvas.findByRole('heading', { name })).toBeVisible()
+    // 카드 세 장, 안은 항목 한 줄씩 - 이름 · 현재 값 · 단추
+    const cards: Record<string, string[]> = {
+      Account: ['Account email', 'Delete account'],
+      'Sign-in & security': ['Password', 'Sign-in methods', 'Active sessions'],
+      Preferences: ['Profile'],
+    }
+    for (const [card, rows] of Object.entries(cards)) {
+      const region = within(await canvas.findByRole('region', { name: card }))
+      for (const name of rows) await expect(region.getByRole('group', { name })).toBeVisible()
+    }
+    await expect(canvas.getAllByRole('region')).toHaveLength(3)
+    const methods = within(canvas.getByRole('group', { name: 'Sign-in methods' }))
+    await expect(methods.getByText('Password · Google')).toBeVisible()
+    await expect(methods.getByRole('button', { name: 'Sign-in methods Manage' })).toHaveAttribute(
+      'data-variant',
+      'secondary',
+    )
   },
 }
 
@@ -78,7 +102,8 @@ export const OpensOnTheSectionTheHashNames: Story = {
     return () => window.history.replaceState(null, '', before || window.location.pathname)
   },
   play: async ({ canvas }) => {
-    const title = await canvas.findByRole('heading', { name: 'Delete account' })
+    // 항목이 든 카드(「계정」)의 제목으로 간다
+    const title = await canvas.findByRole('heading', { level: 2, name: 'Account' })
     await waitFor(() => expect(title).toHaveFocus())
     const top = title.getBoundingClientRect().top
     await expect(top).toBeGreaterThanOrEqual(0)
@@ -93,11 +118,9 @@ export const OpensOnTheSectionTheHashNames: Story = {
 export const WithoutTheAccountNickname: Story = {
   args: { showDisplayName: false },
   play: async ({ canvas, userEvent }) => {
-    const section = within(await canvas.findByRole('region', { name: 'Profile' }))
-    await expect(section.queryByText('Nickname')).toBeNull()
-    await expect(section.getByText('Language')).toBeVisible()
-    await expect(section.getByText('Time zone')).toBeVisible()
-    const dialog = await openDialog(canvas, userEvent, section, 'Edit profile')
+    const section = within(await canvas.findByRole('group', { name: 'Profile' }))
+    await expect(section.queryByText(/Ann/)).toBeNull()
+    const dialog = await openDialog(canvas, userEvent, section, 'Profile Change')
     await expect(dialog.queryByLabelText(/Nickname/)).toBeNull()
     await expect(dialog.getByLabelText('Language')).toBeVisible()
     await expect(dialog.getByLabelText('Time zone')).toBeVisible()
@@ -106,8 +129,8 @@ export const WithoutTheAccountNickname: Story = {
 
 export const ChangePassword: Story = {
   play: async ({ canvas, userEvent }) => {
-    const section = within(await canvas.findByRole('region', { name: 'Password' }))
-    const dialog = await openDialog(canvas, userEvent, section, 'Change password')
+    const section = within(await canvas.findByRole('group', { name: 'Password' }))
+    const dialog = await openDialog(canvas, userEvent, section, 'Password Change')
     await userEvent.type(dialog.getByLabelText(/^Current password/), 'wrong-old-1')
     await userEvent.type(dialog.getByLabelText(/^New password/), 'Correct-horse-battery-9')
     await userEvent.type(dialog.getByLabelText(/^Confirm password/), 'Correct-horse-battery-9')
@@ -125,8 +148,8 @@ export const ChangePassword: Story = {
 /** 비밀번호 계정: 새 주소 + 현재 비밀번호 → 새 주소로 간 6자리를 같은 자리에서 입력 → 바뀐다(다른 기기는 로그아웃) */
 export const ChangePasswordMismatchBlocksAndSaysWhy: Story = {
   play: async ({ canvas, userEvent }) => {
-    const section = within(await canvas.findByRole('region', { name: 'Password' }))
-    const dialog = await openDialog(canvas, userEvent, section, 'Change password')
+    const section = within(await canvas.findByRole('group', { name: 'Password' }))
+    const dialog = await openDialog(canvas, userEvent, section, 'Password Change')
     await userEvent.type(dialog.getByLabelText(/^Current password/), 'old-password-1')
     await userEvent.type(dialog.getByLabelText(/^New password/), 'Correct-horse-battery-9')
     const confirm = dialog.getByLabelText(/^Confirm password/)
@@ -155,8 +178,8 @@ export const ChangePasswordMismatchBlocksAndSaysWhy: Story = {
 /** 현재 비밀번호 없이 「비밀번호 변경」 — 꺼진 버튼이 아니라 이유를 말하고 그 칸으로 데려간다 */
 export const ChangePasswordWithoutTheProofExplainsItself: Story = {
   play: async ({ canvas, userEvent }) => {
-    const section = within(await canvas.findByRole('region', { name: 'Password' }))
-    const dialog = await openDialog(canvas, userEvent, section, 'Change password')
+    const section = within(await canvas.findByRole('group', { name: 'Password' }))
+    const dialog = await openDialog(canvas, userEvent, section, 'Password Change')
     const submit = dialog.getByRole('button', { name: 'Change password' })
     await expect(submit).toBeEnabled()
     await userEvent.click(submit)
@@ -170,8 +193,8 @@ export const ChangePasswordWithoutTheProofExplainsItself: Story = {
 
 export const ChangeEmailWithoutAddressOrProofExplainsItself: Story = {
   play: async ({ canvas, userEvent }) => {
-    const section = within(await canvas.findByRole('region', { name: 'Account email' }))
-    const dialog = await openDialog(canvas, userEvent, section, 'Change email')
+    const section = within(await canvas.findByRole('group', { name: 'Account email' }))
+    const dialog = await openDialog(canvas, userEvent, section, 'Account email Change')
     await userEvent.click(dialog.getByRole('button', { name: 'Change email' }))
     await expect(
       await dialog.findByRole('button', { name: 'Enter your email address' }),
@@ -186,7 +209,7 @@ export const ChangeEmailWithoutAddressOrProofExplainsItself: Story = {
 
 export const DeleteStaysClosedUntilTheProofIsGiven: Story = {
   play: async ({ canvas, userEvent }) => {
-    const section = within(await canvas.findByRole('region', { name: 'Delete account' }))
+    const section = within(await canvas.findByRole('group', { name: 'Delete account' }))
     const dialog = await openDialog(canvas, userEvent, section, 'Delete my account')
     // 본인 확인과 글자 확인이 끝나기 전에는 삭제 단추가 켜지지 않는다
     await expect(dialog.getByRole('button', { name: 'Delete account' })).toBeDisabled()
@@ -196,8 +219,8 @@ export const DeleteStaysClosedUntilTheProofIsGiven: Story = {
 
 export const ChangeEmailWithCode: Story = {
   play: async ({ canvas, userEvent }) => {
-    const section = within(await canvas.findByRole('region', { name: 'Account email' }))
-    const dialog = await openDialog(canvas, userEvent, section, 'Change email')
+    const section = within(await canvas.findByRole('group', { name: 'Account email' }))
+    const dialog = await openDialog(canvas, userEvent, section, 'Account email Change')
     await userEvent.type(dialog.getByLabelText(/^New email/), 'next@example.com')
     await userEvent.type(dialog.getByLabelText(/^Current password/), 'old-password-1')
     await userEvent.click(dialog.getByRole('button', { name: 'Change email' }))
@@ -218,8 +241,8 @@ export const ChangeEmailWithCode: Story = {
 
 export const WrongPasswordKeepsTheForm: Story = {
   play: async ({ canvas, userEvent }) => {
-    const section = within(await canvas.findByRole('region', { name: 'Account email' }))
-    const dialog = await openDialog(canvas, userEvent, section, 'Change email')
+    const section = within(await canvas.findByRole('group', { name: 'Account email' }))
+    const dialog = await openDialog(canvas, userEvent, section, 'Account email Change')
     await userEvent.type(dialog.getByLabelText(/^New email/), 'next@example.com')
     await userEvent.type(dialog.getByLabelText(/^Current password/), 'wrong-1')
     await userEvent.click(dialog.getByRole('button', { name: 'Change email' }))
@@ -233,7 +256,7 @@ export const PendingEmailFromServer: Story = {
   args: { fake: { pendingEmail: 'next@example.com' } },
   play: async ({ canvas, userEvent }) => {
     // 갑자기 뜨는 팝업을 피한다 - 구역이 「이어 하기」 단추를 보여 주고, 누르면 인증번호 단계가 열린다
-    const section = within(await canvas.findByRole('region', { name: 'Account email' }))
+    const section = within(await canvas.findByRole('group', { name: 'Account email' }))
     const dialog = await openDialog(canvas, userEvent, section, 'Continue entering the code')
     await expect(
       await dialog.findByText(/We sent a 6-digit code to next@example.com/),
@@ -276,8 +299,8 @@ export const EmailChangeCodeExpiredLocksAndFocusesSendAgain: Story = {
 export const ReauthCodeCountsDownFromAnEstimatedTenMinutes: Story = {
   args: { fake: { passwordless: true } },
   play: async ({ canvas, userEvent }) => {
-    const section = within(await canvas.findByRole('region', { name: 'Account email' }))
-    const dialog = await openDialog(canvas, userEvent, section, 'Change email')
+    const section = within(await canvas.findByRole('group', { name: 'Account email' }))
+    const dialog = await openDialog(canvas, userEvent, section, 'Account email Change')
     await userEvent.type(dialog.getByLabelText(/^New email/), 'next@example.com')
     await userEvent.click(dialog.getByRole('button', { name: 'Email me a code' }))
     await expect(await dialog.findByText(/^Time left (10:00|09:5\d)$/)).toBeVisible()
@@ -289,7 +312,7 @@ export const ReauthCodeCountsDownFromAnEstimatedTenMinutes: Story = {
 export const DeleteCodeCountsDownFromAnEstimatedTenMinutes: Story = {
   args: { fake: { passwordless: true } },
   play: async ({ canvas, userEvent }) => {
-    const section = within(await canvas.findByRole('region', { name: 'Delete account' }))
+    const section = within(await canvas.findByRole('group', { name: 'Delete account' }))
     const dialog = await openDialog(canvas, userEvent, section, 'Delete my account')
     await userEvent.click(dialog.getByRole('button', { name: 'Email me a code' }))
     await expect(await dialog.findByText(/^Time left (10:00|09:5\d)$/)).toBeVisible()
@@ -300,8 +323,8 @@ export const DeleteCodeCountsDownFromAnEstimatedTenMinutes: Story = {
 export const PasswordlessEmailChangeByCode: Story = {
   args: { fake: { passwordless: true } },
   play: async ({ canvas, userEvent }) => {
-    const section = within(await canvas.findByRole('region', { name: 'Account email' }))
-    const dialog = await openDialog(canvas, userEvent, section, 'Change email')
+    const section = within(await canvas.findByRole('group', { name: 'Account email' }))
+    const dialog = await openDialog(canvas, userEvent, section, 'Account email Change')
     await userEvent.type(dialog.getByLabelText(/^New email/), 'next@example.com')
     await userEvent.click(dialog.getByRole('button', { name: 'Email me a code' }))
     await expect(await dialog.findByText(/We sent a 6-digit code to ann@example.com/)).toBeVisible()
@@ -318,8 +341,8 @@ export const PasswordlessEmailChangeByCode: Story = {
 export const PasswordlessWrongReauthCodeShowsAttemptsLeft: Story = {
   args: { fake: { passwordless: true } },
   play: async ({ canvas, userEvent }) => {
-    const section = within(await canvas.findByRole('region', { name: 'Account email' }))
-    const dialog = await openDialog(canvas, userEvent, section, 'Change email')
+    const section = within(await canvas.findByRole('group', { name: 'Account email' }))
+    const dialog = await openDialog(canvas, userEvent, section, 'Account email Change')
     await userEvent.type(dialog.getByLabelText(/^New email/), 'next@example.com')
     await userEvent.click(dialog.getByRole('button', { name: 'Email me a code' }))
     await userEvent.click(await dialog.findByLabelText('Digit 1 of 6'))
@@ -332,8 +355,8 @@ export const PasswordlessWrongReauthCodeShowsAttemptsLeft: Story = {
 export const PasswordlessFirstPasswordByCode: Story = {
   args: { fake: { passwordless: true } },
   play: async ({ canvas, userEvent }) => {
-    const section = within(await canvas.findByRole('region', { name: 'Set a password' }))
-    const dialog = await openDialog(canvas, userEvent, section, 'Set a password')
+    const section = within(await canvas.findByRole('group', { name: 'Password' }))
+    const dialog = await openDialog(canvas, userEvent, section, 'Password Set a password')
     await userEvent.click(dialog.getByRole('button', { name: 'Email me a code' }))
     await userEvent.click(await dialog.findByLabelText('Digit 1 of 6'))
     await userEvent.paste(FAKE_CODE)
@@ -349,8 +372,8 @@ export const NoAddressAccountReconsents: Story = {
   args: { fake: { noAddress: true }, socialProviders: [{ provider: 'naver' }] },
   play: async ({ canvas, args, userEvent }) => {
     await expect(await canvas.findByText(/needs a verified email address/)).toBeVisible()
-    const section = within(await canvas.findByRole('region', { name: 'Account email' }))
-    const dialog = await openDialog(canvas, userEvent, section, 'Add email')
+    const section = within(await canvas.findByRole('group', { name: 'Account email' }))
+    const dialog = await openDialog(canvas, userEvent, section, 'Register email')
     await expect(dialog.getByText(/confirm it is you with your current sign-in/)).toBeVisible()
     await userEvent.type(dialog.getByLabelText(/^New email/), 'next@example.com')
     await userEvent.click(await dialog.findByRole('button', { name: 'Confirm with Naver' }))
@@ -368,8 +391,8 @@ export const RequiredAppAsksForTheProviderOnlyWhenTheServerSays: Story = {
     socialProviders: [{ provider: 'kakao' }],
   },
   play: async ({ canvas, args, userEvent }) => {
-    const section = within(await canvas.findByRole('region', { name: 'Account email' }))
-    const dialog = await openDialog(canvas, userEvent, section, 'Add email')
+    const section = within(await canvas.findByRole('group', { name: 'Account email' }))
+    const dialog = await openDialog(canvas, userEvent, section, 'Register email')
     await expect(dialog.queryByRole('button', { name: 'Confirm with Kakao' })).toBeNull()
     await userEvent.type(dialog.getByLabelText(/^New email/), 'next@example.com')
     await userEvent.click(dialog.getByRole('button', { name: 'Add email' }))
@@ -389,13 +412,13 @@ export const AddressLessLineAccount: Story = {
     socialProviders: [{ provider: 'line' }, { provider: 'x' }],
   },
   play: async ({ canvas, args, userEvent }) => {
-    const section = within(await canvas.findByRole('region', { name: 'Account email' }))
-    await expect(section.getByText('No email address on this account')).toBeVisible()
+    const section = within(await canvas.findByRole('group', { name: 'Account email' }))
+    await expect(section.getByText('None')).toBeVisible()
     await expect(section.queryByText('Current address')).toBeNull()
     await expect(section.queryByText('Unverified')).toBeNull()
-    const methods = within(await canvas.findByRole('region', { name: 'Sign-in methods' }))
+    const methods = within(await canvas.findByRole('group', { name: 'Sign-in methods' }))
     await expect(methods.getByText('LINE')).toBeVisible()
-    const dialog = await openDialog(canvas, userEvent, section, 'Add email')
+    const dialog = await openDialog(canvas, userEvent, section, 'Register email')
     await userEvent.type(dialog.getByLabelText(/^New email/), 'me@example.com')
     await userEvent.click(await dialog.findByRole('button', { name: 'Confirm with LINE' }))
     await expect(args.onProviderReauth).toHaveBeenCalledWith('line', {
@@ -436,7 +459,8 @@ export const PasswordlessLinkAsksForTheProofAfterTheProvider: Story = {
     onLinkSocial: fn(),
   },
   play: async ({ canvas, args, userEvent }) => {
-    await userEvent.click(await canvas.findByRole('button', { name: 'Link Kakao' }))
+    const list = await openList(canvas, userEvent, 'Sign-in methods Manage')
+    await userEvent.click(await list.findByRole('button', { name: 'Link Kakao' }))
     await expect(args.onLinkSocial).toHaveBeenCalledWith('kakao') // 증거는 제공자에 다녀온 뒤 콜백 화면이 받는다
   },
 }
@@ -478,10 +502,10 @@ export const EmailLessGoogleAccount: Story = {
     socialProviders: [{ provider: 'google' }],
   },
   play: async ({ canvas, userEvent }) => {
-    const section = within(await canvas.findByRole('region', { name: 'Account email' }))
-    await expect(section.getByText('No email address on this account')).toBeVisible()
+    const section = within(await canvas.findByRole('group', { name: 'Account email' }))
+    await expect(section.getByText('None')).toBeVisible()
     await expect(section.queryByText('Current address')).toBeNull()
-    const dialog = await openDialog(canvas, userEvent, section, 'Add email')
+    const dialog = await openDialog(canvas, userEvent, section, 'Register email')
     await userEvent.type(dialog.getByLabelText(/^New email/), 'me@example.com')
     await expect(await dialog.findByRole('button', { name: 'Confirm with Google' })).toBeVisible()
   },
@@ -491,8 +515,8 @@ export const EmailLessGoogleAccount: Story = {
 export const EmailLessGoogleAccountKorean: Story = {
   args: { ...EmailLessGoogleAccount.args, labels: koAuthLabels },
   play: async ({ canvas }) => {
-    const section = within(await canvas.findByRole('region', { name: '계정 이메일' }))
-    await expect(section.getByText('이 계정에는 이메일 주소가 없어요')).toBeVisible()
+    const section = within(await canvas.findByRole('group', { name: '계정 이메일' }))
+    await expect(section.getByText('없음')).toBeVisible()
   },
 }
 
@@ -500,28 +524,32 @@ export const EmailLessGoogleAccountKorean: Story = {
 export const JustLinkedNotice: Story = {
   args: { linkedProvider: 'kakao' },
   play: async ({ canvas }) => {
-    await expect(await canvas.findByText(/Kakao is linked.*notice/)).toBeVisible()
+    // 연결을 마치고 돌아오면 로그인 수단 대화상자가 다시 열려 있고, 결과 문구는 그 안에 있다
+    const dialog = within(await canvas.findByRole('dialog', { name: 'Sign-in methods' }))
+    await expect(await dialog.findByText(/Kakao is linked.*notice/)).toBeVisible()
   },
 }
 
 export const LastMethodProtected: Story = {
   args: { fake: { onlyMethod: true } },
-  play: async ({ canvas }) => {
-    await expect(await canvas.findByText(/cannot be removed/)).toBeVisible()
-    await expect(canvas.queryByRole('button', { name: 'Remove' })).toBeNull()
+  play: async ({ canvas, userEvent }) => {
+    const dialog = await openList(canvas, userEvent, 'Sign-in methods Manage')
+    await expect(await dialog.findByText(/cannot be removed/)).toBeVisible()
+    await expect(dialog.queryByRole('button', { name: 'Remove' })).toBeNull()
   },
 }
 
 export const UnlinkAndLink: Story = {
   args: { socialProviders: [{ provider: 'google' }, { provider: 'kakao' }], onLinkSocial: fn() },
   play: async ({ canvas, args, userEvent }) => {
-    await userEvent.click(await canvas.findByRole('button', { name: 'Link Kakao' }))
+    const list = await openList(canvas, userEvent, 'Sign-in methods Manage')
+    await userEvent.click(await list.findByRole('button', { name: 'Link Kakao' }))
     await expect(args.onLinkSocial).toHaveBeenCalledWith('kakao')
-    const removes = () => canvas.getAllByRole('button', { name: 'Remove' })
-    await canvas.findAllByRole('listitem')
-    const rows = removes().filter((b) => b.closest('li'))
+    const rows = (await list.findAllByRole('button', { name: 'Remove' })).filter((b) =>
+      b.closest('li'),
+    )
     await userEvent.click(rows[rows.length - 1]) // Google 은 목록 맨 끝
-    const dialog = within(await canvas.findByRole('dialog'))
+    const dialog = await topDialog(canvas)
     const confirm = dialog.getByRole('button', { name: 'Remove' })
     await expect(confirm).toBeDisabled() // 다시 인증이 있어야 켜진다
     await userEvent.type(dialog.getByLabelText(/^Current password/), 'wrong-1')
@@ -530,7 +558,7 @@ export const UnlinkAndLink: Story = {
     await userEvent.clear(dialog.getByLabelText(/^Current password/))
     await userEvent.type(dialog.getByLabelText(/^Current password/), 'old-password-1')
     await userEvent.click(confirm)
-    await waitFor(() => expect(canvas.queryByText('Google')).toBeNull())
+    await waitFor(() => expect(list.queryByText('Google')).toBeNull())
   },
 }
 
@@ -538,15 +566,16 @@ export const UnlinkAndLink: Story = {
 export const UnlinkNeedsTheMailedCodeForAPasswordlessAccount: Story = {
   args: { fake: { passwordless: true } },
   play: async ({ canvas, userEvent }) => {
-    const rows = (await canvas.findAllByRole('listitem')).filter((li) => li.querySelector('button'))
+    const list = await openList(canvas, userEvent, 'Sign-in methods Manage')
+    const rows = (await list.findAllByRole('listitem')).filter((li) => li.querySelector('button'))
     await userEvent.click(within(rows[0]).getByRole('button', { name: 'Remove' }))
-    const dialog = within(await canvas.findByRole('dialog'))
+    const dialog = await topDialog(canvas)
     await expect(dialog.getByRole('button', { name: 'Remove' })).toBeDisabled()
     await userEvent.click(dialog.getByRole('button', { name: 'Email me a code' }))
     await userEvent.click(await dialog.findByLabelText('Digit 1 of 6'))
     await userEvent.paste(FAKE_CODE)
     await userEvent.click(dialog.getByRole('button', { name: 'Remove' }))
-    await expect(await canvas.findByText('Removed.')).toBeVisible()
+    await expect(await list.findByText('Removed.')).toBeVisible()
   },
 }
 
@@ -554,9 +583,10 @@ export const UnlinkNeedsTheMailedCodeForAPasswordlessAccount: Story = {
 export const UnlinkNoAddressReconsents: Story = {
   args: { fake: { noAddress: true }, socialProviders: [{ provider: 'naver' }] },
   play: async ({ canvas, args, userEvent }) => {
-    const rows = (await canvas.findAllByRole('listitem')).filter((li) => li.querySelector('button'))
+    const list = await openList(canvas, userEvent, 'Sign-in methods Manage')
+    const rows = (await list.findAllByRole('listitem')).filter((li) => li.querySelector('button'))
     await userEvent.click(within(rows[1]).getByRole('button', { name: 'Remove' }))
-    const dialog = within(await canvas.findByRole('dialog'))
+    const dialog = await topDialog(canvas)
     await userEvent.click(dialog.getByRole('button', { name: 'Confirm with Naver' }))
     await expect(args.onProviderReauth).toHaveBeenCalledWith('naver', {
       kind: 'unlink',
@@ -567,25 +597,29 @@ export const UnlinkNoAddressReconsents: Story = {
 
 export const Sessions: Story = {
   play: async ({ canvas, userEvent }) => {
-    await expect(await canvas.findByText('This device')).toBeVisible()
-    await expect(canvas.getByText('Unknown device')).toBeVisible()
+    // 줄에는 기기 수만 - 목록은 「보기」가 여는 대화상자에 있다
+    const row = within(await canvas.findByRole('group', { name: 'Active sessions' }))
+    await expect(row.getByText('3 devices')).toBeVisible()
+    const list = await openList(canvas, userEvent, 'Active sessions View')
+    await expect(await list.findByText('This device')).toBeVisible()
+    await expect(list.getByText('Unknown device')).toBeVisible()
     // 로그아웃은 확인 대화상자를 거친다
-    await userEvent.click(canvas.getAllByRole('button', { name: 'Sign out' })[0])
-    const one = within(await canvas.findByRole('dialog'))
+    await userEvent.click(list.getAllByRole('button', { name: 'Sign out' })[0])
+    const one = await topDialog(canvas)
     await userEvent.click(one.getByRole('button', { name: 'Sign out' }))
-    await waitFor(() => expect(canvas.queryByText('Pixel 9')).toBeNull())
-    await userEvent.click(canvas.getByRole('button', { name: 'Sign out all other devices' }))
-    const others = within(await canvas.findByRole('dialog'))
+    await waitFor(() => expect(list.queryByText('Pixel 9')).toBeNull())
+    await userEvent.click(list.getByRole('button', { name: 'Sign out all other devices' }))
+    const others = await topDialog(canvas)
     await userEvent.click(others.getByRole('button', { name: 'Sign out all other devices' }))
-    await waitFor(() => expect(canvas.queryByText('Unknown device')).toBeNull())
+    await waitFor(() => expect(list.queryByText('Unknown device')).toBeNull())
   },
 }
 
 export const DeleteWithPassword: Story = {
   play: async ({ canvas, userEvent }) => {
-    await expect(await canvas.findByText(/erased after 30 days/)).toBeVisible()
-    const section = within(await canvas.findByRole('region', { name: 'Delete account' }))
+    const section = within(await canvas.findByRole('group', { name: 'Delete account' }))
     const dialog = await openDialog(canvas, userEvent, section, 'Delete my account')
+    await expect(dialog.getByText(/erased after 30 days/)).toBeVisible() // 유예 안내는 확인 대화상자 안에 있다
     await userEvent.type(dialog.getByLabelText(/^Current password/), 'old-password-1')
     const confirm = await dialog.findByRole('button', { name: 'Delete account' })
     await expect(confirm).toBeDisabled() // 글자를 쳐야 켜진다
@@ -596,12 +630,12 @@ export const DeleteWithPassword: Story = {
     await userEvent.type(typed, 'DELETE')
     await expect(confirm).toBeEnabled()
     await userEvent.click(confirm)
-    await expect(await canvas.findByText(/scheduled for erasure/)).toBeVisible()
+    await waitFor(() => expect(canvas.getByText(/scheduled for erasure on/)).toBeVisible())
     // self-restore 를 켰다고 알리지 않았으면 「다시 로그인하면 취소」를 말하지 않는다 — 꺼진 서버에서 거짓이 되지 않게
     await expect(canvas.queryByText(/cancel the deletion/)).toBeNull()
     // 안내를 읽을 시간을 준다 — 로그아웃은 사용자가 누른다(곧바로 로그아웃하면 가드가 로그인으로 보내 안내가 보이지 않는다)
     await expect(
-      within(canvas.getByRole('region', { name: 'Delete account' })).getByRole('button', {
+      within(canvas.getByRole('group', { name: 'Delete account' })).getByRole('button', {
         name: 'Sign out',
       }),
     ).toBeVisible()
@@ -612,7 +646,7 @@ export const DeleteWithPassword: Story = {
 export const DeletePasswordlessByCode: Story = {
   args: { fake: { passwordless: true } },
   play: async ({ canvas, userEvent }) => {
-    const section = within(await canvas.findByRole('region', { name: 'Delete account' }))
+    const section = within(await canvas.findByRole('group', { name: 'Delete account' }))
     const dialog = await openDialog(canvas, userEvent, section, 'Delete my account')
     await expect(dialog.queryByLabelText(/^Current password/)).toBeNull()
     await expect(dialog.getByRole('button', { name: 'Delete account' })).toBeDisabled()
@@ -621,14 +655,14 @@ export const DeletePasswordlessByCode: Story = {
     await userEvent.paste(FAKE_CODE)
     await userEvent.type(dialog.getByLabelText('Type DELETE to confirm'), 'DELETE')
     await userEvent.click(dialog.getByRole('button', { name: 'Delete account' }))
-    await expect(await canvas.findByText(/scheduled for erasure/)).toBeVisible()
+    await expect(await canvas.findByText(/scheduled for erasure on/)).toBeVisible()
   },
 }
 
 export const DeleteWithAWrongCodeShowsAttemptsLeft: Story = {
   args: { fake: { passwordless: true } },
   play: async ({ canvas, userEvent }) => {
-    const section = within(await canvas.findByRole('region', { name: 'Delete account' }))
+    const section = within(await canvas.findByRole('group', { name: 'Delete account' }))
     const dialog = await openDialog(canvas, userEvent, section, 'Delete my account')
     await userEvent.click(dialog.getByRole('button', { name: 'Email me a code' }))
     await userEvent.click(await dialog.findByLabelText('Digit 1 of 6'))
@@ -637,7 +671,7 @@ export const DeleteWithAWrongCodeShowsAttemptsLeft: Story = {
     await userEvent.click(dialog.getByRole('button', { name: 'Delete account' }))
     // 틀린 번호면 대화상자가 열린 채 그 자리에서 다시
     await expect(await dialog.findByText(/not right\. 4 attempts left/)).toBeVisible()
-    await expect(canvas.queryByText(/scheduled for erasure/)).toBeNull()
+    await expect(canvas.queryByText(/scheduled for erasure on/)).toBeNull()
   },
 }
 
@@ -654,14 +688,14 @@ export const DeleteNoAddressAfterProviderReturn: Story = {
     await expect(await dialog.findByText('Confirmed with Naver.')).toBeVisible()
     await userEvent.type(dialog.getByLabelText('Type DELETE to confirm'), 'DELETE')
     await userEvent.click(dialog.getByRole('button', { name: 'Delete account' }))
-    await expect(await canvas.findByText(/scheduled for erasure/)).toBeVisible()
+    await expect(await canvas.findByText(/scheduled for erasure on/)).toBeVisible()
   },
 }
 
 /** 삭제 대화상자를 취소하면 입력한 현재 비밀번호를 쥐고 있지 않는다 - 다시 열면 빈 칸이고 확인은 꺼져 있다 */
 export const DeleteDialogForgetsThePasswordWhenCancelled: Story = {
   play: async ({ canvas, userEvent }) => {
-    const section = within(await canvas.findByRole('region', { name: 'Delete account' }))
+    const section = within(await canvas.findByRole('group', { name: 'Delete account' }))
     let dialog = await openDialog(canvas, userEvent, section, 'Delete my account')
     await userEvent.type(dialog.getByLabelText(/^Current password/), 'old-password-1')
     await userEvent.click(dialog.getAllByRole('button', { name: 'Cancel' }).at(-1)!)
@@ -675,8 +709,9 @@ export const DeleteDialogForgetsThePasswordWhenCancelled: Story = {
 export const PartialSections: Story = {
   args: { sections: { delete: false, email: false, password: false } },
   play: async ({ canvas }) => {
-    await expect(await canvas.findByRole('heading', { name: 'Profile' })).toBeVisible()
-    await expect(canvas.queryByRole('heading', { name: 'Delete account' })).toBeNull()
+    await expect(await canvas.findByRole('group', { name: 'Profile' })).toBeVisible()
+    await expect(canvas.queryByRole('group', { name: 'Delete account' })).toBeNull()
+    await expect(canvas.queryByRole('group', { name: 'Password' })).toBeNull()
   },
 }
 
@@ -697,7 +732,7 @@ export const SuspendedAndBlocked: StoryObj = {
 export const Dark: Story = {
   globals: { theme: 'dark' },
   play: async ({ canvas }) => {
-    await expect(await canvas.findByRole('heading', { name: 'Account' })).toBeVisible()
+    await expect(await canvas.findByRole('heading', { level: 2, name: 'Account' })).toBeVisible()
   },
 }
 
@@ -705,8 +740,8 @@ export const Dark: Story = {
 export const ReauthCodeUsesTheServerWindow: Story = {
   args: { fake: { passwordless: true, codeWindowMinutes: 3 } },
   play: async ({ canvas, canvasElement, userEvent }) => {
-    const section = within(await canvas.findByRole('region', { name: 'Account email' }))
-    const dialog = await openDialog(canvas, userEvent, section, 'Change email')
+    const section = within(await canvas.findByRole('group', { name: 'Account email' }))
+    const dialog = await openDialog(canvas, userEvent, section, 'Account email Change')
     await userEvent.type(dialog.getByLabelText(/^New email/), 'next@example.com')
     await userEvent.click(dialog.getByRole('button', { name: 'Email me a code' }))
     await expect(await dialog.findByText(/^Time left (03:00|02:5\d)$/)).toBeVisible()
@@ -719,7 +754,7 @@ export const ReauthCodeUsesTheServerWindow: Story = {
 export const DeleteCodeUsesTheServerWindow: Story = {
   args: { fake: { passwordless: true, codeWindowMinutes: 3 } },
   play: async ({ canvas, userEvent }) => {
-    const section = within(await canvas.findByRole('region', { name: 'Delete account' }))
+    const section = within(await canvas.findByRole('group', { name: 'Delete account' }))
     const dialog = await openDialog(canvas, userEvent, section, 'Delete my account')
     await userEvent.click(dialog.getByRole('button', { name: 'Email me a code' }))
     await expect(await dialog.findByText(/^Time left (03:00|02:5\d)$/)).toBeVisible()
@@ -729,8 +764,8 @@ export const DeleteCodeUsesTheServerWindow: Story = {
 export const EmailChangeRequestUsesTheServerWindow: Story = {
   args: { fake: { codeWindowMinutes: 4 } },
   play: async ({ canvas, canvasElement, userEvent }) => {
-    const section = within(await canvas.findByRole('region', { name: 'Account email' }))
-    const dialog = await openDialog(canvas, userEvent, section, 'Change email')
+    const section = within(await canvas.findByRole('group', { name: 'Account email' }))
+    const dialog = await openDialog(canvas, userEvent, section, 'Account email Change')
     await userEvent.type(dialog.getByLabelText(/^New email/), 'next@example.com')
     await userEvent.type(dialog.getByLabelText(/^Current password/), 'old-password-1')
     await userEvent.click(dialog.getByRole('button', { name: /^(Change|Send)/ }))
@@ -746,7 +781,7 @@ export const EmailChangeRequestUsesTheServerWindow: Story = {
 export const SuspendedAccountCannotDelete: Story = {
   args: { fake: { suspended: true } },
   play: async ({ canvas, userEvent }) => {
-    const section = within(await canvas.findByRole('region', { name: 'Delete account' }))
+    const section = within(await canvas.findByRole('group', { name: 'Delete account' }))
     const dialog = await openDialog(canvas, userEvent, section, 'Delete my account')
     await userEvent.type(dialog.getByLabelText(/^Current password/), 'old-password-1')
     await userEvent.type(dialog.getByLabelText('Type DELETE to confirm'), 'DELETE')
@@ -760,7 +795,7 @@ export const SuspendedAccountCannotDelete: Story = {
 export const SuspendedAccountCannotAskForTheDeleteCode: Story = {
   args: { fake: { suspended: true, passwordless: true } },
   play: async ({ canvas, userEvent }) => {
-    const section = within(await canvas.findByRole('region', { name: 'Delete account' }))
+    const section = within(await canvas.findByRole('group', { name: 'Delete account' }))
     const dialog = await openDialog(canvas, userEvent, section, 'Delete my account')
     await userEvent.click(dialog.getByRole('button', { name: 'Email me a code' }))
     await expect(await canvas.findByText('A suspended account cannot be deleted.')).toBeVisible()
@@ -771,12 +806,12 @@ export const SuspendedAccountCannotAskForTheDeleteCode: Story = {
 export const DeletionNoticeMentionsSelfRestoreOnlyWhenOn: Story = {
   args: { selfRestore: true },
   play: async ({ canvas, userEvent }) => {
-    const section = within(await canvas.findByRole('region', { name: 'Delete account' }))
+    const section = within(await canvas.findByRole('group', { name: 'Delete account' }))
     const dialog = await openDialog(canvas, userEvent, section, 'Delete my account')
     await userEvent.type(dialog.getByLabelText(/^Current password/), 'old-password-1')
     await userEvent.type(dialog.getByLabelText('Type DELETE to confirm'), 'DELETE')
     await userEvent.click(dialog.getByRole('button', { name: 'Delete account' }))
-    await expect(await canvas.findByText(/scheduled for erasure/)).toBeVisible()
+    await expect(await canvas.findByText(/scheduled for erasure on/)).toBeVisible()
     await expect(
       canvas.getByText(/Sign in again within that time and you can cancel the deletion\./),
     ).toBeVisible()
@@ -787,13 +822,13 @@ export const DeletionNoticeMentionsSelfRestoreOnlyWhenOn: Story = {
 export const NicknameWithTheServerTag: Story = {
   args: { fake: { displayTag: '4821' } },
   play: async ({ canvas, userEvent }) => {
-    await expect(await canvas.findByText('Ann#4821')).toBeVisible()
+    await expect(await canvas.findByText(/Ann#4821/)).toBeVisible()
     await expect(canvas.getByRole('button', { name: 'Copy' })).toBeVisible()
     const dialog = await openDialog(
       canvas,
       userEvent,
-      within(await canvas.findByRole('region', { name: 'Profile' })),
-      'Edit profile',
+      within(await canvas.findByRole('group', { name: 'Profile' })),
+      'Profile Change',
     )
     await expect(dialog.getByLabelText('Nickname')).toHaveValue('Ann')
   },
@@ -806,8 +841,8 @@ export const NicknameTakenShowsUnderTheField: Story = {
     const dialog = await openDialog(
       canvas,
       userEvent,
-      within(await canvas.findByRole('region', { name: 'Profile' })),
-      'Edit profile',
+      within(await canvas.findByRole('group', { name: 'Profile' })),
+      'Profile Change',
     )
     const field = dialog.getByLabelText('Nickname')
     await userEvent.clear(field)
@@ -822,15 +857,15 @@ export const NicknameTakenShowsUnderTheField: Story = {
 
 export const NicknameSaves: Story = {
   play: async ({ canvas, userEvent }) => {
-    const section = within(await canvas.findByRole('region', { name: 'Profile' }))
-    const dialog = await openDialog(canvas, userEvent, section, 'Edit profile')
+    const section = within(await canvas.findByRole('group', { name: 'Profile' }))
+    const dialog = await openDialog(canvas, userEvent, section, 'Profile Change')
     const field = dialog.getByLabelText('Nickname')
     await userEvent.clear(field)
     await userEvent.type(field, '  Annie  ')
     await userEvent.click(dialog.getByRole('button', { name: 'Save' }))
     // 저장되면 대화상자가 닫히고 구역의 값이 바뀐다
     await expect(await section.findByText('Profile saved.')).toBeVisible()
-    await expect(await section.findByText('Annie')).toBeVisible()
+    await expect(await section.findByText(/Annie/)).toBeVisible()
   },
 }
 
@@ -838,13 +873,13 @@ export const NicknameSaves: Story = {
 export const NicknameChangeLimitNamesTheWait: Story = {
   args: { fake: { nicknameChangeLimit: 1 } },
   play: async ({ canvas, userEvent }) => {
-    const section = within(await canvas.findByRole('region', { name: 'Profile' }))
-    let dialog = await openDialog(canvas, userEvent, section, 'Edit profile')
+    const section = within(await canvas.findByRole('group', { name: 'Profile' }))
+    let dialog = await openDialog(canvas, userEvent, section, 'Profile Change')
     await userEvent.clear(dialog.getByLabelText('Nickname'))
     await userEvent.type(dialog.getByLabelText('Nickname'), 'Annie')
     await userEvent.click(dialog.getByRole('button', { name: 'Save' }))
     await expect(await section.findByText('Profile saved.')).toBeVisible()
-    dialog = await openDialog(canvas, userEvent, section, 'Edit profile')
+    dialog = await openDialog(canvas, userEvent, section, 'Profile Change')
     const field = dialog.getByLabelText('Nickname')
     await userEvent.clear(field)
     await userEvent.type(field, 'Anna')
@@ -860,8 +895,8 @@ export const NicknameChangeLimitNamesTheWait: Story = {
 /** `#` · `@` 는 보내기 전에 서버 규칙과 같은 문구로 바로 알린다 — 👩‍💻 같은 조합 이모지는 막지 않는다 */
 export const NicknameSymbolsAreRefusedAtOnceEmojiAreFine: Story = {
   play: async ({ canvas, userEvent }) => {
-    const section = within(await canvas.findByRole('region', { name: 'Profile' }))
-    const dialog = await openDialog(canvas, userEvent, section, 'Edit profile')
+    const section = within(await canvas.findByRole('group', { name: 'Profile' }))
+    const dialog = await openDialog(canvas, userEvent, section, 'Profile Change')
     const field = dialog.getByLabelText('Nickname')
     await userEvent.clear(field)
     await userEvent.type(field, 'an#na')
@@ -883,8 +918,8 @@ export const NicknameReservedByTheServerUsesOurSentence: Story = {
     const dialog = await openDialog(
       canvas,
       userEvent,
-      within(await canvas.findByRole('region', { name: 'Profile' })),
-      'Edit profile',
+      within(await canvas.findByRole('group', { name: 'Profile' })),
+      'Profile Change',
     )
     const field = dialog.getByLabelText('Nickname')
     await userEvent.clear(field)
@@ -899,8 +934,8 @@ export const NicknameReservedByTheServerUsesOurSentence: Story = {
 export const EmailChangeCodeWithNoMoreResends: Story = {
   args: { fake: { resendExhausted: true, codeWindowMinutes: 10 } },
   play: async ({ canvas, userEvent }) => {
-    const section = within(await canvas.findByRole('region', { name: 'Account email' }))
-    const dialog = await openDialog(canvas, userEvent, section, 'Change email')
+    const section = within(await canvas.findByRole('group', { name: 'Account email' }))
+    const dialog = await openDialog(canvas, userEvent, section, 'Account email Change')
     await userEvent.type(dialog.getByLabelText(/^New email/), 'next@example.com')
     await userEvent.type(dialog.getByLabelText(/^Current password/), 'old-password-1')
     await userEvent.click(dialog.getByRole('button', { name: 'Change email' }))
@@ -918,7 +953,7 @@ export const EmailChangeCodeWithNoMoreResends: Story = {
 export const DeleteCodeWithNoMoreResends: Story = {
   args: { fake: { passwordless: true, resendExhausted: true, codeWindowMinutes: 10 } },
   play: async ({ canvas, userEvent }) => {
-    const section = within(await canvas.findByRole('region', { name: 'Delete account' }))
+    const section = within(await canvas.findByRole('group', { name: 'Delete account' }))
     const dialog = await openDialog(canvas, userEvent, section, 'Delete my account')
     await userEvent.click(dialog.getByRole('button', { name: 'Email me a code' }))
     await expect(await dialog.findByLabelText('Digit 1 of 6')).toBeVisible()
@@ -933,8 +968,8 @@ export const DeleteCodeWithNoMoreResends: Story = {
 export const ProfileSaveNotifiesTheApp: Story = {
   args: { onProfileChanged: fn() },
   play: async ({ canvas, args, userEvent }) => {
-    const section = within(await canvas.findByRole('region', { name: 'Profile' }))
-    const dialog = await openDialog(canvas, userEvent, section, 'Edit profile')
+    const section = within(await canvas.findByRole('group', { name: 'Profile' }))
+    const dialog = await openDialog(canvas, userEvent, section, 'Profile Change')
     const field = dialog.getByLabelText('Nickname')
     await userEvent.clear(field)
     await userEvent.type(field, 'Annie')
@@ -952,13 +987,15 @@ export const ProfileSaveNotifiesTheApp: Story = {
 /** 이메일을 필수로 켠 앱의 계정 이메일: 쓰임을 말하고, 지울 수 없다고 말한다 — 바꾸는 단추만 있다 */
 export const AccountEmailSaysWhatItIsFor: Story = {
   args: { fake: { emailRequired: false, firstRegistrationOpen: true } },
-  play: async ({ canvas }) => {
-    const section = within(await canvas.findByRole('region', { name: 'Account email' }))
-    await expect(
-      section.getByText('Used to sign in, to find your password and for security notices.'),
-    ).toBeVisible()
-    await expect(section.getByRole('button', { name: 'Change email' })).toBeVisible()
+  play: async ({ canvas, userEvent }) => {
+    const section = within(await canvas.findByRole('group', { name: 'Account email' }))
+    await expect(section.getByRole('button', { name: 'Account email Change' })).toBeVisible()
     await expect(section.queryByRole('button', { name: /Remove|Delete/ })).toBeNull()
+    // 무엇에 쓰이는지는 「바꾸기」가 여는 대화상자에 있다
+    const dialog = await openDialog(canvas, userEvent, section, 'Account email Change')
+    await expect(
+      dialog.getByText('Used to sign in, to find your password and for security notices.'),
+    ).toBeVisible()
   },
 }
 
@@ -966,10 +1003,10 @@ export const AccountEmailSaysWhatItIsFor: Story = {
 export const ContactEmailRegister: Story = {
   args: { contactEmail: true },
   play: async ({ canvas, userEvent }) => {
-    const section = within(await canvas.findByRole('region', { name: 'Contact email' }))
+    const section = within(await canvas.findByRole('group', { name: 'Contact email' }))
     await expect(section.getByText('Notices go to your account email')).toBeVisible()
-    await expect(section.getByText(/not used to sign in or to find your password/)).toBeVisible()
-    const dialog = await openDialog(canvas, userEvent, section, 'Add a contact email')
+    const dialog = await openDialog(canvas, userEvent, section, 'Contact email Register')
+    await expect(dialog.getByText(/not used to sign in or to find your password/)).toBeVisible()
     await waitFor(() => expect(dialog.getByLabelText(/^Contact email/)).toHaveFocus())
     // 형식이 틀리면 이유를 말하고 그 칸으로 간다 — 단추는 눌린다
     await userEvent.type(dialog.getByLabelText(/^Contact email/), 'nope')
@@ -991,9 +1028,8 @@ export const ContactEmailRegister: Story = {
     await userEvent.paste(FAKE_CODE)
     await expect(await section.findByText('Your contact email is saved.')).toBeVisible()
     await expect(section.getByText('news@example.com')).toBeVisible()
-    await expect(section.getByText(/Security mail always goes to your account email/)).toBeVisible()
     // 계정 이메일은 그대로다
-    const account = within(canvas.getByRole('region', { name: 'Account email' }))
+    const account = within(canvas.getByRole('group', { name: 'Account email' }))
     await expect(account.getByText('ann@example.com')).toBeVisible()
   },
 }
@@ -1002,9 +1038,9 @@ export const ContactEmailRegister: Story = {
 export const ContactEmailChangeAndRemove: Story = {
   args: { contactEmail: true, fake: { contactEmail: 'old@example.com' } },
   play: async ({ canvas, userEvent }) => {
-    const section = within(await canvas.findByRole('region', { name: 'Contact email' }))
+    const section = within(await canvas.findByRole('group', { name: 'Contact email' }))
     await expect(section.getByText('old@example.com')).toBeVisible()
-    const dialog = await openDialog(canvas, userEvent, section, 'Change')
+    const dialog = await openDialog(canvas, userEvent, section, 'Contact email Change')
     await userEvent.type(await dialog.findByLabelText(/^Contact email/), 'new@example.com')
     await userEvent.click(dialog.getByRole('button', { name: 'Send me a code' }))
     await userEvent.click((await dialog.findAllByLabelText('Digit 1 of 6'))[0])
@@ -1012,7 +1048,7 @@ export const ContactEmailChangeAndRemove: Story = {
     await expect(await section.findByText('new@example.com')).toBeVisible()
     await expect(section.queryByText('old@example.com')).toBeNull()
     // 지우기는 확인을 거친다
-    await userEvent.click(section.getByRole('button', { name: 'Remove' }))
+    await userEvent.click(section.getByRole('button', { name: 'Contact email Remove' }))
     const confirm = within(await canvas.findByRole('dialog'))
     await userEvent.click(confirm.getByRole('button', { name: 'Remove' }))
     await expect(await section.findByText(/Your contact email is removed/)).toBeVisible()
@@ -1025,11 +1061,13 @@ export const ContactEmailChangeAndRemove: Story = {
 export const ContactEmailCancelKeepsWhatWas: Story = {
   args: { contactEmail: true, fake: { contactEmail: 'old@example.com' } },
   play: async ({ canvas, userEvent }) => {
-    const section = within(await canvas.findByRole('region', { name: 'Contact email' }))
-    const dialog = await openDialog(canvas, userEvent, section, 'Change')
+    const section = within(await canvas.findByRole('group', { name: 'Contact email' }))
+    const dialog = await openDialog(canvas, userEvent, section, 'Contact email Change')
     await userEvent.click(await dialog.findByRole('button', { name: 'Cancel' }))
     await expect(section.getByText('old@example.com')).toBeVisible()
-    await waitFor(() => expect(section.getByRole('button', { name: 'Change' })).toHaveFocus())
+    await waitFor(() =>
+      expect(section.getByRole('button', { name: 'Contact email Change' })).toHaveFocus(),
+    )
   },
 }
 
@@ -1037,8 +1075,8 @@ export const ContactEmailCancelKeepsWhatWas: Story = {
 export const ContactEmailServerOffHidesTheSection: Story = {
   args: { contactEmail: true, fake: { contactEmailOff: true } },
   play: async ({ canvas }) => {
-    await canvas.findByRole('region', { name: 'Account email' })
-    await expect(canvas.queryByRole('region', { name: 'Contact email' })).toBeNull()
+    await canvas.findByRole('group', { name: 'Account email' })
+    await expect(canvas.queryByRole('group', { name: 'Contact email' })).toBeNull()
   },
 }
 
@@ -1046,12 +1084,12 @@ export const ContactEmailServerOffHidesTheSection: Story = {
 export const ContactEmailLegacyServerOffHidesTheSectionOnThe404: Story = {
   args: { contactEmail: true, fake: { contactEmailLegacyOff: true } },
   play: async ({ canvas, userEvent }) => {
-    const section = within(await canvas.findByRole('region', { name: 'Contact email' }))
-    const dialog = await openDialog(canvas, userEvent, section, 'Add a contact email')
+    const section = within(await canvas.findByRole('group', { name: 'Contact email' }))
+    const dialog = await openDialog(canvas, userEvent, section, 'Contact email Register')
     await userEvent.type(await dialog.findByLabelText(/^Contact email/), 'news@example.com')
     await userEvent.click(dialog.getByRole('button', { name: 'Send me a code' }))
-    await waitFor(() => expect(canvas.queryByRole('region', { name: 'Contact email' })).toBeNull())
-    await expect(canvas.getByRole('region', { name: 'Account email' })).toBeVisible()
+    await waitFor(() => expect(canvas.queryByRole('group', { name: 'Contact email' })).toBeNull())
+    await expect(canvas.getByRole('group', { name: 'Account email' })).toBeVisible()
   },
 }
 
@@ -1063,8 +1101,8 @@ export const ContactEmailWithoutAnAccountAddressAsksTheProvider: Story = {
     socialProviders: [{ provider: 'naver' }],
   },
   play: async ({ canvas, args, userEvent }) => {
-    const section = within(await canvas.findByRole('region', { name: 'Contact email' }))
-    const dialog = await openDialog(canvas, userEvent, section, 'Add a contact email')
+    const section = within(await canvas.findByRole('group', { name: 'Contact email' }))
+    const dialog = await openDialog(canvas, userEvent, section, 'Contact email Register')
     await userEvent.type(await dialog.findByLabelText(/^Contact email/), 'news@example.com')
     await userEvent.click(dialog.getByRole('button', { name: 'Send me a code' }))
     await userEvent.click(await dialog.findByRole('button', { name: 'Confirm with Naver' }))
@@ -1097,8 +1135,8 @@ export const ContactEmailReturnsFromTheProviderAndSendsTheCode: Story = {
 /** 앱이 안 켜면(기본) 구역이 없다 */
 export const ContactEmailIsOffByDefault: Story = {
   play: async ({ canvas }) => {
-    await canvas.findByRole('region', { name: 'Account email' })
-    await expect(canvas.queryByRole('region', { name: 'Contact email' })).toBeNull()
+    await canvas.findByRole('group', { name: 'Account email' })
+    await expect(canvas.queryByRole('group', { name: 'Contact email' })).toBeNull()
   },
 }
 
@@ -1106,10 +1144,9 @@ export const ContactEmailIsOffByDefault: Story = {
 export const EmailSectionsKorean: Story = {
   args: { contactEmail: true, labels: koAuthLabels },
   play: async ({ canvas }) => {
-    const account = within(await canvas.findByRole('region', { name: '계정 이메일' }))
-    await expect(account.getByText('로그인, 비밀번호 찾기, 보안 알림에 쓰여요.')).toBeVisible()
-    await expect(account.getByRole('button', { name: '이메일 바꾸기' })).toBeVisible()
-    const contact = within(canvas.getByRole('region', { name: '연락받을 이메일' }))
+    const account = within(await canvas.findByRole('group', { name: '계정 이메일' }))
+    await expect(account.getByRole('button', { name: '계정 이메일 바꾸기' })).toBeVisible()
+    const contact = within(canvas.getByRole('group', { name: '연락받을 이메일' }))
     await expect(contact.getByText('계정 이메일로 받아요')).toBeVisible()
     await expect(contact.getByRole('button', { name: '연락받을 이메일 등록' })).toBeVisible()
   },
@@ -1122,8 +1159,8 @@ export const FirstEmailFromSettings: Story = {
     socialProviders: [{ provider: 'naver' }],
   },
   play: async ({ canvas, userEvent }) => {
-    const section = within(await canvas.findByRole('region', { name: 'Account email' }))
-    const dialog = await openDialog(canvas, userEvent, section, 'Add email')
+    const section = within(await canvas.findByRole('group', { name: 'Account email' }))
+    const dialog = await openDialog(canvas, userEvent, section, 'Register email')
     await userEvent.type(dialog.getByLabelText(/^New email/), 'first@example.com')
     await userEvent.click(dialog.getByRole('button', { name: 'Add email' }))
     await expect(
@@ -1148,19 +1185,19 @@ export const RequiredEmailOpensOnlyRegisterAndDelete: Story = {
     await expect(
       await canvas.findByText(/you can only add it here or delete your account/),
     ).toBeVisible()
-    await expect(canvas.queryByRole('heading', { name: 'Sign-in methods' })).toBeNull()
-    await expect(canvas.queryByRole('heading', { name: 'Contact email' })).toBeNull()
-    await expect(canvas.getByRole('heading', { name: 'Delete account' })).toBeVisible()
-    const section = within(canvas.getByRole('region', { name: 'Account email' }))
-    const dialog = await openDialog(canvas, userEvent, section, 'Add email')
+    await expect(canvas.queryByRole('group', { name: 'Sign-in methods' })).toBeNull()
+    await expect(canvas.queryByRole('group', { name: 'Contact email' })).toBeNull()
+    await expect(canvas.getByRole('group', { name: 'Delete account' })).toBeVisible()
+    const section = within(canvas.getByRole('group', { name: 'Account email' }))
+    const dialog = await openDialog(canvas, userEvent, section, 'Register email')
     await userEvent.type(dialog.getByLabelText(/^New email/), 'first@example.com')
     await userEvent.click(dialog.getByRole('button', { name: 'Add email' }))
     await userEvent.click((await dialog.findAllByLabelText('Digit 1 of 6'))[0])
     await userEvent.paste(FAKE_CODE)
     await expect(await section.findByText(/Your email address is changed/)).toBeVisible()
     await expect(args.onEmailRegistered).toHaveBeenCalledTimes(1)
-    await expect(await canvas.findByRole('heading', { name: 'Sign-in methods' })).toBeVisible()
-    await expect(canvas.getByRole('heading', { name: 'Contact email' })).toBeVisible()
+    await expect(await canvas.findByRole('group', { name: 'Sign-in methods' })).toBeVisible()
+    await expect(canvas.getByRole('group', { name: 'Contact email' })).toBeVisible()
   },
 }
 
@@ -1173,22 +1210,22 @@ export const RequiredEmailOpensOnlyRegisterAndDelete: Story = {
 export const LoginIdFixed: Story = {
   args: { fake: { loginId: { value: 'Sumin.Kim' } } },
   play: async ({ canvas }) => {
-    const row = within(await canvas.findByRole('region', { name: 'Username' }))
+    const row = within(await canvas.findByRole('group', { name: 'Username' }))
     await expect(row.getByText('sumin.kim')).toBeVisible()
     await expect(row.getByText('Cannot be changed')).toBeVisible()
     await expect(row.queryByRole('textbox')).toBeNull()
     await expect(row.queryByRole('button')).toBeNull()
     await expect(row.queryByText(/You sign in with/)).toBeNull()
     // 나머지 구역은 그대로 열려 있다
-    await expect(canvas.getByRole('heading', { name: 'Password' })).toBeVisible()
+    await expect(canvas.getByRole('group', { name: 'Password' })).toBeVisible()
   },
 }
 
 /** 키가 없는 서버(꺼진 서버 · 옛 서버) — 아이디 줄도 목차 항목도 없다. 지금 화면 그대로 */
 export const NoLoginIdWhenTheServerHasItOff: Story = {
   play: async ({ canvas }) => {
-    await canvas.findByRole('heading', { name: 'Profile' })
-    await expect(canvas.queryByRole('region', { name: 'Username' })).toBeNull()
+    await canvas.findByRole('group', { name: 'Profile' })
+    await expect(canvas.queryByRole('group', { name: 'Username' })).toBeNull()
     await expect(canvas.queryByRole('link', { name: 'Username' })).toBeNull()
   },
 }
@@ -1197,7 +1234,7 @@ export const NoLoginIdWhenTheServerHasItOff: Story = {
 export const LoginIdSocialOnlyWithAnAddress: Story = {
   args: { fake: { passwordless: true, loginId: { value: 'sumin.kim' } } },
   play: async ({ canvas, userEvent }) => {
-    const row = within(await canvas.findByRole('region', { name: 'Username' }))
+    const row = within(await canvas.findByRole('group', { name: 'Username' }))
     await expect(
       row.getByText(
         'You sign in with Google now. Set a password to sign in with your username or email too.',
@@ -1207,7 +1244,7 @@ export const LoginIdSocialOnlyWithAnAddress: Story = {
     const button = row.getByRole('button', { name: 'Set a password' })
     await expect(button).toHaveAttribute('data-variant', 'secondary') // 글자만 있는 단추가 아니다
     await userEvent.click(button)
-    const title = await canvas.findByRole('heading', { name: 'Set a password' }) // 비밀번호가 없는 계정의 구역 제목
+    const title = await canvas.findByRole('heading', { level: 2, name: 'Sign-in & security' }) // 항목이 든 카드의 제목
     await waitFor(() => expect(title).toHaveFocus())
   },
 }
@@ -1219,13 +1256,13 @@ export const LoginIdSocialOnlyWithoutAnAddress: Story = {
     socialProviders: [{ provider: 'kakao' }],
   },
   play: async ({ canvas, userEvent }) => {
-    const row = within(await canvas.findByRole('region', { name: 'Username' }))
+    const row = within(await canvas.findByRole('group', { name: 'Username' }))
     await expect(row.getByText(/You sign in with Kakao now\./)).toBeVisible()
     await expect(row.queryByRole('button', { name: 'Set a password' })).toBeNull()
     await userEvent.click(row.getByRole('button', { name: 'Register an email' }))
-    const title = await canvas.findByRole('heading', { name: 'Account email' })
+    const title = await canvas.findByRole('heading', { level: 2, name: 'Account' })
     await waitFor(() => expect(title).toHaveFocus())
-    const email = within(canvas.getByRole('region', { name: 'Account email' }))
+    const email = within(canvas.getByRole('group', { name: 'Account email' }))
     await expect(email.getByText('Register an email to start posting.')).toBeVisible()
   },
 }
@@ -1243,7 +1280,7 @@ export const WriteTimeWithoutAnAddressFoldsOnlyPasswordAndContactEmail: Story = 
   },
   play: async ({ canvas, userEvent }) => {
     for (const name of ['Password', 'Contact email']) {
-      const section = within(await canvas.findByRole('region', { name }))
+      const section = within(await canvas.findByRole('group', { name }))
       await expect(
         section.getByText('Register an email first, then you can do this.'),
       ).toBeVisible()
@@ -1254,19 +1291,22 @@ export const WriteTimeWithoutAnAddressFoldsOnlyPasswordAndContactEmail: Story = 
       )
     }
     // 소셜 로그인 수단의 연결 · 해제는 서버가 주소 없이도 받는다 - 접히지 않는다
-    const methods = within(await canvas.findByRole('region', { name: 'Sign-in methods' }))
+    const methods = within(await canvas.findByRole('group', { name: 'Sign-in methods' }))
     await expect(methods.queryByText('Register an email first, then you can do this.')).toBeNull()
-    await expect(methods.getByRole('button', { name: 'Link Google' })).toBeVisible()
+    await userEvent.click(methods.getByRole('button', { name: 'Sign-in methods Manage' }))
+    const list = within(await canvas.findByRole('dialog'))
+    await expect(list.getByRole('button', { name: 'Link Google' })).toBeVisible()
+    await userEvent.click(list.getByRole('button', { name: 'Close' }))
     // 열려 있는 것: 프로필 · 이메일 · 세션 · 삭제
     for (const name of ['Profile', 'Account email', 'Active sessions', 'Delete account'])
-      await expect(canvas.getByRole('heading', { name })).toBeVisible()
+      await expect(canvas.getByRole('group', { name })).toBeVisible()
     // 단추는 이메일 구역으로 데려가 제목에 포커스를 둔다
     await userEvent.click(
-      within(canvas.getByRole('region', { name: 'Password' })).getByRole('button', {
+      within(canvas.getByRole('group', { name: 'Password' })).getByRole('button', {
         name: 'Register email',
       }),
     )
-    const title = await canvas.findByRole('heading', { name: 'Account email' })
+    const title = await canvas.findByRole('heading', { level: 2, name: 'Account' })
     await waitFor(() => expect(title).toHaveFocus())
   },
 }
@@ -1275,7 +1315,7 @@ export const WriteTimeWithoutAnAddressFoldsOnlyPasswordAndContactEmail: Story = 
 export const SectionsStayOpenWithAnAddress: Story = {
   args: { fake: { emailRequiredToWrite: false } },
   play: async ({ canvas }) => {
-    await canvas.findByRole('heading', { name: 'Password' })
+    await canvas.findByRole('group', { name: 'Password' })
     await expect(canvas.queryByText('Register an email first, then you can do this.')).toBeNull()
   },
 }
@@ -1284,7 +1324,7 @@ export const SectionsStayOpenWithAnAddress: Story = {
 export const EmailToWriteLineOnlyWhenTheServerAsksForIt: Story = {
   args: { fake: { noAddress: true, loginId: { value: 'sumin.kim' } } },
   play: async ({ canvas }) => {
-    const email = within(await canvas.findByRole('region', { name: 'Account email' }))
+    const email = within(await canvas.findByRole('group', { name: 'Account email' }))
     await expect(email.queryByText('Register an email to start posting.')).toBeNull()
   },
 }
@@ -1297,14 +1337,14 @@ export const EmailToWriteLineOnlyWhenTheServerAsksForIt: Story = {
 export const LoginIdNotChosenYetOpensOnlyChooseEmailDelete: Story = {
   args: { fake: { loginId: {} }, onLoginIdChosen: fn() },
   play: async ({ canvas, args, userEvent }) => {
-    const row = within(await canvas.findByRole('region', { name: 'Username' }))
+    const row = within(await canvas.findByRole('group', { name: 'Username' }))
     await expect(canvas.queryByRole('alert')).toBeNull()
-    await expect(canvas.queryByRole('heading', { name: 'Profile' })).toBeNull()
-    await expect(canvas.queryByRole('heading', { name: 'Password' })).toBeNull()
-    await expect(canvas.queryByRole('heading', { name: 'Sign-in methods' })).toBeNull()
-    await expect(canvas.queryByRole('heading', { name: 'Active sessions' })).toBeNull()
-    await expect(canvas.getByRole('heading', { name: 'Account email' })).toBeVisible()
-    await expect(canvas.getByRole('heading', { name: 'Delete account' })).toBeVisible()
+    await expect(canvas.queryByRole('group', { name: 'Profile' })).toBeNull()
+    await expect(canvas.queryByRole('group', { name: 'Password' })).toBeNull()
+    await expect(canvas.queryByRole('group', { name: 'Sign-in methods' })).toBeNull()
+    await expect(canvas.queryByRole('group', { name: 'Active sessions' })).toBeNull()
+    await expect(canvas.getByRole('group', { name: 'Account email' })).toBeVisible()
+    await expect(canvas.getByRole('group', { name: 'Delete account' })).toBeVisible()
     const submit = row.getByRole('button', { name: 'Use this username' })
     await expect(submit).toHaveAttribute('data-variant', 'primary')
     await userEvent.type(row.getByRole('textbox', { name: /^Username/ }), 'Sumin.Kim')
@@ -1315,11 +1355,11 @@ export const LoginIdNotChosenYetOpensOnlyChooseEmailDelete: Story = {
     await expect(args.onLoginIdChosen).not.toHaveBeenCalled()
     await userEvent.click(within(confirm).getByRole('button', { name: 'Confirm' }))
     // 정했다 - 값이 바뀌고(고치는 요소 없음) 나머지 구역이 열린다
-    const fixed = within(await canvas.findByRole('region', { name: 'Username' }))
+    const fixed = within(await canvas.findByRole('group', { name: 'Username' }))
     await expect(await fixed.findByText('sumin.kim')).toBeVisible()
     await expect(fixed.queryByRole('textbox')).toBeNull()
-    await expect(await canvas.findByRole('heading', { name: 'Password' })).toBeVisible()
-    await expect(canvas.getByRole('heading', { name: 'Profile' })).toBeVisible()
+    await expect(await canvas.findByRole('group', { name: 'Password' })).toBeVisible()
+    await expect(canvas.getByRole('group', { name: 'Profile' })).toBeVisible()
     await expect(args.onLoginIdChosen).toHaveBeenCalledTimes(1)
   },
 }
@@ -1342,7 +1382,7 @@ export const LoginIdAlreadySetInAnotherTabTellsTheApp: StoryObj<typeof AlreadySe
   render: (args) => <AlreadySetElsewhereDemo {...args} />,
   args: { onLoginIdChosen: fn() },
   play: async ({ canvas, args, userEvent }) => {
-    const row = within(await canvas.findByRole('region', { name: 'Username' }))
+    const row = within(await canvas.findByRole('group', { name: 'Username' }))
     await userEvent.type(row.getByRole('textbox', { name: /^Username/ }), 'sumin.kim')
     await row.findByText(/This username is available/)
     await userEvent.click(row.getByRole('button', { name: 'Use this username' }))
@@ -1376,7 +1416,7 @@ function SlowReloadDemo() {
 export const ConfirmationClosesAsSoonAsTheLoginIdIsSet: StoryObj<typeof SlowReloadDemo> = {
   render: () => <SlowReloadDemo />,
   play: async ({ canvas, userEvent }) => {
-    const row = within(await canvas.findByRole('region', { name: 'Username' }))
+    const row = within(await canvas.findByRole('group', { name: 'Username' }))
     await userEvent.type(row.getByRole('textbox', { name: /^Username/ }), 'sumin.kim')
     await row.findByText(/This username is available/)
     await userEvent.click(row.getByRole('button', { name: 'Use this username' }))
@@ -1394,7 +1434,7 @@ export const ConfirmationClosesAsSoonAsTheLoginIdIsSet: StoryObj<typeof SlowRelo
 export const LoginIdTakenOnTheLastStepStaysUnchosen: Story = {
   args: { fake: { loginId: { takenOnConfirm: ['race.winner'] } } },
   play: async ({ canvas, userEvent }) => {
-    const row = within(await canvas.findByRole('region', { name: 'Username' }))
+    const row = within(await canvas.findByRole('group', { name: 'Username' }))
     await userEvent.type(row.getByRole('textbox', { name: /^Username/ }), 'race.winner')
     await userEvent.click(row.getByRole('button', { name: 'Use this username' }))
     const confirm = await within(document.body).findByRole('dialog', { name: 'Use race.winner?' })
@@ -1403,7 +1443,7 @@ export const LoginIdTakenOnTheLastStepStaysUnchosen: Story = {
     await expect(
       (await row.findAllByText('This username is taken or not available'))[0],
     ).toBeVisible()
-    await expect(canvas.queryByRole('heading', { name: 'Password' })).toBeNull()
+    await expect(canvas.queryByRole('group', { name: 'Password' })).toBeNull()
   },
 }
 
@@ -1421,7 +1461,7 @@ const narrowLoginId = (width: number): Story => ({
     ),
   ],
   play: async ({ canvas, canvasElement }) => {
-    const row = within(await canvas.findByRole('region', { name: '아이디' }))
+    const row = within(await canvas.findByRole('group', { name: '아이디' }))
     const value = row.getByText('abcdefghij0123456789')
     await expect(value).toBeVisible()
     const box = canvasElement.querySelector<HTMLElement>('[data-narrow]')!
@@ -1443,7 +1483,7 @@ export const LoginIdKorean: Story = {
     labels: koAuthLabels,
   },
   play: async ({ canvas }) => {
-    const row = within(await canvas.findByRole('region', { name: '아이디' }))
+    const row = within(await canvas.findByRole('group', { name: '아이디' }))
     await expect(row.getByText('바꿀 수 없어요')).toBeVisible()
     await expect(
       row.getByText(

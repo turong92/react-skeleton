@@ -1,4 +1,5 @@
-import { Alert, Button, FormProblems, SectionCard, useSubmitAttempt } from '@skeleton/ui'
+import { Alert, Button, FormProblems, SettingsRow, useSubmitAttempt } from '@skeleton/ui'
+import { SectionShell } from './SectionShell'
 import { SettingsDialog } from './SettingsDialog'
 import { useId, useState, type FormEvent } from 'react'
 import { violationsOf } from '../account/passwordRules'
@@ -27,6 +28,8 @@ export type PasswordSectionProps = {
   confirmPassword?: boolean
   /** 첫 렌더부터 대화상자가 열려 있다 - 서버 렌더 시험 · 스토리용 */
   initiallyOpen?: boolean
+  /** 줄만 그린다(`AccountSettings` 의 카드 안) - 아니면 제목 있는 카드 한 장에 담는다 */
+  row?: boolean
 }
 
 /**
@@ -40,51 +43,52 @@ export function PasswordSection(props: PasswordSectionProps) {
   const [done, setDone] = useState(false)
   if (reauthKindOf(props.subject) === 'provider')
     return (
-      <SectionCard id="password" title={labels.passwordSetTitle}>
-        <Alert tone="info">{labels.passwordNeedsEmail}</Alert>
-      </SectionCard>
+      <SectionShell row={props.row} id="password" title={labels.sectionPassword}>
+        <SettingsRow label={labels.sectionPassword} value={labels.passwordNeedsEmail} />
+      </SectionShell>
     )
   const action = hasPassword ? labels.passwordChangeSubmit : labels.passwordSetTitle
   return (
-    <>
-      <SectionCard
-        id="password"
-        title={hasPassword ? labels.sectionPassword : labels.passwordSetTitle}
-        description={hasPassword ? labels.passwordOtherSessionsNote : labels.passwordSetHint}
-      >
-        <div className={styles.stack}>
-          {done && <Alert tone="success">{labels.passwordChanged}</Alert>}
-          <p className={styles.muted}>
-            {hasPassword ? labels.passwordHasValue : labels.passwordHasNone}
-          </p>
-          <div>
-            <Button
-              onClick={() => {
-                setDone(false)
-                setOpen(true)
-              }}
+    <SectionShell row={props.row} id="password" title={labels.sectionPassword}>
+      <SettingsRow
+        label={labels.sectionPassword}
+        value={hasPassword ? labels.passwordHasValue : labels.passwordHasNone}
+        action={
+          <Button
+            variant="secondary"
+            size="sm"
+            aria-label={`${labels.sectionPassword} ${hasPassword ? labels.rowChange : labels.passwordSetTitle}`}
+            onClick={() => {
+              setDone(false)
+              setOpen(true)
+            }}
+          >
+            {hasPassword ? labels.rowChange : labels.passwordSetTitle}
+          </Button>
+        }
+        dialogs={
+          <>
+            <SettingsDialog
+              open={open}
+              onClose={() => setOpen(false)}
+              title={action}
+              closeLabel={labels.dialogClose}
             >
-              {action}
-            </Button>
-          </div>
-        </div>
-      </SectionCard>
-      <SettingsDialog
-        open={open}
-        onClose={() => setOpen(false)}
-        title={action}
-        closeLabel={labels.dialogClose}
+              <PasswordForm
+                {...props}
+                onDone={() => {
+                  setDone(true)
+                  setOpen(false)
+                }}
+                onCancel={() => setOpen(false)}
+              />
+            </SettingsDialog>
+          </>
+        }
       >
-        <PasswordForm
-          {...props}
-          onDone={() => {
-            setDone(true)
-            setOpen(false)
-          }}
-          onCancel={() => setOpen(false)}
-        />
-      </SettingsDialog>
-    </>
+        {done && <Alert tone="success">{labels.passwordChanged}</Alert>}
+      </SettingsRow>
+    </SectionShell>
   )
 }
 
@@ -145,6 +149,9 @@ function PasswordForm({
         aria-label={labels.sectionPassword}
         noValidate
       >
+        <p className={styles.muted}>
+          {hasPassword ? labels.passwordOtherSessionsNote : labels.passwordSetHint}
+        </p>
         {showError && <Alert tone="danger">{action.error?.message}</Alert>}
         <div id={ids.proof}>
           <ReauthProof

@@ -1,6 +1,6 @@
 import { ErrorCodes, isErrorCode } from '@skeleton/api-client'
-import { Alert, PageHeader, SectionIndex, Skeleton } from '@skeleton/ui'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Alert, PageHeader, SectionIndex, SettingsGroup, Skeleton } from '@skeleton/ui'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { AccountApi, SocialReauth } from '../account/accountApi'
 import { DEFAULT_LOGIN_ID_RULES, type LoginIdRules } from '../account/loginIdRules'
 import { supportedTimeZones, withCurrent } from '../account/timeZones'
@@ -85,6 +85,8 @@ export type AccountSettingsProps = {
   onDiscarded?: (provider: string) => void
   /** `resume` 을 읽었다(앱이 돌아온 주소의 state 를 비운다) */
   onResumeConsumed?: () => void
+  /** 「환경」 카드에 더할 줄들(예: `@skeleton/legal` 의 `<ConsentSettings row />`) - 줄은 `SettingsRow` */
+  preferenceRows?: ReactNode
 }
 
 const ALL: AccountSectionName[] = [
@@ -98,8 +100,21 @@ const ALL: AccountSectionName[] = [
   'delete',
 ]
 
-/** 구역의 DOM id(주소의 `#해시` · 목차 앵커) — 나머지는 이름 그대로 */
-const domId = (name: AccountSectionName): string => (name === 'loginId' ? 'login-id' : name)
+/** 구역의 주소 해시(`#email` …) — 나머지는 이름 그대로 */
+const hashOf = (name: AccountSectionName): string => (name === 'loginId' ? 'login-id' : name)
+
+/** 카드 세 장 - 목차의 앵커이고, 해시 · 제공자 왕복 재개가 스크롤해 가는 곳이다 */
+type CardId = 'account' | 'security' | 'preferences'
+const CARD_OF: Record<AccountSectionName, CardId> = {
+  profile: 'preferences',
+  loginId: 'account',
+  email: 'account',
+  contact: 'account',
+  delete: 'account',
+  password: 'security',
+  methods: 'security',
+  sessions: 'security',
+}
 
 /**
  * 계정 설정 — `AccountApi` 하나로 프로필 · 비밀번호 · 이메일 · 로그인 수단 · 세션 · 삭제를 잇는다.
@@ -131,6 +146,7 @@ export function AccountSettings({
   resume,
   onResumeConsumed,
   onDiscarded,
+  preferenceRows,
 }: AccountSettingsProps) {
   const labels = mergeLabels(given)
   const on = (name: AccountSectionName) =>
@@ -223,8 +239,8 @@ export function AccountSettings({
     if (!ready) return
     const go = () => {
       const id = window.location.hash.slice(1)
-      if (!ALL.some((name) => domId(name) === id)) return
-      openSection(id)
+      const name = ALL.find((n) => hashOf(n) === id)
+      if (name) openSection(CARD_OF[name])
     }
     go()
     window.addEventListener('hashchange', go)
@@ -235,10 +251,10 @@ export function AccountSettings({
   const resumeSection = useRef(
     resume
       ? {
-          'email-change': 'email',
-          'contact-email': 'contact',
-          delete: 'delete',
-          unlink: 'methods',
+          'email-change': CARD_OF.email,
+          'contact-email': CARD_OF.contact,
+          delete: CARD_OF.delete,
+          unlink: CARD_OF.methods,
           discard: undefined,
           link: undefined,
           'link-reauth': undefined,
@@ -279,22 +295,9 @@ export function AccountSettings({
   // (설정이 부르는 `me` · `/auth/sessions` 는 허용 목록 안이고 비밀번호 정책은 로그인 없는 호출이라 이 모드에서도 403 이 나지 않는다)
   const loginIdPending = account.loginId === null
   const loginIdShown = account.loginId !== undefined && (loginIdPending || on('loginId'))
-  const items = ALL.filter((name) => (name === 'loginId' ? loginIdShown : on(name))).map((id) => ({
-    id: domId(id),
-    label: {
-      profile: labels.sectionProfile,
-      loginId: labels.loginId,
-      password: labels.sectionPassword,
-      email: labels.sectionEmail,
-      contact: labels.sectionContactEmail,
-      methods: labels.sectionMethods,
-      sessions: labels.sectionSessions,
-      delete: labels.sectionDelete,
-    }[id],
-  }))
-
   const emailSection = (
     <EmailSection
+      row
       email={account.email}
       verified={account.emailVerified}
       subject={subject}
@@ -327,6 +330,7 @@ export function AccountSettings({
   )
   const deleteSection = (
     <DeleteAccountSection
+      row
       subject={subject}
       graceDays={graceDays}
       selfRestore={selfRestore}
@@ -353,10 +357,19 @@ export function AccountSettings({
   const needsAddress = account.emailRequiredToWrite === true
   const goTo = (target: string) => {
     window.history.replaceState(null, '', `#${target}`)
-    openSection(target)
+    openSection(CARD_OF[target as AccountSectionName])
   }
   const goEmail = on('email') ? () => goTo('email') : undefined
   const canGo = goTarget === 'password' ? !restricted && on('password') : restricted || on('email')
+  const contactShown = !restricted && on('contact') && account.contactEmail !== undefined
+  const accountCard = loginIdShown || restricted || on('email') || contactShown || on('delete')
+  const securityCard = !restricted && (on('password') || on('methods') || on('sessions'))
+  const preferencesCard = !restricted && (on('profile') || !!preferenceRows)
+  const items = [
+    accountCard && { id: 'account', label: labels.groupAccount },
+    securityCard && { id: 'security', label: labels.groupSecurity },
+    preferencesCard && { id: 'preferences', label: labels.groupPreferences },
+  ].filter((item) => item !== false)
   return (
     <div className={styles.sections}>
       <PageHeader
@@ -370,137 +383,160 @@ export function AccountSettings({
       {resumeError !== null && (
         <Alert tone="danger">{authErrorMessage(resumeError, labels).message}</Alert>
       )}
-      {!restricted && on('profile') && (
-        <ProfileSection
-          profile={account}
-          locales={locales}
-          timeZones={zones}
-          labels={given}
-          showDisplayName={showDisplayName}
-          onSave={async (patch) => {
-            const saved = await api.updateProfile(patch)
-            me.reload()
-            onProfileChanged?.(saved)
-          }}
-        />
+      {accountCard && (
+        <SettingsGroup id="account" title={labels.groupAccount}>
+          {loginIdShown && account.loginId !== undefined && (
+            <LoginIdSection
+              row
+              loginId={account.loginId}
+              hasPassword={account.hasPassword}
+              email={subject.email}
+              provider={
+                reauthSubjectOf(account).providers[0] ??
+                account.methods.find((m) => m.method !== 'password')?.method
+              }
+              rules={loginIdRules}
+              api={api}
+              labels={given}
+              onSubmit={(loginId) => api.setLoginId(loginId)}
+              onChosen={() => {
+                me.reload()
+                onLoginIdChosen?.()
+              }}
+              onAlreadySet={() => {
+                me.reload()
+                onLoginIdChosen?.() // 다른 탭에서 정했다 - 막도 접는다
+              }}
+              onGo={canGo ? () => goTo(goTarget) : undefined}
+            />
+          )}
+          {(restricted || on('email')) && emailSection}
+          {contactShown && needsAddress && (
+            <NeedsEmailCard
+              row
+              id="contact"
+              title={labels.sectionContactEmail}
+              onGo={goEmail}
+              labels={given}
+            />
+          )}
+          {contactShown && !needsAddress && (
+            <ContactEmailSection
+              row
+              contactEmail={account.contactEmail ?? null}
+              labels={given}
+              onRequestCode={(email, proof) => api.requestContactEmail(email, proof)}
+              providers={subject.providers}
+              onProviderReauth={
+                onProviderReauth &&
+                ((provider, email) => onProviderReauth(provider, { kind: 'contact-email', email }))
+              }
+              resume={contactResume}
+              onConfirmCode={(code) => api.confirmContactEmail(code)}
+              onRemove={() => api.removeContactEmail()}
+              onChanged={me.reload}
+            />
+          )}
+          {(restricted || on('delete')) && deleteSection}
+        </SettingsGroup>
       )}
-      {loginIdShown && account.loginId !== undefined && (
-        <LoginIdSection
-          loginId={account.loginId}
-          hasPassword={account.hasPassword}
-          email={subject.email}
-          provider={
-            reauthSubjectOf(account).providers[0] ??
-            account.methods.find((m) => m.method !== 'password')?.method
-          }
-          rules={loginIdRules}
-          api={api}
-          labels={given}
-          onSubmit={(loginId) => api.setLoginId(loginId)}
-          onChosen={() => {
-            me.reload()
-            onLoginIdChosen?.()
-          }}
-          onAlreadySet={() => {
-            me.reload()
-            onLoginIdChosen?.() // 다른 탭에서 정했다 - 막도 접는다
-          }}
-          onGo={canGo ? () => goTo(goTarget) : undefined}
-        />
+      {securityCard && (
+        <SettingsGroup id="security" title={labels.groupSecurity}>
+          {on('password') && needsAddress && (
+            <NeedsEmailCard
+              row
+              id="password"
+              title={labels.sectionPassword}
+              onGo={goEmail}
+              labels={given}
+            />
+          )}
+          {on('password') && !needsAddress && (
+            <PasswordSection
+              row
+              subject={subject}
+              policy={policy.data}
+              email={account.email ?? undefined}
+              requestReauthCode={requestReauthCode}
+              labels={given}
+              confirmPassword={confirmPassword}
+              onChange={async (request) => {
+                await api.changePassword(request)
+                me.reload()
+                sessions.reload()
+              }}
+            />
+          )}
+          {on('methods') && (
+            <SignInMethodsSection
+              row
+              initiallyOpen={!!linkedProvider || resume?.action.kind === 'unlink'}
+              identities={account.methods}
+              socialProviders={socialProviders}
+              subject={subject}
+              requestReauthCode={requestReauthCode}
+              failure={unlinkFailure}
+              onProviderReauth={
+                onProviderReauth &&
+                ((provider, identityId) =>
+                  onProviderReauth(provider, { kind: 'unlink', identityId }))
+              }
+              onLink={onLinkSocial}
+              linkIntent={linkIntent}
+              notice={
+                linkedProvider
+                  ? labels.methodLinkedNotice(labelOfMethod(linkedProvider, labels))
+                  : undefined
+              }
+              formatDate={formatDate}
+              labels={given}
+              onUnlink={async (id, reauth) => {
+                await api.unlinkIdentity(id, reauth)
+                me.reload()
+                sessions.reload() // 서버가 이 계정의 다른 세션을 닫는다
+              }}
+            />
+          )}
+          {on('sessions') && (
+            <SessionsSection
+              row
+              sessions={sessions.data ?? []}
+              formatDate={formatDate}
+              labels={given}
+              onRevoke={async (id) => {
+                await api.revokeSession(id)
+                sessions.reload()
+              }}
+              contactNote={on('contact') && account.contactEmail !== undefined}
+              onRevokeOthers={async () => {
+                await api.revokeOtherSessions()
+                sessions.reload()
+                me.reload() // 주인의 복구 동작이 연락받을 이메일을 비웠을 수 있다
+              }}
+            />
+          )}
+        </SettingsGroup>
       )}
-      {!restricted && on('password') && needsAddress && (
-        <NeedsEmailCard
-          id="password"
-          title={labels.sectionPassword}
-          onGo={goEmail}
-          labels={given}
-        />
+      {preferencesCard && (
+        <SettingsGroup id="preferences" title={labels.groupPreferences}>
+          {on('profile') && (
+            <ProfileSection
+              row
+              profile={account}
+              locales={locales}
+              timeZones={zones}
+              labels={given}
+              showDisplayName={showDisplayName}
+              onSave={async (patch) => {
+                const saved = await api.updateProfile(patch)
+                me.reload()
+                onProfileChanged?.(saved)
+              }}
+            />
+          )}
+          {preferenceRows}
+        </SettingsGroup>
       )}
-      {!restricted && on('password') && !needsAddress && (
-        <PasswordSection
-          subject={subject}
-          policy={policy.data}
-          email={account.email ?? undefined}
-          requestReauthCode={requestReauthCode}
-          labels={given}
-          confirmPassword={confirmPassword}
-          onChange={async (request) => {
-            await api.changePassword(request)
-            me.reload()
-            sessions.reload()
-          }}
-        />
-      )}
-      {(restricted || on('email')) && emailSection}
-      {!restricted && on('contact') && account.contactEmail !== undefined && needsAddress && (
-        <NeedsEmailCard
-          id="contact"
-          title={labels.sectionContactEmail}
-          onGo={goEmail}
-          labels={given}
-        />
-      )}
-      {!restricted && on('contact') && account.contactEmail !== undefined && !needsAddress && (
-        <ContactEmailSection
-          contactEmail={account.contactEmail ?? null}
-          labels={given}
-          onRequestCode={(email, proof) => api.requestContactEmail(email, proof)}
-          providers={subject.providers}
-          onProviderReauth={
-            onProviderReauth &&
-            ((provider, email) => onProviderReauth(provider, { kind: 'contact-email', email }))
-          }
-          resume={contactResume}
-          onConfirmCode={(code) => api.confirmContactEmail(code)}
-          onRemove={() => api.removeContactEmail()}
-          onChanged={me.reload}
-        />
-      )}
-      {!restricted && on('methods') && (
-        <SignInMethodsSection
-          identities={account.methods}
-          socialProviders={socialProviders}
-          subject={subject}
-          requestReauthCode={requestReauthCode}
-          failure={unlinkFailure}
-          onProviderReauth={
-            onProviderReauth &&
-            ((provider, identityId) => onProviderReauth(provider, { kind: 'unlink', identityId }))
-          }
-          onLink={onLinkSocial}
-          linkIntent={linkIntent}
-          notice={
-            linkedProvider
-              ? labels.methodLinkedNotice(labelOfMethod(linkedProvider, labels))
-              : undefined
-          }
-          formatDate={formatDate}
-          labels={given}
-          onUnlink={async (id, reauth) => {
-            await api.unlinkIdentity(id, reauth)
-            me.reload()
-            sessions.reload() // 서버가 이 계정의 다른 세션을 닫는다
-          }}
-        />
-      )}
-      {!restricted && on('sessions') && (
-        <SessionsSection
-          sessions={sessions.data ?? []}
-          formatDate={formatDate}
-          labels={given}
-          onRevoke={async (id) => {
-            await api.revokeSession(id)
-            sessions.reload()
-          }}
-          contactNote={on('contact') && account.contactEmail !== undefined}
-          onRevokeOthers={async () => {
-            await api.revokeOtherSessions()
-            sessions.reload()
-            me.reload() // 주인의 복구 동작이 연락받을 이메일을 비웠을 수 있다
-          }}
-        />
-      )}
-      {(restricted || on('delete')) && deleteSection}
     </div>
   )
 }

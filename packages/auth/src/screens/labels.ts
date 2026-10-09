@@ -254,6 +254,18 @@ export type AuthLabels = {
   profileLocaleDefault: string
   profileSaved: string
   profileEdit: string
+  /** 설정 카드 제목 3개(목차 칩도 같다) */
+  groupAccount: string
+  groupSecurity: string
+  groupPreferences: string
+  /** 설정 줄 오른쪽 단추 · 값 자리의 말 */
+  rowChange: string
+  rowManage: string
+  rowView: string
+  rowRegister: string
+  rowNone: string
+  /** 「로그인한 기기」 줄의 값 */
+  sessionsCount: (count: number) => string
   /** 설정 대화상자의 × 단추 이름 */
   dialogClose: string
   passwordHasValue: string
@@ -713,6 +725,15 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   profileLocaleDefault: 'Not set',
   profileSaved: 'Profile saved.',
   profileEdit: 'Edit profile',
+  groupAccount: 'Account',
+  groupSecurity: 'Sign-in & security',
+  groupPreferences: 'Preferences',
+  rowChange: 'Change',
+  rowManage: 'Manage',
+  rowView: 'View',
+  rowRegister: 'Register',
+  rowNone: 'None',
+  sessionsCount: (count) => (count === 1 ? '1 device' : `${count} devices`),
   dialogClose: 'Close',
   passwordHasValue: 'A password is set.',
   passwordHasNone: 'There is no password yet.',

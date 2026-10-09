@@ -61,7 +61,7 @@ const run = (name: string, fn: () => Promise<void>) =>
     await fn()
   })
 
-const region = (name: string, on: Page = page): Locator => on.getByRole('region', { name })
+const region = (name: string, on: Page = page): Locator => on.getByRole('group', { name })
 const token = (on: Page = page) =>
   on.evaluate(() => window.localStorage.getItem('sample.accessToken'))
 

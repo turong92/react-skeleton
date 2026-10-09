@@ -2,8 +2,10 @@ import {
   Alert,
   Badge,
   Button,
+  Dialog,
   Pagination,
   SectionCard,
+  SettingsRow,
   Skeleton,
   Switch,
   Table,
@@ -31,6 +33,8 @@ export type ConsentSettingsProps = {
   zone?: string
   /** 절 id(목차 앵커) — 기본 `consents` */
   id?: string
+  /** 줄만 그린다(`@skeleton/auth` 의 `AccountSettings` 의 `preferenceRows` 로 「환경」 카드 안에) - 「보기」가 연 대화상자에 목록 · 이력이 든다. 아니면 제목 있는 절 한 장 */
+  row?: boolean
   labels?: Partial<LegalLabels>
 }
 
@@ -54,6 +58,7 @@ export function ConsentSettings({
   formatLocale,
   zone,
   id = 'consents',
+  row = false,
   labels: given,
 }: ConsentSettingsProps) {
   const labels = mergeLegalLabels(given)
@@ -67,6 +72,7 @@ export function ConsentSettings({
     locale: string
     title: string
   } | null>(null)
+  const [dialogOpen, setDialogOpen] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
   const [page, setPage] = useState(0)
   const [failure, setFailure] = useState(false)
@@ -77,7 +83,9 @@ export function ConsentSettings({
   const titleOf = (type: string) => picked.find((d) => d.type === type)?.title ?? type
 
   if (mine.isPending)
-    return (
+    return row ? (
+      <SettingsRow label={labels.settingsTitle} value={<Skeleton />} />
+    ) : (
       <SectionCard id={id} title={labels.settingsTitle}>
         <Skeleton />
       </SectionCard>
@@ -89,7 +97,9 @@ export function ConsentSettings({
   )
     return null
   if (mine.isError || !mine.data)
-    return (
+    return row ? (
+      <SettingsRow label={labels.settingsTitle} value={labels.settingsFailed} />
+    ) : (
       <SectionCard id={id} title={labels.settingsTitle}>
         <Alert tone="danger">{labels.settingsFailed}</Alert>
       </SectionCard>
@@ -112,8 +122,9 @@ export function ConsentSettings({
     }
   }
 
-  return (
-    <SectionCard id={id} title={labels.settingsTitle} description={labels.settingsDescription}>
+  const content = (
+    <>
+      {row && <p className={styles.muted}>{labels.settingsDescription}</p>}
       {failure && <Alert tone="danger">{labels.withdrawFailed}</Alert>}
       <ul className={styles.list}>
         {mine.data.items.map((item) => {
@@ -213,15 +224,52 @@ export function ConsentSettings({
           </>
         )}
       </div>
-      <DocumentDialog
-        api={api}
-        document={open}
-        onClose={() => setOpen(null)}
-        facts={facts}
-        locale={formatLocale ?? locale}
-        zone={zone}
-        labels={given}
+    </>
+  )
+  const documentDialog = (
+    <DocumentDialog
+      api={api}
+      document={open}
+      onClose={() => setOpen(null)}
+      facts={facts}
+      locale={formatLocale ?? locale}
+      zone={zone}
+      labels={given}
+    />
+  )
+  if (row)
+    return (
+      <SettingsRow
+        label={labels.settingsTitle}
+        action={
+          <Button
+            variant="secondary"
+            size="sm"
+            aria-label={`${labels.settingsTitle} ${labels.viewShort}`}
+            onClick={() => setDialogOpen(true)}
+          >
+            {labels.viewShort}
+          </Button>
+        }
+        dialogs={
+          <>
+            <Dialog
+              open={dialogOpen}
+              onClose={() => setDialogOpen(false)}
+              title={labels.settingsTitle}
+              closeLabel={labels.close}
+            >
+              {dialogOpen && content}
+            </Dialog>
+            {documentDialog}
+          </>
+        }
       />
+    )
+  return (
+    <SectionCard id={id} title={labels.settingsTitle} description={labels.settingsDescription}>
+      {content}
+      {documentDialog}
     </SectionCard>
   )
 }

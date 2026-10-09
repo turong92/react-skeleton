@@ -131,7 +131,7 @@ describe('the first email after the exemption window: the provider confirms once
       )
       await pwExpect(page).toHaveURL(/\/board$/)
       await page.goto(`${baseUrl}/account`)
-      await pwExpect(page.getByRole('heading', { name: auth.sectionMethods })).toBeVisible()
+      await pwExpect(page.getByRole('group', { name: auth.sectionMethods })).toBeVisible()
       await pwExpect(page.getByText(auth.settingsNeedsEmail)).toHaveCount(0)
       await page.goto(baseUrl)
       await pwExpect(page.getByRole('heading', { level: 1, name: /안녕하세요/ })).toBeVisible()

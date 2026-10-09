@@ -1,0 +1,61 @@
+.rows {
+  display: block;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(7rem, 11rem) minmax(0, 1fr) auto;
+  grid-template-areas: 'label value action' 'extra extra extra';
+  align-items: center;
+  column-gap: var(--space-md);
+  row-gap: var(--space-sm);
+  padding-block: var(--space-md);
+}
+
+/* 대화상자가 줄 사이에 끼어 있어도 이어진 줄 위에 구분선이 선다 */
+.row ~ .row {
+  border-block-start: 1px solid var(--border);
+}
+
+.label {
+  grid-area: label;
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+}
+
+.value {
+  grid-area: value;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.action {
+  grid-area: action;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+}
+
+.extra {
+  grid-area: extra;
+  display: grid;
+  gap: var(--space-sm);
+  min-width: 0;
+}
+
+/* 좁은 화면 - 이름이 위, 값과 단추가 아래 줄(값이 남는 폭을 쓰고 단추는 오른쪽) */
+@media (max-width: 40rem) {
+  .row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: 'label label' 'value action' 'extra extra';
+  }
+
+  .row:not(:has(.value)) {
+    grid-template-areas: 'label action' 'extra extra';
+  }
+}

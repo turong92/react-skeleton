@@ -1,6 +1,7 @@
 import { ErrorCodes } from '@skeleton/api-client'
-import { Alert, Button, CopyButton, Field, Input, Select, SectionCard } from '@skeleton/ui'
+import { Alert, Button, CopyButton, Field, Input, Select, SettingsRow } from '@skeleton/ui'
 import { useState, type FormEvent } from 'react'
+import { SectionShell } from './SectionShell'
 import { SettingsDialog } from './SettingsDialog'
 import type { ProfilePatch } from '../account/types'
 import styles from './auth.module.css'
@@ -28,6 +29,10 @@ export type ProfileSectionProps = {
    * 계정 이름이 화면에 둘이 되지 않게. 끄면 언어 · 시간대만 남고 닉네임은 저장 요청에도 실리지 않는다
    */
   showDisplayName?: boolean
+  /** 줄만 그린다(`AccountSettings` 의 카드 안) - 아니면 제목 있는 카드 한 장에 담는다 */
+  row?: boolean
+  /** 첫 렌더부터 대화상자가 열려 있다 - 서버 렌더 시험 · 스토리용 */
+  initiallyOpen?: boolean
 }
 
 /** 프로필 절 — 닉네임(꼬리표가 있으면 `닉네임#번호` 와 복사) · 언어 · 시간대를 값으로 보이고, 「프로필 수정」이 양식을 대화상자로 연다 */
@@ -38,69 +43,75 @@ export function ProfileSection({
   onSave,
   labels: given,
   showDisplayName = true,
+  row,
+  initiallyOpen = false,
 }: ProfileSectionProps) {
   const labels = mergeLabels(given)
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(initiallyOpen)
   const [saved, setSaved] = useState(false)
   const fullName =
     profile.displayName && profile.displayTag
       ? `${profile.displayName}#${profile.displayTag}`
       : null
   const localeName = locales.find((l) => l.value === profile.locale)?.label ?? profile.locale
-  const value = (text: string | null) => <strong>{text || labels.profileLocaleDefault}</strong>
+  const summary = [
+    showDisplayName ? (fullName ?? profile.displayName) : null,
+    localeName,
+    profile.timeZone,
+  ]
+    .filter(Boolean)
+    .join(' · ')
   return (
-    <>
-      <SectionCard id="profile" title={labels.sectionProfile}>
-        <div className={styles.stack}>
-          {saved && <Alert tone="success">{labels.profileSaved}</Alert>}
-          {showDisplayName && (
-            <div className={styles.row}>
-              <span className={styles.muted}>{labels.displayName}</span>
-              {value(fullName ?? profile.displayName)}
-              {fullName && <CopyButton value={fullName} label={labels.copyHint} />}
-            </div>
-          )}
-          <div className={styles.row}>
-            <span className={styles.muted}>{labels.profileLocale}</span>
-            {value(localeName)}
-          </div>
-          <div className={styles.row}>
-            <span className={styles.muted}>{labels.profileTimeZone}</span>
-            {value(profile.timeZone)}
-          </div>
-          <div>
-            <Button
-              onClick={() => {
-                setSaved(false)
-                setOpen(true)
-              }}
+    <SectionShell row={row} id="profile" title={labels.sectionProfile}>
+      <SettingsRow
+        label={labels.sectionProfile}
+        value={
+          <>
+            <strong>{summary || labels.profileLocaleDefault}</strong>
+            {showDisplayName && fullName && <CopyButton value={fullName} label={labels.copyHint} />}
+          </>
+        }
+        action={
+          <Button
+            variant="secondary"
+            size="sm"
+            aria-label={`${labels.sectionProfile} ${labels.rowChange}`}
+            onClick={() => {
+              setSaved(false)
+              setOpen(true)
+            }}
+          >
+            {labels.rowChange}
+          </Button>
+        }
+        dialogs={
+          <>
+            <SettingsDialog
+              open={open}
+              onClose={() => setOpen(false)}
+              title={labels.sectionProfile}
+              closeLabel={labels.dialogClose}
             >
-              {labels.profileEdit}
-            </Button>
-          </div>
-        </div>
-      </SectionCard>
-      <SettingsDialog
-        open={open}
-        onClose={() => setOpen(false)}
-        title={labels.sectionProfile}
-        closeLabel={labels.dialogClose}
+              <ProfileForm
+                profile={profile}
+                locales={locales}
+                timeZones={timeZones}
+                onSave={onSave}
+                labels={given}
+                showDisplayName={showDisplayName}
+                onSaved={() => {
+                  setSaved(true)
+                  setOpen(false)
+                }}
+                onCancel={() => setOpen(false)}
+              />
+            </SettingsDialog>
+          </>
+        }
       >
-        <ProfileForm
-          profile={profile}
-          locales={locales}
-          timeZones={timeZones}
-          onSave={onSave}
-          labels={given}
-          showDisplayName={showDisplayName}
-          onSaved={() => {
-            setSaved(true)
-            setOpen(false)
-          }}
-          onCancel={() => setOpen(false)}
-        />
-      </SettingsDialog>
-    </>
+        {saved && <Alert tone="success">{labels.profileSaved}</Alert>}
+      </SettingsRow>
+    </SectionShell>
   )
 }
 

@@ -1,4 +1,4 @@
-import { Alert, Button, ConfirmDialog, SectionCard } from '@skeleton/ui'
+import { Alert, Button, ConfirmDialog, SettingsRow } from '@skeleton/ui'
 import { useState } from 'react'
 import type { ReauthCredential, SocialReauth } from '../account/accountApi'
 import type { DeletionResult } from '../account/types'
@@ -6,6 +6,7 @@ import { isReauthFailure, reauthKindOf, type ReauthSubject } from '../reauth/kin
 import { ReauthProof } from './ReauthProof'
 import styles from './auth.module.css'
 import { mergeLabels, type AuthLabels } from './labels'
+import { SectionShell } from './SectionShell'
 import { useAction } from './useAction'
 
 export type DeleteAccountSectionProps = {
@@ -27,6 +28,8 @@ export type DeleteAccountSectionProps = {
   /** 삭제가 예약되고 안내를 읽은 뒤 사용자가 「로그아웃」을 눌렀을 때(보통 이 기기를 로그아웃한다) */
   onDeleted?: (result: DeletionResult) => void
   formatDate?: (iso: string) => string
+  /** 줄만 그린다(`AccountSettings` 의 카드 안) - 아니면 제목 있는 카드 한 장에 담는다 */
+  row?: boolean
   labels?: Partial<AuthLabels>
 }
 
@@ -44,6 +47,7 @@ export function DeleteAccountSection({
   onResumeSpent,
   onDeleted,
   formatDate = defaultFormat,
+  row,
   labels: given,
 }: DeleteAccountSectionProps) {
   const labels = mergeLabels(given)
@@ -78,31 +82,32 @@ export function DeleteAccountSection({
 
   if (result)
     return (
-      <SectionCard id="delete" title={labels.sectionDelete}>
-        <div className={styles.stack}>
+      <SectionShell row={row} id="delete" title={labels.sectionDelete}>
+        {/* 안내를 읽을 시간을 준다 — 곧바로 로그아웃하면 가드가 로그인으로 보내 안내가 보이지 않는다 */}
+        <SettingsRow
+          label={labels.sectionDelete}
+          action={
+            <Button variant="secondary" size="sm" onClick={() => onDeleted?.(result)}>
+              {labels.deleteDoneAction}
+            </Button>
+          }
+        >
           <Alert tone="warning">
             {labels.deleteScheduled(formatDate(result.purgeAfter))}
             {selfRestore && ` ${labels.deleteSelfRestoreNote}`}
           </Alert>
-          {/* 안내를 읽을 시간을 준다 — 곧바로 로그아웃하면 가드가 로그인으로 보내 안내가 보이지 않는다 */}
-          <div>
-            <Button onClick={() => onDeleted?.(result)}>{labels.deleteDoneAction}</Button>
-          </div>
-        </div>
-      </SectionCard>
+        </SettingsRow>
+      </SectionShell>
     )
 
   return (
-    <SectionCard
-      id="delete"
-      title={labels.sectionDelete}
-      description={labels.deleteGraceNotice(graceDays)}
-    >
-      <div className={styles.stack}>
-        {del.error && !open && <Alert tone="danger">{del.error.message}</Alert>}
-        <div>
+    <SectionShell row={row} id="delete" title={labels.sectionDelete}>
+      <SettingsRow
+        label={labels.sectionDelete}
+        action={
           <Button
             variant="danger"
+            size="sm"
             onClick={() => {
               del.clear()
               setOpen(true)
@@ -110,46 +115,58 @@ export function DeleteAccountSection({
           >
             {labels.deleteButton}
           </Button>
-        </div>
-      </div>
-      <ConfirmDialog
-        open={open}
-        onClose={() => {
-          // 취소 · Esc 뒤에는 입력한 비밀번호 · 인증번호 단계 · 실패 상태를 쥐고 있지 않는다(닫힌 대화상자도 안을 마운트해 두므로 `key` 로 새로 시작한다)
-          setOpen(false)
-          setProof(null)
-          setClosed((n) => n + 1)
-        }}
-        onConfirm={confirm}
-        title={labels.deleteDialogTitle}
-        confirmDisabled={!ready}
-        description={
-          <div className={styles.stack}>
-            <p>{labels.deleteDialogBody}</p>
-            {open && del.error && !isReauthFailure(del.raw) && (
-              <Alert tone="danger">{del.error.message}</Alert>
-            )}
-            {kind === 'password' && <p className={styles.muted}>{labels.deletePasswordHint}</p>}
-            <ReauthProof
-              key={closed}
-              kind={kind}
-              email={subject.email}
-              providers={subject.providers}
-              requestCode={requestDeleteCode}
-              onChange={setProof}
-              failure={isReauthFailure(del.raw) ? del.raw : undefined}
-              onProvider={onProviderReauth}
-              confirmedWith={resume?.provider}
-              labels={given}
-            />
-          </div>
         }
-        confirmLabel={labels.deleteConfirm}
-        cancelLabel={labels.cancel}
-        closeLabel={labels.cancel}
-        busy={del.busy}
-        typedConfirmation={{ phrase: labels.deleteTypedPhrase, label: labels.deleteTypedLabel }}
-      />
-    </SectionCard>
+        dialogs={
+          <>
+            <ConfirmDialog
+              open={open}
+              onClose={() => {
+                // 취소 · Esc 뒤에는 입력한 비밀번호 · 인증번호 단계 · 실패 상태를 쥐고 있지 않는다(닫힌 대화상자도 안을 마운트해 두므로 `key` 로 새로 시작한다)
+                setOpen(false)
+                setProof(null)
+                setClosed((n) => n + 1)
+              }}
+              onConfirm={confirm}
+              title={labels.deleteDialogTitle}
+              confirmDisabled={!ready}
+              description={
+                <div className={styles.stack}>
+                  <p>{labels.deleteGraceNotice(graceDays)}</p>
+                  <p>{labels.deleteDialogBody}</p>
+                  {open && del.error && !isReauthFailure(del.raw) && (
+                    <Alert tone="danger">{del.error.message}</Alert>
+                  )}
+                  {kind === 'password' && (
+                    <p className={styles.muted}>{labels.deletePasswordHint}</p>
+                  )}
+                  <ReauthProof
+                    key={closed}
+                    kind={kind}
+                    email={subject.email}
+                    providers={subject.providers}
+                    requestCode={requestDeleteCode}
+                    onChange={setProof}
+                    failure={isReauthFailure(del.raw) ? del.raw : undefined}
+                    onProvider={onProviderReauth}
+                    confirmedWith={resume?.provider}
+                    labels={given}
+                  />
+                </div>
+              }
+              confirmLabel={labels.deleteConfirm}
+              cancelLabel={labels.cancel}
+              closeLabel={labels.cancel}
+              busy={del.busy}
+              typedConfirmation={{
+                phrase: labels.deleteTypedPhrase,
+                label: labels.deleteTypedLabel,
+              }}
+            />
+          </>
+        }
+      >
+        {del.error && !open && <Alert tone="danger">{del.error.message}</Alert>}
+      </SettingsRow>
+    </SectionShell>
   )
 }

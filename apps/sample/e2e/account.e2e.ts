@@ -492,7 +492,12 @@ describe('a passwordless account (email link) re-authenticates by a mailed code,
     await pwExpect(page.getByText(auth.passwordChanged)).toBeVisible()
     pwExpect((await apiLogin({ email: linkNext, password: firstPassword })).status).toBe(200)
     await page.reload()
-    await pwExpect(region(auth.sectionPassword).getByLabel(auth.currentPassword)).toBeVisible()
+    // 비밀번호가 생겼으니 이제 현재 비밀번호를 묻는다(대화상자 안)
+    await region(auth.sectionPassword)
+      .getByRole('button', { name: auth.passwordChangeSubmit })
+      .click()
+    await pwExpect(page.getByRole('dialog').getByLabel(auth.currentPassword)).toBeVisible()
+    await page.keyboard.press('Escape')
   })
 
   it('unlink: removing a sign-in method needs re-authentication — the dialog asks for the password and stays open on a wrong one', async () => {

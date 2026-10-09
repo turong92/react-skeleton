@@ -468,6 +468,7 @@ const en: Record<keyof typeof ko, string> = {
   'settings.cheersLink': 'My cheers',
   'settings.cheersHint': 'See the cheers you sent and ask for a refund',
   'nav.adminPayments': 'Payments',
+  'nav.adminAccounts': 'Accounts',
   'admin.payments.title': 'Payments',
   'admin.payments.subtitle': 'Look at payments and handle refund requests.',
   'admin.payments.tabsLabel': 'View',

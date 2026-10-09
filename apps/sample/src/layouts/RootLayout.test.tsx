@@ -1,9 +1,10 @@
 import { AuthProvider, createAuthSession, createTokenStore, type AuthApi } from '@skeleton/auth'
+import { fakeJwt } from '../../../../packages/auth/src/test/fixtures'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { i18n } from '../i18n'
-import { RootLayout } from './RootLayout'
+import { AdminLinks, RootLayout } from './RootLayout'
 
 afterEach(async () => {
   vi.unstubAllGlobals()
@@ -97,5 +98,28 @@ describe('RootLayout (signed out)', () => {
       </AuthProvider>,
     )
     expect(html).toMatch(new RegExp(`<a[^>]*href="/login"[^>]*>${i18n.t('header.signIn')}</a>`))
+  })
+})
+
+describe('RootLayout (signed in): operator menu', () => {
+  const renderAs = (roles: string[] | undefined) => {
+    vi.stubGlobal('document', { documentElement: { dataset: {} } })
+    const store = createTokenStore()
+    if (roles) store.set(fakeJwt({ sub: 'a', roles }))
+    return renderToStaticMarkup(
+      <AuthProvider session={createAuthSession({ api, store })}>
+        <MemoryRouter>
+          <AdminLinks />
+        </MemoryRouter>
+      </AuthProvider>,
+    )
+  }
+  it('shows the two operator screens in the menu only to an ADMIN - never to a member or a visitor', () => {
+    const admin = renderAs(['USER', 'ADMIN'])
+    expect(admin).toContain('href="/admin/payments"')
+    expect(admin).toContain('href="/admin/accounts"')
+    const member = renderAs(['USER'])
+    expect(member).not.toContain('/admin/')
+    expect(renderAs(undefined)).not.toContain('/admin/')
   })
 })

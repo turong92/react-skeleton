@@ -53,6 +53,19 @@ function SignedInActions() {
   )
 }
 
+/** 운영자 화면으로 가는 메뉴 - 라우트 가드(`RequireRole roles={['ADMIN']}`)와 같은 판정이다. 권한이 없으면 아무것도 그리지 않는다 */
+export function AdminLinks() {
+  const { t } = useT()
+  const { principal } = useAuth()
+  if (!principal?.roles.includes('ADMIN')) return null
+  return (
+    <>
+      <NavLink to="/admin/payments">{t('nav.adminPayments')}</NavLink>
+      <NavLink to="/admin/accounts">{t('nav.adminAccounts')}</NavLink>
+    </>
+  )
+}
+
 /** 푸터 링크 — 같은 페이지의 앵커(`/#pricing`)는 일반 `<a>`, 사이트 안 경로는 라우터 링크 */
 function footerLink(link: FooterLink, children: ReactNode) {
   return link.href.startsWith('/#') ? (
@@ -123,6 +136,7 @@ export function RootLayout() {
               <NavLink to="/board">{t('nav.board')}</NavLink>
               <NavLink to="/cheer">{t('nav.cheer')}</NavLink>
               <NavLink to="/settings">{t('nav.settings')}</NavLink>
+              <AdminLinks />
             </>
           )
         }

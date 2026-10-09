@@ -462,6 +462,7 @@ export default {
   'settings.cheersLink': '내 응원 내역',
   'settings.cheersHint': '응원한 내역을 보고 환불을 요청해요',
   'nav.adminPayments': '결제 관리',
+  'nav.adminAccounts': '계정 관리',
   'admin.payments.title': '결제 관리',
   'admin.payments.subtitle': '결제를 확인하고 환불 요청을 처리해요.',
   'admin.payments.tabsLabel': '결제 보기',

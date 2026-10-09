@@ -21,6 +21,7 @@ export default defineConfig({
           'e2e/walkthrough.legal.shots.ts', // legal 모듈이 있는 백엔드일 때만 — 아니면 건너뛴다
           'e2e/walkthrough.email.shots.ts', // 이메일 필수(쓰기 때) — 가짜 LINE(주소 없음) · mailpit
           'e2e/walkthrough.loginId.shots.ts', // 로그인 아이디 — 가입 양식 · 로그인 · 아이디 찾기 · 게이트 · 설정 · 관리자 표 · 메일 (ko · en)
+          'e2e/walkthrough.settings.shots.ts', // 설정의 입력 동작이 대화상자로 뜨는 모습 — 구역 읽기 상태 · 대화상자 · 구역 칩 이동 · 이메일 없는 계정의 수단 연결 (1280 · 375)
         ]
       : ['e2e/**/*.e2e.ts'],
     globalSetup: ['e2e/globalSetup.ts'],

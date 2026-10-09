@@ -460,3 +460,82 @@ describe('the browser script (fakeSdkScript)', () => {
     expect(assigned).toEqual([])
   })
 })
+
+describe('자동결제(구독)', () => {
+  const customerKey = 'cus_0123456789abcdef0123456789abcdef'
+  const authorizeBilling = async () => {
+    const answer = (await (
+      await fetch(`${fake.url}/sdk/authorize-billing`, {
+        method: 'POST',
+        body: JSON.stringify({ customerKey }),
+      })
+    ).json()) as { ok: boolean; authKey: string }
+    return answer.authKey
+  }
+  const issue = (authKey: string, key = customerKey) =>
+    toss('POST', '/v1/billing/authorizations/issue', { authKey, customerKey: key })
+
+  it('issues a billing key once per authKey, and an unknown or reused authKey is 404 NOT_FOUND_BILLING', async () => {
+    await control.set({ reset: true })
+    const authKey = await authorizeBilling()
+    const issued = await issue(authKey)
+    expect(issued.status).toBe(200)
+    expect(((await issued.json()) as { billingKey: string }).billingKey).toMatch(/^bkey_/)
+    expect((await issue(authKey)).status).toBe(404) // 한 번만 쓴다
+    const refused = await issue('auth_unknown')
+    expect(refused.status).toBe(404)
+    expect(((await refused.json()) as { code: string }).code).toBe('NOT_FOUND_BILLING')
+  })
+
+  it('charges with the billing key (idempotent by key), declines or loses the answer when told, and refuses an unknown key like the real one', async () => {
+    await control.set({ reset: true })
+    const { billingKey } = (await (await issue(await authorizeBilling())).json()) as {
+      billingKey: string
+    }
+    const charge = (orderId: string, key: string) =>
+      toss(
+        'POST',
+        `/v1/billing/${billingKey}`,
+        { customerKey, amount: 3900, orderId, orderName: '월 구독' },
+        { 'Idempotency-Key': key },
+      )
+    const first = await charge('ord_sub_1', 'k1')
+    expect(first.status).toBe(200)
+    const payment = (await first.json()) as {
+      paymentKey: string
+      status: string
+      totalAmount: number
+    }
+    expect(payment).toMatchObject({ status: 'DONE', totalAmount: 3900 })
+    expect(
+      ((await (await charge('ord_sub_1', 'k1')).json()) as { paymentKey: string }).paymentKey,
+    ).toBe(payment.paymentKey) // 같은 키는 같은 답
+    expect((await toss('GET', '/v1/payments/orders/ord_sub_1')).status).toBe(200) // 조회가 이 결제를 안다
+
+    await control.set({ billing: { mode: 'decline' } })
+    const declined = await charge('ord_sub_2', 'k2')
+    expect(declined.status).toBe(403)
+    expect(((await declined.json()) as { code: string }).code).toBe('REJECT_CARD_COMPANY')
+    expect((await charge('ord_sub_2', 'k3')).status).toBe(200) // 지시는 한 번만 쓰인다
+
+    const unknown = await toss(
+      'POST',
+      '/v1/billing/bkey_unknown',
+      { customerKey, amount: 1, orderId: 'ord_x', orderName: 'x' },
+      { 'Idempotency-Key': 'k9' },
+    )
+    expect(unknown.status).toBe(400)
+    expect(((await unknown.json()) as { code: string }).code).toBe('INVALID_BILL_KEY_REQUEST')
+  })
+
+  it('deletes a billing key and treats an unknown one as INVALID_BILL_KEY_REQUEST', async () => {
+    await control.set({ reset: true })
+    const { billingKey } = (await (await issue(await authorizeBilling())).json()) as {
+      billingKey: string
+    }
+    expect((await control.state()).billingKeys).toEqual([billingKey])
+    expect((await toss('DELETE', `/v1/billing/${billingKey}`)).status).toBe(200)
+    expect((await control.state()).billingKeys).toEqual([])
+    expect((await toss('DELETE', `/v1/billing/${billingKey}`)).status).toBe(400)
+  })
+})

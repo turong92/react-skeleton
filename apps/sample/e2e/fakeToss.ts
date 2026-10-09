@@ -21,6 +21,10 @@ import type { BrowserContext } from 'playwright'
  *   { complete: <orderId> }                    나중에 결제를 끝낸다(승인 호출 없이 DONE) — 사용자가 뒤늦게 끝낸 결제를 조회가 맞추는 시나리오
  *   { cardNumber: '<가려진 번호>' | null }     이후 결제의 카드 번호(기본 `43301234****1234` → 현대카드 ····1234)
  *   { reset: true }                            모든 결제 · 호출 기록 · 지시를 지운다
+ * 자동결제(구독, 2단계): POST /v1/billing/authorizations/issue {authKey, customerKey} → 빌링키 · 카드 / POST /v1/billing/{billingKey} {customerKey, amount, orderId, orderName} → 결제 객체(DONE) /
+ *   DELETE /v1/billing/{billingKey}. 카드 등록 창 대역은 `POST /sdk/authorize-billing` 으로 authKey 를 만든다. 없는 authKey 의 발급은 404 NOT_FOUND_BILLING,
+ *   없는 빌링키의 승인 · 삭제는 400 INVALID_BILL_KEY_REQUEST(진짜 토스에서 잰 그대로 — 백엔드 docs/real-provider-setup.md §11.7).
+ *   제어 `{ billing: { mode: 'decline'|'lose'|'error', code? } | null }` — 다음 빌링 승인 한 번: 카드사 거절 · 적용했지만 답이 유실됨 · 5xx(적용 안 됨).
  * `GET /control` → { payments, calls, next }  — `calls` 는 토스 API(/v1/…) 호출만(결제창 · 제어 트래픽은 빼고) 시각 순으로, 멱등 키와 본문과 함께.
  */
 
@@ -79,11 +83,18 @@ export type FakeTossCall = {
 export type FakeTossState = {
   payments: Payment[]
   calls: FakeTossCall[]
-  next: { sdk: SdkInstruction | null; confirm: ConfirmInstruction | null }
+  next: {
+    sdk: SdkInstruction | null
+    confirm: ConfirmInstruction | null
+    billing: ConfirmInstruction | null
+  }
+  /** 살아 있는 빌링키(삭제하면 사라진다) */
+  billingKeys: string[]
 }
 export type FakeTossPatch = {
   sdk?: SdkInstruction | null
   confirm?: ConfirmInstruction | null
+  billing?: ConfirmInstruction | null
   complete?: string
   cardNumber?: string | null
   reset?: boolean
@@ -169,7 +180,9 @@ export async function startFakeToss(): Promise<FakeToss> {
   const payments = new Map<string, Payment>() // paymentKey → 결제
   let calls: FakeTossCall[] = []
   const replies = new Map<string, { status: number; body: unknown }>() // 멱등 키 → 처음 준 답
-  const next: FakeTossState['next'] = { sdk: null, confirm: null }
+  const next: FakeTossState['next'] = { sdk: null, confirm: null, billing: null }
+  const authKeys = new Map<string, string>() // authKey → customerKey (한 번 쓰면 사라진다)
+  const billingKeys = new Map<string, { customerKey: string; cardNumber: string }>() // 빌링키 → 고객 키 · 카드
   let cardNumber: string | null = null
   const byOrder = (orderId: string) => [...payments.values()].find((p) => p.orderId === orderId)
   const expectedAuth = `Basic ${Buffer.from(`${FAKE_TOSS.secretKey}:`).toString('base64')}`
@@ -219,6 +232,105 @@ export async function startFakeToss(): Promise<FakeToss> {
       },
       cors,
     )
+  }
+
+  /** 카드 등록 창 대역이 부른다 — "카드 인증을 마친" authKey 를 만든다(사용자가 닫으면 만들지 않는다) */
+  function authorizeBilling(res: ServerResponse, body: Record<string, unknown> | null) {
+    const instruction = next.sdk
+    next.sdk = null
+    if (instruction === 'cancel' || instruction === 'cancel-no-order-id')
+      return send(
+        res,
+        200,
+        {
+          ok: false,
+          fail: { code: 'PAY_PROCESS_CANCELED', message: '사용자가 인증을 취소하였습니다.' },
+        },
+        cors,
+      )
+    const authKey = `auth_${randomUUID().replaceAll('-', '').slice(0, 24)}`
+    authKeys.set(authKey, String(body?.customerKey ?? ''))
+    return send(res, 200, { ok: true, authKey }, cors)
+  }
+
+  function issueBilling(res: ServerResponse, body: Record<string, unknown> | null) {
+    const authKey = String(body?.authKey ?? '')
+    const customerKey = String(body?.customerKey ?? '')
+    if (!customerKey)
+      return tossError(res, 400, 'INVALID_REQUEST', '필수 파라미터가 누락되었습니다: customerKey')
+    if (authKeys.get(authKey) !== customerKey) return tossError(res, 404, 'NOT_FOUND_BILLING')
+    authKeys.delete(authKey) // authKey 는 한 번만 쓴다
+    const billingKey = `bkey_${randomUUID().replaceAll('-', '').slice(0, 24)}`
+    const card = cardNumber ?? DEFAULT_CARD_NUMBER
+    billingKeys.set(billingKey, { customerKey, cardNumber: card })
+    return send(res, 200, {
+      mId: 'tosstest',
+      billingKey,
+      customerKey,
+      authenticatedAt: now(),
+      method: '카드',
+      card: {
+        issuerCode: '61',
+        acquirerCode: '31',
+        number: card,
+        cardType: '신용',
+        ownerType: '개인',
+      },
+      cardCompany: '현대',
+      cardNumber: PLANTED.fullCardNumber,
+      customerName: PLANTED.name,
+      customerEmail: PLANTED.email,
+    })
+  }
+
+  async function chargeBilling(
+    res: ServerResponse,
+    billingKey: string,
+    body: Record<string, unknown> | null,
+    key: string,
+  ) {
+    const billing = billingKeys.get(billingKey)
+    if (!billing || billing.customerKey !== body?.customerKey)
+      return tossError(
+        res,
+        400,
+        'INVALID_BILL_KEY_REQUEST',
+        '빌링키 인증이 완료되지 않았거나 유효하지 않은 빌링 거래 건입니다.',
+      )
+    const amount = Number(body?.amount)
+    const orderId = String(body?.orderId ?? '')
+    if (!Number.isInteger(amount) || amount <= 0 || !orderId)
+      return tossError(res, 400, 'INVALID_REQUEST')
+    const instruction = next.billing
+    next.billing = null
+    if (instruction?.mode === 'decline')
+      return tossError(
+        res,
+        403,
+        instruction.code ?? 'REJECT_CARD_COMPANY',
+        '카드사에서 승인을 거절했습니다.',
+      )
+    if (instruction?.mode === 'error')
+      return tossError(res, 500, 'FAILED_INTERNAL_SYSTEM_PROCESSING')
+    const payment: Payment = {
+      paymentKey: `pay_${randomUUID().replaceAll('-', '').slice(0, 24)}`,
+      orderId,
+      orderName: String(body?.orderName ?? ''),
+      currency: 'KRW',
+      amount,
+      balance: amount,
+      status: 'DONE',
+      requestedAt: now(),
+      approvedAt: now(),
+      cancels: [],
+      cardNumber: billing.cardNumber,
+    }
+    payments.set(payment.paymentKey, payment)
+    const reply = { status: 200, body: paymentObject(payment) }
+    replies.set(key, reply)
+    // 적용은 됐지만 답이 닿지 않는다 — 같은 멱등 키로 다시 부르면 처음 답이 나온다
+    if (instruction?.mode === 'lose') return void res.socket?.destroy()
+    return send(res, reply.status, reply.body)
   }
 
   function approve(p: Payment) {
@@ -305,10 +417,14 @@ export async function startFakeToss(): Promise<FakeToss> {
           calls = []
           next.sdk = null
           next.confirm = null
+          next.billing = null
+          authKeys.clear()
+          billingKeys.clear()
           cardNumber = null
         }
         if ('sdk' in patch) next.sdk = patch.sdk ?? null
         if ('confirm' in patch) next.confirm = patch.confirm ?? null
+        if ('billing' in patch) next.billing = patch.billing ?? null
         if ('cardNumber' in patch) cardNumber = patch.cardNumber ?? null
         if (patch.complete) {
           const target = byOrder(patch.complete)
@@ -320,20 +436,41 @@ export async function startFakeToss(): Promise<FakeToss> {
         payments: [...payments.values()],
         calls,
         next,
+        billingKeys: [...billingKeys.keys()],
       } satisfies FakeTossState)
     }
 
     if (path === '/sdk/authorize' && req.method === 'POST') return authorize(res, body)
+    if (path === '/sdk/authorize-billing' && req.method === 'POST')
+      return authorizeBilling(res, body)
 
-    if (!path.startsWith('/v1/payments')) return send(res, 404, { error: 'not found' })
+    if (!path.startsWith('/v1/payments') && !path.startsWith('/v1/billing'))
+      return send(res, 404, { error: 'not found' })
 
     // 토스 API — 인증 · 기록
     const idempotencyKey = (req.headers['idempotency-key'] as string | undefined) ?? null
     calls.push({ method: req.method ?? 'GET', path, idempotencyKey, body })
     if (req.headers.authorization !== expectedAuth) return tossError(res, 401, 'UNAUTHORIZED_KEY')
-    if (req.method === 'POST' && !idempotencyKey) return tossError(res, 400, 'INVALID_REQUEST')
+    if (req.method === 'POST' && !idempotencyKey && path !== '/v1/billing/authorizations/issue')
+      return tossError(res, 400, 'INVALID_REQUEST')
     const replay = idempotencyKey ? replies.get(idempotencyKey) : undefined
     if (replay) return send(res, replay.status, replay.body)
+
+    if (req.method === 'POST' && path === '/v1/billing/authorizations/issue')
+      return issueBilling(res, body)
+    const billingMatch = /^\/v1\/billing\/([^/]+)$/.exec(path)
+    if (req.method === 'POST' && billingMatch)
+      return chargeBilling(
+        res,
+        decodeURIComponent(billingMatch[1] as string),
+        body,
+        idempotencyKey as string,
+      )
+    if (req.method === 'DELETE' && billingMatch) {
+      const billingKey = decodeURIComponent(billingMatch[1] as string)
+      if (!billingKeys.delete(billingKey)) return tossError(res, 400, 'INVALID_BILL_KEY_REQUEST')
+      return send(res, 200, {})
+    }
 
     if (req.method === 'POST' && path === '/v1/payments/confirm')
       return confirm(res, body, idempotencyKey as string)
@@ -428,7 +565,7 @@ export function tossControl(fakeUrl: string) {
 
 /**
  * 브라우저가 받을 토스 SDK v2 대역 — `window.TossPayments(clientKey).payment({customerKey}).requestPayment({...})` 하나만 흉내 낸다(`@skeleton/payment` 의 `openCheckout` 이 부르는 모양).
- * 가짜 토스의 `/sdk/authorize` 로 결제를 만들고, 성공이면 곧장 `successUrl?paymentKey&orderId&amount`, 실패면 `failUrl?code&message&orderId` 로 이동한다(`withoutOrderId` 면 `orderId` 없이 — 앱이 failUrl 에 실은 쿼리는 그대로 남는다).
+ * 가짜 토스의 `/sdk/authorize` 로 결제를 만들고(카드 등록 창 `requestBillingAuth` 는 `/sdk/authorize-billing` 으로 authKey 를 만들어 `successUrl?authKey&customerKey` 로 돌려보낸다), 성공이면 곧장 `successUrl?paymentKey&orderId&amount`, 실패면 `failUrl?code&message&orderId` 로 이동한다(`withoutOrderId` 면 `orderId` 없이 — 앱이 failUrl 에 실은 쿼리는 그대로 남는다).
  * `leave` 면 인증만 하고 떠난 사용자 — 이동도 끝남도 없이 약속이 영원히 열려 있다.
  * `window` · `fetch` · `location` 은 실행하는 쪽이 준다(브라우저에서는 전역 그대로 — `new Function` 으로 감싸 시험한다)
  */
@@ -437,8 +574,27 @@ export function fakeSdkScript(fakeUrl: string): string {
   var FAKE = ${JSON.stringify(fakeUrl)};
   window.TossPayments = function (clientKey) {
     return {
-      payment: function () {
+      payment: function (options) {
         return {
+          requestBillingAuth: async function (request) {
+            var response = await fetch(FAKE + '/sdk/authorize-billing', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ clientKey: clientKey, customerKey: options.customerKey, method: request.method })
+            });
+            var result = await response.json();
+            var back;
+            if (result.ok) {
+              back = new URL(request.successUrl);
+              back.searchParams.set('authKey', result.authKey);
+              back.searchParams.set('customerKey', options.customerKey);
+            } else {
+              back = new URL(request.failUrl);
+              back.searchParams.set('code', result.fail.code);
+              back.searchParams.set('message', result.fail.message);
+            }
+            location.assign(back.toString());
+          },
           requestPayment: async function (request) {
             var response = await fetch(FAKE + '/sdk/authorize', {
               method: 'POST',

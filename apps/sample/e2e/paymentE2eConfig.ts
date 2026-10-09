@@ -6,14 +6,17 @@
  *   한 실행은 같은 계정(`user@example.com`)과 같은 주소(`::1`)에서 그보다 많은 주문을 만든다 - 이 백엔드에서만 넉넉히 푼다(운영 값이 아니다).
  * - `payment.webhook.path-token`: 웹훅 주소의 비밀 조각(`/payments/webhooks/toss/<token>`). 지금 어떤 시나리오도 웹훅을 보내지 않는다 - 보호 환경 규칙(24자 이상 · 서로 다른 글자 8개 이상 · 주소에 쓸 수 있는 글자만)을 지키는
  *   e2e 전용 값이라 비밀이 아니다(공개 저장소). 이후 시나리오가 웹훅을 보낼 때 이 값을 주소에 쓴다.
+ * - `sample.subscription.period` · `payment.subscription.renewal.retry-interval`: 구독(2단계) — 견본 플랜의 갱신 주기를 25초로, 거절된 갱신의 재시도를 8초 뒤로 줄여 갱신 한 번을 시나리오 안에서 본다(운영 값은 `P1M` · 24시간).
  * - `payment.checkout-ttl`: 결제 가능 시간 — 결제창에서 떠난 결제를 만료 작업이 이 시간 뒤 결제사에 물어 닫거나 맞춘다(시나리오 ②). 40초면 느린 첫 실행에서도 시나리오가 제 결제를 시간 안에 끝낸다.
  */
 export const PAYMENT_E2E_SKELETON = {
+  sample: { subscription: { period: 'PT25S' } },
   http: { clients: { 'payment-toss': { 'response-timeout': '10s' } } },
   payment: {
     'checkout-ttl': '40s',
     reconcile: { 'first-delay': '11s' },
     http: { 'order-rate-limit': { 'account-capacity': 1000, 'ip-capacity': 1000 } },
     webhook: { 'path-token': 'e2e-payment-webhook-token-0123456789' },
+    subscription: { renewal: { 'retry-interval': '8s' } },
   },
 } as const

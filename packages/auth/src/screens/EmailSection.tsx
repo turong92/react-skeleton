@@ -52,7 +52,7 @@ export type EmailSectionProps = {
   registerToWrite?: boolean
   /** 제공자에서 돌아와 이어 보낸 요청이 실패했다 - 다시 열린 대화상자 안에서 이유를 말한다 */
   resumeFailure?: string
-  /** 첫 렌더부터 대화상자가 열려 있다 - 서버 렌더 시험 · 스토리용 (제공자에서 돌아온 `resume` 도 같은 모습으로 연다) */
+  /** 첫 렌더부터 대화상자가 열려 있다 - 부모가 제공자에서 돌아온 이메일 변경(`resume`)을 이어 가는 동안 구역이 늦게 그려져도 열린 채 시작하게 하고, 서버 렌더 시험 · 스토리도 쓴다 */
   initiallyOpen?: boolean
   labels?: Partial<AuthLabels>
 }
@@ -94,6 +94,8 @@ export function EmailSection({
   const [changed, setChanged] = useState(false)
   // 제공자 동의에서 돌아왔으면 같은 대화상자가 그 단계로 다시 열려 있다
   const [open, setOpen] = useState(!!resume || initiallyOpen)
+  // 이미 본 왕복 실패 문구 - 닫거나 다시 보내면 그 문구는 더 보이지 않는다(부모는 실패 때 한 번만 값을 준다)
+  const [seenFailure, setSeenFailure] = useState<string>()
   const action = useAction(labels)
   const now = useCodeClock()
   /** 방금 보낸 요청의 유효 창(어림) — `me.pendingEmailExpiresAt`(서버 값)이 읽히면 그쪽이 이긴다 */
@@ -120,6 +122,7 @@ export function EmailSection({
 
   async function submit(event: FormEvent) {
     event.preventDefault()
+    setSeenFailure(resumeFailure)
     if (needProof && kind === 'provider') return
     // 버튼은 늘 눌린다 — 새 주소가 비었거나 본인 확인이 모자라면 이유를 말하고 그 칸으로 간다
     if (problems.length > 0) return attempt.fail(problems[0].target)
@@ -148,6 +151,7 @@ export function EmailSection({
   }
 
   const closeDialog = () => {
+    setSeenFailure(resumeFailure)
     setOpen(false)
     setEditing(false)
     setNewEmail('')
@@ -338,7 +342,9 @@ export function EmailSection({
         closeLabel={labels.dialogClose}
       >
         <div className={styles.stack}>
-          {resumeFailure && <Alert tone="danger">{resumeFailure}</Alert>}
+          {resumeFailure && resumeFailure !== seenFailure && (
+            <Alert tone="danger">{resumeFailure}</Alert>
+          )}
           {!email && !showCode && (
             <p className={styles.muted}>
               {needProof && kind === 'provider' ? labels.emailAddHintReauth : labels.emailAddHint}

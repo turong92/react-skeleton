@@ -19,6 +19,8 @@ export type SignInMethodsSectionProps = {
   onLink?: (provider: string) => void | Promise<unknown>
   /** 연결 앞의 안내(다시 인증 메일을 보냈다 …) */
   notice?: string
+  /** 제공자에서 돌아와 이어 한 연결 해제가 실패했다 - 스크롤해 온 이 구역에서 이유를 말한다 */
+  failure?: string
   /** 다시 인증이 든다(서버가 강제) — 비밀번호 · 메일 인증번호 · `socialReauth`. 마지막 수단은 409 */
   onUnlink: (identityId: string, reauth: ReauthCredential) => Promise<unknown>
   /** 다시 인증의 종류를 고르는 `me` 의 부분(`reauthSubjectOf(me)`) */
@@ -48,6 +50,7 @@ export function SignInMethodsSection({
   requestReauthCode,
   onProviderReauth,
   notice,
+  failure,
   linkIntent,
   formatDate = defaultFormat,
   labels: given,
@@ -101,6 +104,7 @@ export function SignInMethodsSection({
       <div className={styles.stack} ref={section}>
         {action.error && !target && <Alert tone="danger">{action.error.message}</Alert>}
         {message && <Alert tone="success">{message}</Alert>}
+        {failure && <Alert tone="danger">{failure}</Alert>}
         {notice && <Alert tone="info">{notice}</Alert>}
         {resuming && (
           <Alert tone="info">{labels.methodLinkContinue(labelOfMethod(resuming, labels))}</Alert>

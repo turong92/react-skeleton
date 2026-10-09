@@ -658,6 +658,20 @@ export const DeleteNoAddressAfterProviderReturn: Story = {
   },
 }
 
+/** 삭제 대화상자를 취소하면 입력한 현재 비밀번호를 쥐고 있지 않는다 - 다시 열면 빈 칸이고 확인은 꺼져 있다 */
+export const DeleteDialogForgetsThePasswordWhenCancelled: Story = {
+  play: async ({ canvas, userEvent }) => {
+    const section = within(await canvas.findByRole('region', { name: 'Delete account' }))
+    let dialog = await openDialog(canvas, userEvent, section, 'Delete my account')
+    await userEvent.type(dialog.getByLabelText(/^Current password/), 'old-password-1')
+    await userEvent.click(dialog.getAllByRole('button', { name: 'Cancel' }).at(-1)!)
+    await waitFor(() => expect(canvas.queryByRole('dialog')).toBeNull())
+    dialog = await openDialog(canvas, userEvent, section, 'Delete my account')
+    await expect(dialog.getByLabelText(/^Current password/)).toHaveValue('')
+    await expect(dialog.getByRole('button', { name: 'Delete account' })).toBeDisabled()
+  },
+}
+
 export const PartialSections: Story = {
   args: { sections: { delete: false, email: false, password: false } },
   play: async ({ canvas }) => {

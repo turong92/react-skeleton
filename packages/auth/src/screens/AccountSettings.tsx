@@ -141,6 +141,8 @@ export function AccountSettings({
   const passwordOn = sections?.password !== false
   const me = useResource(useCallback(() => api.me(), [api]))
   const [resumeError, setResumeError] = useState<unknown>(null)
+  /** 제공자에서 돌아와 이어 한 연결 해제가 실패했다 - 로그인 수단 구역에서 말한다(스크롤이 거기로 가므로) */
+  const [unlinkFailure, setUnlinkFailure] = useState<string>()
   /** 제공자에서 돌아와 이어 보낸 이메일 변경이 실패했다 - 다시 열린 이메일 대화상자 안에서 말한다 */
   const [emailResumeFailure, setEmailResumeFailure] = useState<string>()
   // 제공자 동의 왕복에서 돌아온 증거로 이어 갈 작업 — 처음 그릴 때부터 알고 있다(앱이 `resume` 을 첫 렌더에 준다)
@@ -199,10 +201,13 @@ export function AccountSettings({
         .discardAccount({ socialReauth })
         .then(() => onDiscarded?.(socialReauth.provider), setResumeError)
     } else if (action.kind === 'unlink')
-      api.unlinkIdentity(action.identityId, { socialReauth }).then(() => {
-        reloadMe()
-        reloadSessions() // 서버가 이 계정의 다른 세션을 닫는다
-      }, setResumeError)
+      api.unlinkIdentity(action.identityId, { socialReauth }).then(
+        () => {
+          reloadMe()
+          reloadSessions() // 서버가 이 계정의 다른 세션을 닫는다
+        },
+        (error: unknown) => setUnlinkFailure(authErrorMessage(error, labels).message),
+      )
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `labels` 는 오류 문구에만 쓰고, 이 효과는 돌아온 한 번만 돈다
   }, [resume, api, reloadMe, reloadSessions, onResumeConsumed, onDiscarded])
 
@@ -457,6 +462,7 @@ export function AccountSettings({
           socialProviders={socialProviders}
           subject={subject}
           requestReauthCode={requestReauthCode}
+          failure={unlinkFailure}
           onProviderReauth={
             onProviderReauth &&
             ((provider, identityId) => onProviderReauth(provider, { kind: 'unlink', identityId }))

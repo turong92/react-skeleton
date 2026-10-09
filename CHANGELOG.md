@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — 설정의 입력은 대화상자로(`@skeleton/auth` · `@skeleton/ui` · `apps/sample`)
+
+- **설정 구역은 현재 값 + 단추만 보이고, 입력 양식은 모달 대화상자로 뜬다**(프로필 · 계정 이메일 · 연락받을 이메일 · 비밀번호 · 계정 삭제). 세션 로그아웃 · 연락받을 이메일 지우기에는 확인 단계가 생겼다. 제공자 왕복에서 돌아오면 그 구역으로 스크롤하고 같은 대화상자가 그 단계로 다시 열린다. 새로고침 뒤 대기 중인 이메일 변경은 구역의 「인증번호 입력 이어 하기」 단추로 보인다(팝업이 저절로 뜨지 않는다).
+- **`AuthLabels` 키 11개 추가**(앱이 문구를 덮어쓴 경우 확인): `profileEdit` · `dialogClose` · `passwordHasValue` · `passwordHasNone` · `emailContinueCode` · `contactEmailRemoveTitle` · `contactEmailRemoveBody` · `sessionsRevokeTitle` · `sessionsRevokeBody` · `sessionsRevokeOthersTitle` · `sessionsRevokeOthersBody`.
+- **새 prop**: `EmailSection` 의 `initiallyOpen` · `resumeFailure`, `PasswordSection` 의 `initiallyOpen`, `SignInMethodsSection` 의 `failure`.
+- **`AppShell` 이 고정 머리의 실제 높이를 문서의 `scroll-padding-top` 으로 쓴다** — 구역 칩 · 앵커로 가도 제목이 머리 밑에 깔리지 않는다.
+- **로그인 수단 구역은 이메일 없는 계정에게도 열린다**(백엔드 `feat/link-without-email` 이 먼저 배포돼야 한다 — 소셜 연결 · 해제를 쓰기 때 방식의 허용 목록에 더했다).
+- **제공자 재확인(1시간 뒤 첫 이메일 등록)에서 돌아오면 떠나기 전의 같은 주소로 와 막이 다시 열리고 인증번호 요청까지 이어 간다**(`8760ad0`).
+- 견본 앱: 운영자(`ADMIN`) 계정에게만 상단 메뉴에 「결제 관리」 「계정 관리」가 보인다.
+
 ### Added — 로그인 아이디(서버가 켠 앱만) · 이메일을 「쓰기 때」 받기(`@skeleton/auth` · `@skeleton/auth/admin` · `apps/sample`)
 
 백엔드(kotlin-skeleton, `docs/account-http-contract.md` 의 **FINAL-7** — 로그인 아이디 L1~L13, 쓰기 때 이메일 E7~E12)에 맞췄다. 둘 다 앱의 선택이라 **기본은 꺼짐**이고, 켜졌는지는 응답이 말한다: `GET /auth/methods` 의 `loginId: { minLength, maxLength }` 키(발견) · `me.loginId`(`null` = 정해야 한다, 키 없음 = 꺼진 서버) · `me.emailRequired` / `me.emailRequiredToWrite`. **키가 없으면 모든 화면이 예전과 같다**(앱이 환경변수로 따로 맞추는 값은 없다). 쓰는 법은 `packages/auth/README.md` 의 「로그인 아이디」 · 「이메일을 받는 시점」 · 「막 셋을 붙이는 법」.

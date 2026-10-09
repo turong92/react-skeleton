@@ -50,6 +50,8 @@ export function DeleteAccountSection({
   const kind = reauthKindOf(subject)
   const [proof, setProof] = useState<ReauthCredential | null>(null)
   // 제공자 동의에서 돌아왔으면 같은 대화상자가 그 단계(증거 확인됨 · 글자 확인만 남음)로 다시 열린다
+  /** 닫을 때마다 늘어 `ReauthProof` 의 입력 · 인증번호 단계를 새로 시작하게 한다 */
+  const [closed, setClosed] = useState(0)
   const [open, setOpen] = useState(() => !!resume)
   const [result, setResult] = useState<DeletionResult | null>(null)
   const del = useAction(labels)
@@ -99,14 +101,25 @@ export function DeleteAccountSection({
       <div className={styles.stack}>
         {del.error && !open && <Alert tone="danger">{del.error.message}</Alert>}
         <div>
-          <Button variant="danger" onClick={() => setOpen(true)}>
+          <Button
+            variant="danger"
+            onClick={() => {
+              del.clear()
+              setOpen(true)
+            }}
+          >
             {labels.deleteButton}
           </Button>
         </div>
       </div>
       <ConfirmDialog
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={() => {
+          // 취소 · Esc 뒤에는 입력한 비밀번호 · 인증번호 단계 · 실패 상태를 쥐고 있지 않는다(닫힌 대화상자도 안을 마운트해 두므로 `key` 로 새로 시작한다)
+          setOpen(false)
+          setProof(null)
+          setClosed((n) => n + 1)
+        }}
         onConfirm={confirm}
         title={labels.deleteDialogTitle}
         confirmDisabled={!ready}
@@ -118,6 +131,7 @@ export function DeleteAccountSection({
             )}
             {kind === 'password' && <p className={styles.muted}>{labels.deletePasswordHint}</p>}
             <ReauthProof
+              key={closed}
               kind={kind}
               email={subject.email}
               providers={subject.providers}

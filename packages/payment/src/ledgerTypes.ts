@@ -35,7 +35,8 @@ export type OrderCard = { issuer: string | null; last4: string | null }
 export type Order = {
   id: string
   status: OrderStatus
-  kind: 'ONE_TIME'
+  /** 한 번 결제 · 구독의 첫 결제 · 구독의 갱신 결제(계약 §12) */
+  kind: 'ONE_TIME' | 'SUBSCRIPTION_INITIAL' | 'SUBSCRIPTION_RENEWAL'
   itemType: string
   itemRef: string
   quantity: number

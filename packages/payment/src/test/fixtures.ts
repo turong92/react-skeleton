@@ -1,5 +1,6 @@
 import type { AdminOrder, AdminRefund, PaymentEvent, WebhookEvent } from '../admin/types'
 import type { Order, Refund } from '../ledgerTypes'
+import type { Subscription } from '../subscriptionTypes'
 
 /** 테스트 · 스토리가 함께 쓰는 만들기 도우미(공개 표면 아님 — index.ts 가 내보내지 않는다) */
 export const at = '2026-01-01T03:00:00Z'
@@ -85,5 +86,22 @@ export const webhookEvent = (over: Partial<WebhookEvent> = {}): WebhookEvent => 
   lastError: null,
   receivedAt: at,
   processedAt: at,
+  ...over,
+})
+
+export const subscription = (over: Partial<Subscription> = {}): Subscription => ({
+  id: 'sub_1',
+  status: 'ACTIVE',
+  planCode: 'standard',
+  planName: 'Standard',
+  amount: { amount: 6900, currency: 'KRW' },
+  period: 'P1M',
+  currentPeriodStart: '2026-10-01T03:00:00Z',
+  currentPeriodEnd: '2026-11-01T03:00:00Z',
+  attempt: 1,
+  endReason: null,
+  card: { issuer: 'HYUNDAI', last4: '1234' },
+  testMode: false,
+  createdAt: '2026-10-01T03:00:00Z',
   ...over,
 })

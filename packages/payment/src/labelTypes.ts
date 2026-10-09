@@ -1,5 +1,6 @@
 import type { ReviewReason, WebhookEventStatus } from './admin/types'
 import type { OrderStatus, RefundRequestReason, RefundStatus } from './ledgerTypes'
+import type { SubscriptionEndReason, SubscriptionStatus } from './subscriptionTypes'
 
 /** 거절의 종류(`DECLINED` 의 `data.category`) — 모르는 값은 `OTHER` 문구 */
 export type DeclineCategory = 'LIMIT_OR_BALANCE' | 'CARD_DECLINED' | 'TEMPORARY' | 'OTHER'
@@ -245,6 +246,65 @@ export type PaymentAdminLabels = {
   }
 }
 
+/** 주기(`P1M` 등)의 단위 글자 — 개수를 받아 「월」(1) · 「3개월」처럼 돌려준다 */
+export type PeriodUnitLabels = Record<
+  'year' | 'month' | 'week' | 'day' | 'hour' | 'minute',
+  (count: number) => string
+>
+
+/** 구독 부품(`SubscriptionPlanList` · `MySubscriptionCard` · `CancelSubscriptionDialog`)의 글자 */
+export type SubscriptionLabels = {
+  /** 구독 상태 알약 */
+  status: Record<SubscriptionStatus, string>
+  periodUnit: PeriodUnitLabels
+  /** 「3,900원 / 월」 - 금액 글자와 주기 단위 글자(`periodUnit`)를 받는다 */
+  priceEvery: (money: string, unit: string) => string
+  plans: {
+    caption: string
+    subscribe: string
+    /** 단추의 낭독 이름 — 보이는 글자(`subscribe`)로 시작한다 */
+    subscribeFor: (planName: string) => string
+    /** 카드 등록 창을 여는 동안 단추 스피너의 낭독 이름 */
+    subscribing: string
+    emptyTitle: string
+    emptyDescription: string
+  }
+  mine: {
+    amount: string
+    nextPayment: string
+    /** 해지 예약 중 이용이 끝나는 때 칸의 이름 */
+    access: string
+    /** 「11월 1일에 끝나요」 - 인자는 이미 서식을 입힌 시각 */
+    endsOn: (when: string) => string
+    card: string
+    recentPayments: string
+    cancel: string
+    /** 첫 결제를 결제사가 아직 답하지 않았다(`PENDING`) */
+    pending: string
+    /** 갱신이 거절돼 다시 시도하는 중(`PAST_DUE`) - 그동안은 이용할 수 없다 */
+    pastDue: string
+    /** 끝난 구독(`ENDED`)의 안내 - 끝난 이유별 */
+    ended: Record<SubscriptionEndReason, string>
+    /** 이 패키지가 모르는 끝난 이유 */
+    endedUnknown: string
+  }
+  cancelDialog: {
+    title: string
+    /** 기간 끝까지 이용하고 그 뒤 결제하지 않는다 - 인자는 이미 서식을 입힌 끝나는 시각 */
+    body: (when: string) => string
+    /** `PAST_DUE` 는 해지하면 바로 끝난다 */
+    bodyNow: string
+    confirm: string
+    /** 확인 단추가 일하는 동안의 낭독 이름 */
+    loading: string
+    /** 창을 닫는 단추 - 「취소」가 결제 취소로 읽히지 않게 「닫기」 */
+    dismiss: string
+    /** 모서리의 × 단추의 낭독 이름 */
+    close: string
+    error: string
+  }
+}
+
 /**
  * 결제 부품이 그리는 글자 전부 — 부품은 번역을 모른다. 기본은 영어(`labels.en.ts`)이고 한국어는 `koPaymentLabels`(`labels.ko.ts`).
  * 일부만 덮어쓰려면 `labels={{ result: { paid: { title: '응원해 주셔서 고마워요' } } }}`(안쪽도 일부만 가능).
@@ -349,6 +409,7 @@ export type PaymentLabels = {
     }
   }
   reference: { label: string; copy: string; copied: string }
+  subscription: SubscriptionLabels
   admin: PaymentAdminLabels
 }
 

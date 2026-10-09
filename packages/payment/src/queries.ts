@@ -31,6 +31,8 @@ export const paymentKeys = {
   orders: () => [...paymentKeys.all, 'orders'] as const,
   orderList: (params: OrderListParams = {}) => [...paymentKeys.orders(), params] as const,
   order: (id: string) => [...paymentKeys.all, 'order', id] as const,
+  subscriptionPlans: () => [...paymentKeys.all, 'subscription-plans'] as const,
+  mySubscription: () => [...paymentKeys.all, 'my-subscription'] as const,
 }
 
 export function paymentConfigQuery(api: PaymentLedgerApi) {
@@ -69,7 +71,7 @@ export function ordersQuery(api: PaymentLedgerApi, params: Omit<OrderListParams,
  * 뿌리를 다시 읽으라고 한다. **변경의 `onSettled` 는 이 약속을 돌려줘야 한다**(`void` 로 버리지 않는다): 그래야 다시 읽기가 끝날 때까지 변경이 `pending` 이고
  * 단추가 잠겨, 방금 환불이 나갔는데 낡은 화면에서 같은 환불 · 요청이 또 나가지 않는다 - `statusWhileReReading` 시험이 지킨다.
  */
-const invalidateRoot = (client: QueryClient) =>
+export const invalidateRoot = (client: QueryClient) =>
   client.invalidateQueries({ queryKey: paymentKeys.all })
 
 // 변경 변수 객체 → 그 호출이 쓴 키. 성공한 호출이 자기 키만 놓도록 — 변수 객체는 mutationFn 과 onSuccess 에 같은 것이 간다

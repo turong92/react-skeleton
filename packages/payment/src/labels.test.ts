@@ -147,6 +147,25 @@ describe('the words on the screen (spec 11.2)', () => {
     expect(koPaymentLabels.testMode).toBe('테스트 결제예요. 실제로 돈이 나가지 않아요')
   })
 
+  it('says the subscription table words (subscribe, cancel-at-period-end) in Korean and plain English', () => {
+    const sub = koPaymentLabels.subscription
+    expect(sub.plans.subscribe).toBe('구독하기')
+    expect(sub.mine.cancel).toBe('해지 예약')
+    expect(sub.status.CANCELING).toBe('해지 예약됨')
+    expect(sub.mine.endsOn('11월 1일')).toBe('11월 1일에 끝나요')
+    expect(sub.cancelDialog.dismiss).toBe('닫기')
+    expect(defaultPaymentLabels.subscription.plans.subscribe).toBe('Subscribe')
+    expect(defaultPaymentLabels.subscription.mine.cancel).toBe('End at period end')
+    expect(Object.keys(sub.mine.ended).sort()).toEqual([
+      'ACCOUNT_ERASED',
+      'FIRST_PAYMENT_DECLINED',
+      'PAYMENT_FAILED',
+      'REFUNDED',
+      'RENEWAL_BLOCKED',
+      'USER_CANCELED',
+    ])
+  })
+
   it('has the same keys in Korean and English', () => {
     expect(en.map(([p]) => p)).toEqual(ko.map(([p]) => p))
   })

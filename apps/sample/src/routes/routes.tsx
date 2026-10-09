@@ -23,6 +23,9 @@ import { NotFoundPage } from './NotFoundPage'
 import { PaymentDetailPage } from './PaymentDetailPage'
 import { PaymentReturnPage } from './PaymentReturnPage'
 import { SettingsPage } from './SettingsPage'
+import { SubscribePage } from './SubscribePage'
+import { SubscriptionPage } from './SubscriptionPage'
+import { SubscriptionReturnPage } from './SubscriptionReturnPage'
 
 const publicSeo = (
   titleKey: MessageKey,
@@ -95,6 +98,22 @@ export const routes: RouteObject[] = [
             path: '/payments/:id',
             element: <PaymentDetailPage />,
             handle: privateSeo('cheer.detail.title'),
+          },
+          // 구독 — 결제는 `@skeleton/payment`. 백엔드 `skeleton.payment.subscription.enabled=true` 가 있어야 열린다
+          {
+            path: '/subscribe',
+            element: <SubscribePage />,
+            handle: privateSeo('nav.subscription'),
+          },
+          {
+            path: '/subscriptions/return',
+            element: <SubscriptionReturnPage />,
+            handle: privateSeo('subscription.return.title'),
+          },
+          {
+            path: '/subscription',
+            element: <SubscriptionPage />,
+            handle: privateSeo('subscription.title'),
           },
           { path: '/settings', element: <SettingsPage />, handle: privateSeo('nav.settings') },
           {

@@ -6,6 +6,7 @@ export type {
   PaymentLabels,
   PaymentLabelsInput,
   RefundReasonCode,
+  SubscriptionLabels,
 } from './labelTypes'
 export { defaultPaymentLabels } from './labels.en'
 export { koPaymentLabels } from './labels.ko'

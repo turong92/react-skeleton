@@ -52,6 +52,27 @@ export function cardDisplay(
   return lookup(labels.methods, order.method) || null
 }
 
+const PERIOD = /^P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)W)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?)?$/
+const PERIOD_UNITS = ['year', 'month', 'week', 'day', 'hour', 'minute'] as const
+
+/**
+ * 「3,900원 / 월」 - 금액과 ISO-8601 주기(`P1M` · `P3M` · `PT3M`)의 첫 0 아닌 단위. 읽을 수 없는 주기(복합 · 0 · 모르는 글자)는 코드를 그리지 않고 금액만 쓴다.
+ */
+export function priceEveryDisplay(
+  amount: PaymentAmount,
+  period: string,
+  labels: Pick<PaymentLabels, 'currencySuffix' | 'subscription'>,
+  locale?: string,
+): string {
+  const money = formatMoney(amount, { locale, currencySuffix: labels.currencySuffix })
+  const match = PERIOD.exec(period)
+  const counts = match?.slice(1).map((part) => Number(part ?? 0))
+  const at = counts?.findIndex((count) => count > 0) ?? -1
+  const unit = at >= 0 ? PERIOD_UNITS[at] : undefined
+  if (!counts || unit === undefined) return money
+  return labels.subscription.priceEvery(money, labels.subscription.periodUnit[unit](counts[at]!))
+}
+
 /**
  * 문구 표를 코드로 찾는다 — 표에 **자기 것**으로 있는 코드만 찾는다. 서버가 보낸 코드가 `constructor` · `toString` 같은 이름이어도
  * `Object.prototype` 의 함수를 문구로 꺼내 오지 않는다.

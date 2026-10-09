@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — 구독(자동결제) 화면과 호출(`@skeleton/payment` · `apps/sample`)
+
+백엔드 `skeleton.payment.subscription.enabled=true`(HTTP 계약 §12)에 맞췄다. 꺼진 서버에서는 경로가 없으니 이 부분을 쓰지 않으면 아무것도 바뀌지 않는다. 쓰는 법은 `packages/payment/README.md` 의 「구독」.
+
+- **호출 · 훅** — `createSubscriptionApi`(플랜 · 시작(`Idempotency-Key`) · 첫 결제 `activate`(승인과 같은 긴 제한 시간) · 내 구독 · 해지) · `useSubscriptionPlans` · `useMySubscription`(첫 결제를 확인하는 `PENDING` 동안만 `useOrder` 와 같은 간격으로 되묻는다) · `useStartSubscription` · `useActivateSubscription`(결과를 모르면 알아서 다시 보낸다) · `useCancelSubscription`. 변경은 `paymentKeys.all` 을 무효화한다(`start` 는 제외). `openBillingAuth`(토스 카드 등록 창 · SDK 로더는 `openCheckout` 과 같다; `TossPaymentsFactory` 에 `requestBillingAuth`) · `readBillingReturn`.
+- **오류 코드 4개** — `SUBSCRIPTION_NOT_FOUND` · `ALREADY_SUBSCRIBED` · `SUBSCRIPTION_NOT_ACTIVATABLE` · `SUBSCRIPTION_NOT_CANCELABLE` (`PAYMENT_LEDGER_ERROR_CODES` 가 열여섯에서 스물). `Order.kind` 에 `SUBSCRIPTION_INITIAL` · `SUBSCRIPTION_RENEWAL`.
+- **화면 부품** — `SubscriptionPlanList` · `SubscriptionStatusBadge` · `MySubscriptionCard` · `CancelSubscriptionDialog`, 도우미 `priceEveryDisplay`. 문구는 `PaymentLabels.subscription`(ko · en) 한 묶음이 늘었다 - 앱이 `PaymentLabels` 를 통째로 만들어 넘기던 곳은 이 키가 필요하다. 스토리 `Packages/payment/SubscriptionPlanList` · `MySubscriptionCard` · `CancelSubscriptionDialog`.
+- **sample** — 메뉴 「구독」(`/subscription`, 내 구독) · `/subscribe`(플랜 카드 → 카드 등록 창) · `/subscriptions/return`(돌아온 `authKey` 로 첫 결제를 한 번만 보내고 `PaymentResult` 로 보인다). 플랜 이름은 코드로 된 번역(`subscription.plan.basic` 등)이 있으면 그것을, 없으면 서버 이름을 쓴다. 설정 화면은 그대로다.
+
 ### Changed — 설정은 카드 3장 · 항목 한 줄씩(`@skeleton/auth` · `@skeleton/ui` · `@skeleton/legal` · `apps/sample`)
 
 - **설정(`/account`)이 카드 9장에서 3장(계정 · 로그인 · 보안 · 환경)이 되고, 카드 안은 항목 한 줄씩이다**(이름 · 현재 값 · 오른쪽 테두리 단추; 375 · 320px 에서는 이름이 위, 값과 단추가 아래 줄). 긴 설명은 그 항목의 대화상자 안으로 옮겼고, 로그인 수단 · 로그인한 기기 · 약관 동의는 목록이 줄에 펼쳐져 있지 않고 「관리」 · 「보기」가 여는 대화상자 안에 있다. 구역 칩과 `#email` 같은 해시는 그 항목이 든 카드로 간다. 제공자 왕복 뒤 재개(연결 · 해제)는 로그인 수단 대화상자를 다시 열어 결과를 그 안에 보인다.

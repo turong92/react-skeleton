@@ -1,0 +1,26 @@
+.list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr));
+  gap: var(--space-lg);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.list > li {
+  display: grid;
+  min-width: 0;
+}
+
+.body {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.price {
+  margin: 0;
+  font-size: var(--font-size-subheading);
+  font-weight: 650;
+  color: var(--text-strong);
+  overflow-wrap: anywhere;
+}

@@ -64,6 +64,39 @@ export const fakePaymentLedgerApi = () => ({
   requestRefund: async () => ({}),
   withdrawRefund: async () => ({}),
 })
+const paymentSubscription = {
+  id: 'sub_1',
+  status: 'ACTIVE',
+  planCode: 'basic',
+  planName: 'Basic',
+  amount: { amount: 3900, currency: 'KRW' },
+  period: 'P1M',
+  currentPeriodStart: '2026-01-01T00:00:00Z',
+  currentPeriodEnd: '2026-02-01T00:00:00Z',
+  attempt: 1,
+  endReason: null,
+  card: { issuer: 'HYUNDAI', last4: '1234' },
+  testMode: true,
+  createdAt: '2026-01-01T00:00:00Z',
+}
+export const fakeSubscriptionApi = () => ({
+  plans: async () => [
+    {
+      code: 'basic',
+      name: 'Basic',
+      amount: { amount: 3900, currency: 'KRW' },
+      period: 'P1M',
+      level: 1,
+    },
+  ],
+  start: async () => ({
+    subscription: { ...paymentSubscription, status: 'PENDING' },
+    billingAuth: null,
+  }),
+  activate: async () => paymentSubscription,
+  me: async () => ({ subscription: paymentSubscription, orders: [paymentOrder] }),
+  cancel: async () => paymentSubscription,
+})
 const notification = {
   id: 'u1:e1',
   eventId: 'e1',
@@ -718,6 +751,30 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
     onConfirm: noop,
   }),
   'payment#TestModeNotice': () => ({}),
+  'payment#SubscriptionStatusBadge': () => ({ status: 'ACTIVE' }),
+  'payment#SubscriptionPlanList': () => ({
+    plans: [
+      {
+        code: 'basic',
+        name: 'Basic',
+        amount: { amount: 3900, currency: 'KRW' },
+        period: 'P1M',
+        level: 1,
+      },
+    ],
+    onSubscribe: noop,
+  }),
+  'payment#MySubscriptionCard': () => ({
+    subscription: paymentSubscription,
+    orders: [paymentOrder],
+    onCancel: noop,
+  }),
+  'payment#CancelSubscriptionDialog': () => ({
+    open: true,
+    subscription: paymentSubscription,
+    onClose: noop,
+    onConfirm: noop,
+  }),
   'captcha-turnstile#Turnstile': () => ({ siteKey: 'site-key', onToken: noop }),
 }
 
@@ -752,6 +809,11 @@ export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
   'payment#useOrders': () => [fakePaymentLedgerApi()],
   'payment#useRequestRefund': () => [fakePaymentLedgerApi()],
   'payment#useWithdrawRefund': () => [fakePaymentLedgerApi()],
+  'payment#useSubscriptionPlans': () => [fakeSubscriptionApi()],
+  'payment#useMySubscription': () => [fakeSubscriptionApi()],
+  'payment#useStartSubscription': () => [fakeSubscriptionApi()],
+  'payment#useActivateSubscription': () => [fakeSubscriptionApi()],
+  'payment#useCancelSubscription': () => [fakeSubscriptionApi()],
   'author-profile#useAuthorProfiles': () => [fakeAuthorProfileApi()],
   'author-profile#useProfileDialog': () => [{ api: fakeAuthorProfileApi(), title: 'Profiles' }],
   'author-profile#useAuthorProfileConfig': () => [fakeAuthorProfileApi()],

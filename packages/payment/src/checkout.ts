@@ -16,6 +16,12 @@ export type TossPaymentsFactory = ((clientKey: string) => {
       successUrl: string
       failUrl: string
     }): Promise<void>
+    /** 카드 등록 창(자동결제) — `openBillingAuth`. 성공하면 `successUrl` 에 `authKey` · `customerKey` 가 붙는다 */
+    requestBillingAuth(request: {
+      method: 'CARD'
+      successUrl: string
+      failUrl: string
+    }): Promise<void>
   }
 }) & { ANONYMOUS: string }
 

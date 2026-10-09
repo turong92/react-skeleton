@@ -49,7 +49,9 @@ const EN_FORBIDDEN = [
 ]
 const ownKeys = (dictionary: Record<string, string>) =>
   Object.entries(dictionary).filter(([key]) =>
-    /^(cheer\.|nav\.cheer$|settings\.cheers|admin\.payments\.|nav\.adminPayments$)/.test(key),
+    /^(cheer\.|nav\.cheer$|settings\.cheers|admin\.payments\.|nav\.adminPayments$|subscription\.|nav\.subscription$)/.test(
+      key,
+    ),
   )
 const squash = (text: string) => text.replace(/\s+/g, '')
 

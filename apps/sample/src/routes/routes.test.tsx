@@ -48,6 +48,14 @@ describe('routes', () => {
     expect(leaf('/payments/ord_abc')?.path).toBe('/payments/:id')
   })
 
+  it('has the subscription journey: plans (/subscribe), back from the card window (/subscriptions/return), my subscription (/subscription) — all behind sign-in', () => {
+    expect(leaf('/subscribe')?.path).toBe('/subscribe')
+    expect(leaf('/subscriptions/return')?.path).toBe('/subscriptions/return')
+    expect(leaf('/subscription')?.path).toBe('/subscription')
+    for (const path of ['/subscribe', '/subscriptions/return', '/subscription'])
+      expect(guarded(path), path).toBe(true)
+  })
+
   it('has the operator payment screens: the list (/admin/payments) and one payment (/admin/payments/:id)', () => {
     expect(leaf('/admin/payments')?.path).toBe('/admin/payments')
     expect(leaf('/admin/payments/ord_abc')?.path).toBe('/admin/payments/:id')

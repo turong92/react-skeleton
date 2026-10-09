@@ -21,9 +21,12 @@ const episodes = new WeakMap<object, Episode>()
 // 이 간격보다 오래 아무 일(답도 오류도)이 없었으면(탭이 숨겨졌거나 상한에서 멈췄다가 다시 열림) 새로 시작한다
 const EPISODE_GAP_MS = 2 * ORDER_POLL_MAX_MS
 
-export type PollQuery = {
-  state: { data: OrderDetail | undefined; dataUpdatedAt: number; errorUpdatedAt?: number }
+export type PollQuery<T = OrderDetail> = {
+  state: { data: T | undefined; dataUpdatedAt: number; errorUpdatedAt?: number }
 }
+
+/** 주문 한 건 조회가 되물을 때인가 - `CONFIRMING` */
+const orderConfirming = (data: OrderDetail | undefined) => data?.order.status === 'CONFIRMING'
 
 /**
  * 다음 되묻기까지의 간격. 상한은 시계로 잰다(`now() - since`) — 조회가 계속 실패해도 마지막 성공 시각이 멈춰 있을 뿐
@@ -34,8 +37,17 @@ export function pollIntervalOf(
   maxPollMs: number,
   now: () => number = Date.now,
 ): number | false {
-  const status = query.state.data?.order.status
-  if (status !== 'CONFIRMING') {
+  return pollWhile(query, orderConfirming, maxPollMs, now)
+}
+
+/** `pollIntervalOf` 와 같은 간격 · 상한 · 새 회차 규칙을, 「되물을 때인가」를 `active` 로 바꿔 다른 조회(구독의 첫 결제 확인)에 쓴다 */
+export function pollWhile<T>(
+  query: PollQuery<T>,
+  shouldPoll: (data: T | undefined) => boolean,
+  maxPollMs: number,
+  now: () => number = Date.now,
+): number | false {
+  if (!shouldPoll(query.state.data)) {
     episodes.delete(query)
     return false
   }
@@ -50,5 +62,5 @@ export function pollIntervalOf(
         : { ...known, lastActive: active, lastData: data, answers: known.answers + 1 }
   episodes.set(query, episode)
   if (now() - episode.since >= maxPollMs) return false
-  return orderPollInterval(status, episode.answers)
+  return orderPollInterval('CONFIRMING', episode.answers)
 }

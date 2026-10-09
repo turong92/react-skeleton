@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cardDisplay, formatMoney, lookup } from './format'
+import { cardDisplay, formatMoney, lookup, priceEveryDisplay } from './format'
 import { defaultPaymentLabels, koPaymentLabels } from './labels'
 
 describe('formatMoney', () => {
@@ -85,5 +85,22 @@ describe('lookup — a text table is read by its own keys only', () => {
       cardDisplay({ method: 'CARD', card: { issuer: 'constructor', last4: '1234' } }, labels),
     ).toBe('카드 ····1234')
     expect(cardDisplay({ method: 'toString', card: null }, labels)).toBeNull()
+  })
+})
+
+describe('priceEveryDisplay (ISO-8601 period → 「3,900원 / 월」)', () => {
+  const labels = koPaymentLabels
+  const money = { amount: 3900, currency: 'KRW' }
+  it('reads the first non-zero unit of the period', () => {
+    expect(priceEveryDisplay(money, 'P1M', labels, 'ko-KR')).toBe('3,900원 / 월')
+    expect(priceEveryDisplay(money, 'P3M', labels, 'ko-KR')).toBe('3,900원 / 3개월')
+    expect(priceEveryDisplay(money, 'P1Y', labels, 'ko-KR')).toBe('3,900원 / 년')
+    expect(priceEveryDisplay(money, 'P2W', labels, 'ko-KR')).toBe('3,900원 / 2주')
+    expect(priceEveryDisplay(money, 'PT3M', labels, 'ko-KR')).toBe('3,900원 / 3분')
+    expect(priceEveryDisplay(money, 'PT1H', labels, 'ko-KR')).toBe('3,900원 / 시간')
+  })
+  it('a period it cannot read shows the price alone, never the raw code', () => {
+    expect(priceEveryDisplay(money, 'monthly', labels, 'ko-KR')).toBe('3,900원')
+    expect(priceEveryDisplay(money, 'P0D', labels, 'ko-KR')).toBe('3,900원')
   })
 })

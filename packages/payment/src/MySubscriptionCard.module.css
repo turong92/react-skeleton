@@ -1,0 +1,42 @@
+.body {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(12rem, 100%), 1fr));
+  gap: var(--space-md) var(--space-lg);
+  margin: 0;
+}
+
+.fact {
+  display: grid;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.fact dt {
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+}
+
+.fact dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.recent {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--font-size-body);
+}
+
+.action {
+  display: flex;
+  flex-wrap: wrap;
+}

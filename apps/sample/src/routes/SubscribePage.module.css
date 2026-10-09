@@ -1,0 +1,13 @@
+.page {
+  display: grid;
+  gap: var(--space-xl);
+}
+
+.notice {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.reference {
+  margin-top: var(--space-sm);
+}

@@ -394,7 +394,7 @@ describe('account lifecycle against the real backend', () => {
   it('language and time zone are saved to the account — and the account has no nickname line (the user has one nickname concept: the board ones)', async () => {
     const section = region(ko('account.localeSection'))
     await pwExpect(section.getByText(auth.displayName, { exact: true })).toHaveCount(0)
-    await section.getByRole('button', { name: auth.profileEdit }).click()
+    await section.getByRole('button', { name: ko('account.localeEdit') }).click()
     const dialog = page.getByRole('dialog')
     await pwExpect(dialog.getByLabel(auth.displayName, { exact: true })).toHaveCount(0)
     await dialog.getByLabel(auth.profileTimeZone, { exact: true }).selectOption('Asia/Seoul')

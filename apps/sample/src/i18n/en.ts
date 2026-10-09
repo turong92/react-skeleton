@@ -57,6 +57,7 @@ const en: Record<keyof typeof ko, string> = {
   'signup.nicknameHint': 'It becomes your first nickname. You can add more or change it later.',
   'account.localeSection': 'Language and time zone',
   'account.localeSaved': 'Saved.',
+  'account.localeEdit': 'Change language and time zone',
   'settings.nicknames': 'My nicknames',
   'settings.nicknamesHint':
     'The nicknames you write posts and comments with. Make several and pick one for each post. The board does not show that two of your nicknames belong to the same person.',

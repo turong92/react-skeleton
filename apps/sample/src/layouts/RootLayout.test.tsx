@@ -1,10 +1,13 @@
 import { AuthProvider, createAuthSession, createTokenStore, type AuthApi } from '@skeleton/auth'
-import { fakeJwt } from '../../../../packages/auth/src/test/fixtures'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { i18n } from '../i18n'
 import { AdminLinks, RootLayout } from './RootLayout'
+
+/** 서명 없는 JWT 꼴 토큰 — 화면용 claim(roles)만 읽힌다 */
+const fakeJwt = (claims: Record<string, unknown>) =>
+  `header.${btoa(JSON.stringify(claims)).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '')}.signature`
 
 afterEach(async () => {
   vi.unstubAllGlobals()

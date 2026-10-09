@@ -14,6 +14,7 @@ export function appAuthLabels(locale: string, t: Translate): Partial<AuthLabels>
     displayNameHint: t('signup.nicknameHint'),
     sectionProfile: t('account.localeSection'),
     profileSaved: t('account.localeSaved'),
+    profileEdit: t('account.localeEdit'),
   }
   return locale === 'ko' ? { ...koAuthLabels, ...own } : own
 }

@@ -58,6 +58,7 @@ export default {
   'signup.nicknameHint': '첫 닉네임이 돼요. 나중에 더 만들거나 바꿀 수 있어요.',
   'account.localeSection': '언어 · 시간대',
   'account.localeSaved': '저장했어요.',
+  'account.localeEdit': '언어 · 시간대 바꾸기',
   'settings.nicknames': '내 닉네임',
   'settings.nicknamesHint':
     '게시판에 글과 댓글을 쓸 때 쓸 닉네임이에요. 여러 개를 만들어 글마다 골라 쓸 수 있고, 서로 다른 닉네임이 같은 사람이라는 건 다른 사람에게 보이지 않아요.',

@@ -72,7 +72,7 @@ describe('settings dialogs walkthrough', () => {
       )
 
       await region(ko('account.localeSection'))
-        .getByRole('button', { name: auth.profileEdit })
+        .getByRole('button', { name: ko('account.localeEdit') })
         .click()
       await shot(
         page,

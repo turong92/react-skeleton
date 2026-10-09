@@ -427,7 +427,7 @@ ${ssr ? `\n## 서버 렌더\n\n\`apps/${name}\` 는 서버가 첫 응답을 그�
     markerBlocks(sourceClaude, storybook, 'storybook'),
     sample,
     'sample',
-  )
+  ).replace(/<!-- skeleton-only:start -->\n[\s\S]*?<!-- skeleton-only:end -->\n*/g, '') // 스켈레톤 레포 자체를 고칠 때의 지침 — 찍은 프로젝트는 뼈대가 아니다
   const at = original.indexOf('## 핵심 컨벤션')
   if (at < 0) fail('CLAUDE.md has no "## 핵심 컨벤션" section — update stamp.mjs')
   const structure = [

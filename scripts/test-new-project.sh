@@ -291,7 +291,8 @@ want="api-client auth author-profile board i18n legal marketing notifications re
 check "eslint 의 앱 이름 막기에 sample 과 새 앱 이름이 모두 있다" bash -c "grep -q \"'sample/\*\*'\" '$WS/eslint.config.js' && grep -q \"'acme-app/\*\*'\" '$WS/eslint.config.js'"
 check "새 앱 이름 acme-app 은 샘플과 별개다 (샘플은 acme-app 으로 바뀌지 않는다)" bash -c "! grep -rIl --exclude-dir=node_modules --exclude=pnpm-lock.yaml 'acme-app' '$WS/apps/sample'"
 check "CLAUDE.md · README 가 샘플 앱을 한 줄로 안내한다" bash -c "grep -q 'apps/sample' '$WS/CLAUDE.md' && grep -q 'apps/sample' '$WS/README.md'"
-check "표식 주석(sample:start/end · sample-e2e-job)은 남지 않는다" bash -c "! grep -rIE --exclude-dir=node_modules --exclude=pnpm-lock.yaml 'sample:(start|end)|sample-e2e-job' '$WS'"
+check "표식 주석(sample:start/end · sample-e2e-job · skeleton-only)은 남지 않는다" bash -c "! grep -rIE --exclude-dir=node_modules --exclude=pnpm-lock.yaml 'sample:(start|end)|sample-e2e-job|skeleton-only' '$WS'"
+check "찍힌 CLAUDE.md 에 \"이 레포는 뼈대다\" 가 남지 않는다" bash -c "! grep -q '이 레포는 뼈대다' '$WS/CLAUDE.md'"
 WSS="$TMP/wss"
 expect_exit 0 "--with-sample --ssr --without-storybook --scope @acme 도 함께 찍힌다" stamp "$WSS" --with-sample --ssr --without-storybook --scope @acme
 check "SSR 앱 + 샘플 (스토리집 없이), 스코프가 샘플에도 적용된다" bash -c "test -f '$WSS/apps/acme-app/server/main.ts' && test -f '$WSS/apps/sample/package.json' && test ! -e '$WSS/apps/storybook' && grep -q '@acme/ui' '$WSS/apps/sample/package.json'"

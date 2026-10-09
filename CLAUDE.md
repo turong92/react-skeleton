@@ -99,7 +99,12 @@ capabilities.json             # 기능 카탈로그 정본(LLM · 사람이 무�
 
 ## 핵심 컨벤션
 
-- **확장 지점**: 이 레포는 뼈대다 — 확장 지점은 설계 대상이다. 단 새 확장 지점은 실제로 갈아 끼울 두 번째 구현이 계획에 있을 때만 둔다(하나뿐이면 얇게 두고, 두 번째가 계획에 들어올 때 넓힌다).
+<!-- skeleton-only:start -->
+
+**확장 지점**: 이 레포는 뼈대다 — 확장 지점은 설계 대상이다. 단 새 확장 지점은 실제로 갈아 끼울 두 번째 구현이 계획에 있을 때만 둔다(하나뿐이면 얇게 두고, 두 번째가 계획에 들어올 때 넓힌다).
+
+<!-- skeleton-only:end -->
+
 - **패키지 안쪽 금지**: 다른 패키지는 이름(`@skeleton/<이름>`)과 `exports` 하위 경로(`/tokens.css` · `/vite` · `/base.css`)로만 쓴다. `@skeleton/*/src/**` · 폴더를 벗어나는 상대 import · 앱 import 는 ESLint(`eslint.config.js`) + `tests/workspace.test.ts` 가 막는다
 - **의존 선언 = 실제 import**: 앱 · 패키지가 `package.json` 에 적은 `@skeleton/*` 는 소스가 import 하는 것과 정확히 같아야 한다(`workspace:*`). 패키지를 새로 쓰면 앱 `package.json` 에 한 줄 더한다. `starter` 는 워크벤치에 의존하지 않는다. 패키지가 외부 라이브러리를 쓰면 `dependencies`(또는 `peerDependencies`)에 선언한다 — 이것도 테스트가 확인
 - **HTTP 엔드포인트: 모듈이 열면 그 경로가 기본값, 안 열면 경로를 설정으로**: 백엔드 모듈이 컨트롤러를 여는 패키지(`notifications` → `/notifications`, `storage` → `/storage/*`, `board` → `/boards`)는 그 경로가 기본값이고 `basePath` · `storageEndpoints(basePath)` 로 바꾼다(모듈이 막힌 앱이 자기 컨트롤러를 두는 경우). 모듈이 서비스 계약만 주는 경우(`payment` · `captcha-turnstile`)는 기본 경로를 가정하지 않는다. 모듈 수준 계약만 겨냥한다 — 어느 Kotlin 파일의 어느 DTO 인지는 패키지 README 에

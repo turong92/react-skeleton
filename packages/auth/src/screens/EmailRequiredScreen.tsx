@@ -20,6 +20,10 @@ export type EmailRequiredScreenProps = {
   pending?: { email: string; window: CodeWindow } | null
   /** `POST /account/email/change { newEmail }`(다시 인증 없이 · 마지막 로그인 1시간 안). 다시 보내기도 같은 호출이다 */
   onRequestCode: (request: { newEmail: string; socialReauth?: SocialReauth }) => Promise<CodeSent>
+  /** 제공자 재확인에서 돌아왔다 - 적던 주소를 채우고 새 인가 코드로 인증번호 요청까지 한 번 이어 간다. 실패하면 주소가 남은 채 오류를 보인다 */
+  resume?: { newEmail: string; socialReauth: SocialReauth } | null
+  /** `resume` 을 받아 쓰기 시작했다 - 앱이 쥔 값을 지운다(인가 코드는 한 번만 쓴다) */
+  onResumeTaken?: () => void
   /** `POST /account/email/change/confirm { code }` — 요청한 그 세션에서만 */
   onConfirmCode: (code: string) => Promise<unknown>
   /** 확인됐다 — 앱이 화면을 닫고 원래 가려던 곳으로 보낸다 */
@@ -53,6 +57,8 @@ export function EmailRequiredScreen({
   providers = [],
   pending,
   onRequestCode,
+  resume,
+  onResumeTaken,
   onConfirmCode,
   onRegistered,
   onProviderReauth,
@@ -113,10 +119,17 @@ export function EmailRequiredScreen({
   async function send(event?: FormEvent) {
     event?.preventDefault()
     if (problem) return attempt.fail(ids.email)
+    await request(email.trim())
+  }
+
+  async function request(address: string, socialReauth?: SocialReauth) {
     let response: CodeSent
     const ok = await action.run(async () => {
       try {
-        response = await onRequestCode({ newEmail: email.trim() })
+        response = await onRequestCode({
+          newEmail: address,
+          ...(socialReauth ? { socialReauth } : {}),
+        })
       } catch (caught) {
         // 마지막 로그인이 1시간을 넘었다 — 이 칸 아래에서 제공자 재동의를 안내한다(오류 줄로 두지 않는다)
         if (isErrorCode(caught, ErrorCodes.ACCOUNT_REAUTH_REQUIRED)) setReauth(true)
@@ -126,10 +139,24 @@ export function EmailRequiredScreen({
     if (ok) {
       setReauth(false)
       setWindow(codeWindowOf(response!) ?? estimateCodeWindow(now(), { ttlSeconds: 600 }))
-      setSentTo(email.trim())
+      setSentTo(address)
       attempt.reset()
     }
   }
+
+  // 제공자 재확인에서 돌아왔다: 적던 주소를 되살리고 인증번호 요청을 한 번 이어 간다(인가 코드는 한 번만 쓴다 - 두 번 나가지 않게 ref)
+  const resumed = useRef(false)
+  const requestRef = useRef(request)
+  useEffect(() => {
+    requestRef.current = request
+  })
+  useEffect(() => {
+    if (!resume || resumed.current) return
+    resumed.current = true
+    setEmail(resume.newEmail)
+    onResumeTaken?.()
+    void requestRef.current(resume.newEmail, resume.socialReauth)
+  }, [resume, onResumeTaken])
 
   const providerName = providers.length > 0 ? labelOfMethod(providers[0], labels) : null
 

@@ -8,7 +8,8 @@ export type SocialLinkFlowOptions = Omit<SocialLoginFlowOptions, 'session'> & {
 
 /** 제공자 동의 왕복이 끝난 뒤 이어 갈 작업 — 폼이 다시 그릴 수 있는 것만 담는다(비밀 없음. `link-reauth` 의 `target` 만 아직 쓰이지 않은 인가 코드를 싣는다) */
 export type ProviderAction =
-  | { kind: 'email-change'; newEmail: string }
+  /** `returnTo`: 이메일 등록 막이 덮고 있던 자리 - 있으면 돌아와 설정 대신 그 자리에서 막을 다시 연다 */
+  | { kind: 'email-change'; newEmail: string; returnTo?: string }
   | { kind: 'unlink'; identityId: string }
   | { kind: 'delete' }
   /** 이메일 없는 계정 버리기(`POST /account/discard`)의 다시 인증 - 오래된 세션 */

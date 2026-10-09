@@ -84,6 +84,12 @@ export function EmailRequiredGate({
   const required = state.status === 'required'
   // 서버가 주소를 언제 요구하는가(`me` 가 알려 준다): 쓰기 때 방식이면 쓰기용 모습. 아직 모르면 로그인 직후 모습으로 열고, 열리면 곧 `me` 를 다시 읽어 맞춘다
   const when = useSyncExternalStore(controller.subscribe, controller.getWhen, controller.getWhen)
+  // 제공자 재확인에서 돌아와 이어 갈 것(적던 주소 · 새 인가 코드) - 화면이 받아 쓰면 지운다
+  const resume = useSyncExternalStore(
+    controller.subscribe,
+    controller.getResume,
+    controller.getResume,
+  )
   // `me` 에서 읽은 것은 **그 계정의 것**이다 - 계정이 바뀌면(다음 계정의 `me` 가 실패하거나 아직 오지 않았어도) 이전 계정의 아이디 · 제공자 · 대기 중 인증번호 단계가 남지 않게 계정 id 와 함께 둔다
   const [reads, setReads] = useState<AccountReads>(NO_READS)
   const mine = reads.for === accountId ? reads : NO_READS
@@ -172,8 +178,9 @@ export function EmailRequiredGate({
   // 쓰기 때 방식 + 막이 걷힌 계정 설정: 그려질 화면도 「나중에 하기」도 없어 붙잡힌 호출이 영영 끝나지 않는다 - 붙잡지 않고 원래 403 으로 끝낸다(구역이 이유를 말한다).
   // 로그인 직후 방식은 그대로다(서버가 설정을 제한 모드로 줄여 이메일 구역만 열어 두고, 등록하면 풀린다)
   useEffect(() => {
-    if (required && standAside && when === 'write') controller.decline()
-  }, [required, standAside, when, controller])
+    // 제공자 재확인에서 막 돌아온 동안(`resume` 이 있다)은 접지 않는다 - 곧 원래 자리로 이동하고, 거기서 막이 이 값을 받아 쓴다
+    if (required && standAside && when === 'write' && !resume) controller.decline()
+  }, [required, standAside, when, resume, controller])
   const covered = required && !standAside
   useRestoreFocus(covered)
   const screen = (
@@ -182,6 +189,8 @@ export function EmailRequiredGate({
       pending={pending}
       labels={labels}
       onRequestCode={(request) => api.changeEmail(request)}
+      resume={resume}
+      onResumeTaken={controller.clearResume}
       onConfirmCode={(code) => api.confirmEmailChangeCode(code)}
       onRegistered={() => {
         controller.registered()

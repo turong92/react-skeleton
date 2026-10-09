@@ -1,5 +1,6 @@
 import { ApiRequestError, ErrorCodes, type ForbiddenContext } from '@skeleton/api-client'
 import type { AccountMe } from './account/types'
+import type { SocialReauth } from './account/accountApi'
 import { createGateCore, type GateState } from './gateController'
 
 /** 이 오류는 「이메일을 등록해 주세요」 화면이 말한다 — 전역 오류 토스트에서 뺀다 */
@@ -40,6 +41,9 @@ export function stillNeedsAddress(me: Partial<EmailRequirementFields>): boolean 
   return emailWhenOf(me) !== 'none'
 }
 
+/** 제공자 재확인을 다녀온 뒤 막이 이어 갈 것 - 적던 주소와 새 인가 코드(한 번만 쓸 수 있다) */
+export type EmailRequiredResume = { newEmail: string; socialReauth: SocialReauth }
+
 export type EmailRequiredController = {
   getState(): EmailRequiredState
   subscribe(listener: () => void): () => void
@@ -58,6 +62,10 @@ export type EmailRequiredController = {
    */
   isReady(): boolean
   setReady(ready: boolean): void
+  /** 제공자 재확인에서 돌아왔다 - 막을 열고 이 값을 쥔다. 화면이 받아 인증번호 요청을 이어 가고 `clearResume()` 한다(메모리에만 둔다) */
+  offerResume(resume: EmailRequiredResume): void
+  getResume(): EmailRequiredResume | null
+  clearResume(): void
   /** 등록하지 않고 떠난다(로그아웃 · 계정 삭제) — 붙잡은 호출은 원래 403 으로 끝난다 */
   decline(): void
   /**
@@ -81,8 +89,24 @@ export function createEmailRequiredController(): EmailRequiredController {
     when = next
     for (const listener of [...listeners]) listener()
   }
+  let resume: EmailRequiredResume | null = null
+  const setResume = (next: EmailRequiredResume | null) => {
+    if (next === resume) return
+    resume = next
+    for (const listener of [...listeners]) listener()
+  }
   return {
     ...core,
+    offerResume(next) {
+      setResume(next)
+      core.require()
+    },
+    getResume: () => resume,
+    clearResume: () => setResume(null),
+    decline() {
+      setResume(null)
+      core.decline()
+    },
     subscribe(listener) {
       listeners.add(listener)
       const stopCore = core.subscribe(listener)
@@ -94,6 +118,7 @@ export function createEmailRequiredController(): EmailRequiredController {
     registered() {
       // 먼저 알려 둔다 - 붙잡힌 호출이 풀려 다시 나갈 때 이미 요구가 없다(모르던 것은 그대로 모른다)
       if (when === 'login' || when === 'write') setWhen('none')
+      setResume(null)
       resolve()
     },
     getWhen: () => when,

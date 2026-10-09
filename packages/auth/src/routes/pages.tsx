@@ -9,7 +9,7 @@ import type { EmailRequiredController } from '../emailRequired'
 import type { LoginIdRequiredController } from '../loginIdRequired'
 import type { AuthApi } from '../authApi'
 import { linkIntentOf, linkIntentState } from '../linkIntent'
-import { postSignInTarget, rememberReturnTo, consumeReturnTo } from '../returnTo'
+import { postSignInTarget, rememberReturnTo, consumeReturnTo, safeReturnPath } from '../returnTo'
 import { AccountSettings, type AccountSettingsProps } from '../screens/AccountSettings'
 import { ForgotLoginIdScreen } from '../screens/ForgotLoginIdScreen'
 import { ForgotPasswordScreen } from '../screens/ForgotPasswordScreen'
@@ -433,6 +433,7 @@ function SocialLinkCallbackInner({ flow, ctx }: { flow: SocialLinkFlow; ctx: Pag
   const [done, setDone] = useState(false)
   const [failure, setFailure] = useState<unknown>(null)
   const started = useRef(false)
+  const handed = useRef(false)
   const callback = read.data
   const account = me.data
   const action = useMemo<ProviderAction | null>(
@@ -469,6 +470,30 @@ function SocialLinkCallbackInner({ flow, ctx }: { flow: SocialLinkFlow; ctx: Pag
     ).then(() => setDone(true), setFailure)
   }, [callback, foreign, action, ctx.accountApi, once])
 
+  // 이메일 등록 막이 덮고 있던 자리에서 온 재확인 - 설정이 아니라 그 자리로 돌아가 막을 다시 연다(적던 주소 · 새 인가 코드를 막에 넘긴다)
+  const gateReturn =
+    callback && !foreign && action?.kind === 'email-change' && ctx.emailRequired
+      ? safeReturnPath(action.returnTo, '')
+      : ''
+  const [handedBack, setHandedBack] = useState(false)
+  const emailGate = ctx.emailRequired
+  useEffect(() => {
+    if (!gateReturn || !callback || action?.kind !== 'email-change' || !emailGate || handed.current)
+      return
+    handed.current = true
+    emailGate.offerResume({
+      newEmail: action.newEmail,
+      socialReauth: {
+        provider: callback.provider,
+        authorizationCode: callback.authorizationCode,
+        ...(callback.redirectUri ? { redirectUri: callback.redirectUri } : {}),
+        ...proofOf(callback),
+      },
+    })
+    setHandedBack(true)
+  }, [gateReturn, callback, action, emailGate])
+  if (gateReturn && handedBack) return <Navigate to={gateReturn} replace />
+
   if (done)
     return (
       <Navigate
@@ -500,6 +525,7 @@ function SocialLinkCallbackInner({ flow, ctx }: { flow: SocialLinkFlow; ctx: Pag
   // 이메일 변경 · 연결 해제 · 삭제의 다시 인증 — 새 인가 코드를 가지고 설정 화면으로 돌아가 하려던 작업을 이어서 한다
   if (
     callback &&
+    !gateReturn &&
     action &&
     ['email-change', 'unlink', 'delete', 'discard', 'contact-email'].includes(action.kind)
   )
@@ -687,6 +713,7 @@ export function AccountPage({
     void beginRef.current(startReauth.provider, {
       kind: 'email-change',
       newEmail: startReauth.newEmail,
+      ...(startReauth.returnTo ? { returnTo: startReauth.returnTo } : {}),
     })
   }, [startReauth, flow, accountId, navigate, location.pathname])
   // 「이 계정 지우고 …」 가 오래된 세션이라 제공자 재동의를 요구했다 - 바로 그 제공자의 동의 화면으로(돌아오면 설정이 버리기를 이어서 부른다)

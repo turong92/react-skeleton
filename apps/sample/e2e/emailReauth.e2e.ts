@@ -20,7 +20,7 @@ import { waitForCode } from './mail'
  * 표준 구성에서 만든다(면제 창을 0 으로 바꾼 별도 백엔드가 필요 없다): 같은 LINE 계정으로 **두 번째 브라우저 컨텍스트**가 로그인해 첫 번째 세션을 닫는다
  * (`DELETE /auth/sessions?keepCurrent=true` - 허용 목록의 `/auth/**`). 닫힌 세션은 면제가 없다 - 첫 컨텍스트의 액세스 토큰은 아직 살아 있어 주소를 보내 보면 `403 REAUTH_REQUIRED`.
  * 흐름: 주소 입력 -> 서버가 REAUTH_REQUIRED -> 「보안을 위해 한 번 더 확인해 주세요 ... LINE」 -> 단추 -> 계정 설정이 열리자마자 LINE 동의(새 PKCE verifier) ->
- * 돌아오면 설정의 이메일 구역이 인증번호를 보낸다 -> 메일함의 번호 -> 막이 걷히고 모든 구역이 열린다.
+ * 돌아오면 떠나기 전의 같은 자리(/board)에서 막이 다시 열려 인증번호를 이어 보낸다 -> 메일함의 번호 -> 막이 걷히고 모든 구역이 열린다.
  */
 const pwExpect = baseExpect.configure({ timeout: 20_000 })
 const baseUrl = inject('baseUrl')
@@ -102,7 +102,7 @@ describe('the first email after the exemption window: the provider confirms once
   })
 
   run(
-    'the button sends the person straight to LINE (a NEW verifier), and back to the settings with the code step',
+    'the button sends the person straight to LINE (a NEW verifier), and back to the same page with the gate open on the code step',
     async () => {
       const authorize = page.waitForRequest((r) => r.url().startsWith(`${fakeUrl}/line/authorize`))
       await page
@@ -112,11 +112,11 @@ describe('the first email after the exemption window: the provider confirms once
       const q = new URL((await authorize).url()).searchParams
       pwExpect(q.get('redirect_uri')).toBe(`${baseUrl}/account/link-callback`)
       pwExpect(q.get('code_challenge')).toMatch(/^[A-Za-z0-9_-]{43}$/)
-      await pwExpect(page).toHaveURL(/\/account$/)
-      // 설정(이메일 등록 전): 주소가 먼저라 비밀번호 · 로그인 수단은 「이메일을 등록한 뒤에 할 수 있어요」 카드로 접혀 있다
-      await pwExpect(page.getByText(auth.settingsNeedsEmail).first()).toBeVisible()
-      const section = page.getByRole('region', { name: auth.sectionEmail })
-      await pwExpect(section.getByLabel(auth.codeDigit(1, 6))).toBeVisible() // 인증번호 단계가 이어진다
+      // 동의를 마치면 설정이 아니라 떠나기 전의 같은 자리로 돌아오고, 막이 다시 열려 있고 인증번호 요청까지 이어졌다(「인증번호 받기」를 또 누르지 않는다)
+      await pwExpect(page).toHaveURL(/\/board$/)
+      const gate = page.getByRole('dialog', { name: auth.emailRequiredWriteTitle })
+      await pwExpect(gate.getByLabel(auth.codeDigit(1, 6))).toBeVisible()
+      await pwExpect(gate.getByText(address).first()).toBeVisible() // 적던 주소가 남아 있다
     },
   )
 
@@ -126,7 +126,11 @@ describe('the first email after the exemption window: the provider confirms once
       const code = await waitForCode(mailUrl, address, 'email-change', { seen })
       await page.getByLabel(auth.codeDigit(1, 6)).click()
       await page.keyboard.type(code.code)
-      await pwExpect(page.getByText(auth.emailChanged)).toBeVisible()
+      await pwExpect(page.getByRole('dialog', { name: auth.emailRequiredWriteTitle })).toHaveCount(
+        0,
+      )
+      await pwExpect(page).toHaveURL(/\/board$/)
+      await page.goto(`${baseUrl}/account`)
       await pwExpect(page.getByRole('heading', { name: auth.sectionMethods })).toBeVisible()
       await pwExpect(page.getByText(auth.settingsNeedsEmail)).toHaveCount(0)
       await page.goto(baseUrl)

@@ -64,10 +64,13 @@ export function EmailGate({ children }: { children: ReactNode }) {
       onDiscardReauth={(provider) =>
         void router.navigate(ACCOUNT_PATH, { state: discardReauthState(provider) })
       }
-      // 마지막 로그인이 1시간을 넘었다 — 계정 설정이 열리자마자 그 제공자의 동의 화면으로 보낸다(돌아오면 거기서 인증번호를 이어 받는다)
-      onProviderReauth={(provider, newEmail) =>
-        void router.navigate(ACCOUNT_PATH, { state: emailReauthState(provider, newEmail) })
-      }
+      // 마지막 로그인이 1시간을 넘었다 — 계정 설정이 열리자마자 그 제공자의 동의 화면으로 보낸다. 지금 있는 자리(경로 + 쿼리)를 실어 보내, 돌아오면 같은 자리에서 막이 다시 열려 인증번호 요청을 이어 간다
+      onProviderReauth={(provider, newEmail) => {
+        const { pathname, search } = router.state.location
+        void router.navigate(ACCOUNT_PATH, {
+          state: emailReauthState(provider, newEmail, `${pathname}${search}`),
+        })
+      }}
       onLater={() =>
         toast.info(labels.emailRequiredDeclined ?? defaultAuthLabels.emailRequiredDeclined, {
           id: DECLINED_TOAST_ID,

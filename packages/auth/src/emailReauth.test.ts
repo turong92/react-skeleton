@@ -23,6 +23,26 @@ describe('email re-confirmation hand-off (router state only)', () => {
   })
 })
 
+describe('where the person was when the gate sent them to the provider', () => {
+  it('carries the same-origin path and query, so the return lands on the same page', () => {
+    expect(emailReauthOf(emailReauthState('line', 'a@b.c', '/board?page=2'))).toEqual({
+      provider: 'line',
+      newEmail: 'a@b.c',
+      returnTo: '/board?page=2',
+    })
+  })
+
+  it.each([['https://evil.example/x'], ['//evil.example'], ['board'], ['/a\\b']])(
+    'drops a place that is not a same-origin path (%s) but keeps the hand-off',
+    (returnTo) => {
+      expect(emailReauthOf(emailReauthState('line', 'a@b.c', returnTo))).toEqual({
+        provider: 'line',
+        newEmail: 'a@b.c',
+      })
+    },
+  )
+})
+
 describe('discard re-confirmation hand-off (router state only)', () => {
   it('carries only the provider', () => {
     expect(discardReauthOf(discardReauthState('line'))).toEqual({ provider: 'line' })

@@ -11,6 +11,8 @@ export const defaultPaymentAdminLabels: PaymentAdminLabels = {
     FULFILMENT_UNRESOLVED: 'The money was received but the delivery never finished',
     REFUND_APPLY_UNRESOLVED:
       'The refund went through but taking back what was delivered never finished',
+    SUBSCRIPTION_STALE_CHARGE:
+      'A subscription payment arrived late that the subscription was not waiting for - it needs a refund',
     STALE_CONFIRMING: 'Stuck confirming the payment for a long time',
     STALE_REFUND: 'Stuck refunding for a long time',
   },

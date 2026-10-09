@@ -225,6 +225,7 @@ describe('the operator words (spec 11.2: 「결제사와 맞추기」, 「확인
       'REFUND_MISMATCH',
       'STALE_CONFIRMING',
       'STALE_REFUND',
+      'SUBSCRIPTION_STALE_CHARGE',
     ])
     expect(Object.keys(a.eventTypes).sort()).toEqual(
       [

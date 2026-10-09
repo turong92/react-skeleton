@@ -10,6 +10,7 @@ import {
   type FormProblem,
 } from '@skeleton/ui'
 import { useId, useRef, useState, type FormEvent } from 'react'
+import { SettingsDialog } from './SettingsDialog'
 import type { ReauthCredential } from '../account/accountApi'
 import { useCodeClock } from '../codeClockContext'
 import { codeWindowOf, estimateCodeWindow, type CodeWindow } from '../codeWindow'
@@ -49,6 +50,10 @@ export type EmailSectionProps = {
   required?: boolean
   /** 이 앱은 주소를 **글을 쓸 때** 받는다(`me.emailRequiredToWrite === true`) — 「이메일을 등록하면 글을 쓸 수 있어요」 한 줄을 더한다 */
   registerToWrite?: boolean
+  /** 제공자에서 돌아와 이어 보낸 요청이 실패했다 - 다시 열린 대화상자 안에서 이유를 말한다 */
+  resumeFailure?: string
+  /** 첫 렌더부터 대화상자가 열려 있다 - 서버 렌더 시험 · 스토리용 (제공자에서 돌아온 `resume` 도 같은 모습으로 연다) */
+  initiallyOpen?: boolean
   labels?: Partial<AuthLabels>
 }
 
@@ -75,6 +80,8 @@ export function EmailSection({
   formatDate = defaultFormat,
   required = false,
   registerToWrite = false,
+  resumeFailure,
+  initiallyOpen = false,
   labels: given,
 }: EmailSectionProps) {
   const labels = mergeLabels(given)
@@ -85,6 +92,8 @@ export function EmailSection({
   const [local, setLocal] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
   const [changed, setChanged] = useState(false)
+  // 제공자 동의에서 돌아왔으면 같은 대화상자가 그 단계로 다시 열려 있다
+  const [open, setOpen] = useState(!!resume || initiallyOpen)
   const action = useAction(labels)
   const now = useCodeClock()
   /** 방금 보낸 요청의 유효 창(어림) — `me.pendingEmailExpiresAt`(서버 값)이 읽히면 그쪽이 이긴다 */
@@ -138,6 +147,16 @@ export function EmailSection({
     }
   }
 
+  const closeDialog = () => {
+    setOpen(false)
+    setEditing(false)
+    setNewEmail('')
+    setProof(null)
+    setReauthNeeded(false)
+    action.clear()
+    attempt.reset()
+  }
+
   const proofReady = kind === 'password' || kind === 'code' ? proof !== null : true
   const newEmailProblem = !newEmail.trim()
     ? labels.problemEmailMissing
@@ -150,6 +169,133 @@ export function EmailSection({
       ? []
       : [{ key: 'proof', message: labels.problemProofMissing, target: ids.proof }]),
   ]
+  const form = (
+    <form
+      className={styles.form}
+      onSubmit={submit}
+      aria-label={labels.emailChangeSubmit}
+      noValidate
+    >
+      {action.error && !isReauthFailure(action.raw) && (
+        <Alert tone="danger">{action.error.message}</Alert>
+      )}
+      <Field
+        id={ids.email}
+        label={labels.emailNew}
+        required
+        error={attempt.attempted ? newEmailProblem : undefined}
+      >
+        {(control) => (
+          <Input
+            {...control}
+            type="email"
+            autoComplete="email"
+            value={newEmail}
+            onChange={(e) => setNewEmail(e.target.value)}
+          />
+        )}
+      </Field>
+      {needProof && (
+        <div id={ids.proof}>
+          <ReauthProof
+            kind={kind}
+            email={subject.email}
+            providers={subject.providers}
+            requestCode={requestReauthCode}
+            onChange={setProof}
+            failure={
+              isReauthFailure(action.raw) &&
+              !(firstRegistration && isErrorCode(action.raw, ErrorCodes.ACCOUNT_REAUTH_REQUIRED))
+                ? action.raw
+                : undefined
+            }
+            onProvider={
+              onProviderReauth && newEmail.trim()
+                ? (provider) => onProviderReauth(provider, newEmail.trim())
+                : undefined
+            }
+            confirmedWith={resume?.provider}
+            labels={
+              firstRegistration && subject.providers.length > 0
+                ? {
+                    ...given,
+                    reauthProviderHint: labels.emailReauthNeeded(
+                      labelOfMethod(subject.providers[0], labels),
+                    ),
+                  }
+                : given
+            }
+          />
+        </div>
+      )}
+      {(kind !== 'provider' || !needProof) && (
+        <FormProblems
+          title={labels.formProblemsTitle}
+          problems={attempt.attempted ? problems : []}
+        />
+      )}
+      {(kind !== 'provider' || !needProof) && (
+        <div className={styles.row}>
+          <Button type="submit" loading={action.busy} loadingLabel={labels.submitting}>
+            {email ? labels.emailChangeSubmit : labels.emailAddSubmit}
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => (editing && waiting ? setEditing(false) : closeDialog())}
+          >
+            {labels.cancel}
+          </Button>
+        </div>
+      )}
+    </form>
+  )
+  const waitingCode = !!waiting && !editing
+  const title = email ? labels.emailChangeSubmit : labels.emailAddSubmit
+  const codeStep = showCode ? (
+    <div className={styles.stack}>
+      <VerifyCodePanel
+        email={waiting}
+        title={labels.emailPendingTitle}
+        description={(email ? labels.emailPendingBody : labels.emailPendingBodyFirst)(
+          waiting,
+          pendingEmailExpiresAt && pendingEmail === waiting
+            ? formatDate(pendingEmailExpiresAt)
+            : undefined,
+        )}
+        labels={given}
+        expiresAt={serverExpiry ?? localWindow?.expiresAt}
+        expirySource={serverExpiry ? 'server' : (localWindow?.source ?? 'estimate')}
+        resendExhausted={localWindow?.resendExhausted === true}
+        // 이 요청은 다시 인증이 드니(비밀번호 · 메일 코드) 조용히 다시 보낼 수 없다 — 시간이 다 되면 「다시 받기 · 다른 주소로」로 포커스
+        onExpire={() => againBox.current?.querySelector<HTMLButtonElement>('button')?.focus()}
+        onVerify={async (code) => {
+          await onConfirmCode(code)
+          setLocal(null)
+          setChanged(true)
+          closeDialog()
+          onConfirmed?.()
+        }}
+        onStartOver={() => {
+          setNewEmail('')
+          setEditing(true)
+        }}
+      />
+      <p className={styles.muted}>{labels.emailPendingNote}</p>
+      {!email && <Alert tone="info">{noCodeHint}</Alert>}
+      <div className={styles.row} ref={againBox}>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => {
+            setNewEmail(waiting)
+            setEditing(true)
+          }}
+        >
+          {labels.emailSendAgain}
+        </Button>
+      </div>
+    </div>
+  ) : null
   return (
     <SectionCard id="email" title={labels.sectionEmail}>
       <div className={styles.stack}>
@@ -169,138 +315,38 @@ export function EmailSection({
         <p className={styles.muted}>{labels.emailRole}</p>
         {registerToWrite && <p>{labels.settingsEmailToWrite}</p>}
         {email && required && <p className={styles.muted}>{labels.emailCannotRemove}</p>}
-        {!email && !showCode && (
-          <p className={styles.muted}>
-            {needProof && kind === 'provider' ? labels.emailAddHintReauth : labels.emailAddHint}
-          </p>
-        )}
         {changed && <Alert tone="success">{labels.emailChanged}</Alert>}
-        {showCode ? (
-          <div className={styles.stack}>
-            <VerifyCodePanel
-              email={waiting}
-              title={labels.emailPendingTitle}
-              description={(email ? labels.emailPendingBody : labels.emailPendingBodyFirst)(
-                waiting,
-                pendingEmailExpiresAt && pendingEmail === waiting
-                  ? formatDate(pendingEmailExpiresAt)
-                  : undefined,
-              )}
-              labels={given}
-              expiresAt={serverExpiry ?? localWindow?.expiresAt}
-              expirySource={serverExpiry ? 'server' : (localWindow?.source ?? 'estimate')}
-              resendExhausted={localWindow?.resendExhausted === true}
-              // 이 요청은 다시 인증이 드니(비밀번호 · 메일 코드) 조용히 다시 보낼 수 없다 — 시간이 다 되면 「다시 받기 · 다른 주소로」로 포커스
-              onExpire={() => againBox.current?.querySelector<HTMLButtonElement>('button')?.focus()}
-              onVerify={async (code) => {
-                await onConfirmCode(code)
-                setLocal(null)
-                setChanged(true)
-                onConfirmed?.()
-              }}
-              onStartOver={() => {
-                setNewEmail('')
-                setEditing(true)
-              }}
-            />
-            <p className={styles.muted}>{labels.emailPendingNote}</p>
-            {!email && <Alert tone="info">{noCodeHint}</Alert>}
-            <div className={styles.row} ref={againBox}>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  setNewEmail(waiting)
-                  setEditing(true)
-                }}
-              >
-                {labels.emailSendAgain}
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <form
-            className={styles.form}
-            onSubmit={submit}
-            aria-label={labels.emailChangeSubmit}
-            noValidate
+        <div className={styles.row}>
+          <Button
+            onClick={() => {
+              setChanged(false)
+              setOpen(true)
+            }}
           >
-            {action.error && !isReauthFailure(action.raw) && (
-              <Alert tone="danger">{action.error.message}</Alert>
-            )}
-            <Field
-              id={ids.email}
-              label={labels.emailNew}
-              required
-              error={attempt.attempted ? newEmailProblem : undefined}
-            >
-              {(control) => (
-                <Input
-                  {...control}
-                  type="email"
-                  autoComplete="email"
-                  value={newEmail}
-                  onChange={(e) => setNewEmail(e.target.value)}
-                />
-              )}
-            </Field>
-            {needProof && (
-              <div id={ids.proof}>
-                <ReauthProof
-                  kind={kind}
-                  email={subject.email}
-                  providers={subject.providers}
-                  requestCode={requestReauthCode}
-                  onChange={setProof}
-                  failure={
-                    isReauthFailure(action.raw) &&
-                    !(
-                      firstRegistration &&
-                      isErrorCode(action.raw, ErrorCodes.ACCOUNT_REAUTH_REQUIRED)
-                    )
-                      ? action.raw
-                      : undefined
-                  }
-                  onProvider={
-                    onProviderReauth && newEmail.trim()
-                      ? (provider) => onProviderReauth(provider, newEmail.trim())
-                      : undefined
-                  }
-                  confirmedWith={resume?.provider}
-                  labels={
-                    firstRegistration && subject.providers.length > 0
-                      ? {
-                          ...given,
-                          reauthProviderHint: labels.emailReauthNeeded(
-                            labelOfMethod(subject.providers[0], labels),
-                          ),
-                        }
-                      : given
-                  }
-                />
-              </div>
-            )}
-            {(kind !== 'provider' || !needProof) && (
-              <FormProblems
-                title={labels.formProblemsTitle}
-                problems={attempt.attempted ? problems : []}
-              />
-            )}
-            {(kind !== 'provider' || !needProof) && (
-              <div className={styles.row}>
-                <Button type="submit" loading={action.busy} loadingLabel={labels.submitting}>
-                  {email ? labels.emailChangeSubmit : labels.emailAddSubmit}
-                </Button>
-                {editing && (
-                  <Button variant="ghost" onClick={() => setEditing(false)}>
-                    {labels.cancel}
-                  </Button>
-                )}
-              </div>
-            )}
-          </form>
-        )}
+            {waitingCode
+              ? labels.emailContinueCode
+              : email
+                ? labels.emailChangeSubmit
+                : labels.emailAddSubmit}
+          </Button>
+        </div>
       </div>
+      <SettingsDialog
+        open={open}
+        onClose={closeDialog}
+        title={title}
+        closeLabel={labels.dialogClose}
+      >
+        <div className={styles.stack}>
+          {resumeFailure && <Alert tone="danger">{resumeFailure}</Alert>}
+          {!email && !showCode && (
+            <p className={styles.muted}>
+              {needProof && kind === 'provider' ? labels.emailAddHintReauth : labels.emailAddHint}
+            </p>
+          )}
+          {showCode ? codeStep : form}
+        </div>
+      </SettingsDialog>
     </SectionCard>
   )
 }

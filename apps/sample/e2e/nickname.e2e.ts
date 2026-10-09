@@ -108,9 +108,9 @@ describe('nickname: sign-up → board author → delete → cancel', () => {
   it('delete the account → signed-out landing → sign in again → "cancel the deletion?" → cancel → signed in', async () => {
     await page.goto(`${baseUrl}/account`)
     const section = page.getByRole('region', { name: auth.sectionDelete })
-    await section.getByLabel(auth.currentPassword).fill(password)
     await section.getByRole('button', { name: auth.deleteButton }).click()
     const dialog = page.getByRole('dialog')
+    await dialog.getByLabel(auth.currentPassword).fill(password)
     await dialog.getByLabel(auth.deleteTypedLabel).fill(auth.deleteTypedPhrase)
     await dialog.getByRole('button', { name: auth.deleteConfirm }).click()
     await pwExpect(heading(auth.accountDeletedTitle)).toBeVisible()

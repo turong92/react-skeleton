@@ -141,6 +141,8 @@ export function AccountSettings({
   const passwordOn = sections?.password !== false
   const me = useResource(useCallback(() => api.me(), [api]))
   const [resumeError, setResumeError] = useState<unknown>(null)
+  /** 제공자에서 돌아와 이어 보낸 이메일 변경이 실패했다 - 다시 열린 이메일 대화상자 안에서 말한다 */
+  const [emailResumeFailure, setEmailResumeFailure] = useState<string>()
   // 제공자 동의 왕복에서 돌아온 증거로 이어 갈 작업 — 처음 그릴 때부터 알고 있다(앱이 `resume` 을 첫 렌더에 준다)
   const [emailResume, setEmailResume] = useState<{ newEmail: string; provider: string } | null>(
     () =>
@@ -148,6 +150,8 @@ export function AccountSettings({
         ? { newEmail: resume.action.newEmail, provider: resume.socialReauth.provider }
         : null,
   )
+  // 이메일 대화상자는 돌아온 자리에서 다시 열려 있다 - 요청이 구역보다 먼저 끝나 `emailResume` 이 비워졌어도 처음 열린 채로 그려진다
+  const [emailReturned] = useState(() => resume?.action.kind === 'email-change')
   const [deleteResume, setDeleteResume] = useState<SocialReauth | null>(() =>
     resume?.action.kind === 'delete' ? resume.socialReauth : null,
   )
@@ -187,7 +191,7 @@ export function AccountSettings({
         },
         (error: unknown) => {
           setEmailResume(null)
-          setResumeError(error)
+          setEmailResumeFailure(authErrorMessage(error, labels).message)
         },
       )
     } else if (action.kind === 'discard') {
@@ -199,6 +203,7 @@ export function AccountSettings({
         reloadMe()
         reloadSessions() // 서버가 이 계정의 다른 세션을 닫는다
       }, setResumeError)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `labels` 는 오류 문구에만 쓰고, 이 효과는 돌아온 한 번만 돈다
   }, [resume, api, reloadMe, reloadSessions, onResumeConsumed, onDiscarded])
 
   // 구역으로 간다 - 스크롤하고 제목에 포커스를 두어 낭독이 도착한 자리를 알린다
@@ -219,6 +224,26 @@ export function AccountSettings({
     go()
     window.addEventListener('hashchange', go)
     return () => window.removeEventListener('hashchange', go)
+  }, [ready, openSection])
+
+  // 제공자 왕복에서 돌아왔다 - 하던 구역으로 스크롤한다(그 구역의 대화상자는 이미 그 단계로 다시 열려 있다). 한 번만
+  const resumeSection = useRef(
+    resume
+      ? {
+          'email-change': 'email',
+          'contact-email': 'contact',
+          delete: 'delete',
+          unlink: 'methods',
+          discard: undefined,
+          link: undefined,
+          'link-reauth': undefined,
+        }[resume.action.kind]
+      : undefined,
+  )
+  useEffect(() => {
+    if (!ready || !resumeSection.current) return
+    openSection(resumeSection.current)
+    resumeSection.current = undefined
   }, [ready, openSection])
 
   const requestReauthCode = useCallback(() => api.requestReauthConfirmation(), [api])
@@ -275,6 +300,8 @@ export function AccountSettings({
       resume={emailResume}
       required={account.emailRequired !== undefined}
       registerToWrite={account.emailRequiredToWrite === true}
+      resumeFailure={emailResumeFailure}
+      initiallyOpen={emailReturned}
       onProviderReauth={
         onProviderReauth &&
         ((provider, newEmail) => onProviderReauth(provider, { kind: 'email-change', newEmail }))

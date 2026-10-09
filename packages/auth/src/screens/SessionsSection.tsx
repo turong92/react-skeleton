@@ -1,4 +1,4 @@
-import { Alert, Badge, Button, SectionCard } from '@skeleton/ui'
+import { Alert, Badge, Button, ConfirmDialog, SectionCard } from '@skeleton/ui'
 import { useState } from 'react'
 import type { AccountSession } from '../account/types'
 import styles from './auth.module.css'
@@ -31,11 +31,14 @@ export function SessionsSection({
   const labels = mergeLabels(given)
   const action = useAction(labels)
   const [message, setMessage] = useState<string | null>(null)
+  /** 확인을 기다리는 로그아웃 - 한 기기(`id`) 또는 다른 모든 기기 */
+  const [confirming, setConfirming] = useState<{ id: string } | 'others' | null>(null)
   const others = sessions.filter((s) => !s.current)
 
   async function revoke(task: () => Promise<unknown>) {
     setMessage(null)
     if (await action.run(task)) setMessage(labels.sessionsRevoked)
+    setConfirming(null)
   }
 
   return (
@@ -50,7 +53,7 @@ export function SessionsSection({
             size="sm"
             loading={action.busy}
             loadingLabel={labels.submitting}
-            onClick={() => revoke(onRevokeOthers)}
+            onClick={() => setConfirming('others')}
           >
             {labels.sessionsRevokeOthers}
           </Button>
@@ -83,7 +86,7 @@ export function SessionsSection({
                   variant="secondary"
                   size="sm"
                   disabled={action.busy}
-                  onClick={() => revoke(() => onRevoke(session.id))}
+                  onClick={() => setConfirming({ id: session.id })}
                 >
                   {labels.sessionsRevoke}
                 </Button>
@@ -92,6 +95,26 @@ export function SessionsSection({
           ))}
         </ul>
       </div>
+      <ConfirmDialog
+        open={confirming !== null}
+        onClose={() => setConfirming(null)}
+        onConfirm={() =>
+          confirming === 'others'
+            ? revoke(onRevokeOthers)
+            : confirming && revoke(() => onRevoke(confirming.id))
+        }
+        title={
+          confirming === 'others' ? labels.sessionsRevokeOthersTitle : labels.sessionsRevokeTitle
+        }
+        description={
+          confirming === 'others' ? labels.sessionsRevokeOthersBody : labels.sessionsRevokeBody
+        }
+        confirmLabel={confirming === 'others' ? labels.sessionsRevokeOthers : labels.sessionsRevoke}
+        cancelLabel={labels.cancel}
+        closeLabel={labels.cancel}
+        tone="primary"
+        busy={action.busy}
+      />
     </SectionCard>
   )
 }

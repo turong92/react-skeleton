@@ -92,17 +92,20 @@ describe('account walkthrough (FINAL-3 codes)', () => {
       await page.goto(`${baseUrl}/account`)
       const region = (name: string, on: Page = page) => on.getByRole('region', { name })
       const emailSection = region(auth.sectionEmail)
-      await emailSection.getByLabel(auth.emailNew).fill(emailNext)
-      await emailSection.getByLabel(auth.currentPassword).fill(password)
       await emailSection.getByRole('button', { name: auth.emailChangeSubmit }).click()
-      await emailSection.getByText(auth.emailPendingTitle).waitFor()
+      const emailDialog = page.getByRole('dialog')
+      await emailDialog.getByLabel(auth.emailNew).fill(emailNext)
+      await emailDialog.getByLabel(auth.currentPassword).fill(password)
+      await emailDialog.getByRole('button', { name: auth.emailChangeSubmit }).click()
+      await emailDialog.getByText(auth.emailPendingTitle).waitFor()
       await page.reload()
-      await emailSection.getByText(auth.emailPendingTitle).waitFor()
+      await emailSection.getByRole('button', { name: auth.emailContinueCode }).click()
+      await emailDialog.getByText(auth.emailPendingTitle).waitFor()
       await shot(
         page,
         '06-email-change-code-step.png',
-        '이메일 변경 — 새 주소로 간 6자리를 이 화면에서 입력하는 단계. 새로고침해도 서버(me.pendingEmail)가 알려 줘서 그대로 열린다.',
-        emailSection,
+        '이메일 변경 — 새 주소로 간 6자리를 대화상자에서 입력하는 단계. 새로고침하면 팝업은 닫히고, 서버(me.pendingEmail)가 기억한 상태는 「인증번호 입력 이어 하기」 단추로 다시 연다.',
+        emailDialog,
       )
 
       // ── 비밀번호 없는 계정: 코드로 다시 인증(그 자리에서) · 삭제(코드 + 글자) ──────
@@ -123,25 +126,28 @@ describe('account walkthrough (FINAL-3 codes)', () => {
       await plPage.getByRole('heading', { name: /안녕하세요/ }).waitFor()
       await plPage.goto(`${baseUrl}/account`)
       const plEmail = region(auth.sectionEmail, plPage)
-      await plEmail.getByLabel(auth.emailNew).fill(passwordlessNext)
-      await plEmail.getByRole('button', { name: auth.reauthCodeSend }).click()
+      await plEmail.getByRole('button', { name: auth.emailChangeSubmit }).click()
+      const plEmailDialog = plPage.getByRole('dialog')
+      await plEmailDialog.getByLabel(auth.emailNew).fill(passwordlessNext)
+      await plEmailDialog.getByRole('button', { name: auth.reauthCodeSend }).click()
       const reauth = await waitForCode(mailUrl, passwordless, 'reauth', { seen })
-      await plEmail.getByText(auth.reauthCodeSent(passwordless)).waitFor()
-      await enterCode(plPage, plEmail, reauth.code)
-      await plEmail.getByText(auth.reauthCodeEntered).waitFor()
+      await plEmailDialog.getByText(auth.reauthCodeSent(passwordless)).waitFor()
+      await enterCode(plPage, plEmailDialog, reauth.code)
+      await plEmailDialog.getByText(auth.reauthCodeEntered).waitFor()
       await shot(
         plPage,
         '07-reauth-by-code-in-place.png',
-        '다시 인증 — 비밀번호 없는 계정은 「인증번호 받기」 → 메일의 6자리를 같은 자리에서 입력(링크 왕복 없음). 번호를 넣으면 아래 「이메일 바꾸기」가 켜진다.',
-        plEmail,
+        '다시 인증 — 비밀번호 없는 계정은 「인증번호 받기」 → 메일의 6자리를 대화상자 안에서 입력(링크 왕복 없음). 번호를 넣으면 아래 「이메일 바꾸기」가 켜진다.',
+        plEmailDialog,
       )
+      await plPage.keyboard.press('Escape')
       const plDelete = region(auth.sectionDelete, plPage)
-      await plDelete.getByRole('button', { name: auth.reauthCodeSend }).click()
-      const deleteCode = await waitForCode(mailUrl, passwordless, 'delete', { seen })
-      await plDelete.getByText(auth.reauthCodeSent(passwordless)).waitFor()
-      await enterCode(plPage, plDelete, deleteCode.code)
       await plDelete.getByRole('button', { name: auth.deleteButton }).click()
       const dialog = plPage.getByRole('dialog')
+      await dialog.getByRole('button', { name: auth.reauthCodeSend }).click()
+      const deleteCode = await waitForCode(mailUrl, passwordless, 'delete', { seen })
+      await dialog.getByText(auth.reauthCodeSent(passwordless)).waitFor()
+      await enterCode(plPage, dialog, deleteCode.code)
       await dialog.getByLabel(auth.deleteTypedLabel).fill(auth.deleteTypedPhrase)
       await shot(
         plPage,

@@ -226,23 +226,24 @@ describe('email required walkthrough', () => {
       )
       await shot(page, '10-account-email.png', '계정 이메일 구역.', accountEmail)
       await contactSection.getByRole('button', { name: auth.contactEmailAdd }).click()
-      await contactSection.getByLabel(auth.contactEmailField).fill(contact)
+      const contactDialog = page.getByRole('dialog')
+      await contactDialog.getByLabel(auth.contactEmailField).fill(contact)
       await shot(
         page,
         '11-contact-email-entering.png',
-        '연락받을 이메일 등록 — 주소를 적고 「인증번호 받기」.',
-        contactSection,
+        '연락받을 이메일 등록 — 대화상자에서 주소를 적고 「인증번호 받기」.',
+        contactDialog,
       )
-      await contactSection.getByRole('button', { name: auth.contactEmailSend }).click()
-      await contactSection.getByText(auth.contactEmailCodeTitle).waitFor()
+      await contactDialog.getByRole('button', { name: auth.contactEmailSend }).click()
+      await contactDialog.getByText(auth.contactEmailCodeTitle).waitFor()
       await shot(
         page,
         '12-contact-email-code.png',
-        '그 주소로 간 인증번호 입력(같은 입력).',
-        contactSection,
+        '그 주소로 간 인증번호 입력(같은 대화상자 안).',
+        contactDialog,
       )
       const contactCode = await waitForCode(mailUrl, contact, 'contact-email', { seen })
-      await contactSection.getByLabel(auth.codeDigit(1, 6)).click()
+      await contactDialog.getByLabel(auth.codeDigit(1, 6)).click()
       await page.keyboard.type(contactCode.code)
       await contactSection.getByText(auth.contactEmailSaved).waitFor()
       await showBoth()

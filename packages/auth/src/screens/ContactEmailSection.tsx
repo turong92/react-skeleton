@@ -1,5 +1,5 @@
 import { ApiRequestError, ErrorCodes, isErrorCode } from '@skeleton/api-client'
-import { Alert, SectionCard, useSubmitAttempt } from '@skeleton/ui'
+import { Alert, ConfirmDialog, SectionCard, useSubmitAttempt } from '@skeleton/ui'
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import type { CodeSent, SocialReauth } from '../account/accountApi'
 import { useCodeClock } from '../codeClockContext'
@@ -8,6 +8,7 @@ import styles from './auth.module.css'
 import { ReauthPrompt } from './EmailRequiredParts'
 import { ContactEmailForm, ContactEmailSummary } from './ContactEmailParts'
 import type { ContactEmailSectionProps, Step } from './contactEmailTypes'
+import { SettingsDialog } from './SettingsDialog'
 import { useStepFocus } from './useStepFocus'
 import { mergeLabels } from './labels'
 import { useAction } from './useAction'
@@ -41,8 +42,10 @@ export function ContactEmailSection({
   const action = useAction(labels)
   const removal = useAction(labels)
   const attempt = useSubmitAttempt()
-  const [step, setStep] = useState<Step>('idle')
-  const [email, setEmail] = useState('')
+  // 제공자 동의에서 돌아왔으면 같은 대화상자가 입력 단계로 다시 열려 있고(주소가 채워져 있다) 곧 인증번호 단계로 이어진다
+  const [step, setStep] = useState<Step>(resume ? 'entering' : 'idle')
+  const [email, setEmail] = useState(resume?.email ?? '')
+  const [confirmingRemove, setConfirmingRemove] = useState(false)
   const [sentTo, setSentTo] = useState('')
   const [codeWin, setCodeWin] = useState<CodeWindow | null>(null)
   const [notice, setNotice] = useState<'saved' | 'removed' | null>(null)
@@ -105,12 +108,19 @@ export function ContactEmailSection({
         throw caught
       }
     })
+    setConfirmingRemove(false)
     if (ok) {
       setNotice('removed')
       onChanged?.()
     }
   }
 
+  const dialogTitle = contactEmail ? labels.contactEmailChange : labels.contactEmailAdd
+  const closeDialog = () => {
+    action.clear()
+    setReauth(false)
+    setStep('idle')
+  }
   return (
     <SectionCard id="contact" title={labels.sectionContactEmail}>
       <div className={styles.stack}>
@@ -120,20 +130,25 @@ export function ContactEmailSection({
             {notice === 'saved' ? labels.contactEmailSaved : labels.contactEmailRemoved}
           </Alert>
         )}
-        {step === 'idle' && (
-          <ContactEmailSummary
-            contactEmail={contactEmail}
-            labels={labels}
-            actions={actions}
-            removal={removal}
-            onStart={() => {
-              setNotice(null)
-              setEmail('')
-              setStep('entering')
-            }}
-            onRemove={() => void remove()}
-          />
-        )}
+        <ContactEmailSummary
+          contactEmail={contactEmail}
+          labels={labels}
+          actions={actions}
+          removal={removal}
+          onStart={() => {
+            setNotice(null)
+            setEmail('')
+            setStep('entering')
+          }}
+          onRemove={() => setConfirmingRemove(true)}
+        />
+      </div>
+      <SettingsDialog
+        open={step !== 'idle'}
+        onClose={closeDialog}
+        title={dialogTitle}
+        closeLabel={labels.dialogClose}
+      >
         {step === 'entering' && (
           <ContactEmailForm
             labels={labels}
@@ -159,10 +174,7 @@ export function ContactEmailSection({
               )
             }
             onSubmit={send}
-            onCancel={() => {
-              action.clear()
-              setStep('idle')
-            }}
+            onCancel={closeDialog}
           />
         )}
         {step === 'code' && (
@@ -191,7 +203,18 @@ export function ContactEmailSection({
             />
           </div>
         )}
-      </div>
+      </SettingsDialog>
+      <ConfirmDialog
+        open={confirmingRemove}
+        onClose={() => setConfirmingRemove(false)}
+        onConfirm={() => void remove()}
+        title={labels.contactEmailRemoveTitle}
+        description={labels.contactEmailRemoveBody}
+        confirmLabel={labels.contactEmailRemove}
+        cancelLabel={labels.cancel}
+        closeLabel={labels.cancel}
+        busy={removal.busy}
+      />
     </SectionCard>
   )
 }

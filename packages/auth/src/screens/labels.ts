@@ -253,6 +253,18 @@ export type AuthLabels = {
   profileTimeZone: string
   profileLocaleDefault: string
   profileSaved: string
+  profileEdit: string
+  /** 설정 대화상자의 × 단추 이름 */
+  dialogClose: string
+  passwordHasValue: string
+  passwordHasNone: string
+  emailContinueCode: string
+  contactEmailRemoveTitle: string
+  contactEmailRemoveBody: string
+  sessionsRevokeTitle: string
+  sessionsRevokeBody: string
+  sessionsRevokeOthersTitle: string
+  sessionsRevokeOthersBody: string
   passwordChangeSubmit: string
   passwordSetTitle: string
   passwordSetHint: string
@@ -700,6 +712,17 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   profileTimeZone: 'Time zone',
   profileLocaleDefault: 'Not set',
   profileSaved: 'Profile saved.',
+  profileEdit: 'Edit profile',
+  dialogClose: 'Close',
+  passwordHasValue: 'A password is set.',
+  passwordHasNone: 'There is no password yet.',
+  emailContinueCode: 'Continue entering the code',
+  contactEmailRemoveTitle: 'Remove the contact email?',
+  contactEmailRemoveBody: 'Notices will go to your account email again.',
+  sessionsRevokeTitle: 'Sign this device out?',
+  sessionsRevokeBody: 'That device will have to sign in again.',
+  sessionsRevokeOthersTitle: 'Sign out every other device?',
+  sessionsRevokeOthersBody: 'Only this device stays signed in.',
   passwordChangeSubmit: 'Change password',
   passwordSetTitle: 'Set a password',
   passwordSetHint: 'You sign in without a password today. You can add one.',

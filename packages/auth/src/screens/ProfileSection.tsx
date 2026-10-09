@@ -1,6 +1,7 @@
 import { ErrorCodes } from '@skeleton/api-client'
 import { Alert, Button, CopyButton, Field, Input, Select, SectionCard } from '@skeleton/ui'
 import { useState, type FormEvent } from 'react'
+import { SettingsDialog } from './SettingsDialog'
 import type { ProfilePatch } from '../account/types'
 import styles from './auth.module.css'
 import { displayNameFieldError, displayNameProblem } from './displayName'
@@ -29,7 +30,7 @@ export type ProfileSectionProps = {
   showDisplayName?: boolean
 }
 
-/** 프로필 절 — 닉네임(꼬리표가 있으면 `닉네임#번호` 와 복사) · 언어 · 시간대 */
+/** 프로필 절 — 닉네임(꼬리표가 있으면 `닉네임#번호` 와 복사) · 언어 · 시간대를 값으로 보이고, 「프로필 수정」이 양식을 대화상자로 연다 */
 export function ProfileSection({
   profile,
   locales,
@@ -39,10 +40,84 @@ export function ProfileSection({
   showDisplayName = true,
 }: ProfileSectionProps) {
   const labels = mergeLabels(given)
+  const [open, setOpen] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const fullName =
+    profile.displayName && profile.displayTag
+      ? `${profile.displayName}#${profile.displayTag}`
+      : null
+  const localeName = locales.find((l) => l.value === profile.locale)?.label ?? profile.locale
+  const value = (text: string | null) => <strong>{text || labels.profileLocaleDefault}</strong>
+  return (
+    <>
+      <SectionCard id="profile" title={labels.sectionProfile}>
+        <div className={styles.stack}>
+          {saved && <Alert tone="success">{labels.profileSaved}</Alert>}
+          {showDisplayName && (
+            <div className={styles.row}>
+              <span className={styles.muted}>{labels.displayName}</span>
+              {value(fullName ?? profile.displayName)}
+              {fullName && <CopyButton value={fullName} label={labels.copyHint} />}
+            </div>
+          )}
+          <div className={styles.row}>
+            <span className={styles.muted}>{labels.profileLocale}</span>
+            {value(localeName)}
+          </div>
+          <div className={styles.row}>
+            <span className={styles.muted}>{labels.profileTimeZone}</span>
+            {value(profile.timeZone)}
+          </div>
+          <div>
+            <Button
+              onClick={() => {
+                setSaved(false)
+                setOpen(true)
+              }}
+            >
+              {labels.profileEdit}
+            </Button>
+          </div>
+        </div>
+      </SectionCard>
+      <SettingsDialog
+        open={open}
+        onClose={() => setOpen(false)}
+        title={labels.sectionProfile}
+        closeLabel={labels.dialogClose}
+      >
+        <ProfileForm
+          profile={profile}
+          locales={locales}
+          timeZones={timeZones}
+          onSave={onSave}
+          labels={given}
+          showDisplayName={showDisplayName}
+          onSaved={() => {
+            setSaved(true)
+            setOpen(false)
+          }}
+          onCancel={() => setOpen(false)}
+        />
+      </SettingsDialog>
+    </>
+  )
+}
+
+function ProfileForm({
+  profile,
+  locales,
+  timeZones,
+  onSave,
+  labels: given,
+  showDisplayName,
+  onSaved,
+  onCancel,
+}: ProfileSectionProps & { showDisplayName: boolean; onSaved: () => void; onCancel: () => void }) {
+  const labels = mergeLabels(given)
   const [displayName, setDisplayName] = useState(profile.displayName ?? '')
   const [locale, setLocale] = useState(profile.locale ?? '')
   const [timeZone, setTimeZone] = useState(profile.timeZone ?? '')
-  const [saved, setSaved] = useState(false)
   const action = useAction(labels)
   const [localProblem, setLocalProblem] = useState<string>()
   // 닉네임 칸 아래에 말하는 서버 답: 겹침(409) · 변경 한도(429) · 규칙 위반(400 필드 오류) — 서버의 영어 문장은 보이지 않는다. 전역 토스트는 앱이 이 코드들을 뺀다
@@ -59,7 +134,6 @@ export function ProfileSection({
 
   async function submit(event: FormEvent) {
     event.preventDefault()
-    setSaved(false)
     const problem = showDisplayName
       ? displayNameProblem(displayName, 'optional', labels)
       : undefined
@@ -70,15 +144,14 @@ export function ProfileSection({
       patch.displayName = displayName.trim()
     if (locale && locale !== (profile.locale ?? '')) patch.locale = locale
     if (timeZone && timeZone !== (profile.timeZone ?? '')) patch.timeZone = timeZone
-    if (Object.keys(patch).length === 0) return setSaved(true)
-    setSaved(await action.run(() => onSave(patch)))
+    if (Object.keys(patch).length === 0) return onSaved()
+    if (await action.run(() => onSave(patch))) onSaved()
   }
 
   return (
-    <SectionCard id="profile" title={labels.sectionProfile}>
+    <>
       <form className={styles.form} onSubmit={submit} aria-label={labels.sectionProfile}>
         {action.error && !nameTaken && <Alert tone="danger">{action.error.message}</Alert>}
-        {saved && <Alert tone="success">{labels.profileSaved}</Alert>}
         {showDisplayName && (
           <Field
             label={labels.displayName}
@@ -129,12 +202,15 @@ export function ProfileSection({
             </Select>
           )}
         </Field>
-        <div>
+        <div className={styles.row}>
           <Button type="submit" loading={action.busy} loadingLabel={labels.submitting}>
             {labels.save}
           </Button>
+          <Button variant="secondary" onClick={onCancel}>
+            {labels.cancel}
+          </Button>
         </div>
       </form>
-    </SectionCard>
+    </>
   )
 }

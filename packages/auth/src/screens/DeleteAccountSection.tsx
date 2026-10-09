@@ -1,12 +1,5 @@
-import {
-  Alert,
-  Button,
-  ConfirmDialog,
-  FormProblems,
-  SectionCard,
-  useSubmitAttempt,
-} from '@skeleton/ui'
-import { useId, useState } from 'react'
+import { Alert, Button, ConfirmDialog, SectionCard } from '@skeleton/ui'
+import { useState } from 'react'
 import type { ReauthCredential, SocialReauth } from '../account/accountApi'
 import type { DeletionResult } from '../account/types'
 import { isReauthFailure, reauthKindOf, type ReauthSubject } from '../reauth/kind'
@@ -56,23 +49,28 @@ export function DeleteAccountSection({
   const labels = mergeLabels(given)
   const kind = reauthKindOf(subject)
   const [proof, setProof] = useState<ReauthCredential | null>(null)
-  const [open, setOpen] = useState(false)
+  // 제공자 동의에서 돌아왔으면 같은 대화상자가 그 단계(증거 확인됨 · 글자 확인만 남음)로 다시 열린다
+  const [open, setOpen] = useState(() => !!resume)
   const [result, setResult] = useState<DeletionResult | null>(null)
   const del = useAction(labels)
   const credential: ReauthCredential | null = resume ? { socialReauth: resume } : proof
   const ready = credential !== null
-  const proofId = `${useId()}-proof`
-  const attempt = useSubmitAttempt()
 
   async function confirm() {
     if (!credential) return
-    await del.run(async () => {
+    let rejected = false
+    const ok = await del.run(async () => {
       try {
         setResult(await onDelete(credential))
+      } catch (error) {
+        rejected = isReauthFailure(error)
+        throw error
       } finally {
         if (resume) onResumeSpent?.()
       }
     })
+    // 증거가 거절되면 창을 열어 둔 채 그 자리에서 다시(틀린 비밀번호 · 인증번호) - 그 밖의 결과면 닫는다
+    if (!ok && rejected) return
     setOpen(false)
   }
 
@@ -99,32 +97,9 @@ export function DeleteAccountSection({
       description={labels.deleteGraceNotice(graceDays)}
     >
       <div className={styles.stack}>
-        {del.error && !isReauthFailure(del.raw) && <Alert tone="danger">{del.error.message}</Alert>}
-        {kind === 'password' && <p className={styles.muted}>{labels.deletePasswordHint}</p>}
-        <div id={proofId}>
-          <ReauthProof
-            kind={kind}
-            email={subject.email}
-            providers={subject.providers}
-            requestCode={requestDeleteCode}
-            onChange={setProof}
-            failure={isReauthFailure(del.raw) ? del.raw : undefined}
-            onProvider={onProviderReauth}
-            confirmedWith={resume?.provider}
-            labels={given}
-          />
-        </div>
-        <FormProblems
-          title={labels.formProblemsTitle}
-          problems={
-            attempt.attempted && !ready
-              ? [{ key: 'proof', message: labels.problemProofMissing, target: proofId }]
-              : []
-          }
-        />
+        {del.error && !open && <Alert tone="danger">{del.error.message}</Alert>}
         <div>
-          {/* 꺼 두지 않는다 — 본인 확인 전에 누르면 이유를 말하고 그 칸으로 데려간다 */}
-          <Button variant="danger" onClick={() => (ready ? setOpen(true) : attempt.fail(proofId))}>
+          <Button variant="danger" onClick={() => setOpen(true)}>
             {labels.deleteButton}
           </Button>
         </div>
@@ -134,7 +109,27 @@ export function DeleteAccountSection({
         onClose={() => setOpen(false)}
         onConfirm={confirm}
         title={labels.deleteDialogTitle}
-        description={labels.deleteDialogBody}
+        confirmDisabled={!ready}
+        description={
+          <div className={styles.stack}>
+            <p>{labels.deleteDialogBody}</p>
+            {open && del.error && !isReauthFailure(del.raw) && (
+              <Alert tone="danger">{del.error.message}</Alert>
+            )}
+            {kind === 'password' && <p className={styles.muted}>{labels.deletePasswordHint}</p>}
+            <ReauthProof
+              kind={kind}
+              email={subject.email}
+              providers={subject.providers}
+              requestCode={requestDeleteCode}
+              onChange={setProof}
+              failure={isReauthFailure(del.raw) ? del.raw : undefined}
+              onProvider={onProviderReauth}
+              confirmedWith={resume?.provider}
+              labels={given}
+            />
+          </div>
+        }
         confirmLabel={labels.deleteConfirm}
         cancelLabel={labels.cancel}
         closeLabel={labels.cancel}

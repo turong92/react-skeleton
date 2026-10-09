@@ -124,6 +124,7 @@ describe('settings sections', () => {
         policy={policy}
         onChange={noop}
         requestReauthCode={noop}
+        initiallyOpen
       />,
     )
   it('password: asks for the current password only when the account has one; a passwordless one gets a mailed code instead', () => {
@@ -150,6 +151,7 @@ describe('settings sections', () => {
         requestReauthCode={noop}
         onChangeEmail={noop}
         onConfirmCode={noop}
+        initiallyOpen
         {...extra}
       />,
     )
@@ -177,6 +179,10 @@ describe('settings sections', () => {
     expect(pending).toContain('Digit 1 of 6') // the code cells
     expect(pending).toContain('Send the code again')
     expect(pending).not.toContain('New email') // the form is replaced by the code step
+    // closed, the section only offers to pick the step up again (no popup that opens by itself)
+    expect(email(withPassword, { pendingEmail: 'new@b.c', initiallyOpen: false })).toContain(
+      'Continue entering the code',
+    )
     const none = email(withPassword)
     expect(none).not.toContain('Enter the code for your new address')
     expect(email(withPassword, { pendingEmail: null })).not.toContain('Digit 1 of 6')
@@ -290,7 +296,7 @@ describe('settings sections', () => {
     expect(out).toContain('This device')
     expect(out).toContain('Unknown device')
     expect(out).toContain('Sign out all other devices')
-    expect(out.match(/>Sign out</g)).toHaveLength(1)
+    expect(out.match(/>Sign out</g)).toHaveLength(2) // the other device's button + the confirm button of the (closed) dialog
   })
 
   it('sessions: a loopback IP reads as this device, other IPv6 is compressed', () => {

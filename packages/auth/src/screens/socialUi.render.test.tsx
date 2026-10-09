@@ -187,7 +187,7 @@ describe('an account without an address (LINE / X)', () => {
   }
 
   it('shows "no email address" instead of an empty value, and invites to add one', () => {
-    const out = html(<EmailSection {...base} email={null} />)
+    const out = html(<EmailSection {...base} email={null} initiallyOpen />)
     expect(out).toContain(L.emailNone)
     expect(out).not.toContain('<strong></strong>')
     expect(out).not.toContain(L.emailUnverified)

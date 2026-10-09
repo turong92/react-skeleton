@@ -1,4 +1,5 @@
 import { Alert, Button, FormProblems, SectionCard, useSubmitAttempt } from '@skeleton/ui'
+import { SettingsDialog } from './SettingsDialog'
 import { useId, useState, type FormEvent } from 'react'
 import { violationsOf } from '../account/passwordRules'
 import type { PasswordPolicy, PasswordViolation } from '../account/types'
@@ -24,10 +25,70 @@ export type PasswordSectionProps = {
   labels?: Partial<AuthLabels>
   /** 새 비밀번호를 한 번 더 입력받는다(기본 false — 모듈은 중립이라 앱이 켠다) — 다르면 제출하지 않는다. 확인 값은 서버로 보내지 않는다 */
   confirmPassword?: boolean
+  /** 첫 렌더부터 대화상자가 열려 있다 - 서버 렌더 시험 · 스토리용 */
+  initiallyOpen?: boolean
 }
 
-/** 비밀번호 절 — 바꾸면 다른 기기는 로그아웃되고 이 기기는 그대로. 첫 비밀번호는 메일 주소가 인증된 계정만(주소가 없으면 정할 수 없다) */
-export function PasswordSection({
+/**
+ * 비밀번호 절 — 비밀번호가 있는지 없는지만 보이고, 「바꾸기 / 정하기」가 양식을 대화상자로 연다. 바꾸면 다른 기기는 로그아웃되고 이 기기는 그대로.
+ * 첫 비밀번호는 메일 주소가 인증된 계정만(주소가 없으면 정할 수 없다)
+ */
+export function PasswordSection(props: PasswordSectionProps) {
+  const labels = mergeLabels(props.labels)
+  const hasPassword = props.subject.hasPassword
+  const [open, setOpen] = useState(props.initiallyOpen ?? false)
+  const [done, setDone] = useState(false)
+  if (reauthKindOf(props.subject) === 'provider')
+    return (
+      <SectionCard id="password" title={labels.passwordSetTitle}>
+        <Alert tone="info">{labels.passwordNeedsEmail}</Alert>
+      </SectionCard>
+    )
+  const action = hasPassword ? labels.passwordChangeSubmit : labels.passwordSetTitle
+  return (
+    <>
+      <SectionCard
+        id="password"
+        title={hasPassword ? labels.sectionPassword : labels.passwordSetTitle}
+        description={hasPassword ? labels.passwordOtherSessionsNote : labels.passwordSetHint}
+      >
+        <div className={styles.stack}>
+          {done && <Alert tone="success">{labels.passwordChanged}</Alert>}
+          <p className={styles.muted}>
+            {hasPassword ? labels.passwordHasValue : labels.passwordHasNone}
+          </p>
+          <div>
+            <Button
+              onClick={() => {
+                setDone(false)
+                setOpen(true)
+              }}
+            >
+              {action}
+            </Button>
+          </div>
+        </div>
+      </SectionCard>
+      <SettingsDialog
+        open={open}
+        onClose={() => setOpen(false)}
+        title={action}
+        closeLabel={labels.dialogClose}
+      >
+        <PasswordForm
+          {...props}
+          onDone={() => {
+            setDone(true)
+            setOpen(false)
+          }}
+          onCancel={() => setOpen(false)}
+        />
+      </SettingsDialog>
+    </>
+  )
+}
+
+function PasswordForm({
   subject,
   policy,
   email,
@@ -35,13 +96,14 @@ export function PasswordSection({
   requestReauthCode,
   labels: given,
   confirmPassword = false,
-}: PasswordSectionProps) {
+  onDone,
+  onCancel,
+}: PasswordSectionProps & { onDone: () => void; onCancel: () => void }) {
   const labels = mergeLabels(given)
   const hasPassword = subject.hasPassword
   const kind = reauthKindOf(subject)
   const [next, setNext] = useState('')
   const [proof, setProof] = useState<ReauthCredential | null>(null)
-  const [done, setDone] = useState(false)
   const [violations, setViolations] = useState<PasswordViolation[]>([])
   const action = useAction(labels)
   const uid = useId()
@@ -64,17 +126,10 @@ export function PasswordSection({
 
   async function submit(event: FormEvent) {
     event.preventDefault()
-    setDone(false)
     setViolations([])
     if (problems.length > 0) return attempt.fail(problems[0].target)
     const ok = await action.run(() => onChange({ ...proof, newPassword: next }))
-    if (ok) {
-      setDone(true)
-      setNext('')
-      confirm.reset()
-      attempt.reset()
-      setProof(null)
-    }
+    if (ok) onDone()
   }
   // 정책 위반은 힌트 목록이 보여 준다 — 오류 줄에는 중복해서 올리지 않는다
   const serverViolations = violationsOf(action.raw)
@@ -82,18 +137,8 @@ export function PasswordSection({
   const proofFailure = isReauthFailure(action.raw) ? action.raw : undefined
   const showError = action.error && !proofFailure && serverViolations.length === 0
 
-  if (kind === 'provider')
-    return (
-      <SectionCard id="password" title={labels.passwordSetTitle}>
-        <Alert tone="info">{labels.passwordNeedsEmail}</Alert>
-      </SectionCard>
-    )
   return (
-    <SectionCard
-      id="password"
-      title={hasPassword ? labels.sectionPassword : labels.passwordSetTitle}
-      description={hasPassword ? labels.passwordOtherSessionsNote : labels.passwordSetHint}
-    >
+    <>
       <form
         className={styles.form}
         onSubmit={submit}
@@ -101,7 +146,6 @@ export function PasswordSection({
         noValidate
       >
         {showError && <Alert tone="danger">{action.error?.message}</Alert>}
-        {done && <Alert tone="success">{labels.passwordChanged}</Alert>}
         <div id={ids.proof}>
           <ReauthProof
             kind={kind}
@@ -134,12 +178,15 @@ export function PasswordSection({
           title={labels.formProblemsTitle}
           problems={attempt.attempted ? problems : []}
         />
-        <div>
+        <div className={styles.row}>
           <Button type="submit" loading={action.busy} loadingLabel={labels.submitting}>
-            {labels.passwordChangeSubmit}
+            {hasPassword ? labels.passwordChangeSubmit : labels.passwordSetTitle}
+          </Button>
+          <Button variant="secondary" onClick={onCancel}>
+            {labels.cancel}
           </Button>
         </div>
       </form>
-    </SectionCard>
+    </>
   )
 }

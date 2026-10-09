@@ -1,0 +1,130 @@
+import type { Checkout } from './ledgerTypes'
+
+export type { Checkout } from './ledgerTypes'
+
+/** 토스페이먼츠 SDK v2 (결제창 · API 개별 연동). npm 패키지가 아니라 스크립트다 — 누른 그때 불러온다 */
+export const TOSS_SDK_URL = 'https://js.tosspayments.com/v2/standard'
+
+/** `window.TossPayments` 중 쓰는 만큼만 */
+export type TossPaymentsFactory = ((clientKey: string) => {
+  payment(options: { customerKey: string }): {
+    requestPayment(request: {
+      method: 'CARD'
+      amount: { currency: string; value: number }
+      orderId: string
+      orderName: string
+      successUrl: string
+      failUrl: string
+    }): Promise<void>
+  }
+}) & { ANONYMOUS: string }
+
+/** 스크립트가 이 시간(밀리초) 안에 `onload` 도 `onerror` 도 못 주면 포기한다 — 그다음 누름이 다시 시도한다 */
+export const SDK_LOAD_TIMEOUT_MS = 15_000
+
+type SdkWindow = { TossPayments?: TossPaymentsFactory }
+type SdkDocument = {
+  createElement(tag: 'script'): {
+    src: string
+    async: boolean
+    onload: (() => void) | null
+    onerror: (() => void) | null
+    remove(): void
+  }
+  head: { appendChild(node: never): unknown }
+}
+
+export type LoadTossPaymentsSdkEnv = {
+  /** 시험용 — 기본은 전역 `window` · `document`. 서버에서는 둘 다 없다 */
+  window?: SdkWindow
+  document?: SdkDocument
+  timeoutMs?: number
+}
+
+// window 마다 따로 기억한다(형제 captcha-turnstile 처럼) — 모듈 전역에 두면 서버 렌더·시험 사이에 샌다
+const loading = new WeakMap<object, Promise<TossPaymentsFactory>>()
+
+/**
+ * 토스 SDK 스크립트를 불러온다. 이미 있으면 그대로 쓰고, 불러오는 중이면 같은 약속을 돌려주고, 실패(오류 · 제한 시간 · 전역 없음)하면
+ * 붙인 `<script>` 를 떼고 약속을 버려 다음 클릭이 다시 시도한다. 브라우저가 아니면(서버) 던지지 않고 거절된 약속을 돌려준다.
+ */
+export function loadTossPaymentsSdk(
+  env: LoadTossPaymentsSdkEnv = {},
+): Promise<TossPaymentsFactory> {
+  const globals = globalThis as { window?: SdkWindow; document?: SdkDocument }
+  const win = 'window' in env ? env.window : globals.window
+  const doc = 'document' in env ? env.document : globals.document
+  if (!win || !doc)
+    return Promise.reject(new Error('The TossPayments SDK can only be loaded in a browser'))
+  if (win.TossPayments) return Promise.resolve(win.TossPayments)
+  const known = loading.get(win)
+  if (known) return known
+
+  const timeoutMs = env.timeoutMs ?? SDK_LOAD_TIMEOUT_MS
+  const attempt: { promise?: Promise<TossPaymentsFactory> } = {}
+  const promise = (attempt.promise = new Promise<TossPaymentsFactory>((resolve, reject) => {
+    const script = doc.createElement('script')
+    const timer = setTimeout(
+      () => fail(`The TossPayments script did not finish loading in ${timeoutMs} ms`),
+      timeoutMs,
+    )
+    const fail = (why: string) => {
+      clearTimeout(timer)
+      script.remove()
+      // 포기한 시도의 늦은 이벤트가 그 뒤에 시작한 새 시도의 기억을 지우지 않게 — 내 약속일 때만 지운다
+      if (loading.get(win) === attempt.promise) loading.delete(win)
+      reject(new Error(why))
+    }
+    script.src = TOSS_SDK_URL
+    script.async = true
+    script.onload = () => {
+      clearTimeout(timer)
+      const sdk = win.TossPayments
+      if (sdk) resolve(sdk)
+      else fail('The TossPayments script loaded but window.TossPayments is missing')
+    }
+    script.onerror = () => fail(`Could not load the TossPayments script (${TOSS_SDK_URL})`)
+    doc.head.appendChild(script as never)
+  }))
+  loading.set(win, promise)
+  return promise
+}
+
+export type OpenCheckoutOptions = {
+  /** 결제 성공 뒤 돌아올 주소 — 프론트가 정한다(서버는 받지도 저장하지도 않는다). `readCheckoutReturn` 이 읽는다 */
+  successUrl: string
+  failUrl: string
+  /** SDK 를 불러오는 함수 — 시험 · 스토리에서 가짜로 바꾼다 */
+  loadSdk?: () => Promise<TossPaymentsFactory>
+}
+
+/**
+ * `checkout.kind` 로 갈라 결제창을 연다. 브라우저 전역은 이 함수 안에서만 읽는다(import 때는 건드리지 않는다 — SSR 안전).
+ * `TOSS_PAYMENT_WINDOW`: 구매자 이름 · 이메일 · 전화번호는 넘기지 않는다(선택 칸이다). 결제창이 주소를 바꾸면 약속은 끝나지 않을 수 있고,
+ * 사용자가 창을 닫으면 SDK 가 던진 에러(`code: 'USER_CANCEL'` 등)가 그대로 나온다.
+ */
+export async function openCheckout(
+  checkout: Checkout,
+  { successUrl, failUrl, loadSdk = loadTossPaymentsSdk }: OpenCheckoutOptions,
+): Promise<void> {
+  switch (checkout.kind) {
+    case 'TOSS_PAYMENT_WINDOW': {
+      // 결제사 모듈이 키를 정하지 못하면 서버가 `null` 을 준다 - SDK 에 `null` 을 넘기지 않고, 스크립트도 불러오기 전에 멈춘다
+      if (!checkout.clientKey) throw new Error('The checkout has no client key')
+      const TossPayments = await loadSdk()
+      await TossPayments(checkout.clientKey)
+        .payment({ customerKey: TossPayments.ANONYMOUS })
+        .requestPayment({
+          method: 'CARD',
+          amount: { currency: checkout.amount.currency, value: checkout.amount.amount },
+          orderId: checkout.orderId,
+          orderName: checkout.orderName,
+          successUrl,
+          failUrl,
+        })
+      return
+    }
+    default:
+      throw new Error(`Unknown checkout kind: ${String((checkout as { kind: unknown }).kind)}`)
+  }
+}

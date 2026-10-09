@@ -1,0 +1,54 @@
+.result {
+  display: grid;
+  gap: var(--space-lg);
+  max-width: 36rem;
+}
+
+.message {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.title {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.title:focus-visible {
+  outline: 3px solid var(--teal);
+  outline-offset: var(--space-xs);
+}
+
+.description {
+  margin: 0;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.facts {
+  display: grid;
+  gap: var(--space-sm);
+  margin: 0;
+}
+
+.fact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs) var(--space-md);
+}
+
+.fact dt {
+  color: var(--text-muted);
+}
+
+.fact dd {
+  margin: 0;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}

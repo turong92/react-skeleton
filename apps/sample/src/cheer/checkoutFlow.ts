@@ -1,0 +1,203 @@
+import { isErrorCode, retryAfterSeconds, ErrorCodes } from '@skeleton/api-client'
+import {
+  INTENT_KEY_TTL_MS,
+  PaymentLedgerErrorCodes,
+  PaymentRedirectError,
+  readCheckoutReturn,
+  type Checkout,
+  type CreateOrderInput,
+  type CreateOrderResult,
+  type OpenCheckoutOptions,
+  type OrderStatus,
+} from '@skeleton/payment'
+import { CHEER_ITEM_TYPE } from './types'
+
+/** 우리가 실패 주소에 직접 싣는 주문 id 의 이름 — 결제창은 그만둠(`PAY_PROCESS_CANCELED`)에 `orderId` 를 싣지 않을 수 있다 */
+export const RETURN_ORDER_PARAM = 'order'
+
+/**
+ * 결제창이 돌려보낼 주소 — 이 앱의 한 화면(`/payments/return`)이 성공 · 실패를 모두 받아 주소의 모양으로 가른다. 서버는 이 주소를 받지도 저장하지도 않는다.
+ * 실패 주소에는 우리 주문 id 를 직접 싣는다(주문을 만든 뒤에 짓는다) — 결제창이 어느 주문인지 말해 주지 않아도 화면이 그 주문을 닫는다.
+ */
+export function checkoutReturnUrls(
+  origin: string,
+  orderId: string,
+): Pick<OpenCheckoutOptions, 'successUrl' | 'failUrl'> {
+  const back = `${origin.replace(/\/+$/, '')}/payments/return`
+  return {
+    successUrl: back,
+    failUrl: `${back}?${RETURN_ORDER_PARAM}=${encodeURIComponent(orderId)}`,
+  }
+}
+
+export type StartCheerDeps = {
+  createOrder: (input: CreateOrderInput) => Promise<CreateOrderResult>
+  openCheckout: (
+    checkout: Checkout,
+    urls: Pick<OpenCheckoutOptions, 'successUrl' | 'failUrl'>,
+  ) => Promise<void>
+  abandonOrder: (orderId: string) => Promise<unknown>
+  /** 이 주문의 결제창이 돌려보낼 주소 */
+  urlsFor: (orderId: string) => Pick<OpenCheckoutOptions, 'successUrl' | 'failUrl'>
+}
+
+/**
+ * - `opened`: 결제창이 열렸다(대개 이 화면을 떠난다).
+ * - `canceled`: 사람이 창을 닫았다 — 주문은 돌려놓았다(`abandon`). 오류가 아니다.
+ * - `window-failed`: 창이 못 열렸다(스크립트 차단 · 네트워크). 주문은 그대로 두고 `created` 로 돌려준다 — 화면이 들고 있다가 다시 누르면 `startCheer` 의 세 번째 인자로 넘겨 창만 다시 연다(누를 때마다 새 주문이 쌓이지 않는다).
+ * - `order-failed`: 서버가 주문을 거절했다(목록에 없는 금액 · 결제 꺼짐 · 요청이 많음 …)거나, 같은 키의 주문이 닫혀서 결제창 값 없이 돌아왔다. 창은 열지 않았다.
+ * - `settled`: 같은 키의 주문이 이미 결제됐거나(`PAID` · 환불 계열) 승인 중(`CONFIRMING`)이라 결제창 값 없이 돌아왔다 - 실패가 아니다. 화면은 그 주문의 한 건 화면으로 보낸다. 창은 열지 않았다.
+ * - `unavailable`: 서버에 결제창 키가 없다(`clientKey: null`) - 다시 눌러도 열 수 없다. 만든 주문은 돌려놓았다(`abandon`).
+ */
+export type StartCheerResult =
+  | { kind: 'opened' }
+  | { kind: 'canceled' }
+  | { kind: 'settled'; orderId: string }
+  | { kind: 'unavailable' }
+  | { kind: 'window-failed'; error: unknown; created: CreateOrderResult }
+  | { kind: 'order-failed'; error: unknown }
+
+/** 같은 키를 다시 보냈을 때 결제창 값 없이 돌아와도 실패가 아닌 주문 - 돈이 이미 움직였다 */
+const MONEY_MOVED: ReadonlySet<OrderStatus> = new Set<OrderStatus>([
+  'PAID',
+  'CONFIRMING',
+  'PARTIALLY_REFUNDED',
+  'REFUNDED',
+])
+
+// 토스 SDK 가 창을 닫을 때 던지는 코드(`USER_CANCEL`)와, 결제창이 failUrl 에 싣는 코드(`PAY_PROCESS_CANCELED`)
+const CLOSED_CODES = new Set(['USER_CANCEL', 'PAY_PROCESS_CANCELED'])
+const codeOf = (error: unknown) =>
+  typeof error === 'object' && error !== null && 'code' in error
+    ? String((error as { code: unknown }).code)
+    : null
+
+/**
+ * 금액을 고르고 「응원하기」를 눌렀을 때 — 서버 목록의 `itemRef` 로 주문을 만들고 결제창을 연다.
+ * `reuse` 는 같은 금액으로 앞서 창을 못 열었을 때 돌려받은 주문 — 있으면 주문을 새로 만들지 않고 그 주문의 창만 다시 연다.
+ */
+export async function startCheer(
+  deps: StartCheerDeps,
+  itemRef: string,
+  reuse?: CreateOrderResult,
+): Promise<StartCheerResult> {
+  let created: CreateOrderResult
+  if (reuse) created = reuse
+  else
+    try {
+      created = await deps.createOrder({ itemType: CHEER_ITEM_TYPE, itemRef })
+    } catch (error) {
+      return { kind: 'order-failed', error }
+    }
+  // 같은 키를 다시 보냈는데 주문이 이미 결제할 수 있는 상태가 아니면 서버는 결제창 값 없이 답한다(`checkout: null`) - 열 창이 없다.
+  // 이미 돈이 움직인 주문(결제됨 · 승인 중 · 환불)은 실패가 아니라 그 주문의 화면으로 보낸다. 그 밖(닫힘)은 실패 - 키는 이 답으로 풀렸으니(성공) 다음 누름은 새 주문이다
+  const { checkout } = created
+  if (checkout == null) {
+    if (MONEY_MOVED.has(created.order.status)) return { kind: 'settled', orderId: created.order.id }
+    return { kind: 'order-failed', error: new Error('The order is no longer open for payment') }
+  }
+  // 서버에 결제창 키가 없다 - 다시 눌러도 같다. 만든 주문을 돌려놓고(못 돌려놓아도 서버의 만료 작업이 닫는다) 「지금은 결제할 수 없어요」로 말한다
+  if (!checkout.clientKey) {
+    await deps.abandonOrder(created.order.id).catch(() => undefined)
+    return { kind: 'unavailable' }
+  }
+  try {
+    await deps.openCheckout(checkout, deps.urlsFor(created.order.id))
+    return { kind: 'opened' }
+  } catch (error) {
+    const code = codeOf(error)
+    if (code !== null && CLOSED_CODES.has(code)) {
+      // 돌려놓지 못해도 사람은 창을 닫았다 — 서버의 만료 작업이 닫는다
+      await deps.abandonOrder(created.order.id).catch(() => undefined)
+      return { kind: 'canceled' }
+    }
+    return { kind: 'window-failed', error, created }
+  }
+}
+
+/** 결제창을 못 연 채 화면이 들고 있는 주문 — `since` 는 결제창이 안 열린 것을 안 때(ms) */
+export type UnopenedOrder = { itemRef: string; created: CreateOrderResult; since: number }
+
+/**
+ * 「응원하기」를 다시 눌렀을 때 새 주문 대신 다시 열 주문 — 같은 금액이고 {@link INTENT_KEY_TTL_MS} 안일 때만.
+ * 이 상수는 결제창 유효 시간보다 짧은 수로 빌려 쓴 것이다. 시간이 지나면 버린다: 서버가 그 주문을 닫았을 수 있고, 멱등 키도 같은 시간에 새로 바뀐다(`createIntentKeys`).
+ */
+export function reusableOrderOf(
+  unopened: UnopenedOrder | null,
+  itemRef: string,
+  now: number,
+): CreateOrderResult | undefined {
+  if (unopened === null || unopened.itemRef !== itemRef) return undefined
+  return now - unopened.since >= INTENT_KEY_TTL_MS ? undefined : unopened.created
+}
+
+/** `startCheer` 가 끝난 뒤 화면이 들고 있을 주문 — 창이 안 열린 경우만 남기고 나머지는 비운다. 같은 주문의 창이 또 안 열려도 주문이 젊어지지 않는다 */
+export function unopenedAfter(
+  result: StartCheerResult,
+  itemRef: string,
+  now: number,
+  previous: UnopenedOrder | null,
+): UnopenedOrder | null {
+  if (result.kind !== 'window-failed') return null
+  return {
+    itemRef,
+    created: result.created,
+    since: previous?.created === result.created ? previous.since : now,
+  }
+}
+
+/** 결제창에서 돌아온 주소가 화면에 시키는 일 */
+export type ReturnPlan =
+  | { kind: 'confirm'; orderId: string; providerPaymentId: string; amount: number }
+  /** 결제창이 실패 주소로 돌려보냈다. `canceled` 는 사람이 창을 닫은 경우 */
+  | { kind: 'left'; orderId: string | null; canceled: boolean }
+  | { kind: 'invalid' }
+
+export function returnPlanOf(search: string): ReturnPlan {
+  try {
+    const read = readCheckoutReturn(search)
+    if (read.ok)
+      return {
+        kind: 'confirm',
+        orderId: read.orderId,
+        providerPaymentId: read.providerPaymentId,
+        amount: read.amount,
+      }
+    // 결제창이 주문 id 를 싣지 않아도(그만둠) 우리가 실패 주소에 실은 것이 있다
+    const ours = new URLSearchParams(search).get(RETURN_ORDER_PARAM)
+    return {
+      kind: 'left',
+      orderId: ours || read.orderId,
+      canceled: read.code === 'PAY_PROCESS_CANCELED',
+    }
+  } catch (error) {
+    if (error instanceof PaymentRedirectError) return { kind: 'invalid' }
+    throw error
+  }
+}
+
+/**
+ * 주문을 거절당했을 때 화면이 말할 것.
+ * - `rateLimited`(429): 고정 창이 끝날 때까지 몇 번을 눌러도 429이고 같은 키 재전송도 한도를 쓴다 - 「다시 눌러 주세요」가 아니라 **언제** 다시 누를지 말한다.
+ *   `until`(ms) 은 서버가 알려 준 기다림(초)이 끝나는 **시각**이다 - 그 시각을 문장에 쓰고(남은 분은 줄지 않으니 쓰지 않는다) 그때까지 단추를 막는다. 못 읽으면 `null`(「잠시 뒤에」) - 시간을 모르면 막지 않는다.
+ * - `unavailable`(503 `PAYMENT.UNAVAILABLE`): 결제창을 여는 결제사가 없다 - 클라이언트 키가 없을 때와 같은 막힘이다(다시 눌러도 같고 누를 때마다 한도를 쓴다)
+ * - `notOffered`: 목록에 없는 금액(422) · `orderFailed`: 그 밖
+ */
+export type OrderFailure =
+  | { kind: 'rateLimited'; until: number | null }
+  | { kind: 'unavailable' }
+  | { kind: 'notOffered' }
+  | { kind: 'orderFailed' }
+
+export function orderFailureOf(error: unknown, now: number): OrderFailure {
+  if (isErrorCode(error, ErrorCodes.COMMON_TOO_MANY_REQUESTS)) {
+    const seconds = retryAfterSeconds(error)
+    return seconds === undefined || seconds <= 0
+      ? { kind: 'rateLimited', until: null }
+      : { kind: 'rateLimited', until: now + seconds * 1000 }
+  }
+  if (isErrorCode(error, PaymentLedgerErrorCodes.UNAVAILABLE)) return { kind: 'unavailable' }
+  if (isErrorCode(error, PaymentLedgerErrorCodes.ITEM_NOT_PURCHASABLE))
+    return { kind: 'notOffered' }
+  return { kind: 'orderFailed' }
+}

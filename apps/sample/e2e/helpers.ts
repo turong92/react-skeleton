@@ -51,6 +51,8 @@ export async function signIn(page: Page, baseUrl: string, account = DEMO) {
   await dismissConsent(page)
   await page.getByRole('link', { name: ko('header.signIn'), exact: true }).click()
   await fillSignIn(page, account)
+  // 로그인 화면에도 h1 이 있어 그것만으로는 로그인이 끝났는지 모른다 — 다음 `goto` 가 로그인 요청을 끊지 않게, 로그인 화면을 떠날 때(= 세션이 생겼을 때)까지 기다린다
+  await page.waitForURL((url) => url.pathname !== '/login')
   await page.getByRole('heading', { level: 1 }).first().waitFor()
 }
 

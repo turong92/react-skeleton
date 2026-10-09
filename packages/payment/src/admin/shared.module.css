@@ -1,0 +1,105 @@
+/* 운영자 부품이 함께 쓰는 조각 — 목록 틀 · 줄 끝 행동 · 낭독 전용 글자 */
+.list {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+/*
+ * 좁은 화면에서 표는 열을 쥐어짜지 않고 자기 안에서 가로로 스크롤된다(`@skeleton/ui` 의 `Table` 이 스크롤 영역).
+ * 최소 폭이 없으면 `overflow-wrap: anywhere`(코드 열)와 한글 줄바꿈이 열을 한 글자 폭까지 줄여 글자가 세로로 쪼개진다.
+ */
+.list table {
+  min-width: 44rem;
+}
+
+.more {
+  display: flex;
+  justify-content: center;
+}
+
+.error {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.cell {
+  display: grid;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.muted {
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+  overflow-wrap: anywhere;
+}
+
+.code {
+  font-family: var(--mono);
+  font-size: var(--font-size-small);
+  overflow-wrap: anywhere;
+}
+
+.amount {
+  color: var(--text);
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+/*
+ * `renderAction` 이 라우터 링크에 붙이는 클래스 — `@skeleton/ui` 의 작은 보조 `Button`(secondary · sm)과 같은 모양.
+ * 쉬는 상태에서도 테두리와 바탕이 있다(글자만 있는 링크 금지), hover · active · focus-visible 이 서로 다르고 높이는 36px(거친 포인터는 44px).
+ */
+.actionLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0 var(--space-md);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-strong);
+  font-size: var(--font-size-small);
+  font-weight: 650;
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+@media (pointer: coarse) {
+  .actionLink {
+    min-height: 44px;
+  }
+}
+
+.actionLink:hover {
+  border-color: var(--teal);
+  background: var(--teal-wash);
+}
+
+.actionLink:active {
+  border-color: var(--teal);
+  background: var(--teal-soft);
+}
+
+.actionLink:focus-visible {
+  outline: 3px solid var(--teal);
+  outline-offset: 2px;
+}

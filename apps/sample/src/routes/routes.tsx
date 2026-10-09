@@ -7,15 +7,21 @@ import { AppFrame } from '../layouts/AppFrame'
 import type { MessageKey } from '../i18n'
 import type { SeoHandle } from '../seo/routeSeo'
 import { AdminAccountsPage } from './AdminAccountsPage'
+import { AdminPaymentPage } from './AdminPaymentPage'
+import { AdminPaymentsPage } from './AdminPaymentsPage'
 import { BoardFormPage } from './BoardFormPage'
 import { BoardPage } from './BoardPage'
 import { BoardPostPage } from './BoardPostPage'
+import { CheerPage } from './CheerPage'
+import { CheersPage } from './CheersPage'
 import { HomeRoute } from './HomeRoute'
 import { LegalRoute } from './LegalRoute'
 import { NoteDetailPage } from './NoteDetailPage'
 import { NoteFormPage } from './NoteFormPage'
 import { NotesPage } from './NotesPage'
 import { NotFoundPage } from './NotFoundPage'
+import { PaymentDetailPage } from './PaymentDetailPage'
+import { PaymentReturnPage } from './PaymentReturnPage'
 import { SettingsPage } from './SettingsPage'
 
 const publicSeo = (
@@ -77,6 +83,19 @@ export const routes: RouteObject[] = [
             element: <BoardFormPage />,
             handle: privateSeo('nav.board'),
           },
+          // 응원하기 — 결제는 `@skeleton/payment`. `/payments/return` 은 `/payments/:id` 보다 먼저 맞는다(정적 경로가 앞선다)
+          { path: '/cheer', element: <CheerPage />, handle: privateSeo('nav.cheer') },
+          {
+            path: '/payments/return',
+            element: <PaymentReturnPage />,
+            handle: privateSeo('cheer.return.title'),
+          },
+          { path: '/cheers', element: <CheersPage />, handle: privateSeo('cheer.history.title') },
+          {
+            path: '/payments/:id',
+            element: <PaymentDetailPage />,
+            handle: privateSeo('cheer.detail.title'),
+          },
           { path: '/settings', element: <SettingsPage />, handle: privateSeo('nav.settings') },
           {
             element: <RequireRole roles={['ADMIN']} forbidden={<BlockedNotice />} />,
@@ -85,6 +104,17 @@ export const routes: RouteObject[] = [
                 path: '/admin/accounts',
                 element: <AdminAccountsPage />,
                 handle: privateSeo('nav.account'),
+              },
+              // 운영자 결제 도구 — 백엔드 `skeleton.payment.admin.enabled`. 정적 경로가 아니므로 `:id` 는 목록 뒤에
+              {
+                path: '/admin/payments',
+                element: <AdminPaymentsPage />,
+                handle: privateSeo('nav.adminPayments'),
+              },
+              {
+                path: '/admin/payments/:id',
+                element: <AdminPaymentPage />,
+                handle: privateSeo('nav.adminPayments'),
               },
             ],
           },

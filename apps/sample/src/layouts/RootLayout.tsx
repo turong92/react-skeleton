@@ -121,6 +121,7 @@ export function RootLayout() {
               </NavLink>
               <NavLink to="/notes">{t('nav.notes')}</NavLink>
               <NavLink to="/board">{t('nav.board')}</NavLink>
+              <NavLink to="/cheer">{t('nav.cheer')}</NavLink>
               <NavLink to="/settings">{t('nav.settings')}</NavLink>
             </>
           )

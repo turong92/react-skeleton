@@ -1,0 +1,128 @@
+import { paymentKeys, type PaymentConfig } from '@skeleton/payment'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { renderToStaticMarkup } from 'react-dom/server'
+import { MemoryRouter } from 'react-router-dom'
+import { afterEach, describe, expect, it } from 'vitest'
+import { cheerKeys } from '../cheer/queries'
+import type { CheerOption } from '../cheer/types'
+import { i18n } from '../i18n'
+import { CheerPage } from './CheerPage'
+
+afterEach(async () => {
+  await i18n.setLocale('ko', { remember: false })
+})
+
+const options: CheerOption[] = [1000, 3000, 5000].map((amount) => ({
+  itemRef: `cheer-${amount}`,
+  amount: { amount, currency: 'KRW' },
+}))
+const config = (over: Partial<PaymentConfig> = {}): PaymentConfig => ({
+  available: true,
+  testMode: true,
+  refundRequestsEnabled: true,
+  ...over,
+})
+
+function render(data: { options?: CheerOption[]; config?: PaymentConfig }) {
+  const client = new QueryClient()
+  if (data.options) client.setQueryData(cheerKeys.options(), data.options)
+  if (data.config) client.setQueryData(paymentKeys.config(), data.config)
+  return renderToStaticMarkup(
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <CheerPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  )
+}
+
+describe('CheerPage', () => {
+  it('shows the amounts the server offers as pressable choices, with the middle one already chosen', () => {
+    const html = render({ options, config: config() })
+    expect(html).toContain('응원하기')
+    for (const label of ['1,000원', '3,000원', '5,000원']) expect(html).toContain(label)
+    expect(html.match(/role="radio"/g)).toHaveLength(3)
+    expect(html).toMatch(/<button[^>]*aria-checked="true"[^>]*>.*?3,000원/)
+  })
+
+  it('has exactly one filled button — the one that pays (the choices are outlined)', () => {
+    const html = render({ options, config: config() })
+    expect(html.match(/data-variant="primary"/g)).toHaveLength(1)
+    expect(html).toMatch(/<button[^>]*data-variant="primary"[^>]*>[^<]*응원하기/)
+  })
+
+  it('says it is a test payment next to the button when the server runs on test keys', () => {
+    expect(render({ options, config: config({ testMode: true }) })).toContain('테스트 결제예요')
+    expect(render({ options, config: config({ testMode: false }) })).not.toContain(
+      '테스트 결제예요',
+    )
+  })
+
+  it('a button that cannot be pressed stays reachable and says why next to it (not a bare disabled button)', () => {
+    const html = render({ options, config: config({ available: false }) })
+    const button = html.match(/<button[^>]*data-variant="primary"[^>]*>/)?.[0] ?? ''
+    expect(button).toContain('aria-disabled="true"')
+    expect(button).not.toMatch(/\sdisabled/)
+    const describedBy = button.match(/aria-describedby="([^"]+)"/)?.[1]
+    expect(describedBy).toBeTruthy()
+    expect(html).toMatch(new RegExp(`id="${describedBy}"[^>]*>지금은 결제를 쓸 수 없어요`))
+  })
+
+  it('a re-read of the amounts that fails while they are on screen keeps the form (nothing to reload, the choices are still good)', () => {
+    const client = new QueryClient()
+    client
+      .getQueryCache()
+      .build(client, { queryKey: cheerKeys.options() })
+      .setState({
+        status: 'error',
+        error: new Error('network'),
+        fetchStatus: 'idle',
+        data: options,
+      })
+    const html = renderToStaticMarkup(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <CheerPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+    expect(html).toContain('role="radio"')
+  })
+
+  it('while the amounts are loading there is a spinner and no way to pay', () => {
+    const html = render({})
+    expect(html).toContain('불러오는 중')
+    expect(html).not.toContain('role="radio"')
+  })
+
+  it('an empty list of amounts says so instead of showing a button that pays nothing', () => {
+    const html = render({ options: [], config: config() })
+    expect(html).toContain('고를 수 있는 금액이 없어요')
+    expect(html).not.toContain('role="radio"')
+  })
+
+  it('English: the English words and a currency the English reader knows', async () => {
+    await i18n.setLocale('en', { remember: false })
+    const html = render({ options, config: config() })
+    expect(html).toContain('Send a cheer')
+    expect(html).toContain('₩3,000')
+    expect(html).not.toMatch(/[가-힣]/)
+  })
+
+  it('the rate-limit sentences name the time it opens again, never a count of minutes that would not shrink, in both languages', async () => {
+    expect(i18n.t('cheer.rateLimited', { time: '오후 3:42' })).toBe(
+      '요청이 많아요. 오후 3:42 이후에 다시 눌러 주세요.',
+    )
+    expect(i18n.t('cheer.rateLimitedWait', { time: '오후 3:42' })).toBe(
+      '오후 3:42 이후에 다시 누를 수 있어요',
+    )
+    await i18n.setLocale('en', { remember: false })
+    expect(i18n.t('cheer.rateLimited', { time: '3:42 PM' })).toBe(
+      'There are too many requests. Please try again after 3:42 PM.',
+    )
+    expect(i18n.t('cheer.rateLimitedWait', { time: '3:42 PM' })).toBe(
+      'You can press again after 3:42 PM',
+    )
+    expect(i18n.t('cheer.rateLimitedSoon')).toContain('in a moment')
+  })
+})

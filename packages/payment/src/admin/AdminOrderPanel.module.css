@@ -1,0 +1,104 @@
+.body {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--space-md) var(--space-lg);
+  margin: 0;
+}
+
+.fact {
+  display: grid;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.fact dt {
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+}
+
+.fact dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.code {
+  font-family: var(--mono);
+  font-size: var(--font-size-small);
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--font-size-body);
+}
+
+.muted {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+  overflow-wrap: anywhere;
+}
+
+.flags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.action {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm) var(--space-md);
+}
+
+.reason {
+  color: var(--text);
+  font-size: var(--font-size-small);
+  overflow-wrap: anywhere;
+}
+
+.refunds,
+.events {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.refund {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs) var(--space-md);
+  padding: var(--space-sm) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.event {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs) var(--space-md);
+  padding: var(--space-sm) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.decide {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+/* 방금 환불이 나갔다는 말 - 눌리는 것이 아니라 결과이므로 단추 모양이 아니고 굵은 글자다 */
+.done {
+  margin: 0;
+  color: var(--text-strong);
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}

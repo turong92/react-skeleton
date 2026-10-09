@@ -35,6 +35,8 @@ export default defineConfig(({ mode }) => ({
               '/admin',
               '/notes',
               '/board',
+              '/cheer',
+              '/payments',
               '/settings',
             ],
           },

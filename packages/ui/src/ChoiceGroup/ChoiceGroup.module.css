@@ -1,0 +1,37 @@
+/* 선택 묶음 — 칸 하나씩이 보조 단추 모양이라 쉬는 상태에서도 눌리는 것으로 보인다. 고른 칸은 테두리 · 바탕 · 안쪽 선 · 체크로 분명하다 */
+.group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+}
+
+.choice {
+  min-height: 56px;
+  min-width: 128px;
+  gap: var(--space-sm);
+  font-size: var(--font-size-body);
+}
+
+/* 안 고른 칸에 올린 손 — 고른 칸(청록 테두리 · 청록 바탕 · 안쪽 선 · ✓)과 닮지 않게 테두리만 진해진다. Button 보조 hover 보다 앞서도록 [role] 로 한 단 올린다 */
+.group .choice[role='radio']:hover:not([aria-checked='true']):not([aria-disabled='true']) {
+  border-color: var(--text-muted);
+  background: var(--surface-alt);
+}
+
+/* 고른 칸 — Button 보조 모양(0,2,0)보다 앞서도록 그룹 안에서 */
+.group .choice[aria-checked='true'] {
+  border-color: var(--teal);
+  background: var(--teal-wash);
+  box-shadow: inset 0 0 0 1px var(--teal);
+  font-weight: 750;
+}
+
+.check {
+  color: var(--teal);
+  font-weight: 800;
+}
+
+.group .choice[aria-disabled='true'] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}

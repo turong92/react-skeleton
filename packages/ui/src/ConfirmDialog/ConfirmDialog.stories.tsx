@@ -123,10 +123,43 @@ export const BusyLocksBothButtons: Story = {
   },
 }
 
+/** 한국어 화면에서 스피너가 영어 「Loading」으로 읽히지 않게 — 이름을 넘긴다 */
+export const BusyNamesItsSpinner: Story = {
+  args: { open: true, busy: true, loadingLabel: 'Deleting' },
+  play: async () => {
+    await screen.findByRole('dialog', { name: 'Delete project' })
+    await expect(screen.getByRole('button', { name: /Deleting/ })).toBeDisabled()
+    await expect(screen.queryByText('Loading')).toBeNull()
+  },
+}
+
 export const Dark: Story = {
   globals: { theme: 'dark' },
   args: { open: true },
   play: async () => {
     await expect(await screen.findByRole('dialog', { name: 'Delete project' })).toBeVisible()
+  },
+}
+
+export const BlockedConfirmStaysReachable: Story = {
+  render: () => (
+    <Demo
+      confirmBlockedBy="blocked-why"
+      description={<p id="blocked-why">Another delete is already running.</p>}
+    />
+  ),
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole('button', { name: 'Delete…' }))
+    await screen.findByRole('dialog', { name: 'Delete project' })
+    const confirm = screen.getByRole('button', { name: 'Delete project' })
+    // 막혔지만 닿는다 — 꺼지지(disabled) 않고, 이유가 단추 설명으로 낭독되고, 눌러도 아무 일 없다
+    await expect(confirm).toHaveAttribute('aria-disabled', 'true')
+    await expect(confirm).not.toBeDisabled()
+    await expect(confirm).toHaveAccessibleDescription('Another delete is already running.')
+    confirm.focus()
+    await expect(confirm).toHaveFocus()
+    await userEvent.click(confirm)
+    await expect(onConfirm).not.toHaveBeenCalled()
+    await expect(screen.getByRole('dialog')).toBeVisible()
   },
 }

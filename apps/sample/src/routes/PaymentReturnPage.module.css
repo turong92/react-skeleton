@@ -1,0 +1,11 @@
+.page {
+  display: grid;
+  gap: var(--space-xl);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-md);
+}

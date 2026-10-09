@@ -57,3 +57,26 @@ export const LongTitle: Story = {
     await expect(canvas.getByRole('button', { name: 'Edit' })).toBeVisible()
   },
 }
+
+/** 끊을 곳이 없는 긴 낱말(공백 없는 이름 · 주소)이 제목 줄에서 삐져나가지 않는다 — 제목이 줄을 바꾸고 `actions` 는 아래로 내려간다 */
+export const UnbreakableTitleStaysInside: Story = {
+  args: {
+    title: 'Supercalifragilisticexpialidocious'.repeat(3),
+    actions: <Button size="sm">Edit</Button>,
+  },
+  render: (args) => (
+    <div data-testid="frame" style={{ width: '20rem' }}>
+      <Card {...args} />
+    </div>
+  ),
+  play: async ({ canvas }) => {
+    const frame = canvas.getByTestId('frame')
+    await expect(frame.scrollWidth).toBeLessThanOrEqual(frame.clientWidth)
+    await expect(
+      canvas.getByRole('heading', { level: 2 }).getBoundingClientRect().right,
+    ).toBeLessThanOrEqual(frame.getBoundingClientRect().right)
+    await expect(
+      canvas.getByRole('button', { name: 'Edit' }).getBoundingClientRect().right,
+    ).toBeLessThanOrEqual(frame.getBoundingClientRect().right)
+  },
+}

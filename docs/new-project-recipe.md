@@ -142,7 +142,7 @@ scripts/new-project.sh ~/work/saas/web saas --packages marketing,payment,notific
 <!-- kotlin-stamp: saas -->
 
 ```bash
-scripts/new-project.sh ~/work/saas/api dev.example.saas saas Saas --modules payment,payment-toss,notification,notification-jdbc --db mysql
+scripts/new-project.sh ~/work/saas/api dev.example.saas saas Saas --modules payment,payment-jdbc,payment-toss,notification,notification-jdbc --db mysql
 ```
 
 그다음:
@@ -154,7 +154,7 @@ cd ~/work/saas/api && scripts/dev.sh
 cd ~/work/saas/web && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm capabilities:check
 ```
 
-손으로 써야 하는 것: 토스 결제 위젯과 성공/실패 라우트(`confirmRequestFromTossRedirect`), 주문 · 금액 검증 컨트롤러(백엔드가 HTTP 를 열지 않는다 — `skeleton.payment-toss` 켜기 + `secret-key`), 요금제 데이터, 화면별 데이터 훅(Patterns 복사), 가입 폼의 `<Turnstile>`.
+손으로 써야 하는 것: 결제 화면과 성공/실패 라우트(`openCheckout` · `readCheckoutReturn` 은 패키지에 있다 — 부품은 아직 없다), 주문 · 금액 검증 컨트롤러(장부 저장 모듈 `payment-jdbc` 가 kotlin-skeleton 에 들어오기 전에는 백엔드가 HTTP 를 열지 않는다 — `skeleton.payment-toss` 켜기 + `secret-key`), 요금제 데이터, 화면별 데이터 훅(Patterns 복사), 가입 폼의 `<Turnstile>`.
 
 ### 예 3. 콘텐츠 · 랜딩 사이트 (서버 렌더링) — 검색에 노출되는 소개 · 요금 · 약관
 

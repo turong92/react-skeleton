@@ -4,6 +4,8 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { TestProject } from 'vitest/node'
 import { FAKE_LINE, FAKE_X, startFakeProviders, type FakeProviders } from './fakeProviders'
+import { FAKE_TOSS, startFakeToss, type FakeToss } from './fakeToss'
+import { PAYMENT_E2E_SKELETON } from './paymentE2eConfig'
 
 /*
  * e2e 준비 — 1) 백엔드(kotlin-skeleton 의 `scripts/sample-e2e-backend.sh start`: 새 DB · 로컬 S3 · apps/sample 기동, 준비되면 `READY <주소>` 한 줄을 찍는다)
@@ -16,6 +18,11 @@ import { FAKE_LINE, FAKE_X, startFakeProviders, type FakeProviders } from './fak
  * 가짜 소셜 제공자: 기본으로 켠다 — 백엔드를 올리기 전에 가짜 LINE · X 를 띄우고 그 주소로 백엔드의 LINE · X 설정(`SPRING_APPLICATION_JSON`)을 덮는다
  *   (`auth-social-oidc` · `auth-social-x` 모듈이 있는 백엔드용; `E2E_FAKE_PROVIDERS=0` 이면 끄고 소셜 시나리오는 건너뛴다). 약관 재동의 필터를 시험하려면 `SKELETON_LEGAL_RECONSENT_ENABLED=true`(로컬 프로필은 꺼 둔다).
  *
+ * 가짜 토스: 기본으로 켠다 — 백엔드를 올리기 전에 가짜 토스(`fakeToss.ts`)를 띄우고 백엔드가 그것을 보게 한다(`SKELETON_PAYMENT_TOSS_BASE_URL` · `_SECRET_KEY` · `_CLIENT_KEY` · `_ENABLED`,
+ *   운영자 경로 `SKELETON_PAYMENT_ADMIN_ENABLED`, 그리고 `SPRING_APPLICATION_JSON` 의 `skeleton.payment` · `skeleton.http.clients.payment-toss` — 조회 작업이 곧 돌고(`reconcile.first-delay`) 결제 가능 시간이 짧다(`checkout-ttl`), 결제사 응답 제한은 첫 조회보다 짧다(`response-timeout`),
+ *   주문 만들기 요청 수 한도(계정 10 · IP 30 / 10분)를 푼다(`http.order-rate-limit`), 웹훅 주소 조각(`webhook.path-token`) — 값은 `paymentE2eConfig.ts`).
+ *   `payment-jdbc` · `payment-toss` 가 없는 백엔드에서는 이 값들이 쓰이지 않고 결제 시나리오는 건너뛴다. `E2E_FAKE_TOSS=0` 이면 끈다.
+ *
  * 환경변수: E2E_API_URL — 이미 떠 있는 백엔드를 쓴다(기동 · 정리를 건너뜀) · SAMPLE_API_DIR — 백엔드 레포 위치(기본: 이 레포 옆 ../kotlin-skeleton)
  */
 declare module 'vitest' {
@@ -26,6 +33,8 @@ declare module 'vitest' {
     mailUrl: string
     /** 가짜 LINE · X(`fakeProviders.ts`) — `E2E_FAKE_PROVIDERS=0` 이면 빈 문자열 */
     fakeUrl: string
+    /** 가짜 토스(`fakeToss.ts`) — `E2E_FAKE_TOSS=0` 이거나 이미 떠 있는 백엔드(`E2E_API_URL`)를 쓰면 빈 문자열 */
+    fakeTossUrl: string
   }
 }
 
@@ -61,6 +70,7 @@ export default async function setup(project: TestProject) {
   let backendScript: string | null = null
   let backendEnv: NodeJS.ProcessEnv = process.env
   let fake: FakeProviders | null = null
+  let fakeToss: FakeToss | null = null
   let apiUrl = process.env.E2E_API_URL ?? ''
   let mailUrl = process.env.E2E_MAIL_URL ?? ''
   if (!apiUrl) {
@@ -74,6 +84,8 @@ export default async function setup(project: TestProject) {
     ]
     // 가짜 소셜 제공자는 기본으로 켠다 — 표준 e2e 한 번이 소셜 여정까지 돌게(`E2E_FAKE_PROVIDERS=0` 이면 끈다: 소셜 없는 백엔드 구성)
     if (process.env.E2E_FAKE_PROVIDERS !== '0') fake = await startFakeProviders()
+    // 가짜 토스도 기본으로 켠다 — 결제 여정(결제창 → 승인 → 조회 → 환불)을 진짜 토스 없이 끝까지(`E2E_FAKE_TOSS=0` 이면 끈다: 결제 없는 백엔드 구성)
+    if (process.env.E2E_FAKE_TOSS !== '0') fakeToss = await startFakeToss()
     // 링크 로그인 요청은 같은 IP(::1)에서 시간당 10번(`skeleton.auth-magic-link.per-ip`, 넘으면 429)이 한도다 — 이 실행의 시나리오는 한 백엔드에 새 계정을 여럿 만들어 10번을 넘는다. e2e 백엔드에서만 올린다
     // E2E_EMAIL_REAUTH_WINDOW=PT0S: 첫 이메일 등록의 재인증 면제 창을 없앤다 — 「1시간이 지난」 제공자 재동의 길(emailReauth.e2e.ts)을 만들 수 있는 유일한 길. 표준 실행에서는 쓰지 않는다
     // 아이디 정하기 한도(`login-id.claim-limit`: 계정마다 · IP 마다 시간당 10번 - 같은 IP 에서 계정을 여럿 만드는 이 실행은 넘는다)와 실시간 중복 확인의 IP 한도(`check-per-ip`)도 e2e 백엔드에서만 올린다
@@ -86,11 +98,16 @@ export default async function setup(project: TestProject) {
           : {}),
       },
     }
+    // 결제 시나리오가 기다릴 수 있는 시간 안에 끝나게(값과 까닭은 `paymentE2eConfig.ts`) — 응답 제한(10초)도 같이 싣는다: 백엔드는 `reconcile.first-delay` 가 그보다 길지 않으면 기동에 실패한다(스펙 §9.2)
+    const e2eSkeleton = {
+      ...e2eLimits,
+      ...(fakeToss ? PAYMENT_E2E_SKELETON : {}),
+    }
     const fakeConfig = fake
       ? {
           SPRING_APPLICATION_JSON: JSON.stringify({
             skeleton: {
-              ...e2eLimits,
+              ...e2eSkeleton,
               'auth-social-oidc': {
                 providers: {
                   line: {
@@ -124,10 +141,20 @@ export default async function setup(project: TestProject) {
             },
           }),
         }
-      : { SPRING_APPLICATION_JSON: JSON.stringify({ skeleton: e2eLimits }) }
+      : { SPRING_APPLICATION_JSON: JSON.stringify({ skeleton: e2eSkeleton }) }
+    const tossEnv = fakeToss
+      ? {
+          SKELETON_PAYMENT_TOSS_ENABLED: 'true',
+          SKELETON_PAYMENT_TOSS_BASE_URL: fakeToss.url,
+          SKELETON_PAYMENT_TOSS_SECRET_KEY: FAKE_TOSS.secretKey,
+          SKELETON_PAYMENT_TOSS_CLIENT_KEY: FAKE_TOSS.clientKey,
+          SKELETON_PAYMENT_ADMIN_ENABLED: 'true', // 운영자 경로(`/api/v1/admin/payments`) - 운영자 화면(`operatorPage`)과 API 시험이 쓴다
+        }
+      : {}
     backendEnv = {
       ...process.env,
       ...fakeConfig,
+      ...tossEnv,
       MARINA_DIRECT: '1',
       SERVER_PORT: String(serverPort),
       DB_PORT: String(dbPort),
@@ -201,6 +228,7 @@ export default async function setup(project: TestProject) {
   const stopAll = () => {
     killWeb()
     void fake?.close()
+    void fakeToss?.close()
     if (backendScript) spawnSync('bash', [backendScript, 'stop'], { env: backendEnv })
   }
 
@@ -215,5 +243,6 @@ export default async function setup(project: TestProject) {
   project.provide('apiUrl', apiUrl)
   project.provide('mailUrl', mailUrl)
   project.provide('fakeUrl', fake?.url ?? '')
+  project.provide('fakeTossUrl', fakeToss?.url ?? '')
   return stopAll
 }

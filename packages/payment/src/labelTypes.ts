@@ -1,0 +1,361 @@
+import type { ReviewReason, WebhookEventStatus } from './admin/types'
+import type { OrderStatus, RefundRequestReason, RefundStatus } from './ledgerTypes'
+
+/** 거절의 종류(`DECLINED` 의 `data.category`) — 모르는 값은 `OTHER` 문구 */
+export type DeclineCategory = 'LIMIT_OR_BALANCE' | 'CARD_DECLINED' | 'TEMPORARY' | 'OTHER'
+
+/** 환불 줄의 사유 — 본인이 고르는 셋과, 장부가 스스로 붙이는 둘(운영자가 한 환불 · 결제사 콘솔에서 일어난 환불) */
+export type RefundReasonCode = RefundRequestReason | 'OPERATOR' | 'PROVIDER_CONSOLE'
+
+/** 운영자 환불이 거절(`REFUND_DECLINED`)될 때의 종류(`data.category`) — 모르는 값은 `OTHER` 문구 */
+export type RefundDeclineCategory =
+  | 'ALREADY_REFUNDED'
+  | 'AMOUNT_EXCEEDED'
+  | 'PARTIAL_NOT_ALLOWED'
+  | 'PERIOD_EXPIRED'
+  | 'TEMPORARY'
+  | 'OTHER'
+
+export type Titled = { title: string; description: string }
+
+/** 운영자 목록 하나의 비었을 때 · 표 이름 */
+type AdminListLabels = { caption: string; emptyTitle: string; emptyDescription: string }
+
+/**
+ * 운영자 부품(`@skeleton/payment/admin`)의 글자 — `PaymentLabels.admin`. 낱말 규칙은 사용자 부품과 같다(스펙 §11.2):
+ * 돈을 돌려주는 일은 늘 「환불」(「승인」 · 「반려」 · 「취소」 없음), 결제사와 장부를 맞추는 일은 「결제사와 맞추기」(「동기화」 · 「대사」 없음).
+ */
+export type PaymentAdminLabels = {
+  /** 확인 필요 사유 코드 → 글자 */
+  reviewReason: Record<ReviewReason, string>
+  /** 이 패키지가 모르는 사유 코드의 중립 글자 — 코드는 그리지 않는다 */
+  reviewUnknown: string
+  /** 확인 필요 띠 아래의 다음 걸음 안내 - 돈 쪽 사유(결제사에 다시 물어 맞춘다) */
+  reviewHint: string
+  /** 지급 · 회수가 끝내 안 된 사유(`FULFILMENT_UNRESOLVED` · `REFUND_APPLY_UNRESOLVED`)의 안내 - 「결제사와 맞추기」가 그 일을 다시 건다 */
+  reviewHintRetry: string
+  /**
+   * 「결제사와 맞추기」를 누른 **뒤에도** 사유가 남았을 때의 안내(돈 쪽 사유 · 오래 남은 확인 중 · 오래 남은 환불) - 오래 남은 것으로 파생된 사유는 맞춰도 안 풀릴 수 있다.
+   * 같은 안내(「누르면 다시 물어봐요」)를 되풀이하지 않고 사실을 말한다
+   */
+  reviewHintSynced: string
+  /** 맞춘 뒤에도 지급 · 회수 사유가 남았을 때 - 그 일을 다시 걸었고, 끝나면 스스로 사라진다 */
+  reviewHintRetrySynced: string
+  /** 계정이 지워진 결제의 표시(결제 목록 줄 · 한 건 화면의 계정 옆) */
+  erasedAccount: string
+  /**
+   * 환불 **줄**에 찍히는 우리 쪽 이유 코드(`failureCode`) → 문장: `NOT_APPLIED` · `PROVIDER_PENDING` · `RESULT_MISMATCH` · `ORDER_REFUNDED` · `LATE_RESULT` ·
+   * `REFUND_DECLINED`(결제사가 코드 없이 확정 거절). 모르는 코드는 코드 그대로 그린다
+   */
+  refundFailure: Record<string, string>
+  /**
+   * **이력**에만 남는 이유 코드(`providerCode`) → 문장: `PROVIDER_PENDING_EXPIRED`(줄에는 안 찍힌다) · `LATE_RESULT`(이력 종류가 `REFUND_UNKNOWN` 이라 이력 이름이
+   * 「결과를 몰라요」로 읽히니, 이 문장이 그 이름을 대신한다). 모르는 코드는 참조 번호에 그대로 둔다
+   */
+  eventCodes: Record<string, string>
+  /** 이력 · 환불 줄의 행위자 */
+  actors: Record<'USER' | 'OPERATOR' | 'SYSTEM' | 'PROVIDER', string>
+  /** 이력 종류 코드 → 글자 */
+  eventTypes: Record<string, string>
+  /** 모르는 이력 종류의 중립 글자 */
+  unknownEvent: string
+  webhookStatus: Record<WebhookEventStatus, string>
+  /** 세 목록이 함께 쓰는 오류 제목 — 불러오는 중 · 다시 불러오기 · 더 보기 · 오류 설명은 `list.*` 를 쓴다 */
+  list: { errorTitle: string }
+  orders: AdminListLabels & {
+    /** 조건에 맞는 결제가 없을 때(찾는 중이라는 것을 말한다) */
+    noMatchTitle: string
+    noMatchDescription: string
+    columns: { payment: string; amount: string; method: string; status: string; time: string }
+    /** 조건 줄(`role="search"`)의 이름 */
+    filterLabel: string
+    statusFilter: string
+    statusAll: string
+    search: string
+    searchHint: string
+    searchSubmit: string
+    /** 「탈퇴한 계정의 결제도 보기」 스위치 - 서버는 탈퇴한 계정의 결제를 기본으로 숨긴다 */
+    includeErased: string
+    /** 스위치 설명 - 확인 필요 탭과 결제 번호로 찾을 때는 늘 보인다는 것 */
+    includeErasedHint: string
+    details: string
+    /** 단추의 낭독 이름 — 보이는 글자(`details`)로 시작한다 */
+    detailsFor: (orderName: string) => string
+  }
+  panel: {
+    id: string
+    account: string
+    provider: string
+    providerPayment: string
+    /** 결제가 안 된 이유 코드 앞 이름(`ErrorReference` 의 말머리) */
+    failureCode: string
+    /** 직접 환불(전액 · 부분) 단추 */
+    refund: string
+    /** 환불 요청이 열려 있어 직접 환불이 막힌 이유 — 진행 중이면 `refundBlocked.inProgress` */
+    refundBlockedByRequest: string
+    /**
+     * 다시 읽기가 실패해 화면이 낡았을 수 있다 - 돈이 나가는 단추(「환불하기」 · 「요청대로 환불하기」)가 막힌 이유.
+     * 방금 환불이 나갔는데 화면이 환불 전 그대로일 수 있어, 최신 내용을 본 뒤에만 누르게 한다
+     */
+    stale: string
+    /** 돈이 결제사와 어긋난 확인 필요(`REFUND_MISMATCH` …)라 먼저 맞추기를 권한다 - 돈이 나가는 단추(「환불하기」 · 「요청대로 환불하기」)가 막힌 이유(맞추기 단추가 있을 때) */
+    syncFirst: string
+    /** 같은 이유인데 화면에 「결제사와 맞추기」가 없다(`onSync` 없음) - 서버가 환불을 막는 사유(`REFUND_MISMATCH`)만 막고, 없는 단추로 보내지 않는다 */
+    moneyOff: string
+    /** 맞춘 뒤에도 돈이 어긋난 채다 - 방금 한 「결제사와 맞추기」를 또 하라고 하지 않고 결제사 화면을 보게 한다(`syncFirst` 대신) */
+    stillOff: string
+    /** 맞추기는 됐는데 방금 보낸 환불의 모름(잠금 · 키)을 못 놓았다 - 보낸 환불이 아직 가는 중일 수 있다. 몇 초 뒤에 다시 맞추면 되는지를 받는다 */
+    syncHeld: string
+    /** 방금 환불 호출이 성공했다고 말하는 상태 글자 - 금액을 받는다(재조회가 실패해도 이 말은 남는다) */
+    refunded: (amount: string) => string
+    /** 방금 환불이 나가는 중이다(`PENDING`) */
+    refunding: (amount: string) => string
+    sync: string
+    syncing: string
+    synced: string
+    syncErrors: {
+      unsupported: string
+      unavailable: string
+      /** 이 결제를 만든 키의 쪽(테스트 · 실제 결제)이 지금 키와 다르다 - 다시 해도 안 된다(409 `PAYMENT.MODE_MISMATCH`) */
+      modeMismatch: string
+      /** 결제사가 그 결제를 모른다(404 `PAYMENT.PROVIDER_PAYMENT_NOT_FOUND`) - 다시 건 일이 없다. 다시 해도 같다 */
+      providerNotFound: string
+      other: string
+    }
+    /** 요청 줄 옆 단추 — 보이는 글자와, 금액 · 결제 번호를 붙인 낭독 이름(줄마다 구별된다. 보이는 글자로 시작한다) */
+    approve: string
+    approveFor: (amount: string, orderId: string) => string
+    reject: string
+    rejectFor: (amount: string, orderId: string) => string
+    events: string
+    noEvents: string
+  }
+  refundDialog: {
+    direct: { title: string; note: string }
+    approve: { title: string; note: string }
+    reject: {
+      title: string
+      note: string
+      confirm: string
+      loading: string
+      /** 서버가 답했고 거절이 안 된 경우(404 …) */
+      error: string
+      /** 답을 잃어 거절됐는지 모르는 경우 */
+      unknown: string
+    }
+    confirm: string
+    loading: string
+    amountLabel: string
+    /** 환불할 수 있는 금액 안내 — 금액을 받는다 */
+    amountHint: (max: string) => string
+    requestedAmount: string
+    reason: string
+    dismiss: string
+    close: string
+    /** 금액 칸이 막힌 이유(확인 단추 옆) — 고칠 수 있는 것은 칸의 오류로, 막힌 확인은 이 글자를 단추 설명으로 */
+    blocked: {
+      empty: string
+      invalid: string
+      zero: string
+      exceeds: (max: string) => string
+    }
+    /** 결과를 모르는 동안 금액 · 사유 칸을 잠근 이유 한 줄 - 두 칸의 설명으로 이어진다. 같은 내용으로만 다시 보낼 수 있다 */
+    locked: string
+    /** 보내는 중에 금액 · 사유 칸을 잠근 이유 한 줄 - 두 칸의 설명이다. 보내는 동안 고친 값은 보낸 값이 아니다 */
+    sending: string
+    errors: {
+      /** 직접 환불이 지금은 안 된다(409) */
+      notAllowed: string
+      /** 직접 환불 · 승인의 409 `PAYMENT.MODE_MISMATCH` - 이 결제를 만든 키의 쪽(테스트 · 실제 결제)이 지금 키와 다르다. 다시 해도 안 된다 */
+      modeMismatch: string
+      /**
+       * 요청 승인의 409 - 이미 결정됐을 수도, 주문이 환불할 수 없거나 결제사에 결제가 없을 수도 있다(두 뜻). 중립으로 말하고 결제 한 건으로 보낸다
+       */
+      approveNotAllowed: string
+      /** 직접 환불의 409 `REFUND_IN_PROGRESS` 인데 열린 것이 기다리는 요청(`REQUESTED`)이다 - 「환불 중」이 아니다 */
+      requestWaiting: string
+      /** 요청 승인의 400 `REFUND_AMOUNT_EXCEEDED` - 요청 줄은 `REQUESTED` 로 남는다. 거절하거나 한 건에서 직접 환불 */
+      approveExceeded: string
+      amountExceeded: string
+      /** 서버가 요청을 선점 전에 모양이 틀렸다고 거절했다(400 `COMMON.VALIDATION_FAILED` 등) - 아무것도 나가지 않았다. 금액과 사유를 고쳐 다시 보낼 수 있다 */
+      invalid: string
+      declined: Record<RefundDeclineCategory, string>
+      /** 서버가 답했고 환불이 안 된 그 밖의 경우(404 …) */
+      other: string
+      /** 환불 전 확인 조회가 실패해 **보내지 않았다**(503 `PAYMENT.UNAVAILABLE`) — 확정이다, 아무것도 안 나갔다 */
+      unavailable: string
+      /** 답을 잃었다(네트워크 오류 · 시간 초과 · 5xx) — 환불이 나갔는지 모른다. 어디서 확인하는지 말한다 */
+      unknown: string
+      /** 답은 왔는데 환불 줄이 환불 없이 닫혀 있다(같은 키로 다시 보낸 답) */
+      notDone: string
+      /** 요청 승인 · 거절의 409 — 이미 결정됐거나 본인이 거뒀다 */
+      alreadyDecided: string
+      /** 요청 승인이 결제사 거절(402)로 끝났다 — 그 요청 줄은 닫혔다. 한 건에서 직접 환불로 안내 */
+      requestClosed: string
+    }
+  }
+  requests: AdminListLabels & {
+    columns: {
+      payment: string
+      amount: string
+      reason: string
+      requestedAt: string
+      status: string
+    }
+    details: string
+    detailsFor: (orderId: string) => string
+  }
+  webhooks: AdminListLabels & {
+    columns: {
+      receivedAt: string
+      event: string
+      resource: string
+      order: string
+      status: string
+      deliveries: string
+      reason: string
+    }
+    /**
+     * 표식 줄(`resourceType=LIMIT_MARKER`)이 이벤트 이름 자리에 쓰는 문장 - 한 결제의 알림이 창 상한에 걸려 창 끝에 조회 한 번으로 미뤄졌다(계약 8.2).
+     * 이 줄은 결제사가 보낸 것이 아니라 우리가 만든 줄이다. 줄의 상태로 네 문장 - 아직 기다린다(`waiting`) · 확인이 끝났다(`done`) · 이번 시도가 안 돼 작업이 다시 한다(`retrying`) · 시도를 다 써 손이 필요하다(`failed`)
+     */
+    limitMarker: {
+      /** 줄이 `RECEIVED` 다 - 창 끝에 도는 조회 한 번을 기다린다 */
+      waiting: string
+      /** 줄이 `PROCESSED` · `IGNORED` 로 끝났다 - 그 한 번의 조회가 끝났다 */
+      done: string
+      /** 줄이 `FAILED` 다 - 이번 시도가 안 됐고 작업이 다시 한다(계약 3 수신함). 사람에게 시키지 않는다 */
+      retrying: string
+      /** 줄이 `DEAD` 다 - 시도를 다 썼다. 다시 처리를 부탁한다 */
+      failed: string
+      /** 단추의 낭독 이름에 이벤트 이름 대신 쓰는 짧은 명사 */
+      name: string
+    }
+    /**
+     * 수신함 줄의 `resourceId` 가 `order:<주문 id>` 모양일 때 - 그 주문에는 결제사 결제 번호(결제 키)가 아직 없다.
+     * 코드를 그대로 보이지 않고, 어느 결제인지(`orderId`)와 함께 풀어 쓴다
+     */
+    noProviderPayment: (orderId: string) => string
+    retry: string
+    /** 「다시 처리」를 보낸 줄에 남는 상태 글자(`role="status"`) - 목록이 다시 읽힐 때까지 */
+    retried: string
+    /** 단추의 낭독 이름 — 같은 이벤트 이름이 여러 줄이니 줄을 가르는 값(결제 번호, 없으면 결제사 결제 번호)을 붙인다 */
+    retryFor: (eventType: string, target: string) => string
+    retrying: string
+  }
+}
+
+/**
+ * 결제 부품이 그리는 글자 전부 — 부품은 번역을 모른다. 기본은 영어(`labels.en.ts`)이고 한국어는 `koPaymentLabels`(`labels.ko.ts`).
+ * 일부만 덮어쓰려면 `labels={{ result: { paid: { title: '응원해 주셔서 고마워요' } } }}`(안쪽도 일부만 가능).
+ * 낱말은 한 벌로 통일한다(결제 · 환불 · 결제 확인 중 …) — 「쓰지 않는 말」이 문구에 없는 것은 `labels.test.ts` 가 지킨다.
+ * 화면 낭독이 읽는 글자(스피너 · 오류 말머리 · 닫기 단추)도 여기 있다 — 한국어 문구를 넘기면 영어가 남지 않는다.
+ */
+export type PaymentLabels = {
+  /** 안내 띠(`TestModeNotice`)의 낭독 말머리 */
+  noticeLabel: string
+  /** 「테스트 결제예요. 실제로 돈이 나가지 않아요」 */
+  testMode: string
+  orderStatus: Record<OrderStatus, string>
+  /** 열린 환불이 있는 동안(`PENDING`) 상태 알약 자리에 대신 보이는 글자. `REQUESTED` 는 `refundStatus.REQUESTED` */
+  refundInProgress: string
+  refundStatus: Record<RefundStatus, string>
+  /** `WITHDRAWN` 줄을 시스템이 닫았을 때(`closedBy: 'SYSTEM'` - 환불이 끝나 요청이 닫혔다) 알약 글자 - 본인이 거둔 줄은 `refundStatus.WITHDRAWN` */
+  refundClosedBySystem: string
+  /** 이 패키지가 아직 모르는 상태 코드의 중립 글자 — 코드는 화면에 그리지 않는다. 확인 필요한 결제의 알약(운영자 부품)도 같은 글자 */
+  unknownStatus: string
+  /** 오류 알림(`Alert`)의 낭독 말머리 */
+  errorLabel: string
+  /** 환불 사유 코드 → 글자. 모르는 코드는 글자 없이 둔다 */
+  refundReason: Record<RefundReasonCode, string>
+  /** 결제 수단 종류 코드(`CARD` · `EASY_PAY` …) → 글자. 모르는 코드는 보이지 않는다 */
+  methods: Record<string, string>
+  /** 카드사 코드(`HYUNDAI` …) → 이름. 모르는 코드는 `cardFallback` */
+  issuers: Record<string, string>
+  cardFallback: string
+  /** 통화 → 금액 뒤에 붙는 글자(`KRW: '원'` → 3,000원). 빈 글자나 없는 통화는 `Intl` 의 통화 표기 */
+  currencySuffix: Record<string, string>
+  failure: Record<DeclineCategory, string>
+  list: {
+    caption: string
+    emptyTitle: string
+    emptyDescription: string
+    /** 스피너의 낭독 이름 — 「더 보기」 단추가 일하는 동안에도 이것 */
+    loading: string
+    errorTitle: string
+    errorDescription: string
+    retry: string
+    details: string
+    /** 단추의 낭독 이름 — 보이는 글자(`details`)로 시작한다 */
+    detailsFor: (orderName: string) => string
+    loadMore: string
+  }
+  result: {
+    paid: Titled
+    /** 환불이 끝난 결제 */
+    refunded: Titled
+    confirming: Titled & { loading: string }
+    slow: Titled
+    failed: { title: string }
+    /** 서버가 이 승인 요청을 받지 않았고(400 · 409 · 404) 주문도 끝나지 않았다 — 돈이 나갔는지는 결제 내역이 말한다 */
+    unconfirmed: Titled
+    expired: Titled
+    canceled: Titled
+    viewHistory: string
+    retry: string
+  }
+  summary: {
+    /** 주문 이름(`orderName`) 칸의 이름 */
+    name: string
+    amount: string
+    method: string
+    paidAt: string
+    refunded: string
+    refundable: string
+    refunds: string
+    requestRefund: string
+    /** 내 환불 요청(`REQUESTED`) 줄 옆의 단추와, 그 단추가 일하는 동안의 낭독 이름 */
+    withdrawRefund: string
+    withdrawing: string
+  }
+  /** 환불 요청이 막힌 이유 — 단추 옆 글자와 환불 창의 오류가 같은 문장을 쓴다 */
+  refundBlocked: {
+    /** 이미 환불을 요청해 둔 상태(`REQUESTED`) */
+    requested: string
+    /** 환불이 진행 중(`PENDING`) */
+    inProgress: string
+    unavailable: string
+    /** 다시 읽기가 실패해 화면이 낡았을 수 있다 - 최신 내용을 본 뒤에 요청하게 */
+    stale: string
+  }
+  refundDialog: {
+    title: string
+    amountLabel: string
+    note: string
+    reason: string
+    confirm: string
+    /** 확인 단추가 일하는 동안의 낭독 이름 */
+    loading: string
+    /** 창을 닫는 단추 — 「취소」가 결제 취소로 읽히지 않게 「닫기」 */
+    dismiss: string
+    /** 모서리의 × 단추의 낭독 이름 */
+    close: string
+    /** 환불할 수 있는 금액이 0 일 때 */
+    nothingToRefund: string
+    errors: {
+      /** 든 키로 다시 보냈더니 그 요청 줄이 이미 거절 · 거둠으로 닫혀 있다 - 키가 놓였으니 다음 누름은 새 요청이다 */
+      closed: string
+      other: string
+    }
+  }
+  reference: { label: string; copy: string; copied: string }
+  admin: PaymentAdminLabels
+}
+
+export type DeepPartial<T> = T extends (...args: never[]) => unknown
+  ? T
+  : T extends object
+    ? { [K in keyof T]?: DeepPartial<T[K]> }
+    : T
+
+export type PaymentLabelsInput = DeepPartial<PaymentLabels>

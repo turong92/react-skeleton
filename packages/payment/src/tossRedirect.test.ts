@@ -52,4 +52,21 @@ describe('confirmRequestFromTossRedirect', () => {
       ).toThrow(PaymentRedirectError)
     }
   })
+
+  it('does not put the amount from the address into the message (it is whatever the visitor typed)', () => {
+    const typed = 'x<b>9999</b>'
+    let message = ''
+    try {
+      confirmRequestFromTossRedirect(
+        `?paymentKey=a&orderId=b&amount=${encodeURIComponent(typed)}`,
+        {
+          currency: 'KRW',
+        },
+      )
+    } catch (error) {
+      message = (error as Error).message
+    }
+    expect(message).toMatch(/amount/)
+    expect(message).not.toContain('9999')
+  })
 })

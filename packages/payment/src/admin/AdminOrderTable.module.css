@@ -1,0 +1,22 @@
+.filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-md);
+}
+
+.search {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.submit {
+  align-self: flex-end;
+}
+
+.flags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs) var(--space-sm);
+}

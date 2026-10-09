@@ -639,23 +639,54 @@
     },
     {
       "patterns": [],
-      "stories": [],
+      "stories": [
+        "packages/payment/src/OrderStatusBadge.stories.tsx",
+        "packages/payment/src/OrderList.stories.tsx",
+        "packages/payment/src/PaymentResult.stories.tsx",
+        "packages/payment/src/OrderSummary.stories.tsx",
+        "packages/payment/src/RefundRequestDialog.stories.tsx",
+        "packages/payment/src/TestModeNotice.stories.tsx"
+      ],
       "docs": ["packages/payment/README.md"],
       "entryPoints": [
+        "createPaymentLedgerApi",
+        "usePaymentConfig",
+        "useCreateOrder",
+        "useConfirmOrder",
+        "useAbandonOrder",
+        "useOrder",
+        "useOrders",
+        "useRequestRefund",
+        "useWithdrawRefund",
+        "openCheckout",
+        "readCheckoutReturn",
+        "isPaymentLedgerError",
+        "declineDetail",
+        "PaymentLedgerErrorCodes",
+        "OrderStatusBadge",
+        "OrderList",
+        "PaymentResult",
+        "OrderSummary",
+        "RefundRequestDialog",
+        "TestModeNotice",
+        "koPaymentLabels",
+        "formatMoney",
+        "cardDisplay",
         "createPaymentApi",
         "confirmRequestFromTossRedirect",
         "isPaymentError",
         "PAYMENT_ERROR_CODES",
         "PaymentRedirectError"
       ],
-      "needs": ["api-client"],
+      "needs": ["api-client", "time", "ui"],
       "backend": {
-        "modules": ["payment"],
+        "modules": ["payment", "payment-jdbc"],
         "oneOfModules": [["payment-toss", "payment-stripe"]],
         "optionalModules": [],
         "basePaths": [],
         "docs": [
           "docs/modules/payment.md",
+          "docs/modules/payment-jdbc.md",
           "docs/modules/payment-toss.md",
           "docs/modules/payment-stripe.md"
         ]
@@ -669,18 +700,107 @@
         "flag": "--packages payment",
         "included": "flag",
         "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
-        "alsoVia": ["--with-workbench"],
+        "alsoVia": ["--with-sample", "--with-workbench"],
         "optOut": null
       },
-      "summary": "결제 계약 — 토스 성공 리다이렉트를 승인 요청으로 바꾸고 승인/취소/환불을 부르는 얇은 클라이언트(경로는 앱이 정한다).",
+      "summary": "결제 한 벌 — 장부 API(주문 만들기 · 승인 · 내 결제 내역 · 환불 요청/거둠) · TanStack Query 훅(CONFIRMING 동안만 되묻는 useOrder) · 토스 결제창 열기(openCheckout) · 돌아온 주소 읽기(readCheckoutReturn) · 오류 코드, 화면 부품(상태 알약 · 결제 내역 · 결과 · 한 건 + 환불 줄 · 환불 요청 창 · 테스트 결제 표시 — 문구는 labels prop, 한국어는 koPaymentLabels, 카드는 「현대카드 ····1234」), 그리고 장부 없이 쓰는 얇은 호출(승인/취소/환불 경로는 앱이 정한다).",
       "notFor": [
-        "결제 위젯 · 결제창 UI 는 없다 — 토스 SDK 를 앱이 붙인다",
-        "백엔드 모듈이 HTTP 를 열지 않는다 — 주문 · 금액 검증 · 웹훅 컨트롤러는 백엔드 앱 코드(그래서 이 패키지는 기본 경로를 가정하지 않는다)",
-        "Stripe 리다이렉트 변환은 없다(토스만) · 구독 관리 화면 없음"
+        "운영자 화면은 이 진입점에 없다 — 선택 하위 경로 @skeleton/payment/admin(항목 payment-admin)에 있다. 사용자 쪽 부품은 상품을 모른다(주문 이름 orderName 을 그대로 보인다), 계정 id 는 그리지 않는다",
+        "결제창은 토스(TOSS_PAYMENT_WINDOW)만 안다 — 스트라이프 결제창 · 구독 · 자동결제는 없다(모르는 kind 는 openCheckout 이 던진다)",
+        "장부 API(createPaymentLedgerApi · 훅)는 백엔드 장부 저장 모듈 payment-jdbc 가 있어야 열린다 — 없으면 createPaymentApi 로 앱이 연 경로를 부른다(주문 · 금액 검증 컨트롤러는 앱 코드)",
+        "구매자 이름 · 이메일 · 전화번호를 결제창에 넘기지 않고 카드 번호도 다루지 않는다(서버가 카드사 코드 + 끝 네 글자만 준다)"
       ],
       "keywords": {
-        "ko": ["결제", "토스", "스트라이프", "환불", "카드 결제", "결제 승인", "유료"],
-        "en": ["payment", "toss", "stripe", "checkout", "refund", "billing", "paid"]
+        "ko": [
+          "결제",
+          "토스",
+          "스트라이프",
+          "환불",
+          "카드 결제",
+          "결제 승인",
+          "유료",
+          "결제 내역",
+          "환불 요청",
+          "결제 결과",
+          "결제 화면",
+          "테스트 결제"
+        ],
+        "en": [
+          "payment",
+          "toss",
+          "stripe",
+          "checkout",
+          "refund",
+          "billing",
+          "paid",
+          "payment history",
+          "refund request",
+          "payment result",
+          "test payment"
+        ]
+      }
+    },
+    {
+      "patterns": [
+        "packages/payment/src/admin/AdminOrderTable.stories.tsx",
+        "packages/payment/src/admin/AdminOrderPanel.stories.tsx",
+        "packages/payment/src/admin/AdminRefundDialog.stories.tsx",
+        "packages/payment/src/admin/RefundRequestTable.stories.tsx",
+        "packages/payment/src/admin/WebhookEventTable.stories.tsx"
+      ],
+      "stories": [],
+      "docs": ["packages/payment/README.md", "apps/sample/src/routes/AdminPaymentPage.tsx"],
+      "entryPoints": [
+        "@skeleton/payment/admin#createPaymentAdminApi",
+        "@skeleton/payment/admin#AdminOrderTable",
+        "@skeleton/payment/admin#AdminOrderPanel",
+        "@skeleton/payment/admin#AdminRefundDialog",
+        "@skeleton/payment/admin#RefundRequestTable",
+        "@skeleton/payment/admin#WebhookEventTable",
+        "@skeleton/payment/admin#adminAccessProblem"
+      ],
+      "needs": ["payment"],
+      "backend": {
+        "modules": ["payment", "payment-jdbc"],
+        "oneOfModules": [],
+        "optionalModules": [],
+        "basePaths": [],
+        "docs": ["docs/modules/payment.md", "docs/modules/payment-jdbc.md"]
+      },
+      "status": "experimental",
+      "id": "payment-admin",
+      "kind": "pattern",
+      "package": "@skeleton/payment",
+      "stampFlag": {
+        "flag": "--packages payment",
+        "included": "flag",
+        "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
+        "alsoVia": ["--with-sample", "--with-workbench"],
+        "optOut": null
+      },
+      "summary": "운영자 결제 화면(선택 내보내기 @skeleton/payment/admin) — 결제 목록(상태 · 결제 번호로 찾기, 확인 필요 알약) · 한 건(환불 줄 · 이력 · 직접 환불 전액/부분 · 요청대로 환불하기 · 요청 거절하기 · 결제사와 맞추기) · 환불 요청 목록 · 웹훅 수신함. 돈이 나가는 행동은 늘 확인 창(AdminRefundDialog)을 거치고 금액은 남은 금액을 넘지 못하게 화면에서도 막는다. 샘플 화면: /admin/payments · /admin/payments/:id.",
+      "path": "packages/payment/src/admin/index.ts",
+      "notFor": [
+        "백엔드 skeleton.payment.admin.enabled=true 와 ADMIN 역할이 있어야 열린다(검사는 서버, RequireRole 은 화면용) — 운영자 HTTP 는 payment-jdbc 가 연다. 운영자 경로 모양의 정본은 백엔드 docs/payment-http-contract.md 이고, 이 패키지 README 의 「운영자 API」 표가 그것에 맞춘 것이다",
+        "사용자 지원용 검색 · 통계 · 정산 · 세금계산서 화면은 없다 — 결제 목록 · 한 건 · 환불 요청 · 웹훅 수신함이 전부다",
+        "샘플 화면(/admin/payments)에 웹훅 수신함은 아직 두지 않았다 — 부품(WebhookEventTable)만 있다"
+      ],
+      "keywords": {
+        "ko": [
+          "운영자 결제",
+          "환불 승인",
+          "환불 처리",
+          "결제 관리",
+          "결제사와 맞추기",
+          "웹훅 수신함"
+        ],
+        "en": [
+          "payment admin",
+          "refund queue",
+          "operator refund",
+          "reconcile payment",
+          "webhook inbox"
+        ]
       }
     },
     {
@@ -1330,6 +1450,9 @@
           "notification-jdbc",
           "notification-mail",
           "notification-sse",
+          "payment",
+          "payment-jdbc",
+          "payment-toss",
           "persistence-jdbc",
           "platform",
           "storage",
@@ -1338,7 +1461,7 @@
         ],
         "oneOfModules": [],
         "optionalModules": [],
-        "basePaths": ["/api/v1/notes"],
+        "basePaths": ["/api/v1/notes", "/api/v1/cheers"],
         "docs": ["docs/sample.md"],
         "app": "apps/sample"
       },
@@ -1347,7 +1470,7 @@
       "kind": "app",
       "package": "sample",
       "path": "apps/sample",
-      "summary": "참조 앱 Notes — Patterns 로 조립한 작지만 실제 같은 제품(랜딩 · 로그인 · 대시보드 · 목록 · 상세 · 폼 · 첨부 · 알림 · 게시판 · 다국어 · 설정 · 404 — 로그인 아이디를 켜고 이메일은 쓰기 때 받는 서버 짝), 새 기능은 이 앱의 한 조각을 따라 한다.",
+      "summary": "참조 앱 Notes — Patterns 로 조립한 작지만 실제 같은 제품(랜딩 · 로그인 · 대시보드 · 목록 · 상세 · 폼 · 첨부 · 알림 · 게시판 · 응원하기 결제 · 다국어 · 설정 · 404 — 로그인 아이디를 켜고 이메일은 쓰기 때 받는 서버 짝), 새 기능은 이 앱의 한 조각을 따라 한다.",
       "stampFlag": {
         "flag": "--with-sample",
         "included": "flag",
@@ -1357,6 +1480,7 @@
           "i18n",
           "marketing",
           "notifications",
+          "payment",
           "realtime",
           "seo",
           "storage"
@@ -1480,6 +1604,7 @@
           "notification-sse",
           "notification-websocket",
           "payment",
+          "payment-jdbc",
           "payment-stripe",
           "payment-toss",
           "persistence-jdbc",

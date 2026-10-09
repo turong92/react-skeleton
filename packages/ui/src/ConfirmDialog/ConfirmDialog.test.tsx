@@ -64,10 +64,57 @@ describe('ConfirmDialog', () => {
     expect(html).toContain('aria-busy="true"')
   })
 
+  it('while busy the spinner on the confirm button is named by loadingLabel (default: Loading, unchanged)', () => {
+    const named = renderToStaticMarkup(
+      <ConfirmDialog {...base} confirmLabel="Delete" busy loadingLabel="Deleting" />,
+    )
+    expect(named).toContain('Deleting')
+    expect(named).not.toContain('Loading')
+    const plain = renderToStaticMarkup(<ConfirmDialog {...base} confirmLabel="Delete" busy />)
+    expect(plain).toContain('Loading')
+  })
+
   it('confirmDisabled keeps the confirm button off even when nothing else is missing (a proof the dialog asks for is not ready yet)', () => {
     const html = renderToStaticMarkup(
       <ConfirmDialog {...base} confirmLabel="Remove" confirmDisabled />,
     )
     expect(html).toMatch(/<button[^>]*disabled=""[^>]*>[^<]*(<[^>]*>)*Remove/)
+  })
+  it('confirmBlockedBy keeps the confirm button reachable: aria-disabled, never disabled, no submit, described by the reason', () => {
+    const html = renderToStaticMarkup(
+      <ConfirmDialog
+        {...base}
+        confirmLabel="Remove"
+        confirmBlockedBy="why"
+        description={<p id="why">Nothing to remove</p>}
+      />,
+    )
+    const button = html.match(/<button[^>]*>[^<]*(<[^>]*>)*Remove/)?.[0] ?? ''
+    expect(button).toContain('aria-disabled="true"')
+    expect(button).toContain('aria-describedby="why"')
+    expect(button).not.toMatch(/\sdisabled/)
+    expect(button).toContain('type="button"')
+  })
+
+  it('confirmBlockedBy never turns a typed-phrase button into a submit (a blocked click must do nothing)', () => {
+    const html = renderToStaticMarkup(
+      <ConfirmDialog
+        {...base}
+        confirmLabel="Remove"
+        typedConfirmation={{ phrase: 'x', label: 'Type x' }}
+        confirmBlockedBy="why"
+      />,
+    )
+    const button = html.match(/<button[^>]*>[^<]*(<[^>]*>)*Remove/)?.[0] ?? ''
+    expect(button).toContain('type="button"')
+    expect(button).not.toContain('form=')
+  })
+
+  it('busy still disables for real even when blocked (only work in progress is a real disabled)', () => {
+    const html = renderToStaticMarkup(
+      <ConfirmDialog {...base} confirmLabel="Remove" busy confirmBlockedBy="why" />,
+    )
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>.*Remove/)
+    expect(html).not.toContain('aria-disabled')
   })
 })

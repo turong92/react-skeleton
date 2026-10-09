@@ -1,0 +1,10 @@
+.page {
+  display: grid;
+  gap: var(--space-xl);
+}
+
+.panel {
+  display: grid;
+  gap: var(--space-lg);
+  padding-top: var(--space-lg);
+}

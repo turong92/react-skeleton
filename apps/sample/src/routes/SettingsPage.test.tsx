@@ -76,6 +76,22 @@ describe('SettingsPage — account card', () => {
   })
 })
 
+describe('SettingsPage — cheers', () => {
+  it('has one boxed link line to 「내 응원 내역」 (a pressable card, not bare words)', () => {
+    const html = render(me({}))
+    expect(html).toMatch(/<a [^>]*class="[^"]*card[^"]*"[^>]*href="\/cheers"/)
+    expect(html).toContain('내 응원 내역')
+    expect(html).toContain('응원한 내역을 보고 환불을 요청해요')
+  })
+
+  it('English: My cheers', async () => {
+    await i18n.setLocale('en', { remember: false })
+    const html = render(me({}))
+    expect(html).toMatch(/href="\/cheers"/)
+    expect(html).toContain('My cheers')
+  })
+})
+
 describe('SettingsPage — an account without an email address (Google with a non-Gmail address, LINE, X)', () => {
   it('says "no email" instead of a bare dash and offers a real button that adds one', () => {
     const html = render(me({ email: null, emailVerified: false }))

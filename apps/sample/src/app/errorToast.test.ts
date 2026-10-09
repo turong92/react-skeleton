@@ -1,4 +1,6 @@
 import { ApiRequestError, ErrorCodes } from '@skeleton/api-client'
+import { PAYMENT_LEDGER_ERROR_CODES, RefundRequestNotOpenError } from '@skeleton/payment'
+import { RefundNotDoneError } from '@skeleton/payment/admin'
 import { describe, expect, it, vi } from 'vitest'
 import { toastUnlessValidation } from './errorToast'
 
@@ -33,6 +35,51 @@ describe('toastUnlessValidation', () => {
       'c',
     )
     toastUnlessValidation(show)(blocked)
+    expect(show).not.toHaveBeenCalled()
+  })
+
+  it('lets the payment screens speak for every PAYMENT.* error in their own words (the server wording never reaches a toast)', () => {
+    const show = vi.fn()
+    for (const code of [
+      ...PAYMENT_LEDGER_ERROR_CODES,
+      ErrorCodes.PAYMENT_PROVIDER_ERROR,
+      ErrorCodes.PAYMENT_ROUTING_FAILED,
+    ])
+      toastUnlessValidation(show)(apiError(code))
+    expect(show).not.toHaveBeenCalled()
+  })
+
+  it('a refund line that came back closed (RefundNotDoneError, an English sentence made for logs) is told by the refund window in place, never by a toast', () => {
+    const show = vi.fn()
+    const line = {
+      id: 'rfd_1',
+      orderId: 'ord_1',
+      status: 'FAILED' as const,
+      amount: { amount: 1000, currency: 'KRW' },
+      reasonCode: 'OPERATOR',
+      origin: 'OPERATOR' as const,
+      requestedAt: 't',
+      completedAt: null,
+      closedBy: null,
+    }
+    toastUnlessValidation(show)(new RefundNotDoneError(line))
+    expect(show).not.toHaveBeenCalled()
+  })
+
+  it('a refund request that came back closed (RefundRequestNotOpenError, an English sentence made for logs) is told by the request window in place, never by a toast', () => {
+    const show = vi.fn()
+    const line = {
+      id: 'rfd_1',
+      orderId: 'ord_1',
+      status: 'REJECTED' as const,
+      amount: { amount: 1000, currency: 'KRW' },
+      reasonCode: 'CUSTOMER_REQUEST',
+      origin: 'USER' as const,
+      requestedAt: 't',
+      completedAt: null,
+      closedBy: null,
+    }
+    toastUnlessValidation(show)(new RefundRequestNotOpenError(line))
     expect(show).not.toHaveBeenCalled()
   })
 

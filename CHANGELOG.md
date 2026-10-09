@@ -49,6 +49,185 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - 문구 `errorIdentityTaken` 이 막연한 「이미 다른 사람과 연결돼 있어요」 에서 「그 계정으로 로그인한 뒤 설정에서 연결을 끊거나 그 계정을 삭제하고 다시 시도해 주세요」 로 바뀌고, 제공자 이름을 아는 화면(연결 본인 확인 · 연결 콜백)은 새 라벨 `errorIdentityTakenFor(provider)` 로 「이 ○○ 계정은 …」 을 보여 준다. 소셜을 끊은 뒤 그 소셜로 다시 로그인하면 _내가 만든 다른 계정_ 이 쥐고 있을 수 있다 (백엔드 `docs/accounts.md` "소셜을 끊은 뒤 다시 연결하려다 막힌 길"). 스토리 `SocialLinkTakenByAnotherAccount`.
 
+### Fixed — 운영자 API 를 실제 백엔드 계약에 맞춤 (F5)
+
+백엔드의 결제 HTTP(B7, 커밋 `32ba6d4`)가 생겼다. 그동안 가정으로 만든 운영자 API 를 백엔드 `docs/payment-http-contract.md` 와 컨트롤러 · DTO 에 한 줄씩 대조해 맞췄다(문서와 코드가 다르면 코드가 사실).
+
+- **이력**: `events[].id` 는 그 주문 이력 안의 순번(1 부터)이다 - 타입을 `number` 로 좁히고 전역 키로 쓰지 않는다고 적었다(화면의 목록 키는 한 주문 안에서만 쓴다). `actorId`(`string | null`)를 타입에 더했다(화면에 그리지 않는다).
+- **탈퇴한 계정**: `AdminOrderListParams.includeErased`, 목록 조건 `AdminOrderFilter.includeErased`, 전체 탭의 스위치 「탈퇴한 계정의 결제도 보기」(`AdminOrderTable` 의 `showErasedToggle` - 확인 필요 탭에는 없다: 서버가 거기서는 늘 보여 준다). 계정 id 가 탈퇴 대체 값(`deleted:…`, 백엔드 `erasure.account-id=TOMBSTONE`)이면 목록 줄과 한 건 화면에 「탈퇴한 계정」이 붙는다 - 운영자 응답의 `accountErasedAt` 이 늘 와서 `KEEP` 에서도 가른다(타입의 `?` 는 방어 - 칸이 없으면 이 대체 값으로만 가른다).
+- **웹훅 수신함**: 표식 줄(`resourceType=LIMIT_MARKER`)은 코드 대신 한 문장으로 그린다. 「다시 처리」는 1회차 리뷰에서 손이 필요한 줄로 좁혔다(아래).
+- **맞춘 뒤에도 남는 사유**: 파생 사유(`STALE_CONFIRMING` · `STALE_REFUND` · 오래된 `FULFILMENT_UNRESOLVED` · `REFUND_APPLY_UNRESOLVED`)는 한 건 상세와 맞추기 응답에도 오고 맞춰도 안 풀릴 수 있다. 맞춘 뒤에도 사유가 남으면 「누르면 다시 물어봐요」를 되풀이하지 않고 「결제사에 다시 물었지만 아직 남아 있어요 …」 / 「그 일을 다시 걸었어요. 끝나면 이 표시가 사라져요」라고 말한다.
+- **주문 만들기 응답**: `checkout` 은 같은 키 재전송에서 주문이 이미 `PENDING` 이 아니면 `null`, `clientKey` 도 `null` 일 수 있다. 견본 앱의 `startCheer` 는 결제창을 열지 않고 주문 실패로 돌려주며(다음 누름은 새 주문), `openCheckout` 은 키 없이는 SDK 를 부르지 않고 던진다.
+- **`closedBy`**: 운영자 환불 줄에도 온다 - 그것을 따른다(`ORDER_REFUNDED` 추정은 1회차 리뷰에서 지웠다).
+- **그대로인 것(확인했다)**: 환불 줄의 `origin: PROVIDER` · `reasonCode: PROVIDER_CONSOLE` 타입과 라벨(사용자 · 운영자 화면 모두)은 이미 있었다. 돈과 닿는 동작(멱등 키 수명 · 확정/모름 분류 · 창의 값 = 보낸 값 · 낡은 화면 차단)은 바꾸지 않았다.
+- **e2e**: 백엔드 설정에 주문 만들기 요청 수 한도를 푼다(`skeleton.payment.http.order-rate-limit.account-capacity` · `ip-capacity`, 기본 10 · 30 / 10분) · 웹훅 주소 조각(`skeleton.payment.webhook.path-token`, e2e 전용 값). 실행하지 않았다(견본 앱 백엔드가 아직 없다) - 타입체크와 설정 단위 시험만.
+- **문서**: `packages/payment/README.md` 의 「운영자 API 가정」을 「운영자 API — 백엔드 계약과 맞춘 표」로 고쳐 썼다. 시험 픽스처의 429 코드는 `COMMON.TOO_MANY_REQUESTS`.
+- **새 필수 문구 키**(`labels` 를 통째로 만들어 주는 앱은 채워야 한다): `admin.reviewHintSynced` · `reviewHintRetrySynced` · `erasedAccount`, `admin.orders.includeErased` · `includeErasedHint`, `admin.webhooks.limitMarker`.
+
+### Fixed — F5 리뷰 1회차
+
+- **주문 만들기 `429`**: 「다시 눌러 주세요」는 사실이 아니었다(고정 창이 끝날 때까지 몇 번을 눌러도 429이고 같은 키 재전송도 한도를 쓴다). 견본 앱은 `retryAfterSeconds` 로 언제 다시 누를지를 말하고(처음에는 「N분 뒤에」 - 2회차에서 풀리는 시각으로 바뀌었다) 그 시간 동안 단추를 `aria-disabled` + 이유로 막는다. 시간을 못 읽으면 「잠시 뒤에」, 단추는 그대로. (`orderFailureOf`)
+- **`checkout: null`**: 주문 상태로 가른다 - `PAID` · `CONFIRMING` · 환불 계열이면 실패가 아니라 그 결제의 화면으로. `clientKey: null` 이면 만든 주문을 돌려놓고(`abandon`) 「지금은 결제를 쓸 수 없어요」.
+- **맞춘 뒤의 안내**: `AdminOrderPanel` 의 `synced` 는 이제 깃발이 아니라 맞추기가 돌려준 주문(`useSyncOrder` 의 `data`)이다. 그 응답의 `reviewReason` 이 지금 화면의 사유와 같을 때만 「맞췄어요」 · 「맞춰 봤지만 …」를 말한다 - 맞춘 뒤에 새로 생긴 사유(맞추기 → 직접 환불 → `REFUND_MISMATCH`)에는 처음의 말이고 맞추기가 채운 단추로 남는다. `useDirectRefund` · `useRefundDecision` 에 `onSend`(보내는 순간 - 2회차에서 `onDone` 의 이름과 때를 바꿨다)가 생겼고 견본 화면은 `sync.reset` 을 꽂는다.
+- **웹훅 수신함 「다시 처리」**: `FAILED` · `DEAD` 줄과 받은 지 오래된(`staleReceivedAfterMs`, 기본 10분) `RECEIVED` 줄에만. `IGNORED` · `PROCESSED` · 갓 받은 줄은 단추가 없다(서버는 누를 때마다 결제사 조회 하나를 넣는데 화면은 안 바뀌어 연타를 불렀다). `retried`(id → 누른 시각)에 든 줄은 「다시 넣었어요」 상태 글자. 표식 줄은 기다리는 중 / 확인이 끝남 두 문장(`webhooks.limitMarker` 가 글자에서 `{ waiting, done, name }` 로 바뀌었다), 수신함 `id` 는 `number`. 「결제사 결제 번호」 칸은 우리 주문의 결제 키이고 `order:<id>` 는 「결제사 결제 번호 없음 (결제 …)」(`webhooks.noProviderPayment`).
+- **환불 `400 COMMON.VALIDATION_FAILED` · `PARAMETER_VALIDATION_FAILED` · `MALFORMED_REQUEST`**: 선점 전의 확정 거절이다 - 키를 놓고 칸을 열며 「보낸 내용이 올바르지 않아요 …」(`refundDialog.errors.invalid`, `RefundProblem` 의 `invalid`). 그 밖의 `COMMON.*` · 코드 없는 4xx 는 여전히 모름이다.
+- **`PAYMENT.PROVIDER_PAYMENT_NOT_FOUND`**(404, 백엔드가 이 이름으로 맞춘다): 맞추기가 「결제사가 이 결제를 찾지 못했어요. 결제사 화면에서 확인해 주세요」(`panel.syncErrors.providerNotFound`).
+- **`accountErasedAt?: string | null`**: 운영자 주문 응답의 선택 칸. 「탈퇴한 계정」 표시가 이 칸을 먼저 본다(`isErasedAccount`).
+- **옛 서버를 위한 대체 읽기 삭제**: 결제 HTTP 는 이번에 처음 생겨 그런 서버가 없다 - `Order.openRefundStatus` · `Refund.closedBy` 는 필수 칸이고 `OrderStatusBadge` 의 `refundPending` prop 과 `ORDER_REFUNDED` 로 시스템을 추정하던 읽기는 없어졌다(`closedBy` 만 읽고 없으면 본인).
+- **운영자 호출의 반환 타입**: `refundOrder` · `approveRefund` · `rejectRefund` 는 `AdminRefund`.
+- **문구**: 「탈퇴한 계정의 결제도 보기」 설명에 「확인 필요 탭과 결제 번호 찾기에서는 늘 보여요」. README 에 「백엔드가 맞출 것」 표.
+
+### Fixed — F5 리뷰 2회차
+
+- **주문 만들기 `429` 의 「N분」이 줄지 않던 것(Important)**: 문장이 남은 분 대신 **풀리는 시각**을 말한다(「요청이 많아요. 2026. 10. 9. 오후 3:42 이후에 다시 눌러 주세요」 · 단추 옆 「… 이후에 다시 누를 수 있어요」 - 문구 `cheer.rateLimited` · `cheer.rateLimitedWait` 의 변수가 `minutes` 에서 `time` 으로 바뀌었다). 타이머가 풀릴 때 막힘과 **위험 띠를 함께** 비운다. 판정은 순수 함수로 뺐다(`cheerHold.ts` 의 `holdReasonOf` · `openingIn` · `noticeAfterOpening`). `orderFailureOf` 의 `rateLimited` 에서 `minutes` 칸을 지우고 `until` 만 둔다.
+- **`unavailable`(서버에 결제창 키가 없음) 뒤에도 눌리던 단추**: 이 결과를 받으면 `config.available === false` 와 같은 막힘 + 이유(`aria-disabled` + 설명)로 둔다 - 화면을 새로 열 때까지. 누를 때마다 주문 + 돌려놓기가 나가 열 번이면 429 이던 것.
+- **주문 만들기 `429` 가 전역 토스트로도 뜨던 것**: `useCreateOrder(api, { meta })` 가 뮤테이션에 `meta` 를 붙일 수 있고, 견본 화면은 `quietStatuses: [429]` 를 싣는다 - 이 호출만 조용하다(`COMMON.TOO_MANY_REQUESTS` 를 앱 전체에서 거르지 않는다 - 다른 화면은 토스트가 유일한 안내다).
+- **웹훅 수신함 `retriedIds` → `retried`(id → 누른 시각, ms)**: 다시 넣은 줄은 `RECEIVED` 가 되지만 `receivedAt` 은 그대로라서, 목록이 다시 읽힐 때 비우면 작업이 도는 중에 단추가 곧바로 다시 나왔다. 부품이 누른 뒤 `staleReceivedAfterMs` 동안 그 줄의 단추를 감추고, 비우는 일은 부모에게서 없어졌다(깨지는 변경 - 이 기능은 아직 나가지 않았다).
+- **표식 줄이 `FAILED` · `DEAD` 일 때**: 「잠시 뒤 한 번에 확인해요」는 사실이 아니다 - 「…확인하지 못했어요. 다시 처리해 주세요」(새 필수 문구 키 `admin.webhooks.limitMarker.failed`). 「아무도 확인하지 않는다」는 `DEAD` 에만 맞았다 - 3회차에서 `FAILED` 는 따로 갈랐다(아래). README 에 `now` 는 서버 시계를 넘기는 것이 좋고 넘기면 1분 자동 갱신이 꺼진다는 것, `staleReceivedAfterMs` 는 백엔드 `skeleton.payment.webhook.per-order-limit.window`(기본 10분) 이상이어야 한다는 것을 적었다.
+- **맞춤 → 풀림 → 같은 종류로 다시 찍힐 때의 거짓 「맞춰 봤지만 아직 어긋나 있어요」**: 견본 화면이 사유가 `sync.data.reviewReason` 과 달라지는 순간 `sync.reset()` 을 부른다(`syncNoteIsStale`) - 한 번 갈라지면 되살아나지 않는다.
+- **`useDirectRefund` · `useRefundDecision` 의 `onDone` → `onSend`**: 성공에서만 불려, 결과를 모르는 환불 뒤에도 「결제사와 맞췄어요」가 남았다. 이제 **보내는 순간** 불린다(직접 환불 · 승인 · 거절 모두). 견본 화면은 맞추는 중이면 끊지 않는다.
+- **문서**: 환불 줄의 `closedBy` 는 필수 칸(README) · `refundOrderMutation` 주석에 `invalid` 셋 · `adminAccessProblem` 이 `PAYMENT.PROVIDER_PAYMENT_NOT_FOUND` 404 를 「꺼짐」으로 읽지 않는다.
+
+### Fixed — F5 리뷰 3회차
+
+- **표식 줄 `FAILED`**: 「아무도 다시 확인하지 않는다」는 사실이 아니다(계약 §3 수신함 - `FAILED` 는 이번 시도 실패, 작업이 다시 한다. 시도를 다 쓴 것은 `DEAD`). `FAILED` 는 「…확인하지 못해 다시 시도하고 있어요」(새 필수 문구 키 `admin.webhooks.limitMarker.retrying`), 「…확인하지 못했어요. 다시 처리해 주세요」(`failed`)는 `DEAD` 에만.
+- **다시 넣은 줄이 감추는 시간 안에 `DEAD` 가 되면**: 단추가 최대 10분 가려지던 것 - `DEAD` 는 「다시 넣었어요」를 지우고 단추를 보인다.
+- **주문 만들기 `503 PAYMENT.UNAVAILABLE`**: 클라이언트 키가 없을 때와 같은 막힘이다 - `orderFailureOf` 가 `unavailable` 을 돌려주고 견본 화면이 「지금은 결제를 쓸 수 없어요」 + `aria-disabled` 단추로 둔다(다시 눌러도 같고 누를 때마다 한도를 썼다).
+- **문서**: README 의 웹훅 수신함 줄(`retried` · 표식 줄 네 문장)과 「N분 뒤에」 잔재, 훅 서명의 `onSend?`, 「백엔드가 맞출 것」을 「백엔드와 맞춘 곳」으로(네 가지 모두 백엔드 `62d45a5` 에서 맞춰졌고 `accountErasedAt` 의 근거는 계약 §1.4), 운영자 `sync` 의 `404 PAYMENT.PROVIDER_PAYMENT_NOT_FOUND`, `quietStatuses` 는 견본 앱의 `createQueryClient` 만 읽는다는 것. 타입 주석(`accountErasedAt` · `available` · `checkout: null`)도 사실대로.
+
+### Fixed — 프런트 전체 독립 리뷰 3회차 (R-FE)
+
+- **이미 환불된 환불 요청이 「요청하지 못했어요」로 읽히던 것(2회차가 만든 회귀)**: `requestRefundMutation` 은 답 줄이 `REJECTED` · `WITHDRAWN` · `FAILED`(운영자 쪽 `RefundNotDoneError` 와 같은 집합)일 때만 `RefundRequestNotOpenError` 를 던진다. `SUCCEEDED` · `PENDING` · `REQUESTED` 는 성공이라 창이 닫히고 다시 읽은 화면이 사실을 말한다. `RefundRequestDialog` 는 이 오류를 「이 환불 요청은 이미 닫혔어요. 다시 요청하려면 한 번 더 눌러 주세요」(`refundDialog.errors.closed`)로 말하고, 샘플 앱의 전역 토스트는 `RefundRequestNotOpenError` 를 거른다(영어 내부 문장이 뜨지 않는다).
+- **「결제사와 맞추기」 뒤의 「가는 중일 수 있어요」**: 모름이 풀리면(`direct.unsure` 가 거짓이면) 말하지 않는다. 문장에서 초를 뺐다(누른 순간의 값이라 줄지 않는다): `admin.panel.syncHeld` 는 이제 함수가 아니라 글자다. `heldSecondsOf` · `syncHeld` prop 은 그대로(값이 있으면 말한다).
+- **유예에 바닥**: `max(보낸 때 + unsureHoldMs, 모름이 된 때 + 15초)` - 보낸 때가 실제로 나간 때가 아닐 수 있다(오프라인으로 멈췄다 나간 변경 · `mutations.retry`). `UnsureState` 에 `unsureAt` 이 더해졌고 `useDirectRefund` 에 `unsureFloorMs?`(기본 15초 - 스토리용 손잡이)가 생겼다.
+- **직접 환불 · 승인의 409 `PAYMENT.MODE_MISMATCH`**: 「환불하지 못했어요. 다시 해 보세요」가 아니라 맞추기 쪽과 같은 모드 문장(`admin.refundDialog.errors.modeMismatch`).
+- **문서**: README 의 `POST /orders/{id}/sync` 칸에 `409 PAYMENT.MODE_MISMATCH`, 「서버가 409 로 막는 것은 `REFUND_MISMATCH` 뿐」을 모드 불일치까지로 고쳤고(주석 포함), 유예가 넘어야 하는 구간(서버의 선점 전 구간)을 적었다.
+- **새 필수 문구 키**: `refundDialog.errors.closed`, `admin.refundDialog.errors.modeMismatch`.
+
+### Fixed — 프런트 전체 독립 리뷰 2회차 (R-FE)
+
+- **45초 유예 안에 누른 「결제사와 맞추기」가 말없이 아무 일도 안 하던 것**: 유예를 모름이 된 때가 아니라 **보낸 때**(`refund.submittedAt`)부터 센다 - 가장 흔한 모름인 시간 초과는 모름이 됐을 때 이미 유예가 지나 있어 첫 맞추기가 바로 놓는다. 다시 보내면 보낸 때가 바뀌어 다시 센다(`unsureSince` 추적은 없앴다). 유예 때문에 못 놓았으면 `forget()` 이 `{ kind: 'hold', waitMs }` 를 돌려주고(놓았으면 `release`, 놓을 것이 없으면 `none` - 반환형이 `void` 에서 바뀌었다), `heldSecondsOf(verdict)` 를 `AdminOrderPanel` 의 새 prop `syncHeld` 에 주면 「보낸 환불이 아직 가는 중일 수 있어요. 약 N초 뒤에 다시 맞춰 주세요」를 `role="status"` 로 말한다. `mayForgetUnsure` 는 `unsureVerdict` 가 대신한다.
+- **`LATE_RESULT` 가 「환불 안 됨 + 이유 코드」로 읽히지 않는다**: `refundFailure` 에 `LATE_RESULT`(「닫힌 뒤에 결제사의 환불 결과가 도착했어요. 다른 환불 줄과 환불된 금액을 확인해 주세요」) · `REFUND_DECLINED` 를 더했다. `PROVIDER_PENDING_EXPIRED` 는 줄에 안 찍히고 이력에만 남으니 줄 코드 표에서 빼고, 새 표 `eventCodes` 로 이력에서 문장으로 그린다(`LATE_RESULT` 는 이력 종류가 `REFUND_UNKNOWN` 이라 「환불 결과를 아직 몰라요」로 읽히던 이름을 문장이 대신한다). `RESULT_MISMATCH` 는 「결제사의 답이 요청과 맞지 않았어요」(금액만 어긋나는 것이 아니다), `PROVIDER_PENDING` 은 「결제사에서 아직 환불 중이에요」(금지어 「처리 중」의 변형 「처리하는 중」 - 낱말 시험이 이제 이것도 잡는다. 웹훅 「다시 처리」의 진행 글자도 「다시 시도하는 중」으로). 운영자 응답에 `closedBy` 가 없고 `failureCode: ORDER_REFUNDED` 뿐이어도 시스템이 닫은 줄로 읽는다.
+- **`onSync` 없는 조립에서 단추 차단이 막다른 길이 아니다**: 서버가 환불을 막는 것은 `REFUND_MISMATCH` 뿐이다 - 맞추기 단추가 없으면 그것만 막고 「결제사와 어긋나 있어 환불할 수 없어요」(「먼저 결제사와 맞춰 주세요」는 맞추기 단추가 있을 때만). 맞춘 뒤에도 사유가 남으면 「맞춰 봤지만 아직 어긋나 있어요. 결제사 화면에서 확인해 주세요」. 모드가 달라 맞추기가 `409 PAYMENT.MODE_MISMATCH` 로 실패하면 「다시 해 보세요」가 아니라 「…지금 키로는 맞출 수 없어요」.
+- **사용자 쪽**: 「환불 요청함」 상태 줄은 방금 낸 요청 줄(`requestRefund.data.id`)이 목록에 있으면 말하지 않는다(요청 → 운영자가 정함 → 재조회 성공 → 나중의 재조회 실패에서 되살아나던 것; 거둠 비교는 이것으로 대신한다). 환불 요청의 답 줄이 `REQUESTED` 가 아니면(든 키로 정해진 줄을 돌려받음) 창을 닫지 않고 `RefundRequestNotOpenError` 로 실패하며 키를 놓는다. 승인의 답 줄이 `FAILED` 인 2xx(늦은 결과)는 「요청은 환불 안 됨으로 닫혔어요 …」가 아니라 「이 환불 줄은 환불 없이 닫혔어요. 환불 내역을 확인해 주세요」(402 확정 거절은 그대로).
+- **문서**: `[Unreleased]` 에 R-FE 1회차 항목을 더하고, 틀려진 두 문장(환불 요청의 무효화, 맞추기가 든 키를 놓는 조건)을 고쳤다. 스토리의 `PAID` + `AMOUNT_MISMATCH` 는 백엔드가 만들지 않는 상태라 `REFUND_MISMATCH` 로 고쳤다. `retryWebhookEventMutation` 도 「재조회가 끝날 때까지 pending」 표에 넣었다.
+- **새 필수 문구 키**(`labels` 를 통째로 만들어 주는 앱은 채워야 한다): `admin.eventCodes`, `admin.panel.moneyOff` · `stillOff` · `syncHeld(seconds)` · `syncErrors.modeMismatch`. `admin.refundFailure` 의 키 집합이 바뀌었다(`LATE_RESULT` · `REFUND_DECLINED` 추가, `PROVIDER_PENDING_EXPIRED` 제거).
+
+### Fixed — 프런트 전체 독립 리뷰 1회차 (R-FE)
+
+- **`orderLink` 가 `ReactNode` 에서 함수가 됐다(깨지는 변경)**: `AdminRefundDialog` 의 `orderLink?: (buttonLikeClassName: string) => ReactNode`, `useRefundDecision` 의 `orderLink?: (refund, buttonLikeClassName) => ReactNode` - 날 `<a>` 는 글자로만 그려지니 창이 버튼 모양 클래스를 건넨다(라우터의 `<Link className={className} …>`).
+- **새 필수 문구 키**: `admin.reviewHintRetry`(지급 · 회수가 끝내 안 된 사유의 안내) · `admin.refundFailure`(우리 쪽 환불 줄 코드 → 문장) · `admin.panel.syncFirst` · `refundClosedBySystem`(`WITHDRAWN` 을 시스템이 닫은 줄의 알약). `ReviewReason` 에 `FULFILMENT_UNRESOLVED` · `REFUND_APPLY_UNRESOLVED` · `STALE_CONFIRMING` · `STALE_REFUND`, 이력에 `REFUND_APPLIED` 가 더해졌다.
+- **돈이 어긋난 사유는 돈이 나가는 단추를 막는다**: `REFUND_MISMATCH` · `AMOUNT_MISMATCH` · `ORDER_MISMATCH` · `MODE_MISMATCH` 이면 「환불하기」 · 「요청대로 환불하기」가 `aria-disabled` + 「먼저 결제사와 맞춰 주세요」로 막히고 채운 단추는 「결제사와 맞추기」다(2회차에서 `onSync` 없는 조립은 `REFUND_MISMATCH` 만으로 좁혔다).
+- **`Refund.closedBy`**: `WITHDRAWN` 줄을 `USER`(본인이 거뒀다) · `SYSTEM`(환불이 끝나 요청이 닫혔다)이 닫았는지 - 없으면 `USER`.
+- **`unsureHoldMs`**: `useDirectRefund` 의 새 옵션(기본 `OPERATOR_REFUND_TIMEOUT_MS` = 45초) - 「결제사와 맞추기」가 모름(잠금 + 든 키)을 놓기까지의 유예.
+- 변경은 **재조회가 끝날 때까지 pending** 이다(`onSettled` 가 무효화 약속을 돌려준다 - `void` 로 버리면 낡은 화면에서 같은 환불이 한 번 더 나갈 수 있다; 변경마다 시험이 지킨다). 환불 요청은 확정 거절이나 답 유실에도 무효화한다.
+- 환불 답 줄이 `FAILED` 인 2xx 는 「환불 안 됨, 다시 누르면 새로 나가요」가 아니라 「환불 없이 닫혔어요. 환불 내역을 확인해 주세요」(늦은 결과가 돈을 움직였을 수 있다). 직접 환불의 `409 REFUND_IN_PROGRESS` 가 열린 요청(`REQUESTED`)이면 「기다리는 환불 요청이 있어요」, 사용자 쪽은 「이미 환불을 요청했어요」.
+- e2e(작성만, 실행하지 않았다): 환불 요청 거둠 시나리오 ⑧, 운영자 「모든 상태」 탭이 빈 상태도 받아들임.
+
+### Fixed — 창에 보이는 값 = 보낸 값, 상태 줄 = 서버가 읽어 준 지금 (F4 리뷰 3회차)
+
+- **닫아 둔 창이 확정 오류로 다시 열려도 금액 · 사유가 보낸 값 그대로다**: 부분 환불을 보내고 × 로 닫았는데 서버가 확정 답(402 일시 거절 · 503 · 환불 안 됨 줄 · 404)을 주면 창이 다시 열리는데, 그때 처음 모습(전액 · 운영자 사유)으로 돌아가 있어 오류 옆의 열린 확인 한 번에 보낸 적 없는 전액이 나갈 수 있었다. 창은 **오류가 남아 있지 않을 때만** 열 때 처음 모습으로 돌아온다(`ask()` 가 이미 오류를 지운다).
+- **보내는 중에는 금액 · 사유 칸을 고칠 수 없다**: 읽기 전용이되 닿고, 이유 한 줄(「보내는 중이라 금액과 사유를 바꿀 수 없어요」 · 새 문구 `refundDialog.sending`, ko · en)이 두 칸의 설명이다. 보내는 동안 고친 값이 모름으로 끝나며 「잠긴 값」이 되어 확인 한 번에 새 키로 나가던 길이 막힌다. **잠긴 칸(보내는 중 · 결과를 모름)은 적던 글자가 아니라 보낸 변수를 보인다** - `AdminRefundDialog` 의 새 prop `sent`(`useDirectRefund` 가 변경의 `variables` 를 준다).
+- **「방금 한 일」 상태 줄은 다시 읽기가 실패한(`stale`) 동안에만 보인다**: 변경의 답은 재조회가 성공해도, 결제사와 맞춰도 남아 「환불 중이에요」 · 「환불 요청함」이 사실보다 오래 남았다. 이제 재조회가 성공하면 환불 줄이 사실을 말한다. 낡은 화면에서도 줄 id 로 목록에서 찾아 그 줄이 답보다 더 간 상태면 그 줄이 말한다(답 `PENDING` 이 목록에서 `FAILED` 면 말하지 않는다). 직접 환불과 승인이 둘 다 있으면 더 최근 것(`useDirectRefund().doneAt` · `useRefundDecision().approvedAt`). 사용자의 「환불 요청함」도 `refreshFailed` 일 때만. `AdminOrderPanel.refunded` 는 이제 `id` 를 포함한다(`Pick<Refund, 'id' | 'status' | 'amount'>` - 환불 줄 그대로 주면 된다).
+- **「결제사와 맞추기」 성공이 든 키도 놓는다**(`IntentKeys.clear()`; 단 **보낸 지 `unsureHoldMs` 가 지난 뒤에만** - R-FE 1 · 2회차 항목): 장부가 결제사와 맞았으니(나가 있던 환불은 환불 줄로 보인다) 그 뒤의 환불은 운영자가 새로 정한 새 의도다. `forget()` 은 **누른 때가 아니라 끝난 순간**의 상태를 본다 - 그 사이 같은 키로 다시 보내는 중이면 건드리지 않는다(보내는 중인 변경을 `reset()` 하지 않는다). `useOperatorRefund(api, keys?)` 는 키 보관소를 부모가 줄 수 있다.
+- **낡은 화면에서 채운 단추는 막힌 「요청대로 환불하기」가 아니다**: `stale` 이면 승인이 채움 후보에서 빠져 「결제사와 맞추기」가 채워진다(화면당 채운 단추 하나).
+
+### Fixed — 나간 환불은 말로 하고, 모르는 환불은 키를 놓지 않는다 (F4 리뷰 2회차)
+
+- **환불이 나갔는데 재조회만 실패해도 같은 환불이 한 번 더 나가지 않는다**: `AdminOrderPanel` 의 `refunded`(방금 나간 줄)가 「환불했어요: 금액」 · 「환불 중이에요: 금액」을 상태 글자(`role="status"`)로 말하고, `stale`(다시 읽기 실패)이면 돈이 나가는 두 단추(「환불하기」 · 「요청대로 환불하기」)가 `aria-disabled` + 이유(「최신 내용을 불러온 뒤에 환불할 수 있어요」)로 막힌다. 이미 열린 창의 같은 키 재시도는 그대로다. 운영자 한 건 화면의 띠는 「아래 숫자가 낡았을 수 있어요」라고 말한다. 사용자 쪽 한 건(`OrderSummary` 의 `stale`)도 낡은 화면에서 「환불 요청」을 또 내지 못하게 막고, 낸 요청을 「환불 요청함」으로 말한다.
+- **「결과를 모름」 상태에서 든 키가 조용히 풀리지 않는다**: 결과를 모르는 동안 직접 환불 창의 금액 · 사유 칸은 잠긴다(읽기 전용이되 닿고, 이유 한 줄이 두 칸의 설명) — 키는 의도(주문 · 사유 · 금액)별이라 값이 바뀌면 새 키가 나가 이미 나간 부분 환불이 한 번 더 나갈 수 있었다. 일하는 중에 × 로 닫았다 다시 열어도, 모름으로 끝난 뒤 닫았다 열어도 전액으로 돌아가지 않는다(`useDirectRefund` — 새 훅). 모름으로 든 키에는 10분 나이 제한을 적용하지 않는다(`IntentKeys.hold` — 운영자 환불만, 사용자 쪽 주문 만들기 · 환불 요청은 그대로). 모름에서 벗어나는 길: 같은 내용을 다시 보내 확정 답이나 성공을 받거나, 「결제사와 맞추기」가 끝난 뒤(`forget()`).
+- **닫힌 창에서 끝난 오류가 성공처럼 보이지 않는다**: 일하는 중에 × 로 닫은 뒤 승인 · 거절 · 직접 환불이 오류로 끝나면 창이 다시 열려 그 말을 한다(`useRefundDecision` · `useDirectRefund` 의 `onError`).
+- **영어 내부 문장이 토스트로 뜨지 않는다**: `RefundNotDoneError`(`refund rfd_… is FAILED`)는 전역 토스트에서 거른다 — 환불 창이 제자리에서 우리 낱말로 말한다.
+- **승인의 409 · 400 이 막다른 길이 아니다**: 승인의 `409 REFUND_NOT_ALLOWED` 는 두 뜻이라(이미 결정됨 / 주문이 환불할 수 없거나 결제사에 결제가 없음) 「지금은 이 요청대로 환불할 수 없어요. 결제 한 건에서 상태를 확인해 주세요」로 중립으로 말하고, `400 REFUND_AMOUNT_EXCEEDED`(요청 줄은 `REQUESTED` 로 남는다)는 「요청을 거절하거나 결제 한 건에서 직접 환불해 주세요」 — 둘 다 결제 한 건으로 가는 길(`orderLink`)을 준다. 직접 환불의 `409 REFUND_IN_PROGRESS` 는 열린 것이 기다리는 요청(`order.openRefundStatus === 'REQUESTED'`)이면 「기다리는 환불 요청이 있어요. 그 요청을 먼저 결정해 주세요」.
+- **운영자 환불 · 승인 호출은 45초를 기다린다**(`OPERATOR_REFUND_TIMEOUT_MS`, `createPaymentAdminApi(client, { refundTimeoutMs })`): 서버가 결제사 조회 + 환불을 하므로 클라이언트 기본 15초보다 길다. 거절은 돈이 안 움직여 기본 그대로다.
+- **문서가 코드보다 넓지 않다**: 「402 · 400 · 409 = 확정」을 「장부 코드(`PAYMENT.*`)가 붙은 답만 확정, 코드 없는 4xx 와 `PROVIDER_NOT_FOUND` · `ROUTING_FAILED` 등은 모름」으로 고쳤고 `refundOutcome.test.ts` 가 그 경계를 고정한다. 운영자 API 가정 표를 진행 문서의 운영자 계약 추가 ①~⑥ 에 맞췄다.
+- e2e(`paymentAdmin.e2e.ts`): `aria-disabled` 단추를 `click()` 하면 Playwright 가 「enabled 가 아님」으로 15초를 기다리다 실패하므로, 막힌 확인을 포커스 + Enter 로 누른다(「닿는다」도 같이 잰다). 두 e2e 파일과 `paymentSteps.ts` 의 다른 `click()` 은 모두 눌릴 수 있는 단추다. **작성만 했다 — 실행하지 않았다.**
+
+### Fixed — 거둠도 끝나면 무효화한다, 문서와 작은 사실 맞춤 (F3 리뷰 2~3회차)
+
+- **`useWithdrawRefund` 는 실패해도 뿌리를 무효화한다**: 환불 요청 거둠이 「이미 처리됨」으로 끝나도 화면이 서버의 지금 상태를 다시 읽는다. 거둠 · 승인 · 그만둠은 끝나면(실패 포함), 환불 요청도 끝나면(확정 거절 · 답 유실 포함 - R-FE 1회차부터) 무효화하고 주문 만들기는 하지 않는다. `packages/payment/README.md` 의 문장과 상수 표(`INTENT_KEY_TTL_MS`)를 맞췄다.
+- **`apps/sample`**: 거둠이 이미 처리된 요청이라 막히면 그렇게 말한다(방향 없는 문구) · 거절된 뒤 다시 요청하면 옛 문구를 지운다 · 돌아온 화면은 주문 id 가 있는데 못 읽었으면(조회 중이든 실패든) 「다시 해 보기」를 감춘다 · 결제창이 안 열린 주문은 안 것으로부터 시간을 센다.
+
+### Fixed — 운영자 환불이 아는 것만 말한다 (F4 리뷰 1회차)
+
+- **결과를 모르는 오류를 「환불하지 못했어요」라고 단정하지 않는다**: `refundProblemOf(error)` 가 확정(장부 코드가 붙은 답 — 결제사 거절 · 409 · 400 · `503 PAYMENT.UNAVAILABLE` = 보내지 않았다 · 환불 없이 닫힌 줄)과 모름(네트워크 · 시간 초과 · 5xx)을 가른다. 모름은 「환불 결과를 확인하지 못했어요」 + 환불 내역 확인 안내(확인은 열려 있다), 승인의 409 는 「이미 처리된 요청이에요」, 거절의 모름은 「거절 결과를 확인하지 못했어요」.
+- **`Idempotency-Key` 는 모를 때만 든다**: 확정 판정(장부 코드 `PAYMENT.*` 가 붙은 답 — 402 · 400 · 409 · 404 · 503 — 과 200 인데 `FAILED`/`REJECTED`/`WITHDRAWN` 줄; 코드 없는 4xx 와 `PROVIDER_NOT_FOUND` · `ROUTING_FAILED` 는 모름)에서는 놓아, 같은 금액으로 다시 누르면 새 환불 줄 · 새 키다. 같은 키 재전송이 돌려준 닫힌 줄은 성공처럼 창을 닫지 않고 실패로 말한다(`RefundNotDoneError`).
+- **요청 승인이 결제사에 거절되면 막다른 길이 아니다**: 그 요청 줄은 닫힌다(스펙 §5.3) — 확인이 막히고(`aria-disabled` + 이유) 「요청은 환불 안 됨으로 닫혔어요. 결제 한 건에서 직접 환불해 주세요」, 목록에서 연 창은 결제 한 건으로 가는 링크(`orderLink`)를 준다.
+- **채운 단추는 화면에 하나**: `AdminOrderPanel` 은 우선순위(기다리는 요청의 결정 → 확인 필요의 맞추기 → 환불하기 → 맞추기 → 막힌 환불하기)로 하나만 채우고, `RefundRequestTable` 의 줄 단추는 모두 테두리다. 상태별 스토리 `play` 가 채운 단추 수를 센다.
+- **`useRefundDecision` 이 패키지로**(`@skeleton/payment/admin`, 샘플에서 이사): 스토리 `play` 가 베낀 코드가 아니라 진짜 훅을 잰다(승인은 `approve` 만, 거절은 `reject` 만). 일하는 동안 × 로 닫았다 다시 열어도 일하는 중이다(풀린 확인으로 승인이 두 번 나가지 않는다).
+- **데이터가 있는데 다시 읽기만 실패하면 화면을 바꾸지 않는다**(운영자 한 건 · 내 결제 한 건 · 응원하기): 창 · 오류 · 멱등 키가 그 컴포넌트 안에 살기 때문에, 통째로 오류 화면으로 바뀌면 「모르는 오류에서 같은 키 재사용」이 깨졌다. 운영자 한 건 화면은 띠 + 「다시 시도」를 더한다.
+- 단추 낭독 이름: 결정 단추는 금액 + 결제 번호, 「다시 처리」는 이벤트 이름 + 결제 번호(없으면 결제사 결제 번호). 요청 처리 창은 결제 번호를 한 줄로 말한다.
+- `PAYMENT.WEBHOOK_EVENT_NOT_FOUND` 를 장부 오류 코드에 더하고 「꺼짐」 판정에서 「없음」으로 본다. `packages/payment/README.md` 의 「운영자 API 가정」 표를 백엔드와 정한 계약(C1~C8)에 맞췄다.
+- e2e(`paymentAdmin.e2e.ts`): 늘 참이던 단정(`getByText('운영자')`)을 「운영자 · 운영자가 환불함」 순서로, 기다림 없던 「결제사 호출 0」을 브라우저가 보낸 환불 POST 수 + 조용해질 때까지 기다림으로 바꿨다. **작성만 했다 — 백엔드가 들어온 뒤 실행한다.**
+
+### Added — `@skeleton/ui` `ChoiceGroup` (F3 리뷰 1회차)
+
+- **`ChoiceGroup`**: 하나만 고르는 선택지 묶음(WAI-ARIA radio group) — 칸마다 보조 `Button`, 고른 칸은 ✓ · 굵게 · 안쪽 선, Tab 은 한 번(고른 칸), 화살표 · Home · End(`nextChoiceIndex`)가 고른 칸을 옮기고 포커스가 따라간다. 이름은 `aria-label` 또는 보이는 제목에 잇는 `aria-labelledby`. 안 고른 칸의 hover 는 고른 칸과 다른 모양. 스토리 + `play`(키보드 · 포커스 · a11y). `apps/sample` 의 `AmountChoice` 를 옮긴 것 — 샘플은 이것을 쓴다.
+
+### Fixed — `apps/sample` 응원하기 (F3 리뷰 1회차)
+
+- **결제창을 닫고 돌아온 화면이 틀린 말을 하지 않는다**: 실패 주소로 돌아오면 주소만으로 「그만뒀어요」 / 「결제가 안 됐어요」라 한다(「확인 중」 · 「내역에서 다시 볼 수 있어요」가 아니다). 서버가 돈이 움직였다고 할 때(`PAID` · `CONFIRMING` · 환불)만 그 말로 뒤집는다. `failUrl` 에 우리 주문 id(`?order=`)를 싣는다 — 결제창이 `orderId` 를 싣지 않아도 그 주문을 닫는다. 가짜 토스에 `sdk: 'cancel-no-order-id'`.
+- **`PAYMENT.*` 오류는 토스트로 한 번 더 뜨지 않는다**(`toastUnlessValidation`): 화면이 제자리에서 말한다. 「요청 거두기」 실패에도 제자리 문구.
+- **결제창을 못 열면 누를 때마다 새 주문이 생기지 않는다**: 만든 주문을 화면이 들고 있다가 같은 금액으로 다시 누르면 창만 다시 연다.
+- **e2e**: 한 파일의 시나리오들이 로그인을 한 번만 한다(`ensureSignedIn` — 둘째 시나리오부터 「로그인」 링크가 없어 던지던 것) · 탐침은 404 만 건너뜀(그 밖의 실패는 던진다) · 백엔드에 `skeleton.http.clients.payment-toss.response-timeout=10s` 를 같이 싣는다(`reconcile.first-delay` 가드) · `checkout-ttl` 40s · ⑥ 은 이 주문의 호출만 센다 · ① 은 내역 줄의 카드 표시를 단정한다.
+
+### Added — `@skeleton/payment/admin` 운영자 부품, `apps/sample` 의 운영자 결제 화면, e2e (F4)
+
+- **`@skeleton/payment/admin`**(선택 하위 경로 — `@skeleton/auth/admin` 과 같다. 기본 진입점은 이것을 싣지 않는다): `createPaymentAdminApi`(`/admin/payments` — 목록 · 한 건 · 직접 환불 · 환불 요청 목록 · 승인 · 거절 · 「결제사와 맞추기」 · 웹훅 수신함 보기 · 다시 처리) · 훅 `useAdminOrders` `useAdminOrder` `useAdminRefundRequests` `useAdminWebhookEvents` `useOperatorRefund`(의도별 `Idempotency-Key`) `useApproveRefund` `useRejectRefund` `useSyncOrder` `useRetryWebhookEvent`(변경이 끝나면 사용자 쪽과 같은 뿌리 `['payment']` 를 무효화) · `adminAccessProblem`(403 접근 차단 / 404 운영자 경로가 꺼짐 — 결제 한 건이 없다는 404 와 코드로 가른다).
+- **부품 다섯**: `AdminOrderTable`(표 · 확인 필요 알약과 이유 · 상태 고르기 · 결제 번호 찾기) · `AdminOrderPanel`(한 건 — 결제사 결제 번호 · 환불 줄 · 이력 · 직접 「환불하기」 · 「결제사와 맞추기」, 주 단추는 하나) · `AdminRefundDialog`(직접 환불 전액/부분 · 요청대로 환불 · 요청 거절 — 돈이 나가는 행동은 늘 이 확인 창, 남은 금액을 넘는 금액은 화면에서도 막고 막힌 확인은 `aria-disabled` + 이유) · `RefundRequestTable`(결정을 기다리는 줄에 채운 단추 하나) · `WebhookEventTable`(처리되지 못한 줄에만 「다시 처리」). 줄 끝 행동은 모두 테두리 있는 단추이고 `renderAction` 링크에는 버튼 모양 클래스를 붙인다. 스토리 다섯 파일(`play` · 접근성 · 320/375px · 영어) · 마크업 시험 · 한국어 문구에 영어가 남지 않는 시험.
+- **문구**: `PaymentLabels.admin`(`koPaymentLabels.admin`) — 낱말은 스펙 §11.2 한 벌(운영자 키까지 `labels.test.ts` 가 「쓰지 않는 말」을 막는다: 돈을 돌려주는 일은 「환불」 하나, 「승인」 · 「반려」 · 「동기화」 없음, 「결제사와 맞추기」, 「확인 필요」).
+- **`apps/sample`**: `/admin/payments`(탭 전체 · 확인 필요 · 환불 요청, `?tab=` 에 남는다) · `/admin/payments/:id`(한 건) — `RequireRole ADMIN` 아래, 서버 403 은 「접근 차단」 · 404 는 「결제 관리를 쓸 수 없어요」. `admin.payments.*`(ko · en)은 낱말 시험(`cheerWording.test.ts`)이 본다. 메뉴 링크는 두지 않았다(계정 도구와 같다) · 웹훅 수신함은 화면에 두지 않았다(부품만).
+- **e2e**: `payment.e2e.ts` ①의 운영자 환불 걸음이 API 호출에서 운영자 화면 조작(별도 로그인 컨텍스트 → 환불 요청 탭 → 「요청대로 환불하기」 → 확인 창)으로 바뀌었다. 새 `paymentAdmin.e2e.ts`: ⓐ 운영자만 들어간다 ⓑ 부분 환불(남은 금액을 넘으면 막힘 → 2,000원 환불 → 「일부 환불됨」, 결제사 취소 한 번 · 금액 2,000) ⓒ 요청 거절(사용자에게 「환불 안 됨」, 결제사 호출 없음) ⓓ 「결제사와 맞추기」. 운영자 경로가 닫힌 백엔드에서는 건너뛴다. **작성만 했다 — 백엔드 B7 · B8 이 들어온 뒤 실행한다.**
+- `capabilities.json`: 항목 `payment-admin`(패턴) · `payment` 의 「운영자 화면은 아직 없다」 안내를 하위 경로로 고쳤다. `backend.modules` 에 `payment-jdbc` 는 아직 없다(kotlin main 에 들어온 뒤).
+- **운영자 API 는 가정이다** — 스펙 §7 이 모양을 다 정하지 않아 `packages/payment/README.md` 의 「운영자 API 가정 — 백엔드 B7 이 맞출 것」에 경로 · 쿼리 · 응답 칸 · 오류 코드를 적었다.
+
+### Added — `apps/sample` 응원하기: 금액 고르기 → 결제창 → 결과 → 내 응원 내역 → 환불 요청, 가짜 토스, e2e (F3)
+
+- **화면**: `/cheer`(서버가 준 금액 목록에서 하나 — `@skeleton/ui` 의 `ChoiceGroup`(보조 `Button` 모양의 선택지), 고른 것은 테두리 · 바탕 · ✓ — 와 채운 단추 「응원하기」 하나, 테스트 키면 `TestModeNotice`, 못 쓰면 흐리게 두고 이유) → 결제창(`openCheckout`) → `/payments/return`(성공 · 실패 주소 둘 다 읽어 같은 주문의 승인을 한 번, `PaymentResult`) → `/cheers`(내 응원 내역 — `OrderList`) → `/payments/:id`(`OrderSummary` + 환불 요청 `RefundRequestDialog`). 메뉴에 「응원하기」, 설정에 「내 응원 내역」 링크 카드. 모두 `RequireAuth` 아래 · `noindex` · robots 에서 막음. 문구 `cheer.*`(ko · en)는 낱말 시험(`cheerWording.test.ts`)이 「쓰지 않는 말」을 막는다.
+- **`apps/sample/src/cheer/`**: 응원 API(`GET /cheers/options` · `/cheers/me`) · 쿼리 훅 · `startCheer`(주문 → 결제창, 창을 닫으면 주문을 돌려놓는다) · `returnPlanOf`(돌아온 주소 → 할 일) · `shownOrderOf` · `cheerAsOrder` · `paymentLabelsFor`(패키지 문구 위에 응원 말만 덮는다).
+- **`e2e/fakeToss.ts`**: 토스 문서 모양의 가짜(승인 · 취소 · 조회, Basic 인증 · 멱등 키 · 금액 대조) + 제어 `POST /control`(다음 승인을 거절 · 지연 · 유실 · 5xx, 결제창을 닫음 · 인증만 하고 떠남, 나중에 결제를 끝냄, 카드 번호) + 토스 SDK 대역 스크립트(`routeTossSdk` 가 `js.tosspayments.com` 요청을 가로챈다). 단위 시험 `fakeToss.test.ts`. `globalSetup.ts` 가 기본으로 띄워 백엔드에 `SKELETON_PAYMENT_TOSS_*` 로 알린다(`E2E_FAKE_TOSS=0` 이면 끈다).
+- **`e2e/payment.e2e.ts`**: 스펙 §13.2 ①~⑦(결제 → 내역 → 환불 요청 → 운영자 환불 · 떠난 결제의 뒤늦은 정합 · 금액 변조 · 카드 거절 · 승인 응답 유실 · 새로 고침 · 그만둠). 백엔드에 응원하기가 없으면 건너뛴다. 운영자 환불은 운영자 화면(F4) 전이라 API 로.
+- `capabilities.json`: `app-sample` 이 `payment` 를 끌고 온다(`autoIncludes`) · `payment` 의 `alsoVia` 에 `--with-sample`.
+
+### Fixed — `@skeleton/payment` 막힌 환불 확인도 Tab 으로 닿는다, 환불된 결제의 결과 화면에 「결제 내역」(F2 리뷰 2회차)
+
+- **`ConfirmDialog` 에 `confirmBlockedBy`**(더하기만 — 기존 prop 동작 그대로): 창 안에서 왜 못 누르는지 말하는 요소의 id 를 주면 확인이 `aria-disabled="true"` 로 흐리게 남고, Tab 으로 닿고, 눌러도 아무 일 없고(문구 입력 창에서도 제출하지 않는다), 그 요소가 단추 설명으로 낭독된다. `busy` 는 정말 일하는 중이라 그대로 `disabled`. 스토리 `BlockedConfirmStaysReachable`.
+- **`RefundRequestDialog`**: `REFUND_IN_PROGRESS` · `REFUND_NOT_ALLOWED` 뒤와 환불할 금액 0 일 때 확인 단추가 꺼지지 않고 막힌 채 닿는다 — 이유 띠(`Alert`)가 단추 설명이다. 스토리 `ErrorRefundAlreadyOpen` · `ErrorRefundNotAllowed` · `NothingLeftToRefund` 가 `aria-disabled` · 닿음 · 설명을 단정한다. 「일하는 중이 아닌데 진짜 `disabled`」인 단추를 `packages/payment` 전체에서 훑었으나 더는 없었다(남은 `disabled` 는 `loading` 이 거는 것뿐).
+- **`PaymentResult`**: `REFUNDED` 가 자기 단계가 되면서 빠졌던 「결제 내역」 단추를 되살렸다(스토리 `Refunded` 와 `ui.test.tsx` 가 단정).
+
+### Fixed — `@skeleton/payment` 결제 결과의 세 갈래: 모르면 다시 보내고, 거절은 거절, 확정 4xx 는 따로(F1 확인 리뷰 2회차)
+
+- **결과를 모르면 같은 주문의 승인을 다시 보낸다**: `useConfirmOrder`(`confirmOrderMutation`)가 네트워크 오류 · 시간 초과 · 5xx · 401 갱신 실패에 `CONFIRM_RETRY_LIMIT`(5)번, 1초에서 두 배씩 10초까지 다시 보낸다(그동안 `isPending`). 서버 계약이 받쳐 준다 — `CONFIRMING` 이면 202, `PAID` 면 200, 결제사 멱등 키 = 주문 id. 전에는 승인 요청이 서버에 닿지 못해 `PENDING` 이던 주문이 영원히 「확인이 늦어지고 있어요」였다(되묻기는 `PENDING` 을 묻지 않고, 결제 내역은 `PENDING` 을 빼고 준다).
+- **`confirmOutcomeOf(error)`**: `declined`(402 `DECLINED`) · `rejected`(그 밖의 확정 4xx: 400 `AMOUNT_MISMATCH` · 409 `MODE_MISMATCH` · 409 `ORDER_NOT_PAYABLE` · 404) · `unknown`(그 밖 전부). 확정된 답은 다시 보내지 않는다.
+- **`PaymentResult` 에 단계 하나**: 「결제를 확인하지 못했어요」(`result.unconfirmed`) — 확정 4xx 이고 주문이 아직 끝나지 않았을 때. 스피너도 「다시 해 보기」도 없고 「결제 내역」 + 참조 번호. 서버가 읽어 준 주문이 끝 상태면 그 상태가 오류를 이긴다. 다시 보내고도 끝내 모르면 곧바로 「확인이 늦어지고 있어요」다(전에는 모르는 오류가 30초 스피너였다).
+- **되묻기 상한은 시계로 잰다**: 조회가 계속 실패해도 `Date.now() - 첫 답` 이 상한을 넘으면 멈춘다. 조회 하나가 실패해도 간격이 1초로 돌아가거나 5분 시계가 다시 돌지 않는다(회차 사이의 공백은 `errorUpdatedAt` 도 센다).
+- **든 `Idempotency-Key` (`createIntentKeys`)**: 성공한 호출은 **자기가 쓴** 키만 버린다(그 사이 다른 입력으로 넘어갔다면 그 입력의 키가 남는다), 든 키에 수명 10분(`INTENT_KEY_TTL_MS`, 결제창 유효 시간 30분보다 짧게). 키 시험을 응답 전에 두 번 누르는 상황 · 다시 그려도 같은 키인지(스토리 `RetryAfterAFailureKeepsTheSameKey`)까지 넓혔다.
+- **`loadTossPaymentsSdk`**: 포기한 시도의 늦은 `load`/`error` 가 그 뒤에 시작한 새 시도의 기억을 지우지 않는다. `readCheckoutReturn` 과 같게 `confirmRequestFromTossRedirect` 의 오류 문장도 주소의 금액 날값을 싣지 않는다.
+- **README**: 결과 화면에서 승인 · 다시 보내기 · 단계 판정을 엮는 예시, `press()` 가 끝날 때까지 단추를 막는 예시(`disabled={create.isPending}` 은 주문이 만들어진 뒤 결제창이 뜨기 전 틈에 단추를 다시 연다). 맨 위 「kotlin 병합 뒤 할 일」 메모는 아래로 옮겼다(찍힌 프로젝트의 README 에 따라가지 않게).
+- **kotlin 병합 뒤 할 일 (잊지 말 것)**: 백엔드 `payment-jdbc` 가 kotlin-skeleton 에 들어오면 `capabilities.json` 의 `payment` 항목 `backend.modules` 에 `payment-jdbc` 를 더하고, 같은 때 `backend.basePaths` 를 `["/api/v1/payments"]` 로 채운다. 지금 `basePaths` 는 `[]` 다 — 적힌 모듈(`payment`)이 열지 않는 경로를 적으면 `siblingCheck` 가 짝 경로가 없다며 검사를 건너뛰어 빈틈으로 통과한다.
+
+### Fixed — `@skeleton/payment` 화면 부품: 링크는 버튼 모양, 영어가 안 남는다, 요청만 한 환불은 「환불 요청함」, 꺼진 단추도 Tab 으로 닿는다(F2 리뷰 1회차)
+
+- **버튼 모양 링크**: `OrderList` 의 `renderAction` 이 네 번째 인자로 버튼 모양 클래스를 준다(작은 보조 `Button` 과 같은 테두리 · 높이 · hover · 포커스). 정본 스토리 `LinkAction` · README 예시는 링크에 그 클래스를 붙이고, `play` 가 테두리 · 바탕 · 높이를 단정한다. 없던 `<LinkButton>` 을 쓰라던 문구는 없앴다(`@skeleton/ui` 로 올리지 않았다).
+- **한국어 문구를 넘기면 영어가 남지 않는다**: `ConfirmDialog` 에 `loadingLabel`(`@skeleton/ui`, 기본 `Loading` 그대로) — 환불 창 확인 단추의 「Loading 환불 요청하기」. 오류 알림의 낭독 말머리(`labels.errorLabel`) · 「더 보기」의 스피너 · 「거두는 중」 · × 단추(`창 닫기`). 낱말 시험이 `labels` 객체만 훑던 빈틈은 `ui.test.tsx` 가 한국어로 그린 마크업(태그를 벗긴 글자 + `aria-label`)에서 `Error|Loading|Close|Copy|Reference|…` 를 찾는 것으로 메웠다.
+- **환불을 요청만 한 상태**: 계약에 `Order.openRefundStatus?: 'REQUESTED' | 'PENDING' | null`(백엔드가 맞춘다 · `refundPending` 은 그대로). 알약 · 요약은 `REQUESTED` → 「환불 요청함」(돈은 안 움직였다), `PENDING` → 「환불 중」, 칸이 없는 서버는 `refundPending` 만으로 「환불 중」. `OrderSummary` 는 환불 줄 중 열린 줄의 상태를 먼저 쓴다(머리 알약과 줄이 어긋나지 않는다). 막힌 이유도 「이미 환불을 요청했어요」 / 「환불 중이에요」로 갈린다.
+- **「요청 거두기」**: `OrderSummary` 의 `onWithdrawRefund?(refund)` · `withdrawing?` — 내가 요청한(`REQUESTED` · `USER`) 줄 옆 테두리 단추. 상태 낱말은 「환불 요청 거둠」(「그만둠」은 결제창 이탈에만).
+- **못 누르는 단추**: `aria-disabled="true"` + 눌러도 아무 일 없음 + 옆에 이유 한 줄(`aria-describedby`) — Tab 으로 닿고 이유가 낭독된다. `docs/ui-catalog.md` 의 원칙 절(「꺼진 버튼으로 막지 않는다」)과 `OrderSummary` 줄이 서로 맞게 다듬었다. 서버 설정(`refundRequestsEnabled`)을 아직 모르면(`undefined`) 단추를 그리지 않는다 — 켜졌다 꺼지는 단추가 없다.
+- **환불 창**: 닫는 단추 「취소」 → 「닫기」(× 는 「창 닫기」) — 낱말 시험의 「취소」 예외가 없어졌다. 창이 보인 금액을 `amount` 로 보낸다. `REFUND_IN_PROGRESS` · `REFUND_NOT_ALLOWED` 뒤와 환불할 금액 0 이면 확인 단추가 막힌다(2회차에서 꺼짐 → `aria-disabled` 로 닿게 고쳤다). 묵은 오류는 부모가 열 때 `reset()`(README).
+- **결과 화면**: 환불된 주문은 「환불됐어요」, 이름과 금액은 따로 칸, 겹쳐 읽히던 `role="status"` 중첩을 걷고 제목에 `aria-describedby`, 다른 주문으로 바뀌면 「늦어지고 있어요」도 처음부터. `OrderList` 는 불러오는 중 · 오류여도 받은 줄을 지우지 않는다.
+- **문구**: 모르는 상태는 영문 코드 대신 「확인 필요」, 「돈은 나가지 않았어요」(단정)는 「결제가 끝나지 않았어요」, 「다시 해 보세요」/「다시 불러오기」 통일, 운영자 · 결제사 콘솔이 한 환불의 사유 문구 두 개, 같은 문장이 두 키에 있던 것(환불 막힘 이유)은 `refundBlocked` 하나. 문구 파일은 `labelTypes.ts` · `labels.en.ts` · `labels.ko.ts` 로 갈랐다(공개 이름은 그대로). 낱말 시험은 공백을 뗀 글자로 붙여 쓴 변형(「처리중」 · 「테스트모드」)을 잡고, 「결제 내역」 · 「환불 요청」 같은 긍정 단정을 더했다. 표 조회는 자기 키만(`Object.hasOwn`) — `constructor` 같은 코드가 와도 함수가 글자로 나오지 않는다.
+- **좁은 폭**: `PaymentResult`(참조 번호가 붙는 단계, 영어도) · `RefundRequestDialog`(뷰포트 설정 320/375, 영어도) 스토리. 공백 없는 긴 영문 이름이 `Card` 머리에서 넘치던 것을 고쳤다(`@skeleton/ui` `Card` 의 제목이 줄을 바꾸고 `actions` 는 아래로 — 스토리 `UnbreakableTitleStaysInside`).
+
+### Added — `@skeleton/payment` 화면 부품 여섯 개(F2)
+
+- `OrderStatusBadge`(눌리지 않는 알약 · 열린 환불이면 「환불 중」) · `OrderList`(결제 내역 — 줄 끝 「자세히」 단추만 눌린다, 카드 표시 「현대카드 ····1234」) · `PaymentResult`(됐어요 / 확인 중 / 늦어지고 있어요 / 안 됐어요 / 시간이 지났어요 / 그만뒀어요 — 거절 종류별 문구, 결제사 코드는 `ErrorReference` 안에만) · `OrderSummary`(한 건 + 환불 줄 + 「환불 요청」, 못 누르면 이유를 옆에) · `RefundRequestDialog`(사유 고정 셋 · 확인/취소) · `TestModeNotice`.
+- 문구는 `labels` prop(기본 영어 · `koPaymentLabels`), 낱말은 스펙 §11.2 의 한 벌 — 「쓰지 않는 말」이 기본 문구에 없음을 `labels.test.ts` 가 고정. 도우미 `formatMoney` · `cardDisplay` · `declineCategoryOf`.
+- 스토리 여섯 파일(`play` · 접근성 · 320/375px) · `docs/ui-catalog.md` 여섯 줄 · `tests/support/ssrFixtures.ts` · `capabilities.json`(`needs` 에 `time` `ui`). 런타임 의존에 `@skeleton/ui` · `@skeleton/time` 추가.
+
+### Added — `@skeleton/payment` 장부 API · 훅 · 결제창 열기(F1)
+
+- `createPaymentLedgerApi(client, { basePath = '/payments' })`(주문 만들기 · 승인 · 그만둠 · 한 건 · 내역 · 환불 요청 · 거둠, 만들기 · 환불 요청은 `Idempotency-Key`) · 훅 `usePaymentConfig` `useCreateOrder` `useConfirmOrder`(결과를 모르면 같은 주문의 승인을 다시 보낸다 — 아래 「Fixed」) `useAbandonOrder` `useOrder`(`CONFIRMING` 동안만 간격을 늘려 되묻고 첫 답으로부터 5분이면 멈춘다) `useOrders` `useRequestRefund` `useWithdrawRefund`(키는 한 뿌리 `paymentKeys.all`; 환불 요청은 성공하면, 거둠 · 승인 · 그만둠은 끝나면(실패 포함) 뿌리를 무효화하고, 주문 만들기는 무효화하지 않는다 · `useCreateOrder` / `useRequestRefund` 는 한 의도의 `Idempotency-Key` 를 들고 있다 — 성공하면 그 키만 버리고 10분이 지나면 새로 만든다 · 승인 호출은 45초까지 기다린다) · `openCheckout`(토스 SDK v2 를 누른 그때 불러온다, 구매자 정보 없음, SSR 안전) · `readCheckoutReturn` · 장부 오류 코드 열네 개(`PaymentLedgerErrorCodes` `isPaymentLedgerError` `declineDetail`). 기존 `createPaymentApi` · `confirmRequestFromTossRedirect` · `isPaymentError` 는 그대로. 부품(F2) · `@skeleton/payment/admin`(F4)은 아직 없다. 백엔드 짝은 kotlin-skeleton `feat/payment-ledger`(`payment-jdbc` 가 들어오면 `capabilities.json` 의 `backend.modules` 에 더한다).
+
 ### Fixed — 이메일 등록 · 약관 재동의 막이 한 계정의 것이 된다, 독립 리뷰 반영(`@skeleton/auth` · `@skeleton/legal` · `@skeleton/realtime` · `apps/sample`)
 
 - **계정 바뀜**: 두 컨트롤러에 `setAccount(accountId)` — 게이트가 매번 알린다. 계정이 **바뀌면**(다른 탭이 B 로 로그인 · 로그아웃; 토큰 저장소는 탭끼리 동기화된다) 이전 계정의 막이 접히고 붙잡힌 호출은 원래 403 으로 끝난다(B 의 토큰으로 나가지 않는다). 로그아웃 뒤에 늦게 온 403 은 막을 다시 세우지 않는다. 막이 열려 있는 동안 탭이 다시 보이면(visibilitychange · focus) 서버에 다시 묻는다 — 다른 탭에서 이미 등록 · 동의했으면 접고 붙잡은 호출을 보낸다(`reconsent.check()` 는 더는 묻지 않으면 닫는다). `ReconsentGate` 의 `deferCheck`: 앞 단계가 끝나야 묻는 앱이 계정을 숨기지 않고 확인만 미룬다.

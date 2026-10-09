@@ -1,0 +1,42 @@
+.body {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.facts {
+  display: grid;
+  gap: var(--space-md);
+  margin: 0;
+}
+
+.fact {
+  display: grid;
+  gap: var(--space-xs);
+  margin: 0;
+}
+
+.factLabel {
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+}
+
+.factValue {
+  color: var(--text-strong);
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.amountValue {
+  font-size: var(--font-size-subheading);
+}
+
+.note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+}
+
+.codeValue {
+  font-family: var(--mono);
+  font-weight: 500;
+}

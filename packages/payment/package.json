@@ -3,11 +3,15 @@
   "version": "1.1.0",
   "private": true,
   "type": "module",
-  "description": "결제 계약 타입 + 얇은 호출(provider 라우팅 조회 · confirm/cancel/refund) + 토스 리다이렉트 → confirm 요청. 백엔드 modules/payment(payment-toss · payment-stripe) 짝 — 모듈은 HTTP 를 열지 않아 경로는 앱이 알려 준다",
+  "description": "결제 한 벌 — 장부 API(주문 · 결제창 값 · 승인 · 환불 요청) · 화면 부품(상태 알약 · 결제 내역 · 결과 · 한 건 · 환불 요청 창 · 테스트 결제 표시) · TanStack Query 훅 · 토스 결제창 열기(openCheckout) · 돌아온 주소 읽기 · 선택 운영자 부품(@skeleton/payment/admin), 그리고 기존 얇은 호출(provider 라우팅 · confirm/cancel/refund) · 토스 리다이렉트 → confirm 요청. 백엔드 modules/payment(payment-jdbc · payment-toss · payment-stripe) 짝",
   "exports": {
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./admin": {
+      "types": "./src/admin/index.ts",
+      "default": "./src/admin/index.ts"
     }
   },
   "types": "./src/index.ts",
@@ -16,6 +20,17 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@skeleton/api-client": "workspace:*"
+    "@skeleton/api-client": "workspace:*",
+    "@skeleton/time": "workspace:*",
+    "@skeleton/ui": "workspace:*"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "^5.0.0",
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@tanstack/react-query": "^5.99.2",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
   }
 }

@@ -1,0 +1,109 @@
+.list {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.rows {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* 줄 전체는 눌리지 않는다 — 구분선만 있고, 누르는 것은 줄 끝의 「자세히」 단추 하나 */
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: var(--space-md) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.main {
+  display: grid;
+  flex: 1 1 14rem;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.name {
+  font-weight: 650;
+  color: var(--text-strong);
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs) var(--space-md);
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+  overflow-wrap: anywhere;
+}
+
+.amount {
+  color: var(--text);
+  font-weight: 650;
+}
+
+.error {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.more {
+  display: flex;
+  justify-content: center;
+}
+
+/*
+ * `renderAction` 이 라우터 링크에 붙이는 클래스 — `@skeleton/ui` 의 작은 보조 `Button`(secondary · sm)과 같은 모양.
+ * 쉬는 상태에서도 테두리와 바탕이 있다(글자만 있는 링크 금지), hover · active · focus-visible 이 서로 다르고 높이는 36px(거친 포인터는 44px).
+ */
+.detailsLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0 var(--space-md);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-strong);
+  font-size: var(--font-size-small);
+  font-weight: 650;
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+@media (pointer: coarse) {
+  .detailsLink {
+    min-height: 44px;
+  }
+}
+
+.detailsLink:hover {
+  border-color: var(--teal);
+  background: var(--teal-wash);
+}
+
+.detailsLink:active {
+  border-color: var(--teal);
+  background: var(--teal-soft);
+}
+
+.detailsLink:focus-visible {
+  outline: 3px solid var(--teal);
+  outline-offset: 2px;
+}

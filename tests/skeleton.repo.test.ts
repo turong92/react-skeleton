@@ -97,6 +97,7 @@ describe('the skeleton repo', () => {
       'packages/legal',
       'packages/marketing',
       'packages/notifications',
+      'packages/payment',
       'packages/seo',
       'packages/storage',
       'packages/theme',

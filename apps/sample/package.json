@@ -21,6 +21,7 @@
     "@skeleton/legal": "workspace:*",
     "@skeleton/marketing": "workspace:*",
     "@skeleton/notifications": "workspace:*",
+    "@skeleton/payment": "workspace:*",
     "@skeleton/realtime": "workspace:*",
     "@skeleton/seo": "workspace:*",
     "@skeleton/storage": "workspace:*",

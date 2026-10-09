@@ -1,0 +1,36 @@
+.page {
+  display: grid;
+  gap: var(--space-xl);
+}
+
+.form {
+  display: grid;
+  gap: var(--space-lg);
+  max-width: 560px;
+}
+
+.legend {
+  font-weight: 650;
+  color: var(--text-strong);
+}
+
+.group {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.action {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.reason {
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+}
+
+.reference {
+  margin-top: var(--space-sm);
+}

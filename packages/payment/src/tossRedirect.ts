@@ -29,9 +29,7 @@ export function confirmRequestFromTossRedirect(
   const orderId = read('orderId')
   const rawAmount = read('amount')
   if (!/^\d+$/.test(rawAmount))
-    throw new PaymentRedirectError(
-      `The payment redirect amount is not a whole number: ${rawAmount}`,
-    )
+    throw new PaymentRedirectError('The payment redirect amount is not a whole number')
   return {
     providerPaymentId: paymentKey,
     merchantReferenceId: orderId,

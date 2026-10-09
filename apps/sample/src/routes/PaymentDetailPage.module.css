@@ -1,0 +1,11 @@
+.page {
+  display: grid;
+  gap: var(--space-xl);
+}
+
+/* 방금 환불을 요청했다는 말 - 결과를 알리는 글자이지 단추가 아니다 */
+.done {
+  margin: 0;
+  color: var(--text-strong);
+  font-weight: 650;
+}

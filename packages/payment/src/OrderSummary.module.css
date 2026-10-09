@@ -1,0 +1,67 @@
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--space-md) var(--space-lg);
+  margin: 0;
+}
+
+.fact {
+  display: grid;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.fact dt {
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+}
+
+.fact dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.body {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--font-size-body);
+}
+
+.refunds {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.refund {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs) var(--space-md);
+  padding: var(--space-sm) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.refundMeta {
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+  overflow-wrap: anywhere;
+}
+
+.action {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm) var(--space-md);
+}
+
+.reason {
+  color: var(--text);
+  font-size: var(--font-size-small);
+  overflow-wrap: anywhere;
+}

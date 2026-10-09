@@ -1,4 +1,4 @@
-import { RequireAuth } from '@skeleton/auth'
+import { RequireAuth, RequireRole } from '@skeleton/auth'
 import { isValidElement } from 'react'
 import { matchRoutes } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
@@ -40,6 +40,33 @@ describe('routes', () => {
     expect(leaf('/nope/nope')?.path).toBe('*')
   })
 
+  it('has the cheer journey: choose (/cheer), come back from the payment window (/payments/return), my cheers (/cheers), one payment (/payments/:id)', () => {
+    expect(leaf('/cheer')?.path).toBe('/cheer')
+    // 정적 경로가 `:id` 보다 먼저 맞는다 — 결제창이 돌아오는 주소가 결제 한 건으로 읽히지 않는다
+    expect(leaf('/payments/return')?.path).toBe('/payments/return')
+    expect(leaf('/cheers')?.path).toBe('/cheers')
+    expect(leaf('/payments/ord_abc')?.path).toBe('/payments/:id')
+  })
+
+  it('has the operator payment screens: the list (/admin/payments) and one payment (/admin/payments/:id)', () => {
+    expect(leaf('/admin/payments')?.path).toBe('/admin/payments')
+    expect(leaf('/admin/payments/ord_abc')?.path).toBe('/admin/payments/:id')
+  })
+
+  it('the operator payment screens sit under the auth guard and, inside it, the ADMIN role guard — the accounts tool is guarded the same way', () => {
+    const hasRoleGuard = (path: string) =>
+      chain(path).some(
+        (route) => isValidElement(route.element) && route.element.type === RequireRole,
+      )
+    for (const path of ['/admin/accounts', '/admin/payments', '/admin/payments/ord_abc']) {
+      expect(guarded(path), path).toBe(true)
+      expect(hasRoleGuard(path), path).toBe(true)
+    }
+    // 사용자 쪽 결제 화면에는 역할 가드가 없다
+    for (const path of ['/cheer', '/cheers', '/payments/ord_abc'])
+      expect(hasRoleGuard(path), path).toBe(false)
+  })
+
   it('the signed-in screens sit under the auth guard; home, login, the legal pages and the 404 are public', () => {
     for (const path of [
       '/notes',
@@ -53,6 +80,10 @@ describe('routes', () => {
       '/admin/accounts',
       '/board/abc/edit',
       '/settings',
+      '/cheer',
+      '/payments/return',
+      '/cheers',
+      '/payments/ord_abc',
     ])
       expect(guarded(path), path).toBe(true)
     for (const path of [
@@ -94,6 +125,10 @@ describe('routes', () => {
       '/board',
       '/board/p1',
       '/settings',
+      '/cheer',
+      '/payments/return',
+      '/cheers',
+      '/payments/ord_abc',
     ])
       expect(seoOf(path)?.indexable, path).toBe(false)
     expect(seoOf('/nope')?.indexable).toBe(false)

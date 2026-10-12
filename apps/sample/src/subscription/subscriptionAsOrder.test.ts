@@ -14,6 +14,7 @@ const sub = (over: Partial<Subscription> = {}): Subscription => ({
   attempt: 1,
   endReason: null,
   card: { issuer: 'HYUNDAI', last4: '1234' },
+  pendingPlanCode: null,
   testMode: true,
   createdAt: '2026-10-01T03:00:00Z',
   ...over,

@@ -36,7 +36,7 @@ export type Order = {
   id: string
   status: OrderStatus
   /** 한 번 결제 · 구독의 첫 결제 · 구독의 갱신 결제(계약 §12) */
-  kind: 'ONE_TIME' | 'SUBSCRIPTION_INITIAL' | 'SUBSCRIPTION_RENEWAL'
+  kind: 'ONE_TIME' | 'SUBSCRIPTION_INITIAL' | 'SUBSCRIPTION_RENEWAL' | 'SUBSCRIPTION_CHANGE'
   itemType: string
   itemRef: string
   quantity: number

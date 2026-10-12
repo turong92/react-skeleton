@@ -1,0 +1,9 @@
+.body {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.text {
+  margin: 0;
+  overflow-wrap: anywhere;
+}

@@ -27,6 +27,11 @@ export type AdminOrderPanelProps = {
   /** 주면 「결제사와 맞추기」가 생긴다 */
   onSync?: () => void
   /**
+   * 주면 결제사가 답하지 않아 확인 중(`CONFIRMING`)으로 남은 **구독 결제**에 「결제 안 됨으로 닫기」가 생긴다(돈이 나가지 않는 단추 - 서버가 닫기 전에 결제사에 한 번 더 묻는다).
+   * 확인 창(`CloseSubscriptionChargeDialog`)을 여는 것은 부모
+   */
+  onCloseCharge?: () => void
+  /**
    * 화면이 낡았을 수 있다(다시 읽기가 실패했다). 돈이 나가는 단추(「환불하기」 · 「요청대로 환불하기」)가 `aria-disabled` 로 막히고 이유가 설명으로 붙는다 -
    * 방금 환불이 나갔는데 화면이 환불 전 그대로면 같은 환불이 한 번 더 나갈 수 있다. 「요청 거절하기」 · 「결제사와 맞추기」(돈이 안 나간다)는 그대로다
    * (주문의 `reviewReason` 이 돈이 어긋난 사유 - `REFUND_MISMATCH` · `AMOUNT_MISMATCH` · `ORDER_MISMATCH` · `MODE_MISMATCH` - 일 때도 같은 두 단추가 「먼저 결제사와 맞춰 주세요」로 막힌다.
@@ -100,6 +105,7 @@ export function AdminOrderPanel({
   onApprove,
   onReject,
   onSync,
+  onCloseCharge,
   stale,
   refunded,
   syncing,
@@ -126,6 +132,10 @@ export function AdminOrderPanel({
   const openLine = refunds.find((refund) => OPEN_REFUND.has(refund.status))
   const open: OpenRefundStatus | null =
     (openLine?.status as OpenRefundStatus | undefined) ?? order.openRefundStatus
+  const canCloseCharge =
+    Boolean(onCloseCharge) &&
+    order.status === 'CONFIRMING' &&
+    order.kind.startsWith('SUBSCRIPTION_')
   const canRefund = Boolean(onRefund) && REFUNDABLE.has(order.status) && order.refundableAmount > 0
   const review = order.reviewReason
   // 맞춘 응답이 지금 화면의 사유와 같을 때만 「맞춘 뒤」다 - 다른 사유는 맞춘 뒤에 새로 생긴 것이다
@@ -251,7 +261,7 @@ export function AdminOrderPanel({
             copiedLabel={labels.reference.copied}
           />
         )}
-        {(canRefund || onSync) && (
+        {(canRefund || onSync || canCloseCharge) && (
           <div className={styles.action}>
             {canRefund && (
               <Button
@@ -276,6 +286,11 @@ export function AdminOrderPanel({
                 onClick={onSync}
               >
                 {text.panel.sync}
+              </Button>
+            )}
+            {canCloseCharge && (
+              <Button variant="secondary" onClick={onCloseCharge}>
+                {text.panel.closeCharge}
               </Button>
             )}
             {syncedNow && !syncError && (

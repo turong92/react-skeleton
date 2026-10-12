@@ -102,6 +102,7 @@ export const koPaymentAdminLabels: PaymentAdminLabels = {
     sync: '결제사와 맞추기',
     syncing: '맞추는 중',
     synced: '결제사와 맞췄어요',
+    closeCharge: '결제 안 됨으로 닫기',
     syncErrors: {
       unsupported: '이 결제사는 조회를 지원하지 않아요',
       unavailable: '결제사에 닿지 못했어요. 잠시 뒤에 다시 해 보세요',
@@ -116,6 +117,19 @@ export const koPaymentAdminLabels: PaymentAdminLabels = {
     rejectFor: (amount, orderId) => `요청 거절하기: ${amount} (결제 ${orderId})`,
     events: '이력',
     noEvents: '아직 이력이 없어요',
+  },
+  closeChargeDialog: {
+    title: '이 결제를 「결제 안 됨」으로 닫을까요?',
+    body: '결제사가 끝내 답하지 않은 구독 결제예요. 닫기 전에 결제사에 한 번 더 물어보고, 결제된 것으로 나오면 닫지 않고 결제됨으로 맞춰요. 닫으면 이 계정은 다시 구독할 수 있어요.',
+    confirm: '결제 안 됨으로 닫기',
+    loading: '닫는 중',
+    dismiss: '닫기',
+    close: '창 닫기',
+    errors: {
+      notClosable:
+        '지금은 닫을 수 없는 결제예요. 결제사가 아직 진행하고 있거나 이미 정해졌어요. 「결제사와 맞추기」로 확인해 주세요',
+      other: '닫지 못했어요. 결제사에 물을 수 없을 때는 닫지 않아요. 잠시 뒤에 다시 해 보세요',
+    },
   },
   refundDialog: {
     direct: { title: '환불할까요?', note: '환불하면 돈이 나가고 되돌릴 수 없어요.' },

@@ -3,8 +3,10 @@ import { PaymentLedgerErrorCodes } from '@skeleton/payment'
 import {
   adminAccessProblem,
   AdminOrderPanel,
+  CloseSubscriptionChargeDialog,
   heldSecondsOf,
   useAdminOrder,
+  useCloseSubscriptionCharge,
   useDirectRefund,
   useRefundDecision,
   useSyncOrder,
@@ -44,6 +46,8 @@ function AdminPayment({
   const labels = paymentLabelsFor(t, language)
   const { order } = detail
   const sync = useSyncOrder(paymentAdminApi)
+  const closeCharge = useCloseSubscriptionCharge(paymentAdminApi)
+  const [closing, setClosing] = useState(false)
   // 사유가 맞춘 응답의 사유와 달라지는 순간 맞춘 뒤의 안내를 비운다 - 한 번 갈라지면 되살아나지 않게(맞춤 → 풀림 → 같은 사유로 다시 찍혀도 거짓 「맞춰 봤지만」이 뜨지 않는다)
   const syncNoteStale = syncNoteIsStale(sync.data, order.reviewReason)
   const resetSync = sync.reset
@@ -106,6 +110,10 @@ function AdminPayment({
           setHeld(null)
           sync.mutate(order.id, { onSuccess: () => setHeld(heldSecondsOf(direct.forget())) })
         }}
+        onCloseCharge={() => {
+          closeCharge.reset() // 묵은 오류가 새로 연 창에 보이지 않게
+          setClosing(true)
+        }}
         syncing={sync.isPending}
         // 맞춘 응답의 사유가 지금 화면의 사유와 같을 때만 「맞춘 뒤」를 말한다
         synced={sync.data}
@@ -113,6 +121,14 @@ function AdminPayment({
         syncHeld={direct.unsure ? held : null}
         syncError={sync.error}
         locale={language}
+        labels={labels}
+      />
+      <CloseSubscriptionChargeDialog
+        open={closing}
+        onClose={() => setClosing(false)}
+        onConfirm={() => closeCharge.mutate(order.id, { onSuccess: () => setClosing(false) })}
+        busy={closeCharge.isPending}
+        error={closeCharge.error}
         labels={labels}
       />
       {direct.dialog}

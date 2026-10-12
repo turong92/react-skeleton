@@ -152,6 +152,14 @@ export function syncOrderMutation(api: PaymentAdminApi, client: QueryClient) {
   }
 }
 
+export function closeSubscriptionChargeMutation(api: PaymentAdminApi, client: QueryClient) {
+  return {
+    mutationFn: (orderId: string) => api.closeSubscriptionCharge(orderId),
+    // 409 도 다시 읽는다: 그 사이 결제사가 답했거나 다른 길이 끝냈다
+    onSettled: () => invalidateRoot(client),
+  }
+}
+
 export function retryWebhookEventMutation(api: PaymentAdminApi, client: QueryClient) {
   return {
     mutationFn: (id: number) => api.retryWebhookEvent(id),

@@ -113,6 +113,7 @@ export const defaultPaymentAdminLabels: PaymentAdminLabels = {
     sync: 'Match with the provider',
     syncing: 'Matching',
     synced: 'Matched with the provider',
+    closeCharge: 'Close as not paid',
     syncErrors: {
       unsupported: 'This provider cannot be asked',
       unavailable: 'Could not reach the provider. Try again in a moment',
@@ -128,6 +129,20 @@ export const defaultPaymentAdminLabels: PaymentAdminLabels = {
     rejectFor: (amount, orderId) => `Decline request: ${amount} (payment ${orderId})`,
     events: 'History',
     noEvents: 'No history yet',
+  },
+  closeChargeDialog: {
+    title: 'Close this payment as not paid?',
+    body: 'The provider never answered this subscription payment. Before closing, it asks the provider once more: if the payment shows as paid it is not closed but matched as paid. Once closed, this account can subscribe again.',
+    confirm: 'Close as not paid',
+    loading: 'Closing',
+    dismiss: 'Close',
+    close: 'Close dialog',
+    errors: {
+      notClosable:
+        'This payment cannot be closed now. The provider is still working on it, or it has been settled. Check it with "Match with the provider".',
+      other:
+        'Could not close it. When the provider cannot be asked it is not closed. Try again in a moment.',
+    },
   },
   refundDialog: {
     direct: { title: 'Refund this payment?', note: 'The money goes out and cannot be taken back.' },

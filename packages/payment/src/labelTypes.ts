@@ -114,6 +114,8 @@ export type PaymentAdminLabels = {
     sync: string
     syncing: string
     synced: string
+    /** 막힌 구독 결제를 닫는 단추(확인 창을 연다) */
+    closeCharge: string
     syncErrors: {
       unsupported: string
       unavailable: string
@@ -130,6 +132,21 @@ export type PaymentAdminLabels = {
     rejectFor: (amount: string, orderId: string) => string
     events: string
     noEvents: string
+  }
+  /** 막힌 구독 결제를 「결제 안 됨」으로 닫는 확인 창 */
+  closeChargeDialog: {
+    title: string
+    body: string
+    confirm: string
+    /** 확인 단추가 일하는 동안의 낭독 이름 */
+    loading: string
+    dismiss: string
+    close: string
+    errors: {
+      /** 지금은 닫을 수 없다 - 결제사가 아직 진행하고 있거나 이미 정해졌다(409) */
+      notClosable: string
+      other: string
+    }
   }
   refundDialog: {
     direct: { title: string; note: string }

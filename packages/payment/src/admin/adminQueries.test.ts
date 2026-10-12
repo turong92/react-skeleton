@@ -43,6 +43,7 @@ function fakeApi() {
     approveRefund: record('approveRefund'),
     rejectRefund: record('rejectRefund'),
     syncOrder: record('syncOrder'),
+    closeSubscriptionCharge: record('closeSubscriptionCharge'),
     listWebhookEvents: record('listWebhookEvents', page),
     retryWebhookEvent: record('retryWebhookEvent'),
   }

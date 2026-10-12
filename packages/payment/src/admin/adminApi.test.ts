@@ -116,6 +116,16 @@ describe('createPaymentAdminApi (paths and bodies mirror spec 7, operator routes
     expect(calls[1]?.request).toEqual({ params: {} })
   })
 
+  it('closeSubscriptionCharge → POST /orders/{id}/close, no body', async () => {
+    const { client, calls } = fakeClient()
+    await createPaymentAdminApi(client).closeSubscriptionCharge('ord_1')
+    expect(calls[0]).toEqual({
+      kind: 'value',
+      path: '/admin/payments/orders/ord_1/close',
+      request: { method: 'POST' },
+    })
+  })
+
   it('approveRefund / rejectRefund → POST /refunds/{id}/approve | reject, no body, no Idempotency-Key', async () => {
     const { client, calls } = fakeClient()
     const api = createPaymentAdminApi(client)

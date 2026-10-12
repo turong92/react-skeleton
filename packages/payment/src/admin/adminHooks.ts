@@ -11,6 +11,7 @@ import {
   refundOrderMutation,
   rejectRefundMutation,
   retryWebhookEventMutation,
+  closeSubscriptionChargeMutation,
   syncOrderMutation,
 } from './adminQueries'
 import type { AdminOrderListParams, AdminRefundListParams, WebhookEventListParams } from './types'
@@ -75,6 +76,12 @@ export function useRejectRefund(api: PaymentAdminApi) {
 export function useSyncOrder(api: PaymentAdminApi) {
   const client = useQueryClient()
   return useMutation(syncOrderMutation(api, client))
+}
+
+/** 막힌 구독 결제를 「결제 안 됨」으로 닫는다 - 서버가 닫기 전에 결제사에 한 번 더 묻고, 결제된 것으로 나오면 닫지 않고 결제됨으로 맞춘다. 변수는 결제 번호 */
+export function useCloseSubscriptionCharge(api: PaymentAdminApi) {
+  const client = useQueryClient()
+  return useMutation(closeSubscriptionChargeMutation(api, client))
 }
 
 /** 수신함의 한 줄을 다시 처리한다 */

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — 운영자의 막힌 구독 결제 닫기(`@skeleton/payment/admin`)
+
+백엔드 `POST /admin/payments/orders/{id}/close`(HTTP 계약)에 맞췄다.
+
+- `closeSubscriptionCharge` · `useCloseSubscriptionCharge`, `AdminOrderPanel` 의 `onCloseCharge`(확인 중으로 남은 구독 결제에만 「결제 안 됨으로 닫기」), `CloseSubscriptionChargeDialog`. 주문의 `kind` 에 `SUBSCRIPTION_CHANGE`.
+
 ### Added — 환불 요청을 운영자가 금액 고쳐 승인(`@skeleton/payment/admin`)
 
 백엔드 `POST /admin/payments/refunds/{id}/approve` 의 선택 본문 `{amount}`(HTTP 계약)에 맞췄다. 금액을 고치지 않으면 지금과 같다(본문 없이 요청 금액 그대로).

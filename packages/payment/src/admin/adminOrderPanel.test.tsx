@@ -765,12 +765,22 @@ describe('AdminOrderPanel — the history', () => {
 })
 
 describe('AdminOrderPanel — closing a stuck subscription charge', () => {
-  const stuck = adminOrder({ status: 'CONFIRMING', kind: 'SUBSCRIPTION_INITIAL' })
+  const stuck = adminOrder({
+    status: 'CONFIRMING',
+    kind: 'SUBSCRIPTION_INITIAL',
+    reviewReason: 'STALE_CONFIRMING',
+  })
   const closeButton = (html: string) => html.includes('결제 안 됨으로 닫기')
 
   it('only an unanswered subscription charge gets 「결제 안 됨으로 닫기」, and only when the page can handle it', () => {
     expect(closeButton(panel(detail({ order: stuck }), { onCloseCharge: noop }))).toBe(true)
     expect(closeButton(panel(detail({ order: stuck })))).toBe(false)
+    // 막 나간 승인(표시 없음)은 아직 닫을 때가 아니다
+    expect(
+      closeButton(
+        panel(detail({ order: { ...stuck, reviewReason: null } }), { onCloseCharge: noop }),
+      ),
+    ).toBe(false)
     expect(
       closeButton(
         panel(detail({ order: adminOrder({ status: 'CONFIRMING', kind: 'ONE_TIME' }) }), {

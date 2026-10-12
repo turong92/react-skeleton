@@ -27,7 +27,7 @@ export type AdminOrderPanelProps = {
   /** 주면 「결제사와 맞추기」가 생긴다 */
   onSync?: () => void
   /**
-   * 주면 결제사가 답하지 않아 확인 중(`CONFIRMING`)으로 남은 **구독 결제**에 「결제 안 됨으로 닫기」가 생긴다(돈이 나가지 않는 단추 - 서버가 닫기 전에 결제사에 한 번 더 묻는다).
+   * 주면 결제사가 답하지 않아 오래 확인 중(`CONFIRMING` + `CONFIRM_UNRESOLVED` · `STALE_CONFIRMING`)으로 남은 **구독 결제**에 「결제 안 됨으로 닫기」가 생긴다(돈이 나가지 않는 단추 - 서버가 닫기 전에 결제사에 한 번 더 묻는다).
    * 확인 창(`CloseSubscriptionChargeDialog`)을 여는 것은 부모
    */
   onCloseCharge?: () => void
@@ -135,7 +135,9 @@ export function AdminOrderPanel({
   const canCloseCharge =
     Boolean(onCloseCharge) &&
     order.status === 'CONFIRMING' &&
-    order.kind.startsWith('SUBSCRIPTION_')
+    order.kind.startsWith('SUBSCRIPTION_') &&
+    // 막 나간 승인은 결제사가 아직 모를 뿐이다 - 서버도 같은 조건으로만 닫는다
+    (order.reviewReason === 'CONFIRM_UNRESOLVED' || order.reviewReason === 'STALE_CONFIRMING')
   const canRefund = Boolean(onRefund) && REFUNDABLE.has(order.status) && order.refundableAmount > 0
   const review = order.reviewReason
   // 맞춘 응답이 지금 화면의 사유와 같을 때만 「맞춘 뒤」다 - 다른 사유는 맞춘 뒤에 새로 생긴 것이다

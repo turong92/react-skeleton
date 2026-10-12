@@ -33,6 +33,8 @@ export const paymentKeys = {
   order: (id: string) => [...paymentKeys.all, 'order', id] as const,
   subscriptionPlans: () => [...paymentKeys.all, 'subscription-plans'] as const,
   mySubscription: () => [...paymentKeys.all, 'my-subscription'] as const,
+  planChangePreview: (id: string, planCode: string) =>
+    [...paymentKeys.all, 'plan-change-preview', id, planCode] as const,
 }
 
 export function paymentConfigQuery(api: PaymentLedgerApi) {

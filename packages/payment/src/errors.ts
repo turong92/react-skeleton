@@ -45,6 +45,12 @@ export const PaymentLedgerErrorCodes = {
   SUBSCRIPTION_NOT_ACTIVATABLE: 'PAYMENT.SUBSCRIPTION_NOT_ACTIVATABLE',
   /** 첫 결제 전(`PENDING`)의 구독을 해지하려 했다 → 409 */
   SUBSCRIPTION_NOT_CANCELABLE: 'PAYMENT.SUBSCRIPTION_NOT_CANCELABLE',
+  /** 플랜을 바꿀 수 없다(위 등급이 아니다 · 이용 중이 아니다 · 결제가 오가는 중이다 · 꺼져 있다) → 409 */
+  PLAN_CHANGE_NOT_ALLOWED: 'PAYMENT.PLAN_CHANGE_NOT_ALLOWED',
+  /** 서버가 다시 계산한 변경 금액이 본 금액보다 크다 → 409. 미리보기를 다시 한다 */
+  PLAN_CHANGE_CHARGE_CHANGED: 'PAYMENT.PLAN_CHANGE_CHARGE_CHANGED',
+  /** 운영자 경로: 닫을 수 없는 구독 결제(구독 결제가 아니다 · 확인 중이 아니다 · 결제사가 아직 처리 중이다) → 409 */
+  ORDER_NOT_CLOSABLE: 'PAYMENT.ORDER_NOT_CLOSABLE',
 } as const
 
 export type PaymentLedgerErrorCode =

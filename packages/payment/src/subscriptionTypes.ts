@@ -31,6 +31,8 @@ export type Subscription = {
   endReason: SubscriptionEndReason | null
   /** 끝난 구독은 `null` */
   card: OrderCard | null
+  /** 플랜 변경의 결제를 확인하는 동안 바뀔 플랜 코드(`planCode` 는 아직 옛 플랜). 아니면 `null` */
+  pendingPlanCode: string | null
   testMode: boolean
   createdAt: string
 }
@@ -69,3 +71,16 @@ export type ActivateSubscriptionInput = { providerPayload: { authKey: string } }
 
 /** `GET /subscriptions/me` — 구독이 없으면 `subscription: null`. `orders` 는 최근 결제 5건 */
 export type MySubscription = { subscription: Subscription | null; orders: Order[] }
+
+/** `GET /subscriptions/{id}/change-preview` - `charge` 가 지금 결제될 금액(0 이면 과금 없이 바뀐다), `amount` 는 새 플랜의 전체 가격, `restartsPeriod` 면 오늘부터 새 기간 */
+export type PlanChangePreview = {
+  planCode: string
+  planName: string
+  charge: PaymentAmount
+  amount: PaymentAmount
+  period: string
+  restartsPeriod: boolean
+}
+
+/** `expectedCharge` 는 미리보기로 본 `charge.amount` - 서버가 다시 계산한 값이 더 크면 409 `PLAN_CHANGE_CHARGE_CHANGED` */
+export type ChangePlanInput = { planCode: string; expectedCharge: number }

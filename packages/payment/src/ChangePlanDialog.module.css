@@ -1,0 +1,37 @@
+.body {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.facts {
+  display: grid;
+  gap: var(--space-md);
+  margin: 0;
+}
+
+.fact {
+  display: grid;
+  gap: var(--space-xs);
+}
+
+.fact dt {
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+}
+
+.fact dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.charge {
+  font-size: var(--font-size-subheading);
+  font-weight: 650;
+  color: var(--text-strong);
+}
+
+.note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+}

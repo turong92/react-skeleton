@@ -5,7 +5,9 @@ import type { PaymentSubscriptionApi } from './subscriptionApi'
 import {
   activateSubscriptionMutation,
   cancelSubscriptionMutation,
+  changePlanMutation,
   mySubscriptionQuery,
+  planChangePreviewQuery,
   startSubscriptionMutation,
   subscriptionPlansQuery,
 } from './subscriptionQueries'
@@ -46,4 +48,23 @@ export function useActivateSubscription(api: PaymentSubscriptionApi) {
 export function useCancelSubscription(api: PaymentSubscriptionApi) {
   const client = useQueryClient()
   return useMutation(cancelSubscriptionMutation(api, client))
+}
+
+/** 위 등급으로 바꾸면 지금 얼마가 결제되는가. `planCode` 가 `null` 이면 묻지 않는다(창이 닫혔거나 아직 고르지 않았다) */
+export function usePlanChangePreview(
+  api: PaymentSubscriptionApi,
+  id: string,
+  planCode: string | null,
+) {
+  return useQuery({
+    ...planChangePreviewQuery(api, id, planCode ?? ''),
+    enabled: planCode !== null,
+  })
+}
+
+/** 플랜을 위 등급으로 바꾼다 - 변수 `{ id, planCode, expectedCharge }`. `data.pendingPlanCode` 가 있으면 결제 확인 중이다. 거절은 `PAYMENT.DECLINED`(플랜 그대로) */
+export function useChangeSubscriptionPlan(api: PaymentSubscriptionApi) {
+  const client = useQueryClient()
+  const [keys] = useState(() => createIntentKeys())
+  return useMutation(changePlanMutation(api, client, keys))
 }

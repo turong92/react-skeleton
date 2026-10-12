@@ -15,6 +15,8 @@ export type MySubscriptionCardProps = {
   orders: readonly Order[]
   /** 주면 이용 중(`ACTIVE` · `PAST_DUE`)일 때 채운 「해지 예약」 단추가 생긴다. 확인 창을 여는 것은 부모(`CancelSubscriptionDialog`) */
   onCancel?: () => void
+  /** 주면 이용 중(`ACTIVE`)일 때 채우지 않은 보조 「플랜 올리기」 단추가 생긴다. 창을 여는 것은 부모(`ChangePlanDialog`) */
+  onChangePlan?: () => void
   /** 최근 결제 줄 끝의 「자세히」 링크(라우터 `<Link>`) — `OrderList` 의 `renderAction` 과 같다 */
   renderOrderAction?: OrderListProps['renderAction']
   locale?: string
@@ -30,6 +32,7 @@ export function MySubscriptionCard({
   subscription,
   orders,
   onCancel,
+  onChangePlan,
   renderOrderAction,
   locale,
   formatTime = (iso) => formatInstant(iso, { locale }),
@@ -39,6 +42,8 @@ export function MySubscriptionCard({
   const mine = labels.subscription.mine
   const { status } = subscription
   const card = cardDisplay({ method: 'CARD', card: subscription.card }, labels)
+  // 한 구역의 채운 단추는 하나: 플랜 올리기가 있으면 그것이 주된 행동이고 해지 예약은 테두리
+  const canChange = !!onChangePlan && status === 'ACTIVE' && !subscription.pendingPlanCode
   const dated = status === 'ACTIVE' || status === 'PAST_DUE' || status === 'CANCELING'
   return (
     <Card
@@ -50,6 +55,11 @@ export function MySubscriptionCard({
         {status === 'PENDING' && (
           <Alert tone="info" toneLabel={labels.noticeLabel}>
             {mine.pending}
+          </Alert>
+        )}
+        {subscription.pendingPlanCode && (
+          <Alert tone="info" toneLabel={labels.noticeLabel}>
+            {mine.changePending}
           </Alert>
         )}
         {status === 'PAST_DUE' && (
@@ -89,11 +99,18 @@ export function MySubscriptionCard({
             />
           </section>
         )}
-        {onCancel && (status === 'ACTIVE' || status === 'PAST_DUE') && (
+        {(onCancel || canChange) && (status === 'ACTIVE' || status === 'PAST_DUE') && (
           <div className={styles.action}>
-            <Button variant="primary" onClick={onCancel}>
-              {mine.cancel}
-            </Button>
+            {canChange && (
+              <Button variant="primary" onClick={onChangePlan}>
+                {mine.changePlan}
+              </Button>
+            )}
+            {onCancel && (
+              <Button variant={canChange ? 'secondary' : 'primary'} onClick={onCancel}>
+                {mine.cancel}
+              </Button>
+            )}
           </div>
         )}
       </div>

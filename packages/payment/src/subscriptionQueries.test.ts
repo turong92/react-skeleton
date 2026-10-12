@@ -7,6 +7,7 @@ import type { PaymentSubscriptionApi } from './subscriptionApi'
 import {
   activateSubscriptionMutation,
   cancelSubscriptionMutation,
+  changePlanMutation,
   mySubscriptionQuery,
   startSubscriptionMutation,
   subscriptionPlansQuery,
@@ -45,12 +46,52 @@ function fakeApi() {
       calls.push(['cancel', id])
       return subscription({ status: 'CANCELING' })
     },
+    changePreview: async (id, planCode) => {
+      calls.push(['changePreview', id, planCode])
+      throw new Error('not used')
+    },
+    changePlan: async (id, input, options) => {
+      calls.push(['changePlan', id, input, options])
+      return subscription({ planCode: input.planCode })
+    },
   }
   return { api, calls }
 }
 
 const apiError = (code: string, status: number) =>
   new ApiRequestError({ code, title: code, status, timestamp: 't' }, 'tr', 'sp', 'tp')
+
+describe('changePlanMutation - one Idempotency-Key per attempt at the same change', () => {
+  async function pressTwice(failure: Error | null) {
+    const { api, calls } = fakeApi()
+    const client = new QueryClient()
+    const keys = createIntentKeys()
+    api.changePlan = async (id, input, options) => {
+      calls.push(['changePlan', id, input, options])
+      if (failure) throw failure
+      return subscription({ planCode: input.planCode })
+    }
+    const observer = new MutationObserver<
+      unknown,
+      Error,
+      { id: string; planCode: string; expectedCharge: number }
+    >(client, changePlanMutation(api, client, keys) as never)
+    const vars = { id: 'sub_1', planCode: 'pro', expectedCharge: 1500 }
+    await observer.mutate(vars).catch(() => undefined)
+    await observer.mutate(vars).catch(() => undefined)
+    return calls.map((call) => (call[3] as { idempotencyKey: string }).idempotencyKey)
+  }
+
+  it('a lost answer is sent again with the same key (the server charges once)', async () => {
+    const [first, second] = await pressTwice(new Error('lost'))
+    expect(first).toBe(second)
+  })
+
+  it('a definite refusal frees the key, so pressing again is a new attempt and not a replay of the refused one', async () => {
+    const [first, second] = await pressTwice(apiError('PAYMENT.DECLINED', 402))
+    expect(first).not.toBe(second)
+  })
+})
 
 describe('subscription keys sit under the one payment root', () => {
   it('so a single invalidation of the root re-reads plans and my subscription too', () => {

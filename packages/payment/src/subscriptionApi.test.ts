@@ -74,4 +74,30 @@ describe('createSubscriptionApi (paths and bodies mirror the backend HTTP contra
       { path: '/payments/subscriptions/sub%2F1/cancel', request: { method: 'POST' } },
     ])
   })
+
+  it('changePreview → GET …/change-preview?planCode and changePlan → POST …/change with the Idempotency-Key and the long timeout', async () => {
+    const { client, calls } = fakeClient()
+    const api = createSubscriptionApi(client)
+    await api.changePreview('sub/1', 'pro')
+    await api.changePlan(
+      'sub/1',
+      { planCode: 'pro', expectedCharge: 1500 },
+      { idempotencyKey: 'k1' },
+    )
+    expect(calls).toEqual([
+      {
+        path: '/payments/subscriptions/sub%2F1/change-preview',
+        request: { params: { planCode: 'pro' } },
+      },
+      {
+        path: '/payments/subscriptions/sub%2F1/change',
+        request: {
+          method: 'POST',
+          json: { planCode: 'pro', expectedCharge: 1500 },
+          idempotencyKey: 'k1',
+          timeoutMs: CONFIRM_TIMEOUT_MS,
+        },
+      },
+    ])
+  })
 })

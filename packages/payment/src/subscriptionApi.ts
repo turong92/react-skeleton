@@ -3,7 +3,9 @@ import { CONFIRM_TIMEOUT_MS } from './ledgerApi'
 import type { IdempotentCall } from './ledgerTypes'
 import type {
   ActivateSubscriptionInput,
+  ChangePlanInput,
   MySubscription,
+  PlanChangePreview,
   StartSubscriptionInput,
   StartSubscriptionResult,
   Subscription,
@@ -21,6 +23,13 @@ export type PaymentSubscriptionApi = {
   me(): Promise<MySubscription>
   /** `POST {basePath}/subscriptions/{id}/cancel` — `ACTIVE` → `CANCELING`, `PAST_DUE` 는 바로 `ENDED`. 다시 눌러도 같은 답 */
   cancel(id: string): Promise<Subscription>
+  /** `GET {basePath}/subscriptions/{id}/change-preview?planCode=` - 위 등급으로 바꾸면 지금 얼마가 결제되는가 */
+  changePreview(id: string, planCode: string): Promise<PlanChangePreview>
+  /**
+   * `POST {basePath}/subscriptions/{id}/change` + `Idempotency-Key` - 바뀐 구독(200) 또는 결제 확인 중(202, `pendingPlanCode`).
+   * 거절은 `PAYMENT.DECLINED`(플랜 그대로), 금액이 올랐으면 409 `PAYMENT.PLAN_CHANGE_CHARGE_CHANGED`. 첫 결제처럼 결제사를 부르므로 `activateTimeoutMs` 를 쓴다
+   */
+  changePlan(id: string, input: ChangePlanInput, options?: IdempotentCall): Promise<Subscription>
 }
 
 export type PaymentSubscriptionApiOptions = {
@@ -56,5 +65,16 @@ export function createSubscriptionApi(
       }),
     me: () => client.value<MySubscription>(`${base}/me`),
     cancel: (id) => client.value<Subscription>(`${base}/${enc(id)}/cancel`, { method: 'POST' }),
+    changePreview: (id, planCode) =>
+      client.value<PlanChangePreview>(`${base}/${enc(id)}/change-preview`, {
+        params: { planCode },
+      }),
+    changePlan: (id, input, { idempotencyKey = newIdempotencyKey() } = {}) =>
+      client.value<Subscription>(`${base}/${enc(id)}/change`, {
+        method: 'POST',
+        json: input,
+        idempotencyKey,
+        timeoutMs: activateTimeoutMs,
+      }),
   }
 }

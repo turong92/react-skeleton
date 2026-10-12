@@ -1,8 +1,12 @@
 import {
   CancelSubscriptionDialog,
+  ChangePlanDialog,
   MySubscriptionCard,
   useCancelSubscription,
+  useChangeSubscriptionPlan,
   useMySubscription,
+  usePlanChangePreview,
+  useSubscriptionPlans,
 } from '@skeleton/payment'
 import { EmptyState, PageHeader, Spinner } from '@skeleton/ui'
 import { useState } from 'react'
@@ -25,7 +29,12 @@ export function SubscriptionPage() {
   const labels = subscriptionLabelsFor(t, language)
   const me = useMySubscription(subscriptionApi)
   const cancel = useCancelSubscription(subscriptionApi)
+  const change = useChangeSubscriptionPlan(subscriptionApi)
+  const plans = useSubscriptionPlans(subscriptionApi)
   const [confirming, setConfirming] = useState(false)
+  // 플랜 올리기 창: 열려 있는 동안 고른 플랜(없으면 닫힘)
+  const [changeTo, setChangeTo] = useState<string | null>(null)
+  const preview = usePlanChangePreview(subscriptionApi, me.data?.subscription?.id ?? '', changeTo)
 
   if (me.isPending) return <Spinner label={t('common.loading')} />
   if (me.data === undefined) return <LoadError error={me.error} onRetry={() => void me.refetch()} />
@@ -47,6 +56,17 @@ export function SubscriptionPage() {
       </div>
     )
 
+  // 지금보다 윗등급이고 주기 · 통화가 같은 플랜만 - 서버가 같은 규칙으로 거절한다
+  const current = plans.data?.find((plan) => plan.code === subscription.planCode)
+  const upgrades = (plans.data ?? [])
+    .filter(
+      (plan) =>
+        current !== undefined &&
+        plan.level > current.level &&
+        plan.period === subscription.period &&
+        plan.amount.currency === subscription.amount.currency,
+    )
+    .map((plan) => ({ ...plan, name: planNameOf(t, plan) }))
   const cancelable = subscription.status === 'ACTIVE' || subscription.status === 'PAST_DUE'
   return (
     <div className={styles.page}>
@@ -57,6 +77,14 @@ export function SubscriptionPage() {
           planName: planNameOf(t, { code: subscription.planCode, name: subscription.planName }),
         }}
         orders={orders}
+        {...(upgrades.length > 0 && subscription.status === 'ACTIVE'
+          ? {
+              onChangePlan: () => {
+                change.reset() // 묵은 오류가 새로 연 창에 보이지 않게
+                setChangeTo(upgrades[0]!.code)
+              },
+            }
+          : {})}
         onCancel={() => {
           cancel.reset() // 묵은 오류가 새로 연 창에 보이지 않게
           setConfirming(true)
@@ -78,6 +106,26 @@ export function SubscriptionPage() {
           <LinkButton to="/subscribe">{t('subscription.again')}</LinkButton>
         </div>
       )}
+      <ChangePlanDialog
+        open={changeTo !== null && subscription.status === 'ACTIVE'}
+        onClose={() => setChangeTo(null)}
+        onConfirm={(input) =>
+          change.mutate({ id: subscription.id, ...input }, { onSuccess: () => setChangeTo(null) })
+        }
+        plans={upgrades}
+        planCode={changeTo ?? ''}
+        onPlanChange={(code) => {
+          change.reset()
+          setChangeTo(code)
+        }}
+        preview={preview.data}
+        previewLoading={preview.isFetching}
+        previewError={preview.error}
+        busy={change.isPending}
+        error={change.error}
+        locale={language}
+        labels={labels}
+      />
       <CancelSubscriptionDialog
         open={confirming && cancelable}
         onClose={() => setConfirming(false)}

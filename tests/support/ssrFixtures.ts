@@ -76,6 +76,7 @@ const paymentSubscription = {
   attempt: 1,
   endReason: null,
   card: { issuer: 'HYUNDAI', last4: '1234' },
+  pendingPlanCode: null,
   testMode: true,
   createdAt: '2026-01-01T00:00:00Z',
 }
@@ -96,6 +97,15 @@ export const fakeSubscriptionApi = () => ({
   activate: async () => paymentSubscription,
   me: async () => ({ subscription: paymentSubscription, orders: [paymentOrder] }),
   cancel: async () => paymentSubscription,
+  changePreview: async () => ({
+    planCode: 'pro',
+    planName: 'Pro',
+    charge: { amount: 1500, currency: 'KRW' },
+    amount: { amount: 9900, currency: 'KRW' },
+    period: 'P1M',
+    restartsPeriod: false,
+  }),
+  changePlan: async () => paymentSubscription,
 })
 const notification = {
   id: 'u1:e1',
@@ -769,6 +779,22 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
     orders: [paymentOrder],
     onCancel: noop,
   }),
+  'payment#ChangePlanDialog': () => ({
+    open: true,
+    plans: [
+      {
+        code: 'pro',
+        name: 'Pro',
+        amount: { amount: 9900, currency: 'KRW' },
+        period: 'P1M',
+        level: 3,
+      },
+    ],
+    planCode: 'pro',
+    onPlanChange: noop,
+    onClose: noop,
+    onConfirm: noop,
+  }),
   'payment#CancelSubscriptionDialog': () => ({
     open: true,
     subscription: paymentSubscription,
@@ -814,6 +840,8 @@ export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
   'payment#useStartSubscription': () => [fakeSubscriptionApi()],
   'payment#useActivateSubscription': () => [fakeSubscriptionApi()],
   'payment#useCancelSubscription': () => [fakeSubscriptionApi()],
+  'payment#useChangeSubscriptionPlan': () => [fakeSubscriptionApi()],
+  'payment#usePlanChangePreview': () => [fakeSubscriptionApi(), 'sub_1', 'pro'],
   'author-profile#useAuthorProfiles': () => [fakeAuthorProfileApi()],
   'author-profile#useProfileDialog': () => [{ api: fakeAuthorProfileApi(), title: 'Profiles' }],
   'author-profile#useAuthorProfileConfig': () => [fakeAuthorProfileApi()],

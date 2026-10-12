@@ -12,15 +12,15 @@ import {
   releaseKey,
 } from './queries'
 import type { PaymentSubscriptionApi } from './subscriptionApi'
-import type { MySubscription, StartSubscriptionInput } from './subscriptionTypes'
+import type { ChangePlanInput, MySubscription, StartSubscriptionInput } from './subscriptionTypes'
 
 export function subscriptionPlansQuery(api: PaymentSubscriptionApi) {
   return { queryKey: paymentKeys.subscriptionPlans(), queryFn: () => api.plans() }
 }
 
-/** 첫 결제를 결제사가 아직 답하지 않았다(`PENDING`) - 되묻는다. 주문의 `CONFIRMING` 과 같은 간격 · 상한(`pollWhile`) */
+/** 첫 결제 · 플랜 변경 결제를 결제사가 아직 답하지 않았다(`PENDING` · `pendingPlanCode`) - 되묻는다. 주문의 `CONFIRMING` 과 같은 간격 · 상한(`pollWhile`) */
 const checkingFirstPayment = (data: MySubscription | undefined) =>
-  data?.subscription?.status === 'PENDING'
+  data?.subscription?.status === 'PENDING' || !!data?.subscription?.pendingPlanCode
 
 export function mySubscriptionQuery(
   api: PaymentSubscriptionApi,
@@ -71,6 +71,44 @@ export function activateSubscriptionMutation(api: PaymentSubscriptionApi, client
 export function cancelSubscriptionMutation(api: PaymentSubscriptionApi, client: QueryClient) {
   return {
     mutationFn: (id: string) => api.cancel(id),
+    onSettled: () => invalidateRoot(client),
+  }
+}
+
+/** 위 등급으로 바꾸면 지금 얼마가 결제되는가 - 금액은 시간에 따라 변하므로 창을 열 때마다 새로 묻는다(`staleTime` 0, 캐시에 오래 두지 않는다) */
+export function planChangePreviewQuery(api: PaymentSubscriptionApi, id: string, planCode: string) {
+  return {
+    queryKey: paymentKeys.planChangePreview(id, planCode),
+    queryFn: () => api.changePreview(id, planCode),
+    gcTime: 0,
+  }
+}
+
+/**
+ * 플랜을 위 등급으로 바꾼다. `Idempotency-Key` 는 (구독 · 플랜 · 본 금액)마다 훅이 들고 있어 결과를 모르는 채 다시 눌러도 같은 변경이다(서버가 한 번만 결제한다).
+ * 성공하거나 확정된 답(거절 402 · 409 …)을 받으면 키를 놓는다 - 거절 뒤 다시 누르면 새 시도다. 끝나면 어느 쪽이든 캐시를 새로 고친다(금액이 달라졌다면 미리보기도 다시 읽힌다).
+ */
+export function changePlanMutation(
+  api: PaymentSubscriptionApi,
+  client: QueryClient,
+  keys?: IntentKeys,
+) {
+  type Variables = ChangePlanInput & { id: string } & IdempotentCall
+  return {
+    mutationFn: (variables: Variables) => {
+      const { id, idempotencyKey, ...input } = variables
+      const key = keyOf(
+        keys,
+        variables,
+        JSON.stringify([id, input.planCode, input.expectedCharge]),
+        idempotencyKey,
+      )
+      return api.changePlan(id, input, key !== undefined ? { idempotencyKey: key } : undefined)
+    },
+    onSuccess: (_result: unknown, variables: Variables) => releaseKey(keys, variables),
+    onError: (error: unknown, variables: Variables) => {
+      if (confirmOutcomeOf(error) !== 'unknown') releaseKey(keys, variables)
+    },
     onSettled: () => invalidateRoot(client),
   }
 }

@@ -22,6 +22,7 @@ const sub = (over: Partial<Subscription> = {}): Subscription => ({
   attempt: 1,
   endReason: null,
   card: { issuer: 'HYUNDAI', last4: '1234' },
+  pendingPlanCode: null,
   testMode: false,
   createdAt: '2026-10-01T03:00:00Z',
   ...over,
@@ -39,9 +40,28 @@ const paid = {
   paidAt: '2026-10-01T03:00:05Z',
 } as Order
 
-function render(data: MySubscription | undefined) {
+const catalog = [
+  {
+    code: 'basic',
+    name: 'Basic',
+    amount: { amount: 3900, currency: 'KRW' },
+    period: 'P1M',
+    level: 1,
+  },
+  {
+    code: 'standard',
+    name: 'Standard',
+    amount: { amount: 6900, currency: 'KRW' },
+    period: 'P1M',
+    level: 2,
+  },
+  { code: 'pro', name: 'Pro', amount: { amount: 9900, currency: 'KRW' }, period: 'P1M', level: 3 },
+]
+
+function render(data: MySubscription | undefined, plans = false) {
   const client = new QueryClient()
   if (data) client.setQueryData(paymentKeys.mySubscription(), data)
+  if (plans) client.setQueryData(paymentKeys.subscriptionPlans(), catalog)
   return renderToStaticMarkup(
     <QueryClientProvider client={client}>
       <MemoryRouter>
@@ -75,6 +95,15 @@ describe('SubscriptionPage', () => {
     expect(html).toContain('카드를 확인하고 다시 구독해 주세요')
     expect(html).toMatch(/<a[^>]*href="\/subscribe"[^>]*>다시 구독하기/)
     expect(html).not.toContain('해지 예약</button>')
+  })
+
+  it('with higher plans on offer an active subscription can be raised; the top plan has nothing above it', () => {
+    expect(render({ subscription: sub(), orders: [] }, true)).toMatch(
+      /data-variant="primary"[^>]*>플랜 올리기</,
+    )
+    const top = render({ subscription: sub({ planCode: 'pro' }), orders: [] }, true)
+    expect(top).not.toContain('플랜 올리기')
+    expect(top).toContain('해지 예약')
   })
 
   it('still loading: no card yet', () => {

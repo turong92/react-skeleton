@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — 구독 플랜 올리기(`@skeleton/payment` · `apps/sample`)
+
+백엔드 `skeleton.payment.subscription.plan-change.enabled=true`(HTTP 계약 §12.2)에 맞췄다.
+
+- `createSubscriptionApi` 에 `changePreview`(지금 결제될 금액) · `changePlan`(`Idempotency-Key`, 긴 제한 시간), 훅 `usePlanChangePreview` · `useChangeSubscriptionPlan`(결과를 모르면 같은 키로 다시, 확정된 거절 뒤에는 새 키), 구독의 `pendingPlanCode`(결제 확인 중이면 `useMySubscription` 이 되묻는다), 오류 코드 `PLAN_CHANGE_NOT_ALLOWED` · `PLAN_CHANGE_CHARGE_CHANGED` · `ORDER_NOT_CLOSABLE`.
+- `ChangePlanDialog`(플랜 고르기 → 지금 결제될 금액 미리보기 → 확인) 와 `MySubscriptionCard` 의 `onChangePlan`(채운 「플랜 올리기」, 해지 예약은 테두리로 물러난다). 문구는 `labels.subscription.changeDialog`(ko · en). 견본 「내 구독」이 윗등급 플랜이 있을 때 연다.
+
 ### Added — 구독(자동결제) 화면과 호출(`@skeleton/payment` · `apps/sample`)
 
 백엔드 `skeleton.payment.subscription.enabled=true`(HTTP 계약 §12)에 맞췄다. 꺼진 서버에서는 경로가 없으니 이 부분을 쓰지 않으면 아무것도 바뀌지 않는다. 쓰는 법은 `packages/payment/README.md` 의 「구독」.

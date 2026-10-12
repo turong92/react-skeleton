@@ -279,6 +279,10 @@ export type SubscriptionLabels = {
     card: string
     recentPayments: string
     cancel: string
+    /** 「플랜 올리기」 단추 */
+    changePlan: string
+    /** 플랜 변경의 결제를 결제사가 아직 답하지 않았다(`pendingPlanCode`) */
+    changePending: string
     /** 첫 결제를 결제사가 아직 답하지 않았다(`PENDING`) */
     pending: string
     /** 갱신이 거절돼 다시 시도하는 중(`PAST_DUE`) - 그동안은 이용할 수 없다 */
@@ -302,6 +306,35 @@ export type SubscriptionLabels = {
     /** 모서리의 × 단추의 낭독 이름 */
     close: string
     error: string
+  }
+  changeDialog: {
+    title: string
+    plan: string
+    /** 지금 결제될 금액 칸의 이름 */
+    chargeNow: string
+    /** 지금 결제할 금액이 0 이라 과금 없이 바뀐다 */
+    noCharge: string
+    /** 새 플랜의 다음 결제 칸의 이름 - 값은 「6,900원 · 1개월마다 결제」 */
+    nextPrice: string
+    /** 전액을 결제하고 오늘부터 새 기간이 시작된다 */
+    restart: string
+    loadingPreview: string
+    previewError: string
+    confirm: string
+    /** 확인 단추가 일하는 동안의 낭독 이름 */
+    loading: string
+    /** 창을 닫는 단추 - 「취소」가 결제 취소로 읽히지 않게 「닫기」 */
+    dismiss: string
+    /** 모서리의 × 단추의 낭독 이름 */
+    close: string
+    errors: {
+      /** 그 사이 금액이 올랐다 - 새 미리보기를 보고 다시 누른다 */
+      chargeChanged: string
+      /** 카드 결제가 되지 않았다 - 플랜은 그대로 */
+      declined: string
+      notAllowed: string
+      other: string
+    }
   }
 }
 

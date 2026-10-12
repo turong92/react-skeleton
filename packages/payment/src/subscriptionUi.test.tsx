@@ -2,6 +2,7 @@ import { ApiRequestError } from '@skeleton/api-client'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { CancelSubscriptionDialog } from './CancelSubscriptionDialog'
+import { ChangePlanDialog } from './ChangePlanDialog'
 import { koPaymentLabels } from './labels'
 import { MySubscriptionCard } from './MySubscriptionCard'
 import { SubscriptionPlanList } from './SubscriptionPlanList'
@@ -199,5 +200,98 @@ describe('CancelSubscriptionDialog', () => {
     const html = dialog({}, { error })
     expect(html).toContain('해지를 예약하지 못했어요')
     expect(html).toContain('trace-5')
+  })
+})
+
+describe('ChangePlanDialog', () => {
+  const preview = {
+    planCode: 'pro',
+    planName: 'Pro',
+    charge: { amount: 1500, currency: 'KRW' },
+    amount: { amount: 9900, currency: 'KRW' },
+    period: 'P1M',
+    restartsPeriod: false,
+  }
+  const dialog = (props: object = {}) =>
+    renderToStaticMarkup(
+      <ChangePlanDialog
+        open
+        onClose={noop}
+        onConfirm={noop}
+        plans={[plans[1]!]}
+        planCode="pro"
+        onPlanChange={noop}
+        preview={preview}
+        {...common}
+        {...props}
+      />,
+    )
+
+  it('shows what is charged now and the price from the next payment before anything is pressed', () => {
+    const html = dialog()
+    expect(html).toContain('지금 결제할 금액')
+    expect(html).toContain('1,500원')
+    expect(html).toContain('9,900원 · 1개월마다 결제')
+  })
+
+  it('a zero charge says the change costs nothing extra, a restart says the period begins today', () => {
+    expect(dialog({ preview: { ...preview, charge: { amount: 0, currency: 'KRW' } } })).toContain(
+      '추가 결제 없이 바로 바뀌어요',
+    )
+    expect(dialog({ preview: { ...preview, restartsPeriod: true } })).toContain(
+      '오늘부터 새 기간이 시작돼요',
+    )
+  })
+
+  it('without an amount the confirm is locked and says it is checking', () => {
+    const html = dialog({ preview: undefined, previewLoading: true })
+    expect(html).toContain('결제할 금액을 확인하는 중')
+    expect(html).toMatch(
+      /aria-disabled="true"[^>]*>[^<]*플랜 바꾸기|플랜 바꾸기[^]*aria-disabled="true"/,
+    )
+  })
+
+  it('a declined card says the plan stays as it was; a raised amount asks to look again', () => {
+    const apiError = (code: string, status: number) =>
+      new ApiRequestError(
+        { code, title: 't', status, timestamp: '2026-01-01T00:00:00Z', traceId: 'tr' },
+        'tr',
+        'sp',
+        'tp',
+      )
+    expect(dialog({ error: apiError('PAYMENT.DECLINED', 402) })).toContain('플랜은 그대로예요')
+    expect(dialog({ error: apiError('PAYMENT.PLAN_CHANGE_CHARGE_CHANGED', 409) })).toContain(
+      '결제할 금액이 달라졌어요',
+    )
+  })
+})
+
+describe('MySubscriptionCard plan change', () => {
+  const card = (over: Parameters<typeof subscription>[0] = {}, props: object = {}) =>
+    renderToStaticMarkup(
+      <MySubscriptionCard
+        subscription={subscription(over)}
+        orders={[]}
+        onCancel={noop}
+        onChangePlan={noop}
+        {...common}
+        {...props}
+      />,
+    )
+
+  it('an active subscription gets one filled 「플랜 올리기」 and the cancel steps back to an outline', () => {
+    const html = card()
+    expect(html).toMatch(/data-variant="primary"[^>]*>플랜 올리기</)
+    expect(html).toMatch(/data-variant="secondary"[^>]*>해지 예약</)
+  })
+
+  it('while the change is being confirmed it says so and offers no second change', () => {
+    const html = card({ pendingPlanCode: 'pro' })
+    expect(html).toContain('플랜 변경 결제를 확인하고 있어요')
+    expect(html).not.toContain('플랜 올리기</button>')
+  })
+
+  it('a canceling subscription is not offered a change', () => {
+    expect(card({ status: 'CANCELING' })).not.toContain('플랜 올리기')
   })
 })

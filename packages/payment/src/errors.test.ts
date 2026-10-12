@@ -31,7 +31,7 @@ describe('payment error codes (modules/payment PaymentErrorCode)', () => {
 })
 
 describe('ledger error codes (HTTP contract, the list of user and operator errors)', () => {
-  it('lists the twenty the backend adds, under the PAYMENT. prefix', () => {
+  it('lists the twenty-three the backend adds, under the PAYMENT. prefix', () => {
     expect([...PAYMENT_LEDGER_ERROR_CODES].sort()).toEqual(
       [
         'ORDER_NOT_FOUND',
@@ -54,6 +54,9 @@ describe('ledger error codes (HTTP contract, the list of user and operator error
         'ALREADY_SUBSCRIBED',
         'SUBSCRIPTION_NOT_ACTIVATABLE',
         'SUBSCRIPTION_NOT_CANCELABLE',
+        'PLAN_CHANGE_NOT_ALLOWED',
+        'PLAN_CHANGE_CHARGE_CHANGED',
+        'ORDER_NOT_CLOSABLE',
       ]
         .map((name) => `PAYMENT.${name}`)
         .sort(),

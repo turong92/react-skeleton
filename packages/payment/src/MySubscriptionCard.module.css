@@ -39,4 +39,5 @@
 .action {
   display: flex;
   flex-wrap: wrap;
+  gap: var(--space-md);
 }

@@ -11,6 +11,8 @@ export const koPaymentAdminLabels: PaymentAdminLabels = {
     FULFILMENT_UNRESOLVED: '돈은 받았는데 지급이 끝내 안 됐어요',
     REFUND_APPLY_UNRESOLVED: '환불은 됐는데 회수가 끝내 안 됐어요',
     SUBSCRIPTION_STALE_CHARGE: '구독이 기다리지 않는 결제가 늦게 들어왔어요 — 환불이 필요해요',
+    SUBSCRIPTION_CANCEL_REFUND_UNRESOLVED:
+      '지금 해지한 구독의 환불이 나가지 못했어요 — 환불이 필요해요',
     STALE_CONFIRMING: '결제 확인 중인 채로 오래 남아 있어요',
     STALE_REFUND: '환불 중인 채로 오래 남아 있어요',
   },

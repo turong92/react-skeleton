@@ -13,6 +13,8 @@ export const defaultPaymentAdminLabels: PaymentAdminLabels = {
       'The refund went through but taking back what was delivered never finished',
     SUBSCRIPTION_STALE_CHARGE:
       'A subscription payment arrived late that the subscription was not waiting for - it needs a refund',
+    SUBSCRIPTION_CANCEL_REFUND_UNRESOLVED:
+      'The refund for a subscription that was ended early did not go out - it needs a refund',
     STALE_CONFIRMING: 'Stuck confirming the payment for a long time',
     STALE_REFUND: 'Stuck refunding for a long time',
   },

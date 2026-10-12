@@ -11,6 +11,7 @@ import { api, ensureSignedIn, labels, resultTitle, tokenOf } from './paymentStep
  * ② 카드사가 첫 결제를 거절 → 결과 「결제 안 됨」 → 「내 구독」은 「끝남」(구독이 시작되지 않았다) → 다시 구독할 수 있다
  * ③ 구독 한 번 + 주기 끝 갱신 한 번 → 결제사 승인이 정확히 두 번(첫 결제 · 갱신), 결제 내역 둘 → 해지해 더 과금되지 않게 닫는다
  * ④ 베이직 → 「플랜 올리기」(금액 미리보기 → 확인) → 스탠다드, 결제사 승인은 변경 몫으로 한 번 더 (남은 기간 차액만)
+ * ⑤ 베이직 → 「지금 해지하고 환불」(환불 예정 금액·계산 내역 → 확인) → 「끝남」, 결제사 취소는 낸 금액만큼 정확히 한 번(견본 정책: 7일 안이면 전액)
  */
 const pwExpect = baseExpect.configure({ timeout: 20_000 })
 const baseUrl = inject('baseUrl')
@@ -256,4 +257,67 @@ describe('④ raising the plan', () => {
     expect(charges).toHaveLength(2)
     await cancelIfAny(DEMO)
   })
+})
+
+describe('⑤ ending now with a refund', () => {
+  run(
+    'shows the refund and its calculation, ends at once and the provider is asked to cancel once',
+    async () => {
+      await untilNoLiveSubscription(DEMO)
+      const token = await tokenOf(apiUrl, DEMO)
+      const started = await api(
+        apiUrl,
+        token,
+        'POST',
+        '/payments/subscriptions',
+        { planCode: 'basic', country: 'KR' },
+        { 'Idempotency-Key': `e2e-now-${Date.now()}` },
+      )
+      expect(started.status).toBe(201)
+      const id = started.json.value.subscription.id as string
+      const authKey = (
+        (await (
+          await fetch(`${fakeTossUrl}/sdk/authorize-billing`, {
+            method: 'POST',
+            body: JSON.stringify({ customerKey: started.json.value.billingAuth.customerKey }),
+          })
+        ).json()) as { authKey: string }
+      ).authKey
+      expect(
+        (
+          await api(apiUrl, token, 'POST', `/payments/subscriptions/${id}/activate`, {
+            providerPayload: { authKey },
+          })
+        ).status,
+      ).toBe(200)
+
+      await ensureSignedIn(page, baseUrl)
+      await page.goto(`${baseUrl}/subscription`)
+      const now = labels.subscription.cancelNowDialog
+      await page.getByRole('button', { name: subscribed.mine.cancelNow, exact: true }).click()
+      const dialog = page.getByRole('dialog', { name: now.title })
+      // 환불 예정 금액과 계산 내역 - 7일 안이라 낸 3,900원 전액
+      await pwExpect(dialog.getByText(now.refund)).toBeVisible()
+      await pwExpect(dialog.getByText('3,900원').first()).toBeVisible()
+      await pwExpect(dialog.getByText(now.withdrawal)).toBeVisible()
+      await dialog.getByRole('button', { name: now.confirm }).click()
+      await pwExpect(dialog).toBeHidden()
+      await pwExpect(page.getByText(subscribed.status.ENDED).first()).toBeVisible()
+      await pwExpect(page.getByText(/3,900원을 돌려드려요/)).toBeVisible()
+
+      const mine = await me()
+      expect(mine.subscription?.status).toBe('ENDED')
+      expect(mine.subscription?.endReason).toBe('USER_CANCELED_NOW')
+      const cancels = (await toss!.state()).calls.filter(
+        (c) => c.method === 'POST' && /^\/v1\/payments\/[^/]+\/cancel$/.test(c.path),
+      )
+      expect(cancels).toHaveLength(1)
+      // 두 번 눌러도 환불은 한 번 - 서버가 같은 답을 준다
+      const again = await api(apiUrl, token, 'POST', `/payments/subscriptions/${id}/cancel-now`)
+      expect(again.status).toBe(200)
+      expect(
+        (await toss!.state()).calls.filter((c) => /^\/v1\/payments\/[^/]+\/cancel$/.test(c.path)),
+      ).toHaveLength(1)
+    },
+  )
 })

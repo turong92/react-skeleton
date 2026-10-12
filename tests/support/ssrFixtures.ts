@@ -97,6 +97,19 @@ export const fakeSubscriptionApi = () => ({
   activate: async () => paymentSubscription,
   me: async () => ({ subscription: paymentSubscription, orders: [paymentOrder] }),
   cancel: async () => paymentSubscription,
+  cancelPreview: async () => ({
+    open: true,
+    refund: { amount: 3393, currency: 'KRW' },
+    withdrawal: false,
+    lines: [],
+  }),
+  cancelNow: async () => ({
+    subscription: paymentSubscription,
+    refund: { amount: 0, currency: 'KRW' },
+    withdrawal: false,
+    lines: [],
+    refunds: [],
+  }),
   changePreview: async () => ({
     planCode: 'pro',
     planName: 'Pro',
@@ -795,6 +808,20 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
     onClose: noop,
     onConfirm: noop,
   }),
+  'payment#CancelNowDialog': () => ({
+    open: true,
+    onClose: noop,
+    onConfirm: noop,
+  }),
+  'payment#CancelNowResultNotice': () => ({
+    result: {
+      subscription: paymentSubscription,
+      refund: { amount: 3393, currency: 'KRW' },
+      withdrawal: false,
+      lines: [],
+      refunds: [],
+    },
+  }),
   'payment#CancelSubscriptionDialog': () => ({
     open: true,
     subscription: paymentSubscription,
@@ -840,6 +867,8 @@ export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
   'payment#useStartSubscription': () => [fakeSubscriptionApi()],
   'payment#useActivateSubscription': () => [fakeSubscriptionApi()],
   'payment#useCancelSubscription': () => [fakeSubscriptionApi()],
+  'payment#useCancelSubscriptionNow': () => [fakeSubscriptionApi()],
+  'payment#useCancelPreview': () => [fakeSubscriptionApi(), 'sub_1'],
   'payment#useChangeSubscriptionPlan': () => [fakeSubscriptionApi()],
   'payment#usePlanChangePreview': () => [fakeSubscriptionApi(), 'sub_1', 'pro'],
   'author-profile#useAuthorProfiles': () => [fakeAuthorProfileApi()],

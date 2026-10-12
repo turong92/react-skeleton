@@ -6,6 +6,7 @@ import { ORDER_POLL_MAX_DURATION_MS, ORDER_POLL_MIN_MS, paymentKeys } from './qu
 import type { PaymentSubscriptionApi } from './subscriptionApi'
 import {
   activateSubscriptionMutation,
+  cancelNowMutation,
   cancelSubscriptionMutation,
   changePlanMutation,
   mySubscriptionQuery,
@@ -45,6 +46,20 @@ function fakeApi() {
     cancel: async (id) => {
       calls.push(['cancel', id])
       return subscription({ status: 'CANCELING' })
+    },
+    cancelPreview: async (id) => {
+      calls.push(['cancelPreview', id])
+      throw new Error('not used')
+    },
+    cancelNow: async (id) => {
+      calls.push(['cancelNow', id])
+      return {
+        subscription: subscription({ status: 'ENDED', endReason: 'USER_CANCELED_NOW' }),
+        refund: { amount: 0, currency: 'KRW' },
+        withdrawal: false,
+        lines: [],
+        refunds: [],
+      }
     },
     changePreview: async (id, planCode) => {
       calls.push(['changePreview', id, planCode])
@@ -233,5 +248,35 @@ describe('mutations', () => {
         after: 'success',
       })
     }
+  })
+})
+
+describe('startSubscriptionMutation - a different country is a different attempt', () => {
+  it('keeps one Idempotency-Key per (plan, country) and hands out a new one when the country changes', async () => {
+    const { api, calls } = fakeApi()
+    const client = new QueryClient()
+    const keys = createIntentKeys()
+    const observer = new MutationObserver<unknown, Error, { planCode: string; country?: string }>(
+      client,
+      { ...startSubscriptionMutation(api, client, keys), onSuccess: undefined } as never,
+    )
+    await observer.mutate({ planCode: 'basic', country: 'KR' }).catch(() => undefined)
+    await observer.mutate({ planCode: 'basic', country: 'KR' }).catch(() => undefined)
+    await observer.mutate({ planCode: 'basic', country: 'US' }).catch(() => undefined)
+    const used = calls.filter((call) => call[0] === 'start').map((call) => (call[2] as { idempotencyKey: string }).idempotencyKey)
+    expect(used[0]).toBe(used[1])
+    expect(used[2]).not.toBe(used[0])
+  })
+})
+
+describe('cancelNowMutation', () => {
+  it('asks the api once for the subscription id and refreshes the payment cache either way', async () => {
+    const { api, calls } = fakeApi()
+    const client = new QueryClient()
+    const invalidate = vi.spyOn(client, 'invalidateQueries')
+    const observer = new MutationObserver<unknown, Error, string>(client, cancelNowMutation(api, client))
+    await observer.mutate('sub_1')
+    expect(calls).toEqual([['cancelNow', 'sub_1']])
+    expect(invalidate).toHaveBeenCalled()
   })
 })

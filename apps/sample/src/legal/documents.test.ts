@@ -4,7 +4,9 @@ import { describe, expect, it } from 'vitest'
 import { legalFacts } from './facts'
 import { legalVersions, type LegalDoc } from './documents'
 
-const docs: LegalDoc[] = ['terms', 'privacy']
+const docs: LegalDoc[] = ['terms', 'privacy', 'refund']
+// 약관 · 방침은 개정 이력이 있다. 환불 정책은 이번에 처음 쓴 문서라 한 판이다
+const minVersions = (doc: LegalDoc) => (doc === 'refund' ? 1 : 2)
 const locales = ['ko', 'en'] as const
 
 describe.each(docs.flatMap((doc) => locales.map((locale) => [doc, locale] as const)))(
@@ -12,8 +14,8 @@ describe.each(docs.flatMap((doc) => locales.map((locale) => [doc, locale] as con
   (doc, locale) => {
     const versions = legalVersions(doc, locale)
 
-    it('has two or more versions, with unique version labels and real effective dates', () => {
-      expect(versions.length).toBeGreaterThanOrEqual(2)
+    it('has its versions, with unique version labels and real effective dates', () => {
+      expect(versions.length).toBeGreaterThanOrEqual(minVersions(doc))
       expect(new Set(versions.map((v) => v.version)).size).toBe(versions.length)
       for (const v of versions) expect(isIsoDate(v.effectiveDate), v.version).toBe(true)
     })
@@ -37,7 +39,7 @@ describe.each(docs.flatMap((doc) => locales.map((locale) => [doc, locale] as con
         expect(
           v.markdown,
           `${v.version} must not repeat the page title as a leading h1`,
-        ).not.toMatch(/^\s*# (Terms of Service|Privacy Policy|이용약관|개인정보 처리방침)\s*$/m)
+        ).not.toMatch(/^\s*# (Terms of Service|Privacy Policy|Refund Policy|이용약관|개인정보 처리방침|환불 정책)\s*$/m)
       }
     })
   },

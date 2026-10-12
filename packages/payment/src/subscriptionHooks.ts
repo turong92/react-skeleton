@@ -4,6 +4,8 @@ import { createIntentKeys } from './queries'
 import type { PaymentSubscriptionApi } from './subscriptionApi'
 import {
   activateSubscriptionMutation,
+  cancelNowMutation,
+  cancelPreviewQuery,
   cancelSubscriptionMutation,
   changePlanMutation,
   mySubscriptionQuery,
@@ -67,4 +69,15 @@ export function useChangeSubscriptionPlan(api: PaymentSubscriptionApi) {
   const client = useQueryClient()
   const [keys] = useState(() => createIntentKeys())
   return useMutation(changePlanMutation(api, client, keys))
+}
+
+/** 지금 해지하면 얼마가 돌아오는가(`data.open` 이 `false` 면 이 나라는 기간 끝 해지만). `enabled` 가 `false` 면 묻지 않는다. 금액이 변하니 확인 창을 열 때 `refetch()` 한다 */
+export function useCancelPreview(api: PaymentSubscriptionApi, id: string, enabled = true) {
+  return useQuery({ ...cancelPreviewQuery(api, id), enabled })
+}
+
+/** 지금 해지하고 환불받는다 - 변수는 구독 id, `data.refunds` 가 주문별 환불 결과. 끝나면 캐시를 새로 고친다 */
+export function useCancelSubscriptionNow(api: PaymentSubscriptionApi) {
+  const client = useQueryClient()
+  return useMutation(cancelNowMutation(api, client))
 }

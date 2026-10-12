@@ -1,6 +1,6 @@
 import type { LegalVersion } from '@skeleton/marketing'
 
-export type LegalDoc = 'terms' | 'privacy'
+export type LegalDoc = 'terms' | 'privacy' | 'refund'
 export type LegalLocale = 'ko' | 'en'
 
 /*

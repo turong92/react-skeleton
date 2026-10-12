@@ -1,6 +1,8 @@
 import { ApiRequestError } from '@skeleton/api-client'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
+import { CancelNowDialog } from './CancelNowDialog'
+import { CancelNowResultNotice } from './CancelNowResultNotice'
 import { CancelSubscriptionDialog } from './CancelSubscriptionDialog'
 import { ChangePlanDialog } from './ChangePlanDialog'
 import { koPaymentLabels } from './labels'
@@ -98,7 +100,7 @@ describe('MySubscriptionCard', () => {
     expect(html).toContain('다음 결제일')
     expect(html).toContain('2026. 11. 1.')
     expect(html).toContain('현대카드 ····1234')
-    expect(html).toMatch(/data-variant="primary"[^>]*>해지 예약</)
+    expect(html).toMatch(/data-variant="primary"[^>]*>기간 끝에 해지</)
   })
 
   it('CANCELING: says when it ends instead of a next payment, and offers no second cancel', () => {
@@ -106,20 +108,20 @@ describe('MySubscriptionCard', () => {
     expect(html).toContain('해지 예약됨')
     expect(html).toContain('2026. 11. 1.에 끝나요')
     expect(html).not.toContain('다음 결제일')
-    expect(html).not.toContain('해지 예약</button>')
+    expect(html).not.toContain('기간 끝에 해지</button>')
   })
 
   it('PAST_DUE: tells it cannot be used meanwhile and still offers to end it', () => {
     const html = card({ status: 'PAST_DUE', attempt: 2 })
     expect(html).toContain('결제 다시 시도 중')
     expect(html).toContain('그동안은 이용할 수 없어요')
-    expect(html).toContain('해지 예약</button>')
+    expect(html).toContain('기간 끝에 해지</button>')
   })
 
   it('PENDING: only says the first payment is being checked (no cancel, no dates)', () => {
     const html = card({ status: 'PENDING' })
     expect(html).toContain('첫 결제를 확인하고 있어요')
-    expect(html).not.toContain('해지 예약</button>')
+    expect(html).not.toContain('기간 끝에 해지</button>')
     expect(html).not.toContain('다음 결제일')
   })
 
@@ -282,7 +284,7 @@ describe('MySubscriptionCard plan change', () => {
   it('an active subscription gets one filled 「플랜 올리기」 and the cancel steps back to an outline', () => {
     const html = card()
     expect(html).toMatch(/data-variant="primary"[^>]*>플랜 올리기</)
-    expect(html).toMatch(/data-variant="secondary"[^>]*>해지 예약</)
+    expect(html).toMatch(/data-variant="secondary"[^>]*>기간 끝에 해지</)
   })
 
   it('while the change is being confirmed it says so and offers no second change', () => {
@@ -293,5 +295,104 @@ describe('MySubscriptionCard plan change', () => {
 
   it('a canceling subscription is not offered a change', () => {
     expect(card({ status: 'CANCELING' })).not.toContain('플랜 올리기')
+  })
+})
+
+describe('CancelNowDialog', () => {
+  const preview = {
+    open: true,
+    refund: { amount: 3393, currency: 'KRW' },
+    withdrawal: false,
+    lines: [
+      { code: 'PAID' as const, amount: 3900 },
+      { code: 'USED' as const, amount: -130 },
+      { code: 'PENALTY' as const, amount: -377 },
+    ],
+  }
+  const dialog = (props: object = {}) =>
+    renderToStaticMarkup(
+      <CancelNowDialog open onClose={noop} onConfirm={noop} preview={preview} {...common} {...props} />,
+    )
+
+  it('shows the refund and every line of the calculation before anything is pressed, the deductions with a minus', () => {
+    const html = dialog()
+    expect(html).toContain('환불 예정 금액')
+    expect(html).toContain('3,393원')
+    expect(html).toContain('3,900원')
+    expect(html).toContain('-130원')
+    expect(html).toContain('-377원')
+    expect(html).toContain('위약금')
+  })
+
+  it('inside the withdrawal period it says the whole payment comes back', () => {
+    const html = dialog({
+      preview: { ...preview, withdrawal: true, refund: { amount: 3900, currency: 'KRW' }, lines: [preview.lines[0]] },
+    })
+    expect(html).toContain('철회 기간 안이라 낸 금액을 모두 돌려드려요')
+    expect(html).not.toContain('위약금')
+  })
+
+  it('without an amount the confirm is locked and says it is checking', () => {
+    const html = dialog({ preview: undefined, previewLoading: true })
+    expect(html).toContain('환불 금액을 확인하는 중')
+    expect(html).toMatch(/aria-disabled="true"[^>]*>[^<]*지금 해지하고 환불받기|지금 해지하고 환불받기[^]*aria-disabled="true"/)
+  })
+
+  it('says why a refused cancel was refused', () => {
+    const apiError = (code: string) =>
+      new ApiRequestError(
+        { code, title: 't', status: 409, timestamp: '2026-01-01T00:00:00Z', traceId: 'tr' },
+        'tr',
+        'sp',
+        'tp',
+      )
+    expect(dialog({ error: apiError('PAYMENT.SUBSCRIPTION_CHARGE_IN_PROGRESS') })).toContain('결제를 확인하는 중이라')
+    expect(dialog({ error: apiError('PAYMENT.SUBSCRIPTION_CANCEL_NOT_ALLOWED') })).toContain('기간 끝에 해지를 이용해')
+  })
+})
+
+describe('CancelNowResultNotice', () => {
+  const result = (status: 'SUCCEEDED' | 'PENDING' | 'FAILED' | 'NOT_SENT', refund = 3393) => ({
+    subscription: subscription({ status: 'ENDED', endReason: 'USER_CANCELED_NOW' }),
+    refund: { amount: refund, currency: 'KRW' },
+    withdrawal: false,
+    lines: [],
+    refunds: [{ orderId: 'ord_1', amount: { amount: refund, currency: 'KRW' }, status }],
+  })
+  const notice = (r: ReturnType<typeof result>) =>
+    renderToStaticMarkup(<CancelNowResultNotice result={r} {...common} />)
+
+  it('says the refund amount when it went through, and never claims a refund that failed or is still going out', () => {
+    expect(notice(result('SUCCEEDED'))).toContain('3,393원을 돌려드려요')
+    expect(notice(result('SUCCEEDED', 0))).toContain('돌려드릴 금액은 없어요')
+    expect(notice(result('PENDING'))).toContain('환불을 처리하고 있어요')
+    expect(notice(result('NOT_SENT'))).toContain('환불을 처리하고 있어요')
+    expect(notice(result('FAILED'))).toContain('환불을 마치지 못했어요')
+  })
+})
+
+describe('MySubscriptionCard cancel now', () => {
+  const card = (over: Parameters<typeof subscription>[0] = {}, props: object = {}) =>
+    renderToStaticMarkup(
+      <MySubscriptionCard subscription={subscription(over)} orders={[]} onCancel={noop} {...common} {...props} />,
+    )
+
+  it('the two cancel buttons weigh the same - both outlined - and the second only exists when the parent offers it', () => {
+    const html = card({}, { onCancelNow: noop })
+    expect(html).toMatch(/data-variant="secondary"[^>]*>기간 끝에 해지</)
+    expect(html).toMatch(/data-variant="secondary"[^>]*>지금 해지하고 환불</)
+    expect(html).not.toMatch(/data-variant="primary"/)
+    expect(card()).not.toContain('지금 해지하고 환불')
+  })
+
+  it('a subscription already set to end can still be ended now, but is not offered a second period-end cancel', () => {
+    const html = card({ status: 'CANCELING' }, { onCancelNow: noop })
+    expect(html).toContain('지금 해지하고 환불')
+    expect(html).not.toContain('기간 끝에 해지</button>')
+  })
+
+  it('an ended or past-due subscription has no cancel-now', () => {
+    expect(card({ status: 'ENDED' }, { onCancelNow: noop })).not.toContain('지금 해지하고 환불')
+    expect(card({ status: 'PAST_DUE' }, { onCancelNow: noop })).not.toContain('지금 해지하고 환불')
   })
 })

@@ -39,7 +39,7 @@ function Demo(props: Partial<ComponentProps<typeof CancelSubscriptionDialog>>) {
   return (
     <>
       <Button variant="secondary" onClick={() => setOpen(true)}>
-        해지 예약
+        기간 끝에 해지
       </Button>
       <CancelSubscriptionDialog
         {...(meta.args as ComponentProps<typeof CancelSubscriptionDialog>)}
@@ -63,7 +63,7 @@ const dialogName = '해지를 예약할까요?'
 export const ConfirmSendsOnce: Story = {
   render: () => <Demo />,
   play: async ({ canvas, userEvent }) => {
-    await userEvent.click(canvas.getByRole('button', { name: '해지 예약' }))
+    await userEvent.click(canvas.getByRole('button', { name: '기간 끝에 해지' }))
     const dialog = await screen.findByRole('dialog', { name: dialogName })
     await waitFor(() => expect(within(dialog).getByRole('button', { name: '닫기' })).toHaveFocus())
     await expect(dialog).toHaveTextContent('2026. 11. 1.까지 계속 이용할 수 있고')
@@ -77,13 +77,13 @@ export const ConfirmSendsOnce: Story = {
 export const CloseSendsNothing: Story = {
   render: () => <Demo />,
   play: async ({ canvas, userEvent }) => {
-    await userEvent.click(canvas.getByRole('button', { name: '해지 예약' }))
+    await userEvent.click(canvas.getByRole('button', { name: '기간 끝에 해지' }))
     const dialog = await screen.findByRole('dialog', { name: dialogName })
     await userEvent.click(within(dialog).getByRole('button', { name: '닫기' }))
     await expect(onConfirm).not.toHaveBeenCalled()
     await expect(onClose).toHaveBeenCalled()
     // 연 단추로 포커스가 돌아온다
-    await waitFor(() => expect(canvas.getByRole('button', { name: '해지 예약' })).toHaveFocus())
+    await waitFor(() => expect(canvas.getByRole('button', { name: '기간 끝에 해지' })).toHaveFocus())
   },
 }
 

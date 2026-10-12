@@ -41,12 +41,24 @@ export const Active: Story = {
     await expect(canvas.getByText('다음 결제일')).toBeVisible()
     // 카드는 칸에도, 최근 결제 줄에도 있다
     await expect(canvas.getAllByText('현대카드 ····1234')).toHaveLength(2)
-    const cancel = canvas.getByRole('button', { name: '해지 예약' })
+    const cancel = canvas.getByRole('button', { name: '기간 끝에 해지' })
     await expect(cancel).toHaveAttribute('data-variant', 'primary')
     await userEvent.click(cancel)
     await expect(args.onCancel).toHaveBeenCalledOnce()
     // 최근 결제 줄 끝은 눌리는 모양의 링크다
     await expect(canvas.getByRole('link', { name: '자세히: Standard 6,900' })).toBeVisible()
+  },
+}
+
+export const CancelNowOffered: Story = {
+  args: { onCancelNow: fn() },
+  play: async ({ canvas, args, userEvent }) => {
+    // 두 해지 단추는 같은 무게 - 둘 다 테두리
+    await expect(canvas.getByRole('button', { name: '기간 끝에 해지' })).toHaveAttribute('data-variant', 'secondary')
+    const now = canvas.getByRole('button', { name: '지금 해지하고 환불' })
+    await expect(now).toHaveAttribute('data-variant', 'secondary')
+    await userEvent.click(now)
+    await expect(args.onCancelNow).toHaveBeenCalledOnce()
   },
 }
 
@@ -56,7 +68,7 @@ export const Canceling: Story = {
     await expect(canvas.getByText('해지 예약됨')).toBeVisible()
     await expect(canvas.getByText('2026. 11. 1. 오후 12:00에 끝나요')).toBeVisible()
     await expect(canvas.queryByText('다음 결제일')).toBeNull()
-    await expect(canvas.queryByRole('button', { name: '해지 예약' })).toBeNull()
+    await expect(canvas.queryByRole('button', { name: '기간 끝에 해지' })).toBeNull()
   },
 }
 
@@ -65,7 +77,7 @@ export const PastDue: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByText('결제 다시 시도 중')).toBeVisible()
     await expect(canvas.getByText(/그동안은 이용할 수 없어요/)).toBeVisible()
-    await expect(canvas.getByRole('button', { name: '해지 예약' })).toBeVisible()
+    await expect(canvas.getByRole('button', { name: '기간 끝에 해지' })).toBeVisible()
   },
 }
 

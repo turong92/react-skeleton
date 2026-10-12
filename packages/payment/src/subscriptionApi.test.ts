@@ -75,6 +75,29 @@ describe('createSubscriptionApi (paths and bodies mirror the backend HTTP contra
     ])
   })
 
+  it('start passes the country along, cancelPreview → GET …/cancel-preview and cancelNow → POST …/cancel-now with the long timeout', async () => {
+    const { client, calls } = fakeClient()
+    const api = createSubscriptionApi(client)
+    await api.start({ planCode: 'basic', country: 'KR' }, { idempotencyKey: 'k-1' })
+    await api.cancelPreview('sub/1')
+    await api.cancelNow('sub/1')
+    expect(calls).toEqual([
+      {
+        path: '/payments/subscriptions',
+        request: {
+          method: 'POST',
+          json: { planCode: 'basic', country: 'KR' },
+          idempotencyKey: 'k-1',
+        },
+      },
+      { path: '/payments/subscriptions/sub%2F1/cancel-preview', request: undefined },
+      {
+        path: '/payments/subscriptions/sub%2F1/cancel-now',
+        request: { method: 'POST', timeoutMs: CONFIRM_TIMEOUT_MS },
+      },
+    ])
+  })
+
   it('changePreview → GET …/change-preview?planCode and changePlan → POST …/change with the Idempotency-Key and the long timeout', async () => {
     const { client, calls } = fakeClient()
     const api = createSubscriptionApi(client)

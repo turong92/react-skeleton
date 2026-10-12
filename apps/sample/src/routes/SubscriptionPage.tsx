@@ -1,8 +1,13 @@
 import {
+  CancelNowDialog,
+  CancelNowResultNotice,
   CancelSubscriptionDialog,
   ChangePlanDialog,
   MySubscriptionCard,
+  useCancelPreview,
   useCancelSubscription,
+  useCancelSubscriptionNow,
+  type CancelNowResult,
   useChangeSubscriptionPlan,
   useMySubscription,
   usePlanChangePreview,
@@ -21,7 +26,7 @@ import styles from './SubscriptionPage.module.css'
 
 /**
  * 「내 구독」 — 구독이 없으면 플랜으로 이어 주고, 있으면 `MySubscriptionCard`(플랜 · 상태 · 다음 결제일 · 카드 · 최근 결제 · 「해지 예약」)를 보인다.
- * 「해지 예약」은 확인 창을 거친다. 끝난 구독은 끝난 이유를 말하고 「다시 구독하기」로 이어 준다. 최근 결제 줄 끝의 링크는 결제 한 건(`/payments/:id`)으로 간다.
+ * 「기간 끝에 해지」와 「지금 해지하고 환불」은 확인 창을 거친다(지금 해지는 이 나라의 정책이 열었을 때만 — 환불 예정 금액과 계산 내역을 먼저 보인다). 끝난 구독은 끝난 이유를 말하고 「다시 구독하기」로 이어 준다. 최근 결제 줄 끝의 링크는 결제 한 건(`/payments/:id`)으로 간다.
  */
 export function SubscriptionPage() {
   const { t, locale } = useT()
@@ -31,6 +36,13 @@ export function SubscriptionPage() {
   const cancel = useCancelSubscription(subscriptionApi)
   const change = useChangeSubscriptionPlan(subscriptionApi)
   const plans = useSubscriptionPlans(subscriptionApi)
+  // 지금 해지: 정책이 열었는지(`open`)를 이용 중일 때만 묻고, 확인 창을 열 때마다 새로 읽는다(남은 기간에 따라 금액이 변한다)
+  const subscriptionId = me.data?.subscription?.id ?? ''
+  const inUse = me.data?.subscription?.status === 'ACTIVE' || me.data?.subscription?.status === 'CANCELING'
+  const cancelPreview = useCancelPreview(subscriptionApi, subscriptionId, inUse)
+  const cancelNow = useCancelSubscriptionNow(subscriptionApi)
+  const [endingNow, setEndingNow] = useState(false)
+  const [endedNow, setEndedNow] = useState<CancelNowResult | null>(null)
   const [confirming, setConfirming] = useState(false)
   // 플랜 올리기 창: 열려 있는 동안 고른 플랜(없으면 닫힘)
   const [changeTo, setChangeTo] = useState<string | null>(null)
@@ -89,6 +101,15 @@ export function SubscriptionPage() {
           cancel.reset() // 묵은 오류가 새로 연 창에 보이지 않게
           setConfirming(true)
         }}
+        {...(cancelPreview.data?.open
+          ? {
+              onCancelNow: () => {
+                cancelNow.reset()
+                setEndingNow(true)
+                void cancelPreview.refetch()
+              },
+            }
+          : {})}
         renderOrderAction={(order, label, accessibleName, buttonLikeClassName) => (
           <Link
             to={`/payments/${order.id}`}
@@ -101,6 +122,14 @@ export function SubscriptionPage() {
         locale={language}
         labels={labels}
       />
+      {endedNow && subscription.status === 'ENDED' && (
+        <CancelNowResultNotice result={endedNow} locale={language} labels={labels} />
+      )}
+      <div className={styles.actions}>
+        <LinkButton to="/refund" variant="secondary">
+          {t('subscription.refundPolicy')}
+        </LinkButton>
+      </div>
       {subscription.status === 'ENDED' && (
         <div className={styles.actions}>
           <LinkButton to="/subscribe">{t('subscription.again')}</LinkButton>
@@ -123,6 +152,25 @@ export function SubscriptionPage() {
         previewError={preview.error}
         busy={change.isPending}
         error={change.error}
+        locale={language}
+        labels={labels}
+      />
+      <CancelNowDialog
+        open={endingNow && inUse}
+        onClose={() => setEndingNow(false)}
+        onConfirm={() =>
+          cancelNow.mutate(subscription.id, {
+            onSuccess: (result) => {
+              setEndingNow(false)
+              setEndedNow(result)
+            },
+          })
+        }
+        preview={cancelPreview.data}
+        previewLoading={cancelPreview.isFetching}
+        previewError={cancelPreview.error}
+        busy={cancelNow.isPending}
+        error={cancelNow.error}
         locale={language}
         labels={labels}
       />

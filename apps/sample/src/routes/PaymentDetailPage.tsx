@@ -48,7 +48,13 @@ function PaymentDetail({
   return (
     <div className={styles.page}>
       <PageHeader
-        back={<TextLink to="/cheers">← {t('cheer.detail.back')}</TextLink>}
+        back={
+          order.itemType === 'subscription' ? (
+            <TextLink to="/subscription">← {t('subscription.title')}</TextLink>
+          ) : (
+            <TextLink to="/cheers">← {t('cheer.detail.back')}</TextLink>
+          )
+        }
         title={t('cheer.detail.title')}
       />
       {refreshFailed && (

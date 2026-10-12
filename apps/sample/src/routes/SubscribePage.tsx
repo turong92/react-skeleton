@@ -7,7 +7,7 @@ import {
   usePaymentConfig,
   type SubscriptionPlan,
 } from '@skeleton/payment'
-import { Alert, ErrorReference, PageHeader, Spinner } from '@skeleton/ui'
+import { Alert, ErrorReference, Field, PageHeader, Select, Spinner } from '@skeleton/ui'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { paymentApi } from '../cheer/api'
@@ -15,6 +15,7 @@ import { LinkButton } from '../components/LinkButton'
 import { LoadError } from '../components/LoadError'
 import { languageOf, useT, type MessageKey } from '../i18n'
 import { subscriptionApi } from '../subscription/api'
+import { countryForLocale, countryName, countryOptions } from '../subscription/country'
 import { subscriptionLabelsFor } from '../subscription/labels'
 import { planNameOf } from '../subscription/planName'
 import {
@@ -53,6 +54,8 @@ export function SubscribePage() {
   const start = useStartSubscription(subscriptionApi, { meta: { quietStatuses: [429] } })
   const navigate = useNavigate()
   const [busyPlan, setBusyPlan] = useState<string | null>(null)
+  // 결제하는 나라 - 화면 언어로 미리 채우고 바꿀 수 있다. 서버는 이 나라로 해지·환불 정책을 고른다
+  const [country, setCountry] = useState(() => countryForLocale(language))
   const [notice, setNotice] = useState<Notice | null>(null)
 
   // 카드 창에서 뒤로 가기로 돌아오면(브라우저가 이 화면을 그대로 되살린다) 「여는 중」에 갇히지 않게
@@ -74,11 +77,13 @@ export function SubscribePage() {
     setNotice(null)
     const result = await startSubscribe(
       {
-        start: (planCode) => start.mutateAsync({ planCode }),
+        start: (planCode, buyerCountry) =>
+          start.mutateAsync(buyerCountry ? { planCode, country: buyerCountry } : { planCode }),
         openBillingAuth,
         urlsFor: (id) => subscribeReturnUrls(window.location.origin, id),
       },
       plan.code,
+      country,
     )
     if (result.kind === 'opened') return // 카드 창이 이 화면을 떠나게 한다 — 돌아오면 `pageshow` 가 풀어 준다
     setBusyPlan(null)
@@ -123,6 +128,24 @@ export function SubscribePage() {
           </div>
         </Alert>
       )}
+      <div className={styles.country}>
+        <Field label={t('subscription.subscribe.country')} hint={t('subscription.subscribe.countryHint')}>
+          {(control) => (
+            <Select {...control} value={country} onChange={(event) => setCountry(event.target.value)}>
+              {countryOptions(countryForLocale(language)).map((code) => (
+                <option key={code} value={code}>
+                  {countryName(code, language)}
+                </option>
+              ))}
+            </Select>
+          )}
+        </Field>
+        <div>
+          <LinkButton to="/refund" variant="secondary">
+            {t('subscription.refundPolicy')}
+          </LinkButton>
+        </div>
+      </div>
       <SubscriptionPlanList
         plans={plans.data.map((plan) => ({ ...plan, name: planNameOf(t, plan) }))}
         onSubscribe={(plan) => void subscribe(plan)}

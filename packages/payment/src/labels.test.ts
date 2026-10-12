@@ -150,7 +150,7 @@ describe('the words on the screen (spec 11.2)', () => {
   it('says the subscription table words (subscribe, cancel-at-period-end) in Korean and plain English', () => {
     const sub = koPaymentLabels.subscription
     expect(sub.plans.subscribe).toBe('구독하기')
-    expect(sub.mine.cancel).toBe('해지 예약')
+    expect(sub.mine.cancel).toBe('기간 끝에 해지')
     expect(sub.status.CANCELING).toBe('해지 예약됨')
     expect(sub.mine.endsOn('11월 1일')).toBe('11월 1일에 끝나요')
     expect(sub.cancelDialog.dismiss).toBe('닫기')
@@ -163,6 +163,7 @@ describe('the words on the screen (spec 11.2)', () => {
       'REFUNDED',
       'RENEWAL_BLOCKED',
       'USER_CANCELED',
+      'USER_CANCELED_NOW',
     ])
   })
 

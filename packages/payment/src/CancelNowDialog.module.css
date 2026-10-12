@@ -1,0 +1,47 @@
+.body {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.text {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.breakdown {
+  display: grid;
+  gap: var(--space-sm);
+  margin: 0;
+}
+
+.line {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.line dt {
+  color: var(--text-muted);
+}
+
+.line dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.total {
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--border);
+  font-weight: 650;
+  color: var(--text-strong);
+}
+
+.total dt {
+  color: var(--text-strong);
+}
+
+.note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+}

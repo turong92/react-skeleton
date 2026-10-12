@@ -25,6 +25,7 @@ const sub = (over: Partial<Subscription> = {}): Subscription => ({
   pendingPlanCode: null,
   testMode: false,
   createdAt: '2026-10-01T03:00:00Z',
+  country: 'KR',
   ...over,
 })
 

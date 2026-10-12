@@ -87,6 +87,7 @@ describe('RootLayout (signed out)', () => {
     )
     expect(html).toMatch(/<footer[\s\S]*href="\/terms"[\s\S]*<\/footer>/)
     expect(html).toMatch(/<footer[\s\S]*href="\/privacy"[\s\S]*<\/footer>/)
+    expect(html).toMatch(/<footer[\s\S]*href="\/refund"[\s\S]*<\/footer>/)
     expect(html).toContain(i18n.t('footer.cookieSettings'))
     expect(html).not.toContain(i18n.t('consent.title'))
   })

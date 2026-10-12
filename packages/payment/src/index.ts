@@ -77,6 +77,10 @@ export {
 // 구독(자동결제) — 백엔드 `skeleton.payment.subscription.enabled=true` 인 앱에서만 경로가 열린다
 export type {
   ActivateSubscriptionInput,
+  CancelLine,
+  CancelNowResult,
+  CancelPreview,
+  CancelRefund,
   ChangePlanInput,
   BillingAuth,
   MySubscription,
@@ -93,7 +97,9 @@ export { createSubscriptionApi } from './subscriptionApi'
 export type { PaymentSubscriptionApi, PaymentSubscriptionApiOptions } from './subscriptionApi'
 export {
   useActivateSubscription,
+  useCancelPreview,
   useCancelSubscription,
+  useCancelSubscriptionNow,
   useChangeSubscriptionPlan,
   useMySubscription,
   usePlanChangePreview,
@@ -120,6 +126,10 @@ export { MySubscriptionCard } from './MySubscriptionCard'
 export type { MySubscriptionCardProps } from './MySubscriptionCard'
 export { ChangePlanDialog } from './ChangePlanDialog'
 export type { ChangePlanDialogProps } from './ChangePlanDialog'
+export { CancelNowDialog } from './CancelNowDialog'
+export type { CancelNowDialogProps } from './CancelNowDialog'
+export { CancelNowResultNotice } from './CancelNowResultNotice'
+export type { CancelNowResultNoticeProps } from './CancelNowResultNotice'
 export { CancelSubscriptionDialog } from './CancelSubscriptionDialog'
 export type { CancelSubscriptionDialogProps } from './CancelSubscriptionDialog'
 export { TestModeNotice } from './TestModeNotice'

@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => ({
     // 공개 주소는 VITE_SITE_URL(.env 또는 빌드 환경변수) — 없으면 robots.txt 만 내고 경고한다
     seoFiles({
       baseUrl: loadEnv(mode, process.cwd(), 'VITE_').VITE_SITE_URL || undefined,
-      routes: ['/', '/terms', '/privacy'],
+      routes: ['/', '/terms', '/privacy', '/refund'],
       robots: {
         rules: [
           {

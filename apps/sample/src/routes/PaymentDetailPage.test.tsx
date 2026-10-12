@@ -80,6 +80,12 @@ describe('PaymentDetailPage', () => {
     expect(html).toMatch(/<a [^>]*href="\/cheers"[^>]*>[^<]*내 응원 내역/)
   })
 
+  it('a subscription payment goes back to 「내 구독」, not to the cheer list', () => {
+    const html = render(withDetail({ order: order({ itemType: 'subscription' }), refunds: [] }))
+    expect(html).toMatch(/<a [^>]*href="\/subscription"[^>]*>[^<]*내 구독/)
+    expect(html).not.toContain('내 응원 내역')
+  })
+
   it('a paid cheer has a filled 「환불 요청」 button that can be pressed', () => {
     const html = render(withDetail({ order: order(), refunds: [] }))
     const button = html.match(/<button[^>]*data-variant="primary"[^>]*>[^<]*환불 요청/)?.[0] ?? ''

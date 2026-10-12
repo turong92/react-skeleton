@@ -3,6 +3,8 @@ import { CONFIRM_TIMEOUT_MS } from './ledgerApi'
 import type { IdempotentCall } from './ledgerTypes'
 import type {
   ActivateSubscriptionInput,
+  CancelNowResult,
+  CancelPreview,
   ChangePlanInput,
   MySubscription,
   PlanChangePreview,
@@ -23,6 +25,13 @@ export type PaymentSubscriptionApi = {
   me(): Promise<MySubscription>
   /** `POST {basePath}/subscriptions/{id}/cancel` — `ACTIVE` → `CANCELING`, `PAST_DUE` 는 바로 `ENDED`. 다시 눌러도 같은 답 */
   cancel(id: string): Promise<Subscription>
+  /** `GET {basePath}/subscriptions/{id}/cancel-preview` - 지금 해지하면 얼마가 돌아오는가(`open: false` 면 이 나라는 기간 끝 해지만) */
+  cancelPreview(id: string): Promise<CancelPreview>
+  /**
+   * `POST {basePath}/subscriptions/{id}/cancel-now` - 구독을 지금 끝내고 이번 기간의 쓰지 않은 몫을 환불한다. 다시 눌러도 같은 답(환불은 한 번).
+   * 409 `PAYMENT.SUBSCRIPTION_CANCEL_NOT_ALLOWED`(정책이 닫음 · 이용 중이 아님) · 409 `PAYMENT.SUBSCRIPTION_CHARGE_IN_PROGRESS`(결제가 오가는 중). 결제사를 부르므로 `activateTimeoutMs` 를 쓴다
+   */
+  cancelNow(id: string): Promise<CancelNowResult>
   /** `GET {basePath}/subscriptions/{id}/change-preview?planCode=` - 위 등급으로 바꾸면 지금 얼마가 결제되는가 */
   changePreview(id: string, planCode: string): Promise<PlanChangePreview>
   /**
@@ -65,6 +74,12 @@ export function createSubscriptionApi(
       }),
     me: () => client.value<MySubscription>(`${base}/me`),
     cancel: (id) => client.value<Subscription>(`${base}/${enc(id)}/cancel`, { method: 'POST' }),
+    cancelPreview: (id) => client.value<CancelPreview>(`${base}/${enc(id)}/cancel-preview`),
+    cancelNow: (id) =>
+      client.value<CancelNowResult>(`${base}/${enc(id)}/cancel-now`, {
+        method: 'POST',
+        timeoutMs: activateTimeoutMs,
+      }),
     changePreview: (id, planCode) =>
       client.value<PlanChangePreview>(`${base}/${enc(id)}/change-preview`, {
         params: { planCode },

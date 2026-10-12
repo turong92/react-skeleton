@@ -296,6 +296,8 @@ export type SubscriptionLabels = {
     card: string
     recentPayments: string
     cancel: string
+    /** 「지금 해지하고 환불」 단추 - 이 나라의 정책이 중도 해지를 열었을 때만 보인다 */
+    cancelNow: string
     /** 「플랜 올리기」 단추 */
     changePlan: string
     /** 플랜 변경의 결제를 결제사가 아직 답하지 않았다(`pendingPlanCode`) */
@@ -323,6 +325,48 @@ export type SubscriptionLabels = {
     /** 모서리의 × 단추의 낭독 이름 */
     close: string
     error: string
+  }
+  cancelNowDialog: {
+    title: string
+    /** 지금 바로 끝나고 이용할 수 없다 + 쓰지 않은 만큼 돌려준다 */
+    body: string
+    /** 계산 내역 표의 낭독 이름 */
+    breakdown: string
+    paid: string
+    used: string
+    penalty: string
+    /** 환불 예정 금액 칸의 이름 */
+    refund: string
+    /** 철회 기간 안이라 전액 환불 */
+    withdrawal: string
+    /** 금액은 해지하는 순간 기준으로 다시 계산된다 */
+    estimate: string
+    /** 낼 돈이 없어 돌려줄 금액이 0 이다 */
+    noRefund: string
+    loadingPreview: string
+    previewError: string
+    confirm: string
+    /** 확인 단추가 일하는 동안의 낭독 이름 */
+    loading: string
+    /** 창을 닫는 단추 - 「취소」가 결제 취소로 읽히지 않게 「닫기」 */
+    dismiss: string
+    /** 모서리의 × 단추의 낭독 이름 */
+    close: string
+    errors: {
+      notAllowed: string
+      /** 갱신 · 변경 결제가 오가는 중 - 끝난 뒤 다시 */
+      chargeInProgress: string
+      other: string
+    }
+  }
+  /** 지금 해지한 직후 안내 띠 - 인자는 이미 서식을 입힌 금액 */
+  cancelNowResult: {
+    done: (refund: string) => string
+    noRefund: string
+    /** 환불을 결제사가 처리 중이거나 서버가 다시 보낼 것이다 */
+    pending: string
+    /** 결제사가 환불을 거절했다 - 사람이 본다 */
+    failed: string
   }
   changeDialog: {
     title: string

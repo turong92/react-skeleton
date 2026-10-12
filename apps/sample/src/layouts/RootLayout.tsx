@@ -108,6 +108,7 @@ export function RootLayout() {
             legalLinks={[
               { label: t('footer.terms'), href: '/terms' },
               { label: t('footer.privacy'), href: '/privacy' },
+              { label: t('footer.refund'), href: '/refund' },
             ]}
             copyright={t('footer.copyright', { year: String(new Date().getFullYear()) })}
             renderLink={footerLink}

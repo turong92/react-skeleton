@@ -6,7 +6,7 @@ import { LegalPage } from './LegalPage'
 
 afterEach(() => i18n.setLocale('ko', { remember: false }))
 
-const render = (doc: 'terms' | 'privacy', search = '') =>
+const render = (doc: 'terms' | 'privacy' | 'refund', search = '') =>
   renderToStaticMarkup(
     <MemoryRouter initialEntries={[`/${doc}${search}`]}>
       <LegalPage doc={doc} />
@@ -24,6 +24,13 @@ describe('/terms and /privacy (LegalPage)', () => {
 
   it('privacy has its own title', () => {
     expect(render('privacy')).toContain(i18n.t('legal.privacy.title'))
+  })
+
+  it('the refund policy has its own title and says it is a template for the sample policy', () => {
+    const html = render('refund')
+    expect(html).toContain(i18n.t('legal.refund.title'))
+    expect(html).toContain('TEMPLATE')
+    expect(html).toContain('10%')
   })
 
   it('the version in the address (?v=) is the one shown, so a link points at a version', () => {

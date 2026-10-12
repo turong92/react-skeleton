@@ -44,7 +44,8 @@ export function startSubscriptionMutation(
   return {
     mutationFn: (variables: Variables) => {
       const { idempotencyKey, ...input } = variables
-      const key = keyOf(keys, variables, input.planCode, idempotencyKey)
+      // 나라가 다르면 다른 시도다 - 서버는 같은 키의 재전송에서 나라를 바꾸지 않는다
+      const key = keyOf(keys, variables, JSON.stringify([input.planCode, input.country ?? null]), idempotencyKey)
       return _api.start(input, key !== undefined ? { idempotencyKey: key } : undefined)
     },
     onSuccess: (_result: unknown, variables: Variables) => releaseKey(keys, variables),
@@ -71,6 +72,23 @@ export function activateSubscriptionMutation(api: PaymentSubscriptionApi, client
 export function cancelSubscriptionMutation(api: PaymentSubscriptionApi, client: QueryClient) {
   return {
     mutationFn: (id: string) => api.cancel(id),
+    onSettled: () => invalidateRoot(client),
+  }
+}
+
+/** 지금 해지하면 얼마가 돌아오는가 - 남은 기간이 줄수록 금액이 변하므로 캐시에 오래 두지 않는다(`staleTime` 0). 창을 열 때 `refetch()` 로 새로 묻는다 */
+export function cancelPreviewQuery(api: PaymentSubscriptionApi, id: string) {
+  return {
+    queryKey: paymentKeys.cancelPreview(id),
+    queryFn: () => api.cancelPreview(id),
+    gcTime: 0,
+  }
+}
+
+/** 지금 해지하고 환불받는다. 서버가 다시 눌러도 같은 답이므로 재시도는 하지 않는다 - 끝나면 어느 쪽이든 캐시를 새로 고친다(409 는 그 사이 구독이 달라졌다는 확정 답) */
+export function cancelNowMutation(api: PaymentSubscriptionApi, client: QueryClient) {
+  return {
+    mutationFn: (id: string) => api.cancelNow(id),
     onSettled: () => invalidateRoot(client),
   }
 }

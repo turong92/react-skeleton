@@ -68,6 +68,11 @@ export const routes: RouteObject[] = [
         handle: publicSeo('seo.privacy.title', 'seo.privacy.description'),
       },
       {
+        path: '/refund',
+        element: <LegalRoute doc="refund" />,
+        handle: publicSeo('seo.refund.title', 'seo.refund.description'),
+      },
+      {
         element: <RequireAuth />,
         children: [
           { path: '/notes', element: <NotesPage />, handle: privateSeo('nav.notes') },

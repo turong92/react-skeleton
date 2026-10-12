@@ -8,6 +8,8 @@ export type SubscriptionStatus = 'PENDING' | 'ACTIVE' | 'PAST_DUE' | 'CANCELING'
 export type SubscriptionEndReason =
   | 'FIRST_PAYMENT_DECLINED'
   | 'USER_CANCELED'
+  /** 중도 해지 - 지금 끝내고 이번 기간의 쓰지 않은 몫을 환불했다 */
+  | 'USER_CANCELED_NOW'
   | 'PAYMENT_FAILED'
   | 'ACCOUNT_ERASED'
   | 'RENEWAL_BLOCKED'
@@ -35,6 +37,8 @@ export type Subscription = {
   pendingPlanCode: string | null
   testMode: boolean
   createdAt: string
+  /** 구매자 나라(ISO-3166 두 글자) - 해지·환불 정책을 고른 열쇠. 모르면 `null` */
+  country: string | null
 }
 
 export type SubscriptionPlan = {
@@ -64,7 +68,8 @@ export type StartSubscriptionResult = {
   billingAuth: BillingAuth | null
 }
 
-export type StartSubscriptionInput = { planCode: string }
+/** `country` 는 구매자 나라(ISO-3166 두 글자) - 해지·환불 정책이 이 나라를 따른다. 생략하면 서버의 기본 나라 */
+export type StartSubscriptionInput = { planCode: string; country?: string }
 
 /** 카드 등록 창에서 돌아온 `authKey` 로 빌링키를 만들고 첫 결제를 한다 */
 export type ActivateSubscriptionInput = { providerPayload: { authKey: string } }
@@ -84,3 +89,33 @@ export type PlanChangePreview = {
 
 /** `expectedCharge` 는 미리보기로 본 `charge.amount` - 서버가 다시 계산한 값이 더 크면 409 `PLAN_CHANGE_CHARGE_CHANGED` */
 export type ChangePlanInput = { planCode: string; expectedCharge: number }
+
+/** 중도 해지 계산 내역의 한 줄 - `PAID` 낸 돈(양수) · `USED` 쓴 몫(음수) · `PENALTY` 위약금(음수). 합이 환불 금액이다 */
+export type CancelLine = { code: 'PAID' | 'USED' | 'PENALTY'; amount: number }
+
+/**
+ * `GET /subscriptions/{id}/cancel-preview` - `open` 이 `false` 면 이 나라의 정책이 중도 해지를 닫았다(기간 끝 해지만, `refund` 0).
+ * `withdrawal` 이면 7일 철회로 전액을 돌려준다. 금액은 시간에 따라 변한다(남은 기간이 줄어든다)
+ */
+export type CancelPreview = {
+  open: boolean
+  refund: PaymentAmount
+  withdrawal: boolean
+  lines: CancelLine[]
+}
+
+/** 주문 하나의 환불 결과 - `PENDING` 결제사 답을 기다림 · `FAILED` 결제사가 거절함 · `NOT_SENT` 아직 못 보냄(서버가 다시 보낸다) */
+export type CancelRefund = {
+  orderId: string
+  amount: PaymentAmount
+  status: 'SUCCEEDED' | 'PENDING' | 'FAILED' | 'NOT_SENT'
+}
+
+/** `POST /subscriptions/{id}/cancel-now` - 구독은 이미 `ENDED`(`USER_CANCELED_NOW`). `refund` 는 돌려주기로 한 합계 */
+export type CancelNowResult = {
+  subscription: Subscription
+  refund: PaymentAmount
+  withdrawal: boolean
+  lines: CancelLine[]
+  refunds: CancelRefund[]
+}

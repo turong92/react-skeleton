@@ -45,7 +45,10 @@ export function CancelNowDialog({
   const labels = all.subscription.cancelNowDialog
   const statusId = useId()
   const ready = preview !== undefined && !previewLoading
-  const message = isPaymentLedgerError(error, PaymentLedgerErrorCodes.SUBSCRIPTION_CANCEL_NOT_ALLOWED)
+  const message = isPaymentLedgerError(
+    error,
+    PaymentLedgerErrorCodes.SUBSCRIPTION_CANCEL_NOT_ALLOWED,
+  )
     ? labels.errors.notAllowed
     : isPaymentLedgerError(error, PaymentLedgerErrorCodes.SUBSCRIPTION_CHARGE_IN_PROGRESS)
       ? labels.errors.chargeInProgress

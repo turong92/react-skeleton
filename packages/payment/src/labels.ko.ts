@@ -213,12 +213,14 @@ export const koPaymentLabels: PaymentLabels = {
       close: '창 닫기',
       errors: {
         notAllowed: '지금은 바로 해지할 수 없어요. 기간 끝에 해지를 이용해 주세요.',
-        chargeInProgress: '결제를 확인하는 중이라 지금은 해지할 수 없어요. 잠시 뒤에 다시 해 주세요.',
+        chargeInProgress:
+          '결제를 확인하는 중이라 지금은 해지할 수 없어요. 잠시 뒤에 다시 해 주세요.',
         other: '해지하지 못했어요. 다시 해 보세요.',
       },
     },
     cancelNowResult: {
-      done: (refund) => `구독을 해지했어요. ${refund}을 돌려드려요. 카드사에 따라 반영까지 며칠 걸릴 수 있어요.`,
+      done: (refund) =>
+        `구독을 해지했어요. ${refund}을 돌려드려요. 카드사에 따라 반영까지 며칠 걸릴 수 있어요.`,
       noRefund: '구독을 해지했어요. 돌려드릴 금액은 없어요.',
       pending: '구독을 해지했어요. 환불을 처리하고 있어요. 곧 결제 내역에 반영돼요.',
       failed: '구독은 해지했지만 환불을 마치지 못했어요. 문의해 주세요.',

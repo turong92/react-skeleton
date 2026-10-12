@@ -39,7 +39,9 @@ describe.each(docs.flatMap((doc) => locales.map((locale) => [doc, locale] as con
         expect(
           v.markdown,
           `${v.version} must not repeat the page title as a leading h1`,
-        ).not.toMatch(/^\s*# (Terms of Service|Privacy Policy|Refund Policy|이용약관|개인정보 처리방침|환불 정책)\s*$/m)
+        ).not.toMatch(
+          /^\s*# (Terms of Service|Privacy Policy|Refund Policy|이용약관|개인정보 처리방침|환불 정책)\s*$/m,
+        )
       }
     })
   },

@@ -215,14 +215,17 @@ export const defaultPaymentLabels: PaymentLabels = {
       close: 'Close dialog',
       errors: {
         notAllowed: 'It cannot be ended right now. Use "End at period end" instead.',
-        chargeInProgress: 'A payment is being confirmed, so it cannot end now. Try again in a moment.',
+        chargeInProgress:
+          'A payment is being confirmed, so it cannot end now. Try again in a moment.',
         other: 'Could not end it now. Try again.',
       },
     },
     cancelNowResult: {
-      done: (refund) => `The subscription ended. We refund ${refund}. It can take a few days to show up on your card statement.`,
+      done: (refund) =>
+        `The subscription ended. We refund ${refund}. It can take a few days to show up on your card statement.`,
       noRefund: 'The subscription ended. There is nothing to refund.',
-      pending: 'The subscription ended. The refund is being processed and will show in your payments soon.',
+      pending:
+        'The subscription ended. The refund is being processed and will show in your payments soon.',
       failed: 'The subscription ended, but the refund did not go through. Please contact us.',
     },
     changeDialog: {

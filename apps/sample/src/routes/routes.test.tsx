@@ -117,7 +117,8 @@ describe('routes', () => {
   it('every route says how it appears to search engines (handle.seo): the landing and the legal pages are indexable; the login page, everything behind it and the 404 are not', () => {
     const seoOf = (path: string) =>
       (chain(path).at(-1)!.handle as { seo?: { indexable: boolean } } | undefined)?.seo
-    for (const path of ['/', '/terms', '/privacy', '/refund']) expect(seoOf(path)?.indexable, path).toBe(true)
+    for (const path of ['/', '/terms', '/privacy', '/refund'])
+      expect(seoOf(path)?.indexable, path).toBe(true)
     for (const path of [
       '/login',
       '/sign-up',

@@ -127,7 +127,9 @@ describe('SubscriptionPage', () => {
     const closed = render({ subscription: sub(), orders: [] }, false, { ...open, open: false })
     expect(closed).not.toMatch(/<button[^>]*>지금 해지하고 환불</)
     expect(closed).toContain('기간 끝에 해지')
-    expect(render({ subscription: sub(), orders: [] })).not.toMatch(/<button[^>]*>지금 해지하고 환불</)
+    expect(render({ subscription: sub(), orders: [] })).not.toMatch(
+      /<button[^>]*>지금 해지하고 환불</,
+    )
   })
 
   it('an already scheduled end can still be ended now', () => {

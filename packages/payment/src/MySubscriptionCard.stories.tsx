@@ -54,7 +54,10 @@ export const CancelNowOffered: Story = {
   args: { onCancelNow: fn() },
   play: async ({ canvas, args, userEvent }) => {
     // 두 해지 단추는 같은 무게 - 둘 다 테두리
-    await expect(canvas.getByRole('button', { name: '기간 끝에 해지' })).toHaveAttribute('data-variant', 'secondary')
+    await expect(canvas.getByRole('button', { name: '기간 끝에 해지' })).toHaveAttribute(
+      'data-variant',
+      'secondary',
+    )
     const now = canvas.getByRole('button', { name: '지금 해지하고 환불' })
     await expect(now).toHaveAttribute('data-variant', 'secondary')
     await userEvent.click(now)

@@ -45,7 +45,12 @@ export function startSubscriptionMutation(
     mutationFn: (variables: Variables) => {
       const { idempotencyKey, ...input } = variables
       // 나라가 다르면 다른 시도다 - 서버는 같은 키의 재전송에서 나라를 바꾸지 않는다
-      const key = keyOf(keys, variables, JSON.stringify([input.planCode, input.country ?? null]), idempotencyKey)
+      const key = keyOf(
+        keys,
+        variables,
+        JSON.stringify([input.planCode, input.country ?? null]),
+        idempotencyKey,
+      )
       return _api.start(input, key !== undefined ? { idempotencyKey: key } : undefined)
     },
     onSuccess: (_result: unknown, variables: Variables) => releaseKey(keys, variables),

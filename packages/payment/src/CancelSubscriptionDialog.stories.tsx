@@ -83,7 +83,9 @@ export const CloseSendsNothing: Story = {
     await expect(onConfirm).not.toHaveBeenCalled()
     await expect(onClose).toHaveBeenCalled()
     // 연 단추로 포커스가 돌아온다
-    await waitFor(() => expect(canvas.getByRole('button', { name: '기간 끝에 해지' })).toHaveFocus())
+    await waitFor(() =>
+      expect(canvas.getByRole('button', { name: '기간 끝에 해지' })).toHaveFocus(),
+    )
   },
 }
 

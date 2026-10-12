@@ -115,7 +115,10 @@ export function MySubscriptionCard({
               </Button>
             )}
             {onCancel && (status === 'ACTIVE' || status === 'PAST_DUE') && (
-              <Button variant={canChange || canCancelNow ? 'secondary' : 'primary'} onClick={onCancel}>
+              <Button
+                variant={canChange || canCancelNow ? 'secondary' : 'primary'}
+                onClick={onCancel}
+              >
                 {mine.cancel}
               </Button>
             )}

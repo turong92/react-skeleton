@@ -478,7 +478,8 @@ const en: Record<keyof typeof ko, string> = {
   'subscription.plan.pro': 'Pro',
   'subscription.subscribe.title': 'Subscribe',
   'subscription.subscribe.country': 'Country you pay from',
-  'subscription.subscribe.countryHint': 'How you can end a subscription and get a refund differs by country.',
+  'subscription.subscribe.countryHint':
+    'How you can end a subscription and get a refund differs by country.',
   'subscription.refundPolicy': 'Read the refund policy',
   'subscription.subscribe.subtitle':
     'Pick a plan and register a card. After that you are charged automatically each period.',

@@ -69,10 +69,9 @@ export const LockedUntilTheRefundIsRead: Story = {
     const dialog = await screen.findByRole('dialog', { name: dialogName })
     await expect(dialog).toHaveTextContent('환불 금액을 확인하는 중')
     await waitFor(() =>
-      expect(within(dialog).getByRole('button', { name: '지금 해지하고 환불받기' })).toHaveAttribute(
-        'aria-disabled',
-        'true',
-      ),
+      expect(
+        within(dialog).getByRole('button', { name: '지금 해지하고 환불받기' }),
+      ).toHaveAttribute('aria-disabled', 'true'),
     )
   },
 }

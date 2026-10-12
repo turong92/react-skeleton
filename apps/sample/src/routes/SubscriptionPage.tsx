@@ -38,7 +38,8 @@ export function SubscriptionPage() {
   const plans = useSubscriptionPlans(subscriptionApi)
   // 지금 해지: 정책이 열었는지(`open`)를 이용 중일 때만 묻고, 확인 창을 열 때마다 새로 읽는다(남은 기간에 따라 금액이 변한다)
   const subscriptionId = me.data?.subscription?.id ?? ''
-  const inUse = me.data?.subscription?.status === 'ACTIVE' || me.data?.subscription?.status === 'CANCELING'
+  const inUse =
+    me.data?.subscription?.status === 'ACTIVE' || me.data?.subscription?.status === 'CANCELING'
   const cancelPreview = useCancelPreview(subscriptionApi, subscriptionId, inUse)
   const cancelNow = useCancelSubscriptionNow(subscriptionApi)
   const [endingNow, setEndingNow] = useState(false)

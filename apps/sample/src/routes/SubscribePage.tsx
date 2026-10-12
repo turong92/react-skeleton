@@ -129,9 +129,16 @@ export function SubscribePage() {
         </Alert>
       )}
       <div className={styles.country}>
-        <Field label={t('subscription.subscribe.country')} hint={t('subscription.subscribe.countryHint')}>
+        <Field
+          label={t('subscription.subscribe.country')}
+          hint={t('subscription.subscribe.countryHint')}
+        >
           {(control) => (
-            <Select {...control} value={country} onChange={(event) => setCountry(event.target.value)}>
+            <Select
+              {...control}
+              value={country}
+              onChange={(event) => setCountry(event.target.value)}
+            >
               {countryOptions(countryForLocale(language)).map((code) => (
                 <option key={code} value={code}>
                   {countryName(code, language)}

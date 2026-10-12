@@ -311,7 +311,14 @@ describe('CancelNowDialog', () => {
   }
   const dialog = (props: object = {}) =>
     renderToStaticMarkup(
-      <CancelNowDialog open onClose={noop} onConfirm={noop} preview={preview} {...common} {...props} />,
+      <CancelNowDialog
+        open
+        onClose={noop}
+        onConfirm={noop}
+        preview={preview}
+        {...common}
+        {...props}
+      />,
     )
 
   it('shows the refund and every line of the calculation before anything is pressed, the deductions with a minus', () => {
@@ -326,7 +333,12 @@ describe('CancelNowDialog', () => {
 
   it('inside the withdrawal period it says the whole payment comes back', () => {
     const html = dialog({
-      preview: { ...preview, withdrawal: true, refund: { amount: 3900, currency: 'KRW' }, lines: [preview.lines[0]] },
+      preview: {
+        ...preview,
+        withdrawal: true,
+        refund: { amount: 3900, currency: 'KRW' },
+        lines: [preview.lines[0]],
+      },
     })
     expect(html).toContain('철회 기간 안이라 낸 금액을 모두 돌려드려요')
     expect(html).not.toContain('위약금')
@@ -335,7 +347,9 @@ describe('CancelNowDialog', () => {
   it('without an amount the confirm is locked and says it is checking', () => {
     const html = dialog({ preview: undefined, previewLoading: true })
     expect(html).toContain('환불 금액을 확인하는 중')
-    expect(html).toMatch(/aria-disabled="true"[^>]*>[^<]*지금 해지하고 환불받기|지금 해지하고 환불받기[^]*aria-disabled="true"/)
+    expect(html).toMatch(
+      /aria-disabled="true"[^>]*>[^<]*지금 해지하고 환불받기|지금 해지하고 환불받기[^]*aria-disabled="true"/,
+    )
   })
 
   it('says why a refused cancel was refused', () => {
@@ -346,8 +360,12 @@ describe('CancelNowDialog', () => {
         'sp',
         'tp',
       )
-    expect(dialog({ error: apiError('PAYMENT.SUBSCRIPTION_CHARGE_IN_PROGRESS') })).toContain('결제를 확인하는 중이라')
-    expect(dialog({ error: apiError('PAYMENT.SUBSCRIPTION_CANCEL_NOT_ALLOWED') })).toContain('기간 끝에 해지를 이용해')
+    expect(dialog({ error: apiError('PAYMENT.SUBSCRIPTION_CHARGE_IN_PROGRESS') })).toContain(
+      '결제를 확인하는 중이라',
+    )
+    expect(dialog({ error: apiError('PAYMENT.SUBSCRIPTION_CANCEL_NOT_ALLOWED') })).toContain(
+      '기간 끝에 해지를 이용해',
+    )
   })
 })
 
@@ -374,7 +392,13 @@ describe('CancelNowResultNotice', () => {
 describe('MySubscriptionCard cancel now', () => {
   const card = (over: Parameters<typeof subscription>[0] = {}, props: object = {}) =>
     renderToStaticMarkup(
-      <MySubscriptionCard subscription={subscription(over)} orders={[]} onCancel={noop} {...common} {...props} />,
+      <MySubscriptionCard
+        subscription={subscription(over)}
+        orders={[]}
+        onCancel={noop}
+        {...common}
+        {...props}
+      />,
     )
 
   it('the two cancel buttons weigh the same - both outlined - and the second only exists when the parent offers it', () => {

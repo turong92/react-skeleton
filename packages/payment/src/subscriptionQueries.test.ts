@@ -263,7 +263,9 @@ describe('startSubscriptionMutation - a different country is a different attempt
     await observer.mutate({ planCode: 'basic', country: 'KR' }).catch(() => undefined)
     await observer.mutate({ planCode: 'basic', country: 'KR' }).catch(() => undefined)
     await observer.mutate({ planCode: 'basic', country: 'US' }).catch(() => undefined)
-    const used = calls.filter((call) => call[0] === 'start').map((call) => (call[2] as { idempotencyKey: string }).idempotencyKey)
+    const used = calls
+      .filter((call) => call[0] === 'start')
+      .map((call) => (call[2] as { idempotencyKey: string }).idempotencyKey)
     expect(used[0]).toBe(used[1])
     expect(used[2]).not.toBe(used[0])
   })
@@ -274,7 +276,10 @@ describe('cancelNowMutation', () => {
     const { api, calls } = fakeApi()
     const client = new QueryClient()
     const invalidate = vi.spyOn(client, 'invalidateQueries')
-    const observer = new MutationObserver<unknown, Error, string>(client, cancelNowMutation(api, client))
+    const observer = new MutationObserver<unknown, Error, string>(
+      client,
+      cancelNowMutation(api, client),
+    )
     await observer.mutate('sub_1')
     expect(calls).toEqual([['cancelNow', 'sub_1']])
     expect(invalidate).toHaveBeenCalled()

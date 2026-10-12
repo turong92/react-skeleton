@@ -10,6 +10,7 @@ import { api, ensureSignedIn, labels, resultTitle, tokenOf } from './paymentStep
  * ① 베이직 구독 → 「구독 중」·카드 ····1234 → 해지 예약(확인 창) → 「해지 예약됨」·「○에 끝나요」(다시 눌러도 같은 답)
  * ② 카드사가 첫 결제를 거절 → 결과 「결제 안 됨」 → 「내 구독」은 「끝남」(구독이 시작되지 않았다) → 다시 구독할 수 있다
  * ③ 구독 한 번 + 주기 끝 갱신 한 번 → 결제사 승인이 정확히 두 번(첫 결제 · 갱신), 결제 내역 둘 → 해지해 더 과금되지 않게 닫는다
+ * ④ 베이직 → 「플랜 올리기」(금액 미리보기 → 확인) → 스탠다드, 결제사 승인은 변경 몫으로 한 번 더 (남은 기간 차액만)
  */
 const pwExpect = baseExpect.configure({ timeout: 20_000 })
 const baseUrl = inject('baseUrl')
@@ -197,5 +198,62 @@ describe('③ the renewal at the end of the period', () => {
     expect(new Set(charges.map((c) => c.idempotencyKey)).size).toBe(2) // 주문마다 멱등 키가 다르다
 
     await cancelIfAny(SECOND)
+  })
+})
+
+describe('④ raising the plan', () => {
+  run('shows what is charged now, then switches to Standard with one more charge', async () => {
+    await untilNoLiveSubscription(DEMO)
+    // 구독은 API 로 빠르게 연다(주기가 25초라 화면 걸음이 길면 갱신이 먼저 온다)
+    const token = await tokenOf(apiUrl, DEMO)
+    const started = await api(
+      apiUrl,
+      token,
+      'POST',
+      '/payments/subscriptions',
+      { planCode: 'basic' },
+      { 'Idempotency-Key': `e2e-raise-${Date.now()}` },
+    )
+    expect(started.status).toBe(201)
+    const id = started.json.value.subscription.id as string
+    const authKey = (
+      (await (
+        await fetch(`${fakeTossUrl}/sdk/authorize-billing`, {
+          method: 'POST',
+          body: JSON.stringify({ customerKey: started.json.value.billingAuth.customerKey }),
+        })
+      ).json()) as { authKey: string }
+    ).authKey
+    expect(
+      (
+        await api(apiUrl, token, 'POST', `/payments/subscriptions/${id}/activate`, {
+          providerPayload: { authKey },
+        })
+      ).status,
+    ).toBe(200)
+
+    await ensureSignedIn(page, baseUrl)
+    await page.goto(`${baseUrl}/subscription`)
+    await page.getByRole('button', { name: subscribed.mine.changePlan, exact: true }).click()
+    const dialog = page.getByRole('dialog')
+    // 고른 윗등급 플랜의 금액 미리보기 - 지금 결제될 금액과 다음 결제부터의 가격
+    await pwExpect(dialog.getByText(subscribed.changeDialog.chargeNow)).toBeVisible()
+    await pwExpect(dialog.getByText(subscribed.changeDialog.nextPrice)).toBeVisible()
+    await dialog.getByRole('button', { name: subscribed.changeDialog.confirm }).click()
+    await pwExpect(dialog).toBeHidden()
+    await pwExpect(page.getByText('스탠다드').first()).toBeVisible()
+
+    const mine = await me()
+    expect(mine.orders.map((o) => o.kind).sort()).toEqual([
+      'SUBSCRIPTION_CHANGE',
+      'SUBSCRIPTION_INITIAL',
+    ])
+    expect(mine.orders.every((o) => o.status === 'PAID')).toBe(true)
+    // 결제사에는 카드 교환 한 번 + 승인 둘(첫 결제 · 변경 몫)만 갔다
+    const charges = (await toss!.state()).calls.filter(
+      (c) => c.method === 'POST' && /^\/v1\/billing\/(?!authorizations)/.test(c.path),
+    )
+    expect(charges).toHaveLength(2)
+    await cancelIfAny(DEMO)
   })
 })

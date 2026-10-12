@@ -105,8 +105,8 @@ useCancelSubscription(api).mutate(id) // ACTIVE → CANCELING(기간 끝까지 �
 
 - 변경(`activate` · `cancel`)이 성공하든 실패하든 `paymentKeys.all` 뿌리를 무효화하고, 그 약속이 끝날 때까지 `pending` 이다(낡은 화면에서 한 번 더 누르지 못한다). `start` 는 무효화하지 않는다 - 시작만 한 `PENDING` 은 `me` 에 보이지 않고 기다리면 카드 창이 늦게 열린다.
 - 새 오류 코드: `SUBSCRIPTION_NOT_FOUND`(404) · `ALREADY_SUBSCRIBED` · `SUBSCRIPTION_NOT_ACTIVATABLE` · `SUBSCRIPTION_NOT_CANCELABLE`(409) — `PaymentLedgerErrorCodes` / `isPaymentLedgerError` 에 들어 있다.
-- 화면 부품(문구는 `labels.subscription`, ko · en 둘 다): `SubscriptionPlanList`(`plans` · `onSubscribe(plan)` · `busyPlanCode?` — 카드마다 이름 · 「3,900원 / 월」 · 채운 「구독하기」 하나) · `SubscriptionStatusBadge`(`status`) · `MySubscriptionCard`(`subscription` · `orders` · `onCancel?` · `renderOrderAction?` — 플랜 · 상태 · 다음 결제일(해지 예약이면 「○○에 끝나요」) · 카드 끝 네 자리 · 최근 결제 · 채운 「해지 예약」, 끝난 구독은 `endReason` 별 안내) · `CancelSubscriptionDialog`(`open` · `onClose` · `onConfirm` · `subscription` · `busy?` · `error?`). 플랜 이름을 번역하려면 `name` 을 바꿔 넘긴다(견본 앱은 코드로 된 번역을 우선하고 없으면 서버 이름).
-- `priceEveryDisplay(amount, period, labels, locale?)` 가 「3,900원 / 월」을 만든다 — 읽을 수 없는 주기는 코드를 그리지 않고 금액만.
+- 화면 부품(문구는 `labels.subscription`, ko · en 둘 다): `SubscriptionPlanList`(`plans` · `onSubscribe(plan)` · `busyPlanCode?` — 카드마다 이름 · 「3,900원 · 1개월마다 결제」 · 채운 「구독하기」 하나) · `SubscriptionStatusBadge`(`status`) · `MySubscriptionCard`(`subscription` · `orders` · `onCancel?` · `renderOrderAction?` — 플랜 · 상태 · 다음 결제일(해지 예약이면 「○○에 끝나요」) · 카드 끝 네 자리 · 최근 결제 · 채운 「해지 예약」, 끝난 구독은 `endReason` 별 안내) · `CancelSubscriptionDialog`(`open` · `onClose` · `onConfirm` · `subscription` · `busy?` · `error?`). 플랜 이름을 번역하려면 `name` 을 바꿔 넘긴다(견본 앱은 코드로 된 번역을 우선하고 없으면 서버 이름).
+- `priceEveryDisplay(amount, period, labels, locale?)` 가 「3,900원 · 1개월마다 결제」을 만든다 — 읽을 수 없는 주기는 코드를 그리지 않고 금액만.
 
 ## 장부 API (`createPaymentLedgerApi(client, { basePath })`)
 

@@ -5,7 +5,7 @@ import { SubscriptionPlanList } from './SubscriptionPlanList'
 import type { SubscriptionPlan } from './subscriptionTypes'
 
 /**
- * 구독 플랜 카드 목록 — 카드마다 이름 · 「3,900원 / 월」 · 채운 「구독하기」 단추 하나(카드 한 장이 한 구역이라 단추도 카드마다 하나).
+ * 구독 플랜 카드 목록 — 카드마다 이름 · 「3,900원 · 1개월마다 결제」 · 채운 「구독하기」 단추 하나(카드 한 장이 한 구역이라 단추도 카드마다 하나).
  * 단추를 누르면 부모가 구독을 만들고 카드 등록 창을 연다. 여는 동안(`busyPlanCode`) 그 단추에 스피너가 돌고 다른 단추는 잠긴다.
  * 이름은 서버가 준 `name` 그대로다(앱이 번역하려면 바꿔 넘긴다). 375 · 320px 에서는 카드가 한 줄에 한 장으로 접힌다.
  */
@@ -38,7 +38,7 @@ type Story = StoryObj<typeof meta>
 export const Default: Story = {
   play: async ({ canvas, args, userEvent }) => {
     await expect(canvas.getAllByRole('button', { name: /^구독하기/ })).toHaveLength(3)
-    await expect(canvas.getByText('6,900원 / 월')).toBeVisible()
+    await expect(canvas.getByText('6,900원 · 1개월마다 결제')).toBeVisible()
     const standard = canvas.getByRole('button', { name: '구독하기: Standard' })
     await expect(standard).toHaveAttribute('data-variant', 'primary')
     await userEvent.click(standard)

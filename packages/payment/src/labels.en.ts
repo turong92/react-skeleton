@@ -149,7 +149,7 @@ export const defaultPaymentLabels: PaymentLabels = {
       hour: (n) => (n === 1 ? 'hour' : `${n} hours`),
       minute: (n) => (n === 1 ? 'minute' : `${n} minutes`),
     },
-    priceEvery: (money, unit) => `${money} per ${unit}`,
+    priceEvery: (money, unit) => `${money}, billed every ${unit}`,
     plans: {
       caption: 'Plans',
       subscribe: 'Subscribe',

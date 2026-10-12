@@ -257,7 +257,7 @@ export type SubscriptionLabels = {
   /** 구독 상태 알약 */
   status: Record<SubscriptionStatus, string>
   periodUnit: PeriodUnitLabels
-  /** 「3,900원 / 월」 - 금액 글자와 주기 단위 글자(`periodUnit`)를 받는다 */
+  /** 「3,900원 · 1개월마다 결제」 - 금액 글자와 주기 단위 글자(`periodUnit`)를 받는다 */
   priceEvery: (money: string, unit: string) => string
   plans: {
     caption: string

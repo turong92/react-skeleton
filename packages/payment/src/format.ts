@@ -56,7 +56,7 @@ const PERIOD = /^P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)W)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:
 const PERIOD_UNITS = ['year', 'month', 'week', 'day', 'hour', 'minute'] as const
 
 /**
- * 「3,900원 / 월」 - 금액과 ISO-8601 주기(`P1M` · `P3M` · `PT3M`)의 첫 0 아닌 단위. 읽을 수 없는 주기(복합 · 0 · 모르는 글자)는 코드를 그리지 않고 금액만 쓴다.
+ * 「3,900원 · 1개월마다 결제」 - 금액과 ISO-8601 주기(`P1M` · `P3M` · `PT3M`)의 첫 0 아닌 단위. 읽을 수 없는 주기(복합 · 0 · 모르는 글자)는 코드를 그리지 않고 금액만 쓴다.
  */
 export function priceEveryDisplay(
   amount: PaymentAmount,

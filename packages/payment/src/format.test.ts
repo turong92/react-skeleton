@@ -88,16 +88,16 @@ describe('lookup — a text table is read by its own keys only', () => {
   })
 })
 
-describe('priceEveryDisplay (ISO-8601 period → 「3,900원 / 월」)', () => {
+describe('priceEveryDisplay (ISO-8601 period → 「3,900원 · 1개월마다 결제」)', () => {
   const labels = koPaymentLabels
   const money = { amount: 3900, currency: 'KRW' }
   it('reads the first non-zero unit of the period', () => {
-    expect(priceEveryDisplay(money, 'P1M', labels, 'ko-KR')).toBe('3,900원 / 월')
-    expect(priceEveryDisplay(money, 'P3M', labels, 'ko-KR')).toBe('3,900원 / 3개월')
-    expect(priceEveryDisplay(money, 'P1Y', labels, 'ko-KR')).toBe('3,900원 / 년')
-    expect(priceEveryDisplay(money, 'P2W', labels, 'ko-KR')).toBe('3,900원 / 2주')
-    expect(priceEveryDisplay(money, 'PT3M', labels, 'ko-KR')).toBe('3,900원 / 3분')
-    expect(priceEveryDisplay(money, 'PT1H', labels, 'ko-KR')).toBe('3,900원 / 시간')
+    expect(priceEveryDisplay(money, 'P1M', labels, 'ko-KR')).toBe('3,900원 · 1개월마다 결제')
+    expect(priceEveryDisplay(money, 'P3M', labels, 'ko-KR')).toBe('3,900원 · 3개월마다 결제')
+    expect(priceEveryDisplay(money, 'P1Y', labels, 'ko-KR')).toBe('3,900원 · 1년마다 결제')
+    expect(priceEveryDisplay(money, 'P2W', labels, 'ko-KR')).toBe('3,900원 · 2주마다 결제')
+    expect(priceEveryDisplay(money, 'PT3M', labels, 'ko-KR')).toBe('3,900원 · 3분마다 결제')
+    expect(priceEveryDisplay(money, 'PT1H', labels, 'ko-KR')).toBe('3,900원 · 1시간마다 결제')
   })
   it('a period it cannot read shows the price alone, never the raw code', () => {
     expect(priceEveryDisplay(money, 'monthly', labels, 'ko-KR')).toBe('3,900원')

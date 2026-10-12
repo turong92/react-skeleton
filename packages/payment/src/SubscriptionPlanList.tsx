@@ -15,7 +15,7 @@ export type SubscriptionPlanListProps = {
 }
 
 /**
- * 구독 플랜 카드 목록 — 카드마다 이름 · 「3,900원 / 월」 · 채운 「구독하기」 단추 하나. 이름은 서버가 준 `name` 그대로
+ * 구독 플랜 카드 목록 — 카드마다 이름 · 「3,900원 · 1개월마다 결제」 · 채운 「구독하기」 단추 하나. 이름은 서버가 준 `name` 그대로
  * (앱이 번역하려면 `plans` 의 `name` 을 바꿔 넘긴다). 375 · 320px 에서는 한 줄에 한 장으로 접힌다.
  */
 export function SubscriptionPlanList({

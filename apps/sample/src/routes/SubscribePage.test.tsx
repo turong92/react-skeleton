@@ -40,7 +40,11 @@ function render(data: { plans?: SubscriptionPlan[]; config?: PaymentConfig }) {
 describe('SubscribePage', () => {
   it('shows a card per plan with the price per period and one filled 「구독하기」 each', () => {
     const html = render({ plans, config })
-    for (const price of ['3,900원 · 1개월마다 결제', '6,900원 · 1개월마다 결제', '9,900원 · 1개월마다 결제'])
+    for (const price of [
+      '3,900원 · 1개월마다 결제',
+      '6,900원 · 1개월마다 결제',
+      '9,900원 · 1개월마다 결제',
+    ])
       expect(html).toContain(price)
     expect(html.match(/data-variant="primary"/g)).toHaveLength(3)
     expect(html).toContain('aria-label="구독하기: 베이직"')

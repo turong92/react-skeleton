@@ -83,3 +83,19 @@ export function lookup<T>(
 ): T | undefined {
   return code != null && Object.hasOwn(table, code) ? table[code] : undefined
 }
+
+/**
+ * 운영자가 금액을 고쳐 환불한 줄이면 「요청 5,000원」 - 환불한 금액(`amount`)과 처음 요청한 금액이 다를 때만, 아니면 `null`.
+ * 환불 금액은 그대로 두고 옆에 붙인다(사용자 · 운영자 화면이 같이 쓴다).
+ */
+export function requestedAmountNote(
+  refund: { amount: PaymentAmount; requestedAmount?: PaymentAmount | null },
+  labels: Pick<PaymentLabels, 'currencySuffix' | 'summary'>,
+  locale?: string,
+): string | null {
+  const { requestedAmount } = refund
+  if (!requestedAmount || requestedAmount.amount === refund.amount.amount) return null
+  return labels.summary.requestedAmountNote(
+    formatMoney(requestedAmount, { locale, currencySuffix: labels.currencySuffix }),
+  )
+}

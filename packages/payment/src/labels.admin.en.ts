@@ -133,7 +133,7 @@ export const defaultPaymentAdminLabels: PaymentAdminLabels = {
     direct: { title: 'Refund this payment?', note: 'The money goes out and cannot be taken back.' },
     approve: {
       title: 'Refund as requested?',
-      note: 'The requested amount is refunded as it is. This cannot be undone.',
+      note: 'The requested amount is the default, and you can refund less. You cannot refund more than was requested, and it cannot be undone.',
     },
     reject: {
       title: 'Decline the refund request?',

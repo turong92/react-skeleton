@@ -361,7 +361,7 @@ export const ErrorRefundLineClosedWithoutRefunding: Story = {
   },
 }
 
-/** 요청대로 환불 — 요청한 금액과 사유를 그대로 보이고(고칠 칸 없음), 확인하면 요청의 결정만 부모에 알린다 */
+/** 요청 환불 — 요청한 금액과 사유를 보이고, 금액 칸은 요청 금액에서 시작한다(낮춰서 환불할 수 있다). 그대로 확인하면 금액 없이, 고치면 고친 금액을 부모에 알린다 */
 const request = adminRefund({
   amount: { amount: 2000, currency: 'KRW' },
   reasonCode: 'DUPLICATE',
@@ -372,7 +372,10 @@ export const ApproveARequest: Story = {
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(canvas.getByRole('button', { name: '열기' }))
     const dialog = await screen.findByRole('dialog', { name: '요청대로 환불할까요?' })
-    await waitFor(() => expect(within(dialog).getByRole('button', { name: '닫기' })).toHaveFocus())
+    // 처음 포커스는 금액 칸(Enter 로 제출되지 않는다) - 승인도 낮출 금액을 곧바로 고쳐 쓸 수 있다. 거절 창만 「닫기」에서 시작한다
+    await waitFor(() =>
+      expect(within(dialog).getByRole('textbox', { name: '환불할 금액' })).toHaveFocus(),
+    )
     // 어느 결제의 요청인지 - 금액만으로는 알 수 없다
     await expect(
       within(dialog).getByText('결제 번호', { selector: 'dt' }).nextElementSibling,
@@ -380,20 +383,41 @@ export const ApproveARequest: Story = {
     await expect(dialog).toHaveTextContent('요청한 금액')
     await expect(dialog).toHaveTextContent('2,000원')
     await expect(dialog).toHaveTextContent('같은 결제가 두 번 됐어요')
-    await expect(within(dialog).queryByRole('textbox')).toBeNull()
+    await expect(within(dialog).getByRole('textbox', { name: '환불할 금액' })).toHaveValue('2000')
     await expect(within(dialog).queryByRole('combobox')).toBeNull()
     const confirm = within(dialog).getByRole('button', { name: '환불하기' })
     await expect(confirm).toHaveAttribute('data-variant', 'danger')
     await userEvent.click(confirm)
     await expect(onConfirm).toHaveBeenCalledTimes(1)
+    await expect(onConfirm).toHaveBeenCalledWith(undefined) // 요청 금액 그대로 - 금액을 싣지 않는다
   },
 }
 
-export const ApproveABiggerRequestThanWhatIsLeftIsBlocked: Story = {
+export const ApproveWithALoweredAmountSendsIt: Story = {
+  render: () => <Demo mode="approve" request={request} order={{ refundableAmount: 3000 }} />,
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole('button', { name: '열기' }))
+    const dialog = await screen.findByRole('dialog', { name: '요청대로 환불할까요?' })
+    const amount = within(dialog).getByRole('textbox', { name: '환불할 금액' })
+    await userEvent.clear(amount)
+    await userEvent.type(amount, '2500') // 요청(2,000원)보다 많이는 환불하지 않는다
+    await expectBlockedButReachable(dialog, '환불할 수 있는 금액(2,000원)을 넘을 수 없어요')
+    await userEvent.clear(amount)
+    await userEvent.type(amount, '1500')
+    await userEvent.click(within(dialog).getByRole('button', { name: '환불하기' }))
+    await expect(onConfirm).toHaveBeenCalledWith(1500)
+  },
+}
+
+export const ApproveABiggerRequestThanWhatIsLeftStartsAtWhatIsLeft: Story = {
   args: { open: true, mode: 'approve', request, order: { refundableAmount: 1500 } },
   play: async () => {
     const dialog = await screen.findByRole('dialog', { name: '요청대로 환불할까요?' })
-    await expectBlockedButReachable(dialog, '환불할 수 있는 금액(1,500원)을 넘을 수 없어요')
+    await expect(within(dialog).getByRole('textbox', { name: '환불할 금액' })).toHaveValue('1500')
+    await expect(dialog).toHaveTextContent('환불할 수 있는 금액: 1,500원')
+    await expect(within(dialog).getByRole('button', { name: '환불하기' })).not.toHaveAttribute(
+      'aria-disabled',
+    )
   },
 }
 

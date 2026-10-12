@@ -121,7 +121,7 @@ export const koPaymentAdminLabels: PaymentAdminLabels = {
     direct: { title: '환불할까요?', note: '환불하면 돈이 나가고 되돌릴 수 없어요.' },
     approve: {
       title: '요청대로 환불할까요?',
-      note: '요청한 금액이 그대로 환불돼요. 되돌릴 수 없어요.',
+      note: '요청한 금액이 기본이고, 낮춰서 환불할 수도 있어요. 요청보다 많이는 환불할 수 없고, 환불하면 되돌릴 수 없어요.',
     },
     reject: {
       title: '환불 요청을 거절할까요?',

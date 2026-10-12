@@ -1,7 +1,7 @@
 import { formatInstant } from '@skeleton/time'
 import { Button, Card } from '@skeleton/ui'
 import { useId } from 'react'
-import { cardDisplay, formatMoney, lookup } from './format'
+import { cardDisplay, formatMoney, lookup, requestedAmountNote } from './format'
 import { resolvePaymentLabels, type PaymentLabelsInput } from './labels'
 import type { OpenRefundStatus, Order, Refund } from './ledgerTypes'
 import { OrderStatusBadge, RefundStatusBadge } from './OrderStatusBadge'
@@ -60,6 +60,7 @@ export function OrderSummary({
       { locale, currencySuffix: labels.currencySuffix },
     )
   const card = cardDisplay(order, labels)
+  const requestedNote = (refund: Refund) => requestedAmountNote(refund, labels, locale)
 
   // 열린 환불의 상태: 환불 줄이 말해 주면 그것이(같은 카드의 머리 알약과 줄이 어긋나지 않게), 아니면 주문 응답이
   const openLine = refunds.find((refund) => OPEN_REFUND.has(refund.status))
@@ -116,6 +117,9 @@ export function OrderSummary({
                       labels={input}
                     />
                     <strong>{money(refund.amount.amount)}</strong>
+                    {requestedNote(refund) && (
+                      <span className={styles.refundMeta}>{requestedNote(refund)}</span>
+                    )}
                     <span className={styles.refundMeta}>
                       {formatTime(when)}
                       {reason && ` · ${reason}`}

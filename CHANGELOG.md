@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — 환불 요청을 운영자가 금액 고쳐 승인(`@skeleton/payment/admin`)
+
+백엔드 `POST /admin/payments/refunds/{id}/approve` 의 선택 본문 `{amount}`(HTTP 계약)에 맞췄다. 금액을 고치지 않으면 지금과 같다(본문 없이 요청 금액 그대로).
+
+- `approveRefund(id, amount?)` · `useApproveRefund` 변수 `{ id, amount }`(문자열 id 도 그대로 받는다) · 환불 줄의 `requestedAmount`.
+- `AdminRefundDialog` 승인 모드에 금액 칸(요청 금액에서 시작, 상한 = 요청 금액과 환불 가능액 중 작은 쪽) — `onConfirm(amount?)`. 환불 줄 옆에 금액이 다르면 「요청 5,000원」(`requestedAmountNote`): 운영자 목록 · 한 건 · 내 결제 상세.
+
 ### Added — 구독 플랜 올리기(`@skeleton/payment` · `apps/sample`)
 
 백엔드 `skeleton.payment.subscription.plan-change.enabled=true`(HTTP 계약 §12.2)에 맞췄다.

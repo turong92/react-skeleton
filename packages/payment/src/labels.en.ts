@@ -110,6 +110,7 @@ export const defaultPaymentLabels: PaymentLabels = {
     requestRefund: 'Request a refund',
     withdrawRefund: 'Take back request',
     withdrawing: 'Taking back',
+    requestedAmountNote: (requested) => `Requested ${requested}`,
   },
   refundBlocked: {
     requested: 'You already asked for a refund',

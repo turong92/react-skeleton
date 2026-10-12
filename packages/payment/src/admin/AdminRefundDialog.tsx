@@ -36,13 +36,16 @@ type Direct = {
   sent?: { amount: number; reasonCode: OperatorRefundReason }
 }
 
-/** 본인의 환불 요청 하나를 승인(`approve` — 요청한 금액 그대로 환불한다)하거나 거절(`reject` — 돈은 안 나간다)한다 */
+/**
+ * 본인의 환불 요청 하나를 승인(`approve` — 기본은 요청한 금액 그대로이고, 금액 칸에서 **낮춰** 환불할 수 있다)하거나 거절(`reject` — 돈은 안 나간다)한다.
+ * 승인의 `onConfirm` 은 **고친 금액**(최소 단위)을 받는다 - 요청 금액 그대로면 `undefined`(본문 없이 승인)
+ */
 type Decide = {
   mode: 'approve' | 'reject'
   request: Pick<Refund, 'orderId' | 'amount' | 'reasonCode'>
-  /** 알면 준다 — 요청이 남은 금액보다 크면 화면에서도 막는다 */
+  /** 알면 준다 — 환불할 수 있는 금액이 요청보다 작으면 금액 칸의 처음 값과 상한이 그 금액이다(서버가 최종 판단) */
   order?: Pick<Order, 'refundableAmount'>
-  onConfirm: () => void
+  onConfirm: (amount?: number) => void
   /**
    * 이 요청의 결제 한 건으로 가는 링크(목록에서 연 창이 준다 — 한 건 화면에서는 필요 없다). 승인이 끝내 정해지지 않았거나(결과를 모름 · 이미 처리됨)
    * 요청이 환불 안 됨으로 닫혔을 때만 오류 아래에 보인다 — 거기서 환불 내역을 보거나 직접 환불한다.
@@ -61,7 +64,7 @@ const REASONS: readonly OperatorRefundReason[] = [
 ]
 
 /**
- * 운영자의 환불 결정 창 — 돈이 나가는 행동(직접 환불 · 요청대로 환불)은 늘 이 창을 거친다. 처음 포커스는 — 직접 환불은 금액 칸(Enter 로 제출되지 않는다), 요청 처리는 「닫기」(실수로 Enter 를 눌러도 안전).
+ * 운영자의 환불 결정 창 — 돈이 나가는 행동(직접 환불 · 요청대로 환불)은 늘 이 창을 거친다. 처음 포커스는 — 직접 환불 · 승인은 금액 칸(Enter 로 제출되지 않는다), 거절은 「닫기」(실수로 Enter 를 눌러도 안전).
  * 못 누르는 확인(남은 금액 없음 · 금액이 잘못됨 · 서버가 「환불 중」 「지금은 안 됨」이라고 답함)은 꺼지지 않고 `aria-disabled` 로 흐리게 남아
  * Tab 으로 닿고, 이유 문장이 단추 설명으로 낭독된다. 거절 창은 돈이 안 나가므로 보통 단추 색.
  * 서버의 답은 **확정과 모름을 가른다**(`refundProblemOf`): 답을 잃었으면 「결과를 확인하지 못했어요」(확인은 열려 있다), 요청 승인이 결제사에 거절되면 그 요청이 닫혔다고
@@ -76,9 +79,15 @@ export function AdminRefundDialog(props: AdminRefundDialogProps) {
   const labels = resolvePaymentLabels(input)
   const text = labels.admin.refundDialog
   const direct = props.mode === 'direct'
+  const approving = props.mode === 'approve'
+  const rejecting = props.mode === 'reject'
   const money = props.mode === 'direct' ? props.order.amount : props.request.amount
   const refundable =
     props.mode === 'direct' ? props.order.refundableAmount : props.order?.refundableAmount
+  // 금액 칸이 있는 창(직접 환불 · 승인)의 상한 - 직접은 환불할 수 있는 금액, 승인은 거기에 요청 금액이 더해진 작은 쪽(요청보다 많이는 환불하지 않는다)
+  const limit = approving
+    ? Math.min(props.request.amount.amount, refundable ?? props.request.amount.amount)
+    : refundable
   const digits = fractionDigits(money.currency)
   const show = (minor: number) =>
     formatMoney(
@@ -89,7 +98,7 @@ export function AdminRefundDialog(props: AdminRefundDialogProps) {
   const fieldId = useId()
   const reasonId = useId()
   const lockedId = useId()
-  const fullAmount = minorToInput(refundable ?? 0, digits)
+  const fullAmount = minorToInput(limit ?? 0, digits)
 
   // 서버의 답 — 확정(서버가 요청을 보고 답했다)과 모름(답을 잃었다)을 가른다. 모름을 「못 했어요」라고 단정하지 않는다
   const hasError = error !== undefined && error !== null
@@ -119,23 +128,17 @@ export function AdminRefundDialog(props: AdminRefundDialogProps) {
 
   // 금액 — 직접 환불은 적은 글자를 읽어 검사하고, 요청 처리는 요청한 금액 그대로
   const parsed = parseAmountInput(shownAmount, digits)
-  const nothingToRefund = direct && refundable !== undefined && refundable <= 0
+  const nothingToRefund = (direct || approving) && refundable !== undefined && refundable <= 0
   let problem: string | null = null
-  if (direct && !nothingToRefund) {
+  if ((direct || approving) && !nothingToRefund) {
     if (parsed.kind === 'empty') problem = text.blocked.empty
     else if (parsed.kind === 'invalid') problem = text.blocked.invalid
     else if (parsed.minor <= 0) problem = text.blocked.zero
-    else if (refundable !== undefined && parsed.minor > refundable)
-      problem = text.blocked.exceeds(show(refundable))
+    else if (limit !== undefined && parsed.minor > limit)
+      problem = text.blocked.exceeds(show(limit))
   }
-  const tooBig =
-    props.mode === 'approve' && refundable !== undefined && props.request.amount.amount > refundable
-  const overMessage =
-    tooBig && refundable !== undefined ? text.blocked.exceeds(show(refundable)) : null
 
   const doneAs = error instanceof RefundNotDoneError ? error.refund.status : null
-  const approving = props.mode === 'approve'
-  const rejecting = props.mode === 'reject'
   // 승인이 결제사 거절(402)이면 그 요청 줄은 환불 안 됨으로 닫혔다(스펙 §5.3 — FAILED → PENDING 전이는 없다)
   const requestClosed = approving && answer === 'declined'
   // 승인이 2xx 인데 답 줄이 FAILED 다(같은 키 재전송의 답 · 늦은 결과) - 닫혔다는 건 같지만 「거절돼서」가 아니다. 결제사가 환불했는지는 환불 내역이 말한다
@@ -206,15 +209,18 @@ export function AdminRefundDialog(props: AdminRefundDialogProps) {
     ? reasonId
     : problem
       ? fieldErrorId
-      : overMessage || serverBlocked
+      : serverBlocked
         ? reasonId
         : undefined
   const copy =
     props.mode === 'direct' ? text.direct : props.mode === 'approve' ? text.approve : text.reject
 
   function confirm() {
-    if (props.mode !== 'direct') return props.onConfirm()
-    if (parsed.kind === 'ok') props.onConfirm({ reasonCode: shownReason, amount: parsed.minor })
+    if (props.mode === 'reject') return props.onConfirm()
+    if (parsed.kind !== 'ok') return
+    if (props.mode === 'direct') props.onConfirm({ reasonCode: shownReason, amount: parsed.minor })
+    // 요청 금액 그대로면 금액을 싣지 않는다 - 본문 없는 승인과 같다
+    else props.onConfirm(parsed.minor === props.request.amount.amount ? undefined : parsed.minor)
   }
 
   return (
@@ -306,6 +312,26 @@ export function AdminRefundDialog(props: AdminRefundDialogProps) {
               </div>
             </dl>
           )}
+          {approving && !nothingToRefund && (
+            <Field
+              id={fieldId}
+              label={text.amountLabel}
+              hint={limit !== undefined ? text.amountHint(show(limit)) : undefined}
+              error={problem ?? undefined}
+            >
+              {(control) => (
+                <Input
+                  {...control}
+                  value={draft}
+                  readOnly={Boolean(busy)}
+                  inputMode={digits === 0 ? 'numeric' : 'decimal'}
+                  autoComplete="off"
+                  spellCheck={false}
+                  onChange={(event) => setDraft(event.target.value)}
+                />
+              )}
+            </Field>
+          )}
           <p className={styles.note}>{copy.note}</p>
           {nothingToRefund && (
             <div id={reasonId}>
@@ -314,22 +340,9 @@ export function AdminRefundDialog(props: AdminRefundDialogProps) {
               </Alert>
             </div>
           )}
-          {overMessage && !nothingToRefund && (
-            <div id={reasonId}>
-              <Alert tone="warning" toneLabel={labels.noticeLabel}>
-                {overMessage}
-              </Alert>
-            </div>
-          )}
           {hasError && (
             <>
-              <div
-                id={
-                  !nothingToRefund && !overMessage && !problem && serverBlocked
-                    ? reasonId
-                    : undefined
-                }
-              >
+              <div id={!nothingToRefund && !problem && serverBlocked ? reasonId : undefined}>
                 <Alert tone="danger" toneLabel={labels.errorLabel}>
                   {message}
                 </Alert>

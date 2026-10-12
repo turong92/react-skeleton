@@ -238,25 +238,23 @@ describe('AdminRefundDialog — direct refund', () => {
 })
 
 describe('AdminRefundDialog — approve a request', () => {
-  it('shows the requested amount and reason as they are (nothing to type) and a danger 환불하기', () => {
+  it('shows the requested amount and reason, an amount field that starts at the request (to lower it), and a danger 환불하기', () => {
     const html = decide('approve')
     expect(html).toContain('요청대로 환불할까요?')
     expect(html).toContain('요청한 금액')
     expect(html).toContain('2,000원')
     expect(html).toContain('같은 결제가 두 번 됐어요')
-    expect(html).not.toMatch(/<input/)
+    expect(html).toMatch(/<input[^>]*value="2000"/)
+    expect(html).toContain('환불할 수 있는 금액: 2,000원')
     expect(html).not.toMatch(/<select/)
     expect(buttonOf(html, '환불하기')).toContain('data-variant="danger"')
   })
 
-  it('a request bigger than what is left is blocked on the screen as well (the server has the last word)', () => {
+  it('a request bigger than what is left starts at what is left (the operator can still refund that much), and the limit says so', () => {
     const html = decide('approve', { order: { refundableAmount: 1500 } })
-    const button = buttonOf(html, '환불하기')
-    expect(button).toContain('aria-disabled="true"')
-    const id = button.match(/aria-describedby="([^"]+)"/)?.[1]
-    expect(html).toMatch(
-      new RegExp(`id="${id}"[\\s\\S]{0,300}?환불할 수 있는 금액\\(1,500원\\)을 넘을 수 없어요`),
-    )
+    expect(html).toMatch(/<input[^>]*value="1500"/)
+    expect(html).toContain('환불할 수 있는 금액: 1,500원')
+    expect(buttonOf(html, '환불하기')).not.toContain('aria-disabled')
   })
 
   it('a request that fits is not blocked, even when the order is not known', () => {

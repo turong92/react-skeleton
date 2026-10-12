@@ -110,6 +110,7 @@ export const koPaymentLabels: PaymentLabels = {
     requestRefund: '환불 요청',
     withdrawRefund: '요청 거두기',
     withdrawing: '거두는 중',
+    requestedAmountNote: (requested) => `요청 ${requested}`,
   },
   refundBlocked: {
     requested: '이미 환불을 요청했어요',

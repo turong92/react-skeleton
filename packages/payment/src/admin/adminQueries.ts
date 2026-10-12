@@ -127,7 +127,13 @@ export function refundOrderMutation(api: PaymentAdminApi, client: QueryClient, k
  */
 export function approveRefundMutation(api: PaymentAdminApi, client: QueryClient) {
   return {
-    mutationFn: async (refundId: string) => assertRefundDone(await api.approveRefund(refundId)),
+    // 변수는 환불 줄 id, 금액을 고쳐 승인하면 `{ id, amount }`
+    mutationFn: async (variables: string | { id: string; amount?: number }) => {
+      const { id, amount } = typeof variables === 'string' ? { id: variables } : variables
+      return assertRefundDone(
+        await (amount !== undefined ? api.approveRefund(id, amount) : api.approveRefund(id)),
+      )
+    },
     onSettled: () => invalidateRoot(client),
   }
 }

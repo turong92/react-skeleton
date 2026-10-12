@@ -1,6 +1,6 @@
 import { formatInstant } from '@skeleton/time'
 import { Button, Table, type TableColumn } from '@skeleton/ui'
-import { formatMoney, lookup } from '../format'
+import { formatMoney, lookup, requestedAmountNote } from '../format'
 import { resolvePaymentLabels, type PaymentLabelsInput } from '../labels'
 import { RefundStatusBadge } from '../OrderStatusBadge'
 import { closedByOf } from './closedBy'
@@ -65,7 +65,15 @@ export function RefundRequestTable({
       key: 'amount',
       header: text.columns.amount,
       align: 'end',
-      render: (refund) => <span className={sharedStyles.amount}>{money(refund)}</span>,
+      render: (refund) => {
+        const note = requestedAmountNote(refund, labels, locale)
+        return (
+          <span className={sharedStyles.amount}>
+            {money(refund)}
+            {note && ` (${note})`}
+          </span>
+        )
+      },
     },
     {
       key: 'reason',

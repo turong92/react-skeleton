@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { cardDisplay, formatMoney, lookup, priceEveryDisplay } from './format'
-import { defaultPaymentLabels, koPaymentLabels } from './labels'
+import { cardDisplay, formatMoney, lookup, priceEveryDisplay, requestedAmountNote } from './format'
+import { defaultPaymentLabels, koPaymentLabels, resolvePaymentLabels } from './labels'
 
 describe('formatMoney', () => {
   it('writes won the way people read it, using the suffix from the labels', () => {
@@ -102,5 +102,21 @@ describe('priceEveryDisplay (ISO-8601 period → 「3,900원 · 1개월마다 �
   it('a period it cannot read shows the price alone, never the raw code', () => {
     expect(priceEveryDisplay(money, 'monthly', labels, 'ko-KR')).toBe('3,900원')
     expect(priceEveryDisplay(money, 'P0D', labels, 'ko-KR')).toBe('3,900원')
+  })
+})
+
+describe('requestedAmountNote', () => {
+  const labels = resolvePaymentLabels(koPaymentLabels)
+  const won = (amount: number) => ({ amount, currency: 'KRW' })
+
+  it('says what was first asked only when the operator refunded a different amount', () => {
+    expect(requestedAmountNote({ amount: won(3000), requestedAmount: won(5000) }, labels)).toBe(
+      '요청 5,000원',
+    )
+    expect(
+      requestedAmountNote({ amount: won(5000), requestedAmount: won(5000) }, labels),
+    ).toBeNull()
+    expect(requestedAmountNote({ amount: won(5000), requestedAmount: null }, labels)).toBeNull()
+    expect(requestedAmountNote({ amount: won(5000) }, labels)).toBeNull()
   })
 })

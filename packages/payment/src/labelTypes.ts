@@ -410,6 +410,8 @@ export type PaymentLabels = {
     /** 내 환불 요청(`REQUESTED`) 줄 옆의 단추와, 그 단추가 일하는 동안의 낭독 이름 */
     withdrawRefund: string
     withdrawing: string
+    /** 운영자가 금액을 고쳐 환불했을 때 환불 금액 옆에 붙는 처음 요청한 금액 - 「요청 5,000원」. 인자는 서식을 입힌 금액 */
+    requestedAmountNote: (requested: string) => string
   }
   /** 환불 요청이 막힌 이유 — 단추 옆 글자와 환불 창의 오류가 같은 문장을 쓴다 */
   refundBlocked: {

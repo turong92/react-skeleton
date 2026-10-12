@@ -122,16 +122,18 @@ describe('mutations change the ledger, so they refresh the whole payment root (t
     const client = new QueryClient()
     const spy = vi.spyOn(client, 'invalidateQueries')
     await run(approveRefundMutation(api, client), client, 'rfd_1')
+    await run(approveRefundMutation(api, client), client, { id: 'rfd_3', amount: 1500 })
     await run(rejectRefundMutation(api, client), client, 'rfd_2')
     await run(syncOrderMutation(api, client), client, 'ord_1')
     await run(retryWebhookEventMutation(api, client), client, 7)
     expect(calls).toEqual([
       ['approveRefund', 'rfd_1'],
+      ['approveRefund', 'rfd_3', 1500],
       ['rejectRefund', 'rfd_2'],
       ['syncOrder', 'ord_1'],
       ['retryWebhookEvent', 7],
     ])
-    expect(spy).toHaveBeenCalledTimes(4)
+    expect(spy).toHaveBeenCalledTimes(5)
     for (const call of spy.mock.calls) expect(call[0]).toEqual({ queryKey: paymentKeys.all })
   })
 

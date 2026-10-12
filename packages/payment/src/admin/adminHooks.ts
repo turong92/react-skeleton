@@ -59,7 +59,7 @@ export function useOperatorRefund(
   return useMutation(refundOrderMutation(api, client, ownKeys ?? made))
 }
 
-/** 요청을 승인한다 = 환불 실행(돈이 나간다). 변수는 환불 줄 id. 답 줄이 환불 없이 닫혀 있으면 `RefundNotDoneError`. 확인 창까지 이은 것은 `useRefundDecision` */
+/** 요청을 승인한다 = 환불 실행(돈이 나간다). 변수는 환불 줄 id, 금액을 고쳐 승인하면 `{ id, amount }`. 답 줄이 환불 없이 닫혀 있으면 `RefundNotDoneError`. 확인 창까지 이은 것은 `useRefundDecision` */
 export function useApproveRefund(api: PaymentAdminApi) {
   const client = useQueryClient()
   return useMutation(approveRefundMutation(api, client))

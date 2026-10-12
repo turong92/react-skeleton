@@ -63,12 +63,16 @@ export function useRefundDecision(
       error={mutation.error}
       orderLink={orderLink && ((className) => orderLink(decision.refund, className))}
       onClose={() => setOpen(false)}
-      onConfirm={() => {
+      onConfirm={(amount) => {
         onSend?.()
-        mutation.mutate(decision.refund.id, {
-          onSuccess: () => setOpen(false),
-          onError: () => setOpen(true),
-        })
+        const handlers = { onSuccess: () => setOpen(false), onError: () => setOpen(true) }
+        // 고친 금액이 있을 때만 승인에 실린다 - 요청 금액 그대로면 본문 없이 보낸다
+        if (decision.mode === 'approve')
+          approve.mutate(
+            amount !== undefined ? { id: decision.refund.id, amount } : decision.refund.id,
+            handlers,
+          )
+        else reject.mutate(decision.refund.id, handlers)
       }}
       labels={labels}
       locale={locale}

@@ -121,6 +121,12 @@ describe('createPaymentAdminApi (paths and bodies mirror spec 7, operator routes
     const api = createPaymentAdminApi(client)
     await api.approveRefund('rfd_1')
     await api.rejectRefund('rfd_1')
+    await api.approveRefund('rfd_2', 1500)
+    expect(calls[2]).toEqual({
+      kind: 'value',
+      path: '/admin/payments/refunds/rfd_2/approve',
+      request: { method: 'POST', json: { amount: 1500 }, timeoutMs: OPERATOR_REFUND_TIMEOUT_MS },
+    })
     expect(calls[0]).toEqual({
       kind: 'value',
       path: '/admin/payments/refunds/rfd_1/approve',

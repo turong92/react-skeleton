@@ -4,7 +4,7 @@ import { Alert, Badge, Button, Card, ErrorReference } from '@skeleton/ui'
 import { useId } from 'react'
 import { isPaymentLedgerError, PaymentLedgerErrorCodes } from '../errors'
 import { referenceOf } from '../failure'
-import { cardDisplay, formatMoney, lookup } from '../format'
+import { cardDisplay, formatMoney, lookup, requestedAmountNote } from '../format'
 import { resolvePaymentLabels, type PaymentLabels, type PaymentLabelsInput } from '../labels'
 import type { OpenRefundStatus, Refund } from '../ledgerTypes'
 import { OrderStatusBadge, RefundStatusBadge } from '../OrderStatusBadge'
@@ -317,6 +317,7 @@ export function AdminOrderPanel({
               {refunds.map((refund) => {
                 const reason = lookup(labels.refundReason, refund.reasonCode)
                 const amount = money(refund.amount.amount)
+                const requestedNote = requestedAmountNote(refund, labels, locale)
                 return (
                   <li key={refund.id} className={styles.refund}>
                     <RefundStatusBadge
@@ -325,6 +326,7 @@ export function AdminOrderPanel({
                       labels={input}
                     />
                     <strong>{amount}</strong>
+                    {requestedNote && <span className={styles.muted}>{requestedNote}</span>}
                     <span className={styles.muted}>
                       {formatTime(refund.completedAt ?? refund.requestedAt)} ·{' '}
                       {lookup(text.actors, refund.origin) ?? ''}

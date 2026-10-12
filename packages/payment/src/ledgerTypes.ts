@@ -76,6 +76,10 @@ export type Refund = {
    * 사용자 응답과 운영자 응답 모두에 온다. `null` 이면 `USER` 로 읽는다
    */
   closedBy: 'USER' | 'SYSTEM' | null
+  /**
+   * 운영자가 금액을 고쳐 승인했다면 처음 요청한 금액(그때 `amount` 는 승인한 금액이고 둘이 다르다). 고치지 않았으면 `null` - 구버전 서버는 칸이 없다
+   */
+  requestedAmount?: PaymentAmount | null
 }
 
 /** `GET /config` — 결제사 빈이 없거나 클라이언트 키가 없으면 `available: false` */

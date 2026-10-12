@@ -1,6 +1,6 @@
 /*
  * 작성자를 화면에 어떻게 보이는지 정하는 한 곳 — 글 목록 · 글 상세 · 댓글이 모두 이 규칙을 쓴다.
- * 작성자 id(계정 id `acc_…` · 프로필 id 모두)는 어디에도 그리지 않는다: 닉네임이 있으면 그것, 탈퇴했으면 「탈퇴한 사용자」, 없으면 「이름 없는 사용자」.
+ * 작성자 id(계정 id `acc_…` · 프로필 id 모두)는 어디에도 그리지 않는다: 닉네임이 있으면 그것, 탈퇴했으면 「탈퇴한 사용자」, 없으면 「익명」.
  */
 
 /** 작성자 자리에 쓰는 글자 — 기본은 영어 */
@@ -13,7 +13,7 @@ export type AuthorLabels = {
 
 export const defaultAuthorLabels: AuthorLabels = {
   authorDeleted: 'Deleted user',
-  authorUnnamed: 'Unnamed user',
+  authorUnnamed: 'Anonymous',
 }
 
 /** 글 · 댓글 응답에서 작성자를 정하는 데 쓰는 필드 — 옛 서버는 `authorName` 이 없다 */

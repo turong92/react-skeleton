@@ -162,7 +162,7 @@ export const Authors: Story = {
       caption: '글 목록',
       author: '작성자',
       authorDeleted: '탈퇴한 사용자',
-      authorUnnamed: '이름 없는 사용자',
+      authorUnnamed: '익명',
     },
     posts: [
       ...posts,
@@ -184,7 +184,7 @@ export const Authors: Story = {
     const table = canvas.getByRole('table', { name: '글 목록' })
     await expect(within(table).getByRole('columnheader', { name: '작성자' })).toBeVisible()
     await expect(within(table).getByText('Admin')).toBeVisible()
-    await expect(within(table).getByText('이름 없는 사용자')).toBeVisible()
+    await expect(within(table).getByText('익명')).toBeVisible()
     await expect(within(table).getByText('탈퇴한 사용자')).toBeVisible()
     // 겹치는 닉네임에만 꼬리표
     await expect(within(table).getByText('#4821')).toBeVisible()

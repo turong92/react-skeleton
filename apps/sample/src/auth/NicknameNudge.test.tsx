@@ -51,7 +51,7 @@ describe('NicknameNudge — only when every nickname is still unnamed (magic-lin
   it('shows one conspicuous band: a title, one sentence, one filled primary button and a later button', () => {
     const html = render([unnamed])
     expect(html).toContain('닉네임을 정해 주세요')
-    expect(html).toContain('닉네임이 없으면 게시판에서 「이름 없는 사용자」로 보여요.')
+    expect(html).toContain('닉네임이 없으면 게시판에서 「익명」으로 보여요.')
     expect(html).toMatch(/data-variant="primary"[^>]*>닉네임 정하기</)
     expect(html).toMatch(/>나중에</)
     expect(html).toContain('aria-label="닉네임 안내"')

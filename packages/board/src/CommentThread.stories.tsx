@@ -243,7 +243,7 @@ export const Dark: Story = {
   },
 }
 
-const koLabels = { authorDeleted: '탈퇴한 사용자', authorUnnamed: '이름 없는 사용자' }
+const koLabels = { authorDeleted: '탈퇴한 사용자', authorUnnamed: '익명' }
 
 /** 작성자 표시 — 닉네임 · 이름 없음 · 탈퇴. 계정 id 는 화면에도 스크린 리더에도 나오지 않는다 */
 export const Authors: Story = {
@@ -265,7 +265,7 @@ export const Authors: Story = {
   },
   play: async ({ canvas }) => {
     await expect(canvas.getByText('수민')).toBeVisible()
-    await expect(canvas.getByText('이름 없는 사용자')).toBeVisible()
+    await expect(canvas.getByText('익명')).toBeVisible()
     await expect(canvas.getByText('탈퇴한 사용자')).toBeVisible()
     // 스크린 리더가 읽는 이름: 단추 이름에 닉네임이 들어가고 id 는 어디에도 없다
     await expect(canvas.getByRole('button', { name: 'Reply: 수민' })).toBeVisible()

@@ -32,9 +32,9 @@ describe('resolveAuthor', () => {
   })
 
   it('uses the labels it is given', () => {
-    const labels = { authorDeleted: '탈퇴한 사용자', authorUnnamed: '이름 없는 사용자' }
+    const labels = { authorDeleted: '탈퇴한 사용자', authorUnnamed: '익명' }
     expect(resolveAuthor({ authorId: 'deleted:x' }, labels).name).toBe('탈퇴한 사용자')
-    expect(resolveAuthor({ authorId: 'a' }, labels).name).toBe('이름 없는 사용자')
+    expect(resolveAuthor({ authorId: 'a' }, labels).name).toBe('익명')
   })
 })
 

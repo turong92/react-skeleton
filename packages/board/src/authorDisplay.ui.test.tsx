@@ -34,7 +34,7 @@ describe('author display — PostList', () => {
   it('has an author column and names the three kinds of author', () => {
     expect(html).toContain('>Author<')
     expect(html).toContain('수민')
-    expect(html).toContain('Unnamed user')
+    expect(html).toContain('Anonymous')
     expect(html).toContain('Deleted user')
   })
 
@@ -91,7 +91,7 @@ describe('author display — comments', () => {
     )
     expect(html).toContain('수민')
     expect(html).toContain('Deleted user')
-    expect(html).toContain('Unnamed user')
+    expect(html).toContain('Anonymous')
     expect(html).toContain('aria-label="Reply: 수민"')
     expect(html).toContain('aria-label="Edit: 수민"')
     expect(html).not.toContain('acc_me')

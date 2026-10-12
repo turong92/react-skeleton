@@ -23,7 +23,7 @@ export type AuthorNameProps = {
 }
 
 /**
- * 작성자 한 사람 — 아바타 + 이름. 규칙은 `resolveAuthor`(닉네임 → 「탈퇴한 사용자」 → 「이름 없는 사용자」).
+ * 작성자 한 사람 — 아바타 + 이름. 규칙은 `resolveAuthor`(닉네임 → 「탈퇴한 사용자」 → 「익명」).
  * 계정 id 는 그리지 않는다. 아바타는 스크린 리더에서 숨겨 이름이 한 번만 읽힌다.
  */
 export function AuthorName({

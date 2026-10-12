@@ -20,7 +20,7 @@ export const REACTION_ICONS: Record<string, string> = { LIKE: '👍', DISLIKE: '
 export const reactionLabels = (t: Translate): Record<string, string> =>
   Object.fromEntries(REACTION_CODES.map((code) => [code, t(`board.reactions.${code}`)]))
 
-/** 작성자 자리의 글자 — 삭제된 사용자(지운 프로필 · 탈퇴한 계정) · 이름 없는 사용자(계정 id 도 프로필 id 도 어디에도 그리지 않는다) */
+/** 작성자 자리의 글자 — 삭제된 사용자(지운 프로필 · 탈퇴한 계정) · 익명(계정 id 도 프로필 id 도 어디에도 그리지 않는다) */
 const authorLabels = (t: Translate) => ({
   authorDeleted: t('board.author.deleted'),
   authorUnnamed: t('board.author.unnamed'),

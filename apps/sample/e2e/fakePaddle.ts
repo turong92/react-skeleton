@@ -358,7 +358,7 @@ export function fakePaddleSdkScript(fakeUrl: string): string {
   return `(function () {
   var FAKE = ${JSON.stringify(fakeUrl)};
   var token = null;
-  var PRICES = ${JSON.stringify(Object.fromEntries(Object.values(FAKE_PADDLE.prices).map((p) => [p.id, p.amount])))};
+  var PRICES = ${JSON.stringify(Object.fromEntries(Object.values(FAKE_PADDLE.prices).map((p) => [p.id, { amount: p.amount, recurring: p.recurring }])))};
   window.Paddle = {
     Environment: { set: function () {} },
     Initialize: function (options) { token = options.token; },
@@ -368,8 +368,11 @@ export function fakePaddleSdkScript(fakeUrl: string): string {
           details: {
             lineItems: request.items.map(function (item) {
               return {
-                price: { id: item.priceId },
-                formattedTotals: { total: '$' + (PRICES[item.priceId] / 100).toFixed(2) }
+                price: {
+                  id: item.priceId,
+                  billingCycle: PRICES[item.priceId].recurring ? { interval: 'month', frequency: 1 } : null
+                },
+                formattedTotals: { total: '$' + (PRICES[item.priceId].amount / 100).toFixed(2) }
               };
             })
           }

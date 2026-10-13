@@ -152,15 +152,24 @@ describe('previewPaddlePrices', () => {
         data: {
           details: {
             lineItems: [
-              { price: { id: 'pri_cheer' }, formattedTotals: { total: '$0.99' } },
-              { price: { id: 'pri_basic' }, formattedTotals: { total: '$3.99' } },
+              {
+                price: { id: 'pri_cheer', billingCycle: null },
+                formattedTotals: { total: '$0.99' },
+              },
+              {
+                price: { id: 'pri_basic', billingCycle: { interval: 'month', frequency: 1 } },
+                formattedTotals: { total: '$3.99' },
+              },
             ],
           },
         },
       })
     }
     const shown = await previewPaddlePrices({ ...preview, loadSdk: () => Promise.resolve(sdk) })
-    expect(shown).toEqual({ basic: '$3.99', 'cheer-1000': '$0.99' })
+    expect(shown).toEqual({
+      basic: { total: '$3.99', period: 'P1M' }, // Paddle 가격의 주기 - 우리 플랜의 주기가 아니다
+      'cheer-1000': { total: '$0.99', period: null },
+    })
     expect(calls).toEqual([
       ['environment', 'sandbox'],
       ['initialize', 'test_token'],

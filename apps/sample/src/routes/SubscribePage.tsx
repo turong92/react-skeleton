@@ -180,7 +180,9 @@ export function SubscribePage() {
         priceOf={(plan) => {
           const slot = amountOf(plan.code)
           if (slot.kind === 'table') return undefined
-          if (slot.kind === 'paddle') return priceEveryText(slot.text, plan.period, labels)
+          if (slot.kind === 'paddle')
+            // 주기도 Paddle 가격의 것이다(우리 플랜 주기가 아니다) - 1회 가격이면 금액만
+            return slot.period ? priceEveryText(slot.text, slot.period, labels) : slot.text
           return t(
             slot.kind === 'loading' ? 'payment.paddle.priceLoading' : 'payment.paddle.priceFailed',
           )

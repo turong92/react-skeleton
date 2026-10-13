@@ -49,6 +49,7 @@ export type {
   LoadPaddleSdkEnv,
   OpenPaddleInput,
   PaddleAttributes,
+  PaddlePrice,
   PaddlePricePreviewConfig,
   PaddleSdk,
 } from './paddle'

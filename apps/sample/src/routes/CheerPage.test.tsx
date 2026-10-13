@@ -32,7 +32,7 @@ const paddlePreview = {
 function render(data: {
   options?: CheerOption[]
   config?: PaymentConfig
-  paddlePrices?: Record<string, string>
+  paddlePrices?: Record<string, { total: string; period: string | null }>
 }) {
   const client = new QueryClient()
   if (data.options) client.setQueryData(cheerKeys.options(), data.options)
@@ -142,7 +142,11 @@ describe('CheerPage', () => {
     const html = render({
       options,
       config: paddle,
-      paddlePrices: { 'cheer-1000': '$0.99', 'cheer-3000': '$2.99', 'cheer-5000': '$4.99' },
+      paddlePrices: {
+        'cheer-1000': { total: '$0.99', period: null },
+        'cheer-3000': { total: '$2.99', period: null },
+        'cheer-5000': { total: '$4.99', period: null },
+      },
     })
     for (const label of ['$0.99', '$2.99', '$4.99']) expect(html).toContain(label)
     expect(html).not.toContain('3,000원')

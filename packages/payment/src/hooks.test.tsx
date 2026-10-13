@@ -204,13 +204,14 @@ describe('usePaddlePrices', () => {
   const state = (client: QueryClient, config: typeof preview | undefined) =>
     render(client, () => {
       const prices = usePaddlePrices(config, () => new Promise(() => {}))
-      return `${prices.status}:${prices.priceOf('basic') ?? '-'}`
+      const price = prices.priceOf('basic')
+      return `${prices.status}:${price ? `${price.total}/${price.period}` : '-'}`
     })
 
   it('shows the amount Paddle returned once it is in', () => {
     const client = new QueryClient()
-    client.setQueryData(paddlePricesKey(preview), { basic: '$3.99' })
-    expect(state(client, preview)).toBe('ready:$3.99')
+    client.setQueryData(paddlePricesKey(preview), { basic: { total: '$3.99', period: 'P1M' } })
+    expect(state(client, preview)).toBe('ready:$3.99/P1M')
   })
 
   it('says loading while it waits, off without a preview, and failed - with no amount - when Paddle failed', () => {

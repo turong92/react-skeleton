@@ -15,11 +15,11 @@ afterEach(async () => {
   await i18n.setLocale('ko', { remember: false })
 })
 
-const plan = (code: string, name: string, amount: number): SubscriptionPlan => ({
+const plan = (code: string, name: string, amount: number, period = 'P1M'): SubscriptionPlan => ({
   code,
   name,
   amount: { amount, currency: 'KRW' },
-  period: 'P1M',
+  period,
   level: 1,
 })
 const plans = [
@@ -44,7 +44,7 @@ const config: PaymentConfig = { available: true, testMode: true, refundRequestsE
 function render(data: {
   plans?: SubscriptionPlan[]
   config?: PaymentConfig
-  paddlePrices?: Record<string, string>
+  paddlePrices?: Record<string, { total: string; period: string | null }>
 }) {
   const client = new QueryClient()
   if (data.plans) client.setQueryData(paymentKeys.subscriptionPlans(), data.plans)
@@ -98,7 +98,10 @@ describe('SubscribePage', () => {
     const html = render({
       plans,
       config: paddleConfig,
-      paddlePrices: { basic: '$3.99', standard: '$6.99' },
+      paddlePrices: {
+        basic: { total: '$3.99', period: 'P1M' },
+        standard: { total: '$6.99', period: 'P1M' },
+      },
     })
     expect(html).toContain('$3.99 · 1개월마다 결제')
     expect(html).toContain('$6.99 · 1개월마다 결제')
@@ -110,5 +113,20 @@ describe('SubscribePage', () => {
     const html = render({ plans, config: paddleConfig })
     expect(html).toContain('금액 확인 중')
     expect(html).not.toContain('3,900원')
+  })
+
+  it('words the cycle from the Paddle price, not from our local plan period (PT3M here), and shows only the amount for a price without a cycle', () => {
+    const html = render({
+      plans: [plan('basic', 'Basic', 3900, 'PT3M'), plan('standard', 'Standard', 6900, 'PT3M')],
+      config: paddleConfig,
+      paddlePrices: {
+        basic: { total: '$3.99', period: 'P1M' },
+        standard: { total: '$6.99', period: null },
+      },
+    })
+    expect(html).toContain('$3.99 · 1개월마다 결제')
+    expect(html).toContain('$6.99')
+    expect(html).not.toContain('$6.99 ·')
+    expect(html).not.toContain('3분')
   })
 })

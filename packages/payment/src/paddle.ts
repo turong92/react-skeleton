@@ -11,7 +11,12 @@ export type PaddleSdk = {
   /** 구매자 위치의 통화로 환산한 표시 금액 - 위치를 안 주면 Paddle.js 가 IP 로 정한다 */
   PricePreview(request: { items: { priceId: string; quantity: number }[] }): Promise<{
     data: {
-      details: { lineItems: { price: { id: string }; formattedTotals: { total: string } }[] }
+      details: {
+        lineItems: {
+          price: { id: string; billingCycle?: { interval: string; frequency: number } | null }
+          formattedTotals: { total: string }
+        }[]
+      }
     }
   }>
   Checkout: {
@@ -124,8 +129,13 @@ export type PaddlePricePreviewConfig = {
   prices: Readonly<Record<string, string>>
 }
 
+/** Paddle 가격 한 줄 - 구매자 통화의 표시 금액과, 가격의 결제 주기(ISO-8601 `P1M` · 1회 가격이면 `null`) */
+export type PaddlePrice = { total: string; period: string | null }
+
+const CYCLE_UNIT: Record<string, string> = { day: 'D', week: 'W', month: 'M', year: 'Y' }
+
 /**
- * 가격 미리보기 - 구매자 위치의 통화로 환산된 **실제 결제 금액**(세금 포함 합계, 예 `$3.99`)을 코드별로 돌려준다. 우리 표의 금액이 아니라 Paddle 가격이 결제 금액이다.
+ * 가격 미리보기 - 구매자 위치의 통화로 환산된 **실제 결제 금액**(세금 포함 합계, 예 `$3.99`)과 **Paddle 가격의 결제 주기**를 코드별로 돌려준다(우리 플랜 표의 주기가 아니다). 우리 표의 금액이 아니라 Paddle 가격이 결제 금액이다.
  * 실패하면 거절한다 - 화면은 틀린 금액 대신 금액을 숨긴다. 응답에 없는 코드는 결과에서 빠진다.
  */
 export async function previewPaddlePrices({
@@ -134,7 +144,7 @@ export async function previewPaddlePrices({
   prices,
   loadSdk = loadPaddleSdk,
 }: PaddlePricePreviewConfig & { loadSdk?: () => Promise<PaddleSdk> }): Promise<
-  Record<string, string>
+  Record<string, PaddlePrice>
 > {
   const Paddle = await loadSdk()
   if (environment === 'sandbox') Paddle.Environment.set('sandbox')
@@ -143,13 +153,17 @@ export async function previewPaddlePrices({
   const result = await Paddle.PricePreview({
     items: priceIds.map((priceId) => ({ priceId, quantity: 1 })),
   })
-  const totals = new Map(
-    result.data.details.lineItems.map((line) => [line.price.id, line.formattedTotals.total]),
-  )
-  const shown: Record<string, string> = {}
+  const lines = new Map(result.data.details.lineItems.map((line) => [line.price.id, line]))
+  const shown: Record<string, PaddlePrice> = {}
   for (const [code, priceId] of Object.entries(prices)) {
-    const total = totals.get(priceId)
-    if (total) shown[code] = total
+    const line = lines.get(priceId)
+    if (!line?.formattedTotals.total) continue
+    const cycle = line.price.billingCycle
+    const unit = cycle ? CYCLE_UNIT[cycle.interval] : undefined
+    shown[code] = {
+      total: line.formattedTotals.total,
+      period: cycle && unit ? `P${cycle.frequency}${unit}` : null,
+    }
   }
   return shown
 }

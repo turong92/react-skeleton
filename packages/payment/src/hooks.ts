@@ -1,7 +1,7 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import type { PaymentLedgerApi } from './ledgerApi'
-import type { PaddlePricePreviewConfig, PaddleSdk } from './paddle'
+import type { PaddlePrice, PaddlePricePreviewConfig, PaddleSdk } from './paddle'
 import type { OrderListParams } from './ledgerTypes'
 import {
   abandonOrderMutation,
@@ -89,8 +89,8 @@ export function useWithdrawRefund(api: PaymentLedgerApi) {
 export type PaddlePrices = {
   /** `off`: 미리보기 값이 없다(결제사가 Paddle 이 아니거나 구버전 서버) · `loading` · `ready` · `failed` */
   status: 'off' | 'loading' | 'ready' | 'failed'
-  /** 구매자 통화의 표시 금액(`$3.99`). 불러오는 중이거나 실패했거나 응답에 그 코드가 없으면 `undefined` - 이때 원화 표 금액으로 되돌아가지 않는다 */
-  priceOf(code: string): string | undefined
+  /** 구매자 통화의 표시 금액(`$3.99`)과 Paddle 가격의 주기(`P1M`, 1회 가격은 `null`). 불러오는 중이거나 실패했거나 응답에 그 코드가 없으면 `undefined` - 이때 원화 표 금액으로 되돌아가지 않는다 */
+  priceOf(code: string): PaddlePrice | undefined
 }
 
 /**

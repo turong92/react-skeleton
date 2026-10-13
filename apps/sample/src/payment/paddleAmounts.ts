@@ -9,7 +9,7 @@ export type AmountSlot =
   | { kind: 'table' }
   | { kind: 'loading' }
   | { kind: 'failed' }
-  | { kind: 'paddle'; text: string }
+  | { kind: 'paddle'; text: string; period: string | null }
 
 export function amountSlotOf(
   provider: string | undefined,
@@ -18,8 +18,8 @@ export function amountSlotOf(
 ): AmountSlot {
   if (provider !== 'paddle') return { kind: 'table' }
   if (prices.status === 'loading') return { kind: 'loading' }
-  const text = prices.status === 'ready' ? prices.priceOf(code) : undefined
-  return text ? { kind: 'paddle', text } : { kind: 'failed' }
+  const price = prices.status === 'ready' ? prices.priceOf(code) : undefined
+  return price ? { kind: 'paddle', text: price.total, period: price.period } : { kind: 'failed' }
 }
 
 /** 고른 결제사가 Paddle 일 때만 가격 미리보기를 불러, 코드별 금액 자리를 돌려준다 */

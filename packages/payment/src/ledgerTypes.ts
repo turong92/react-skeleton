@@ -1,3 +1,4 @@
+import type { PaddlePricePreviewConfig } from './paddle'
 import type { PaymentAmount } from './types'
 
 /** 주문 상태 — 전이는 백엔드 장부가 지킨다. 「환불 중」은 상태가 아니라 `refundPending` 이다 */
@@ -89,6 +90,8 @@ export type PaymentConfig = {
   refundRequestsEnabled: boolean
   /** 결제창을 열 수 있는 결제사 id (예 `['paddle','toss']`) - 화면이 나라 · 언어로 하나를 골라 `provider` 로 보낸다. 구버전 서버는 칸이 없다 */
   providers?: string[]
+  /** 결제사 id → 가격 미리보기 값 - Paddle 처럼 구매자 통화로 환산해 결제하는 결제사만. 구버전 서버는 칸이 없다 */
+  pricePreviews?: Record<string, PaddlePricePreviewConfig>
 }
 
 /**

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { openBillingAuth } from './billingAuth'
 import { openCheckout } from './checkout'
-import { loadPaddleSdk, openPaddleCheckout, type PaddleSdk } from './paddle'
+import { loadPaddleSdk, openPaddleCheckout, previewPaddlePrices, type PaddleSdk } from './paddle'
 import { orderQuery } from './queries'
 import { mySubscriptionQuery } from './subscriptionQueries'
 
@@ -11,6 +11,10 @@ function fakePaddle() {
     Environment: { set: (environment) => calls.push(['environment', environment]) },
     Initialize: (options) => calls.push(['initialize', options.token]),
     Checkout: { open: (options) => calls.push(['open', options]) },
+    PricePreview: (request) => {
+      calls.push(['preview', request])
+      return Promise.resolve({ data: { details: { lineItems: [] } } })
+    },
   }
   return { sdk, calls }
 }
@@ -130,5 +134,53 @@ describe('waiting for the webhook', () => {
     expect(poll({ subscription: { status: 'ACTIVE', pendingPlanCode: null }, orders: [] })).toBe(
       false,
     )
+  })
+})
+
+describe('previewPaddlePrices', () => {
+  const preview = {
+    clientToken: 'test_token',
+    environment: 'sandbox',
+    prices: { basic: 'pri_basic', 'cheer-1000': 'pri_cheer' },
+  }
+
+  it('asks Paddle once for every price and maps the formatted totals back to our codes', async () => {
+    const { sdk, calls } = fakePaddle()
+    sdk.PricePreview = (request) => {
+      calls.push(['preview', request])
+      return Promise.resolve({
+        data: {
+          details: {
+            lineItems: [
+              { price: { id: 'pri_cheer' }, formattedTotals: { total: '$0.99' } },
+              { price: { id: 'pri_basic' }, formattedTotals: { total: '$3.99' } },
+            ],
+          },
+        },
+      })
+    }
+    const shown = await previewPaddlePrices({ ...preview, loadSdk: () => Promise.resolve(sdk) })
+    expect(shown).toEqual({ basic: '$3.99', 'cheer-1000': '$0.99' })
+    expect(calls).toEqual([
+      ['environment', 'sandbox'],
+      ['initialize', 'test_token'],
+      [
+        'preview',
+        {
+          items: [
+            { priceId: 'pri_basic', quantity: 1 },
+            { priceId: 'pri_cheer', quantity: 1 },
+          ],
+        },
+      ],
+    ])
+  })
+
+  it('rejects when Paddle fails, so the screen shows no amount instead of a wrong one', async () => {
+    const { sdk } = fakePaddle()
+    sdk.PricePreview = () => Promise.reject(new Error('preview failed'))
+    await expect(
+      previewPaddlePrices({ ...preview, loadSdk: () => Promise.resolve(sdk) }),
+    ).rejects.toThrow('preview failed')
   })
 })

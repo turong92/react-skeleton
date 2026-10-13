@@ -1,5 +1,6 @@
 import {
   openBillingAuth,
+  priceEveryText,
   SubscriptionPlanList,
   TestModeNotice,
   useStartSubscription,
@@ -15,6 +16,7 @@ import { LinkButton } from '../components/LinkButton'
 import { LoadError } from '../components/LoadError'
 import { languageOf, useT, type MessageKey } from '../i18n'
 import { subscriptionApi } from '../subscription/api'
+import { usePaddleAmounts } from '../payment/paddleAmounts'
 import { chooseProvider, FORCED_PROVIDER } from '../payment/provider'
 import { countryForLocale, countryName, countryOptions } from '../subscription/country'
 import { subscriptionLabelsFor } from '../subscription/labels'
@@ -59,6 +61,15 @@ export function SubscribePage() {
   const [country, setCountry] = useState(() => countryForLocale(language))
   const [notice, setNotice] = useState<Notice | null>(null)
 
+  // 한국이면 토스(카드 등록), 아니면 Paddle(결제창 한 번 - 갱신은 Paddle 이 한다). 설정으로 모두 한쪽으로 돌릴 수 있다
+  const provider = chooseProvider({
+    providers: config.data?.providers,
+    country,
+    forced: FORCED_PROVIDER,
+  })
+
+  const amountOf = usePaddleAmounts(provider)
+
   // 카드 창에서 뒤로 가기로 돌아오면(브라우저가 이 화면을 그대로 되살린다) 「여는 중」에 갇히지 않게
   useEffect(() => {
     const restore = (event: PageTransitionEvent) => {
@@ -71,13 +82,6 @@ export function SubscribePage() {
   if (plans.isPending) return <Spinner label={t('common.loading')} />
   if (plans.data === undefined)
     return <LoadError error={plans.error} onRetry={() => void plans.refetch()} />
-
-  // 한국이면 토스(카드 등록), 아니면 Paddle(결제창 한 번 - 갱신은 Paddle 이 한다). 설정으로 모두 한쪽으로 돌릴 수 있다
-  const provider = chooseProvider({
-    providers: config.data?.providers,
-    country,
-    forced: FORCED_PROVIDER,
-  })
 
   async function subscribe(plan: SubscriptionPlan) {
     if (busyPlan !== null) return
@@ -173,6 +177,14 @@ export function SubscribePage() {
         busyPlanCode={busyPlan}
         locale={language}
         labels={labels}
+        priceOf={(plan) => {
+          const slot = amountOf(plan.code)
+          if (slot.kind === 'table') return undefined
+          if (slot.kind === 'paddle') return priceEveryText(slot.text, plan.period, labels)
+          return t(
+            slot.kind === 'loading' ? 'payment.paddle.priceLoading' : 'payment.paddle.priceFailed',
+          )
+        }}
       />
     </div>
   )

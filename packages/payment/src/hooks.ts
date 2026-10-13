@@ -1,6 +1,7 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import type { PaymentLedgerApi } from './ledgerApi'
+import type { PaddlePricePreviewConfig, PaddleSdk } from './paddle'
 import type { OrderListParams } from './ledgerTypes'
 import {
   abandonOrderMutation,
@@ -10,6 +11,7 @@ import {
   orderQuery,
   type OrderQueryOptions,
   ordersQuery,
+  paddlePricesQuery,
   paymentConfigQuery,
   requestRefundMutation,
   withdrawRefundMutation,
@@ -82,4 +84,29 @@ export function useRequestRefund(api: PaymentLedgerApi) {
 export function useWithdrawRefund(api: PaymentLedgerApi) {
   const client = useQueryClient()
   return useMutation(withdrawRefundMutation(api, client))
+}
+
+export type PaddlePrices = {
+  /** `off`: 미리보기 값이 없다(결제사가 Paddle 이 아니거나 구버전 서버) · `loading` · `ready` · `failed` */
+  status: 'off' | 'loading' | 'ready' | 'failed'
+  /** 구매자 통화의 표시 금액(`$3.99`). 불러오는 중이거나 실패했거나 응답에 그 코드가 없으면 `undefined` - 이때 원화 표 금액으로 되돌아가지 않는다 */
+  priceOf(code: string): string | undefined
+}
+
+/**
+ * Paddle 로 결제할 화면의 금액 - Paddle.js 가격 미리보기가 돌려준 표시 금액을 상품 · 플랜 코드로 찾는다. [preview] 는 `usePaymentConfig` 의 `pricePreviews.paddle`.
+ * 실패해도 던지지 않고 `failed` 로 알린다(화면이 금액을 숨기고 결제창에서 확인하라고 안내한다).
+ */
+export function usePaddlePrices(
+  preview: PaddlePricePreviewConfig | undefined,
+  loadSdk?: () => Promise<PaddleSdk>,
+): PaddlePrices {
+  const empty = { clientToken: '', environment: '', prices: {} }
+  const query = useQuery({
+    ...paddlePricesQuery(preview ?? empty, loadSdk),
+    enabled: preview !== undefined && Object.keys(preview.prices).length > 0,
+  })
+  const status =
+    preview === undefined ? 'off' : query.isError ? 'failed' : query.isSuccess ? 'ready' : 'loading'
+  return { status, priceOf: (code) => query.data?.[code] }
 }

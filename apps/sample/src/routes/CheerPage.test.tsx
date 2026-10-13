@@ -1,4 +1,4 @@
-import { paymentKeys, type PaymentConfig } from '@skeleton/payment'
+import { paddlePricesKey, paymentKeys, type PaymentConfig } from '@skeleton/payment'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router-dom'
@@ -23,10 +23,21 @@ const config = (over: Partial<PaymentConfig> = {}): PaymentConfig => ({
   ...over,
 })
 
-function render(data: { options?: CheerOption[]; config?: PaymentConfig }) {
+const paddlePreview = {
+  clientToken: 'test_token',
+  environment: 'sandbox',
+  prices: { 'cheer-1000': 'pri_1', 'cheer-3000': 'pri_3', 'cheer-5000': 'pri_5' },
+}
+
+function render(data: {
+  options?: CheerOption[]
+  config?: PaymentConfig
+  paddlePrices?: Record<string, string>
+}) {
   const client = new QueryClient()
   if (data.options) client.setQueryData(cheerKeys.options(), data.options)
   if (data.config) client.setQueryData(paymentKeys.config(), data.config)
+  if (data.paddlePrices) client.setQueryData(paddlePricesKey(paddlePreview), data.paddlePrices)
   return renderToStaticMarkup(
     <QueryClientProvider client={client}>
       <MemoryRouter>
@@ -124,5 +135,20 @@ describe('CheerPage', () => {
       'You can press again after 3:42 PM',
     )
     expect(i18n.t('cheer.rateLimitedSoon')).toContain('in a moment')
+  })
+
+  it('pays with Paddle: the choices show the amounts Paddle quotes instead of the KRW table', () => {
+    const paddle = config({ providers: ['paddle'], pricePreviews: { paddle: paddlePreview } })
+    const html = render({
+      options,
+      config: paddle,
+      paddlePrices: { 'cheer-1000': '$0.99', 'cheer-3000': '$2.99', 'cheer-5000': '$4.99' },
+    })
+    for (const label of ['$0.99', '$2.99', '$4.99']) expect(html).toContain(label)
+    expect(html).not.toContain('3,000원')
+    // 아직 못 받았거나 못 받으면 원화 표로 되돌아가지 않는다
+    const pending = render({ options, config: paddle })
+    expect(pending).toContain('금액 확인 중')
+    expect(pending).not.toContain('3,000원')
   })
 })

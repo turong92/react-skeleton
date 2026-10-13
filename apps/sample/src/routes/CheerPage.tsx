@@ -20,6 +20,7 @@ import { formatInstant } from '@skeleton/time'
 import { useEffect, useId, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { paymentApi } from '../cheer/api'
+import { usePaddleAmounts } from '../payment/paddleAmounts'
 import { useChosenProvider } from '../payment/useProvider'
 import { countryForLocale } from '../subscription/country'
 import {
@@ -60,6 +61,7 @@ export function CheerPage() {
   const config = usePaymentConfig(paymentApi)
   // 한국이면 토스, 아니면 Paddle(설정으로 모두 한쪽으로 돌릴 수 있다) - 서버가 켜진 결제사를 알려 준 때만
   const provider = useChosenProvider(countryForLocale(language))
+  const amountOf = usePaddleAmounts(provider)
   // 주문 만들기의 429 는 이 화면이 제자리에서(띠 · 단추 옆) 말한다 - 전역 토스트로 한 번 더 뜨지 않게 이 호출만 조용히 한다
   const createOrder = useCreateOrder(paymentApi, { meta: { quietStatuses: [429] } })
   const abandon = useAbandonOrder(paymentApi)
@@ -101,6 +103,15 @@ export function CheerPage() {
     chosen !== null && offered.some((option) => option.itemRef === chosen)
       ? chosen
       : defaultOf(offered)
+  // Paddle 로 결제하면 금액은 Paddle 가격이다 - 못 받았으면 원화 표로 되돌아가지 않고 숨긴다
+  const amountLabel = (option: CheerOption, index: number) => {
+    const slot = amountOf(option.itemRef)
+    if (slot.kind === 'paddle') return slot.text
+    if (slot.kind === 'loading') return t('payment.paddle.priceLoading')
+    if (slot.kind === 'failed') return t('cheer.optionN', { n: index + 1 })
+    return formatMoney(option.amount, { locale: language, currencySuffix: labels.currencySuffix })
+  }
+  const priceFailed = offered.some((option) => amountOf(option.itemRef).kind === 'failed')
   const timeOf = (until: number) =>
     formatInstant(new Date(until).toISOString(), { locale: language })
   const hold = holdReasonOf({ configAvailable: config.data?.available, keyMissing, notice })
@@ -168,17 +179,15 @@ export function CheerPage() {
               </span>
               <ChoiceGroup
                 aria-labelledby={legendId}
-                options={offered.map((option) => ({
+                options={offered.map((option, index) => ({
                   value: option.itemRef,
-                  label: formatMoney(option.amount, {
-                    locale: language,
-                    currencySuffix: labels.currencySuffix,
-                  }),
+                  label: amountLabel(option, index),
                 }))}
                 value={selected}
                 onChange={setChosen}
                 disabled={busy}
               />
+              {priceFailed && <p className={styles.reason}>{t('payment.paddle.priceFailed')}</p>}
             </div>
             {config.data?.testMode && <TestModeNotice labels={labels} />}
             {notice && (

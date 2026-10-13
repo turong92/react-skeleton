@@ -8,6 +8,12 @@ export const PADDLE_LOAD_TIMEOUT_MS = 15_000
 export type PaddleSdk = {
   Environment: { set(environment: 'sandbox' | 'production'): void }
   Initialize(options: { token: string; eventCallback?: (event: { name?: string }) => void }): void
+  /** 구매자 위치의 통화로 환산한 표시 금액 - 위치를 안 주면 Paddle.js 가 IP 로 정한다 */
+  PricePreview(request: { items: { priceId: string; quantity: number }[] }): Promise<{
+    data: {
+      details: { lineItems: { price: { id: string }; formattedTotals: { total: string } }[] }
+    }
+  }>
   Checkout: {
     open(options: {
       transactionId: string
@@ -109,4 +115,41 @@ export async function openPaddleCheckout({
     transactionId: attributes.transactionId,
     settings: { displayMode: 'overlay', successUrl, ...(locale ? { locale } : {}) },
   })
+}
+
+/** `GET /config` 의 `pricePreviews.paddle` - 상품 · 플랜 코드 → Paddle 가격 id 와 공개 토큰 */
+export type PaddlePricePreviewConfig = {
+  clientToken: string
+  environment: string
+  prices: Readonly<Record<string, string>>
+}
+
+/**
+ * 가격 미리보기 - 구매자 위치의 통화로 환산된 **실제 결제 금액**(세금 포함 합계, 예 `$3.99`)을 코드별로 돌려준다. 우리 표의 금액이 아니라 Paddle 가격이 결제 금액이다.
+ * 실패하면 거절한다 - 화면은 틀린 금액 대신 금액을 숨긴다. 응답에 없는 코드는 결과에서 빠진다.
+ */
+export async function previewPaddlePrices({
+  clientToken,
+  environment,
+  prices,
+  loadSdk = loadPaddleSdk,
+}: PaddlePricePreviewConfig & { loadSdk?: () => Promise<PaddleSdk> }): Promise<
+  Record<string, string>
+> {
+  const Paddle = await loadSdk()
+  if (environment === 'sandbox') Paddle.Environment.set('sandbox')
+  Paddle.Initialize({ token: clientToken })
+  const priceIds = [...new Set(Object.values(prices))]
+  const result = await Paddle.PricePreview({
+    items: priceIds.map((priceId) => ({ priceId, quantity: 1 })),
+  })
+  const totals = new Map(
+    result.data.details.lineItems.map((line) => [line.price.id, line.formattedTotals.total]),
+  )
+  const shown: Record<string, string> = {}
+  for (const [code, priceId] of Object.entries(prices)) {
+    const total = totals.get(priceId)
+    if (total) shown[code] = total
+  }
+  return shown
 }

@@ -64,7 +64,19 @@ export function priceEveryDisplay(
   labels: Pick<PaymentLabels, 'currencySuffix' | 'subscription'>,
   locale?: string,
 ): string {
-  const money = formatMoney(amount, { locale, currencySuffix: labels.currencySuffix })
+  return priceEveryText(
+    formatMoney(amount, { locale, currencySuffix: labels.currencySuffix }),
+    period,
+    labels,
+  )
+}
+
+/** [priceEveryDisplay] 의 글자 판 - 금액을 이미 글자로 가졌을 때(Paddle 이 돌려준 `$3.99`) */
+export function priceEveryText(
+  money: string,
+  period: string,
+  labels: Pick<PaymentLabels, 'subscription'>,
+): string {
   const match = PERIOD.exec(period)
   const counts = match?.slice(1).map((part) => Number(part ?? 0))
   const at = counts?.findIndex((count) => count > 0) ?? -1

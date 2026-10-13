@@ -1,4 +1,5 @@
 import { Button, Card, EmptyState } from '@skeleton/ui'
+import type { ReactNode } from 'react'
 import { priceEveryDisplay } from './format'
 import { resolvePaymentLabels, type PaymentLabelsInput } from './labels'
 import type { SubscriptionPlan } from './subscriptionTypes'
@@ -11,6 +12,8 @@ export type SubscriptionPlanListProps = {
   /** 카드 등록 창을 여는 중인 플랜 코드 — 그 카드의 단추에 스피너가 돌고 다른 단추는 잠긴다 */
   busyPlanCode?: string | null
   locale?: string
+  /** 카드의 금액 자리를 앱이 채운다(예: Paddle 이 돌려준 구매자 통화 금액 · 불러오는 중 · 안내). `undefined` 를 돌려주면 서버가 준 표의 금액 */
+  priceOf?: (plan: SubscriptionPlan) => ReactNode
   labels?: PaymentLabelsInput
 }
 
@@ -23,6 +26,7 @@ export function SubscriptionPlanList({
   onSubscribe,
   busyPlanCode = null,
   locale,
+  priceOf,
   labels: input,
 }: SubscriptionPlanListProps) {
   const labels = resolvePaymentLabels(input)
@@ -41,7 +45,7 @@ export function SubscriptionPlanList({
           <Card title={plan.name}>
             <div className={styles.body}>
               <p className={styles.price}>
-                {priceEveryDisplay(plan.amount, plan.period, labels, locale)}
+                {priceOf?.(plan) ?? priceEveryDisplay(plan.amount, plan.period, labels, locale)}
               </p>
               <Button
                 variant="primary"

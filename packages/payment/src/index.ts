@@ -38,8 +38,20 @@ export type {
 export { CONFIRM_TIMEOUT_MS, createPaymentLedgerApi } from './ledgerApi'
 export type { PaymentLedgerApi, PaymentLedgerApiOptions } from './ledgerApi'
 export { openCheckout, loadTossPaymentsSdk, SDK_LOAD_TIMEOUT_MS, TOSS_SDK_URL } from './checkout'
-export { openPaddleCheckout, loadPaddleSdk, PADDLE_SDK_URL, PADDLE_LOAD_TIMEOUT_MS } from './paddle'
-export type { LoadPaddleSdkEnv, OpenPaddleInput, PaddleAttributes, PaddleSdk } from './paddle'
+export {
+  openPaddleCheckout,
+  loadPaddleSdk,
+  previewPaddlePrices,
+  PADDLE_SDK_URL,
+  PADDLE_LOAD_TIMEOUT_MS,
+} from './paddle'
+export type {
+  LoadPaddleSdkEnv,
+  OpenPaddleInput,
+  PaddleAttributes,
+  PaddlePricePreviewConfig,
+  PaddleSdk,
+} from './paddle'
 export type { LoadTossPaymentsSdkEnv, OpenCheckoutOptions, TossPaymentsFactory } from './checkout'
 export { readCheckoutReturn } from './checkoutReturn'
 export type { CheckoutReturn } from './checkoutReturn'
@@ -62,6 +74,7 @@ export {
   ORDER_POLL_MAX_MS,
   ORDER_POLL_MIN_MS,
   orderPollInterval,
+  paddlePricesKey,
   paymentKeys,
   RefundRequestNotOpenError,
 } from './queries'
@@ -72,10 +85,12 @@ export {
   useCreateOrder,
   useOrder,
   useOrders,
+  usePaddlePrices,
   usePaymentConfig,
   useRequestRefund,
   useWithdrawRefund,
 } from './hooks'
+export type { PaddlePrices } from './hooks'
 
 // 구독(자동결제) — 백엔드 `skeleton.payment.subscription.enabled=true` 인 앱에서만 경로가 열린다
 export type {
@@ -145,6 +160,6 @@ export type {
   PaymentLabelsInput,
   SubscriptionLabels,
 } from './labels'
-export { cardDisplay, formatMoney, priceEveryDisplay } from './format'
+export { cardDisplay, formatMoney, priceEveryDisplay, priceEveryText } from './format'
 export type { FormatMoneyOptions } from './format'
 export { declineCategoryOf } from './failure'

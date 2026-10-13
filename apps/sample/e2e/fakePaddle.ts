@@ -353,14 +353,29 @@ export function paddleControl(fakeUrl: string) {
   return { state: () => call('GET'), set: (patch: Record<string, unknown>) => call('POST', patch) }
 }
 
-/** Paddle.js 대역 — `Checkout.open` 이 이 서버에 결제를 만들게 하고 successUrl 로 돌려보낸다 */
+/** Paddle.js 대역 — `PricePreview` 는 가짜 가격표의 달러 표시 금액을 돌려주고, `Checkout.open` 은 이 서버에 결제를 만들게 하고 successUrl 로 돌려보낸다 */
 export function fakePaddleSdkScript(fakeUrl: string): string {
   return `(function () {
   var FAKE = ${JSON.stringify(fakeUrl)};
   var token = null;
+  var PRICES = ${JSON.stringify(Object.fromEntries(Object.values(FAKE_PADDLE.prices).map((p) => [p.id, p.amount])))};
   window.Paddle = {
     Environment: { set: function () {} },
     Initialize: function (options) { token = options.token; },
+    PricePreview: function (request) {
+      return Promise.resolve({
+        data: {
+          details: {
+            lineItems: request.items.map(function (item) {
+              return {
+                price: { id: item.priceId },
+                formattedTotals: { total: '$' + (PRICES[item.priceId] / 100).toFixed(2) }
+              };
+            })
+          }
+        }
+      });
+    },
     Checkout: {
       open: async function (options) {
         var response = await fetch(FAKE + '/sdk/checkout', {

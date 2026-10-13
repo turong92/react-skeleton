@@ -1,4 +1,9 @@
-import { paymentKeys, type PaymentConfig, type SubscriptionPlan } from '@skeleton/payment'
+import {
+  paddlePricesKey,
+  paymentKeys,
+  type PaymentConfig,
+  type SubscriptionPlan,
+} from '@skeleton/payment'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router-dom'
@@ -22,12 +27,29 @@ const plans = [
   plan('standard', 'Standard', 6900),
   plan('pro', 'Pro', 9900),
 ]
+const preview = {
+  clientToken: 'test_token',
+  environment: 'sandbox',
+  prices: { basic: 'pri_basic', standard: 'pri_standard' },
+}
+const paddleConfig: PaymentConfig = {
+  available: true,
+  testMode: true,
+  refundRequestsEnabled: true,
+  providers: ['paddle'],
+  pricePreviews: { paddle: preview },
+}
 const config: PaymentConfig = { available: true, testMode: true, refundRequestsEnabled: true }
 
-function render(data: { plans?: SubscriptionPlan[]; config?: PaymentConfig }) {
+function render(data: {
+  plans?: SubscriptionPlan[]
+  config?: PaymentConfig
+  paddlePrices?: Record<string, string>
+}) {
   const client = new QueryClient()
   if (data.plans) client.setQueryData(paymentKeys.subscriptionPlans(), data.plans)
   if (data.config) client.setQueryData(paymentKeys.config(), data.config)
+  if (data.paddlePrices) client.setQueryData(paddlePricesKey(preview), data.paddlePrices)
   return renderToStaticMarkup(
     <QueryClientProvider client={client}>
       <MemoryRouter>
@@ -70,5 +92,23 @@ describe('SubscribePage', () => {
 
   it('still loading the plans: a spinner, no cards', () => {
     expect(render({})).not.toContain('구독하기')
+  })
+
+  it('pays with Paddle: shows the amount Paddle quotes, never the KRW table amount, and hides the amount of a plan Paddle did not quote', () => {
+    const html = render({
+      plans,
+      config: paddleConfig,
+      paddlePrices: { basic: '$3.99', standard: '$6.99' },
+    })
+    expect(html).toContain('$3.99 · 1개월마다 결제')
+    expect(html).toContain('$6.99 · 1개월마다 결제')
+    expect(html).toContain('결제창에서 금액을 확인하세요') // pro 는 가격 id 가 없다
+    expect(html).not.toContain('원 · 1개월마다 결제')
+  })
+
+  it('while Paddle is quoting there is a placeholder and no KRW amount', () => {
+    const html = render({ plans, config: paddleConfig })
+    expect(html).toContain('금액 확인 중')
+    expect(html).not.toContain('3,900원')
   })
 })

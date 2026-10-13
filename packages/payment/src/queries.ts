@@ -1,6 +1,7 @@
 import type { QueryClient } from '@tanstack/react-query'
 import type { ApiCursorResponse } from '@skeleton/api-client'
 import { confirmOutcomeOf } from './errors'
+import { previewPaddlePrices, type PaddlePricePreviewConfig, type PaddleSdk } from './paddle'
 import type { IntentKeys } from './intentKeys'
 import type { PaymentLedgerApi } from './ledgerApi'
 import type {
@@ -226,5 +227,22 @@ export function withdrawRefundMutation(api: PaymentLedgerApi, client: QueryClien
     mutationFn: (refundId: string) => api.withdrawRefund(refundId),
     // 실패여도 다시 읽는다: 409/404 는 그 사이 요청이 이미 처리됐다는 확정 답이라, 낡은 「요청 거두기」를 화면에 남기지 않는다
     onSettled: () => invalidateRoot(client),
+  }
+}
+
+export const paddlePricesKey = (preview: PaddlePricePreviewConfig) =>
+  ['payment', 'paddle-prices', preview.environment, preview.clientToken, preview.prices] as const
+
+/** Paddle.js 가격 미리보기 - 구매자 통화의 표시 금액(코드 → `$3.99`). 구매자 위치는 바뀌지 않으니 오래 쓴다 */
+export function paddlePricesQuery(
+  preview: PaddlePricePreviewConfig,
+  loadSdk?: () => Promise<PaddleSdk>,
+) {
+  return {
+    queryKey: paddlePricesKey(preview),
+    queryFn: () => previewPaddlePrices({ ...preview, ...(loadSdk ? { loadSdk } : {}) }),
+    staleTime: 5 * 60_000,
+    retry: false,
+    retryOnMount: false, // 실패한 미리보기를 화면이 다시 열릴 때마다 Paddle 에 되묻지 않는다 - 캐시에서 비워질 때까지 실패로 둔다
   }
 }

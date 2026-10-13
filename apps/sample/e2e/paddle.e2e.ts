@@ -71,6 +71,9 @@ describe('a Paddle subscription from the first payment to the end of the period'
     await ensureSignedIn(page, baseUrl)
     await page.goto(`${baseUrl}/subscribe`)
     await page.getByLabel(/결제하는 나라/).selectOption('US')
+    // 플랜 목록의 금액은 Paddle 가격(달러)이다 - 우리 플랜 표의 원화가 아니다
+    await pwExpect(page.getByText('$3.99 · 1개월마다 결제')).toBeVisible()
+    await pwExpect(page.getByText(/원 · 1개월마다 결제/)).toHaveCount(0)
     await page.getByRole('button', { name: /구독하기.*베이직/ }).click()
     await page.waitForURL(/\/subscriptions\/return\?.*provider=paddle/)
     await pwExpect(resultTitle(page, labels.result.paid.title)).toBeVisible()

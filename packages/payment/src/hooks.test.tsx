@@ -8,12 +8,13 @@ import {
   useCreateOrder,
   useOrder,
   useOrders,
+  usePaddlePrices,
   usePaymentConfig,
   useRequestRefund,
   useWithdrawRefund,
 } from './hooks'
 import type { PaymentLedgerApi } from './ledgerApi'
-import { paymentKeys } from './queries'
+import { paddlePricesKey, paymentKeys } from './queries'
 
 const api = {} as PaymentLedgerApi
 
@@ -195,5 +196,35 @@ describe('useAbandonOrder', () => {
     } as unknown as PaymentLedgerApi
     await mount(() => useAbandonOrder(fake)).mutateAsync('ord_9')
     expect(seen).toEqual(['ord_9'])
+  })
+})
+
+describe('usePaddlePrices', () => {
+  const preview = { clientToken: 't', environment: 'sandbox', prices: { basic: 'pri_basic' } }
+  const state = (client: QueryClient, config: typeof preview | undefined) =>
+    render(client, () => {
+      const prices = usePaddlePrices(config, () => new Promise(() => {}))
+      return `${prices.status}:${prices.priceOf('basic') ?? '-'}`
+    })
+
+  it('shows the amount Paddle returned once it is in', () => {
+    const client = new QueryClient()
+    client.setQueryData(paddlePricesKey(preview), { basic: '$3.99' })
+    expect(state(client, preview)).toBe('ready:$3.99')
+  })
+
+  it('says loading while it waits, off without a preview, and failed - with no amount - when Paddle failed', () => {
+    expect(state(new QueryClient(), preview)).toBe('loading:-')
+    expect(state(new QueryClient(), undefined)).toBe('off:-')
+    const failed = new QueryClient()
+    failed
+      .getQueryCache()
+      .build(failed, { queryKey: paddlePricesKey(preview) })
+      .setState({
+        status: 'error',
+        error: new Error('x'),
+        data: undefined,
+      })
+    expect(state(failed, preview)).toBe('failed:-')
   })
 })

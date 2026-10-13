@@ -92,6 +92,19 @@ export type PaymentConfig = {
   providers?: string[]
   /** 결제사 id → 가격 미리보기 값 - Paddle 처럼 구매자 통화로 환산해 결제하는 결제사만. 구버전 서버는 칸이 없다 */
   pricePreviews?: Record<string, PaddlePricePreviewConfig>
+  /** 서버가 이 요청마다 정한 접속 나라(ISO-3166 두 글자). 모르면 `null`, 구버전 서버는 칸이 없다 */
+  country?: string | null
+  /** 그 나라로 서버가 정한 결제사 - 주문 · 구독을 만들 때 이것만 보낼 수 있다(다른 값은 400). 정할 수 없으면 `null` */
+  provider?: string | null
+  /** 그 나라의 해지·환불 정책 요약 - 화면이 `key` 로 문구를 고른다 */
+  cancelPolicy?: PaymentCancelPolicy | null
+}
+
+/** `key` 는 서버의 정책 이름(`korea` · `period-end-only` …). 숫자는 `korea` 일 때만(설정값) */
+export type PaymentCancelPolicy = {
+  key: string
+  penaltyPercent?: number | null
+  withdrawalDays?: number | null
 }
 
 /**

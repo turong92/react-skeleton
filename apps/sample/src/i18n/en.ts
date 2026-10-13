@@ -436,6 +436,14 @@ const en: Record<keyof typeof ko, string> = {
   'nav.cheer': 'Cheer',
   'cheer.title': 'Send a cheer',
   'cheer.subtitle': 'Pick an amount to cheer us on.',
+  'payment.country.line': 'Paying from: {country}',
+  'payment.policy.korea.withdrawal':
+    'Full refund if you have not used it within {days} days of paying.',
+  'payment.policy.korea.cancel':
+    'Cancel any time and get the unused period back (a {percent}% cancellation fee applies).',
+  'payment.policy.paddle.payment': 'Paddle handles the payment.',
+  'payment.policy.paddle.refund': 'Paddle reviews refund requests.',
+  'payment.policy.periodEnd': 'When you cancel, it stops at the end of the period you paid for.',
   'payment.paddle.priceLoading': 'Checking the price…',
   'payment.paddle.priceFailed': 'Check the amount in the checkout window',
   'cheer.optionN': 'Cheer {n}',
@@ -480,9 +488,6 @@ const en: Record<keyof typeof ko, string> = {
   'subscription.plan.standard': 'Standard',
   'subscription.plan.pro': 'Pro',
   'subscription.subscribe.title': 'Subscribe',
-  'subscription.subscribe.country': 'Country you pay from',
-  'subscription.subscribe.countryHint':
-    'How you can end a subscription and get a refund differs by country.',
   'subscription.refundPolicy': 'Read the refund policy',
   'subscription.subscribe.subtitle':
     'Pick a plan and register a card. After that you are charged automatically each period.',

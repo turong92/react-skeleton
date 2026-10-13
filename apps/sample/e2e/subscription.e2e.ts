@@ -270,7 +270,7 @@ describe('⑤ ending now with a refund', () => {
         token,
         'POST',
         '/payments/subscriptions',
-        { planCode: 'basic', country: 'KR' },
+        { planCode: 'basic' },
         { 'Idempotency-Key': `e2e-now-${Date.now()}` },
       )
       expect(started.status).toBe(201)

@@ -8,7 +8,7 @@ import { api, ensureSignedIn, labels, resultTitle, tokenOf } from './paymentStep
 /*
  * 해외 결제(Paddle) — 한 흐름: 구독 시작(결제창 → 서명된 웹훅) → 갱신 웹훅 → 같은 웹훅을 다시 받아도 한 번만 → 순서가 뒤바뀐 낡은 웹훅 → 기간 끝 해지(Paddle API) → 기간이 끝나면 끝난다.
  * 가짜 Paddle(`fakePaddle.ts`)이 진짜처럼 서명한 웹훅을 진짜 백엔드로 쏜다. 구독이 없는 백엔드나 가짜 Paddle 이 꺼진 실행(`E2E_FAKE_PADDLE=0`)이면 건너뛴다.
- * 구매자 나라를 미국으로 고르면 견본 앱은 Paddle 로 간다(한국이면 토스). 이 흐름에서 **우리 갱신 작업은 토스 쪽으로도 Paddle 로도 과금하지 않는다** - 토스 승인 호출이 0 이다.
+ * 접속 나라가 미국이면(헤더 `CF-IPCountry: US`) 서버가 Paddle 을 고른다(한국이면 토스). 이 흐름에서 **우리 갱신 작업은 토스 쪽으로도 Paddle 로도 과금하지 않는다** - 토스 승인 호출이 0 이다.
  */
 const pwExpect = baseExpect.configure({ timeout: 20_000 })
 const baseUrl = inject('baseUrl')
@@ -23,6 +23,8 @@ let context: BrowserContext
 let page: Page
 beforeAll(async () => {
   ;({ browser, context, page } = await launch())
+  // 구매자 나라는 서버가 접속 나라(Cloudflare 의 CF-IPCountry)로 정한다 - 이 흐름은 미국 방문자(→ Paddle)다
+  await context.setExtraHTTPHeaders({ 'CF-IPCountry': 'US' })
   if (fakePaddleUrl) await routePaddleSdk(context, fakePaddleUrl)
 })
 afterAll(async () => {
@@ -67,10 +69,10 @@ describe('a Paddle subscription from the first payment to the end of the period'
     )
       return ctx.skip() // 앞 시나리오가 닫지 못한 구독 - 이 흐름은 새 계정 상태를 전제한다
 
-    // 1. 구독 시작 - 나라를 미국으로 → Paddle 결제창(대역) → 돌아온 화면이 서버를 되묻는다
+    // 1. 구독 시작 - 접속 나라 미국 → Paddle 결제창(대역) → 돌아온 화면이 서버를 되묻는다
     await ensureSignedIn(page, baseUrl)
     await page.goto(`${baseUrl}/subscribe`)
-    await page.getByLabel(/결제하는 나라/).selectOption('US')
+    await pwExpect(page.getByText(/결제 국가: 미국/)).toBeVisible()
     // 플랜 목록의 금액은 Paddle 가격(달러)이다 - 우리 플랜 표의 원화가 아니다
     await pwExpect(page.getByText('$3.99 · 1개월마다 결제')).toBeVisible()
     await pwExpect(page.getByText(/원 · 1개월마다 결제/)).toHaveCount(0)

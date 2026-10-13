@@ -26,6 +26,7 @@ export type {
   OrderDetail,
   OrderListParams,
   OrderStatus,
+  PaymentCancelPolicy,
   PaymentConfig,
   Refund,
   RefundOrigin,

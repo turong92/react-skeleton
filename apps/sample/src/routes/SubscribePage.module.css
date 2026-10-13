@@ -11,9 +11,3 @@
 .reference {
   margin-top: var(--space-sm);
 }
-
-.country {
-  display: grid;
-  gap: var(--space-sm);
-  max-width: 24rem;
-}

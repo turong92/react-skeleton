@@ -22,7 +22,7 @@ export function subscribeReturnUrls(
 }
 
 export type StartSubscribeDeps = {
-  start: (planCode: string, country?: string, provider?: string) => Promise<StartSubscriptionResult>
+  start: (planCode: string, provider?: string) => Promise<StartSubscriptionResult>
   openBillingAuth: (
     billingAuth: BillingAuth,
     urls: Pick<OpenBillingAuthOptions, 'successUrl' | 'failUrl'>,
@@ -54,19 +54,16 @@ const codeOf = (error: unknown) =>
     ? String((error as { code: unknown }).code)
     : null
 
-/** 플랜을 골라 「구독하기」를 눌렀을 때 — 서버에 구독을 만들고 카드 등록 창을 연다. `country` 는 구매자 나라(해지·환불 정책을 고르는 열쇠) */
+/** 플랜을 골라 「구독하기」를 눌렀을 때 — 서버에 구독을 만들고 카드 등록 창을 연다. `provider` 는 서버가 `GET /config` 로 알려 준 결제사 - 나라는 서버가 정한다 */
 export async function startSubscribe(
   deps: StartSubscribeDeps,
   planCode: string,
-  country?: string,
   provider?: string,
 ): Promise<StartSubscribeResult> {
   let started: StartSubscriptionResult
   try {
     started =
-      provider === undefined
-        ? await deps.start(planCode, country)
-        : await deps.start(planCode, country, provider)
+      provider === undefined ? await deps.start(planCode) : await deps.start(planCode, provider)
   } catch (error) {
     return { kind: 'start-failed', error }
   }

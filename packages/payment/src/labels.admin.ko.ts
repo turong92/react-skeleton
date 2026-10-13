@@ -10,6 +10,7 @@ export const koPaymentAdminLabels: PaymentAdminLabels = {
     ORDER_MISMATCH: '결제사가 알려 준 결제가 이 결제와 달라요',
     FULFILMENT_UNRESOLVED: '돈은 받았는데 지급이 끝내 안 됐어요',
     REFUND_APPLY_UNRESOLVED: '환불은 됐는데 회수가 끝내 안 됐어요',
+    BUYER_COUNTRY_KR: '해외 결제사로 결제했는데 결제한 사람의 주소가 한국이에요 — 확인이 필요해요',
     SUBSCRIPTION_STALE_CHARGE: '구독이 기다리지 않는 결제가 늦게 들어왔어요 — 환불이 필요해요',
     SUBSCRIPTION_CANCEL_REFUND_UNRESOLVED:
       '지금 해지한 구독의 환불이 나가지 못했어요 — 환불이 필요해요',

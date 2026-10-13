@@ -7,10 +7,13 @@
  * - `payment.webhook.path-token`: 웹훅 주소의 비밀 조각(`/payments/webhooks/toss/<token>`). 지금 어떤 시나리오도 웹훅을 보내지 않는다 - 보호 환경 규칙(24자 이상 · 서로 다른 글자 8개 이상 · 주소에 쓸 수 있는 글자만)을 지키는
  *   e2e 전용 값이라 비밀이 아니다(공개 저장소). 이후 시나리오가 웹훅을 보낼 때 이 값을 주소에 쓴다.
  * - `sample.subscription.period` · `payment.subscription.renewal.retry-interval`: 구독(2단계) — 견본 플랜의 갱신 주기를 25초로, 거절된 갱신의 재시도를 8초 뒤로 줄여 갱신 한 번을 시나리오 안에서 본다(운영 값은 `P1M` · 24시간).
+ * - `web.client-ip`: 접속 나라(`CF-IPCountry`)는 cloudflare 모드에서 믿는 프록시가 보낸 것만 읽는다 - 시험은 컨텍스트의 헤더로 나라를 정한다(Paddle 흐름은 `US`). 헤더가 없으면 기본 나라 KR(토스).
  * - `payment.checkout-ttl`: 결제 가능 시간 — 결제창에서 떠난 결제를 만료 작업이 이 시간 뒤 결제사에 물어 닫거나 맞춘다(시나리오 ②). 40초면 느린 첫 실행에서도 시나리오가 제 결제를 시간 안에 끝낸다.
  */
 export const PAYMENT_E2E_SKELETON = {
   sample: { subscription: { period: 'PT25S' } },
+  // 접속 나라는 Cloudflare 의 CF-IPCountry 로만 온다 - 이 백엔드는 cloudflare 모드로 띄워 시험이 헤더로 나라를 정한다(헤더가 없으면 설정의 기본 나라 KR → 토스). 피어는 항상 로컬(Vite 프록시)이다
+  web: { 'client-ip': { mode: 'cloudflare', 'trusted-proxies': ['127.0.0.1/32', '::1/128'] } },
   http: { clients: { 'payment-toss': { 'response-timeout': '10s' } } },
   payment: {
     'checkout-ttl': '40s',

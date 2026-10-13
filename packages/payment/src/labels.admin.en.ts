@@ -11,6 +11,8 @@ export const defaultPaymentAdminLabels: PaymentAdminLabels = {
     FULFILMENT_UNRESOLVED: 'The money was received but the delivery never finished',
     REFUND_APPLY_UNRESOLVED:
       'The refund went through but taking back what was delivered never finished',
+    BUYER_COUNTRY_KR:
+      'Paid through the overseas provider but the buyer address is in Korea - needs a look',
     SUBSCRIPTION_STALE_CHARGE:
       'A subscription payment arrived late that the subscription was not waiting for - it needs a refund',
     SUBSCRIPTION_CANCEL_REFUND_UNRESOLVED:

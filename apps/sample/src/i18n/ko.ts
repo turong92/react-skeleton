@@ -433,6 +433,13 @@ export default {
   'nav.cheer': '응원하기',
   'cheer.title': '응원하기',
   'cheer.subtitle': '마음에 드는 금액을 골라 응원해 주세요.',
+  'payment.country.line': '결제 국가: {country}',
+  'payment.policy.korea.withdrawal': '결제 후 {days}일 안에 쓰지 않았다면 전액 환불해 드려요.',
+  'payment.policy.korea.cancel':
+    '언제든 해지할 수 있어요. 남은 기간은 환불해 드려요 (위약금 {percent}%).',
+  'payment.policy.paddle.payment': '결제는 Paddle 이 처리해요.',
+  'payment.policy.paddle.refund': '환불은 Paddle 이 검토해요.',
+  'payment.policy.periodEnd': '해지하면 이용 기간이 끝날 때 멈춰요.',
   'payment.paddle.priceLoading': '금액 확인 중…',
   'payment.paddle.priceFailed': '결제창에서 금액을 확인하세요',
   'cheer.optionN': '응원 {n}',
@@ -474,8 +481,6 @@ export default {
   'subscription.plan.standard': '스탠다드',
   'subscription.plan.pro': '프로',
   'subscription.subscribe.title': '구독',
-  'subscription.subscribe.country': '결제하는 나라',
-  'subscription.subscribe.countryHint': '나라에 따라 해지와 환불 기준이 달라요.',
   'subscription.refundPolicy': '환불 정책 보기',
   'subscription.subscribe.subtitle':
     '플랜을 고르면 카드를 등록하고, 이후에는 기간마다 자동으로 결제돼요.',

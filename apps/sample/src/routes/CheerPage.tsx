@@ -21,8 +21,8 @@ import { useEffect, useId, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { paymentApi } from '../cheer/api'
 import { usePaddleAmounts } from '../payment/paddleAmounts'
-import { useChosenProvider } from '../payment/useProvider'
-import { countryForLocale } from '../subscription/country'
+import { CountryPolicyNotice } from '../payment/CountryPolicyNotice'
+import { useServerProvider } from '../payment/useProvider'
 import {
   checkoutReturnUrls,
   nowMs,
@@ -67,8 +67,8 @@ export function CheerPage() {
   const labels = paymentLabelsFor(t, language)
   const options = useCheerOptions()
   const config = usePaymentConfig(paymentApi)
-  // 한국이면 토스, 아니면 Paddle(설정으로 모두 한쪽으로 돌릴 수 있다) - 서버가 켜진 결제사를 알려 준 때만
-  const provider = useChosenProvider(countryForLocale(language))
+  // 결제사는 서버가 접속 나라로 정한다(한국이면 토스, 아니면 Paddle) - 화면은 고르지 않는다
+  const provider = useServerProvider()
   const amountOf = usePaddleAmounts(provider)
   // 주문 만들기의 429 는 이 화면이 제자리에서(띠 · 단추 옆) 말한다 - 전역 토스트로 한 번 더 뜨지 않게 이 호출만 조용히 한다
   const createOrder = useCreateOrder(paymentApi, { meta: { quietStatuses: [429] } })
@@ -193,6 +193,7 @@ export function CheerPage() {
               />
               {priceFailed && <p className={styles.reason}>{t('payment.paddle.priceFailed')}</p>}
             </div>
+            <CountryPolicyNotice />
             {config.data?.testMode && <TestModeNotice labels={labels} />}
             {notice && (
               <Alert

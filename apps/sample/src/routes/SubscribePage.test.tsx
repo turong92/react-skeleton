@@ -37,6 +37,9 @@ const paddleConfig: PaymentConfig = {
   testMode: true,
   refundRequestsEnabled: true,
   providers: ['paddle'],
+  provider: 'paddle',
+  country: 'US',
+  cancelPolicy: { key: 'period-end-only' },
   pricePreviews: { paddle: preview },
 }
 const config: PaymentConfig = { available: true, testMode: true, refundRequestsEnabled: true }
@@ -128,5 +131,27 @@ describe('SubscribePage', () => {
     expect(html).toContain('$6.99')
     expect(html).not.toContain('$6.99 ·')
     expect(html).not.toContain('3분')
+  })
+
+  it('shows the country the server decided and the rules of that country - read only, no country choice - and the refund policy link', () => {
+    const korea = render({
+      plans,
+      config: {
+        ...config,
+        providers: ['toss'],
+        provider: 'toss',
+        country: 'KR',
+        cancelPolicy: { key: 'korea', penaltyPercent: 10, withdrawalDays: 7 },
+      },
+    })
+    expect(korea).toContain('결제 국가: 대한민국')
+    expect(korea).toContain('7일 안에 쓰지 않았다면 전액 환불')
+    expect(korea).toContain('위약금 10%')
+    expect(korea).toContain('href="/refund"')
+    expect(korea).not.toContain('<select')
+    const abroad = render({ plans, config: paddleConfig, paddlePrices: {} })
+    expect(abroad).toContain('결제 국가: 미국')
+    expect(abroad).toContain('결제는 Paddle 이 처리해요')
+    expect(abroad).toContain('환불은 Paddle 이 검토해요')
   })
 })

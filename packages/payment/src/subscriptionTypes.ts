@@ -81,8 +81,10 @@ export type StartSubscriptionResult = {
   billingAuth: BillingAuth | null
 }
 
-/** `country` 는 구매자 나라(ISO-3166 두 글자) - 해지·환불 정책이 이 나라를 따른다. 생략하면 서버의 기본 나라 */
-export type StartSubscriptionInput = { planCode: string; country?: string; provider?: string }
+/**
+ * 구매자 나라는 보내지 않는다 - 서버가 접속 나라로 정한다(`GET /config` 의 `country`). `provider` 는 `GET /config` 의 `provider` 와 같아야 한다(다르면 서버가 400)
+ */
+export type StartSubscriptionInput = { planCode: string; provider?: string }
 
 /** 카드 등록 창에서 돌아온 `authKey` 로 빌링키를 만들고 첫 결제를 한다 */
 export type ActivateSubscriptionInput = { providerPayload: { authKey: string } }

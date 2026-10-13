@@ -1,9 +1,7 @@
 import { usePaymentConfig } from '@skeleton/payment'
 import { paymentApi } from '../cheer/api'
-import { chooseProvider, FORCED_PROVIDER } from './provider'
 
-/** 지금 구매자 나라로 결제할 결제사 id (서버가 켜진 결제사를 알려 주기 전에는 `undefined`) */
-export function useChosenProvider(country: string): string | undefined {
-  const config = usePaymentConfig(paymentApi)
-  return chooseProvider({ providers: config.data?.providers, country, forced: FORCED_PROVIDER })
+/** 서버가 이 요청의 나라로 정한 결제사 id - 화면이 고르지 않는다(서버가 아직 안 답했거나 정하지 못했으면 `undefined`) */
+export function useServerProvider(): string | undefined {
+  return usePaymentConfig(paymentApi).data?.provider ?? undefined
 }

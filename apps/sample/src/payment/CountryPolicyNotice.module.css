@@ -1,0 +1,17 @@
+.notice {
+  display: grid;
+  gap: var(--space-sm);
+  max-width: 34rem;
+}
+
+.country {
+  margin: 0;
+  font-weight: 650;
+  color: var(--text-strong);
+}
+
+.lines {
+  margin: 0;
+  padding-left: var(--space-lg);
+  color: var(--text-muted);
+}

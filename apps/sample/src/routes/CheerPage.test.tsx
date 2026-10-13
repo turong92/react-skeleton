@@ -138,7 +138,11 @@ describe('CheerPage', () => {
   })
 
   it('pays with Paddle: the choices show the amounts Paddle quotes instead of the KRW table', () => {
-    const paddle = config({ providers: ['paddle'], pricePreviews: { paddle: paddlePreview } })
+    const paddle = config({
+      providers: ['paddle'],
+      provider: 'paddle',
+      pricePreviews: { paddle: paddlePreview },
+    })
     const html = render({
       options,
       config: paddle,

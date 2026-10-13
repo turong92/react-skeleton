@@ -218,6 +218,7 @@ describe('the operator words (spec 11.2: 「결제사와 맞추기」, 「확인
   it('has a phrase for every reason an order can need a check, every history event of spec 5.4 and every inbox status', () => {
     expect(Object.keys(a.reviewReason).sort()).toEqual([
       'AMOUNT_MISMATCH',
+      'BUYER_COUNTRY_KR',
       'CONFIRM_UNRESOLVED',
       'FULFILMENT_UNRESOLVED',
       'MODE_MISMATCH',

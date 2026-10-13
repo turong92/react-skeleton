@@ -8,7 +8,7 @@ import {
   usePaymentConfig,
   type SubscriptionPlan,
 } from '@skeleton/payment'
-import { Alert, ErrorReference, Field, PageHeader, Select, Spinner } from '@skeleton/ui'
+import { Alert, ErrorReference, PageHeader, Spinner } from '@skeleton/ui'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { paymentApi } from '../cheer/api'
@@ -17,8 +17,8 @@ import { LoadError } from '../components/LoadError'
 import { languageOf, useT, type MessageKey } from '../i18n'
 import { subscriptionApi } from '../subscription/api'
 import { usePaddleAmounts } from '../payment/paddleAmounts'
-import { chooseProvider, FORCED_PROVIDER } from '../payment/provider'
-import { countryForLocale, countryName, countryOptions } from '../subscription/country'
+import { CountryPolicyNotice } from '../payment/CountryPolicyNotice'
+import { useServerProvider } from '../payment/useProvider'
 import { subscriptionLabelsFor } from '../subscription/labels'
 import { planNameOf } from '../subscription/planName'
 import {
@@ -57,16 +57,10 @@ export function SubscribePage() {
   const start = useStartSubscription(subscriptionApi, { meta: { quietStatuses: [429] } })
   const navigate = useNavigate()
   const [busyPlan, setBusyPlan] = useState<string | null>(null)
-  // 결제하는 나라 - 화면 언어로 미리 채우고 바꿀 수 있다. 서버는 이 나라로 해지·환불 정책을 고른다
-  const [country, setCountry] = useState(() => countryForLocale(language))
   const [notice, setNotice] = useState<Notice | null>(null)
 
-  // 한국이면 토스(카드 등록), 아니면 Paddle(결제창 한 번 - 갱신은 Paddle 이 한다). 설정으로 모두 한쪽으로 돌릴 수 있다
-  const provider = chooseProvider({
-    providers: config.data?.providers,
-    country,
-    forced: FORCED_PROVIDER,
-  })
+  // 결제사는 서버가 접속 나라로 정한다(한국이면 토스 카드 등록, 아니면 Paddle 결제창 한 번 - 갱신은 Paddle 이 한다). 화면은 고르지 않는다
+  const provider = useServerProvider()
 
   const amountOf = usePaddleAmounts(provider)
 
@@ -89,18 +83,13 @@ export function SubscribePage() {
     setNotice(null)
     const result = await startSubscribe(
       {
-        start: (planCode, buyerCountry, chosen) =>
-          start.mutateAsync({
-            planCode,
-            ...(buyerCountry ? { country: buyerCountry } : {}),
-            ...(chosen ? { provider: chosen } : {}),
-          }),
+        start: (planCode, chosen) =>
+          start.mutateAsync({ planCode, ...(chosen ? { provider: chosen } : {}) }),
         openBillingAuth: (billingAuth, urls) =>
           openBillingAuth(billingAuth, { ...urls, locale: language }),
         urlsFor: (id, chosen) => subscribeReturnUrls(window.location.origin, id, chosen),
       },
       plan.code,
-      country,
       provider,
     )
     if (result.kind === 'opened') return // 카드 창이 이 화면을 떠나게 한다 — 돌아오면 `pageshow` 가 풀어 준다
@@ -146,31 +135,7 @@ export function SubscribePage() {
           </div>
         </Alert>
       )}
-      <div className={styles.country}>
-        <Field
-          label={t('subscription.subscribe.country')}
-          hint={t('subscription.subscribe.countryHint')}
-        >
-          {(control) => (
-            <Select
-              {...control}
-              value={country}
-              onChange={(event) => setCountry(event.target.value)}
-            >
-              {countryOptions(countryForLocale(language)).map((code) => (
-                <option key={code} value={code}>
-                  {countryName(code, language)}
-                </option>
-              ))}
-            </Select>
-          )}
-        </Field>
-        <div>
-          <LinkButton to="/refund" variant="secondary">
-            {t('subscription.refundPolicy')}
-          </LinkButton>
-        </div>
-      </div>
+      <CountryPolicyNotice />
       <SubscriptionPlanList
         plans={plans.data.map((plan) => ({ ...plan, name: planNameOf(t, plan) }))}
         onSubscribe={(plan) => void subscribe(plan)}

@@ -39,3 +39,11 @@ describe('the backend settings the payment e2e asks for', () => {
     expect(ttl).toBeLessThanOrEqual(60)
   })
 })
+
+describe('the client-ip mode of the payment e2e backend', () => {
+  it('is cloudflare and trusts only loopback peers, so a test sets the country with CF-IPCountry and nobody else can', () => {
+    const { web } = PAYMENT_E2E_SKELETON
+    expect(web['client-ip'].mode).toBe('cloudflare')
+    expect(web['client-ip']['trusted-proxies']).toEqual(['127.0.0.1/32', '::1/128'])
+  })
+})

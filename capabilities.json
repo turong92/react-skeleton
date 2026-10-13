@@ -697,13 +697,14 @@
       "backend": {
         "modules": ["payment", "payment-jdbc"],
         "oneOfModules": [["payment-toss", "payment-stripe"]],
-        "optionalModules": [],
+        "optionalModules": ["payment-paddle"],
         "basePaths": [],
         "docs": [
           "docs/modules/payment.md",
           "docs/modules/payment-jdbc.md",
           "docs/modules/payment-toss.md",
-          "docs/modules/payment-stripe.md"
+          "docs/modules/payment-stripe.md",
+          "docs/modules/payment-paddle.md"
         ]
       },
       "status": "experimental",
@@ -1475,6 +1476,7 @@
           "notification-sse",
           "payment",
           "payment-jdbc",
+          "payment-paddle",
           "payment-toss",
           "persistence-jdbc",
           "platform",
@@ -1628,6 +1630,7 @@
           "notification-websocket",
           "payment",
           "payment-jdbc",
+          "payment-paddle",
           "payment-stripe",
           "payment-toss",
           "persistence-jdbc",

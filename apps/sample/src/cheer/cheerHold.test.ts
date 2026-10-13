@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { holdReasonOf, noticeAfterOpening, openingIn, type HoldNotice } from './cheerHold'
+import {
+  holdReasonOf,
+  noticeAfterOpening,
+  noticeOfOrderFailure,
+  openingIn,
+  type HoldNotice,
+} from './cheerHold'
 
 const limited = (until: number | null): HoldNotice => ({ kind: 'rateLimited', until })
 const closed: HoldNotice = { kind: 'closed' }
@@ -60,5 +66,31 @@ describe('noticeAfterOpening — what the timer clears when the hold ends', () =
   it('a 429 that had no time is not a hold, so the timer never touches it', () => {
     const soon = limited(null)
     expect(noticeAfterOpening(soon)).toBe(soon)
+  })
+})
+
+describe('noticeOfOrderFailure — a refused order is told on the screen, not held', () => {
+  it('a 503 UNAVAILABLE (e.g. the provider refused to prepare the payment) shows its message with the error reference and leaves the button pressable', () => {
+    const error = new Error('503')
+    const notice = noticeOfOrderFailure({ kind: 'unavailable' }, error)
+    expect(notice).toEqual({ kind: 'unavailable', error })
+    expect(holdReasonOf({ configAvailable: true, keyMissing: false, notice })).toBeNull()
+  })
+
+  it('keeps the 429 time, and the other refusals by their kind', () => {
+    const error = new Error('x')
+    expect(noticeOfOrderFailure({ kind: 'rateLimited', until: 5 }, error)).toEqual({
+      kind: 'rateLimited',
+      until: 5,
+      error,
+    })
+    expect(noticeOfOrderFailure({ kind: 'notOffered' }, error)).toEqual({
+      kind: 'notOffered',
+      error,
+    })
+    expect(noticeOfOrderFailure({ kind: 'orderFailed' }, error)).toEqual({
+      kind: 'orderFailed',
+      error,
+    })
   })
 })

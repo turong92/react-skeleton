@@ -251,6 +251,7 @@ describe('the operator words (spec 11.2: 「결제사와 맞추기」, 「확인
         'REFUND_SYNCED',
         'REFUND_APPLIED',
         'REVIEW_FLAGGED',
+        'TRANSACTION_FAILED',
       ].sort(),
     )
     expect(Object.keys(a.webhookStatus).sort()).toEqual([

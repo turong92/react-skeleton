@@ -61,6 +61,7 @@ export const defaultPaymentAdminLabels: PaymentAdminLabels = {
     REFUND_SYNCED: 'Refund matched with the provider',
     REFUND_APPLIED: 'What was delivered was taken back for the refund',
     REVIEW_FLAGGED: 'Marked as needing a check',
+    TRANSACTION_FAILED: 'The provider refused to prepare the payment',
   },
   unknownEvent: 'There is a record',
   webhookStatus: {

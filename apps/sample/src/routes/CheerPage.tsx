@@ -32,7 +32,12 @@ import {
   unopenedAfter,
   type UnopenedOrder,
 } from '../cheer/checkoutFlow'
-import { holdReasonOf, noticeAfterOpening, openingIn } from '../cheer/cheerHold'
+import {
+  holdReasonOf,
+  noticeAfterOpening,
+  noticeOfOrderFailure,
+  openingIn,
+} from '../cheer/cheerHold'
 import { paymentLabelsFor } from '../cheer/paymentLabels'
 import { useCheerOptions } from '../cheer/queries'
 import type { CheerOption } from '../cheer/types'
@@ -41,7 +46,10 @@ import { languageOf, useT } from '../i18n'
 import styles from './CheerPage.module.css'
 
 type Notice =
-  | { kind: 'closed' | 'windowFailed' | 'orderFailed' | 'notOffered'; error?: unknown }
+  | {
+      kind: 'closed' | 'windowFailed' | 'orderFailed' | 'notOffered' | 'unavailable'
+      error?: unknown
+    }
   /** `until`(ms)은 막힘이 풀리는 시각 - 문장에는 이 시각을 쓴다. `null` 이면 서버가 기다림을 알려 주지 않았다 - 「잠시 뒤에」 */
   | { kind: 'rateLimited'; until: number | null; error: unknown }
 
@@ -152,12 +160,8 @@ export function CheerPage() {
     else if (result.kind === 'window-failed')
       setNotice({ kind: 'windowFailed', error: result.error })
     else {
-      const failure = orderFailureOf(result.error, nowMs())
-      if (failure.kind === 'rateLimited')
-        setNotice({ kind: 'rateLimited', until: failure.until, error: result.error })
-      else if (failure.kind === 'unavailable')
-        setKeyMissing(true) // 결제창 키가 없을 때와 같은 막힘 - 같은 이유 글자
-      else setNotice({ kind: failure.kind, error: result.error })
+      // 503 도 안내로 말한다(띠 + 문의 번호) - 막지 않으니 다시 누를 수 있다
+      setNotice(noticeOfOrderFailure(orderFailureOf(result.error, nowMs()), result.error))
     }
   }
 

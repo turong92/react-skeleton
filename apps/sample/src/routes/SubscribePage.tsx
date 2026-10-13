@@ -73,7 +73,11 @@ export function SubscribePage() {
     return <LoadError error={plans.error} onRetry={() => void plans.refetch()} />
 
   // 한국이면 토스(카드 등록), 아니면 Paddle(결제창 한 번 - 갱신은 Paddle 이 한다). 설정으로 모두 한쪽으로 돌릴 수 있다
-  const provider = chooseProvider({ providers: config.data?.providers, country, forced: FORCED_PROVIDER })
+  const provider = chooseProvider({
+    providers: config.data?.providers,
+    country,
+    forced: FORCED_PROVIDER,
+  })
 
   async function subscribe(plan: SubscriptionPlan) {
     if (busyPlan !== null) return

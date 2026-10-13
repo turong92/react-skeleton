@@ -19,7 +19,13 @@ export type OpenBillingAuthOptions = {
  */
 export async function openBillingAuth(
   billingAuth: BillingAuth,
-  { successUrl, failUrl, loadSdk = loadTossPaymentsSdk, loadPaddle, locale }: OpenBillingAuthOptions,
+  {
+    successUrl,
+    failUrl,
+    loadSdk = loadTossPaymentsSdk,
+    loadPaddle,
+    locale,
+  }: OpenBillingAuthOptions,
 ): Promise<void> {
   switch (billingAuth.kind) {
     case 'TOSS_BILLING_AUTH': {

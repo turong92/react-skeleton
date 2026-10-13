@@ -8,8 +8,12 @@ describe('chooseProvider', () => {
   })
 
   it('a setting switches everybody to one provider', () => {
-    expect(chooseProvider({ providers: ['paddle', 'toss'], country: 'KR', forced: 'paddle' })).toBe('paddle')
-    expect(chooseProvider({ providers: ['paddle', 'toss'], country: 'US', forced: 'toss' })).toBe('toss')
+    expect(chooseProvider({ providers: ['paddle', 'toss'], country: 'KR', forced: 'paddle' })).toBe(
+      'paddle',
+    )
+    expect(chooseProvider({ providers: ['paddle', 'toss'], country: 'US', forced: 'toss' })).toBe(
+      'toss',
+    )
   })
 
   it('falls back to the provider that exists when the preferred one is off', () => {

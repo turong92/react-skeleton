@@ -21,7 +21,10 @@ export function useSubscriptionPlans(api: PaymentSubscriptionApi) {
 }
 
 /** 내 구독(없으면 `data.subscription` 이 `null`) + 최근 결제 5건. 첫 결제를 확인하는 동안(`PENDING`)만 간격을 늘려 가며 다시 묻는다 */
-export function useMySubscription(api: PaymentSubscriptionApi, options?: MySubscriptionQueryOptions) {
+export function useMySubscription(
+  api: PaymentSubscriptionApi,
+  options?: MySubscriptionQueryOptions,
+) {
   return useQuery(mySubscriptionQuery(api, options))
 }
 

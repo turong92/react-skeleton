@@ -84,7 +84,11 @@ function ReturnFlow({ plan }: { plan: Settled }) {
   const abandon = useAbandonOrder(paymentApi)
   const orderId = plan.orderId
   // Paddle: 결과가 웹훅으로 서버에 닿는다 - 승인 호출 없이 주문이 `PAID` 가 될 때까지 되묻는다
-  const read = useOrder(paymentApi, orderId ?? undefined, plan.kind === 'watch' ? { untilPaid: true } : undefined)
+  const read = useOrder(
+    paymentApi,
+    orderId ?? undefined,
+    plan.kind === 'watch' ? { untilPaid: true } : undefined,
+  )
 
   // 이 주소에 대해 한 번만 — StrictMode 가 효과를 두 번 돌려도 요청은 한 번이다
   const sent = useRef<string | null>(null)
@@ -105,7 +109,8 @@ function ReturnFlow({ plan }: { plan: Settled }) {
 
   const order = shownOrderOf({
     // 웹훅 전의 `PENDING` 은 아직 「확인 중」이다 - 시작도 안 한 주문처럼 보이지 않게 비워 둔다
-    read: plan.kind === 'watch' && read.data?.order.status === 'PENDING' ? undefined : read.data?.order,
+    read:
+      plan.kind === 'watch' && read.data?.order.status === 'PENDING' ? undefined : read.data?.order,
     reply: confirm.data ?? abandon.data,
     ...(plan.kind === 'left'
       ? { left: plan.canceled ? ('canceled' as const) : ('failed' as const) }

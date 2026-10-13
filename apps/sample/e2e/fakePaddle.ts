@@ -54,8 +54,17 @@ type Sub = {
 }
 export type FakePaddleCall = { method: string; path: string; authorized: boolean; body: unknown }
 export type SentWebhook = { eventId: string; eventType: string; status: number }
-export type FakePaddleTransaction = { id: string; items: Array<{ price_id: string; quantity: number }>; custom_data: Record<string, string> }
-export type FakePaddleState = { subscriptions: Sub[]; calls: FakePaddleCall[]; sent: SentWebhook[]; transactions: FakePaddleTransaction[] }
+export type FakePaddleTransaction = {
+  id: string
+  items: Array<{ price_id: string; quantity: number }>
+  custom_data: Record<string, string>
+}
+export type FakePaddleState = {
+  subscriptions: Sub[]
+  calls: FakePaddleCall[]
+  sent: SentWebhook[]
+  transactions: FakePaddleTransaction[]
+}
 export type FakePaddle = {
   url: string
   /** 백엔드 주소(`http://localhost:<포트>`) — 웹훅을 이 주소로 쏜다 */
@@ -73,9 +82,17 @@ export async function startFakePaddle(): Promise<FakePaddle> {
   let sent: SentWebhook[] = []
   const bodies = new Map<string, string>() // event_id → 쏜 원문(재전송용)
   const transactions = new Map<string, FakePaddleTransaction>() // 백엔드가 만든 거래
-  const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type' }
+  const cors = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type',
+  }
 
-  async function fire(eventType: string, data: unknown, occurredAt = new Date(), eventId = `evt_${randomUUID().replaceAll('-', '')}`) {
+  async function fire(
+    eventType: string,
+    data: unknown,
+    occurredAt = new Date(),
+    eventId = `evt_${randomUUID().replaceAll('-', '')}`,
+  ) {
     const body = JSON.stringify({
       event_id: eventId,
       event_type: eventType,
@@ -106,11 +123,21 @@ export async function startFakePaddle(): Promise<FakePaddle> {
     status: s.status,
     currency_code: s.currency,
     custom_data: s.customData,
-    scheduled_change: s.scheduledCancel ? { action: 'cancel', effective_at: s.periodEnd, resume_at: null } : null,
+    scheduled_change: s.scheduledCancel
+      ? { action: 'cancel', effective_at: s.periodEnd, resume_at: null }
+      : null,
     current_billing_period: { starts_at: s.periodStart, ends_at: s.periodEnd },
   })
 
-  function transactionEntity(s: Sub | null, customData: Record<string, string>, currency: string, amount: number, origin: string, priceId: string, transactionId?: string) {
+  function transactionEntity(
+    s: Sub | null,
+    customData: Record<string, string>,
+    currency: string,
+    amount: number,
+    origin: string,
+    priceId: string,
+    transactionId?: string,
+  ) {
     const at = iso(new Date())
     return {
       id: transactionId ?? `txn_${randomUUID().replaceAll('-', '').slice(0, 26)}`,
@@ -122,21 +149,37 @@ export async function startFakePaddle(): Promise<FakePaddle> {
       items: [{ price: { id: priceId }, quantity: 1 }],
       billed_at: at,
       billing_period: s ? { starts_at: s.periodStart, ends_at: s.periodEnd } : null,
-      details: { totals: { subtotal: String(amount), tax: '0', total: String(amount), currency_code: currency } },
-      payments: [{ status: 'captured', method_details: { type: 'card', card: { type: 'visa', last4: '4242' } } }],
+      details: {
+        totals: {
+          subtotal: String(amount),
+          tax: '0',
+          total: String(amount),
+          currency_code: currency,
+        },
+      },
+      payments: [
+        {
+          status: 'captured',
+          method_details: { type: 'card', card: { type: 'visa', last4: '4242' } },
+        },
+      ],
     }
   }
 
   /** 결제창 대역이 부른다 - 백엔드가 미리 만든 거래를 결제하고 웹훅을 쏜다(구독 가격이면 구독도). 모르는 거래면 거절 */
   async function checkout(res: ServerResponse, body: Record<string, unknown> | null) {
     const txn = transactions.get(String(body?.transactionId ?? ''))
-    if (!txn || body?.token !== FAKE_PADDLE.clientToken) return send(res, 400, { error: 'unknown transaction or token' }, cors)
+    if (!txn || body?.token !== FAKE_PADDLE.clientToken)
+      return send(res, 400, { error: 'unknown transaction or token' }, cors)
     const price = Object.values(FAKE_PADDLE.prices).find((p) => p.id === txn.items[0]?.price_id)
     if (!price) return send(res, 400, { error: 'unknown price' }, cors)
     const customData = txn.custom_data
     const currency = 'USD'
     if (!price.recurring) {
-      await fire('transaction.completed', transactionEntity(null, customData, currency, price.amount, 'web', price.id, txn.id))
+      await fire(
+        'transaction.completed',
+        transactionEntity(null, customData, currency, price.amount, 'web', price.id, txn.id),
+      )
       return send(res, 200, { ok: true }, cors)
     }
     const now = new Date()
@@ -154,7 +197,10 @@ export async function startFakePaddle(): Promise<FakePaddle> {
     }
     subs.set(sub.id, sub)
     // Paddle 은 결제를 먼저 알리고 구독을 만든다
-    await fire('transaction.completed', transactionEntity(sub, customData, currency, price.amount, 'web', price.id, txn.id))
+    await fire(
+      'transaction.completed',
+      transactionEntity(sub, customData, currency, price.amount, 'web', price.id, txn.id),
+    )
     await fire('subscription.created', { ...subscriptionEntity(sub), transaction_id: txn.id })
     await fire('subscription.activated', subscriptionEntity(sub))
     return send(res, 200, { ok: true, subscriptionId: sub.id }, cors)
@@ -175,7 +221,17 @@ export async function startFakePaddle(): Promise<FakePaddle> {
       s.periodStart = iso(start)
       s.periodEnd = iso(new Date(start.getTime() + PERIOD_MS))
       s.txnCount += 1
-      await fire('transaction.completed', transactionEntity(s, s.customData, s.currency, s.amount, 'subscription_recurring', s.priceId))
+      await fire(
+        'transaction.completed',
+        transactionEntity(
+          s,
+          s.customData,
+          s.currency,
+          s.amount,
+          'subscription_recurring',
+          s.priceId,
+        ),
+      )
       await fire('subscription.updated', subscriptionEntity(s))
     }
     if (typeof patch.endPeriod === 'string') {
@@ -193,9 +249,18 @@ export async function startFakePaddle(): Promise<FakePaddle> {
     if (typeof patch.stale === 'string') {
       const s = subs.get(patch.stale)
       if (!s) return send(res, 404, { error: 'no such subscription' })
-      await fire('subscription.updated', subscriptionEntity({ ...s, status: 'active', scheduledCancel: false }), new Date(Date.now() - 60 * 60_000))
+      await fire(
+        'subscription.updated',
+        subscriptionEntity({ ...s, status: 'active', scheduledCancel: false }),
+        new Date(Date.now() - 60 * 60_000),
+      )
     }
-    return send(res, 200, { subscriptions: [...subs.values()], calls, sent, transactions: [...transactions.values()] } satisfies FakePaddleState)
+    return send(res, 200, {
+      subscriptions: [...subs.values()],
+      calls,
+      sent,
+      transactions: [...transactions.values()],
+    } satisfies FakePaddleState)
   }
 
   const server: Server = createServer((req, res) => {
@@ -210,7 +275,8 @@ export async function startFakePaddle(): Promise<FakePaddle> {
     }
     const text = await readBody(req)
     const body = text ? (JSON.parse(text) as Record<string, unknown>) : null
-    if (path === '/control') return req.method === 'GET' ? control(res, {}) : control(res, body ?? {})
+    if (path === '/control')
+      return req.method === 'GET' ? control(res, {}) : control(res, body ?? {})
     if (path === '/sdk/checkout' && req.method === 'POST') return checkout(res, body)
 
     if (path === '/transactions' && req.method === 'POST') {
@@ -223,7 +289,7 @@ export async function startFakePaddle(): Promise<FakePaddle> {
         custom_data: (body?.custom_data as Record<string, string> | undefined) ?? {},
       }
       transactions.set(txn.id, txn)
-      return send(res, 200, { data: { id: txn.id, status: 'draft', ...txn } })
+      return send(res, 200, { data: { status: 'draft', ...txn } })
     }
 
     const cancel = /^\/subscriptions\/([^/]+)\/cancel$/.exec(path)
@@ -235,7 +301,10 @@ export async function startFakePaddle(): Promise<FakePaddle> {
       if (!s) return send(res, 404, { error: { code: 'not_found' } })
       if (body?.effective_from === 'immediately') s.status = 'canceled'
       else s.scheduledCancel = true
-      await fire(s.status === 'canceled' ? 'subscription.canceled' : 'subscription.updated', subscriptionEntity(s))
+      await fire(
+        s.status === 'canceled' ? 'subscription.canceled' : 'subscription.updated',
+        subscriptionEntity(s),
+      )
       return send(res, 200, { data: subscriptionEntity(s) })
     }
     return send(res, 404, { error: 'not found' })
@@ -261,7 +330,12 @@ function readBody(req: IncomingMessage): Promise<string> {
   })
 }
 
-function send(res: ServerResponse, status: number, body: unknown, headers: Record<string, string> = {}) {
+function send(
+  res: ServerResponse,
+  status: number,
+  body: unknown,
+  headers: Record<string, string> = {},
+) {
   res.writeHead(status, { 'Content-Type': 'application/json', ...headers })
   res.end(JSON.stringify(body))
 }
@@ -304,6 +378,10 @@ export function fakePaddleSdkScript(fakeUrl: string): string {
 
 export async function routePaddleSdk(context: BrowserContext, fakeUrl: string) {
   await context.route('https://cdn.paddle.com/paddle/v2/paddle.js*', (route) =>
-    route.fulfill({ status: 200, contentType: 'application/javascript', body: fakePaddleSdkScript(fakeUrl) }),
+    route.fulfill({
+      status: 200,
+      contentType: 'application/javascript',
+      body: fakePaddleSdkScript(fakeUrl),
+    }),
   )
 }

@@ -63,7 +63,10 @@ export async function startSubscribe(
 ): Promise<StartSubscribeResult> {
   let started: StartSubscriptionResult
   try {
-    started = provider === undefined ? await deps.start(planCode, country) : await deps.start(planCode, country, provider)
+    started =
+      provider === undefined
+        ? await deps.start(planCode, country)
+        : await deps.start(planCode, country, provider)
   } catch (error) {
     return { kind: 'start-failed', error }
   }

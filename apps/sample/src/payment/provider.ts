@@ -13,10 +13,13 @@ export function chooseProvider({
   forced?: string | undefined
 }): string | undefined {
   if (!providers || providers.length === 0) return undefined
-  const wanted = forced && forced !== 'auto' ? forced : country.toUpperCase() === 'KR' ? 'toss' : 'paddle'
+  const wanted =
+    forced && forced !== 'auto' ? forced : country.toUpperCase() === 'KR' ? 'toss' : 'paddle'
   return providers.includes(wanted) ? wanted : providers[0]
 }
 
 /** 빌드 설정 - 모두를 한 결제사로 돌린다. 비어 있거나 `auto` 면 나라로 고른다 */
 export const FORCED_PROVIDER: string | undefined =
-  (import.meta as { env?: Record<string, string | undefined> }).env?.VITE_PAYMENT_PROVIDER?.trim() || undefined
+  (
+    import.meta as { env?: Record<string, string | undefined> }
+  ).env?.VITE_PAYMENT_PROVIDER?.trim() || undefined

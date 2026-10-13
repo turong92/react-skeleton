@@ -13,7 +13,12 @@ import type {
   RefundRequestInput,
   RefundStatus,
 } from './ledgerTypes'
-import { ORDER_POLL_MAX_DURATION_MS, pollIntervalOf, pollWhile, type PollQuery } from './orderPolling'
+import {
+  ORDER_POLL_MAX_DURATION_MS,
+  pollIntervalOf,
+  pollWhile,
+  type PollQuery,
+} from './orderPolling'
 
 export {
   ORDER_POLL_MAX_DURATION_MS,
@@ -59,7 +64,11 @@ export function orderQuery(
     queryFn: () => api.getOrder(id),
     refetchInterval: (query: PollQuery) =>
       untilPaid
-        ? pollWhile(query, (data) => data?.order.status === 'PENDING' || data?.order.status === 'CONFIRMING', maxPollMs)
+        ? pollWhile(
+            query,
+            (data) => data?.order.status === 'PENDING' || data?.order.status === 'CONFIRMING',
+            maxPollMs,
+          )
         : pollIntervalOf(query, maxPollMs),
   }
 }

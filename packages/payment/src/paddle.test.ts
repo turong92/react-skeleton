@@ -75,7 +75,12 @@ describe('the provider switch', () => {
         amount: { amount: 1000, currency: 'KRW' },
         attributes,
       },
-      { successUrl: '/ok', failUrl: '/fail', loadSdk: loadToss, loadPaddle: () => Promise.resolve(sdk) },
+      {
+        successUrl: '/ok',
+        failUrl: '/fail',
+        loadSdk: loadToss,
+        loadPaddle: () => Promise.resolve(sdk),
+      },
     )
     await openBillingAuth(
       {
@@ -86,7 +91,12 @@ describe('the provider switch', () => {
         customerKey: 'cus_1',
         attributes: { ...attributes, transactionId: 'txn_2' },
       },
-      { successUrl: '/ok', failUrl: '/fail', loadSdk: loadToss, loadPaddle: () => Promise.resolve(sdk) },
+      {
+        successUrl: '/ok',
+        failUrl: '/fail',
+        loadSdk: loadToss,
+        loadPaddle: () => Promise.resolve(sdk),
+      },
     )
     expect(loadToss).not.toHaveBeenCalled()
     expect(calls.filter((c) => (c as unknown[])[0] === 'open')).toHaveLength(2)

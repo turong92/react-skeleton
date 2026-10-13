@@ -914,4 +914,7 @@ export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
  * 일부러 브라우저 전용인 export — 서버에서 그리지 않는다. 항목마다 이유를 쓴다(이유 없는 항목 · 더는 없는 export 는 테스트가 막는다).
  * 지금은 없다: 모든 컴포넌트 · 훅이 서버에서 그려진다(브라우저 API 는 effect · 이벤트 핸들러 안에서만).
  */
-export const BROWSER_ONLY: Record<string, string> = {}
+export const BROWSER_ONLY: Record<string, string> = {
+  'payment#usePaddlePrices':
+    "asks Paddle.js (a browser script) for prices in the buyer's currency - there is nothing to ask on the server",
+}

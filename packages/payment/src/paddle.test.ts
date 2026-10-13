@@ -15,14 +15,10 @@ function fakePaddle() {
   return { sdk, calls }
 }
 
-const attributes = {
-  environment: 'sandbox',
-  priceId: 'pri_1',
-  customData: '{"orderId":"ord_1","accountId":"acc_1"}',
-}
+const attributes = { environment: 'sandbox', transactionId: 'txn_1' }
 
 describe('openPaddleCheckout', () => {
-  it('opens the overlay with the price and the custom data the server chose, and returns to our address', async () => {
+  it('opens the overlay with the server-made transaction id only, and returns to our address', async () => {
     const { sdk, calls } = fakePaddle()
     await openPaddleCheckout({
       clientToken: 'test_token',
@@ -36,8 +32,7 @@ describe('openPaddleCheckout', () => {
       [
         'open',
         {
-          items: [{ priceId: 'pri_1', quantity: 1 }],
-          customData: { orderId: 'ord_1', accountId: 'acc_1' },
+          transactionId: 'txn_1',
           settings: {
             displayMode: 'overlay',
             successUrl: 'https://app.example/payments/return?provider=paddle&order=ord_1',
@@ -47,14 +42,14 @@ describe('openPaddleCheckout', () => {
     ])
   })
 
-  it('does not even load the script without a token or a price', async () => {
+  it('does not even load the script without a token or a transaction', async () => {
     const loadSdk = vi.fn()
     await expect(
       openPaddleCheckout({ clientToken: null, attributes, successUrl: '/x', loadSdk }),
     ).rejects.toThrow('client token')
     await expect(
       openPaddleCheckout({ clientToken: 't', attributes: {}, successUrl: '/x', loadSdk }),
-    ).rejects.toThrow('price')
+    ).rejects.toThrow('transaction')
     expect(loadSdk).not.toHaveBeenCalled()
   })
 
@@ -89,7 +84,7 @@ describe('the provider switch', () => {
         clientKey: 'tok',
         testMode: true,
         customerKey: 'cus_1',
-        attributes: { ...attributes, customData: '{"subscriptionId":"sub_1"}' },
+        attributes: { ...attributes, transactionId: 'txn_2' },
       },
       { successUrl: '/ok', failUrl: '/fail', loadSdk: loadToss, loadPaddle: () => Promise.resolve(sdk) },
     )

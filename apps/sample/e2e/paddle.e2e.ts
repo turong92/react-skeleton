@@ -64,6 +64,10 @@ describe('a Paddle subscription from the first payment to the end of the period'
       expect(started.subscription?.amount).toEqual({ amount: 399, currency: 'USD' })
       expect(started.orders.map((o) => o.kind)).toEqual(['SUBSCRIPTION_INITIAL'])
       const providerSub = (await paddle.state()).subscriptions[0]!
+      // 거래는 백엔드가 만들었다: 서버가 정한 가격 · 우리 구독 줄 id 가 들어 있다(브라우저가 넘긴 값이 아니다)
+      const created = (await paddle.state()).transactions[0]!
+      expect(created.items).toEqual([{ price_id: 'pri_e2e_basic', quantity: 1 }])
+      expect(created.custom_data).toMatchObject({ subscriptionId: started.subscription!.id })
 
       // 내 구독 - 해지는 기간 끝에만(환불 있는 중도 해지 · 플랜 올리기는 열리지 않는다)
       await page.goto(`${baseUrl}/subscription`)
@@ -93,8 +97,8 @@ describe('a Paddle subscription from the first payment to the end of the period'
       await pwExpect(dialog).toBeHidden()
       await pwExpect(page.getByText(subscribed.status.CANCELING).first()).toBeVisible()
       const state = await paddle.state()
-      expect(state.calls).toHaveLength(1)
-      expect(state.calls[0]).toMatchObject({ path: `/subscriptions/${providerSub.id}/cancel`, authorized: true, body: { effective_from: 'next_billing_period' } })
+      expect(state.calls.filter((c) => c.path.endsWith('/cancel'))).toHaveLength(1)
+      expect(state.calls.find((c) => c.path.endsWith('/cancel'))).toMatchObject({ path: `/subscriptions/${providerSub.id}/cancel`, authorized: true, body: { effective_from: 'next_billing_period' } })
 
       // 5. 기간이 끝났다 - Paddle 이 알린다
       await paddle.set({ endPeriod: providerSub.id })
@@ -106,7 +110,7 @@ describe('a Paddle subscription from the first payment to the end of the period'
         const tossCalls = (await tossControl(fakeTossUrl).state()).calls.slice(tossBefore).filter((c) => c.path.startsWith('/v1/billing') || c.path.startsWith('/v1/payments/confirm'))
         expect(tossCalls).toEqual([])
       }
-      expect((await paddle.state()).calls).toHaveLength(1)
+      expect((await paddle.state()).calls.filter((c) => c.path.endsWith('/cancel'))).toHaveLength(1)
       // 보낸 웹훅은 모두 받아들여졌다(서명 통과)
       expect((await paddle.state()).sent.every((s) => s.status === 200)).toBe(true)
     },

@@ -115,7 +115,7 @@ export type PaddleCheckout = {
   orderId: string
   orderName: string
   amount: PaymentAmount
-  attributes: { environment?: string; priceId?: string; customData?: string }
+  attributes: { environment?: string; transactionId?: string }
 }
 export type Checkout = TossPaymentWindowCheckout | PaddleCheckout
 

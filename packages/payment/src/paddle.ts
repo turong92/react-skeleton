@@ -10,8 +10,7 @@ export type PaddleSdk = {
   Initialize(options: { token: string; eventCallback?: (event: { name?: string }) => void }): void
   Checkout: {
     open(options: {
-      items: { priceId: string; quantity: number }[]
-      customData?: Record<string, string>
+      transactionId: string
       settings?: { displayMode?: 'overlay'; successUrl?: string; locale?: string }
     }): void
   }
@@ -78,29 +77,21 @@ export function loadPaddleSdk(env: LoadPaddleSdkEnv = {}): Promise<PaddleSdk> {
   return promise
 }
 
-/** 서버가 준 Paddle 결제창 값(`checkout.attributes` · `billingAuth.attributes`). `customData` 는 JSON 문자열 — 서버가 정하고 우리는 그대로 넘긴다 */
-export type PaddleAttributes = { environment?: string; priceId?: string; customData?: string }
+/** 서버가 준 Paddle 결제창 값(`checkout.attributes` · `billingAuth.attributes`) - 서버가 Paddle 에 미리 만든 **거래 id** 가 전부다. 가격 · 수량 · 우리 줄 id 는 거래에 서버가 넣었다 */
+export type PaddleAttributes = { environment?: string; transactionId?: string }
 
 export type OpenPaddleInput = {
   clientToken: string | null
   attributes: PaddleAttributes
-  /** 결제가 끝나면 Paddle 이 보낼 주소 — 프론트가 정한다. 결제 결과는 웹훅으로 서버에 닿으므로 이 주소의 화면은 서버를 되묻는다 */
+  /** 결제가 끝나면 Paddle 이 보낼 주소 - 프론트가 정한다. 결제 결과는 웹훅으로 서버에 닿으므로 이 주소의 화면은 서버를 되묻는다 */
   successUrl: string
   locale?: string
   loadSdk?: () => Promise<PaddleSdk>
 }
 
-function customDataOf(text: string | undefined): Record<string, string> {
-  if (!text) return {}
-  const parsed: unknown = JSON.parse(text)
-  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed))
-    throw new Error('The Paddle custom data is not an object')
-  return Object.fromEntries(Object.entries(parsed).map(([key, value]) => [key, String(value)]))
-}
-
 /**
- * Paddle 결제창(오버레이)을 연다 — 가격 id 와 우리가 심을 `customData`(계정 · 주문/구독 id)는 서버가 정해 준 값 그대로다. 약속은 창이 **열리면** 끝난다(결제 완료는 알리지 않는다 —
- * 서버가 웹훅으로 안다). 클라이언트 토큰이나 가격 id 가 없으면 스크립트를 부르기 전에 던진다.
+ * Paddle 결제창(오버레이)을 연다 - **서버가 만든 거래 id 만** 넘긴다(가격 · customData 를 브라우저가 정하지 않는다). 약속은 창이 **열리면** 끝난다(완료는 알리지 않는다 - 서버가 웹훅으로 안다).
+ * 클라이언트 토큰이나 거래 id 가 없으면 스크립트를 부르기 전에 던진다.
  */
 export async function openPaddleCheckout({
   clientToken,
@@ -110,14 +101,12 @@ export async function openPaddleCheckout({
   loadSdk = loadPaddleSdk,
 }: OpenPaddleInput): Promise<void> {
   if (!clientToken) throw new Error('The checkout has no client token')
-  if (!attributes.priceId) throw new Error('The checkout has no Paddle price')
-  const customData = customDataOf(attributes.customData)
+  if (!attributes.transactionId) throw new Error('The checkout has no Paddle transaction')
   const Paddle = await loadSdk()
   if (attributes.environment === 'sandbox') Paddle.Environment.set('sandbox')
   Paddle.Initialize({ token: clientToken })
   Paddle.Checkout.open({
-    items: [{ priceId: attributes.priceId, quantity: 1 }],
-    customData,
+    transactionId: attributes.transactionId,
     settings: { displayMode: 'overlay', successUrl, ...(locale ? { locale } : {}) },
   })
 }

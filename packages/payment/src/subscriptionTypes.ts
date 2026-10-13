@@ -71,7 +71,7 @@ export type PaddleBillingAuth = {
   clientKey: string | null
   testMode: boolean
   customerKey: string
-  attributes: { environment?: string; priceId?: string; customData?: string }
+  attributes: { environment?: string; transactionId?: string }
 }
 export type BillingAuth = TossBillingAuth | PaddleBillingAuth
 

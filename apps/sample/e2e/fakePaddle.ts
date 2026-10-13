@@ -7,9 +7,10 @@ import type { BrowserContext } from 'playwright'
  * 토스와 다르게 **이 서버가 백엔드를 부른다**: Paddle 은 결과를 서명한 웹훅(`Paddle-Signature: ts=…;h1=HMAC-SHA256(secret, "ts:원문")`)으로 보낸다 — 이 서버가 그것을 만들어
  * `POST <백엔드>/api/v1/payments/webhooks/paddle` 로 쏜다(백엔드 주소는 기동 뒤 `setBackend` 로 준다). 본문 모양은 Paddle Billing 문서 그대로(`event_id` · `event_type` · `occurred_at` · `data`).
  *
- * Paddle API(백엔드가 부른다): POST /subscriptions/{id}/cancel {effective_from} — Bearer 키가 틀리면 403. `next_billing_period` 면 해지 예약(`scheduled_change`)을 걸고 `subscription.updated` 를 쏜다.
+ * Paddle API(백엔드가 부른다): POST /transactions {items:[{price_id,quantity}], custom_data} - 서버가 거래를 먼저 만든다(Bearer 키가 틀리면 403) → {data:{id:'txn_…'}}.
+ *   POST /subscriptions/{id}/cancel {effective_from} — Bearer 키가 틀리면 403. `next_billing_period` 면 해지 예약(`scheduled_change`)을 걸고 `subscription.updated` 를 쏜다.
  * 결제창(Paddle.js)은 이 서버에 없다 — 시험이 스크립트(`https://cdn.paddle.com/paddle/v2/paddle.js`)를 가로채 `fakePaddleSdkScript` 로 바꾼다(`routePaddleSdk`).
- * 그 대역은 `Checkout.open` 에서 이 서버의 `POST /sdk/checkout` 을 부르고(가격 id · customData) 곧장 successUrl 로 돌려보낸다. 이 서버는 그때 결제 + 구독을 만들어 웹훅 셋을 쏜다.
+ * 그 대역은 `Checkout.open({ transactionId })` 에서 이 서버의 `POST /sdk/checkout` 을 부르고(거래 id 만) 곧장 successUrl 로 돌려보낸다. 이 서버는 그때 미리 만들어진 거래(가격 · customData 는 백엔드가 정한 것)를 결제하고 구독을 만들어 웹훅 셋을 쏜다.
  *
  * 제어 `POST /control`:
  *   { renew: <결제사 구독 id> }      기간이 끝나 Paddle 이 다음 결제를 했다 — `transaction.completed`(subscription_recurring) + `subscription.updated`(새 기간)
@@ -53,7 +54,8 @@ type Sub = {
 }
 export type FakePaddleCall = { method: string; path: string; authorized: boolean; body: unknown }
 export type SentWebhook = { eventId: string; eventType: string; status: number }
-export type FakePaddleState = { subscriptions: Sub[]; calls: FakePaddleCall[]; sent: SentWebhook[] }
+export type FakePaddleTransaction = { id: string; items: Array<{ price_id: string; quantity: number }>; custom_data: Record<string, string> }
+export type FakePaddleState = { subscriptions: Sub[]; calls: FakePaddleCall[]; sent: SentWebhook[]; transactions: FakePaddleTransaction[] }
 export type FakePaddle = {
   url: string
   /** 백엔드 주소(`http://localhost:<포트>`) — 웹훅을 이 주소로 쏜다 */
@@ -70,6 +72,7 @@ export async function startFakePaddle(): Promise<FakePaddle> {
   let calls: FakePaddleCall[] = []
   let sent: SentWebhook[] = []
   const bodies = new Map<string, string>() // event_id → 쏜 원문(재전송용)
+  const transactions = new Map<string, FakePaddleTransaction>() // 백엔드가 만든 거래
   const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type' }
 
   async function fire(eventType: string, data: unknown, occurredAt = new Date(), eventId = `evt_${randomUUID().replaceAll('-', '')}`) {
@@ -107,16 +110,15 @@ export async function startFakePaddle(): Promise<FakePaddle> {
     current_billing_period: { starts_at: s.periodStart, ends_at: s.periodEnd },
   })
 
-  function transactionEntity(s: Sub | null, customData: Record<string, string>, currency: string, amount: number, origin: string, priceId: string) {
+  function transactionEntity(s: Sub | null, customData: Record<string, string>, currency: string, amount: number, origin: string, transactionId?: string) {
     const at = iso(new Date())
     return {
-      id: `txn_${randomUUID().replaceAll('-', '').slice(0, 26)}`,
+      id: transactionId ?? `txn_${randomUUID().replaceAll('-', '').slice(0, 26)}`,
       status: 'completed',
       currency_code: currency,
       origin,
       ...(s ? { subscription_id: s.id } : {}),
       custom_data: customData,
-      items: [{ price: { id: priceId }, quantity: 1 }],
       billed_at: at,
       billing_period: s ? { starts_at: s.periodStart, ends_at: s.periodEnd } : null,
       details: { totals: { subtotal: String(amount), tax: '0', total: String(amount), currency_code: currency } },
@@ -124,15 +126,16 @@ export async function startFakePaddle(): Promise<FakePaddle> {
     }
   }
 
-  /** 결제창 대역이 부른다 — 결제를 만들고 웹훅을 쏜다(구독 가격이면 구독도) */
+  /** 결제창 대역이 부른다 - 백엔드가 미리 만든 거래를 결제하고 웹훅을 쏜다(구독 가격이면 구독도). 모르는 거래면 거절 */
   async function checkout(res: ServerResponse, body: Record<string, unknown> | null) {
-    const items = (body?.items as Array<{ priceId?: string }> | undefined) ?? []
-    const price = Object.values(FAKE_PADDLE.prices).find((p) => p.id === items[0]?.priceId)
-    if (!price || body?.token !== FAKE_PADDLE.clientToken) return send(res, 400, { error: 'unknown price or token' }, cors)
-    const customData = (body.customData as Record<string, string> | undefined) ?? {}
+    const txn = transactions.get(String(body?.transactionId ?? ''))
+    if (!txn || body?.token !== FAKE_PADDLE.clientToken) return send(res, 400, { error: 'unknown transaction or token' }, cors)
+    const price = Object.values(FAKE_PADDLE.prices).find((p) => p.id === txn.items[0]?.price_id)
+    if (!price) return send(res, 400, { error: 'unknown price' }, cors)
+    const customData = txn.custom_data
     const currency = 'USD'
     if (!price.recurring) {
-      await fire('transaction.completed', transactionEntity(null, customData, currency, price.amount, 'web', price.id))
+      await fire('transaction.completed', transactionEntity(null, customData, currency, price.amount, 'web', txn.id))
       return send(res, 200, { ok: true }, cors)
     }
     const now = new Date()
@@ -150,7 +153,7 @@ export async function startFakePaddle(): Promise<FakePaddle> {
     }
     subs.set(sub.id, sub)
     // Paddle 은 결제를 먼저 알리고 구독을 만든다
-    await fire('transaction.completed', transactionEntity(sub, customData, currency, price.amount, 'web', price.id))
+    await fire('transaction.completed', transactionEntity(sub, customData, currency, price.amount, 'web', txn.id))
     await fire('subscription.created', subscriptionEntity(sub))
     await fire('subscription.activated', subscriptionEntity(sub))
     return send(res, 200, { ok: true, subscriptionId: sub.id }, cors)
@@ -162,6 +165,7 @@ export async function startFakePaddle(): Promise<FakePaddle> {
       calls = []
       sent = []
       bodies.clear()
+      transactions.clear()
     }
     if (typeof patch.renew === 'string') {
       const s = subs.get(patch.renew)
@@ -170,7 +174,7 @@ export async function startFakePaddle(): Promise<FakePaddle> {
       s.periodStart = iso(start)
       s.periodEnd = iso(new Date(start.getTime() + PERIOD_MS))
       s.txnCount += 1
-      await fire('transaction.completed', transactionEntity(s, s.customData, s.currency, s.amount, 'subscription_recurring', s.priceId))
+      await fire('transaction.completed', transactionEntity(s, s.customData, s.currency, s.amount, 'subscription_recurring'))
       await fire('subscription.updated', subscriptionEntity(s))
     }
     if (typeof patch.endPeriod === 'string') {
@@ -190,7 +194,7 @@ export async function startFakePaddle(): Promise<FakePaddle> {
       if (!s) return send(res, 404, { error: 'no such subscription' })
       await fire('subscription.updated', subscriptionEntity({ ...s, status: 'active', scheduledCancel: false }), new Date(Date.now() - 60 * 60_000))
     }
-    return send(res, 200, { subscriptions: [...subs.values()], calls, sent } satisfies FakePaddleState)
+    return send(res, 200, { subscriptions: [...subs.values()], calls, sent, transactions: [...transactions.values()] } satisfies FakePaddleState)
   }
 
   const server: Server = createServer((req, res) => {
@@ -207,6 +211,19 @@ export async function startFakePaddle(): Promise<FakePaddle> {
     const body = text ? (JSON.parse(text) as Record<string, unknown>) : null
     if (path === '/control') return req.method === 'GET' ? control(res, {}) : control(res, body ?? {})
     if (path === '/sdk/checkout' && req.method === 'POST') return checkout(res, body)
+
+    if (path === '/transactions' && req.method === 'POST') {
+      const authorized = req.headers.authorization === `Bearer ${FAKE_PADDLE.apiKey}`
+      calls.push({ method: req.method, path, authorized, body })
+      if (!authorized) return send(res, 403, { error: { code: 'forbidden' } })
+      const txn: FakePaddleTransaction = {
+        id: `txn_${randomUUID().replaceAll('-', '').slice(0, 26)}`,
+        items: (body?.items as FakePaddleTransaction['items'] | undefined) ?? [],
+        custom_data: (body?.custom_data as Record<string, string> | undefined) ?? {},
+      }
+      transactions.set(txn.id, txn)
+      return send(res, 200, { data: { id: txn.id, status: 'draft', ...txn } })
+    }
 
     const cancel = /^\/subscriptions\/([^/]+)\/cancel$/.exec(path)
     if (cancel && req.method === 'POST') {
@@ -274,7 +291,7 @@ export function fakePaddleSdkScript(fakeUrl: string): string {
         var response = await fetch(FAKE + '/sdk/checkout', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token: token, items: options.items, customData: options.customData })
+          body: JSON.stringify({ token: token, transactionId: options.transactionId })
         });
         if (!response.ok) return;
         location.assign(options.settings.successUrl);

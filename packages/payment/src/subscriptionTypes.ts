@@ -39,6 +39,10 @@ export type Subscription = {
   createdAt: string
   /** 구매자 나라(ISO-3166 두 글자) - 해지·환불 정책을 고른 열쇠. 모르면 `null` */
   country: string | null
+  /** 어느 결제사의 구독인가(`toss` · `paddle` …) - 구버전 서버는 칸이 없다 */
+  provider?: string
+  /** 결제사가 갱신을 직접 하는 구독(Paddle) - 플랜 변경 · 중도 해지(환불)는 열리지 않고 해지는 기간 끝에만 된다 */
+  providerManaged?: boolean
 }
 
 export type SubscriptionPlan = {
@@ -60,7 +64,16 @@ export type TossBillingAuth = {
   customerKey: string
   attributes: Record<string, string>
 }
-export type BillingAuth = TossBillingAuth
+/** Paddle - 카드 등록이 따로 없다. 결제창(오버레이)에서 첫 결제까지 하고, 구독은 웹훅으로 `ACTIVE` 가 된다 */
+export type PaddleBillingAuth = {
+  provider: string
+  kind: 'PADDLE_CHECKOUT'
+  clientKey: string | null
+  testMode: boolean
+  customerKey: string
+  attributes: { environment?: string; priceId?: string; customData?: string }
+}
+export type BillingAuth = TossBillingAuth | PaddleBillingAuth
 
 /** `billingAuth` 는 같은 키로 다시 보냈는데 카드를 이미 냈으면 `null` 이다(`200`) */
 export type StartSubscriptionResult = {
@@ -69,7 +82,7 @@ export type StartSubscriptionResult = {
 }
 
 /** `country` 는 구매자 나라(ISO-3166 두 글자) - 해지·환불 정책이 이 나라를 따른다. 생략하면 서버의 기본 나라 */
-export type StartSubscriptionInput = { planCode: string; country?: string }
+export type StartSubscriptionInput = { planCode: string; country?: string; provider?: string }
 
 /** 카드 등록 창에서 돌아온 `authKey` 로 빌링키를 만들고 첫 결제를 한다 */
 export type ActivateSubscriptionInput = { providerPayload: { authKey: string } }

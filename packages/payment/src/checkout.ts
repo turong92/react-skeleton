@@ -1,4 +1,5 @@
 import type { Checkout } from './ledgerTypes'
+import { openPaddleCheckout, type PaddleSdk } from './paddle'
 
 export type { Checkout } from './ledgerTypes'
 
@@ -102,6 +103,10 @@ export type OpenCheckoutOptions = {
   failUrl: string
   /** SDK 를 불러오는 함수 — 시험 · 스토리에서 가짜로 바꾼다 */
   loadSdk?: () => Promise<TossPaymentsFactory>
+  /** Paddle.js 를 불러오는 함수 — 시험 · 스토리에서 가짜로 바꾼다 */
+  loadPaddle?: () => Promise<PaddleSdk>
+  /** Paddle 결제창 언어 */
+  locale?: string
 }
 
 /**
@@ -111,7 +116,7 @@ export type OpenCheckoutOptions = {
  */
 export async function openCheckout(
   checkout: Checkout,
-  { successUrl, failUrl, loadSdk = loadTossPaymentsSdk }: OpenCheckoutOptions,
+  { successUrl, failUrl, loadSdk = loadTossPaymentsSdk, loadPaddle, locale }: OpenCheckoutOptions,
 ): Promise<void> {
   switch (checkout.kind) {
     case 'TOSS_PAYMENT_WINDOW': {
@@ -130,6 +135,15 @@ export async function openCheckout(
         })
       return
     }
+    case 'PADDLE_CHECKOUT':
+      // Paddle 은 실패 주소가 없다 - 창을 닫으면 아무 일도 일어나지 않고, 열린 주문은 서버의 만료 작업이 닫는다
+      return openPaddleCheckout({
+        clientToken: checkout.clientKey,
+        attributes: checkout.attributes,
+        successUrl,
+        ...(locale ? { locale } : {}),
+        ...(loadPaddle ? { loadSdk: loadPaddle } : {}),
+      })
     default:
       throw new Error(`Unknown checkout kind: ${String((checkout as { kind: unknown }).kind)}`)
   }

@@ -158,3 +158,12 @@ describe('claimActivation — one activate per authKey while this page lives (St
     expect(claimActivation('sub_2', 'bk_once')).toBe(true)
   })
 })
+
+describe('paddle (the first payment comes by webhook)', () => {
+  it('comes back with the subscription id and the page only watches the subscription', () => {
+    expect(subscribeReturnUrls('https://app.example', 'sub_1', 'paddle').successUrl).toBe(
+      'https://app.example/subscriptions/return?sub=sub_1&provider=paddle',
+    )
+    expect(returnPlanOf('?sub=sub_1&provider=paddle')).toEqual({ kind: 'watch', id: 'sub_1' })
+  })
+})

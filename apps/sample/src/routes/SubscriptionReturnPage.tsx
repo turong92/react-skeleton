@@ -57,6 +57,33 @@ function ActivateFlow({ plan }: { plan: Extract<ReturnPlan, { kind: 'activate' }
   )
 }
 
+/**
+ * Paddle 결제창이 돌려보내는 곳. 카드 등록 · 첫 승인 호출이 없다 - 첫 결제는 웹훅으로 서버에 닿아 구독이 `ACTIVE` 가 되므로 「내 구독」을 되묻기만 한다
+ * (시작만 한 구독은 `me` 에 보이지 않다가 웹훅 뒤에 나타난다).
+ */
+function WatchFlow({ id }: { id: string }) {
+  const { t, locale } = useT()
+  const language = languageOf(locale)
+  const labels = subscriptionLabelsFor(t, language)
+  const navigate = useNavigate()
+  const config = usePaymentConfig(paymentApi)
+  const me = useMySubscription(subscriptionApi, { untilActive: true })
+  const shown = shownSubscriptionOf(id, { read: me.data?.subscription })
+  const order = shown
+    ? subscriptionAsOrder(shown, planNameOf(t, { code: shown.planCode, name: shown.planName }))
+    : undefined
+  return (
+    <PaymentResult
+      order={order}
+      testMode={config.data?.testMode}
+      locale={language}
+      labels={labels}
+      onViewHistory={() => void navigate('/subscription')}
+      onRetry={() => void navigate('/subscribe')}
+    />
+  )
+}
+
 export function SubscriptionReturnPage() {
   const { t, locale } = useT()
   const navigate = useNavigate()
@@ -105,7 +132,7 @@ export function SubscriptionReturnPage() {
   return (
     <div className={styles.page}>
       {header}
-      <ActivateFlow plan={plan} />
+      {plan.kind === 'watch' ? <WatchFlow id={plan.id} /> : <ActivateFlow plan={plan} />}
     </div>
   )
 }

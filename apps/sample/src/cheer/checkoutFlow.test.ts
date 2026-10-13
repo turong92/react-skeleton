@@ -351,3 +351,18 @@ describe('orderFailureOf — what a refused order says (and whether pressing aga
     })
   })
 })
+
+describe('paddle (the result comes by webhook)', () => {
+  it('sends the chosen provider with the order', async () => {
+    const f = fakes()
+    await startCheer(f.deps, 'cheer-3000', undefined, { provider: 'paddle' })
+    expect(f.creates).toEqual([{ itemType: 'cheer', itemRef: 'cheer-3000', provider: 'paddle' }])
+  })
+
+  it('comes back to the same page with the order id, and the page only watches the order', () => {
+    const urls = checkoutReturnUrls('https://app.example', 'ord_1', 'paddle')
+    expect(urls.successUrl).toBe('https://app.example/payments/return?provider=paddle&order=ord_1')
+    expect(returnPlanOf('?provider=paddle&order=ord_1')).toEqual({ kind: 'watch', orderId: 'ord_1' })
+    expect(returnPlanOf('?provider=paddle')).toEqual({ kind: 'invalid' })
+  })
+})

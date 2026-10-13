@@ -90,7 +90,7 @@ export function SubscriptionPage() {
           planName: planNameOf(t, { code: subscription.planCode, name: subscription.planName }),
         }}
         orders={orders}
-        {...(upgrades.length > 0 && subscription.status === 'ACTIVE'
+        {...(upgrades.length > 0 && subscription.status === 'ACTIVE' && !subscription.providerManaged
           ? {
               onChangePlan: () => {
                 change.reset() // 묵은 오류가 새로 연 창에 보이지 않게
@@ -102,7 +102,7 @@ export function SubscriptionPage() {
           cancel.reset() // 묵은 오류가 새로 연 창에 보이지 않게
           setConfirming(true)
         }}
-        {...(cancelPreview.data?.open
+        {...(cancelPreview.data?.open && !subscription.providerManaged
           ? {
               onCancelNow: () => {
                 cancelNow.reset()

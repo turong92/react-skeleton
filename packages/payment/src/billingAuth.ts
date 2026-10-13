@@ -1,4 +1,5 @@
 import { loadTossPaymentsSdk, type TossPaymentsFactory } from './checkout'
+import { openPaddleCheckout, type PaddleSdk } from './paddle'
 import type { BillingAuth } from './subscriptionTypes'
 
 export type OpenBillingAuthOptions = {
@@ -7,6 +8,9 @@ export type OpenBillingAuthOptions = {
   failUrl: string
   /** SDK 를 불러오는 함수 — 시험 · 스토리에서 가짜로 바꾼다 */
   loadSdk?: () => Promise<TossPaymentsFactory>
+  /** Paddle.js 를 불러오는 함수 — 시험 · 스토리에서 가짜로 바꾼다 */
+  loadPaddle?: () => Promise<PaddleSdk>
+  locale?: string
 }
 
 /**
@@ -15,7 +19,7 @@ export type OpenBillingAuthOptions = {
  */
 export async function openBillingAuth(
   billingAuth: BillingAuth,
-  { successUrl, failUrl, loadSdk = loadTossPaymentsSdk }: OpenBillingAuthOptions,
+  { successUrl, failUrl, loadSdk = loadTossPaymentsSdk, loadPaddle, locale }: OpenBillingAuthOptions,
 ): Promise<void> {
   switch (billingAuth.kind) {
     case 'TOSS_BILLING_AUTH': {
@@ -26,6 +30,15 @@ export async function openBillingAuth(
         .requestBillingAuth({ method: 'CARD', successUrl, failUrl })
       return
     }
+    case 'PADDLE_CHECKOUT':
+      // Paddle 은 카드 등록이 따로 없다 - 결제창에서 첫 결제까지 하고 구독은 웹훅으로 켜진다. 실패 주소도 없다
+      return openPaddleCheckout({
+        clientToken: billingAuth.clientKey,
+        attributes: billingAuth.attributes,
+        successUrl,
+        ...(locale ? { locale } : {}),
+        ...(loadPaddle ? { loadSdk: loadPaddle } : {}),
+      })
     default:
       throw new Error(
         `Unknown billing auth kind: ${String((billingAuth as { kind: unknown }).kind)}`,

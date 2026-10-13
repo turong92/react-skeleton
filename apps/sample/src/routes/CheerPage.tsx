@@ -20,8 +20,11 @@ import { formatInstant } from '@skeleton/time'
 import { useEffect, useId, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { paymentApi } from '../cheer/api'
+import { useChosenProvider } from '../payment/useProvider'
+import { countryForLocale } from '../subscription/country'
 import {
   checkoutReturnUrls,
+  nowMs,
   orderFailureOf,
   reusableOrderOf,
   startCheer,
@@ -55,6 +58,8 @@ export function CheerPage() {
   const labels = paymentLabelsFor(t, language)
   const options = useCheerOptions()
   const config = usePaymentConfig(paymentApi)
+  // 한국이면 토스, 아니면 Paddle(설정으로 모두 한쪽으로 돌릴 수 있다) - 서버가 켜진 결제사를 알려 준 때만
+  const provider = useChosenProvider(countryForLocale(language))
   // 주문 만들기의 429 는 이 화면이 제자리에서(띠 · 단추 옆) 말한다 - 전역 토스트로 한 번 더 뜨지 않게 이 호출만 조용히 한다
   const createOrder = useCreateOrder(paymentApi, { meta: { quietStatuses: [429] } })
   const abandon = useAbandonOrder(paymentApi)
@@ -114,14 +119,15 @@ export function CheerPage() {
     const result = await startCheer(
       {
         createOrder: createOrder.mutateAsync,
-        openCheckout,
+        openCheckout: (checkout, urls) => openCheckout(checkout, { ...urls, locale: language }),
         abandonOrder: abandon.mutateAsync,
-        urlsFor: (orderId) => checkoutReturnUrls(window.location.origin, orderId),
+        urlsFor: (orderId, chosen) => checkoutReturnUrls(window.location.origin, orderId, chosen),
       },
       selected,
-      reusableOrderOf(unopened, selected, Date.now()),
+      reusableOrderOf(unopened, selected, nowMs()),
+      { provider },
     )
-    setUnopened(unopenedAfter(result, selected, Date.now(), unopened))
+    setUnopened(unopenedAfter(result, selected, nowMs(), unopened))
     if (result.kind === 'opened') return // 결제창이 이 화면을 떠나게 한다 — 돌아오면 `pageshow` 가 풀어 준다
     setBusy(false)
     if (result.kind === 'settled') {
@@ -135,7 +141,7 @@ export function CheerPage() {
     else if (result.kind === 'window-failed')
       setNotice({ kind: 'windowFailed', error: result.error })
     else {
-      const failure = orderFailureOf(result.error, Date.now())
+      const failure = orderFailureOf(result.error, nowMs())
       if (failure.kind === 'rateLimited')
         setNotice({ kind: 'rateLimited', until: failure.until, error: result.error })
       else if (failure.kind === 'unavailable')

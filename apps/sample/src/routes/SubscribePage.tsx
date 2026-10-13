@@ -15,6 +15,7 @@ import { LinkButton } from '../components/LinkButton'
 import { LoadError } from '../components/LoadError'
 import { languageOf, useT, type MessageKey } from '../i18n'
 import { subscriptionApi } from '../subscription/api'
+import { chooseProvider, FORCED_PROVIDER } from '../payment/provider'
 import { countryForLocale, countryName, countryOptions } from '../subscription/country'
 import { subscriptionLabelsFor } from '../subscription/labels'
 import { planNameOf } from '../subscription/planName'
@@ -71,19 +72,28 @@ export function SubscribePage() {
   if (plans.data === undefined)
     return <LoadError error={plans.error} onRetry={() => void plans.refetch()} />
 
+  // 한국이면 토스(카드 등록), 아니면 Paddle(결제창 한 번 - 갱신은 Paddle 이 한다). 설정으로 모두 한쪽으로 돌릴 수 있다
+  const provider = chooseProvider({ providers: config.data?.providers, country, forced: FORCED_PROVIDER })
+
   async function subscribe(plan: SubscriptionPlan) {
     if (busyPlan !== null) return
     setBusyPlan(plan.code)
     setNotice(null)
     const result = await startSubscribe(
       {
-        start: (planCode, buyerCountry) =>
-          start.mutateAsync(buyerCountry ? { planCode, country: buyerCountry } : { planCode }),
-        openBillingAuth,
-        urlsFor: (id) => subscribeReturnUrls(window.location.origin, id),
+        start: (planCode, buyerCountry, chosen) =>
+          start.mutateAsync({
+            planCode,
+            ...(buyerCountry ? { country: buyerCountry } : {}),
+            ...(chosen ? { provider: chosen } : {}),
+          }),
+        openBillingAuth: (billingAuth, urls) =>
+          openBillingAuth(billingAuth, { ...urls, locale: language }),
+        urlsFor: (id, chosen) => subscribeReturnUrls(window.location.origin, id, chosen),
       },
       plan.code,
       country,
+      provider,
     )
     if (result.kind === 'opened') return // 카드 창이 이 화면을 떠나게 한다 — 돌아오면 `pageshow` 가 풀어 준다
     setBusyPlan(null)

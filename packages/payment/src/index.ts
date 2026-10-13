@@ -32,11 +32,14 @@ export type {
   RefundRequestInput,
   RefundRequestReason,
   RefundStatus,
+  PaddleCheckout,
   TossPaymentWindowCheckout,
 } from './ledgerTypes'
 export { CONFIRM_TIMEOUT_MS, createPaymentLedgerApi } from './ledgerApi'
 export type { PaymentLedgerApi, PaymentLedgerApiOptions } from './ledgerApi'
 export { openCheckout, loadTossPaymentsSdk, SDK_LOAD_TIMEOUT_MS, TOSS_SDK_URL } from './checkout'
+export { openPaddleCheckout, loadPaddleSdk, PADDLE_SDK_URL, PADDLE_LOAD_TIMEOUT_MS } from './paddle'
+export type { LoadPaddleSdkEnv, OpenPaddleInput, PaddleAttributes, PaddleSdk } from './paddle'
 export type { LoadTossPaymentsSdkEnv, OpenCheckoutOptions, TossPaymentsFactory } from './checkout'
 export { readCheckoutReturn } from './checkoutReturn'
 export type { CheckoutReturn } from './checkoutReturn'
@@ -91,6 +94,7 @@ export type {
   SubscriptionEndReason,
   SubscriptionPlan,
   SubscriptionStatus,
+  PaddleBillingAuth,
   TossBillingAuth,
 } from './subscriptionTypes'
 export { createSubscriptionApi } from './subscriptionApi'

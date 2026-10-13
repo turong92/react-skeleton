@@ -12,6 +12,9 @@ import {
 } from '@skeleton/payment'
 import { CHEER_ITEM_TYPE } from './types'
 
+/** 지금 시각(ms) - 이벤트 처리기가 렌더 순수성 검사에 걸리지 않게 한 겹 감싼 시계 */
+export const nowMs = (): number => Date.now()
+
 /** 우리가 실패 주소에 직접 싣는 주문 id 의 이름 — 결제창은 그만둠(`PAY_PROCESS_CANCELED`)에 `orderId` 를 싣지 않을 수 있다 */
 export const RETURN_ORDER_PARAM = 'order'
 
@@ -22,8 +25,14 @@ export const RETURN_ORDER_PARAM = 'order'
 export function checkoutReturnUrls(
   origin: string,
   orderId: string,
+  provider?: string,
 ): Pick<OpenCheckoutOptions, 'successUrl' | 'failUrl'> {
   const back = `${origin.replace(/\/+$/, '')}/payments/return`
+  // Paddle 은 실패 주소가 없고 결과가 웹훅으로 서버에 닿는다 - 돌아온 화면은 우리 주문 id 로 서버를 되묻기만 한다
+  if (provider === 'paddle') {
+    const watch = `${back}?provider=paddle&${RETURN_ORDER_PARAM}=${encodeURIComponent(orderId)}`
+    return { successUrl: watch, failUrl: watch }
+  }
   return {
     successUrl: back,
     failUrl: `${back}?${RETURN_ORDER_PARAM}=${encodeURIComponent(orderId)}`,
@@ -38,7 +47,10 @@ export type StartCheerDeps = {
   ) => Promise<void>
   abandonOrder: (orderId: string) => Promise<unknown>
   /** 이 주문의 결제창이 돌려보낼 주소 */
-  urlsFor: (orderId: string) => Pick<OpenCheckoutOptions, 'successUrl' | 'failUrl'>
+  urlsFor: (
+    orderId: string,
+    provider?: string,
+  ) => Pick<OpenCheckoutOptions, 'successUrl' | 'failUrl'>
 }
 
 /**
@@ -80,12 +92,17 @@ export async function startCheer(
   deps: StartCheerDeps,
   itemRef: string,
   reuse?: CreateOrderResult,
+  { provider }: { provider?: string | undefined } = {},
 ): Promise<StartCheerResult> {
   let created: CreateOrderResult
   if (reuse) created = reuse
   else
     try {
-      created = await deps.createOrder({ itemType: CHEER_ITEM_TYPE, itemRef })
+      created = await deps.createOrder({
+        itemType: CHEER_ITEM_TYPE,
+        itemRef,
+        ...(provider ? { provider } : {}),
+      })
     } catch (error) {
       return { kind: 'order-failed', error }
     }
@@ -102,7 +119,7 @@ export async function startCheer(
     return { kind: 'unavailable' }
   }
   try {
-    await deps.openCheckout(checkout, deps.urlsFor(created.order.id))
+    await deps.openCheckout(checkout, deps.urlsFor(created.order.id, provider))
     return { kind: 'opened' }
   } catch (error) {
     const code = codeOf(error)
@@ -151,9 +168,16 @@ export type ReturnPlan =
   | { kind: 'confirm'; orderId: string; providerPaymentId: string; amount: number }
   /** 결제창이 실패 주소로 돌려보냈다. `canceled` 는 사람이 창을 닫은 경우 */
   | { kind: 'left'; orderId: string | null; canceled: boolean }
+  /** Paddle - 승인 호출이 없다. 웹훅이 주문을 `PAID` 로 옮기므로 서버를 되묻기만 한다 */
+  | { kind: 'watch'; orderId: string }
   | { kind: 'invalid' }
 
 export function returnPlanOf(search: string): ReturnPlan {
+  const params = new URLSearchParams(search)
+  if (params.get('provider') === 'paddle') {
+    const orderId = params.get(RETURN_ORDER_PARAM)
+    return orderId ? { kind: 'watch', orderId } : { kind: 'invalid' }
+  }
   try {
     const read = readCheckoutReturn(search)
     if (read.ok)

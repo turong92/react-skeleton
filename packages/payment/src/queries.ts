@@ -13,7 +13,7 @@ import type {
   RefundRequestInput,
   RefundStatus,
 } from './ledgerTypes'
-import { ORDER_POLL_MAX_DURATION_MS, pollIntervalOf, type PollQuery } from './orderPolling'
+import { ORDER_POLL_MAX_DURATION_MS, pollIntervalOf, pollWhile, type PollQuery } from './orderPolling'
 
 export {
   ORDER_POLL_MAX_DURATION_MS,
@@ -45,17 +45,22 @@ export function paymentConfigQuery(api: PaymentLedgerApi) {
 export type OrderQueryOptions = {
   /** `CONFIRMING` 을 되묻는 총 시간 상한(기본 {@link ORDER_POLL_MAX_DURATION_MS}) */
   maxPollMs?: number
+  /** Paddle 처럼 결제 결과가 웹훅으로 닿는 결제사의 돌아온 화면 — `PENDING` 도 `PAID` 가 될 때까지 되묻는다 */
+  untilPaid?: boolean
 }
 
 export function orderQuery(
   api: PaymentLedgerApi,
   id: string,
-  { maxPollMs = ORDER_POLL_MAX_DURATION_MS }: OrderQueryOptions = {},
+  { maxPollMs = ORDER_POLL_MAX_DURATION_MS, untilPaid = false }: OrderQueryOptions = {},
 ) {
   return {
     queryKey: paymentKeys.order(id),
     queryFn: () => api.getOrder(id),
-    refetchInterval: (query: PollQuery) => pollIntervalOf(query, maxPollMs),
+    refetchInterval: (query: PollQuery) =>
+      untilPaid
+        ? pollWhile(query, (data) => data?.order.status === 'PENDING' || data?.order.status === 'CONFIRMING', maxPollMs)
+        : pollIntervalOf(query, maxPollMs),
   }
 }
 

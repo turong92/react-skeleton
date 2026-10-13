@@ -12,19 +12,25 @@ import {
 export function subscribeReturnUrls(
   origin: string,
   subscriptionId: string,
+  provider?: string,
 ): Pick<OpenBillingAuthOptions, 'successUrl' | 'failUrl'> {
   // 카드 창은 성공 주소에 `authKey` · `customerKey` 만 덧붙인다 - 어느 구독인지는 우리가 주소에 싣는다
   const back = `${origin.replace(/\/+$/, '')}/subscriptions/return?sub=${encodeURIComponent(subscriptionId)}`
-  return { successUrl: back, failUrl: back }
+  // Paddle 은 카드 창이 따로 없고 첫 결제가 웹훅으로 닿는다 - 돌아온 화면은 서버를 되묻기만 한다
+  const returnTo = provider === 'paddle' ? `${back}&provider=paddle` : back
+  return { successUrl: returnTo, failUrl: returnTo }
 }
 
 export type StartSubscribeDeps = {
-  start: (planCode: string, country?: string) => Promise<StartSubscriptionResult>
+  start: (planCode: string, country?: string, provider?: string) => Promise<StartSubscriptionResult>
   openBillingAuth: (
     billingAuth: BillingAuth,
     urls: Pick<OpenBillingAuthOptions, 'successUrl' | 'failUrl'>,
   ) => Promise<void>
-  urlsFor: (subscriptionId: string) => Pick<OpenBillingAuthOptions, 'successUrl' | 'failUrl'>
+  urlsFor: (
+    subscriptionId: string,
+    provider?: string,
+  ) => Pick<OpenBillingAuthOptions, 'successUrl' | 'failUrl'>
 }
 
 /**
@@ -53,16 +59,17 @@ export async function startSubscribe(
   deps: StartSubscribeDeps,
   planCode: string,
   country?: string,
+  provider?: string,
 ): Promise<StartSubscribeResult> {
   let started: StartSubscriptionResult
   try {
-    started = await deps.start(planCode, country)
+    started = provider === undefined ? await deps.start(planCode, country) : await deps.start(planCode, country, provider)
   } catch (error) {
     return { kind: 'start-failed', error }
   }
   if (started.billingAuth === null) return { kind: 'settled' }
   try {
-    await deps.openBillingAuth(started.billingAuth, deps.urlsFor(started.subscription.id))
+    await deps.openBillingAuth(started.billingAuth, deps.urlsFor(started.subscription.id, provider))
     return { kind: 'opened' }
   } catch (error) {
     const code = codeOf(error)
@@ -86,9 +93,16 @@ export type ReturnPlan =
   | { kind: 'activate'; id: string; authKey: string }
   /** 창이 실패 주소로 돌려보냈다. `canceled` 는 사람이 창을 닫은 경우 */
   | { kind: 'left'; canceled: boolean }
+  /** Paddle - 첫 결제는 웹훅이 구독을 `ACTIVE` 로 올린다. 서버를 되묻기만 한다 */
+  | { kind: 'watch'; id: string }
   | { kind: 'invalid' }
 
 export function returnPlanOf(search: string): ReturnPlan {
+  const params = new URLSearchParams(search)
+  if (params.get('provider') === 'paddle') {
+    const id = params.get('sub')
+    return id ? { kind: 'watch', id } : { kind: 'invalid' }
+  }
   try {
     const read = readBillingReturn(search)
     if (!read.ok) return { kind: 'left', canceled: CLOSED_CODES.has(read.code) }

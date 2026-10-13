@@ -22,15 +22,25 @@ export function subscriptionPlansQuery(api: PaymentSubscriptionApi) {
 const checkingFirstPayment = (data: MySubscription | undefined) =>
   data?.subscription?.status === 'PENDING' || !!data?.subscription?.pendingPlanCode
 
+export type MySubscriptionQueryOptions = {
+  maxPollMs?: number
+  /** Paddle 처럼 첫 결제가 웹훅으로 닿는 결제사의 돌아온 화면 - 시작만 한 구독은 `me` 에 보이지 않으니 구독이 보이고 `ACTIVE` 가 될 때까지 되묻는다 */
+  untilActive?: boolean
+}
+
+/** 구독이 아직 안 보이거나(웹훅 전) 확인 중이다 */
+const waitingForWebhook = (data: MySubscription | undefined) =>
+  data === undefined || data.subscription === null || checkingFirstPayment(data)
+
 export function mySubscriptionQuery(
   api: PaymentSubscriptionApi,
-  { maxPollMs = ORDER_POLL_MAX_DURATION_MS }: { maxPollMs?: number } = {},
+  { maxPollMs = ORDER_POLL_MAX_DURATION_MS, untilActive = false }: MySubscriptionQueryOptions = {},
 ) {
   return {
     queryKey: paymentKeys.mySubscription(),
     queryFn: () => api.me(),
     refetchInterval: (query: PollQuery<MySubscription>) =>
-      pollWhile(query, checkingFirstPayment, maxPollMs),
+      pollWhile(query, untilActive ? waitingForWebhook : checkingFirstPayment, maxPollMs),
   }
 }
 

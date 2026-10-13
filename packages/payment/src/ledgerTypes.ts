@@ -87,6 +87,8 @@ export type PaymentConfig = {
   available: boolean
   testMode: boolean
   refundRequestsEnabled: boolean
+  /** 결제창을 열 수 있는 결제사 id (예 `['paddle','toss']`) - 화면이 나라 · 언어로 하나를 골라 `provider` 로 보낸다. 구버전 서버는 칸이 없다 */
+  providers?: string[]
 }
 
 /**
@@ -103,9 +105,27 @@ export type TossPaymentWindowCheckout = {
   orderName: string
   amount: PaymentAmount
 }
-export type Checkout = TossPaymentWindowCheckout
+/** Paddle(판매 대행) — 결제창은 Paddle.js 오버레이이고 결과는 웹훅으로 서버에 닿는다. 금액 · 통화는 Paddle 가격이 정한다(여러 통화) */
+export type PaddleCheckout = {
+  provider: string
+  kind: 'PADDLE_CHECKOUT'
+  /** Paddle.js 클라이언트 토큰 - 없으면 `null` */
+  clientKey: string | null
+  testMode: boolean
+  orderId: string
+  orderName: string
+  amount: PaymentAmount
+  attributes: { environment?: string; priceId?: string; customData?: string }
+}
+export type Checkout = TossPaymentWindowCheckout | PaddleCheckout
 
-export type CreateOrderInput = { itemType: string; itemRef: string; quantity?: number }
+export type CreateOrderInput = {
+  itemType: string
+  itemRef: string
+  quantity?: number
+  /** 결제사 id - 비우면 서버가 고른다 */
+  provider?: string
+}
 /**
  * `checkout` 은 같은 `Idempotency-Key` 를 다시 보냈는데 주문이 이미 `PENDING` 이 아니거나 결제 가능 시간이 지난 `PENDING` 이면 `null` 이다(`200`, 계약 2 「주문 만들기」) -
  * 열 결제창이 없다. 새 주문(`201`)은 늘 값이 있다

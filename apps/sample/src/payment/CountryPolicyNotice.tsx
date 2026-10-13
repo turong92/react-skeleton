@@ -1,4 +1,7 @@
 import { usePaymentConfig } from '@skeleton/payment'
+import { Select } from '@skeleton/ui'
+import { useQueryClient } from '@tanstack/react-query'
+import { DEV_COUNTRIES, getDevCountry, setDevCountry } from '../api/devCountry'
 import { paymentApi } from '../cheer/api'
 import { LinkButton } from '../components/LinkButton'
 import { languageOf, useT } from '../i18n'
@@ -13,6 +16,7 @@ import styles from './CountryPolicyNotice.module.css'
 export function CountryPolicyNotice() {
   const { t, locale } = useT()
   const config = usePaymentConfig(paymentApi)
+  const queryClient = useQueryClient()
   const lines = policyLinesOf(config.data?.cancelPolicy, config.data?.provider)
   if (lines.length === 0) return null
   const country = config.data?.country
@@ -21,6 +25,26 @@ export function CountryPolicyNotice() {
       {country && (
         <p className={styles.country}>
           {t('payment.country.line', { country: countryName(country, languageOf(locale)) })}
+          {config.data?.devCountrySwitch && (
+            <>
+              {' '}
+              <span className={styles.dev}>{t('payment.devCountry.badge')}</span>{' '}
+              <Select
+                aria-label={t('payment.devCountry.label')}
+                value={getDevCountry() ?? country}
+                onChange={(event) => {
+                  setDevCountry(event.target.value)
+                  void queryClient.invalidateQueries() // 나라가 바뀌면 결제사 · 가격 · 규칙을 새로 읽는다
+                }}
+              >
+                {DEV_COUNTRIES.map((code) => (
+                  <option key={code} value={code}>
+                    {code}
+                  </option>
+                ))}
+              </Select>
+            </>
+          )}
         </p>
       )}
       <ul className={styles.lines}>

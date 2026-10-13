@@ -433,6 +433,8 @@ export default {
   'nav.cheer': '응원하기',
   'cheer.title': '응원하기',
   'cheer.subtitle': '마음에 드는 금액을 골라 응원해 주세요.',
+  'payment.devCountry.label': '개발용 나라',
+  'payment.devCountry.badge': '개발용',
   'payment.country.line': '결제 국가: {country}',
   'payment.policy.korea.withdrawal': '결제 후 {days}일 안에 쓰지 않았다면 전액 환불해 드려요.',
   'payment.policy.korea.cancel':

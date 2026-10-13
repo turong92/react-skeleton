@@ -15,7 +15,9 @@ import { authSession } from './auth/session'
 import { EmailGate } from './auth/EmailGate'
 import { LoginIdGate } from './auth/LoginIdGate'
 import { LegalGate } from './legal/LegalGate'
+import { getDevCountry } from './api/devCountry'
 import { i18n } from './i18n'
+import { initialLocale } from './i18n/initialLocale'
 import { router } from './routes'
 
 // 갱신이 안 돼 로그아웃되면(만료 · 재사용 감지 · 정지) 이유를 한 줄로 알린다 — 라우트 가드가 로그인으로 보낸다
@@ -50,10 +52,28 @@ function render() {
   )
 }
 
-// 저장한 언어 → 브라우저 언어 → 기본 언어를 정하고(필요하면 사전을 불러온 뒤) 그린다 — 첫 화면이 깜박이지 않는다. 실패해도 기본 언어로 그린다
+/** 저장한 선택이 있으면 그대로(`init`), 없을 때만 개발용 나라 → 브라우저 언어 → 영어 순으로 첫 언어를 정한다(저장하지 않는다) */
+async function startLocale(): Promise<void> {
+  let stored: string | null = null
+  try {
+    stored = window.localStorage.getItem('notes:ui-locale')
+  } catch {
+    // 저장소를 못 쓰는 환경 - 고른 적이 없는 것으로 본다
+  }
+  if (stored) {
+    await i18n.init()
+    return
+  }
+  await i18n.setLocale(
+    initialLocale({ devCountry: getDevCountry(), languages: navigator.languages }),
+    { remember: false },
+  )
+}
+
+// 저장한 언어 → (없으면 개발용 나라 → 브라우저 언어 → 영어)를 정하고(필요하면 사전을 불러온 뒤) 그린다 — 첫 화면이 깜박이지 않는다. 실패해도 기본 언어로 그린다
 void authSession
   .restore() // 액세스 토큰은 없고 갱신 자격만 남은 탭(다른 탭이 로그인했다 · 쿠키 모드)을 되살린다
   .catch(() => undefined)
-  .then(() => i18n.init())
+  .then(startLocale)
   .catch(() => undefined)
   .then(render)

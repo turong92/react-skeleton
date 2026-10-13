@@ -7,6 +7,7 @@ import {
 import { createTokenStore } from '@skeleton/auth'
 import { describe, expect, it, vi } from 'vitest'
 import { createAppApiClient } from './createAppApiClient'
+import { setDevCountry } from './devCountry'
 
 type Captured = { baseURL?: string; headers: Record<string, unknown> }
 
@@ -146,5 +147,35 @@ describe('M3 — an unrecoverable 401 clears both credentials', () => {
     expect(recoverForbidden).toHaveBeenCalledTimes(1)
     expect(calls).toBe(2)
     void client
+  })
+
+  it('puts the dev country on every request from this one place - the config screen and the order / subscription calls see the same country - and on none when none is chosen', async () => {
+    const store = new Map<string, string>()
+    vi.stubGlobal('window', {
+      localStorage: {
+        getItem: (k: string) => store.get(k) ?? null,
+        setItem: (k: string, v: string) => void store.set(k, v),
+        removeItem: (k: string) => void store.delete(k),
+      },
+    })
+    try {
+      const captured: Captured[] = []
+      const client = createAppApiClient({
+        env: {},
+        tokenStore: createTokenStore(),
+        adapter: adapterFor(captured, ok),
+      })
+      await client.value('/payments/config')
+      setDevCountry('US')
+      await client.value('/payments/config')
+      await client.value('/payments/orders', {
+        method: 'POST',
+        json: { itemType: 'cheer', itemRef: 'cheer-3000' },
+      })
+      await client.value('/payments/subscriptions', { method: 'POST', json: { planCode: 'basic' } })
+      expect(captured.map((c) => c.headers['X-Dev-Country'])).toEqual([undefined, 'US', 'US', 'US'])
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 })

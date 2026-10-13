@@ -13,6 +13,7 @@ import {
   type TokenStore,
 } from '@skeleton/auth'
 import { userTimeZone } from '@skeleton/time'
+import { devCountryHeaders } from './devCountry'
 import { serverClock } from './serverClock'
 
 export type AppApiClientOptions = {
@@ -50,6 +51,7 @@ export function createAppApiClient({
   debug = false,
   adapter,
 }: AppApiClientOptions): ApiClient {
+  const authHeaders = createAuthHeadersProvider(tokenStore)
   return createApiClient({
     ...apiConfigFromEnv(env),
     adapter,
@@ -57,7 +59,8 @@ export function createAppApiClient({
     recoverUnauthorized,
     recoverForbidden,
     withCredentials,
-    getAuthHeaders: createAuthHeadersProvider(tokenStore),
+    // 개발용 나라(`X-Dev-Country`)는 모든 요청에 한 곳에서 붙인다 - 화면(`/config`)과 주문 · 구독이 같은 나라를 본다(서버가 스위치를 켠 로컬만 읽는다)
+    getAuthHeaders: () => ({ ...authHeaders(), ...devCountryHeaders() }),
     getTimeZone: userTimeZone,
     onResponseDate: (date) => serverClock.observeDateHeader(date),
     onError: createUnauthorizedHandler({ store: tokenStore, refreshStore, onUnauthorized }),

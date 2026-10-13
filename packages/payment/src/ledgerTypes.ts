@@ -98,6 +98,8 @@ export type PaymentConfig = {
   provider?: string | null
   /** 그 나라의 해지·환불 정책 요약 - 화면이 `key` 로 문구를 고른다 */
   cancelPolicy?: PaymentCancelPolicy | null
+  /** 서버가 개발용 나라 덮어쓰기를 켰다(로컬만) - 켜져 있으면 요청의 `X-Dev-Country` 가 `country` 를 정한다 */
+  devCountrySwitch?: boolean
 }
 
 /** `key` 는 서버의 정책 이름(`korea` · `period-end-only` …). 숫자는 `korea` 일 때만(설정값) */

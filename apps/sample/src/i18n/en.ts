@@ -436,6 +436,8 @@ const en: Record<keyof typeof ko, string> = {
   'nav.cheer': 'Cheer',
   'cheer.title': 'Send a cheer',
   'cheer.subtitle': 'Pick an amount to cheer us on.',
+  'payment.devCountry.label': 'Country (development)',
+  'payment.devCountry.badge': 'dev only',
   'payment.country.line': 'Paying from: {country}',
   'payment.policy.korea.withdrawal':
     'Full refund if you have not used it within {days} days of paying.',

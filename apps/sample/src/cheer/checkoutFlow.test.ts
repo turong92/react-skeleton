@@ -353,10 +353,10 @@ describe('orderFailureOf — what a refused order says (and whether pressing aga
 })
 
 describe('paddle (the result comes by webhook)', () => {
-  it('sends the chosen provider with the order', async () => {
+  it('sends no provider with the order - the server decides - and comes back the way of the provider the server used', async () => {
     const f = fakes()
-    await startCheer(f.deps, 'cheer-3000', undefined, { provider: 'paddle' })
-    expect(f.creates).toEqual([{ itemType: 'cheer', itemRef: 'cheer-3000', provider: 'paddle' }])
+    await startCheer(f.deps, 'cheer-3000')
+    expect(f.creates).toEqual([{ itemType: 'cheer', itemRef: 'cheer-3000' }])
   })
 
   it('comes back to the same page with the order id, and the page only watches the order', () => {

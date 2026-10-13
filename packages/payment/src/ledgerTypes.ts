@@ -88,13 +88,13 @@ export type PaymentConfig = {
   available: boolean
   testMode: boolean
   refundRequestsEnabled: boolean
-  /** 결제창을 열 수 있는 결제사 id (예 `['paddle','toss']`) - 화면이 나라 · 언어로 하나를 골라 `provider` 로 보낸다. 구버전 서버는 칸이 없다 */
+  /** 결제창을 열 수 있는 결제사 id (예 `['paddle','toss']`) - 어느 것을 쓰는지는 서버가 정한다(아래 `provider`). 구버전 서버는 칸이 없다 */
   providers?: string[]
   /** 결제사 id → 가격 미리보기 값 - Paddle 처럼 구매자 통화로 환산해 결제하는 결제사만. 구버전 서버는 칸이 없다 */
   pricePreviews?: Record<string, PaddlePricePreviewConfig>
   /** 서버가 이 요청마다 정한 접속 나라(ISO-3166 두 글자). 모르면 `null`, 구버전 서버는 칸이 없다 */
   country?: string | null
-  /** 그 나라로 서버가 정한 결제사 - 주문 · 구독을 만들 때 이것만 보낼 수 있다(다른 값은 400). 정할 수 없으면 `null` */
+  /** 그 나라로 서버가 정한 결제사 - 주문 · 구독이 실제로 쓴다(화면이 보내는 값은 없다). 정할 수 없거나 그 나라의 결제사가 못 열리면 `null`(그때 `available` 도 false) */
   provider?: string | null
   /** 그 나라의 해지·환불 정책 요약 - 화면이 `key` 로 문구를 고른다 */
   cancelPolicy?: PaymentCancelPolicy | null
@@ -139,8 +139,7 @@ export type CreateOrderInput = {
   itemType: string
   itemRef: string
   quantity?: number
-  /** 결제사 id - 비우면 서버가 고른다 */
-  provider?: string
+  // 결제사 · 나라는 보내지 않는다 - 서버가 접속 나라로 정한다(`GET /config`); 보내도 서버는 읽지 않는다
 }
 /**
  * `checkout` 은 같은 `Idempotency-Key` 를 다시 보냈는데 주문이 이미 `PENDING` 이 아니거나 결제 가능 시간이 지난 `PENDING` 이면 `null` 이다(`200`, 계약 2 「주문 만들기」) -

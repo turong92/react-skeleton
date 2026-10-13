@@ -251,26 +251,6 @@ describe('mutations', () => {
   })
 })
 
-describe('startSubscriptionMutation - a different provider is a different attempt', () => {
-  it('keeps one Idempotency-Key per (plan, provider) and hands out a new one when the provider changes', async () => {
-    const { api, calls } = fakeApi()
-    const client = new QueryClient()
-    const keys = createIntentKeys()
-    const observer = new MutationObserver<unknown, Error, { planCode: string; provider?: string }>(
-      client,
-      { ...startSubscriptionMutation(api, client, keys), onSuccess: undefined } as never,
-    )
-    await observer.mutate({ planCode: 'basic', provider: 'toss' }).catch(() => undefined)
-    await observer.mutate({ planCode: 'basic', provider: 'toss' }).catch(() => undefined)
-    await observer.mutate({ planCode: 'basic', provider: 'paddle' }).catch(() => undefined)
-    const used = calls
-      .filter((call) => call[0] === 'start')
-      .map((call) => (call[2] as { idempotencyKey: string }).idempotencyKey)
-    expect(used[0]).toBe(used[1])
-    expect(used[2]).not.toBe(used[0])
-  })
-})
-
 describe('cancelNowMutation', () => {
   it('asks the api once for the subscription id and refreshes the payment cache either way', async () => {
     const { api, calls } = fakeApi()

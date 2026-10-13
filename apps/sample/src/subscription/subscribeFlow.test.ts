@@ -51,15 +51,15 @@ describe('subscribeReturnUrls', () => {
 })
 
 describe('startSubscribe', () => {
-  it('hands the server-chosen provider to the server with the plan - and no country', async () => {
+  it("hands only the plan to the server - provider and country are the server's to decide", async () => {
     const seen: unknown[][] = []
     const { deps } = fakes()
     deps.start = async (...args) => {
       seen.push(args)
       return started(billingAuth)
     }
-    await startSubscribe(deps, 'basic', 'paddle')
-    expect(seen).toEqual([['basic', 'paddle']])
+    await startSubscribe(deps, 'basic')
+    expect(seen).toEqual([['basic']])
   })
 
   it('starts the subscription, then opens the card window with the server values and our return addresses', async () => {

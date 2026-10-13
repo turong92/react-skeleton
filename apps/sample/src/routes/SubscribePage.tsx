@@ -83,14 +83,12 @@ export function SubscribePage() {
     setNotice(null)
     const result = await startSubscribe(
       {
-        start: (planCode, chosen) =>
-          start.mutateAsync({ planCode, ...(chosen ? { provider: chosen } : {}) }),
+        start: (planCode) => start.mutateAsync({ planCode }),
         openBillingAuth: (billingAuth, urls) =>
           openBillingAuth(billingAuth, { ...urls, locale: language }),
         urlsFor: (id, chosen) => subscribeReturnUrls(window.location.origin, id, chosen),
       },
       plan.code,
-      provider,
     )
     if (result.kind === 'opened') return // 카드 창이 이 화면을 떠나게 한다 — 돌아오면 `pageshow` 가 풀어 준다
     setBusyPlan(null)

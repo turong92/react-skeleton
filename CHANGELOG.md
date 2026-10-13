@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — 결제사 · 나라는 서버가 정한다
 
-- `PaymentConfig` 에 `country` · `provider` · `cancelPolicy`(`PaymentCancelPolicy`). `StartSubscriptionInput` 에서 `country` 를 뺐다(서버가 접속 나라로 정한다; `provider` 는 `GET /config` 의 값만). 운영자 라벨에 `BUYER_COUNTRY_KR`.
+- `PaymentConfig` 에 `country` · `provider` · `cancelPolicy`(`PaymentCancelPolicy`). `StartSubscriptionInput` · `CreateOrderInput` 에서 `country` · `provider` 를 뺐다(서버가 접속 나라로 정하고 본문 값은 읽지 않는다). 운영자 라벨에 `BUYER_COUNTRY_KR`.
 - 견본 앱: 「나라 고르기」 칸과 `chooseProvider`/`VITE_PAYMENT_PROVIDER` 를 없애고 `CountryPolicyNotice`(결제 국가 + 그 나라의 해지·환불 규칙 두세 줄 + 환불 정책 링크, 보여 주기 전용)로 바꿨다. e2e 는 컨텍스트의 `CF-IPCountry` 헤더로 나라를 정한다. `capabilities.json` 에 `payment-paddle` 을 맞췄다.
 
 ### Added — 운영자의 막힌 구독 결제 닫기(`@skeleton/payment/admin`)

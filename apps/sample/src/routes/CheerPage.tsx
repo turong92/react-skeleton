@@ -144,7 +144,6 @@ export function CheerPage() {
       },
       selected,
       reusableOrderOf(unopened, selected, nowMs()),
-      { provider },
     )
     setUnopened(unopenedAfter(result, selected, nowMs(), unopened))
     if (result.kind === 'opened') return // 결제창이 이 화면을 떠나게 한다 — 돌아오면 `pageshow` 가 풀어 준다

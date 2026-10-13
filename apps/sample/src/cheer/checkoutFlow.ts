@@ -92,17 +92,12 @@ export async function startCheer(
   deps: StartCheerDeps,
   itemRef: string,
   reuse?: CreateOrderResult,
-  { provider }: { provider?: string | undefined } = {},
 ): Promise<StartCheerResult> {
   let created: CreateOrderResult
   if (reuse) created = reuse
   else
     try {
-      created = await deps.createOrder({
-        itemType: CHEER_ITEM_TYPE,
-        itemRef,
-        ...(provider ? { provider } : {}),
-      })
+      created = await deps.createOrder({ itemType: CHEER_ITEM_TYPE, itemRef })
     } catch (error) {
       return { kind: 'order-failed', error }
     }
@@ -119,7 +114,7 @@ export async function startCheer(
     return { kind: 'unavailable' }
   }
   try {
-    await deps.openCheckout(checkout, deps.urlsFor(created.order.id, provider))
+    await deps.openCheckout(checkout, deps.urlsFor(created.order.id, checkout.provider))
     return { kind: 'opened' }
   } catch (error) {
     const code = codeOf(error)

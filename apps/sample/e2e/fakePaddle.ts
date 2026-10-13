@@ -49,6 +49,7 @@ type Sub = {
   periodEnd: string
   scheduledCancel: boolean
   txnCount: number
+  priceId: string
 }
 export type FakePaddleCall = { method: string; path: string; authorized: boolean; body: unknown }
 export type SentWebhook = { eventId: string; eventType: string; status: number }
@@ -106,7 +107,7 @@ export async function startFakePaddle(): Promise<FakePaddle> {
     current_billing_period: { starts_at: s.periodStart, ends_at: s.periodEnd },
   })
 
-  function transactionEntity(s: Sub | null, customData: Record<string, string>, currency: string, amount: number, origin: string) {
+  function transactionEntity(s: Sub | null, customData: Record<string, string>, currency: string, amount: number, origin: string, priceId: string) {
     const at = iso(new Date())
     return {
       id: `txn_${randomUUID().replaceAll('-', '').slice(0, 26)}`,
@@ -115,6 +116,7 @@ export async function startFakePaddle(): Promise<FakePaddle> {
       origin,
       ...(s ? { subscription_id: s.id } : {}),
       custom_data: customData,
+      items: [{ price: { id: priceId }, quantity: 1 }],
       billed_at: at,
       billing_period: s ? { starts_at: s.periodStart, ends_at: s.periodEnd } : null,
       details: { totals: { subtotal: String(amount), tax: '0', total: String(amount), currency_code: currency } },
@@ -130,7 +132,7 @@ export async function startFakePaddle(): Promise<FakePaddle> {
     const customData = (body.customData as Record<string, string> | undefined) ?? {}
     const currency = 'USD'
     if (!price.recurring) {
-      await fire('transaction.completed', transactionEntity(null, customData, currency, price.amount, 'web'))
+      await fire('transaction.completed', transactionEntity(null, customData, currency, price.amount, 'web', price.id))
       return send(res, 200, { ok: true }, cors)
     }
     const now = new Date()
@@ -144,10 +146,11 @@ export async function startFakePaddle(): Promise<FakePaddle> {
       periodEnd: iso(new Date(now.getTime() + PERIOD_MS)),
       scheduledCancel: false,
       txnCount: 1,
+      priceId: price.id,
     }
     subs.set(sub.id, sub)
     // Paddle 은 결제를 먼저 알리고 구독을 만든다
-    await fire('transaction.completed', transactionEntity(sub, customData, currency, price.amount, 'web'))
+    await fire('transaction.completed', transactionEntity(sub, customData, currency, price.amount, 'web', price.id))
     await fire('subscription.created', subscriptionEntity(sub))
     await fire('subscription.activated', subscriptionEntity(sub))
     return send(res, 200, { ok: true, subscriptionId: sub.id }, cors)
@@ -167,7 +170,7 @@ export async function startFakePaddle(): Promise<FakePaddle> {
       s.periodStart = iso(start)
       s.periodEnd = iso(new Date(start.getTime() + PERIOD_MS))
       s.txnCount += 1
-      await fire('transaction.completed', transactionEntity(s, s.customData, s.currency, s.amount, 'subscription_recurring'))
+      await fire('transaction.completed', transactionEntity(s, s.customData, s.currency, s.amount, 'subscription_recurring', s.priceId))
       await fire('subscription.updated', subscriptionEntity(s))
     }
     if (typeof patch.endPeriod === 'string') {

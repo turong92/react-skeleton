@@ -6,7 +6,7 @@ import { resolve } from 'node:path'
  *
  *   { "projects": { "a": { "hosts": ["a.localhost", "a.example.com"], "distDir": "dist/a", "apiBaseUrl": "…", "siteUrl": "…" } } }
  *
- * `distDir` 은 `vite build` 결과 폴더(`client/` · `server/`) — 파일이 있는 폴더 기준 상대 경로. `apiBaseUrl` · `siteUrl` 을 빼면 환경변수(API_BASE_URL · SITE_URL).
+ * `distDir` 은 `vite build` 결과 폴더(`client/` · `server/`) — 파일이 있는 폴더 기준 상대 경로. `apiBaseUrl` 은 필수(전역 API_BASE_URL 로 대신하지 않는다), `siteUrl` 은 빼면 canonical · og:url 이 빠진다.
  */
 export type Project = {
   name: string
@@ -14,7 +14,8 @@ export type Project = {
   hosts: string[]
   /** 절대 경로 */
   distDir: string
-  apiBaseUrl?: string
+  /** 이 프로젝트의 백엔드 — 필수. 프록시를 거치지 않는 내부 주소가 안전하다(docs/multi-project.md) */
+  apiBaseUrl: string
   siteUrl?: string
 }
 
@@ -69,11 +70,17 @@ export function readProjects(json: unknown, baseDir: string): Project[] {
     }
     const distDir = text(raw.distDir)
     if (!distDir) throw new Error(`project "${name}" needs "distDir"`)
+    // 전역 API_BASE_URL 로 대신하지 않는다 — 비워 두면 프로젝트가 다른 프로젝트의 백엔드로 가서 그 데이터를 그릴 수 있다
+    const apiBaseUrl = text(raw.apiBaseUrl)?.replace(/\/+$/, '')
+    if (!apiBaseUrl || !/^https?:\/\//.test(apiBaseUrl))
+      throw new Error(
+        `project "${name}" needs "apiBaseUrl" (absolute http(s) address of its backend)`,
+      )
     return {
       name,
       hosts,
       distDir: resolve(baseDir, distDir),
-      apiBaseUrl: text(raw.apiBaseUrl)?.replace(/\/+$/, ''),
+      apiBaseUrl,
       siteUrl: text(raw.siteUrl)?.replace(/\/+$/, ''),
     }
   })

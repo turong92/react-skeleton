@@ -46,21 +46,35 @@ describe('readProjects — the projects file', () => {
     expect(() =>
       readProjects(
         file({
-          a: { hosts: ['x.localhost'], distDir: 'dist/a' },
-          b: { hosts: ['X.localhost'], distDir: 'dist/b' },
+          a: { hosts: ['x.localhost'], distDir: 'dist/a', apiBaseUrl: 'http://x/api/v1' },
+          b: { hosts: ['X.localhost'], distDir: 'dist/b', apiBaseUrl: 'http://x/api/v1' },
         }),
         '/srv',
       ),
     ).toThrow(/x\.localhost.*a.*b/s)
   })
 
+  it('requires the backend address per project — no fallback to a shared one that could send another project’s data', () => {
+    expect(() => readProjects(file({ a: { hosts: ['a.localhost'], distDir: 'd' } }), '/')).toThrow(
+      /apiBaseUrl/,
+    )
+  })
+
   it('refuses a project with no hosts, a host with a port, an odd project name, or an empty list', () => {
-    expect(() => readProjects(file({ a: { hosts: [], distDir: 'd' } }), '/')).toThrow(/hosts/)
     expect(() =>
-      readProjects(file({ a: { hosts: ['a.localhost:3000'], distDir: 'd' } }), '/'),
+      readProjects(file({ a: { hosts: [], distDir: 'd', apiBaseUrl: 'http://x/api/v1' } }), '/'),
+    ).toThrow(/hosts/)
+    expect(() =>
+      readProjects(
+        file({ a: { hosts: ['a.localhost:3000'], distDir: 'd', apiBaseUrl: 'http://x/api/v1' } }),
+        '/',
+      ),
     ).toThrow(/port/)
     expect(() =>
-      readProjects(file({ 'A b': { hosts: ['a.localhost'], distDir: 'd' } }), '/'),
+      readProjects(
+        file({ 'A b': { hosts: ['a.localhost'], distDir: 'd', apiBaseUrl: 'http://x/api/v1' } }),
+        '/',
+      ),
     ).toThrow(/name/)
     expect(() => readProjects(file({}), '/')).toThrow(/at least one project/)
   })
@@ -86,8 +100,12 @@ describe('createProjectDispatcher — one handler per project, chosen by Host', 
   const projects = readProjects(
     {
       projects: {
-        a: { hosts: ['a.localhost', 'a.example.com'], distDir: 'dist/a' },
-        b: { hosts: ['b.localhost'], distDir: 'dist/b' },
+        a: {
+          hosts: ['a.localhost', 'a.example.com'],
+          distDir: 'dist/a',
+          apiBaseUrl: 'http://x/api/v1',
+        },
+        b: { hosts: ['b.localhost'], distDir: 'dist/b', apiBaseUrl: 'http://x/api/v1' },
       },
     },
     '/srv',

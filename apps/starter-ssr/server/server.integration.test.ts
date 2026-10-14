@@ -232,7 +232,11 @@ beforeAll(
       projects: Object.fromEntries(
         names.map((name) => [
           name,
-          { hosts: [`${name}.localhost`, `www.${name}.test`], distDir: `projects/${name}` },
+          {
+            hosts: [`${name}.localhost`, `www.${name}.test`],
+            distDir: `projects/${name}`,
+            apiBaseUrl: `http://127.0.0.1:${backend.port}/api/v1`,
+          },
         ]),
       ),
     })

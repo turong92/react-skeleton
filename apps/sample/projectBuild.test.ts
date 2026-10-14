@@ -64,6 +64,12 @@ describe('projectOwnEnv — only what the project itself supplies', () => {
       )
       writeFileSync(join(dir, '.env.b'), 'VITE_API_BASE_URL=https://api.b.example.com/api/v1\n')
       expect(projectOwnEnv('b', dir, {}).VITE_API_BASE_URL).toBe('https://api.b.example.com/api/v1')
+      // Vite 는 `.env.<이름>.local` 도 읽어 번들에 넣는다 — 같은 순서(셸 > .local > 파일)로 합쳐 검사한다
+      writeFileSync(join(dir, '.env.b.local'), 'VITE_API_BASE_URL=http://localhost:8080/api/v1\n')
+      expect(() => assertProjectBuildEnv('b', 'build', projectOwnEnv('b', dir, {}))).toThrow(
+        /VITE_API_BASE_URL/,
+      )
+      rmSync(join(dir, '.env.b.local'))
       // 빌드 환경(Pages 대시보드 · 셸)에서 명시한 값은 파일보다 앞선다
       expect(
         projectOwnEnv('b', dir, { VITE_API_BASE_URL: 'https://x.example.com/api/v1' })

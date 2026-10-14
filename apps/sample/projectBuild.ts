@@ -26,7 +26,7 @@ export function assertProjectBuildEnv(
 }
 
 /**
- * 프로젝트가 **스스로** 정한 값 — `.env.<이름>` 파일과 명시한 빌드 환경(셸 · Pages 대시보드)의 `VITE_*`.
+ * 프로젝트가 **스스로** 정한 값 — `.env.<이름>` · `.env.<이름>.local` 파일과 명시한 빌드 환경(셸 · Pages 대시보드)의 `VITE_*`.
  * 모두의 `.env` · `.env.local` 은 들어오지 않는다(프로젝트 아닌 값이 슬쩍 통과하거나 섞이지 않게). 기본 모드에서는 빈 객체.
  */
 export function projectOwnEnv(
@@ -35,10 +35,17 @@ export function projectOwnEnv(
   shell: Record<string, string | undefined>,
 ): Record<string, string | undefined> {
   if (DEFAULT_MODES.has(mode)) return {}
-  const file = join(dir, `.env.${mode}`)
-  const fromFile = existsSync(file) ? parseEnv(readFileSync(file, 'utf8')) : {}
+  // Vite 와 같은 순서: 셸 > `.env.<이름>.local` > `.env.<이름>`
+  const read = (name: string) => {
+    const file = join(dir, name)
+    return existsSync(file) ? parseEnv(readFileSync(file, 'utf8')) : {}
+  }
   const own: Record<string, string | undefined> = {}
-  for (const [key, value] of Object.entries({ ...fromFile, ...shell }))
+  for (const [key, value] of Object.entries({
+    ...read(`.env.${mode}`),
+    ...read(`.env.${mode}.local`),
+    ...shell,
+  }))
     if (key.startsWith('VITE_')) own[key] = value
   return own
 }

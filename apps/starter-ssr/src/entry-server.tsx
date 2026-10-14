@@ -84,8 +84,21 @@ export function createRenderer(config: {
   apiBaseUrl: string
   apiTimeoutMs: number
   siteUrl?: string
+  /** 켜면 방문자의 Host 를 백엔드 호출에 그대로 넘긴다(한 백엔드가 Host 로 프로젝트를 고를 때 — `PROJECTS_FILE`). 기본은 끔 */
+  forwardHost?: boolean
 }): Render {
-  const api = createServerApiClient({ baseUrl: config.apiBaseUrl, timeoutMs: config.apiTimeoutMs })
-  return (url) =>
-    render(url, { api, prefetchTimeoutMs: config.apiTimeoutMs + 250, siteUrl: config.siteUrl })
+  const make = (forwardHost?: string) =>
+    createServerApiClient({
+      baseUrl: config.apiBaseUrl,
+      timeoutMs: config.apiTimeoutMs,
+      forwardHost,
+    })
+  const shared = make()
+  return (url, request) =>
+    render(url, {
+      // Host 를 넘길 때는 요청마다 클라이언트를 새로 만든다 — 방문자의 Host 가 다른 요청에 남지 않는다
+      api: config.forwardHost && request?.host ? make(request.host) : shared,
+      prefetchTimeoutMs: config.apiTimeoutMs + 250,
+      siteUrl: config.siteUrl,
+    })
 }

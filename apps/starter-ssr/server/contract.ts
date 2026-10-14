@@ -12,5 +12,10 @@ export type RenderResult = {
   title: string
 }
 
+export type RenderRequest = {
+  /** 요청의 `Host` 헤더(포트 포함) — 백엔드가 Host 로 프로젝트를 고르는 서버 설정이면 렌더가 백엔드 호출에 그대로 넘긴다 */
+  host?: string
+}
+
 /** 요청 주소(경로 + 쿼리)를 받아 그린다. 던지지 않는 것이 약속이다 — 데이터가 없으면 없는 채로 그린다 */
-export type Render = (url: string) => Promise<RenderResult>
+export type Render = (url: string, request?: RenderRequest) => Promise<RenderResult>

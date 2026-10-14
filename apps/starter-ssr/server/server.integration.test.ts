@@ -1,6 +1,6 @@
 import { spawn, type ChildProcess } from 'node:child_process'
-import { cpSync, mkdtempSync, rmSync } from 'node:fs'
-import { createServer, type Server } from 'node:http'
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { createServer, request as httpRequest, type Server } from 'node:http'
 import { createServer as createNetServer } from 'node:net'
 import type { AddressInfo } from 'node:net'
 import { createRequire } from 'node:module'
@@ -51,11 +51,21 @@ function run(command: string, args: string[], cwd: string, timeoutMs: number): P
   })
 }
 
-type Backend = { port: number; mode: 'ok' | 'hang'; hits: number; server: Server }
+type Backend = {
+  port: number
+  mode: 'ok' | 'hang'
+  hits: number
+  /** `/hello` 요청마다 받은 헤더 */
+  seen: Array<Record<string, string | string[] | undefined>>
+  server: Server
+}
 async function startBackend(): Promise<Backend> {
-  const backend = { mode: 'ok', hits: 0 } as Backend
+  const backend = { mode: 'ok', hits: 0, seen: [] as Backend['seen'] } as Backend
   backend.server = createServer((req, res) => {
-    if (req.url?.startsWith('/api/v1/hello')) backend.hits += 1
+    if (req.url?.startsWith('/api/v1/hello')) {
+      backend.hits += 1
+      backend.seen.push(req.headers)
+    }
     if (backend.mode === 'hang') return // 응답하지 않는다 — 서버 렌더의 시간 제한이 끊어야 한다
     res.writeHead(200, { 'content-type': 'application/json' })
     res.end(
@@ -80,7 +90,11 @@ async function closedPort(): Promise<number> {
 }
 
 type Running = { child: ChildProcess; base: string; stop: () => Promise<number | null> }
-function startServer(appDir: string, apiPort: number): Promise<Running> {
+function startServer(
+  appDir: string,
+  apiPort: number,
+  extraEnv: Record<string, string> = {},
+): Promise<Running> {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [join(appDir, 'server', 'main.ts')], {
       cwd: appDir,
@@ -91,6 +105,7 @@ function startServer(appDir: string, apiPort: number): Promise<Running> {
         PORT: '0',
         API_BASE_URL: `http://127.0.0.1:${apiPort}/api/v1`,
         SSR_API_TIMEOUT_MS: '400',
+        ...extraEnv,
       },
       stdio: ['ignore', 'pipe', 'pipe'],
     })
@@ -128,6 +143,26 @@ function startServer(appDir: string, apiPort: number): Promise<Running> {
   })
 }
 
+const BRAND_B = 'brand-b'
+
+/** 지정한 Host 헤더로 요청한다(fetch 는 Host 를 못 바꾼다) */
+function getAs(base: string, path: string, host: string) {
+  return new Promise<{ status: number; body: string }>((resolve, reject) => {
+    const { port } = new URL(base)
+    const req = httpRequest(
+      { host: '127.0.0.1', port, path, headers: { host }, timeout: REQUEST_TIMEOUT_MS },
+      (res) => {
+        let body = ''
+        res.on('data', (chunk) => (body += chunk))
+        res.on('end', () => resolve({ status: res.statusCode ?? 0, body }))
+      },
+    )
+    req.on('timeout', () => req.destroy(new Error('request timed out')))
+    req.on('error', reject)
+    req.end()
+  })
+}
+
 const get = (base: string, path: string) =>
   fetch(`${base}${path}`, { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS), redirect: 'manual' })
 
@@ -136,6 +171,8 @@ let appDir = ''
 let backend: Backend
 let live: Running
 let orphan: Running
+let multi: Running
+let alone: Running
 
 beforeAll(
   async () => {
@@ -176,12 +213,41 @@ beforeAll(
     backend = await startBackend()
     live = await startServer(appDir, backend.port)
     orphan = await startServer(appDir, await closedPort())
+
+    // 한 서버 · 프로젝트 둘: 같은 빌드를 두 폴더로 복사하고, b 의 서버 번들만 앱 이름을 바꿔 「다른 화면 번들」로 만든다. 각자 /assets 에 자기 표식 파일
+    for (const name of ['a', 'b']) {
+      cpSync(built, join(appDir, 'projects', name), { recursive: true })
+      mkdirSync(join(appDir, 'projects', name, 'client', 'assets'), { recursive: true })
+      writeFileSync(
+        join(appDir, 'projects', name, 'client', 'assets', `only-${name}.js`),
+        `// ${name}`,
+      )
+    }
+    const bundleB = join(appDir, 'projects', 'b', 'server', 'entry-server.js')
+    const original = readFileSync(bundleB, 'utf8')
+    if (!original.includes(APP_NAME))
+      throw new Error('the server bundle does not hold the app name')
+    writeFileSync(bundleB, original.replaceAll(APP_NAME, BRAND_B))
+    const listing = (names: string[]) => ({
+      projects: Object.fromEntries(
+        names.map((name) => [
+          name,
+          { hosts: [`${name}.localhost`, `www.${name}.test`], distDir: `projects/${name}` },
+        ]),
+      ),
+    })
+    writeFileSync(join(appDir, 'projects.json'), JSON.stringify(listing(['a', 'b'])))
+    writeFileSync(join(appDir, 'only-a.json'), JSON.stringify(listing(['a'])))
+    multi = await startServer(appDir, backend.port, {
+      PROJECTS_FILE: join(appDir, 'projects.json'),
+    })
+    alone = await startServer(appDir, backend.port, { PROJECTS_FILE: join(appDir, 'only-a.json') })
   },
   BUILD_TIMEOUT_MS * 2 + 60_000,
 )
 
 afterAll(async () => {
-  await Promise.allSettled([live?.stop(), orphan?.stop()])
+  await Promise.allSettled([live?.stop(), orphan?.stop(), multi?.stop(), alone?.stop()])
   backend?.server.closeAllConnections()
   await new Promise((done) => backend?.server.close(done) ?? done(undefined))
   killAll()
@@ -267,5 +333,53 @@ describe('the built server, asked by a client that runs no JavaScript', () => {
 
   it('shuts down cleanly on SIGTERM', async () => {
     expect(await orphan.stop()).toBe(0)
+  }, 20_000)
+})
+
+describe('one server, several projects (PROJECTS_FILE): the Host picks the project', () => {
+  it('renders each host with its own project bundle, and alternating requests never mix them', async () => {
+    for (const [host, brand, other] of [
+      ['a.localhost:3000', APP_NAME, BRAND_B],
+      ['b.localhost:3000', BRAND_B, APP_NAME],
+      ['www.a.test', APP_NAME, BRAND_B],
+      ['B.LOCALHOST', BRAND_B, APP_NAME],
+      ['a.localhost', APP_NAME, BRAND_B],
+    ] as const) {
+      const { status, body } = await getAs(multi.base, '/', host)
+      expect(status, host).toBe(200)
+      expect(body, host).toContain(`<title>홈 · ${brand}</title>`)
+      expect(body, host).not.toContain(other)
+    }
+  }, 20_000)
+
+  it('hands the visitor’s own host to the backend on every render, never a neighbour’s', async () => {
+    backend.seen.length = 0
+    await getAs(multi.base, '/', 'a.localhost:3000')
+    await getAs(multi.base, '/', 'b.localhost:3000')
+    expect(backend.seen.map((h) => [h.host, h['x-forwarded-host']])).toEqual([
+      ['a.localhost:3000', 'a.localhost:3000'],
+      ['b.localhost:3000', 'b.localhost:3000'],
+    ])
+  }, 20_000)
+
+  it('rejects a host that is not in the list (421) and does not ask the backend', async () => {
+    const hits = backend.hits
+    for (const host of ['evil.example.com', 'localhost:3000', 'c.localhost'])
+      expect((await getAs(multi.base, '/', host)).status, host).toBe(421)
+    expect(backend.hits).toBe(hits)
+  }, 20_000)
+
+  it('serves /assets from the folder of the host’s own project only', async () => {
+    expect((await getAs(multi.base, '/assets/only-a.js', 'a.localhost')).status).toBe(200)
+    expect((await getAs(multi.base, '/assets/only-a.js', 'b.localhost')).status).toBe(404)
+    expect((await getAs(multi.base, '/assets/only-b.js', 'b.localhost')).status).toBe(200)
+    expect((await getAs(multi.base, '/assets/only-b.js', 'a.localhost')).status).toBe(404)
+  }, 20_000)
+
+  it('keeps the build apart: one project alone (a list with only a) runs by itself and refuses the other', async () => {
+    const own = await getAs(alone.base, '/', 'a.localhost')
+    expect(own.status).toBe(200)
+    expect(own.body).toContain(`<title>홈 · ${APP_NAME}</title>`)
+    expect((await getAs(alone.base, '/', 'b.localhost')).status).toBe(421)
   }, 20_000)
 })

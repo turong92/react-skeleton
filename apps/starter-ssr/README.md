@@ -32,6 +32,7 @@ docker run --rm -p 3000:3000 -e API_BASE_URL=http://host.docker.internal:8080/ap
 | `API_BASE_URL`       | `http://localhost:8080/api/v1` | **서버 렌더가** 첫 데이터를 가져오는 백엔드(절대 주소)                                                    |
 | `SSR_API_TIMEOUT_MS` | `2000`                         | 서버 렌더 중 백엔드를 기다리는 최대 시간                                                                  |
 | `DIST_DIR`           | `./dist`                       | `vite build` 결과 폴더                                                                                    |
+| `PROJECTS_FILE`      | —                              | 있으면 한 서버가 요청 Host 로 프로젝트를 골라 그 프로젝트 번들로 그린다 — `server/projects.ts`            |
 | `SITE_URL`           | —                              | 공개 주소(`https://example.com`) — canonical · `og:url` · `sitemap.xml`(빌드 때도). 없으면 그 태그를 뺀다 |
 | `VITE_API_*`         | —                              | **브라우저의** API 클라이언트(`apps/starter` 와 같다). 기본 같은 origin 의 `/api/v1`                      |
 

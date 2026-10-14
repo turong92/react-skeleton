@@ -14,6 +14,8 @@ export type ServerConfig = {
   distDir: string
   /** 사이트의 공개 주소(`https://notes.example.com`) — canonical · `og:url` · 사이트맵의 바탕. 없으면 그 태그를 빼고 추측한 주소를 쓰지 않는다 */
   siteUrl?: string
+  /** 프로젝트 목록 파일(`projects.ts` 의 꼴). 있으면 한 서버가 요청 Host 로 프로젝트를 골라 그 프로젝트 번들로 그린다(프로덕션만). 없으면 지금처럼 앱 하나 */
+  projectsFile?: string
 }
 
 type Env = Record<string, string | undefined>
@@ -52,5 +54,6 @@ export function readServerConfig(env: Env): ServerConfig {
     apiTimeoutMs: integer(env, 'SSR_API_TIMEOUT_MS', 2000, { min: 1, max: 60_000 }),
     distDir: env.DIST_DIR?.trim() || join(dirname(fileURLToPath(import.meta.url)), '..', 'dist'),
     siteUrl,
+    projectsFile: env.PROJECTS_FILE?.trim() || undefined,
   }
 }

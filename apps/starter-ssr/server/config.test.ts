@@ -57,4 +57,11 @@ describe('readServerConfig — SITE_URL (the public address that canonical links
     expect(() => readServerConfig({ SITE_URL: 'notes.example.com' })).toThrow(/SITE_URL/)
     expect(() => readServerConfig({ SITE_URL: 'javascript:alert(1)' })).toThrow(/SITE_URL/)
   })
+
+  it('reads PROJECTS_FILE (the list of projects one server serves); absent means the single app as before', () => {
+    expect(readServerConfig({}).projectsFile).toBeUndefined()
+    expect(readServerConfig({ PROJECTS_FILE: ' /srv/projects.json ' }).projectsFile).toBe(
+      '/srv/projects.json',
+    )
+  })
 })

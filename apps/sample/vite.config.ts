@@ -10,7 +10,7 @@ const apiTarget = process.env.API_PROXY_TARGET ?? 'http://localhost:8080'
 
 export default defineConfig(({ mode, command }) => {
   const env = loadEnv(mode, process.cwd(), 'VITE_')
-  // 프로젝트별 정적 빌드(`vite build --mode a`)는 `.env.a` 를 읽는다 — API 주소가 없으면 멈춘다(docs/multi-project.md)
+  // 프로젝트별 정적 빌드(`vite build --mode a`)는 `.env.a` 를 읽는다 — API 주소가 없으면 멈춘다(projectBuild.ts)
   assertProjectBuildEnv(mode, command, env)
   return {
     plugins: [

@@ -5,38 +5,67 @@
  *
  *   node server/main.ts            # 프로덕션 — `dist/` 가 있어야 한다
  *   node server/main.ts --dev      # 개발 — HMR 이 있는 Vite 개발 서버
- * 환경변수: HOST · PORT · API_BASE_URL · SSR_API_TIMEOUT_MS · DIST_DIR · SITE_URL (server/config.ts)
+ * 환경변수: HOST · PORT · API_BASE_URL · SSR_API_TIMEOUT_MS · DIST_DIR · SITE_URL · PROJECTS_FILE (server/config.ts)
+ * PROJECTS_FILE 이 있으면(프로덕션만) 한 서버가 요청 Host 로 프로젝트를 골라 그 프로젝트의 번들로 그린다 — server/projects.ts. 없으면 앱 하나(지금과 같다).
  */
 import { readFile } from 'node:fs/promises'
 import { createServer, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { readServerConfig, type ServerConfig } from './config.ts'
 import type { Render } from './contract.ts'
 import { createHandler } from './handler.ts'
+import { createProjectDispatcher, readProjects, type RequestHandler } from './projects.ts'
 
 type Created = { server: Server; close: () => Promise<void> }
-type ServerBundle = {
-  createRenderer: (config: Pick<ServerConfig, 'apiBaseUrl' | 'apiTimeoutMs' | 'siteUrl'>) => Render
+type RendererConfig = Pick<ServerConfig, 'apiBaseUrl' | 'apiTimeoutMs' | 'siteUrl'> & {
+  forwardHost?: boolean
 }
+type ServerBundle = { createRenderer: (config: RendererConfig) => Render }
 
 const APP_ROOT = fileURLToPath(new URL('..', import.meta.url))
 const logError = (error: unknown, url: string) => console.error(`render failed for ${url}:`, error)
 
-async function createProductionServer(config: ServerConfig): Promise<Created> {
-  const clientDir = join(config.distDir, 'client')
+/** 빌드 결과 폴더 하나(`client/` · `server/`)로 요청을 받는 핸들러. 폴더마다 따로 만들어 서로 아무것도 나누지 않는다 */
+async function createProductionHandler(distDir: string, renderer: RendererConfig) {
+  const clientDir = join(distDir, 'client')
   const template = await readFile(join(clientDir, 'index.html'), 'utf8').catch(() => {
     throw new Error(`${clientDir}/index.html not found — run \`pnpm build\` first`)
   })
-  const bundleUrl = pathToFileURL(join(config.distDir, 'server', 'entry-server.js')).href
+  const bundleUrl = pathToFileURL(join(distDir, 'server', 'entry-server.js')).href
   const bundle = (await import(bundleUrl)) as ServerBundle
-  const handler = createHandler({
+  return createHandler({
     template: () => template,
-    render: bundle.createRenderer(config),
+    render: bundle.createRenderer(renderer),
     staticDir: clientDir,
     onError: logError,
   })
+}
+
+async function createProductionServer(config: ServerConfig): Promise<Created> {
+  let handler: RequestHandler
+  if (config.projectsFile) {
+    // 한 서버 · 프로젝트 여럿 — 프로젝트마다 번들 · 템플릿 · 렌더러를 따로 읽어 두고 Host 로 고른다. 백엔드에는 방문자의 Host 를 넘긴다
+    const projects = readProjects(
+      JSON.parse(await readFile(config.projectsFile, 'utf8')) as unknown,
+      dirname(config.projectsFile),
+    )
+    const handlers = new Map<string, RequestHandler>()
+    for (const project of projects)
+      handlers.set(
+        project.name,
+        await createProductionHandler(project.distDir, {
+          apiBaseUrl: project.apiBaseUrl ?? config.apiBaseUrl,
+          apiTimeoutMs: config.apiTimeoutMs,
+          siteUrl: project.siteUrl ?? config.siteUrl,
+          forwardHost: true,
+        }),
+      )
+    handler = createProjectDispatcher(projects, (project) => handlers.get(project.name)!)
+  } else {
+    handler = await createProductionHandler(config.distDir, config)
+  }
   const server = createServer((req, res) => void handler(req, res))
   return { server, close: async () => undefined }
 }
@@ -69,6 +98,10 @@ async function createDevelopmentServer(config: ServerConfig): Promise<Created> {
 
 const config = readServerConfig(process.env)
 const dev = process.argv.includes('--dev')
+if (dev && config.projectsFile)
+  throw new Error(
+    'PROJECTS_FILE works with the built server only — run `pnpm build:project <name>` for each project, then `pnpm start`',
+  )
 const { server, close } = await (dev
   ? createDevelopmentServer(config)
   : createProductionServer(config))

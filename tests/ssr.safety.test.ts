@@ -143,8 +143,8 @@ describe('server-rendering every exported component and hook', () => {
     return found.sort()
   }
 
-  function page(children: ReactNode) {
-    const auth = ctx.mod('auth')
+  function page(children: ReactNode, c: FixtureContext = ctx) {
+    const auth = c.mod('auth')
     return createElement(
       QueryClientProvider,
       { client: new QueryClient() },
@@ -152,7 +152,7 @@ describe('server-rendering every exported component and hook', () => {
         MemoryRouter,
         null,
         createElement(auth.AuthProvider as ComponentType<Record<string, unknown>>, {
-          session: fakeSession(ctx),
+          session: fakeSession(c),
           children,
         }),
       ),
@@ -246,5 +246,58 @@ describe('server-rendering every exported component and hook', () => {
       }
       expect(renderClean(page(createElement(Probe))), key).toContain(name)
     }
+  })
+
+  /*
+   * 한 서버가 프로젝트 여럿을 그릴 때 — 프로젝트마다 번들(= 모듈 인스턴스)이 따로이고, 한 프로젝트 안에서는 요청이 계속 온다.
+   * 같은 입력의 렌더가 (1) 같은 인스턴스에서 요청을 거듭해도 (2) 서로 독립인 두 인스턴스(프로젝트 A · B)에서도 글자 하나 다르지 않아야 한다 —
+   * 모듈 전역에 상태가 쌓이거나 새는 패키지가 있으면 여기서 갈린다.
+   */
+  it('renders every component and hook identically across repeated requests and across independent project bundles', async () => {
+    const instance = async (): Promise<FixtureContext> => {
+      vi.resetModules()
+      const mods = new Map<string, Mod>()
+      for (const entry of barrels) mods.set(entry.dir, await load(entry))
+      return {
+        mod(pkg) {
+          const found = mods.get(pkg)
+          if (!found) throw new Error(`${pkg} is not in this workspace`)
+          return found
+        },
+      }
+    }
+    const renderAll = (c: FixtureContext): Record<string, string> => {
+      const out: Record<string, string> = {}
+      for (const entry of barrels) {
+        for (const [name, value] of Object.entries(c.mod(entry.dir))) {
+          const key = `${entry.dir}#${name}`
+          if (key in BROWSER_ONLY) continue
+          if (isComponentExport(name, value) && COMPONENT_PROPS[key]) {
+            const props = COMPONENT_PROPS[key](c)
+            out[key] = renderClean(
+              page(createElement(value as ComponentType<Record<string, unknown>>, props), c),
+            )
+          } else if (isHookExport(name, value) && HOOK_ARGS[key]) {
+            const args = HOOK_ARGS[key](c)
+            const Probe = () => {
+              ;(value as (...a: unknown[]) => unknown)(...args)
+              return createElement('p', null, name)
+            }
+            out[key] = renderClean(page(createElement(Probe), c))
+          }
+        }
+      }
+      return out
+    }
+    const projectA = await instance()
+    const firstRequest = renderAll(projectA)
+    expect(Object.keys(firstRequest).length).toBeGreaterThan(10)
+    const projectB = await instance()
+    const otherProject = renderAll(projectB)
+    const laterRequest = renderAll(projectA) // A 의 두 번째 요청 — B 를 그린 뒤에도 같아야 한다
+    const differing = (other: Record<string, string>) =>
+      Object.keys(firstRequest).filter((key) => other[key] !== firstRequest[key])
+    expect(differing(otherProject), 'rendered differently in the other project bundle').toEqual([])
+    expect(differing(laterRequest), 'rendered differently on a later request').toEqual([])
   })
 })

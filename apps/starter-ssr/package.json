@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "node server/main.ts --dev",
     "build": "tsc -b && vite build --outDir dist/client && vite build --ssr src/entry-server.tsx --outDir dist/server",
+    "build:project": "tsc -b && node buildProject.mjs",
     "start": "node server/main.ts",
     "test": "vitest run --pool forks --testTimeout 30000 --hookTimeout 60000",
     "typecheck": "tsc -b --noEmit"

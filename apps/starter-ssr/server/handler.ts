@@ -102,7 +102,7 @@ export function createHandler({ template, render, staticDir, lang, onError }: Ha
         // 해시 파일이 없다 — HTML 404 페이지가 아니라 진짜 404(브라우저가 스크립트 자리에 HTML 을 받아 헷갈리지 않게)
         if (url.pathname.startsWith('/assets/')) return plain(res, 404, 'Not Found')
       }
-      const result = await render(target)
+      const result = await render(target, { host: req.headers.host })
       const body = fill(await template(target), { head: result.head, html: result.html, lang })
       res.writeHead(result.status, {
         'content-type': 'text/html; charset=utf-8',

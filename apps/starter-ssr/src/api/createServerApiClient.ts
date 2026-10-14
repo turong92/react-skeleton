@@ -5,6 +5,11 @@ export type ServerApiClientOptions = {
   baseUrl: string
   /** 서버 렌더가 기다리는 최대 시간(`SSR_API_TIMEOUT_MS`) */
   timeoutMs: number
+  /**
+   * 방문자가 쓴 Host(`a.localhost:3000`). 주면 백엔드 호출에 `Host` 와 `X-Forwarded-Host` 로 그대로 단다 — 한 백엔드가 Host 로 프로젝트를 고른다.
+   * 안 주면 아무것도 달지 않는다(프로젝트 하나짜리 지금 흐름). 요청마다 클라이언트를 만들어 쓴다.
+   */
+  forwardHost?: string
   /** 테스트용 */
   adapter?: AxiosAdapter
 }
@@ -17,7 +22,17 @@ export type ServerApiClientOptions = {
 export function createServerApiClient({
   baseUrl,
   timeoutMs,
+  forwardHost,
   adapter,
 }: ServerApiClientOptions): ApiClient {
-  return createApiClient({ baseUrl, timeoutMs, retry: { attempts: 0 }, adapter })
+  return createApiClient({
+    baseUrl,
+    timeoutMs,
+    retry: { attempts: 0 },
+    adapter,
+    // 사용자 인증은 없다 — 이 훅은 모든 요청에 다는 헤더를 얻는 자리일 뿐이다
+    getAuthHeaders: forwardHost
+      ? () => ({ Host: forwardHost, 'X-Forwarded-Host': forwardHost })
+      : undefined,
+  })
 }

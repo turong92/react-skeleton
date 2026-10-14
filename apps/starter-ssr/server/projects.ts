@@ -1,0 +1,107 @@
+import type { IncomingMessage, ServerResponse } from 'node:http'
+import { resolve } from 'node:path'
+
+/*
+ * 한 서버에 프로젝트 여럿 — 프로젝트 목록 파일(`PROJECTS_FILE`)과 Host 로 프로젝트를 고르는 길잡이. 파일이 없으면 이 모듈은 쓰이지 않는다(지금과 같다).
+ *
+ *   { "projects": { "a": { "hosts": ["a.localhost", "a.example.com"], "distDir": "dist/a", "apiBaseUrl": "…", "siteUrl": "…" } } }
+ *
+ * `distDir` 은 `vite build` 결과 폴더(`client/` · `server/`) — 파일이 있는 폴더 기준 상대 경로. `apiBaseUrl` · `siteUrl` 을 빼면 환경변수(API_BASE_URL · SITE_URL).
+ */
+export type Project = {
+  name: string
+  /** 소문자 · 포트 없음. 이 Host 로 온 요청이 이 프로젝트다 */
+  hosts: string[]
+  /** 절대 경로 */
+  distDir: string
+  apiBaseUrl?: string
+  siteUrl?: string
+}
+
+export type RequestHandler = (req: IncomingMessage, res: ServerResponse) => Promise<void>
+
+/** `A.Localhost:3000` → `a.localhost`. 헤더가 없거나 비었으면 undefined */
+export function hostOf(header: string | undefined): string | undefined {
+  const raw = header?.trim().toLowerCase()
+  if (!raw) return undefined
+  const withoutPort = raw.startsWith('[') ? raw.replace(/:\d+$/, '') : raw.replace(/:\d*$/, '')
+  return withoutPort.replace(/\.$/, '') || undefined
+}
+
+const NAME = /^[a-z][a-z0-9-]*$/
+const HOST = /^(?:[a-z0-9-]+(?:\.[a-z0-9-]+)*|\[[0-9a-f:]+\])$/
+
+type Raw = Record<string, unknown>
+const isObject = (value: unknown): value is Raw =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+const text = (value: unknown) =>
+  typeof value === 'string' && value.trim() ? value.trim() : undefined
+
+/** 목록 파일 내용 → 프로젝트들. 못 쓰는 값은 추측하지 않고 던진다 */
+export function readProjects(json: unknown, baseDir: string): Project[] {
+  const entries = isObject(json) && isObject(json.projects) ? Object.entries(json.projects) : []
+  if (entries.length === 0)
+    throw new Error('projects file needs at least one project under "projects"')
+  const owner = new Map<string, string>()
+  return entries.map(([name, value]) => {
+    if (!NAME.test(name))
+      throw new Error(`project name must be lower-case letters, digits, hyphens (got "${name}")`)
+    const raw = isObject(value) ? value : {}
+    const hosts = Array.isArray(raw.hosts)
+      ? raw.hosts.map((host) => String(host).trim().toLowerCase())
+      : []
+    if (hosts.length === 0) throw new Error(`project "${name}" needs a non-empty "hosts" list`)
+    for (const host of hosts) {
+      if (/:\d*$/.test(host) && !host.endsWith(']'))
+        throw new Error(
+          `project "${name}": host "${host}" must not carry a port (the port is ignored)`,
+        )
+      if (!HOST.test(host)) throw new Error(`project "${name}": "${host}" is not a host name`)
+      const other = owner.get(host)
+      if (other !== undefined)
+        throw new Error(
+          `host "${host}" belongs to both "${other}" and "${name}" — a request could not pick one`,
+        )
+      owner.set(host, name)
+    }
+    const distDir = text(raw.distDir)
+    if (!distDir) throw new Error(`project "${name}" needs "distDir"`)
+    return {
+      name,
+      hosts,
+      distDir: resolve(baseDir, distDir),
+      apiBaseUrl: text(raw.apiBaseUrl)?.replace(/\/+$/, ''),
+      siteUrl: text(raw.siteUrl)?.replace(/\/+$/, ''),
+    }
+  })
+}
+
+/**
+ * 프로젝트마다 핸들러를 하나씩 만들어(`open`, 기동 때 한 번) 두고, 요청의 Host 로 고른다. 목록에 없는 Host 는 421 로 거절한다.
+ * 핸들러(템플릿 · 렌더러 · 정적 폴더)가 프로젝트마다 따로라서 프로젝트 사이에 섞이는 서버 안 상태가 없다.
+ * 같은 주소가 Host 에 따라 다른 내용이므로 응답에 `Vary: Host` — 중간 캐시가 프로젝트를 섞지 않는다.
+ */
+export function createProjectDispatcher(
+  projects: Project[],
+  open: (project: Project) => RequestHandler,
+): RequestHandler {
+  const byHost = new Map<string, RequestHandler>()
+  for (const project of projects) {
+    const handler = open(project)
+    for (const host of project.hosts) byHost.set(host, handler)
+  }
+  return async (req, res) => {
+    const host = hostOf(req.headers.host)
+    const handler = host === undefined ? undefined : byHost.get(host)
+    res.setHeader('vary', 'Host')
+    if (!handler) {
+      res.writeHead(421, {
+        'content-type': 'text/plain; charset=utf-8',
+        'x-content-type-options': 'nosniff',
+      })
+      res.end('Misdirected Request')
+      return
+    }
+    await handler(req, res)
+  }
+}

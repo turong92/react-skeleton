@@ -29,6 +29,18 @@ describe('createServerApiClient — the backend client the server render uses', 
     expect(seen[0].headers.Authorization).toBeUndefined()
   })
 
+  it('passes the host the visitor used on to the backend (Host and X-Forwarded-Host) so it can pick the project — and only when asked', async () => {
+    const seen: InternalAxiosRequestConfig[] = []
+    const adapter = reply(seen, { value: {}, meta: { timestamp: 't' } })
+    const base = { baseUrl: 'http://backend:8080/api/v1', timeoutMs: 1000, adapter }
+    await createServerApiClient({ ...base, forwardHost: 'a.localhost:3000' }).value('/hello')
+    await createServerApiClient(base).value('/hello')
+    expect(seen[0].headers.Host).toBe('a.localhost:3000')
+    expect(seen[0].headers['X-Forwarded-Host']).toBe('a.localhost:3000')
+    expect(seen[1].headers.Host).toBeUndefined()
+    expect(seen[1].headers['X-Forwarded-Host']).toBeUndefined()
+  })
+
   it('a backend that is down surfaces as the client network error code (the render then falls back)', async () => {
     const api = createServerApiClient({
       baseUrl: 'http://backend:8080/api/v1',

@@ -275,6 +275,7 @@ function apply(
     'scripts/capabilities.d/siblingCheck.mjs', // 옆 레포(kotlin-skeleton)의 카탈로그를 읽는 가드 — 찍힌 프로젝트에는 옆 레포가 없다
     'scripts/capabilities.d/siblingCheck.d.mts',
     'docs/new-project-recipe.md',
+    'docs/multi-project.md', // 스켈레톤의 앱(sample · starter-ssr)을 이름으로 말하는 문서
   ])
     rmSync(join(target, path), { recursive: true, force: true })
   if (existsSync(join(target, 'scripts')) && readdirSync(join(target, 'scripts')).length === 0)

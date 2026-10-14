@@ -18,6 +18,9 @@ export type Project = {
   siteUrl?: string
 }
 
+/** 프로젝트 모드에서 Host 와 무관하게 200 을 내는 헬스 경로 */
+export const HEALTH_PATH = '/healthz'
+
 export type RequestHandler = (req: IncomingMessage, res: ServerResponse) => Promise<void>
 
 /** `A.Localhost:3000` → `a.localhost`. 헤더가 없거나 비었으면 undefined */
@@ -91,6 +94,15 @@ export function createProjectDispatcher(
     for (const host of project.hosts) byHost.set(host, handler)
   }
   return async (req, res) => {
+    // 플랫폼 헬스체크는 컨테이너 안에서 `localhost` 로 온다 — Host 를 보지 않고, 어느 프로젝트도 고르지 않는다
+    if (req.url === HEALTH_PATH) {
+      res.writeHead(200, {
+        'content-type': 'text/plain; charset=utf-8',
+        'cache-control': 'no-store',
+      })
+      res.end('ok')
+      return
+    }
     const host = hostOf(req.headers.host)
     const handler = host === undefined ? undefined : byHost.get(host)
     res.setHeader('vary', 'Host')

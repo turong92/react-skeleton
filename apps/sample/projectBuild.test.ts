@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { assertProjectBuildEnv } from './projectBuild.ts'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { assertProjectBuildEnv, projectOwnEnv } from './projectBuild.ts'
 
 /*
  * 프로젝트별 정적 빌드(`vite build --mode <프로젝트>`) 의 안전장치. 정적 호스트(Pages)에는 `/api/v1` 이 없다 —
@@ -31,5 +34,43 @@ describe('assertProjectBuildEnv', () => {
     const env = { VITE_API_BASE_URL: 'https://api.a.example.com/api/v1' }
     expect(() => assertProjectBuildEnv('A b', 'build', env)).toThrow(/project name/)
     expect(() => assertProjectBuildEnv('../x', 'build', env)).toThrow(/project name/)
+  })
+
+  it('refuses a local or plain-http API address — Pages serves https and cannot reach a developer machine', () => {
+    for (const address of [
+      'http://api.a.example.com/api/v1',
+      'https://localhost:8080/api/v1',
+      'https://127.0.0.1/api/v1',
+    ])
+      expect(
+        () => assertProjectBuildEnv('a', 'build', { VITE_API_BASE_URL: address }),
+        address,
+      ).toThrow(/VITE_API_BASE_URL/)
+  })
+})
+
+describe('projectOwnEnv — only what the project itself supplies', () => {
+  it('does not take the API address from the shared .env / .env.local: a project without its own .env.<name> still fails', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'proj-env-'))
+    try {
+      writeFileSync(join(dir, '.env'), 'VITE_API_BASE_URL=http://localhost:8080/api/v1\n')
+      writeFileSync(
+        join(dir, '.env.local'),
+        'VITE_API_BASE_URL=https://api.other.example.com/api/v1\n',
+      )
+      expect(projectOwnEnv('b', dir, {})).toEqual({})
+      expect(() => assertProjectBuildEnv('b', 'build', projectOwnEnv('b', dir, {}))).toThrow(
+        /VITE_API_BASE_URL/,
+      )
+      writeFileSync(join(dir, '.env.b'), 'VITE_API_BASE_URL=https://api.b.example.com/api/v1\n')
+      expect(projectOwnEnv('b', dir, {}).VITE_API_BASE_URL).toBe('https://api.b.example.com/api/v1')
+      // 빌드 환경(Pages 대시보드 · 셸)에서 명시한 값은 파일보다 앞선다
+      expect(
+        projectOwnEnv('b', dir, { VITE_API_BASE_URL: 'https://x.example.com/api/v1' })
+          .VITE_API_BASE_URL,
+      ).toBe('https://x.example.com/api/v1')
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 })

@@ -58,7 +58,8 @@ async function createProductionServer(config: ServerConfig): Promise<Created> {
         await createProductionHandler(project.distDir, {
           apiBaseUrl: project.apiBaseUrl ?? config.apiBaseUrl,
           apiTimeoutMs: config.apiTimeoutMs,
-          siteUrl: project.siteUrl ?? config.siteUrl,
+          // 프로젝트의 공개 주소는 프로젝트가 정한다 — 없으면 canonical · og:url 을 빼고, 다른 프로젝트의 SITE_URL 로 대신하지 않는다
+          siteUrl: project.siteUrl,
           forwardHost: true,
         }),
       )

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — 한 서버에 프로젝트 여럿 (개발 · 정적 빌드 · 서버 렌더)
+
+백엔드가 요청 Host 로 프로젝트를 고르는 구성(`docs/multi-project.md`)에 맞췄다. 설정이 없으면 지금과 같다.
+
+- 개발: `apps/sample/devProxy.ts` — `<이름>.localhost` 로 열면 그 Host 가 `/api/v1` 프록시를 지나 백엔드까지 그대로(+ `X-Forwarded-Host`). `localhost` · IP · 터널은 예전 그대로.
+- 정적: `vite build --mode <프로젝트>` 가 `.env.<프로젝트>` 로 프로젝트별 산출물을 낸다. API 의 https 공개 주소가 프로젝트 자신의 값으로 없으면 빌드가 멈춘다(`projectBuild.ts`). Pages 설정은 문서에.
+- 서버 렌더: `apps/starter-ssr` 에 `PROJECTS_FILE` — 한 Node 서버가 Host 로 프로젝트별 번들을 골라 그린다(목록 밖 Host 421 · `/healthz` 는 Host 무관 · `/assets` Host 별 · 백엔드 호출에 `X-Forwarded-Host`). 프로젝트 빌드는 `pnpm --filter starter-ssr build:project <이름>`. 루트 `tests/ssr.safety.test.ts` 에 프로젝트·요청 사이 누출 검사.
+
 ### Changed — 결제사 · 나라는 서버가 정한다
 
 - `PaymentConfig` 에 `country` · `provider` · `cancelPolicy`(`PaymentCancelPolicy`). `StartSubscriptionInput` · `CreateOrderInput` 에서 `country` · `provider` 를 뺐다(서버가 접속 나라로 정하고 본문 값은 읽지 않는다). 운영자 라벨에 `BUYER_COUNTRY_KR`.

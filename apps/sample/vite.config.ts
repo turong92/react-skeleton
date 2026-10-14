@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 import { seoFiles } from '@skeleton/seo/vite'
 import { themePrePaint } from '@skeleton/theme/vite'
 import { apiProxy } from './devProxy.ts'
-import { assertProjectBuildEnv } from './projectBuild.ts'
+import { assertProjectBuildEnv, projectOwnEnv } from './projectBuild.ts'
 
 // 백엔드를 다른 주소 · 포트로 띄웠다면: API_PROXY_TARGET=http://localhost:18080 pnpm dev (기본 8080)
 const apiTarget = process.env.API_PROXY_TARGET ?? 'http://localhost:8080'
@@ -11,7 +11,8 @@ const apiTarget = process.env.API_PROXY_TARGET ?? 'http://localhost:8080'
 export default defineConfig(({ mode, command }) => {
   const env = loadEnv(mode, process.cwd(), 'VITE_')
   // 프로젝트별 정적 빌드(`vite build --mode a`)는 `.env.a` 를 읽는다 — API 주소가 없으면 멈춘다(projectBuild.ts)
-  assertProjectBuildEnv(mode, command, env)
+  const own = projectOwnEnv(mode, process.cwd(), process.env)
+  assertProjectBuildEnv(mode, command, own)
   return {
     plugins: [
       react(),
@@ -19,7 +20,10 @@ export default defineConfig(({ mode, command }) => {
       // 빌드가 sitemap.xml · robots.txt 를 낸다 — 공개 페이지만 적고(랜딩 · 약관 · 방침), 로그인 뒤 화면은 robots 에서 막는다.
       // 공개 주소는 VITE_SITE_URL(.env 또는 빌드 환경변수) — 없으면 robots.txt 만 내고 경고한다
       seoFiles({
-        baseUrl: env.VITE_SITE_URL || undefined,
+        // 프로젝트 빌드는 프로젝트 자신의 공개 주소만 쓴다(공용 .env 의 값으로 다른 프로젝트 주소가 sitemap 에 새지 않게)
+        baseUrl:
+          (command === 'build' && Object.keys(own).length > 0 ? own : env).VITE_SITE_URL ||
+          undefined,
         routes: ['/', '/terms', '/privacy', '/refund'],
         robots: {
           rules: [

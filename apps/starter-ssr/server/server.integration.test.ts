@@ -352,14 +352,20 @@ describe('one server, several projects (PROJECTS_FILE): the Host picks the proje
     }
   }, 20_000)
 
-  it('hands the visitor’s own host to the backend on every render, never a neighbour’s', async () => {
+  it('hands the visitor’s own host to the backend (X-Forwarded-Host) on every render, never a neighbour’s', async () => {
     backend.seen.length = 0
     await getAs(multi.base, '/', 'a.localhost:3000')
     await getAs(multi.base, '/', 'b.localhost:3000')
-    expect(backend.seen.map((h) => [h.host, h['x-forwarded-host']])).toEqual([
-      ['a.localhost:3000', 'a.localhost:3000'],
-      ['b.localhost:3000', 'b.localhost:3000'],
+    expect(backend.seen.map((h) => h['x-forwarded-host'])).toEqual([
+      'a.localhost:3000',
+      'b.localhost:3000',
     ])
+    // Host 는 건드리지 않는다 — 백엔드 주소로 가는 길(프록시 · TLS)이 그대로다
+    expect(backend.seen.every((h) => h.host === `127.0.0.1:${backend.port}`)).toBe(true)
+  }, 20_000)
+
+  it('answers /healthz whatever the host (the container’s own health check uses localhost)', async () => {
+    expect((await getAs(multi.base, '/healthz', 'localhost:3000')).status).toBe(200)
   }, 20_000)
 
   it('rejects a host that is not in the list (421) and does not ask the backend', async () => {

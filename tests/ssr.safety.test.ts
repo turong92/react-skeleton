@@ -143,7 +143,7 @@ describe('server-rendering every exported component and hook', () => {
     return found.sort()
   }
 
-  function page(children: ReactNode, c: FixtureContext = ctx) {
+  function page(children: ReactNode, c: FixtureContext = ctx, session?: unknown) {
     const auth = c.mod('auth')
     return createElement(
       QueryClientProvider,
@@ -152,7 +152,7 @@ describe('server-rendering every exported component and hook', () => {
         MemoryRouter,
         null,
         createElement(auth.AuthProvider as ComponentType<Record<string, unknown>>, {
-          session: fakeSession(c),
+          session: session ?? fakeSession(c),
           children,
         }),
       ),
@@ -250,10 +250,12 @@ describe('server-rendering every exported component and hook', () => {
 
   /*
    * 한 서버가 프로젝트 여럿을 그릴 때 — 프로젝트마다 번들(= 모듈 인스턴스)이 따로이고, 한 프로젝트 안에서는 요청이 계속 온다.
-   * 같은 입력의 렌더가 (1) 같은 인스턴스에서 요청을 거듭해도 (2) 서로 독립인 두 인스턴스(프로젝트 A · B)에서도 글자 하나 다르지 않아야 한다 —
-   * 모듈 전역에 상태가 쌓이거나 새는 패키지가 있으면 여기서 갈린다.
+   * 첫 요청은 **표식이 든 다른 입력**(로그인한 관리자 세션, 이메일 `marker@leak.test`)으로 그리고, 이어지는 요청들(같은 번들 · 독립된 다른 번들)을
+   * 평범한 입력으로 그렸을 때 출력이 처음부터 평범하게 그린 것과 같고 표식이 없어야 한다 — 모듈 전역에 앞 요청의 상태가 남는 패키지를 잡는다.
+   * (렌더가 동기라 동시에 겹친 요청은 재지 않는다. 겹침은 요청마다 새로 만드는 구조 — QueryClient · 세션 · 클라이언트 — 가 막는다.)
    */
-  it('renders every component and hook identically across repeated requests and across independent project bundles', async () => {
+  it('a request drawn from marked input leaves nothing behind: later requests in the same bundle and in another bundle render as if it never happened', async () => {
+    const MARKER = 'marker@leak.test'
     const instance = async (): Promise<FixtureContext> => {
       vi.resetModules()
       const mods = new Map<string, Mod>()
@@ -266,8 +268,23 @@ describe('server-rendering every exported component and hook', () => {
         },
       }
     }
-    const renderAll = (c: FixtureContext): Record<string, string> => {
+    const b64 = (value: object) => Buffer.from(JSON.stringify(value)).toString('base64url')
+    const markedToken = `${b64({ alg: 'none' })}.${b64({ sub: 'marker', email: MARKER, roles: ['ADMIN'], exp: 4102444800 })}.sig`
+    const markedSession = (c: FixtureContext) => {
+      const auth = c.mod('auth')
+      const store = (auth.createTokenStore as () => { set(token: string): void })()
+      store.set(markedToken)
+      const unused = async () => {
+        throw new Error('unused')
+      }
+      return (auth.createAuthSession as (o: object) => unknown)({
+        api: { me: unused, refresh: unused, logout: unused },
+        store,
+      })
+    }
+    const renderAll = (c: FixtureContext, marked: boolean): Record<string, string> => {
       const out: Record<string, string> = {}
+      const wrap = (children: ReactNode) => page(children, c, marked ? markedSession(c) : undefined)
       for (const entry of barrels) {
         for (const [name, value] of Object.entries(c.mod(entry.dir))) {
           const key = `${entry.dir}#${name}`
@@ -275,7 +292,7 @@ describe('server-rendering every exported component and hook', () => {
           if (isComponentExport(name, value) && COMPONENT_PROPS[key]) {
             const props = COMPONENT_PROPS[key](c)
             out[key] = renderClean(
-              page(createElement(value as ComponentType<Record<string, unknown>>, props), c),
+              wrap(createElement(value as ComponentType<Record<string, unknown>>, props)),
             )
           } else if (isHookExport(name, value) && HOOK_ARGS[key]) {
             const args = HOOK_ARGS[key](c)
@@ -283,21 +300,32 @@ describe('server-rendering every exported component and hook', () => {
               ;(value as (...a: unknown[]) => unknown)(...args)
               return createElement('p', null, name)
             }
-            out[key] = renderClean(page(createElement(Probe), c))
+            out[key] = renderClean(wrap(createElement(Probe)))
           }
         }
       }
       return out
     }
+    const baseline = renderAll(await instance(), false)
+    expect(Object.keys(baseline).length).toBeGreaterThan(10)
+
     const projectA = await instance()
-    const firstRequest = renderAll(projectA)
-    expect(Object.keys(firstRequest).length).toBeGreaterThan(10)
+    const marked = renderAll(projectA, true)
+    // 표식 입력이 실제로 출력을 바꿨는지 — 아니면 이 검사는 아무것도 못 본다
+    expect(
+      Object.keys(marked).filter((key) => marked[key] !== baseline[key]).length,
+    ).toBeGreaterThan(0)
+
     const projectB = await instance()
-    const otherProject = renderAll(projectB)
-    const laterRequest = renderAll(projectA) // A 의 두 번째 요청 — B 를 그린 뒤에도 같아야 한다
+    const otherProject = renderAll(projectB, false)
+    const sameProjectAgain = renderAll(projectA, false)
     const differing = (other: Record<string, string>) =>
-      Object.keys(firstRequest).filter((key) => other[key] !== firstRequest[key])
-    expect(differing(otherProject), 'rendered differently in the other project bundle').toEqual([])
-    expect(differing(laterRequest), 'rendered differently on a later request').toEqual([])
+      Object.keys(baseline).filter((key) => other[key] !== baseline[key])
+    expect(differing(otherProject), 'leaked into the other project bundle').toEqual([])
+    expect(differing(sameProjectAgain), 'leaked into the next request of the same bundle').toEqual(
+      [],
+    )
+    for (const html of [...Object.values(otherProject), ...Object.values(sameProjectAgain)])
+      expect(html).not.toContain(MARKER)
   })
 })

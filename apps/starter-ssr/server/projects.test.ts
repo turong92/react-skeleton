@@ -108,6 +108,16 @@ describe('createProjectDispatcher — one handler per project, chosen by Host', 
     expect(calls).toEqual(['a', 'a', 'b'])
   })
 
+  it('answers /healthz for any host (platform health checks hit localhost) without picking a project', async () => {
+    calls.length = 0
+    for (const host of ['localhost:3000', 'evil.example.com', undefined]) {
+      const { res, sent } = fakeResponse()
+      await dispatch({ ...requestTo(host), url: '/healthz', method: 'GET' } as IncomingMessage, res)
+      expect(sent.status, String(host)).toBe(200)
+    }
+    expect(calls).toEqual([])
+  })
+
   it('rejects a host that is not in the list (421) without calling any project; the answer varies by Host', async () => {
     calls.length = 0
     for (const host of ['evil.example.com', 'localhost:3000', undefined]) {

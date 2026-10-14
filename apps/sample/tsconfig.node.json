@@ -5,5 +5,13 @@
     "lib": ["ES2023", "DOM"],
     "types": ["node", "vite/client"]
   },
-  "include": ["vite.config.ts", "devProxy.ts", "devProxy.test.ts", "vitest.e2e.config.ts", "e2e"]
+  "include": [
+    "vite.config.ts",
+    "devProxy.ts",
+    "devProxy.test.ts",
+    "projectBuild.ts",
+    "projectBuild.test.ts",
+    "vitest.e2e.config.ts",
+    "e2e"
+  ]
 }

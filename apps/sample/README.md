@@ -13,6 +13,19 @@ scripts/dev-sample.sh        # DB · 로컬 S3 → 백엔드 :8080 → 이 앱 :
 
 이 레포에서 프론트만: `pnpm dev:sample`(백엔드는 `API_PROXY_TARGET=http://localhost:8080`, 기본값). 브라우저 e2e: `pnpm e2e:sample` — 백엔드까지 스스로 올렸다 내린다(Docker · JDK 필요, 아래 「테스트」).
 
+## 한 서버에 프로젝트 여럿으로 열어 보기 (개발)
+
+백엔드 하나가 요청 **Host** 로 프로젝트를 고른다(`skeleton.projects`). 같은 앱을 주소만 달리해 두 번 띄우면 프로젝트 둘이 된다 — 앱을 복제하지 않는다. `*.localhost` 는 브라우저가 알아서 이 컴퓨터로 보내므로 hosts 파일이 필요 없다.
+
+```bash
+pnpm --filter sample dev --port 5174     # http://a.localhost:5174
+pnpm --filter sample dev --port 5175     # http://b.localhost:5175
+```
+
+- 브라우저가 쓴 Host(`a.localhost:5174`)가 `/api/v1` 프록시를 거쳐 백엔드에 **그대로**(+ `X-Forwarded-Host`) 닿는다(`devProxy.ts`). 백엔드는 포트를 떼고 `a.localhost` 로 프로젝트를 고른다. 오리진이 달라 로그인 · 저장소(localStorage)도 프로젝트마다 따로다.
+- `localhost:5173` · `127.0.0.1:5173` · 터널 도메인은 예전 그대로 — 프록시가 Host 를 백엔드 주소로 바꾼다. 터널 도메인(`skel.…`)을 쓰려면 `server.allowedHosts` 에 더해야 한다(Vite 가 모르는 Host 는 403).
+- 포트는 마음대로(`--port`). 백엔드를 다른 포트로 띄웠다면 `API_PROXY_TARGET=http://localhost:18080`.
+
 ## 화면 → Pattern 지도
 
 | 화면 (경로)                                                                                                                                                    | 파일                                                                                                                                                                                                                                            | 어느 Pattern 에서 왔나                                                                           | 어떻게 조립했나                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |

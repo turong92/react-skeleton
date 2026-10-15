@@ -26,6 +26,9 @@ import { PAYMENT_E2E_SKELETON } from './paymentE2eConfig'
  *
  * 가짜 Paddle: 가짜 토스와 함께 켠다(`E2E_FAKE_PADDLE=0` 이면 끈다) - `fakePaddle.ts` 가 서명한 웹훅을 백엔드로 쏘고(백엔드 주소는 기동 뒤 알려 준다) 백엔드의 Paddle 설정(`SKELETON_PAYMENT_PADDLE_*` · `PADDLE_*`)이 이 서버를 본다.
  *
+ * 네이티브 백엔드: E2E_NATIVE=1 이면 백엔드 스크립트가 `apps/sample` 을 GraalVM 네이티브로 빌드해 리눅스 컨테이너로 띄운다(JVM 대신 — 같은 시나리오가 네이티브에서도 도는지). 컨테이너 안의 앱이 호스트의 가짜 서버(소셜 · 토스 · Paddle)를
+ *   `localhost:<포트>` 로 보도록 그 포트들을 `E2E_NATIVE_FORWARD_PORTS` 로 넘긴다. 첫 빌드는 오래 걸려(몇 분) 기동 제한을 늘린다. 이미 만든 실행 파일은 `E2E_NATIVE_SKIP_BUILD=1`. 나머지는 위와 같다.
+ *
  * 환경변수: E2E_API_URL — 이미 떠 있는 백엔드를 쓴다(기동 · 정리를 건너뜀) · SAMPLE_API_DIR — 백엔드 레포 위치(기본: 이 레포 옆 ../kotlin-skeleton)
  */
 declare module 'vitest' {
@@ -79,6 +82,7 @@ export default async function setup(project: TestProject) {
   let fakePaddle: FakePaddle | null = null
   let apiUrl = process.env.E2E_API_URL ?? ''
   let mailUrl = process.env.E2E_MAIL_URL ?? ''
+  const native = process.env.E2E_NATIVE === '1'
   if (!apiUrl) {
     const apiDir = resolve(process.env.SAMPLE_API_DIR ?? resolve(repoRoot, '../kotlin-skeleton'))
     backendScript = resolve(apiDir, 'scripts/sample-e2e-backend.sh')
@@ -89,7 +93,8 @@ export default async function setup(project: TestProject) {
       await freePort(),
     ]
     // 가짜 소셜 제공자는 기본으로 켠다 — 표준 e2e 한 번이 소셜 여정까지 돌게(`E2E_FAKE_PROVIDERS=0` 이면 끈다: 소셜 없는 백엔드 구성)
-    if (process.env.E2E_FAKE_PROVIDERS !== '0') fake = await startFakeProviders()
+    if (process.env.E2E_FAKE_PROVIDERS !== '0')
+      fake = await startFakeProviders(native ? '127.0.0.1' : 'localhost') // 네이티브: 컨테이너의 socat 이 호스트의 IPv4 로 건넨다 — `localhost` 가 ::1 만 열면 닿지 않는다
     // 가짜 토스도 기본으로 켠다 — 결제 여정(결제창 → 승인 → 조회 → 환불)을 진짜 토스 없이 끝까지(`E2E_FAKE_TOSS=0` 이면 끈다: 결제 없는 백엔드 구성)
     if (process.env.E2E_FAKE_TOSS !== '0') fakeToss = await startFakeToss()
     if (process.env.E2E_FAKE_PADDLE !== '0') fakePaddle = await startFakePaddle()
@@ -109,6 +114,17 @@ export default async function setup(project: TestProject) {
     const e2eSkeleton = {
       ...e2eLimits,
       ...(fakeToss || fakePaddle ? PAYMENT_E2E_SKELETON : {}),
+      // 네이티브 컨테이너에는 호스트 요청의 출발지가 도커가 만든 임의의 주소로 보인다(사설 대역도 아니다) — 접속 나라 헤더를 믿는 프록시를 모든 주소로 연다(이 e2e 백엔드만, 호스트 포트는 로컬에만 열린다)
+      ...(native && (fakeToss || fakePaddle)
+        ? {
+            web: {
+              'client-ip': {
+                ...PAYMENT_E2E_SKELETON.web['client-ip'],
+                'trusted-proxies': ['0.0.0.0/0', '::/0'],
+              },
+            },
+          }
+        : {}),
     }
     const fakeConfig = fake
       ? {
@@ -178,6 +194,13 @@ export default async function setup(project: TestProject) {
       ...tossEnv,
       ...paddleEnv,
       MARINA_DIRECT: '1',
+      ...(native
+        ? {
+            E2E_NATIVE_FORWARD_PORTS: [fake, fakeToss, fakePaddle]
+              .flatMap((f) => (f ? [new URL(f.url).port] : []))
+              .join(' '),
+          }
+        : {}),
       SERVER_PORT: String(serverPort),
       DB_PORT: String(dbPort),
       S3_PORT: String(s3Port),
@@ -189,7 +212,7 @@ export default async function setup(project: TestProject) {
     const started = spawnSync('bash', [backendScript, 'start'], {
       encoding: 'utf8',
       env: backendEnv,
-      timeout: 560_000,
+      timeout: native ? 1_800_000 : 560_000, // 네이티브는 첫 빌드가 5~10분
     })
     if (started.status !== 0)
       throw new Error(`backend did not start:\n${started.stdout}\n${started.stderr}`)

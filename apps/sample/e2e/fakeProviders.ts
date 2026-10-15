@@ -43,7 +43,7 @@ const json = (res: ServerResponse, status: number, value: unknown) => {
   res.end(JSON.stringify(value))
 }
 
-export async function startFakeProviders(): Promise<FakeProviders> {
+export async function startFakeProviders(listenHost = 'localhost'): Promise<FakeProviders> {
   const grants = new Map<string, Grant>()
   const state = {
     line: { sub: 'U-e2e-line-1', name: 'LINE Tester', email: undefined as string | undefined },
@@ -205,7 +205,7 @@ export async function startFakeProviders(): Promise<FakeProviders> {
   const server: Server = createServer((req, res) => {
     handle(req, res).catch(() => json(res, 500, { error: 'fake provider crashed' }))
   })
-  await new Promise<void>((done) => server.listen(0, 'localhost', done))
+  await new Promise<void>((done) => server.listen(0, listenHost, done))
   const address = server.address()
   if (!address || typeof address === 'string') throw new Error('fake providers: no port')
   base = `http://localhost:${address.port}`

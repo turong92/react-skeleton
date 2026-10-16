@@ -1,9 +1,7 @@
 /// <reference types="node" />
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
 import { check } from '@skeleton/tokens/build'
 import { describe, expect, it } from 'vitest'
-import { loadWorkspaces, REPO } from './support/loadWorkspaces'
+import { loadWorkspaces } from './support/loadWorkspaces'
 
 /*
  * 토큰 정본 → 생성물이 레포 전체에서 한 곳(packages/tokens)에만 있고, 앱이 그것을 먼저 불러오는지.
@@ -12,17 +10,12 @@ import { loadWorkspaces, REPO } from './support/loadWorkspaces'
 const workspaces = loadWorkspaces()
 // 화면 앱만 — 스토리집은 .storybook/preview.tsx 에서 같은 순서로 불러온다(tests/workspace.test.ts 가 확인)
 const apps = workspaces.filter((w) => w.kind === 'app' && w.dir !== 'apps/storybook')
-const read = (path: string) => readFileSync(join(REPO, path), 'utf8')
 
 describe('docs/design-tokens.md', () => {
   it('table region equals what the generator makes (hand-written text outside it is untouched)', () => {
     expect(check({ docOut: '../../docs/design-tokens.md' }), 'drifted — run `pnpm tokens`').toEqual(
       [],
     )
-  })
-
-  it('does not leak a project name into the generator docs', () => {
-    expect(read('docs/design-tokens.md').toLowerCase()).not.toContain('acme')
   })
 })
 

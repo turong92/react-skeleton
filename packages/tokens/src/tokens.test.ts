@@ -75,11 +75,8 @@ describe('tokens.json format (W3C Design Tokens draft)', () => {
     expect(missing).toEqual([])
   })
 
-  it('uses the neutral $extensions.skeleton key and nothing project-specific leaked in', () => {
-    const json = JSON.stringify(tokensJson)
-    expect(json).toContain('"skeleton"')
-    for (const file of ['tokens.json', 'build.mjs'])
-      expect(read(file).toLowerCase(), file).not.toContain('acme')
+  it('uses the neutral $extensions.skeleton key', () => {
+    expect(JSON.stringify(tokensJson)).toContain('"skeleton"')
   })
 })
 

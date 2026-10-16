@@ -97,13 +97,13 @@ Node 24(또는 22.18+), pnpm 10.
 ```bash
 scripts/new-project.sh <target-dir> <name> [--packages a,b,c] [--ssr] [--without-storybook] [--with-workbench] [--with-sample] [--scope @acme]
 
-scripts/new-project.sh ~/work/ovation ovation                                      # 스타터 + 스타터가 쓰는 패키지
-scripts/new-project.sh ~/work/ovation ovation --packages realtime,notifications,storage
-scripts/new-project.sh ~/work/ovation ovation --packages board                     # 게시판(→ ui · api-client · time 으로 닫힌다)
-scripts/new-project.sh ~/work/ovation ovation --scope @ovation --packages payment  # 패키지 스코프도 바꾼다
-scripts/new-project.sh ~/work/ovation ovation --ssr                                 # 서버 렌더 스타터(스토리집은 기본으로 따라온다)
-scripts/new-project.sh ~/work/ovation ovation --without-storybook                   # 스토리집 · 스토리 · 에이전트 안내 없이
-scripts/new-project.sh ~/work/ovation ovation --with-sample                         # 참조 앱 apps/sample(Notes)도 함께 — 기본은 뗀다
+scripts/new-project.sh ~/work/acme acme                                      # 스타터 + 스타터가 쓰는 패키지
+scripts/new-project.sh ~/work/acme acme --packages realtime,notifications,storage
+scripts/new-project.sh ~/work/acme acme --packages board                     # 게시판(→ ui · api-client · time 으로 닫힌다)
+scripts/new-project.sh ~/work/acme acme --scope @acme --packages payment  # 패키지 스코프도 바꾼다
+scripts/new-project.sh ~/work/acme acme --ssr                                 # 서버 렌더 스타터(스토리집은 기본으로 따라온다)
+scripts/new-project.sh ~/work/acme acme --without-storybook                   # 스토리집 · 스토리 · 에이전트 안내 없이
+scripts/new-project.sh ~/work/acme acme --with-sample                         # 참조 앱 apps/sample(Notes)도 함께 — 기본은 뗀다
 ```
 
 - 이 레포를 복사해(`node_modules` · `dist` · `.git` 제외) `apps/starter` 를 `apps/<name>` 으로 바꾼다(package.json 이름 · `index.html` 제목 · 헤더 브랜드 · `.env.example`). `apps/workbench` 는 `--with-workbench` 일 때만(그러면 모든 패키지가 따라온다).
@@ -214,13 +214,13 @@ WebSocket URL 은 `VITE_API_BASE_URL` 에서 자동 파생된다. 예: `VITE_API
 백엔드(kotlin-skeleton 에서 찍은 프로젝트)와 프론트를 **같은 작업 폴더에 `api` · `web` 으로** 둔다. 백엔드의 `scripts/dev.sh` 가 DB(+ 로컬 S3) 컨테이너 → 백엔드 → 옆의 `../web` 의 `pnpm dev` 를 한 번에 띄우고 Ctrl-C 로 같이 내린다.
 
 ```
-~/work/ovation/
+~/work/acme/
 ├── api/    # kotlin-skeleton/scripts/new-project.sh 로 찍은 것
 └── web/    # react-skeleton/scripts/new-project.sh 로 찍은 것
 ```
 
 ```bash
-cd ~/work/ovation/api && scripts/dev.sh   # http://localhost:5173 (프론트) · :8080 (백엔드)
+cd ~/work/acme/api && scripts/dev.sh   # http://localhost:5173 (프론트) · :8080 (백엔드)
 ```
 
 스타터 백엔드(`apps/api`)에는 시드 계정이 없다 — 화면에서 가입한다(`APP=sample scripts/dev.sh` 나 `scripts/dev-sample.sh` 로 샘플 백엔드를 띄우면 시드 `user@example.com` / `password` 로 로그인된다). 프론트 폴더가 다른 곳이면 `WEB_DIR=…`, 프론트 없이는 `WEB_DIR= scripts/dev.sh`.

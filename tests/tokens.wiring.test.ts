@@ -22,7 +22,7 @@ describe('docs/design-tokens.md', () => {
   })
 
   it('does not leak a project name into the generator docs', () => {
-    expect(read('docs/design-tokens.md').toLowerCase()).not.toContain('ovation')
+    expect(read('docs/design-tokens.md').toLowerCase()).not.toContain('acme')
   })
 })
 

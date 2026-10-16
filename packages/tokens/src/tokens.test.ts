@@ -79,7 +79,7 @@ describe('tokens.json format (W3C Design Tokens draft)', () => {
     const json = JSON.stringify(tokensJson)
     expect(json).toContain('"skeleton"')
     for (const file of ['tokens.json', 'build.mjs'])
-      expect(read(file).toLowerCase(), file).not.toContain('ovation')
+      expect(read(file).toLowerCase(), file).not.toContain('acme')
   })
 })
 

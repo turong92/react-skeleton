@@ -1316,7 +1316,7 @@
         ],
         "oneOfModules": [],
         "optionalModules": [],
-        "basePaths": ["/api/v1"],
+        "basePaths": ["/api/v1", "/api/v1/project-hello"],
         "docs": ["docs/minimal-composition.md"],
         "app": "apps/api"
       },
@@ -1378,7 +1378,7 @@
         ],
         "oneOfModules": [],
         "optionalModules": [],
-        "basePaths": ["/api/v1"],
+        "basePaths": ["/api/v1", "/api/v1/project-hello"],
         "docs": ["docs/minimal-composition.md"],
         "app": "apps/api"
       },

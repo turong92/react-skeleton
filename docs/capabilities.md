@@ -337,7 +337,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 - 위치: `starter` (`apps/starter`)
 - 켜는 법: 모든 프로젝트에 들어간다
 - 필요한 것: `api-client` · `auth` · `theme` · `time` · `tokens` · `ui`
-- 백엔드: 모듈 `account` · `account-jdbc` · `alert` · `auth` · `auth-session` · `auth-session-jdbc` · `auth-social` · `captcha-turnstile` · `db-postgresql` · `idempotency` · `job-queue-jdbc` · `legal` · `legal-jdbc` · `migration` · `migration-flyway` · `notification-mail` · `persistence-jdbc` · `platform` · `time` · 경로 `/api/v1` · 짝 앱 `apps/api`
+- 백엔드: 모듈 `account` · `account-jdbc` · `alert` · `auth` · `auth-session` · `auth-session-jdbc` · `auth-social` · `captcha-turnstile` · `db-postgresql` · `idempotency` · `job-queue-jdbc` · `legal` · `legal-jdbc` · `migration` · `migration-flyway` · `notification-mail` · `persistence-jdbc` · `platform` · `time` · 경로 `/api/v1` · `/api/v1/project-hello` · 짝 앱 `apps/api`
 - 주요 진입점: `apps/starter/src/main.tsx` · `apps/starter/src/routes/routes.tsx` · `apps/starter/src/api/client.ts` · `apps/starter/src/auth/session.ts` · `apps/starter/src/layouts/RootLayout.tsx`
 - 문서: `CLAUDE.md`
 - 쓰지 않는 경우: 서버가 첫 HTML 을 그려야 하면(검색 노출 · 링크 미리보기) → app-starter-ssr / 복사 후 안 쓰는 것은 지운다 — 스타터는 최소다
@@ -349,7 +349,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 - 위치: `starter-ssr` (`apps/starter-ssr`)
 - 켜는 법: `--ssr` — 함께 따라오는 패키지 `seo`
 - 필요한 것: `api-client` · `auth` · `seo` · `theme` · `time` · `tokens` · `ui`
-- 백엔드: 모듈 `account` · `account-jdbc` · `alert` · `auth` · `auth-session` · `auth-session-jdbc` · `auth-social` · `captcha-turnstile` · `db-postgresql` · `idempotency` · `job-queue-jdbc` · `legal` · `legal-jdbc` · `migration` · `migration-flyway` · `notification-mail` · `persistence-jdbc` · `platform` · `time` · 경로 `/api/v1` · 짝 앱 `apps/api`
+- 백엔드: 모듈 `account` · `account-jdbc` · `alert` · `auth` · `auth-session` · `auth-session-jdbc` · `auth-social` · `captcha-turnstile` · `db-postgresql` · `idempotency` · `job-queue-jdbc` · `legal` · `legal-jdbc` · `migration` · `migration-flyway` · `notification-mail` · `persistence-jdbc` · `platform` · `time` · 경로 `/api/v1` · `/api/v1/project-hello` · 짝 앱 `apps/api`
 - 주요 진입점: `apps/starter-ssr/server/main.ts` · `apps/starter-ssr/src/entry-server.tsx` · `apps/starter-ssr/src/entry-client.tsx` · `apps/starter-ssr/src/routes/routes.tsx` · `apps/starter-ssr/Dockerfile`
 - 문서: `apps/starter-ssr/README.md` · `CLAUDE.md`
 - 쓰지 않는 경우: 로그인 뒤 앱(대시보드)은 SPA 로 충분하다 → app-starter / 렌더 중 window · localStorage · 난수 · 시각을 읽지 않는다(하이드레이션 어긋남) / --ssr 은 SPA 스타터를 대신한다(둘 다 찍을 수 없다)

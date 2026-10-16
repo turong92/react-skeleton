@@ -277,6 +277,19 @@ describe('control: what the next apply does (one time only)', () => {
     })
   })
 
+  it('cancel not-complete: CancelNotComplete once and nothing is cancelled; the next cancel goes through', async () => {
+    const { paymentId } = await buyerPays(3000)
+    await apply(paymentId)
+    await control.set({ cancel: { mode: 'not-complete' } })
+    expect(await (await cancel(paymentId, 1000, 'n1')).json()).toMatchObject({
+      code: 'CancelNotComplete',
+    })
+    expect(
+      (await control.state()).payments.find((p) => p.paymentId === paymentId)?.cancels,
+    ).toEqual([])
+    expect(await (await cancel(paymentId, 1000, 'n2')).json()).toMatchObject({ code: 'Success' })
+  })
+
   it('decline: Fail once and nothing is applied; the next apply goes through', async () => {
     await control.set({ apply: { mode: 'decline' } })
     const { paymentId } = await buyerPays()

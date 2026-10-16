@@ -17,6 +17,7 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
  * 제어 `POST /control` — 다음에 일어날 일을 **한 번만** 정한다(앞 시나리오의 지시가 다음 시나리오에 남지 않게):
  *   { buyer: 'cancel' | 'fail' | 'leave' | null }          다음 결제창: 구매자가 그만둔다(UserCancel) · 실패(TimeExpired) · 결제 없이 떠난다(어디로도 돌려보내지 않는다)
  *   { apply: { mode: 'decline'|'delay'|'lose'|'error', delayMs? } | null }   다음 승인: 거절(`Fail`) · 늦게 답함 · 적용했지만 답이 유실됨(연결 끊김) · 5xx(적용 안 됨)
+ *   { cancel: { mode: 'not-complete' } | null }             다음 취소: 적용하지 않고 `CancelNotComplete`(취소가 아직 끝나지 않았다 - 곧 자동 재처리)
  *   { reset: true }                                        모든 결제 · 호출 기록 · 지시를 지운다
  * `GET /control` → { payments, reservations, calls, next } — `calls` 는 네이버페이 API(/naverpay-partner/…) 호출만 시각 순으로.
  */
@@ -54,6 +55,8 @@ export type ApplyInstruction = {
   mode: 'decline' | 'delay' | 'lose' | 'error'
   delayMs?: number
 }
+/** 다음 취소: 취소를 적용하지 않고 `CancelNotComplete`(곧 자동 재처리) · 잔액 부족 같은 거절은 승인에만 있다 */
+export type CancelInstruction = { mode: 'not-complete' }
 type BuyerInstruction = 'cancel' | 'fail' | 'leave'
 
 export type FakeNaverPayCall = {
@@ -67,11 +70,16 @@ export type FakeNaverPayState = {
   payments: Payment[]
   reservations: Reservation[]
   calls: FakeNaverPayCall[]
-  next: { buyer: BuyerInstruction | null; apply: ApplyInstruction | null }
+  next: {
+    buyer: BuyerInstruction | null
+    apply: ApplyInstruction | null
+    cancel: CancelInstruction | null
+  }
 }
 export type FakeNaverPayPatch = {
   buyer?: BuyerInstruction | null
   apply?: ApplyInstruction | null
+  cancel?: CancelInstruction | null
   reset?: boolean
 }
 
@@ -140,7 +148,7 @@ export async function startFakeNaverPay(): Promise<FakeNaverPay> {
   const replies = new Map<string, string>() // `<operation>/<멱등 키>` → 처음 응답 본문
   let calls: FakeNaverPayCall[] = []
   const reservations = new Map<string, Reservation>()
-  const next: FakeNaverPayState['next'] = { buyer: null, apply: null }
+  const next: FakeNaverPayState['next'] = { buyer: null, apply: null, cancel: null }
   let appUrl = ''
   let sequence = 0
 
@@ -274,6 +282,9 @@ export async function startFakeNaverPay(): Promise<FakeNaverPay> {
   }
 
   function cancel(form: Record<string, string>): Reply {
+    const instruction = next.cancel
+    next.cancel = null
+    if (instruction?.mode === 'not-complete') return envelope('CancelNotComplete', 'retry later')
     const payment = payments.get(form.paymentId ?? '')
     if (!payment || !payment.applied) return envelope('InvalidPaymentId', 'not applied')
     const asked = Number(form.cancelAmount)
@@ -378,9 +389,11 @@ export async function startFakeNaverPay(): Promise<FakeNaverPay> {
           calls = []
           next.buyer = null
           next.apply = null
+          next.cancel = null
         }
         if ('buyer' in patch) next.buyer = patch.buyer ?? null
         if ('apply' in patch) next.apply = patch.apply ?? null
+        if ('cancel' in patch) next.cancel = patch.cancel ?? null
         return emit(res, json(200, { ok: true }))
       }
 

@@ -65,6 +65,7 @@ export function DiscardPath({
           {providers.map((provider) => (
             <Button
               key={provider}
+              className={styles.action}
               disabled={!onProviderReauth}
               onClick={() => onProviderReauth?.(provider)}
             >
@@ -73,7 +74,7 @@ export function DiscardPath({
           ))}
         </div>
       ) : (
-        <Button variant="danger" onClick={() => setOpen(true)}>
+        <Button variant="danger" className={styles.action} onClick={() => setOpen(true)}>
           {labels.emailRequiredDiscard}
         </Button>
       )}

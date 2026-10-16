@@ -66,6 +66,13 @@
   font-size: var(--font-size-small);
 }
 
+.discard .action {
+  /* 단추 글자는 기본이 줄바꿈 없음 — 글꼴이 넓은 기기(리눅스 · 안드로이드)의 320px 에서는 이 칸이 가로로 밀린다. 여기서는 줄을 바꾼다 */
+  white-space: normal;
+  padding-block: var(--space-sm);
+  line-height: var(--line-height-normal);
+}
+
 .leave {
   display: grid;
   gap: var(--space-md);

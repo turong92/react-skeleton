@@ -112,7 +112,7 @@ describe('readNaverPayReturn (what NaverPay put on the return address the server
   it('success: order + resultCode Success + paymentId → the order and the payment id (no amount - the server knows it)', () => {
     expect(
       readNaverPayReturn(
-        '?kind=NAVERPAY_SDK&provider=naverpay&order=ord_1&resultCode=Success&paymentId=20261017NP0001',
+        '?kind=NAVERPAY_REDIRECT&provider=naverpay&order=ord_1&resultCode=Success&paymentId=20261017NP0001',
       ),
     ).toEqual({ ok: true, orderId: 'ord_1', paymentId: '20261017NP0001' })
   })

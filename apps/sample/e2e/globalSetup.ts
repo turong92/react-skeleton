@@ -29,7 +29,7 @@ import { PAYMENT_E2E_SKELETON } from './paymentE2eConfig'
  * 가짜 카카오페이: 가짜 토스와 함께 켠다(`E2E_FAKE_KAKAOPAY=0` 이면 끈다) - 백엔드의 카카오페이 설정(`SKELETON_PAYMENT_KAKAOPAY_*`)이 이 서버를 본다. 돌아올 주소(`RETURN_URL`)는 이 서버의 `/return` 이고, 앱(Vite)이 뜬 뒤 그 주소를 알려 준다 -
  *   백엔드는 앱보다 먼저 떠서 앱의 주소를 모르기 때문이다. 토스와 둘 다 켜지면 같은 나라(KR)에 결제사가 둘이라 응원하기에 「결제 방법」 고르기가 생긴다(`GET /payments/config` 의 `choices`).
  *
- * 가짜 네이버페이: 가짜 토스와 함께 켠다(`E2E_FAKE_NAVERPAY=0` 이면 끈다) - 백엔드의 네이버페이 설정(`SKELETON_PAYMENT_NAVERPAY_*`)이 이 서버를 본다. 결제창(네이버 SDK)은 브라우저가 여는 것이라 시험이 SDK 스크립트를 가로챈다(`routeNaverPaySdk`);
+ * 가짜 네이버페이: 가짜 토스와 함께 켠다(`E2E_FAKE_NAVERPAY=0` 이면 끈다) - 백엔드의 네이버페이 설정(`SKELETON_PAYMENT_NAVERPAY_*`)이 이 서버를 본다(결제 예약 API 와 결제창 `/payments/<예약 번호>` 둘 다 이 서버).
  *   돌아올 주소(`RETURN_URL`)는 이 서버의 `/return` 이고 앱이 뜬 뒤 그 주소를 알려 준다(카카오페이와 같다). 인증값은 가맹 심사 뒤에야 나오므로 진짜 네이버페이로는 돌려 볼 수 없다. 토스 · 카카오페이와 셋이 켜지면 「결제 방법」 고르기에 셋이 보인다.
  *
  * 가짜 Paddle: 가짜 토스와 함께 켠다(`E2E_FAKE_PADDLE=0` 이면 끈다) - `fakePaddle.ts` 가 서명한 웹훅을 백엔드로 쏘고(백엔드 주소는 기동 뒤 알려 준다) 백엔드의 Paddle 설정(`SKELETON_PAYMENT_PADDLE_*` · `PADDLE_*`)이 이 서버를 본다.
@@ -221,6 +221,7 @@ export default async function setup(project: TestProject) {
           SKELETON_PAYMENT_NAVERPAY_CHAIN_ID: FAKE_NAVERPAY.chainId,
           SKELETON_PAYMENT_NAVERPAY_RETURN_URL: `${fakeNaverPay.url}/return`,
           SKELETON_PAYMENT_NAVERPAY_BASE_URL: fakeNaverPay.url,
+          SKELETON_PAYMENT_NAVERPAY_WINDOW_BASE_URL: fakeNaverPay.url,
         }
       : {}
     backendEnv = {

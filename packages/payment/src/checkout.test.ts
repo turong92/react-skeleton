@@ -364,3 +364,49 @@ describe('checkoutCanOpen (a checkout the screen can actually open)', () => {
     ).toBe(false)
   })
 })
+
+describe('openCheckout — NAVERPAY_REDIRECT', () => {
+  const naver: Checkout = {
+    provider: 'naverpay',
+    kind: 'NAVERPAY_REDIRECT',
+    clientKey: null,
+    testMode: true,
+    orderId: 'ord_1',
+    orderName: '응원하기 3,000원',
+    amount: { amount: 3000, currency: 'KRW' },
+    attributes: { windowUrl: 'https://test-m.pay.naver.com/payments/RSV1' },
+  }
+
+  it('sends the buyer to the window address the server reserved - nothing else, no SDK, and not to the successUrl the screen made up', async () => {
+    const navigate = vi.fn()
+    await openCheckout(naver, { successUrl: 'https://evil.example/ok', failUrl: 'f', navigate })
+    expect(navigate).toHaveBeenCalledExactlyOnceWith('https://test-m.pay.naver.com/payments/RSV1')
+  })
+
+  it('a window address that is not http(s) is never followed, and an easy pay is refused rather than dropped', async () => {
+    const navigate = vi.fn()
+    const bad = { ...naver, attributes: { windowUrl: 'javascript:alert(1)' } } as Checkout
+    await expect(openCheckout(bad, { successUrl: 's', failUrl: 'f', navigate })).rejects.toThrow(
+      /http/,
+    )
+    await expect(
+      openCheckout({ ...naver, attributes: {} } as Checkout, {
+        successUrl: 's',
+        failUrl: 'f',
+        navigate,
+      }),
+    ).rejects.toThrow(/http/)
+    await expect(
+      openCheckout(naver, { successUrl: 's', failUrl: 'f', easyPay: 'NAVERPAY', navigate }),
+    ).rejects.toThrow(/NAVERPAY/)
+    expect(navigate).not.toHaveBeenCalled()
+  })
+
+  it('can be opened only with a window address - a null client key is normal here', () => {
+    expect(checkoutCanOpen(naver)).toBe(true)
+    expect(checkoutCanOpen({ ...naver, attributes: {} } as Checkout)).toBe(false)
+    expect(
+      checkoutCanOpen({ ...naver, attributes: { windowUrl: 'data:text/html,x' } } as Checkout),
+    ).toBe(false)
+  })
+})

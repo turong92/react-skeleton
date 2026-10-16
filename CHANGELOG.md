@@ -9,8 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added — 네이버페이 직접 연동 (단건 결제 · 취소 · 환불) — 토스 계약 없이
 
-- `checkout.kind === 'NAVERPAY_SDK'`: `openCheckout` 이 네이버 SDK(`https://nsp.pay.naver.com/sdk/js/naverpay.min.js` - 누른 그때 불러온다, npm 의존 없음)로 결제창을 같은 창에서 연다. 서버가 준 공개 값(클라이언트 아이디 · 체인 아이디 · 모드 · 돌아올 주소 · 과세/면세 금액)과 주문 id · 이름 · 금액만 넘긴다(구매자 정보 없음). 값이 모자라거나 과세 + 면세가 금액과 다르면 스크립트를 부르기 전에 던진다. 간편결제 단추가 따로 없어 `easyPay` 를 주면 던진다. `checkoutCanOpen` 이 이 결제창도 가른다. `loadNaverPay` 로 가짜 SDK 를 넣는다.
-- `readNaverPayReturn(search)`: 서버 설정의 돌아올 주소로 붙어 온 `?kind=NAVERPAY_SDK&order=…&resultCode=Success&paymentId=…` / `resultCode=UserCancel` / 그 밖의 `resultCode` 를 읽는다(금액은 주소에 없다). 승인은 토스처럼 `confirmOrder(id, { providerPaymentId: paymentId, amount })`. 백엔드 `payment-naverpay` - 승인 API 가 금액을 받지 않아 금액은 결제창이 정하고 서버가 승인 응답의 총액을 주문과 대조한다. 견본 `PaymentReturnPage` 는 읽은 주문의 금액과 결제 번호로 승인을 한 번 보내고, `CheerPage` 의 「결제 방법」 고르기에 네이버페이가 나온다. e2e: 가짜 네이버페이 `apps/sample/e2e/fakeNaverPay.ts`(+ SDK 가로채기) + `naverpay.e2e.ts`. 인증값이 가맹 심사 뒤에야 나와 진짜 네이버페이로는 돌려 보지 못했다.
+- `checkout.kind === 'NAVERPAY_REDIRECT'`: 서버가 결제를 이미 예약했다(금액 · 주문 번호는 장부의 값 - 구매자가 못 바꾼다). `openCheckout` 이 SDK 없이 구매자를 서버가 준 결제창 주소(`attributes.windowUrl`, http(s) 절대 주소만 - 아니면 던진다)로 보낸다(`navigate` 로 바꿀 수 있다). 간편결제 단추가 따로 없어 `easyPay` 를 주면 던진다. `checkoutCanOpen` 이 이 결제창도 가른다(공개 키가 `null` 인 것이 정상).
+- `readNaverPayReturn(search)`: 서버 설정의 돌아올 주소로 붙어 온 `?kind=NAVERPAY_REDIRECT&order=…&resultCode=Success&paymentId=…` / `resultCode=UserCancel` / 그 밖의 `resultCode` 를 읽는다(금액은 주소에 없다). 승인은 토스처럼 `confirmOrder(id, { providerPaymentId: paymentId, amount })`. 백엔드 `payment-naverpay`. 견본 `PaymentReturnPage` 는 읽은 주문의 금액과 결제 번호로 승인을 한 번 보내고, `CheerPage` 의 「결제 방법」 고르기에 네이버페이가 나온다. e2e: 가짜 네이버페이 `apps/sample/e2e/fakeNaverPay.ts` + `naverpay.e2e.ts`. 인증값이 가맹 심사 뒤에야 나와 진짜 네이버페이로는 돌려 보지 못했다.
 
 ### Added — 카카오페이 직접 연동 (단건 결제 · 취소 · 환불) — 토스 계약 없이
 

@@ -1,7 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import {
   FAKE_NAVERPAY,
-  fakeSdkScript,
   naverPayControl,
   startFakeNaverPay,
   type FakeNaverPay,
@@ -45,37 +44,52 @@ const history = (paymentId: string) =>
   })
 let n = 0
 
+const RETURN = 'https://app.test/payments/return?kind=NAVERPAY_REDIRECT&order=x'
 const reserveBody = (merchantPayKey: string, total: number) => ({
-  sdk: {
-    mode: 'development',
-    clientId: FAKE_NAVERPAY.clientId,
-    chainId: FAKE_NAVERPAY.chainId,
-    payType: 'normal',
-    openType: 'page',
-  },
-  open: {
-    merchantPayKey,
-    productName: '응원하기',
-    productCount: 1,
-    totalPayAmount: total,
-    taxScopeAmount: total,
-    taxExScopeAmount: 0,
-    returnUrl: 'https://app.test/payments/return?kind=NAVERPAY_SDK&order=x',
-    productItems: [
-      { categoryType: 'ETC', categoryId: 'ETC', uid: merchantPayKey, name: 'x', count: 1 },
-    ],
-  },
+  modelVersion: '2',
+  merchantPayKey,
+  productName: '응원하기',
+  productCount: 1,
+  totalPayAmount: total,
+  taxScopeAmount: total,
+  taxExScopeAmount: 0,
+  returnUrl: RETURN,
+  productItems: [
+    { categoryType: 'ETC', categoryId: 'ETC', uid: merchantPayKey, name: 'x', count: 1 },
+  ],
 })
-/** 구매자가 결제창에서 결제를 마친다 - 돌려받은 결제 번호 */
+let keys = 0
+const reserve = (body: unknown, key: string | null = `rk-${++keys}`) =>
+  fetch(`${fake.url}${API}/v2/reserve`, {
+    method: 'POST',
+    headers: {
+      ...headers(),
+      'Content-Type': 'application/json',
+      ...(key ? { 'X-NaverPay-Idempotency-Key': key } : {}),
+    },
+    body: JSON.stringify(body),
+  })
+/** 서버가 결제를 예약한다 - 예약 번호 */
+async function reserved(orderId: string, total: number) {
+  const body = (await (await reserve(reserveBody(orderId, total))).json()) as {
+    code: string
+    body: { reserveId: string }
+  }
+  expect(body.code).toBe('Success')
+  return body.body.reserveId
+}
+/** 구매자가 예약한 결제창을 따라가 결제를 마친다 - 돌아가는 주소 */
+async function openWindow(reserveId: string) {
+  const hop = await fetch(`${fake.url}/payments/${reserveId}`, { redirect: 'manual' })
+  expect(hop.status).toBe(302)
+  return new URL(hop.headers.get('location') ?? '')
+}
+/** 구매자가 결제를 마친다 - 돌려받은 결제 번호 */
 async function buyerPays(total = 3000) {
   const orderId = `ord_test${++n}`
-  const response = await fetch(`${fake.url}/sdk/reserve`, {
-    method: 'POST',
-    body: JSON.stringify(reserveBody(orderId, total)),
-  })
-  const result = (await response.json()) as { ok?: boolean; paymentId: string }
-  expect(result.ok).toBe(true)
-  return { orderId, paymentId: result.paymentId }
+  const back = await openWindow(await reserved(orderId, total))
+  expect(back.searchParams.get('resultCode')).toBe('Success')
+  return { orderId, paymentId: back.searchParams.get('paymentId') ?? '' }
 }
 const apply = (paymentId: string, key = `apply-${paymentId}`) =>
   post('/v2.2/apply/payment', { paymentId }, key)
@@ -190,54 +204,62 @@ describe('cancel and history', () => {
   })
 })
 
-describe('the buyer window (reserve)', () => {
-  it('refuses a window opened with another client id, or a tax split that does not add up', async () => {
-    const wrong = reserveBody('ord_x', 3000)
-    wrong.sdk.clientId = 'nope'
+describe('reserve and the buyer window', () => {
+  it('reserves with the amount and order id the server sent, needs the idempotency key, refuses a tax split that does not add up and replays the first answer with 409', async () => {
+    expect((await reserve(reserveBody('ord_x', 3000), null)).status).toBe(400)
+    const bad = { ...reserveBody('ord_x', 3000), taxScopeAmount: 1000 }
+    expect(await (await reserve(bad)).json()).toMatchObject({ code: 'InvalidParameter' })
+    const first = await reserve(reserveBody('ord_k', 4000), 'same-key')
+    const replay = await reserve(reserveBody('ord_k', 4000), 'same-key')
+    expect(replay.status).toBe(409)
+    expect(await replay.json()).toEqual(await first.json())
     expect(
-      await (
-        await fetch(`${fake.url}/sdk/reserve`, { method: 'POST', body: JSON.stringify(wrong) })
-      ).json(),
-    ).toMatchObject({ fail: { resultCode: 'InvalidMerchant' } })
-    const bad = reserveBody('ord_x', 3000)
-    bad.open.taxScopeAmount = 1000
-    expect(
-      await (
-        await fetch(`${fake.url}/sdk/reserve`, { method: 'POST', body: JSON.stringify(bad) })
-      ).json(),
-    ).toMatchObject({ fail: { resultCode: 'InvalidParameter' } })
+      (await control.state()).reservations.filter((r) => r.merchantPayKey === 'ord_k'),
+    ).toHaveLength(1)
   })
 
-  it('tamperAmount: the payment is made for the amount the buyer changed it to - once only', async () => {
-    await control.set({ tamperAmount: 10 })
-    const first = await buyerPays(3000)
-    const second = await buyerPays(3000)
-    const payments = (await control.state()).payments
-    expect(payments.find((p) => p.paymentId === first.paymentId)?.total).toBe(10)
-    expect(payments.find((p) => p.paymentId === second.paymentId)?.total).toBe(3000)
+  it('the buyer window pays exactly what was reserved and goes back to the return address with resultCode=Success&paymentId, joining an existing query with &', async () => {
+    const reserveId = await reserved('ord_win', 3000)
+    const back = await openWindow(reserveId)
+    expect(`${back.origin}${back.pathname}`).toBe('https://app.test/payments/return')
+    expect(back.searchParams.get('kind')).toBe('NAVERPAY_REDIRECT')
+    const payment = (await control.state()).payments.find(
+      (p) => p.paymentId === back.searchParams.get('paymentId'),
+    )
+    expect(payment).toMatchObject({ merchantPayKey: 'ord_win', total: 3000, applied: false })
   })
 
-  it('answers the preflight of the browser window (another origin) and lets it read the answer', async () => {
-    const preflight = await fetch(`${fake.url}/sdk/reserve`, { method: 'OPTIONS' })
-    expect(preflight.status).toBe(204)
-    expect(preflight.headers.get('access-control-allow-origin')).toBe('*')
-    expect(preflight.headers.get('access-control-allow-headers')).toBe('Content-Type')
-    const answer = await fetch(`${fake.url}/sdk/reserve`, {
-      method: 'POST',
-      body: JSON.stringify(reserveBody('ord_cors', 3000)),
+  it('the buyer can close the window (UserCancel), fail (TimeExpired) or leave - once only; nothing is paid then', async () => {
+    const before = (await control.state()).payments.length
+    await control.set({ buyer: 'cancel' })
+    expect((await openWindow(await reserved('ord_c', 1000))).searchParams.get('resultCode')).toBe(
+      'UserCancel',
+    )
+    await control.set({ buyer: 'fail' })
+    const failed = await openWindow(await reserved('ord_f', 1000))
+    expect(failed.searchParams.get('resultCode')).toBe('TimeExpired')
+    expect(failed.searchParams.get('reserveId')).toMatch(/^RSV/)
+    await control.set({ buyer: 'leave' })
+    const left = await fetch(`${fake.url}/payments/${await reserved('ord_l', 1000)}`, {
+      redirect: 'manual',
     })
-    expect(answer.headers.get('access-control-allow-origin')).toBe('*')
+    expect(left.status).toBe(200)
+    expect((await control.state()).payments).toHaveLength(before)
+    expect((await openWindow(await reserved('ord_n', 1000))).searchParams.get('resultCode')).toBe(
+      'Success',
+    )
+    expect((await fetch(`${fake.url}/payments/RSV-none`, { redirect: 'manual' })).status).toBe(404)
   })
 
   it('GET /return hands the buyer on to the app with the same query', async () => {
     fake.setApp('http://app.test/')
     const hop = await fetch(
-      `${fake.url}/return?kind=NAVERPAY_SDK&order=o&resultCode=Success&paymentId=p`,
+      `${fake.url}/return?kind=NAVERPAY_REDIRECT&order=o&resultCode=Success&paymentId=p`,
       { redirect: 'manual' },
     )
     expect(hop.status).toBe(302)
     expect(hop.headers.get('location')).toBe(
-      'http://app.test/payments/return?kind=NAVERPAY_SDK&order=o&resultCode=Success&paymentId=p',
+      'http://app.test/payments/return?kind=NAVERPAY_REDIRECT&order=o&resultCode=Success&paymentId=p',
     )
   })
 })
@@ -268,54 +290,8 @@ describe('control: what the next apply does (one time only)', () => {
     await apply(paymentId)
     const calls = (await control.state()).calls
     expect(calls.map((c) => [c.path.replace(API, ''), c.idempotencyKey])).toEqual([
+      ['/v2/reserve', expect.stringMatching(/^rk-/)],
       ['/v2.2/apply/payment', `apply-${paymentId}`],
     ])
-  })
-})
-
-describe('the browser script (fakeSdkScript)', () => {
-  /** 스크립트를 가짜 `window` · `fetch` · `location` 위에서 실행한다 — 진짜 브라우저 없이 결제창이 하는 일을 본다 */
-  async function run(answer: unknown, returnUrl: string) {
-    const win: Record<string, unknown> = {}
-    const assigned: string[] = []
-    const requests: { url: string; body: Record<string, unknown> }[] = []
-    const fakeFetch = async (url: string, init: { body: string }) => {
-      requests.push({ url, body: JSON.parse(init.body) as Record<string, unknown> })
-      return { json: async () => answer }
-    }
-    new Function('window', 'fetch', 'location', fakeSdkScript('http://fake.test'))(win, fakeFetch, {
-      assign: (url: string) => assigned.push(url),
-    })
-    const Naver = win.Naver as {
-      Pay: { create: (o: object) => { open: (r: object) => Promise<void> } }
-    }
-    await Naver.Pay.create({ mode: 'development' }).open({ returnUrl })
-    return { assigned, requests }
-  }
-
-  it('sends what the buyer put in the window to the fake and returns with resultCode=Success&paymentId, joining an existing query with &', async () => {
-    const { assigned, requests } = await run(
-      { ok: true, paymentId: 'P1' },
-      'http://app.test/payments/return?kind=NAVERPAY_SDK&order=o',
-    )
-    expect(requests[0]?.url).toBe('http://fake.test/sdk/reserve')
-    expect(requests[0]?.body).toEqual({
-      sdk: { mode: 'development' },
-      open: { returnUrl: 'http://app.test/payments/return?kind=NAVERPAY_SDK&order=o' },
-    })
-    expect(assigned).toEqual([
-      'http://app.test/payments/return?kind=NAVERPAY_SDK&order=o&resultCode=Success&paymentId=P1',
-    ])
-  })
-
-  it('a refusal returns with the result code (UserCancel carries nothing else; the others carry a message and a reserve id); leave never returns', async () => {
-    expect(
-      (await run({ fail: { resultCode: 'UserCancel' } }, 'http://app.test/r')).assigned,
-    ).toEqual(['http://app.test/r?resultCode=UserCancel'])
-    expect(
-      (await run({ fail: { resultCode: 'TimeExpired', reserveId: 'RSV1' } }, 'http://app.test/r'))
-        .assigned,
-    ).toEqual(['http://app.test/r?resultCode=TimeExpired&resultMessage=failed&reserveId=RSV1'])
-    expect((await run({ leave: true }, 'http://app.test/r')).assigned).toEqual([])
   })
 })

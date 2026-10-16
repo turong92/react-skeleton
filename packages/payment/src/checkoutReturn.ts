@@ -39,7 +39,7 @@ export type NaverPayReturn =
   | { ok: false; orderId: string | null; code: 'CANCELED' | 'FAILED' }
 
 /**
- * 네이버페이가 돌려보낸 주소(`?kind=NAVERPAY_SDK&provider=<결제사 id>&order=<주문 id>&resultCode=Success&paymentId=…` / `resultCode=UserCancel` / 그 밖의 `resultCode` + `resultMessage` + `reserveId`)를 읽는다.
+ * 네이버페이가 돌려보낸 주소(`?kind=NAVERPAY_REDIRECT&provider=<결제사 id>&order=<주문 id>&resultCode=Success&paymentId=…` / `resultCode=UserCancel` / 그 밖의 `resultCode` + `resultMessage` + `reserveId`)를 읽는다.
  * 주문 id 는 서버가 돌아올 주소에 실은 것이다. **금액은 주소에 없다** - 서버가 주문의 금액으로 승인하고 승인 응답의 총액을 대조한다. 결제사의 `resultMessage` 는 일부러 돌려주지 않는다.
  * 성공 주소에 주문 id 나 결제 번호가 없거나 `resultCode` 가 없으면 `PaymentRedirectError`.
  */

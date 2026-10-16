@@ -34,7 +34,7 @@ export type {
   RefundRequestReason,
   RefundStatus,
   KakaoPayRedirectCheckout,
-  NaverPaySdkCheckout,
+  NaverPayRedirectCheckout,
   PaddleCheckout,
   TossPaymentWindowCheckout,
 } from './ledgerTypes'
@@ -62,18 +62,6 @@ export type {
   PaddlePricePreviewConfig,
   PaddleSdk,
 } from './paddle'
-export {
-  openNaverPayCheckout,
-  loadNaverPaySdk,
-  NAVERPAY_SDK_URL,
-  NAVERPAY_LOAD_TIMEOUT_MS,
-} from './naverpay'
-export type {
-  LoadNaverPaySdkEnv,
-  NaverPayAttributes,
-  NaverPaySdk,
-  OpenNaverPayInput,
-} from './naverpay'
 export type { LoadTossPaymentsSdkEnv, OpenCheckoutOptions, TossPaymentsFactory } from './checkout'
 export { EASY_PAY_CODES, easyPaysFor } from './easyPay'
 export type { EasyPayCode } from './easyPay'

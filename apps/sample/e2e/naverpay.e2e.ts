@@ -1,6 +1,6 @@
-import { expect as baseExpect, type Browser, type BrowserContext, type Page } from 'playwright/test'
+import { expect as baseExpect, type Browser, type Page } from 'playwright/test'
 import { afterAll, beforeAll, describe, inject, it } from 'vitest'
-import { FAKE_NAVERPAY, PLANTED, naverPayControl, routeNaverPaySdk } from './fakeNaverPay'
+import { FAKE_NAVERPAY, PLANTED, naverPayControl } from './fakeNaverPay'
 import { ko, launch } from './helpers'
 import {
   api,
@@ -15,7 +15,7 @@ import {
 } from './paymentSteps'
 
 /*
- * 네이버페이 직접 연동(단건) — 한 흐름: 응원하기에서 「네이버페이」를 골라 결제 → 브라우저의 네이버 SDK(가짜로 가로챈다)가 결제창을 열고 결제를 마쳐 `paymentId` 를 달아 돌려보낸다 → 서버가 승인 →
+ * 네이버페이 직접 연동(단건) — 한 흐름: 응원하기에서 「네이버페이」를 골라 결제 → 서버가 결제를 예약하고 구매자가 예약한 결제창(가짜)에서 결제를 마쳐 `paymentId` 를 달아 돌려보낸다 → 서버가 승인 →
  * 「결제됨」 → 내 응원 내역 → 환불 요청 → 운영자 환불 → 「환불됨」. 같은 나라(KR)에 토스와 네이버페이가 둘 다 켜져 있어야 「결제 방법」 고르기가 보인다(백엔드 `GET /payments/config` 의 `choices`).
  * 가짜 네이버페이(`fakeNaverPay.ts`)가 없거나(`E2E_FAKE_NAVERPAY=0`) 백엔드에 네이버페이가 없으면 통째로 건너뛴다. 인증값이 가맹 심사 뒤에야 나와 진짜 네이버페이로는 돌려 보지 못했다.
  * 이 시험이 백엔드에 기대하는 것은 `globalSetup.ts` 머리말과 이 앱 README 의 「e2e 가 백엔드에 기대하는 것」에 있다.
@@ -28,12 +28,9 @@ const naver = fakeNaverPayUrl ? naverPayControl(fakeNaverPayUrl) : null
 const LATE = 90_000
 
 let browser: Browser
-let context: BrowserContext
 let page: Page
 beforeAll(async () => {
-  ;({ browser, context, page } = await launch())
-  // 브라우저의 네이버 SDK 스크립트는 가짜로 바꾼다(진짜 `nsp.pay.naver.com` 에는 닿지 않는다)
-  if (fakeNaverPayUrl) await routeNaverPaySdk(context, fakeNaverPayUrl)
+  ;({ browser, page } = await launch())
 })
 afterAll(async () => {
   await browser?.close()
@@ -64,21 +61,28 @@ describe('a NaverPay one-time payment from the choice to the refund', () => {
       await pwExpect(pick).toHaveAttribute('aria-checked', 'true')
       await page.getByRole('button', { name: ko('cheer.submit'), exact: true }).click()
 
-      // 결제창(가짜 SDK)이 결제를 마치고 paymentId 를 달아 돌려보낸다 → 돌아온 화면이 승인을 보낸다 → 「결제됨」
+      // 결제창(가짜)이 결제를 마치고 paymentId 를 달아 돌려보낸다 → 돌아온 화면이 승인을 보낸다 → 「결제됨」
       await page.waitForURL(/\/payments\/return\?/)
       const orderId = new URL(page.url()).searchParams.get('order')
       if (!orderId) throw new Error(`no order in ${page.url()}`)
       await pwExpect(resultTitle(page, labels.result.paid.title)).toBeVisible()
       await pwExpect(page.getByText(labels.testMode)).toBeVisible()
 
-      // 결제사에는 승인 한 번뿐이다(결제 준비 호출이 없다) - 멱등 키는 결제 번호에서, 승인 응답의 주문 번호 · 금액은 우리 주문과 같다
+      // 결제사에는 예약 한 번 · 승인 한 번 - 금액 · 주문 번호는 서버가 정한 값(예약), 멱등 키는 결제 번호에서
       const state = await naver.state()
       const [payment] = state.payments
       pwExpect(state.calls.map((c) => c.path.split('/').slice(-2).join('/'))).toEqual([
+        'v2/reserve',
         'apply/payment',
       ])
-      pwExpect(state.calls[0]?.body).toEqual({ paymentId: payment?.paymentId })
-      pwExpect(state.calls[0]?.idempotencyKey).toBe(`apply-${payment?.paymentId}`)
+      pwExpect(state.calls[0]?.body).toMatchObject({
+        merchantPayKey: orderId,
+        totalPayAmount: 3000,
+        taxScopeAmount: 3000,
+        taxExScopeAmount: 0,
+      })
+      pwExpect(state.calls[1]?.body).toEqual({ paymentId: payment?.paymentId })
+      pwExpect(state.calls[1]?.idempotencyKey).toBe(`apply-${payment?.paymentId}`)
       pwExpect(payment).toMatchObject({ merchantPayKey: orderId, total: 3000, applied: true })
 
       // 새로 고쳐도 승인이 다시 나가지 않는다

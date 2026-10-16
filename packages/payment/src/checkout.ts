@@ -1,7 +1,6 @@
 import type { Checkout } from './ledgerTypes'
 import { easyPaysOfCheckout } from './easyPay'
 import { openPaddleCheckout, type PaddleSdk } from './paddle'
-import { naverPayWindowOf, openNaverPayCheckout, type NaverPaySdk } from './naverpay'
 
 export type { Checkout } from './ledgerTypes'
 
@@ -113,8 +112,7 @@ function webAddress(value: string | undefined): string | null {
 }
 
 /**
- * 화면이 이 결제창을 **열 수 있는가** - 토스 · Paddle 은 서버가 준 공개 키가 있어야 하고(없으면 결제창을 열 수 없다는 서버의 말이다), 카카오페이는 공개 키가 없고 그 몫으로 결제창 주소가 있어야 하며,
- * 네이버페이는 아이디 · 체인 아이디 · 모드 · 돌아올 주소 · 과세 구분이 모두 있어야 한다.
+ * 화면이 이 결제창을 **열 수 있는가** - 토스 · Paddle 은 서버가 준 공개 키가 있어야 하고(없으면 결제창을 열 수 없다는 서버의 말이다), 카카오페이 · 네이버페이는 공개 키가 없고 그 몫으로 결제창 주소가 있어야 한다.
  * 열 수 없으면 주문을 돌려놓고 「지금은 결제할 수 없어요」로 말한다.
  */
 export function checkoutCanOpen(checkout: Checkout): boolean {
@@ -123,14 +121,8 @@ export function checkoutCanOpen(checkout: Checkout): boolean {
       webAddress(checkout.attributes?.pcUrl) !== null &&
       webAddress(checkout.attributes?.mobileUrl) !== null
     )
-  if (checkout.kind === 'NAVERPAY_SDK')
-    return naverPayWindowOf({
-      clientId: checkout.clientKey,
-      attributes: checkout.attributes,
-      orderId: checkout.orderId,
-      orderName: checkout.orderName,
-      amount: checkout.amount.amount,
-    }).ok
+  if (checkout.kind === 'NAVERPAY_REDIRECT')
+    return webAddress(checkout.attributes?.windowUrl) !== null
   return Boolean(checkout.clientKey)
 }
 
@@ -146,10 +138,8 @@ export type OpenCheckoutOptions = {
   loadPaddle?: () => Promise<PaddleSdk>
   /** Paddle 결제창 언어 */
   locale?: string
-  /** 카카오페이: 구매자를 결제창 주소로 보내는 함수 - 기본은 현재 창을 옮긴다(`location.assign`). 시험 · 스토리에서 바꾼다 */
+  /** 카카오페이 · 네이버페이: 구매자를 결제창 주소로 보내는 함수 - 기본은 현재 창을 옮긴다(`location.assign`). 시험 · 스토리에서 바꾼다 */
   navigate?: (url: string) => void
-  /** 네이버페이 SDK 를 불러오는 함수 — 시험 · 스토리에서 가짜로 바꾼다 */
-  loadNaverPay?: () => Promise<NaverPaySdk>
   /** 카카오페이: 모바일 기기인가 - 기본은 `navigator.userAgent` 로 본다. 모바일이면 모바일 주소, 아니면 PC 주소 */
   isMobile?: () => boolean
 }
@@ -174,7 +164,6 @@ export async function openCheckout(
     easyPay,
     loadSdk = loadTossPaymentsSdk,
     loadPaddle,
-    loadNaverPay,
     locale,
     navigate = defaultNavigate,
     isMobile = defaultIsMobile,
@@ -225,19 +214,17 @@ export async function openCheckout(
       navigate(address)
       return
     }
-    case 'NAVERPAY_SDK':
+    case 'NAVERPAY_REDIRECT': {
       // 네이버페이에는 간편결제 단추가 따로 없다 - 조용히 버리지 않고 토스 쪽과 같이 던진다
       if (easyPay !== undefined)
         throw new Error(`The checkout does not offer the easy pay ${easyPay}`)
-      // 돌아오는 주소는 서버 설정이다(`attributes.returnUrl`) - successUrl · failUrl 은 쓰지 않는다
-      return openNaverPayCheckout({
-        clientId: checkout.clientKey,
-        attributes: checkout.attributes,
-        orderId: checkout.orderId,
-        orderName: checkout.orderName,
-        amount: checkout.amount.amount,
-        ...(loadNaverPay ? { loadSdk: loadNaverPay } : {}),
-      })
+      const address = webAddress(checkout.attributes?.windowUrl)
+      if (address === null)
+        throw new Error('The checkout has no http(s) address to send the buyer to')
+      // 돌아오는 주소는 서버 설정이다(결제 예약 때 네이버페이가 받았다) - successUrl · failUrl 은 쓰지 않는다
+      navigate(address)
+      return
+    }
     default:
       throw new Error(`Unknown checkout kind: ${String((checkout as { kind: unknown }).kind)}`)
   }

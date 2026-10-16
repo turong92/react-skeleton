@@ -703,14 +703,16 @@
       "backend": {
         "modules": ["payment", "payment-jdbc"],
         "oneOfModules": [["payment-toss", "payment-stripe"]],
-        "optionalModules": ["payment-paddle"],
+        "optionalModules": ["payment-paddle", "payment-kakaopay", "payment-naverpay"],
         "basePaths": [],
         "docs": [
           "docs/modules/payment.md",
           "docs/modules/payment-jdbc.md",
           "docs/modules/payment-toss.md",
           "docs/modules/payment-stripe.md",
-          "docs/modules/payment-paddle.md"
+          "docs/modules/payment-paddle.md",
+          "docs/modules/payment-kakaopay.md",
+          "docs/modules/payment-naverpay.md"
         ]
       },
       "status": "experimental",
@@ -1482,6 +1484,8 @@
           "notification-sse",
           "payment",
           "payment-jdbc",
+          "payment-kakaopay",
+          "payment-naverpay",
           "payment-paddle",
           "payment-toss",
           "persistence-jdbc",
@@ -1636,6 +1640,8 @@
           "notification-websocket",
           "payment",
           "payment-jdbc",
+          "payment-kakaopay",
+          "payment-naverpay",
           "payment-paddle",
           "payment-stripe",
           "payment-toss",

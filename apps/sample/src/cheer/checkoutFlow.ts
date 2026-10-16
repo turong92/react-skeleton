@@ -209,8 +209,8 @@ export function returnPlanOf(search: string): ReturnPlan {
       throw error
     }
   }
-  // 네이버페이도 같다 - 서버 설정의 돌아올 주소에 `kind=NAVERPAY_SDK`(checkout.kind 와 같은 값)가 실려 있다
-  if (params.get('kind') === 'NAVERPAY_SDK') {
+  // 네이버페이도 같다 - 서버 설정의 돌아올 주소에 `kind=NAVERPAY_REDIRECT`(checkout.kind 와 같은 값)가 실려 있다
+  if (params.get('kind') === 'NAVERPAY_REDIRECT') {
     try {
       const read = readNaverPayReturn(params)
       if (read.ok)

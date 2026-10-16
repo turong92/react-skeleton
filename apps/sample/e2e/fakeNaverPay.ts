@@ -1,26 +1,24 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http'
-import type { BrowserContext } from 'playwright'
 
 /*
- * 가짜 네이버페이 — 진짜 네이버페이 없이(인증값이 가맹 심사 뒤에야 나온다) 단건 결제 여정(결제창 → 서버 승인 → 조회 → 환불)을 브라우저로 끝까지 돌려 본다. `fakeToss.ts` · `fakeKakaoPay.ts` 와 같은 자리 · 방식이다.
+ * 가짜 네이버페이 — 진짜 네이버페이 없이(인증값이 가맹 심사 뒤에야 나온다) 단건 결제 여정(결제 예약 → 결제창 → 서버 승인 → 조회 → 환불)을 브라우저로 끝까지 돌려 본다. `fakeToss.ts` · `fakeKakaoPay.ts` 와 같은 자리 · 방식이다.
  * 응답 모양은 백엔드의 가짜(`modules/payment-naverpay` 의 시험 소스 `FakeNaverPayServer.kt`)와 맞춘다 - 개발 문서(docs.pay.naver.com) 모양:
+ *   POST /naverpay-partner/naverpay/payments/v2/reserve           결제 예약 (JSON) → {code, message, body: {reserveId}}
  *   POST /naverpay-partner/naverpay/payments/v2.2/apply/payment   승인 (폼 paymentId) → {code, message, body: {paymentId, detail}}
  *   POST /naverpay-partner/naverpay/payments/v1/cancel            취소(= 우리 말로 환불) (폼 paymentId, cancelAmount, cancelReason, cancelRequester, taxScopeAmount, taxExScopeAmount) → {code, body: {…RestAmount}}
  *   POST /naverpay-partner/naverpay/payments/v2.3/list/history/{paymentId}   결제 내역 조회 (JSON) → {code, body: {list}}
- * 일부러 진짜처럼 엄격하다: 인증 헤더 셋(`X-Naver-Client-Id` · `X-Naver-Client-Secret` · `X-NaverPay-Chain-Id`) 중 하나라도 틀리면 401 · 승인 · 취소는 폼이고 **멱등 키 헤더가 없으면 400**,
- * 같은 멱등 키의 재요청은 적용하지 않고 409 + 처음 응답 · 이미 승인된 결제의 승인은 `AlreadyComplete` · 남은 금액보다 많은 취소는 `OverRemainAmount` · 과세 + 면세가 취소 금액과 다르면 `TaxScopeAmountError`.
- * 업무 오류는 HTTP 200 + `code` 로 온다(문서의 결과 코드 표를 그렇게 읽었다 - 백엔드 가짜와 같다).
+ * 일부러 진짜처럼 엄격하다: 인증 헤더 셋(`X-Naver-Client-Id` · `X-Naver-Client-Secret` · `X-NaverPay-Chain-Id`) 중 하나라도 틀리면 401 · 예약 · 승인 · 취소는 **멱등 키 헤더가 없으면 400**,
+ * 같은 멱등 키의 재요청은 적용하지 않고 409 + 처음 응답 · 예약은 필수 칸이 빠지거나 과세 + 면세가 총액과 다르면 `InvalidParameter` · 이미 승인된 결제의 승인은 `AlreadyComplete` · 남은 금액보다 많은 취소는 `OverRemainAmount` ·
+ * 과세 + 면세가 취소 금액과 다르면 `TaxScopeAmountError`. 업무 오류는 HTTP 200 + `code` 로 온다(문서의 결과 코드 표를 그렇게 읽었다 - 백엔드 가짜와 같다).
  *
- * 결제창(네이버 SDK)은 서버가 아니라 브라우저가 연다 - 시험이 SDK 스크립트 요청(`https://nsp.pay.naver.com/sdk/js/naverpay.min.js`)을 가로채 `fakeSdkScript` 로 바꾼다(`routeNaverPaySdk`).
- * 그 가짜 SDK 는 결제창에 **구매자 브라우저가 넘긴 값**(주문 번호 · 총액 · 과세 구분 · 아이디 · 체인 · 모드)을 이 서버의 `POST /sdk/reserve` 로 보내 결제 예약을 만들고, `returnUrl` 로 결과를 붙여 이동한다.
- * 돌아오는 주소(`return-url`)가 이 서버의 `GET /return` 이면 앱 주소(`setApp`)로 한 번 더 넘긴다 - 백엔드는 앱(Vite)보다 먼저 떠서 그 주소를 모르기 때문이다.
+ * 구매자의 결제창(`GET /payments/<reserveId>`)은 브라우저가 따라가면 곧장 돌아가는 주소(`returnUrl`)로 보낸다 - 진짜 네이버페이 화면에서 구매자가 결제를 마치면 `returnUrl` 에 `resultCode=Success&paymentId=…` 을 붙여 보내는 것과 같다.
+ * 결제는 **예약한 값 그대로** 만들어진다(구매자가 금액을 바꿀 길이 없다). 돌아오는 주소(`return-url`)가 이 서버의 `GET /return` 이면 앱 주소(`setApp`)로 한 번 더 넘긴다 - 백엔드는 앱(Vite)보다 먼저 떠서 그 주소를 모르기 때문이다.
  *
  * 제어 `POST /control` — 다음에 일어날 일을 **한 번만** 정한다(앞 시나리오의 지시가 다음 시나리오에 남지 않게):
  *   { buyer: 'cancel' | 'fail' | 'leave' | null }          다음 결제창: 구매자가 그만둔다(UserCancel) · 실패(TimeExpired) · 결제 없이 떠난다(어디로도 돌려보내지 않는다)
- *   { tamperAmount: number | null }                         다음 결제창: 구매자가 브라우저에서 결제창 금액을 이 값으로 바꿨다(결제 예약이 그 금액으로 만들어진다)
  *   { apply: { mode: 'decline'|'delay'|'lose'|'error', delayMs? } | null }   다음 승인: 거절(`Fail`) · 늦게 답함 · 적용했지만 답이 유실됨(연결 끊김) · 5xx(적용 안 됨)
  *   { reset: true }                                        모든 결제 · 호출 기록 · 지시를 지운다
- * `GET /control` → { payments, calls, next } — `calls` 는 네이버페이 API(/naverpay-partner/…) 호출만 시각 순으로.
+ * `GET /control` → { payments, reservations, calls, next } — `calls` 는 네이버페이 API(/naverpay-partner/…) 호출만 시각 순으로.
  */
 
 export const FAKE_NAVERPAY = {
@@ -38,6 +36,8 @@ export const PLANTED = {
 }
 
 const API = '/naverpay-partner/naverpay/payments'
+
+type Reservation = { reserveId: string; merchantPayKey: string; total: number; returnUrl: string }
 
 type Cancel = { payHistId: string; amount: number; at: string }
 
@@ -65,17 +65,13 @@ export type FakeNaverPayCall = {
 }
 export type FakeNaverPayState = {
   payments: Payment[]
+  reservations: Reservation[]
   calls: FakeNaverPayCall[]
-  next: {
-    buyer: BuyerInstruction | null
-    apply: ApplyInstruction | null
-    tamperAmount: number | null
-  }
+  next: { buyer: BuyerInstruction | null; apply: ApplyInstruction | null }
 }
 export type FakeNaverPayPatch = {
   buyer?: BuyerInstruction | null
   apply?: ApplyInstruction | null
-  tamperAmount?: number | null
   reset?: boolean
 }
 
@@ -129,16 +125,13 @@ const envelope = (code: string, message: string, body: unknown = null): Reply =>
   json(200, { code, message, body })
 const empty = (status: number): Reply => ({ kind: 'empty', status })
 
-/** 구매자 브라우저의 결제창(가짜 SDK)이 다른 출처(이 서버)를 부른다 - 토스의 가짜와 같이 연다 */
-const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type' }
-
 function emit(res: ServerResponse, reply: Reply) {
   if (reply.kind === 'drop') return res.destroy()
   if (reply.kind === 'empty') {
-    res.writeHead(reply.status, CORS)
+    res.writeHead(reply.status)
     return res.end()
   }
-  res.writeHead(reply.status, { ...CORS, 'Content-Type': 'application/json;charset=UTF-8' })
+  res.writeHead(reply.status, { 'Content-Type': 'application/json;charset=UTF-8' })
   return res.end(reply.body)
 }
 
@@ -146,58 +139,77 @@ export async function startFakeNaverPay(): Promise<FakeNaverPay> {
   const payments = new Map<string, Payment>() // paymentId → 결제
   const replies = new Map<string, string>() // `<operation>/<멱등 키>` → 처음 응답 본문
   let calls: FakeNaverPayCall[] = []
-  const next: FakeNaverPayState['next'] = { buyer: null, apply: null, tamperAmount: null }
+  const reservations = new Map<string, Reservation>()
+  const next: FakeNaverPayState['next'] = { buyer: null, apply: null }
   let appUrl = ''
   let sequence = 0
 
-  /** 구매자 브라우저가 결제창에 넘긴 값으로 결제 예약을 만든다 - 진짜 SDK 는 네이버 서버에서 이것을 한다 */
-  function reserve(body: Record<string, unknown>): Reply {
-    const sdk = body.sdk as Record<string, unknown> | undefined
-    const open = body.open as Record<string, unknown> | undefined
+  /** 서버가 결제를 예약한다 - 금액 · 주문 번호는 이 호출의 값이다. */
+  function reserve(body: Record<string, unknown> | null): Reply {
+    const total = body?.totalPayAmount
+    const taxed = body?.taxScopeAmount
+    const exempt = body?.taxExScopeAmount
+    const items = body?.productItems
     if (
-      !sdk ||
-      !open ||
-      sdk.clientId !== FAKE_NAVERPAY.clientId ||
-      sdk.chainId !== FAKE_NAVERPAY.chainId ||
-      sdk.mode !== 'development'
-    )
-      return json(200, { fail: { resultCode: 'InvalidMerchant' } })
-    const items = open.productItems
-    const taxed = open.taxScopeAmount
-    const exempt = open.taxExScopeAmount
-    const total = open.totalPayAmount
-    if (
-      typeof open.merchantPayKey !== 'string' ||
-      !open.merchantPayKey ||
-      typeof open.productName !== 'string' ||
+      !body ||
+      typeof body.merchantPayKey !== 'string' ||
+      !body.merchantPayKey ||
+      body.merchantPayKey.length > 64 ||
+      typeof body.productName !== 'string' ||
+      !Number.isInteger(body.productCount) ||
       !Number.isInteger(total) ||
       (total as number) < 10 ||
       !Number.isInteger(taxed) ||
       !Number.isInteger(exempt) ||
       (taxed as number) + (exempt as number) !== total ||
-      typeof open.returnUrl !== 'string' ||
+      typeof body.returnUrl !== 'string' ||
+      !body.returnUrl ||
       !Array.isArray(items) ||
       items.length === 0
     )
-      return json(200, { fail: { resultCode: 'InvalidParameter' } })
+      return envelope('InvalidParameter', 'reserve')
+    const reserveId = `RSV${String(++sequence).padStart(8, '0')}`
+    reservations.set(reserveId, {
+      reserveId,
+      merchantPayKey: body.merchantPayKey,
+      total: total as number,
+      returnUrl: body.returnUrl,
+    })
+    return envelope('Success', '', { reserveId })
+  }
+
+  /** 구매자의 결제창 - 예약한 값 그대로 결제하고 `returnUrl` 로 돌려보낸다. 어떻게 끝날지는 제어가 정한다 */
+  function buyerWindow(res: ServerResponse, reserveId: string) {
+    const reservation = reservations.get(reserveId)
+    if (!reservation) {
+      res.writeHead(404, { 'Content-Type': 'text/plain;charset=UTF-8' })
+      return res.end('no such reservation')
+    }
     const instruction = next.buyer
     next.buyer = null
-    if (instruction === 'leave') return json(200, { leave: true })
-    if (instruction === 'cancel') return json(200, { fail: { resultCode: 'UserCancel' } })
-    if (instruction === 'fail')
-      return json(200, { fail: { resultCode: 'TimeExpired', reserveId: 'RSV1' } })
-    const tamper = next.tamperAmount
-    next.tamperAmount = null
-    const paymentId = `20261017NP${String(++sequence).padStart(8, '0')}`
-    payments.set(paymentId, {
-      paymentId,
-      merchantPayKey: open.merchantPayKey,
-      total: tamper ?? (total as number),
-      applied: false,
-      appliedAt: null,
-      cancels: [],
-    })
-    return json(200, { ok: true, paymentId })
+    if (instruction === 'leave') {
+      res.writeHead(200, { 'Content-Type': 'text/html;charset=UTF-8' })
+      return res.end('<!doctype html><title>NaverPay (fake)</title><p>waiting for the buyer</p>')
+    }
+    const join = reservation.returnUrl.includes('?') ? '&' : '?'
+    let query: string
+    if (instruction === 'cancel') query = 'resultCode=UserCancel'
+    else if (instruction === 'fail')
+      query = `resultCode=TimeExpired&resultMessage=failed&reserveId=${reserveId}`
+    else {
+      const paymentId = `20261017NP${String(++sequence).padStart(8, '0')}`
+      payments.set(paymentId, {
+        paymentId,
+        merchantPayKey: reservation.merchantPayKey,
+        total: reservation.total,
+        applied: false,
+        appliedAt: null,
+        cancels: [],
+      })
+      query = `resultCode=Success&paymentId=${paymentId}`
+    }
+    res.writeHead(302, { Location: `${reservation.returnUrl}${join}${query}` })
+    return res.end()
   }
 
   function applied(payment: Payment): Reply {
@@ -346,9 +358,6 @@ export async function startFakeNaverPay(): Promise<FakeNaverPay> {
     const requestUrl = new URL(req.url ?? '/', 'http://fake')
     const path = requestUrl.pathname
     try {
-      if (req.method === 'OPTIONS')
-        return void res.writeHead(204, { ...CORS, 'Access-Control-Allow-Methods': 'POST' }).end()
-
       // 제어
       if (path === '/control') {
         if (req.method === 'GET')
@@ -356,6 +365,7 @@ export async function startFakeNaverPay(): Promise<FakeNaverPay> {
             res,
             json(200, {
               payments: [...payments.values()],
+              reservations: [...reservations.values()],
               calls,
               next,
             } satisfies FakeNaverPayState),
@@ -364,22 +374,19 @@ export async function startFakeNaverPay(): Promise<FakeNaverPay> {
         if (patch.reset) {
           payments.clear()
           replies.clear()
+          reservations.clear()
           calls = []
           next.buyer = null
           next.apply = null
-          next.tamperAmount = null
         }
         if ('buyer' in patch) next.buyer = patch.buyer ?? null
         if ('apply' in patch) next.apply = patch.apply ?? null
-        if ('tamperAmount' in patch) next.tamperAmount = patch.tamperAmount ?? null
         return emit(res, json(200, { ok: true }))
       }
 
-      // 구매자 브라우저의 결제창(가짜 SDK)이 부르는 결제 예약 · 돌아가는 길
-      if (req.method === 'POST' && path === '/sdk/reserve') {
-        const body = parseJson(await readBody(req))
-        return emit(res, body ? reserve(body) : empty(400))
-      }
+      // 구매자의 결제창 · 돌아가는 길
+      const window = /^\/payments\/([^/]+)$/.exec(path)
+      if (req.method === 'GET' && window) return buyerWindow(res, window[1] ?? '')
       if (req.method === 'GET' && path === '/return') {
         if (!appUrl) return emit(res, empty(500))
         res.writeHead(302, { Location: `${appUrl}/payments/return${requestUrl.search}` })
@@ -389,18 +396,20 @@ export async function startFakeNaverPay(): Promise<FakeNaverPay> {
       // 네이버페이 API
       if (!path.startsWith(`${API}/`)) return emit(res, empty(404))
       const raw = await readBody(req)
-      const operation = path.endsWith('/apply/payment')
-        ? 'apply'
-        : path.endsWith('/v1/cancel')
-          ? 'cancel'
-          : path.includes('/list/history/')
-            ? 'history'
-            : null
+      const operation = path.endsWith('/v2/reserve')
+        ? 'reserve'
+        : path.endsWith('/apply/payment')
+          ? 'apply'
+          : path.endsWith('/v1/cancel')
+            ? 'cancel'
+            : path.includes('/list/history/')
+              ? 'history'
+              : null
       const key = (req.headers['x-naverpay-idempotency-key'] as string | undefined) ?? null
       calls.push({
         method: req.method ?? 'GET',
         path,
-        body: operation === 'history' ? parseJson(raw) : parseForm(raw),
+        body: operation === 'history' || operation === 'reserve' ? parseJson(raw) : parseForm(raw),
         idempotencyKey: key,
       })
       if (
@@ -416,8 +425,12 @@ export async function startFakeNaverPay(): Promise<FakeNaverPay> {
       if (!key || key.length > 64 || !/^[A-Za-z0-9_-]+$/.test(key)) return emit(res, empty(400))
       const replay = replies.get(`${operation}/${key}`)
       if (replay !== undefined) return emit(res, { kind: 'json', status: 409, body: replay })
-      const form = parseForm(raw)
-      const reply = operation === 'apply' ? await apply(form) : cancel(form)
+      const reply =
+        operation === 'reserve'
+          ? reserve(parseJson(raw))
+          : operation === 'apply'
+            ? await apply(parseForm(raw))
+            : cancel(parseForm(raw))
       if (reply.kind === 'drop') replies.set(`${operation}/${key}`, reply.replay)
       else if (
         reply.kind === 'json' &&
@@ -447,51 +460,6 @@ export async function startFakeNaverPay(): Promise<FakeNaverPay> {
         server.close(() => done())
       }),
   }
-}
-
-/**
- * 브라우저가 받을 네이버페이 SDK 대역 - `window.Naver.Pay.create({...}).open({...})` 하나만 흉내 낸다(`@skeleton/payment` 의 `openCheckout` 이 부르는 모양).
- * 구매자가 결제창에 넘긴 값(`create` 옵션 + `open` 예약 값)을 가짜 네이버페이의 `/sdk/reserve` 로 보내 결제 예약을 만들고, 성공이면 `returnUrl` 에 `resultCode=Success&paymentId=…` 을,
- * 실패면 `resultCode`(`UserCancel` · `TimeExpired` …)를 붙여 이동한다(진짜 SDK 가 하는 일). 돌아오는 주소에 이미 쿼리가 있으면 `&` 로 잇는다. `leave` 면 결제 없이 떠난 사용자 - 이동도 끝남도 없다.
- * `window` · `fetch` · `location` 은 실행하는 쪽이 준다(브라우저에서는 전역 그대로 - `new Function` 으로 감싸 시험한다)
- */
-export function fakeSdkScript(fakeUrl: string): string {
-  return `(function () {
-  var FAKE = ${JSON.stringify(fakeUrl)};
-  window.Naver = {
-    Pay: {
-      create: function (sdk) {
-        return {
-          open: async function (open) {
-            var response = await fetch(FAKE + '/sdk/reserve', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ sdk: sdk, open: open })
-            });
-            var result = await response.json();
-            if (result.leave) return;
-            var query = result.ok
-              ? 'resultCode=Success&paymentId=' + encodeURIComponent(result.paymentId)
-              : 'resultCode=' + encodeURIComponent(result.fail.resultCode) +
-                (result.fail.resultCode === 'UserCancel' ? '' : '&resultMessage=failed&reserveId=' + encodeURIComponent(result.fail.reserveId || 'RSV0'));
-            location.assign(open.returnUrl + (open.returnUrl.indexOf('?') >= 0 ? '&' : '?') + query);
-          }
-        };
-      }
-    }
-  };
-})();`
-}
-
-/** 이 브라우저 컨텍스트가 네이버페이 SDK 를 가짜로 받게 한다(진짜 `nsp.pay.naver.com` 에는 닿지 않는다) */
-export async function routeNaverPaySdk(context: BrowserContext, fakeUrl: string) {
-  await context.route('https://nsp.pay.naver.com/sdk/js/naverpay.min.js*', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/javascript',
-      body: fakeSdkScript(fakeUrl),
-    }),
-  )
 }
 
 /** 시험이 가짜 네이버페이를 제어한다 - `GET /control` 로 결제와 호출 기록을 읽는다 */

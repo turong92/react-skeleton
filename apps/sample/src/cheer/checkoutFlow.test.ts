@@ -65,6 +65,22 @@ describe('checkoutReturnUrls', () => {
 })
 
 describe('startCheer', () => {
+  it('without an easy pay the payment window is opened with the return addresses only - exactly as before', async () => {
+    const { deps, opened } = fakes()
+    await startCheer(deps, 'cheer-3000')
+    expect(opened).toEqual([[checkout, checkoutReturnUrls('https://app.example', 'ord_1')]])
+  })
+
+  it('with an easy pay the chosen app is handed to the payment window', async () => {
+    const { deps, opened } = fakes()
+    await expect(startCheer(deps, 'cheer-3000', undefined, 'NAVERPAY')).resolves.toEqual({
+      kind: 'opened',
+    })
+    expect(opened).toEqual([
+      [checkout, { ...checkoutReturnUrls('https://app.example', 'ord_1'), easyPay: 'NAVERPAY' }],
+    ])
+  })
+
   it("creates a cheer order for the chosen server amount, then opens the payment window with this app's return addresses", async () => {
     const { deps, log, creates, opened } = fakes()
     await expect(startCheer(deps, 'cheer-3000')).resolves.toEqual({ kind: 'opened' })

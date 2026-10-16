@@ -774,6 +774,7 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
     onConfirm: noop,
   }),
   'payment#TestModeNotice': () => ({}),
+  'payment#EasyPayButtons': () => ({ codes: ['NAVERPAY'], onPick: noop }),
   'payment#SubscriptionStatusBadge': () => ({ status: 'ACTIVE' }),
   'payment#SubscriptionPlanList': () => ({
     plans: [

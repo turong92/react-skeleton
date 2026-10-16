@@ -1,3 +1,4 @@
+import type { EasyPayCode } from './easyPay'
 import type { ReviewReason, WebhookEventStatus } from './admin/types'
 import type { OrderStatus, RefundRequestReason, RefundStatus } from './ledgerTypes'
 import type { SubscriptionEndReason, SubscriptionStatus } from './subscriptionTypes'
@@ -410,6 +411,8 @@ export type PaymentLabels = {
   noticeLabel: string
   /** 「테스트 결제예요. 실제로 돈이 나가지 않아요」 */
   testMode: string
+  /** 결제창 안 간편결제 단추 묶음(`EasyPayButtons`) - 낭독 이름과 단추 글자(결제사가 부르는 이름) */
+  easyPay: { group: string; names: Record<EasyPayCode, string> }
   orderStatus: Record<OrderStatus, string>
   /** 열린 환불이 있는 동안(`PENDING`) 상태 알약 자리에 대신 보이는 글자. `REQUESTED` 는 `refundStatus.REQUESTED` */
   refundInProgress: string

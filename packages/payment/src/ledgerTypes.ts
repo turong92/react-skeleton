@@ -92,6 +92,8 @@ export type PaymentConfig = {
   providers?: string[]
   /** 결제사 id → 가격 미리보기 값 - Paddle 처럼 구매자 통화로 환산해 결제하는 결제사만. 구버전 서버는 칸이 없다 */
   pricePreviews?: Record<string, PaddlePricePreviewConfig>
+  /** 결제사 id → 결제창 안에서 바로 열 간편결제 코드(`NAVERPAY` …). 주문을 만들기 전에 단추를 그리는 데 쓴다. 목록이 빈 결제사는 키가 없다. 구버전 서버는 칸이 없다 */
+  easyPays?: Record<string, string[]>
   /** 서버가 이 요청마다 정한 접속 나라(ISO-3166 두 글자). 모르면 `null`, 구버전 서버는 칸이 없다 */
   country?: string | null
   /** 그 나라로 서버가 정한 결제사 - 주문 · 구독이 실제로 쓴다(화면이 보내는 값은 없다). 정할 수 없거나 그 나라의 결제사가 못 열리면 `null`(그때 `available` 도 false) */
@@ -122,6 +124,8 @@ export type TossPaymentWindowCheckout = {
   orderId: string
   orderName: string
   amount: PaymentAmount
+  /** `easyPays`: 이 결제창에서 바로 열 수 있는 간편결제 코드를 쉼표로 이은 것(`NAVERPAY,KAKAOPAY`) - 서버 설정이 비면 칸이 없다. 구버전 서버는 `attributes` 도 없다 */
+  attributes?: { method?: string; easyPays?: string }
 }
 /** Paddle(판매 대행) — 결제창은 Paddle.js 오버레이이고 결과는 웹훅으로 서버에 닿는다. 금액 · 통화는 Paddle 가격이 정한다(여러 통화) */
 export type PaddleCheckout = {

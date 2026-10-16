@@ -66,6 +66,37 @@ describe('openCheckout — TOSS_PAYMENT_WINDOW', () => {
     })
   })
 
+  it('with an easy pay it opens that app directly (card.flowMode DIRECT) and changes nothing else', async () => {
+    const { factory, seen } = fakeSdk()
+    await openCheckout(
+      { ...checkout, attributes: { method: 'CARD', easyPays: 'NAVERPAY,KAKAOPAY' } },
+      { successUrl: 's', failUrl: 'f', easyPay: 'KAKAOPAY', loadSdk: async () => factory },
+    )
+    expect(seen.request).toEqual({
+      method: 'CARD',
+      amount: { currency: 'KRW', value: 3000 },
+      orderId: 'ord_1',
+      orderName: '응원하기 3,000원',
+      successUrl: 's',
+      failUrl: 'f',
+      card: { flowMode: 'DIRECT', easyPay: 'KAKAOPAY' },
+    })
+  })
+
+  it('refuses an easy pay the server did not offer in this checkout, before loading the SDK', async () => {
+    const loadSdk = vi.fn(async () => fakeSdk().factory)
+    await expect(
+      openCheckout(
+        { ...checkout, attributes: { method: 'CARD', easyPays: 'NAVERPAY' } },
+        { successUrl: 's', failUrl: 'f', easyPay: 'KAKAOPAY', loadSdk },
+      ),
+    ).rejects.toThrow(/KAKAOPAY/)
+    await expect(
+      openCheckout(checkout, { successUrl: 's', failUrl: 'f', easyPay: 'KAKAOPAY', loadSdk }),
+    ).rejects.toThrow(/KAKAOPAY/)
+    expect(loadSdk).not.toHaveBeenCalled()
+  })
+
   it('throws on a kind it does not know, without loading anything', async () => {
     const loadSdk = vi.fn()
     await expect(

@@ -5,6 +5,20 @@ import type { PaymentLabels } from './labelTypes'
 export const koPaymentLabels: PaymentLabels = {
   noticeLabel: '알림',
   testMode: '테스트 결제예요. 실제로 돈이 나가지 않아요',
+  easyPay: {
+    group: '간편결제',
+    names: {
+      TOSSPAY: '토스페이',
+      NAVERPAY: '네이버페이',
+      KAKAOPAY: '카카오페이',
+      SAMSUNGPAY: '삼성페이',
+      LPAY: '엘페이',
+      PAYCO: '페이코',
+      SSG: 'SSG페이',
+      APPLEPAY: '애플페이',
+      PINPAY: '핀페이',
+    },
+  },
   orderStatus: {
     PENDING: '결제 전',
     CONFIRMING: '결제 확인 중',

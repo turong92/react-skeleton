@@ -5,6 +5,20 @@ import type { PaymentLabels } from './labelTypes'
 export const defaultPaymentLabels: PaymentLabels = {
   noticeLabel: 'Notice',
   testMode: 'This is a test payment. No real money moves.',
+  easyPay: {
+    group: 'Easy pay',
+    names: {
+      TOSSPAY: 'Toss Pay',
+      NAVERPAY: 'Naver Pay',
+      KAKAOPAY: 'Kakao Pay',
+      SAMSUNGPAY: 'Samsung Pay',
+      LPAY: 'L.PAY',
+      PAYCO: 'PAYCO',
+      SSG: 'SSG Pay',
+      APPLEPAY: 'Apple Pay',
+      PINPAY: 'Pin Pay',
+    },
+  },
   orderStatus: {
     PENDING: 'Not paid yet',
     CONFIRMING: 'Checking payment',

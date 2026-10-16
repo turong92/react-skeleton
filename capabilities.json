@@ -646,6 +646,7 @@
         "packages/payment/src/OrderSummary.stories.tsx",
         "packages/payment/src/RefundRequestDialog.stories.tsx",
         "packages/payment/src/TestModeNotice.stories.tsx",
+        "packages/payment/src/EasyPayButtons.stories.tsx",
         "packages/payment/src/SubscriptionPlanList.stories.tsx",
         "packages/payment/src/MySubscriptionCard.stories.tsx",
         "packages/payment/src/CancelSubscriptionDialog.stories.tsx"
@@ -680,6 +681,8 @@
         "OrderSummary",
         "RefundRequestDialog",
         "TestModeNotice",
+        "EasyPayButtons",
+        "easyPaysFor",
         "SubscriptionPlanList",
         "SubscriptionStatusBadge",
         "MySubscriptionCard",

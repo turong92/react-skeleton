@@ -1,4 +1,5 @@
 import type { Checkout } from './ledgerTypes'
+import { easyPaysOfCheckout } from './easyPay'
 import { openPaddleCheckout, type PaddleSdk } from './paddle'
 
 export type { Checkout } from './ledgerTypes'
@@ -16,6 +17,8 @@ export type TossPaymentsFactory = ((clientKey: string) => {
       orderName: string
       successUrl: string
       failUrl: string
+      /** 간편결제 앱을 바로 연다(`DIRECT`). 없으면 통합 결제창 */
+      card?: { flowMode: 'DIRECT'; easyPay: string }
     }): Promise<void>
     /** 카드 등록 창(자동결제) — `openBillingAuth`. 성공하면 `successUrl` 에 `authKey` · `customerKey` 가 붙는다 */
     requestBillingAuth(request: {
@@ -103,6 +106,8 @@ export type OpenCheckoutOptions = {
   failUrl: string
   /** SDK 를 불러오는 함수 — 시험 · 스토리에서 가짜로 바꾼다 */
   loadSdk?: () => Promise<TossPaymentsFactory>
+  /** 토스 결제창에서 이 간편결제 앱을 바로 연다(`NAVERPAY` …). 이 결제창 값(`attributes.easyPays`)에 없는 코드면 던진다. 없으면 통합 결제창 */
+  easyPay?: string
   /** Paddle.js 를 불러오는 함수 — 시험 · 스토리에서 가짜로 바꾼다 */
   loadPaddle?: () => Promise<PaddleSdk>
   /** Paddle 결제창 언어 */
@@ -116,12 +121,22 @@ export type OpenCheckoutOptions = {
  */
 export async function openCheckout(
   checkout: Checkout,
-  { successUrl, failUrl, loadSdk = loadTossPaymentsSdk, loadPaddle, locale }: OpenCheckoutOptions,
+  {
+    successUrl,
+    failUrl,
+    easyPay,
+    loadSdk = loadTossPaymentsSdk,
+    loadPaddle,
+    locale,
+  }: OpenCheckoutOptions,
 ): Promise<void> {
   switch (checkout.kind) {
     case 'TOSS_PAYMENT_WINDOW': {
       // 결제사 모듈이 키를 정하지 못하면 서버가 `null` 을 준다 - SDK 에 `null` 을 넘기지 않고, 스크립트도 불러오기 전에 멈춘다
       if (!checkout.clientKey) throw new Error('The checkout has no client key')
+      // 서버가 이 결제창에 허락하지 않은 간편결제는 열지 않는다 - 화면이 오래된 설정 응답으로 단추를 그렸어도 여기서 멈춘다
+      if (easyPay !== undefined && !easyPaysOfCheckout(checkout).includes(easyPay))
+        throw new Error(`The checkout does not offer the easy pay ${easyPay}`)
       const TossPayments = await loadSdk()
       await TossPayments(checkout.clientKey)
         .payment({ customerKey: TossPayments.ANONYMOUS })
@@ -132,6 +147,7 @@ export async function openCheckout(
           orderName: checkout.orderName,
           successUrl,
           failUrl,
+          ...(easyPay !== undefined ? { card: { flowMode: 'DIRECT' as const, easyPay } } : {}),
         })
       return
     }

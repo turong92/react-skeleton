@@ -55,6 +55,10 @@ export type {
   PaddleSdk,
 } from './paddle'
 export type { LoadTossPaymentsSdkEnv, OpenCheckoutOptions, TossPaymentsFactory } from './checkout'
+export { EASY_PAY_CODES, easyPaysFor } from './easyPay'
+export type { EasyPayCode } from './easyPay'
+export { EasyPayButtons } from './EasyPayButtons'
+export type { EasyPayButtonsProps } from './EasyPayButtons'
 export { readCheckoutReturn } from './checkoutReturn'
 export type { CheckoutReturn } from './checkoutReturn'
 export { readBillingReturn } from './billingReturn'

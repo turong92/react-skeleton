@@ -1,4 +1,6 @@
 import {
+  easyPaysFor,
+  EasyPayButtons,
   formatMoney,
   openCheckout,
   TestModeNotice,
@@ -130,20 +132,24 @@ export function CheerPage() {
         ? t('cheer.rateLimitedWait', { time: timeOf(notice.until) })
         : null
   const held = reason !== null
+  // 카드 단추(「응원하기」) 옆의 간편결제 - 서버 설정이 정한다(비면 지금 화면 그대로)
+  const easyPays = easyPaysFor(config.data, provider)
 
-  async function submit() {
+  async function submit(easyPay?: string) {
     if (selected === null || busy || held) return
     setBusy(true)
     setNotice(null)
     const result = await startCheer(
       {
         createOrder: createOrder.mutateAsync,
-        openCheckout: (checkout, urls) => openCheckout(checkout, { ...urls, locale: language }),
+        openCheckout: (checkout, options) =>
+          openCheckout(checkout, { ...options, locale: language }),
         abandonOrder: abandon.mutateAsync,
         urlsFor: (orderId, chosen) => checkoutReturnUrls(window.location.origin, orderId, chosen),
       },
       selected,
       reusableOrderOf(unopened, selected, nowMs()),
+      easyPay,
     )
     setUnopened(unopenedAfter(result, selected, nowMs(), unopened))
     if (result.kind === 'opened') return // 결제창이 이 화면을 떠나게 한다 — 돌아오면 `pageshow` 가 풀어 준다
@@ -227,6 +233,12 @@ export function CheerPage() {
               >
                 {t('cheer.submit')}
               </Button>
+              <EasyPayButtons
+                codes={easyPays}
+                labels={labels}
+                disabled={busy || held}
+                onPick={(code) => void submit(code)}
+              />
               {reason !== null && (
                 <span id={reasonId} className={styles.reason}>
                   {reason}

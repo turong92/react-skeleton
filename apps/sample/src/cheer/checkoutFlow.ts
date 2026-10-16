@@ -43,7 +43,7 @@ export type StartCheerDeps = {
   createOrder: (input: CreateOrderInput) => Promise<CreateOrderResult>
   openCheckout: (
     checkout: Checkout,
-    urls: Pick<OpenCheckoutOptions, 'successUrl' | 'failUrl'>,
+    options: Pick<OpenCheckoutOptions, 'successUrl' | 'failUrl' | 'easyPay'>,
   ) => Promise<void>
   abandonOrder: (orderId: string) => Promise<unknown>
   /** 이 주문의 결제창이 돌려보낼 주소 */
@@ -87,11 +87,13 @@ const codeOf = (error: unknown) =>
 /**
  * 금액을 고르고 「응원하기」를 눌렀을 때 — 서버 목록의 `itemRef` 로 주문을 만들고 결제창을 연다.
  * `reuse` 는 같은 금액으로 앞서 창을 못 열었을 때 돌려받은 주문 — 있으면 주문을 새로 만들지 않고 그 주문의 창만 다시 연다.
+ * `easyPay` 는 눌린 간편결제 단추(`NAVERPAY` …) - 있으면 결제창이 그 앱을 바로 연다. 없으면(카드 단추) 통합 결제창.
  */
 export async function startCheer(
   deps: StartCheerDeps,
   itemRef: string,
   reuse?: CreateOrderResult,
+  easyPay?: string,
 ): Promise<StartCheerResult> {
   let created: CreateOrderResult
   if (reuse) created = reuse
@@ -114,7 +116,10 @@ export async function startCheer(
     return { kind: 'unavailable' }
   }
   try {
-    await deps.openCheckout(checkout, deps.urlsFor(created.order.id, checkout.provider))
+    await deps.openCheckout(checkout, {
+      ...deps.urlsFor(created.order.id, checkout.provider),
+      ...(easyPay !== undefined ? { easyPay } : {}),
+    })
     return { kind: 'opened' }
   } catch (error) {
     const code = codeOf(error)

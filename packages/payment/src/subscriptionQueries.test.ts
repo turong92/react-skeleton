@@ -146,6 +146,29 @@ describe('mySubscriptionQuery — ask again only while the first payment is bein
   })
 })
 
+describe('mySubscriptionQuery with subscriptionId — wait for the subscription just started, not an older one', () => {
+  const interval = (id: string, read: Partial<Subscription> | null) =>
+    mySubscriptionQuery(fakeApi().api, { subscriptionId: id }).refetchInterval({
+      state: {
+        data: { subscription: read ? subscription(read) : null, orders: [] },
+        dataUpdatedAt: Date.now(),
+        errorUpdatedAt: 0,
+      },
+    } as never)
+
+  it('keeps asking while "me" still shows another (older, ENDED) subscription', () => {
+    expect(interval('new', { id: 'old', status: 'ENDED' })).toBe(ORDER_POLL_MIN_MS)
+    expect(interval('new', { id: 'old', status: 'ACTIVE' })).toBe(ORDER_POLL_MIN_MS)
+    expect(interval('new', null)).toBe(ORDER_POLL_MIN_MS)
+  })
+
+  it('stops once that very subscription is settled (ACTIVE, or ENDED for good); PENDING is asked again', () => {
+    expect(interval('new', { id: 'new', status: 'ACTIVE' })).toBe(false)
+    expect(interval('new', { id: 'new', status: 'ENDED' })).toBe(false)
+    expect(interval('new', { id: 'new', status: 'PENDING' })).toBe(ORDER_POLL_MIN_MS)
+  })
+})
+
 describe('mutations', () => {
   async function run(
     build: (api: PaymentSubscriptionApi, client: QueryClient) => unknown,

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — Paddle 결제 직후 화면이 옛 구독에서 멈추던 것
+
+- `useMySubscription(api, { subscriptionId })` — 방금 시작한 구독의 id 가 보이고 `PENDING` 을 벗어날 때까지 되묻는다. 같은 계정의 옛 `ENDED` 구독이 먼저 읽혀도 답으로 치지 않는다(해지 후 재구독 · 같은 계정으로 연달아 도는 e2e 에서 화면이 「없음」에 멈추던 구멍). 견본 `SubscriptionReturnPage` 가 반환 주소의 구독 id 를 넘긴다. `untilActive: true` 만 쓰던 호출은 그대로. 토스 구독(`activate` 응답 · id 일치)과 단건 주문(`orderQuery` 가 id 로 조회)은 이미 같은 구멍이 없다.
+
 ### Added — 한 서버에 프로젝트 여럿 (개발 · 정적 빌드 · 서버 렌더)
 
 백엔드가 요청 Host 로 프로젝트를 고르는 구성(`docs/multi-project.md`)에 맞췄다. 설정이 없으면 지금과 같다.

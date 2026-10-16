@@ -67,7 +67,7 @@ function WatchFlow({ id }: { id: string }) {
   const labels = subscriptionLabelsFor(t, language)
   const navigate = useNavigate()
   const config = usePaymentConfig(paymentApi)
-  const me = useMySubscription(subscriptionApi, { untilActive: true })
+  const me = useMySubscription(subscriptionApi, { subscriptionId: id })
   const shown = shownSubscriptionOf(id, { read: me.data?.subscription })
   const order = shown
     ? subscriptionAsOrder(shown, planNameOf(t, { code: shown.planCode, name: shown.planName }))

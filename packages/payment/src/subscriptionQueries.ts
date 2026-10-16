@@ -26,21 +26,38 @@ export type MySubscriptionQueryOptions = {
   maxPollMs?: number
   /** Paddle 처럼 첫 결제가 웹훅으로 닿는 결제사의 돌아온 화면 - 시작만 한 구독은 `me` 에 보이지 않으니 구독이 보이고 `ACTIVE` 가 될 때까지 되묻는다 */
   untilActive?: boolean
+  /**
+   * 방금 시작한 그 구독의 id(`untilActive` 를 뜻한다). `me` 가 같은 계정의 옛 구독(`ENDED` 등)을 돌려주는 동안은 답으로 치지 않고,
+   * 이 id 의 구독이 보이고 `PENDING` 을 벗어날 때까지 되묻는다
+   */
+  subscriptionId?: string
 }
 
 /** 구독이 아직 안 보이거나(웹훅 전) 확인 중이다 */
 const waitingForWebhook = (data: MySubscription | undefined) =>
   data === undefined || data.subscription === null || checkingFirstPayment(data)
 
+const waitingForSubscription = (id: string) => (data: MySubscription | undefined) =>
+  waitingForWebhook(data) || data?.subscription?.id !== id
+
 export function mySubscriptionQuery(
   api: PaymentSubscriptionApi,
-  { maxPollMs = ORDER_POLL_MAX_DURATION_MS, untilActive = false }: MySubscriptionQueryOptions = {},
+  {
+    maxPollMs = ORDER_POLL_MAX_DURATION_MS,
+    untilActive = false,
+    subscriptionId,
+  }: MySubscriptionQueryOptions = {},
 ) {
+  const shouldPoll =
+    subscriptionId !== undefined
+      ? waitingForSubscription(subscriptionId)
+      : untilActive
+        ? waitingForWebhook
+        : checkingFirstPayment
   return {
     queryKey: paymentKeys.mySubscription(),
     queryFn: () => api.me(),
-    refetchInterval: (query: PollQuery<MySubscription>) =>
-      pollWhile(query, untilActive ? waitingForWebhook : checkingFirstPayment, maxPollMs),
+    refetchInterval: (query: PollQuery<MySubscription>) => pollWhile(query, shouldPoll, maxPollMs),
   }
 }
 

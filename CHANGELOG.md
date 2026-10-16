@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — 카카오페이 직접 연동 (단건 결제 · 취소 · 환불) — 토스 계약 없이
+
+- `checkout.kind === 'KAKAOPAY_REDIRECT'`: `openCheckout` 이 SDK 없이 구매자를 서버가 준 결제창 주소(`attributes.pcUrl` · `mobileUrl`, http(s) 절대 주소만 - 아니면 던진다)로 보낸다(`navigate` · `isMobile` 로 바꿀 수 있다). 카카오페이에는 간편결제 단추가 따로 없어 `easyPay` 를 주면 던진다. `checkoutCanOpen(checkout)`: 열 수 있는 결제창인가(토스 · Paddle = 공개 키, 카카오페이 = 결제창 주소 - 공개 키가 `null` 인 것이 정상이다).
+- `readKakaoPayReturn(search)`: 서버 설정의 돌아올 주소로 붙어 온 `?provider=kakaopay&order=…&result=success|cancel|fail&pg_token=…` 을 읽는다(금액도 결제 번호도 주소에 없다). `ConfirmOrderInput` 에 `approvalToken`(= `pg_token`)이 생기고 `providerPaymentId` 는 선택이다(서버가 주문에 박아 둔 거래 번호를 쓴다). 백엔드 `payment-kakaopay`.
+- `PaymentConfig.choices`(같은 나라에서 열린 결제사 - 둘 이상이면 화면이 「결제 방법」을 고르게 한다) · `CreateOrderInput.provider`(고른 결제사 - 서버는 `choices` 안에서만 받는다). 같은 항목에 다른 결제사를 고르면 다른 의도라 `Idempotency-Key` 도 다르다. 견본 `CheerPage` 가 쓰고(토스 + 카카오페이가 둘 다 켜진 서버에서만 고르기가 보인다), 돌아온 화면(`PaymentReturnPage`)은 읽은 주문의 금액과 토큰으로 승인을 한 번 보낸다. e2e: 가짜 카카오페이 `apps/sample/e2e/fakeKakaoPay.ts` + `kakaopay.e2e.ts`.
+
 ### Added — 간편결제 단추 (토스 결제창 안 네이버페이 · 카카오페이 · 토스페이)
 
 - `EasyPayButtons`(카드 단추 옆 테두리 단추 하나씩, 막힘은 `ariaDisabled` + `describedBy`, 누른 단추에만 스피너) · `easyPaysFor(config, provider)` · `EASY_PAY_CODES` · 라벨 `easyPay`(ko/en) · `PaymentConfig.easyPays`(백엔드 `GET /config`, 결제사 id → 코드 목록).

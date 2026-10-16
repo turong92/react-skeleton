@@ -90,9 +90,13 @@ function ReturnFlow({ plan }: { plan: Settled }) {
     plan.kind === 'watch' ? { untilPaid: true } : undefined,
   )
 
+  // 카카오페이: 돌아온 주소에는 금액도 결제 번호도 없다 - 서버가 주문에 박아 둔 번호로 승인하고, 화면은 읽은 주문의 금액을 보탠다(서버가 주문의 금액과 대조한다). 주문을 읽기 전에는 보내지 않는다
+  const heldAmount = read.data?.order.amount.amount
+
   // 이 주소에 대해 한 번만 — StrictMode 가 효과를 두 번 돌려도 요청은 한 번이다
   const sent = useRef<string | null>(null)
   useEffect(() => {
+    if (plan.kind === 'approve' && heldAmount === undefined) return
     const key = JSON.stringify(plan)
     if (sent.current === key) return
     sent.current = key
@@ -103,9 +107,15 @@ function ReturnFlow({ plan }: { plan: Settled }) {
         providerPaymentId: plan.providerPaymentId,
         amount: plan.amount,
       })
-    else if (plan.orderId !== null) abandon.mutate(plan.orderId)
+    else if (plan.kind === 'approve' && heldAmount !== undefined)
+      confirm.mutate({
+        orderId: plan.orderId,
+        amount: heldAmount,
+        approvalToken: plan.approvalToken,
+      })
+    else if (plan.kind === 'left' && plan.orderId !== null) abandon.mutate(plan.orderId)
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 변경 훅의 mutate 는 매 그림마다 바뀐다; 열쇠(주소)가 같으면 다시 보내지 않는다
-  }, [plan])
+  }, [plan, heldAmount])
 
   const order = shownOrderOf({
     // 웹훅 전의 `PENDING` 은 아직 「확인 중」이다 - 시작도 안 한 주문처럼 보이지 않게 비워 둔다

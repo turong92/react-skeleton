@@ -130,7 +130,12 @@ export function createOrderMutation(
       const key = keyOf(
         keys,
         variables,
-        JSON.stringify([input.itemType, input.itemRef, input.quantity ?? null]),
+        JSON.stringify([
+          input.itemType,
+          input.itemRef,
+          input.quantity ?? null,
+          input.provider ?? null,
+        ]),
         idempotencyKey,
       )
       return api.createOrder(input, key !== undefined ? { idempotencyKey: key } : undefined)

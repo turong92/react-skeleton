@@ -290,6 +290,20 @@ describe('the order whose window never opened — when pressing again may reuse 
     expect(reusableOrderOf(held, 'cheer-5000', 1_000 + 5_000)).toBeUndefined()
   })
 
+  it('another payment method starts a new order - the held order opens another provider window', () => {
+    const heldKakao: UnopenedOrder = { ...held, provider: 'kakaopay' }
+    expect(reusableOrderOf(heldKakao, 'cheer-3000', 2_000, 'kakaopay')).toBe(created)
+    expect(reusableOrderOf(heldKakao, 'cheer-3000', 2_000, 'toss')).toBeUndefined()
+    expect(reusableOrderOf(held, 'cheer-3000', 2_000, 'kakaopay')).toBeUndefined()
+    const failed = { kind: 'window-failed', error: new Error('x'), created } as const
+    expect(unopenedAfter(failed, 'cheer-3000', 7, null, 'kakaopay')).toEqual({
+      itemRef: 'cheer-3000',
+      created,
+      since: 7,
+      provider: 'kakaopay',
+    })
+  })
+
   it('nothing held reuses nothing', () => {
     expect(reusableOrderOf(null, 'cheer-3000', 0)).toBeUndefined()
   })
@@ -383,5 +397,74 @@ describe('paddle (the result comes by webhook)', () => {
       orderId: 'ord_1',
     })
     expect(returnPlanOf('?provider=paddle')).toEqual({ kind: 'invalid' })
+  })
+})
+
+describe('kakaopay (the server called ready; the buyer comes back with a pg_token)', () => {
+  const kakao: Checkout = {
+    provider: 'kakaopay',
+    kind: 'KAKAOPAY_REDIRECT',
+    clientKey: null,
+    testMode: true,
+    orderId: 'ord_1',
+    orderName: '응원하기 3,000원',
+    amount: { amount: 3000, currency: 'KRW' },
+    attributes: { pcUrl: 'https://pay.example/pc', mobileUrl: 'https://pay.example/m' },
+  }
+  const kakaoCreated = { order: { id: 'ord_1' }, checkout: kakao } as unknown as CreateOrderResult
+
+  it('a checkout with no client key is normal for KakaoPay - the window opens, nothing is abandoned', async () => {
+    const f = fakes()
+    f.deps.createOrder = async () => kakaoCreated
+    await expect(
+      startCheer(f.deps, 'cheer-3000', undefined, undefined, 'kakaopay'),
+    ).resolves.toEqual({ kind: 'opened' })
+    expect(f.log).toEqual(['open'])
+  })
+
+  it('a KakaoPay checkout without its window addresses cannot be opened: the order is given back and payments are unavailable', async () => {
+    const f = fakes()
+    f.deps.createOrder = async () => {
+      f.log.push('create')
+      return { order: { id: 'ord_1' }, checkout: { ...kakao, attributes: {} } } as never
+    }
+    await expect(
+      startCheer(f.deps, 'cheer-3000', undefined, undefined, 'kakaopay'),
+    ).resolves.toEqual({ kind: 'unavailable' })
+    expect(f.log).toEqual(['create', 'abandon:ord_1'])
+  })
+
+  it('the chosen provider travels with the order, and only when the person chose one', async () => {
+    const f = fakes()
+    await startCheer(f.deps, 'cheer-3000', undefined, undefined, 'kakaopay')
+    expect(f.creates).toEqual([{ itemType: 'cheer', itemRef: 'cheer-3000', provider: 'kakaopay' }])
+    const g = fakes()
+    await startCheer(g.deps, 'cheer-3000')
+    expect(g.creates).toEqual([{ itemType: 'cheer', itemRef: 'cheer-3000' }])
+  })
+
+  it('the return address of the server carries the order, the result and the token - success becomes one approve of that order, with no amount from the address', () => {
+    expect(returnPlanOf('?provider=kakaopay&order=ord_1&result=success&pg_token=tok_1')).toEqual({
+      kind: 'approve',
+      orderId: 'ord_1',
+      approvalToken: 'tok_1',
+    })
+  })
+
+  it('cancel and fail leave the order the way the Toss failure address does; a success without its token is invalid', () => {
+    expect(returnPlanOf('?provider=kakaopay&order=ord_1&result=cancel')).toEqual({
+      kind: 'left',
+      orderId: 'ord_1',
+      canceled: true,
+    })
+    expect(returnPlanOf('?provider=kakaopay&order=ord_1&result=fail')).toEqual({
+      kind: 'left',
+      orderId: 'ord_1',
+      canceled: false,
+    })
+    expect(returnPlanOf('?provider=kakaopay&order=ord_1&result=success')).toEqual({
+      kind: 'invalid',
+    })
+    expect(returnPlanOf('?provider=kakaopay')).toEqual({ kind: 'invalid' })
   })
 })

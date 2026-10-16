@@ -556,6 +556,15 @@ describe('intent keys through the mutations (several calls in flight)', () => {
     expect(f.sent[2]?.key).toBe(f.sent[1]?.key)
   })
 
+  it('the same item with another provider is another intent - a KakaoPay press never replays the Toss order of the same amount', async () => {
+    const f = flight()
+    void f.press({ ...cheer3, provider: 'toss' })
+    void f.press({ ...cheer3, provider: 'kakaopay' })
+    await f.flush()
+    expect(f.sent).toHaveLength(2)
+    expect(f.sent[1]?.key).not.toBe(f.sent[0]?.key)
+  })
+
   it('an omitted quantity and an explicit 1 are two intents — the key does not guess what the server defaults to', async () => {
     const f = flight()
     void f.press(cheer3)

@@ -683,6 +683,8 @@
         "TestModeNotice",
         "EasyPayButtons",
         "easyPaysFor",
+        "readKakaoPayReturn",
+        "checkoutCanOpen",
         "SubscriptionPlanList",
         "SubscriptionStatusBadge",
         "MySubscriptionCard",

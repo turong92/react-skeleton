@@ -100,6 +100,30 @@ export function loadTossPaymentsSdk(
   return promise
 }
 
+/** 구매자를 이 주소로 보낼 수 있는가 - http(s) 절대 주소만(`javascript:` · `data:` 같은 것을 서버 답이 망가졌어도 따라가지 않는다) */
+function webAddress(value: string | undefined): string | null {
+  if (!value) return null
+  try {
+    const url = new URL(value)
+    return url.protocol === 'https:' || url.protocol === 'http:' ? value : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * 화면이 이 결제창을 **열 수 있는가** - 토스 · Paddle 은 서버가 준 공개 키가 있어야 하고(없으면 결제창을 열 수 없다는 서버의 말이다), 카카오페이는 공개 키가 없고 그 몫으로 결제창 주소가 있어야 한다.
+ * 열 수 없으면 주문을 돌려놓고 「지금은 결제할 수 없어요」로 말한다.
+ */
+export function checkoutCanOpen(checkout: Checkout): boolean {
+  if (checkout.kind === 'KAKAOPAY_REDIRECT')
+    return (
+      webAddress(checkout.attributes?.pcUrl) !== null &&
+      webAddress(checkout.attributes?.mobileUrl) !== null
+    )
+  return Boolean(checkout.clientKey)
+}
+
 export type OpenCheckoutOptions = {
   /** 결제 성공 뒤 돌아올 주소 — 프론트가 정한다(서버는 받지도 저장하지도 않는다). `readCheckoutReturn` 이 읽는다 */
   successUrl: string
@@ -112,6 +136,17 @@ export type OpenCheckoutOptions = {
   loadPaddle?: () => Promise<PaddleSdk>
   /** Paddle 결제창 언어 */
   locale?: string
+  /** 카카오페이: 구매자를 결제창 주소로 보내는 함수 - 기본은 현재 창을 옮긴다(`location.assign`). 시험 · 스토리에서 바꾼다 */
+  navigate?: (url: string) => void
+  /** 카카오페이: 모바일 기기인가 - 기본은 `navigator.userAgent` 로 본다. 모바일이면 모바일 주소, 아니면 PC 주소 */
+  isMobile?: () => boolean
+}
+
+const MOBILE_AGENT = /Android|iPhone|iPad|iPod|Mobile/i
+const defaultIsMobile = () =>
+  typeof navigator !== 'undefined' && MOBILE_AGENT.test(navigator.userAgent ?? '')
+const defaultNavigate = (url: string) => {
+  window.location.assign(url)
 }
 
 /**
@@ -128,6 +163,8 @@ export async function openCheckout(
     loadSdk = loadTossPaymentsSdk,
     loadPaddle,
     locale,
+    navigate = defaultNavigate,
+    isMobile = defaultIsMobile,
   }: OpenCheckoutOptions,
 ): Promise<void> {
   switch (checkout.kind) {
@@ -162,6 +199,19 @@ export async function openCheckout(
         ...(locale ? { locale } : {}),
         ...(loadPaddle ? { loadSdk: loadPaddle } : {}),
       })
+    case 'KAKAOPAY_REDIRECT': {
+      // 카카오페이에는 카드 단추 · 간편결제 단추가 따로 없다 - 조용히 버리지 않고 토스 쪽과 같이 던진다
+      if (easyPay !== undefined)
+        throw new Error(`The checkout does not offer the easy pay ${easyPay}`)
+      const address = webAddress(
+        isMobile() ? checkout.attributes?.mobileUrl : checkout.attributes?.pcUrl,
+      )
+      if (address === null)
+        throw new Error('The checkout has no http(s) address to send the buyer to')
+      // 돌아오는 주소는 서버 설정이다(`ready` 때 카카오페이가 받았다) - successUrl · failUrl 은 쓰지 않는다
+      navigate(address)
+      return
+    }
     default:
       throw new Error(`Unknown checkout kind: ${String((checkout as { kind: unknown }).kind)}`)
   }

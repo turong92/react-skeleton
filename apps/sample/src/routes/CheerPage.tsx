@@ -69,8 +69,19 @@ export function CheerPage() {
   const labels = paymentLabelsFor(t, language)
   const options = useCheerOptions()
   const config = usePaymentConfig(paymentApi)
-  // 결제사는 서버가 접속 나라로 정한다(한국이면 토스, 아니면 Paddle) - 화면은 고르지 않는다
-  const provider = useServerProvider()
+  // 결제사는 서버가 접속 나라로 정한다(한국이면 토스, 아니면 Paddle). 같은 나라에 결제사가 둘 이상 켜졌을 때만(`config.choices` — 토스 + 카카오페이) 사람이 「결제 방법」을 고른다
+  const serverProvider = useServerProvider()
+  const choices = config.data?.choices ?? []
+  const [pickedProvider, setPickedProvider] = useState<string | null>(null)
+  const chosenProvider =
+    choices.length > 1
+      ? pickedProvider !== null && choices.includes(pickedProvider)
+        ? pickedProvider
+        : serverProvider !== undefined && choices.includes(serverProvider)
+          ? serverProvider
+          : choices[0]
+      : undefined
+  const provider = chosenProvider ?? serverProvider
   const amountOf = usePaddleAmounts(provider)
   // 주문 만들기의 429 는 이 화면이 제자리에서(띠 · 단추 옆) 말한다 - 전역 토스트로 한 번 더 뜨지 않게 이 호출만 조용히 한다
   const createOrder = useCreateOrder(paymentApi, { meta: { quietStatuses: [429] } })
@@ -87,6 +98,7 @@ export function CheerPage() {
   const navigate = useNavigate()
   const reasonId = useId()
   const legendId = useId()
+  const providerLegendId = useId()
 
   // 요청이 많아 막힌 때는 풀리는 시각까지 단추를 막고 이유를 적는다(눌러도 같은 429 이고, 같은 키 재전송도 한도를 쓴다). 그 시각에 막힘과 **안내를 함께** 비운다
   useEffect(() => {
@@ -124,6 +136,8 @@ export function CheerPage() {
     return formatMoney(option.amount, { locale: language, currencySuffix: labels.currencySuffix })
   }
   const priceFailed = offered.some((option) => amountOf(option.itemRef).kind === 'failed')
+  const providerLabel = (id: string) =>
+    id === 'toss' || id === 'kakaopay' ? t(`cheer.provider.${id}`) : id
   const timeOf = (until: number) =>
     formatInstant(new Date(until).toISOString(), { locale: language })
   const hold = holdReasonOf({ configAvailable: config.data?.available, keyMissing, notice })
@@ -151,10 +165,11 @@ export function CheerPage() {
         urlsFor: (orderId, chosen) => checkoutReturnUrls(window.location.origin, orderId, chosen),
       },
       selected,
-      reusableOrderOf(unopened, selected, nowMs()),
+      reusableOrderOf(unopened, selected, nowMs(), chosenProvider),
       easyPay,
+      chosenProvider,
     )
-    setUnopened(unopenedAfter(result, selected, nowMs(), unopened))
+    setUnopened(unopenedAfter(result, selected, nowMs(), unopened, chosenProvider))
     if (result.kind === 'opened') return // 결제창이 이 화면을 떠나게 한다 — 돌아오면 `pageshow` 가 풀어 준다
     setBusy(false)
     if (result.kind === 'settled') {
@@ -201,6 +216,20 @@ export function CheerPage() {
               />
               {priceFailed && <p className={styles.reason}>{t('payment.paddle.priceFailed')}</p>}
             </div>
+            {chosenProvider !== undefined && (
+              <div className={styles.group}>
+                <span id={providerLegendId} className={styles.legend}>
+                  {t('cheer.providerLegend')}
+                </span>
+                <ChoiceGroup
+                  aria-labelledby={providerLegendId}
+                  options={choices.map((id) => ({ value: id, label: providerLabel(id) }))}
+                  value={chosenProvider}
+                  onChange={setPickedProvider}
+                  disabled={busy}
+                />
+              </div>
+            )}
             <CountryPolicyNotice />
             {config.data?.testMode && <TestModeNotice labels={labels} />}
             {notice && (

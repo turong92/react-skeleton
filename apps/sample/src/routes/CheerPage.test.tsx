@@ -69,6 +69,35 @@ describe('CheerPage', () => {
     )
   })
 
+  it('draws a 「결제 방법」 choice only when the server has opened more than one provider for this country (Toss + KakaoPay), with the server pick chosen', () => {
+    const two = render({
+      options,
+      config: config({ provider: 'toss', choices: ['toss', 'kakaopay'] }),
+    })
+    expect(two).toContain('결제 방법')
+    expect(two).toContain('토스페이먼츠')
+    expect(two).toContain('카카오페이')
+    expect(two).toMatch(/<button[^>]*aria-checked="true"[^>]*>.*?토스페이먼츠/)
+    expect(two.match(/role="radio"/g)).toHaveLength(5) // 금액 셋 + 결제 방법 둘
+
+    for (const choices of [undefined, [], ['toss']]) {
+      const one = render({
+        options,
+        config: config({ provider: 'toss', ...(choices ? { choices } : {}) }),
+      })
+      expect(one).not.toContain('결제 방법')
+      expect(one.match(/role="radio"/g)).toHaveLength(3)
+    }
+  })
+
+  it('with no server pick (two providers and no country map) the first choice is chosen so the person always sends one', () => {
+    const html = render({
+      options,
+      config: config({ provider: null, choices: ['kakaopay', 'toss'] }),
+    })
+    expect(html).toMatch(/<button[^>]*aria-checked="true"[^>]*>.*?카카오페이/)
+  })
+
   it('draws one outlined button per easy pay the server offers for its provider, next to the card button', () => {
     const html = render({
       options,

@@ -102,6 +102,11 @@ export type PaymentConfig = {
   cancelPolicy?: PaymentCancelPolicy | null
   /** 서버가 개발용 나라 덮어쓰기를 켰다(로컬만) - 켜져 있으면 요청의 `X-Dev-Country` 가 `country` 를 정한다 */
   devCountrySwitch?: boolean
+  /**
+   * 구매자가 고를 수 있는 결제사 id - 이 나라에서 지금 열려 있는 결제사. **둘 이상일 때만** 「결제 방법」 고르기를 그리고 고른 id 를 `createOrder` 의 `provider` 로 보낸다.
+   * 나라 지도에 결제사가 없고 후보가 둘이면 `provider` 는 `null` 이라 고르지 않은 주문은 거절된다. 구버전 서버는 칸이 없다
+   */
+  choices?: string[]
 }
 
 /** `key` 는 서버의 정책 이름(`korea` · `period-end-only` …). 숫자는 `korea` 일 때만(설정값) */
@@ -139,13 +144,32 @@ export type PaddleCheckout = {
   amount: PaymentAmount
   attributes: { environment?: string; transactionId?: string }
 }
-export type Checkout = TossPaymentWindowCheckout | PaddleCheckout
+/**
+ * 카카오페이 직접 연동(단건) - 서버가 결제 준비(`ready`)를 이미 불렀다. 브라우저는 SDK 없이 구매자를 `attributes` 의 주소로 **보낸다**(PC · 모바일).
+ * 공개 키가 없어 `clientKey` 는 늘 `null` 이다(`openCheckout` 도 `null` 이라고 멈추지 않는다 - 주소가 그 몫). 돌아오는 주소는 서버 설정이 정하고(`provider=kakaopay&order=…&result=…&pg_token=…`) `readKakaoPayReturn` 이 읽는다
+ */
+export type KakaoPayRedirectCheckout = {
+  provider: string
+  kind: 'KAKAOPAY_REDIRECT'
+  clientKey: null
+  testMode: boolean
+  orderId: string
+  orderName: string
+  amount: PaymentAmount
+  /** `pcUrl` · `mobileUrl`: 구매자가 갈 결제창(http(s) 절대 주소) · `appUrl`: 카카오톡 앱을 바로 여는 주소(이 패키지는 쓰지 않는다) */
+  attributes: { pcUrl?: string; mobileUrl?: string; appUrl?: string }
+}
+export type Checkout = TossPaymentWindowCheckout | PaddleCheckout | KakaoPayRedirectCheckout
 
 export type CreateOrderInput = {
   itemType: string
   itemRef: string
   quantity?: number
-  // 결제사 · 나라는 보내지 않는다 - 서버가 접속 나라로 정한다(`GET /config`); 보내도 서버는 읽지 않는다
+  /**
+   * 결제사 id - **`GET /config` 의 `choices` 에 둘 이상이 있을 때만** 보낸다(같은 나라에 결제사가 둘 이상 켜졌고 구매자가 고른 것). 서버는 `choices` 밖의 값을 읽지 않는다.
+   * 나라는 보내지 않는다 - 서버가 접속 나라로 정한다(`GET /config`)
+   */
+  provider?: string
 }
 /**
  * `checkout` 은 같은 `Idempotency-Key` 를 다시 보냈는데 주문이 이미 `PENDING` 이 아니거나 결제 가능 시간이 지난 `PENDING` 이면 `null` 이다(`200`, 계약 2 「주문 만들기」) -
@@ -154,7 +178,13 @@ export type CreateOrderInput = {
 export type CreateOrderResult = { order: Order; checkout: Checkout | null }
 
 /** 결제창에서 돌아온 결제의 승인 요청. `amount` 는 주소에서 왔다 — 서버가 주문의 금액과 대조한다(최소 단위 정수) */
-export type ConfirmOrderInput = { providerPaymentId: string; amount: number }
+export type ConfirmOrderInput = {
+  /** 토스의 `paymentKey`. 결제사가 거래 번호를 먼저 정한 주문(카카오페이)은 서버가 주문에 박아 둔 번호를 쓰니 생략한다 */
+  providerPaymentId?: string
+  amount: number
+  /** 돌아온 결제창이 승인을 허락한 증거 - 카카오페이의 `pg_token`. 토스는 보내지 않는다 */
+  approvalToken?: string
+}
 
 export type OrderDetail = { order: Order; refunds: Refund[] }
 

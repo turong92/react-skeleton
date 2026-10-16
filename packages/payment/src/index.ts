@@ -33,12 +33,19 @@ export type {
   RefundRequestInput,
   RefundRequestReason,
   RefundStatus,
+  KakaoPayRedirectCheckout,
   PaddleCheckout,
   TossPaymentWindowCheckout,
 } from './ledgerTypes'
 export { CONFIRM_TIMEOUT_MS, createPaymentLedgerApi } from './ledgerApi'
 export type { PaymentLedgerApi, PaymentLedgerApiOptions } from './ledgerApi'
-export { openCheckout, loadTossPaymentsSdk, SDK_LOAD_TIMEOUT_MS, TOSS_SDK_URL } from './checkout'
+export {
+  checkoutCanOpen,
+  openCheckout,
+  loadTossPaymentsSdk,
+  SDK_LOAD_TIMEOUT_MS,
+  TOSS_SDK_URL,
+} from './checkout'
 export {
   openPaddleCheckout,
   loadPaddleSdk,
@@ -59,8 +66,8 @@ export { EASY_PAY_CODES, easyPaysFor } from './easyPay'
 export type { EasyPayCode } from './easyPay'
 export { EasyPayButtons } from './EasyPayButtons'
 export type { EasyPayButtonsProps } from './EasyPayButtons'
-export { readCheckoutReturn } from './checkoutReturn'
-export type { CheckoutReturn } from './checkoutReturn'
+export { readCheckoutReturn, readKakaoPayReturn } from './checkoutReturn'
+export type { CheckoutReturn, KakaoPayReturn } from './checkoutReturn'
 export { readBillingReturn } from './billingReturn'
 export type { BillingReturn } from './billingReturn'
 export { openBillingAuth } from './billingAuth'

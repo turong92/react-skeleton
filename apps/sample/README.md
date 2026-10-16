@@ -75,6 +75,8 @@ pnpm --filter sample dev --port 5175     # http://b.localhost:5175
 | 제어                  | 가짜 토스 `POST /control` — `{sdk: 'cancel'\|'cancel-no-order-id'\|'leave'}` · `{confirm: {mode: 'decline'\|'delay'\|'lose'\|'error'}}` · `{complete: <주문 id>}` · `{cardNumber}` · `{reset: true}`, `GET /control` 은 받은 호출 기록 | 한 번만 적용된다                                                                                                                                                                                                                                   |
 | 포트                  | 가짜 토스는 빈 포트(`127.0.0.1`), 백엔드·DB·S3·메일도 빈 포트                                                                                                                                                                          | 개발 서버 포트(8080 · 5173 · 8025)와 겹치지 않는다                                                                                                                                                                                                 |
 
+카카오페이 시나리오 `e2e/kakaopay.e2e.ts` 는 가짜 카카오페이(`e2e/fakeKakaoPay.ts`, `E2E_FAKE_KAKAOPAY=0` 이면 끈다)를 쓴다 - 같은 백엔드에 토스와 **둘 다** 켜지면(같은 나라 KR 에 결제사가 둘) 응원하기에 「결제 방법」 고르기가 생기고(`GET /payments/config` 의 `choices`), 백엔드의 `payment.routing.country-providers.KR=toss` 가 처음 골라진 쪽을 정한다. 백엔드가 읽는 것: `SKELETON_PAYMENT_KAKAOPAY_ENABLED=true` · `_SECRET_KEY` · `_CID=TC0ONETIME` · `_BASE_URL=http://127.0.0.1:<빈 포트>`(가짜 카카오페이) · `_RETURN_URL=<가짜 카카오페이>/return`(가짜가 앱의 `/payments/return` 으로 넘긴다 - 백엔드가 앱보다 먼저 떠서 앱 주소를 모르기 때문) · `skeleton.http.clients.payment-kakaopay.response-timeout=10s`. 제어 `POST /control` — `{buyer: 'cancel'\|'fail'\|'leave'}` · `{approve: {mode: 'decline'\|'delay'\|'lose'\|'error'}}` · `{reset: true}`.
+
 ## 구조 (화면 조각 하나 = 이 폴더들)
 
 ```

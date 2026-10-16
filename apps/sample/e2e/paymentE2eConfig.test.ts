@@ -28,6 +28,10 @@ describe('the backend settings the payment e2e asks for', () => {
     expect(seconds(payment.reconcile['first-delay'])).toBeGreaterThan(responseTimeout)
   })
 
+  it('KakaoPay has the same response limit as Toss - the backend guard checks the first lookup against it too when both providers are on', () => {
+    expect(seconds(http.clients['payment-kakaopay']['response-timeout'])).toBe(responseTimeout)
+  })
+
   it('the provider response limit is not below the 10 seconds the backend guard warns about, and the whole wait of a scenario stays small', () => {
     expect(responseTimeout).toBeGreaterThanOrEqual(10)
     expect(seconds(payment.reconcile['first-delay'])).toBeLessThanOrEqual(15)

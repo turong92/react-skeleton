@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
+  checkoutCanOpen,
   loadTossPaymentsSdk,
   openCheckout,
   SDK_LOAD_TIMEOUT_MS,
@@ -282,5 +283,84 @@ describe('loadTossPaymentsSdk (the default loader — runs only when the button 
     expect(second.appended).toHaveLength(1)
     void a.catch(() => undefined)
     void b.catch(() => undefined)
+  })
+})
+
+describe('openCheckout — KAKAOPAY_REDIRECT (the server called ready; the buyer is sent to the address for their device)', () => {
+  const kakao: Checkout = {
+    provider: 'kakaopay',
+    kind: 'KAKAOPAY_REDIRECT',
+    clientKey: null,
+    testMode: true,
+    orderId: 'ord_1',
+    orderName: '응원하기 3,000원',
+    amount: { amount: 3000, currency: 'KRW' },
+    attributes: {
+      pcUrl: 'https://pay.example/pc',
+      mobileUrl: 'https://pay.example/mobile',
+      appUrl: 'https://pay.example/app',
+    },
+  }
+  const urls = {
+    successUrl: 'https://app.example/payments/return',
+    failUrl: 'https://app.example/payments/return?failed=1',
+  }
+
+  it('sends a desktop browser to the PC address and loads no SDK', async () => {
+    const navigate = vi.fn()
+    const loadSdk = vi.fn()
+    await openCheckout(kakao, { ...urls, navigate, isMobile: () => false, loadSdk })
+    expect(navigate).toHaveBeenCalledExactlyOnceWith('https://pay.example/pc')
+    expect(loadSdk).not.toHaveBeenCalled()
+  })
+
+  it('sends a phone to the mobile address', async () => {
+    const navigate = vi.fn()
+    await openCheckout(kakao, { ...urls, navigate, isMobile: () => true })
+    expect(navigate).toHaveBeenCalledExactlyOnceWith('https://pay.example/mobile')
+  })
+
+  it('never navigates to anything but an http(s) address - a javascript: address from a broken server answer stops here', async () => {
+    const navigate = vi.fn()
+    const evil = {
+      ...kakao,
+      attributes: { pcUrl: 'javascript:alert(1)', mobileUrl: 'data:text/html,x' },
+    } as Checkout
+    await expect(openCheckout(evil, { ...urls, navigate, isMobile: () => false })).rejects.toThrow(
+      /address/,
+    )
+    await expect(openCheckout(evil, { ...urls, navigate, isMobile: () => true })).rejects.toThrow(
+      /address/,
+    )
+    expect(navigate).not.toHaveBeenCalled()
+  })
+
+  it('refuses an easy pay (KakaoPay has no card/easy-pay buttons of its own) instead of dropping it', async () => {
+    const navigate = vi.fn()
+    await expect(openCheckout(kakao, { ...urls, navigate, easyPay: 'NAVERPAY' })).rejects.toThrow(
+      /easy pay/,
+    )
+    expect(navigate).not.toHaveBeenCalled()
+  })
+})
+
+describe('checkoutCanOpen (a checkout the screen can actually open)', () => {
+  it('a Toss or Paddle checkout needs its client key; a KakaoPay checkout needs its addresses instead (it has no key)', () => {
+    expect(checkoutCanOpen(checkout)).toBe(true)
+    expect(checkoutCanOpen({ ...checkout, clientKey: null })).toBe(false)
+    const kakao = {
+      provider: 'kakaopay',
+      kind: 'KAKAOPAY_REDIRECT',
+      clientKey: null,
+      testMode: true,
+      orderId: 'o',
+      orderName: 'n',
+      amount: { amount: 1, currency: 'KRW' },
+      attributes: { pcUrl: 'https://p/x', mobileUrl: 'https://p/m' },
+    } as Checkout
+    expect(checkoutCanOpen(kakao)).toBe(true)
+    expect(
+      checkoutCanOpen({ ...kakao, attributes: { pcUrl: '', mobileUrl: '' } } as Checkout),
+    ).toBe(false)
   })
 })

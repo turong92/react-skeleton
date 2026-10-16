@@ -4,6 +4,7 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { TestProject } from 'vitest/node'
 import { FAKE_LINE, FAKE_X, startFakeProviders, type FakeProviders } from './fakeProviders'
+import { FAKE_KAKAOPAY, startFakeKakaoPay, type FakeKakaoPay } from './fakeKakaoPay'
 import { FAKE_PADDLE, startFakePaddle, type FakePaddle } from './fakePaddle'
 import { FAKE_TOSS, startFakeToss, type FakeToss } from './fakeToss'
 import { PAYMENT_E2E_SKELETON } from './paymentE2eConfig'
@@ -24,6 +25,9 @@ import { PAYMENT_E2E_SKELETON } from './paymentE2eConfig'
  *   주문 만들기 요청 수 한도(계정 10 · IP 30 / 10분)를 푼다(`http.order-rate-limit`), 웹훅 주소 조각(`webhook.path-token`) — 값은 `paymentE2eConfig.ts`).
  *   `payment-jdbc` · `payment-toss` 가 없는 백엔드에서는 이 값들이 쓰이지 않고 결제 시나리오는 건너뛴다. `E2E_FAKE_TOSS=0` 이면 끈다.
  *
+ * 가짜 카카오페이: 가짜 토스와 함께 켠다(`E2E_FAKE_KAKAOPAY=0` 이면 끈다) - 백엔드의 카카오페이 설정(`SKELETON_PAYMENT_KAKAOPAY_*`)이 이 서버를 본다. 돌아올 주소(`RETURN_URL`)는 이 서버의 `/return` 이고, 앱(Vite)이 뜬 뒤 그 주소를 알려 준다 -
+ *   백엔드는 앱보다 먼저 떠서 앱의 주소를 모르기 때문이다. 토스와 둘 다 켜지면 같은 나라(KR)에 결제사가 둘이라 응원하기에 「결제 방법」 고르기가 생긴다(`GET /payments/config` 의 `choices`).
+ *
  * 가짜 Paddle: 가짜 토스와 함께 켠다(`E2E_FAKE_PADDLE=0` 이면 끈다) - `fakePaddle.ts` 가 서명한 웹훅을 백엔드로 쏘고(백엔드 주소는 기동 뒤 알려 준다) 백엔드의 Paddle 설정(`SKELETON_PAYMENT_PADDLE_*` · `PADDLE_*`)이 이 서버를 본다.
  *
  * 네이티브 백엔드: E2E_NATIVE=1 이면 백엔드 스크립트가 `apps/sample` 을 GraalVM 네이티브로 빌드해 리눅스 컨테이너로 띄운다(JVM 대신 — 같은 시나리오가 네이티브에서도 도는지). 컨테이너 안의 앱이 호스트의 가짜 서버(소셜 · 토스 · Paddle)를
@@ -41,6 +45,8 @@ declare module 'vitest' {
     fakeUrl: string
     /** 가짜 토스(`fakeToss.ts`) — `E2E_FAKE_TOSS=0` 이거나 이미 떠 있는 백엔드(`E2E_API_URL`)를 쓰면 빈 문자열 */
     fakeTossUrl: string
+    /** 가짜 카카오페이(`fakeKakaoPay.ts`) - `E2E_FAKE_KAKAOPAY=0` 이거나 이미 떠 있는 백엔드를 쓰면 빈 문자열 */
+    fakeKakaoPayUrl: string
     /** 가짜 Paddle(`fakePaddle.ts`) — `E2E_FAKE_PADDLE=0` 이거나 이미 떠 있는 백엔드를 쓰면 빈 문자열 */
     fakePaddleUrl: string
   }
@@ -80,6 +86,7 @@ export default async function setup(project: TestProject) {
   let fake: FakeProviders | null = null
   let fakeToss: FakeToss | null = null
   let fakePaddle: FakePaddle | null = null
+  let fakeKakaoPay: FakeKakaoPay | null = null
   let apiUrl = process.env.E2E_API_URL ?? ''
   let mailUrl = process.env.E2E_MAIL_URL ?? ''
   const native = process.env.E2E_NATIVE === '1'
@@ -97,6 +104,7 @@ export default async function setup(project: TestProject) {
     // 가짜 토스도 기본으로 켠다 — 결제 여정(결제창 → 승인 → 조회 → 환불)을 진짜 토스 없이 끝까지(`E2E_FAKE_TOSS=0` 이면 끈다: 결제 없는 백엔드 구성)
     if (process.env.E2E_FAKE_TOSS !== '0') fakeToss = await startFakeToss()
     if (process.env.E2E_FAKE_PADDLE !== '0') fakePaddle = await startFakePaddle()
+    if (process.env.E2E_FAKE_KAKAOPAY !== '0') fakeKakaoPay = await startFakeKakaoPay()
     // 링크 로그인 요청은 같은 IP(::1)에서 시간당 10번(`skeleton.auth-magic-link.per-ip`, 넘으면 429)이 한도다 — 이 실행의 시나리오는 한 백엔드에 새 계정을 여럿 만들어 10번을 넘는다. e2e 백엔드에서만 올린다
     // E2E_EMAIL_REAUTH_WINDOW=PT0S: 첫 이메일 등록의 재인증 면제 창을 없앤다 — 「1시간이 지난」 제공자 재동의 길(emailReauth.e2e.ts)을 만들 수 있는 유일한 길. 표준 실행에서는 쓰지 않는다
     // 아이디 정하기 한도(`login-id.claim-limit`: 계정마다 · IP 마다 시간당 10번 - 같은 IP 에서 계정을 여럿 만드는 이 실행은 넘는다)와 실시간 중복 확인의 IP 한도(`check-per-ip`)도 e2e 백엔드에서만 올린다
@@ -112,9 +120,9 @@ export default async function setup(project: TestProject) {
     // 결제 시나리오가 기다릴 수 있는 시간 안에 끝나게(값과 까닭은 `paymentE2eConfig.ts`) — 응답 제한(10초)도 같이 싣는다: 백엔드는 `reconcile.first-delay` 가 그보다 길지 않으면 기동에 실패한다(스펙 §9.2)
     const e2eSkeleton = {
       ...e2eLimits,
-      ...(fakeToss || fakePaddle ? PAYMENT_E2E_SKELETON : {}),
+      ...(fakeToss || fakePaddle || fakeKakaoPay ? PAYMENT_E2E_SKELETON : {}),
       // 네이티브 컨테이너에는 호스트 요청의 출발지가 도커가 만든 임의의 주소로 보인다(사설 대역도 아니다) — 접속 나라 헤더를 믿는 프록시를 모든 주소로 연다(이 e2e 백엔드만, 호스트 포트는 로컬에만 열린다)
-      ...(native && (fakeToss || fakePaddle)
+      ...(native && (fakeToss || fakePaddle || fakeKakaoPay)
         ? {
             web: {
               'client-ip': {
@@ -187,15 +195,25 @@ export default async function setup(project: TestProject) {
           PADDLE_PRICE_CHEER_1000: FAKE_PADDLE.prices.cheer1000.id,
         }
       : {}
+    const kakaoEnv = fakeKakaoPay
+      ? {
+          SKELETON_PAYMENT_KAKAOPAY_ENABLED: 'true',
+          SKELETON_PAYMENT_KAKAOPAY_SECRET_KEY: FAKE_KAKAOPAY.secretKey,
+          SKELETON_PAYMENT_KAKAOPAY_CID: FAKE_KAKAOPAY.cid,
+          SKELETON_PAYMENT_KAKAOPAY_RETURN_URL: `${fakeKakaoPay.url}/return`,
+          SKELETON_PAYMENT_KAKAOPAY_BASE_URL: fakeKakaoPay.url,
+        }
+      : {}
     backendEnv = {
       ...process.env,
       ...fakeConfig,
       ...tossEnv,
+      ...kakaoEnv,
       ...paddleEnv,
       MARINA_DIRECT: '1',
       ...(native
         ? {
-            E2E_NATIVE_FORWARD_PORTS: [fake, fakeToss, fakePaddle]
+            E2E_NATIVE_FORWARD_PORTS: [fake, fakeToss, fakePaddle, fakeKakaoPay]
               .flatMap((f) => (f ? [new URL(f.url).port] : []))
               .join(' '),
           }
@@ -257,6 +275,7 @@ export default async function setup(project: TestProject) {
       },
     )
     baseUrl = `http://127.0.0.1:${port}`
+    fakeKakaoPay?.setApp(baseUrl)
     try {
       await waitFor(`${baseUrl}/`, 'web server', 30_000)
       break
@@ -275,6 +294,7 @@ export default async function setup(project: TestProject) {
     void fake?.close()
     void fakeToss?.close()
     void fakePaddle?.close()
+    void fakeKakaoPay?.close()
     if (backendScript) spawnSync('bash', [backendScript, 'stop'], { env: backendEnv })
   }
 
@@ -290,6 +310,7 @@ export default async function setup(project: TestProject) {
   project.provide('mailUrl', mailUrl)
   project.provide('fakeUrl', fake?.url ?? '')
   project.provide('fakeTossUrl', fakeToss?.url ?? '')
+  project.provide('fakeKakaoPayUrl', fakeKakaoPay?.url ?? '')
   project.provide('fakePaddleUrl', fakePaddle?.url ?? '')
   return stopAll
 }

@@ -1,9 +1,11 @@
 import { isErrorCode, retryAfterSeconds, ErrorCodes } from '@skeleton/api-client'
 import {
+  checkoutCanOpen,
   INTENT_KEY_TTL_MS,
   PaymentLedgerErrorCodes,
   PaymentRedirectError,
   readCheckoutReturn,
+  readKakaoPayReturn,
   type Checkout,
   type CreateOrderInput,
   type CreateOrderResult,
@@ -94,12 +96,18 @@ export async function startCheer(
   itemRef: string,
   reuse?: CreateOrderResult,
   easyPay?: string,
+  provider?: string,
 ): Promise<StartCheerResult> {
   let created: CreateOrderResult
   if (reuse) created = reuse
   else
     try {
-      created = await deps.createOrder({ itemType: CHEER_ITEM_TYPE, itemRef })
+      // `provider` 는 사람이 「결제 방법」을 골랐을 때만 간다(같은 나라에 결제사가 둘 이상 켜진 서버) - 없으면 서버가 정한다
+      created = await deps.createOrder({
+        itemType: CHEER_ITEM_TYPE,
+        itemRef,
+        ...(provider !== undefined ? { provider } : {}),
+      })
     } catch (error) {
       return { kind: 'order-failed', error }
     }
@@ -110,8 +118,8 @@ export async function startCheer(
     if (MONEY_MOVED.has(created.order.status)) return { kind: 'settled', orderId: created.order.id }
     return { kind: 'order-failed', error: new Error('The order is no longer open for payment') }
   }
-  // 서버에 결제창 키가 없다 - 다시 눌러도 같다. 만든 주문을 돌려놓고(못 돌려놓아도 서버의 만료 작업이 닫는다) 「지금은 결제할 수 없어요」로 말한다
-  if (!checkout.clientKey) {
+  // 서버에 결제창 키가 없다(카카오페이는 키 대신 결제창 주소) - 다시 눌러도 같다. 만든 주문을 돌려놓고(못 돌려놓아도 서버의 만료 작업이 닫는다) 「지금은 결제할 수 없어요」로 말한다
+  if (!checkoutCanOpen(checkout)) {
     await deps.abandonOrder(created.order.id).catch(() => undefined)
     return { kind: 'unavailable' }
   }
@@ -133,7 +141,13 @@ export async function startCheer(
 }
 
 /** 결제창을 못 연 채 화면이 들고 있는 주문 — `since` 는 결제창이 안 열린 것을 안 때(ms) */
-export type UnopenedOrder = { itemRef: string; created: CreateOrderResult; since: number }
+export type UnopenedOrder = {
+  itemRef: string
+  created: CreateOrderResult
+  since: number
+  /** 사람이 고른 결제 방법 - 다른 방법으로 다시 누르면 그 주문의 창을 다시 열지 않는다 */
+  provider?: string
+}
 
 /**
  * 「응원하기」를 다시 눌렀을 때 새 주문 대신 다시 열 주문 — 같은 금액이고 {@link INTENT_KEY_TTL_MS} 안일 때만.
@@ -143,8 +157,10 @@ export function reusableOrderOf(
   unopened: UnopenedOrder | null,
   itemRef: string,
   now: number,
+  provider?: string,
 ): CreateOrderResult | undefined {
-  if (unopened === null || unopened.itemRef !== itemRef) return undefined
+  if (unopened === null || unopened.itemRef !== itemRef || unopened.provider !== provider)
+    return undefined
   return now - unopened.since >= INTENT_KEY_TTL_MS ? undefined : unopened.created
 }
 
@@ -154,18 +170,22 @@ export function unopenedAfter(
   itemRef: string,
   now: number,
   previous: UnopenedOrder | null,
+  provider?: string,
 ): UnopenedOrder | null {
   if (result.kind !== 'window-failed') return null
   return {
     itemRef,
     created: result.created,
     since: previous?.created === result.created ? previous.since : now,
+    ...(provider !== undefined ? { provider } : {}),
   }
 }
 
 /** 결제창에서 돌아온 주소가 화면에 시키는 일 */
 export type ReturnPlan =
   | { kind: 'confirm'; orderId: string; providerPaymentId: string; amount: number }
+  /** 카카오페이 - 구매자가 인증을 마치고 돌아왔다. 주소에는 금액도 결제 번호도 없다: 서버가 주문에 박아 둔 번호와 주문 금액으로 승인한다(화면은 승인 토큰만 보탠다) */
+  | { kind: 'approve'; orderId: string; approvalToken: string }
   /** 결제창이 실패 주소로 돌려보냈다. `canceled` 는 사람이 창을 닫은 경우 */
   | { kind: 'left'; orderId: string | null; canceled: boolean }
   /** Paddle - 승인 호출이 없다. 웹훅이 주문을 `PAID` 로 옮기므로 서버를 되묻기만 한다 */
@@ -174,6 +194,17 @@ export type ReturnPlan =
 
 export function returnPlanOf(search: string): ReturnPlan {
   const params = new URLSearchParams(search)
+  if (params.get('provider') === 'kakaopay') {
+    try {
+      const read = readKakaoPayReturn(params)
+      if (read.ok)
+        return { kind: 'approve', orderId: read.orderId, approvalToken: read.approvalToken }
+      return { kind: 'left', orderId: read.orderId, canceled: read.code === 'CANCELED' }
+    } catch (error) {
+      if (error instanceof PaymentRedirectError) return { kind: 'invalid' }
+      throw error
+    }
+  }
   if (params.get('provider') === 'paddle') {
     const orderId = params.get(RETURN_ORDER_PARAM)
     return orderId ? { kind: 'watch', orderId } : { kind: 'invalid' }

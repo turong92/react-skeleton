@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { PaymentRedirectError } from './tossRedirect'
-import { readCheckoutReturn } from './checkoutReturn'
+import { readCheckoutReturn, readKakaoPayReturn } from './checkoutReturn'
 
 describe('readCheckoutReturn (what the payment window put on successUrl / failUrl)', () => {
   it('success: paymentKey + orderId + amount → { ok: true, orderId, providerPaymentId, amount }', () => {
@@ -64,5 +64,46 @@ describe('readCheckoutReturn (what the payment window put on successUrl / failUr
     }
     expect(message).not.toContain('SECRET')
     expect(message).toMatch(/amount/)
+  })
+})
+
+describe('readKakaoPayReturn (what KakaoPay put on the return address the server gave it)', () => {
+  it('success: order + pg_token → the order and the approval token (no amount - the server knows it)', () => {
+    expect(
+      readKakaoPayReturn('?provider=kakaopay&order=ord_1&result=success&pg_token=abc123'),
+    ).toEqual({
+      ok: true,
+      orderId: 'ord_1',
+      approvalToken: 'abc123',
+    })
+  })
+
+  it('a success address without the token is not a success - it throws, like the Toss side with a missing paymentKey', () => {
+    expect(() => readKakaoPayReturn('?provider=kakaopay&order=ord_1&result=success')).toThrow(
+      PaymentRedirectError,
+    )
+    expect(() => readKakaoPayReturn('?provider=kakaopay&result=success&pg_token=x')).toThrow(
+      PaymentRedirectError,
+    )
+  })
+
+  it('cancel and fail: the order and a code - canceled means the buyer closed the window', () => {
+    expect(readKakaoPayReturn('?provider=kakaopay&order=ord_1&result=cancel')).toEqual({
+      ok: false,
+      orderId: 'ord_1',
+      code: 'CANCELED',
+    })
+    expect(readKakaoPayReturn('?provider=kakaopay&order=ord_1&result=fail')).toEqual({
+      ok: false,
+      orderId: 'ord_1',
+      code: 'FAILED',
+    })
+  })
+
+  it('anything else is not a KakaoPay return', () => {
+    expect(() => readKakaoPayReturn('?provider=kakaopay&order=ord_1')).toThrow(PaymentRedirectError)
+    expect(() => readKakaoPayReturn('?provider=kakaopay&order=ord_1&result=other')).toThrow(
+      PaymentRedirectError,
+    )
   })
 })

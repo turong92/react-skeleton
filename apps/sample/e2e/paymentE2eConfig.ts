@@ -1,6 +1,7 @@
 /**
  * 결제 e2e 가 백엔드의 `SPRING_APPLICATION_JSON`(`skeleton.*`)에 얹는 값 — 시나리오가 기다릴 수 있는 시간 안에 끝나게 한다. 기본값(60초 · 30분)이면 시나리오 하나가 몇 분을 기다린다.
  * - `http.clients.payment-toss.response-timeout`: 결제사 응답 제한. 백엔드는 `reconcile.first-delay` 가 이 값보다 길지 않으면 기동에 실패한다(스펙 §9.2) — 모든 e2e 파일이 같은 백엔드를 쓰므로 이 값을 같이 싣는다. 장부를 쓰는 앱의 가드가 짧다고 경고하는 10초 밑으로 내리지 않는다.
+ * - `http.clients.payment-kakaopay.response-timeout`: 카카오페이도 같은 까닭 - 켜면 가드가 같은 규칙을 본다(`reconcile.first-delay` 가 응답 제한보다 길어야 기동).
  * - `payment.reconcile.first-delay`: 승인 선점 뒤 첫 조회 — 응답 제한(10초)보다 길게(11초).
  * - `payment.http.order-rate-limit`: 주문 만들기(`POST /payments/orders`)의 요청 수 한도 - 기본은 **계정마다 10 · 호출자 IP 마다 30 / 10분**(백엔드 `docs/config/modules/payment.yml`, 계약 9)이고, 넘으면 `429 COMMON.TOO_MANY_REQUESTS`.
  *   한 실행은 같은 계정(`user@example.com`)과 같은 주소(`::1`)에서 그보다 많은 주문을 만든다 - 이 백엔드에서만 넉넉히 푼다(운영 값이 아니다).
@@ -14,7 +15,12 @@ export const PAYMENT_E2E_SKELETON = {
   sample: { subscription: { period: 'PT25S' } },
   // 접속 나라는 Cloudflare 의 CF-IPCountry 로만 온다 - 이 백엔드는 cloudflare 모드로 띄워 시험이 헤더로 나라를 정한다(헤더가 없으면 설정의 기본 나라 KR → 토스). 피어는 항상 로컬(Vite 프록시)이다
   web: { 'client-ip': { mode: 'cloudflare', 'trusted-proxies': ['127.0.0.1/32', '::1/128'] } },
-  http: { clients: { 'payment-toss': { 'response-timeout': '10s' } } },
+  http: {
+    clients: {
+      'payment-toss': { 'response-timeout': '10s' },
+      'payment-kakaopay': { 'response-timeout': '10s' },
+    },
+  },
   payment: {
     'checkout-ttl': '40s',
     reconcile: { 'first-delay': '11s' },

@@ -26,9 +26,35 @@ export const Default: Story = {
 }
 
 export const Opening: Story = {
-  args: { disabled: true },
+  args: { disabled: true, loadingCode: 'KAKAOPAY' },
   play: async ({ canvas }) => {
     for (const button of canvas.getAllByRole('button')) await expect(button).toBeDisabled()
+    await expect(canvas.getByRole('button', { name: /카카오페이/ })).toHaveAttribute(
+      'aria-busy',
+      'true',
+    )
+    await expect(canvas.getByRole('button', { name: '네이버페이' })).not.toHaveAttribute(
+      'aria-busy',
+    )
+  },
+}
+
+/** 막힌 화면 - 포커스는 남고(`disabled` 아님) 이유가 읽히며 눌러도 아무 일도 없다 */
+export const Held: Story = {
+  args: { ariaDisabled: true, describedBy: 'why' },
+  render: (args) => (
+    <>
+      <EasyPayButtons {...args} />
+      <p id="why">지금은 결제를 쓸 수 없어요</p>
+    </>
+  ),
+  play: async ({ canvas, args }) => {
+    const button = canvas.getByRole('button', { name: '네이버페이' })
+    await expect(button).toHaveAttribute('aria-disabled', 'true')
+    await expect(button).toHaveAccessibleDescription('지금은 결제를 쓸 수 없어요')
+    await expect(button).not.toBeDisabled()
+    await userEvent.click(button)
+    await expect(args.onPick).not.toHaveBeenCalled()
   },
 }
 

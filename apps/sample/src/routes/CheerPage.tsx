@@ -230,6 +230,7 @@ export function CheerPage() {
                 size="lg"
                 loading={busy && pickedEasyPay === null}
                 loadingLabel={t('cheer.opening')}
+                disabled={busy}
                 aria-disabled={held ? true : undefined}
                 aria-describedby={held ? reasonId : undefined}
                 onClick={held ? undefined : () => void submit()}

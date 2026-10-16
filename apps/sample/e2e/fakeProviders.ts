@@ -43,7 +43,7 @@ const json = (res: ServerResponse, status: number, value: unknown) => {
   res.end(JSON.stringify(value))
 }
 
-export async function startFakeProviders(listenHost = 'localhost'): Promise<FakeProviders> {
+export async function startFakeProviders(listenHost = '127.0.0.1'): Promise<FakeProviders> {
   const grants = new Map<string, Grant>()
   const state = {
     line: { sub: 'U-e2e-line-1', name: 'LINE Tester', email: undefined as string | undefined },

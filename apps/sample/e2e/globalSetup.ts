@@ -93,8 +93,7 @@ export default async function setup(project: TestProject) {
       await freePort(),
     ]
     // 가짜 소셜 제공자는 기본으로 켠다 — 표준 e2e 한 번이 소셜 여정까지 돌게(`E2E_FAKE_PROVIDERS=0` 이면 끈다: 소셜 없는 백엔드 구성)
-    if (process.env.E2E_FAKE_PROVIDERS !== '0')
-      fake = await startFakeProviders(native ? '127.0.0.1' : 'localhost') // 네이티브: 컨테이너의 socat 이 호스트의 IPv4 로 건넨다 — `localhost` 가 ::1 만 열면 닿지 않는다
+    if (process.env.E2E_FAKE_PROVIDERS !== '0') fake = await startFakeProviders() // IPv4 루프백에서 받는다 — 백엔드(JVM · 네이티브 컨테이너의 socat)는 IPv4 로 오는데 Node 의 `localhost` 는 ::1 만 열 수 있다
     // 가짜 토스도 기본으로 켠다 — 결제 여정(결제창 → 승인 → 조회 → 환불)을 진짜 토스 없이 끝까지(`E2E_FAKE_TOSS=0` 이면 끈다: 결제 없는 백엔드 구성)
     if (process.env.E2E_FAKE_TOSS !== '0') fakeToss = await startFakeToss()
     if (process.env.E2E_FAKE_PADDLE !== '0') fakePaddle = await startFakePaddle()

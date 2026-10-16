@@ -90,6 +90,15 @@ describe('CheerPage', () => {
     }
   })
 
+  it('names NaverPay in the choice when it is one of three providers open for the country', () => {
+    const html = render({
+      options,
+      config: config({ provider: 'toss', choices: ['toss', 'kakaopay', 'naverpay'] }),
+    })
+    expect(html).toContain('네이버페이')
+    expect(html.match(/role="radio"/g)).toHaveLength(6) // 금액 셋 + 결제 방법 셋
+  })
+
   it('with no server pick (two providers and no country map) the first choice is chosen so the person always sends one', () => {
     const html = render({
       options,

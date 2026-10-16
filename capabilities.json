@@ -684,6 +684,7 @@
         "EasyPayButtons",
         "easyPaysFor",
         "readKakaoPayReturn",
+        "readNaverPayReturn",
         "checkoutCanOpen",
         "SubscriptionPlanList",
         "SubscriptionStatusBadge",

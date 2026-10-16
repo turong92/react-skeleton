@@ -453,6 +453,7 @@ const en: Record<keyof typeof ko, string> = {
   'cheer.providerLegend': 'Payment method',
   'cheer.provider.toss': 'Toss Payments',
   'cheer.provider.kakaopay': 'KakaoPay',
+  'cheer.provider.naverpay': 'NaverPay',
   'cheer.submit': 'Send a cheer',
   'cheer.opening': 'Opening the payment window',
   'cheer.unavailable': 'Payments are not available right now',

@@ -6,6 +6,7 @@ import {
   PaymentRedirectError,
   readCheckoutReturn,
   readKakaoPayReturn,
+  readNaverPayReturn,
   type Checkout,
   type CreateOrderInput,
   type CreateOrderResult,
@@ -186,6 +187,8 @@ export type ReturnPlan =
   | { kind: 'confirm'; orderId: string; providerPaymentId: string; amount: number }
   /** 카카오페이 - 구매자가 인증을 마치고 돌아왔다. 주소에는 금액도 결제 번호도 없다: 서버가 주문에 박아 둔 번호와 주문 금액으로 승인한다(화면은 승인 토큰만 보탠다) */
   | { kind: 'approve'; orderId: string; approvalToken: string }
+  /** 네이버페이 - 구매자가 결제창을 마치고 돌아왔다. 주소에는 결제 번호만 있고 금액이 없다: 화면은 읽은 주문의 금액을 보태 승인을 보낸다(서버가 주문의 금액으로 승인하고 승인 응답의 총액을 대조한다) */
+  | { kind: 'confirm-held'; orderId: string; providerPaymentId: string }
   /** 결제창이 실패 주소로 돌려보냈다. `canceled` 는 사람이 창을 닫은 경우 */
   | { kind: 'left'; orderId: string | null; canceled: boolean }
   /** Paddle - 승인 호출이 없다. 웹훅이 주문을 `PAID` 로 옮기므로 서버를 되묻기만 한다 */
@@ -200,6 +203,18 @@ export function returnPlanOf(search: string): ReturnPlan {
       const read = readKakaoPayReturn(params)
       if (read.ok)
         return { kind: 'approve', orderId: read.orderId, approvalToken: read.approvalToken }
+      return { kind: 'left', orderId: read.orderId, canceled: read.code === 'CANCELED' }
+    } catch (error) {
+      if (error instanceof PaymentRedirectError) return { kind: 'invalid' }
+      throw error
+    }
+  }
+  // 네이버페이도 같다 - 서버 설정의 돌아올 주소에 `kind=NAVERPAY_SDK`(checkout.kind 와 같은 값)가 실려 있다
+  if (params.get('kind') === 'NAVERPAY_SDK') {
+    try {
+      const read = readNaverPayReturn(params)
+      if (read.ok)
+        return { kind: 'confirm-held', orderId: read.orderId, providerPaymentId: read.paymentId }
       return { kind: 'left', orderId: read.orderId, canceled: read.code === 'CANCELED' }
     } catch (error) {
       if (error instanceof PaymentRedirectError) return { kind: 'invalid' }

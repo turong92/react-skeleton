@@ -449,6 +449,7 @@ export default {
   'cheer.providerLegend': '결제 방법',
   'cheer.provider.toss': '토스페이먼츠',
   'cheer.provider.kakaopay': '카카오페이',
+  'cheer.provider.naverpay': '네이버페이',
   'cheer.submit': '응원하기',
   'cheer.opening': '결제창을 여는 중',
   'cheer.unavailable': '지금은 결제를 쓸 수 없어요',

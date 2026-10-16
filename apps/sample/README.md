@@ -77,6 +77,8 @@ pnpm --filter sample dev --port 5175     # http://b.localhost:5175
 
 카카오페이 시나리오 `e2e/kakaopay.e2e.ts` 는 가짜 카카오페이(`e2e/fakeKakaoPay.ts`, `E2E_FAKE_KAKAOPAY=0` 이면 끈다)를 쓴다 - 같은 백엔드에 토스와 **둘 다** 켜지면(같은 나라 KR 에 결제사가 둘) 응원하기에 「결제 방법」 고르기가 생기고(`GET /payments/config` 의 `choices`), 백엔드의 `payment.routing.country-providers.KR=toss` 가 처음 골라진 쪽을 정한다. 백엔드가 읽는 것: `SKELETON_PAYMENT_KAKAOPAY_ENABLED=true` · `_SECRET_KEY` · `_CID=TC0ONETIME` · `_BASE_URL=http://127.0.0.1:<빈 포트>`(가짜 카카오페이) · `_RETURN_URL=<가짜 카카오페이>/return`(가짜가 앱의 `/payments/return` 으로 넘긴다 - 백엔드가 앱보다 먼저 떠서 앱 주소를 모르기 때문) · `skeleton.http.clients.payment-kakaopay.response-timeout=10s`. 제어 `POST /control` — `{buyer: 'cancel'\|'fail'\|'leave'}` · `{approve: {mode: 'decline'\|'delay'\|'lose'\|'error'}}` · `{reset: true}`.
 
+네이버페이 시나리오 `e2e/naverpay.e2e.ts` 는 가짜 네이버페이(`e2e/fakeNaverPay.ts`, `E2E_FAKE_NAVERPAY=0` 이면 끈다)를 쓴다 - 결제창(네이버 SDK)은 서버가 아니라 **브라우저**가 여는 것이라 시험이 SDK 스크립트(`https://nsp.pay.naver.com/sdk/js/naverpay.min.js`)를 가로채 가짜(`routeNaverPaySdk`)로 바꾼다. 토스 · 카카오페이와 함께 켜지면 「결제 방법」 고르기에 셋이 보인다. 백엔드가 읽는 것: `SKELETON_PAYMENT_NAVERPAY_ENABLED=true` · `_MODE=development` · `_CLIENT_ID` · `_CLIENT_SECRET` · `_CHAIN_ID` · `_BASE_URL=http://127.0.0.1:<빈 포트>`(가짜 네이버페이) · `_RETURN_URL=<가짜 네이버페이>/return`(가짜가 앱의 `/payments/return` 으로 넘긴다) · `skeleton.http.clients.payment-naverpay.response-timeout=10s`. 제어 `POST /control` — `{buyer: 'cancel'\|'fail'\|'leave'}` · `{tamperAmount: <금액>}`(구매자가 결제창 금액을 바꿨다) · `{apply: {mode: 'decline'\|'delay'\|'lose'\|'error'}}` · `{reset: true}`. 인증값이 가맹 심사 뒤에야 나와 진짜 네이버페이로는 돌려 보지 못했다.
+
 ## 구조 (화면 조각 하나 = 이 폴더들)
 
 ```

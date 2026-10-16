@@ -85,6 +85,24 @@ describe('PaymentReturnPage', () => {
     expect(html).not.toContain('결제됐어요')
   })
 
+  it('a NaverPay return reads the order the server holds - paid says so with no card, and the address alone claims no payment', () => {
+    const html = render(
+      '?kind=NAVERPAY_SDK&provider=naverpay&order=ord_1&resultCode=Success&paymentId=20261017NP0001',
+      order({ card: null, method: 'EASY_PAY' }),
+    )
+    expect(html).toContain('결제됐어요')
+    expect(html).not.toContain('결제를 그만뒀어요')
+    expect(
+      render('?kind=NAVERPAY_SDK&provider=naverpay&order=ord_1&resultCode=Success'),
+    ).not.toContain('결제됐어요')
+  })
+
+  it('a NaverPay window the person closed (UserCancel) says 「그만뒀어요」 at once from the address alone', () => {
+    const html = render('?kind=NAVERPAY_SDK&provider=naverpay&order=ord_1&resultCode=UserCancel')
+    expect(html).toContain('결제를 그만뒀어요')
+    expect(html).not.toContain('확인 중')
+  })
+
   it('an order still being confirmed says 「결제 확인 중」 and does not offer a second payment', () => {
     const html = render(SUCCESS, order({ status: 'CONFIRMING', paidAt: null, card: null }))
     expect(html).toContain('결제 확인 중이에요')

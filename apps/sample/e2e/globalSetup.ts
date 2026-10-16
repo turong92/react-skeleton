@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 import type { TestProject } from 'vitest/node'
 import { FAKE_LINE, FAKE_X, startFakeProviders, type FakeProviders } from './fakeProviders'
 import { FAKE_KAKAOPAY, startFakeKakaoPay, type FakeKakaoPay } from './fakeKakaoPay'
+import { FAKE_NAVERPAY, startFakeNaverPay, type FakeNaverPay } from './fakeNaverPay'
 import { FAKE_PADDLE, startFakePaddle, type FakePaddle } from './fakePaddle'
 import { FAKE_TOSS, startFakeToss, type FakeToss } from './fakeToss'
 import { PAYMENT_E2E_SKELETON } from './paymentE2eConfig'
@@ -28,6 +29,9 @@ import { PAYMENT_E2E_SKELETON } from './paymentE2eConfig'
  * 가짜 카카오페이: 가짜 토스와 함께 켠다(`E2E_FAKE_KAKAOPAY=0` 이면 끈다) - 백엔드의 카카오페이 설정(`SKELETON_PAYMENT_KAKAOPAY_*`)이 이 서버를 본다. 돌아올 주소(`RETURN_URL`)는 이 서버의 `/return` 이고, 앱(Vite)이 뜬 뒤 그 주소를 알려 준다 -
  *   백엔드는 앱보다 먼저 떠서 앱의 주소를 모르기 때문이다. 토스와 둘 다 켜지면 같은 나라(KR)에 결제사가 둘이라 응원하기에 「결제 방법」 고르기가 생긴다(`GET /payments/config` 의 `choices`).
  *
+ * 가짜 네이버페이: 가짜 토스와 함께 켠다(`E2E_FAKE_NAVERPAY=0` 이면 끈다) - 백엔드의 네이버페이 설정(`SKELETON_PAYMENT_NAVERPAY_*`)이 이 서버를 본다. 결제창(네이버 SDK)은 브라우저가 여는 것이라 시험이 SDK 스크립트를 가로챈다(`routeNaverPaySdk`);
+ *   돌아올 주소(`RETURN_URL`)는 이 서버의 `/return` 이고 앱이 뜬 뒤 그 주소를 알려 준다(카카오페이와 같다). 인증값은 가맹 심사 뒤에야 나오므로 진짜 네이버페이로는 돌려 볼 수 없다. 토스 · 카카오페이와 셋이 켜지면 「결제 방법」 고르기에 셋이 보인다.
+ *
  * 가짜 Paddle: 가짜 토스와 함께 켠다(`E2E_FAKE_PADDLE=0` 이면 끈다) - `fakePaddle.ts` 가 서명한 웹훅을 백엔드로 쏘고(백엔드 주소는 기동 뒤 알려 준다) 백엔드의 Paddle 설정(`SKELETON_PAYMENT_PADDLE_*` · `PADDLE_*`)이 이 서버를 본다.
  *
  * 네이티브 백엔드: E2E_NATIVE=1 이면 백엔드 스크립트가 `apps/sample` 을 GraalVM 네이티브로 빌드해 리눅스 컨테이너로 띄운다(JVM 대신 — 같은 시나리오가 네이티브에서도 도는지). 컨테이너 안의 앱이 호스트의 가짜 서버(소셜 · 토스 · Paddle)를
@@ -47,6 +51,8 @@ declare module 'vitest' {
     fakeTossUrl: string
     /** 가짜 카카오페이(`fakeKakaoPay.ts`) - `E2E_FAKE_KAKAOPAY=0` 이거나 이미 떠 있는 백엔드를 쓰면 빈 문자열 */
     fakeKakaoPayUrl: string
+    /** 가짜 네이버페이(`fakeNaverPay.ts`) - `E2E_FAKE_NAVERPAY=0` 이거나 이미 떠 있는 백엔드를 쓰면 빈 문자열 */
+    fakeNaverPayUrl: string
     /** 가짜 Paddle(`fakePaddle.ts`) — `E2E_FAKE_PADDLE=0` 이거나 이미 떠 있는 백엔드를 쓰면 빈 문자열 */
     fakePaddleUrl: string
   }
@@ -87,6 +93,7 @@ export default async function setup(project: TestProject) {
   let fakeToss: FakeToss | null = null
   let fakePaddle: FakePaddle | null = null
   let fakeKakaoPay: FakeKakaoPay | null = null
+  let fakeNaverPay: FakeNaverPay | null = null
   let apiUrl = process.env.E2E_API_URL ?? ''
   let mailUrl = process.env.E2E_MAIL_URL ?? ''
   const native = process.env.E2E_NATIVE === '1'
@@ -105,6 +112,7 @@ export default async function setup(project: TestProject) {
     if (process.env.E2E_FAKE_TOSS !== '0') fakeToss = await startFakeToss()
     if (process.env.E2E_FAKE_PADDLE !== '0') fakePaddle = await startFakePaddle()
     if (process.env.E2E_FAKE_KAKAOPAY !== '0') fakeKakaoPay = await startFakeKakaoPay()
+    if (process.env.E2E_FAKE_NAVERPAY !== '0') fakeNaverPay = await startFakeNaverPay()
     // 링크 로그인 요청은 같은 IP(::1)에서 시간당 10번(`skeleton.auth-magic-link.per-ip`, 넘으면 429)이 한도다 — 이 실행의 시나리오는 한 백엔드에 새 계정을 여럿 만들어 10번을 넘는다. e2e 백엔드에서만 올린다
     // E2E_EMAIL_REAUTH_WINDOW=PT0S: 첫 이메일 등록의 재인증 면제 창을 없앤다 — 「1시간이 지난」 제공자 재동의 길(emailReauth.e2e.ts)을 만들 수 있는 유일한 길. 표준 실행에서는 쓰지 않는다
     // 아이디 정하기 한도(`login-id.claim-limit`: 계정마다 · IP 마다 시간당 10번 - 같은 IP 에서 계정을 여럿 만드는 이 실행은 넘는다)와 실시간 중복 확인의 IP 한도(`check-per-ip`)도 e2e 백엔드에서만 올린다
@@ -120,9 +128,9 @@ export default async function setup(project: TestProject) {
     // 결제 시나리오가 기다릴 수 있는 시간 안에 끝나게(값과 까닭은 `paymentE2eConfig.ts`) — 응답 제한(10초)도 같이 싣는다: 백엔드는 `reconcile.first-delay` 가 그보다 길지 않으면 기동에 실패한다(스펙 §9.2)
     const e2eSkeleton = {
       ...e2eLimits,
-      ...(fakeToss || fakePaddle || fakeKakaoPay ? PAYMENT_E2E_SKELETON : {}),
+      ...(fakeToss || fakePaddle || fakeKakaoPay || fakeNaverPay ? PAYMENT_E2E_SKELETON : {}),
       // 네이티브 컨테이너에는 호스트 요청의 출발지가 도커가 만든 임의의 주소로 보인다(사설 대역도 아니다) — 접속 나라 헤더를 믿는 프록시를 모든 주소로 연다(이 e2e 백엔드만, 호스트 포트는 로컬에만 열린다)
-      ...(native && (fakeToss || fakePaddle || fakeKakaoPay)
+      ...(native && (fakeToss || fakePaddle || fakeKakaoPay || fakeNaverPay)
         ? {
             web: {
               'client-ip': {
@@ -204,16 +212,28 @@ export default async function setup(project: TestProject) {
           SKELETON_PAYMENT_KAKAOPAY_BASE_URL: fakeKakaoPay.url,
         }
       : {}
+    const naverEnv = fakeNaverPay
+      ? {
+          SKELETON_PAYMENT_NAVERPAY_ENABLED: 'true',
+          SKELETON_PAYMENT_NAVERPAY_MODE: 'development',
+          SKELETON_PAYMENT_NAVERPAY_CLIENT_ID: FAKE_NAVERPAY.clientId,
+          SKELETON_PAYMENT_NAVERPAY_CLIENT_SECRET: FAKE_NAVERPAY.clientSecret,
+          SKELETON_PAYMENT_NAVERPAY_CHAIN_ID: FAKE_NAVERPAY.chainId,
+          SKELETON_PAYMENT_NAVERPAY_RETURN_URL: `${fakeNaverPay.url}/return`,
+          SKELETON_PAYMENT_NAVERPAY_BASE_URL: fakeNaverPay.url,
+        }
+      : {}
     backendEnv = {
       ...process.env,
       ...fakeConfig,
       ...tossEnv,
       ...kakaoEnv,
+      ...naverEnv,
       ...paddleEnv,
       MARINA_DIRECT: '1',
       ...(native
         ? {
-            E2E_NATIVE_FORWARD_PORTS: [fake, fakeToss, fakePaddle, fakeKakaoPay]
+            E2E_NATIVE_FORWARD_PORTS: [fake, fakeToss, fakePaddle, fakeKakaoPay, fakeNaverPay]
               .flatMap((f) => (f ? [new URL(f.url).port] : []))
               .join(' '),
           }
@@ -276,6 +296,7 @@ export default async function setup(project: TestProject) {
     )
     baseUrl = `http://127.0.0.1:${port}`
     fakeKakaoPay?.setApp(baseUrl)
+    fakeNaverPay?.setApp(baseUrl)
     try {
       await waitFor(`${baseUrl}/`, 'web server', 30_000)
       break
@@ -295,6 +316,7 @@ export default async function setup(project: TestProject) {
     void fakeToss?.close()
     void fakePaddle?.close()
     void fakeKakaoPay?.close()
+    void fakeNaverPay?.close()
     if (backendScript) spawnSync('bash', [backendScript, 'stop'], { env: backendEnv })
   }
 
@@ -311,6 +333,7 @@ export default async function setup(project: TestProject) {
   project.provide('fakeUrl', fake?.url ?? '')
   project.provide('fakeTossUrl', fakeToss?.url ?? '')
   project.provide('fakeKakaoPayUrl', fakeKakaoPay?.url ?? '')
+  project.provide('fakeNaverPayUrl', fakeNaverPay?.url ?? '')
   project.provide('fakePaddleUrl', fakePaddle?.url ?? '')
   return stopAll
 }

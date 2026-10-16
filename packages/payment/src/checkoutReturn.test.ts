@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { PaymentRedirectError } from './tossRedirect'
-import { readCheckoutReturn, readKakaoPayReturn } from './checkoutReturn'
+import { readCheckoutReturn, readKakaoPayReturn, readNaverPayReturn } from './checkoutReturn'
 
 describe('readCheckoutReturn (what the payment window put on successUrl / failUrl)', () => {
   it('success: paymentKey + orderId + amount → { ok: true, orderId, providerPaymentId, amount }', () => {
@@ -105,5 +105,41 @@ describe('readKakaoPayReturn (what KakaoPay put on the return address the server
     expect(() => readKakaoPayReturn('?provider=kakaopay&order=ord_1&result=other')).toThrow(
       PaymentRedirectError,
     )
+  })
+})
+
+describe('readNaverPayReturn (what NaverPay put on the return address the server gave the SDK)', () => {
+  it('success: order + resultCode Success + paymentId → the order and the payment id (no amount - the server knows it)', () => {
+    expect(
+      readNaverPayReturn(
+        '?kind=NAVERPAY_SDK&provider=naverpay&order=ord_1&resultCode=Success&paymentId=20261017NP0001',
+      ),
+    ).toEqual({ ok: true, orderId: 'ord_1', paymentId: '20261017NP0001' })
+  })
+
+  it('a success address without the payment id or the order is not a success - it throws, like the Toss side with a missing paymentKey', () => {
+    expect(() => readNaverPayReturn('?order=ord_1&resultCode=Success')).toThrow(
+      PaymentRedirectError,
+    )
+    expect(() => readNaverPayReturn('?resultCode=Success&paymentId=x')).toThrow(
+      PaymentRedirectError,
+    )
+  })
+
+  it('UserCancel is the buyer closing the window (CANCELED); every other code is a failure - and the provider message is never handed back', () => {
+    expect(readNaverPayReturn('?order=ord_1&resultCode=UserCancel')).toEqual({
+      ok: false,
+      orderId: 'ord_1',
+      code: 'CANCELED',
+    })
+    const failed = readNaverPayReturn(
+      '?order=ord_1&resultCode=TimeExpired&resultMessage=%EC%8B%9C%EA%B0%84&reserveId=r1',
+    )
+    expect(failed).toEqual({ ok: false, orderId: 'ord_1', code: 'FAILED' })
+    expect(Object.keys(failed)).not.toContain('resultMessage')
+  })
+
+  it('no result code at all is not an address NaverPay could have made - it throws', () => {
+    expect(() => readNaverPayReturn('?order=ord_1')).toThrow(PaymentRedirectError)
   })
 })

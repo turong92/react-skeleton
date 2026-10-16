@@ -33,6 +33,30 @@ export function readKakaoPayReturn(search: string | URLSearchParams): KakaoPayRe
   }
 }
 
+/** 네이버페이가 우리 서버 설정의 돌아올 주소로 돌려보낸 결과 - 성공이면 서버 승인에 쓸 결제 번호(`paymentId`), 아니면 구매자가 그만둔 것(`CANCELED`)인지 실패(`FAILED`)인지 */
+export type NaverPayReturn =
+  | { ok: true; orderId: string; paymentId: string }
+  | { ok: false; orderId: string | null; code: 'CANCELED' | 'FAILED' }
+
+/**
+ * 네이버페이가 돌려보낸 주소(`?kind=NAVERPAY_SDK&provider=<결제사 id>&order=<주문 id>&resultCode=Success&paymentId=…` / `resultCode=UserCancel` / 그 밖의 `resultCode` + `resultMessage` + `reserveId`)를 읽는다.
+ * 주문 id 는 서버가 돌아올 주소에 실은 것이다. **금액은 주소에 없다** - 서버가 주문의 금액으로 승인하고 승인 응답의 총액을 대조한다. 결제사의 `resultMessage` 는 일부러 돌려주지 않는다.
+ * 성공 주소에 주문 id 나 결제 번호가 없거나 `resultCode` 가 없으면 `PaymentRedirectError`.
+ */
+export function readNaverPayReturn(search: string | URLSearchParams): NaverPayReturn {
+  const params = typeof search === 'string' ? new URLSearchParams(search) : search
+  const orderId = params.get('order') || null
+  const code = params.get('resultCode')
+  if (!code) throw new PaymentRedirectError('The payment redirect has no resultCode')
+  if (code === 'Success') {
+    const paymentId = params.get('paymentId')
+    if (!orderId) throw new PaymentRedirectError('The payment redirect has no order')
+    if (!paymentId) throw new PaymentRedirectError('The payment redirect has no paymentId')
+    return { ok: true, orderId, paymentId }
+  }
+  return { ok: false, orderId, code: code === 'UserCancel' ? 'CANCELED' : 'FAILED' }
+}
+
 /**
  * 결제창이 `successUrl` / `failUrl` 로 돌려보낸 주소(`?paymentKey&orderId&amount` / `?code&message&orderId`)를 읽는다.
  * `paymentKey` 가 있으면 성공 쪽이다. **금액은 주소에서 왔다 — 사용자가 고칠 수 있다.** 서버가 주문의 금액과 대조한다.

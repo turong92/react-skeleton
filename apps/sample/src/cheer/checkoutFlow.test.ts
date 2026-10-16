@@ -478,3 +478,66 @@ describe('kakaopay (the server called ready; the buyer comes back with a pg_toke
     expect(returnPlanOf('?kind=KAKAOPAY_REDIRECT&provider=kakaopay')).toEqual({ kind: 'invalid' })
   })
 })
+
+describe('naverpay (the browser opens the SDK window; the buyer comes back with a paymentId)', () => {
+  const naver: Checkout = {
+    provider: 'naverpay',
+    kind: 'NAVERPAY_SDK',
+    clientKey: 'CLIENTID',
+    testMode: true,
+    orderId: 'ord_1',
+    orderName: '응원하기 3,000원',
+    amount: { amount: 3000, currency: 'KRW' },
+    attributes: {
+      chainId: 'CHAINID',
+      mode: 'development',
+      returnUrl:
+        'https://app.example/payments/return?kind=NAVERPAY_SDK&provider=naverpay&order=ord_1',
+      taxScopeAmount: '3000',
+      taxExScopeAmount: '0',
+    },
+  }
+  const naverCreated = { order: { id: 'ord_1' }, checkout: naver } as unknown as CreateOrderResult
+
+  it('a NaverPay checkout the SDK can open is opened; one whose ids or return address are missing cannot be: the order is given back and payments are unavailable', async () => {
+    const f = fakes()
+    f.deps.createOrder = async () => naverCreated
+    await expect(
+      startCheer(f.deps, 'cheer-3000', undefined, undefined, 'naverpay'),
+    ).resolves.toEqual({ kind: 'opened' })
+    expect(f.log).toEqual(['open'])
+
+    const g = fakes()
+    g.deps.createOrder = async () => {
+      g.log.push('create')
+      return { order: { id: 'ord_1' }, checkout: { ...naver, attributes: {} } } as never
+    }
+    await expect(
+      startCheer(g.deps, 'cheer-3000', undefined, undefined, 'naverpay'),
+    ).resolves.toEqual({ kind: 'unavailable' })
+    expect(g.log).toEqual(['create', 'abandon:ord_1'])
+  })
+
+  it('the return address of the server carries the order and the payment id - success becomes one confirm of that order with the payment id and no amount from the address', () => {
+    expect(
+      returnPlanOf(
+        '?kind=NAVERPAY_SDK&provider=naverpay&order=ord_1&resultCode=Success&paymentId=20261017NP0001',
+      ),
+    ).toEqual({ kind: 'confirm-held', orderId: 'ord_1', providerPaymentId: '20261017NP0001' })
+  })
+
+  it('UserCancel and any other result code leave the order the way the Toss failure address does; a success without its payment id is invalid', () => {
+    expect(
+      returnPlanOf('?kind=NAVERPAY_SDK&provider=naverpay&order=ord_1&resultCode=UserCancel'),
+    ).toEqual({ kind: 'left', orderId: 'ord_1', canceled: true })
+    expect(
+      returnPlanOf(
+        '?kind=NAVERPAY_SDK&provider=naverpay&order=ord_1&resultCode=TimeExpired&resultMessage=x&reserveId=r',
+      ),
+    ).toEqual({ kind: 'left', orderId: 'ord_1', canceled: false })
+    expect(
+      returnPlanOf('?kind=NAVERPAY_SDK&provider=naverpay&order=ord_1&resultCode=Success'),
+    ).toEqual({ kind: 'invalid' })
+    expect(returnPlanOf('?kind=NAVERPAY_SDK&provider=naverpay')).toEqual({ kind: 'invalid' })
+  })
+})

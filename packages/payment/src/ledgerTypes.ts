@@ -159,7 +159,32 @@ export type KakaoPayRedirectCheckout = {
   /** `pcUrl` · `mobileUrl`: 구매자가 갈 결제창(http(s) 절대 주소) · `appUrl`: 카카오톡 앱을 바로 여는 주소(이 패키지는 쓰지 않는다) */
   attributes: { pcUrl?: string; mobileUrl?: string; appUrl?: string }
 }
-export type Checkout = TossPaymentWindowCheckout | PaddleCheckout | KakaoPayRedirectCheckout
+/**
+ * 네이버페이 직접 연동(단건) - 서버가 결제를 미리 만들지 않는다. 브라우저가 네이버 SDK 로 결제창을 열고(`clientKey` = 클라이언트 아이디, 공개 값) 결제를 마치면 서버 설정의 돌아올 주소
+ * (`attributes.returnUrl`)로 `resultCode` · `paymentId` 가 붙어 돌아온다 - `readNaverPayReturn` 이 읽고, 그 `paymentId` 가 승인 요청의 `providerPaymentId` 다. 금액은 이 창이 정한다(서버가 승인 응답의 총액을 주문과 대조한다)
+ */
+export type NaverPaySdkCheckout = {
+  provider: string
+  kind: 'NAVERPAY_SDK'
+  clientKey: string | null
+  testMode: boolean
+  orderId: string
+  orderName: string
+  amount: PaymentAmount
+  /** `chainId` · `mode`(`development` \| `production`) · `returnUrl` · `taxScopeAmount` · `taxExScopeAmount`(둘의 합이 금액) */
+  attributes?: {
+    chainId?: string
+    mode?: string
+    returnUrl?: string
+    taxScopeAmount?: string
+    taxExScopeAmount?: string
+  }
+}
+export type Checkout =
+  | TossPaymentWindowCheckout
+  | PaddleCheckout
+  | KakaoPayRedirectCheckout
+  | NaverPaySdkCheckout
 
 export type CreateOrderInput = {
   itemType: string

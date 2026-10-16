@@ -52,7 +52,8 @@ function render(search: string, detail?: Order) {
 }
 
 const SUCCESS = '?paymentKey=pk_1&orderId=ord_1&amount=3000'
-const KAKAO_SUCCESS = '?provider=kakaopay&order=ord_1&result=success&pg_token=tok_1'
+const KAKAO_SUCCESS =
+  '?kind=KAKAOPAY_REDIRECT&provider=kakaopay&order=ord_1&result=success&pg_token=tok_1'
 
 describe('PaymentReturnPage', () => {
   it('a paid order says so, with the card and a way on to 「내 응원 내역」', () => {
@@ -71,13 +72,16 @@ describe('PaymentReturnPage', () => {
   })
 
   it('a KakaoPay window the person closed (result=cancel) says 「그만뒀어요」 at once from the address alone', () => {
-    const html = render('?provider=kakaopay&order=ord_1&result=cancel')
+    const html = render('?kind=KAKAOPAY_REDIRECT&provider=kakaopay&order=ord_1&result=cancel')
     expect(html).toContain('결제를 그만뒀어요')
     expect(html).not.toContain('확인 중')
   })
 
   it('a KakaoPay success address without its token is an unreadable address, not a payment', () => {
-    const html = render('?provider=kakaopay&order=ord_1&result=success', order())
+    const html = render(
+      '?kind=KAKAOPAY_REDIRECT&provider=kakaopay&order=ord_1&result=success',
+      order(),
+    )
     expect(html).not.toContain('결제됐어요')
   })
 

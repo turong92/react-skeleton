@@ -444,7 +444,11 @@ describe('kakaopay (the server called ready; the buyer comes back with a pg_toke
   })
 
   it('the return address of the server carries the order, the result and the token - success becomes one approve of that order, with no amount from the address', () => {
-    expect(returnPlanOf('?provider=kakaopay&order=ord_1&result=success&pg_token=tok_1')).toEqual({
+    expect(
+      returnPlanOf(
+        '?kind=KAKAOPAY_REDIRECT&provider=kakaopay&order=ord_1&result=success&pg_token=tok_1',
+      ),
+    ).toEqual({
       kind: 'approve',
       orderId: 'ord_1',
       approvalToken: 'tok_1',
@@ -452,19 +456,25 @@ describe('kakaopay (the server called ready; the buyer comes back with a pg_toke
   })
 
   it('cancel and fail leave the order the way the Toss failure address does; a success without its token is invalid', () => {
-    expect(returnPlanOf('?provider=kakaopay&order=ord_1&result=cancel')).toEqual({
+    expect(
+      returnPlanOf('?kind=KAKAOPAY_REDIRECT&provider=kakaopay&order=ord_1&result=cancel'),
+    ).toEqual({
       kind: 'left',
       orderId: 'ord_1',
       canceled: true,
     })
-    expect(returnPlanOf('?provider=kakaopay&order=ord_1&result=fail')).toEqual({
+    expect(
+      returnPlanOf('?kind=KAKAOPAY_REDIRECT&provider=kakaopay&order=ord_1&result=fail'),
+    ).toEqual({
       kind: 'left',
       orderId: 'ord_1',
       canceled: false,
     })
-    expect(returnPlanOf('?provider=kakaopay&order=ord_1&result=success')).toEqual({
+    expect(
+      returnPlanOf('?kind=KAKAOPAY_REDIRECT&provider=kakaopay&order=ord_1&result=success'),
+    ).toEqual({
       kind: 'invalid',
     })
-    expect(returnPlanOf('?provider=kakaopay')).toEqual({ kind: 'invalid' })
+    expect(returnPlanOf('?kind=KAKAOPAY_REDIRECT&provider=kakaopay')).toEqual({ kind: 'invalid' })
   })
 })

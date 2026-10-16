@@ -44,7 +44,7 @@ import { paymentLabelsFor } from '../cheer/paymentLabels'
 import { useCheerOptions } from '../cheer/queries'
 import type { CheerOption } from '../cheer/types'
 import { LoadError } from '../components/LoadError'
-import { languageOf, useT } from '../i18n'
+import { i18n, languageOf, useT } from '../i18n'
 import styles from './CheerPage.module.css'
 
 type Notice =
@@ -136,8 +136,11 @@ export function CheerPage() {
     return formatMoney(option.amount, { locale: language, currencySuffix: labels.currencySuffix })
   }
   const priceFailed = offered.some((option) => amountOf(option.itemRef).kind === 'failed')
-  const providerLabel = (id: string) =>
-    id === 'toss' || id === 'kakaopay' ? t(`cheer.provider.${id}`) : id
+  // 이름표는 사전이 가진 결제사 id 만 - 모르는 id(설정으로 바꾼 `provider-id`)는 id 그대로
+  const providerLabel = (id: string) => {
+    const key = `cheer.provider.${id}`
+    return i18n.has(key) ? t(key) : id
+  }
   const timeOf = (until: number) =>
     formatInstant(new Date(until).toISOString(), { locale: language })
   const hold = holdReasonOf({ configAvailable: config.data?.available, keyMissing, notice })

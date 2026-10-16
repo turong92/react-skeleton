@@ -11,7 +11,7 @@ export type KakaoPayReturn =
   | { ok: false; orderId: string | null; code: 'CANCELED' | 'FAILED' }
 
 /**
- * 카카오페이가 돌려보낸 주소(`?provider=kakaopay&order=<주문 id>&result=success&pg_token=…` / `result=cancel` / `result=fail`)를 읽는다. 주문 id 는 서버가 `ready` 때 주소에 실은 것이다.
+ * 카카오페이가 돌려보낸 주소(`?kind=KAKAOPAY_REDIRECT&provider=<결제사 id>&order=<주문 id>&result=success&pg_token=…` / `result=cancel` / `result=fail`)를 읽는다. 주문 id 는 서버가 `ready` 때 주소에 실은 것이다.
  * **금액은 주소에 없다** - 서버가 주문의 금액으로 승인한다. 성공 주소에 주문 id 나 토큰이 없거나 `result` 를 모르면 `PaymentRedirectError`.
  */
 export function readKakaoPayReturn(search: string | URLSearchParams): KakaoPayReturn {

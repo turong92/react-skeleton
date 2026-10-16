@@ -194,7 +194,8 @@ export type ReturnPlan =
 
 export function returnPlanOf(search: string): ReturnPlan {
   const params = new URLSearchParams(search)
-  if (params.get('provider') === 'kakaopay') {
+  // 카카오페이로 돌아온 주소는 서버가 `kind=KAKAOPAY_REDIRECT`(checkout.kind 와 같은 값)를 실어 준다 - 결제사 id 는 설정(`provider-id`)이라 이름으로 가르지 않는다
+  if (params.get('kind') === 'KAKAOPAY_REDIRECT') {
     try {
       const read = readKakaoPayReturn(params)
       if (read.ok)

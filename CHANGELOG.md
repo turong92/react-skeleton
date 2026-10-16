@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — 간편결제 단추 (토스 결제창 안 네이버페이 · 카카오페이 · 토스페이)
+
+- `EasyPayButtons`(카드 단추 옆 테두리 단추 하나씩, 막힘은 `ariaDisabled` + `describedBy`, 누른 단추에만 스피너) · `easyPaysFor(config, provider)` · `EASY_PAY_CODES` · 라벨 `easyPay`(ko/en) · `PaymentConfig.easyPays`(백엔드 `GET /config`, 결제사 id → 코드 목록).
+- `openCheckout(checkout, { easyPay })`: 토스 SDK 에 `card: { flowMode: 'DIRECT', easyPay }` 로 그 앱을 바로 연다. 그 주문의 `checkout.attributes.easyPays` 에 없는 코드(그리고 Paddle 결제창)는 SDK 를 불러오기 전에 던진다.
+- 단건 결제 전용 - 자동결제(`openBillingAuth`) 카드 등록 창엔 간편결제가 없어 구독 화면에는 내지 않는다. 서버 목록이 비면 화면은 예전 그대로. 견본 `CheerPage` 가 쓴다. 백엔드: `skeleton.payment-toss.easy-pays`.
+
 ### Fixed — Paddle 결제 직후 화면이 옛 구독에서 멈추던 것
 
 - `useMySubscription(api, { subscriptionId })` — 방금 시작한 구독의 id 가 보이고 `PENDING` 을 벗어날 때까지 되묻는다. 같은 계정의 옛 `ENDED` 구독이 먼저 읽혀도 답으로 치지 않는다(해지 후 재구독 · 같은 계정으로 연달아 도는 e2e 에서 화면이 「없음」에 멈추던 구멍). 견본 `SubscriptionReturnPage` 가 반환 주소의 구독 id 를 넘긴다. `untilActive: true` 만 쓰던 호출은 그대로. 토스 구독(`activate` 응답 · id 일치)과 단건 주문(`orderQuery` 가 id 로 조회)은 이미 같은 구멍이 없다.

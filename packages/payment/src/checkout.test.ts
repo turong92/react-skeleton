@@ -97,6 +97,26 @@ describe('openCheckout — TOSS_PAYMENT_WINDOW', () => {
     expect(loadSdk).not.toHaveBeenCalled()
   })
 
+  it('does not silently drop an easy pay on a Paddle checkout - it throws like the Toss side', async () => {
+    const loadPaddle = vi.fn()
+    await expect(
+      openCheckout(
+        {
+          provider: 'paddle',
+          kind: 'PADDLE_CHECKOUT',
+          clientKey: 'tok',
+          testMode: true,
+          orderId: 'ord_1',
+          orderName: 'x',
+          amount: { amount: 3000, currency: 'KRW' },
+          attributes: { transactionId: 'txn_1' },
+        },
+        { successUrl: 's', failUrl: 'f', easyPay: 'NAVERPAY', loadPaddle },
+      ),
+    ).rejects.toThrow(/NAVERPAY/)
+    expect(loadPaddle).not.toHaveBeenCalled()
+  })
+
   it('throws on a kind it does not know, without loading anything', async () => {
     const loadSdk = vi.fn()
     await expect(

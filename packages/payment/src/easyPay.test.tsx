@@ -44,6 +44,30 @@ describe('EasyPayButtons', () => {
     expect(html).toContain('간편결제')
   })
 
+  it('a held screen keeps every button reachable: aria-disabled and described by the reason, never the disabled attribute', () => {
+    const html = renderToStaticMarkup(
+      <EasyPayButtons codes={['NAVERPAY']} onPick={noop} ariaDisabled describedBy="why" />,
+    )
+    const button = html.match(/<button[^>]*>/)?.[0] ?? ''
+    expect(button).toContain('aria-disabled="true"')
+    expect(button).toContain('aria-describedby="why"')
+    expect(button).not.toMatch(/\sdisabled/)
+  })
+
+  it('only the pressed code shows the spinner while its window opens', () => {
+    const html = renderToStaticMarkup(
+      <EasyPayButtons
+        codes={['NAVERPAY', 'KAKAOPAY']}
+        onPick={noop}
+        disabled
+        loadingCode="KAKAOPAY"
+      />,
+    )
+    const buttons = html.match(/<button[^>]*>.*?<\/button>/g) ?? []
+    expect(buttons[0]).not.toContain('aria-busy')
+    expect(buttons[1]).toContain('aria-busy="true"')
+  })
+
   it('disables every button while a payment is being opened', () => {
     const html = renderToStaticMarkup(
       <EasyPayButtons codes={['NAVERPAY']} onPick={noop} disabled />,

@@ -152,6 +152,8 @@ export async function openCheckout(
       return
     }
     case 'PADDLE_CHECKOUT':
+      if (easyPay !== undefined)
+        throw new Error(`The checkout does not offer the easy pay ${easyPay}`)
       // Paddle 은 실패 주소가 없다 - 창을 닫으면 아무 일도 일어나지 않고, 열린 주문은 서버의 만료 작업이 닫는다
       return openPaddleCheckout({
         clientToken: checkout.clientKey,

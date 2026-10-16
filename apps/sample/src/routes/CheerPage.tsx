@@ -77,6 +77,8 @@ export function CheerPage() {
   const abandon = useAbandonOrder(paymentApi)
   const [chosen, setChosen] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  // 눌린 간편결제 코드 - 창을 여는 중 스피너는 눌린 그 단추에만 뜬다(카드 단추는 `null`)
+  const [pickedEasyPay, setPickedEasyPay] = useState<string | null>(null)
   const [notice, setNotice] = useState<Notice | null>(null)
   // 결제창을 못 열었을 때 만든 주문 — 같은 금액으로 다시 누르면 새 주문 대신 이 주문의 창만 다시 연다(금액을 바꾸거나 시간이 지나면 버린다)
   const [unopened, setUnopened] = useState<UnopenedOrder | null>(null)
@@ -138,6 +140,7 @@ export function CheerPage() {
   async function submit(easyPay?: string) {
     if (selected === null || busy || held) return
     setBusy(true)
+    setPickedEasyPay(easyPay ?? null)
     setNotice(null)
     const result = await startCheer(
       {
@@ -225,7 +228,7 @@ export function CheerPage() {
             <div className={styles.action}>
               <Button
                 size="lg"
-                loading={busy}
+                loading={busy && pickedEasyPay === null}
                 loadingLabel={t('cheer.opening')}
                 aria-disabled={held ? true : undefined}
                 aria-describedby={held ? reasonId : undefined}
@@ -236,7 +239,11 @@ export function CheerPage() {
               <EasyPayButtons
                 codes={easyPays}
                 labels={labels}
-                disabled={busy || held}
+                disabled={busy}
+                ariaDisabled={held}
+                describedBy={held ? reasonId : undefined}
+                loadingCode={busy ? pickedEasyPay : null}
+                loadingLabel={t('cheer.opening')}
                 onPick={(code) => void submit(code)}
               />
               {reason !== null && (

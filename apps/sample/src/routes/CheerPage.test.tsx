@@ -69,6 +69,40 @@ describe('CheerPage', () => {
     )
   })
 
+  it('draws one outlined button per easy pay the server offers for its provider, next to the card button', () => {
+    const html = render({
+      options,
+      config: config({ provider: 'toss', easyPays: { toss: ['NAVERPAY', 'KAKAOPAY', 'TOSSPAY'] } }),
+    })
+    for (const name of ['네이버페이', '카카오페이', '토스페이'])
+      expect(html).toMatch(new RegExp(`<button[^>]*data-variant="secondary"[^>]*>[^<]*${name}`))
+    expect(html.match(/data-variant="primary"/g)).toHaveLength(1)
+  })
+
+  it('draws no easy pay button when the list is empty or belongs to another provider - the screen is what it was', () => {
+    for (const over of [
+      {},
+      { provider: 'toss', easyPays: {} },
+      { provider: 'paddle', easyPays: { toss: ['NAVERPAY'] } },
+    ] as Partial<PaymentConfig>[]) {
+      const html = render({ options, config: config(over) })
+      expect(html).not.toContain('네이버페이')
+      expect(html).not.toContain('간편결제')
+    }
+  })
+
+  it('while the screen is held the easy pay buttons are aria-disabled and give the same reason as the card button', () => {
+    const html = render({
+      options,
+      config: config({ available: false, provider: 'toss', easyPays: { toss: ['NAVERPAY'] } }),
+    })
+    const button =
+      html.match(/<button[^>]*data-variant="secondary"[^>]*>[^<]*네이버페이/)?.[0] ?? ''
+    expect(button).toContain('aria-disabled="true"')
+    expect(button).not.toMatch(/\sdisabled/)
+    expect(button).toMatch(/aria-describedby="[^"]+"/)
+  })
+
   it('a button that cannot be pressed stays reachable and says why next to it (not a bare disabled button)', () => {
     const html = render({ options, config: config({ available: false }) })
     const button = html.match(/<button[^>]*data-variant="primary"[^>]*>/)?.[0] ?? ''

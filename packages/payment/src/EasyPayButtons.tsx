@@ -10,6 +10,12 @@ export type EasyPayButtonsProps = {
   onPick: (code: EasyPayCode) => void
   /** 결제창을 여는 중이면 모두 막는다 */
   disabled?: boolean
+  /** 막힌 화면(결제를 쓸 수 없음 · 요청이 많음) - `disabled` 대신 `aria-disabled` 로 포커스를 남기고 누름을 무시한다. 이유 글의 id 는 `describedBy` */
+  ariaDisabled?: boolean
+  describedBy?: string
+  /** 창을 여는 중인 코드 - 그 단추에만 스피너(`loadingLabel` 이 낭독 이름) */
+  loadingCode?: string | null
+  loadingLabel?: string
   labels?: PaymentLabelsInput
 }
 
@@ -18,6 +24,10 @@ export function EasyPayButtons({
   codes,
   onPick,
   disabled = false,
+  ariaDisabled = false,
+  describedBy,
+  loadingCode = null,
+  loadingLabel,
   labels: input,
 }: EasyPayButtonsProps) {
   const labels = resolvePaymentLabels(input)
@@ -33,7 +43,11 @@ export function EasyPayButtons({
           variant="secondary"
           size="lg"
           disabled={disabled}
-          onClick={() => onPick(code)}
+          loading={loadingCode === code}
+          {...(loadingLabel ? { loadingLabel } : {})}
+          aria-disabled={ariaDisabled ? true : undefined}
+          aria-describedby={ariaDisabled ? describedBy : undefined}
+          onClick={ariaDisabled ? undefined : () => onPick(code)}
         >
           {labels.easyPay.names[code]}
         </Button>

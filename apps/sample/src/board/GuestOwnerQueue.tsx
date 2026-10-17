@@ -13,6 +13,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useT } from '../i18n'
 import { boardApi } from './api'
+import { locate } from './attachmentAccess'
 import { BoardPicture } from './BoardPicture'
 
 /**
@@ -45,21 +46,42 @@ export function GuestOwnerQueue({
   })
   const wrong = rejected && !token
   const secret = wrong ? undefined : entered
-  const options = { guestSecret: secret, enabled: !!secret }
-  const pending = usePendingComments(boardApi, code, postId, {}, options)
-  const edits = useCommentRevisions(boardApi, code, postId, {}, options)
+  // 입력 한 번에 시도 한 번 - 대기 목록을 먼저 묻고, 비밀이 맞아 성공했을 때만 고친 댓글을 묻는다
+  const pending = usePendingComments(
+    boardApi,
+    code,
+    postId,
+    {},
+    { guestSecret: secret, enabled: !!secret },
+  )
+  const edits = useCommentRevisions(
+    boardApi,
+    code,
+    postId,
+    {},
+    { guestSecret: secret, enabled: !!secret && pending.isSuccess },
+  )
   const moderate = useModerateComment(boardApi, code, postId)
   const decide = useDecideCommentRevision(boardApi, code, postId)
   const forbidden = rejected
 
   const refresh = () => {
     void pending.refetch()
-    void edits.refetch()
+    if (edits.isSuccess) void edits.refetch()
   }
   const name = (c: Comment) => c.authorName ?? c.authorId
+  const at = (c: Comment, key: string) =>
+    locate(c.attachments, c.pendingRevision?.attachments, key) ?? {
+      index: 0,
+      from: 'current' as const,
+    }
   const access = (c: Comment, key: string) => () =>
     boardApi
-      .commentAttachmentAccess(code, postId, c.id, key, { guestSecret: secret })
+      .commentAttachmentAccess(code, postId, c.id, at(c, key).index, {
+        from: at(c, key).from,
+        as: 'owner',
+        guestSecret: secret,
+      })
       .then((r) => r.url)
 
   return (

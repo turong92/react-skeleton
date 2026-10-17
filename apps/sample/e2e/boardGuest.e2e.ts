@@ -159,6 +159,19 @@ describe('Board — guests, approval and edited versions against the real backen
     // 다른 손님이 이 글에 댓글을 단다 - 비회원 댓글이라 승인 대기
     const OTHER = '글주인이 승인할 손님 댓글'
     await page.getByRole('textbox', { name: ko('board.comments.newComment') }).fill(OTHER)
+    // 사진도 붙인다 - 글 주인은 비밀번호로 승인 전에 그 사진을 볼 수 있어야 한다
+    await commentForm(page)
+      .locator('input[type=file]')
+      .first()
+      .setInputFiles({
+        name: 'dot.png',
+        mimeType: 'image/png',
+        buffer: Buffer.from(
+          'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+          'base64',
+        ),
+      })
+    await pwExpect(page.getByText(ko('board.pictures.attached'))).toBeVisible({ timeout: 30_000 })
     await fillGuest(commentForm(page), '지나가는손님')
     await page.getByRole('button', { name: ko('board.comments.postComment') }).click()
     await pwExpect(page.getByText(ko('board.guest.pending'))).toBeVisible()
@@ -171,6 +184,12 @@ describe('Board — guests, approval and edited versions against the real backen
     await page.getByLabel(ko('board.ownerQueue.secret')).fill(PASSWORD)
     await page.getByRole('button', { name: ko('board.ownerQueue.open') }).click()
     await pwExpect(page.getByTestId('owner-queue')).toContainText(OTHER)
+    // 승인 전 사진: 글의 비밀로 받은 서명 주소로 보인다 (Q2')
+    const queued = page.getByTestId('owner-queue').getByRole('img')
+    await pwExpect(queued).toBeVisible({ timeout: 30_000 })
+    await pwExpect
+      .poll(() => queued.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0))
+      .toBe(true)
     await page
       .getByRole('button', { name: `${ko('board.comments.approve')}: 지나가는손님` })
       .click()

@@ -86,5 +86,6 @@ describe('queries that carry a guest secret do not retry a client error', () => 
       client.fetchQuery(pendingCommentsQuery(api, 'free', 1, {}, { guestSecret: 'wrong' })),
     ).rejects.toBeInstanceOf(ApiRequestError)
     expect(listPendingComments).toHaveBeenCalledTimes(1)
+    expect(pendingCommentsQuery(api, 'free', 1).refetchOnWindowFocus).toBe(false)
   })
 })

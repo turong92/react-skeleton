@@ -89,6 +89,8 @@ export const pendingCommentsQuery = (
   queryKey: boardKeys.pendingComments(code, postId, params),
   queryFn: () => api.listPendingComments(code, postId, params, options),
   retry: retryUnlessClientError,
+  // 창으로 돌아올 때마다 다시 묻지 않는다 - 비밀을 싣는 읽기는 부를 때마다 「틀린 시도」 한도를 건드릴 수 있다
+  refetchOnWindowFocus: false,
 })
 /** 고친 댓글(공개본 + `pendingRevision`) — 관리하는 쪽만 */
 export const commentRevisionsQuery = (
@@ -101,4 +103,6 @@ export const commentRevisionsQuery = (
   queryKey: boardKeys.commentRevisions(code, postId, params),
   queryFn: () => api.listCommentRevisions(code, postId, params, options),
   retry: retryUnlessClientError,
+  // 창으로 돌아올 때마다 다시 묻지 않는다 - 비밀을 싣는 읽기는 부를 때마다 「틀린 시도」 한도를 건드릴 수 있다
+  refetchOnWindowFocus: false,
 })

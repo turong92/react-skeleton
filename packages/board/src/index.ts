@@ -17,6 +17,7 @@ export type {
   GuestWrite,
   PendingRevision,
   AttachmentAccess,
+  AttachmentAccessOptions,
   RevisionDecision,
   CommentSort,
   CommentStatus,

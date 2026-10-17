@@ -32,6 +32,7 @@ import { GuestOwnerQueue } from '../board/GuestOwnerQueue'
 import { storedGuestToken, useGuestUi } from '../board/guest'
 import { REACTION_ICONS, commentLabels, postDetailLabels, reactionLabels } from '../board/labels'
 import { guestPicturePicker, picturePicker } from '../board/picturePicker'
+import { locate } from '../board/attachmentAccess'
 import { BoardPicture } from '../board/BoardPicture'
 import { useBoardCode } from '../board/useBoardCode'
 import { LoadError } from '../components/LoadError'
@@ -74,9 +75,6 @@ function PostView({
   const guestOwned = post.authorGuest === true && guestPosts.ids.has(post.id)
   const mine = isOwn(post, principal?.accountId) || guestOwned // 서버가 준 `mine`(작성자 id 는 프로필 id 라 계정 id 와 비교하지 않는다)
   const secretKind = config.guestSecret ?? 'PASSWORD'
-  // 로그인하지 않은 작성자 · 글 주인이 승인 전 사진을 볼 때 보내는 비밀 - TOKEN 방식만 이 브라우저가 안다 (PASSWORD 는 미리보기 없음)
-  const accessOptions = principal ? undefined : { guestSecret: storedGuestToken(secretKind) }
-  const postAccessOptions = accessOptions
 
   async function confirmDelete() {
     const guestSecret = guestOwned
@@ -108,9 +106,15 @@ function PostView({
         renderAttachment={(key) => (
           <BoardPicture
             url={post.attachmentUrls?.[key]}
-            access={() =>
-              boardApi.postAttachmentAccess(code, id, key, postAccessOptions).then((r) => r.url)
-            }
+            access={() => {
+              const at = locate(post.attachments, post.pendingRevision?.attachments, key)
+              // 로그인하지 않았으면 이 브라우저가 쓴 글일 때만 비밀을 보낸다 (남의 글에 요청하지 않는다)
+              if (!at || (!principal && !guestOwned)) return Promise.reject(new Error('no access'))
+              const guestSecret = principal ? undefined : storedGuestToken(secretKind)
+              return boardApi
+                .postAttachmentAccess(code, id, at.index, { from: at.from, guestSecret })
+                .then((r) => r.url)
+            }}
           />
         )}
         onDecideRevision={
@@ -153,11 +157,24 @@ function PostView({
         renderAttachment={(key, comment) => (
           <BoardPicture
             url={comment.attachmentUrls?.[key]}
-            access={() =>
-              boardApi
-                .commentAttachmentAccess(code, id, comment.id, key, accessOptions)
+            access={() => {
+              const at = locate(comment.attachments, comment.pendingRevision?.attachments, key)
+              if (!at) return Promise.reject(new Error('no access'))
+              // 로그인하지 않았으면 이 브라우저가 쓴 댓글(작성자) 또는 쓴 글(글 주인)일 때만, 그 비밀 하나로 증명한다
+              const asAuthor = guestComments.ids.has(comment.id)
+              if (!principal && !asAuthor && !guestOwned)
+                return Promise.reject(new Error('no access'))
+              const options = principal
+                ? { from: at.from }
+                : {
+                    from: at.from,
+                    as: asAuthor ? ('author' as const) : ('owner' as const),
+                    guestSecret: storedGuestToken(secretKind),
+                  }
+              return boardApi
+                .commentAttachmentAccess(code, id, comment.id, at.index, options)
                 .then((r) => r.url)
-            }
+            }}
           />
         )}
         canReact={!!principal}

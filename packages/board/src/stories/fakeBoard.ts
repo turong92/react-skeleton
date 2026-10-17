@@ -261,12 +261,12 @@ export function createFakeBoard(options: FakeBoardOptions = {}) {
       )
     }),
     // 가짜 서버는 사진을 올리지 않는다 - 서명 주소를 흉내만 낸다
-    postAttachmentAccess: slow(async (_code, _id, key) => ({
-      url: `https://signed.example/${key}`,
+    postAttachmentAccess: slow(async (_code, _id, index) => ({
+      url: `https://signed.example/post/${index}`,
       expiresInSeconds: 300,
     })),
-    commentAttachmentAccess: slow(async (_code, _postId, _id, key) => ({
-      url: `https://signed.example/${key}`,
+    commentAttachmentAccess: slow(async (_code, _postId, _id, index) => ({
+      url: `https://signed.example/comment/${index}`,
       expiresInSeconds: 300,
     })),
     listCommentRevisions: slow(async (_code, postId, params = {}, guestOptions) => {

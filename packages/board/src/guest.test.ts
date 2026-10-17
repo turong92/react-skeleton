@@ -119,4 +119,21 @@ describe('createComment mutation — a waiting comment is not counted', () => {
       client.getQueryData<{ commentCount: number }>(boardKeys.post('free', 1))?.commentCount,
     ).toBe(1)
   })
+
+  it('signed access names the picture by position, the list it is in, and the one secret a signed-out caller proves', async () => {
+    const { client, calls } = recorder()
+    const api = createBoardApi(client)
+    await api.postAttachmentAccess('free', 1, 0)
+    await api.commentAttachmentAccess('free', 1, 2, 1, {
+      from: 'edit',
+      as: 'owner',
+      guestSecret: 's',
+    })
+    expect(calls[0]).toMatchObject({
+      path: '/boards/free/posts/1/attachments',
+      request: { params: { index: 0 } },
+    })
+    expect(calls[1].request?.params).toEqual({ index: 1, from: 'edit', as: 'owner' })
+    expect(calls[1].request?.headers).toEqual({ 'X-Board-Guest-Secret': 's' })
+  })
 })

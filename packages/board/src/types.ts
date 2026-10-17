@@ -76,6 +76,12 @@ export type PendingRevision = {
   submittedAt: string
 }
 
+/** 서명 열람의 인자 - `from: 'edit'` 이면 대기 중인 고친 판의 첨부 목록, `as` 는 비회원이 증명할 비밀(`owner`: 글의 비밀, `author`: 댓글의 비밀) */
+export type AttachmentAccessOptions = GuestOptions & {
+  from?: 'current' | 'edit'
+  as?: 'owner' | 'author'
+}
+
 /** 승인 전 · 판 사진을 관리하는 사람 · 작성자가 짧게 읽는 서명 주소 */
 export type AttachmentAccess = { url: string; expiresInSeconds: number }
 

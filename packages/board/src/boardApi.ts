@@ -21,6 +21,7 @@ import type {
   PostSummary,
   ReactionState,
   AttachmentAccess,
+  AttachmentAccessOptions,
   RevisionDecision,
   ReactionTarget,
   ReactionType,
@@ -84,20 +85,23 @@ export type BoardApi = {
     params?: CommentQueueParams,
     options?: GuestOptions,
   ): Promise<ApiPageResponse<Comment>>
-  /** `GET …/posts/{id}/attachments?key=` — 공개 영역에 없는 사진(승인 전 · 판)의 짧은 서명 주소. 운영자 · 작성자만(비회원은 `guestSecret`) */
+  /**
+   * `GET …/posts/{id}/attachments?index=N` — 공개 영역에 없는 사진(승인 전 · 판)의 짧은 서명 주소. 운영자 · 작성자만(비회원은 `guestSecret`).
+   * `index` 는 첨부 목록의 순번이고, 대기 중인 고친 판의 목록이면 `from: 'edit'`.
+   */
   postAttachmentAccess(
     code: string,
     id: BoardId,
-    key: string,
-    options?: GuestOptions,
+    index: number,
+    options?: AttachmentAccessOptions,
   ): Promise<AttachmentAccess>
-  /** `GET …/comments/{id}/attachments?key=` — 운영자 · 댓글을 관리하는 글 주인 · 작성자(비회원은 `guestSecret`) */
+  /** `GET …/comments/{id}/attachments?index=N` — 운영자 · 댓글을 관리하는 글 주인 · 작성자. 비회원은 `guestSecret` 과 증명할 비밀 **하나**(`as`) */
   commentAttachmentAccess(
     code: string,
     postId: BoardId,
     id: BoardId,
-    key: string,
-    options?: GuestOptions,
+    index: number,
+    options?: AttachmentAccessOptions,
   ): Promise<AttachmentAccess>
   /** `GET …/comments?revision=pending` — 고친 댓글(공개본 + `pendingRevision`), 관리하는 쪽만 */
   listCommentRevisions(
@@ -227,14 +231,14 @@ export function createBoardApi(
         params: defined({ ...params, status: 'PENDING' }),
         headers: guestHeaders(options?.guestSecret),
       }),
-    postAttachmentAccess: (code, id, key, options) =>
+    postAttachmentAccess: (code, id, index, options) =>
       client.value<AttachmentAccess>(`${post(code, id)}/attachments`, {
-        params: { key },
+        params: defined({ index, from: options?.from }),
         headers: guestHeaders(options?.guestSecret),
       }),
-    commentAttachmentAccess: (code, postId, id, key, options) =>
+    commentAttachmentAccess: (code, postId, id, index, options) =>
       client.value<AttachmentAccess>(`${comment(code, postId, id)}/attachments`, {
-        params: { key },
+        params: defined({ index, from: options?.from, as: options?.as }),
         headers: guestHeaders(options?.guestSecret),
       }),
     listCommentRevisions: (code, postId, params = {}, options) =>

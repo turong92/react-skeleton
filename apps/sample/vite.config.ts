@@ -7,6 +7,10 @@ import { assertProjectBuildEnv, projectOwnEnv } from './projectBuild.ts'
 
 // 백엔드를 다른 주소 · 포트로 띄웠다면: API_PROXY_TARGET=http://localhost:18080 pnpm dev (기본 8080)
 const apiTarget = process.env.API_PROXY_TARGET ?? 'http://localhost:8080'
+// 게시판 사진의 공개 주소는 같은 출처의 `/files/...`(백엔드 로컬 설정 skeleton.storage.web.public.base-url=/files) - 로컬 S3(SeaweedFS)의 공개 접두사로 넘긴다.
+// 폰이 터널(skel.ovation.fans)로 열어도 사진이 같은 출처라 깨지지 않는다. S3 를 다른 포트로 띄웠다면 S3_PORT=18333 (docker-compose 와 같은 이름)
+const filesTarget =
+  process.env.FILES_PROXY_TARGET ?? `http://127.0.0.1:${process.env.S3_PORT ?? '8333'}/app`
 
 export default defineConfig(({ mode, command }) => {
   const env = loadEnv(mode, process.cwd(), 'VITE_')
@@ -60,7 +64,14 @@ export default defineConfig(({ mode, command }) => {
       // 한 서버에 프로젝트 여럿이면 `a.localhost:5174` · `b.localhost:5175` 로 연다 — 그 Host 가 백엔드까지 그대로 간다(devProxy.ts)
       // `localhost` · `*.localhost` · IP 는 Vite 가 기본으로 받는다. 그 밖의 도메인(터널 등)은 allowedHosts 에 더해야 한다
       allowedHosts: ['.localhost'],
-      proxy: { '/api/v1': apiProxy(apiTarget) },
+      proxy: {
+        '/api/v1': apiProxy(apiTarget),
+        '/files': {
+          target: filesTarget,
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/files/, ''),
+        },
+      },
     },
   }
 })

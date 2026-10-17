@@ -234,13 +234,16 @@ describe('Board — guests, approval and edited versions against the real backen
     await pwExpect(waiting).toBeVisible()
     const privateSrc = (await waiting.getAttribute('src')) ?? ''
     pwExpect(privateSrc).toMatch(/signature/i)
-    pwExpect(privateSrc).not.toContain('/app/public/')
+    pwExpect(privateSrc).not.toContain('/files/')
     await page.getByRole('button', { name: `${ko('board.comments.approve')}: ${NAME}` }).click()
     // 승인 뒤: 공개 주소(키에 계정 · 비회원 표시 · 원래 키가 없다)
     await pwExpect
       .poll(async () => (await commentOf(page, TEXT).getByRole('img').getAttribute('src')) ?? '')
-      .toMatch(/\/app\/public\/b\/[0-9a-f]{32}\.png$/)
-    const publicUrl = (await commentOf(page, TEXT).getByRole('img').getAttribute('src')) ?? ''
+      .toMatch(/^\/files\/public\/b\/[0-9a-f]{32}\.png$/)
+    // 같은 출처의 상대 주소 - 요청에는 절대 주소가 필요하다 (img.src 가 해석한 값)
+    const publicUrl = await commentOf(page, TEXT)
+      .getByRole('img')
+      .evaluate((el: HTMLImageElement) => el.src)
     pwExpect(publicUrl).not.toMatch(/uploads|\/g\/|acc_/)
     await signOut(page)
     await visit(postUrl)
@@ -292,7 +295,7 @@ describe('Board — guests, approval and edited versions against the real backen
       )
       .toBe(true)
     pwExpect(await memberPicture.getAttribute('src')).toMatch(
-      /\/app\/public\/b\/[0-9a-f]{32}\.png$/,
+      /^\/files\/public\/b\/[0-9a-f]{32}\.png$/,
     )
   })
 })

@@ -97,11 +97,14 @@ export default async function setup(project: TestProject) {
   let apiUrl = process.env.E2E_API_URL ?? ''
   let mailUrl = process.env.E2E_MAIL_URL ?? ''
   const native = process.env.E2E_NATIVE === '1'
+  // 게시판 사진의 공개 주소 `/files/...` 를 vite 가 넘길 곳 - 하네스가 로컬 S3 를 띄우면 그 포트
+  let filesTarget = process.env.FILES_PROXY_TARGET
   if (!apiUrl) {
     const apiDir = resolve(process.env.SAMPLE_API_DIR ?? resolve(repoRoot, '../kotlin-skeleton'))
     backendScript = resolve(apiDir, 'scripts/sample-e2e-backend.sh')
     // 빈 포트 셋(백엔드 · DB · 로컬 S3) — 개발 중인 다른 서버와 겹치지 않는다
     const [serverPort, dbPort, s3Port] = [await freePort(), await freePort(), await freePort()]
+    filesTarget ??= `http://127.0.0.1:${s3Port}/app`
     const [smtpPort, mailHttpPort] = [
       Number(process.env.E2E_MAIL_SMTP_PORT) || (await freePort()),
       await freePort(),
@@ -290,7 +293,12 @@ export default async function setup(project: TestProject) {
       ['exec', 'vite', '--port', String(port), '--strictPort', '--host', '127.0.0.1'],
       {
         cwd: appDir,
-        env: { ...process.env, API_PROXY_TARGET: apiUrl, MARINA_DIRECT: '1' },
+        env: {
+          ...process.env,
+          API_PROXY_TARGET: apiUrl,
+          ...(filesTarget ? { FILES_PROXY_TARGET: filesTarget } : {}),
+          MARINA_DIRECT: '1',
+        },
         stdio: 'ignore',
         detached: true,
       },

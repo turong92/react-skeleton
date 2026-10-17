@@ -76,18 +76,14 @@ describe('routes', () => {
       expect(hasRoleGuard(path), path).toBe(false)
   })
 
-  it('the signed-in screens sit under the auth guard; home, login, the legal pages and the 404 are public', () => {
+  it('the signed-in screens sit under the auth guard; home, login, the legal pages, the board and the 404 are public', () => {
     for (const path of [
       '/notes',
       '/notes/new',
       '/notes/abc',
       '/notes/abc/edit',
-      '/board',
-      '/board/new',
-      '/board/abc',
       '/account',
       '/admin/accounts',
-      '/board/abc/edit',
       '/settings',
       '/cheer',
       '/payments/return',
@@ -110,6 +106,11 @@ describe('routes', () => {
       '/privacy',
       '/refund',
       '/nope',
+      // 게시판은 비회원도 읽고(서버 allow-anonymous-read) 게시판이 허락하면 쓴다 - 화면이 로그인 여부로 가린다
+      '/board',
+      '/board/new',
+      '/board/abc',
+      '/board/abc/edit',
     ])
       expect(guarded(path), path).toBe(false)
   })

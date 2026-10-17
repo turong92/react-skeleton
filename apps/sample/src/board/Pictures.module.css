@@ -1,0 +1,19 @@
+.picker {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.picture {
+  max-width: 12rem;
+  max-height: 12rem;
+  border-radius: var(--radius-sm);
+}

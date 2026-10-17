@@ -259,7 +259,7 @@ export function BoardComments({
                   commentMaxLength={config.commentMaxLength}
                   canModerate={config.canModerate}
                   maxAttachments={maxAttachments}
-                  reactionTypes={config.reactionTypes}
+                  reactionTypes={options.guest ? [] : config.reactionTypes} // 반응은 로그인이 필요하다
                   onReply={
                     commentable
                       ? (parentId, body, authorId, extra) => write(body, parentId, authorId, extra)

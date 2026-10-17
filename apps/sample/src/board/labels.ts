@@ -24,6 +24,31 @@ export const reactionLabels = (t: Translate): Record<string, string> =>
 const authorLabels = (t: Translate) => ({
   authorDeleted: t('board.author.deleted'),
   authorUnnamed: t('board.author.unnamed'),
+  authorGuest: t('board.author.guest'),
+})
+
+/** 비회원 칸 · 고친 내용 승인 대기의 글자 */
+const guestLabels = (t: Translate) => ({
+  guestName: t('board.guest.name'),
+  guestNameRequired: t('board.guest.nameRequired'),
+  guestNameTooLong: (max: number) => t('board.guest.nameTooLong', { max }),
+  guestSecret: t('board.guest.secret'),
+  guestSecretHint: t('board.guest.secretHint'),
+  guestSecretRequired: t('board.guest.secretRequired'),
+  guestCaptchaRequired: t('board.guest.captchaRequired'),
+  guestPending: t('board.guest.pending'),
+  guestEditPending: t('board.guest.editPending'),
+})
+
+export const guestFieldLabels = guestLabels
+
+const revisionLabels = (t: Translate) => ({
+  revisionWaiting: t('board.revision.waiting'),
+  revisionReview: t('board.revision.review'),
+  revisionCurrent: t('board.revision.current'),
+  revisionEdited: t('board.revision.edited'),
+  approveEdit: t('board.revision.approve'),
+  rejectEdit: t('board.revision.reject'),
 })
 
 const pageLabel = (t: Translate) => (page: number) => t('board.page', { page })
@@ -67,6 +92,7 @@ export const postListLabels = (t: Translate): PostListLabelsInput => ({
 
 const postStatusLabels = (t: Translate): PostDetailLabels['status'] => ({
   DRAFT: t('board.status.DRAFT'),
+  PENDING: t('board.status.PENDING'),
   PUBLISHED: t('board.status.PUBLISHED'),
   HIDDEN: t('board.status.HIDDEN'),
   DELETED: t('board.status.DELETED'),
@@ -74,6 +100,8 @@ const postStatusLabels = (t: Translate): PostDetailLabels['status'] => ({
 
 export const postDetailLabels = (t: Translate): PostDetailLabels => ({
   ...authorLabels(t),
+  ...revisionLabels(t),
+  pendingNote: t('board.pending.post'),
   edit: t('board.detail.edit'),
   delete: t('board.detail.delete'),
   pin: t('board.detail.pin'),
@@ -101,10 +129,18 @@ export const postEditorLabels = (t: Translate, mustCreate = false): Partial<Post
   formLabel: t('board.form.formLabel'),
   authorRequired: t(mustCreate ? 'board.authorRequiredCreate' : 'board.authorRequired'),
   authorUnsettled: t('board.authorUnsettled'),
+  ...guestLabels(t),
 })
 
 export const commentLabels = (t: Translate, mustCreate = false): BoardCommentsLabelsInput => ({
   ...authorLabels(t),
+  ...guestLabels(t),
+  ...revisionLabels(t),
+  pending: t('board.pending.badge'),
+  pendingNote: t('board.pending.comment'),
+  approve: t('board.comments.approve'),
+  attachments: t('board.comments.attachments'),
+  guestDeleteSecret: t('board.guest.deleteSecret'),
   heading: t('board.comments.heading'),
   sort: t('board.comments.sort'),
   sorts: {

@@ -72,6 +72,11 @@ export const routes: RouteObject[] = [
         element: <LegalRoute doc="refund" />,
         handle: publicSeo('seo.refund.title', 'seo.refund.description'),
       },
+      // 게시판은 로그인하지 않아도 열린다(서버 `allow-anonymous-read`) - 읽기는 누구나, 쓰기는 로그인했거나 게시판이 비회원 쓰기를 허락할 때(화면이 가린다). 검색에는 노출하지 않는다
+      { path: '/board', element: <BoardPage />, handle: privateSeo('nav.board') },
+      { path: '/board/new', element: <BoardFormPage />, handle: privateSeo('nav.board') },
+      { path: '/board/:id', element: <BoardPostPage />, handle: privateSeo('nav.board') },
+      { path: '/board/:id/edit', element: <BoardFormPage />, handle: privateSeo('nav.board') },
       {
         element: <RequireAuth />,
         children: [
@@ -82,14 +87,6 @@ export const routes: RouteObject[] = [
             path: '/notes/:id/edit',
             element: <NoteFormPage />,
             handle: privateSeo('nav.notes'),
-          },
-          { path: '/board', element: <BoardPage />, handle: privateSeo('nav.board') },
-          { path: '/board/new', element: <BoardFormPage />, handle: privateSeo('nav.board') },
-          { path: '/board/:id', element: <BoardPostPage />, handle: privateSeo('nav.board') },
-          {
-            path: '/board/:id/edit',
-            element: <BoardFormPage />,
-            handle: privateSeo('nav.board'),
           },
           // 응원하기 — 결제는 `@skeleton/payment`. `/payments/return` 은 `/payments/:id` 보다 먼저 맞는다(정적 경로가 앞선다)
           { path: '/cheer', element: <CheerPage />, handle: privateSeo('nav.cheer') },

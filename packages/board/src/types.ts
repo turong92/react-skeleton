@@ -208,6 +208,8 @@ export type Comment = {
   attachments?: string[]
   /** 대기 중인 고친 내용 — 쓴 회원 · 운영자 · 관리하는 글 주인에게만(남에게는 null) */
   pendingRevision?: PendingRevision | null
+  /** 댓글을 관리하는 사람에게만 실린다 — `false` 면 이 댓글의 상태를 지금 못 바꾼다(운영자가 가린 댓글을 글 주인이 되살릴 수 없다). 복원 단추의 근거 */
+  canManage?: boolean
 }
 
 /** 계약의 `CommentThread` — 최상위 댓글 + 그 아래 **모든** 자손(평평하게, 오래된 순). 자손의 `replies` 는 항상 빈 배열 — 중첩은 `nestThread` 가 만든다 */

@@ -185,6 +185,7 @@ export function CommentItem({ node, ctx }: { node: CommentNode; ctx: ThreadConte
         {manage &&
           ctx.onModerate &&
           comment.status === 'HIDDEN' &&
+          comment.canManage !== false &&
           action(L.restore, () => ctx.onModerate?.(comment.id, 'PUBLISHED'))}
       </div>
 

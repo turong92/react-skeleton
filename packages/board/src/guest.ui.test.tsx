@@ -124,6 +124,21 @@ describe('guest and waiting comments', () => {
     expect(other).not.toContain('aria-label="Edit')
   })
 
+  it('a hidden comment the server says the manager cannot change gets no restore button', () => {
+    const hidden = (canManage?: boolean) =>
+      renderToStaticMarkup(
+        <CommentThread
+          {...base}
+          thread={thread(3, [], { status: 'HIDDEN', body: null, canManage })}
+          canManageComments
+          onModerate={noop}
+        />,
+      )
+    expect(hidden(false)).not.toContain('aria-label="Restore')
+    expect(hidden(true)).toContain('aria-label="Restore')
+    expect(hidden(undefined)).toContain('aria-label="Restore')
+  })
+
   it('a waiting edit: the writer sees a note, a manager sees both texts side by side with decide buttons, everyone else sees nothing', () => {
     const revision = { body: 'new text', attachments: [], submittedAt: '2026-01-01T00:00:00Z' }
     const t = thread(1, [], { body: 'old text', mine: true, pendingRevision: revision })

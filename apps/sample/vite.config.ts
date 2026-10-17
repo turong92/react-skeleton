@@ -66,7 +66,8 @@ export default defineConfig(({ mode, command }) => {
       allowedHosts: ['.localhost'],
       proxy: {
         '/api/v1': apiProxy(apiTarget),
-        '/files': {
+        // 공개 접두사만 넘긴다 - 나머지 `/files/...` 는 S3 에 닿지 않는다(비공개 업로드 영역이 개발 서버를 통해 새지 않게)
+        '/files/public': {
           target: filesTarget,
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/files/, ''),

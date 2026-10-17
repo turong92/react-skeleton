@@ -182,9 +182,8 @@ describe('Board — posts, nested comments and typed reactions against the real 
     await openPost(page, `${TITLE} (수정)`)
     await pwExpect(page.getByText(ko('board.comments.hidden'))).toBeVisible()
     await pwExpect(page.getByText(REPLY)).toHaveCount(0)
-    await pwExpect(
-      page.getByRole('button', { name: new RegExp(`^${ko('board.comments.hide')}: `) }),
-    ).toHaveCount(0)
+    // 글 주인은 이제 자기 글의 댓글을 가릴 수 있다(게시판 설정 ownerModeratesComments) - 그래서 「가리기」 단추는 더 이상 운영자만의 것이 아니다.
+    // 운영자만의 것은 글 고정이다
     await pwExpect(
       article(page).getByRole('button', { name: ko('board.detail.pin'), exact: true }),
     ).toHaveCount(0)

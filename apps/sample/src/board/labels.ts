@@ -102,6 +102,7 @@ export const postDetailLabels = (t: Translate): PostDetailLabels => ({
   ...authorLabels(t),
   ...revisionLabels(t),
   pendingNote: t('board.pending.post'),
+  approve: t('board.comments.approve'),
   edit: t('board.detail.edit'),
   delete: t('board.detail.delete'),
   pin: t('board.detail.pin'),

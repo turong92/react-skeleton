@@ -91,6 +91,15 @@ const create = useCreatePost(boardApi, code)
 - **`lastOwnAuthorId(comments)`**: `mine` 인 댓글 중 가장 나중에 쓴 것의 `authorId`(시각은 `Date.parse` 로 비교, 같으면 id 큰 쪽, 없으면 `undefined`). 탈퇴한 작성자(`authorDeleted`)와 `pending:` id 는 건너뛴다. `BoardComments` 가 **현재 불러온 쪽**의 댓글로 계산해 `threadAuthorId` 로 넘긴다(다른 쪽에 쓴 댓글은 모른다). 글이 내 것이면 `postAuthor={{ authorId, mine, authorDeleted }}` 를 주어 글의 작성자를 단서로 더한다(내 댓글이 없을 때의 대체).
 - `AuthorScope` · `collidingNames` 는 그대로다 — 비교 기준이 「작성자 id」라, 프로필 id 가 되면 같은 이름의 다른 프로필에 꼬리표가 붙는다.
 
+## 비회원 · 승인 · 고친 내용 · 댓글 사진 (서버가 켠 만큼만)
+
+백엔드 계약: kotlin-skeleton `docs/board-http-contract.md`. 모두 서버 설정이 켠 것만 화면에 나타난다 — 꺼진 서버(옛 서버)에서는 새 키가 없고 화면은 예전과 같다.
+
+- **비회원 쓰기**: 앱이 로그인하지 않았고 `BoardConfig.guestEnabled` · 게시판 `settings.guestWrite` 가 허락할 때 `guest` prop(`GuestUi`)을 `BoardComments` · `PostEditor` 에 준다 — 이름 + 비밀번호(`PASSWORD`; `TOKEN` 이면 앱이 만든 `token`) + 캡차 자리(`renderCaptcha`). 비밀은 **헤더 `X-Board-Guest-Secret` 로만** 나간다(`api.createPost(…, { guest })` · `updatePost(…, { guestSecret })`). 비회원은 작성자(프로필)를 고르지 않는다. 서버는 비회원을 모르므로(`mine` 은 늘 false) 이 브라우저가 쓴 id 는 `useOwnGuestIds` 로 기억하고(비밀은 기억하지 않는다) `ownGuestIds` 로 돌려준다 — 고치기 · 지우기가 그 id 에만 보이고 비밀번호를 다시 묻는다. 승인 대기 글 · 댓글은 비회원이 다시 읽을 수 없으니 **보낸 응답을 화면이 들고 있는다**(`BoardComments` 가 안내와 방금 쓴 것을 보인다).
+- **승인 대기 · 글 주인 관리**: `status: 'PENDING'` 에 「승인 대기」 표시, 관리하는 쪽(`canModerate` 또는 `canManageComments`)에게 승인 · 가리기 단추. 운영자는 글 목록에서 `status: 'PENDING'` / `revision: 'pending'` 으로 대기 글 · 고친 글을 본다.
+- **고친 내용**: 서버가 공개본을 그대로 두고 `pendingRevision` 을 준다 — 쓴 사람에게는 「고친 내용은 승인 뒤에 보여요」, 관리하는 쪽에는 공개본과 나란히 + 승인 · 거절(`useDecidePostRevision` · `useDecideCommentRevision`).
+- **댓글 사진**: `BoardConfig.commentMaxAttachments > 0` 이면 `attachmentPicker`(업로드는 앱 몫 — 키만 오간다) · `renderAttachment`(키 → 그림). 가린 · 지운 댓글의 `attachments` 는 `[]`.
+
 ## 반응 종류를 더하려면 (「공감」 예)
 
 1. **서버**: 설정에 코드를 더한다 — `skeleton.board.reaction.types: LIKE,DISLIKE,EMPATHY`(스키마 · 코드 변경 없음). `GET /boards/config` 가 `reactionTypes` 에 `EMPATHY` 를 싣는다.

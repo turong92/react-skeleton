@@ -23,6 +23,8 @@ export type PostDetailLabels = AuthorLabels &
   RevisionLabels & {
     /** 승인 대기 글을 쓴 사람에게 보이는 안내 */
     pendingNote: string
+    /** 승인 대기 글을 공개한다(운영자) */
+    approve: string
     edit: string
     delete: string
     pin: string
@@ -39,6 +41,7 @@ const defaultLabels: PostDetailLabels = {
   ...defaultAuthorLabels,
   ...defaultRevisionLabels,
   pendingNote: 'Only you and the people who manage this board can see it until it is approved.',
+  approve: 'Approve',
   edit: 'Edit',
   delete: 'Delete',
   pin: 'Pin',
@@ -166,6 +169,15 @@ export function PostDetail({
           {onDelete && (
             <Button variant="danger" size="sm" onClick={onDelete}>
               {labels.delete}
+            </Button>
+          )}
+          {onModerate && post.status === 'PENDING' && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => onModerate({ status: 'PUBLISHED' })}
+            >
+              {labels.approve}
             </Button>
           )}
           {onModerate && (

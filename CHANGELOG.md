@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — 게시판: 비회원 쓰기 · 승인 대기 · 고친 내용 승인 · 댓글 사진 (2026-10-17)
+
+- `@skeleton/board`: 비회원 칸(`GuestFields`, 이름 + 비밀번호 + 캡차 자리, 비밀은 헤더로만), `(guest)` 표시, 승인 대기 표시 · 승인/가리기, 글 주인의 댓글 관리(`canManageComments`), 고친 내용 비교 + 승인/거절(`pendingRevision`), 댓글 사진(`attachmentPicker` · `renderAttachment`), 새 API/훅(`updateBoard` · `decide…Revision` · `listPendingComments` · `listCommentRevisions` · `usePendingComments` …), `useOwnGuestIds`. 서버가 켜지 않으면 새 키가 없고 화면은 같다. `ErrorCodes.BOARD_CAPTCHA_FAILED`(`@skeleton/api-client`).
+- 참조 앱(`apps/sample`): `/board` 가 로그인 없이 열린다(서버 `allow-anonymous-read`) - 비회원 글 · 댓글, 운영자의 대기 목록, 로그인한 사람의 댓글 사진. 새 e2e `boardGuest.e2e.ts`.
+
 ### Added — 네이버페이 직접 연동 (단건 결제 · 취소 · 환불) — 토스 계약 없이
 
 - `checkout.kind === 'NAVERPAY_REDIRECT'`: 서버가 결제를 이미 예약했다(금액 · 주문 번호는 장부의 값 - 구매자가 못 바꾼다). `openCheckout` 이 SDK 없이 구매자를 서버가 준 결제창 주소(`attributes.windowUrl`, http(s) 절대 주소만 - 아니면 던진다)로 보낸다(`navigate` 로 바꿀 수 있다). 간편결제 단추가 따로 없어 `easyPay` 를 주면 던진다. `checkoutCanOpen` 이 이 결제창도 가른다(공개 키가 `null` 인 것이 정상).

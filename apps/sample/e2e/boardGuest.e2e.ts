@@ -1,0 +1,167 @@
+import { expect as pwExpect, type Browser, type Page } from 'playwright/test'
+import { afterAll, beforeAll, describe, inject, it } from 'vitest'
+import { MODERATOR, USER, openBoard, openPost, signInAs, signOut, writePost } from './boardSteps'
+import { dismissConsent, ko, launch } from './helpers'
+
+/*
+ * 비회원 · 승인 흐름 — 로그아웃 상태의 방문자가 이름 · 비밀번호로 댓글을 쓰면 승인 대기 → 글 주인이 로그인해 승인 → 공개 →
+ * 방문자가 자기 댓글을 고치면 고친 내용은 대기(공개본은 그대로) → 글 주인이 고친 내용을 거절. 그리고 방문자의 새 글은 운영자가 승인한다.
+ * 진짜 백엔드(`general` 게시판: 비회원 쓰기 ALL · 비회원 글 · 댓글 승인 GUESTS · 글 주인 댓글 관리) · 진짜 브라우저. 앞 단계의 결과에 기댄다.
+ * 비회원은 업로드가 로그인을 요구해 그림을 붙일 수 없다 - 그림 댓글은 회원으로(아래 마지막 단계).
+ */
+const baseUrl = inject('baseUrl')
+
+let browser: Browser
+let page: Page
+let postUrl = ''
+
+const TITLE = '비회원 시연 글'
+const COMMENT = '지나가던 손님이 남깁니다'
+const EDITED = '손님이 고친 말씀입니다'
+const GUEST_POST = '손님이 쓴 새 글'
+const NAME = '손님'
+const PASSWORD = 'pass1234'
+
+beforeAll(async () => {
+  ;({ browser, page } = await launch())
+})
+afterAll(async () => {
+  await browser?.close()
+})
+
+async function visit(url: string) {
+  await page.goto(url)
+  await dismissConsent(page)
+}
+
+/** 로그인한 채로 글 열기 - 주소를 새로 열면 이 앱은 세션을 메모리에서만 들고 있어 비회원이 되므로, 메뉴로 들어간다 */
+async function openAsMember() {
+  await openBoard(page)
+  await openPost(page, TITLE)
+}
+
+async function fillGuest(scope: Page | ReturnType<Page['locator']>, name?: string) {
+  if (name) await scope.getByLabel(ko('board.guest.name')).fill(name)
+  await scope.getByLabel(ko('board.guest.secret')).fill(PASSWORD)
+}
+
+describe('Board — guests, approval and edited versions against the real backend', () => {
+  it('a member writes a post (published at once - approval only applies to guests)', async () => {
+    await signInAs(page, baseUrl, USER)
+    await openBoard(page)
+    await writePost(page, TITLE, '비회원도 댓글을 남길 수 있어요.')
+    postUrl = page.url()
+    await signOut(page)
+  })
+
+  it('a signed-out visitor asks for a name and a password, then the comment waits - and the public thread has no place for it', async () => {
+    await visit(postUrl)
+    await pwExpect(page.getByRole('heading', { level: 2, name: TITLE })).toBeVisible()
+    await page.getByRole('textbox', { name: ko('board.comments.newComment') }).fill(COMMENT)
+    await page.getByRole('button', { name: ko('board.comments.postComment') }).click()
+    await pwExpect(page.getByText(ko('board.guest.nameRequired'))).toBeVisible()
+    await fillGuest(page, NAME)
+    await page.getByRole('button', { name: ko('board.comments.postComment') }).click()
+    await pwExpect(page.getByText(ko('board.guest.pending'))).toBeVisible()
+    await pwExpect(page.getByText(COMMENT)).toBeVisible() // 방금 쓴 것을 이 자리에서만 본다
+    await page.reload()
+    await pwExpect(page.getByRole('heading', { level: 2, name: TITLE })).toBeVisible()
+    await pwExpect(page.getByText(COMMENT)).toHaveCount(0) // 다시 읽으면 공개 스레드에는 자리가 없다
+  })
+
+  it('the post owner signs in, sees the waiting comment and approves it - then it is public with the (guest) mark', async () => {
+    await signInAs(page, baseUrl, USER)
+    await openAsMember()
+    await pwExpect(page.getByText(COMMENT)).toBeVisible()
+    await pwExpect(page.getByText(ko('board.pending.badge')).first()).toBeVisible()
+    await page.getByRole('button', { name: `${ko('board.comments.approve')}: ${NAME}` }).click()
+    await pwExpect(page.getByText(ko('board.pending.badge'))).toHaveCount(0)
+    await signOut(page)
+    await visit(postUrl)
+    await pwExpect(page.getByText(COMMENT)).toBeVisible()
+    await pwExpect(page.getByText(ko('board.author.guest')).first()).toBeVisible()
+  })
+
+  it('the visitor edits their own comment: the earlier text stays public, the edit waits', async () => {
+    await page.getByRole('button', { name: `${ko('board.comments.edit')}: ${NAME}` }).click()
+    const box = page.getByRole('textbox', { name: ko('board.comments.editField') })
+    await box.fill(EDITED)
+    // 새 댓글 칸에도 비밀번호 칸이 있다 - 고치는 폼 안의 것
+    await page
+      .locator('form')
+      .filter({ has: box })
+      .getByLabel(ko('board.guest.secret'))
+      .fill(PASSWORD)
+    await page.getByRole('button', { name: ko('board.comments.save') }).click()
+    await pwExpect(page.getByText(ko('board.guest.editPending'))).toBeVisible()
+    await page.reload()
+    await pwExpect(page.getByText(COMMENT)).toBeVisible()
+    await pwExpect(page.getByText(EDITED)).toHaveCount(0)
+  })
+
+  it('the post owner compares both texts and rejects the edit - the public text is unchanged', async () => {
+    await signInAs(page, baseUrl, USER)
+    await openAsMember()
+    const revision = page.getByTestId('comment-revision')
+    await pwExpect(revision).toBeVisible()
+    await pwExpect(revision).toContainText(COMMENT)
+    await pwExpect(revision).toContainText(EDITED)
+    await page.getByRole('button', { name: `${ko('board.revision.reject')}: ${NAME}` }).click()
+    await pwExpect(page.getByTestId('comment-revision')).toHaveCount(0)
+    await pwExpect(page.getByText(COMMENT)).toBeVisible()
+    await signOut(page)
+  })
+
+  it('a visitor posts a new article: it waits, only the moderator sees it in the queue, and approving publishes it', async () => {
+    await visit(`${baseUrl}/board/new`)
+    await page.getByLabel(new RegExp(ko('board.form.title'))).fill(GUEST_POST)
+    await page
+      .getByLabel(new RegExp(ko('board.form.body')))
+      .fill('운영자 승인을 기다리는 글입니다.')
+    await fillGuest(page, NAME)
+    await page.getByRole('button', { name: ko('board.form.submitCreate') }).click()
+    await pwExpect(
+      page.getByRole('heading', { name: ko('board.guest.postPendingTitle') }),
+    ).toBeVisible()
+    await visit(`${baseUrl}/board`)
+    await pwExpect(page.getByRole('link', { name: GUEST_POST })).toHaveCount(0)
+
+    await signInAs(page, baseUrl, MODERATOR)
+    await openBoard(page)
+    await page.getByRole('button', { name: ko('board.queue.pending') }).click()
+    await page.getByRole('link', { name: GUEST_POST }).click()
+    await page.getByRole('heading', { level: 2, name: GUEST_POST }).waitFor()
+    await page
+      .getByRole('button', { name: ko('board.comments.approve'), exact: true })
+      .first()
+      .click()
+    await pwExpect(page.getByText(ko('board.pending.post'))).toHaveCount(0)
+    await signOut(page)
+    await visit(`${baseUrl}/board`)
+    await pwExpect(page.getByRole('link', { name: GUEST_POST })).toBeVisible()
+  })
+
+  it('a member attaches a picture to a comment and everyone sees it', async () => {
+    await signInAs(page, baseUrl, USER)
+    await openAsMember()
+    const png = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+      'base64',
+    )
+    await page
+      .getByRole('textbox', { name: ko('board.comments.newComment') })
+      .fill('사진을 붙인 댓글')
+    await page
+      .locator('input[type=file]')
+      .first()
+      .setInputFiles({ name: 'dot.png', mimeType: 'image/png', buffer: png })
+    await pwExpect(page.getByRole('button', { name: ko('board.pictures.remove') })).toBeVisible({
+      timeout: 30_000,
+    })
+    await page.getByRole('button', { name: ko('board.comments.postComment') }).click()
+    await pwExpect(
+      page.getByRole('list', { name: ko('board.comments.attachments') }).getByRole('img'),
+    ).toBeVisible({ timeout: 30_000 })
+    await signOut(page)
+  })
+})

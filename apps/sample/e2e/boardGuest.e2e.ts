@@ -291,6 +291,8 @@ describe('Board — guests, approval and edited versions against the real backen
         memberPicture.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0),
       )
       .toBe(true)
-    pwExpect(await memberPicture.getAttribute('src')).toMatch(/\/app\/public\/b\/[0-9a-f]{32}\.png$/)
+    pwExpect(await memberPicture.getAttribute('src')).toMatch(
+      /\/app\/public\/b\/[0-9a-f]{32}\.png$/,
+    )
   })
 })

@@ -9,25 +9,36 @@ import {
   type AuthorLabels,
   type AuthorTagMode,
 } from './authorDisplay'
-import type { PostDetail as PostDetailData, PostModeration, PostStatus } from './types'
+import { defaultRevisionLabels, type RevisionLabels } from './guestLabels'
+import type {
+  PostDetail as PostDetailData,
+  PostModeration,
+  PostStatus,
+  RevisionDecision,
+} from './types'
 import styles from './PostDetail.module.css'
 
 /** 글 상세의 글자 — 기본은 영어. 일부만 덮어쓰려면 `labels={{ edit: '수정' }}` */
-export type PostDetailLabels = AuthorLabels & {
-  edit: string
-  delete: string
-  pin: string
-  unpin: string
-  hide: string
-  restore: string
-  pinned: string
-  status: Record<PostStatus, string>
-  views: (count: number) => string
-  attachments: (count: number) => string
-}
+export type PostDetailLabels = AuthorLabels &
+  RevisionLabels & {
+    /** 승인 대기 글을 쓴 사람에게 보이는 안내 */
+    pendingNote: string
+    edit: string
+    delete: string
+    pin: string
+    unpin: string
+    hide: string
+    restore: string
+    pinned: string
+    status: Record<PostStatus, string>
+    views: (count: number) => string
+    attachments: (count: number) => string
+  }
 
 const defaultLabels: PostDetailLabels = {
   ...defaultAuthorLabels,
+  ...defaultRevisionLabels,
+  pendingNote: 'Only you and the people who manage this board can see it until it is approved.',
   edit: 'Edit',
   delete: 'Delete',
   pin: 'Pin',
@@ -55,6 +66,8 @@ export type PostDetailProps = {
   onDelete?: () => void
   /** 운영자 — 고정/해제 · 숨김/복구 */
   onModerate?: (moderation: PostModeration) => void
+  /** 운영자 — 대기 중인 고친 내용을 공개본과 나란히 보고 승인 · 거절 */
+  onDecideRevision?: (decision: RevisionDecision) => void
   formatTime?: (iso: string) => string
   /** 작성자 꼬리표 — 글 한 건에는 겹칠 상대가 없어 기본은 안 보인다. 보이려면 `always` */
   authorTag?: AuthorTagMode
@@ -70,6 +83,7 @@ export function PostDetail({
   onEdit,
   onDelete,
   onModerate,
+  onDecideRevision,
   formatTime = (iso) => formatInstant(iso),
   labels: input,
   authorTag,
@@ -105,6 +119,42 @@ export function PostDetail({
         </div>
       </header>
       <p className={styles.body}>{post.body}</p>
+      {post.status === 'PENDING' && <p className={styles.note}>{labels.pendingNote}</p>}
+      {post.pendingRevision && (
+        <div className={styles.revision} data-testid="post-revision">
+          <p className={styles.note}>
+            {onDecideRevision ? labels.revisionReview : labels.revisionWaiting}
+          </p>
+          <dl className={styles.compare}>
+            {onDecideRevision && (
+              <>
+                <dt>{labels.revisionCurrent}</dt>
+                <dd>
+                  <strong>{post.title}</strong>
+                  <br />
+                  {post.body}
+                </dd>
+              </>
+            )}
+            <dt>{labels.revisionEdited}</dt>
+            <dd>
+              <strong>{post.pendingRevision.title ?? post.title}</strong>
+              <br />
+              {post.pendingRevision.body}
+            </dd>
+          </dl>
+          {onDecideRevision && (
+            <div className={styles.actions}>
+              <Button size="sm" variant="secondary" onClick={() => onDecideRevision('APPROVE')}>
+                {labels.approveEdit}
+              </Button>
+              <Button size="sm" variant="danger" onClick={() => onDecideRevision('REJECT')}>
+                {labels.rejectEdit}
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
       {reactions}
       {hasActions && (
         <div className={styles.actions}>

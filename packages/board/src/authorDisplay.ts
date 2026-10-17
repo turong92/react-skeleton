@@ -9,11 +9,14 @@ export type AuthorLabels = {
   authorDeleted: string
   /** 닉네임이 없는 작성자 */
   authorUnnamed: string
+  /** 비회원이 쓴 글 · 댓글의 이름 뒤에 붙는 표시 — 회원 닉네임 사칭을 가른다 */
+  authorGuest?: string
 }
 
 export const defaultAuthorLabels: AuthorLabels = {
   authorDeleted: 'Deleted user',
   authorUnnamed: 'Anonymous',
+  authorGuest: '(guest)',
 }
 
 /** 글 · 댓글 응답에서 작성자를 정하는 데 쓰는 필드 — 옛 서버는 `authorName` 이 없다 */
@@ -23,6 +26,8 @@ export type AuthorFields = {
   authorDeleted?: boolean
   /** 서버가 붙이는 4자리 꼬리표(`수민#4821` 의 `4821`) — 꼬리표 방식이 꺼진 서버 · 옛 서버는 null · 없음 */
   authorTag?: string | null
+  /** 비회원이 쓴 글 · 댓글 — `authorName` 은 그가 친 이름이다. 옛 서버는 없음 */
+  authorGuest?: boolean
 }
 
 /**

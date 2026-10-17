@@ -36,3 +36,8 @@
   white-space: nowrap;
   vertical-align: bottom;
 }
+
+.guest {
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+}

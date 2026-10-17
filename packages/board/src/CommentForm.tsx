@@ -1,6 +1,17 @@
 import { Button, Field, Textarea } from '@skeleton/ui'
 import { useCallback, useId, useState, type FormEvent } from 'react'
 import { AuthorError, AuthorSlot } from './AuthorSlot'
+import type { AttachmentPicker, CommentSubmitExtra } from './commentExtras'
+import { GuestFields } from './GuestFields'
+import { defaultGuestLabels, type GuestLabels } from './guestLabels'
+import {
+  emptyGuestDraft,
+  guestCredentials,
+  guestProblems,
+  MIN_GUEST_SECRET,
+  type GuestDraft,
+  type GuestUi,
+} from './guestUi'
 import { focusAuthorSlot } from './focusAuthorSlot'
 import type { AuthorPicker } from './authorship'
 import { defaultCommentLabels } from './commentLabels'
@@ -11,7 +22,7 @@ export type CommentFormProps = {
   label: string
   submitLabel: string
   /** 보내는 일 — 약속이 풀리면 끝난 것이고, 던지면(서버 오류) 쓴 글을 그대로 둔다. 오류 표시는 앱의 전역 핸들러 */
-  onSubmit: (body: string, authorId?: string) => Promise<unknown> | void
+  onSubmit: (body: string, authorId?: string, extra?: CommentSubmitExtra) => Promise<unknown> | void
   maxLength: number
   requiredMessage: string
   tooLongMessage: (max: number) => string
@@ -40,6 +51,16 @@ export type CommentFormProps = {
   threadAuthorId?: string
   /** 댓글을 아직 불러오는 중 — 선택기가 처음 값을 확정하지 않고 기다린다 */
   threadLoading?: boolean
+  /** 로그인하지 않고 쓰는 새 댓글 · 답글 — 이름 · 비밀번호(· 캡차) 칸이 생기고 제출 값의 `extra.guest` 로 간다 */
+  guest?: GuestUi
+  /** 비회원이 자기 댓글을 고친다 — 비밀번호 칸만 묻고(`TOKEN` 이면 묻지 않고 앱의 토큰) `extra.guestSecret` 로 간다 */
+  guestSecretFor?: GuestUi
+  guestLabels?: GuestLabels
+  /** 첨부 고르는 자리 — 업로드는 앱 몫이다 */
+  attachmentPicker?: AttachmentPicker
+  /** `BoardConfig.commentMaxAttachments` — 0 이면 자리를 그리지 않는다 */
+  maxAttachments?: number
+  initialAttachments?: string[]
 }
 
 /** 댓글 한 칸 폼 — 새 댓글 · 답글 · 수정이 같이 쓴다. 비었거나 한도를 넘으면 칸 아래에 말하고 포커스를 둔다 */
@@ -61,7 +82,17 @@ export function CommentForm({
   authorUnsettledMessage = defaultCommentLabels.authorUnsettled,
   threadAuthorId,
   threadLoading = false,
+  guest,
+  guestSecretFor,
+  guestLabels = defaultGuestLabels,
+  attachmentPicker,
+  maxAttachments = 0,
+  initialAttachments = [],
 }: CommentFormProps) {
+  const [guestDraft, setGuestDraft] = useState<GuestDraft>(emptyGuestDraft)
+  const [guestChecked, setGuestChecked] = useState(false)
+  const [attachments, setAttachments] = useState(initialAttachments)
+  const withAttachments = attachmentPicker !== undefined && maxAttachments > 0
   const [value, setValue] = useState(initialValue)
   const [error, setError] = useState<string>()
   const [pending, setPending] = useState(false)
@@ -101,6 +132,11 @@ export function CommentForm({
           : undefined
     const authorProblem = withAuthor && !authorId
     const blocked = withAuthor && !authorProblem && unsettled
+    const guestProblem =
+      (guest !== undefined &&
+        Object.keys(guestProblems(guestDraft, guest, guestLabels)).length > 0) ||
+      (guestSecretFor?.secretKind === 'PASSWORD' && guestDraft.secret.length < MIN_GUEST_SECRET)
+    setGuestChecked(true)
     setError(problem)
     setAuthorMissing(authorProblem)
     setBlockedUnsettled(blocked)
@@ -112,10 +148,31 @@ export function CommentForm({
       focusAuthorSlot(form)
       return
     }
+    if (guestProblem) return
+    const extra: CommentSubmitExtra = {
+      ...(guest ? { guest: guestCredentials(guestDraft, guest) } : {}),
+      ...(guestSecretFor
+        ? {
+            guestSecret:
+              guestSecretFor.secretKind === 'TOKEN' ? guestSecretFor.token : guestDraft.secret,
+          }
+        : {}),
+      ...(withAttachments ? { attachments } : {}),
+    }
+    const hasExtra = Object.keys(extra).length > 0
     setPending(true)
     try {
-      await (withAuthor && authorId ? onSubmit(body, authorId) : onSubmit(body))
-      if (clearOnSubmit) setValue('')
+      await (hasExtra
+        ? onSubmit(body, withAuthor ? authorId : undefined, extra)
+        : withAuthor && authorId
+          ? onSubmit(body, authorId)
+          : onSubmit(body))
+      if (clearOnSubmit) {
+        setValue('')
+        setAttachments([])
+        setGuestDraft((draft) => ({ ...emptyGuestDraft, name: draft.name }))
+        setGuestChecked(false)
+      }
     } catch {
       // 쓴 글은 그대로 — 오류 토스트는 전역 핸들러가 띄운다
     } finally {
@@ -137,6 +194,29 @@ export function CommentForm({
           />
         )}
       </Field>
+      {guest && (
+        <GuestFields
+          ui={guest}
+          labels={guestLabels}
+          value={guestDraft}
+          onChange={setGuestDraft}
+          showErrors={guestChecked}
+          idPrefix={`guest-${label}`}
+        />
+      )}
+      {guestSecretFor && guestSecretFor.secretKind === 'PASSWORD' && (
+        <GuestFields
+          ui={guestSecretFor}
+          labels={guestLabels}
+          value={guestDraft}
+          onChange={setGuestDraft}
+          showErrors={guestChecked}
+          secretOnly
+          idPrefix={`guest-edit`}
+        />
+      )}
+      {withAttachments &&
+        attachmentPicker({ value: attachments, onChange: setAttachments, max: maxAttachments })}
       <div className={styles.actions}>
         {withAuthor && (
           <AuthorSlot

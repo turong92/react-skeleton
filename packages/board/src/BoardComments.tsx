@@ -1,4 +1,15 @@
-import { Button, Card, Dialog, EmptyState, Field, Pagination, Select, Spinner } from '@skeleton/ui'
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  Dialog,
+  EmptyState,
+  Field,
+  Pagination,
+  Select,
+  Spinner,
+} from '@skeleton/ui'
 import { useMemo, useState } from 'react'
 import { collidingNames } from './authorDisplay'
 import { isUsableOwnAuthorId, lastOwnAuthorId, threadIsUnknown } from './authorship'
@@ -6,16 +17,27 @@ import type { BoardApi } from './boardApi'
 import { resolveBoardCommentsLabels, type BoardCommentsLabelsInput } from './boardCommentsLabels'
 import { CommentForm } from './CommentForm'
 import { CommentThread } from './CommentThread'
+import type { CommentSubmitExtra } from './commentExtras'
 import type { CommentOptions } from './commentThreadContext'
+import { GuestFields } from './GuestFields'
+import { emptyGuestDraft, type GuestDraft } from './guestUi'
 import {
   useComments,
   useCreateComment,
+  useDecideCommentRevision,
   useModerateComment,
   useReaction,
   useRemoveComment,
   useUpdateComment,
 } from './hooks'
-import { COMMENT_SORTS, type BoardConfig, type BoardId, type CommentSort } from './types'
+import {
+  COMMENT_SORTS,
+  type BoardConfig,
+  type BoardId,
+  type Comment,
+  type CommentInput,
+  type CommentSort,
+} from './types'
 import styles from './BoardComments.module.css'
 
 export type BoardCommentsProps = Omit<
@@ -33,6 +55,8 @@ export type BoardCommentsProps = Omit<
   | 'authorRequired'
   | 'threadAuthorId'
   | 'threadLoading'
+  | 'maxAttachments'
+  | 'onDecideRevision'
 > & {
   api: BoardApi
   boardCode: string
@@ -59,6 +83,10 @@ export type BoardCommentsProps = Omit<
    * (이 글에 댓글을 쓴 적이 없어도 같은 이름으로 이어 쓰게). 내 댓글이 있으면 댓글이 먼저다. 탈퇴 · `pending:` id 는 건너뛴다
    */
   postAuthor?: { authorId: string; mine?: boolean; authorDeleted?: boolean }
+  /** 비회원이 댓글을 쓴 직후 — 앱이 그 id 를 기억해 두었다가 `ownGuestIds` 로 돌려주면 이 브라우저에서 고치기 · 지우기가 보인다 */
+  onGuestWritten?: (comment: Comment) => void
+  /** 글 주인이 비회원일 때 댓글 승인 · 가리기 · 고친 댓글 결정에 보내는 글의 비밀(헤더로만 나간다) */
+  managerSecret?: string
 }
 
 /**
@@ -76,6 +104,8 @@ export function BoardComments({
   beforeWrite,
   beforeDelete,
   postAuthor,
+  onGuestWritten,
+  managerSecret,
   ...options
 }: BoardCommentsProps) {
   const labels = resolveBoardCommentsLabels(input)
@@ -95,7 +125,8 @@ export function BoardComments({
       (postAuthor && isUsableOwnAuthorId(postAuthor) ? postAuthor.authorId : undefined),
     [comments.data, postAuthor],
   )
-  const authorRequired = config.authorRequired === true
+  // 비회원은 작성자(프로필)를 고르지 않는다 — 서버가 `authorId` 를 보낸 비회원을 거절한다
+  const authorRequired = config.authorRequired === true && options.guest === undefined
   /** 현재 쪽의 댓글을 아직 모른다(받는 중 · 이전 쪽 placeholder) — 이때의 undefined 는 「쓴 적 없음」이 아니다. 첫 불러오기 **실패**는 모름이 아니라 실패라 여기 들지 않는다 */
   const threadLoading = threadIsUnknown(comments)
   const create = useCreateComment(api, boardCode, postId)
@@ -103,9 +134,45 @@ export function BoardComments({
   const remove = useRemoveComment(api, boardCode, postId)
   const moderate = useModerateComment(api, boardCode, postId)
   const react = useReaction(api, boardCode, config.reactionMode)
+  const decide = useDecideCommentRevision(api, boardCode, postId)
+  /** 보낸 직후의 안내 — 비회원은 승인 대기 글을 다시 읽지 못하므로 (이름 · 본문과 함께) 이 자리에서만 보인다 */
+  const [notice, setNotice] = useState<string>()
+  const [justPosted, setJustPosted] = useState<Comment[]>([])
+  const [deleteDraft, setDeleteDraft] = useState<GuestDraft>(emptyGuestDraft)
+  const maxAttachments = config.commentMaxAttachments ?? 0
+  const guest = options.guest
+  const guestSecretOf = (secret?: string) =>
+    secret ?? (guest?.secretKind === 'TOKEN' ? guest.token : undefined)
+  /** 지우려는 댓글이 이 브라우저가 비회원으로 쓴 것이다 — 비밀을 함께 보낸다 */
+  const guestDeleting =
+    deleting !== null && options.ownGuestIds?.has(deleting) === true && guest !== undefined
   /** 막히면 던진다 — `CommentForm` 이 조용히 받아 쓴 글을 남긴다 */
   const allowed = async () => {
     if (beforeWrite && !beforeWrite()) throw new Error('write blocked by beforeWrite')
+  }
+  /** 새 댓글 · 답글 — 비회원이면 이름 · 비밀은 `extra.guest` 로 온다 */
+  const write = async (
+    body: string,
+    parentId: BoardId | undefined,
+    authorId: string | undefined,
+    extra: CommentSubmitExtra | undefined,
+  ) => {
+    await allowed()
+    const input: CommentInput = {
+      body,
+      ...(parentId === undefined ? {} : { parentId }),
+      ...(authorId ? { authorId } : {}),
+      ...(extra?.attachments ? { attachments: extra.attachments } : {}),
+      ...(extra?.guest ? { guest: extra.guest } : {}),
+    }
+    const created = await create.mutateAsync({ input })
+    if (extra?.guest) onGuestWritten?.(created)
+    if (created.status === 'PENDING') {
+      setNotice(extra?.guest ? labels.guestPending : labels.pendingNote)
+      // 비회원은 승인 대기 댓글을 다시 읽지 못한다 — 방금 보낸 것을 이 자리에 둔다
+      if (extra?.guest) setJustPosted((list) => [...list, created])
+    }
+    return created
   }
 
   return (
@@ -125,11 +192,24 @@ export function BoardComments({
             authorUnsettledMessage={labels.authorUnsettled}
             threadAuthorId={threadAuthorId}
             threadLoading={threadLoading}
-            onSubmit={async (body, authorId) => {
-              await allowed()
-              return create.mutateAsync({ input: authorId ? { body, authorId } : { body } })
-            }}
+            guest={options.guest}
+            guestLabels={labels}
+            attachmentPicker={options.attachmentPicker}
+            maxAttachments={maxAttachments}
+            onSubmit={(body, authorId, extra) => write(body, undefined, authorId, extra)}
           />
+        )}
+        {notice && <Alert tone="info">{notice}</Alert>}
+        {justPosted.length > 0 && (
+          <ul className={styles.threads} aria-label={labels.pending}>
+            {justPosted.map((c) => (
+              <li key={c.id}>
+                <Badge tone="warning">{labels.pending}</Badge> <strong>{c.authorName}</strong>{' '}
+                <span>{labels.authorGuest}</span>
+                <p>{c.body}</p>
+              </li>
+            ))}
+          </ul>
         )}
         <Field label={labels.sort}>
           {(control) => (
@@ -178,25 +258,45 @@ export function BoardComments({
                   maxDepth={config.maxCommentDepth}
                   commentMaxLength={config.commentMaxLength}
                   canModerate={config.canModerate}
+                  maxAttachments={maxAttachments}
                   reactionTypes={config.reactionTypes}
                   onReply={
                     commentable
-                      ? async (parentId, body, authorId) => {
-                          await allowed()
-                          return create.mutateAsync({
-                            input: authorId ? { body, parentId, authorId } : { body, parentId },
-                          })
-                        }
+                      ? (parentId, body, authorId, extra) => write(body, parentId, authorId, extra)
                       : undefined
                   }
-                  onEdit={async (id, body) => {
+                  onEdit={async (id, body, extra) => {
                     await allowed()
-                    return update.mutateAsync({ id, body })
+                    const edited = (await update.mutateAsync({
+                      id,
+                      body,
+                      ...(extra?.attachments ? { attachments: extra.attachments } : {}),
+                      ...(guestSecretOf(extra?.guestSecret)
+                        ? { guestSecret: guestSecretOf(extra?.guestSecret) }
+                        : {}),
+                    })) as Comment | undefined
+                    if (edited?.pendingRevision && extra?.guestSecret !== undefined)
+                      setNotice(labels.guestEditPending)
+                    return edited
                   }}
                   onDelete={(id) => {
-                    if (!beforeDelete || beforeDelete()) setDeleting(id)
+                    if (!beforeDelete || beforeDelete()) {
+                      setDeleteDraft(emptyGuestDraft)
+                      setDeleting(id)
+                    }
                   }}
-                  onModerate={(id, status) => moderate.mutate({ id, status })}
+                  onModerate={(id, status) =>
+                    moderate.mutate(
+                      managerSecret ? { id, status, guestSecret: managerSecret } : { id, status },
+                    )
+                  }
+                  onDecideRevision={(id, decision) =>
+                    decide.mutate(
+                      managerSecret
+                        ? { id, decision, guestSecret: managerSecret }
+                        : { id, decision },
+                    )
+                  }
                   onReact={(id, type, active) =>
                     react.mutate({
                       target: { kind: 'comment', postId, commentId: id },
@@ -235,8 +335,13 @@ export function BoardComments({
               variant="danger"
               loading={remove.isPending}
               onClick={() => {
-                if (deleting !== null)
-                  void remove.mutateAsync(deleting).then(
+                if (deleting === null) return
+                const secret = guestDeleting
+                  ? guestSecretOf(deleteDraft.secret || undefined)
+                  : undefined
+                void remove
+                  .mutateAsync(secret ? { id: deleting, guestSecret: secret } : deleting)
+                  .then(
                     () => setDeleting(null),
                     () => setDeleting(null),
                   )
@@ -248,6 +353,19 @@ export function BoardComments({
         }
       >
         <p>{labels.confirmDeleteBody}</p>
+        {guestDeleting && guest?.secretKind === 'PASSWORD' && (
+          <>
+            <p>{labels.guestDeleteSecret}</p>
+            <GuestFields
+              ui={guest}
+              labels={labels}
+              value={deleteDraft}
+              onChange={setDeleteDraft}
+              secretOnly
+              idPrefix="guest-delete"
+            />
+          </>
+        )}
       </Dialog>
     </Card>
   )

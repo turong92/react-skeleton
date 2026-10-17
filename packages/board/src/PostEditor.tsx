@@ -3,12 +3,26 @@ import { useCallback, useId, useState, type FormEvent } from 'react'
 import { AuthorError, AuthorSlot } from './AuthorSlot'
 import { focusAuthorSlot } from './focusAuthorSlot'
 import type { AuthorPicker } from './authorship'
+import { GuestFields } from './GuestFields'
+import {
+  emptyGuestDraft,
+  guestCredentials,
+  guestProblems,
+  type GuestDraft,
+  type GuestUi,
+} from './guestUi'
 import { defaultPostEditorLabels, type PostEditorLabels } from './postEditorLabels'
-import type { BoardConfig } from './types'
+import type { BoardConfig, GuestCredentials } from './types'
 import styles from './PostEditor.module.css'
 
 /** `authorId` 는 선택기에서 고른 값 — 선택기가 없거나 고르지 않았으면 키 자체가 없다 */
-export type PostEditorValues = { title: string; body: string; authorId?: string }
+export type PostEditorValues = {
+  title: string
+  body: string
+  authorId?: string
+  /** 로그인하지 않고 쓸 때(`guest` prop) — 이름 · 비밀 · 캡차 토큰 */
+  guest?: GuestCredentials
+}
 
 export type PostEditorProps = {
   /** 길이 한도 — 서버 설정(`BoardConfig`)의 값 */
@@ -35,6 +49,8 @@ export type PostEditorProps = {
    * (고를 수단이 없는 막다른 길이 된다 — 서버가 400 `BOARD.AUTHOR_REQUIRED` 로 답하니 앱이 선택기를 꽂아야 한다)
    */
   authorRequired?: boolean
+  /** 로그인하지 않고 쓰는 새 글 — 이름 · 비밀번호(· 캡차) 칸이 생기고 제출 값의 `guest` 로 간다. 고치기 폼에는 주지 않는다(비밀은 고치기 요청의 헤더로 따로) */
+  guest?: GuestUi
   labels?: Partial<PostEditorLabels>
 }
 
@@ -50,8 +66,11 @@ export function PostEditor({
   fieldErrors,
   authorPicker,
   authorRequired,
+  guest,
   labels: input,
 }: PostEditorProps) {
+  const [guestDraft, setGuestDraft] = useState<GuestDraft>(emptyGuestDraft)
+  const [guestChecked, setGuestChecked] = useState(false)
   const labels = { ...defaultPostEditorLabels, ...input }
   const [values, setValues] = useState(initial)
   const [problems, setProblems] = useState<Partial<Record<keyof PostEditorValues, string>>>({})
@@ -101,7 +120,11 @@ export function PostEditor({
     setProblems(found)
     setAuthorMissing(found.authorId !== undefined && !authorId)
     setBlockedUnsettled(found.authorId !== undefined && authorId !== undefined)
+    setGuestChecked(true)
+    const guestFailed =
+      guest !== undefined && Object.keys(guestProblems(guestDraft, guest, labels)).length > 0
     const first = Object.keys(found)[0]
+    if (!first && guestFailed) return
     if (first === 'authorId') {
       focusAuthorSlot(form)
       return
@@ -115,6 +138,7 @@ export function PostEditor({
         title: values.title.trim(),
         body: values.body.trim(),
         ...(withAuthor && authorId ? { authorId } : {}),
+        ...(guest ? { guest: guestCredentials(guestDraft, guest) } : {}),
       })
     } catch {
       // 표시는 부모가 `error` · `fieldErrors` 로 한다
@@ -161,6 +185,16 @@ export function PostEditor({
           />
         )}
       </Field>
+      {guest && (
+        <GuestFields
+          ui={guest}
+          labels={labels}
+          value={guestDraft}
+          onChange={setGuestDraft}
+          showErrors={guestChecked}
+          idPrefix="post-guest"
+        />
+      )}
       <div className={styles.actions}>
         {withAuthor && (
           <AuthorSlot

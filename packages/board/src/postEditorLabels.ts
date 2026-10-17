@@ -1,7 +1,8 @@
 import { defaultCommentLabels } from './commentLabels'
+import { defaultGuestLabels, type GuestLabels } from './guestLabels'
 
 /** 글 폼의 글자 — 기본은 영어. 일부만 덮어쓰려면 `labels={{ title: '제목' }}` */
-export type PostEditorLabels = {
+export type PostEditorLabels = GuestLabels & {
   title: string
   body: string
   requiredMark: string
@@ -20,6 +21,7 @@ export type PostEditorLabels = {
 }
 
 export const defaultPostEditorLabels: PostEditorLabels = {
+  ...defaultGuestLabels,
   title: 'Title',
   body: 'Body',
   requiredMark: '*',

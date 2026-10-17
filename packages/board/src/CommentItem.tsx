@@ -2,7 +2,7 @@ import { AuthorName } from './AuthorName'
 import { isOwn } from './authorship'
 import { nameKey, resolveAuthor, showsTag } from './authorDisplay'
 import { formatInstant } from '@skeleton/time'
-import { Button } from '@skeleton/ui'
+import { Badge, Button } from '@skeleton/ui'
 import type { CommentLabels } from './commentLabels'
 import { CommentForm } from './CommentForm'
 import type { CommentNode } from './commentTree'
@@ -32,7 +32,12 @@ export function CommentItem({ node, ctx }: { node: CommentNode; ctx: ThreadConte
   const { comment, children } = node
   const { labels: L } = ctx
   const published = comment.status === 'PUBLISHED'
-  const own = isOwn(comment, ctx.currentUserId)
+  const waiting = comment.status === 'PENDING'
+  const guestOwned = comment.authorGuest === true && ctx.ownGuestIds?.has(comment.id) === true
+  // 서버는 비회원을 모른다(`mine` 은 늘 false) — 이 브라우저가 비회원으로 쓴 댓글은 화면이 자기가 가진 것으로 안다
+  const own = isOwn(comment, ctx.currentUserId) || guestOwned
+  const manage = ctx.canModerate === true || ctx.canManageComments === true
+  const revision = comment.pendingRevision ?? undefined
   const resolved = resolveAuthor(comment, L)
   const author = ctx.renderAuthor ? (
     <strong>
@@ -75,6 +80,7 @@ export function CommentItem({ node, ctx }: { node: CommentNode; ctx: ThreadConte
         <time dateTime={comment.createdAt} className={styles.time}>
           {format(comment.createdAt)}
         </time>
+        {waiting && <Badge tone="warning">{L.pending}</Badge>}
       </div>
 
       {ctx.editing === comment.id ? (
@@ -87,16 +93,53 @@ export function CommentItem({ node, ctx }: { node: CommentNode; ctx: ThreadConte
           maxLength={ctx.commentMaxLength}
           requiredMessage={L.required}
           tooLongMessage={L.tooLong}
+          guestSecretFor={guestOwned ? ctx.guest : undefined}
+          guestLabels={L}
+          attachmentPicker={ctx.attachmentPicker}
+          maxAttachments={ctx.maxAttachments}
+          initialAttachments={comment.attachments ?? []}
           onCancel={() => ctx.setEditing(null)}
-          onSubmit={async (body) => {
-            await ctx.onEdit?.(comment.id, body)
+          onSubmit={async (body, _authorId, extra) => {
+            await (extra ? ctx.onEdit?.(comment.id, body, extra) : ctx.onEdit?.(comment.id, body))
             ctx.setEditing(null)
           }}
         />
       ) : (
-        <p className={published ? styles.body : styles.placeholder}>
-          {published ? comment.body : comment.status === 'DELETED' ? L.deleted : L.hidden}
+        <p className={comment.body !== null ? styles.body : styles.placeholder}>
+          {comment.body !== null
+            ? comment.body
+            : comment.status === 'DELETED'
+              ? L.deleted
+              : L.hidden}
         </p>
+      )}
+      {comment.body !== null && (comment.attachments?.length ?? 0) > 0 && (
+        <ul className={styles.attachments} aria-label={L.attachments}>
+          {comment.attachments?.map((key) => (
+            <li key={key}>{ctx.renderAttachment ? ctx.renderAttachment(key, comment) : key}</li>
+          ))}
+        </ul>
+      )}
+      {waiting && own && <p className={styles.note}>{L.pendingNote}</p>}
+      {revision && (own || manage) && (
+        <div className={styles.revision} data-testid="comment-revision">
+          <p className={styles.note}>{manage ? L.revisionReview : L.revisionWaiting}</p>
+          {manage && (
+            <dl className={styles.compare}>
+              <dt>{L.revisionCurrent}</dt>
+              <dd>{comment.body}</dd>
+              <dt>{L.revisionEdited}</dt>
+              <dd>{revision.body}</dd>
+            </dl>
+          )}
+          {!manage && <p className={styles.body}>{revision.body}</p>}
+          {manage && ctx.onDecideRevision && (
+            <div className={styles.actions}>
+              {action(L.approveEdit, () => ctx.onDecideRevision?.(comment.id, 'APPROVE'))}
+              {action(L.rejectEdit, () => ctx.onDecideRevision?.(comment.id, 'REJECT'), 'danger')}
+            </div>
+          )}
+        </div>
       )}
 
       {published && reactionTypes.length > 0 && (
@@ -117,16 +160,23 @@ export function CommentItem({ node, ctx }: { node: CommentNode; ctx: ThreadConte
           ctx.onReply &&
           comment.depth < ctx.maxDepth &&
           action(L.reply, () => ctx.setReplyingTo(comment.id))}
-        {published && own && ctx.onEdit && action(L.edit, () => ctx.setEditing(comment.id))}
+        {(published || waiting) &&
+          own &&
+          ctx.onEdit &&
+          action(L.edit, () => ctx.setEditing(comment.id))}
         {comment.status !== 'DELETED' &&
           (own || ctx.canModerate) &&
           ctx.onDelete &&
           action(L.delete, () => ctx.onDelete?.(comment.id), 'danger')}
-        {ctx.canModerate &&
+        {manage &&
           ctx.onModerate &&
-          published &&
+          waiting &&
+          action(L.approve, () => ctx.onModerate?.(comment.id, 'PUBLISHED'))}
+        {manage &&
+          ctx.onModerate &&
+          (published || waiting) &&
           action(L.hide, () => ctx.onModerate?.(comment.id, 'HIDDEN'))}
-        {ctx.canModerate &&
+        {manage &&
           ctx.onModerate &&
           comment.status === 'HIDDEN' &&
           action(L.restore, () => ctx.onModerate?.(comment.id, 'PUBLISHED'))}
@@ -147,11 +197,17 @@ export function CommentItem({ node, ctx }: { node: CommentNode; ctx: ThreadConte
           authorUnsettledMessage={L.authorUnsettled}
           threadAuthorId={ctx.threadAuthorId}
           threadLoading={ctx.threadLoading}
+          guest={ctx.guest}
+          guestLabels={L}
+          attachmentPicker={ctx.attachmentPicker}
+          maxAttachments={ctx.maxAttachments}
           onCancel={() => ctx.setReplyingTo(null)}
-          onSubmit={async (body, authorId) => {
-            await (authorId
-              ? ctx.onReply?.(comment.id, body, authorId)
-              : ctx.onReply?.(comment.id, body))
+          onSubmit={async (body, authorId, extra) => {
+            await (extra
+              ? ctx.onReply?.(comment.id, body, authorId, extra)
+              : authorId
+                ? ctx.onReply?.(comment.id, body, authorId)
+                : ctx.onReply?.(comment.id, body))
             ctx.expand(comment.id)
             ctx.setReplyingTo(null)
           }}

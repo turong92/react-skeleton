@@ -1,0 +1,10 @@
+.fields {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.error {
+  margin: var(--space-xs) 0 0;
+  color: var(--red);
+  font-size: var(--font-size-caption);
+}

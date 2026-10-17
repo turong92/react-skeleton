@@ -42,3 +42,43 @@
   border-left: 2px solid var(--border);
   list-style: none;
 }
+
+.attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-caption);
+}
+
+.revision {
+  display: grid;
+  gap: var(--space-xs);
+  padding: var(--space-sm);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.compare {
+  display: grid;
+  gap: var(--space-xs);
+  margin: 0;
+}
+
+.compare dt {
+  color: var(--text-muted);
+  font-size: var(--font-size-caption);
+}
+
+.compare dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}

@@ -33,6 +33,8 @@ function Demo({
   /** 첫 목록 요청을 서버 오류로 실패시킨다(첫 불러오기 실패) */
   failFirstList?: boolean
 } & Partial<ComponentProps<typeof BoardComments>>) {
+  /** 이 브라우저가 비회원으로 쓴 댓글 — 앱은 `useOwnGuestIds` 로 저장한다 */
+  const [ownGuestIds, setOwnGuestIds] = useState<ReadonlySet<number>>(new Set())
   const [{ api, board }] = useState(() => {
     const made = createFakeBoard(fake)
     setup?.(made)
@@ -65,6 +67,8 @@ function Demo({
         config={board.config}
         currentUserId={fake?.me ?? 'me'}
         formatTime={() => '2026-01-01'}
+        ownGuestIds={ownGuestIds}
+        onGuestWritten={(c) => setOwnGuestIds((ids) => new Set(ids).add(c.id))}
         {...rest}
       />
     </WithQuery>
@@ -748,5 +752,67 @@ export const NarrowColumnWithLongProfileNamesDoesNotScrollSideways: Story = {
     await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
       document.documentElement.clientWidth,
     )
+  },
+}
+
+const guestUi = { secretKind: 'PASSWORD', nameMaxLength: 20 } as const
+
+export const GuestWritesACommentThatWaitsForApproval: Story = {
+  args: {
+    fake: { anonymous: true, guestWrite: 'ALL', commentApproval: 'GUESTS', guestEnabled: true },
+    guest: guestUi,
+  },
+  play: async ({ canvas, userEvent }) => {
+    await canvas.findByText('Spaces, always.')
+    // 비어 있으면 이름 · 비밀번호를 먼저 묻는다
+    await userEvent.type(
+      canvas.getByRole('textbox', { name: 'Write a comment' }),
+      'Hello from a visitor',
+    )
+    await userEvent.click(canvas.getByRole('button', { name: 'Post comment' }))
+    await expect(await canvas.findByText('Enter a name.')).toBeVisible()
+    await userEvent.type(canvas.getByRole('textbox', { name: 'Your name' }), 'Visitor')
+    await userEvent.type(canvas.getByLabelText('Password'), 'pw-1234')
+    await userEvent.click(canvas.getByRole('button', { name: 'Post comment' }))
+    // 승인 대기: 안내와 방금 쓴 글이 이 자리에 보이고, 공개 스레드에는 자리가 없다
+    await expect(
+      await canvas.findByText('Thanks. It will show up once it is approved.'),
+    ).toBeVisible()
+    await expect(canvas.getByText('Hello from a visitor')).toBeVisible()
+    await expect(canvas.getAllByText('Waiting for approval').length).toBeGreaterThan(0)
+  },
+}
+
+export const ManagerApprovesAWaitingComment: Story = {
+  args: {
+    fake: { canModerate: true, commentApproval: 'GUESTS' },
+    setup: (board) => {
+      board.newComment(3, 'Waiting for a manager', null, 'guest:9', { status: 'PENDING' })
+    },
+  },
+  play: async ({ canvas, userEvent }) => {
+    await expect(await canvas.findByText('Waiting for a manager')).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: /^Approve:/ }))
+    await waitFor(() => expect(canvas.queryByRole('button', { name: /^Approve:/ })).toBeNull())
+    await expect(canvas.getByText('Waiting for a manager')).toBeVisible()
+  },
+}
+
+export const EditOfAnApprovedCommentWaitsAndShowsTheOldText: Story = {
+  args: {
+    fake: { commentApproval: 'ALL' },
+    setup: (board) => {
+      board.newComment(3, 'My own words', null, 'me')
+    },
+  },
+  play: async ({ canvas, userEvent }) => {
+    await canvas.findByText('My own words')
+    await userEvent.click(canvas.getByRole('button', { name: 'Edit: Me' }))
+    const box = canvas.getByRole('textbox', { name: 'Edit comment' })
+    await userEvent.clear(box)
+    await userEvent.type(box, 'My edited words')
+    await userEvent.click(canvas.getByRole('button', { name: 'Save' }))
+    await expect(await canvas.findByTestId('comment-revision')).toBeVisible()
+    await expect(canvas.getByText(/waiting for approval/)).toBeVisible()
   },
 }

@@ -44,6 +44,11 @@ export function AuthorName({
       )}
       <bdi className={styles.name}>{resolved.name}</bdi>
       {showsTag(tag, collides, resolved.tag) && <span className={styles.tag}>#{resolved.tag}</span>}
+      {author.authorGuest === true && (
+        <span className={styles.guest}>
+          {labels?.authorGuest ?? defaultAuthorLabels.authorGuest}
+        </span>
+      )}
     </span>
   )
 }

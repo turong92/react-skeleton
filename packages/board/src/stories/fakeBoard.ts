@@ -1,6 +1,6 @@
 import { ErrorCodes } from '@skeleton/api-client'
 import type { BoardApi } from '../boardApi'
-import type { Board, Comment, CommentWithReplies, PostDetail } from '../types'
+import type { Board, Comment, CommentWithReplies, PostDetail, PostSummary } from '../types'
 import { fail, pageOf, total, withDelay } from './fakeBoardSupport'
 import { seedDemo } from './fakeBoardSeed'
 import { createStore, type FakeBoardOptions } from './fakeBoardStore'
@@ -26,22 +26,61 @@ export function createFakeBoard(options: FakeBoardOptions = {}) {
     findPost,
     findComment,
     view,
+    settings,
+    revisions,
+    secrets,
+    canManage,
+    needsApproval,
+    newGuestAuthor,
+    proves,
+    need,
+    sees,
   } = store
   const { guard, needModerator, react, newPost, newComment } = store
   const slow = withDelay(options.delayMs ?? 0)
   const page = <T>(all: T[], pageNo?: number, size?: number) => pageOf(all, stamp(), pageNo, size)
-  const postView = (post: PostDetail): PostDetail => ({ ...post, mine: owns(post.authorId) })
+  /** 글 응답 — 대기 중인 고친 내용은 쓴 사람 · 운영자에게만 */
+  const postView = (post: PostDetail): PostDetail => ({
+    ...post,
+    mine: owns(post.authorId),
+    canManageComments: canManage(post),
+    pendingRevision:
+      revisions.get(post.id) && (canModerate || owns(post.authorId))
+        ? revisions.get(post.id)!
+        : null,
+  })
+  /** 목록 줄에는 `canManageComments` · `pendingRevision` 이 없다(고친 글 목록만 판을 싣는다) */
+  const summaryView = (post: PostDetail, withRevision = false): PostSummary => {
+    const row: Record<string, unknown> = { ...postView(post) }
+    for (const key of ['body', 'attachments', 'canManageComments', 'commentApproval'])
+      delete row[key]
+    row.pendingRevision = withRevision ? (revisions.get(post.id) ?? null) : undefined
+    return row as PostSummary
+  }
   const setCommentStatus = (id: number, status: Comment['status']) => {
     const row = findComment(id)
     row.status = status
+    if (status !== 'PUBLISHED') revisions.delete(id)
     return view(row)
+  }
+  const attachmentsOk = (keys: string[] | undefined) =>
+    guard((keys?.length ?? 0) <= config.commentMaxAttachments!)
+  /** 비회원 글 주인이거나 관리하는 쪽이어야 한다 — 아니면 403 (틀린 비밀 · 헤더 없음도 같다) */
+  const managing = (postId: number, guestSecret?: string) => {
+    need(canModerate || settings.ownerModeratesComments)
+    const post = findPost(postId)
+    need(
+      canManage(post) ||
+        (settings.ownerModeratesComments && proves(post.id, post.authorId, guestSecret)),
+    )
+    return post
   }
 
   const api: BoardApi = {
     getConfig: slow(async () => config),
     listBoards: slow(
       async (): Promise<Board[]> => [
-        { code: 'free', name: 'Free board', description: null, postCount: posts.size },
+        { code: 'free', name: 'Free board', description: null, postCount: posts.size, settings },
       ],
     ),
     getBoard: slow(async (code) => ({
@@ -49,13 +88,35 @@ export function createFakeBoard(options: FakeBoardOptions = {}) {
       name: 'Free board',
       description: null,
       postCount: posts.size,
+      settings,
     })),
     createBoard: slow(async (input) => ({
       ...input,
       description: input.description ?? null,
       postCount: 0,
     })),
+    updateBoard: slow(async (code, patch) => {
+      needModerator()
+      return {
+        code,
+        name: patch.name ?? 'Free board',
+        description: patch.description ?? null,
+        postCount: posts.size,
+        settings: { ...settings, ...patch.settings },
+      }
+    }),
     listPosts: slow(async (_code, params = {}) => {
+      if (params.revision === 'pending') {
+        needModerator()
+        const rows = [...posts.values()].filter(
+          (p) => revisions.has(p.id) && p.status === 'PUBLISHED',
+        )
+        return page(
+          rows.map((r) => summaryView(r, true)),
+          params.page,
+          params.size,
+        )
+      }
       const status = canModerate ? (params.status ?? 'PUBLISHED') : 'PUBLISHED'
       const q = params.q?.toLowerCase() ?? ''
       const key = (p: PostDetail) => {
@@ -67,14 +128,14 @@ export function createFakeBoard(options: FakeBoardOptions = {}) {
         return seqOf(p.id)
       }
       const rows = [...posts.values()]
-        .filter((p) => p.status === status)
+        .filter((p) => (params.mine ? owns(p.authorId) : p.status === status))
         .filter((p) => !q || `${p.title} ${p.body}`.toLowerCase().includes(q))
         .sort(
           (a, b) =>
             Number(b.pinned) - Number(a.pinned) || key(b) - key(a) || seqOf(b.id) - seqOf(a.id),
         )
       return page(
-        rows.map((r) => postView(r)),
+        rows.map((r) => summaryView(r)),
         params.page,
         params.size,
       )
@@ -89,40 +150,87 @@ export function createFakeBoard(options: FakeBoardOptions = {}) {
     createPost: slow(async (_code, input) => {
       guard(input.title.trim() !== '' && input.title.length <= config.titleMaxLength)
       guard(input.body.trim() !== '' && input.body.length <= config.bodyMaxLength)
-      return postView(
-        newPost(input.title.trim(), input.body, authorOf(input.authorId), {
-          status: input.status ?? 'PUBLISHED',
-        }),
-      )
+      const guest = input.guest
+      const author = guest
+        ? newGuestAuthor(guest, settings.guestWrite === 'ALL')
+        : options.anonymous
+          ? fail('COMMON.UNAUTHORIZED', 401, 'Unauthorized')
+          : authorOf(input.authorId)
+      const status =
+        (input.status ?? 'PUBLISHED') === 'PUBLISHED' && needsApproval('post', guest !== undefined)
+          ? 'PENDING'
+          : (input.status ?? 'PUBLISHED')
+      const row = newPost(input.title.trim(), input.body, author, { status })
+      if (guest) secrets.set(row.id, guest.secret)
+      return postView(row)
     }),
-    updatePost: slow(async (_code, id, patch) => {
+    updatePost: slow(async (_code, id, patch, guestOptions) => {
       const row = findPost(id)
-      if (!owns(row.authorId) && !canModerate) fail(ErrorCodes.BOARD_FORBIDDEN, 403, 'Forbidden')
+      need(canModerate || owns(row.authorId) || proves(id, row.authorId, guestOptions?.guestSecret))
       if (patch.title !== undefined)
         guard(patch.title.trim() !== '' && patch.title.length <= config.titleMaxLength)
       if (patch.body !== undefined)
         guard(patch.body.trim() !== '' && patch.body.length <= config.bodyMaxLength)
+      const content =
+        patch.title !== undefined || patch.body !== undefined || patch.attachments !== undefined
+      const guestWriter = row.authorId.startsWith('guest:')
+      // 승인 대상 작성자가 공개된 글을 고치면 공개본은 그대로 두고 고친 내용만 대기한다
+      if (content && row.status === 'PUBLISHED' && needsApproval('post', guestWriter)) {
+        const previous = revisions.get(id)
+        revisions.set(id, {
+          title: patch.title?.trim() ?? previous?.title ?? row.title,
+          body: patch.body ?? previous?.body ?? row.body,
+          attachments: patch.attachments ?? previous?.attachments ?? row.attachments,
+          submittedAt: stamp(),
+        })
+        // 비회원은 다시 읽을 때 판을 보지 못한다 — 이 응답으로만 본다
+        return { ...postView(row), pendingRevision: revisions.get(id)! }
+      }
+      if (content) revisions.delete(id)
+      const { status, ...rest } = patch
       Object.assign(row, {
-        ...patch,
+        ...rest,
         excerpt: (patch.body ?? row.body).slice(0, 80),
         updatedAt: stamp(),
       })
+      if (status !== undefined && !(row.status === 'PENDING' && status === 'PUBLISHED'))
+        row.status = status
       return postView(row)
     }),
-    removePost: slow(async (_code, id) => {
+    removePost: slow(async (_code, id, guestOptions) => {
       const row = findPost(id)
-      if (!owns(row.authorId) && !canModerate) fail(ErrorCodes.BOARD_FORBIDDEN, 403, 'Forbidden')
+      need(canModerate || owns(row.authorId) || proves(id, row.authorId, guestOptions?.guestSecret))
       row.status = 'DELETED'
+      revisions.delete(id)
     }),
     moderatePost: slow(async (_code, id, moderation) => {
       needModerator()
       const row = findPost(id)
       if (moderation.pinned !== undefined) row.pinned = moderation.pinned
       row.status = moderation.status ?? row.status
+      if (row.status !== 'PUBLISHED') revisions.delete(id)
+      return postView(row)
+    }),
+    decidePostRevision: slow(async (_code, id, decision) => {
+      needModerator()
+      const row = findPost(id)
+      const revision =
+        revisions.get(id) ?? fail(ErrorCodes.BOARD_POST_NOT_FOUND, 404, 'No pending revision')
+      if (decision === 'APPROVE')
+        Object.assign(row, {
+          title: revision.title ?? row.title,
+          body: revision.body,
+          excerpt: revision.body.slice(0, 80),
+          attachments: revision.attachments,
+          attachmentCount: revision.attachments.length,
+          updatedAt: stamp(),
+        })
+      revisions.delete(id)
       return postView(row)
     }),
     listComments: slow(async (_code, postId, params = {}) => {
-      const all = [...comments.values()].filter((c) => c.postId === postId)
+      const post = findPost(postId)
+      const all = [...comments.values()].filter((c) => c.postId === postId && sees(c, post))
       const key = (c: Comment) =>
         params.sort === 'reactions' ? total(c.reactionCounts) : seqOf(c.id)
       const roots = all
@@ -131,38 +239,110 @@ export function createFakeBoard(options: FakeBoardOptions = {}) {
           params.sort === 'oldest' || params.sort === undefined ? key(a) - key(b) : key(b) - key(a),
         )
       const threads: CommentWithReplies[] = roots.map((root) => ({
-        ...view(root),
+        ...view(root, post),
         replies: all
           .filter((c) => c.rootId === root.id && c.id !== root.id)
           .sort((a, b) => seqOf(a.id) - seqOf(b.id))
-          .map(view),
+          .map((c) => view(c, post)),
       }))
       return page(threads, params.page, params.size)
+    }),
+    listPendingComments: slow(async (_code, postId, params = {}, guestOptions) => {
+      const post = managing(postId, guestOptions?.guestSecret)
+      const rows = [...comments.values()].filter(
+        (c) => c.postId === postId && c.status === 'PENDING',
+      )
+      return page(
+        rows.sort((a, b) => seqOf(a.id) - seqOf(b.id)).map((c) => view(c, post)),
+        params.page,
+        params.size,
+      )
+    }),
+    listCommentRevisions: slow(async (_code, postId, params = {}, guestOptions) => {
+      const post = managing(postId, guestOptions?.guestSecret)
+      const rows = [...comments.values()].filter((c) => c.postId === postId && revisions.has(c.id))
+      return page(
+        rows.sort((a, b) => seqOf(a.id) - seqOf(b.id)).map((c) => view(c, post)),
+        params.page,
+        params.size,
+      )
     }),
     createComment: slow(async (_code, postId, input) => {
       const post = findPost(postId)
       if (post.status !== 'PUBLISHED')
         fail(ErrorCodes.BOARD_POST_NOT_COMMENTABLE, 409, 'Not commentable')
       guard(input.body.trim() !== '' && input.body.length <= config.commentMaxLength)
-      return view(
-        newComment(postId, input.body.trim(), input.parentId ?? null, authorOf(input.authorId)),
-      )
+      attachmentsOk(input.attachments)
+      const guest = input.guest
+      const author = guest
+        ? newGuestAuthor(guest, settings.guestWrite !== 'NONE')
+        : options.anonymous
+          ? fail('COMMON.UNAUTHORIZED', 401, 'Unauthorized')
+          : authorOf(input.authorId)
+      const status = needsApproval('comment', guest !== undefined, post) ? 'PENDING' : 'PUBLISHED'
+      const row = newComment(postId, input.body.trim(), input.parentId ?? null, author, {
+        status,
+        attachments: input.attachments ?? [],
+      })
+      if (guest) secrets.set(row.id, guest.secret)
+      return view(row, post)
     }),
-    updateComment: slow(async (_code, _postId, id, input) => {
+    updateComment: slow(async (_code, postId, id, input, guestOptions) => {
+      const post = findPost(postId)
       const row = findComment(id)
-      if (!owns(row.authorId)) fail(ErrorCodes.BOARD_FORBIDDEN, 403, 'Forbidden')
-      guard(input.body.trim() !== '' && input.body.length <= config.commentMaxLength)
-      Object.assign(row, { body: input.body.trim(), updatedAt: stamp() })
-      return view(row)
+      need(owns(row.authorId) || proves(id, row.authorId, guestOptions?.guestSecret))
+      if (input.body !== undefined)
+        guard(input.body.trim() !== '' && input.body.length <= config.commentMaxLength)
+      attachmentsOk(input.attachments)
+      if (
+        row.status === 'PUBLISHED' &&
+        needsApproval('comment', row.authorId.startsWith('guest:'), post)
+      ) {
+        const previous = revisions.get(id)
+        revisions.set(id, {
+          body: input.body?.trim() ?? previous?.body ?? row.body ?? '',
+          attachments: input.attachments ?? previous?.attachments ?? row.attachments ?? [],
+          submittedAt: stamp(),
+        })
+        return { ...view(row, post), pendingRevision: revisions.get(id)! }
+      }
+      revisions.delete(id)
+      Object.assign(row, {
+        ...(input.body === undefined ? {} : { body: input.body.trim() }),
+        ...(input.attachments === undefined ? {} : { attachments: input.attachments }),
+        updatedAt: stamp(),
+      })
+      return view(row, post)
     }),
-    removeComment: slow(async (_code, _postId, id) => {
+    removeComment: slow(async (_code, _postId, id, guestOptions) => {
       const row = findComment(id)
-      if (!owns(row.authorId) && !canModerate) fail(ErrorCodes.BOARD_FORBIDDEN, 403, 'Forbidden')
+      need(canModerate || owns(row.authorId) || proves(id, row.authorId, guestOptions?.guestSecret))
       row.status = 'DELETED'
+      revisions.delete(id)
     }),
-    moderateComment: slow(async (_code, _postId, id, moderation) => {
-      needModerator()
-      return setCommentStatus(id, moderation.status)
+    moderateComment: slow(async (_code, postId, id, moderation, guestOptions) => {
+      const post = managing(postId, guestOptions?.guestSecret)
+      const row = findComment(id)
+      if (!canModerate) need(moderation.status === 'PUBLISHED' || moderation.status === 'HIDDEN')
+      const was = row.status
+      const result = setCommentStatus(id, moderation.status)
+      if (was === 'PENDING' && moderation.status === 'PUBLISHED') post.commentCount += 1
+      if (was === 'PUBLISHED' && moderation.status !== 'PUBLISHED') post.commentCount -= 1
+      return result
+    }),
+    decideCommentRevision: slow(async (_code, postId, id, decision, guestOptions) => {
+      const post = managing(postId, guestOptions?.guestSecret)
+      const row = findComment(id)
+      const revision =
+        revisions.get(id) ?? fail(ErrorCodes.BOARD_COMMENT_NOT_FOUND, 404, 'No pending revision')
+      if (decision === 'APPROVE')
+        Object.assign(row, {
+          body: revision.body,
+          attachments: revision.attachments,
+          updatedAt: stamp(),
+        })
+      revisions.delete(id)
+      return view(row, post)
     }),
     putReaction: slow(async (_code, target, type) => react(target, type, true)),
     removeReaction: slow(async (_code, target, type) => react(target, type, false)),

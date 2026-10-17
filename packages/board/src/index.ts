@@ -1,11 +1,22 @@
 export type {
+  ApprovalMode,
   Board,
   BoardConfig,
   BoardId,
   BoardInput,
+  BoardPatch,
+  BoardSettings,
   Comment,
   CommentInput,
   CommentListParams,
+  CommentPatch,
+  CommentQueueParams,
+  GuestCredentials,
+  GuestOptions,
+  GuestSecretKind,
+  GuestWrite,
+  PendingRevision,
+  RevisionDecision,
   CommentSort,
   CommentStatus,
   CommentWithReplies,
@@ -23,20 +34,25 @@ export type {
   ReactionType,
 } from './types'
 export { COMMENT_SORTS, POST_SORTS, REACTION_MODES } from './types'
-export { createBoardApi } from './boardApi'
+export { createBoardApi, GUEST_SECRET_HEADER } from './boardApi'
 export type { BoardApi, BoardApiOptions, CreateOptions } from './boardApi'
 export {
   boardKeys,
   boardQuery,
   boardsQuery,
   commentListQuery,
+  commentRevisionsQuery,
   configQuery,
+  pendingCommentsQuery,
   postListQuery,
   postQuery,
 } from './queries'
 export {
   createCommentMutation,
   createPostMutation,
+  decideCommentRevisionMutation,
+  decidePostRevisionMutation,
+  updateBoardMutation,
   moderateCommentMutation,
   moderatePostMutation,
   removeCommentMutation,
@@ -44,6 +60,7 @@ export {
   updateCommentMutation,
   updatePostMutation,
 } from './mutations'
+export type { RemoveVariables } from './mutations'
 export { reactionMutationOptions } from './reactionMutation'
 export type { ReactionVariables } from './reactionMutation'
 export { applyReaction, reactionCount, removeReaction } from './reactions'
@@ -55,7 +72,12 @@ export {
   useBoards,
   useComments,
   useCreateComment,
+  useCommentRevisions,
   useCreatePost,
+  useDecideCommentRevision,
+  useDecidePostRevision,
+  usePendingComments,
+  useUpdateBoard,
   useModerateComment,
   useModeratePost,
   usePost,

@@ -3,6 +3,9 @@ import type { BoardApi } from './boardApi'
 import {
   createCommentMutation,
   createPostMutation,
+  decideCommentRevisionMutation,
+  decidePostRevisionMutation,
+  updateBoardMutation,
   moderateCommentMutation,
   moderatePostMutation,
   removeCommentMutation,
@@ -14,12 +17,21 @@ import {
   boardQuery,
   boardsQuery,
   commentListQuery,
+  commentRevisionsQuery,
   configQuery,
+  pendingCommentsQuery,
   postListQuery,
   postQuery,
 } from './queries'
 import { reactionMutationOptions } from './reactionMutation'
-import type { BoardId, CommentListParams, PostListParams, ReactionMode } from './types'
+import type {
+  BoardId,
+  CommentListParams,
+  CommentQueueParams,
+  GuestOptions,
+  PostListParams,
+  ReactionMode,
+} from './types'
 
 /*
  * 얇은 훅 모음 — 읽기는 쿼리 정의(queries.ts), 쓰기는 옵션 함수(mutations.ts · reactionMutation.ts)를 그대로 쓴다.
@@ -61,6 +73,48 @@ export function useComments(
     ...commentListQuery(api, code, postId, params),
     placeholderData: keepPreviousData,
   })
+}
+
+/** 승인 대기 댓글 — 관리하는 쪽(`PostDetail.canManageComments`)만 켠다. 비회원 글 주인은 `guestSecret` */
+export function usePendingComments(
+  api: BoardApi,
+  code: string,
+  postId: BoardId,
+  params: CommentQueueParams = {},
+  options: GuestOptions & { enabled?: boolean } = {},
+) {
+  const { enabled = true, ...guest } = options
+  return useQuery({ ...pendingCommentsQuery(api, code, postId, params, guest), enabled })
+}
+
+/** 고친 댓글(공개본 + `pendingRevision`) — 관리하는 쪽만 */
+export function useCommentRevisions(
+  api: BoardApi,
+  code: string,
+  postId: BoardId,
+  params: CommentQueueParams = {},
+  options: GuestOptions & { enabled?: boolean } = {},
+) {
+  const { enabled = true, ...guest } = options
+  return useQuery({ ...commentRevisionsQuery(api, code, postId, params, guest), enabled })
+}
+
+/** 운영자의 게시판 이름 · 설명 · 설정 고치기 */
+export function useUpdateBoard(api: BoardApi, code: string) {
+  const client = useQueryClient()
+  return useMutation(updateBoardMutation(client, api, code))
+}
+
+/** 운영자의 고친 글 승인 · 거절 — `mutate('APPROVE' | 'REJECT')` */
+export function useDecidePostRevision(api: BoardApi, code: string, id: BoardId) {
+  const client = useQueryClient()
+  return useMutation(decidePostRevisionMutation(client, api, code, id))
+}
+
+/** 고친 댓글 승인 · 거절 — `mutate({ id, decision, guestSecret? })` */
+export function useDecideCommentRevision(api: BoardApi, code: string, postId: BoardId) {
+  const client = useQueryClient()
+  return useMutation(decideCommentRevisionMutation(client, api, code, postId))
 }
 
 export function useCreatePost(api: BoardApi, code: string) {

@@ -1,7 +1,11 @@
 import { ErrorCodes } from '@skeleton/api-client'
 import type {
+  ApprovalMode,
   BoardConfig,
   Comment,
+  GuestSecretKind,
+  GuestWrite,
+  PendingRevision,
   PostDetail,
   ReactionMode,
   ReactionState,
@@ -36,6 +40,19 @@ export type FakeBoardOptions = {
   owned?: string[]
   /** 계정 id → 꼬리표(4자리, 꼬리표 방식 서버). 없으면 null */
   tags?: Record<string, string>
+  /** true 면 로그인하지 않은 호출자 — 쓰기는 `guest` 로만, `mine` 은 늘 false(서버는 비회원을 모른다) */
+  anonymous?: boolean
+  /** 게시판 설정 — 기본은 모두 꺼짐(NONE · OFF). `guestWrite` 가 NONE 이면 `guest.enabled` 여도 익명 쓰기는 401 */
+  guestWrite?: GuestWrite
+  postApproval?: ApprovalMode
+  commentApproval?: ApprovalMode
+  ownerModerates?: boolean
+  /** `config.guestEnabled` (기본: `guestWrite` 가 NONE 이 아니면 true) */
+  guestEnabled?: boolean
+  guestSecret?: GuestSecretKind
+  captchaRequired?: boolean
+  /** 댓글 첨부 상한(0 = 꺼짐) */
+  commentMaxAttachments?: number
 }
 
 const DEFAULT_NICKNAMES: Record<string, string | null> = {
@@ -51,15 +68,26 @@ const DEFAULT_NICKNAMES: Record<string, string | null> = {
 export function createStore(options: FakeBoardOptions) {
   const { mode = 'SINGLE', me = 'me', canModerate = false } = options
   const nicknames = options.nicknames ?? DEFAULT_NICKNAMES
-  const ownedIds = new Set([me, ...(options.owned ?? [])])
+  const guestWrite = options.guestWrite ?? 'NONE'
+  const settings = {
+    guestWrite,
+    postApproval: options.postApproval ?? 'OFF',
+    commentApproval: options.commentApproval ?? 'OFF',
+    ownerModeratesComments: options.ownerModerates ?? false,
+  } as const
+  /** 비회원 행의 이름 · 비밀 — 비밀은 응답에 나가지 않는다 */
+  const guestNames = new Map<string, string>()
+  const secrets = new Map<number, string>()
+  const ownedIds = new Set(options.anonymous ? [] : [me, ...(options.owned ?? [])])
   /** 서버가 `mine` 을 싣는 규칙 — 호출자가 쓸 수 있는 작성자 id 인가 */
   const owns = (authorId: string) => ownedIds.has(authorId)
   /** 서버가 글 · 댓글 응답에 붙이는 작성자 필드 */
   const authorFields = (id: string) => ({
     authorId: id,
-    authorName: id.startsWith('deleted:') ? null : (nicknames[id] ?? null),
+    authorName: id.startsWith('deleted:') ? null : (guestNames.get(id) ?? nicknames[id] ?? null),
     authorDeleted: id.startsWith('deleted:'),
     authorTag: options.tags?.[id] ?? null,
+    authorGuest: id.startsWith('guest:'),
   })
   const types = options.types ?? ['LIKE', 'DISLIKE']
   const config: BoardConfig = {
@@ -72,9 +100,16 @@ export function createStore(options: FakeBoardOptions) {
     maxPageSize: 50,
     canModerate,
     ...(options.authorRequired === undefined ? {} : { authorRequired: options.authorRequired }),
+    guestEnabled: options.guestEnabled ?? guestWrite !== 'NONE',
+    guestSecret: options.guestSecret ?? 'PASSWORD',
+    guestNameMaxLength: 20,
+    captchaRequired: options.captchaRequired ?? false,
+    commentMaxAttachments: options.commentMaxAttachments ?? 0,
   }
   const posts = new Map<number, PostDetail>()
   const comments = new Map<number, Comment>()
+  /** 대기 중인 고친 내용 — 행마다 하나. 응답에는 보는 사람에게 허락될 때만 실린다 */
+  const revisions = new Map<number, PendingRevision>()
   const controls = { failReactions: options.failReactions ?? false }
   const order = new Map<number, number>()
   let seq = 0
@@ -113,7 +148,13 @@ export function createStore(options: FakeBoardOptions) {
     return row
   }
 
-  function newComment(postId: number, body: string, parentId: number | null, author = me) {
+  function newComment(
+    postId: number,
+    body: string,
+    parentId: number | null,
+    author = me,
+    over: Partial<Comment> = {},
+  ) {
     const parent = parentId === null ? null : findComment(parentId)
     const depth = parent ? parent.depth + 1 : 0
     if (depth > config.maxCommentDepth) fail(ErrorCodes.BOARD_COMMENT_TOO_DEEP, 422, 'Too deep')
@@ -132,26 +173,68 @@ export function createStore(options: FakeBoardOptions) {
       replyCount: 0,
       createdAt: stamp(),
       updatedAt: stamp(),
+      attachments: [],
+      ...over,
     }
     comments.set(row.id, row)
     order.set(row.id, seq)
-    findPost(postId).commentCount += 1
+    if (row.status === 'PUBLISHED') findPost(postId).commentCount += 1
     return row
   }
 
-  /** 응답 모양의 댓글 — 본문은 `PUBLISHED` 가 아니면 null, `replyCount` 는 모든 자손 */
-  const view = (row: Comment): Comment => {
+  /** 이 글의 댓글을 승인 · 가릴 수 있는 호출자 — 운영자, 댓글 관리가 켜진 게시판의 글 주인 */
+  const canManage = (post: PostDetail) =>
+    canModerate || (settings.ownerModeratesComments && owns(post.authorId))
+  /** 서버의 `needsApproval` — 운영자는 면제, 댓글을 관리하는 글 주인은 자기 글의 댓글에 대해 면제 */
+  const needsApproval = (target: 'post' | 'comment', guest: boolean, post?: PostDetail) => {
+    if (canModerate) return false
+    const mode = target === 'post' ? settings.postApproval : settings.commentApproval
+    if (mode === 'OFF') return false
+    if (mode === 'GUESTS') return guest
+    return !(target === 'comment' && post && canManage(post))
+  }
+  /** 비회원 만들기 규칙(서버와 같은 순서·코드) — 이름 · 비밀 · 캡차 검사 뒤 새 행 id 의 작성자 값을 돌려준다 */
+  const newGuestAuthor = (
+    guest: { name?: string; secret: string; captchaToken?: string },
+    allowed: boolean,
+  ) => {
+    if (!options.anonymous)
+      fail(ErrorCodes.BOARD_CONTENT_INVALID, 400, 'Guest name is for signed-out writers')
+    if (!allowed || !config.guestEnabled) fail('COMMON.UNAUTHORIZED', 401, 'Unauthorized')
+    if (!guest.name?.trim() || guest.name.trim().length > 20)
+      fail(ErrorCodes.BOARD_CONTENT_INVALID, 400, 'Invalid guest name')
+    if (guest.secret.length < 4) fail(ErrorCodes.BOARD_CONTENT_INVALID, 400, 'Invalid guest secret')
+    if (config.captchaRequired && !guest.captchaToken)
+      fail(ErrorCodes.BOARD_CAPTCHA_FAILED, 400, 'Captcha failed')
+    const id = `guest:${seq + 1}`
+    guestNames.set(id, guest.name!.trim())
+    return id
+  }
+  /** 비회원 행의 비밀 확인 — 틀린 비밀 · 회원 행 · 헤더 없음은 모두 같은 403 */
+  const proves = (id: number, authorId: string, secret?: string) =>
+    authorId.startsWith('guest:') && secret !== undefined && secrets.get(id) === secret
+  const need = (ok: boolean) => ok || fail(ErrorCodes.BOARD_FORBIDDEN, 403, 'Forbidden')
+
+  /** 응답 모양의 댓글 — 본문은 `PUBLISHED`(와 보는 사람에게 남은 `PENDING`)가 아니면 null, `replyCount` 는 보이는 자손 */
+  const view = (row: Comment, post: PostDetail = findPost(row.postId)): Comment => {
     const descendants = (id: number): number =>
       [...comments.values()]
-        .filter((c) => c.parentId === id)
+        .filter((c) => c.parentId === id && sees(c, post))
         .reduce((sum, c) => sum + 1 + descendants(c.id), 0)
+    const shown = row.status === 'PUBLISHED' || row.status === 'PENDING'
+    const revision = revisions.get(row.id)
     return {
       ...row,
       mine: owns(row.authorId),
-      body: row.status === 'PUBLISHED' ? row.body : null,
+      body: shown ? row.body : null,
+      attachments: shown ? (row.attachments ?? []) : [],
+      pendingRevision: revision && (canManage(post) || owns(row.authorId)) ? revision : null,
       replyCount: descendants(row.id),
     }
   }
+  /** 승인 대기 댓글은 관리하는 쪽 · 쓴 회원에게만 자리가 있다 */
+  const sees = (row: Comment, post: PostDetail) =>
+    row.status !== 'PENDING' || canManage(post) || owns(row.authorId)
 
   /** 서버가 반응을 세는 규칙 — `reactions.ts` 와 일부러 따로 썼다(같은 코드면 서로를 검증하지 못한다) */
   function react(target: ReactionTarget, type: string | undefined, add: boolean): ReactionState {
@@ -207,6 +290,15 @@ export function createStore(options: FakeBoardOptions) {
     guard: (valid: boolean) =>
       valid || fail(ErrorCodes.BOARD_CONTENT_INVALID, 400, 'Invalid content'),
     needModerator: () => canModerate || fail(ErrorCodes.BOARD_FORBIDDEN, 403, 'Forbidden'),
+    settings,
+    revisions,
+    secrets,
+    canManage,
+    needsApproval,
+    newGuestAuthor,
+    proves,
+    need,
+    sees,
   }
 }
 export type FakeStore = ReturnType<typeof createStore>

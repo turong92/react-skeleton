@@ -123,6 +123,8 @@ export const ErrorCodes = {
   BOARD_POST_NOT_COMMENTABLE: 'BOARD.POST_NOT_COMMENTABLE',
   BOARD_CODE_TAKEN: 'BOARD.CODE_TAKEN',
   BOARD_RATE_LIMITED: 'BOARD.RATE_LIMITED',
+  // 비회원 만들기에 캡차가 필요한데 토큰이 없거나 틀림(`guest.captcha=REQUIRED`) — 400
+  BOARD_CAPTCHA_FAILED: 'BOARD.CAPTCHA_FAILED',
   // 작성자 프로필을 쓰는 서버(`author-profile` 가 있을 때) — AUTHOR_REQUIRED 400(`authorRequired` 인데 `authorId` 없음), AUTHOR_NOT_ALLOWED 403(남의 · 없는 · 지워진 id 이거나 `authorRequired` 가 아닌데 `authorId` 를 보냄 — 같은 코드 · 같은 문구)
   BOARD_AUTHOR_REQUIRED: 'BOARD.AUTHOR_REQUIRED',
   BOARD_AUTHOR_NOT_ALLOWED: 'BOARD.AUTHOR_NOT_ALLOWED',

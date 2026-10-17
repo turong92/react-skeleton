@@ -3,10 +3,15 @@ import type { MutationOptions, QueryClient } from '@tanstack/react-query'
 import type { BoardApi } from './boardApi'
 import { boardKeys } from './queries'
 import type {
+  Board,
+  BoardPatch,
   BoardId,
   Comment,
   CommentInput,
+  CommentPatch,
   CommentStatus,
+  GuestOptions,
+  RevisionDecision,
   PostDetail,
   PostInput,
   PostModeration,
@@ -39,14 +44,15 @@ export function createPostMutation(
   }
 }
 
+/** 로그인하지 않은 사람은 변수에 `guestSecret` 을 함께 준다(헤더로만 나간다) */
 export function updatePostMutation(
   client: QueryClient,
   api: BoardApi,
   code: string,
   id: BoardId,
-): MutationOptions<PostDetail, Error, PostPatch> {
+): MutationOptions<PostDetail, Error, PostPatch & GuestOptions> {
   return {
-    mutationFn: (patch) => api.updatePost(code, id, patch),
+    mutationFn: ({ guestSecret, ...patch }) => api.updatePost(code, id, patch, { guestSecret }),
     onSuccess: (post) => {
       keepDetail(client, code, post)
       void client.invalidateQueries({ queryKey: boardKeys.postLists(code) })
@@ -70,14 +76,52 @@ export function moderatePostMutation(
   }
 }
 
+/** 운영자의 고친 글 승인 · 거절 */
+export function decidePostRevisionMutation(
+  client: QueryClient,
+  api: BoardApi,
+  code: string,
+  id: BoardId,
+): MutationOptions<PostDetail, Error, RevisionDecision> {
+  return {
+    mutationFn: (decision) => api.decidePostRevision(code, id, decision),
+    onSuccess: (post) => {
+      keepDetail(client, code, post)
+      void client.invalidateQueries({ queryKey: boardKeys.postLists(code) })
+    },
+  }
+}
+
+/** 운영자의 게시판 이름 · 설명 · 설정 고치기 */
+export function updateBoardMutation(
+  client: QueryClient,
+  api: BoardApi,
+  code: string,
+): MutationOptions<Board, Error, BoardPatch> {
+  return {
+    mutationFn: (patch) => api.updateBoard(code, patch),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: boardKeys.boards() })
+    },
+  }
+}
+
+/** 글 id, 또는 비회원이 비밀을 함께 줄 때 `{ id, guestSecret }` */
+export type RemoveVariables = BoardId | ({ id: BoardId } & GuestOptions)
+const asRemove = (v: RemoveVariables) => (typeof v === 'object' ? v : { id: v })
+
 export function removePostMutation(
   client: QueryClient,
   api: BoardApi,
   code: string,
-): MutationOptions<void, Error, BoardId> {
+): MutationOptions<void, Error, RemoveVariables> {
   return {
-    mutationFn: (id) => api.removePost(code, id),
-    onSuccess: (_, id) => {
+    mutationFn: (v) => {
+      const { id, guestSecret } = asRemove(v)
+      return api.removePost(code, id, { guestSecret })
+    },
+    onSuccess: (_, v) => {
+      const { id } = asRemove(v)
       client.removeQueries({ queryKey: boardKeys.post(code, id) })
       void client.invalidateQueries({ queryKey: boardKeys.postLists(code) })
       void client.invalidateQueries({ queryKey: boardKeys.boards() })
@@ -99,20 +143,22 @@ export function createCommentMutation(
   return {
     mutationFn: ({ input, idempotencyKey }) =>
       api.createComment(code, postId, input, { idempotencyKey }),
-    onSuccess: () => {
-      // 댓글 수만 로컬에서 +1 — 상세 · 목록을 다시 가져오면 조회수가 오른다
-      client.setQueryData<PostDetail>(
-        boardKeys.post(code, postId),
-        (post) => post && { ...post, ...bumpComments(post) },
-      )
-      client.setQueriesData<ApiPageResponse<PostSummary>>(
-        { queryKey: boardKeys.postLists(code) },
-        (data) =>
-          data && {
-            ...data,
-            values: data.values.map((post) => (post.id === postId ? bumpComments(post) : post)),
-          },
-      )
+    onSuccess: (created) => {
+      // 댓글 수만 로컬에서 +1 — 상세 · 목록을 다시 가져오면 조회수가 오른다. 승인 대기 댓글은 세지 않는다(서버도 승인 때 센다)
+      if (created.status === 'PUBLISHED') {
+        client.setQueryData<PostDetail>(
+          boardKeys.post(code, postId),
+          (post) => post && { ...post, ...bumpComments(post) },
+        )
+        client.setQueriesData<ApiPageResponse<PostSummary>>(
+          { queryKey: boardKeys.postLists(code) },
+          (data) =>
+            data && {
+              ...data,
+              values: data.values.map((post) => (post.id === postId ? bumpComments(post) : post)),
+            },
+        )
+      }
       void client.invalidateQueries({ queryKey: boardKeys.comments(code, postId) })
     },
   }
@@ -130,14 +176,19 @@ function refetchComments<TVars>(
   }
 }
 
+/** 변수의 `guestSecret` 은 비회원이 자기(글의) 비밀을 증명할 때만 */
 export const updateCommentMutation = (
   client: QueryClient,
   api: BoardApi,
   code: string,
   postId: BoardId,
 ) =>
-  refetchComments(client, code, postId, ({ id, body }: { id: BoardId; body: string }) =>
-    api.updateComment(code, postId, id, { body }),
+  refetchComments(
+    client,
+    code,
+    postId,
+    ({ id, guestSecret, ...patch }: { id: BoardId } & CommentPatch & GuestOptions) =>
+      api.updateComment(code, postId, id, patch, { guestSecret }),
   )
 
 export const removeCommentMutation = (
@@ -145,14 +196,38 @@ export const removeCommentMutation = (
   api: BoardApi,
   code: string,
   postId: BoardId,
-) => refetchComments(client, code, postId, (id: BoardId) => api.removeComment(code, postId, id))
+) =>
+  refetchComments(client, code, postId, (v: RemoveVariables) => {
+    const { id, guestSecret } = asRemove(v)
+    return api.removeComment(code, postId, id, { guestSecret })
+  })
 
+/** 운영자 · 댓글을 관리하는 글 주인의 승인(`PUBLISHED`) · 가리기(`HIDDEN`) · (운영자) 삭제 */
 export const moderateCommentMutation = (
   client: QueryClient,
   api: BoardApi,
   code: string,
   postId: BoardId,
 ) =>
-  refetchComments(client, code, postId, ({ id, status }: { id: BoardId; status: CommentStatus }) =>
-    api.moderateComment(code, postId, id, { status }),
+  refetchComments(
+    client,
+    code,
+    postId,
+    ({ id, status, guestSecret }: { id: BoardId; status: CommentStatus } & GuestOptions) =>
+      api.moderateComment(code, postId, id, { status }, { guestSecret }),
+  )
+
+/** 고친 댓글 승인 · 거절 */
+export const decideCommentRevisionMutation = (
+  client: QueryClient,
+  api: BoardApi,
+  code: string,
+  postId: BoardId,
+) =>
+  refetchComments(
+    client,
+    code,
+    postId,
+    ({ id, decision, guestSecret }: { id: BoardId; decision: RevisionDecision } & GuestOptions) =>
+      api.decideCommentRevision(code, postId, id, decision, { guestSecret }),
   )

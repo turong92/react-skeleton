@@ -35,7 +35,13 @@ const defaultLabels: PostDetailLabels = {
   hide: 'Hide',
   restore: 'Restore',
   pinned: 'Pinned',
-  status: { DRAFT: 'Draft', PUBLISHED: 'Published', HIDDEN: 'Hidden', DELETED: 'Deleted' },
+  status: {
+    DRAFT: 'Draft',
+    PENDING: 'Waiting for approval',
+    PUBLISHED: 'Published',
+    HIDDEN: 'Hidden',
+    DELETED: 'Deleted',
+  },
   views: (count) => `Views: ${count}`,
   attachments: (count) => `Attachments: ${count}`,
 }

@@ -7,7 +7,8 @@ import { dismissConsent, ko, launch } from './helpers'
  * 비회원 · 승인 흐름 — 로그아웃 상태의 방문자가 이름 · 비밀번호로 댓글을 쓰면 승인 대기 → 글 주인이 로그인해 승인 → 공개 →
  * 방문자가 자기 댓글을 고치면 고친 내용은 대기(공개본은 그대로) → 글 주인이 고친 내용을 거절. 그리고 방문자의 새 글은 운영자가 승인한다.
  * 진짜 백엔드(`general` 게시판: 비회원 쓰기 ALL · 비회원 글 · 댓글 승인 GUESTS · 글 주인 댓글 관리) · 진짜 브라우저. 앞 단계의 결과에 기댄다.
- * 비회원은 업로드가 로그인을 요구해 그림을 붙일 수 없다 - 그림 댓글은 회원으로(아래 마지막 단계).
+ * 비회원 그림: 견본은 비회원 업로드를 켠다(`skeleton.storage.web.guest`) - 로그인 없이 그림을 올려 댓글에 붙이고, 서버가 비회원 업로드 키만 받는지 본다.
+ * 비회원의 내려받기는 로그인이 필요해 그림이 화면에 그려지지는 않는다(응답의 키로 확인한다).
  */
 const baseUrl = inject('baseUrl')
 
@@ -139,6 +140,32 @@ describe('Board — guests, approval and edited versions against the real backen
     await signOut(page)
     await visit(`${baseUrl}/board`)
     await pwExpect(page.getByRole('link', { name: GUEST_POST })).toBeVisible()
+  })
+
+  it('a signed-out visitor uploads a picture without signing in and the comment carries a guest-issued key', async () => {
+    await visit(postUrl)
+    await pwExpect(page.getByRole('heading', { level: 2, name: TITLE })).toBeVisible()
+    const png = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+      'base64',
+    )
+    await page
+      .getByRole('textbox', { name: ko('board.comments.newComment') })
+      .fill('손님이 사진을 붙인 댓글')
+    await page
+      .locator('input[type=file]')
+      .first()
+      .setInputFiles({ name: 'dot.png', mimeType: 'image/png', buffer: png })
+    await pwExpect(page.getByText(ko('board.pictures.attached'))).toBeVisible({ timeout: 30_000 })
+    await fillGuest(page, NAME)
+    const written = page.waitForResponse(
+      (r) => r.request().method() === 'POST' && /\/posts\/\d+\/comments$/.test(r.url()),
+    )
+    await page.getByRole('button', { name: ko('board.comments.postComment') }).click()
+    const body = (await (await written).json()) as { value: { attachments: string[] } }
+    pwExpect(body.value.attachments).toHaveLength(1)
+    pwExpect(body.value.attachments[0]).toMatch(/\/g\/[0-9a-f-]{36}\.[0-9a-f]{32}\/file\.png$/)
+    await pwExpect(page.getByText(ko('board.guest.pending'))).toBeVisible()
   })
 
   it('a member attaches a picture to a comment and everyone sees it', async () => {

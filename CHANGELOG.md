@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added — 게시판: 비회원 쓰기 · 승인 대기 · 고친 내용 승인 · 댓글 사진 (2026-10-17)
 
+- 견본: 비회원 사진 - 로그인하지 않은 사람도 `storage.web.guest`(서버가 켠 경우)로 이미지를 올려 댓글에 붙인다(`createStorageApi(client, { presign: '/storage/guest/presign' })`, 10 MB · 이미지 넷, 미리보기는 못 받아 「사진을 붙였어요」 줄). `Picture` 가 내려받기 실패를 삼킨다. e2e `boardGuest` 에 비회원 사진 단계.
 - `@skeleton/board`: 비회원 칸(`GuestFields`, 이름 + 비밀번호 + 캡차 자리, 비밀은 헤더로만), `(guest)` 표시, 승인 대기 표시 · 승인/가리기, 글 주인의 댓글 관리(`canManageComments`), 고친 내용 비교 + 승인/거절(`pendingRevision`), 댓글 사진(`attachmentPicker` · `renderAttachment`), 새 API/훅(`updateBoard` · `decide…Revision` · `listPendingComments` · `listCommentRevisions` · `usePendingComments` …), `useOwnGuestIds`. 서버가 켜지 않으면 새 키가 없고 화면은 같다. `ErrorCodes.BOARD_CAPTCHA_FAILED`(`@skeleton/api-client`).
 - 참조 앱(`apps/sample`): `/board` 가 로그인 없이 열린다(서버 `allow-anonymous-read`) - 비회원 글 · 댓글, 운영자의 대기 목록, 로그인한 사람의 댓글 사진. 새 e2e `boardGuest.e2e.ts`.
 

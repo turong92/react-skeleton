@@ -373,6 +373,8 @@ const en: Record<keyof typeof ko, string> = {
   'board.pictures.pickTitle': 'Add a picture',
   'board.pictures.pickHint': 'PNG, JPEG, GIF or WebP, up to 5 MB.',
   'board.pictures.pickButton': 'Choose picture',
+  'board.pictures.guestHint': 'PNG, JPEG, GIF or WebP, up to 10 MB. No sign-in needed.',
+  'board.pictures.attached': 'Picture attached',
   'board.pictures.remove': 'Remove picture',
   'board.pictures.alt': 'Attached picture',
   'header.signIn': 'Sign in',

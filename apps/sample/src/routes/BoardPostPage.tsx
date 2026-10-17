@@ -29,7 +29,7 @@ import { useProfileGate } from '../author/useProfileGate'
 import { boardApi } from '../board/api'
 import { useGuestUi } from '../board/guest'
 import { REACTION_ICONS, commentLabels, postDetailLabels, reactionLabels } from '../board/labels'
-import { picturePicker } from '../board/picturePicker'
+import { guestPicturePicker, picturePicker } from '../board/picturePicker'
 import { Picture } from '../board/Pictures'
 import { useBoardCode } from '../board/useBoardCode'
 import { LoadError } from '../components/LoadError'
@@ -131,7 +131,7 @@ function PostView({
         onGuestWritten={(c) => guestComments.add(c.id)}
         canManageComments={post.canManageComments}
         renderAttachment={(key) => <Picture storageKey={key} />}
-        attachmentPicker={principal ? picturePicker : undefined}
+        attachmentPicker={principal ? picturePicker : guestPicturePicker}
         beforeDelete={emailBeforeWrite.ensure} // 삭제 확인 창을 열기 전에 이메일부터(창 안에서 막히면 이메일 화면이 창 밑에 깔린다)
         postAuthor={{
           authorId: post.authorId,

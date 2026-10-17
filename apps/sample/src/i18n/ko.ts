@@ -368,6 +368,8 @@ export default {
   'board.pictures.pickTitle': '사진 붙이기',
   'board.pictures.pickHint': 'PNG, JPEG, GIF, WebP · 5MB까지.',
   'board.pictures.pickButton': '사진 고르기',
+  'board.pictures.guestHint': 'PNG, JPEG, GIF, WebP · 10MB까지. 로그인 없이 올릴 수 있어요.',
+  'board.pictures.attached': '사진을 붙였어요',
   'board.pictures.remove': '사진 빼기',
   'board.pictures.alt': '붙인 사진',
   'header.signIn': '로그인',

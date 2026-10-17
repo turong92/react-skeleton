@@ -239,7 +239,7 @@ describe('Board — guests, approval and edited versions against the real backen
     // 승인 뒤: 공개 주소(키에 계정 · 비회원 표시 · 원래 키가 없다)
     await pwExpect
       .poll(async () => (await commentOf(page, TEXT).getByRole('img').getAttribute('src')) ?? '')
-      .toMatch(/\/app\/public\/[0-9a-f]{32}\.png$/)
+      .toMatch(/\/app\/public\/b\/[0-9a-f]{32}\.png$/)
     const publicUrl = (await commentOf(page, TEXT).getByRole('img').getAttribute('src')) ?? ''
     pwExpect(publicUrl).not.toMatch(/uploads|\/g\/|acc_/)
     await signOut(page)
@@ -291,6 +291,6 @@ describe('Board — guests, approval and edited versions against the real backen
         memberPicture.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0),
       )
       .toBe(true)
-    pwExpect(await memberPicture.getAttribute('src')).toMatch(/\/app\/public\/[0-9a-f]{32}\.png$/)
+    pwExpect(await memberPicture.getAttribute('src')).toMatch(/\/app\/public\/b\/[0-9a-f]{32}\.png$/)
   })
 })

@@ -13,7 +13,6 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useT } from '../i18n'
 import { boardApi } from './api'
-import { locate } from './attachmentAccess'
 import { BoardPicture } from './BoardPicture'
 
 /**
@@ -44,7 +43,8 @@ export function GuestOwnerQueue({
     const error = client.getQueryState(key)?.error
     return error instanceof ApiRequestError && error.apiError.status === 403
   })
-  const wrong = rejected && !token
+  // 거절되면 TOKEN 이든 입력한 비밀이든 읽기를 끈다(창으로 돌아올 때마다 다시 묻지 않는다) - 입력 칸은 입력 방식일 때만 되살린다
+  const wrong = rejected
   const secret = wrong ? undefined : entered
   // 입력 한 번에 시도 한 번 - 대기 목록을 먼저 묻고, 비밀이 맞아 성공했을 때만 고친 댓글을 묻는다
   const pending = usePendingComments(
@@ -70,23 +70,26 @@ export function GuestOwnerQueue({
     if (edits.isSuccess) void edits.refetch()
   }
   const name = (c: Comment) => c.authorName ?? c.authorId
-  const at = (c: Comment, key: string) =>
-    locate(c.attachments, c.pendingRevision?.attachments, key) ?? {
-      index: 0,
-      from: 'current' as const,
-    }
-  const access = (c: Comment, key: string) => () =>
-    boardApi
-      .commentAttachmentAccess(code, postId, c.id, at(c, key).index, {
-        from: at(c, key).from,
-        as: 'owner',
-        guestSecret: secret,
-      })
-      .then((r) => r.url)
+  // 사진은 (목록, 순번)으로 부른다 - 목록의 순번을 그대로 쓰므로 키를 못 찾는 경우가 없다
+  const picture = (c: Comment, key: string, index: number, from: 'current' | 'edit') => (
+    <BoardPicture
+      key={`${from}:${key}`}
+      url={from === 'current' ? c.attachmentUrls?.[key] : undefined}
+      access={() =>
+        boardApi
+          .commentAttachmentAccess(code, postId, c.id, index, {
+            from,
+            as: 'owner',
+            guestSecret: secret,
+          })
+          .then((r) => r.url)
+      }
+    />
+  )
 
   return (
     <Card title={t('board.ownerQueue.title')}>
-      {!secret && (
+      {!secret && !token && (
         <form
           onSubmit={(event) => {
             event.preventDefault()
@@ -115,7 +118,7 @@ export function GuestOwnerQueue({
       {secret && (pending.isPending || edits.isPending) && !forbidden && (
         <Spinner label={t('common.loading')} />
       )}
-      {secret && token && forbidden && <p role="alert">{t('board.ownerQueue.failed')}</p>}
+      {token && wrong && <p role="alert">{t('board.ownerQueue.failed')}</p>}
       {pending.data &&
         pending.data.values.length === 0 &&
         (edits.data?.values.length ?? 0) === 0 && <p>{t('board.ownerQueue.empty')}</p>}
@@ -125,13 +128,9 @@ export function GuestOwnerQueue({
             <li key={comment.id}>
               <strong>{name(comment)}</strong>
               <p>{comment.body}</p>
-              {(comment.attachments ?? []).map((key) => (
-                <BoardPicture
-                  key={key}
-                  url={comment.attachmentUrls?.[key]}
-                  access={access(comment, key)}
-                />
-              ))}
+              {(comment.attachments ?? []).map((key, index) =>
+                picture(comment, key, index, 'current'),
+              )}
               <Button
                 size="sm"
                 aria-label={`${t('board.comments.approve')}: ${name(comment)}`}
@@ -175,9 +174,7 @@ export function GuestOwnerQueue({
                 <p>
                   {t('board.revision.edited')}: {revision.body}
                 </p>
-                {revision.attachments.map((key) => (
-                  <BoardPicture key={key} access={access(comment, key)} />
-                ))}
+                {revision.attachments.map((key, index) => picture(comment, key, index, 'edit'))}
                 {[
                   ['APPROVE', 'board.revision.approve', 'primary'],
                   ['REJECT', 'board.revision.reject', 'danger'],

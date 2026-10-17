@@ -64,3 +64,12 @@
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
+
+.pictures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

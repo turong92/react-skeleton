@@ -76,6 +76,9 @@ export type PendingRevision = {
   submittedAt: string
 }
 
+/** 승인 전 · 판 사진을 관리하는 사람 · 작성자가 짧게 읽는 서명 주소 */
+export type AttachmentAccess = { url: string; expiresInSeconds: number }
+
 export type RevisionDecision = 'APPROVE' | 'REJECT'
 
 export type Board = {
@@ -133,6 +136,8 @@ export type PostSummary = {
 export type PostDetail = PostSummary & {
   body: string
   attachments: string[]
+  /** 공개 영역이 켜진 서버가 공개된 글에만 싣는다: 첨부 키 → 공개 주소(CDN) */
+  attachmentUrls?: Record<string, string>
   /** 호출자가 이 글의 댓글을 승인 · 가릴 수 있다(운영자 · 댓글 관리가 켜진 게시판의 글 주인) — 승인 · 가리기 단추의 근거 */
   canManageComments?: boolean
   /** 글마다 정한 댓글 승인 규칙 — null 이면 게시판 값 */
@@ -208,6 +213,8 @@ export type Comment = {
   attachments?: string[]
   /** 대기 중인 고친 내용 — 쓴 회원 · 운영자 · 관리하는 글 주인에게만(남에게는 null) */
   pendingRevision?: PendingRevision | null
+  /** 공개 영역이 켜진 서버가 공개된 댓글에만 싣는다: 첨부 키 → 공개 주소(CDN). 없으면 `renderAttachment` 가 서명 주소로 본다 */
+  attachmentUrls?: Record<string, string>
   /** 댓글을 관리하는 사람에게만 실린다 — `false` 면 이 댓글의 상태를 지금 못 바꾼다(운영자가 가린 댓글을 글 주인이 되살릴 수 없다). 복원 단추의 근거 */
   canManage?: boolean
 }

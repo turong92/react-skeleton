@@ -93,6 +93,8 @@ export function stubApi(over: Partial<BoardApi> = {}): BoardApi {
     moderatePost: unused,
     listComments: unused,
     listPendingComments: unused,
+    postAttachmentAccess: unused,
+    commentAttachmentAccess: unused,
     listCommentRevisions: unused,
     createComment: unused,
     updateComment: unused,

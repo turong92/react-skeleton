@@ -260,6 +260,15 @@ export function createFakeBoard(options: FakeBoardOptions = {}) {
         params.size,
       )
     }),
+    // 가짜 서버는 사진을 올리지 않는다 - 서명 주소를 흉내만 낸다
+    postAttachmentAccess: slow(async (_code, _id, key) => ({
+      url: `https://signed.example/${key}`,
+      expiresInSeconds: 300,
+    })),
+    commentAttachmentAccess: slow(async (_code, _postId, _id, key) => ({
+      url: `https://signed.example/${key}`,
+      expiresInSeconds: 300,
+    })),
     listCommentRevisions: slow(async (_code, postId, params = {}, guestOptions) => {
       const post = managing(postId, guestOptions?.guestSecret)
       const rows = [...comments.values()].filter((c) => c.postId === postId && revisions.has(c.id))

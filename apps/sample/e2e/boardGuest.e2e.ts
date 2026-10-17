@@ -4,6 +4,7 @@ import {
   MODERATOR,
   USER,
   commentForm,
+  commentOf,
   openBoard,
   openPost,
   signInAs,
@@ -193,10 +194,46 @@ describe('Board — guests, approval and edited versions against the real backen
       (r) => r.request().method() === 'POST' && /\/posts\/\d+\/comments$/.test(r.url()),
     )
     await page.getByRole('button', { name: ko('board.comments.postComment') }).click()
-    const body = (await (await written).json()) as { value: { attachments: string[] } }
+    const resp = await written
+    const body = (await resp.json()) as { value: { attachments: string[] } }
     pwExpect(body.value.attachments).toHaveLength(1)
     pwExpect(body.value.attachments[0]).toMatch(/\/g\/[0-9a-f-]{36}\.[0-9a-f]{32}\/file\.png$/)
     await pwExpect(page.getByText(ko('board.guest.pending'))).toBeVisible()
+  })
+
+  it('the waiting picture is private, approving makes it public for anyone, hiding takes it away again', async () => {
+    const TEXT = '손님이 사진을 붙인 댓글'
+    await signInAs(page, baseUrl, USER)
+    await openAsMember()
+    // 승인 전: 글 주인은 서명된(비공개) 주소로 본다 - 공개 영역에는 없다
+    const waiting = commentOf(page, TEXT).getByRole('img')
+    await pwExpect(waiting).toBeVisible()
+    const privateSrc = (await waiting.getAttribute('src')) ?? ''
+    pwExpect(privateSrc).toMatch(/signature/i)
+    pwExpect(privateSrc).not.toContain('/app/public/')
+    await page.getByRole('button', { name: `${ko('board.comments.approve')}: ${NAME}` }).click()
+    // 승인 뒤: 공개 주소(키에 계정 · 비회원 표시 · 원래 키가 없다)
+    await pwExpect
+      .poll(async () => (await commentOf(page, TEXT).getByRole('img').getAttribute('src')) ?? '')
+      .toMatch(/\/app\/public\/[0-9a-f]{32}\.png$/)
+    const publicUrl = (await commentOf(page, TEXT).getByRole('img').getAttribute('src')) ?? ''
+    pwExpect(publicUrl).not.toMatch(/uploads|\/g\/|acc_/)
+    await signOut(page)
+    await visit(postUrl)
+    const seen = commentOf(page, TEXT).getByRole('img')
+    await pwExpect(seen).toBeVisible()
+    await pwExpect
+      .poll(() => seen.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0))
+      .toBe(true)
+    pwExpect((await page.request.get(publicUrl)).status()).toBe(200)
+    // 가린 뒤: 공개 영역에서 사라진다
+    await signInAs(page, baseUrl, USER)
+    await openAsMember()
+    await commentOf(page, TEXT)
+      .getByRole('button', { name: `${ko('board.comments.hide')}: ${NAME}` })
+      .click()
+    await pwExpect.poll(async () => (await page.request.get(publicUrl)).status()).not.toBe(200)
+    await signOut(page)
   })
 
   it('a member attaches a picture to a comment and everyone sees it', async () => {
@@ -221,5 +258,15 @@ describe('Board — guests, approval and edited versions against the real backen
       page.getByRole('list', { name: ko('board.comments.attachments') }).getByRole('img'),
     ).toBeVisible({ timeout: 30_000 })
     await signOut(page)
+    // 회원의 사진도 공개된 댓글이라 로그인하지 않은 사람에게 공개 주소로 보인다
+    await visit(postUrl)
+    const memberPicture = commentOf(page, '사진을 붙인 댓글').getByRole('img')
+    await pwExpect(memberPicture).toBeVisible({ timeout: 30_000 })
+    await pwExpect
+      .poll(() =>
+        memberPicture.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0),
+      )
+      .toBe(true)
+    pwExpect(await memberPicture.getAttribute('src')).toMatch(/\/app\/public\/[0-9a-f]{32}\.png$/)
   })
 })

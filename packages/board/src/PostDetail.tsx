@@ -126,6 +126,13 @@ export function PostDetail({
         </div>
       </header>
       <p className={styles.body}>{post.body}</p>
+      {renderAttachment && post.attachments.length > 0 && (
+        <ul className={styles.pictures} aria-label={labels.attachments(post.attachments.length)}>
+          {post.attachments.map((key) => (
+            <li key={key}>{renderAttachment(key)}</li>
+          ))}
+        </ul>
+      )}
       {post.status === 'PENDING' && <p className={styles.note}>{labels.pendingNote}</p>}
       {post.pendingRevision && (
         <div className={styles.revision} data-testid="post-revision">

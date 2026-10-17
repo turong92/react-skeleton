@@ -20,6 +20,7 @@ import type {
   GuestOptions,
   PostSummary,
   ReactionState,
+  AttachmentAccess,
   RevisionDecision,
   ReactionTarget,
   ReactionType,
@@ -83,6 +84,21 @@ export type BoardApi = {
     params?: CommentQueueParams,
     options?: GuestOptions,
   ): Promise<ApiPageResponse<Comment>>
+  /** `GET …/posts/{id}/attachments?key=` — 공개 영역에 없는 사진(승인 전 · 판)의 짧은 서명 주소. 운영자 · 작성자만(비회원은 `guestSecret`) */
+  postAttachmentAccess(
+    code: string,
+    id: BoardId,
+    key: string,
+    options?: GuestOptions,
+  ): Promise<AttachmentAccess>
+  /** `GET …/comments/{id}/attachments?key=` — 운영자 · 댓글을 관리하는 글 주인 · 작성자(비회원은 `guestSecret`) */
+  commentAttachmentAccess(
+    code: string,
+    postId: BoardId,
+    id: BoardId,
+    key: string,
+    options?: GuestOptions,
+  ): Promise<AttachmentAccess>
   /** `GET …/comments?revision=pending` — 고친 댓글(공개본 + `pendingRevision`), 관리하는 쪽만 */
   listCommentRevisions(
     code: string,
@@ -209,6 +225,16 @@ export function createBoardApi(
     listPendingComments: (code, postId, params = {}, options) =>
       client.page<Comment>(`${post(code, postId)}/comments`, {
         params: defined({ ...params, status: 'PENDING' }),
+        headers: guestHeaders(options?.guestSecret),
+      }),
+    postAttachmentAccess: (code, id, key, options) =>
+      client.value<AttachmentAccess>(`${post(code, id)}/attachments`, {
+        params: { key },
+        headers: guestHeaders(options?.guestSecret),
+      }),
+    commentAttachmentAccess: (code, postId, id, key, options) =>
+      client.value<AttachmentAccess>(`${comment(code, postId, id)}/attachments`, {
+        params: { key },
         headers: guestHeaders(options?.guestSecret),
       }),
     listCommentRevisions: (code, postId, params = {}, options) =>

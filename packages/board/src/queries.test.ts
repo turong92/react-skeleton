@@ -1,5 +1,15 @@
-import { describe, expect, it } from 'vitest'
-import { boardKeys, commentListQuery, configQuery, postListQuery, postQuery } from './queries'
+import { ApiRequestError } from '@skeleton/api-client'
+import { QueryClient } from '@tanstack/react-query'
+import { describe, expect, it, vi } from 'vitest'
+import {
+  boardKeys,
+  commentListQuery,
+  configQuery,
+  pendingCommentsQuery,
+  postListQuery,
+  postQuery,
+  retryUnlessClientError,
+} from './queries'
 import { stubApi } from './test/fixtures'
 
 describe('boardKeys — one root, nested, so invalidation and cache patches work by prefix', () => {
@@ -53,5 +63,28 @@ describe('query definitions — a key plus the call, apart from the hooks', () =
       ['post', 'free', 1],
       ['comments', 'free', 1, { sort: 'latest' }],
     ])
+  })
+})
+
+describe('queries that carry a guest secret do not retry a client error', () => {
+  const apiError = (status: number) =>
+    new ApiRequestError({ status, title: 'x', code: 'BOARD.FORBIDDEN' } as never, 't', 's', 'p')
+
+  it('retryUnlessClientError: never on 4xx, twice at most otherwise', () => {
+    expect(retryUnlessClientError(0, apiError(403))).toBe(false)
+    expect(retryUnlessClientError(0, apiError(429))).toBe(false)
+    expect(retryUnlessClientError(0, apiError(503))).toBe(true)
+    expect(retryUnlessClientError(2, apiError(503))).toBe(false)
+    expect(retryUnlessClientError(0, new Error('network'))).toBe(true)
+  })
+
+  it('one wrong secret is one request - every extra try would cost a guess against the secret-attempt limit', async () => {
+    const listPendingComments = vi.fn().mockRejectedValue(apiError(403))
+    const client = new QueryClient()
+    const api = { ...stubApi(), listPendingComments }
+    await expect(
+      client.fetchQuery(pendingCommentsQuery(api, 'free', 1, {}, { guestSecret: 'wrong' })),
+    ).rejects.toBeInstanceOf(ApiRequestError)
+    expect(listPendingComments).toHaveBeenCalledTimes(1)
   })
 })

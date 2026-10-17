@@ -163,6 +163,11 @@ describe('Board — guests, approval and edited versions against the real backen
     await page.getByRole('button', { name: ko('board.comments.postComment') }).click()
     await pwExpect(page.getByText(ko('board.guest.pending'))).toBeVisible()
     // 글을 쓴 이 브라우저의 주인 메뉴 - 글의 비밀번호로 대기 목록을 열고 승인한다
+    // 틀린 비밀번호: 한 번만 시도하고(다시 시도하지 않는다) 입력 칸으로 돌아온다 - 틀린 값을 쥔 채 남지 않는다
+    await page.getByLabel(ko('board.ownerQueue.secret')).fill('wrong-password')
+    await page.getByRole('button', { name: ko('board.ownerQueue.open') }).click()
+    await pwExpect(page.getByText(ko('board.ownerQueue.failed'))).toBeVisible()
+    await pwExpect(page.getByLabel(ko('board.ownerQueue.secret'))).toBeVisible()
     await page.getByLabel(ko('board.ownerQueue.secret')).fill(PASSWORD)
     await page.getByRole('button', { name: ko('board.ownerQueue.open') }).click()
     await pwExpect(page.getByTestId('owner-queue')).toContainText(OTHER)

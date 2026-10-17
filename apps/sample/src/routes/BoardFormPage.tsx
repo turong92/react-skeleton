@@ -25,7 +25,7 @@ import { useAuthorPicker } from '../author/useAuthorPicker'
 import { useAuthLabels } from '../auth/useAuthLabels'
 import { useProfileGate } from '../author/useProfileGate'
 import { boardApi } from '../board/api'
-import { useGuestUi } from '../board/guest'
+import { storedGuestToken, useGuestUi } from '../board/guest'
 import { guestFieldLabels, postEditorLabels } from '../board/labels'
 import { useBoardCode } from '../board/useBoardCode'
 import { fieldErrorsOf, isValidationFailure, type FieldErrors } from '../notes/formErrors'
@@ -145,7 +145,11 @@ function CreatePost({
         onSubmit={async (values) => {
           const post = await create.mutateAsync({
             input: values,
-            idempotencyKey: keyFor.current(values),
+            // 지문에는 비밀 · 캡차 토큰을 넣지 않는다 - 만료된 캡차 토큰으로 다시 보낸 같은 글이 두 장이 되지 않게
+            idempotencyKey: keyFor.current({
+              ...values,
+              guest: values.guest && { name: values.guest.name },
+            }),
           })
           if (values.guest) guestPosts.add(post.id)
           if (post.status === 'PENDING' && values.guest) setWaiting(true)
@@ -221,7 +225,11 @@ function EditPost({ code, id, config }: { code: string; id: number; config: Boar
           }
           const edited = await update.mutateAsync(
             guestOwned
-              ? { ...values, guestSecret: secretKind === 'PASSWORD' ? secret.secret : undefined }
+              ? {
+                  ...values,
+                  guestSecret:
+                    secretKind === 'PASSWORD' ? secret.secret : storedGuestToken(secretKind),
+                }
               : values,
           )
           // 비회원은 승인 대기 판을 다시 읽지 못한다 - 이 응답으로 알린다

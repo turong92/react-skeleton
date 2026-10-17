@@ -146,3 +146,26 @@ export const WithdrawnAuthor: Story = {
     await expect(document.body.innerHTML).not.toContain('deleted:')
   },
 }
+
+/** 운영자는 고친 판의 사진을 공개본의 사진과 나란히 보고, 더해진 것 · 빠진 것을 표시로 알아본 뒤 승인한다 */
+export const RevisionWithPictures: Story = {
+  args: {
+    post: {
+      ...post,
+      attachments: ['k/keep.png', 'k/gone.png'],
+      pendingRevision: {
+        title: 'Edited title',
+        body: 'Edited body',
+        attachments: ['k/keep.png', 'k/new.png'],
+        submittedAt: '2026-01-01T00:00:00Z',
+      },
+    },
+    onDecideRevision: fn(),
+  },
+  play: async ({ canvas }) => {
+    const list = canvas.getByTestId('revision-pictures')
+    await expect(list.querySelector('[data-change="added"]')).toHaveTextContent('k/new.png')
+    await expect(list.querySelector('[data-change="removed"]')).toHaveTextContent('k/gone.png')
+    await expect(list.querySelector('[data-change="kept"]')).toHaveTextContent('k/keep.png')
+  },
+}

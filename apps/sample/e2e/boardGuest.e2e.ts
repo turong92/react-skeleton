@@ -1,6 +1,15 @@
 import { expect as pwExpect, type Browser, type Page } from 'playwright/test'
 import { afterAll, beforeAll, describe, inject, it } from 'vitest'
-import { MODERATOR, USER, openBoard, openPost, signInAs, signOut, writePost } from './boardSteps'
+import {
+  MODERATOR,
+  USER,
+  commentForm,
+  openBoard,
+  openPost,
+  signInAs,
+  signOut,
+  writePost,
+} from './boardSteps'
 import { dismissConsent, ko, launch } from './helpers'
 
 /*
@@ -140,6 +149,28 @@ describe('Board — guests, approval and edited versions against the real backen
     await signOut(page)
     await visit(`${baseUrl}/board`)
     await pwExpect(page.getByRole('link', { name: GUEST_POST })).toBeVisible()
+  })
+
+  it("a guest post's owner manages the comments waiting on it with the post's password, signed out", async () => {
+    await visit(`${baseUrl}/board`)
+    await page.getByRole('link', { name: GUEST_POST }).click()
+    await pwExpect(page.getByRole('heading', { level: 2, name: GUEST_POST })).toBeVisible()
+    // 다른 손님이 이 글에 댓글을 단다 - 비회원 댓글이라 승인 대기
+    const OTHER = '글주인이 승인할 손님 댓글'
+    await page.getByRole('textbox', { name: ko('board.comments.newComment') }).fill(OTHER)
+    await fillGuest(commentForm(page), '지나가는손님')
+    await page.getByRole('button', { name: ko('board.comments.postComment') }).click()
+    await pwExpect(page.getByText(ko('board.guest.pending'))).toBeVisible()
+    // 글을 쓴 이 브라우저의 주인 메뉴 - 글의 비밀번호로 대기 목록을 열고 승인한다
+    await page.getByLabel(ko('board.ownerQueue.secret')).fill(PASSWORD)
+    await page.getByRole('button', { name: ko('board.ownerQueue.open') }).click()
+    await pwExpect(page.getByTestId('owner-queue')).toContainText(OTHER)
+    await page
+      .getByRole('button', { name: `${ko('board.comments.approve')}: 지나가는손님` })
+      .click()
+    await pwExpect(page.getByTestId('owner-queue')).toHaveCount(0)
+    await page.reload()
+    await pwExpect(page.getByText(OTHER)).toBeVisible() // 승인되어 공개 스레드에 있다
   })
 
   it('a signed-out visitor uploads a picture without signing in and the comment carries a guest-issued key', async () => {

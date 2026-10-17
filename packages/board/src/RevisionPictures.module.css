@@ -1,0 +1,31 @@
+.list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.list li {
+  display: grid;
+  gap: var(--space-xs);
+  padding: var(--space-xs);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.added {
+  border-width: 2px;
+}
+
+.removed {
+  border-style: dashed;
+  text-decoration: line-through;
+}
+
+.badge {
+  font-size: var(--font-size-caption);
+  font-weight: 600;
+  text-decoration: none;
+}

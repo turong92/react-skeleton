@@ -185,6 +185,53 @@ describe('guest and waiting comments', () => {
   })
 })
 
+describe('edited pictures in the revision compare', () => {
+  const revision = {
+    body: 'new',
+    attachments: ['k/keep', 'k/new'],
+    submittedAt: '2026-01-01T00:00:00Z',
+  }
+
+  it('a comment manager sees added and removed pictures marked next to the published ones, the writer does not', () => {
+    const t = thread(1, [], {
+      body: 'old',
+      attachments: ['k/keep', 'k/gone'],
+      pendingRevision: revision,
+    })
+    const manager = renderToStaticMarkup(
+      <CommentThread
+        {...base}
+        thread={t}
+        canManageComments
+        onDecideRevision={noop}
+        renderAttachment={(key) => <b>{key}</b>}
+      />,
+    )
+    expect(manager).toMatch(/data-change="added"[^>]*>(<b>k\/new<\/b>)/)
+    expect(manager).toMatch(/data-change="removed"[^>]*>(<b>k\/gone<\/b>)/)
+    expect(manager).toMatch(/data-change="kept"[^>]*>(<b>k\/keep<\/b>)/)
+    const writer = renderToStaticMarkup(
+      <CommentThread
+        {...base}
+        thread={thread(1, [], { body: 'old', mine: true, pendingRevision: revision })}
+      />,
+    )
+    expect(writer).not.toContain('revision-pictures')
+  })
+
+  it('a post moderator sees the same comparison', () => {
+    const post = detail(1, {
+      attachments: ['k/gone'],
+      pendingRevision: { ...revision, title: 'T2' },
+    })
+    const html = renderToStaticMarkup(
+      <PostDetail post={post} onDecideRevision={noop} renderAttachment={(key) => <b>{key}</b>} />,
+    )
+    expect(html).toMatch(/data-change="added"[^>]*>(<b>k\/new<\/b>)/)
+    expect(html).toMatch(/data-change="removed"[^>]*>(<b>k\/gone<\/b>)/)
+  })
+})
+
 describe('post detail with approval', () => {
   it('shows the waiting note, and the revision compare with decide buttons only to a moderator callback', () => {
     const pendingRevision = {

@@ -50,7 +50,7 @@ export function GuestFields({
               {...control}
               type="password"
               name={`${idPrefix}Secret`}
-              autoComplete="new-password"
+              autoComplete="off"
               value={value.secret}
               onChange={(event) => onChange({ ...value, secret: event.target.value })}
             />

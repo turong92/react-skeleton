@@ -6,6 +6,7 @@ import {
   GuestFields,
   PostDetail,
   PostReactionBar,
+  isRevisionStale,
   emptyGuestDraft,
   isOwn,
   useBoardConfig,
@@ -19,7 +20,7 @@ import {
   type GuestDraft,
   type PostDetailData,
 } from '@skeleton/board'
-import { Button, Dialog, EmptyState, PageHeader, Spinner } from '@skeleton/ui'
+import { Alert, Button, Dialog, EmptyState, PageHeader, Spinner } from '@skeleton/ui'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { emailRequired } from '../api/emailRequired'
@@ -27,7 +28,8 @@ import { useAuthorPicker } from '../author/useAuthorPicker'
 import { useAuthLabels } from '../auth/useAuthLabels'
 import { useProfileGate } from '../author/useProfileGate'
 import { boardApi } from '../board/api'
-import { useGuestUi } from '../board/guest'
+import { GuestOwnerQueue } from '../board/GuestOwnerQueue'
+import { storedGuestToken, useGuestUi } from '../board/guest'
 import { REACTION_ICONS, commentLabels, postDetailLabels, reactionLabels } from '../board/labels'
 import { guestPicturePicker, picturePicker } from '../board/picturePicker'
 import { Picture } from '../board/Pictures'
@@ -74,7 +76,11 @@ function PostView({
   const secretKind = config.guestSecret ?? 'PASSWORD'
 
   async function confirmDelete() {
-    const guestSecret = guestOwned && secretKind === 'PASSWORD' ? secret.secret : undefined
+    const guestSecret = guestOwned
+      ? secretKind === 'PASSWORD'
+        ? secret.secret
+        : storedGuestToken(secretKind)
+      : undefined
     await remove.mutateAsync(guestSecret ? { id, guestSecret } : id)
     setConfirming(false)
     navigate('/board', { replace: true })
@@ -82,6 +88,9 @@ function PostView({
 
   return (
     <AuthorScope>
+      {isRevisionStale(decideRevision.error) && (
+        <Alert tone="info">{t('board.revision.changed')}</Alert>
+      )}
       <PostDetail
         post={post}
         labels={postDetailLabels(t)}
@@ -93,6 +102,7 @@ function PostView({
             : undefined
         }
         onModerate={config.canModerate ? (moderation) => moderate.mutate(moderation) : undefined}
+        renderAttachment={(key) => <Picture storageKey={key} />}
         onDecideRevision={
           config.canModerate && post.pendingRevision
             ? (decision, submittedAt) => decideRevision.mutate({ decision, submittedAt })
@@ -131,6 +141,7 @@ function PostView({
         onGuestWritten={(c) => guestComments.add(c.id)}
         canManageComments={post.canManageComments}
         renderAttachment={(key) => <Picture storageKey={key} />}
+        canReact={!!principal}
         attachmentPicker={principal ? picturePicker : guestPicturePicker}
         beforeDelete={emailBeforeWrite.ensure} // 삭제 확인 창을 열기 전에 이메일부터(창 안에서 막히면 이메일 화면이 창 밑에 깔린다)
         postAuthor={{
@@ -139,6 +150,13 @@ function PostView({
           authorDeleted: post.authorDeleted,
         }}
       />
+      {guestOwned && board?.settings?.ownerModeratesComments && (
+        <GuestOwnerQueue
+          code={code}
+          postId={id}
+          token={secretKind === 'TOKEN' ? storedGuestToken(secretKind) : undefined}
+        />
+      )}
       {gate.dialog}
       <Dialog
         open={confirming}

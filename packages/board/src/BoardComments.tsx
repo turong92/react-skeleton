@@ -10,6 +10,7 @@ import {
   Select,
   Spinner,
 } from '@skeleton/ui'
+import { isRevisionStale } from './mutations'
 import { useMemo, useState } from 'react'
 import { collidingNames } from './authorDisplay'
 import { isUsableOwnAuthorId, lastOwnAuthorId, threadIsUnknown } from './authorship'
@@ -87,6 +88,8 @@ export type BoardCommentsProps = Omit<
   onGuestWritten?: (comment: Comment) => void
   /** 글 주인이 비회원일 때 댓글 승인 · 가리기 · 고친 댓글 결정에 보내는 글의 비밀(헤더로만 나간다) */
   managerSecret?: string
+  /** false 면 반응을 누를 수 없다(반응은 로그인이 필요하다) - 단추를 그리지 않고 센 값이 있을 때만 읽기 전용으로 보인다. 기본 true */
+  canReact?: boolean
 }
 
 /**
@@ -106,6 +109,7 @@ export function BoardComments({
   postAuthor,
   onGuestWritten,
   managerSecret,
+  canReact = true,
   ...options
 }: BoardCommentsProps) {
   const labels = resolveBoardCommentsLabels(input)
@@ -200,6 +204,9 @@ export function BoardComments({
           />
         )}
         {notice && <Alert tone="info">{notice}</Alert>}
+        {(isRevisionStale(decide.error) || isRevisionStale(update.error)) && (
+          <Alert tone="info">{labels.revisionChanged}</Alert>
+        )}
         {justPosted.length > 0 && (
           <ul className={styles.threads} aria-label={labels.pending}>
             {justPosted.map((c) => (
@@ -297,12 +304,15 @@ export function BoardComments({
                         : { id, decision, submittedAt },
                     )
                   }
-                  onReact={(id, type, active) =>
-                    react.mutate({
-                      target: { kind: 'comment', postId, commentId: id },
-                      type,
-                      active,
-                    })
+                  onReact={
+                    canReact
+                      ? (id, type, active) =>
+                          react.mutate({
+                            target: { kind: 'comment', postId, commentId: id },
+                            type,
+                            active,
+                          })
+                      : undefined
                   }
                 />
               </li>

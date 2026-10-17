@@ -357,6 +357,12 @@ const en: Record<keyof typeof ko, string> = {
   'board.guest.signIn':
     'You are not signed in. Posts and comments you write as a guest need a name and a password.',
   'board.pending.badge': 'Waiting for approval',
+  'board.ownerQueue.title': 'Post owner - comments waiting',
+  'board.ownerQueue.secret': 'Post owner check',
+  'board.ownerQueue.hint': 'Enter it to see the comments waiting on this post.',
+  'board.ownerQueue.open': 'Open',
+  'board.ownerQueue.failed': 'Could not load. Check the password.',
+  'board.ownerQueue.empty': 'No comments are waiting.',
   'board.pending.comment':
     'Only you and the people who manage this board can see it until it is approved.',
   'board.pending.post':
@@ -365,6 +371,10 @@ const en: Record<keyof typeof ko, string> = {
     'Your edit is waiting for approval. Everyone else still sees the earlier text.',
   'board.revision.review': 'An edit is waiting for approval.',
   'board.revision.current': 'Published now',
+  'board.revision.pictures': 'Pictures',
+  'board.revision.pictureAdded': 'Added',
+  'board.revision.pictureRemoved': 'Removed',
+  'board.revision.changed': 'The edit changed — please review it again',
   'board.revision.edited': 'Edited',
   'board.revision.approve': 'Approve edit',
   'board.revision.reject': 'Reject edit',

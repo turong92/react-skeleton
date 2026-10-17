@@ -4,6 +4,10 @@ import { useMemo } from 'react'
 
 const TOKEN_KEY = 'board:guest-token'
 
+/** `TOKEN` 방식이면 이 브라우저의 비밀 - 비회원이 자기 글을 고치고 지울 때 보낸다 */
+export const storedGuestToken = (secretKind: string) =>
+  secretKind === 'TOKEN' ? guestToken() : undefined
+
 /** `TOKEN` 방식의 비밀 — 이 브라우저가 만든 무작위 값(43자 base64url = 256비트)을 들고 있다가 고치기 · 지우기에도 같은 값을 보낸다 */
 function guestToken(): string {
   try {

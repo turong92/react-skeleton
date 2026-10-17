@@ -9,6 +9,7 @@ import type { CommentNode } from './commentTree'
 import type { CommentOptions } from './commentThreadContext'
 import { ReactionBar } from './ReactionBar'
 import type { BoardId } from './types'
+import { RevisionPictures } from './RevisionPictures'
 import styles from './CommentItem.module.css'
 
 /** `CommentThread` 가 쥔 열림 상태 + 설정 — 아래로 그대로 내려간다 */
@@ -130,6 +131,12 @@ export function CommentItem({ node, ctx }: { node: CommentNode; ctx: ThreadConte
               <dd>{comment.body}</dd>
               <dt>{L.revisionEdited}</dt>
               <dd>{revision.body}</dd>
+              <RevisionPictures
+                current={comment.attachments ?? []}
+                edited={revision.attachments}
+                render={(key) => ctx.renderAttachment?.(key, comment) ?? key}
+                labels={L}
+              />
             </dl>
           )}
           {!manage && <p className={styles.body}>{revision.body}</p>}
@@ -148,18 +155,20 @@ export function CommentItem({ node, ctx }: { node: CommentNode; ctx: ThreadConte
         </div>
       )}
 
-      {published && reactionTypes.length > 0 && (
-        <ReactionBar
-          types={reactionTypes}
-          counts={comment.reactionCounts}
-          mine={comment.myReactions}
-          labels={ctx.reactionLabels}
-          icons={ctx.reactionIcons}
-          groupLabel={L.reactionGroup}
-          disabled={!ctx.onReact}
-          onToggle={(type, active) => ctx.onReact?.(comment.id, type, active)}
-        />
-      )}
+      {published &&
+        reactionTypes.length > 0 &&
+        (ctx.onReact || Object.values(comment.reactionCounts).some((n) => n > 0)) && (
+          <ReactionBar
+            types={reactionTypes}
+            counts={comment.reactionCounts}
+            mine={comment.myReactions}
+            labels={ctx.reactionLabels}
+            icons={ctx.reactionIcons}
+            groupLabel={L.reactionGroup}
+            disabled={!ctx.onReact}
+            onToggle={(type, active) => ctx.onReact?.(comment.id, type, active)}
+          />
+        )}
 
       <div className={styles.actions}>
         {published &&

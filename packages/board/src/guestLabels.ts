@@ -34,8 +34,14 @@ export type RevisionLabels = {
   revisionReview: string
   revisionCurrent: string
   revisionEdited: string
+  /** 첨부(사진)가 달린 판 - 더해진 것 · 빠진 것 표시 */
+  revisionPictures: string
+  revisionPictureAdded: string
+  revisionPictureRemoved: string
   approveEdit: string
   rejectEdit: string
+  /** 결정하려던 판이 그 사이 바뀌었거나(409) 대상이 사라졌다(404) - 다시 불러 온 내용을 확인하게 */
+  revisionChanged: string
 }
 
 export const defaultRevisionLabels: RevisionLabels = {
@@ -43,6 +49,10 @@ export const defaultRevisionLabels: RevisionLabels = {
   revisionReview: 'An edit is waiting for approval.',
   revisionCurrent: 'Published now',
   revisionEdited: 'Edited',
+  revisionPictures: 'Pictures',
+  revisionPictureAdded: 'Added',
+  revisionPictureRemoved: 'Removed',
   approveEdit: 'Approve edit',
   rejectEdit: 'Reject edit',
+  revisionChanged: 'The edit changed while you were looking. Please review it again.',
 }

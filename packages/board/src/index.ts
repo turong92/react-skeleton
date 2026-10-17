@@ -52,6 +52,7 @@ export {
   createPostMutation,
   decideCommentRevisionMutation,
   decidePostRevisionMutation,
+  isRevisionStale,
   updateBoardMutation,
   moderateCommentMutation,
   moderatePostMutation,

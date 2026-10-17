@@ -47,8 +47,12 @@ const revisionLabels = (t: Translate) => ({
   revisionReview: t('board.revision.review'),
   revisionCurrent: t('board.revision.current'),
   revisionEdited: t('board.revision.edited'),
+  revisionPictures: t('board.revision.pictures'),
+  revisionPictureAdded: t('board.revision.pictureAdded'),
+  revisionPictureRemoved: t('board.revision.pictureRemoved'),
   approveEdit: t('board.revision.approve'),
   rejectEdit: t('board.revision.reject'),
+  revisionChanged: t('board.revision.changed'),
 })
 
 const pageLabel = (t: Translate) => (page: number) => t('board.page', { page })

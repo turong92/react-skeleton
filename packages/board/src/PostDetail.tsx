@@ -16,6 +16,7 @@ import type {
   PostStatus,
   RevisionDecision,
 } from './types'
+import { RevisionPictures } from './RevisionPictures'
 import styles from './PostDetail.module.css'
 
 /** 글 상세의 글자 — 기본은 영어. 일부만 덮어쓰려면 `labels={{ edit: '수정' }}` */
@@ -71,6 +72,8 @@ export type PostDetailProps = {
   onModerate?: (moderation: PostModeration) => void
   /** 운영자 — 대기 중인 고친 내용을 공개본과 나란히 보고 승인 · 거절 */
   onDecideRevision?: (decision: RevisionDecision, submittedAt: string) => void
+  /** 고친 판의 첨부 비교에서 키를 그림으로 그린다(업로드 · 주소는 앱 몫) - 없으면 키 글자 */
+  renderAttachment?: (key: string) => ReactNode
   formatTime?: (iso: string) => string
   /** 작성자 꼬리표 — 글 한 건에는 겹칠 상대가 없어 기본은 안 보인다. 보이려면 `always` */
   authorTag?: AuthorTagMode
@@ -87,6 +90,7 @@ export function PostDetail({
   onDelete,
   onModerate,
   onDecideRevision,
+  renderAttachment,
   formatTime = (iso) => formatInstant(iso),
   labels: input,
   authorTag,
@@ -145,6 +149,14 @@ export function PostDetail({
               <br />
               {post.pendingRevision.body}
             </dd>
+            {onDecideRevision && (
+              <RevisionPictures
+                current={post.attachments}
+                edited={post.pendingRevision.attachments}
+                render={renderAttachment}
+                labels={labels}
+              />
+            )}
           </dl>
           {onDecideRevision && (
             <div className={styles.actions}>

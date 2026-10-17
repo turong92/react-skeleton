@@ -354,12 +354,23 @@ export default {
   'board.guest.signIn':
     '로그인하지 않았어요. 비회원으로 쓰는 글과 댓글에는 이름과 비밀번호가 필요해요.',
   'board.pending.badge': '승인 대기',
+  'board.ownerQueue.title': '글 주인 메뉴 - 승인 대기 댓글',
+  'board.ownerQueue.secret': '글 주인 확인 값',
+  'board.ownerQueue.hint':
+    '글을 쓸 때 정한 비밀번호를 넣으면 이 글의 승인 대기 댓글을 볼 수 있어요.',
+  'board.ownerQueue.open': '열기',
+  'board.ownerQueue.failed': '불러오지 못했어요. 비밀번호를 확인해 주세요.',
+  'board.ownerQueue.empty': '승인을 기다리는 댓글이 없어요.',
   'board.pending.comment': '승인되기 전에는 나와 게시판을 관리하는 사람만 볼 수 있어요.',
   'board.pending.post': '승인되기 전에는 나와 게시판을 관리하는 사람만 볼 수 있어요.',
   'board.revision.waiting':
     '고친 내용이 승인을 기다리고 있어요. 다른 사람에게는 아직 이전 내용이 보여요.',
   'board.revision.review': '고친 내용이 승인을 기다리고 있어요.',
   'board.revision.current': '지금 공개된 내용',
+  'board.revision.pictures': '사진',
+  'board.revision.pictureAdded': '더해짐',
+  'board.revision.pictureRemoved': '빠짐',
+  'board.revision.changed': '고친 내용이 바뀌었어요 — 다시 확인해 주세요',
   'board.revision.edited': '고친 내용',
   'board.revision.approve': '고친 내용 승인',
   'board.revision.reject': '고친 내용 거절',

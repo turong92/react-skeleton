@@ -1,3 +1,4 @@
+import { ApiRequestError, ErrorCodes, isErrorCode } from '@skeleton/api-client'
 import type { ApiPageResponse } from '@skeleton/api-client'
 import type { MutationOptions, QueryClient } from '@tanstack/react-query'
 import type { BoardApi } from './boardApi'
@@ -26,6 +27,19 @@ import type {
  */
 type Created<T> = { input: T; /** 같은 제출을 다시 보낼 때만 같은 키 */ idempotencyKey?: string }
 
+/**
+ * 보는 사이 바뀌었다는 오류 - 판의 버전이 달라졌거나(409 BOARD.REVISION_CHANGED) 대상이 이미 공개를 떠났다(404: 글 · 댓글이 가려지거나 지워짐).
+ * 화면은 목록을 다시 불러 새 판 · 새 상태를 본 뒤 결정하게 안내한다.
+ */
+export function isRevisionStale(error: unknown): boolean {
+  return (
+    error instanceof ApiRequestError &&
+    (isErrorCode(error, ErrorCodes.BOARD_REVISION_CHANGED) ||
+      isErrorCode(error, ErrorCodes.BOARD_POST_NOT_FOUND) ||
+      isErrorCode(error, ErrorCodes.BOARD_COMMENT_NOT_FOUND))
+  )
+}
+
 const keepDetail = (client: QueryClient, code: string, post: PostDetail) =>
   client.setQueryData(boardKeys.post(code, post.id), post)
 
@@ -44,6 +58,13 @@ export function createPostMutation(
   }
 }
 
+/** 오래된 화면에서 낸 결정 · 수정이 거절되면 글 상세 · 목록을 다시 불러 지금 상태를 보게 한다 */
+function refreshStalePost(client: QueryClient, code: string, id: BoardId, error: unknown) {
+  if (!isRevisionStale(error)) return
+  void client.invalidateQueries({ queryKey: boardKeys.post(code, id) })
+  void client.invalidateQueries({ queryKey: boardKeys.postLists(code) })
+}
+
 /** 로그인하지 않은 사람은 변수에 `guestSecret` 을 함께 준다(헤더로만 나간다) */
 export function updatePostMutation(
   client: QueryClient,
@@ -57,6 +78,7 @@ export function updatePostMutation(
       keepDetail(client, code, post)
       void client.invalidateQueries({ queryKey: boardKeys.postLists(code) })
     },
+    onError: (error) => refreshStalePost(client, code, id, error),
   }
 }
 
@@ -93,6 +115,7 @@ export function decidePostRevisionMutation(
       keepDetail(client, code, post)
       void client.invalidateQueries({ queryKey: boardKeys.postLists(code) })
     },
+    onError: (error) => refreshStalePost(client, code, id, error),
   }
 }
 
@@ -177,6 +200,11 @@ function refetchComments<TVars>(
   return {
     mutationFn,
     onSuccess: () => client.invalidateQueries({ queryKey: boardKeys.comments(code, postId) }),
+    // 보는 사이 바뀐 댓글(409 · 404) - 스레드를 다시 불러 지금 상태를 보여 준다
+    onError: (error) => {
+      if (isRevisionStale(error))
+        void client.invalidateQueries({ queryKey: boardKeys.comments(code, postId) })
+    },
   }
 }
 

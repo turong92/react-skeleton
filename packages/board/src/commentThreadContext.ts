@@ -57,7 +57,7 @@ export type CommentOptions = {
   ) => Promise<unknown> | void
   onEdit?: (id: BoardId, body: string, extra?: CommentSubmitExtra) => Promise<unknown> | void
   /** 고친 댓글 승인 · 거절(관리하는 쪽) */
-  onDecideRevision?: (id: BoardId, decision: RevisionDecision) => void
+  onDecideRevision?: (id: BoardId, decision: RevisionDecision, submittedAt: string) => void
   onDelete?: (id: BoardId) => void
   onModerate?: (id: BoardId, status: CommentStatus) => void
   /** `active` 는 누른 뒤의 상태 */

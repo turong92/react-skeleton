@@ -135,8 +135,14 @@ export function CommentItem({ node, ctx }: { node: CommentNode; ctx: ThreadConte
           {!manage && <p className={styles.body}>{revision.body}</p>}
           {manage && ctx.onDecideRevision && (
             <div className={styles.actions}>
-              {action(L.approveEdit, () => ctx.onDecideRevision?.(comment.id, 'APPROVE'))}
-              {action(L.rejectEdit, () => ctx.onDecideRevision?.(comment.id, 'REJECT'), 'danger')}
+              {action(L.approveEdit, () =>
+                ctx.onDecideRevision?.(comment.id, 'APPROVE', revision.submittedAt),
+              )}
+              {action(
+                L.rejectEdit,
+                () => ctx.onDecideRevision?.(comment.id, 'REJECT', revision.submittedAt),
+                'danger',
+              )}
             </div>
           )}
         </div>

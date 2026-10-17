@@ -94,7 +94,9 @@ function PostView({
         }
         onModerate={config.canModerate ? (moderation) => moderate.mutate(moderation) : undefined}
         onDecideRevision={
-          config.canModerate && post.pendingRevision ? (d) => decideRevision.mutate(d) : undefined
+          config.canModerate && post.pendingRevision
+            ? (decision, submittedAt) => decideRevision.mutate({ decision, submittedAt })
+            : undefined
         }
         reactions={
           principal ? (

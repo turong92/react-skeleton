@@ -64,6 +64,7 @@ describe('ErrorCodes', () => {
     expect(ErrorCodes.BOARD_POST_NOT_COMMENTABLE).toBe('BOARD.POST_NOT_COMMENTABLE')
     expect(ErrorCodes.BOARD_CODE_TAKEN).toBe('BOARD.CODE_TAKEN')
     expect(ErrorCodes.BOARD_RATE_LIMITED).toBe('BOARD.RATE_LIMITED')
+    expect(ErrorCodes.BOARD_REVISION_CHANGED).toBe('BOARD.REVISION_CHANGED')
     expect(ErrorCodes.BOARD_AUTHOR_REQUIRED).toBe('BOARD.AUTHOR_REQUIRED')
     expect(ErrorCodes.BOARD_AUTHOR_NOT_ALLOWED).toBe('BOARD.AUTHOR_NOT_ALLOWED')
   })

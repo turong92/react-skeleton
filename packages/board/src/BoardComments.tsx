@@ -290,11 +290,11 @@ export function BoardComments({
                       managerSecret ? { id, status, guestSecret: managerSecret } : { id, status },
                     )
                   }
-                  onDecideRevision={(id, decision) =>
+                  onDecideRevision={(id, decision, submittedAt) =>
                     decide.mutate(
                       managerSecret
-                        ? { id, decision, guestSecret: managerSecret }
-                        : { id, decision },
+                        ? { id, decision, submittedAt, guestSecret: managerSecret }
+                        : { id, decision, submittedAt },
                     )
                   }
                   onReact={(id, type, active) =>

@@ -97,7 +97,7 @@ const create = useCreatePost(boardApi, code)
 
 - **비회원 쓰기**: 앱이 로그인하지 않았고 `BoardConfig.guestEnabled` · 게시판 `settings.guestWrite` 가 허락할 때 `guest` prop(`GuestUi`)을 `BoardComments` · `PostEditor` 에 준다 — 이름 + 비밀번호(`PASSWORD`; `TOKEN` 이면 앱이 만든 `token`) + 캡차 자리(`renderCaptcha`). 비밀은 **헤더 `X-Board-Guest-Secret` 로만** 나간다(`api.createPost(…, { guest })` · `updatePost(…, { guestSecret })`). 비회원은 작성자(프로필)를 고르지 않는다. 서버는 비회원을 모르므로(`mine` 은 늘 false) 이 브라우저가 쓴 id 는 `useOwnGuestIds` 로 기억하고(비밀은 기억하지 않는다) `ownGuestIds` 로 돌려준다 — 고치기 · 지우기가 그 id 에만 보이고 비밀번호를 다시 묻는다. 승인 대기 글 · 댓글은 비회원이 다시 읽을 수 없으니 **보낸 응답을 화면이 들고 있는다**(`BoardComments` 가 안내와 방금 쓴 것을 보인다).
 - **승인 대기 · 글 주인 관리**: `status: 'PENDING'` 에 「승인 대기」 표시, 관리하는 쪽(`canModerate` 또는 `canManageComments`)에게 승인 · 가리기 단추. 운영자는 글 목록에서 `status: 'PENDING'` / `revision: 'pending'` 으로 대기 글 · 고친 글을 본다.
-- **고친 내용**: 서버가 공개본을 그대로 두고 `pendingRevision` 을 준다 — 쓴 사람에게는 「고친 내용은 승인 뒤에 보여요」, 관리하는 쪽에는 공개본과 나란히 + 승인 · 거절(`useDecidePostRevision` · `useDecideCommentRevision`).
+- **고친 내용**: 서버가 공개본을 그대로 두고 `pendingRevision` 을 준다 — 쓴 사람에게는 「고친 내용은 승인 뒤에 보여요」, 관리하는 쪽에는 공개본과 나란히 + 승인 · 거절(`useDecidePostRevision` · `useDecideCommentRevision`) — 승인 · 거절은 본 판의 `pendingRevision.submittedAt` 을 함께 보내고, 그 사이 쓴 사람이 덮어썼으면 `409 BOARD.REVISION_CHANGED`(목록을 다시 불러 새 판을 본 뒤 결정).
 - **댓글 사진**: `BoardConfig.commentMaxAttachments > 0` 이면 `attachmentPicker`(업로드는 앱 몫 — 키만 오간다) · `renderAttachment`(키 → 그림). 가린 · 지운 댓글의 `attachments` 는 `[]`.
 
 ## 반응 종류를 더하려면 (「공감」 예)

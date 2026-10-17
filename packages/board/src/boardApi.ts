@@ -61,8 +61,13 @@ export type BoardApi = {
   ): Promise<PostDetail>
   /** `DELETE {basePath}/{code}/posts/{id}` — 204, 서버는 소프트 삭제 */
   removePost(code: string, id: BoardId, options?: GuestOptions): Promise<void>
-  /** `PUT {basePath}/{code}/posts/{id}/revision` — 운영자만(고친 글 승인 · 거절) */
-  decidePostRevision(code: string, id: BoardId, decision: RevisionDecision): Promise<PostDetail>
+  /** `PUT {basePath}/{code}/posts/{id}/revision` — 운영자만(고친 글 승인 · 거절). `submittedAt` 은 본 판의 `pendingRevision.submittedAt` — 그 사이 덮어썼으면 `409 BOARD.REVISION_CHANGED` */
+  decidePostRevision(
+    code: string,
+    id: BoardId,
+    decision: RevisionDecision,
+    submittedAt: string,
+  ): Promise<PostDetail>
   /** `PUT {basePath}/{code}/posts/{id}/moderation` — 운영자만(숨김 · 복구 · 고정) */
   moderatePost(code: string, id: BoardId, moderation: PostModeration): Promise<PostDetail>
   /** `GET {basePath}/{code}/posts/{postId}/comments` — 최상위 댓글 단위 페이지 + 각 자손(평평하게) */
@@ -116,6 +121,7 @@ export type BoardApi = {
     postId: BoardId,
     id: BoardId,
     decision: RevisionDecision,
+    submittedAt: string,
     options?: GuestOptions,
   ): Promise<Comment>
   /** `PUT …/reactions {type}` — 글 또는 댓글. 응답은 서버가 센 집계 */
@@ -189,8 +195,11 @@ export function createBoardApi(
         method: 'DELETE',
         headers: guestHeaders(options?.guestSecret),
       }),
-    decidePostRevision: (code, id, decision) =>
-      client.value<PostDetail>(`${post(code, id)}/revision`, { method: 'PUT', json: { decision } }),
+    decidePostRevision: (code, id, decision, submittedAt) =>
+      client.value<PostDetail>(`${post(code, id)}/revision`, {
+        method: 'PUT',
+        json: { decision, submittedAt },
+      }),
     moderatePost: (code, id, moderation) =>
       client.value<PostDetail>(`${post(code, id)}/moderation`, { method: 'PUT', json: moderation }),
     listComments: (code, postId, params = {}) =>
@@ -233,10 +242,10 @@ export function createBoardApi(
         json: moderation,
         headers: guestHeaders(options?.guestSecret),
       }),
-    decideCommentRevision: (code, postId, id, decision, options) =>
+    decideCommentRevision: (code, postId, id, decision, submittedAt, options) =>
       client.value<Comment>(`${comment(code, postId, id)}/revision`, {
         method: 'PUT',
-        json: { decision },
+        json: { decision, submittedAt },
         headers: guestHeaders(options?.guestSecret),
       }),
     putReaction: (code, target, type) =>

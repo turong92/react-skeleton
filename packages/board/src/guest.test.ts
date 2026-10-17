@@ -59,14 +59,17 @@ describe('guest calls — the secret travels in a header only', () => {
     await api.updateComment('free', 1, 2, { attachments: ['k/1.png'] }, guest)
     await api.removeComment('free', 1, 2, guest)
     await api.moderateComment('free', 1, 2, { status: 'PUBLISHED' }, guest)
-    await api.decideCommentRevision('free', 1, 2, 'APPROVE', guest)
+    await api.decideCommentRevision('free', 1, 2, 'APPROVE', '2026-10-17T00:00:00.000001Z', guest)
     expect(calls.map((c) => c.request?.headers)).toEqual(
       Array(6).fill({ 'X-Board-Guest-Secret': 's3cret' }),
     )
     expect(calls[2].request?.json).toEqual({ attachments: ['k/1.png'] })
     expect(calls[5]).toMatchObject({
       path: '/boards/free/posts/1/comments/2/revision',
-      request: { method: 'PUT', json: { decision: 'APPROVE' } },
+      request: {
+        method: 'PUT',
+        json: { decision: 'APPROVE', submittedAt: '2026-10-17T00:00:00.000001Z' },
+      },
     })
   })
 
@@ -76,7 +79,7 @@ describe('guest calls — the secret travels in a header only', () => {
     await api.listPendingComments('free', 1, { page: 1 }, { guestSecret: 's' })
     await api.listCommentRevisions('free', 1)
     await api.listPosts('free', { revision: 'pending' })
-    await api.decidePostRevision('free', 1, 'REJECT')
+    await api.decidePostRevision('free', 1, 'REJECT', '2026-10-17T00:00:00.000001Z')
     await api.updateBoard('free', { settings: { postApproval: 'ALL' } })
     expect(calls[0].request?.params).toEqual({ page: 1, status: 'PENDING' })
     expect(calls[0].request?.headers).toEqual({ 'X-Board-Guest-Secret': 's' })
@@ -84,7 +87,10 @@ describe('guest calls — the secret travels in a header only', () => {
     expect(calls[2].request?.params).toEqual({ revision: 'pending' })
     expect(calls[3]).toMatchObject({
       path: '/boards/free/posts/1/revision',
-      request: { method: 'PUT', json: { decision: 'REJECT' } },
+      request: {
+        method: 'PUT',
+        json: { decision: 'REJECT', submittedAt: '2026-10-17T00:00:00.000001Z' },
+      },
     })
     expect(calls[4]).toMatchObject({ path: '/boards/free', request: { method: 'PATCH' } })
   })

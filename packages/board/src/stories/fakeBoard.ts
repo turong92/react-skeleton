@@ -211,11 +211,13 @@ export function createFakeBoard(options: FakeBoardOptions = {}) {
       if (row.status !== 'PUBLISHED') revisions.delete(id)
       return postView(row)
     }),
-    decidePostRevision: slow(async (_code, id, decision) => {
+    decidePostRevision: slow(async (_code, id, decision, submittedAt) => {
       needModerator()
       const row = findPost(id)
       const revision =
         revisions.get(id) ?? fail(ErrorCodes.BOARD_POST_NOT_FOUND, 404, 'No pending revision')
+      if (revision.submittedAt !== submittedAt)
+        fail(ErrorCodes.BOARD_REVISION_CHANGED, 409, 'The edit changed')
       if (decision === 'APPROVE')
         Object.assign(row, {
           title: revision.title ?? row.title,
@@ -330,11 +332,13 @@ export function createFakeBoard(options: FakeBoardOptions = {}) {
       if (was === 'PUBLISHED' && moderation.status !== 'PUBLISHED') post.commentCount -= 1
       return result
     }),
-    decideCommentRevision: slow(async (_code, postId, id, decision, guestOptions) => {
+    decideCommentRevision: slow(async (_code, postId, id, decision, submittedAt, guestOptions) => {
       const post = managing(postId, guestOptions?.guestSecret)
       const row = findComment(id)
       const revision =
         revisions.get(id) ?? fail(ErrorCodes.BOARD_COMMENT_NOT_FOUND, 404, 'No pending revision')
+      if (revision.submittedAt !== submittedAt)
+        fail(ErrorCodes.BOARD_REVISION_CHANGED, 409, 'The edit changed')
       if (decision === 'APPROVE')
         Object.assign(row, {
           body: revision.body,

@@ -76,15 +76,19 @@ export function moderatePostMutation(
   }
 }
 
+/** 승인 · 거절과 함께 보내는, 본 판의 버전(`pendingRevision.submittedAt`) */
+export type RevisionDecisionInput = { decision: RevisionDecision; submittedAt: string }
+
 /** 운영자의 고친 글 승인 · 거절 */
 export function decidePostRevisionMutation(
   client: QueryClient,
   api: BoardApi,
   code: string,
   id: BoardId,
-): MutationOptions<PostDetail, Error, RevisionDecision> {
+): MutationOptions<PostDetail, Error, RevisionDecisionInput> {
   return {
-    mutationFn: (decision) => api.decidePostRevision(code, id, decision),
+    mutationFn: ({ decision, submittedAt }) =>
+      api.decidePostRevision(code, id, decision, submittedAt),
     onSuccess: (post) => {
       keepDetail(client, code, post)
       void client.invalidateQueries({ queryKey: boardKeys.postLists(code) })
@@ -228,6 +232,11 @@ export const decideCommentRevisionMutation = (
     client,
     code,
     postId,
-    ({ id, decision, guestSecret }: { id: BoardId; decision: RevisionDecision } & GuestOptions) =>
-      api.decideCommentRevision(code, postId, id, decision, { guestSecret }),
+    ({
+      id,
+      decision,
+      submittedAt,
+      guestSecret,
+    }: { id: BoardId; decision: RevisionDecision; submittedAt: string } & GuestOptions) =>
+      api.decideCommentRevision(code, postId, id, decision, submittedAt, { guestSecret }),
   )

@@ -70,7 +70,7 @@ export type PostDetailProps = {
   /** 운영자 — 고정/해제 · 숨김/복구 */
   onModerate?: (moderation: PostModeration) => void
   /** 운영자 — 대기 중인 고친 내용을 공개본과 나란히 보고 승인 · 거절 */
-  onDecideRevision?: (decision: RevisionDecision) => void
+  onDecideRevision?: (decision: RevisionDecision, submittedAt: string) => void
   formatTime?: (iso: string) => string
   /** 작성자 꼬리표 — 글 한 건에는 겹칠 상대가 없어 기본은 안 보인다. 보이려면 `always` */
   authorTag?: AuthorTagMode
@@ -148,10 +148,18 @@ export function PostDetail({
           </dl>
           {onDecideRevision && (
             <div className={styles.actions}>
-              <Button size="sm" variant="secondary" onClick={() => onDecideRevision('APPROVE')}>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => onDecideRevision('APPROVE', post.pendingRevision!.submittedAt)}
+              >
                 {labels.approveEdit}
               </Button>
-              <Button size="sm" variant="danger" onClick={() => onDecideRevision('REJECT')}>
+              <Button
+                size="sm"
+                variant="danger"
+                onClick={() => onDecideRevision('REJECT', post.pendingRevision!.submittedAt)}
+              >
                 {labels.rejectEdit}
               </Button>
             </div>

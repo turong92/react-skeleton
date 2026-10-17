@@ -74,4 +74,26 @@ describe('dev proxy to the backend', () => {
     expect(await get(port, '/api/v1/ping', 'evil.example.com')).toBe(403)
     expect(backend.seen).toEqual([])
   })
+
+  it('/files/public goes to the S3 public prefix, and a path that could leave it is a 400 that never reaches S3', async () => {
+    const s3 = await fakeBackend()
+    const api = await fakeBackend()
+    process.env.FILES_PROXY_TARGET = `http://127.0.0.1:${s3.port}/app`
+    try {
+      const { port } = await devServer(api.port)
+      expect(await get(port, '/files/public/b/x.png', 'localhost')).toBe(200)
+      const before = s3.seen.length
+      for (const bad of [
+        '/files/public/../private/y.png',
+        '/files/public/%2e%2e/private/y.png',
+        '/files/public/%2E%2E%2Fprivate',
+        '/files/public/a%5c..%5cb',
+      ]) {
+        expect(await get(port, bad, 'localhost'), bad).toBe(400)
+      }
+      expect(s3.seen.length, 'nothing was forwarded for the bad paths').toBe(before)
+    } finally {
+      delete process.env.FILES_PROXY_TARGET
+    }
+  })
 })

@@ -107,11 +107,12 @@ export const History: Story = {
     const history = canvas.getByRole('region', { name: '이력' })
     const items = within(history).getAllByRole('listitem')
     await expect(items).toHaveLength(3)
-    await expect(items[0]).toHaveTextContent('결제를 시작했어요')
-    await expect(items[0]).toHaveTextContent('본인')
+    // 최신 것이 위
+    await expect(items[0]).toHaveTextContent('결제가 확인됐어요')
+    await expect(items[0]).toHaveTextContent('결제사')
     await expect(items[1]).toHaveTextContent('결제 전 → 결제 확인 중')
-    await expect(items[2]).toHaveTextContent('결제가 확인됐어요')
-    await expect(items[2]).toHaveTextContent('결제사')
+    await expect(items[2]).toHaveTextContent('결제를 시작했어요')
+    await expect(items[2]).toHaveTextContent('본인')
     await expect(history).not.toHaveTextContent('CONFIRM_SUCCEEDED')
   },
 }

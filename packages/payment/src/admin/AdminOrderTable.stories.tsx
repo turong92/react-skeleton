@@ -19,6 +19,8 @@ const orders = [
     status: 'CONFIRMING',
     card: null,
     method: 'EASY_PAY',
+    easyPayBrand: 'KAKAOPAY',
+    provider: 'toss',
     reviewReason: 'CONFIRM_UNRESOLVED',
   }),
   adminOrder({
@@ -54,7 +56,7 @@ export const Default: Story = {
     await expect(within(rows[0]).getByText('ord_1')).toBeVisible()
     await expect(within(rows[0]).getByText('현대카드 ····1234')).toBeVisible()
     await expect(within(rows[0]).getByText('결제됨')).toBeVisible()
-    await expect(within(rows[1]).getByText('간편결제')).toBeVisible()
+    await expect(within(rows[1]).getByText('카카오페이 · 토스 경유')).toBeVisible()
     await expect(within(rows[2]).getByText('환불 요청함')).toBeVisible()
     await expect(table).not.toHaveTextContent('acc_')
     await userEvent.click(within(rows[1]).getByRole('button', { name: '자세히: 응원하기 1,000원' }))

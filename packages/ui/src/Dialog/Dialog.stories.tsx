@@ -124,3 +124,18 @@ export const LongContent: Story = {
     await expect(dialog.getBoundingClientRect().height).toBeLessThanOrEqual(window.innerHeight)
   },
 }
+
+/**
+ * 닫기 → 곧바로 다시 열기 - 앞선 `close()` 의 `close` 이벤트는 비동기로 와서 다시 열린 뒤에 도착할 수 있다(부하가 크면 흔하다).
+ * 그 늦은 이벤트가 새로 열린 창을 닫으면 안 된다 - 지금 열려 있으면 이전 닫기의 이벤트이므로 `onClose` 로 올리지 않는다. 합성 `close` 이벤트로 그 도착을 흉내 낸다
+ */
+export const ALateCloseEventDoesNotCloseAReopenedDialog: Story = {
+  render: () => <Demo text="Still here." />,
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole('button', { name: 'Open dialog' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Delete project' })
+    dialog.dispatchEvent(new Event('close'))
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    await expect(screen.getByRole('dialog', { name: 'Delete project' })).toBeVisible()
+  },
+}

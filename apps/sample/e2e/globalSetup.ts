@@ -122,6 +122,8 @@ export default async function setup(project: TestProject) {
     const e2eLimits = {
       'auth-magic-link': { 'per-ip': 100 },
       account: {
+        // 로그인 시도 한도(계정마다 10 · IP 마다 30 / 10분, 성공도 센다) - 한 IP 에서 같은 시드 계정으로 파일마다 여러 번(화면 로그인은 동의 · 프로필 준비 API 로그인까지 셋씩) 들어오는 이 실행은 넘는다
+        login: { 'per-account': 1000, 'per-ip': 5000 },
         'login-id': { 'claim-limit': 1000, 'check-per-ip': 5000 },
         ...(process.env.E2E_EMAIL_REAUTH_WINDOW
           ? { email: { 'first-registration-window': process.env.E2E_EMAIL_REAUTH_WINDOW } }

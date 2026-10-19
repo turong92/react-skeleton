@@ -43,7 +43,15 @@ export function Dialog({
   }, [open])
 
   return (
-    <dialog ref={ref} className={styles.dialog} aria-labelledby={titleId} onClose={onClose}>
+    <dialog
+      ref={ref}
+      className={styles.dialog}
+      aria-labelledby={titleId}
+      onClose={() => {
+        // `close` 이벤트는 비동기로 온다 - 닫자마자 다시 열었다면 앞선 닫기의 늦은 이벤트다. 지금 열려 있는 창을 닫으면 안 된다
+        if (!ref.current?.open) onClose()
+      }}
+    >
       <div className={styles.header}>
         <h2 id={titleId}>{title}</h2>
         <button type="button" className={styles.close} aria-label={closeLabel} onClick={onClose}>

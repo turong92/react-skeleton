@@ -33,6 +33,25 @@ type BoardConfigJson = {
   canModerate: boolean
 }
 
+/**
+ * 이 계정의 알림을 전부 읽음으로 — 다른 사람(비회원 포함)이 달아 준 댓글은 글 주인에게 알림이 되어, 이 백엔드를 같이 쓰는 뒤 파일의
+ * 「안 읽은 알림이 없는 첫 화면」 가정(journey.e2e.ts)을 깬다. 알림을 만드는 시나리오가 끝나면 부른다
+ */
+export async function readAllNotifications(apiUrl: string, account: Account) {
+  const login = await fetch(`${apiUrl}/api/v1/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(account),
+  })
+  if (!login.ok) throw new Error(`login ${account.email} → ${login.status}`)
+  const { value } = (await login.json()) as { value: { accessToken: string } }
+  const read = await fetch(`${apiUrl}/api/v1/notifications/read-all`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${value.accessToken}` },
+  })
+  if (!read.ok) throw new Error(`PATCH /notifications/read-all → ${read.status}`)
+}
+
 /** 로그인 화면에서 이메일 · 비밀번호로(체험 계정 채우기 버튼이 아니라) */
 export async function signInAs(page: Page, baseUrl: string, account: Account) {
   await consentViaApi(account) // legal 모듈이 있는 백엔드: 시드 계정은 동의 기록이 없다(없으면 아무 일도 안 한다)

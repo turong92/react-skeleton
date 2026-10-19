@@ -104,6 +104,12 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   const formId = useId()
   const [typed, setTyped] = useState('')
+  const [wasOpen, setWasOpen] = useState(open)
+  if (open !== wasOpen) {
+    setWasOpen(open)
+    // 열 때마다 입력은 비워진다 - 닫는 길(취소 · × · Esc)이 `close` 이벤트까지 가는 것을 기다리지 않는다(닫자마자 다시 열면 그 이벤트는 무시된다)
+    if (open) setTyped('')
+  }
   const anchorRef = useRef<HTMLDivElement>(null)
   const blocked = confirmBlockedBy !== undefined && !busy
   const ready =
@@ -126,10 +132,7 @@ export function ConfirmDialog({
   return (
     <Dialog
       open={open}
-      onClose={() => {
-        setTyped('')
-        onClose()
-      }}
+      onClose={onClose}
       title={title}
       closeLabel={closeLabel}
       footer={

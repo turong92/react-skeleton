@@ -1,6 +1,7 @@
 import { expect as pwExpect, type Browser, type BrowserContext, type Page } from 'playwright/test'
 import { afterAll, beforeAll, describe, inject, it } from 'vitest'
-import { auth, fillSignIn, ko, launch, legalOn, seedNotes, signIn } from './helpers'
+import { readAllNotifications } from './boardSteps'
+import { DEMO, auth, fillSignIn, ko, launch, legalOn, seedNotes, signIn } from './helpers'
 
 /*
  * 핵심 여정 — 랜딩(로그아웃 상태의 `/` · 동의 배너 · 약관 · 404) → 로그인 → 빈 대시보드 → 만들기(검증 오류 → 성공) → 알림 → 첨부 업로드 → 내보내기 → 목록(검색 · 필터 · 쪽) → 수정 → 삭제 → 설정(테마) → 로그아웃.
@@ -14,6 +15,8 @@ let context: BrowserContext
 let page: Page
 
 beforeAll(async () => {
+  // 「안 읽은 알림이 없는 첫 화면」은 이 파일이 스스로 세운다 - 파일 순서는 고정이 아니고 다른 파일(boardGuest 의 손님 댓글)이 알림을 남긴다
+  await readAllNotifications(inject('apiUrl'), DEMO)
   ;({ browser, context, page } = await launch())
 })
 afterAll(async () => {

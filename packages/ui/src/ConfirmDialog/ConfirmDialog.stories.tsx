@@ -114,6 +114,26 @@ export const TypedConfirmationIsClearedWhenReopened: Story = {
   },
 }
 
+/** 취소로 닫고 곧바로 다시 열어도(`close` 이벤트가 오기 전) 입력이 비어 있다 - 비우는 일을 닫힘 이벤트에 맡기지 않는다 */
+export const TypedConfirmationIsClearedWhenReopenedRightAfterCancel: Story = {
+  render: () => (
+    <Demo typedConfirmation={{ phrase: 'my-project', label: 'Type my-project to confirm' }} />
+  ),
+  play: async ({ canvas, userEvent }) => {
+    const opener = canvas.getByRole('button', { name: 'Delete…' })
+    await userEvent.click(opener)
+    await screen.findByRole('dialog', { name: 'Delete project' })
+    await userEvent.type(screen.getByLabelText('Type my-project to confirm'), 'my-project')
+    // 한 작업 안에서 닫고 다시 연다 - 앞선 닫기의 `close` 이벤트는 다시 열린 뒤에 도착한다
+    screen.getByRole('button', { name: 'Keep it' }).click()
+    await Promise.resolve() // React 가 닫힘을 그리게 마이크로태스크만 양보한다(작업은 넘기지 않는다)
+    opener.click()
+    await screen.findByRole('dialog', { name: 'Delete project' })
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    await expect(screen.getByLabelText('Type my-project to confirm')).toHaveValue('')
+  },
+}
+
 export const BusyLocksBothButtons: Story = {
   args: { open: true, busy: true },
   play: async () => {

@@ -38,9 +38,12 @@ beforeAll(async () => {
   ;({ browser, page } = await launch())
 })
 afterAll(async () => {
-  await browser?.close()
-  // 손님 댓글이 글 주인(USER)에게 알림을 남겼다 - 뒤 파일(journey)은 안 읽은 알림이 없는 첫 화면을 본다
-  await readAllNotifications(inject('apiUrl'), USER)
+  try {
+    await browser?.close()
+  } finally {
+    // 손님 댓글이 글 주인(USER)에게 알림을 남겼다 - 알림 수에 기대는 다른 파일을 위해 치운다(journey 는 스스로도 비운다)
+    await readAllNotifications(inject('apiUrl'), USER)
+  }
 })
 
 async function visit(url: string) {

@@ -56,6 +56,8 @@ export type Order = {
   method: string | null
   /** 카드 결제가 아니거나 계정이 지워져 비워졌으면 `null` */
   card: OrderCard | null
+  /** 결제사가 직접 받은 간편결제의 브랜드 코드(`KAKAOPAY` · `NAVERPAY`) - 그 밖은 `null`, 구버전 서버는 칸이 없다 */
+  easyPayBrand?: string | null
   testMode: boolean
   failureCode: string | null
   createdAt: string
@@ -188,6 +190,11 @@ export type CreateOrderInput = {
    * 나라는 보내지 않는다 - 서버가 접속 나라로 정한다(`GET /config`)
    */
   provider?: string
+  /**
+   * 결제를 시작한 화면의 origin(`window.location.origin`) - 구매자를 서버가 정한 주소로 돌려보내는 결제사(카카오페이 · 네이버페이)가, 서버 설정의 허용 목록(`allowed-return-origins`)에 있을 때만
+   * 그 origin 으로 돌려보낸다(로그인 저장소가 origin 마다 따로라서). 목록 밖이면 서버 설정의 주소. 토스 · Paddle 은 읽지 않는다
+   */
+  returnOrigin?: string
 }
 /**
  * `checkout` 은 같은 `Idempotency-Key` 를 다시 보냈는데 주문이 이미 `PENDING` 이 아니거나 결제 가능 시간이 지난 `PENDING` 이면 `null` 이다(`200`, 계약 2 「주문 만들기」) -

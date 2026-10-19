@@ -47,6 +47,19 @@ describe('cardDisplay', () => {
     expect(show('EASY_PAY', { issuer: null, last4: null })).toBe('간편결제')
   })
 
+  it('names the app of an easy pay the provider took directly - and says 간편결제 for any other', () => {
+    const brand = (easyPayBrand: string | null | undefined) =>
+      cardDisplay({ method: 'EASY_PAY', card: null, easyPayBrand }, labels)
+    expect(brand('KAKAOPAY')).toBe('카카오페이')
+    expect(brand('NAVERPAY')).toBe('네이버페이')
+    expect(brand('NO_SUCH_APP')).toBe('간편결제')
+    expect(brand(null)).toBe('간편결제')
+    expect(brand(undefined)).toBe('간편결제') // 구버전 서버
+    expect(cardDisplay({ method: 'CARD', card: null, easyPayBrand: 'KAKAOPAY' }, labels)).toBe(
+      '카드',
+    )
+  })
+
   it('shows nothing when not even the kind is known', () => {
     expect(show(null, null)).toBeNull()
     expect(show('SOMETHING_NEW', null)).toBeNull()

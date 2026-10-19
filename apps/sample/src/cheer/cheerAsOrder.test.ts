@@ -28,6 +28,14 @@ describe('cheerAsOrder — a cheer drawn by the payment list part', () => {
     })
   })
 
+  it('an easy pay the provider took directly carries its brand, so the list can name the app', () => {
+    expect(cheerAsOrder({ ...cheer, easyPayBrand: 'KAKAOPAY' }, '응원하기')).toMatchObject({
+      method: 'EASY_PAY',
+      card: null,
+      easyPayBrand: 'KAKAOPAY',
+    })
+  })
+
   it('a partly refunded cheer stays PAID on the server but reads 「일부 환불됨」 — the amount refunded is what tells', () => {
     const order = cheerAsOrder({ ...cheer, refundedAmount: 1000 }, '응원하기')
     expect(order.status).toBe('PARTIALLY_REFUNDED')

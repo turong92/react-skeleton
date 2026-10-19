@@ -37,17 +37,22 @@ export function formatMoney(
 
 /**
  * 결제 수단 한 줄 — 카드는 「현대카드 ····1234」(끝 네 글자는 온 그대로 · `*` 가 섞여도 그대로).
- * 문구에 없는 카드사 코드는 「카드」, 끝 네 글자가 없으면 이름만, 카드 칸이 없거나 둘 다 비었으면 수단 종류(「카드」 · 「간편결제」)만.
+ * 문구에 없는 카드사 코드는 「카드」, 끝 네 글자가 없으면 이름만, 카드 칸이 없거나 둘 다 비었으면 수단 종류(「카드」 · 「간편결제」)만 -
+ * 결제사가 직접 받은 간편결제(`easyPayBrand`)는 앱 이름(「카카오페이」 · 「네이버페이」).
  * 수단 종류도 모르면 `null` — 보이지 않는다.
  */
 export function cardDisplay(
-  order: { method: string | null; card: OrderCard | null },
-  labels: Pick<PaymentLabels, 'methods' | 'issuers' | 'cardFallback'>,
+  order: { method: string | null; card: OrderCard | null; easyPayBrand?: string | null },
+  labels: Pick<PaymentLabels, 'methods' | 'issuers' | 'cardFallback' | 'easyPayBrands'>,
 ): string | null {
   const { card } = order
   if (card && (card.issuer || card.last4)) {
     const name = lookup(labels.issuers, card.issuer) || labels.cardFallback
     return card.last4 ? `${name} ····${card.last4}` : name
+  }
+  if (order.method === 'EASY_PAY') {
+    const brand = lookup(labels.easyPayBrands, order.easyPayBrand)
+    if (brand) return brand
   }
   return lookup(labels.methods, order.method) || null
 }

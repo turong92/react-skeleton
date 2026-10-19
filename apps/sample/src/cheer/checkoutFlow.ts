@@ -49,6 +49,8 @@ export type StartCheerDeps = {
     options: Pick<OpenCheckoutOptions, 'successUrl' | 'failUrl' | 'easyPay'>,
   ) => Promise<void>
   abandonOrder: (orderId: string) => Promise<unknown>
+  /** 결제를 시작한 화면의 origin - 서버가 허용 목록에 있을 때만 쓴다(카카오페이 · 네이버페이는 돌아올 주소를 서버가 정한다). 없으면 보내지 않는다 */
+  returnOrigin?: string
   /** 이 주문의 결제창이 돌려보낼 주소 */
   urlsFor: (
     orderId: string,
@@ -108,6 +110,7 @@ export async function startCheer(
         itemType: CHEER_ITEM_TYPE,
         itemRef,
         ...(provider !== undefined ? { provider } : {}),
+        ...(deps.returnOrigin !== undefined ? { returnOrigin: deps.returnOrigin } : {}),
       })
     } catch (error) {
       return { kind: 'order-failed', error }

@@ -55,6 +55,7 @@ export const defaultPaymentLabels: PaymentLabels = {
     VIRTUAL_ACCOUNT: 'Virtual account',
     MOBILE_PHONE: 'Mobile phone',
   },
+  easyPayBrands: { KAKAOPAY: 'KakaoPay', NAVERPAY: 'Naver Pay' },
   issuers: {
     HYUNDAI: 'Hyundai Card',
     SAMSUNG: 'Samsung Card',

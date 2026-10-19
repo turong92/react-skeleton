@@ -165,6 +165,7 @@ export function CheerPage() {
         openCheckout: (checkout, options) =>
           openCheckout(checkout, { ...options, locale: language }),
         abandonOrder: abandon.mutateAsync,
+        returnOrigin: window.location.origin,
         urlsFor: (orderId, chosen) => checkoutReturnUrls(window.location.origin, orderId, chosen),
       },
       selected,

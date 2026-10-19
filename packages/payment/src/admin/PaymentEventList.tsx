@@ -22,42 +22,48 @@ export type PaymentEventListProps = {
   formatTime: (iso: string) => string
 }
 
-/** 「이 결제가 왜 이 상태인가」 — 서버가 준 순서 그대로 한 줄씩: 때 · 누가 · 무슨 일 · 상태 바뀜 · (있으면) 참조 번호 */
+/** 「이 결제가 왜 이 상태인가」 — **최신 것이 위**(서버는 오래된 것부터 준다; `id` 는 그 주문 안의 순번) 한 줄씩: 때 · 누가 · 무슨 일 · 상태 바뀜 · (있으면) 참조 번호 */
 export function PaymentEventList({ events, labels, formatTime }: PaymentEventListProps) {
   const text = labels.admin
   if (events.length === 0) return <p className={styles.muted}>{text.panel.noEvents}</p>
   return (
     <ol className={styles.events}>
-      {events.map((event) => {
-        const change = statusChange(event, labels)
-        // 이력에만 남는 우리 코드(`PROVIDER_PENDING_EXPIRED` · `LATE_RESULT`)는 문장으로 - 참조 번호에는 두지 않는다
-        const coded = lookup(text.eventCodes, event.providerCode)
-        // `LATE_RESULT` 는 이력 종류가 `REFUND_UNKNOWN` 이라 이름만 읽으면 「결과를 아직 몰라요」다 - 일어난 일이 그 이름을 대신한다
-        const replacesTitle = coded !== undefined && event.type === 'REFUND_UNKNOWN'
-        const reference = [coded ? null : event.providerCode, event.providerTraceId, event.traceId]
-          .filter(Boolean)
-          .join(' / ')
-        return (
-          <li key={event.id} className={styles.event}>
-            <span className={styles.muted}>
-              {formatTime(event.createdAt)} · {lookup(text.actors, event.actor) ?? ''}
-            </span>
-            <strong>
-              {(replacesTitle ? coded : lookup(text.eventTypes, event.type)) ?? text.unknownEvent}
-            </strong>
-            {coded && !replacesTitle && <span className={styles.muted}>{coded}</span>}
-            {change && <span className={styles.muted}>{change}</span>}
-            {reference && (
-              <ErrorReference
-                reference={reference}
-                label={labels.reference.label}
-                copyLabel={labels.reference.copy}
-                copiedLabel={labels.reference.copied}
-              />
-            )}
-          </li>
-        )
-      })}
+      {[...events]
+        .sort((a, b) => b.id - a.id)
+        .map((event) => {
+          const change = statusChange(event, labels)
+          // 이력에만 남는 우리 코드(`PROVIDER_PENDING_EXPIRED` · `LATE_RESULT`)는 문장으로 - 참조 번호에는 두지 않는다
+          const coded = lookup(text.eventCodes, event.providerCode)
+          // `LATE_RESULT` 는 이력 종류가 `REFUND_UNKNOWN` 이라 이름만 읽으면 「결과를 아직 몰라요」다 - 일어난 일이 그 이름을 대신한다
+          const replacesTitle = coded !== undefined && event.type === 'REFUND_UNKNOWN'
+          const reference = [
+            coded ? null : event.providerCode,
+            event.providerTraceId,
+            event.traceId,
+          ]
+            .filter(Boolean)
+            .join(' / ')
+          return (
+            <li key={event.id} className={styles.event}>
+              <span className={styles.muted}>
+                {formatTime(event.createdAt)} · {lookup(text.actors, event.actor) ?? ''}
+              </span>
+              <strong>
+                {(replacesTitle ? coded : lookup(text.eventTypes, event.type)) ?? text.unknownEvent}
+              </strong>
+              {coded && !replacesTitle && <span className={styles.muted}>{coded}</span>}
+              {change && <span className={styles.muted}>{change}</span>}
+              {reference && (
+                <ErrorReference
+                  reference={reference}
+                  label={labels.reference.label}
+                  copyLabel={labels.reference.copy}
+                  copiedLabel={labels.reference.copied}
+                />
+              )}
+            </li>
+          )
+        })}
     </ol>
   )
 }

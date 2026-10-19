@@ -19,6 +19,8 @@ export type Cheer = {
   createdAt: string
   refundedAt: string | null
   card?: OrderCard | null
+  /** 결제사가 직접 받은 간편결제의 브랜드 코드(`KAKAOPAY` · `NAVERPAY`) - 그 밖은 `null`, 옛 서버는 칸이 없다 */
+  easyPayBrand?: string | null
 }
 
 export type CheerListParams = { cursor?: string; size?: number }

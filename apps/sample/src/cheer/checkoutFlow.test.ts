@@ -1,4 +1,5 @@
 import { ApiRequestError } from '@skeleton/api-client'
+import { postSignInTarget } from '@skeleton/auth'
 import type { Checkout, CreateOrderInput, CreateOrderResult } from '@skeleton/payment'
 import { describe, expect, it } from 'vitest'
 import {
@@ -65,6 +66,20 @@ describe('checkoutReturnUrls', () => {
 })
 
 describe('startCheer', () => {
+  it('tells the server which origin the checkout started from, so a redirect-style provider returns to it', async () => {
+    const { deps, creates } = fakes()
+    await startCheer({ ...deps, returnOrigin: 'http://localhost:5173' }, 'cheer-3000')
+    expect(creates).toEqual([
+      { itemType: 'cheer', itemRef: 'cheer-3000', returnOrigin: 'http://localhost:5173' },
+    ])
+  })
+
+  it('sends no origin field when the screen does not know one', async () => {
+    const { deps, creates } = fakes()
+    await startCheer(deps, 'cheer-3000')
+    expect(creates[0]).not.toHaveProperty('returnOrigin')
+  })
+
   it('without an easy pay the payment window is opened with the return addresses only - exactly as before', async () => {
     const { deps, opened } = fakes()
     await startCheer(deps, 'cheer-3000')
@@ -532,5 +547,23 @@ describe('naverpay (the server reserved the window; the buyer comes back with a 
       returnPlanOf('?kind=NAVERPAY_REDIRECT&provider=naverpay&order=ord_1&resultCode=Success'),
     ).toEqual({ kind: 'invalid' })
     expect(returnPlanOf('?kind=NAVERPAY_REDIRECT&provider=naverpay')).toEqual({ kind: 'invalid' })
+  })
+})
+
+describe('coming back from a provider without a session', () => {
+  it('after sign-in the visitor is sent to the same return address, query included, and it reads as the same approval', () => {
+    const search =
+      '?kind=KAKAOPAY_REDIRECT&provider=kakaopay&order=ord_1&result=success&pg_token=pg%2Btok_1'
+    // `RequireAuth` 가 로그인 화면으로 보낼 때 담는 `state.from`
+    const target = postSignInTarget({ from: { pathname: '/payments/return', search, hash: '' } })
+    expect(target).toBe(`/payments/return${search}`)
+    expect(returnPlanOf(new URL(target, 'https://app.example').search)).toEqual(
+      returnPlanOf(search),
+    )
+    expect(returnPlanOf(search)).toEqual({
+      kind: 'approve',
+      orderId: 'ord_1',
+      approvalToken: 'pg+tok_1',
+    })
   })
 })

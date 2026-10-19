@@ -427,6 +427,8 @@ export type PaymentLabels = {
   refundReason: Record<RefundReasonCode, string>
   /** 결제 수단 종류 코드(`CARD` · `EASY_PAY` …) → 글자. 모르는 코드는 보이지 않는다 */
   methods: Record<string, string>
+  /** 결제사가 직접 받은 간편결제의 브랜드 코드(`KAKAOPAY` · `NAVERPAY`) → 앱 이름. 모르는 코드는 `methods.EASY_PAY` */
+  easyPayBrands: Record<string, string>
   /** 카드사 코드(`HYUNDAI` …) → 이름. 모르는 코드는 `cardFallback` */
   issuers: Record<string, string>
   cardFallback: string

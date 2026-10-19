@@ -727,7 +727,7 @@ describe('AdminOrderPanel — the history', () => {
     }),
   ]
 
-  it('lists what happened in words, who did it and the status change — in the order the server gave', () => {
+  it('lists what happened in words, who did it and the status change — newest first', () => {
     const html = panel(detail({ events }))
     expect(html).toContain('이력')
     const at = (text: string) => html.indexOf(text)
@@ -741,8 +741,8 @@ describe('AdminOrderPanel — the history', () => {
       '시스템',
     ])
       expect(at(text), text).toBeGreaterThan(-1)
-    expect(at('결제를 시작했어요')).toBeLessThan(at('결제가 확인됐어요'))
-    expect(at('결제가 확인됐어요')).toBeLessThan(at('환불을 결제사에 보냈어요'))
+    expect(at('환불을 결제사에 보냈어요')).toBeLessThan(at('결제가 확인됐어요'))
+    expect(at('결제가 확인됐어요')).toBeLessThan(at('결제를 시작했어요'))
   })
 
   it('a refund event reads its statuses as refund statuses (PENDING is 환불 중 there, not 결제 전)', () => {

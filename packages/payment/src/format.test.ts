@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { cardDisplay, formatMoney, lookup, priceEveryDisplay, requestedAmountNote } from './format'
+import {
+  adminMethodDisplay,
+  cardDisplay,
+  formatMoney,
+  lookup,
+  priceEveryDisplay,
+  requestedAmountNote,
+} from './format'
 import { defaultPaymentLabels, koPaymentLabels, resolvePaymentLabels } from './labels'
 
 describe('formatMoney', () => {
@@ -57,6 +64,22 @@ describe('cardDisplay', () => {
     expect(brand(undefined)).toBe('간편결제') // 구버전 서버
     expect(cardDisplay({ method: 'CARD', card: null, easyPayBrand: 'KAKAOPAY' }, labels)).toBe(
       '카드',
+    )
+  })
+
+  it('an easy pay paid with a card names the app and then the card', () => {
+    expect(
+      cardDisplay(
+        {
+          method: 'EASY_PAY',
+          card: { issuer: 'SHINHAN', last4: '374*' },
+          easyPayBrand: 'KAKAOPAY',
+        },
+        labels,
+      ),
+    ).toBe('카카오페이 · 신한카드 ····374*')
+    expect(cardDisplay({ method: 'EASY_PAY', card: null, easyPayBrand: 'TOSSPAY' }, labels)).toBe(
+      '토스페이',
     )
   })
 
@@ -131,5 +154,32 @@ describe('requestedAmountNote', () => {
     ).toBeNull()
     expect(requestedAmountNote({ amount: won(5000), requestedAmount: null }, labels)).toBeNull()
     expect(requestedAmountNote({ amount: won(5000) }, labels)).toBeNull()
+  })
+})
+
+describe('adminMethodDisplay — the app and the route, so Toss, Kakao and Naver side by side are not confused', () => {
+  const show = (provider: string, easyPayBrand: string | null, method = 'EASY_PAY') =>
+    adminMethodDisplay({ method, card: null, easyPayBrand, provider }, koPaymentLabels)
+
+  it('says which provider the money goes through', () => {
+    expect(show('kakaopay', 'KAKAOPAY')).toBe('카카오페이 · 직접')
+    expect(show('naverpay', 'NAVERPAY')).toBe('네이버페이 · 직접')
+    expect(show('toss', 'KAKAOPAY')).toBe('카카오페이 · 토스 경유')
+    expect(show('toss', null)).toBe('간편결제 · 토스 경유')
+  })
+
+  it('a card payment keeps just the card; an unknown provider id is shown as it is', () => {
+    expect(
+      adminMethodDisplay(
+        {
+          method: 'CARD',
+          card: { issuer: 'HYUNDAI', last4: '1234' },
+          easyPayBrand: null,
+          provider: 'toss',
+        },
+        koPaymentLabels,
+      ),
+    ).toBe('현대카드 ····1234')
+    expect(show('someother', 'KAKAOPAY')).toBe('카카오페이 · someother')
   })
 })

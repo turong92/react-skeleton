@@ -4,7 +4,7 @@ import { Alert, Badge, Button, Card, ErrorReference } from '@skeleton/ui'
 import { useId } from 'react'
 import { isPaymentLedgerError, PaymentLedgerErrorCodes } from '../errors'
 import { referenceOf } from '../failure'
-import { cardDisplay, formatMoney, lookup, requestedAmountNote } from '../format'
+import { adminMethodDisplay, formatMoney, lookup, requestedAmountNote } from '../format'
 import { resolvePaymentLabels, type PaymentLabels, type PaymentLabelsInput } from '../labels'
 import type { OpenRefundStatus, Refund } from '../ledgerTypes'
 import { OrderStatusBadge, RefundStatusBadge } from '../OrderStatusBadge'
@@ -126,7 +126,7 @@ export function AdminOrderPanel({
       { amount, currency: order.amount.currency },
       { locale, currencySuffix: labels.currencySuffix },
     )
-  const card = cardDisplay(order, labels)
+  const card = adminMethodDisplay(order, labels)
 
   // 열린 환불의 상태: 환불 줄이 말해 주면 그것이, 아니면 주문 응답이
   const openLine = refunds.find((refund) => OPEN_REFUND.has(refund.status))

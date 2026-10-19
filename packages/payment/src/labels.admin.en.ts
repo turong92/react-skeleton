@@ -99,6 +99,7 @@ export const defaultPaymentAdminLabels: PaymentAdminLabels = {
     details: 'Details',
     detailsFor: (orderName) => `Details: ${orderName}`,
   },
+  routes: { toss: 'via Toss', kakaopay: 'direct', naverpay: 'direct' },
   panel: {
     id: 'Payment number',
     account: 'Account',

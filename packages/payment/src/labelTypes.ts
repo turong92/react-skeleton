@@ -84,6 +84,8 @@ export type PaymentAdminLabels = {
     /** 단추의 낭독 이름 — 보이는 글자(`details`)로 시작한다 */
     detailsFor: (orderName: string) => string
   }
+  /** 결제사 id → 경로 글자(「토스 경유」 · 「직접」) - 운영자 화면이 간편결제 앱 이름 옆에 붙인다. 모르는 id 는 id 그대로 */
+  routes: Record<string, string>
   panel: {
     id: string
     account: string

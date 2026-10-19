@@ -1,7 +1,7 @@
 import { formatInstant } from '@skeleton/time'
 import { Badge, Button, Field, Input, Select, Switch, Table, type TableColumn } from '@skeleton/ui'
 import { useState } from 'react'
-import { cardDisplay, formatMoney, lookup } from '../format'
+import { adminMethodDisplay, formatMoney, lookup } from '../format'
 import { resolvePaymentLabels, type PaymentLabelsInput } from '../labels'
 import type { OrderStatus } from '../ledgerTypes'
 import { OrderStatusBadge } from '../OrderStatusBadge'
@@ -114,7 +114,7 @@ export function AdminOrderTable({
     {
       key: 'method',
       header: text.columns.method,
-      render: (order) => cardDisplay(order, labels),
+      render: (order) => adminMethodDisplay(order, labels),
     },
     {
       key: 'status',

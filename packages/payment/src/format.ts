@@ -48,13 +48,37 @@ export function cardDisplay(
   const { card } = order
   if (card && (card.issuer || card.last4)) {
     const name = lookup(labels.issuers, card.issuer) || labels.cardFallback
-    return card.last4 ? `${name} ····${card.last4}` : name
+    const text = card.last4 ? `${name} ····${card.last4}` : name
+    const app =
+      order.method === 'EASY_PAY' ? lookup(labels.easyPayBrands, order.easyPayBrand) : undefined
+    return app ? `${app} · ${text}` : text
   }
   if (order.method === 'EASY_PAY') {
     const brand = lookup(labels.easyPayBrands, order.easyPayBrand)
     if (brand) return brand
   }
   return lookup(labels.methods, order.method) || null
+}
+
+/**
+ * 운영자 화면의 결제 수단 - 구매자가 보는 줄에 **경로(결제사)** 를 붙인다(「카카오페이 · 토스 경유」 · 「카카오페이 · 직접」).
+ * 토스 · 카카오페이 · 네이버페이를 함께 켠 프로젝트에서 같은 앱 이름이 어느 결제사로 정산 · 환불되는지 가르려는 것이다. 간편결제가 아니면 구매자 줄 그대로.
+ */
+export function adminMethodDisplay(
+  order: {
+    method: string | null
+    card: OrderCard | null
+    easyPayBrand?: string | null
+    provider: string
+  },
+  labels: Pick<PaymentLabels, 'methods' | 'issuers' | 'cardFallback' | 'easyPayBrands'> & {
+    admin: Pick<PaymentLabels['admin'], 'routes'>
+  },
+): string | null {
+  const shown = cardDisplay(order, labels)
+  if (order.method !== 'EASY_PAY') return shown
+  const route = lookup(labels.admin.routes, order.provider) ?? order.provider
+  return `${shown} · ${route}`
 }
 
 const PERIOD = /^P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)W)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?)?$/

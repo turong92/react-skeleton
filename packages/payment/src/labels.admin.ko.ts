@@ -88,6 +88,7 @@ export const koPaymentAdminLabels: PaymentAdminLabels = {
     details: '자세히',
     detailsFor: (orderName) => `자세히: ${orderName}`,
   },
+  routes: { toss: '토스 경유', kakaopay: '직접', naverpay: '직접' },
   panel: {
     id: '결제 번호',
     account: '계정',

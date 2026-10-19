@@ -26,7 +26,7 @@ export function cheerAsOrder(cheer: Cheer, orderName: string): Order {
     refundableAmount: refunded ? 0 : Math.max(cheer.amount.amount - cheer.refundedAmount, 0),
     refundPending: false,
     openRefundStatus: null,
-    method: card ? 'CARD' : cheer.easyPayBrand ? 'EASY_PAY' : null,
+    method: cheer.easyPayBrand ? 'EASY_PAY' : card ? 'CARD' : null,
     card,
     ...(cheer.easyPayBrand ? { easyPayBrand: cheer.easyPayBrand } : {}),
     testMode: false,

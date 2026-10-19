@@ -55,7 +55,17 @@ export const koPaymentLabels: PaymentLabels = {
     VIRTUAL_ACCOUNT: '가상계좌',
     MOBILE_PHONE: '휴대폰',
   },
-  easyPayBrands: { KAKAOPAY: '카카오페이', NAVERPAY: '네이버페이' },
+  easyPayBrands: {
+    TOSSPAY: '토스페이',
+    NAVERPAY: '네이버페이',
+    KAKAOPAY: '카카오페이',
+    SAMSUNGPAY: '삼성페이',
+    LPAY: '엘페이',
+    PAYCO: '페이코',
+    SSG: 'SSG페이',
+    APPLEPAY: '애플페이',
+    PINPAY: '핀페이',
+  },
   issuers: {
     HYUNDAI: '현대카드',
     SAMSUNG: '삼성카드',

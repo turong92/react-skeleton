@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — 결제 돌아오기 · 표시 (2026-10-19)
+
+- `CreateOrderInput.returnOrigin`(선택): 주문을 만들 때 결제를 시작한 화면의 origin 을 서버에 알린다. 샘플 `startCheer` 는 `window.location.origin` 을 보낸다(서버 허용 목록에 있을 때만 쓰인다).
+- `Order.easyPayBrand`(선택, 옛 서버는 칸이 없다): 간편결제의 브랜드 코드(`KAKAOPAY` · `NAVERPAY` · `TOSSPAY` …). `cardDisplay` 가 「카카오페이 · 신한카드 ····374\*」처럼 앱 이름 뒤에 카드를 붙이고, `adminMethodDisplay`(새) 가 운영자 화면에 「카카오페이 · 토스 경유」 · 「… · 직접」처럼 경로를 붙인다. 샘플의 `Cheer.easyPayBrand` 도 같다.
+- **새 필수 문구 키**(`labels` 를 통째로 만들어 주는 앱은 채워야 한다 - 안 채우면 타입 검사가 깨진다): `PaymentLabels.easyPayBrands`, `PaymentAdminLabels.routes`.
+- 운영자 결제 한 건의 이력(`PaymentEventList`)이 **최신 것이 위**로 바뀌었다(서버는 오래된 것부터 준다).
+
 ### Added — 게시판: 비회원 쓰기 · 승인 대기 · 고친 내용 승인 · 댓글 사진 (2026-10-17)
 
 - `@skeleton/board`: 공개 영역이 켜진 서버의 `attachmentUrls`(글 · 댓글, 공개된 항목만) · `boardApi.postAttachmentAccess` / `commentAttachmentAccess`(승인 전 · 판 사진의 5분 서명 주소) · `AttachmentAccess` 타입. `PostDetail` 이 `renderAttachment` 를 주면 글의 사진도 그린다. 견본의 `BoardPicture` 가 공개 주소가 있으면 그것으로, 없으면 서명 주소로 그리고, 로그인하지 않은 사람에게는 반응 단추를 숨긴다. e2e `boardGuest` 에 「승인 전 비공개 → 승인하면 공개 → 가리면 사라짐」 단계.

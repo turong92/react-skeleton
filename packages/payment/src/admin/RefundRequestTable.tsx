@@ -1,5 +1,6 @@
 import { formatInstant } from '@skeleton/time'
 import { Button, Table, type TableColumn } from '@skeleton/ui'
+import { useId } from 'react'
 import { formatMoney, lookup, requestedAmountNote } from '../format'
 import { resolvePaymentLabels, type PaymentLabelsInput } from '../labels'
 import { RefundStatusBadge } from '../OrderStatusBadge'
@@ -53,6 +54,12 @@ export function RefundRequestTable({
   const panel = labels.admin.panel
   const money = (refund: AdminRefund) =>
     formatMoney(refund.amount, { locale, currencySuffix: labels.currencySuffix })
+  const blockId = useId()
+  // 서버가 이 결제사로는 환불을 못 보낸다고 알린 줄 - 「요청대로 환불하기」를 막고 이유를 옆에 적는다(거절은 그대로: 결제사 화면에서 환불한 뒤 요청을 거절한다)
+  const blockOf = (refund: AdminRefund) =>
+    refund.refundBlock
+      ? (lookup(labels.admin.refundBlock, refund.refundBlock) ?? labels.admin.refundBlock.OTHER)
+      : null
 
   const columns: TableColumn<AdminRefund>[] = [
     {
@@ -98,6 +105,8 @@ export function RefundRequestTable({
       render: (refund) => {
         const waiting = refund.status === 'REQUESTED'
         const detailsName = text.detailsFor(refund.orderId)
+        const blocked = blockOf(refund)
+        const noteId = `${blockId}-${refund.id}`
         return (
           <span className={sharedStyles.actions}>
             {waiting && onApprove && (
@@ -105,10 +114,17 @@ export function RefundRequestTable({
                 variant="secondary"
                 size="sm"
                 aria-label={panel.approveFor(money(refund), refund.orderId)}
-                onClick={() => onApprove(refund)}
+                aria-disabled={blocked !== null ? true : undefined}
+                aria-describedby={blocked !== null ? noteId : undefined}
+                onClick={blocked !== null ? undefined : () => onApprove(refund)}
               >
                 {panel.approve}
               </Button>
+            )}
+            {waiting && onApprove && blocked !== null && (
+              <span id={noteId} className={sharedStyles.muted}>
+                {blocked}
+              </span>
             )}
             {waiting && onReject && (
               <Button

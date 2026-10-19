@@ -1693,3 +1693,58 @@ export const At375: Story = {
   args: { open: true, error: longReference },
   play: () => expectNoSidewaysScroll(375),
 }
+
+/** 구독 결제의 환불 창은 「전액 환불되면 구독도 해지」를 켠 채 시작한다 - 끄면 `endSubscription: false` 가 함께 나간다(켠 채면 싣지 않는다 = 지금 동작) */
+export const SubscriptionChargeCanKeepTheSubscription: Story = {
+  render: () => <Demo order={order({ kind: 'SUBSCRIPTION_RENEWAL' })} />,
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole('button', { name: '열기' }))
+    const dialog = await screen.findByRole('dialog', { name: directName })
+    const box = within(dialog).getByRole('checkbox', { name: '전액 환불되면 구독도 해지' })
+    await expect(box).toBeChecked()
+    await expect(box).toHaveAccessibleDescription(
+      '지금 기간 결제를 전액 환불할 때만 적용돼요. 끄면 다음 결제일에 계속 결제돼요',
+    )
+    await userEvent.click(box)
+    await expect(box).not.toBeChecked()
+    await userEvent.click(within(dialog).getByRole('button', { name: '환불하기' }))
+    await expect(onConfirm).toHaveBeenCalledWith({
+      reasonCode: 'OPERATOR',
+      amount: 3000,
+      endSubscription: false,
+    })
+  },
+}
+
+export const SubscriptionChargeLeftOnSendsNothingExtra: Story = {
+  render: () => <Demo order={order({ kind: 'SUBSCRIPTION_INITIAL' })} />,
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole('button', { name: '열기' }))
+    const dialog = await screen.findByRole('dialog', { name: directName })
+    await userEvent.click(within(dialog).getByRole('button', { name: '환불하기' }))
+    await expect(onConfirm).toHaveBeenCalledWith({ reasonCode: 'OPERATOR', amount: 3000 })
+  },
+}
+
+/** 구독 결제가 아니면 선택이 없다 - 한 번 결제에는 해지할 구독이 없다 */
+export const NoChoiceForAOneTimePayment: Story = {
+  render: () => <Demo />,
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole('button', { name: '열기' }))
+    const dialog = await screen.findByRole('dialog', { name: directName })
+    await expect(within(dialog).queryByRole('checkbox')).toBeNull()
+  },
+}
+
+/** 이 결제사는 서버에서 환불을 못 한다(409 `REFUND_UNSUPPORTED`) - 결제사를 부르기 전에 나간 답이라 확인이 막히고 할 일을 말한다 */
+export const ProviderCannotRefundFromTheServer: Story = {
+  render: () => <Demo error={failure('PAYMENT.REFUND_UNSUPPORTED')} />,
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole('button', { name: '열기' }))
+    const dialog = await screen.findByRole('dialog', { name: directName })
+    await expect(dialog).toHaveTextContent(
+      '이 결제사는 서버에서 환불할 수 없어요. 결제사 관리 화면에서 환불한 뒤 요청을 거절해 주세요',
+    )
+    await expectBlockedButReachable(dialog, '결제사 관리 화면에서 환불')
+  },
+}

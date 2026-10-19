@@ -10,9 +10,9 @@ import { unsureVerdict, type UnsureState, type UnsureVerdict } from './unsureHol
 import type { OperatorRefundInput } from './types'
 
 export type UseDirectRefundOptions = {
-  /** 환불할 결제 - 금액 칸의 처음 값(남은 금액)과 409 문구를 고르는 열린 환불의 상태(`openRefundStatus`)를 쓴다 */
+  /** 환불할 결제 - 금액 칸의 처음 값(남은 금액)과 409 문구를 고르는 열린 환불의 상태(`openRefundStatus`), 「구독도 해지」 선택을 보일지 정하는 종류(`kind`)를 쓴다 */
   order: Pick<Order, 'id' | 'amount' | 'refundableAmount'> &
-    Partial<Pick<Order, 'openRefundStatus'>>
+    Partial<Pick<Order, 'openRefundStatus' | 'kind'>>
   labels?: PaymentLabelsInput
   locale?: string
   /**
@@ -129,7 +129,13 @@ export function useDirectRefund(
 function sentOf(variables: OperatorRefundInput | undefined) {
   return variables?.amount === undefined
     ? undefined
-    : { amount: variables.amount, reasonCode: variables.reasonCode }
+    : {
+        amount: variables.amount,
+        reasonCode: variables.reasonCode,
+        ...(variables.endSubscription !== undefined
+          ? { endSubscription: variables.endSubscription }
+          : {}),
+      }
 }
 
 /** `forget()` 이 못 놓았을 때 화면이 말할 기다림(초, 올림) - 놓았거나 놓을 것이 없었으면 `null` */

@@ -101,7 +101,13 @@ export function refundOrderMutation(api: PaymentAdminApi, client: QueryClient, k
       const key = keyOf(
         keys,
         variables,
-        JSON.stringify([orderId, input.reasonCode, input.amount ?? null]),
+        // 「구독도 해지」 선택이 의도의 일부다 - 같은 키에 다른 선택을 보내면 서버가 409 로 거절한다
+        JSON.stringify([
+          orderId,
+          input.reasonCode,
+          input.amount ?? null,
+          input.endSubscription ?? true,
+        ]),
         idempotencyKey,
       )
       return assertRefundDone(
@@ -127,11 +133,18 @@ export function refundOrderMutation(api: PaymentAdminApi, client: QueryClient, k
  */
 export function approveRefundMutation(api: PaymentAdminApi, client: QueryClient) {
   return {
-    // 변수는 환불 줄 id, 금액을 고쳐 승인하면 `{ id, amount }`
-    mutationFn: async (variables: string | { id: string; amount?: number }) => {
-      const { id, amount } = typeof variables === 'string' ? { id: variables } : variables
+    // 변수는 환불 줄 id, 금액을 고쳐 승인하면 `{ id, amount }`, 「구독도 해지」를 껐으면 `endSubscription: false` 도
+    mutationFn: async (
+      variables: string | { id: string; amount?: number; endSubscription?: boolean },
+    ) => {
+      const { id, amount, endSubscription } =
+        typeof variables === 'string' ? { id: variables } : variables
       return assertRefundDone(
-        await (amount !== undefined ? api.approveRefund(id, amount) : api.approveRefund(id)),
+        await (endSubscription !== undefined
+          ? api.approveRefund(id, amount, endSubscription)
+          : amount !== undefined
+            ? api.approveRefund(id, amount)
+            : api.approveRefund(id)),
       )
     },
     onSettled: () => invalidateRoot(client),

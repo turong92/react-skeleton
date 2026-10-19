@@ -25,8 +25,16 @@ export type ReviewReason =
   | 'STALE_CONFIRMING'
   | 'STALE_REFUND'
 
+/**
+ * 서버에서 환불을 보낼 수 없는 이유(설정만 보고 서버가 계산한다 - 계약 1.4): `UNSUPPORTED` 그 결제사에 환불·조회 능력이 없다(결제사 관리 화면에서 환불한다) ·
+ * `PROVIDER_OFF` 결제사가 지금 꺼져 있다 · `MODE_MISMATCH` 지금 끼운 키의 모드가 주문과 다르다. 막힘이 없으면 `null`. 모르는 값이 와도 화면은 막는다(중립 문구)
+ */
+export type RefundBlock = 'UNSUPPORTED' | 'PROVIDER_OFF' | 'MODE_MISMATCH'
+
 /** 운영자 주문 응답 — 사용자 응답(`Order`)에 운영자만 보는 칸을 더한다 */
 export type AdminOrder = Order & {
+  /** 서버에서 환불을 보낼 수 없는 이유 - 있으면 환불 단추를 막고 이유를 옆에 적는다. 구버전 서버는 칸이 없다 */
+  refundBlock?: RefundBlock | string | null
   /**
    * 산 계정. 계정이 지워졌고 백엔드가 `skeleton.payment.erasure.account-id=TOMBSTONE` 이면 `deleted:` 로 시작하는 대체 값이다(`isErasedAccountId`) -
    * 기본 `KEEP` 이면 지워진 계정도 원래 id 그대로라 이 칸으로는 가를 수 없다 - 탈퇴 여부는 `accountErasedAt` 이 말한다
@@ -55,6 +63,12 @@ export type AdminRefund = Refund & {
    * `PROVIDER_PENDING_EXPIRED` 는 줄에는 안 찍히고 **이력(`providerCode`)에만** 남는다. 화면은 아는 코드를 문장으로, 모르는 코드는 그대로 그린다
    */
   failureCode: string | null
+  /** `true` = 운영자가 「구독도 해지」를 끄고 보낸 환불(전액 환불돼도 구독이 그대로다). 구버전 서버는 칸이 없다 */
+  keepSubscription?: boolean
+  /** 그 주문의 종류 - 구독 결제(`SUBSCRIPTION_INITIAL` · `SUBSCRIPTION_RENEWAL`)면 환불 창이 「구독도 해지」 선택을 보인다. 구버전 서버는 칸이 없다 */
+  orderKind?: Order['kind'] | null
+  /** 그 주문에 서버에서 환불을 보낼 수 없는 이유 - `AdminOrder.refundBlock` 과 같다. 구버전 서버는 칸이 없다 */
+  refundBlock?: RefundBlock | string | null
 }
 
 /** 이력(`payment_events`) 한 줄 — 「이 결제가 왜 이 상태인가」 */
@@ -107,8 +121,15 @@ export type AdminRefundListParams = {
 /** 운영자가 직접 하는 환불의 사유 — 본인이 고르는 셋 + 운영자 판단(`OPERATOR`) */
 export type OperatorRefundReason = RefundRequestReason | 'OPERATOR'
 
-/** 금액을 비우면 남은 전액. 이 패키지의 화면은 늘 금액을 적어 보낸다(창이 보인 금액 = 보낸 금액) */
-export type OperatorRefundInput = { reasonCode: OperatorRefundReason; amount?: number }
+/**
+ * 금액을 비우면 남은 전액. 이 패키지의 화면은 늘 금액을 적어 보낸다(창이 보인 금액 = 보낸 금액).
+ * `endSubscription: false` = 구독 결제를 전액 환불해도 구독을 끝내지 않는다(생략 = `true` = 끝낸다) - 구독 결제 환불 창에서 체크를 끈 때만 싣는다
+ */
+export type OperatorRefundInput = {
+  reasonCode: OperatorRefundReason
+  amount?: number
+  endSubscription?: boolean
+}
 
 /** 수신함 줄의 상태 — 계약 3 「수신함」 */
 export type WebhookEventStatus = 'RECEIVED' | 'PROCESSED' | 'IGNORED' | 'FAILED' | 'DEAD'

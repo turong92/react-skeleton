@@ -25,12 +25,20 @@ export const koPaymentAdminLabels: PaymentAdminLabels = {
   erasedAccount: '탈퇴한 계정',
   refundFailure: {
     NOT_APPLIED: '결제사에서 환불이 적용되지 않았어요',
-    PROVIDER_PENDING: '결제사에서 아직 환불 중이에요',
+    PROVIDER_PENDING: '결제사 검토 중이에요 — 끝나면 환불 결과가 이 줄에 나와요',
     RESULT_MISMATCH: '결제사의 답이 요청과 맞지 않았어요',
     ORDER_REFUNDED: '이미 환불된 결제라서 닫혔어요',
     LATE_RESULT:
       '닫힌 뒤에 결제사의 환불 결과가 도착했어요. 다른 환불 줄과 환불된 금액을 확인해 주세요',
     REFUND_DECLINED: '결제사가 이 환불을 받아 주지 않았어요',
+    PROVIDER_REJECTED: '결제사가 이 환불을 거절했어요. 다시 환불할 수 있어요',
+  },
+  refundBlock: {
+    UNSUPPORTED:
+      '이 결제사는 서버에서 환불할 수 없어요 — 결제사 관리 화면에서 환불한 뒤 요청을 거절하세요',
+    PROVIDER_OFF: '결제사가 지금 꺼져 있어요',
+    MODE_MISMATCH: '키 모드가 달라요',
+    OTHER: '지금은 서버에서 환불할 수 없어요',
   },
   eventCodes: {
     PROVIDER_PENDING_EXPIRED: '결제사가 정해진 시간 안에 끝내지 못해 닫혔어요',
@@ -164,10 +172,16 @@ export const koPaymentAdminLabels: PaymentAdminLabels = {
       zero: '0보다 큰 금액을 적어 주세요',
       exceeds: (max) => `환불할 수 있는 금액(${max})을 넘을 수 없어요`,
     },
+    endSubscription: {
+      label: '전액 환불되면 구독도 해지',
+      hint: '지금 기간 결제를 전액 환불할 때만 적용돼요. 끄면 다음 결제일에 계속 결제돼요',
+    },
     locked:
       '결과를 확인할 때까지 금액과 사유는 바꿀 수 없어요. 다른 금액으로 하려면 창을 닫고 「결제사와 맞추기」로 결과를 먼저 확인해 주세요',
     sending: '보내는 중이라 금액과 사유를 바꿀 수 없어요',
     errors: {
+      unsupported:
+        '이 결제사는 서버에서 환불할 수 없어요. 결제사 관리 화면에서 환불한 뒤 요청을 거절해 주세요',
       modeMismatch:
         '이 결제는 지금과 다른 쪽(테스트 또는 실제 결제)의 키로 만들어져 지금 키로는 환불할 수 없어요',
       notAllowed:

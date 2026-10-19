@@ -32,6 +32,7 @@ export function assertRefundDone<R extends Refund>(refund: R): R {
  * 환불 호출이 오류로 끝났을 때 돈에 대해 알 수 있는 것 — 확정(서버가 요청을 보고 답했다)과 모름을 가른다.
  * - `declined`: 402 `REFUND_DECLINED` — 결제사가 거절했다(확정)
  * - `inProgress` · `notAllowed` · `amountExceeded`: 409/400 — 서버가 이 요청을 받지 않았다(확정)
+ * - `unsupported`: 409 `REFUND_UNSUPPORTED` — 그 결제사는 서버에서 환불을 못 한다. 결제사를 부르기 전에 나갔다(확정) - 다시 해도 안 된다
  * - `unavailable`: 503 `PAYMENT.UNAVAILABLE` — 보내기 전 확인 조회가 실패해 **보내지 않았다**(확정, 아무것도 안 나갔다)
  * - `invalid`: 400 `COMMON.VALIDATION_FAILED` · `COMMON.PARAMETER_VALIDATION_FAILED` · `COMMON.MALFORMED_REQUEST` — 서버가 **선점 전에** 요청의 모양을 거절했다(금액 0 · 음수, 타입이 틀린 값, 깨진 본문). 아무것도 나가지 않았다(확정)
  * - `notDone`: 답은 왔는데 줄이 환불 없이 닫혀 있다(확정)
@@ -43,6 +44,7 @@ export type RefundProblem =
   | 'declined'
   | 'inProgress'
   | 'notAllowed'
+  | 'unsupported'
   | 'amountExceeded'
   | 'unavailable'
   | 'invalid'
@@ -62,6 +64,7 @@ export function refundProblemOf(error: unknown): RefundProblem {
   if (is(PaymentLedgerErrorCodes.REFUND_DECLINED)) return 'declined'
   if (is(PaymentLedgerErrorCodes.REFUND_IN_PROGRESS)) return 'inProgress'
   if (is(PaymentLedgerErrorCodes.REFUND_NOT_ALLOWED)) return 'notAllowed'
+  if (is(PaymentLedgerErrorCodes.REFUND_UNSUPPORTED)) return 'unsupported'
   if (is(PaymentLedgerErrorCodes.REFUND_AMOUNT_EXCEEDED)) return 'amountExceeded'
   if (is(PaymentLedgerErrorCodes.UNAVAILABLE)) return 'unavailable'
   // 선점 전의 확정 거절 - 이 셋만이다. 그 밖의 `COMMON.*`(429 · 401 · 403 · 5xx …)와 코드 없는 4xx 는 서버가 요청을 보고 답했다는 증거가 아니다(모름)

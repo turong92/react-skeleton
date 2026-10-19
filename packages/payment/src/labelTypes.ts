@@ -51,6 +51,10 @@ export type PaymentAdminLabels = {
    */
   refundFailure: Record<string, string>
   /**
+   * 서버에서 환불을 보낼 수 없는 이유(`refundBlock`) → 문장 - 환불 단추 옆에 이유 한 줄로 적는다. `OTHER` 는 모르는 값. 거절 단추는 막지 않는다(결제사 관리 화면에서 환불한 뒤 요청을 거절한다)
+   */
+  refundBlock: Record<'UNSUPPORTED' | 'PROVIDER_OFF' | 'MODE_MISMATCH' | 'OTHER', string>
+  /**
    * **이력**에만 남는 이유 코드(`providerCode`) → 문장: `PROVIDER_PENDING_EXPIRED`(줄에는 안 찍힌다) · `LATE_RESULT`(이력 종류가 `REFUND_UNKNOWN` 이라 이력 이름이
    * 「결과를 몰라요」로 읽히니, 이 문장이 그 이름을 대신한다). 모르는 코드는 참조 번호에 그대로 둔다
    */
@@ -180,11 +184,15 @@ export type PaymentAdminLabels = {
       zero: string
       exceeds: (max: string) => string
     }
+    /** 구독 결제의 환불 창에서 「구독도 해지」 선택 - 기본 켜짐. `hint` 는 선택의 뜻(지금 기간 결제를 전액 환불할 때만 적용된다) */
+    endSubscription: { label: string; hint: string }
     /** 결과를 모르는 동안 금액 · 사유 칸을 잠근 이유 한 줄 - 두 칸의 설명으로 이어진다. 같은 내용으로만 다시 보낼 수 있다 */
     locked: string
     /** 보내는 중에 금액 · 사유 칸을 잠근 이유 한 줄 - 두 칸의 설명이다. 보내는 동안 고친 값은 보낸 값이 아니다 */
     sending: string
     errors: {
+      /** 409 `REFUND_UNSUPPORTED` - 그 결제사는 서버에서 환불할 수 없다. 결제사 관리 화면에서 환불한 뒤 요청을 거절한다 */
+      unsupported: string
       /** 직접 환불이 지금은 안 된다(409) */
       notAllowed: string
       /** 직접 환불 · 승인의 409 `PAYMENT.MODE_MISMATCH` - 이 결제를 만든 키의 쪽(테스트 · 실제 결제)이 지금 키와 다르다. 다시 해도 안 된다 */

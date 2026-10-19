@@ -632,3 +632,31 @@ export const At375: Story = {
     await expect(frame.scrollWidth).toBeLessThanOrEqual(frame.clientWidth)
   },
 }
+
+/** 서버가 이 결제사로는 환불을 못 보낸다고 알렸다 - 「환불하기」와 「요청대로 환불하기」가 흐리게 막히고 이유가 설명으로 읽힌다. 「요청 거절하기」는 열려 있다 */
+export const ProviderCannotRefundFromTheServer: Story = {
+  args: {
+    detail: detail({
+      order: adminOrder({ orderName: '응원하기 3,000원', refundBlock: 'UNSUPPORTED' }),
+      refunds: [adminRefund({ status: 'REQUESTED' })],
+    }),
+    onRefund: fn(),
+    onApprove: fn(),
+    onReject: fn(),
+  },
+  play: async ({ canvas, args, userEvent }) => {
+    const reason =
+      '이 결제사는 서버에서 환불할 수 없어요 — 결제사 관리 화면에서 환불한 뒤 요청을 거절하세요'
+    const refund = canvas.getByRole('button', { name: '환불하기' })
+    await expect(refund).toHaveAttribute('aria-disabled', 'true')
+    const approve = canvas.getByRole('button', { name: /^요청대로 환불하기/ })
+    await expect(approve).toHaveAttribute('aria-disabled', 'true')
+    await expect(approve).toHaveAccessibleDescription(reason)
+    await userEvent.click(refund)
+    await userEvent.click(approve)
+    await expect(args.onRefund).not.toHaveBeenCalled()
+    await expect(args.onApprove).not.toHaveBeenCalled()
+    await userEvent.click(canvas.getByRole('button', { name: /^요청 거절하기/ }))
+    await expect(args.onReject).toHaveBeenCalled()
+  },
+}

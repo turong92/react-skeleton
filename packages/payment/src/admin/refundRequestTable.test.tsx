@@ -95,3 +95,40 @@ describe('RefundRequestTable', () => {
     expect(out).not.toContain('SOMETHING_NEW')
   })
 })
+
+describe('RefundRequestTable - a provider that cannot refund from the server', () => {
+  const blocked = [
+    adminRefund({ id: 'rfd_1', orderId: 'ord_1', refundBlock: 'UNSUPPORTED' }),
+    adminRefund({ id: 'rfd_2', orderId: 'ord_2', refundBlock: 'PROVIDER_OFF' }),
+    adminRefund({ id: 'rfd_3', orderId: 'ord_3', refundBlock: 'MODE_MISMATCH' }),
+    adminRefund({ id: 'rfd_4', orderId: 'ord_4', refundBlock: null }),
+  ]
+
+  it('the approve button of a blocked line cannot be pressed and the reason sits next to it; declining stays open', () => {
+    let approved = 0
+    const out = html({ refunds: blocked, onApprove: () => (approved += 1), onReject: noop })
+    for (const reason of [
+      '이 결제사는 서버에서 환불할 수 없어요 — 결제사 관리 화면에서 환불한 뒤 요청을 거절하세요',
+      '결제사가 지금 꺼져 있어요',
+      '키 모드가 달라요',
+    ])
+      expect(out, reason).toContain(reason)
+    const approve = (id: string) =>
+      out.match(
+        new RegExp(`<button[^>]*aria-label="요청대로 환불하기: [^"]*\\(결제 ${id}\\)"[^>]*>`),
+      )?.[0] ?? ''
+    for (const id of ['ord_1', 'ord_2', 'ord_3']) {
+      const button = approve(id)
+      expect(button, id).toContain('aria-disabled="true"')
+      expect(button, id).toMatch(/aria-describedby="[^"]+"/)
+    }
+    expect(approve('ord_4')).not.toContain('aria-disabled')
+    // 거절은 막지 않는다
+    expect(
+      out
+        .match(/aria-label="요청 거절하기[^"]*"[^>]*>/g)
+        ?.every((tag) => !tag.includes('aria-disabled')),
+    ).toBe(true)
+    expect(approved).toBe(0)
+  })
+})

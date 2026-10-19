@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Paddle 환불 · 구독 결제 환불의 「구독도 해지」 선택 · 환불 못 하는 결제사 (2026-10-20)
+
+- `@skeleton/payment/admin`: 구독 결제(`SUBSCRIPTION_INITIAL` · `SUBSCRIPTION_RENEWAL`)의 환불 창(`AdminRefundDialog` 직접 · 승인)에 「전액 환불되면 구독도 해지」 체크(기본 켜짐, 끄면 `endSubscription: false` 가 본문에 실린다 - 선택이 의도의 일부라 멱등 키가 바뀐다). `OperatorRefundInput.endSubscription` · `approveRefund(id, amount?, endSubscription?)` · `useApproveRefund` 변수 `{ id, amount?, endSubscription? }`. 켜 둔 채면 지금과 같은 요청이 나간다.
+- 서버가 `refundBlock`(`UNSUPPORTED` · `PROVIDER_OFF` · `MODE_MISMATCH`)을 알리면 「환불하기」 · 「요청대로 환불하기」(`AdminOrderPanel` · `RefundRequestTable`)가 `aria-disabled` 로 막히고 이유가 옆에 적힌다(거절은 그대로). `AdminOrder.refundBlock` · `AdminRefund.refundBlock` · `AdminRefund.keepSubscription` · `AdminRefund.orderKind`(모두 선택 - 옛 서버는 칸이 없다). `409 PAYMENT.REFUND_UNSUPPORTED` 는 `RefundProblem` 의 `unsupported`(`PaymentLedgerErrorCodes.REFUND_UNSUPPORTED`).
+- **새 필수 문구 키**(`labels` 를 통째로 만들어 주는 앱은 채워야 한다): `PaymentAdminLabels.refundBlock`, `refundDialog.endSubscription`, `refundDialog.errors.unsupported`. 환불 줄 문구: `PROVIDER_PENDING` 은 「결제사 검토 중이에요 …」로 바뀌었고 `PROVIDER_REJECTED`(결제사가 거절 - 다시 환불할 수 있다)가 더해졌다.
+- 샘플 e2e: 가짜 Paddle 에 환불(`GET /transactions/{id}` · `POST /adjustments` - 기본은 검토 중, `{ decide }` 로 결정 · `adjustment.created/updated` 웹훅)이 더해졌고 `paddle.e2e.ts` 가 구독 결제 환불을 끝까지 돈다(검토 중 → 승인 웹훅 → 구독 유지 / 구독도 해지 → Paddle 에 즉시 해지).
+
 ### Fixed — 다이얼로그 · e2e (2026-10-19)
 
 - `@skeleton/ui` `Dialog`: 닫자마자 다시 열면 앞선 닫기의 늦은 `close` 이벤트가 새로 열린 창을 닫을 수 있었다(부하가 크면 열림 직후 창이 사라지는 스토리 실패로 보였다). 지금 열려 있으면 그 이벤트를 `onClose` 로 올리지 않는다. `ConfirmDialog` 의 확인 문구 비우기는 닫힘 이벤트 대신 `open` 이 켜지는 순간으로 옮겼다.

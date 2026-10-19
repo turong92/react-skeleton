@@ -63,13 +63,19 @@ export function useRefundDecision(
       error={mutation.error}
       orderLink={orderLink && ((className) => orderLink(decision.refund, className))}
       onClose={() => setOpen(false)}
-      onConfirm={(amount) => {
+      onConfirm={(amount, endSubscription) => {
         onSend?.()
         const handlers = { onSuccess: () => setOpen(false), onError: () => setOpen(true) }
-        // 고친 금액이 있을 때만 승인에 실린다 - 요청 금액 그대로면 본문 없이 보낸다
+        // 고친 금액 · 「구독도 해지」를 끈 선택이 있을 때만 승인에 실린다 - 둘 다 없으면 본문 없이 보낸다
         if (decision.mode === 'approve')
           approve.mutate(
-            amount !== undefined ? { id: decision.refund.id, amount } : decision.refund.id,
+            amount !== undefined || endSubscription !== undefined
+              ? {
+                  id: decision.refund.id,
+                  ...(amount !== undefined ? { amount } : {}),
+                  ...(endSubscription !== undefined ? { endSubscription } : {}),
+                }
+              : decision.refund.id,
             handlers,
           )
         else reject.mutate(decision.refund.id, handlers)

@@ -3,7 +3,17 @@ import { afterAll, beforeAll, describe, expect, inject, it } from 'vitest'
 import { paddleControl, routePaddleSdk } from './fakePaddle'
 import { tossControl } from './fakeToss'
 import { DEMO, launch } from './helpers'
-import { api, ensureSignedIn, labels, resultTitle, tokenOf } from './paymentSteps'
+import {
+  ADMIN,
+  adminPaymentsOn,
+  api,
+  ensureSignedIn,
+  labels,
+  operatorOpensPayment,
+  operatorPage,
+  resultTitle,
+  tokenOf,
+} from './paymentSteps'
 
 /*
  * 해외 결제(Paddle) — 한 흐름: 구독 시작(결제창 → 서명된 웹훅) → 갱신 웹훅 → 같은 웹훅을 다시 받아도 한 번만 → 순서가 뒤바뀐 낡은 웹훅 → 기간 끝 해지(Paddle API) → 기간이 끝나면 끝난다.
@@ -155,6 +165,124 @@ describe('a Paddle subscription from the first payment to the end of the period'
     }
     expect((await paddle.state()).calls.filter((c) => c.path.endsWith('/cancel'))).toHaveLength(1)
     // 보낸 웹훅은 모두 받아들여졌다(서명 통과)
+    expect((await paddle.state()).sent.every((s) => s.status === 200)).toBe(true)
+  }, 180_000)
+})
+
+describe('refunding a Paddle subscription charge', () => {
+  it("is held for review, ends by Paddle's decision webhook, and ends the subscription only when the operator left the choice on", async (ctx) => {
+    const token = await tokenOf(apiUrl, DEMO)
+    const config = await api(apiUrl, token, 'GET', '/payments/config')
+    const plans = await api(apiUrl, token, 'GET', '/payments/subscriptions/plans')
+    if (
+      !paddle ||
+      plans.status !== 200 ||
+      !config.json?.value?.providers?.includes('paddle') ||
+      !(await adminPaymentsOn(apiUrl))
+    )
+      return ctx.skip()
+    await paddle.set({ reset: true })
+    const existing = (await mine()).subscription
+    if (
+      existing &&
+      (existing.status === 'ACTIVE' ||
+        existing.status === 'PAST_DUE' ||
+        existing.status === 'CANCELING')
+    )
+      return ctx.skip()
+
+    // 구독을 시작한다(접속 나라 미국 → Paddle)
+    await ensureSignedIn(page, baseUrl)
+    await page.goto(`${baseUrl}/subscribe`)
+    await page.getByRole('button', { name: /구독하기.*베이직/ }).click()
+    await page.waitForURL(/\/subscriptions\/return\?.*provider=paddle/)
+    await pwExpect(resultTitle(page, labels.result.paid.title)).toBeVisible()
+    const started = await mine()
+    const initial = started.orders.find((o) => o.kind === 'SUBSCRIPTION_INITIAL')!
+    const providerSub = (await paddle.state()).subscriptions[0]!
+    const admin = await tokenOf(apiUrl, ADMIN)
+    const adminOrder = async (id: string) =>
+      (await api(apiUrl, admin, 'GET', `/admin/payments/orders/${id}`)).json?.value as {
+        order: { status: string; refundedAmount: number; refundBlock: string | null }
+        refunds: Array<{ status: string; failureCode: string | null; keepSubscription: boolean }>
+      }
+    const cancels = async () =>
+      (await paddle.state()).calls.filter((c) => c.path.endsWith('/cancel'))
+
+    // 1. 「구독도 해지」를 끄고 전액 환불 - Paddle 이 검토 중으로 쥔다(202), 장부는 줄을 열어 둔다
+    expect((await adminOrder(initial.id)).order.refundBlock).toBeNull()
+    const kept = await api(
+      apiUrl,
+      admin,
+      'POST',
+      `/admin/payments/orders/${initial.id}/refunds`,
+      { reasonCode: 'OPERATOR', amount: 399, endSubscription: false },
+      { 'Idempotency-Key': `e2e-paddle-keep-${Date.now()}` },
+    )
+    expect(kept.status).toBe(202)
+    expect(kept.json.value).toMatchObject({
+      status: 'PENDING',
+      failureCode: 'PROVIDER_PENDING',
+      keepSubscription: true,
+    })
+    const adjustments = (await paddle.state()).calls.filter((c) => c.path === '/adjustments')
+    expect(adjustments).toHaveLength(1)
+    expect(adjustments[0]).toMatchObject({
+      authorized: true,
+      body: { action: 'refund', transaction_id: expect.any(String), type: 'full' },
+    })
+    // 운영자 화면은 「결제사 검토 중」이라고 말한다
+    const operator = await operatorPage(browser, baseUrl)
+    try {
+      await operatorOpensPayment(operator.page, baseUrl, initial.id)
+      await pwExpect(
+        operator.page.getByText(labels.admin.refundFailure.PROVIDER_PENDING!),
+      ).toBeVisible()
+    } finally {
+      await operator.close()
+    }
+
+    // 2. Paddle 이 승인했다 - 웹훅이 줄을 끝낸다. 구독은 그대로고 Paddle 에는 해지를 보내지 않는다
+    const first = (await paddle.state()).adjustments[0]!
+    await paddle.set({ decide: { id: first.id, status: 'approved' } })
+    await pwExpect
+      .poll(async () => (await adminOrder(initial.id)).order.status, {
+        timeout: 30_000,
+        intervals: [500],
+      })
+      .toBe('REFUNDED')
+    expect((await adminOrder(initial.id)).refunds[0]).toMatchObject({ status: 'SUCCEEDED' })
+    expect((await mine()).subscription?.status).toBe('ACTIVE')
+    expect(await cancels()).toHaveLength(0)
+
+    // 3. 갱신 결제를 기본 선택(구독도 해지)으로 전액 환불 - 승인되면 구독이 끝나고 Paddle 에도 즉시 해지가 간다
+    await paddle.set({ renew: providerSub.id })
+    await pwExpect
+      .poll(async () => (await mine()).orders.length, { timeout: 30_000, intervals: [500] })
+      .toBe(2)
+    const renewal = (await mine()).orders.find((o) => o.kind === 'SUBSCRIPTION_RENEWAL')!
+    const ended = await api(
+      apiUrl,
+      admin,
+      'POST',
+      `/admin/payments/orders/${renewal.id}/refunds`,
+      { reasonCode: 'OPERATOR', amount: 399 },
+      { 'Idempotency-Key': `e2e-paddle-end-${Date.now()}` },
+    )
+    expect(ended.status).toBe(202)
+    expect(ended.json.value.keepSubscription).toBe(false)
+    const second = (await paddle.state()).adjustments.find((a) => a.status === 'pending_approval')!
+    await paddle.set({ decide: { id: second.id, status: 'approved' } })
+    await pwExpect
+      .poll(async () => (await mine()).subscription?.status, { timeout: 30_000, intervals: [500] })
+      .toBe('ENDED')
+    expect((await mine()).subscription?.endReason).toBe('REFUNDED')
+    await pwExpect.poll(async () => (await cancels()).length, { timeout: 30_000 }).toBe(1)
+    expect((await cancels())[0]).toMatchObject({
+      path: `/subscriptions/${providerSub.id}/cancel`,
+      authorized: true,
+      body: { effective_from: 'immediately' },
+    })
     expect((await paddle.state()).sent.every((s) => s.status === 200)).toBe(true)
   }, 180_000)
 })

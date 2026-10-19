@@ -172,3 +172,32 @@ export const English: Story = {
     await expect(canvas.getAllByText('I changed my mind')).toHaveLength(1)
   },
 }
+
+/** 서버가 이 결제사로는 환불을 못 보낸다고 알린 줄 - 「요청대로 환불하기」는 흐리게 막히고 이유가 옆에 있다. 「요청 거절하기」는 그대로 열려 있다 */
+export const ProviderCannotRefund: Story = {
+  args: {
+    refunds: [
+      adminRefund({ id: 'rfd_1', orderId: 'ord_1', refundBlock: 'UNSUPPORTED' }),
+      adminRefund({ id: 'rfd_2', orderId: 'ord_2', refundBlock: 'PROVIDER_OFF' }),
+      adminRefund({ id: 'rfd_3', orderId: 'ord_3', refundBlock: null }),
+    ],
+  },
+  play: async ({ canvas, args, userEvent }) => {
+    const blocked = canvas.getByRole('button', { name: /^요청대로 환불하기: .*ord_1/ })
+    await expect(blocked).toHaveAttribute('aria-disabled', 'true')
+    await expect(blocked).not.toBeDisabled()
+    await expect(blocked).toHaveAccessibleDescription(
+      '이 결제사는 서버에서 환불할 수 없어요 — 결제사 관리 화면에서 환불한 뒤 요청을 거절하세요',
+    )
+    await userEvent.click(blocked)
+    await expect(args.onApprove).not.toHaveBeenCalled()
+    await expect(
+      canvas.getByRole('button', { name: /^요청대로 환불하기: .*ord_2/ }),
+    ).toHaveAccessibleDescription('결제사가 지금 꺼져 있어요')
+    await expect(
+      canvas.getByRole('button', { name: /^요청대로 환불하기: .*ord_3/ }),
+    ).not.toHaveAttribute('aria-disabled')
+    await userEvent.click(canvas.getByRole('button', { name: /^요청 거절하기: .*ord_1/ }))
+    await expect(args.onReject).toHaveBeenCalled()
+  },
+}

@@ -279,6 +279,7 @@ describe('the operator words (spec 11.2: 「결제사와 맞추기」, 「확인
       'NOT_APPLIED',
       'ORDER_REFUNDED',
       'PROVIDER_PENDING',
+      'PROVIDER_REJECTED',
       'REFUND_DECLINED',
       'RESULT_MISMATCH',
     ])
@@ -303,9 +304,9 @@ describe('the operator words (spec 11.2: 「결제사와 맞추기」, 「확인
   })
 
   it('the provider still working is said in the present, with a table word', () => {
-    expect(a.refundFailure.PROVIDER_PENDING).toBe('결제사에서 아직 환불 중이에요')
+    expect(a.refundFailure.PROVIDER_PENDING).toBe('결제사 검토 중이에요 — 끝나면 환불 결과가 이 줄에 나와요')
     expect(defaultPaymentLabels.admin.refundFailure.PROVIDER_PENDING).toBe(
-      'The provider is still refunding',
+      'Under review at the provider - the refund result shows here when it is done',
     )
   })
 

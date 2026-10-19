@@ -31,7 +31,7 @@ describe('payment error codes (modules/payment PaymentErrorCode)', () => {
 })
 
 describe('ledger error codes (HTTP contract, the list of user and operator errors)', () => {
-  it('lists the twenty-five the backend adds, under the PAYMENT. prefix', () => {
+  it('lists the twenty-six the backend adds, under the PAYMENT. prefix', () => {
     expect([...PAYMENT_LEDGER_ERROR_CODES].sort()).toEqual(
       [
         'ORDER_NOT_FOUND',
@@ -44,6 +44,7 @@ describe('ledger error codes (HTTP contract, the list of user and operator error
         'DECLINED',
         'REFUND_NOT_ALLOWED',
         'REFUND_IN_PROGRESS',
+        'REFUND_UNSUPPORTED',
         'REFUND_AMOUNT_EXCEEDED',
         'REFUND_DECLINED',
         'CAPABILITY_UNSUPPORTED',

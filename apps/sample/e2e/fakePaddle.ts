@@ -7,6 +7,8 @@ import type { BrowserContext } from 'playwright'
  * 토스와 다르게 **이 서버가 백엔드를 부른다**: Paddle 은 결과를 서명한 웹훅(`Paddle-Signature: ts=…;h1=HMAC-SHA256(secret, "ts:원문")`)으로 보낸다 — 이 서버가 그것을 만들어
  * `POST <백엔드>/api/v1/payments/webhooks/paddle` 로 쏜다(백엔드 주소는 기동 뒤 `setBackend` 로 준다). 본문 모양은 Paddle Billing 문서 그대로(`event_id` · `event_type` · `occurred_at` · `data`).
  *
+ * 환불(adjustment): GET /transactions/{id}?include=adjustments(거래 조회 - Bearer 키가 틀리면 403) · POST /adjustments {action:'refund', transaction_id, type, items?} - 검토 중인 환불이 있으면 409 `adjustment_pending_refund_request`,
+ *   남은 금액을 넘으면 400 `adjustment_total_above_remaining_allowed`. 기본은 Paddle 실계정처럼 **검토 중**(`pending_approval`)으로 답하고 `adjustment.created` 를 쏜다 - 결정은 시험이 `{ decide }` 로 내린다(`adjustment.updated`).
  * Paddle API(백엔드가 부른다): POST /transactions {items:[{price_id,quantity}], custom_data} - 서버가 거래를 먼저 만든다(Bearer 키가 틀리면 403) → {data:{id:'txn_…'}}.
  *   POST /subscriptions/{id}/cancel {effective_from} — Bearer 키가 틀리면 403. `next_billing_period` 면 해지 예약(`scheduled_change`)을 걸고 `subscription.updated` 를 쏜다.
  * 결제창(Paddle.js)은 이 서버에 없다 — 시험이 스크립트(`https://cdn.paddle.com/paddle/v2/paddle.js`)를 가로채 `fakePaddleSdkScript` 로 바꾼다(`routePaddleSdk`).
@@ -17,6 +19,8 @@ import type { BrowserContext } from 'playwright'
  *   { endPeriod: <결제사 구독 id> }  해지 예약한 구독의 기간이 끝났다 — `subscription.canceled`
  *   { replay: <event_id> }           같은 사건을 (새 서명으로) 다시 쏜다 — 결제사의 재전송
  *   { stale: <결제사 구독 id> }      가장 새로운 상태보다 일찍 일어난 낡은 `subscription.updated`(ACTIVE)를 나중에 쏜다 — 순서가 뒤바뀐 전달
+ *   { refundMode: 'approve' | 'pending' }  이후 환불을 바로 승인하거나(기본 아님) 검토 중으로 둔다(기본 `pending`)
+ *   { decide: { id, status } }       검토 중인 환불 `id`(adj_…)에 결정(`approved` · `rejected`)을 내리고 `adjustment.updated` 를 쏜다
  *   { reset: true }                  모든 기록을 지운다
  * `GET /control` → { subscriptions, calls, sent } — `calls` 는 Paddle API 호출, `sent` 는 쏜 웹훅(event_id · event_type · 응답 상태).
  */
@@ -59,7 +63,23 @@ export type FakePaddleTransaction = {
   items: Array<{ price_id: string; quantity: number }>
   custom_data: Record<string, string>
 }
+export type FakePaddleAdjustment = {
+  id: string
+  action: 'refund'
+  status: 'pending_approval' | 'approved' | 'rejected'
+  transactionId: string
+  total: number
+  currency: string
+}
+type PaidTransaction = {
+  id: string
+  currency: string
+  total: number
+  priceId: string
+  adjustments: FakePaddleAdjustment[]
+}
 export type FakePaddleState = {
+  adjustments: FakePaddleAdjustment[]
   subscriptions: Sub[]
   calls: FakePaddleCall[]
   sent: SentWebhook[]
@@ -82,6 +102,8 @@ export async function startFakePaddle(): Promise<FakePaddle> {
   let sent: SentWebhook[] = []
   const bodies = new Map<string, string>() // event_id → 쏜 원문(재전송용)
   const transactions = new Map<string, FakePaddleTransaction>() // 백엔드가 만든 거래
+  const paid = new Map<string, PaidTransaction>() // 결제가 끝난(completed) 거래 - 환불이 걸린다
+  let refundMode: 'approve' | 'pending' = 'pending'
   const cors = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
@@ -166,6 +188,42 @@ export async function startFakePaddle(): Promise<FakePaddle> {
     }
   }
 
+  const remember = (entity: ReturnType<typeof transactionEntity>, priceId: string) => {
+    const totals = entity.details.totals
+    paid.set(entity.id, {
+      id: entity.id,
+      currency: entity.currency_code,
+      total: Number(totals.total),
+      priceId,
+      adjustments: [],
+    })
+  }
+
+  const adjustmentEntity = (a: FakePaddleAdjustment) => ({
+    id: a.id,
+    action: a.action,
+    status: a.status,
+    transaction_id: a.transactionId,
+    currency_code: a.currency,
+    created_at: iso(new Date()),
+    totals: { total: String(a.total), currency_code: a.currency },
+  })
+
+  /** 결제가 끝난 거래의 조회 답 - Paddle 의 모양(금액은 최소 단위의 문자열) */
+  const transactionBody = (t: PaidTransaction, withAdjustments: boolean) => ({
+    data: {
+      id: t.id,
+      status: 'completed',
+      currency_code: t.currency,
+      billed_at: iso(new Date()),
+      details: {
+        totals: { total: String(t.total), currency_code: t.currency },
+        line_items: [{ id: `txnitm_${t.id.slice(4)}`, price_id: t.priceId, quantity: 1 }],
+      },
+      ...(withAdjustments ? { adjustments: t.adjustments.map(adjustmentEntity) } : {}),
+    },
+  })
+
   /** 결제창 대역이 부른다 - 백엔드가 미리 만든 거래를 결제하고 웹훅을 쏜다(구독 가격이면 구독도). 모르는 거래면 거절 */
   async function checkout(res: ServerResponse, body: Record<string, unknown> | null) {
     const txn = transactions.get(String(body?.transactionId ?? ''))
@@ -176,10 +234,17 @@ export async function startFakePaddle(): Promise<FakePaddle> {
     const customData = txn.custom_data
     const currency = 'USD'
     if (!price.recurring) {
-      await fire(
-        'transaction.completed',
-        transactionEntity(null, customData, currency, price.amount, 'web', price.id, txn.id),
+      const entity = transactionEntity(
+        null,
+        customData,
+        currency,
+        price.amount,
+        'web',
+        price.id,
+        txn.id,
       )
+      remember(entity, price.id)
+      await fire('transaction.completed', entity)
       return send(res, 200, { ok: true }, cors)
     }
     const now = new Date()
@@ -197,17 +262,38 @@ export async function startFakePaddle(): Promise<FakePaddle> {
     }
     subs.set(sub.id, sub)
     // Paddle 은 결제를 먼저 알리고 구독을 만든다
-    await fire(
-      'transaction.completed',
-      transactionEntity(sub, customData, currency, price.amount, 'web', price.id, txn.id),
+    const first = transactionEntity(
+      sub,
+      customData,
+      currency,
+      price.amount,
+      'web',
+      price.id,
+      txn.id,
     )
+    remember(first, price.id)
+    await fire('transaction.completed', first)
     await fire('subscription.created', { ...subscriptionEntity(sub), transaction_id: txn.id })
     await fire('subscription.activated', subscriptionEntity(sub))
     return send(res, 200, { ok: true, subscriptionId: sub.id }, cors)
   }
 
   async function control(res: ServerResponse, patch: Record<string, unknown>) {
+    if (patch.refundMode === 'approve' || patch.refundMode === 'pending')
+      refundMode = patch.refundMode
+    if (patch.decide && typeof patch.decide === 'object') {
+      const { id, status } = patch.decide as { id?: string; status?: string }
+      const found = [...paid.values()]
+        .flatMap((t) => t.adjustments)
+        .find((a) => a.id === id && a.status === 'pending_approval')
+      if (!found || (status !== 'approved' && status !== 'rejected'))
+        return send(res, 404, { error: 'no such pending adjustment' })
+      found.status = status
+      await fire('adjustment.updated', adjustmentEntity(found))
+    }
     if (patch.reset) {
+      refundMode = 'pending'
+      paid.clear()
       subs.clear()
       calls = []
       sent = []
@@ -221,17 +307,16 @@ export async function startFakePaddle(): Promise<FakePaddle> {
       s.periodStart = iso(start)
       s.periodEnd = iso(new Date(start.getTime() + PERIOD_MS))
       s.txnCount += 1
-      await fire(
-        'transaction.completed',
-        transactionEntity(
-          s,
-          s.customData,
-          s.currency,
-          s.amount,
-          'subscription_recurring',
-          s.priceId,
-        ),
+      const renewal = transactionEntity(
+        s,
+        s.customData,
+        s.currency,
+        s.amount,
+        'subscription_recurring',
+        s.priceId,
       )
+      remember(renewal, s.priceId)
+      await fire('transaction.completed', renewal)
       await fire('subscription.updated', subscriptionEntity(s))
     }
     if (typeof patch.endPeriod === 'string') {
@@ -256,6 +341,7 @@ export async function startFakePaddle(): Promise<FakePaddle> {
       )
     }
     return send(res, 200, {
+      adjustments: [...paid.values()].flatMap((t) => t.adjustments),
       subscriptions: [...subs.values()],
       calls,
       sent,
@@ -290,6 +376,50 @@ export async function startFakePaddle(): Promise<FakePaddle> {
       }
       transactions.set(txn.id, txn)
       return send(res, 200, { data: { status: 'draft', ...txn } })
+    }
+
+    const lookup = /^\/transactions\/([^/]+)$/.exec(path)
+    if (lookup && req.method === 'GET') {
+      const authorized = req.headers.authorization === `Bearer ${FAKE_PADDLE.apiKey}`
+      calls.push({ method: req.method, path, authorized, body })
+      if (!authorized) return send(res, 403, { error: { code: 'forbidden' } })
+      const found = paid.get(decodeURIComponent(lookup[1] as string))
+      if (!found) return send(res, 404, { error: { code: 'not_found' } })
+      return send(res, 200, transactionBody(found, (req.url ?? '').includes('include=adjustments')))
+    }
+
+    if (path === '/adjustments' && req.method === 'POST') {
+      const authorized = req.headers.authorization === `Bearer ${FAKE_PADDLE.apiKey}`
+      calls.push({ method: req.method, path, authorized, body })
+      if (!authorized) return send(res, 403, { error: { code: 'forbidden' } })
+      const found = paid.get(String(body?.transaction_id ?? ''))
+      if (!found || body?.action !== 'refund')
+        return send(res, 404, { error: { code: 'not_found' } })
+      const refused = (status: number, code: string) => send(res, status, { error: { code } })
+      if (found.adjustments.some((a) => a.status === 'pending_approval'))
+        return refused(409, 'adjustment_pending_refund_request')
+      const items = (body?.items as Array<{ amount?: string }> | undefined) ?? []
+      const amount =
+        body?.type === 'full'
+          ? found.total
+          : items.reduce((sum, i) => sum + Number(i.amount ?? 0), 0)
+      const taken = found.adjustments
+        .filter((a) => a.status !== 'rejected')
+        .reduce((sum, a) => sum + a.total, 0)
+      if (amount <= 0) return refused(400, 'adjustment_amount_cannot_be_zero')
+      if (taken + amount > found.total)
+        return refused(400, 'adjustment_total_above_remaining_allowed')
+      const adjustment: FakePaddleAdjustment = {
+        id: `adj_${randomUUID().replaceAll('-', '').slice(0, 26)}`,
+        action: 'refund',
+        status: refundMode === 'approve' ? 'approved' : 'pending_approval',
+        transactionId: found.id,
+        total: amount,
+        currency: found.currency,
+      }
+      found.adjustments.push(adjustment)
+      await fire('adjustment.created', adjustmentEntity(adjustment))
+      return send(res, 201, { data: adjustmentEntity(adjustment) })
     }
 
     const cancel = /^\/subscriptions\/([^/]+)\/cancel$/.exec(path)

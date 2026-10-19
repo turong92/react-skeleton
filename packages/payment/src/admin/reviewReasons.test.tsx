@@ -134,7 +134,8 @@ describe('the refund line failure codes our backend gives (contract 4)', () => {
 
   it.each([
     ['NOT_APPLIED', '결제사에서 환불이 적용되지 않았어요'],
-    ['PROVIDER_PENDING', '결제사에서 아직 환불 중이에요'],
+    ['PROVIDER_PENDING', '결제사 검토 중이에요 — 끝나면 환불 결과가 이 줄에 나와요'],
+    ['PROVIDER_REJECTED', '결제사가 이 환불을 거절했어요. 다시 환불할 수 있어요'],
     ['RESULT_MISMATCH', '결제사의 답이 요청과 맞지 않았어요'],
     ['ORDER_REFUNDED', '이미 환불된 결제라서 닫혔어요'],
     [

@@ -425,3 +425,56 @@ describe('AdminRefundDialog — decline a request', () => {
     expect(decide('reject', { busy: true })).toContain('거절하는 중')
   })
 })
+
+describe('AdminRefundDialog - ending the subscription with the refund', () => {
+  const label = '전액 환불되면 구독도 해지'
+
+  it('a subscription charge (first payment or renewal) gets the choice, on by default, with what it means', () => {
+    for (const kind of ['SUBSCRIPTION_INITIAL', 'SUBSCRIPTION_RENEWAL'] as const) {
+      const html = direct({ order: order({ kind }) })
+      expect(html, kind).toContain(label)
+      expect(html.match(/<input[^>]*type="checkbox"[^>]*>/)?.[0], kind).toContain('checked')
+      expect(html).toContain('끄면 다음 결제일에 계속 결제돼요')
+    }
+  })
+
+  it('approving a request for a subscription charge shows it too, from the request line', () => {
+    const html = decide('approve', {
+      request: adminRefund({
+        orderKind: 'SUBSCRIPTION_RENEWAL',
+        amount: { amount: 2000, currency: 'KRW' },
+      }),
+    })
+    expect(html).toContain(label)
+  })
+
+  it('a one-time payment, a plan change, a request with no order kind and declining a request have no choice', () => {
+    expect(direct({ order: order({ kind: 'ONE_TIME' }) })).not.toContain(label)
+    expect(direct({ order: order({ kind: 'SUBSCRIPTION_CHANGE' }) })).not.toContain(label)
+    expect(decide('approve')).not.toContain(label)
+    expect(
+      decide('reject', { request: adminRefund({ orderKind: 'SUBSCRIPTION_RENEWAL' }) }),
+    ).not.toContain(label)
+  })
+
+  it('while sending, the choice is locked at the value that was sent', () => {
+    const html = direct({
+      order: order({ kind: 'SUBSCRIPTION_RENEWAL' }),
+      busy: true,
+      sent: { amount: 3000, reasonCode: 'OPERATOR', endSubscription: false },
+    })
+    const box = html.match(/<input[^>]*type="checkbox"[^>]*>/)?.[0] ?? ''
+    expect(box).not.toContain('checked')
+    expect(box).toContain('disabled')
+  })
+})
+
+describe('AdminRefundDialog - a provider that cannot refund from the server', () => {
+  it('409 REFUND_UNSUPPORTED says so, blocks the confirm for both ways of refunding and does not offer the same thing again', () => {
+    const error = failed('PAYMENT.REFUND_UNSUPPORTED', 409)
+    for (const html of [direct({ error }), decide('approve', { error })]) {
+      expect(html).toContain('이 결제사는 서버에서 환불할 수 없어요')
+      expect(buttonOf(html, '환불하기')).toContain('aria-disabled="true"')
+    }
+  })
+})

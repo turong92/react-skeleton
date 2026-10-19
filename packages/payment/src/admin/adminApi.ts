@@ -26,9 +26,10 @@ export type PaymentAdminApi = {
   listRefunds(params?: AdminRefundListParams): Promise<ApiCursorResponse<AdminRefund>>
   /**
    * `POST {basePath}/refunds/{id}/approve` — 요청을 승인한다 = 위와 같은 환불 실행(돈이 나간다). `amount`(최소 단위)를 주면 그 금액으로 - 요청 금액이나 환불 가능액을 넘으면
-   * 결제사를 부르지 않고 400 `REFUND_AMOUNT_EXCEEDED`. 없으면 본문 없이 요청 금액 그대로
+   * 결제사를 부르지 않고 400 `REFUND_AMOUNT_EXCEEDED`. 없으면 본문 없이 요청 금액 그대로.
+   * `endSubscription: false` 면 구독 결제를 전액 환불해도 구독을 끝내지 않는다(생략 = 끝낸다)
    */
-  approveRefund(refundId: string, amount?: number): Promise<AdminRefund>
+  approveRefund(refundId: string, amount?: number, endSubscription?: boolean): Promise<AdminRefund>
   /** `POST {basePath}/refunds/{id}/reject` — 요청을 거절한다(돈은 안 움직인다) */
   rejectRefund(refundId: string): Promise<AdminRefund>
   /** `POST {basePath}/orders/{id}/sync` — 「결제사와 맞추기」: 결제사에 물어 장부를 맞춘다. 확인 필요가 풀리면 `reviewReason` 이 비워진다 */
@@ -99,10 +100,17 @@ export function createPaymentAdminApi(
       }),
     listRefunds: (params = {}) =>
       client.cursor<AdminRefund>(`${base}/refunds`, { params: present(params) }),
-    approveRefund: (refundId, amount) =>
+    approveRefund: (refundId, amount, endSubscription) =>
       client.value<AdminRefund>(`${base}/refunds/${enc(refundId)}/approve`, {
         method: 'POST',
-        ...(amount !== undefined ? { json: { amount } } : {}),
+        ...(amount !== undefined || endSubscription !== undefined
+          ? {
+              json: {
+                ...(amount !== undefined ? { amount } : {}),
+                ...(endSubscription !== undefined ? { endSubscription } : {}),
+              },
+            }
+          : {}),
         timeoutMs: refundTimeoutMs,
       }),
     rejectRefund: (refundId) => post<AdminRefund>(`${base}/refunds/${enc(refundId)}/reject`),

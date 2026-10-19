@@ -145,15 +145,21 @@ export function AdminOrderPanel({
   // 돈이 나가는 두 단추(「환불하기」 · 「요청대로 환불하기」)를 막는 이유 - 낡은 화면(방금 나간 환불이 안 보일 수 있다)이거나, 돈이 결제사와 어긋났다.
   // 맞추기 단추가 있으면 넷 모두 먼저 맞추기를 권한다(맞춘 뒤에도 남았으면 그렇게 말한다). 없으면 서버가 실제로 막는 `REFUND_MISMATCH` 만 막고 없는 단추로 보내지 않는다
   const moneyOff = onSync ? isMoneyOffReason(review) : review === 'REFUND_MISMATCH'
-  const hold = stale
-    ? text.panel.stale
-    : moneyOff
-      ? onSync
-        ? syncedNow
-          ? text.panel.stillOff
-          : text.panel.syncFirst
-        : text.panel.moneyOff
-      : null
+  // 서버가 이 결제사로는 환불을 못 보낸다고 알렸다 - 돈이 나가는 두 단추를 막고 이유를 적는다(거절은 그대로)
+  const providerBlock = order.refundBlock
+    ? (lookup(text.refundBlock, order.refundBlock) ?? text.refundBlock.OTHER)
+    : null
+  const hold = providerBlock
+    ? providerBlock
+    : stale
+      ? text.panel.stale
+      : moneyOff
+        ? onSync
+          ? syncedNow
+            ? text.panel.stillOff
+            : text.panel.syncFirst
+          : text.panel.moneyOff
+        : null
   const blocked =
     open === 'REQUESTED'
       ? text.panel.refundBlockedByRequest

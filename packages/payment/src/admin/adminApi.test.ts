@@ -126,6 +126,23 @@ describe('createPaymentAdminApi (paths and bodies mirror spec 7, operator routes
     })
   })
 
+  it('approveRefund carries endSubscription only when it was given (false means keep the subscription)', async () => {
+    const { client, calls } = fakeClient()
+    const api = createPaymentAdminApi(client)
+    await api.approveRefund('rfd_1', undefined, false)
+    await api.approveRefund('rfd_2', 1500, false)
+    expect(calls[0]).toEqual({
+      kind: 'value',
+      path: '/admin/payments/refunds/rfd_1/approve',
+      request: {
+        method: 'POST',
+        json: { endSubscription: false },
+        timeoutMs: OPERATOR_REFUND_TIMEOUT_MS,
+      },
+    })
+    expect(calls[1]).toMatchObject({ request: { json: { amount: 1500, endSubscription: false } } })
+  })
+
   it('approveRefund / rejectRefund → POST /refunds/{id}/approve | reject, no body, no Idempotency-Key', async () => {
     const { client, calls } = fakeClient()
     const api = createPaymentAdminApi(client)

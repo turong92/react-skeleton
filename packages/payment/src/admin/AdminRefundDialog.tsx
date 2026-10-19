@@ -1,4 +1,4 @@
-import { Alert, ConfirmDialog, ErrorReference, Field, Input, Select } from '@skeleton/ui'
+import { Alert, Checkbox, ConfirmDialog, ErrorReference, Field, Input, Select } from '@skeleton/ui'
 import { useId, useState, type ReactNode } from 'react'
 import { declineDetail, isPaymentLedgerError, PaymentLedgerErrorCodes } from '../errors'
 import { referenceOf } from '../failure'
@@ -26,26 +26,31 @@ type Common = {
 /** 운영자가 금액(전액 · 부분)과 사유를 정해 바로 환불한다 — 금액은 남은 금액을 넘지 못한다(화면에서도 막는다, 서버가 최종 판단) */
 type Direct = {
   mode: 'direct'
-  /** `openRefundStatus` 는 선택 - 있으면 409 `REFUND_IN_PROGRESS` 가 「환불 중」인지 「기다리는 요청」인지 가른다 */
-  order: Pick<Order, 'amount' | 'refundableAmount'> & Partial<Pick<Order, 'openRefundStatus'>>
+  /**
+   * `openRefundStatus` 는 선택 - 있으면 409 `REFUND_IN_PROGRESS` 가 「환불 중」인지 「기다리는 요청」인지 가른다.
+   * `kind` 도 선택 - 구독 결제(`SUBSCRIPTION_INITIAL` · `SUBSCRIPTION_RENEWAL`)면 「전액 환불되면 구독도 해지」 선택이 생긴다
+   */
+  order: Pick<Order, 'amount' | 'refundableAmount'> &
+    Partial<Pick<Order, 'openRefundStatus' | 'kind'>>
   onConfirm: (input: OperatorRefundInput & { amount: number }) => void
   /**
    * 마지막으로 **보낸** 금액 · 사유(부모의 변경이 쥔 변수) - 잠긴 칸(보내는 중 · 결과를 모름)은 적던 글자가 아니라 이 값을 보인다.
    * 주지 않으면 칸의 글자를 그대로 보인다
    */
-  sent?: { amount: number; reasonCode: OperatorRefundReason }
+  sent?: { amount: number; reasonCode: OperatorRefundReason; endSubscription?: boolean }
 }
 
 /**
  * 본인의 환불 요청 하나를 승인(`approve` — 기본은 요청한 금액 그대로이고, 금액 칸에서 **낮춰** 환불할 수 있다)하거나 거절(`reject` — 돈은 안 나간다)한다.
- * 승인의 `onConfirm` 은 **고친 금액**(최소 단위)을 받는다 - 요청 금액 그대로면 `undefined`(본문 없이 승인)
+ * 승인의 `onConfirm` 은 **고친 금액**(최소 단위)을 받는다 - 요청 금액 그대로면 `undefined`(본문 없이 승인). 둘째 인자는 「구독도 해지」를 **껐을 때만** `false`
  */
 type Decide = {
   mode: 'approve' | 'reject'
-  request: Pick<Refund, 'orderId' | 'amount' | 'reasonCode'>
+  /** `orderKind` 는 선택 - 구독 결제(`SUBSCRIPTION_INITIAL` · `SUBSCRIPTION_RENEWAL`)면 승인 창에 「구독도 해지」 선택이 생긴다 */
+  request: Pick<Refund, 'orderId' | 'amount' | 'reasonCode'> & { orderKind?: Order['kind'] | null }
   /** 알면 준다 — 환불할 수 있는 금액이 요청보다 작으면 금액 칸의 처음 값과 상한이 그 금액이다(서버가 최종 판단) */
   order?: Pick<Order, 'refundableAmount'>
-  onConfirm: (amount?: number) => void
+  onConfirm: (amount?: number, endSubscription?: false) => void
   /**
    * 이 요청의 결제 한 건으로 가는 링크(목록에서 연 창이 준다 — 한 건 화면에서는 필요 없다). 승인이 끝내 정해지지 않았거나(결과를 모름 · 이미 처리됨)
    * 요청이 환불 안 됨으로 닫혔을 때만 오류 아래에 보인다 — 거기서 환불 내역을 보거나 직접 환불한다.
@@ -55,6 +60,12 @@ type Decide = {
 }
 
 export type AdminRefundDialogProps = Common & (Direct | Decide)
+
+/** 「구독도 해지」 선택이 뜻을 갖는 주문 - 지금 기간의 구독 결제(첫 결제 · 갱신). 플랜 변경 결제의 환불은 구독을 끝내지 않는다 */
+const SUBSCRIPTION_CHARGE: ReadonlySet<string> = new Set([
+  'SUBSCRIPTION_INITIAL',
+  'SUBSCRIPTION_RENEWAL',
+])
 
 const REASONS: readonly OperatorRefundReason[] = [
   'OPERATOR',
@@ -98,6 +109,13 @@ export function AdminRefundDialog(props: AdminRefundDialogProps) {
   const fieldId = useId()
   const reasonId = useId()
   const lockedId = useId()
+  const kind =
+    props.mode === 'direct'
+      ? props.order.kind
+      : props.mode === 'approve'
+        ? props.request.orderKind
+        : undefined
+  const subscription = kind != null && SUBSCRIPTION_CHARGE.has(kind)
   const fullAmount = minorToInput(limit ?? 0, digits)
 
   // 서버의 답 — 확정(서버가 요청을 보고 답했다)과 모름(답을 잃었다)을 가른다. 모름을 「못 했어요」라고 단정하지 않는다
@@ -110,6 +128,8 @@ export function AdminRefundDialog(props: AdminRefundDialogProps) {
 
   const [reason, setReason] = useState<OperatorRefundReason>('OPERATOR')
   const [draft, setDraft] = useState(fullAmount)
+  // 「전액 환불되면 구독도 해지」 - 기본 켜짐(껐을 때만 `endSubscription: false` 를 보낸다)
+  const [endSubscription, setEndSubscription] = useState(true)
   const [wasOpen, setWasOpen] = useState(open)
   if (open !== wasOpen) {
     setWasOpen(open)
@@ -118,6 +138,7 @@ export function AdminRefundDialog(props: AdminRefundDialogProps) {
     if (open && !busy && !hasError) {
       setReason('OPERATOR')
       setDraft(fullAmount)
+      setEndSubscription(true)
     }
   }
 
@@ -125,6 +146,7 @@ export function AdminRefundDialog(props: AdminRefundDialogProps) {
   const sent = props.mode === 'direct' && frozen ? props.sent : undefined
   const shownAmount = sent ? minorToInput(sent.amount, digits) : draft
   const shownReason = sent ? sent.reasonCode : reason
+  const shownEnd = sent ? sent.endSubscription !== false : endSubscription
 
   // 금액 — 직접 환불은 적은 글자를 읽어 검사하고, 요청 처리는 요청한 금액 그대로
   const parsed = parseAmountInput(shownAmount, digits)
@@ -162,7 +184,8 @@ export function AdminRefundDialog(props: AdminRefundDialogProps) {
       requestClosed ||
       approveClosedLine ||
       approveRefused ||
-      alreadyDecided
+      alreadyDecided ||
+      answer === 'unsupported'
   let message: string
   if (rejecting)
     message = alreadyDecided
@@ -171,6 +194,7 @@ export function AdminRefundDialog(props: AdminRefundDialogProps) {
         ? text.reject.unknown
         : text.reject.error
   else if (requestClosed) message = text.errors.requestClosed
+  else if (answer === 'unsupported') message = text.errors.unsupported
   else if (modeMismatch) message = text.errors.modeMismatch
   else if (approveClosedLine) message = text.errors.notDone
   else if (approveRefused) message = text.errors.approveNotAllowed
@@ -218,10 +242,27 @@ export function AdminRefundDialog(props: AdminRefundDialogProps) {
   function confirm() {
     if (props.mode === 'reject') return props.onConfirm()
     if (parsed.kind !== 'ok') return
-    if (props.mode === 'direct') props.onConfirm({ reasonCode: shownReason, amount: parsed.minor })
+    const keep = subscription && !endSubscription ? { endSubscription: false as const } : {}
+    if (props.mode === 'direct')
+      props.onConfirm({ reasonCode: shownReason, amount: parsed.minor, ...keep })
     // 요청 금액 그대로면 금액을 싣지 않는다 - 본문 없는 승인과 같다
-    else props.onConfirm(parsed.minor === props.request.amount.amount ? undefined : parsed.minor)
+    else
+      props.onConfirm(
+        parsed.minor === props.request.amount.amount ? undefined : parsed.minor,
+        keep.endSubscription,
+      )
   }
+
+  // 「구독도 해지」 선택 - 구독 결제의 환불 창(직접 · 승인)에만. 보내는 중 · 모름인 동안은 보낸 값으로 잠긴다
+  const endSubscriptionField = subscription && !rejecting && (
+    <Checkbox
+      label={text.endSubscription.label}
+      description={text.endSubscription.hint}
+      checked={shownEnd}
+      disabled={frozen || Boolean(busy)}
+      onChange={(event) => setEndSubscription(event.target.checked)}
+    />
+  )
 
   return (
     <ConfirmDialog
@@ -332,6 +373,7 @@ export function AdminRefundDialog(props: AdminRefundDialogProps) {
               )}
             </Field>
           )}
+          {endSubscriptionField}
           <p className={styles.note}>{copy.note}</p>
           {nothingToRefund && (
             <div id={reasonId}>

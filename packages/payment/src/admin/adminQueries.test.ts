@@ -171,6 +171,41 @@ describe('mutations change the ledger, so they refresh the whole payment root (t
     ])
   })
 
+  it('turning "end the subscription too" off is another intent - the server refuses the same key with another choice', async () => {
+    const { api, calls } = fakeApi()
+    const client = new QueryClient()
+    let n = 0
+    const options = refundOrderMutation(api, client, createIntentKeys({ make: () => `k-${++n}` }))
+    const input = { orderId: 'ord_1', reasonCode: 'OPERATOR' as const, amount: 1000 }
+    api.refundOrder = async (...args) => {
+      calls.push(['refundOrder', ...args])
+      throw new Error('lost')
+    }
+    await run(options, client, { ...input })
+    await run(options, client, { ...input, endSubscription: false })
+    await run(options, client, { ...input, endSubscription: false })
+    expect(calls.map((c) => (c[3] as { idempotencyKey: string }).idempotencyKey)).toEqual([
+      'k-1',
+      'k-2',
+      'k-2',
+    ])
+    expect(calls[1]?.[2]).toEqual({ reasonCode: 'OPERATOR', amount: 1000, endSubscription: false })
+  })
+
+  it('an approval with the choice off sends it, and one without sends nothing extra', async () => {
+    const { api } = fakeApi()
+    const seen: unknown[][] = []
+    api.approveRefund = async (...args) => {
+      seen.push(args)
+      return refund({ status: 'SUCCEEDED' }) as never
+    }
+    const client = new QueryClient()
+    await run(approveRefundMutation(api, client), client, { id: 'rfd_1', endSubscription: false })
+    await run(approveRefundMutation(api, client), client, { id: 'rfd_2', amount: 500 })
+    await run(approveRefundMutation(api, client), client, 'rfd_3')
+    expect(seen).toEqual([['rfd_1', undefined, false], ['rfd_2', 500], ['rfd_3']])
+  })
+
   it('a succeeded direct refund lets go of its key (the next one is a new intent) and refreshes the root', async () => {
     const { api, calls } = fakeApi()
     const client = new QueryClient()

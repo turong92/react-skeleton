@@ -797,3 +797,39 @@ describe('AdminOrderPanel — closing a stuck subscription charge', () => {
     ).toBe(false)
   })
 })
+
+describe('AdminOrderPanel - a provider that cannot refund from the server', () => {
+  it.each([
+    [
+      'UNSUPPORTED',
+      '이 결제사는 서버에서 환불할 수 없어요 — 결제사 관리 화면에서 환불한 뒤 요청을 거절하세요',
+    ],
+    ['PROVIDER_OFF', '결제사가 지금 꺼져 있어요'],
+    ['MODE_MISMATCH', '키 모드가 달라요'],
+  ])(
+    '%s: 환불하기 and the request approval are held with the reason read as their description, declining stays open',
+    (refundBlock, sentence) => {
+      const html = panel(
+        detail({
+          order: adminOrder({ refundBlock }),
+          refunds: [adminRefund({ status: 'REQUESTED' })],
+        }),
+        { onRefund: noop, onApprove: noop, onReject: noop },
+      )
+      expect(html).toContain(sentence)
+      expect(buttonOf(html, '환불하기')).toContain('aria-disabled="true"')
+      expect(html.match(/<button[^>]*aria-label="요청대로 환불하기[^>]*>/)?.[0]).toContain(
+        'aria-disabled="true"',
+      )
+      expect(html.match(/<button[^>]*aria-label="요청 거절하기[^>]*>/)?.[0]).not.toContain(
+        'aria-disabled',
+      )
+    },
+  )
+
+  it('no block, no hold', () => {
+    const html = panel(detail({ order: adminOrder({ refundBlock: null }) }), { onRefund: noop })
+    expect(buttonOf(html, '환불하기')).not.toContain('aria-disabled')
+    expect(html).not.toContain('서버에서 환불할 수 없어요')
+  })
+})

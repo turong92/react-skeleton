@@ -30,12 +30,20 @@ export const defaultPaymentAdminLabels: PaymentAdminLabels = {
   erasedAccount: 'Closed account',
   refundFailure: {
     NOT_APPLIED: 'The provider did not apply the refund',
-    PROVIDER_PENDING: 'The provider is still refunding',
+    PROVIDER_PENDING: 'Under review at the provider - the refund result shows here when it is done',
     RESULT_MISMATCH: "The provider's answer did not match the request",
     ORDER_REFUNDED: 'The payment was already refunded, so this line was closed',
     LATE_RESULT:
       "The provider's refund result arrived after this line was closed. Check the other refund lines and the refunded amount",
     REFUND_DECLINED: 'The provider declined this refund',
+    PROVIDER_REJECTED: 'The provider turned this refund down. You can refund it again',
+  },
+  refundBlock: {
+    UNSUPPORTED:
+      'This provider cannot refund from the server. Refund in the provider dashboard, then decline the request',
+    PROVIDER_OFF: 'The provider is switched off right now',
+    MODE_MISMATCH: 'The key mode does not match this payment',
+    OTHER: 'This cannot be refunded from the server right now',
   },
   eventCodes: {
     PROVIDER_PENDING_EXPIRED: 'The provider did not finish in time, so this line was closed',
@@ -178,10 +186,16 @@ export const defaultPaymentAdminLabels: PaymentAdminLabels = {
       zero: 'Type an amount above zero',
       exceeds: (max) => `It cannot be more than what can still be refunded (${max})`,
     },
+    endSubscription: {
+      label: 'End the subscription too if refunded in full',
+      hint: "Applies only when this period's charge is refunded in full. Turn it off and the next billing date still charges",
+    },
     locked:
       'The amount and reason cannot be changed until the result is known. To use another amount, close this and check the result with "Match with the provider" first',
     sending: 'The amount and reason cannot be changed while this is being sent',
     errors: {
+      unsupported:
+        'This provider cannot refund from the server. Refund in the provider dashboard, then decline the request',
       modeMismatch:
         'This payment was made with a key for the other side (test or real), so the current key cannot refund it',
       notAllowed:

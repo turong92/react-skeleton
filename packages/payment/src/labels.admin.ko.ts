@@ -25,12 +25,14 @@ export const koPaymentAdminLabels: PaymentAdminLabels = {
   erasedAccount: '탈퇴한 계정',
   refundFailure: {
     NOT_APPLIED: '결제사에서 환불이 적용되지 않았어요',
-    PROVIDER_PENDING: '결제사 검토 중이에요 — 끝나면 환불 결과가 이 줄에 나와요',
+    PROVIDER_PENDING: '결제사의 환불 결과를 기다리고 있어요 — 끝나면 이 줄이 바뀌어요',
     RESULT_MISMATCH: '결제사의 답이 요청과 맞지 않았어요',
     ORDER_REFUNDED: '이미 환불된 결제라서 닫혔어요',
     LATE_RESULT:
       '닫힌 뒤에 결제사의 환불 결과가 도착했어요. 다른 환불 줄과 환불된 금액을 확인해 주세요',
     REFUND_DECLINED: '결제사가 이 환불을 받아 주지 않았어요',
+    CHARGEBACK_WARNING:
+      '카드사 이의 제기의 경고에서 온 줄이에요 — 같은 금액의 차지백은 같은 이의로 한 번만 세요',
     PROVIDER_REJECTED: '결제사가 이 환불을 거절했어요. 다시 환불할 수 있어요',
   },
   refundBlock: {

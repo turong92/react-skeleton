@@ -692,7 +692,7 @@ export const ChargebackAndWonDispute: Story = {
   },
   play: async ({ canvas }) => {
     await expect(canvas.getAllByText(/카드사 이의 제기\(차지백\)/)).toHaveLength(2)
-    await expect(canvas.getByText('분쟁에서 이겨 돌아옴')).toBeVisible()
+    await expect(canvas.getByText('환불 되돌려짐')).toBeVisible()
     await expect(canvas.getByText('분쟁에서 이겨 환불이 되돌려졌어요')).toBeVisible()
   },
 }

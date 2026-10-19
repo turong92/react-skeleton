@@ -37,7 +37,7 @@ export const koPaymentLabels: PaymentLabels = {
     FAILED: '환불 안 됨',
     REJECTED: '환불 안 됨',
     WITHDRAWN: '환불 요청 거둠',
-    REVERSED: '분쟁에서 이겨 돌아옴',
+    REVERSED: '환불 되돌려짐',
   },
   refundClosedBySystem: '환불이 끝나 요청이 닫혔어요',
   unknownStatus: '확인 필요',

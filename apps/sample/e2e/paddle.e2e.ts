@@ -231,7 +231,7 @@ describe('refunding a Paddle subscription charge', () => {
       authorized: true,
       body: { action: 'refund', transaction_id: expect.any(String), type: 'full' },
     })
-    // 운영자 화면은 「결제사 검토 중」이라고 말한다
+    // 운영자 화면은 「결제사의 환불 결과를 기다리고 있어요」라고 말한다
     const operator = await operatorPage(browser, baseUrl)
     try {
       await operatorOpensPayment(operator.page, baseUrl, initial.id)

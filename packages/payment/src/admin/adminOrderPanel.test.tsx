@@ -857,7 +857,7 @@ describe('AdminOrderPanel - chargebacks', () => {
       }),
     )
     expect(html).toContain('카드사 이의 제기(차지백)')
-    expect(html).toContain('분쟁에서 이겨 돌아옴')
+    expect(html).toContain('환불 되돌려짐')
     expect(html).toContain('분쟁에서 이겨 환불이 되돌려졌어요')
     expect(html).not.toContain('REVERSED')
     expect(html).not.toContain('CHARGEBACK')

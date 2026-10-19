@@ -23,7 +23,7 @@ const REFUND_TONE: Record<RefundStatus, Tone> = {
   FAILED: 'danger',
   REJECTED: 'danger',
   WITHDRAWN: 'neutral',
-  REVERSED: 'success',
+  REVERSED: 'neutral',
 }
 
 export type OrderStatusBadgeProps = {

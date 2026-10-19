@@ -276,6 +276,7 @@ describe('the operator words (spec 11.2: 「결제사와 맞추기」, 「확인
   it('names the codes our backend writes on a refund line (failureCode) and the ones only the history carries (providerCode), each in its own table', () => {
     // 줄에 찍히는 코드 - 백엔드 `RefundSettlement` · `RefundLines` · 결제사 코드 없는 확정 거절(`REFUND_DECLINED`)
     expect(Object.keys(a.refundFailure).sort()).toEqual([
+      'CHARGEBACK_WARNING',
       'LATE_RESULT',
       'NOT_APPLIED',
       'ORDER_REFUNDED',
@@ -306,10 +307,10 @@ describe('the operator words (spec 11.2: 「결제사와 맞추기」, 「확인
 
   it('the provider still working is said in the present, with a table word', () => {
     expect(a.refundFailure.PROVIDER_PENDING).toBe(
-      '결제사 검토 중이에요 — 끝나면 환불 결과가 이 줄에 나와요',
+      '결제사의 환불 결과를 기다리고 있어요 — 끝나면 이 줄이 바뀌어요',
     )
     expect(defaultPaymentLabels.admin.refundFailure.PROVIDER_PENDING).toBe(
-      'Under review at the provider - the refund result shows here when it is done',
+      "Waiting for the provider's refund result - this line changes when it is done",
     )
   })
 

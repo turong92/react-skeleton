@@ -37,7 +37,7 @@ export const defaultPaymentLabels: PaymentLabels = {
     FAILED: 'Not refunded',
     REJECTED: 'Not refunded',
     WITHDRAWN: 'Refund request taken back',
-    REVERSED: 'Dispute won, money returned',
+    REVERSED: 'Refund reversed',
   },
   refundClosedBySystem: 'Request closed after the refund finished',
   unknownStatus: 'Needs a check',

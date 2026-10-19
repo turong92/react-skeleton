@@ -30,12 +30,15 @@ export const defaultPaymentAdminLabels: PaymentAdminLabels = {
   erasedAccount: 'Closed account',
   refundFailure: {
     NOT_APPLIED: 'The provider did not apply the refund',
-    PROVIDER_PENDING: 'Under review at the provider - the refund result shows here when it is done',
+    PROVIDER_PENDING:
+      "Waiting for the provider's refund result - this line changes when it is done",
     RESULT_MISMATCH: "The provider's answer did not match the request",
     ORDER_REFUNDED: 'The payment was already refunded, so this line was closed',
     LATE_RESULT:
       "The provider's refund result arrived after this line was closed. Check the other refund lines and the refunded amount",
     REFUND_DECLINED: 'The provider declined this refund',
+    CHARGEBACK_WARNING:
+      'From the warning of a card dispute - a chargeback of the same amount counts as the same dispute',
     PROVIDER_REJECTED: 'The provider turned this refund down. You can refund it again',
   },
   refundBlock: {

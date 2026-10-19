@@ -833,3 +833,41 @@ describe('AdminOrderPanel - a provider that cannot refund from the server', () =
     expect(html).not.toContain('서버에서 환불할 수 없어요')
   })
 })
+
+describe('AdminOrderPanel - chargebacks', () => {
+  it('a chargeback line says where it came from, and the line that was won back says so - in words, never the raw codes', () => {
+    const html = panel(
+      detail({
+        order: adminOrder({ status: 'PARTIALLY_REFUNDED', refundedAmount: 1000 }),
+        refunds: [
+          adminRefund({
+            id: 'rfd_1',
+            status: 'SUCCEEDED',
+            origin: 'PROVIDER',
+            reasonCode: 'CHARGEBACK',
+          }),
+          adminRefund({
+            id: 'rfd_2',
+            status: 'REVERSED',
+            origin: 'PROVIDER',
+            reasonCode: 'CHARGEBACK',
+          }),
+        ],
+        events: [paymentEvent({ id: 1, type: 'CHARGEBACK_REVERSED', actor: 'PROVIDER' })],
+      }),
+    )
+    expect(html).toContain('카드사 이의 제기(차지백)')
+    expect(html).toContain('분쟁에서 이겨 돌아옴')
+    expect(html).toContain('분쟁에서 이겨 환불이 되돌려졌어요')
+    expect(html).not.toContain('REVERSED')
+    expect(html).not.toContain('CHARGEBACK')
+  })
+
+  it('a provider-rejected refund line is a sentence that says it can be refunded again', () => {
+    const html = panel(
+      detail({ refunds: [adminRefund({ status: 'FAILED', failureCode: 'PROVIDER_REJECTED' })] }),
+    )
+    expect(html).toContain('다시 환불할 수 있어요')
+    expect(html).not.toContain('PROVIDER_REJECTED')
+  })
+})

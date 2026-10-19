@@ -64,6 +64,7 @@ export const koPaymentAdminLabels: PaymentAdminLabels = {
     REFUND_REJECTED: '환불 요청을 거절했어요',
     REFUND_WITHDRAWN: '환불 요청을 거뒀어요',
     REFUND_SYNCED: '환불을 결제사와 맞췄어요',
+    CHARGEBACK_REVERSED: '분쟁에서 이겨 환불이 되돌려졌어요',
     REFUND_APPLIED: '환불에 맞춰 지급을 거둬들였어요',
     REVIEW_FLAGGED: '확인이 필요해졌어요',
     TRANSACTION_FAILED: '결제사가 결제 준비를 거절했어요',

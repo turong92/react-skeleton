@@ -37,6 +37,7 @@ export const koPaymentLabels: PaymentLabels = {
     FAILED: '환불 안 됨',
     REJECTED: '환불 안 됨',
     WITHDRAWN: '환불 요청 거둠',
+    REVERSED: '분쟁에서 이겨 돌아옴',
   },
   refundClosedBySystem: '환불이 끝나 요청이 닫혔어요',
   unknownStatus: '확인 필요',
@@ -47,6 +48,7 @@ export const koPaymentLabels: PaymentLabels = {
     NOT_DELIVERED: '받지 못했어요',
     OPERATOR: '운영자가 환불함',
     PROVIDER_CONSOLE: '결제사에서 환불됨',
+    CHARGEBACK: '카드사 이의 제기(차지백)',
   },
   methods: {
     CARD: '카드',

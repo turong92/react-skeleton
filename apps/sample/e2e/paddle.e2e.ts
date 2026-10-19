@@ -286,3 +286,83 @@ describe('refunding a Paddle subscription charge', () => {
     expect((await paddle.state()).sent.every((s) => s.status === 200)).toBe(true)
   }, 180_000)
 })
+
+describe('a chargeback on a Paddle subscription charge', () => {
+  it('is recorded as a chargeback line, ends the subscription, and winning the dispute gives the money back but not the subscription', async (ctx) => {
+    const token = await tokenOf(apiUrl, DEMO)
+    const config = await api(apiUrl, token, 'GET', '/payments/config')
+    const plans = await api(apiUrl, token, 'GET', '/payments/subscriptions/plans')
+    if (
+      !paddle ||
+      plans.status !== 200 ||
+      !config.json?.value?.providers?.includes('paddle') ||
+      !(await adminPaymentsOn(apiUrl))
+    )
+      return ctx.skip()
+    await paddle.set({ reset: true })
+    const existing = (await mine()).subscription
+    if (
+      existing &&
+      (existing.status === 'ACTIVE' ||
+        existing.status === 'PAST_DUE' ||
+        existing.status === 'CANCELING')
+    )
+      return ctx.skip()
+
+    await ensureSignedIn(page, baseUrl)
+    await page.goto(`${baseUrl}/subscribe`)
+    await page.getByRole('button', { name: /구독하기.*베이직/ }).click()
+    await page.waitForURL(/\/subscriptions\/return\?.*provider=paddle/)
+    await pwExpect(resultTitle(page, labels.result.paid.title)).toBeVisible()
+    const started = await mine()
+    const initial = started.orders.find((o) => o.kind === 'SUBSCRIPTION_INITIAL')!
+    const providerSub = (await paddle.state()).subscriptions[0]!
+    const admin = await tokenOf(apiUrl, ADMIN)
+    const detail = async () =>
+      (await api(apiUrl, admin, 'GET', `/admin/payments/orders/${initial.id}`)).json?.value as {
+        order: { status: string; refundedAmount: number }
+        refunds: Array<{ status: string; reasonCode: string; origin: string }>
+        events: Array<{ type: string }>
+      }
+    const cancels = async () =>
+      (await paddle.state()).calls.filter((c) => c.path.endsWith('/cancel'))
+
+    // 1. 구매자가 카드사에 이의를 제기했다 - Paddle 이 스스로 차지백 adjustment 를 만든다
+    const txnId = (await api(apiUrl, admin, 'GET', `/admin/payments/orders/${initial.id}`)).json
+      ?.value.order.providerPaymentId as string
+    await paddle.set({ chargeback: { transaction: txnId } })
+    await pwExpect
+      .poll(async () => (await detail()).order.status, { timeout: 30_000, intervals: [500] })
+      .toBe('REFUNDED')
+    expect((await detail()).refunds).toEqual([
+      expect.objectContaining({
+        status: 'SUCCEEDED',
+        reasonCode: 'CHARGEBACK',
+        origin: 'PROVIDER',
+      }),
+    ])
+    await pwExpect
+      .poll(async () => (await mine()).subscription?.status, { timeout: 30_000, intervals: [500] })
+      .toBe('ENDED')
+    expect((await mine()).subscription?.endReason).toBe('REFUNDED')
+    await pwExpect.poll(async () => (await cancels()).length, { timeout: 30_000 }).toBe(1)
+    expect((await cancels())[0]).toMatchObject({
+      path: `/subscriptions/${providerSub.id}/cancel`,
+      body: { effective_from: 'immediately' },
+    })
+
+    // 2. 분쟁에서 이겼다 - 원래 adjustment 가 reversed 로 바뀌고 되돌림이 만들어진다(웹훅 둘, 한 번만 되돌린다)
+    const chargeback = (await paddle.state()).adjustments.find((a) => a.action === 'chargeback')!
+    await paddle.set({ winDispute: chargeback.id })
+    await pwExpect
+      .poll(async () => (await detail()).order.status, { timeout: 30_000, intervals: [500] })
+      .toBe('PAID')
+    const won = await detail()
+    expect(won.order.refundedAmount).toBe(0)
+    expect(won.refunds).toEqual([expect.objectContaining({ status: 'REVERSED' })])
+    expect(won.events.filter((e) => e.type === 'CHARGEBACK_REVERSED')).toHaveLength(1)
+    // 구독은 되살리지 않는다
+    expect((await mine()).subscription?.status).toBe('ENDED')
+    expect((await paddle.state()).sent.every((s) => s.status === 200)).toBe(true)
+  }, 180_000)
+})

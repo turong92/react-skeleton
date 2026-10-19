@@ -37,6 +37,7 @@ export const defaultPaymentLabels: PaymentLabels = {
     FAILED: 'Not refunded',
     REJECTED: 'Not refunded',
     WITHDRAWN: 'Refund request taken back',
+    REVERSED: 'Dispute won, money returned',
   },
   refundClosedBySystem: 'Request closed after the refund finished',
   unknownStatus: 'Needs a check',
@@ -47,6 +48,7 @@ export const defaultPaymentLabels: PaymentLabels = {
     NOT_DELIVERED: 'I did not receive it',
     OPERATOR: 'Refunded by our team',
     PROVIDER_CONSOLE: 'Refunded by the payment provider',
+    CHARGEBACK: 'Disputed with the card issuer (chargeback)',
   },
   methods: {
     CARD: 'Card',

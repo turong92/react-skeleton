@@ -69,6 +69,7 @@ export const defaultPaymentAdminLabels: PaymentAdminLabels = {
     REFUND_REJECTED: 'Refund request declined',
     REFUND_WITHDRAWN: 'Refund request taken back',
     REFUND_SYNCED: 'Refund matched with the provider',
+    CHARGEBACK_REVERSED: 'Dispute won, the refund was reversed',
     REFUND_APPLIED: 'What was delivered was taken back for the refund',
     REVIEW_FLAGGED: 'Marked as needing a check',
     TRANSACTION_FAILED: 'The provider refused to prepare the payment',

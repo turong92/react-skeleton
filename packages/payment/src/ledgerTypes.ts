@@ -19,6 +19,8 @@ export type RefundStatus =
   | 'FAILED'
   | 'REJECTED'
   | 'WITHDRAWN'
+  /** 이뤄졌던 환불이 결제사 증거로 되돌려졌다 - 차지백 분쟁에서 이겨 돈이 돌아왔다(Paddle). 끝 상태이고 환불된 금액에서 빠진다 */
+  | 'REVERSED'
 
 /** 열린 환불(아직 끝나지 않은 줄)의 상태 — `REQUESTED` 는 요청만 했고 돈은 움직이지 않았다 · `PENDING` 은 환불이 진행 중이다 */
 export type OpenRefundStatus = Extract<RefundStatus, 'REQUESTED' | 'PENDING'>

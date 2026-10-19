@@ -660,3 +660,39 @@ export const ProviderCannotRefundFromTheServer: Story = {
     await expect(args.onReject).toHaveBeenCalled()
   },
 }
+
+/** 차지백(구매자가 카드사에 이의를 제기해 결제사가 돈을 가져간 환불 줄)과, 분쟁에서 이겨 되돌려진 줄 - 말로 적고 코드는 보이지 않는다. 이력에도 「분쟁에서 이겨 환불이 되돌려졌어요」 */
+export const ChargebackAndWonDispute: Story = {
+  args: {
+    detail: detail({
+      order: adminOrder({
+        orderName: '응원하기 3,000원',
+        status: 'PARTIALLY_REFUNDED',
+        refundedAmount: 1000,
+        refundableAmount: 2000,
+      }),
+      refunds: [
+        adminRefund({
+          id: 'rfd_cb1',
+          status: 'SUCCEEDED',
+          origin: 'PROVIDER',
+          reasonCode: 'CHARGEBACK',
+          amount: { amount: 1000, currency: 'KRW' },
+        }),
+        adminRefund({
+          id: 'rfd_cb2',
+          status: 'REVERSED',
+          origin: 'PROVIDER',
+          reasonCode: 'CHARGEBACK',
+          amount: { amount: 500, currency: 'KRW' },
+        }),
+      ],
+      events: [paymentEvent({ id: 1, type: 'CHARGEBACK_REVERSED', actor: 'PROVIDER' })],
+    }),
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getAllByText(/카드사 이의 제기\(차지백\)/)).toHaveLength(2)
+    await expect(canvas.getByText('분쟁에서 이겨 돌아옴')).toBeVisible()
+    await expect(canvas.getByText('분쟁에서 이겨 환불이 되돌려졌어요')).toBeVisible()
+  },
+}

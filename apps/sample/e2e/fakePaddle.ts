@@ -21,6 +21,8 @@ import type { BrowserContext } from 'playwright'
  *   { stale: <결제사 구독 id> }      가장 새로운 상태보다 일찍 일어난 낡은 `subscription.updated`(ACTIVE)를 나중에 쏜다 — 순서가 뒤바뀐 전달
  *   { refundMode: 'approve' | 'pending' }  이후 환불을 바로 승인하거나(기본 아님) 검토 중으로 둔다(기본 `pending`)
  *   { decide: { id, status } }       검토 중인 환불 `id`(adj_…)에 결정(`approved` · `rejected`)을 내리고 `adjustment.updated` 를 쏜다
+ *   { chargeback: { transaction, warning? } }  구매자가 카드사에 이의를 제기했다 - Paddle 이 스스로 `chargeback`(경고면 `chargeback_warning`) adjustment 를 `approved` 로 만들고 `adjustment.created` 를 쏜다
+ *   { winDispute: <adj_…> }          분쟁에서 이겼다 - 원래 adjustment 가 `reversed` 로 바뀌고(`adjustment.updated`) 되돌림 adjustment(`chargeback_reverse`)가 만들어진다(`adjustment.created`)
  *   { reset: true }                  모든 기록을 지운다
  * `GET /control` → { subscriptions, calls, sent } — `calls` 는 Paddle API 호출, `sent` 는 쏜 웹훅(event_id · event_type · 응답 상태).
  */
@@ -65,8 +67,8 @@ export type FakePaddleTransaction = {
 }
 export type FakePaddleAdjustment = {
   id: string
-  action: 'refund'
-  status: 'pending_approval' | 'approved' | 'rejected'
+  action: 'refund' | 'chargeback' | 'chargeback_warning' | 'chargeback_reverse'
+  status: 'pending_approval' | 'approved' | 'rejected' | 'reversed'
   transactionId: string
   total: number
   currency: string
@@ -290,6 +292,47 @@ export async function startFakePaddle(): Promise<FakePaddle> {
         return send(res, 404, { error: 'no such pending adjustment' })
       found.status = status
       await fire('adjustment.updated', adjustmentEntity(found))
+    }
+    if (patch.chargeback && typeof patch.chargeback === 'object') {
+      const { transaction, warning } = patch.chargeback as {
+        transaction?: string
+        warning?: boolean
+      }
+      const found = paid.get(String(transaction ?? ''))
+      if (!found) return send(res, 404, { error: 'no such transaction' })
+      const adjustment: FakePaddleAdjustment = {
+        id: `adj_${randomUUID().replaceAll('-', '').slice(0, 26)}`,
+        action: warning ? 'chargeback_warning' : 'chargeback',
+        status: 'approved',
+        transactionId: found.id,
+        total: found.total,
+        currency: found.currency,
+      }
+      found.adjustments.push(adjustment)
+      await fire('adjustment.created', adjustmentEntity(adjustment))
+    }
+    if (typeof patch.winDispute === 'string') {
+      const original = [...paid.values()]
+        .flatMap((t) => t.adjustments)
+        .find(
+          (a) =>
+            a.id === patch.winDispute &&
+            a.status === 'approved' &&
+            a.action.startsWith('chargeback'),
+        )
+      if (!original) return send(res, 404, { error: 'no such chargeback' })
+      original.status = 'reversed'
+      const reverse: FakePaddleAdjustment = {
+        id: `adj_${randomUUID().replaceAll('-', '').slice(0, 26)}`,
+        action: 'chargeback_reverse',
+        status: 'approved',
+        transactionId: original.transactionId,
+        total: original.total,
+        currency: original.currency,
+      }
+      paid.get(original.transactionId)!.adjustments.push(reverse)
+      await fire('adjustment.updated', adjustmentEntity(original))
+      await fire('adjustment.created', adjustmentEntity(reverse))
     }
     if (patch.reset) {
       refundMode = 'pending'

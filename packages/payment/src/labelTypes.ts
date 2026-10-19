@@ -6,8 +6,8 @@ import type { SubscriptionEndReason, SubscriptionStatus } from './subscriptionTy
 /** 거절의 종류(`DECLINED` 의 `data.category`) — 모르는 값은 `OTHER` 문구 */
 export type DeclineCategory = 'LIMIT_OR_BALANCE' | 'CARD_DECLINED' | 'TEMPORARY' | 'OTHER'
 
-/** 환불 줄의 사유 — 본인이 고르는 셋과, 장부가 스스로 붙이는 둘(운영자가 한 환불 · 결제사 콘솔에서 일어난 환불) */
-export type RefundReasonCode = RefundRequestReason | 'OPERATOR' | 'PROVIDER_CONSOLE'
+/** 환불 줄의 사유 — 본인이 고르는 셋과, 장부가 스스로 붙이는 셋(운영자가 한 환불 · 결제사 콘솔에서 일어난 환불 · 구매자가 카드사에 이의를 제기해 결제사가 돈을 가져간 차지백) */
+export type RefundReasonCode = RefundRequestReason | 'OPERATOR' | 'PROVIDER_CONSOLE' | 'CHARGEBACK'
 
 /** 운영자 환불이 거절(`REFUND_DECLINED`)될 때의 종류(`data.category`) — 모르는 값은 `OTHER` 문구 */
 export type RefundDeclineCategory =

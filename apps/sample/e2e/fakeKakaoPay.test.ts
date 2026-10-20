@@ -207,3 +207,134 @@ describe('control: what the next approve does (one time only)', () => {
     expect(JSON.stringify(state.calls)).not.toContain('pgtok_')
   })
 })
+
+describe('subscription (the subscription merchant code TCSUBSCRIP)', () => {
+  const subCid = FAKE_KAKAOPAY.subscriptionCid
+  const subReady = async (total = 3900) => {
+    const orderId = `ord_sub${++n}`
+    const response = await kakao('ready', {
+      cid: subCid,
+      partner_order_id: orderId,
+      partner_user_id: 'acc_1',
+      item_name: 'Basic',
+      quantity: 1,
+      total_amount: total,
+      tax_free_amount: 0,
+      approval_url: `${RETURN}&result=success`,
+      cancel_url: `${RETURN}&result=cancel`,
+      fail_url: `${RETURN}&result=fail`,
+    })
+    return { orderId, ...(await response.json()) } as {
+      orderId: string
+      tid: string
+      next_redirect_pc_url: string
+    }
+  }
+  /** 정기 코드로 결제창 → 인증 → 승인 - 1회차 결제가 곧 등록이라 승인 응답에 빌링키가 온다 */
+  const registered = async () => {
+    const p = await subReady()
+    const token = await buyerApproves(p.next_redirect_pc_url)
+    const response = await kakao('approve', {
+      cid: subCid,
+      tid: p.tid,
+      partner_order_id: p.orderId,
+      partner_user_id: 'acc_1',
+      pg_token: token,
+    })
+    return { p, body: await response.json() }
+  }
+  const renewal = (sid: string, orderId: string) =>
+    kakao('subscription', {
+      cid: subCid,
+      sid,
+      partner_order_id: orderId,
+      partner_user_id: 'acc_1',
+      item_name: 'Basic',
+      quantity: 1,
+      total_amount: 3900,
+      tax_free_amount: 0,
+    })
+
+  it('the first payment approved with the subscription code returns a billing key; the one-time code never does', async () => {
+    const { body } = await registered()
+    expect(body.sid).toMatch(/^SID\d{8}$/)
+    expect(body.card_info.kakaopay_issuer_corp_code).toBe('SHINHAN')
+    const once = await ready()
+    const onceBody = await (
+      await approve(once, await buyerApproves(once.next_redirect_pc_url))
+    ).json()
+    expect(onceBody.sid).toBeUndefined()
+  })
+
+  it('a renewal charges the key with a new order number; the same order number again, a revoked key and a wrong code are refused (-782 / -400)', async () => {
+    const { body } = await registered()
+    const ok = await renewal(body.sid, 'ord_renew_1')
+    expect(ok.status).toBe(200)
+    expect((await ok.json()).tid).toMatch(/^T\d{19}$/)
+    const again = await renewal(body.sid, 'ord_renew_1')
+    expect(again.status).toBe(400)
+    expect(await again.json()).toMatchObject({ error_code: -782 })
+    expect(
+      (await kakao('manage/subscription/inactive', { cid: subCid, sid: body.sid })).status,
+    ).toBe(200)
+    expect(await (await renewal(body.sid, 'ord_renew_2')).json()).toMatchObject({
+      error_code: -782,
+    })
+    expect((await kakao('subscription', { cid, sid: body.sid })).status).toBe(400)
+  })
+
+  it('inactive twice is an error the second time and the status says INACTIVE (so a caller can read it as done)', async () => {
+    const { body } = await registered()
+    await kakao('manage/subscription/inactive', { cid: subCid, sid: body.sid })
+    expect(
+      (await kakao('manage/subscription/inactive', { cid: subCid, sid: body.sid })).status,
+    ).toBe(400)
+    expect(
+      await (await kakao('manage/subscription/status', { cid: subCid, sid: body.sid })).json(),
+    ).toMatchObject({
+      available: false,
+      status: 'INACTIVE',
+    })
+  })
+
+  it('the next renewal can be told to decline (-782) or to fail with a 5xx, once', async () => {
+    const { body } = await registered()
+    await control.set({ subscription: { mode: 'decline' } })
+    expect(await (await renewal(body.sid, 'ord_renew_d')).json()).toMatchObject({
+      error_code: -782,
+    })
+    await control.set({ subscription: { mode: 'error' } })
+    expect((await renewal(body.sid, 'ord_renew_e')).status).toBe(500)
+    expect((await renewal(body.sid, 'ord_renew_f')).status).toBe(200)
+  })
+
+  it('a recurring order is looked up and cancelled with the subscription code only; the one-time code does not know it', async () => {
+    const { body } = await registered()
+    const charged = await (await renewal(body.sid, 'ord_renew_g')).json()
+    expect((await kakao('order', { cid, tid: charged.tid })).status).toBe(400)
+    expect((await (await kakao('order', { cid: subCid, tid: charged.tid })).json()).status).toBe(
+      'SUCCESS_PAYMENT',
+    )
+    expect((await kakao('cancel', { cid, tid: charged.tid, cancel_amount: 3900 })).status).toBe(400)
+    expect(
+      (await kakao('cancel', { cid: subCid, tid: charged.tid, cancel_amount: 3900 })).status,
+    ).toBe(200)
+  })
+
+  it('the billing return address goes on to the subscription return screen, and the calls are recorded without the key or the token', async () => {
+    fake.setApp('http://127.0.0.1:5999')
+    const hop = await fetch(
+      `${fake.url}/return?kind=KAKAOPAY_BILLING_REDIRECT&provider=kakaopay&sub=sub_1&result=success&pg_token=t`,
+      { redirect: 'manual' },
+    )
+    expect(hop.headers.get('location')).toBe(
+      'http://127.0.0.1:5999/subscriptions/return?kind=KAKAOPAY_BILLING_REDIRECT&provider=kakaopay&sub=sub_1&result=success&pg_token=t',
+    )
+    await control.set({ reset: true })
+    const { body } = await registered()
+    await renewal(body.sid, 'ord_renew_h')
+    const state = await control.state()
+    expect(JSON.stringify(state.calls)).not.toContain(body.sid)
+    expect(JSON.stringify(state.calls)).not.toContain('pgtok_')
+  })
+})

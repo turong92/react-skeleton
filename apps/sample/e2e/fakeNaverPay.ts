@@ -7,6 +7,14 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
  *   POST /naverpay-partner/naverpay/payments/v2.2/apply/payment   승인 (폼 paymentId) → {code, message, body: {paymentId, detail}}
  *   POST /naverpay-partner/naverpay/payments/v1/cancel            취소(= 우리 말로 환불) (폼 paymentId, cancelAmount, cancelReason, cancelRequester, taxScopeAmount, taxExScopeAmount) → {code, body: {…RestAmount}}
  *   POST /naverpay-partner/naverpay/payments/v2.3/list/history/{paymentId}   결제 내역 조회 (JSON) → {code, body: {list}}
+ * 정기 결제(자동결제) - 인증값이 단건과 **다르다**(`FAKE_NAVERPAY.recurrent`; 정기 호출에 단건 값은 401, 단건 호출에 정기 값도 401):
+ *   POST …/recurrent/regist/v1/reserve   등록 예약 (JSON productCode, productName, totalPayAmount, returnUrl, merchantUserId) → {reserveId} · 같은 productCode 로 활성 등록이 있으면 `DataExist`
+ *   POST …/recurrent/regist/v1/approval  등록 완료 (JSON reserveId, tempReceiptId) → {recurrentId, 가려진 이메일}  ← 돈이 움직이지 않는다
+ *   POST …/recurrent/pay/v3/reserve      자동결제 예약 (JSON recurrentId, totalPayAmount, taxScopeAmount, taxExScopeAmount, productName, merchantPayId, merchantUserId) → {paymentId}
+ *   POST …/recurrent/pay/v3/approval     자동결제 승인 (JSON paymentId) → 단건 승인과 같은 {paymentId, detail}
+ *   POST …/recurrent/expire/v1/request   등록 해지 (JSON recurrentId, expireRequester, expireReason) · 이미 해지면 `Expired`
+ * 정기 결제의 취소 · 결제 내역 조회는 단건과 같은 경로이고 그 결제가 정기면 정기 인증값이어야 한다. 구매자의 등록창(`GET /payments/recurrent/<reserveId>`)은 `returnUrl` 로
+ * `resultCode=Success&reserveId=…&tempReceiptId=…` 을 붙여 돌려보낸다(`UserCancel` 은 제어). 정기 등록으로 돌아오는 주소(`kind=NAVERPAY_BILLING_REDIRECT`)는 앱의 `/subscriptions/return` 으로 넘긴다.
  * 일부러 진짜처럼 엄격하다: 인증 헤더 셋(`X-Naver-Client-Id` · `X-Naver-Client-Secret` · `X-NaverPay-Chain-Id`) 중 하나라도 틀리면 401 · 예약 · 승인 · 취소는 **멱등 키 헤더가 없으면 400**,
  * 같은 멱등 키의 재요청은 적용하지 않고 409 + 처음 응답 · 예약은 필수 칸이 빠지거나 과세 + 면세가 총액과 다르면 `InvalidParameter` · 이미 승인된 결제의 승인은 `AlreadyComplete` · 남은 금액보다 많은 취소는 `OverRemainAmount` ·
  * 과세 + 면세가 취소 금액과 다르면 `TaxScopeAmountError`. 업무 오류는 HTTP 200 + `code` 로 온다(문서의 결과 코드 표를 그렇게 읽었다 - 백엔드 가짜와 같다).
@@ -18,14 +26,21 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
  *   { buyer: 'cancel' | 'fail' | 'leave' | null }          다음 결제창: 구매자가 그만둔다(UserCancel) · 실패(TimeExpired) · 결제 없이 떠난다(어디로도 돌려보내지 않는다)
  *   { apply: { mode: 'decline'|'delay'|'lose'|'error', delayMs? } | null }   다음 승인: 거절(`Fail`) · 늦게 답함 · 적용했지만 답이 유실됨(연결 끊김) · 5xx(적용 안 됨)
  *   { cancel: { mode: 'not-complete' } | null }             다음 취소: 적용하지 않고 `CancelNotComplete`(취소가 아직 끝나지 않았다 - 곧 자동 재처리)
+ *   { payApproval: { mode: 'decline'|'lose'|'error' } | null }   다음 자동결제 승인: 거절(`Fail` - 모름) · 적용했지만 답이 유실됨 · 5xx(적용 안 됨) · { mode: 'balance' } 잔액 부족(확정 거절)
  *   { reset: true }                                        모든 결제 · 호출 기록 · 지시를 지운다
- * `GET /control` → { payments, reservations, calls, next } — `calls` 는 네이버페이 API(/naverpay-partner/…) 호출만 시각 순으로.
+ * `GET /control` → { payments, reservations, recurrents, calls, next } — `calls` 는 네이버페이 API(/naverpay-partner/…) 호출만 시각 순으로.
  */
 
 export const FAKE_NAVERPAY = {
   clientId: 'E2EFAKECLIENTID0123456',
   clientSecret: 'E2E_FAKE_CLIENT_SECRET_0123456789abcdef',
   chainId: 'E2EFAKECHAINID01',
+  /** 정기 결제(자동결제)의 인증값 - 단건과 다르다 */
+  recurrent: {
+    clientId: 'E2EFAKERECURCLIENT012',
+    clientSecret: 'E2E_FAKE_RECUR_SECRET_0123456789abcdef',
+    chainId: 'E2EFAKERECURCHAIN',
+  },
 }
 
 /** 응답에 일부러 심는 값 - 이 값이 화면 · 우리 API 응답 어디에도 나오면 안 된다(백엔드의 `FakeNaverPayServer.PLANTED` 와 같은 값) */
@@ -34,6 +49,7 @@ export const PLANTED = {
   cardNo: '5365-****-****-planted',
   userIdentifier: 't1GLYqqJ05planted=',
   product: '초코파이-planted',
+  email: 'pl***@example.com',
 }
 
 const API = '/naverpay-partner/naverpay/payments'
@@ -49,12 +65,36 @@ type Payment = {
   applied: boolean
   appliedAt: string | null
   cancels: Cancel[]
+  /** 정기 결제(자동결제)로 만들어진 결제 - 취소 · 내역 조회가 정기 인증값을 요구한다 */
+  recurring?: boolean
+}
+
+/** 정기 등록 예약 - 구매자가 창에서 마치면 `tempReceiptId` 가 생기고 등록 완료가 `recurrentId` 를 준다 */
+type RegistReservation = {
+  reserveId: string
+  productCode: string
+  merchantUserId: string
+  returnUrl: string
+  tempReceiptId: string | null
+  recurrentId: string | null
+}
+
+type Recurrent = { recurrentId: string; productCode: string; active: boolean }
+
+/** 자동결제 예약(승인 전) */
+type PayReservation = {
+  paymentId: string
+  recurrentId: string
+  merchantPayKey: string
+  total: number
+  approved: boolean
 }
 
 export type ApplyInstruction = {
   mode: 'decline' | 'delay' | 'lose' | 'error'
   delayMs?: number
 }
+export type PayApprovalInstruction = { mode: 'decline' | 'lose' | 'error' | 'balance' }
 /** 다음 취소: 취소를 적용하지 않고 `CancelNotComplete`(곧 자동 재처리) · 잔액 부족 같은 거절은 승인에만 있다 */
 export type CancelInstruction = { mode: 'not-complete' }
 type BuyerInstruction = 'cancel' | 'fail' | 'leave'
@@ -69,17 +109,23 @@ export type FakeNaverPayCall = {
 export type FakeNaverPayState = {
   payments: Payment[]
   reservations: Reservation[]
+  registReservations: RegistReservation[]
+  /** recurrentId → 활성 여부 */
+  recurrents: Record<string, boolean>
+  payReservations: PayReservation[]
   calls: FakeNaverPayCall[]
   next: {
     buyer: BuyerInstruction | null
     apply: ApplyInstruction | null
     cancel: CancelInstruction | null
+    payApproval: PayApprovalInstruction | null
   }
 }
 export type FakeNaverPayPatch = {
   buyer?: BuyerInstruction | null
   apply?: ApplyInstruction | null
   cancel?: CancelInstruction | null
+  payApproval?: PayApprovalInstruction | null
   reset?: boolean
 }
 
@@ -148,7 +194,15 @@ export async function startFakeNaverPay(): Promise<FakeNaverPay> {
   const replies = new Map<string, string>() // `<operation>/<멱등 키>` → 처음 응답 본문
   let calls: FakeNaverPayCall[] = []
   const reservations = new Map<string, Reservation>()
-  const next: FakeNaverPayState['next'] = { buyer: null, apply: null, cancel: null }
+  const registReservations = new Map<string, RegistReservation>()
+  const recurrents = new Map<string, Recurrent>()
+  const payReservations = new Map<string, PayReservation>()
+  const next: FakeNaverPayState['next'] = {
+    buyer: null,
+    apply: null,
+    cancel: null,
+    payApproval: null,
+  }
   let appUrl = ''
   let sequence = 0
 
@@ -184,6 +238,152 @@ export async function startFakeNaverPay(): Promise<FakeNaverPay> {
       returnUrl: body.returnUrl,
     })
     return envelope('Success', '', { reserveId })
+  }
+
+  const text = (body: Record<string, unknown> | null, name: string) =>
+    typeof body?.[name] === 'string' ? (body[name] as string) : ''
+
+  /** 등록 예약: 같은 `productCode` 로 이미 활성 등록이 있으면 `DataExist`(문서의 「중복 등록 불가」) */
+  function registReserve(body: Record<string, unknown> | null): Reply {
+    const code = text(body, 'productCode')
+    const total = body?.totalPayAmount
+    if (
+      !code ||
+      !text(body, 'merchantUserId') ||
+      !text(body, 'returnUrl') ||
+      !text(body, 'productName') ||
+      !Number.isInteger(total) ||
+      (total as number) < 10
+    )
+      return envelope('InvalidParameter', 'regist')
+    if ([...recurrents.values()].some((r) => r.productCode === code && r.active))
+      return envelope('DataExist', 'registered')
+    const reserveId = `RGR${String(++sequence).padStart(8, '0')}`
+    registReservations.set(reserveId, {
+      reserveId,
+      productCode: code,
+      merchantUserId: text(body, 'merchantUserId'),
+      returnUrl: text(body, 'returnUrl'),
+      tempReceiptId: null,
+      recurrentId: null,
+    })
+    return envelope('Success', '', { reserveId })
+  }
+
+  /** 등록 완료 - 구매자가 창에서 마친 예약의 영수증이어야 하고 한 번만. 응답에 가려진 이메일을 심는다(저장 · 로그 금지) */
+  function registApproval(body: Record<string, unknown> | null): Reply {
+    const reservation = registReservations.get(text(body, 'reserveId'))
+    if (
+      !reservation ||
+      !reservation.tempReceiptId ||
+      reservation.tempReceiptId !== text(body, 'tempReceiptId') ||
+      reservation.recurrentId
+    )
+      return envelope('InvalidParameter', 'receipt')
+    const recurrentId = `RC${String(++sequence).padStart(10, '0')}`
+    reservation.recurrentId = recurrentId
+    recurrents.set(recurrentId, { recurrentId, productCode: reservation.productCode, active: true })
+    return envelope('Success', '', {
+      recurrentId,
+      email: PLANTED.email,
+      userIdentifier: PLANTED.userIdentifier,
+    })
+  }
+
+  function payReserve(body: Record<string, unknown> | null): Reply {
+    const recurrent = recurrents.get(text(body, 'recurrentId'))
+    if (!recurrent?.active) return envelope('InvalidRecurrentId', 'unknown')
+    const total = body?.totalPayAmount
+    const taxed = body?.taxScopeAmount
+    const exempt = body?.taxExScopeAmount
+    const key = text(body, 'merchantPayId')
+    if (
+      !Number.isInteger(total) ||
+      (total as number) < 10 ||
+      !Number.isInteger(taxed) ||
+      !Number.isInteger(exempt) ||
+      (taxed as number) + (exempt as number) !== total ||
+      !key ||
+      key.length > 64 ||
+      !text(body, 'productName') ||
+      !text(body, 'merchantUserId')
+    )
+      return envelope('InvalidParameter', 'pay')
+    const paymentId = `20261117NR${String(++sequence).padStart(8, '0')}`
+    payReservations.set(paymentId, {
+      paymentId,
+      recurrentId: recurrent.recurrentId,
+      merchantPayKey: key,
+      total: total as number,
+      approved: false,
+    })
+    return envelope('Success', '', { paymentId })
+  }
+
+  async function payApproval(body: Record<string, unknown> | null): Promise<Reply> {
+    const reservation = payReservations.get(text(body, 'paymentId'))
+    if (!reservation) return envelope('InvalidMerchant', 'unknown payment')
+    const instruction = next.payApproval
+    next.payApproval = null
+    if (instruction?.mode === 'decline') return envelope('Fail', `PG failure ${PLANTED.userKey}`)
+    if (instruction?.mode === 'balance') return envelope('NotEnoughAccountBalance', 'balance')
+    if (instruction?.mode === 'error') return empty(500)
+    if (reservation.approved) return envelope('AlreadyComplete', 'already')
+    if (!recurrents.get(reservation.recurrentId)?.active)
+      return envelope('InvalidRecurrentId', 'expired')
+    reservation.approved = true
+    const payment: Payment = {
+      paymentId: reservation.paymentId,
+      merchantPayKey: reservation.merchantPayKey,
+      total: reservation.total,
+      applied: true,
+      appliedAt: ymdt(),
+      cancels: [],
+      recurring: true,
+    }
+    payments.set(payment.paymentId, payment)
+    const reply = applied(payment)
+    // 적용했지만 답이 유실됐다 - 같은 멱등 키의 재요청은 처음 응답을 받는다
+    return instruction?.mode === 'lose' && reply.kind === 'json'
+      ? { kind: 'drop', replay: reply.body }
+      : reply
+  }
+
+  /** 등록 해지: 이미 해지된 등록은 `Expired`(정상으로 읽어야 한다) */
+  function expire(body: Record<string, unknown> | null): Reply {
+    const recurrent = recurrents.get(text(body, 'recurrentId'))
+    if (!recurrent) return envelope('InvalidRecurrentId', 'unknown')
+    if (!text(body, 'expireRequester') || !text(body, 'expireReason'))
+      return envelope('RequireParameter', 'expire')
+    if (!recurrent.active) return envelope('Expired', 'already')
+    recurrent.active = false
+    return envelope('Success', '')
+  }
+
+  /** 구매자의 등록창 - 등록을 마치고 `returnUrl` 로 돌려보낸다. 어떻게 끝날지는 제어가 정한다 */
+  function registrationWindow(res: ServerResponse, reserveId: string) {
+    const reservation = registReservations.get(reserveId)
+    if (!reservation) {
+      res.writeHead(404, { 'Content-Type': 'text/plain;charset=UTF-8' })
+      return res.end('no such reservation')
+    }
+    const instruction = next.buyer
+    next.buyer = null
+    if (instruction === 'leave') {
+      res.writeHead(200, { 'Content-Type': 'text/html;charset=UTF-8' })
+      return res.end('<!doctype html><title>NaverPay (fake)</title><p>waiting for the buyer</p>')
+    }
+    const join = reservation.returnUrl.includes('?') ? '&' : '?'
+    let query: string
+    if (instruction === 'cancel') query = 'resultCode=UserCancel'
+    else if (instruction === 'fail')
+      query = `resultCode=TimeExpired&resultMessage=failed&reserveId=${reserveId}`
+    else {
+      reservation.tempReceiptId = `TR${String(++sequence).padStart(8, '0')}`
+      query = `resultCode=Success&reserveId=${reserveId}&tempReceiptId=${reservation.tempReceiptId}`
+    }
+    res.writeHead(302, { Location: `${reservation.returnUrl}${join}${query}` })
+    return res.end()
   }
 
   /** 구매자의 결제창 - 예약한 값 그대로 결제하고 `returnUrl` 로 돌려보낸다. 어떻게 끝날지는 제어가 정한다 */
@@ -377,6 +577,9 @@ export async function startFakeNaverPay(): Promise<FakeNaverPay> {
             json(200, {
               payments: [...payments.values()],
               reservations: [...reservations.values()],
+              registReservations: [...registReservations.values()],
+              recurrents: Object.fromEntries([...recurrents].map(([id, r]) => [id, r.active])),
+              payReservations: [...payReservations.values()],
               calls,
               next,
             } satisfies FakeNaverPayState),
@@ -386,50 +589,94 @@ export async function startFakeNaverPay(): Promise<FakeNaverPay> {
           payments.clear()
           replies.clear()
           reservations.clear()
+          registReservations.clear()
+          recurrents.clear()
+          payReservations.clear()
           calls = []
           next.buyer = null
           next.apply = null
           next.cancel = null
+          next.payApproval = null
         }
         if ('buyer' in patch) next.buyer = patch.buyer ?? null
         if ('apply' in patch) next.apply = patch.apply ?? null
         if ('cancel' in patch) next.cancel = patch.cancel ?? null
+        if ('payApproval' in patch) next.payApproval = patch.payApproval ?? null
         return emit(res, json(200, { ok: true }))
       }
 
       // 구매자의 결제창 · 돌아가는 길
+      const registration = /^\/payments\/recurrent\/([^/]+)$/.exec(path)
+      if (req.method === 'GET' && registration)
+        return registrationWindow(res, registration[1] ?? '')
       const window = /^\/payments\/([^/]+)$/.exec(path)
       if (req.method === 'GET' && window) return buyerWindow(res, window[1] ?? '')
       if (req.method === 'GET' && path === '/return') {
         if (!appUrl) return emit(res, empty(500))
-        res.writeHead(302, { Location: `${appUrl}/payments/return${requestUrl.search}` })
+        // 정기 등록으로 돌아오는 주소는 구독 돌아오기 화면으로, 단건은 결제 돌아오기 화면으로
+        const billing = requestUrl.searchParams.get('kind') === 'NAVERPAY_BILLING_REDIRECT'
+        res.writeHead(302, {
+          Location: `${appUrl}/${billing ? 'subscriptions' : 'payments'}/return${requestUrl.search}`,
+        })
         return res.end()
       }
 
       // 네이버페이 API
       if (!path.startsWith(`${API}/`)) return emit(res, empty(404))
       const raw = await readBody(req)
-      const operation = path.endsWith('/v2/reserve')
-        ? 'reserve'
-        : path.endsWith('/apply/payment')
-          ? 'apply'
-          : path.endsWith('/v1/cancel')
-            ? 'cancel'
-            : path.includes('/list/history/')
-              ? 'history'
-              : null
+      const recurrentOperation = path.endsWith('/recurrent/regist/v1/reserve')
+        ? 'regist-reserve'
+        : path.endsWith('/recurrent/regist/v1/approval')
+          ? 'regist-approval'
+          : path.endsWith('/recurrent/pay/v3/reserve')
+            ? 'pay-reserve'
+            : path.endsWith('/recurrent/pay/v3/approval')
+              ? 'pay-approval'
+              : path.endsWith('/recurrent/expire/v1/request')
+                ? 'expire'
+                : null
+      const operation =
+        recurrentOperation ??
+        (path.endsWith('/v2/reserve')
+          ? 'reserve'
+          : path.endsWith('/apply/payment')
+            ? 'apply'
+            : path.endsWith('/v1/cancel')
+              ? 'cancel'
+              : path.includes('/list/history/')
+                ? 'history'
+                : null)
       const key = (req.headers['x-naverpay-idempotency-key'] as string | undefined) ?? null
       calls.push({
         method: req.method ?? 'GET',
         path,
-        body: operation === 'history' || operation === 'reserve' ? parseJson(raw) : parseForm(raw),
+        body:
+          operation === 'history' || operation === 'reserve' || recurrentOperation
+            ? parseJson(raw)
+            : parseForm(raw),
         idempotencyKey: key,
       })
-      if (
-        req.headers['x-naver-client-id'] !== FAKE_NAVERPAY.clientId ||
-        req.headers['x-naver-client-secret'] !== FAKE_NAVERPAY.clientSecret ||
-        req.headers['x-naverpay-chain-id'] !== FAKE_NAVERPAY.chainId
-      )
+      // 인증값: 정기 호출은 정기 값, 단건 호출은 단건 값 - 취소 · 내역 조회는 그 결제가 정기인지에 따라 갈린다
+      const sent = [
+        req.headers['x-naver-client-id'],
+        req.headers['x-naver-client-secret'],
+        req.headers['x-naverpay-chain-id'],
+      ]
+      const single = [FAKE_NAVERPAY.clientId, FAKE_NAVERPAY.clientSecret, FAKE_NAVERPAY.chainId]
+      const recurrent = [
+        FAKE_NAVERPAY.recurrent.clientId,
+        FAKE_NAVERPAY.recurrent.clientSecret,
+        FAKE_NAVERPAY.recurrent.chainId,
+      ]
+      const touched =
+        operation === 'history'
+          ? decodeURIComponent(path.split('/').at(-1) ?? '')
+          : parseForm(raw).paymentId
+      const wantRecurrent =
+        recurrentOperation !== null ||
+        ((operation === 'cancel' || operation === 'history') &&
+          payments.get(touched ?? '')?.recurring === true)
+      if (!(wantRecurrent ? recurrent : single).every((value, i) => sent[i] === value))
         return emit(res, empty(401))
       if (!operation || req.method !== 'POST') return emit(res, empty(404))
       if (operation === 'history')
@@ -439,11 +686,21 @@ export async function startFakeNaverPay(): Promise<FakeNaverPay> {
       const replay = replies.get(`${operation}/${key}`)
       if (replay !== undefined) return emit(res, { kind: 'json', status: 409, body: replay })
       const reply =
-        operation === 'reserve'
-          ? reserve(parseJson(raw))
-          : operation === 'apply'
-            ? await apply(parseForm(raw))
-            : cancel(parseForm(raw))
+        operation === 'regist-reserve'
+          ? registReserve(parseJson(raw))
+          : operation === 'regist-approval'
+            ? registApproval(parseJson(raw))
+            : operation === 'pay-reserve'
+              ? payReserve(parseJson(raw))
+              : operation === 'pay-approval'
+                ? await payApproval(parseJson(raw))
+                : operation === 'expire'
+                  ? expire(parseJson(raw))
+                  : operation === 'reserve'
+                    ? reserve(parseJson(raw))
+                    : operation === 'apply'
+                      ? await apply(parseForm(raw))
+                      : cancel(parseForm(raw))
       if (reply.kind === 'drop') replies.set(`${operation}/${key}`, reply.replay)
       else if (
         reply.kind === 'json' &&

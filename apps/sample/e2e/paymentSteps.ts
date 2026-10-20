@@ -213,3 +213,48 @@ export async function operatorOpensPayment(page: Page, baseUrl: string, orderId:
     page.getByRole('heading', { level: 1, name: ko('admin.payments.detailTitle') }),
   ).toBeVisible()
 }
+
+/** 이 백엔드에 구독(`GET /payments/subscriptions/plans`)이 있는가 — 404 만 「없다」 */
+export function subscriptionsOn(apiUrl: string): Promise<boolean> {
+  return routeExists(apiUrl, DEMO, '/payments/subscriptions/plans')
+}
+
+export type MySubscriptionAnswer = {
+  subscription: null | {
+    id: string
+    status: string
+    endReason: string | null
+    currentPeriodEnd: string
+  }
+  orders: Array<{ id: string; kind: string; status: string }>
+}
+
+export async function mySubscription(
+  apiUrl: string,
+  account: Account = DEMO,
+): Promise<MySubscriptionAnswer> {
+  const answer = await api(
+    apiUrl,
+    await tokenOf(apiUrl, account),
+    'GET',
+    '/payments/subscriptions/me',
+  )
+  return answer.json?.value as MySubscriptionAnswer
+}
+
+/**
+ * 이 계정의 살아 있는 구독을 닫고 없어질 때까지 기다린다(다음 시나리오가 다시 구독할 수 있게) — 해지 예약된 구독은 주기(25초) 끝에 갱신 작업이 끝낸다.
+ * 이 파일의 시나리오들이 같은 계정을 쓰므로 시작할 때와 끝날 때 부른다.
+ */
+export async function endLiveSubscription(apiUrl: string, account: Account = DEMO) {
+  const token = await tokenOf(apiUrl, account)
+  const sub = (await mySubscription(apiUrl, account)).subscription
+  if (sub && (sub.status === 'ACTIVE' || sub.status === 'PAST_DUE'))
+    await api(apiUrl, token, 'POST', `/payments/subscriptions/${sub.id}/cancel`)
+  await pwExpect
+    .poll(async () => (await mySubscription(apiUrl, account)).subscription?.status ?? 'NONE', {
+      timeout: 90_000,
+      intervals: [1_000],
+    })
+    .toMatch(/^(NONE|ENDED)$/)
+}

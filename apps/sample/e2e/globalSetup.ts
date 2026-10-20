@@ -213,6 +213,7 @@ export default async function setup(project: TestProject) {
           SKELETON_PAYMENT_KAKAOPAY_ENABLED: 'true',
           SKELETON_PAYMENT_KAKAOPAY_SECRET_KEY: FAKE_KAKAOPAY.secretKey,
           SKELETON_PAYMENT_KAKAOPAY_CID: FAKE_KAKAOPAY.cid,
+          SKELETON_PAYMENT_KAKAOPAY_SUBSCRIPTION_CID: FAKE_KAKAOPAY.subscriptionCid,
           SKELETON_PAYMENT_KAKAOPAY_RETURN_URL: `${fakeKakaoPay.url}/return`,
           SKELETON_PAYMENT_KAKAOPAY_BASE_URL: fakeKakaoPay.url,
         }
@@ -224,6 +225,9 @@ export default async function setup(project: TestProject) {
           SKELETON_PAYMENT_NAVERPAY_CLIENT_ID: FAKE_NAVERPAY.clientId,
           SKELETON_PAYMENT_NAVERPAY_CLIENT_SECRET: FAKE_NAVERPAY.clientSecret,
           SKELETON_PAYMENT_NAVERPAY_CHAIN_ID: FAKE_NAVERPAY.chainId,
+          SKELETON_PAYMENT_NAVERPAY_RECURRENT_CLIENT_ID: FAKE_NAVERPAY.recurrent.clientId,
+          SKELETON_PAYMENT_NAVERPAY_RECURRENT_CLIENT_SECRET: FAKE_NAVERPAY.recurrent.clientSecret,
+          SKELETON_PAYMENT_NAVERPAY_RECURRENT_CHAIN_ID: FAKE_NAVERPAY.recurrent.chainId,
           SKELETON_PAYMENT_NAVERPAY_RETURN_URL: `${fakeNaverPay.url}/return`,
           SKELETON_PAYMENT_NAVERPAY_BASE_URL: fakeNaverPay.url,
           SKELETON_PAYMENT_NAVERPAY_WINDOW_BASE_URL: fakeNaverPay.url,

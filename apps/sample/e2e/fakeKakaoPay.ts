@@ -8,6 +8,10 @@ import { randomUUID } from 'node:crypto'
  *   POST /online/v1/payment/approve   승인 {cid, tid, partner_order_id, partner_user_id, pg_token, total_amount?} → 승인 객체 · 거절 400 -780
  *   POST /online/v1/payment/cancel    취소(= 우리 말로 환불) {cid, tid, cancel_amount, cancel_tax_free_amount} → 취소 객체(PART_CANCEL_PAYMENT · CANCEL_PAYMENT) · 거절 400 -781
  *   POST /online/v1/payment/order     주문 조회 {cid, tid} → status · payment_action_details
+ * 정기 결제(정기 가맹점 코드 `TCSUBSCRIP`): 같은 `ready` · `approve` 가 **정기 코드로 불리면** 승인 응답에 빌링키(`sid`)가 오고(1회차 결제가 곧 등록),
+ *   POST /online/v1/payment/subscription                          2회차부터 {cid, sid, partner_order_id, partner_user_id, item_name, quantity, total_amount, tax_free_amount} → 승인 객체 · 실패 400 -782
+ *   POST /online/v1/payment/manage/subscription/inactive | status  {cid, sid} → {available, status}
+ * 조회 · 취소는 그 결제를 만든 가맹점 코드로 와야 한다(정기 주문은 정기 코드). 정기 등록으로 돌아오는 주소(`kind=KAKAOPAY_BILLING_REDIRECT`)는 앱의 `/subscriptions/return` 으로 넘긴다.
  * 일부러 진짜처럼 엄격하다: `Authorization: SECRET_KEY <키>` 가 틀리면 401 -401 · 가맹점 코드(cid)가 다르면 400 -400 · 필수 칸이 빠지면 400 -400 ·
  * 승인은 구매자가 인증을 마친 결제의 pg_token 이어야 하고 주문 번호 · 회원 id 가 준비 때와 같아야 하며 **총액이 준비 때와 다르면 거절**, 이미 승인된 결제의 승인은 거절 ·
  * 남은 취소 가능 금액보다 많은 취소는 거절.
@@ -19,13 +23,16 @@ import { randomUUID } from 'node:crypto'
  * 제어 `POST /control` — 다음에 일어날 일을 **한 번만** 정한다(앞 시나리오의 지시가 다음 시나리오에 남지 않게):
  *   { buyer: 'cancel' | 'fail' | 'leave' | null }          다음 결제창: 구매자가 그만둔다(cancel_url) · 결제 실패 화면(fail_url) · 인증 없이 떠난다(어디로도 돌려보내지 않는다)
  *   { approve: { mode: 'decline'|'delay'|'lose'|'error', delayMs? } | null }   다음 승인: 거절 · 늦게 답함 · 적용했지만 답이 유실됨(연결 끊김) · 5xx(적용 안 됨)
+ *   { subscription: { mode: 'decline'|'error' } | null }   다음 정기 과금(2회차부터): 거절(-782) · 5xx(적용 안 됨 = 모름)
  *   { reset: true }                                        모든 결제 · 호출 기록 · 지시를 지운다
- * `GET /control` → { payments, calls, next } — `calls` 는 카카오페이 API(/online/…) 호출만 시각 순으로, 본문과 함께(승인 토큰은 가린다).
+ * `GET /control` → { payments, sids, calls, next } — `calls` 는 카카오페이 API(/online/…) 호출만 시각 순으로, 본문과 함께(승인 토큰은 가린다).
  */
 
 export const FAKE_KAKAOPAY = {
   secretKey: 'DEV_FAKE_E2E_SECRET_KEY_0123456789abcdef',
   cid: 'TC0ONETIME',
+  /** 정기 결제 가맹점 코드 - 카카오페이의 테스트 코드 */
+  subscriptionCid: 'TCSUBSCRIP',
 }
 
 /** 응답에 일부러 심는 값 - 이 값이 화면 · 우리 API 응답 어디에도 나오면 안 된다(백엔드의 `FakeKakaoPayServer.PLANTED` 와 같은 값) */
@@ -47,6 +54,8 @@ type Payment = {
   approvalUrl: string
   cancelUrl: string
   failUrl: string
+  /** 이 결제를 만든 가맹점 코드(단건 또는 정기) */
+  cid: string
   status:
     | 'READY'
     | 'AUTH_PASSWORD'
@@ -66,6 +75,8 @@ export type ApproveInstruction = {
 }
 type BuyerInstruction = 'cancel' | 'fail' | 'leave'
 
+type SubscriptionInstruction = { mode: 'decline' | 'error' }
+
 export type FakeKakaoPayCall = {
   method: string
   path: string
@@ -73,12 +84,19 @@ export type FakeKakaoPayCall = {
 }
 export type FakeKakaoPayState = {
   payments: Payment[]
+  /** 발급된 빌링키(SID) → 활성 여부 */
+  sids: Record<string, boolean>
   calls: FakeKakaoPayCall[]
-  next: { buyer: BuyerInstruction | null; approve: ApproveInstruction | null }
+  next: {
+    buyer: BuyerInstruction | null
+    approve: ApproveInstruction | null
+    subscription: SubscriptionInstruction | null
+  }
 }
 export type FakeKakaoPayPatch = {
   buyer?: BuyerInstruction | null
   approve?: ApproveInstruction | null
+  subscription?: SubscriptionInstruction | null
   reset?: boolean
 }
 
@@ -142,14 +160,20 @@ const availableOf = (p: Payment) =>
   p.status === 'SUCCESS_PAYMENT' || p.status === 'PART_CANCEL_PAYMENT' ? p.total - canceledOf(p) : 0
 const aidOf = (tid: string) => `A${tid.slice(-19)}`
 
-/** 우리 API(`/online/…`)가 받는 본문에서 비밀(승인 토큰)을 가린 사본 - 호출 기록에 남긴다 */
-const redacted = (body: Record<string, unknown> | null) =>
-  body && 'pg_token' in body ? { ...body, pg_token: '<redacted>' } : body
+/** 우리 API(`/online/…`)가 받는 본문에서 비밀(승인 토큰 · 빌링키)을 가린 사본 - 호출 기록에 남긴다 */
+const redacted = (body: Record<string, unknown> | null) => {
+  if (!body) return body
+  const copy = { ...body }
+  if ('pg_token' in copy) copy.pg_token = '<redacted>'
+  if ('sid' in copy) copy.sid = '<redacted>'
+  return copy
+}
 
 export async function startFakeKakaoPay(): Promise<FakeKakaoPay> {
   const payments = new Map<string, Payment>() // tid → 결제
   let calls: FakeKakaoPayCall[] = []
-  const next: FakeKakaoPayState['next'] = { buyer: null, approve: null }
+  const next: FakeKakaoPayState['next'] = { buyer: null, approve: null, subscription: null }
+  const sids = new Map<string, boolean>() // 발급된 빌링키 → 활성 여부
   let appUrl = ''
   let sequence = 0
 
@@ -184,6 +208,7 @@ export async function startFakeKakaoPay(): Promise<FakeKakaoPay> {
       approvalUrl: text('approval_url'),
       cancelUrl: text('cancel_url'),
       failUrl: text('fail_url'),
+      cid: String(body.cid),
       status: 'READY',
       pgToken: null,
       approvedAt: null,
@@ -200,7 +225,8 @@ export async function startFakeKakaoPay(): Promise<FakeKakaoPay> {
 
   async function approve(res: ServerResponse, body: Record<string, unknown>) {
     const payment = payments.get(String(body.tid ?? ''))
-    if (!payment) return kakaoError(res, 400, -780, 'approval failure!', 'NOT_FOUND')
+    if (!payment || payment.cid !== body.cid)
+      return kakaoError(res, 400, -780, 'approval failure!', 'NOT_FOUND')
     const instruction = next.approve
     next.approve = null
     if (instruction?.mode === 'decline')
@@ -228,10 +254,17 @@ export async function startFakeKakaoPay(): Promise<FakeKakaoPay> {
     payment.status = 'SUCCESS_PAYMENT'
     payment.approvedAt = kst()
     if (instruction?.mode === 'lose') return res.destroy() // 적용했지만 답이 유실됐다
+    // 정기 가맹점 코드로 승인한 1회차는 빌링키를 준다 - 첫 결제가 곧 등록이다
+    const sid =
+      payment.cid === FAKE_KAKAOPAY.subscriptionCid
+        ? `SID${String(++sequence).padStart(8, '0')}`
+        : null
+    if (sid) sids.set(sid, true)
     return send(res, 200, {
       aid: aidOf(payment.tid),
       tid: payment.tid,
-      cid: FAKE_KAKAOPAY.cid,
+      cid: payment.cid,
+      ...(sid ? { sid } : {}),
       partner_order_id: payment.partnerOrderId,
       partner_user_id: payment.partnerUserId,
       payment_method_type: 'CARD',
@@ -241,6 +274,7 @@ export async function startFakeKakaoPay(): Promise<FakeKakaoPay> {
       card_info: {
         bin: PLANTED.cardBin,
         kakaopay_issuer_corp: PLANTED.issuer,
+        kakaopay_issuer_corp_code: 'SHINHAN',
         card_type: '체크',
         approved_id: '12345678',
       },
@@ -250,9 +284,81 @@ export async function startFakeKakaoPay(): Promise<FakeKakaoPay> {
     })
   }
 
+  /** 2회차부터: 활성 빌링키로 새 결제를 만든다 - 인증 창이 없다. 같은 주문 번호로 다시 오면 거절(중복 과금 방어) */
+  function subscriptionCharge(res: ServerResponse, body: Record<string, unknown>) {
+    const instruction = next.subscription
+    next.subscription = null
+    const text = (name: string) => (typeof body[name] === 'string' ? (body[name] as string) : '')
+    if (
+      body.cid !== FAKE_KAKAOPAY.subscriptionCid ||
+      ['partner_order_id', 'partner_user_id', 'item_name'].some((name) => !text(name)) ||
+      !Number.isInteger(body.total_amount) ||
+      !Number.isInteger(body.quantity) ||
+      !Number.isInteger(body.tax_free_amount)
+    )
+      return kakaoError(res, 400, -400, 'missing field')
+    if (instruction?.mode === 'error') return kakaoError(res, 500, -500, 'internal')
+    const orderId = text('partner_order_id')
+    if (
+      instruction?.mode === 'decline' ||
+      sids.get(text('sid')) !== true ||
+      [...payments.values()].some((p) => p.partnerOrderId === orderId)
+    )
+      return kakaoError(res, 400, -782, 'subscription failure!', 'USER_LOCKED')
+    const tid = `T${String(++sequence).padStart(19, '0')}`
+    const payment: Payment = {
+      tid,
+      partnerOrderId: orderId,
+      partnerUserId: text('partner_user_id'),
+      total: body.total_amount as number,
+      itemName: text('item_name'),
+      approvalUrl: '',
+      cancelUrl: '',
+      failUrl: '',
+      cid: FAKE_KAKAOPAY.subscriptionCid,
+      status: 'SUCCESS_PAYMENT',
+      pgToken: null,
+      approvedAt: kst(),
+      cancels: [],
+    }
+    payments.set(tid, payment)
+    return send(res, 200, {
+      aid: aidOf(tid),
+      tid,
+      cid: payment.cid,
+      sid: text('sid'),
+      partner_order_id: orderId,
+      partner_user_id: payment.partnerUserId,
+      payment_method_type: 'CARD',
+      item_name: payment.itemName + PLANTED.item,
+      quantity: 1,
+      amount: amountObject(payment.total),
+      created_at: kst(),
+      approved_at: payment.approvedAt,
+    })
+  }
+
+  /** 빌링키 비활성 · 상태. 이미 비활성인 키의 `inactive` 는 오류(진짜도 그렇다) - 모듈이 `status` 로 확인해 멱등으로 읽는다 */
+  function sidState(res: ServerResponse, body: Record<string, unknown>, deactivate: boolean) {
+    if (body.cid !== FAKE_KAKAOPAY.subscriptionCid) return kakaoError(res, 400, -400, 'bad cid')
+    const sid = String(body.sid ?? '')
+    const active = sids.get(sid)
+    if (active === undefined) return kakaoError(res, 400, -400, 'unknown sid')
+    if (deactivate) {
+      if (!active) return kakaoError(res, 400, -780, 'already inactive')
+      sids.set(sid, false)
+    }
+    return send(res, 200, {
+      available: sids.get(sid) === true,
+      status: sids.get(sid) === true ? 'ACTIVE' : 'INACTIVE',
+      created_at: kst(),
+    })
+  }
+
   function cancel(res: ServerResponse, body: Record<string, unknown>) {
     const payment = payments.get(String(body.tid ?? ''))
-    if (!payment) return kakaoError(res, 400, -781, 'cancel failure!', '6666')
+    if (!payment || payment.cid !== body.cid)
+      return kakaoError(res, 400, -781, 'cancel failure!', '6666')
     const asked = body.cancel_amount
     if (!Number.isInteger(asked)) return kakaoError(res, 400, -400, 'missing field')
     if ((asked as number) <= 0 || (asked as number) > availableOf(payment))
@@ -263,7 +369,7 @@ export async function startFakeKakaoPay(): Promise<FakeKakaoPay> {
     return send(res, 200, {
       aid,
       tid: payment.tid,
-      cid: FAKE_KAKAOPAY.cid,
+      cid: payment.cid,
       status: payment.status,
       partner_order_id: payment.partnerOrderId,
       partner_user_id: payment.partnerUserId,
@@ -281,7 +387,8 @@ export async function startFakeKakaoPay(): Promise<FakeKakaoPay> {
 
   function order(res: ServerResponse, body: Record<string, unknown>) {
     const payment = payments.get(String(body.tid ?? ''))
-    if (!payment) return kakaoError(res, 400, -780, 'not found', 'NOT_FOUND')
+    if (!payment || payment.cid !== body.cid)
+      return kakaoError(res, 400, -780, 'not found', 'NOT_FOUND')
     const actions = [
       ...(payment.approvedAt
         ? [
@@ -302,7 +409,7 @@ export async function startFakeKakaoPay(): Promise<FakeKakaoPay> {
     ]
     return send(res, 200, {
       tid: payment.tid,
-      cid: FAKE_KAKAOPAY.cid,
+      cid: payment.cid,
       status: payment.status,
       partner_order_id: payment.partnerOrderId,
       partner_user_id: payment.partnerUserId,
@@ -357,6 +464,7 @@ export async function startFakeKakaoPay(): Promise<FakeKakaoPay> {
         if (req.method === 'GET') {
           return send(res, 200, {
             payments: [...payments.values()],
+            sids: Object.fromEntries(sids),
             calls,
             next,
           } satisfies FakeKakaoPayState)
@@ -364,12 +472,15 @@ export async function startFakeKakaoPay(): Promise<FakeKakaoPay> {
         const patch = (parse(await readBody(req)) ?? {}) as FakeKakaoPayPatch
         if (patch.reset) {
           payments.clear()
+          sids.clear()
           calls = []
           next.buyer = null
           next.approve = null
+          next.subscription = null
         }
         if ('buyer' in patch) next.buyer = patch.buyer ?? null
         if ('approve' in patch) next.approve = patch.approve ?? null
+        if ('subscription' in patch) next.subscription = patch.subscription ?? null
         return send(res, 200, { ok: true })
       }
 
@@ -378,19 +489,27 @@ export async function startFakeKakaoPay(): Promise<FakeKakaoPay> {
       if (req.method === 'GET' && window) return buyerWindow(res, window[1] ?? '')
       if (req.method === 'GET' && path === '/return') {
         if (!appUrl) return kakaoError(res, 500, -500, 'the app address is not set')
-        res.writeHead(302, { Location: `${appUrl}/payments/return${requestUrl.search}` })
+        // 정기 등록으로 돌아오는 주소는 구독 돌아오기 화면으로, 단건은 결제 돌아오기 화면으로
+        const billing = requestUrl.searchParams.get('kind') === 'KAKAOPAY_BILLING_REDIRECT'
+        res.writeHead(302, {
+          Location: `${appUrl}/${billing ? 'subscriptions' : 'payments'}/return${requestUrl.search}`,
+        })
         return res.end()
       }
 
       // 카카오페이 API
-      const api = /^\/online\/v1\/payment\/(ready|approve|cancel|order)$/.exec(path)
+      const api =
+        /^\/online\/v1\/payment\/(ready|approve|cancel|order|subscription|manage\/subscription\/inactive|manage\/subscription\/status)$/.exec(
+          path,
+        )
       if (!api) return kakaoError(res, 404, -404, 'no such function')
       const body = parse(await readBody(req))
       calls.push({ method: req.method ?? 'GET', path, body: redacted(body) })
       if (req.headers.authorization !== `SECRET_KEY ${FAKE_KAKAOPAY.secretKey}`)
         return kakaoError(res, 401, -401, 'unauthorized')
       if (req.method !== 'POST' || !body) return kakaoError(res, 400, -400, 'bad request')
-      if (body.cid !== FAKE_KAKAOPAY.cid) return kakaoError(res, 400, -400, 'bad cid')
+      if (body.cid !== FAKE_KAKAOPAY.cid && body.cid !== FAKE_KAKAOPAY.subscriptionCid)
+        return kakaoError(res, 400, -400, 'bad cid')
       switch (api[1]) {
         case 'ready':
           return ready(res, body)
@@ -398,6 +517,12 @@ export async function startFakeKakaoPay(): Promise<FakeKakaoPay> {
           return await approve(res, body)
         case 'cancel':
           return cancel(res, body)
+        case 'subscription':
+          return subscriptionCharge(res, body)
+        case 'manage/subscription/inactive':
+          return sidState(res, body, true)
+        case 'manage/subscription/status':
+          return sidState(res, body, false)
         default:
           return order(res, body)
       }

@@ -308,3 +308,202 @@ describe('control: what the next apply does (one time only)', () => {
     ])
   })
 })
+
+describe('recurrent payments (the recurrent credentials, registration without money, reserve + approve)', () => {
+  const rHeaders = () => ({
+    'X-Naver-Client-Id': FAKE_NAVERPAY.recurrent.clientId,
+    'X-Naver-Client-Secret': FAKE_NAVERPAY.recurrent.clientSecret,
+    'X-NaverPay-Chain-Id': FAKE_NAVERPAY.recurrent.chainId,
+  })
+  let r = 0
+  const rpost = (path: string, body: unknown, auth: Record<string, string> = rHeaders()) =>
+    fetch(`${fake.url}${API}/recurrent${path}`, {
+      method: 'POST',
+      headers: {
+        ...auth,
+        'Content-Type': 'application/json',
+        'X-NaverPay-Idempotency-Key': `rr-${++r}`,
+      },
+      body: JSON.stringify(body),
+    })
+  const RETURN_BILLING =
+    'https://app.test/subscriptions/return?kind=NAVERPAY_BILLING_REDIRECT&sub=sub_x'
+
+  /** 등록 예약 → 구매자가 등록창에서 마침 → 등록 완료 - recurrentId */
+  async function registered(productCode = `sub_${++n}`) {
+    const reserved = await (
+      await rpost('/regist/v1/reserve', {
+        productCode,
+        productName: 'Basic',
+        totalPayAmount: 3900,
+        returnUrl: RETURN_BILLING,
+        merchantUserId: 'ck_1',
+      })
+    ).json()
+    const hop = await fetch(`${fake.url}/payments/recurrent/${reserved.body.reserveId}`, {
+      redirect: 'manual',
+    })
+    const back = new URL(hop.headers.get('location') ?? '')
+    const approval = await (
+      await rpost('/regist/v1/approval', {
+        reserveId: back.searchParams.get('reserveId'),
+        tempReceiptId: back.searchParams.get('tempReceiptId'),
+      })
+    ).json()
+    return { productCode, back, approval, recurrentId: approval.body?.recurrentId as string }
+  }
+  const pay = async (recurrentId: string, merchantPayId: string, total = 3900) => {
+    const reserved = await (
+      await rpost('/pay/v3/reserve', {
+        recurrentId,
+        totalPayAmount: total,
+        taxScopeAmount: total,
+        taxExScopeAmount: 0,
+        productName: 'Basic',
+        merchantPayId,
+        merchantUserId: 'ck_1',
+      })
+    ).json()
+    return reserved
+  }
+
+  it('a single-payment credential is 401 on a recurrent call and the recurrent one is 401 on a single call', async () => {
+    expect((await rpost('/regist/v1/reserve', {}, headers())).status).toBe(401)
+    expect((await post('/v1/cancel', { paymentId: 'x' }, 'k-1', rHeaders())).status).toBe(401)
+  })
+
+  it('registration moves no money: window → return address with reserveId and tempReceiptId → approval gives a recurrentId and plants a masked email', async () => {
+    await control.set({ reset: true })
+    const { back, approval, recurrentId } = await registered()
+    expect(back.searchParams.get('resultCode')).toBe('Success')
+    expect(back.toString()).toContain('kind=NAVERPAY_BILLING_REDIRECT')
+    expect(recurrentId).toMatch(/^RC\d{10}$/)
+    expect(approval.body.email).toBe('pl***@example.com')
+    expect((await control.state()).payments).toEqual([])
+  })
+
+  it('the same product code cannot be registered twice while the first is active (DataExist), and can again after it is expired', async () => {
+    const first = await registered()
+    const again = await (
+      await rpost('/regist/v1/reserve', {
+        productCode: first.productCode,
+        productName: 'Basic',
+        totalPayAmount: 3900,
+        returnUrl: RETURN_BILLING,
+        merchantUserId: 'ck_1',
+      })
+    ).json()
+    expect(again.code).toBe('DataExist')
+    await rpost('/expire/v1/request', {
+      recurrentId: first.recurrentId,
+      expireRequester: '2',
+      expireReason: 'x',
+    })
+    const ok = await registered(first.productCode)
+    expect(ok.recurrentId).toMatch(/^RC/)
+  })
+
+  it('an approval with a receipt of another reservation, or a second approval, is refused', async () => {
+    const one = await registered()
+    const reserved = await (
+      await rpost('/regist/v1/reserve', {
+        productCode: `sub_${++n}`,
+        productName: 'Basic',
+        totalPayAmount: 3900,
+        returnUrl: RETURN_BILLING,
+        merchantUserId: 'ck_1',
+      })
+    ).json()
+    await fetch(`${fake.url}/payments/recurrent/${reserved.body.reserveId}`, { redirect: 'manual' })
+    const stolen = await (
+      await rpost('/regist/v1/approval', {
+        reserveId: reserved.body.reserveId,
+        tempReceiptId: one.back.searchParams.get('tempReceiptId'),
+      })
+    ).json()
+    expect(stolen.code).toBe('InvalidParameter')
+    const second = await (
+      await rpost('/regist/v1/approval', {
+        reserveId: one.back.searchParams.get('reserveId'),
+        tempReceiptId: one.back.searchParams.get('tempReceiptId'),
+      })
+    ).json()
+    expect(second.code).toBe('InvalidParameter')
+  })
+
+  it('a charge is reserve then approve; the payment then exists and is only visible to the recurrent credentials (history and cancel)', async () => {
+    const { recurrentId } = await registered()
+    const reserved = await pay(recurrentId, 'ord_pay_1')
+    expect(reserved.code).toBe('Success')
+    const approved = await (
+      await rpost('/pay/v3/approval', { paymentId: reserved.body.paymentId })
+    ).json()
+    expect(approved.code).toBe('Success')
+    expect(approved.body.detail).toMatchObject({
+      merchantPayKey: 'ord_pay_1',
+      totalPayAmount: 3900,
+      admissionState: 'SUCCESS',
+    })
+    const paymentId = reserved.body.paymentId as string
+    expect((await history(paymentId)).status).toBe(401)
+    const asRecurrent = await fetch(`${fake.url}${API}/v2.3/list/history/${paymentId}`, {
+      method: 'POST',
+      headers: { ...rHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pageNumber: 1, rowsPerPage: 100 }),
+    })
+    expect((await asRecurrent.json()).body.list).toHaveLength(1)
+    const cancel = await post(
+      '/v1/cancel',
+      {
+        paymentId,
+        cancelAmount: '3900',
+        cancelReason: 'x',
+        cancelRequester: '2',
+        taxScopeAmount: '3900',
+        taxExScopeAmount: '0',
+      },
+      'cc-1',
+      rHeaders(),
+    )
+    expect((await cancel.json()).code).toBe('Success')
+  })
+
+  it('a reserve for an expired registration is InvalidRecurrentId, a second approval of one reservation is AlreadyComplete, and expiring twice reads Expired', async () => {
+    const { recurrentId } = await registered()
+    const reserved = await pay(recurrentId, 'ord_pay_2')
+    await rpost('/pay/v3/approval', { paymentId: reserved.body.paymentId })
+    expect(
+      (await (await rpost('/pay/v3/approval', { paymentId: reserved.body.paymentId })).json()).code,
+    ).toBe('AlreadyComplete')
+    const body = { recurrentId, expireRequester: '2', expireReason: 'x' }
+    expect((await (await rpost('/expire/v1/request', body)).json()).code).toBe('Success')
+    expect((await (await rpost('/expire/v1/request', body)).json()).code).toBe('Expired')
+    expect((await pay(recurrentId, 'ord_pay_3')).code).toBe('InvalidRecurrentId')
+  })
+
+  it('the next approval can be told to decline (Fail), lose its answer after applying, or fail with a 5xx - once each', async () => {
+    const { recurrentId } = await registered()
+    const one = await pay(recurrentId, 'ord_pay_4')
+    await control.set({ payApproval: { mode: 'decline' } })
+    expect(
+      (await (await rpost('/pay/v3/approval', { paymentId: one.body.paymentId })).json()).code,
+    ).toBe('Fail')
+    const two = await pay(recurrentId, 'ord_pay_5')
+    await control.set({ payApproval: { mode: 'lose' } })
+    await expect(rpost('/pay/v3/approval', { paymentId: two.body.paymentId })).rejects.toThrow()
+    expect(
+      (await control.state()).payments.find((p) => p.paymentId === two.body.paymentId)?.applied,
+    ).toBe(true)
+  })
+
+  it('the billing return address goes on to the subscription return screen', async () => {
+    fake.setApp('http://127.0.0.1:5999')
+    const hop = await fetch(
+      `${fake.url}/return?kind=NAVERPAY_BILLING_REDIRECT&sub=sub_1&resultCode=UserCancel`,
+      { redirect: 'manual' },
+    )
+    expect(hop.headers.get('location')).toBe(
+      'http://127.0.0.1:5999/subscriptions/return?kind=NAVERPAY_BILLING_REDIRECT&sub=sub_1&resultCode=UserCancel',
+    )
+  })
+})

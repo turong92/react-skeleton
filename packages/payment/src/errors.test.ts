@@ -60,6 +60,7 @@ describe('ledger error codes (HTTP contract, the list of user and operator error
         'SUBSCRIPTION_CANCEL_NOT_ALLOWED',
         'SUBSCRIPTION_CHARGE_IN_PROGRESS',
         'ORDER_NOT_CLOSABLE',
+        'ORDER_CLOSE_NEEDS_CONFIRMATION',
       ]
         .map((name) => `PAYMENT.${name}`)
         .sort(),

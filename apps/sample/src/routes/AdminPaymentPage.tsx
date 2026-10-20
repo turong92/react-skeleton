@@ -126,7 +126,12 @@ function AdminPayment({
       <CloseSubscriptionChargeDialog
         open={closing}
         onClose={() => setClosing(false)}
-        onConfirm={() => closeCharge.mutate(order.id, { onSuccess: () => setClosing(false) })}
+        onConfirm={(confirmedAtProvider) =>
+          closeCharge.mutate(
+            { orderId: order.id, confirmedAtProvider },
+            { onSuccess: () => setClosing(false) },
+          )
+        }
         busy={closeCharge.isPending}
         error={closeCharge.error}
         labels={labels}

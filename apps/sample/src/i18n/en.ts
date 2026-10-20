@@ -570,10 +570,11 @@ const en: Record<keyof typeof ko, string> = {
   'subscription.return.invalidTitle': 'We could not read the subscription result',
   'subscription.return.invalidBody':
     'The address you came back from the card window with is not valid. Check My subscription.',
-  'subscription.return.closedTitle': 'You closed the card window',
+  'subscription.return.closedTitle': 'You closed the payment method window',
   'subscription.return.closedBody': 'The subscription did not start. Pick a plan to try again.',
-  'subscription.return.leftTitle': 'The card was not registered',
-  'subscription.return.leftBody': 'The subscription did not start. Try again with another card.',
+  'subscription.return.leftTitle': 'The payment method was not registered',
+  'subscription.return.leftBody':
+    'The subscription did not start. Try again, or pick another payment method.',
   'nav.adminPayments': 'Payments',
   'nav.adminAccounts': 'Accounts',
   'admin.payments.title': 'Payments',

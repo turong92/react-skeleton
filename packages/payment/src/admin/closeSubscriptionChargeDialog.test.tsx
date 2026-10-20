@@ -33,4 +33,15 @@ describe('CloseSubscriptionChargeDialog', () => {
     )
     expect(render({ error: failed('PAYMENT.UNAVAILABLE', 503) })).toContain('닫지 못했어요')
   })
+
+  it('a provider that cannot be asked by number asks for the operator own check: the sentence, the box, and the confirm button is off until it is ticked', () => {
+    const html = render({ error: failed('PAYMENT.ORDER_CLOSE_NEEDS_CONFIRMATION', 409) })
+    expect(html).toContain('번호로 결제를 찾을 수 없어요')
+    expect(html).toContain('결제사 화면에서 이 결제가 없는 것을 직접 확인했어요')
+    expect(html).toMatch(/<button[^>]*disabled[^>]*>결제 안 됨으로 닫기/)
+    // 다른 오류에는 확인 칸이 없다
+    expect(render({ error: failed('PAYMENT.ORDER_NOT_CLOSABLE', 409) })).not.toContain(
+      '직접 확인했어요',
+    )
+  })
 })

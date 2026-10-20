@@ -13,6 +13,8 @@ export const defaultPaymentAdminLabels: PaymentAdminLabels = {
       'The refund went through but taking back what was delivered never finished',
     BUYER_COUNTRY_KR:
       'Paid through the overseas provider but the buyer address is in Korea - needs a look',
+    SUBSCRIPTION_TOKEN_MISSING:
+      'The first payment was received but the provider gave no payment method for renewals - the subscription ends at its next renewal',
     SUBSCRIPTION_STALE_CHARGE:
       'A subscription payment arrived late that the subscription was not waiting for - it needs a refund',
     SUBSCRIPTION_CANCEL_REFUND_UNRESOLVED:
@@ -150,7 +152,7 @@ export const defaultPaymentAdminLabels: PaymentAdminLabels = {
   },
   closeChargeDialog: {
     title: 'Close this payment as not paid?',
-    body: 'The provider never answered this subscription payment. Before closing, it asks the provider once more: if the payment shows as paid it is not closed but matched as paid. Once closed, this account can subscribe again.',
+    body: 'The provider never answered this subscription payment. Before closing, it asks the provider once more: if the payment shows as paid it is not closed but matched as paid. Once closed, this account can subscribe again. A provider that cannot look a payment up by number (KakaoPay) is closed only after you check in its own console.',
     confirm: 'Close as not paid',
     loading: 'Closing',
     dismiss: 'Close',
@@ -158,9 +160,12 @@ export const defaultPaymentAdminLabels: PaymentAdminLabels = {
     errors: {
       notClosable:
         'This payment cannot be closed now. The provider is still working on it, or it has been settled. Check it with "Match with the provider".',
+      needsConfirmation:
+        'This provider cannot look a payment up by number. Check in its own console that this payment does not exist, then tick the box below to close it.',
       other:
         'Could not close it. When the provider cannot be asked it is not closed. Try again in a moment.',
     },
+    confirmedAtProvider: "I checked in the provider's console that this payment does not exist",
   },
   refundDialog: {
     direct: { title: 'Refund this payment?', note: 'The money goes out and cannot be taken back.' },

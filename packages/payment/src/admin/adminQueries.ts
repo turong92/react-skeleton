@@ -167,7 +167,12 @@ export function syncOrderMutation(api: PaymentAdminApi, client: QueryClient) {
 
 export function closeSubscriptionChargeMutation(api: PaymentAdminApi, client: QueryClient) {
   return {
-    mutationFn: (orderId: string) => api.closeSubscriptionCharge(orderId),
+    mutationFn: (variables: string | { orderId: string; confirmedAtProvider?: boolean }) =>
+      typeof variables === 'string'
+        ? api.closeSubscriptionCharge(variables)
+        : api.closeSubscriptionCharge(variables.orderId, {
+            confirmedAtProvider: variables.confirmedAtProvider ?? false,
+          }),
     // 409 도 다시 읽는다: 그 사이 결제사가 답했거나 다른 길이 끝냈다
     onSettled: () => invalidateRoot(client),
   }

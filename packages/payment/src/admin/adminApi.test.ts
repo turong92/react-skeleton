@@ -116,6 +116,18 @@ describe('createPaymentAdminApi (paths and bodies mirror spec 7, operator routes
     expect(calls[1]?.request).toEqual({ params: {} })
   })
 
+  it('closeSubscriptionCharge with the operator confirmation → the body says confirmedAtProvider', async () => {
+    const { client, calls } = fakeClient()
+    await createPaymentAdminApi(client).closeSubscriptionCharge('ord_1', {
+      confirmedAtProvider: true,
+    })
+    expect(calls[0]).toEqual({
+      kind: 'value',
+      path: '/admin/payments/orders/ord_1/close',
+      request: { method: 'POST', json: { confirmedAtProvider: true } },
+    })
+  })
+
   it('closeSubscriptionCharge → POST /orders/{id}/close, no body', async () => {
     const { client, calls } = fakeClient()
     await createPaymentAdminApi(client).closeSubscriptionCharge('ord_1')

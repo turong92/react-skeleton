@@ -63,12 +63,14 @@ describe('SubscriptionReturnPage', () => {
 
   it('an address that says it failed, with the window closed by the person: says the card was not registered by their choice', () => {
     const html = render('?sub=sub_1&code=PAY_PROCESS_CANCELED&message=x')
-    expect(html).toContain('카드 등록을 그만뒀어요')
+    expect(html).toContain('결제 수단 등록을 그만뒀어요')
     expect(html).toMatch(/다시 해 보기/)
   })
 
   it('an address that says it failed for another reason: says the card was not registered', () => {
-    expect(render('?sub=sub_1&code=INVALID_CARD&message=x')).toContain('카드를 등록하지 못했어요')
+    expect(render('?sub=sub_1&code=INVALID_CARD&message=x')).toContain(
+      '결제 수단을 등록하지 못했어요',
+    )
   })
 
   it('an address that cannot be read: says so and leads to 「내 구독」 (a link, not a dead end)', () => {

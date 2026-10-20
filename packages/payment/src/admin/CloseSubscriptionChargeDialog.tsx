@@ -1,4 +1,5 @@
-import { Alert, ConfirmDialog, ErrorReference } from '@skeleton/ui'
+import { Alert, Checkbox, ConfirmDialog, ErrorReference } from '@skeleton/ui'
+import { useState } from 'react'
 import { PaymentLedgerErrorCodes, isPaymentLedgerError } from '../errors'
 import { referenceOf } from '../failure'
 import { resolvePaymentLabels, type PaymentLabelsInput } from '../labels'
@@ -8,8 +9,8 @@ export type CloseSubscriptionChargeDialogProps = {
   open: boolean
   /** 닫기 · × · Esc - 열림 상태는 부모가 쥔다 */
   onClose: () => void
-  /** 「결제 안 됨으로 닫기」 - 호출과 닫는 것은 부모 */
-  onConfirm: () => void
+  /** 「결제 안 됨으로 닫기」 - 호출과 닫는 것은 부모. 인자는 운영자가 결제사 화면에서 직접 확인했다는 표시다(주문 번호로 물을 수 없는 결제사의 키 없는 주문에서만 켜진다) */
+  onConfirm: (confirmedAtProvider: boolean) => void
   /** 보내는 중 - 두 단추가 잠기고 확인에 스피너 */
   busy?: boolean
   /** 닫기가 실패했을 때의 오류 - 닫을 수 없는 결제(409)는 그 말을, 그 밖은 일반 문구와 참조 번호를 보인다 */
@@ -33,11 +34,16 @@ export function CloseSubscriptionChargeDialog({
   const text = all.admin.closeChargeDialog
   const hasError = error !== undefined && error !== null
   const reference = hasError ? referenceOf(error) : undefined
+  // 서버가 「직접 확인 없이는 닫지 않는다」고 하면 확인 칸을 받아 다시 보낸다
+  const needsConfirmation =
+    hasError && isPaymentLedgerError(error, PaymentLedgerErrorCodes.ORDER_CLOSE_NEEDS_CONFIRMATION)
+  const [confirmed, setConfirmed] = useState(false)
   return (
     <ConfirmDialog
       open={open}
       onClose={onClose}
-      onConfirm={onConfirm}
+      onConfirm={() => onConfirm(needsConfirmation && confirmed)}
+      confirmDisabled={needsConfirmation && !confirmed}
       title={text.title}
       confirmLabel={text.confirm}
       cancelLabel={text.dismiss}
@@ -47,12 +53,22 @@ export function CloseSubscriptionChargeDialog({
       description={
         <div className={styles.body}>
           <p className={styles.text}>{text.body}</p>
+          {needsConfirmation && (
+            <Checkbox
+              label={text.confirmedAtProvider}
+              checked={confirmed}
+              disabled={busy}
+              onChange={(event) => setConfirmed(event.target.checked)}
+            />
+          )}
           {hasError && (
             <>
               <Alert tone="danger" toneLabel={all.errorLabel}>
-                {isPaymentLedgerError(error, PaymentLedgerErrorCodes.ORDER_NOT_CLOSABLE)
-                  ? text.errors.notClosable
-                  : text.errors.other}
+                {needsConfirmation
+                  ? text.errors.needsConfirmation
+                  : isPaymentLedgerError(error, PaymentLedgerErrorCodes.ORDER_NOT_CLOSABLE)
+                    ? text.errors.notClosable
+                    : text.errors.other}
               </Alert>
               {reference && (
                 <ErrorReference

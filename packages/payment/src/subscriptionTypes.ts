@@ -114,7 +114,7 @@ export type StartSubscriptionResult = {
 /** 구매자 나라 · 결제사는 보내지 않는다 - 서버가 접속 나라로 정한다(`GET /config` 의 `country` · `provider`) */
 export type StartSubscriptionInput = {
   planCode: string
-  /** 결제사 id - **`GET /config` 의 `subscriptionChoices` 에 둘 이상이 있을 때만** 보낸다(구매자가 고른 것). 목록 밖이면 서버가 400 으로 거절한다. 비면 서버가 정한다 */
+  /** 결제사 id - **`GET /config` 의 `subscriptionChoices` 에 둘 이상이 있을 때만** 보낸다(구매자가 고른 것). 목록 밖이면 서버는 거절하지 않고 조용히 서버가 정한 결제사로 바꾼다. 비면 서버가 정한다 */
   provider?: string
   /** 구독을 시작한 화면의 origin(`window.location.origin`) - 서버가 정한 주소로 돌려보내는 결제사(카카오페이 · 네이버페이)가 허용 목록에 있을 때만 그 origin 으로 돌려보낸다 */
   returnOrigin?: string

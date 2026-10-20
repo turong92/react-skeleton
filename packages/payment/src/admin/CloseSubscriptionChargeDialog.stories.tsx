@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { ApiRequestError } from '@skeleton/api-client'
 import { expect, fn, screen, waitFor, within } from 'storybook/test'
 import { koPaymentLabels } from '../labels'
 import { CloseSubscriptionChargeDialog } from './CloseSubscriptionChargeDialog'
@@ -30,5 +31,33 @@ export const ConfirmSendsOnce: Story = {
     await expect(dialog).toHaveTextContent('한 번 더 물어보고')
     await userEvent.click(within(dialog).getByRole('button', { name: '결제 안 됨으로 닫기' }))
     await expect(onConfirm).toHaveBeenCalledOnce()
+    await expect(onConfirm).toHaveBeenCalledWith(false)
+  },
+}
+
+/** 주문 번호로 물을 수 없는 결제사 - 결제사 화면에서 직접 확인했다는 칸을 눌러야 닫을 수 있고, 누른 값이 부모에 간다 */
+export const NeedsOwnCheck: Story = {
+  args: {
+    error: new ApiRequestError(
+      {
+        code: 'PAYMENT.ORDER_CLOSE_NEEDS_CONFIRMATION',
+        title: 't',
+        status: 409,
+        timestamp: 't',
+        traceId: 'tr',
+      },
+      'tr',
+      'sp',
+      'tp',
+    ),
+  },
+  play: async ({ userEvent }) => {
+    const dialog = await screen.findByRole('dialog', { name: dialogName })
+    const confirm = within(dialog).getByRole('button', { name: '결제 안 됨으로 닫기' })
+    await expect(confirm).toBeDisabled()
+    await userEvent.click(within(dialog).getByRole('checkbox'))
+    await expect(confirm).toBeEnabled()
+    await userEvent.click(confirm)
+    await expect(onConfirm).toHaveBeenCalledWith(true)
   },
 }

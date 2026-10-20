@@ -38,7 +38,10 @@ export type PaymentAdminApi = {
    * `POST {basePath}/orders/{id}/close` - 결제사가 끝내 답하지 않아 확인 중(`CONFIRMING`)으로 남은 **구독 결제**를 「결제 안 됨」으로 닫는다(구독의 자리가 풀린다).
    * 서버가 닫기 전에 결제사에 한 번 더 물어, 결제된 것으로 나오면 닫지 않고 결제됨으로 맞춘다. 닫을 수 없으면 409 `PAYMENT.ORDER_NOT_CLOSABLE`
    */
-  closeSubscriptionCharge(orderId: string): Promise<AdminOrder>
+  closeSubscriptionCharge(
+    orderId: string,
+    options?: { confirmedAtProvider?: boolean },
+  ): Promise<AdminOrder>
   /** `GET {basePath}/webhook-events?status&cursor&size` — 수신함 */
   listWebhookEvents(params?: WebhookEventListParams): Promise<ApiCursorResponse<WebhookEvent>>
   /** `POST {basePath}/webhook-events/{id}/retry` — 다시 처리 */
@@ -115,7 +118,13 @@ export function createPaymentAdminApi(
       }),
     rejectRefund: (refundId) => post<AdminRefund>(`${base}/refunds/${enc(refundId)}/reject`),
     syncOrder: (orderId) => post<AdminOrder>(`${base}/orders/${enc(orderId)}/sync`),
-    closeSubscriptionCharge: (orderId) => post<AdminOrder>(`${base}/orders/${enc(orderId)}/close`),
+    closeSubscriptionCharge: (orderId, { confirmedAtProvider = false } = {}) =>
+      confirmedAtProvider
+        ? client.value<AdminOrder>(`${base}/orders/${enc(orderId)}/close`, {
+            method: 'POST',
+            json: { confirmedAtProvider: true },
+          })
+        : post<AdminOrder>(`${base}/orders/${enc(orderId)}/close`),
     listWebhookEvents: (params = {}) =>
       client.cursor<WebhookEvent>(`${base}/webhook-events`, { params: present(params) }),
     retryWebhookEvent: (id) => post<WebhookEvent>(`${base}/webhook-events/${enc(id)}/retry`),

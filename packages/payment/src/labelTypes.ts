@@ -152,8 +152,12 @@ export type PaymentAdminLabels = {
     errors: {
       /** 지금은 닫을 수 없다 - 결제사가 아직 진행하고 있거나 이미 정해졌다(409) */
       notClosable: string
+      /** 주문 번호로 물을 수 없는 결제사 - 결제사 화면에서 직접 확인하고 확인 칸을 눌러야 닫는다(409) */
+      needsConfirmation: string
       other: string
     }
+    /** 확인 칸 이름 - 결제사 화면에서 이 결제가 없는 것을 직접 확인했다 */
+    confirmedAtProvider: string
   }
   refundDialog: {
     direct: { title: string; note: string }

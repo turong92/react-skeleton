@@ -560,10 +560,11 @@ export default {
   'subscription.return.invalidTitle': '구독 결과를 읽지 못했어요',
   'subscription.return.invalidBody':
     '카드 등록 창에서 돌아온 주소가 올바르지 않아요. 내 구독에서 확인해 주세요.',
-  'subscription.return.closedTitle': '카드 등록을 그만뒀어요',
+  'subscription.return.closedTitle': '결제 수단 등록을 그만뒀어요',
   'subscription.return.closedBody': '구독은 시작되지 않았어요. 다시 하려면 플랜을 골라 주세요.',
-  'subscription.return.leftTitle': '카드를 등록하지 못했어요',
-  'subscription.return.leftBody': '구독은 시작되지 않았어요. 다른 카드로 다시 해 보세요.',
+  'subscription.return.leftTitle': '결제 수단을 등록하지 못했어요',
+  'subscription.return.leftBody':
+    '구독은 시작되지 않았어요. 다시 해 보거나 다른 결제 수단을 골라 주세요.',
   'nav.adminPayments': '결제 관리',
   'nav.adminAccounts': '계정 관리',
   'admin.payments.title': '결제 관리',

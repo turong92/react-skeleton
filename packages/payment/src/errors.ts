@@ -57,6 +57,8 @@ export const PaymentLedgerErrorCodes = {
   SUBSCRIPTION_CHARGE_IN_PROGRESS: 'PAYMENT.SUBSCRIPTION_CHARGE_IN_PROGRESS',
   /** 운영자 경로: 닫을 수 없는 구독 결제(구독 결제가 아니다 · 확인 중이 아니다 · 결제사가 아직 처리 중이다) → 409 */
   ORDER_NOT_CLOSABLE: 'PAYMENT.ORDER_NOT_CLOSABLE',
+  /** 운영자 경로: 주문 번호로 결제를 물을 수 없는 결제사(카카오페이)의 결제 키 없는 주문은 결제사 화면에서 직접 확인했다는 표시 없이는 닫지 않는다 → 409. 확인 칸을 받아 다시 보낸다 */
+  ORDER_CLOSE_NEEDS_CONFIRMATION: 'PAYMENT.ORDER_CLOSE_NEEDS_CONFIRMATION',
 } as const
 
 export type PaymentLedgerErrorCode =

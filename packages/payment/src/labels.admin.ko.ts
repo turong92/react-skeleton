@@ -11,6 +11,8 @@ export const koPaymentAdminLabels: PaymentAdminLabels = {
     FULFILMENT_UNRESOLVED: '돈은 받았는데 지급이 끝내 안 됐어요',
     REFUND_APPLY_UNRESOLVED: '환불은 됐는데 회수가 끝내 안 됐어요',
     BUYER_COUNTRY_KR: '해외 결제사로 결제했는데 결제한 사람의 주소가 한국이에요 — 확인이 필요해요',
+    SUBSCRIPTION_TOKEN_MISSING:
+      '첫 결제는 받았는데 갱신에 쓸 결제 수단 정보를 못 받았어요 — 다음 갱신일에 구독이 끝나요',
     SUBSCRIPTION_STALE_CHARGE: '구독이 기다리지 않는 결제가 늦게 들어왔어요 — 환불이 필요해요',
     SUBSCRIPTION_CANCEL_REFUND_UNRESOLVED:
       '지금 해지한 구독의 환불이 나가지 못했어요 — 환불이 필요해요',
@@ -136,7 +138,7 @@ export const koPaymentAdminLabels: PaymentAdminLabels = {
   },
   closeChargeDialog: {
     title: '이 결제를 「결제 안 됨」으로 닫을까요?',
-    body: '결제사가 끝내 답하지 않은 구독 결제예요. 닫기 전에 결제사에 한 번 더 물어보고, 결제된 것으로 나오면 닫지 않고 결제됨으로 맞춰요. 닫으면 이 계정은 다시 구독할 수 있어요.',
+    body: '결제사가 끝내 답하지 않은 구독 결제예요. 닫기 전에 결제사에 한 번 더 물어보고, 결제된 것으로 나오면 닫지 않고 결제됨으로 맞춰요. 닫으면 이 계정은 다시 구독할 수 있어요. 번호로 결제를 물을 수 없는 결제사(카카오페이)는 결제사 화면에서 직접 확인한 뒤에만 닫아요.',
     confirm: '결제 안 됨으로 닫기',
     loading: '닫는 중',
     dismiss: '닫기',
@@ -144,8 +146,11 @@ export const koPaymentAdminLabels: PaymentAdminLabels = {
     errors: {
       notClosable:
         '지금은 닫을 수 없는 결제예요. 결제사가 아직 진행하고 있거나 이미 정해졌어요. 「결제사와 맞추기」로 확인해 주세요',
+      needsConfirmation:
+        '이 결제사는 번호로 결제를 찾을 수 없어요. 결제사 화면에서 이 결제가 없는 것을 직접 확인한 뒤 아래 칸을 눌러 닫아 주세요',
       other: '닫지 못했어요. 결제사에 물을 수 없을 때는 닫지 않아요. 잠시 뒤에 다시 해 보세요',
     },
+    confirmedAtProvider: '결제사 화면에서 이 결제가 없는 것을 직접 확인했어요',
   },
   refundDialog: {
     direct: { title: '환불할까요?', note: '환불하면 돈이 나가고 되돌릴 수 없어요.' },

@@ -47,7 +47,15 @@ export function MySubscriptionCard({
   const labels = resolvePaymentLabels(input)
   const mine = labels.subscription.mine
   const { status } = subscription
-  const card = cardDisplay({ method: 'CARD', card: subscription.card }, labels)
+  // 결제사가 직접 받은 간편결제(카카오페이 · 네이버페이)면 앱 이름이 앞에 붙는다
+  const card = cardDisplay(
+    {
+      method: subscription.easyPayBrand ? 'EASY_PAY' : 'CARD',
+      card: subscription.card,
+      easyPayBrand: subscription.easyPayBrand,
+    },
+    labels,
+  )
   // 한 구역의 채운 단추는 하나: 플랜 올리기가 있으면 그것이 주된 행동이고 해지 예약은 테두리
   const canChange = !!onChangePlan && status === 'ACTIVE' && !subscription.pendingPlanCode
   // 해지 예약 중이어도 지금 해지할 수 있다 - 두 해지 단추는 같은 무게(테두리)

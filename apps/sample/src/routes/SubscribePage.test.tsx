@@ -86,6 +86,25 @@ describe('SubscribePage', () => {
     expect(html).toContain('₩3,900, billed every month')
   })
 
+  it('asks for a payment method only when the server offers two or more for a subscription - and names them in words', () => {
+    const none = render({ plans, config })
+    expect(none).not.toContain('결제 방법')
+    const one = render({ plans, config: { ...config, subscriptionChoices: ['toss'] } })
+    expect(one).not.toContain('결제 방법')
+    const html = render({
+      plans,
+      config: {
+        ...config,
+        provider: 'toss',
+        subscriptionChoices: ['toss', 'kakaopay', 'naverpay'],
+      },
+    })
+    expect(html).toContain('결제 방법')
+    for (const name of ['토스페이먼츠', '카카오페이', '네이버페이']) expect(html).toContain(name)
+    // 서버가 정한 결제사(토스)가 처음 골라져 있다
+    expect(html.match(/aria-checked="true"/g)).toHaveLength(1)
+  })
+
   it('says it is a test payment when the server runs on test keys', () => {
     expect(render({ plans, config })).toContain('테스트 결제예요')
     expect(render({ plans, config: { ...config, testMode: false } })).not.toContain(

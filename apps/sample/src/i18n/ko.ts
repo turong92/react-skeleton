@@ -548,6 +548,7 @@ export default {
   'subscription.subscribe.startFailed': '구독을 시작하지 못했어요. 다시 눌러 주세요.',
   'subscription.subscribe.windowFailed':
     '카드 등록 창을 열지 못했어요. 잠시 뒤에 다시 눌러 주세요.',
+  'subscription.subscribe.providerLegend': '결제 방법',
   'subscription.subscribe.closed': '카드 등록을 그만뒀어요. 마음이 정해지면 다시 눌러 주세요.',
   'subscription.title': '내 구독',
   'subscription.subtitle': '구독 상태를 보고 해지할 수 있어요.',

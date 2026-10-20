@@ -18,7 +18,7 @@ import { shownSubscriptionOf, subscriptionAsOrder } from '../subscription/subscr
 import styles from './SubscriptionReturnPage.module.css'
 
 /**
- * 카드 등록 창이 돌려보내는 곳(성공 · 실패 둘 다). 성공 주소면 **같은 `authKey` 로 첫 결제를 한 번만 보낸다** - 효과가 두 번 돌아도, 뒤로 · 앞으로 가서 다시 떠도 같은 값은 다시 보내지 않는다
+ * 카드 등록 창(토스) · 카카오페이 · 네이버페이가 돌려보내는 곳(성공 · 실패 둘 다). 성공 주소면 **같은 값(`authKey` · `pg_token` · 네이버 등록 영수증)으로 첫 결제를 한 번만 보낸다** - 효과가 두 번 돌아도, 뒤로 · 앞으로 가서 다시 떠도 같은 값은 다시 보내지 않는다
  * (결과를 모르는 오류는 훅이 알아서 다시 보내고, 서버는 재전송을 안전하게 받는다). 결과는 서버가 읽어 준 구독으로 그린다 - 확인 중(`PENDING`)이면 훅이 간격을 늘려 가며 다시 묻는다.
  */
 function ActivateFlow({ plan }: { plan: Extract<ReturnPlan, { kind: 'activate' }> }) {
@@ -31,9 +31,9 @@ function ActivateFlow({ plan }: { plan: Extract<ReturnPlan, { kind: 'activate' }
   const me = useMySubscription(subscriptionApi)
 
   useEffect(() => {
-    if (claimActivation(plan.id, plan.authKey))
-      activate.mutate({ id: plan.id, authKey: plan.authKey })
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- 변경 훅의 mutate 는 매 그림마다 바뀐다; 같은 (구독, authKey) 는 `claimActivation` 이 한 번만 통과시킨다
+    if (claimActivation(plan.id, plan.claimKey))
+      activate.mutate({ id: plan.id, providerPayload: plan.providerPayload })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 변경 훅의 mutate 는 매 그림마다 바뀐다; 같은 (구독, 한 번 쓰는 값) 은 `claimActivation` 이 한 번만 통과시킨다
   }, [plan])
 
   const shown = shownSubscriptionOf(plan.id, {

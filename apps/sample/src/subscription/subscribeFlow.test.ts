@@ -2,6 +2,7 @@ import { ApiRequestError } from '@skeleton/api-client'
 import type { BillingAuth, StartSubscriptionResult } from '@skeleton/payment'
 import { describe, expect, it } from 'vitest'
 import {
+  chosenSubscriptionProvider,
   claimActivation,
   returnPlanOf,
   startFailureOf,
@@ -129,7 +130,32 @@ describe('returnPlanOf — what the address the card window sent us back to asks
     expect(returnPlanOf('?sub=sub_1&customerKey=cus_1&authKey=bk_1')).toEqual({
       kind: 'activate',
       id: 'sub_1',
-      authKey: 'bk_1',
+      providerPayload: { authKey: 'bk_1' },
+      claimKey: 'bk_1',
+    })
+  })
+
+  it('KakaoPay and NaverPay come back to the same screen: activate with their own payload, and a window the person closed reads as closed', () => {
+    const kakao = '?kind=KAKAOPAY_BILLING_REDIRECT&provider=kakaopay&sub=sub_1'
+    expect(returnPlanOf(`${kakao}&result=success&pg_token=pgt_1`)).toEqual({
+      kind: 'activate',
+      id: 'sub_1',
+      providerPayload: { pg_token: 'pgt_1' },
+      claimKey: 'pgt_1',
+    })
+    expect(returnPlanOf(`${kakao}&result=cancel`)).toEqual({ kind: 'left', canceled: true })
+    expect(returnPlanOf(`${kakao}&result=fail`)).toEqual({ kind: 'left', canceled: false })
+    const naver = '?kind=NAVERPAY_BILLING_REDIRECT&provider=naverpay&sub=sub_2'
+    expect(returnPlanOf(`${naver}&resultCode=Success&reserveId=RGR1&tempReceiptId=TR1`)).toEqual({
+      kind: 'activate',
+      id: 'sub_2',
+      providerPayload: { reserveId: 'RGR1', tempReceiptId: 'TR1' },
+      claimKey: 'RGR1:TR1',
+    })
+    expect(returnPlanOf(`${naver}&resultCode=UserCancel`)).toEqual({ kind: 'left', canceled: true })
+    expect(returnPlanOf(`${naver}&resultCode=Success&reserveId=RGR1`)).toEqual({ kind: 'invalid' })
+    expect(returnPlanOf('?kind=KAKAOPAY_BILLING_REDIRECT&result=success&pg_token=x')).toEqual({
+      kind: 'invalid',
     })
   })
 
@@ -156,6 +182,23 @@ describe('claimActivation — one activate per authKey while this page lives (St
     expect(claimActivation('sub_1', 'bk_once')).toBe(false)
     expect(claimActivation('sub_1', 'bk_other')).toBe(true)
     expect(claimActivation('sub_2', 'bk_once')).toBe(true)
+  })
+})
+
+describe('chosenSubscriptionProvider — the buyer picks only when there is something to pick', () => {
+  it('stays with the server when there are fewer than two choices (or the server is old and sent none)', () => {
+    expect(chosenSubscriptionProvider(undefined, null, 'toss')).toBeUndefined()
+    expect(chosenSubscriptionProvider([], null, 'toss')).toBeUndefined()
+    expect(chosenSubscriptionProvider(['toss'], 'toss', 'toss')).toBeUndefined()
+  })
+
+  it('with two or more: the picked one if it is on the list, else the one the server would pick, else the first - never a provider off the list', () => {
+    const choices = ['toss', 'kakaopay', 'naverpay']
+    expect(chosenSubscriptionProvider(choices, 'kakaopay', 'toss')).toBe('kakaopay')
+    expect(chosenSubscriptionProvider(choices, null, 'naverpay')).toBe('naverpay')
+    expect(chosenSubscriptionProvider(choices, 'paddle', 'toss')).toBe('toss')
+    expect(chosenSubscriptionProvider(choices, null, 'paddle')).toBe('toss')
+    expect(chosenSubscriptionProvider(choices, null, undefined)).toBe('toss')
   })
 })
 

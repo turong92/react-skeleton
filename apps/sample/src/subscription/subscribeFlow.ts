@@ -3,6 +3,7 @@ import {
   PaymentLedgerErrorCodes,
   PaymentRedirectError,
   readBillingReturn,
+  type ActivationPayload,
   type BillingAuth,
   type OpenBillingAuthOptions,
   type StartSubscriptionResult,
@@ -48,7 +49,8 @@ export type StartSubscribeResult =
   | { kind: 'start-failed'; error: unknown }
 
 // 토스 SDK 가 창을 닫을 때 던지는 코드(`USER_CANCEL`)와, 실패 주소에 싣는 코드(`PAY_PROCESS_CANCELED`)
-const CLOSED_CODES = new Set(['USER_CANCEL', 'PAY_PROCESS_CANCELED'])
+// 카카오페이 · 네이버페이는 서버가 정한 주소로 돌아오고 `readBillingReturn` 이 닫음을 `CANCELED` 로 읽어 준다
+const CLOSED_CODES = new Set(['USER_CANCEL', 'PAY_PROCESS_CANCELED', 'CANCELED'])
 const codeOf = (error: unknown) =>
   typeof error === 'object' && error !== null && 'code' in error
     ? String((error as { code: unknown }).code)
@@ -91,7 +93,7 @@ export function startFailureOf(error: unknown): StartFailure {
 
 /** 카드 등록 창에서 돌아온 주소가 화면에 시키는 일 */
 export type ReturnPlan =
-  | { kind: 'activate'; id: string; authKey: string }
+  | { kind: 'activate'; id: string; providerPayload: ActivationPayload; claimKey: string }
   /** 창이 실패 주소로 돌려보냈다. `canceled` 는 사람이 창을 닫은 경우 */
   | { kind: 'left'; canceled: boolean }
   /** Paddle - 첫 결제는 웹훅이 구독을 `ACTIVE` 로 올린다. 서버를 되묻기만 한다 */
@@ -108,20 +110,47 @@ export function returnPlanOf(search: string): ReturnPlan {
     const read = readBillingReturn(search)
     if (!read.ok) return { kind: 'left', canceled: CLOSED_CODES.has(read.code) }
     const id = new URLSearchParams(search).get('sub')
-    return id ? { kind: 'activate', id, authKey: read.authKey } : { kind: 'invalid' }
+    if (!id) return { kind: 'invalid' }
+    if ('authKey' in read)
+      return {
+        kind: 'activate',
+        id,
+        providerPayload: { authKey: read.authKey },
+        claimKey: read.authKey,
+      }
+    const payload = read.providerPayload
+    // 한 번 쓰는 값으로 같은 (구독, 값)을 가른다 - 카카오페이 pg_token · 네이버페이 등록 영수증
+    const claimKey =
+      'pg_token' in payload ? payload.pg_token : `${payload.reserveId}:${payload.tempReceiptId}`
+    return { kind: 'activate', id, providerPayload: payload, claimKey }
   } catch (error) {
     if (error instanceof PaymentRedirectError) return { kind: 'invalid' }
     throw error
   }
 }
 
+/**
+ * 구독을 시작할 때 구매자가 고른 결제사 - `subscriptionChoices` 가 둘 이상일 때만 보낸다(그 밖은 서버가 정한다 = `undefined`).
+ * 고른 것이 목록 밖이면(낡은 화면) 서버가 정한 결제사, 그것도 목록 밖이면 첫 번째.
+ */
+export function chosenSubscriptionProvider(
+  choices: string[] | undefined,
+  picked: string | null,
+  serverProvider: string | undefined,
+): string | undefined {
+  if (choices === undefined || choices.length < 2) return undefined
+  if (picked !== null && choices.includes(picked)) return picked
+  if (serverProvider !== undefined && choices.includes(serverProvider)) return serverProvider
+  return choices[0]
+}
+
 // 이 탭이 이미 첫 결제를 보낸 (구독, authKey) - 효과가 두 번 돌아도(StrictMode) 뒤로 · 앞으로 가서 이 화면이 다시 떠도 같은 `activate` 를 또 보내지 않는다.
 // (백엔드는 재전송을 안전하게 받지만 `authKey` 는 한 번 쓰는 값이다. 새로 고침은 탭의 메모리가 비니 서버의 멱등이 받는다)
 const claimed = new Set<string>()
 
-/** 이 (구독, authKey) 의 첫 결제를 지금 보내도 되는가 - 처음 부를 때만 `true` */
-export function claimActivation(subscriptionId: string, authKey: string): boolean {
-  const key = JSON.stringify([subscriptionId, authKey])
+/** 이 (구독, 한 번 쓰는 값) 의 첫 결제를 지금 보내도 되는가 - 처음 부를 때만 `true` */
+export function claimActivation(subscriptionId: string, claimKey: string): boolean {
+  const key = JSON.stringify([subscriptionId, claimKey])
   if (claimed.has(key)) return false
   claimed.add(key)
   return true

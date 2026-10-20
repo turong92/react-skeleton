@@ -101,7 +101,7 @@ export function loadTossPaymentsSdk(
 }
 
 /** 구매자를 이 주소로 보낼 수 있는가 - http(s) 절대 주소만(`javascript:` · `data:` 같은 것을 서버 답이 망가졌어도 따라가지 않는다) */
-function webAddress(value: string | undefined): string | null {
+export function webAddress(value: string | undefined): string | null {
   if (!value) return null
   try {
     const url = new URL(value)
@@ -144,10 +144,10 @@ export type OpenCheckoutOptions = {
   isMobile?: () => boolean
 }
 
-const MOBILE_AGENT = /Android|iPhone|iPad|iPod|Mobile/i
-const defaultIsMobile = () =>
+export const MOBILE_AGENT = /Android|iPhone|iPad|iPod|Mobile/i
+export const defaultIsMobile = () =>
   typeof navigator !== 'undefined' && MOBILE_AGENT.test(navigator.userAgent ?? '')
-const defaultNavigate = (url: string) => {
+export const defaultNavigate = (url: string) => {
   window.location.assign(url)
 }
 

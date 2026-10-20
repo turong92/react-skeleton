@@ -12,7 +12,12 @@ import {
   releaseKey,
 } from './queries'
 import type { PaymentSubscriptionApi } from './subscriptionApi'
-import type { ChangePlanInput, MySubscription, StartSubscriptionInput } from './subscriptionTypes'
+import type {
+  ActivationPayload,
+  ChangePlanInput,
+  MySubscription,
+  StartSubscriptionInput,
+} from './subscriptionTypes'
 
 export function subscriptionPlansQuery(api: PaymentSubscriptionApi) {
   return { queryKey: paymentKeys.subscriptionPlans(), queryFn: () => api.plans() }
@@ -71,7 +76,9 @@ export function startSubscriptionMutation(
   return {
     mutationFn: (variables: Variables) => {
       const { idempotencyKey, ...input } = variables
-      const key = keyOf(keys, variables, JSON.stringify([input.planCode]), idempotencyKey)
+      // 결제 수단이 다르면 다른 의도다 - 같은 키면 서버가 처음 고른 결제사의 구독을 되돌려 준다
+      const intent = input.provider ? [input.planCode, input.provider] : [input.planCode]
+      const key = keyOf(keys, variables, JSON.stringify(intent), idempotencyKey)
       return _api.start(input, key !== undefined ? { idempotencyKey: key } : undefined)
     },
     onSuccess: (_result: unknown, variables: Variables) => releaseKey(keys, variables),
@@ -85,8 +92,15 @@ export function startSubscriptionMutation(
  */
 export function activateSubscriptionMutation(api: PaymentSubscriptionApi, client: QueryClient) {
   return {
-    mutationFn: ({ id, authKey }: { id: string; authKey: string }) =>
-      api.activate(id, { providerPayload: { authKey } }),
+    mutationFn: (
+      variables: { id: string } & ({ authKey: string } | { providerPayload: ActivationPayload }),
+    ) =>
+      api.activate(variables.id, {
+        providerPayload:
+          'providerPayload' in variables
+            ? variables.providerPayload
+            : { authKey: variables.authKey },
+      }),
     retry: (failureCount: number, error: unknown) =>
       failureCount < CONFIRM_RETRY_LIMIT && confirmOutcomeOf(error) === 'unknown',
     retryDelay: confirmRetryDelay,

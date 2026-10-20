@@ -8,13 +8,13 @@ import {
   usePaymentConfig,
   type SubscriptionPlan,
 } from '@skeleton/payment'
-import { Alert, ErrorReference, PageHeader, Spinner } from '@skeleton/ui'
-import { useEffect, useState } from 'react'
+import { Alert, ChoiceGroup, ErrorReference, PageHeader, Spinner } from '@skeleton/ui'
+import { useEffect, useId, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { paymentApi } from '../cheer/api'
 import { LinkButton } from '../components/LinkButton'
 import { LoadError } from '../components/LoadError'
-import { languageOf, useT, type MessageKey } from '../i18n'
+import { i18n, languageOf, useT, type MessageKey } from '../i18n'
 import { subscriptionApi } from '../subscription/api'
 import { usePaddleAmounts } from '../payment/paddleAmounts'
 import { CountryPolicyNotice } from '../payment/CountryPolicyNotice'
@@ -22,6 +22,7 @@ import { useServerProvider } from '../payment/useProvider'
 import { subscriptionLabelsFor } from '../subscription/labels'
 import { planNameOf } from '../subscription/planName'
 import {
+  chosenSubscriptionProvider,
   startFailureOf,
   startSubscribe,
   subscribeReturnUrls,
@@ -58,9 +59,15 @@ export function SubscribePage() {
   const navigate = useNavigate()
   const [busyPlan, setBusyPlan] = useState<string | null>(null)
   const [notice, setNotice] = useState<Notice | null>(null)
+  const providerLegendId = useId()
 
   // 결제사는 서버가 접속 나라로 정한다(한국이면 토스 카드 등록, 아니면 Paddle 결제창 한 번 - 갱신은 Paddle 이 한다). 화면은 고르지 않는다
-  const provider = useServerProvider()
+  const serverProvider = useServerProvider()
+  // 같은 나라에서 정기 결제를 받는 결제사가 둘 이상 켜졌을 때만(`config.subscriptionChoices` - 토스 + 카카오페이 …) 사람이 「결제 방법」을 고른다
+  const choices = config.data?.subscriptionChoices ?? []
+  const [pickedProvider, setPickedProvider] = useState<string | null>(null)
+  const chosenProvider = chosenSubscriptionProvider(choices, pickedProvider, serverProvider)
+  const provider = chosenProvider ?? serverProvider
 
   const amountOf = usePaddleAmounts(provider)
 
@@ -83,7 +90,13 @@ export function SubscribePage() {
     setNotice(null)
     const result = await startSubscribe(
       {
-        start: (planCode) => start.mutateAsync({ planCode }),
+        start: (planCode) =>
+          start.mutateAsync({
+            planCode,
+            ...(chosenProvider !== undefined ? { provider: chosenProvider } : {}),
+            // 카카오페이 · 네이버페이는 서버가 정한 주소로 돌아온다 - 이 화면의 origin 으로 돌아오게 한다(허용 목록 안일 때만 서버가 따른다)
+            returnOrigin: window.location.origin,
+          }),
         openBillingAuth: (billingAuth, urls) =>
           openBillingAuth(billingAuth, { ...urls, locale: language }),
         urlsFor: (id, chosen) => subscribeReturnUrls(window.location.origin, id, chosen),
@@ -97,6 +110,12 @@ export function SubscribePage() {
     else if (result.kind === 'window-failed')
       setNotice({ kind: 'windowFailed', error: result.error })
     else setNotice({ kind: startFailureOf(result.error), error: result.error })
+  }
+
+  // 이름표는 사전이 가진 결제사 id 만 - 모르는 id(설정으로 바꾼 `provider-id`)는 id 그대로
+  const providerLabel = (id: string) => {
+    const key = `cheer.provider.${id}`
+    return i18n.has(key) ? t(key) : id
   }
 
   return (
@@ -132,6 +151,20 @@ export function SubscribePage() {
             )}
           </div>
         </Alert>
+      )}
+      {chosenProvider !== undefined && (
+        <div className={styles.group}>
+          <span id={providerLegendId} className={styles.legend}>
+            {t('subscription.subscribe.providerLegend')}
+          </span>
+          <ChoiceGroup
+            aria-labelledby={providerLegendId}
+            options={choices.map((id) => ({ value: id, label: providerLabel(id) }))}
+            value={chosenProvider}
+            onChange={setPickedProvider}
+            disabled={busyPlan !== null}
+          />
+        </div>
       )}
       <CountryPolicyNotice />
       <SubscriptionPlanList

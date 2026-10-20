@@ -209,6 +209,42 @@ describe('mutations', () => {
     expect(used[0]).toBe(used[1])
   })
 
+  it('a different payment method is a different intent - the same plan with another provider does not replay the first subscription', async () => {
+    const { api, calls } = fakeApi()
+    const keys = createIntentKeys()
+    const client = new QueryClient()
+    const options = startSubscriptionMutation(api, client, keys)
+    api.start = async (input, o) => {
+      calls.push(['start', input, o])
+      throw new Error('lost')
+    }
+    const observer = new MutationObserver<unknown, Error, { planCode: string; provider?: string }>(
+      client,
+      options as never,
+    )
+    await observer.mutate({ planCode: 'basic' }).catch(() => undefined)
+    await observer.mutate({ planCode: 'basic', provider: 'kakaopay' }).catch(() => undefined)
+    await observer.mutate({ planCode: 'basic', provider: 'kakaopay' }).catch(() => undefined)
+    const used = calls.map((call) => (call[2] as { idempotencyKey: string }).idempotencyKey)
+    expect(used[0]).not.toBe(used[1])
+    expect(used[1]).toBe(used[2])
+  })
+
+  it('activate with a KakaoPay or NaverPay payload sends it as given', async () => {
+    const kakao = await run(activateSubscriptionMutation, {
+      id: 'sub_1',
+      providerPayload: { pg_token: 'pgt_1' },
+    })
+    expect(kakao.calls).toEqual([['activate', 'sub_1', { providerPayload: { pg_token: 'pgt_1' } }]])
+    const naver = await run(activateSubscriptionMutation, {
+      id: 'sub_2',
+      providerPayload: { reserveId: 'RGR1', tempReceiptId: 'TR1' },
+    })
+    expect(naver.calls).toEqual([
+      ['activate', 'sub_2', { providerPayload: { reserveId: 'RGR1', tempReceiptId: 'TR1' } }],
+    ])
+  })
+
   it('activate / cancel call the api and invalidate the root', async () => {
     const activate = await run(activateSubscriptionMutation, { id: 'sub_1', authKey: 'bk_1' })
     expect(activate.calls).toEqual([

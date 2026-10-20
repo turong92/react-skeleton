@@ -8,6 +8,15 @@
   gap: var(--space-sm);
 }
 
+.group {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.legend {
+  font-weight: 600;
+}
+
 .reference {
   margin-top: var(--space-sm);
 }

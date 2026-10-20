@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — 카카오페이 · 네이버페이 정기 결제 (2026-10-20)
+
+- `billingAuth.kind` `KAKAOPAY_BILLING_REDIRECT` · `NAVERPAY_BILLING_REDIRECT`: `openBillingAuth` 가 SDK 없이 서버가 예약한 주소(카카오페이 PC · 모바일 / 네이버페이 등록창)로 구매자를 보낸다(`navigate` · `isMobile` 주입). `readBillingReturn` 이 `kind` 로 갈라 카카오페이(`result` · `pg_token`) · 네이버페이(`resultCode` · `reserveId` · `tempReceiptId`)의 돌아온 주소를 읽는다 - 성공은 `{ ok: true, providerPayload }`(그대로 `activate` 로), 닫음은 `CANCELED`. `useActivateSubscription` 변수가 `{ id, providerPayload }` 도 받는다(`{ id, authKey }` 는 그대로).
+- `PaymentConfig.subscriptionChoices`(구독 시작 때 고를 수 있는 결제사) · `StartSubscriptionInput.provider` / `returnOrigin` · `Subscription.easyPayBrand` · `ActivationPayload`. 같은 플랜을 다른 결제 수단으로 다시 시작하면 다른 의도라 멱등 키가 바뀐다. 「내 구독」 카드는 카카오페이 · 네이버페이면 앱 이름을 보인다.
+- 샘플: 구독하기에 「결제 방법」 고르기(`subscriptionChoices` 가 둘 이상일 때), 돌아오기 화면이 세 결제사의 값을 받는다. e2e 의 가짜 카카오페이 · 네이버페이에 정기 경로 · 가짜 등록창이 더해졌다.
+- **주의**: `BillingAuth.clientKey` 는 이미 `string | null` 이었고, 카카오페이 · 네이버페이 구독은 `null` 이다(`billingAuth.attributes` 의 주소가 그 몫).
+
 ### Added — Paddle 환불 · 구독 결제 환불의 「구독도 해지」 선택 · 환불 못 하는 결제사 (2026-10-20)
 
 - `@skeleton/payment/admin`: 구독 결제(`SUBSCRIPTION_INITIAL` · `SUBSCRIPTION_RENEWAL`)의 환불 창(`AdminRefundDialog` 직접 · 승인)에 「전액 환불되면 구독도 해지」 체크(기본 켜짐, 끄면 `endSubscription: false` 가 본문에 실린다 - 선택이 의도의 일부라 멱등 키가 바뀐다). `OperatorRefundInput.endSubscription` · `approveRefund(id, amount?, endSubscription?)` · `useApproveRefund` 변수 `{ id, amount?, endSubscription? }`. 켜 둔 채면 지금과 같은 요청이 나간다.

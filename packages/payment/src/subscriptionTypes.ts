@@ -41,6 +41,8 @@ export type Subscription = {
   country: string | null
   /** 어느 결제사의 구독인가(`toss` · `paddle` …) - 구버전 서버는 칸이 없다 */
   provider?: string
+  /** 결제사가 직접 받은 간편결제의 앱(`KAKAOPAY` · `NAVERPAY`) - 그 밖(토스 · Paddle)과 구버전 서버는 `null` · 칸 없음 */
+  easyPayBrand?: string | null
   /** 결제사가 갱신을 직접 하는 구독(Paddle) - 플랜 변경 · 중도 해지(환불)는 열리지 않고 해지는 기간 끝에만 된다 */
   providerManaged?: boolean
 }
@@ -73,7 +75,35 @@ export type PaddleBillingAuth = {
   customerKey: string
   attributes: { environment?: string; transactionId?: string }
 }
-export type BillingAuth = TossBillingAuth | PaddleBillingAuth
+/**
+ * 카카오페이 정기 결제 - 카드 등록 창이 따로 없다. 서버가 `ready` 로 결제창을 예약했고(첫 결제가 곧 등록이다) 브라우저는 SDK 없이 구매자를 `attributes` 의 주소로 **보낸다**(PC · 모바일).
+ * 돌아오는 주소는 서버가 정한다(`kind=KAKAOPAY_BILLING_REDIRECT&provider=…&sub=…&result=…&pg_token=…`) - `readBillingReturn` 이 읽는다
+ */
+export type KakaoPayBillingAuth = {
+  provider: string
+  kind: 'KAKAOPAY_BILLING_REDIRECT'
+  clientKey: null
+  testMode: boolean
+  customerKey: string
+  attributes: { pcUrl?: string; mobileUrl?: string; appUrl?: string }
+}
+/**
+ * 네이버페이 정기 결제 - 등록은 돈이 움직이지 않는다. 서버가 등록을 예약했고 브라우저는 구매자를 `attributes.windowUrl` 로 **보낸다**.
+ * 돌아오는 주소(`kind=NAVERPAY_BILLING_REDIRECT&provider=…&sub=…&resultCode=…&reserveId=…&tempReceiptId=…`)는 `readBillingReturn` 이 읽는다
+ */
+export type NaverPayBillingAuth = {
+  provider: string
+  kind: 'NAVERPAY_BILLING_REDIRECT'
+  clientKey: null
+  testMode: boolean
+  customerKey: string
+  attributes: { windowUrl?: string }
+}
+export type BillingAuth =
+  | TossBillingAuth
+  | PaddleBillingAuth
+  | KakaoPayBillingAuth
+  | NaverPayBillingAuth
 
 /** `billingAuth` 는 같은 키로 다시 보냈는데 카드를 이미 냈으면 `null` 이다(`200`) */
 export type StartSubscriptionResult = {
@@ -82,10 +112,24 @@ export type StartSubscriptionResult = {
 }
 
 /** 구매자 나라 · 결제사는 보내지 않는다 - 서버가 접속 나라로 정한다(`GET /config` 의 `country` · `provider`) */
-export type StartSubscriptionInput = { planCode: string }
+export type StartSubscriptionInput = {
+  planCode: string
+  /** 결제사 id - **`GET /config` 의 `subscriptionChoices` 에 둘 이상이 있을 때만** 보낸다(구매자가 고른 것). 목록 밖이면 서버가 400 으로 거절한다. 비면 서버가 정한다 */
+  provider?: string
+  /** 구독을 시작한 화면의 origin(`window.location.origin`) - 서버가 정한 주소로 돌려보내는 결제사(카카오페이 · 네이버페이)가 허용 목록에 있을 때만 그 origin 으로 돌려보낸다 */
+  returnOrigin?: string
+}
 
-/** 카드 등록 창에서 돌아온 `authKey` 로 빌링키를 만들고 첫 결제를 한다 */
-export type ActivateSubscriptionInput = { providerPayload: { authKey: string } }
+/**
+ * 등록 창이 돌려준 값 - 토스 `authKey` · 카카오페이 `pg_token`(첫 결제의 인증) · 네이버페이 `reserveId` + `tempReceiptId`(등록 완료). 서버가 결제사마다 모양을 확인하고 틀리면 400 이다
+ */
+export type ActivationPayload =
+  | { authKey: string }
+  | { pg_token: string }
+  | { reserveId: string; tempReceiptId: string }
+
+/** 등록 창에서 돌아온 값으로 빌링키를 만들고 첫 결제를 한다 */
+export type ActivateSubscriptionInput = { providerPayload: ActivationPayload }
 
 /** `GET /subscriptions/me` — 구독이 없으면 `subscription: null`. `orders` 는 최근 결제 5건 */
 export type MySubscription = { subscription: Subscription | null; orders: Order[] }

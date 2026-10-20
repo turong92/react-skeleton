@@ -50,6 +50,21 @@ export const Active: Story = {
   },
 }
 
+/** 결제사가 직접 받은 간편결제(카카오페이 · 네이버페이)는 카드 끝 네 자리 대신 앱 이름이 보인다 */
+export const PaidWithKakaoPay: Story = {
+  args: {
+    subscription: subscription({
+      easyPayBrand: 'KAKAOPAY',
+      card: { issuer: 'HYUNDAI', last4: null },
+    }),
+    orders: [],
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText('카카오페이 · 현대카드')).toBeVisible()
+    await expect(canvas.queryByText('KAKAOPAY')).toBeNull()
+  },
+}
+
 export const CancelNowOffered: Story = {
   args: { onCancelNow: fn() },
   play: async ({ canvas, args, userEvent }) => {

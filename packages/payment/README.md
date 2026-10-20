@@ -98,9 +98,13 @@ if (billingAuth)
   }) // 창을 닫으면 SDK 가 { code: 'USER_CANCEL' } 을 던진다
 
 // 2) 돌아온 곳: 주소를 읽고 첫 결제를 한 번만 보낸다. 결과를 모르면 훅이 같은 구독의 activate 를 알아서 다시 보낸다(서버가 재전송을 안전하게 받는다)
-const back = readBillingReturn(location.search) // { ok: true, authKey } | { ok: false, code } — 못 읽으면 PaymentRedirectError
+const back = readBillingReturn(location.search) // { ok: true, authKey } | { ok: true, providerPayload } | { ok: false, code } — 못 읽으면 PaymentRedirectError
 const activate = useActivateSubscription(api)
-activate.mutate({ id, authKey: back.authKey }) // 200 ACTIVE · 202 PENDING(첫 결제 확인 중) · 402 PAYMENT.DECLINED(구독은 끝난다)
+activate.mutate({ id, authKey: back.authKey }) // 카카오페이 · 네이버페이는 { id, providerPayload: back.providerPayload }. 200 ACTIVE · 202 PENDING(첫 결제 확인 중) · 402 PAYMENT.DECLINED(구독은 끝난다)
+
+// 2') 카카오페이 · 네이버페이(백엔드 `subscription-cid` · `recurrent.*` 를 설정했을 때): 카드 등록 창이 따로 없다 - `billingAuth.kind` 가 `KAKAOPAY_BILLING_REDIRECT`(첫 결제가 곧 등록, 돌아온 주소 `result=success&pg_token`)
+// 또는 `NAVERPAY_BILLING_REDIRECT`(등록은 돈이 안 움직인다, `resultCode=Success&reserveId&tempReceiptId`)이고 `openBillingAuth` 는 SDK 없이 서버가 예약한 주소로 구매자를 보낸다(successUrl · failUrl 은 쓰지 않는다).
+// `GET /config` 의 `subscriptionChoices` 가 둘 이상이면 화면이 「결제 방법」을 고르고 `start.mutateAsync({ planCode, provider, returnOrigin: location.origin })` 로 보낸다. 구독 응답의 `easyPayBrand`(`KAKAOPAY` · `NAVERPAY`)는 「내 구독」 카드에 앱 이름으로 보인다.
 
 // 3) 내 구독: PENDING 인 동안만 간격을 늘려 가며 다시 묻는다
 const mine = useMySubscription(api) // { subscription | null, orders: 최근 결제 5건 }

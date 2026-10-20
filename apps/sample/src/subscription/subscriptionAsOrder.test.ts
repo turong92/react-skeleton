@@ -34,6 +34,14 @@ describe('subscriptionAsOrder — the first payment read as the payment result s
     })
   })
 
+  it('a subscription paid through KakaoPay or NaverPay reads as an easy pay with the app name - the result screen shows 「카카오페이」, not 「카드」', () => {
+    expect(subscriptionAsOrder(sub({ easyPayBrand: 'KAKAOPAY', card: null }), 'S')).toMatchObject({
+      method: 'EASY_PAY',
+      easyPayBrand: 'KAKAOPAY',
+    })
+    expect(subscriptionAsOrder(sub(), 'S')).toMatchObject({ method: 'CARD' })
+  })
+
   it('PENDING (the provider has not answered about the first payment) reads as checking', () => {
     expect(subscriptionAsOrder(sub({ status: 'PENDING' }), 'Standard').status).toBe('CONFIRMING')
   })

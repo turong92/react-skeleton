@@ -111,6 +111,11 @@ export type PaymentConfig = {
    * 나라 지도에 결제사가 없고 후보가 둘이면 `provider` 는 `null` 이라 고르지 않은 주문은 거절된다. 구버전 서버는 칸이 없다
    */
   choices?: string[]
+  /**
+   * 구독을 시작할 때 구매자가 고를 수 있는 결제사 id - 이 나라에서 정기 결제 능력을 가진, 지금 열 수 있는 결제사(`choices` 와 같은 규칙, 늘 온다).
+   * **둘 이상일 때만** 「결제 방법」 고르기를 그리고 고른 id 를 `start` 의 `provider` 로 보낸다. 구버전 서버는 칸이 없다
+   */
+  subscriptionChoices?: string[]
 }
 
 /** `key` 는 서버의 정책 이름(`korea` · `period-end-only` …). 숫자는 `korea` 일 때만(설정값) */

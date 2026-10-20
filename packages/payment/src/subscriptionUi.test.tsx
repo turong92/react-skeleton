@@ -103,6 +103,18 @@ describe('MySubscriptionCard', () => {
     expect(html).toMatch(/data-variant="primary"[^>]*>기간 끝에 해지</)
   })
 
+  it('a subscription paid through KakaoPay or NaverPay shows the app name, with the card issuer when the provider gave one - never the raw brand code', () => {
+    const kakao = card({ easyPayBrand: 'KAKAOPAY', card: { issuer: 'HYUNDAI', last4: null } })
+    expect(kakao).toContain('카카오페이 · 현대카드')
+    expect(kakao).not.toContain('KAKAOPAY')
+    const naver = card({ easyPayBrand: 'NAVERPAY', card: null })
+    expect(naver).toContain('네이버페이')
+    expect(naver).not.toContain('NAVERPAY')
+    const toss = card({ easyPayBrand: null })
+    expect(toss).toContain('현대카드 ····1234')
+    expect(toss).not.toContain('카카오페이')
+  })
+
   it('CANCELING: says when it ends instead of a next payment, and offers no second cancel', () => {
     const html = card({ status: 'CANCELING' })
     expect(html).toContain('해지 예약됨')

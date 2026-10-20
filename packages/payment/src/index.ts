@@ -124,6 +124,9 @@ export type {
   SubscriptionPlan,
   SubscriptionStatus,
   PaddleBillingAuth,
+  KakaoPayBillingAuth,
+  NaverPayBillingAuth,
+  ActivationPayload,
   TossBillingAuth,
 } from './subscriptionTypes'
 export { createSubscriptionApi } from './subscriptionApi'

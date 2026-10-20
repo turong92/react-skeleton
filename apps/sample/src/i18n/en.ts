@@ -557,6 +557,7 @@ const en: Record<keyof typeof ko, string> = {
   'subscription.subscribe.startFailed': 'Could not start your subscription. Please try again.',
   'subscription.subscribe.windowFailed':
     'Could not open the card window. Please try again in a moment.',
+  'subscription.subscribe.providerLegend': 'Payment method',
   'subscription.subscribe.closed':
     'You closed the card window. Press the button again when you are ready.',
   'subscription.title': 'My subscription',

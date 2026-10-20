@@ -24,7 +24,9 @@ export function subscriptionAsOrder(subscription: Subscription, orderName: strin
     refundableAmount: 0,
     refundPending: false,
     openRefundStatus: null,
-    method: subscription.card ? 'CARD' : null,
+    // 결제사가 직접 받은 간편결제(카카오페이 · 네이버페이)면 앱 이름으로 보인다
+    method: subscription.easyPayBrand ? 'EASY_PAY' : subscription.card ? 'CARD' : null,
+    ...(subscription.easyPayBrand ? { easyPayBrand: subscription.easyPayBrand } : {}),
     card: subscription.card,
     testMode: subscription.testMode,
     failureCode: null,

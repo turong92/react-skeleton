@@ -1,4 +1,10 @@
-import { loadTossPaymentsSdk, type TossPaymentsFactory } from './checkout'
+import {
+  defaultIsMobile,
+  defaultNavigate,
+  loadTossPaymentsSdk,
+  webAddress,
+  type TossPaymentsFactory,
+} from './checkout'
 import { openPaddleCheckout, type PaddleSdk } from './paddle'
 import type { BillingAuth } from './subscriptionTypes'
 
@@ -11,6 +17,10 @@ export type OpenBillingAuthOptions = {
   /** Paddle.js 를 불러오는 함수 — 시험 · 스토리에서 가짜로 바꾼다 */
   loadPaddle?: () => Promise<PaddleSdk>
   locale?: string
+  /** 카카오페이 · 네이버페이: 구매자를 등록 창 주소로 보내는 함수 - 기본은 현재 창을 옮긴다. 시험 · 스토리에서 바꾼다 */
+  navigate?: (url: string) => void
+  /** 카카오페이: 모바일 기기인가 - 기본은 `navigator.userAgent` 로 본다 */
+  isMobile?: () => boolean
 }
 
 /**
@@ -25,6 +35,8 @@ export async function openBillingAuth(
     loadSdk = loadTossPaymentsSdk,
     loadPaddle,
     locale,
+    navigate = defaultNavigate,
+    isMobile = defaultIsMobile,
   }: OpenBillingAuthOptions,
 ): Promise<void> {
   switch (billingAuth.kind) {
@@ -45,6 +57,23 @@ export async function openBillingAuth(
         ...(locale ? { locale } : {}),
         ...(loadPaddle ? { loadSdk: loadPaddle } : {}),
       })
+    case 'KAKAOPAY_BILLING_REDIRECT': {
+      // 카드 등록 창이 따로 없다 - 서버가 예약한 결제창으로 구매자를 보낸다(첫 결제가 곧 등록). 돌아오는 주소는 서버가 정했다 - successUrl · failUrl 은 쓰지 않는다
+      const address = webAddress(
+        isMobile() ? billingAuth.attributes.mobileUrl : billingAuth.attributes.pcUrl,
+      )
+      if (address === null)
+        throw new Error('The billing auth has no http(s) address to send the buyer to')
+      navigate(address)
+      return
+    }
+    case 'NAVERPAY_BILLING_REDIRECT': {
+      const address = webAddress(billingAuth.attributes.windowUrl)
+      if (address === null)
+        throw new Error('The billing auth has no http(s) address to send the buyer to')
+      navigate(address)
+      return
+    }
     default:
       throw new Error(
         `Unknown billing auth kind: ${String((billingAuth as { kind: unknown }).kind)}`,

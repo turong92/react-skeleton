@@ -463,10 +463,13 @@ describe('private by default: the ID of X is in no value of any response Y recei
     await y.goto(`${baseUrl}/settings`) // 내 닉네임 목록(프로필)
     await pwExpect(y.getByRole('region', { name: ko('settings.nicknames') })).toBeVisible()
     await y.goto(`${baseUrl}/notes`) // 알림 · 노트 목록
-    await y.getByRole('banner').getByRole('button', { name: /^알림/ }).click()
-    await y.waitForResponse(
-      (r) => r.url().includes('/notifications') && r.request().method() === 'GET',
-    )
+    // 응답을 기다리는 일을 클릭보다 먼저 건다 - 클릭 뒤에 걸면 빠른 응답을 놓쳐 90초를 기다린다
+    await Promise.all([
+      y.waitForResponse(
+        (r) => r.url().includes('/notifications') && r.request().method() === 'GET',
+      ),
+      y.getByRole('banner').getByRole('button', { name: /^알림/ }).click(),
+    ])
     await Promise.all(reading)
     pwExpect(received.length).toBeGreaterThan(0)
     // 게시판 · 프로필 · 알림 응답을 실제로 받았다

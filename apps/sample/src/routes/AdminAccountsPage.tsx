@@ -1,4 +1,4 @@
-import { useCan } from '@skeleton/auth'
+import { useAuth, useCan } from '@skeleton/auth'
 import { createAdminAccountsApi, AdminAccounts } from '@skeleton/auth/admin'
 import { useAssignableRoles } from '../adminRoles/useAssignableRoles'
 import { apiClient } from '../api/client'
@@ -16,6 +16,7 @@ export function AdminAccountsPage() {
       api={adminApi}
       can={useCan()}
       assignableRoles={useAssignableRoles()}
+      callerPermissions={useAuth().principal?.permissions ?? []}
       labels={useAuthLabels()}
     />
   )

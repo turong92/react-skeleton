@@ -16,6 +16,7 @@ export function AuthProvider({ session, children }: { session: AuthSession; chil
       restore: session.restore,
       logout: session.logout,
       refresh: session.refresh,
+      retryPermissions: session.retryPermissions,
     }),
     [state, session],
   )

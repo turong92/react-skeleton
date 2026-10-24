@@ -34,6 +34,8 @@ export type AuthSession = {
   logout(): Promise<void>
   /** `GET /auth/me` 로 principal 을 다시 읽는다 */
   refresh(): Promise<AuthPrincipal>
+  /** 권한을 받지 못해 멈춘 뒤(`permissionsFailed`) 다시 묻는다 */
+  retryPermissions(): void
   /** 액세스 토큰은 없지만 갱신 자격이 남아 있으면(새 탭 · 쿠키 모드 표식) 갱신해 로그인 상태를 되살린다. 앱 시작 때 한 번 */
   restore(): Promise<void>
 }
@@ -75,13 +77,16 @@ export function createAuthSession({
     attempts: number
     timer: ReturnType<typeof setTimeout> | null
   } | null = null
+  /** 이 토큰의 권한을 받으려다 포기했다 - 화면이 「다시 시도」를 보인다 */
+  let permissionsFailedFor: string | null = null
   let state = compute()
 
   function compute(): AuthState {
     const token = store.get()
     if (!token) return { status: 'anonymous', token: null, principal: null }
+    const failed = permissionsFailedFor === token ? { permissionsFailed: true as const } : {}
     if (known?.token === token)
-      return { status: 'authenticated', token, principal: known.principal }
+      return { status: 'authenticated', token, principal: known.principal, ...failed }
     if (decoded?.token !== token) {
       const claims = decodeTokenPrincipal(token)
       const carried =
@@ -90,7 +95,7 @@ export function createAuthSession({
           : null
       decoded = { token, principal: claims && { ...claims, permissions: carried } }
     }
-    return { status: 'authenticated', token, principal: decoded.principal }
+    return { status: 'authenticated', token, principal: decoded.principal, ...failed }
   }
 
   // 저장소를 둘 다 바꾸는 동안에는 알리지 않는다 — 한쪽만 바뀐 중간 상태(옛 토큰 + 새 principal)가 구독자에게 새면 계정이 잠깐 「모르는 사람」으로 보인다
@@ -101,7 +106,8 @@ export function createAuthSession({
     if (
       next.status === state.status &&
       next.token === state.token &&
-      next.principal === state.principal
+      next.principal === state.principal &&
+      next.permissionsFailed === state.permissionsFailed
     )
       return
     state = next
@@ -133,6 +139,7 @@ export function createAuthSession({
         known = { token, principal: filled }
         remember(filled)
         retry = null
+        permissionsFailedFor = null
         refreshState()
       })
       .catch(() => {
@@ -141,7 +148,9 @@ export function createAuthSession({
         permissionsAskedFor = null
         const attempts = (retry?.token === token ? retry.attempts : 0) + 1
         if (attempts >= RETRY_ATTEMPTS) {
-          permissionsAskedFor = token // 더는 묻지 않는다 - 다음 갱신 · 로그인 · 새로고침이 다시 시작한다
+          permissionsAskedFor = token // 더는 묻지 않는다 - 「다시 시도」 · 다음 갱신 · 로그인 · 새로고침이 다시 시작한다
+          permissionsFailedFor = token
+          refreshState()
           return
         }
         retry = {
@@ -221,6 +230,7 @@ export function createAuthSession({
       lastPermissions = null
       decoded = null
       permissionsAskedFor = null
+      permissionsFailedFor = null
       if (retry?.timer) clearTimeout(retry.timer)
       retry = null
       batching = true
@@ -237,6 +247,14 @@ export function createAuthSession({
       } catch {
         // 이 기기는 이미 로그아웃했다 — 서버 폐기는 만료로도 끝난다
       }
+    },
+    retryPermissions() {
+      if (retry?.timer) clearTimeout(retry.timer)
+      retry = null
+      permissionsFailedFor = null
+      permissionsAskedFor = null
+      refreshState()
+      completePermissions()
     },
     async refresh() {
       const principal = withPermissions(await api.me(), [])

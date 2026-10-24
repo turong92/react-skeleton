@@ -62,7 +62,9 @@ export const koAuthLabels: AuthLabels = {
   errorLastMethod: '마지막 로그인 수단이에요. 다른 수단을 먼저 추가해 주세요.',
   errorLastAdmin: '관리자는 최소 한 명이 있어야 해요.',
   errorRoleUnknown: '없는 역할이에요. 목록을 새로 고친 뒤 다시 해 보세요.',
-  errorRoleEscalation: '내가 가진 권한 안에서만 역할을 줄 수 있어요.',
+  errorRoleEscalation: '내가 가진 권한 안에서만 역할을 주거나 회수하고, 계정을 다룰 수 있어요.',
+  permissionsLoadFailed: '권한을 불러오지 못했어요.',
+  permissionsRetry: '다시 시도',
   errorSelfAction: '내 계정에는 할 수 없는 동작이에요.',
   errorIdentityTaken:
     '이 소셜 계정은 이미 다른 계정에 연결돼 있어요. 그 계정으로 로그인한 뒤 설정에서 연결을 끊거나 그 계정을 삭제하고 다시 시도해 주세요.',

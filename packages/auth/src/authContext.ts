@@ -13,6 +13,7 @@ export type AuthContextValue = AuthState &
     | 'restore'
     | 'logout'
     | 'refresh'
+    | 'retryPermissions'
   >
 
 export const AuthContext = createContext<AuthContextValue | null>(null)

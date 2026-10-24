@@ -78,6 +78,8 @@ export type AuthState = {
   status: AuthStatus
   token: string | null
   principal: AuthPrincipal | null
+  /** 권한을 `/auth/me` 로 받으려다 몇 번 실패해 멈췄다(`principal.permissions` 는 계속 `null`) - 있을 때만 `true`. `retryPermissions()` 로 다시 묻는다 */
+  permissionsFailed?: true
 }
 
 /** `GET /auth/methods` 의 값(계약 FINAL-2b) — 모양은 `normalizeMethodsInfo` 가 느슨하게 읽는다 */

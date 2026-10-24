@@ -106,6 +106,30 @@ describe('RequirePermission', () => {
       '<b>secret</b>',
     )
   })
+  it('after giving up on the permissions it says so with a pressable 「Try again」 instead of a blank page', () => {
+    const session = createAuthSession({ api, store: createTokenStore() })
+    session.signIn({
+      accessToken: 'tok',
+      tokenType: 'Bearer',
+      expiresAt: '2026-06-12T01:00:00Z',
+      principal: { accountId: 'a', roles: [], permissions: undefined },
+    })
+    const base = session.getState()
+    Object.assign(session, { getState: () => ({ ...base, permissionsFailed: true }) })
+    const html = renderToStaticMarkup(
+      <AuthProvider session={session}>
+        <MemoryRouter initialEntries={['/admin']}>
+          <Routes>
+            <Route path="/admin" element={<RequirePermission anyOf={['x.y']} />}>
+              <Route index element={<b>secret</b>} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </AuthProvider>,
+    )
+    expect(html).toContain('Could not load your permissions.')
+    expect(html).toMatch(/<button[^>]*>Try again<\/button>/)
+  })
   it('any one of several is enough', () => {
     expect(
       render(['account.roles'], <RequirePermission anyOf={['authz.roles', 'account.roles']} />),

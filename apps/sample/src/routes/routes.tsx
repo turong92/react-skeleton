@@ -1,5 +1,6 @@
 import { RequireAuth, RequirePermission } from '@skeleton/auth'
 import { BlockedNotice } from '../auth/BlockedNotice'
+import { PermissionsFailedNotice } from '../auth/PermissionsFailedNotice'
 import { accountRoutes } from '../auth/authRoutes'
 import type { RouteObject } from 'react-router-dom'
 import { landingJsonLd } from '../landing/landingSeo'
@@ -120,7 +121,13 @@ export const routes: RouteObject[] = [
           },
           { path: '/settings', element: <SettingsPage />, handle: privateSeo('nav.settings') },
           {
-            element: <RequirePermission anyOf={['account.read']} forbidden={<BlockedNotice />} />,
+            element: (
+              <RequirePermission
+                anyOf={['account.read']}
+                forbidden={<BlockedNotice />}
+                failed={<PermissionsFailedNotice />}
+              />
+            ),
             children: [
               {
                 path: '/admin/accounts',
@@ -130,7 +137,13 @@ export const routes: RouteObject[] = [
             ],
           },
           {
-            element: <RequirePermission anyOf={['authz.roles']} forbidden={<BlockedNotice />} />,
+            element: (
+              <RequirePermission
+                anyOf={['authz.roles']}
+                forbidden={<BlockedNotice />}
+                failed={<PermissionsFailedNotice />}
+              />
+            ),
             children: [
               {
                 path: '/admin/roles',
@@ -140,7 +153,13 @@ export const routes: RouteObject[] = [
             ],
           },
           {
-            element: <RequirePermission anyOf={['payment.read']} forbidden={<BlockedNotice />} />,
+            element: (
+              <RequirePermission
+                anyOf={['payment.read']}
+                forbidden={<BlockedNotice />}
+                failed={<PermissionsFailedNotice />}
+              />
+            ),
             children: [
               // 운영자 결제 도구 — 백엔드 `skeleton.payment.admin.enabled`. 정적 경로가 아니므로 `:id` 는 목록 뒤에
               {

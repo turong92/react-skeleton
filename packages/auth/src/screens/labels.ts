@@ -71,6 +71,8 @@ export type AuthLabels = {
   errorLastAdmin: string
   errorRoleUnknown: string
   errorRoleEscalation: string
+  permissionsLoadFailed: string
+  permissionsRetry: string
   errorSelfAction: string
   /** 다른 계정이 그 소셜을 쥐고 있다(내가 끊은 뒤 그 소셜로 다시 로그인해 생긴 계정일 수 있다) — 제공자 이름을 모를 때 */
   errorIdentityTaken: string
@@ -543,7 +545,10 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   errorLastMethod: 'This is your last sign-in method. Add another one first.',
   errorLastAdmin: 'There must be at least one administrator.',
   errorRoleUnknown: 'That role does not exist. Refresh the list and try again.',
-  errorRoleEscalation: 'You can only give roles whose permissions you hold yourself.',
+  errorRoleEscalation:
+    'You can only give or take roles, and manage accounts, within the permissions you hold yourself.',
+  permissionsLoadFailed: 'Could not load your permissions.',
+  permissionsRetry: 'Try again',
   errorSelfAction: 'You cannot do that to your own account.',
   errorIdentityTaken:
     'This account is already linked to another account. Sign in with that account, unlink it in settings or delete that account, then try again.',

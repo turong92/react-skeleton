@@ -90,7 +90,7 @@ describe('AuthProvider / useAuth', () => {
         </AuthProvider>,
       ),
     ).toBe(
-      '<p>cancelDeletion,login,logout,magicLinkLogin,principal,refresh,restore,signIn,socialLogin,status,token</p>',
+      '<p>cancelDeletion,login,logout,magicLinkLogin,principal,refresh,restore,retryPermissions,signIn,socialLogin,status,token</p>',
     )
   })
 

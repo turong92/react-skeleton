@@ -151,6 +151,35 @@ describe('session permissions survive tokens written straight into the store', (
       await vi.advanceTimersByTimeAsync(20_000)
       expect(fake.me).toHaveBeenCalledTimes(3) // 몇 번 다시 묻고 멈춘다
       expect(session.getState().principal?.permissions).toBeNull()
+      expect(session.getState().permissionsFailed).toBe(true)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})
+
+describe('giving up on /auth/me can be undone', () => {
+  it('retryPermissions() clears the failed mark, asks again and fills the permissions', async () => {
+    vi.useFakeTimers()
+    try {
+      const fake = api(wire, { ...wire, permissions: ['payment.read'] })
+      let down = true
+      fake.me = vi.fn(async () => {
+        if (down) throw new Error('down')
+        return { ...wire, permissions: ['payment.read'] } as AuthPrincipal
+      })
+      const store = createTokenStore()
+      store.set(fakeJwt({ sub: 'acc_1', roles: ['CS'] }))
+      const session = createAuthSession({ api: fake, store })
+      session.subscribe(() => undefined)
+      await vi.advanceTimersByTimeAsync(20_000)
+      expect(session.getState().permissionsFailed).toBe(true)
+      down = false
+      session.retryPermissions()
+      expect(session.getState().permissionsFailed).toBeUndefined()
+      await vi.advanceTimersByTimeAsync(10)
+      expect(session.getState().principal?.permissions).toEqual(['payment.read'])
+      expect(session.getState().permissionsFailed).toBeUndefined()
     } finally {
       vi.useRealTimers()
     }

@@ -17,7 +17,7 @@ import type { AccountStatus, AdminAccount } from '../account/types'
 import styles from '../screens/auth.module.css'
 import { mergeLabels, type AuthLabels } from '../screens/labels'
 import { useAction } from '../screens/useAction'
-import { rowActions } from './rowActions'
+import { rowActions, type RoleChoice } from './rowActions'
 
 /** 표 위 검색 · 필터의 값. `loginId` 는 아이디를 켠 서버에서만 쓴다(비어 있으면 거르지 않는다) */
 export type AdminAccountsQueryState = {
@@ -30,7 +30,9 @@ export type AdminAccountsTableProps = {
   accounts: AdminAccount[]
   pagination: PaginationMeta
   /** 운영자가 줄 수 있는 역할(예 `['ADMIN','MODERATOR']`) */
-  assignableRoles: string[]
+  assignableRoles: RoleChoice[]
+  /** 호출자의 권한 목록(`principal.permissions`) - 주면 권한 상승이 될 역할 · 계정 명령을 메뉴에서 뺀다. `assignableRoles` 가 `{ name, permissions }` 일 때 뜻이 있다 */
+  callerPermissions?: readonly string[]
   /** 호출자의 권한 질문 - 정지 · 해제 · 복구 = `account.manage`, 역할 = `account.roles`. 없으면 그 명령을 메뉴에서 뺀다. 기본 모두 허용 */
   can?: (key: string) => boolean
   query: AdminAccountsQueryState
@@ -59,6 +61,7 @@ export function AdminAccountsTable({
   accounts,
   pagination,
   assignableRoles,
+  callerPermissions,
   can,
   query,
   onQueryChange,
@@ -87,7 +90,7 @@ export function AdminAccountsTable({
   const action = useAction(labels)
 
   function items(account: AdminAccount) {
-    return rowActions(account, assignableRoles, can).map((a) => ({
+    return rowActions(account, assignableRoles, can, callerPermissions).map((a) => ({
       key: a.kind,
       label:
         a.kind === 'suspend'

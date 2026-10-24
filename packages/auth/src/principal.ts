@@ -16,7 +16,7 @@ export function decodeTokenPrincipal(token: string): AuthPrincipal | null {
       username: json.username ?? null,
       email: json.email ?? null,
       roles: json.roles ?? [],
-      permissions: [],
+      permissions: null,
     }
   } catch {
     return null

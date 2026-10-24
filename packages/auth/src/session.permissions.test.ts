@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { AuthApi } from './authApi'
 import { createAuthSession } from './session'
 import { createTokenStore } from './tokenStore'
+import { fakeJwt } from './test/fixtures'
 import type { AuthPrincipal, AuthTokenResponse } from './types'
 
 type Wire = Omit<AuthPrincipal, 'permissions'> & { permissions?: string[] }
@@ -82,5 +83,76 @@ describe('session permissions', () => {
     session.subscribe(() => undefined)
     await settle()
     expect(fake.me).toHaveBeenCalledTimes(1)
+  })
+})
+
+/** 갱신기(`createSessionRefresher`) · 다른 탭은 `accept` 를 거치지 않고 저장소에 새 액세스 토큰을 바로 쓴다 */
+describe('session permissions survive tokens written straight into the store', () => {
+  const jwt = (sub: string) => fakeJwt({ sub, roles: ['CS'] })
+  const signedIn = async (fake: AuthApi, store = createTokenStore()) => {
+    const session = createAuthSession({ api: fake, store })
+    session.subscribe(() => undefined)
+    await session.login({ email: 'u@e.com', password: 'pw' })
+    return { session, store }
+  }
+  const loginWith = (permissions: string[]) => {
+    const fake = api({ ...wire, permissions }, { ...wire, permissions })
+    fake.login = async () => ({ ...tokens({ ...wire, permissions }), accessToken: jwt('acc_1') })
+    return fake
+  }
+
+  it('a refreshed token of the same account keeps the permissions at once and is confirmed by /auth/me', async () => {
+    const fake = loginWith(['payment.read', 'payment.refund'])
+    const { session, store } = await signedIn(fake)
+    store.set(jwt('acc_1') + 'x') // 갱신기가 쓴 새 토큰
+    expect(session.getState().principal?.permissions).toEqual(['payment.read', 'payment.refund'])
+    await settle()
+    expect(fake.me).toHaveBeenCalledTimes(1)
+  })
+
+  it('a token written by another tab is treated the same', async () => {
+    const fake = loginWith(['account.read'])
+    const { session, store } = await signedIn(fake)
+    store.set(jwt('acc_1') + 'y')
+    store.set(jwt('acc_1') + 'z')
+    expect(session.getState().principal?.permissions).toEqual(['account.read'])
+  })
+
+  it('another account never inherits them', async () => {
+    const fake = loginWith(['*'])
+    const { session, store } = await signedIn(fake)
+    store.set(jwt('acc_other'))
+    expect(session.getState().principal?.permissions).toBeNull()
+  })
+
+  it('restore(): a token that appears with nobody having asked yet is completed from /auth/me', async () => {
+    const fake = api(wire, { ...wire, permissions: ['payment.read'] })
+    const store = createTokenStore()
+    const session = createAuthSession({ api: fake, store })
+    session.subscribe(() => undefined)
+    expect(session.getState().status).toBe('anonymous')
+    store.set(jwt('acc_1')) // 새 탭 복원: 갱신기가 저장소에 쓴다
+    await settle()
+    expect(session.getState().principal?.permissions).toEqual(['payment.read'])
+  })
+
+  it('permissions are unknown (null), not empty, until /auth/me answers - and stay null if it keeps failing', async () => {
+    vi.useFakeTimers()
+    try {
+      const fake = api(wire, wire)
+      fake.me = vi.fn(async () => {
+        throw new Error('down')
+      })
+      const store = createTokenStore()
+      store.set(jwt('acc_1'))
+      const session = createAuthSession({ api: fake, store })
+      session.subscribe(() => undefined)
+      expect(session.getState().principal?.permissions).toBeNull()
+      await vi.advanceTimersByTimeAsync(20_000)
+      expect(fake.me).toHaveBeenCalledTimes(3) // 몇 번 다시 묻고 멈춘다
+      expect(session.getState().principal?.permissions).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

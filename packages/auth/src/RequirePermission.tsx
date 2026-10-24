@@ -11,6 +11,8 @@ export type RequirePermissionProps = {
   redirectTo?: string
   /** 로그인은 했지만 권한이 없을 때 - 로그아웃시키지 않고 이것을 보인다(기본: 「접근 차단」 안내) */
   forbidden?: ReactNode
+  /** 권한을 아직 받는 중일 때(저장된 토큰으로 막 열었을 때) 그릴 것 - 기본은 아무것도 안 그린다. 「권한 없음」 안내를 먼저 보이지 않기 위해서다 */
+  pending?: ReactNode
   children?: ReactNode
 }
 
@@ -19,13 +21,15 @@ export function RequirePermission({
   anyOf,
   redirectTo = '/login',
   forbidden,
+  pending = null,
   children,
 }: RequirePermissionProps) {
   const { status, principal } = useAuth()
   const location = useLocation()
   if (status !== 'authenticated')
     return <Navigate to={redirectTo} replace state={{ from: location }} />
-  if (!hasPermission(principal?.permissions, anyOf))
+  if (!principal || principal.permissions === null) return pending
+  if (!hasPermission(principal.permissions, anyOf))
     return forbidden ?? <AccountStateNotice kind="blocked" />
   return children ?? <Outlet />
 }

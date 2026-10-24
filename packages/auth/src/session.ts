@@ -65,15 +65,32 @@ export function createAuthSession({
 }: AuthSessionOptions): AuthSession {
   const listeners = new Set<() => void>()
   let known: { token: string; principal: AuthPrincipal | null } | null = null
-  // 권한은 `/auth/me` 만 안다(로그인 응답 · 토큰 claim 에는 없다) - 이 토큰으로 이미 물었거나 받았으면 다시 묻지 않는다(실패해도 반복하지 않는다)
+  // 권한은 응답(로그인 · 갱신)이나 `/auth/me` 만 안다(토큰 claim 에는 없다). 이 토큰으로 이미 받았거나 묻는 중이면 다시 묻지 않는다
   let permissionsAskedFor: string | null = null
+  /** 마지막으로 받은 권한 - 토큰이 갱신돼(갱신기 · 다른 탭이 저장소에 직접 쓴다) 같은 계정의 새 토큰이 오면 `/auth/me` 가 답할 때까지 이어 쓴다 */
+  let lastPermissions: { accountId: string; permissions: string[] } | null = null
+  let decoded: { token: string; principal: AuthPrincipal | null } | null = null
+  let retry: {
+    token: string
+    attempts: number
+    timer: ReturnType<typeof setTimeout> | null
+  } | null = null
   let state = compute()
 
   function compute(): AuthState {
     const token = store.get()
     if (!token) return { status: 'anonymous', token: null, principal: null }
-    const principal = known?.token === token ? known.principal : decodeTokenPrincipal(token)
-    return { status: 'authenticated', token, principal }
+    if (known?.token === token)
+      return { status: 'authenticated', token, principal: known.principal }
+    if (decoded?.token !== token) {
+      const claims = decodeTokenPrincipal(token)
+      const carried =
+        claims && lastPermissions?.accountId === claims.accountId
+          ? lastPermissions.permissions
+          : null
+      decoded = { token, principal: claims && { ...claims, permissions: carried } }
+    }
+    return { status: 'authenticated', token, principal: decoded.principal }
   }
 
   // 저장소를 둘 다 바꾸는 동안에는 알리지 않는다 — 한쪽만 바뀐 중간 상태(옛 토큰 + 새 principal)가 구독자에게 새면 계정이 잠깐 「모르는 사람」으로 보인다
@@ -89,11 +106,20 @@ export function createAuthSession({
       return
     state = next
     listeners.forEach((listener) => listener())
+    if (listeners.size > 0) completePermissions()
   }
 
-  function withPermissions(principal: WirePrincipal, fallback: string[] = []): AuthPrincipal {
+  function withPermissions(principal: WirePrincipal, fallback: string[] | null): AuthPrincipal {
     return { ...principal, permissions: principal.permissions ?? fallback }
   }
+
+  function remember(principal: AuthPrincipal) {
+    if (principal.permissions)
+      lastPermissions = { accountId: principal.accountId, permissions: principal.permissions }
+  }
+
+  const RETRY_ATTEMPTS = 3
+  const RETRY_DELAY_MS = 2000
 
   function completePermissions() {
     const token = store.get()
@@ -103,10 +129,30 @@ export function createAuthSession({
       .then(() => api.me())
       .then((principal) => {
         if (store.get() !== token) return
-        known = { token, principal: withPermissions(principal) }
+        const filled = withPermissions(principal, [])
+        known = { token, principal: filled }
+        remember(filled)
+        retry = null
         refreshState()
       })
-      .catch(() => undefined) // 화면을 숨기는 용도일 뿐 - 못 받으면 권한 없음으로 둔다
+      .catch(() => {
+        // 화면을 숨기는 용도일 뿐이라 조용히 - 권한은 모르는(null) 채로 두고(차단 화면을 띄우지 않는다) 몇 번만 다시 묻는다
+        if (store.get() !== token || permissionsAskedFor !== token) return
+        permissionsAskedFor = null
+        const attempts = (retry?.token === token ? retry.attempts : 0) + 1
+        if (attempts >= RETRY_ATTEMPTS) {
+          permissionsAskedFor = token // 더는 묻지 않는다 - 다음 갱신 · 로그인 · 새로고침이 다시 시작한다
+          return
+        }
+        retry = {
+          token,
+          attempts,
+          timer: setTimeout(() => {
+            if (retry?.token === token) retry.timer = null
+            completePermissions()
+          }, RETRY_DELAY_MS * attempts),
+        }
+      })
   }
 
   store.subscribe(refreshState)
@@ -114,12 +160,13 @@ export function createAuthSession({
 
   function accept(response: AuthTokenResponse) {
     // 로그인 응답에 권한이 없으면(`/auth/me` 만 준다) 같은 계정의 이전 값을 잠깐 이어 쓰고 `/auth/me` 로 다시 받는다 - 토큰이 갱신될 때마다 메뉴가 깜박이지 않게
-    const previous = known?.principal ?? state.principal
-    const carried = previous?.accountId === response.principal.accountId ? previous.permissions : []
-    known = {
-      token: response.accessToken,
-      principal: withPermissions(response.principal, carried),
-    }
+    const carried =
+      lastPermissions?.accountId === response.principal.accountId
+        ? lastPermissions.permissions
+        : null
+    const principal = withPermissions(response.principal, carried)
+    known = { token: response.accessToken, principal }
+    remember(principal)
     permissionsAskedFor = response.principal.permissions ? response.accessToken : null
     // 리프레시 자격을 먼저 — 액세스 토큰이 보이는 순간 갱신이 필요해도 새 자격이 있다
     batching = true
@@ -134,7 +181,6 @@ export function createAuthSession({
       batching = false
     }
     refreshState()
-    if (listeners.size > 0) completePermissions()
     return response
   }
 
@@ -172,7 +218,11 @@ export function createAuthSession({
       const refreshToken = refreshStore?.get()?.refreshToken ?? null
       const hadSession = store.get() !== null || refreshStore?.get() != null
       known = null
+      lastPermissions = null
+      decoded = null
       permissionsAskedFor = null
+      if (retry?.timer) clearTimeout(retry.timer)
+      retry = null
       batching = true
       try {
         refreshStore?.clear()
@@ -189,10 +239,11 @@ export function createAuthSession({
       }
     },
     async refresh() {
-      const principal = withPermissions(await api.me())
+      const principal = withPermissions(await api.me(), [])
       const token = store.get()
       if (token) {
         known = { token, principal }
+        remember(principal)
         permissionsAskedFor = token
       }
       refreshState()

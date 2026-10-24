@@ -64,7 +64,7 @@ describe('createAuthSession', () => {
       username: null,
       email: null,
       roles: ['ADMIN'],
-      permissions: [],
+      permissions: null,
     })
   })
 

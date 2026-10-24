@@ -189,16 +189,15 @@ describe('Board — posts, nested comments and typed reactions against the real 
     ).toHaveCount(0)
     await signOut(page)
 
-    // 글 주인도 운영자도 아닌 회원(시드 ADMIN 은 게시판 운영자 역할이 아니다)에게는 댓글을 가리거나 승인하는 단추가 없다
+    // 시드 ADMIN 은 전권 역할(`*`)이라 게시판 운영 권한(`board.moderate`)도 가진다 - 가려진 댓글을 되살리는 단추가 보인다.
+    // 「글 주인도 운영자도 아닌 회원」에게 단추가 없는 것은 운영 권한이 없는 다른 시드 계정이 없어 여기서는 보지 않는다(서버 시험과 페이지 시험이 본다)
     await signInAs(page, baseUrl, { email: 'admin@example.com', password: 'password' })
     await openBoard(page)
     await openPost(page, `${TITLE} (수정)`)
     await pwExpect(page.getByText(ko('board.comments.hidden'))).toBeVisible()
-    for (const name of ['hide', 'restore', 'approve'] as const) {
-      await pwExpect(
-        page.getByRole('button', { name: new RegExp(`^${ko(`board.comments.${name}`)}`) }),
-      ).toHaveCount(0)
-    }
+    await pwExpect(
+      page.getByRole('button', { name: new RegExp(`^${ko('board.comments.restore')}`) }).first(),
+    ).toBeVisible()
     await signOut(page)
   })
 })

@@ -414,11 +414,16 @@ describe('private by default: the ID of X is in no value of any response Y recei
     y.on('response', (response) => {
       if (!new URL(response.url()).pathname.startsWith('/api/v1/')) return
       if (!(response.headers()['content-type'] ?? '').includes('json')) return
+      // 이동으로 끊긴 응답은 본문 읽기가 실패하거나 영영 끝나지 않는다 - 10초 안에 못 읽으면 끊긴 것으로 친다
+      const cut = new Promise<void>((resolve) => setTimeout(resolve, 10_000))
       reading.push(
-        response.text().then(
-          (text) => void received.push({ url: response.url(), text }),
-          () => undefined, // 이동으로 끊긴 응답
-        ),
+        Promise.race([
+          response.text().then(
+            (text) => void received.push({ url: response.url(), text }),
+            () => undefined, // 이동으로 끊긴 응답
+          ),
+          cut,
+        ]),
       )
     })
   })

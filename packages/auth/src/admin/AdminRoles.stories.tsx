@@ -12,13 +12,19 @@ import type { AdminRolesApi } from './rolesApi'
  * 전권 역할(`protected`)은 단추가 잠기고 이유가 옆에 적힌다. 서버 오류 `AUTHZ.*` 는 창 안에 코드별 문장으로 보인다.
  * 백엔드 `skeleton.authz.admin.enabled=true` + `authz.roles` 권한일 때만 열린다.
  */
-function Demo({ prepare }: { prepare?: (api: ReturnType<typeof createFakeRolesApi>) => void }) {
+function Demo({
+  prepare,
+  callerPermissions,
+}: {
+  prepare?: (api: ReturnType<typeof createFakeRolesApi>) => void
+  callerPermissions?: string[]
+}) {
   const api = useMemo(() => {
     const created = createFakeRolesApi()
     prepare?.(created)
     return created
   }, [prepare])
-  return <AdminRoles api={api} />
+  return <AdminRoles api={api} callerPermissions={callerPermissions} />
 }
 
 const meta = {
@@ -168,5 +174,29 @@ export const BlockedOperator: Story = {
   },
   play: async ({ canvas }) => {
     await expect(await canvas.findByRole('heading', { name: 'Access blocked' })).toBeVisible()
+  },
+}
+
+/** 내게 없는 권한(`board.moderate`)의 체크 상자는 잠기고(켜기도 끄기도 못 한다) 이유가 보이며, 그런 권한을 가진 역할은 지울 수 없다(서버도 403) */
+export const PermissionsBeyondMineAreLocked: Story = {
+  render: () => <Demo callerPermissions={['authz.roles', 'payment.read']} />,
+  play: async ({ canvas, userEvent }) => {
+    const del = await canvas.findByRole('button', { name: 'Delete MODERATOR' })
+    await expect(del).toHaveAttribute('aria-disabled', 'true')
+    await expect(del).toHaveAccessibleDescription(
+      'It has permissions you do not hold, so you cannot delete it.',
+    )
+    await expect(canvas.getByRole('button', { name: 'Delete EMPTY' })).not.toHaveAttribute(
+      'aria-disabled',
+    )
+    await userEvent.click(canvas.getByRole('button', { name: 'Edit MODERATOR' }))
+    const dialog = within(await canvas.findByRole('dialog', { name: 'Edit MODERATOR' }))
+    const mine = dialog.getByLabelText('Hide posts and comments')
+    await expect(mine).toBeDisabled()
+    await expect(mine).toBeChecked()
+    await expect(mine).toHaveAccessibleDescription(
+      'You do not hold this permission, so you cannot change it.',
+    )
+    await expect(dialog.getByLabelText('View payments')).toBeEnabled()
   },
 }

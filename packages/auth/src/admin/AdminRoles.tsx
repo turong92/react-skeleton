@@ -30,6 +30,8 @@ export type AdminRolesProps = {
   supportHref?: string
   /** 만들기 · 고치기 · 지우기가 성공한 뒤 - 다른 화면의 역할 목록(계정 화면의 줄 수 있는 역할)을 다시 읽게 할 때 */
   onChanged?: () => void
+  /** 호출자의 권한 목록(`principal.permissions`) - 주면 서버의 권한 상승 규칙대로 내게 없는 권한의 체크 상자(켜기 · 끄기)와 그런 권한을 가진 역할의 지우기를 잠근다. 안 주면 잠그지 않는다 */
+  callerPermissions?: readonly string[]
 }
 
 /** `*` 를 가진 전권 역할인가 - 고칠 수 없다(서버가 `protected` 로 알려 주고, 혹시 빠져도 `*` 면 잠근다) */
@@ -59,9 +61,19 @@ type FormProps = {
   error: string | null
   onSubmit: (value: { name: string; description: string; permissions: string[] }) => void
   onClose: () => void
+  outside: (key: string) => boolean
 }
 
-function RoleDialog({ role, permissions, labels, busy, error, onSubmit, onClose }: FormProps) {
+function RoleDialog({
+  role,
+  permissions,
+  labels,
+  busy,
+  error,
+  onSubmit,
+  onClose,
+  outside,
+}: FormProps) {
   const formId = useId()
   const [name, setName] = useState(role?.name ?? '')
   const [description, setDescription] = useState(role?.description ?? '')
@@ -124,7 +136,14 @@ function RoleDialog({ role, permissions, labels, busy, error, onSubmit, onClose 
                 <Checkbox
                   key={key}
                   label={labels.permissionLabels[key] ?? key}
-                  description={labels.permissionLabels[key] ? key : undefined}
+                  description={
+                    outside(key)
+                      ? labels.permissionOutside
+                      : labels.permissionLabels[key]
+                        ? key
+                        : undefined
+                  }
+                  disabled={outside(key)}
                   checked={picked.includes(key)}
                   onChange={(e) => toggle(key, e.target.checked)}
                 />
@@ -147,8 +166,14 @@ export function AdminRoles({
   authLabels,
   supportHref,
   onChanged,
+  callerPermissions,
 }: AdminRolesProps) {
   const labels = mergeRolesLabels(given)
+  /** 서버 규칙: 자기 권한 밖의 권한은 역할에 더하지도 빼지도 못한다(전권 `*` 은 모두 가진다) */
+  const outside = (key: string) =>
+    callerPermissions !== undefined &&
+    !callerPermissions.includes('*') &&
+    !callerPermissions.includes(key)
   const load = useCallback(
     async () => ({ roles: await api.list(), permissions: await api.permissions() }),
     [api],
@@ -253,6 +278,8 @@ export function AdminRoles({
               header: labels.columns.actions,
               render: (role) => {
                 const locked = isLocked(role)
+                const outsideKeys = role.permissions.filter(outside)
+                const deleteLocked = locked || outsideKeys.length > 0
                 const lockProps = locked
                   ? { 'aria-disabled': true as const, 'aria-describedby': `${noteId}-${role.name}` }
                   : {}
@@ -271,14 +298,19 @@ export function AdminRoles({
                       variant="danger"
                       size="sm"
                       aria-label={labels.remove(role.name)}
-                      {...lockProps}
-                      onClick={locked ? undefined : () => setDeleting(role)}
+                      {...(deleteLocked
+                        ? {
+                            'aria-disabled': true as const,
+                            'aria-describedby': `${noteId}-${role.name}`,
+                          }
+                        : {})}
+                      onClick={deleteLocked ? undefined : () => setDeleting(role)}
                     >
                       {labels.removeButton}
                     </Button>
-                    {locked && (
+                    {deleteLocked && (
                       <span id={`${noteId}-${role.name}`} className={styles.muted}>
-                        {labels.protectedNote}
+                        {locked ? labels.protectedNote : labels.deleteOutside}
                       </span>
                     )}
                   </span>
@@ -297,6 +329,7 @@ export function AdminRoles({
           busy={busy}
           error={error}
           onClose={close}
+          outside={outside}
           onSubmit={(value) =>
             run(() =>
               editing === 'new'

@@ -6,7 +6,8 @@ export type PermissionInfo = { key: string; module: string }
 /** 역할 한 줄. `protected` 는 전권 역할(고칠 수 없다), `holders` 는 가진 활성 계정 수(계정 모듈이 없으면 null) */
 export type AdminRole = {
   name: string
-  description: string
+  /** 서버가 null 을 줄 수 있다(설명 없이 만든 역할) */
+  description: string | null
   permissions: string[]
   protected: boolean
   holders: number | null

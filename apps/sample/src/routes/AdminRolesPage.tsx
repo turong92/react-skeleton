@@ -1,3 +1,4 @@
+import { useAuth } from '@skeleton/auth'
 import { AdminRoles, koAdminRolesLabels } from '@skeleton/auth/admin'
 import { useQueryClient } from '@tanstack/react-query'
 import { adminRolesApi } from '../adminRoles/api'
@@ -15,6 +16,7 @@ export function AdminRolesPage() {
   return (
     <AdminRoles
       api={adminRolesApi}
+      callerPermissions={useAuth().principal?.permissions ?? []}
       labels={locale === 'ko' ? koAdminRolesLabels : undefined}
       authLabels={useAuthLabels()}
       onChanged={() => void client.invalidateQueries({ queryKey: assignableRolesKey })}

@@ -36,6 +36,10 @@ export type AdminRolesLabels = {
   /** 전권(`*`) 표시 */
   allPermissions: string
   holdersUnknown: string
+  /** 호출자에게 없는 권한의 체크 상자 옆 글자 - 켜지도 끄지도 못하는 이유 */
+  permissionOutside: string
+  /** 호출자 권한 밖 권한을 가진 역할 줄 옆 글자 - 지울 수 없는 이유 */
+  deleteOutside: string
   /** 모르는 권한 키는 키 그대로 보인다 - 아는 키의 이름 */
   permissionLabels: Record<string, string>
   /** 권한 묶음 제목(모듈 이름). 모르는 모듈은 이름 그대로 */
@@ -87,6 +91,8 @@ export const defaultAdminRolesLabels: AdminRolesLabels = {
   protectedNote: 'Full-access role - it cannot be changed or deleted.',
   allPermissions: 'Everything',
   holdersUnknown: '-',
+  permissionOutside: 'You do not hold this permission, so you cannot change it.',
+  deleteOutside: 'It has permissions you do not hold, so you cannot delete it.',
   permissionLabels: {
     'account.read': 'View accounts',
     'account.manage': 'Suspend and restore accounts',
@@ -156,6 +162,8 @@ export const koAdminRolesLabels: Partial<AdminRolesLabels> = {
   protectedNote: '전권 역할이라 고치거나 지울 수 없어요.',
   allPermissions: '전체',
   holdersUnknown: '-',
+  permissionOutside: '내게 없는 권한이라 바꿀 수 없어요.',
+  deleteOutside: '내게 없는 권한이 들어 있어 지울 수 없어요.',
   permissionLabels: {
     'account.read': '계정 보기',
     'account.manage': '계정 정지 · 복구',

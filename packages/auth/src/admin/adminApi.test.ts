@@ -9,10 +9,24 @@ function fake() {
     calls.push({ kind, path, request })
     return { values: [], pagination: { page: 0 }, meta: {} } as never
   }
-  return { calls, client: { page: rec('page'), value: rec('value'), noContent: rec('noContent') } }
+  return {
+    calls,
+    client: {
+      page: rec('page'),
+      value: rec('value'),
+      noContent: rec('noContent'),
+      list: rec('list'),
+    },
+  }
 }
 
 describe('createAdminAccountsApi (opt-in backend: skeleton.account.admin.enabled)', () => {
+  it('assignableRoles → GET /admin/accounts/assignable-roles (the roles this operator may give)', async () => {
+    const { client, calls } = fake()
+    await createAdminAccountsApi(client).assignableRoles()
+    expect(calls[0]).toMatchObject({ kind: 'list', path: '/admin/accounts/assignable-roles' })
+  })
+
   it('list → GET /admin/accounts with only the filters that are set', async () => {
     const { client, calls } = fake()
     await createAdminAccountsApi(client).list({ email: 'a@', page: 1, size: 20 })

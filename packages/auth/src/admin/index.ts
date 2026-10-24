@@ -5,7 +5,7 @@ export type { AdminAccountsQueryState, AdminAccountsTableProps } from './AdminAc
 export { rowActions } from './rowActions'
 export type { AdminRowAction } from './rowActions'
 export { createAdminAccountsApi } from './adminApi'
-export type { AdminAccountQuery, AdminAccountsApi } from './adminApi'
+export type { AdminAccountQuery, AdminAccountsApi, AssignableRole } from './adminApi'
 export type { AdminAccount } from '../account/types'
 export { adminBlocked } from './adminErrors'
 export { AdminRoles } from './AdminRoles'

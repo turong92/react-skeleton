@@ -19,7 +19,11 @@ export type AdminAccountsApi = {
   restore(id: string): Promise<void>
   grantRole(id: string, role: string): Promise<void>
   revokeRole(id: string, role: string): Promise<void>
+  /** 이 운영자가 줄 수 있는 역할(`account.roles`) - 역할 모듈(`authz`)이 없는 서버도 답한다. 전권 역할의 `permissions` 는 `['*']` */
+  assignableRoles(): Promise<AssignableRole[]>
 }
+
+export type AssignableRole = { name: string; permissions: string[] }
 
 const seg = encodeURIComponent
 
@@ -29,11 +33,12 @@ const clampSize = (size: number) => Math.min(100, Math.max(1, Math.floor(size)))
 
 /** 운영자 계정 도구(`/admin/accounts` — 백엔드 `skeleton.account.admin.enabled=true` 일 때만 열린다, ADMIN 역할 필요) */
 export function createAdminAccountsApi(
-  client: Pick<ApiClient, 'page' | 'value' | 'noContent'>,
+  client: Pick<ApiClient, 'page' | 'value' | 'noContent' | 'list'>,
 ): AdminAccountsApi {
   const post = (path: string, json: unknown = {}) =>
     client.noContent(path, { method: 'POST', json })
   return {
+    assignableRoles: () => client.list<AssignableRole>('/admin/accounts/assignable-roles'),
     list: (query = {}) =>
       client.page<AdminAccount>('/admin/accounts', {
         params: Object.fromEntries(

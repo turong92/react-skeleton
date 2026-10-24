@@ -108,6 +108,7 @@ describe('adminApi.list: ?loginId= exact', () => {
     const client = {
       page: async (_p: string, r?: ApiRequest) => (calls.push(r), { values: [] }) as never,
       value: async () => ({}) as never,
+      list: async () => [] as never,
       noContent: async () => undefined,
     }
     const api = createAdminAccountsApi(client)

@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `AuthApi.me()` · `AuthTokenResponse.principal` 의 타입이 `WirePrincipal`(권한이 선택)이 됐다. `AuthPrincipal` 을 직접 만들어 쓰던 테스트 · 스토리는 `permissions: []` 를 더해야 한다.
 - `@skeleton/auth/admin`: `AdminAccounts` · `AdminAccountsTable` 의 `can` prop(정지 · 해제 · 복구 = `account.manage`, 역할 부여/회수 = `account.roles`), `rowActions(account, roles, can?)`. 메뉴가 비는 줄은 ⋯ 를 그리지 않는다. `can` 을 안 주면 전과 같다.
 - `@skeleton/payment/admin`: `AdminOrderPanel` · `RefundRequestTable` · `WebhookEventTable` 의 `can` prop - 환불 · 요청 승인/거절 = `payment.refund`, 결제사와 맞추기 · 닫기 · 웹훅 다시 처리 = `payment.operate`. `PAYMENT_PERMISSIONS` · `CanFn` 내보내기. `can` 을 안 주면 전과 같다.
+- 권한이 화면에 반영되는 시점: 로그인·토큰 갱신 응답의 principal 이 `permissions` 를 싣고(백엔드 계약), 없는 옛 서버는 세션이 `/auth/me` 로 대신 읽는다. 운영자가 권한을 바꾸면 다음 갱신 · 새로고침 때 메뉴가 바뀌고, 그 전에 누른 호출은 서버가 403 을 주어 「접근 차단」 안내가 뜬다(즉시 푸시는 없다).
 - 샘플: `/admin/payments` 는 `payment.read`, `/admin/accounts` 는 `account.read` 로 라우트를 가리고 메뉴도 항목마다 그 권한이 있을 때만 그린다(`ADMIN` 문자열 없음 - `noHardcodedRoles.test.ts` 가 지킨다. 역할 부여 화면의 `assignableRoles` 만 예외).
 
 ### Added — 카카오페이 · 네이버페이 정기 결제 (2026-10-20)

@@ -95,6 +95,17 @@ describe('RequirePermission', () => {
     )
     expect(html).toBe('<i>wait</i>')
   })
+  it('a single `permission` works like a one-item anyOf, and both together accept either', () => {
+    expect(render(['payment.read'], <RequirePermission permission="payment.read" />)).toBe(
+      '<b>secret</b>',
+    )
+    expect(
+      render(['a.b'], <RequirePermission permission="payment.read" forbidden={<p>no</p>} />),
+    ).toBe('<p>no</p>')
+    expect(render(['a.b'], <RequirePermission permission="payment.read" anyOf={['a.b']} />)).toBe(
+      '<b>secret</b>',
+    )
+  })
   it('any one of several is enough', () => {
     expect(
       render(['account.roles'], <RequirePermission anyOf={['authz.roles', 'account.roles']} />),

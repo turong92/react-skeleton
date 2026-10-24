@@ -65,7 +65,7 @@ export function createAuthSession({
 }: AuthSessionOptions): AuthSession {
   const listeners = new Set<() => void>()
   let known: { token: string; principal: AuthPrincipal | null } | null = null
-  // 권한은 응답(로그인 · 갱신)이나 `/auth/me` 만 안다(토큰 claim 에는 없다). 이 토큰으로 이미 받았거나 묻는 중이면 다시 묻지 않는다
+  // 권한은 로그인 · 갱신 응답과 `/auth/me` 가 준다(토큰 claim 에는 없다. 권한을 안 싣는 옛 서버의 응답도 있다). 이 토큰으로 이미 받았거나 묻는 중이면 다시 묻지 않는다
   let permissionsAskedFor: string | null = null
   /** 마지막으로 받은 권한 - 토큰이 갱신돼(갱신기 · 다른 탭이 저장소에 직접 쓴다) 같은 계정의 새 토큰이 오면 `/auth/me` 가 답할 때까지 이어 쓴다 */
   let lastPermissions: { accountId: string; permissions: string[] } | null = null
@@ -159,7 +159,7 @@ export function createAuthSession({
   refreshStore?.subscribe(refreshState)
 
   function accept(response: AuthTokenResponse) {
-    // 로그인 응답에 권한이 없으면(`/auth/me` 만 준다) 같은 계정의 이전 값을 잠깐 이어 쓰고 `/auth/me` 로 다시 받는다 - 토큰이 갱신될 때마다 메뉴가 깜박이지 않게
+    // 응답에 권한이 있으면 그 값을 쓴다. 없으면(옛 서버) 같은 계정의 이전 값을 잠깐 이어 쓰고 `/auth/me` 로 다시 받는다 - 토큰이 갱신될 때마다 메뉴가 깜박이지 않게
     const carried =
       lastPermissions?.accountId === response.principal.accountId
         ? lastPermissions.permissions

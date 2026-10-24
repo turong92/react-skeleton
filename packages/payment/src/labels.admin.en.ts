@@ -53,6 +53,8 @@ export const defaultPaymentAdminLabels: PaymentAdminLabels = {
   eventCodes: {
     PROVIDER_PENDING_EXPIRED: 'The provider did not finish in time, so this line was closed',
     LATE_RESULT: "The provider's refund result arrived after this line was closed",
+    LATE_RESULT_APPLIED:
+      'The provider reported this closed line as refunded, so it was corrected to refunded',
   },
   actors: { USER: 'Buyer', OPERATOR: 'Operator', SYSTEM: 'System', PROVIDER: 'Provider' },
   eventTypes: {

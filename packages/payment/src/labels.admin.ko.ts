@@ -47,6 +47,7 @@ export const koPaymentAdminLabels: PaymentAdminLabels = {
   eventCodes: {
     PROVIDER_PENDING_EXPIRED: '결제사가 정해진 시간 안에 끝내지 못해 닫혔어요',
     LATE_RESULT: '닫힌 뒤에 결제사의 환불 결과가 도착했어요',
+    LATE_RESULT_APPLIED: '닫혔던 줄을 결제사가 환불됐다고 알려와 환불됨으로 바로잡았어요',
   },
   actors: { USER: '본인', OPERATOR: '운영자', SYSTEM: '시스템', PROVIDER: '결제사' },
   eventTypes: {

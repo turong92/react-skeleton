@@ -287,7 +287,11 @@ describe('the operator words (spec 11.2: 「결제사와 맞추기」, 「확인
       'RESULT_MISMATCH',
     ])
     // `PROVIDER_PENDING_EXPIRED` 는 줄에 안 찍히고 이력에만 남는다
-    expect(Object.keys(a.eventCodes).sort()).toEqual(['LATE_RESULT', 'PROVIDER_PENDING_EXPIRED'])
+    expect(Object.keys(a.eventCodes).sort()).toEqual([
+      'LATE_RESULT',
+      'LATE_RESULT_APPLIED',
+      'PROVIDER_PENDING_EXPIRED',
+    ])
     expect(Object.keys(defaultPaymentLabels.admin.refundFailure).sort()).toEqual(
       Object.keys(a.refundFailure).sort(),
     )
@@ -300,6 +304,10 @@ describe('the operator words (spec 11.2: 「결제사와 맞추기」, 「확인
     expect(a.refundFailure.LATE_RESULT).toContain('닫힌 뒤에 결제사의 환불 결과가 도착했어요')
     expect(a.refundFailure.LATE_RESULT).toContain('환불된 금액을 확인해 주세요')
     expect(a.eventCodes.LATE_RESULT).toBe('닫힌 뒤에 결제사의 환불 결과가 도착했어요')
+  })
+
+  it('a closed line the provider later reports as refunded is named as corrected, not as a failure', () => {
+    expect(a.eventCodes.LATE_RESULT_APPLIED).toContain('환불됨으로 바로잡았어요')
   })
 
   it('RESULT_MISMATCH does not claim the amount differed (a remaining-amount mismatch has the requested amount)', () => {

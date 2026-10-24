@@ -1,0 +1,56 @@
+.stack {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.muted {
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.form {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.group {
+  display: grid;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: var(--space-md);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.group legend {
+  padding-inline: var(--space-xs);
+  color: var(--text-strong);
+  font-weight: 600;
+}
+
+.permissions {
+  display: grid;
+  gap: var(--space-md);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.permissions > legend {
+  margin-bottom: var(--space-sm);
+  color: var(--text-strong);
+  font-weight: 600;
+}

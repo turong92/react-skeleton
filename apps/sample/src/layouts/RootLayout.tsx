@@ -58,10 +58,12 @@ export function AdminLinks() {
   const { t } = useT()
   const canPayments = usePermission('payment.read')
   const canAccounts = usePermission('account.read')
+  const canRoles = usePermission('authz.roles')
   return (
     <>
       {canPayments && <NavLink to="/admin/payments">{t('nav.adminPayments')}</NavLink>}
       {canAccounts && <NavLink to="/admin/accounts">{t('nav.adminAccounts')}</NavLink>}
+      {canRoles && <NavLink to="/admin/roles">{t('nav.adminRoles')}</NavLink>}
     </>
   )
 }

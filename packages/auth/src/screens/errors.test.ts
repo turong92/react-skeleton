@@ -27,6 +27,8 @@ describe('authErrorMessage', () => {
     ['ACCOUNT.LAST_SIGN_IN_METHOD', 409, L.errorLastMethod],
     ['ACCOUNT.LAST_ADMIN', 409, L.errorLastAdmin],
     ['ACCOUNT.SELF_ACTION_FORBIDDEN', 409, L.errorSelfAction],
+    ['ACCOUNT.ROLE_UNKNOWN', 400, L.errorRoleUnknown],
+    ['ACCOUNT.ROLE_ESCALATION', 403, L.errorRoleEscalation],
     ['ACCOUNT.IDENTITY_TAKEN', 409, L.errorIdentityTaken],
     ['ACCOUNT.IDENTITY_EXISTS', 409, L.errorIdentityExists],
     ['ACCOUNT.SOCIAL_EMAIL_CONFLICT', 409, L.errorSocialConflict],

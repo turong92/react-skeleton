@@ -119,3 +119,29 @@ describe('login id codes (account contract FINAL-7 L12)', () => {
     expect(ErrorCodes.ACCOUNT_LOGIN_ID_ALREADY_SET).toBe('ACCOUNT.LOGIN_ID_ALREADY_SET') // 409
   })
 })
+
+describe('authz codes (kotlin-skeleton modules/authz, docs/authz-http-contract.md)', () => {
+  it('names the seven role-management codes and the two account role-grant codes', () => {
+    expect([
+      ErrorCodes.AUTHZ_ROLE_PROTECTED,
+      ErrorCodes.AUTHZ_ROLE_IN_USE,
+      ErrorCodes.AUTHZ_ROLE_EXISTS,
+      ErrorCodes.AUTHZ_ROLE_NOT_FOUND,
+      ErrorCodes.AUTHZ_PERMISSION_UNKNOWN,
+      ErrorCodes.AUTHZ_ESCALATION,
+      ErrorCodes.AUTHZ_SELF_LOCKOUT,
+      ErrorCodes.ACCOUNT_ROLE_UNKNOWN,
+      ErrorCodes.ACCOUNT_ROLE_ESCALATION,
+    ]).toEqual([
+      'AUTHZ.ROLE_PROTECTED',
+      'AUTHZ.ROLE_IN_USE',
+      'AUTHZ.ROLE_EXISTS',
+      'AUTHZ.ROLE_NOT_FOUND',
+      'AUTHZ.PERMISSION_UNKNOWN',
+      'AUTHZ.ESCALATION',
+      'AUTHZ.SELF_LOCKOUT',
+      'ACCOUNT.ROLE_UNKNOWN',
+      'ACCOUNT.ROLE_ESCALATION',
+    ])
+  })
+})

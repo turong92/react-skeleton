@@ -567,6 +567,7 @@ export default {
     '구독은 시작되지 않았어요. 다시 해 보거나 다른 결제 수단을 골라 주세요.',
   'nav.adminPayments': '결제 관리',
   'nav.adminAccounts': '계정 관리',
+  'nav.adminRoles': '역할 관리',
   'admin.payments.title': '결제 관리',
   'admin.payments.subtitle': '결제를 확인하고 환불 요청을 처리해요.',
   'admin.payments.tabsLabel': '결제 보기',

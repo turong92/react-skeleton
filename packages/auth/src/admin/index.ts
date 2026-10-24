@@ -8,3 +8,16 @@ export { createAdminAccountsApi } from './adminApi'
 export type { AdminAccountQuery, AdminAccountsApi } from './adminApi'
 export type { AdminAccount } from '../account/types'
 export { adminBlocked } from './adminErrors'
+export { AdminRoles } from './AdminRoles'
+export type { AdminRolesProps } from './AdminRoles'
+export { createAdminRolesApi } from './rolesApi'
+export type {
+  AdminRole,
+  AdminRolesApi,
+  CreateRoleInput,
+  PermissionInfo,
+  UpdateRoleInput,
+} from './rolesApi'
+export { roleErrorMessage } from './rolesErrors'
+export { defaultAdminRolesLabels, koAdminRolesLabels, mergeRolesLabels } from './rolesLabels'
+export type { AdminRolesLabels } from './rolesLabels'

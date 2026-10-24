@@ -7,6 +7,7 @@ import { AppFrame } from '../layouts/AppFrame'
 import type { MessageKey } from '../i18n'
 import type { SeoHandle } from '../seo/routeSeo'
 import { AdminAccountsPage } from './AdminAccountsPage'
+import { AdminRolesPage } from './AdminRolesPage'
 import { AdminPaymentPage } from './AdminPaymentPage'
 import { AdminPaymentsPage } from './AdminPaymentsPage'
 import { BoardFormPage } from './BoardFormPage'
@@ -125,6 +126,16 @@ export const routes: RouteObject[] = [
                 path: '/admin/accounts',
                 element: <AdminAccountsPage />,
                 handle: privateSeo('nav.account'),
+              },
+            ],
+          },
+          {
+            element: <RequirePermission anyOf={['authz.roles']} forbidden={<BlockedNotice />} />,
+            children: [
+              {
+                path: '/admin/roles',
+                element: <AdminRolesPage />,
+                handle: privateSeo('nav.adminRoles'),
               },
             ],
           },

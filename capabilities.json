@@ -1962,13 +1962,18 @@
       }
     },
     {
-      "patterns": ["packages/auth/src/admin/AdminAccounts.stories.tsx"],
+      "patterns": [
+        "packages/auth/src/admin/AdminAccounts.stories.tsx",
+        "packages/auth/src/admin/AdminRoles.stories.tsx"
+      ],
       "stories": [],
       "docs": ["packages/auth/README.md"],
       "entryPoints": [
         "@skeleton/auth/admin#AdminAccounts",
         "@skeleton/auth/admin#AdminAccountsTable",
-        "@skeleton/auth/admin#createAdminAccountsApi"
+        "@skeleton/auth/admin#createAdminAccountsApi",
+        "@skeleton/auth/admin#AdminRoles",
+        "@skeleton/auth/admin#createAdminRolesApi"
       ],
       "needs": ["auth"],
       "backend": {
@@ -1989,7 +1994,7 @@
         "alsoVia": [],
         "optOut": null
       },
-      "summary": "운영자 계정 표(선택 내보내기 @skeleton/auth/admin) — 검색 · 상태 필터 · 정지 · 해제 · 삭제 유예 복구 · 역할 부여/회수.",
+      "summary": "운영자 계정 표(선택 내보내기 @skeleton/auth/admin) — 검색 · 상태 필터 · 정지 · 해제 · 삭제 유예 복구 · 역할 부여/회수. 역할 관리 화면(AdminRoles — 만들기 · 권한 고르기 · 고치기 · 지우기)은 백엔드 authz 모듈이 있을 때.",
       "path": "packages/auth/src/admin/AdminAccounts.tsx",
       "notFor": [
         "백엔드 skeleton.account.admin.enabled=true 와 account.read · account.manage · account.roles 권한이 있어야 열린다(RequirePermission 은 화면용, 검사는 서버)",

@@ -31,6 +31,8 @@ const byCode = (labels: AuthLabels): Record<string, string> => ({
   [ErrorCodes.ACCOUNT_REAUTH_REQUIRED]: labels.errorReauthRequired,
   [ErrorCodes.ACCOUNT_LAST_SIGN_IN_METHOD]: labels.errorLastMethod,
   [ErrorCodes.ACCOUNT_LAST_ADMIN]: labels.errorLastAdmin,
+  [ErrorCodes.ACCOUNT_ROLE_UNKNOWN]: labels.errorRoleUnknown,
+  [ErrorCodes.ACCOUNT_ROLE_ESCALATION]: labels.errorRoleEscalation,
   [ErrorCodes.ACCOUNT_DISCARD_NOT_ALLOWED]: labels.errorDiscardNotAllowed,
   [ErrorCodes.ACCOUNT_SELF_ACTION_FORBIDDEN]: labels.errorSelfAction,
   [ErrorCodes.ACCOUNT_ERASED]: labels.errorErased,

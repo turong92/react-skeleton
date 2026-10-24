@@ -95,7 +95,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 | `account-lifecycle` | 계정 수명주기 화면 한 벌 — 가입(서버 정책 힌트 · 캡차 · 동의 슬롯 · 메일로 받은 6자리 인증번호를 같은 화면에서 입력하면 바로 로그인) · 비밀번호 재설정 · 링크 로그인 도착 · 로그인(방법은 백엔드가 알려 준다) · 계정 설정(이메일 변경 · 첫 비밀번호 · 소셜 연결/해제 · 삭제의 다시 인증은 비밀번호 · 메일 인증번호(그 자리에서 입력) · 제공자 동의 중 계정에 맞는 하나, 이메일 변경 대기는 서버가 말해 준다) · 오래된 메일 링크 안내 · 정지/차단 안내. createAuthRoutes 가 라우트까지 한 번에. | 항상 | account, account-jdbc, auth-session, auth-session-jdbc | stable | 회원가입, 가입 화면, 이메일 인증, 메일 확인, 비밀번호 재설정, 비밀번호 찾기 / sign up, registration screen, verify email, check your email, reset password, forgot password |
 | `session-refresh` | 액세스 토큰 자동 갱신 — 401 이면 갱신을 한 번으로 합쳐(single-flight) 요청을 한 번만 다시 보낸다. 회전하는 리프레시 토큰을 안전하게 저장하고 탭 사이를 락 · storage 이벤트로 맞추며, 재사용 · 만료 때는 깨끗이 로그아웃. body · cookie 모드. | 항상 | auth-session, auth-session-jdbc | stable | 토큰 갱신, 리프레시 토큰, 자동 로그인 유지, 세션 만료, 탭 동기화 / token refresh, refresh token, silent refresh, session expiry, cross-tab sync |
 | `magic-link-login` | 이메일 링크 로그인 — 로그인 화면의 「링크 받기」 · 메일 확인 안내 · 링크를 열면 로그인되는 도착 화면. 비밀번호 없이 쓰거나 비밀번호와 나란히 켠다. | 항상 | auth-magic-link | stable | 링크 로그인, 매직링크, 비밀번호 없는 로그인, 이메일 로그인 / magic link, passwordless, email sign in |
-| `account-admin` | 운영자 계정 표(선택 내보내기 @skeleton/auth/admin) — 검색 · 상태 필터 · 정지 · 해제 · 삭제 유예 복구 · 역할 부여/회수. | 항상 | account | stable | 운영자 도구, 계정 관리, 계정 정지, 관리자 화면 / admin tools, account management, suspend account, admin panel |
+| `account-admin` | 운영자 계정 표(선택 내보내기 @skeleton/auth/admin) — 검색 · 상태 필터 · 정지 · 해제 · 삭제 유예 복구 · 역할 부여/회수. 역할 관리 화면(AdminRoles — 만들기 · 권한 고르기 · 고치기 · 지우기)은 백엔드 authz 모듈이 있을 때. | 항상 | account | stable | 운영자 도구, 계정 관리, 계정 정지, 관리자 화면 / admin tools, account management, suspend account, admin panel |
 | `live-notifications` | 알림이 새로고침 없이 즉시 뜬다 — 실시간 연결(SSE 또는 WebSocket)로 받은 이벤트를 알림 캐시에 넣어 종 · 목록 · 안 읽은 수가 바로 바뀐다. | --packages notifications | (경로만) | stable | 실시간 알림, 알림 즉시 표시, 푸시 알림, 알림 종 실시간 / live notifications, realtime notifications, push notifications, sse notifications |
 | `landing-page` | 공개 첫 화면 — Hero · 기능 · 한마디 · 요금제 · FAQ · 마지막 권유 · 푸터를 Patterns/Landing 한 장으로 조립해 시작한다. | --packages marketing | — | stable | 랜딩, 랜딩 페이지, 홍보 페이지, 첫 화면, 홈페이지 / landing page, homepage, marketing page, hero section |
 | `pricing-page` | 요금제 페이지 — 월/연 토글 · 절약 % · 강조 요금제 · 문의형 · 결제 질문 FAQ 를 데이터(plans)로 그리고 선택은 onSelect 로 받는다. | --packages marketing | — | stable | 요금제, 가격표, 플랜, 월 연 결제 토글, 구독 요금 / pricing page, pricing table, plans, subscription pricing |
@@ -455,15 +455,15 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 - 쓰지 않는 경우: 링크는 15분 · 한 번만 — 도착 화면은 열자마자 한 번만 호출한다 / 없는 주소로 가입까지 해 줄지는 백엔드 skeleton.auth-magic-link.sign-up / 이미 있는 계정은 가입이 닫혀 있어도 링크로 들어온다. 비밀번호가 미확인인 계정은 링크로 들어오면 가입 때 정한 비밀번호가 버려진다 — 설정은 「비밀번호 없음」으로 보인다
 - 키워드: 링크 로그인, 매직링크, 비밀번호 없는 로그인, 이메일 로그인 / magic link, passwordless, email sign in
 
-### `account-admin` — 운영자 계정 표(선택 내보내기 @skeleton/auth/admin) — 검색 · 상태 필터 · 정지 · 해제 · 삭제 유예 복구 · 역할 부여/회수.
+### `account-admin` — 운영자 계정 표(선택 내보내기 @skeleton/auth/admin) — 검색 · 상태 필터 · 정지 · 해제 · 삭제 유예 복구 · 역할 부여/회수. 역할 관리 화면(AdminRoles — 만들기 · 권한 고르기 · 고치기 · 지우기)은 백엔드 authz 모듈이 있을 때.
 
 - 종류 · 상태: pattern · stable
 - 위치: `@skeleton/auth` (`packages/auth/src/admin/AdminAccounts.tsx`)
 - 켜는 법: 모든 프로젝트에 들어간다
 - 필요한 것: `auth`
 - 백엔드: 모듈 `account` · 경로 `/api/v1/admin/accounts`
-- 주요 진입점: `@skeleton/auth/admin#AdminAccounts` · `@skeleton/auth/admin#AdminAccountsTable` · `@skeleton/auth/admin#createAdminAccountsApi`
-- 복사해 시작할 Patterns: `packages/auth/src/admin/AdminAccounts.stories.tsx`
+- 주요 진입점: `@skeleton/auth/admin#AdminAccounts` · `@skeleton/auth/admin#AdminAccountsTable` · `@skeleton/auth/admin#createAdminAccountsApi` · `@skeleton/auth/admin#AdminRoles` · `@skeleton/auth/admin#createAdminRolesApi`
+- 복사해 시작할 Patterns: `packages/auth/src/admin/AdminAccounts.stories.tsx` · `packages/auth/src/admin/AdminRoles.stories.tsx`
 - 문서: `packages/auth/README.md`
 - 쓰지 않는 경우: 백엔드 skeleton.account.admin.enabled=true 와 account.read · account.manage · account.roles 권한이 있어야 열린다(RequirePermission 은 화면용, 검사는 서버) / 사용자 지원용 상세 · 감사 로그 화면은 없다
 - 키워드: 운영자 도구, 계정 관리, 계정 정지, 관리자 화면 / admin tools, account management, suspend account, admin panel

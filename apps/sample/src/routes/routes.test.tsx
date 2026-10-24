@@ -75,6 +75,8 @@ describe('routes', () => {
     }
     expect(guarded('/admin/accounts')).toBe(true)
     expect(permissionsOf('/admin/accounts')).toEqual([['account.read']])
+    expect(guarded('/admin/roles')).toBe(true)
+    expect(permissionsOf('/admin/roles')).toEqual([['authz.roles']])
     // 사용자 쪽 결제 화면에는 권한 가드가 없다
     for (const path of ['/cheer', '/cheers', '/payments/ord_abc'])
       expect(permissionsOf(path), path).toEqual([])

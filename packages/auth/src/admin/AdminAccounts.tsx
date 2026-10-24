@@ -11,6 +11,8 @@ import type { AdminAccountsApi } from './adminApi'
 export type AdminAccountsProps = {
   api: AdminAccountsApi
   assignableRoles: string[]
+  /** 호출자의 권한 질문(`useCan()`) - 표의 명령을 권한으로 가린다. 기본 모두 허용 */
+  can?: (key: string) => boolean
   pageSize?: number
   formatDate?: (iso: string) => string
   /** 차단 안내의 「문의」 링크 */
@@ -22,6 +24,7 @@ export type AdminAccountsProps = {
 export function AdminAccounts({
   api,
   assignableRoles,
+  can,
   pageSize = 20,
   formatDate,
   supportHref,
@@ -65,6 +68,7 @@ export function AdminAccounts({
           accounts={list.data.values}
           pagination={list.data.pagination}
           assignableRoles={assignableRoles}
+          can={can}
           query={query}
           onQueryChange={(next) => {
             setQuery(next)

@@ -1,7 +1,7 @@
 import type { ApiClient } from '@skeleton/api-client'
 import type {
   AuthMethodsWire,
-  AuthPrincipal,
+  WirePrincipal,
   AuthTokenResponse,
   PasswordLoginRequest,
   SocialProof,
@@ -19,7 +19,7 @@ export type AuthApi = {
     options?: { deviceName?: string },
   ): Promise<AuthTokenResponse>
   /** `GET /auth/me` — 인증은 클라이언트의 `getAuthHeaders` 가 붙인다 */
-  me(): Promise<AuthPrincipal>
+  me(): Promise<WirePrincipal>
   /** `POST /auth/social/{provider}/login` (auth-social 모듈) */
   socialLogin(
     provider: string,
@@ -70,7 +70,7 @@ export function createAuthApi(
         skipAuth: true,
         ...(options?.deviceName ? { headers: { 'X-Device-Name': options.deviceName } } : {}),
       }),
-    me: () => client.value<AuthPrincipal>('/auth/me'),
+    me: () => client.value<WirePrincipal>('/auth/me'),
     socialLogin: (provider, authorizationCode, redirectUri, proof) =>
       client.value<AuthTokenResponse>(`/auth/social/${encodeURIComponent(provider)}/login`, {
         method: 'POST',

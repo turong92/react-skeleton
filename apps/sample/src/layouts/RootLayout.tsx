@@ -1,4 +1,4 @@
-import { useAuth } from '@skeleton/auth'
+import { useAuth, usePermission } from '@skeleton/auth'
 import { NotificationBell } from '@skeleton/notifications'
 import { ConsentBanner, SiteFooter, type FooterLink } from '@skeleton/marketing'
 import { ThemeToggle } from '@skeleton/theme'
@@ -53,15 +53,15 @@ function SignedInActions() {
   )
 }
 
-/** 운영자 화면으로 가는 메뉴 - 라우트 가드(`RequireRole roles={['ADMIN']}`)와 같은 판정이다. 권한이 없으면 아무것도 그리지 않는다 */
+/** 운영자 화면으로 가는 메뉴 - 라우트 가드(`RequirePermission`)와 같은 판정이다. 항목마다 그 화면의 읽기 권한이 있을 때만 그린다 */
 export function AdminLinks() {
   const { t } = useT()
-  const { principal } = useAuth()
-  if (!principal?.roles.includes('ADMIN')) return null
+  const canPayments = usePermission('payment.read')
+  const canAccounts = usePermission('account.read')
   return (
     <>
-      <NavLink to="/admin/payments">{t('nav.adminPayments')}</NavLink>
-      <NavLink to="/admin/accounts">{t('nav.adminAccounts')}</NavLink>
+      {canPayments && <NavLink to="/admin/payments">{t('nav.adminPayments')}</NavLink>}
+      {canAccounts && <NavLink to="/admin/accounts">{t('nav.adminAccounts')}</NavLink>}
     </>
   )
 }

@@ -1,3 +1,4 @@
+import { useCan } from '@skeleton/auth'
 import {
   adminAccessProblem,
   AdminOrderTable,
@@ -63,6 +64,7 @@ function RefundsTab() {
   const { t, locale } = useT()
   const language = languageOf(locale)
   const labels = paymentLabelsFor(t, language)
+  const can = useCan()
   const refunds = useAdminRefundRequests(paymentAdminApi, { size: ADMIN_PAYMENTS_PAGE_SIZE })
   // 요청이 환불 안 됨으로 닫히거나 결과를 모를 때 창이 결제 한 건으로 가는 길(링크)을 준다
   const decision = useRefundDecision(paymentAdminApi, {
@@ -82,6 +84,7 @@ function RefundsTab() {
   return (
     <>
       <RefundRequestTable
+        can={can}
         refunds={refunds.data?.pages.flatMap((page) => page.values) ?? []}
         onApprove={(refund) => decision.start('approve', refund)}
         onReject={(refund) => decision.start('reject', refund)}

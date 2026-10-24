@@ -4,11 +4,14 @@ import { useEffect, useState } from 'react'
 import { lookup } from '../format'
 import { resolvePaymentLabels, type PaymentLabelsInput } from '../labels'
 import { ListFrame } from './ListFrame'
+import { allowAll, PAYMENT_PERMISSIONS, type CanFn } from './permissions'
 import sharedStyles from './shared.module.css'
 import { isLimitMarker, isOrderResourceId, ORDER_RESOURCE_PREFIX } from './webhookMarker'
 import type { WebhookEvent, WebhookEventStatus } from './types'
 
 export type WebhookEventTableProps = {
+  /** 호출자의 권한 질문 - 「다시 처리」 = `payment.operate`. 없으면 단추를 그리지 않는다. 기본 모두 허용 */
+  can?: CanFn
   events: readonly WebhookEvent[]
   /**
    * 손이 필요한 줄(`FAILED` · `DEAD`, 그리고 받은 지 오래된 `RECEIVED`)의 「다시 처리」. 주지 않으면 단추가 없다.
@@ -91,7 +94,8 @@ function needsRetry(event: WebhookEvent, now: number, staleAfterMs: number): boo
  */
 export function WebhookEventTable({
   events,
-  onRetryEvent,
+  can = allowAll,
+  onRetryEvent: onRetryEventIn,
   retryingId,
   retried: retriedAt,
   staleReceivedAfterMs = STALE_RECEIVED_MS,
@@ -105,6 +109,7 @@ export function WebhookEventTable({
   formatTime = (iso) => formatInstant(iso, { locale }),
   labels: input,
 }: WebhookEventTableProps) {
+  const onRetryEvent = can(PAYMENT_PERMISSIONS.operate) ? onRetryEventIn : undefined
   const labels = resolvePaymentLabels(input)
   const text = labels.admin.webhooks
   const now = useClock(fixedNow)

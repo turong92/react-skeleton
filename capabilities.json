@@ -140,7 +140,10 @@
         "packages/auth/src/patterns/LoginIdRequired.stories.tsx",
         "packages/auth/src/patterns/AccountSettings.stories.tsx"
       ],
-      "stories": ["packages/auth/src/RequireAuth.stories.tsx"],
+      "stories": [
+        "packages/auth/src/RequireAuth.stories.tsx",
+        "packages/auth/src/RequirePermission.stories.tsx"
+      ],
       "docs": ["packages/auth/README.md"],
       "entryPoints": [
         "createTokenStore",
@@ -154,6 +157,8 @@
         "useAuth",
         "RequireAuth",
         "RequireRole",
+        "RequirePermission",
+        "useCan",
         "SignInScreen",
         "SignUpScreen",
         "AccountSettings",
@@ -193,7 +198,7 @@
       },
       "summary": "로그인 · 계정 수명주기 — 토큰 갱신(401 → 갱신 한 번 → 재시도, 회전 안전 · 탭 락) · 가입(닉네임 칸: 끔 · 선택 · 필수) · 메일 인증 · 비밀번호 재설정 · 링크 로그인 · 소셜 · 계정 설정(비밀번호 · 계정 이메일 · 연락받을 이메일 · 로그인 수단 · 세션 · 삭제) · 이메일을 필수로 켠 앱의 「이메일을 등록해 주세요」 전면 화면(주소 없는 계정이 앱 대신 본다 — 받는 시점은 로그인 직후 또는 쓰기 때, 쓰기 때는 `useEmailBeforeWrite` 와 「나중에 하기」) · 로그인 아이디(서버가 켠 앱만 — 가입의 아이디 칸과 실시간 확인 · 「아이디 또는 이메일」 로그인 · 아이디 찾기 `/forgot-id` · 아이디 없는 계정의 「아이디를 정해 주세요」 막 · 설정의 아이디 줄 · 관리자 표의 아이디 열과 찾기, 키가 없으면 화면은 예전 그대로) · 탈퇴 유예 중 로그인의 「탈퇴를 취소할까요?」 화면과 라우트 한 벌, 방법은 설정으로 켜고 끈다.",
       "notFor": [
-        "권한(roles) 정책 자체는 백엔드 — 이 패키지는 토큰 · 라우트 가드(RequireAuth · RequireRole)만",
+        "권한(roles) 정책 자체는 백엔드 — 이 패키지는 토큰 · 라우트 가드(RequireAuth · RequireRole · RequirePermission)만 - 권한 문자열은 백엔드 GET /auth/me 가 주고 화면은 숨길 뿐이다",
         "약관 동의 저장은 없다 — 가입 화면의 동의 슬롯은 체크한 판을 콜백으로 보고할 뿐(문서 · 저장은 @skeleton/legal)",
         "로그인 화면의 모양(색 · 로고 · 문구 톤)은 앱의 몫 — 문구는 labels prop(기본 영어, koAuthLabels 한국어)"
       ],
@@ -813,7 +818,7 @@
       "summary": "운영자 결제 화면(선택 내보내기 @skeleton/payment/admin) — 결제 목록(상태 · 결제 번호로 찾기, 확인 필요 알약) · 한 건(환불 줄 · 이력 · 직접 환불 전액/부분 · 요청대로 환불하기 · 요청 거절하기 · 결제사와 맞추기) · 환불 요청 목록 · 웹훅 수신함. 돈이 나가는 행동은 늘 확인 창(AdminRefundDialog)을 거치고 금액은 남은 금액을 넘지 못하게 화면에서도 막는다. 샘플 화면: /admin/payments · /admin/payments/:id.",
       "path": "packages/payment/src/admin/index.ts",
       "notFor": [
-        "백엔드 skeleton.payment.admin.enabled=true 와 ADMIN 역할이 있어야 열린다(검사는 서버, RequireRole 은 화면용) — 운영자 HTTP 는 payment-jdbc 가 연다. 운영자 경로 모양의 정본은 백엔드 docs/payment-http-contract.md 이고, 이 패키지 README 의 「운영자 API」 표가 그것에 맞춘 것이다",
+        "백엔드 skeleton.payment.admin.enabled=true 와 payment.read · payment.refund · payment.operate 권한이 있어야 열린다(검사는 서버, RequirePermission 과 부품의 can 은 화면용) — 운영자 HTTP 는 payment-jdbc 가 연다. 운영자 경로 모양의 정본은 백엔드 docs/payment-http-contract.md 이고, 이 패키지 README 의 「운영자 API」 표가 그것에 맞춘 것이다",
         "사용자 지원용 검색 · 통계 · 정산 · 세금계산서 화면은 없다 — 결제 목록 · 한 건 · 환불 요청 · 웹훅 수신함이 전부다",
         "샘플 화면(/admin/payments)에 웹훅 수신함은 아직 두지 않았다 — 부품(WebhookEventTable)만 있다"
       ],
@@ -1986,7 +1991,7 @@
       "summary": "운영자 계정 표(선택 내보내기 @skeleton/auth/admin) — 검색 · 상태 필터 · 정지 · 해제 · 삭제 유예 복구 · 역할 부여/회수.",
       "path": "packages/auth/src/admin/AdminAccounts.tsx",
       "notFor": [
-        "백엔드 skeleton.account.admin.enabled=true 와 ADMIN 역할이 있어야 열린다(RequireRole 은 화면용, 검사는 서버)",
+        "백엔드 skeleton.account.admin.enabled=true 와 account.read · account.manage · account.roles 권한이 있어야 열린다(RequirePermission 은 화면용, 검사는 서버)",
         "사용자 지원용 상세 · 감사 로그 화면은 없다"
       ],
       "keywords": {
@@ -2514,7 +2519,7 @@
     {
       "need": "운영자 계정 관리 표 (검색 · 정지 · 복구 · 역할)",
       "capabilities": ["account-admin"],
-      "byHand": "백엔드 skeleton.account.admin.enabled=true. 프런트는 apps/sample 의 AdminAccountsPage 와 RequireRole 라우트를 복사한다."
+      "byHand": "백엔드 skeleton.account.admin.enabled=true. 프런트는 apps/sample 의 AdminAccountsPage 와 RequirePermission 라우트를 복사한다."
     },
     {
       "need": "약관 · 개인정보 동의 (가입 체크박스 · 새 판 재동의 · 선택 동의 철회) — 문서와 동의 기록은 서버가 쥔다",

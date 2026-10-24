@@ -5,10 +5,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { i18n } from '../i18n'
 import { AdminLinks, RootLayout } from './RootLayout'
 
-/** 서명 없는 JWT 꼴 토큰 — 화면용 claim(roles)만 읽힌다 */
-const fakeJwt = (claims: Record<string, unknown>) =>
-  `header.${btoa(JSON.stringify(claims)).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '')}.signature`
-
 afterEach(async () => {
   vi.unstubAllGlobals()
   await i18n.setLocale('ko', { remember: false })
@@ -106,24 +102,37 @@ describe('RootLayout (signed out)', () => {
 })
 
 describe('RootLayout (signed in): operator menu', () => {
-  const renderAs = (roles: string[] | undefined) => {
+  const renderAs = (permissions: string[] | undefined) => {
     vi.stubGlobal('document', { documentElement: { dataset: {} } })
-    const store = createTokenStore()
-    if (roles) store.set(fakeJwt({ sub: 'a', roles }))
+    const session = createAuthSession({ api, store: createTokenStore() })
+    if (permissions)
+      session.signIn({
+        accessToken: 'tok',
+        tokenType: 'Bearer',
+        expiresAt: '2099-01-01T00:00:00Z',
+        principal: { accountId: 'a', roles: ['X'], permissions },
+      })
     return renderToStaticMarkup(
-      <AuthProvider session={createAuthSession({ api, store })}>
+      <AuthProvider session={session}>
         <MemoryRouter>
           <AdminLinks />
         </MemoryRouter>
       </AuthProvider>,
     )
   }
-  it('shows the two operator screens in the menu only to an ADMIN - never to a member or a visitor', () => {
-    const admin = renderAs(['USER', 'ADMIN'])
-    expect(admin).toContain('href="/admin/payments"')
-    expect(admin).toContain('href="/admin/accounts"')
-    const member = renderAs(['USER'])
-    expect(member).not.toContain('/admin/')
+  it('shows each operator screen only to someone holding its read permission', () => {
+    const all = renderAs(['*'])
+    expect(all).toContain('href="/admin/payments"')
+    expect(all).toContain('href="/admin/accounts"')
+    const cs = renderAs(['payment.read', 'payment.refund'])
+    expect(cs).toContain('href="/admin/payments"')
+    expect(cs).not.toContain('href="/admin/accounts"')
+    const support = renderAs(['account.read'])
+    expect(support).toContain('href="/admin/accounts"')
+    expect(support).not.toContain('href="/admin/payments"')
+  })
+  it('shows nothing to a member without permissions or to a visitor, whatever the role name is', () => {
+    expect(renderAs([])).not.toContain('/admin/')
     expect(renderAs(undefined)).not.toContain('/admin/')
   })
 })

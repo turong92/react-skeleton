@@ -1,5 +1,5 @@
 // `@skeleton/payment/admin` — 운영자 부품(선택 내보내기). 쓰지 않는 프로젝트는 이 진입점을 import 하지 않으면 번들에도 들어오지 않는다.
-// 백엔드는 `skeleton.payment.admin.enabled=true`(기본 꺼짐)와 ADMIN 역할이 필요하다 — 검사는 서버, 화면은 `RequireRole`.
+// 백엔드는 `skeleton.payment.admin.enabled=true`(기본 꺼짐)와 권한(`payment.read` · `payment.refund` · `payment.operate`)이 필요하다 — 검사는 서버, 화면은 `RequirePermission` 과 부품의 `can`.
 export { createPaymentAdminApi, OPERATOR_REFUND_TIMEOUT_MS } from './adminApi'
 export type { PaymentAdminApi, PaymentAdminApiOptions } from './adminApi'
 export { adminAccessProblem } from './adminAccess'
@@ -54,3 +54,5 @@ export type { RefundRequestTableProps } from './RefundRequestTable'
 export { WebhookEventTable } from './WebhookEventTable'
 export type { WebhookEventTableProps } from './WebhookEventTable'
 export type { RenderRowAction } from './rowAction'
+export { PAYMENT_PERMISSIONS } from './permissions'
+export type { CanFn } from './permissions'

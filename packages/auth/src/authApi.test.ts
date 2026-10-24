@@ -21,7 +21,13 @@ function fakeClient<T>(result: T) {
   }
 }
 
-const principal: AuthPrincipal = { accountId: 'acc_1', username: 'u', email: null, roles: ['USER'] }
+const principal: AuthPrincipal = {
+  accountId: 'acc_1',
+  username: 'u',
+  email: null,
+  roles: ['USER'],
+  permissions: [],
+}
 const token: AuthTokenResponse = {
   accessToken: 'jwt',
   tokenType: 'Bearer',

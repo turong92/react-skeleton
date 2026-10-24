@@ -10,6 +10,7 @@ const principal: AuthPrincipal = {
   username: 'demo',
   email: DEMO_LOGIN.email,
   roles: ['USER'],
+  permissions: [],
 }
 
 /** 서명 없는 JWT 꼴 — 이미 로그인한 상태로 시작하려면 `store.set(FAKE_ACCESS_TOKEN)` */

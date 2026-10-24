@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it } from 'vitest'
 import { i18n } from '../i18n'
+import { OperatorSession } from '../test-support/operatorSession'
 import { AdminPaymentsPage, ADMIN_PAYMENTS_PAGE_SIZE } from './AdminPaymentsPage'
 import { ordersParamsOf } from './adminOrdersParams'
 
@@ -61,13 +62,15 @@ function render(url: string, seed: (client: QueryClient) => void) {
   const client = new QueryClient({ defaultOptions: { queries: { retryOnMount: false } } })
   seed(client)
   return renderToStaticMarkup(
-    <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={[url]}>
-        <Routes>
-          <Route path="/admin/payments" element={<AdminPaymentsPage />} />
-        </Routes>
-      </MemoryRouter>
-    </QueryClientProvider>,
+    <OperatorSession>
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={[url]}>
+          <Routes>
+            <Route path="/admin/payments" element={<AdminPaymentsPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
+    </OperatorSession>,
   )
 }
 const size = ADMIN_PAYMENTS_PAGE_SIZE

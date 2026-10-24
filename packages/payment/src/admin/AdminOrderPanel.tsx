@@ -12,12 +12,15 @@ import { TestModeNotice } from '../TestModeNotice'
 import styles from './AdminOrderPanel.module.css'
 import { closedByOf } from './closedBy'
 import { isErasedAccount } from './erasedAccount'
+import { allowAll, PAYMENT_PERMISSIONS, type CanFn } from './permissions'
 import { PaymentEventList } from './PaymentEventList'
 import { isMoneyOffReason, isRetryJobReason } from './reviewReason'
 import type { AdminOrder, AdminOrderDetail, AdminRefund } from './types'
 
 export type AdminOrderPanelProps = {
   detail: AdminOrderDetail
+  /** 호출자의 권한 질문(`useCan` 등) - 환불 · 요청 결정 = `payment.refund`, 맞추기 · 닫기 = `payment.operate`. 권한이 없는 단추는 그리지 않는다. 기본 모두 허용 */
+  can?: CanFn
   /** 주면 환불할 수 있는 결제에 「환불하기」가 생긴다(전액 · 부분). 확인 창(`AdminRefundDialog`)을 여는 것은 부모 */
   onRefund?: () => void
   /** 주면 기다리는 요청(`REQUESTED`) 줄 옆에 「요청대로 환불하기」가 생긴다 — 돈이 나가니 부모가 확인 창을 연다 */
@@ -101,11 +104,12 @@ function syncErrorMessage(error: unknown, labels: PaymentLabels): string {
  */
 export function AdminOrderPanel({
   detail,
-  onRefund,
-  onApprove,
-  onReject,
-  onSync,
-  onCloseCharge,
+  can = allowAll,
+  onRefund: onRefundIn,
+  onApprove: onApproveIn,
+  onReject: onRejectIn,
+  onSync: onSyncIn,
+  onCloseCharge: onCloseChargeIn,
   stale,
   refunded,
   syncing,
@@ -116,6 +120,11 @@ export function AdminOrderPanel({
   formatTime = (iso) => formatInstant(iso, { locale }),
   labels: input,
 }: AdminOrderPanelProps) {
+  const onRefund = can(PAYMENT_PERMISSIONS.refund) ? onRefundIn : undefined
+  const onApprove = can(PAYMENT_PERMISSIONS.refund) ? onApproveIn : undefined
+  const onReject = can(PAYMENT_PERMISSIONS.refund) ? onRejectIn : undefined
+  const onSync = can(PAYMENT_PERMISSIONS.operate) ? onSyncIn : undefined
+  const onCloseCharge = can(PAYMENT_PERMISSIONS.operate) ? onCloseChargeIn : undefined
   const labels = resolvePaymentLabels(input)
   const text = labels.admin
   const { order, refunds, events } = detail

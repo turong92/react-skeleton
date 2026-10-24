@@ -34,6 +34,7 @@ describe('auth headers and principal', () => {
       username: 'admin',
       email: 'admin@example.com',
       roles: ['USER', 'ADMIN'],
+      permissions: [],
     })
   })
 
@@ -48,6 +49,7 @@ describe('auth headers and principal', () => {
       username: null,
       email: null,
       roles: [],
+      permissions: [],
     })
   })
 

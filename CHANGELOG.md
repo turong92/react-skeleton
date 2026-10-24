@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — 권한으로 화면 가리기 (2026-10-24)
+
+백엔드 짝: kotlin-skeleton 의 권한(역할 → 권한 매핑, `GET /auth/me` 의 `permissions`). 하드코딩한 `ADMIN` 은 화면에서 사라진다. `RequireRole` · JWT `roles` 는 그대로 남는다.
+
+- `@skeleton/auth`: `AuthPrincipal.permissions: string[]`(전권은 `['*']`) · `hasPermission(list, key | keys)` · `usePermission(key)` · `useCan()` · `<RequirePermission anyOf forbidden redirectTo>`(로그인 안 함 → 로그인, 권한 없음 → 「접근 차단」 안내 - 세션은 그대로) · `WirePrincipal`. 로그인 응답 · 토큰 claim 에는 권한이 없어서 세션이 `[]` 로 채운 뒤 `/auth/me` 로 한 번 다시 읽는다(옛 서버는 `[]` 그대로).
+- `AuthApi.me()` · `AuthTokenResponse.principal` 의 타입이 `WirePrincipal`(권한이 선택)이 됐다. `AuthPrincipal` 을 직접 만들어 쓰던 테스트 · 스토리는 `permissions: []` 를 더해야 한다.
+- `@skeleton/auth/admin`: `AdminAccounts` · `AdminAccountsTable` 의 `can` prop(정지 · 해제 · 복구 = `account.manage`, 역할 부여/회수 = `account.roles`), `rowActions(account, roles, can?)`. 메뉴가 비는 줄은 ⋯ 를 그리지 않는다. `can` 을 안 주면 전과 같다.
+- `@skeleton/payment/admin`: `AdminOrderPanel` · `RefundRequestTable` · `WebhookEventTable` 의 `can` prop - 환불 · 요청 승인/거절 = `payment.refund`, 결제사와 맞추기 · 닫기 · 웹훅 다시 처리 = `payment.operate`. `PAYMENT_PERMISSIONS` · `CanFn` 내보내기. `can` 을 안 주면 전과 같다.
+- 샘플: `/admin/payments` 는 `payment.read`, `/admin/accounts` 는 `account.read` 로 라우트를 가리고 메뉴도 항목마다 그 권한이 있을 때만 그린다(`ADMIN` 문자열 없음 - `noHardcodedRoles.test.ts` 가 지킨다. 역할 부여 화면의 `assignableRoles` 만 예외).
+
 ### Added — 카카오페이 · 네이버페이 정기 결제 (2026-10-20)
 
 - `billingAuth.kind` `KAKAOPAY_BILLING_REDIRECT` · `NAVERPAY_BILLING_REDIRECT`: `openBillingAuth` 가 SDK 없이 서버가 예약한 주소(카카오페이 PC · 모바일 / 네이버페이 등록창)로 구매자를 보낸다(`navigate` · `isMobile` 주입). `readBillingReturn` 이 `kind` 로 갈라 카카오페이(`result` · `pg_token`) · 네이버페이(`resultCode` · `reserveId` · `tempReceiptId`)의 돌아온 주소를 읽는다 - 성공은 `{ ok: true, providerPayload }`(그대로 `activate` 로), 닫음은 `CANCELED`. `useActivateSubscription` 변수가 `{ id, providerPayload }` 도 받는다(`{ id, authKey }` 는 그대로).

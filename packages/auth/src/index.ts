@@ -10,6 +10,7 @@ export type {
   SocialMode,
   SocialAuthorizeInfo,
   SocialProof,
+  WirePrincipal,
 } from './types'
 export {
   applyAuthHeaders,
@@ -35,6 +36,10 @@ export { CodeClockProvider } from './codeClock'
 export { useCodeClock } from './codeClockContext'
 export { codeWindowOf, estimateCodeWindow, type CodeWindow } from './codeWindow'
 export type { AuthContextValue } from './authContext'
+export { RequirePermission } from './RequirePermission'
+export type { RequirePermissionProps } from './RequirePermission'
+export { ALL_PERMISSIONS, hasPermission } from './permissions'
+export { useCan, usePermission } from './usePermission'
 export { RequireAuth } from './RequireAuth'
 export type { RequireAuthProps } from './RequireAuth'
 export {

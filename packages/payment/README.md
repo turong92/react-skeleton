@@ -182,7 +182,7 @@ import { koPaymentLabels, OrderList, OrderSummary, PaymentResult, RefundRequestD
 
 ## 운영자 부품 — `@skeleton/payment/admin`
 
-`@skeleton/auth/admin` 처럼 **선택 하위 경로**다. 백엔드는 `skeleton.payment.admin.enabled=true`(기본 꺼짐)와 ADMIN 역할이 필요하고, 검사는 서버가 한다(화면은 `RequireRole` 로 보여 줄지만 정한다). 문구는 같은 `labels` prop 의 `admin` 가지(`koPaymentLabels.admin`)다 — 한 벌로 넘기면 된다. 낱말은 사용자 쪽과 같다: 돈을 돌려주는 일은 늘 「환불」(「승인」 · 「반려」 · 「취소」 없음), 맞추는 일은 「결제사와 맞추기」, 사고는 「확인 필요」(`labels.test.ts` 가 운영자 키까지 고정한다).
+`@skeleton/auth/admin` 처럼 **선택 하위 경로**다. 백엔드는 `skeleton.payment.admin.enabled=true`(기본 꺼짐)와 권한(`payment.read` 보기 · `payment.refund` 환불 · `payment.operate` 맞추기 · 닫기 · 웹훅 다시 처리)이 필요하고, 검사는 서버가 한다(화면은 `RequirePermission` 으로 보여 줄지를, 부품의 `can` prop(`useCan()` from `@skeleton/auth`)으로 단추를 정한다 - `can` 을 안 주면 모두 보인다). 문구는 같은 `labels` prop 의 `admin` 가지(`koPaymentLabels.admin`)다 — 한 벌로 넘기면 된다. 낱말은 사용자 쪽과 같다: 돈을 돌려주는 일은 늘 「환불」(「승인」 · 「반려」 · 「취소」 없음), 맞추는 일은 「결제사와 맞추기」, 사고는 「확인 필요」(`labels.test.ts` 가 운영자 키까지 고정한다).
 
 ```tsx
 import {

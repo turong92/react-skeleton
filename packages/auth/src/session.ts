@@ -8,6 +8,7 @@ import type {
   AuthPrincipal,
   AuthState,
   AuthTokenResponse,
+  WirePrincipal,
   PasswordLoginRequest,
   SocialProof,
 } from './types'
@@ -64,6 +65,8 @@ export function createAuthSession({
 }: AuthSessionOptions): AuthSession {
   const listeners = new Set<() => void>()
   let known: { token: string; principal: AuthPrincipal | null } | null = null
+  // 권한은 `/auth/me` 만 안다(로그인 응답 · 토큰 claim 에는 없다) - 이 토큰으로 이미 물었거나 받았으면 다시 묻지 않는다(실패해도 반복하지 않는다)
+  let permissionsAskedFor: string | null = null
   let state = compute()
 
   function compute(): AuthState {
@@ -88,11 +91,36 @@ export function createAuthSession({
     listeners.forEach((listener) => listener())
   }
 
+  function withPermissions(principal: WirePrincipal, fallback: string[] = []): AuthPrincipal {
+    return { ...principal, permissions: principal.permissions ?? fallback }
+  }
+
+  function completePermissions() {
+    const token = store.get()
+    if (!token || permissionsAskedFor === token) return
+    permissionsAskedFor = token
+    Promise.resolve()
+      .then(() => api.me())
+      .then((principal) => {
+        if (store.get() !== token) return
+        known = { token, principal: withPermissions(principal) }
+        refreshState()
+      })
+      .catch(() => undefined) // 화면을 숨기는 용도일 뿐 - 못 받으면 권한 없음으로 둔다
+  }
+
   store.subscribe(refreshState)
   refreshStore?.subscribe(refreshState)
 
   function accept(response: AuthTokenResponse) {
-    known = { token: response.accessToken, principal: response.principal }
+    // 로그인 응답에 권한이 없으면(`/auth/me` 만 준다) 같은 계정의 이전 값을 잠깐 이어 쓰고 `/auth/me` 로 다시 받는다 - 토큰이 갱신될 때마다 메뉴가 깜박이지 않게
+    const previous = known?.principal ?? state.principal
+    const carried = previous?.accountId === response.principal.accountId ? previous.permissions : []
+    known = {
+      token: response.accessToken,
+      principal: withPermissions(response.principal, carried),
+    }
+    permissionsAskedFor = response.principal.permissions ? response.accessToken : null
     // 리프레시 자격을 먼저 — 액세스 토큰이 보이는 순간 갱신이 필요해도 새 자격이 있다
     batching = true
     try {
@@ -106,6 +134,7 @@ export function createAuthSession({
       batching = false
     }
     refreshState()
+    if (listeners.size > 0) completePermissions()
     return response
   }
 
@@ -113,6 +142,7 @@ export function createAuthSession({
     getState: () => state,
     subscribe(listener) {
       listeners.add(listener)
+      completePermissions()
       return () => {
         listeners.delete(listener)
       }
@@ -142,6 +172,7 @@ export function createAuthSession({
       const refreshToken = refreshStore?.get()?.refreshToken ?? null
       const hadSession = store.get() !== null || refreshStore?.get() != null
       known = null
+      permissionsAskedFor = null
       batching = true
       try {
         refreshStore?.clear()
@@ -158,9 +189,12 @@ export function createAuthSession({
       }
     },
     async refresh() {
-      const principal = await api.me()
+      const principal = withPermissions(await api.me())
       const token = store.get()
-      if (token) known = { token, principal }
+      if (token) {
+        known = { token, principal }
+        permissionsAskedFor = token
+      }
       refreshState()
       return principal
     },

@@ -49,7 +49,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 | 백엔드 모듈을 눌러 보는 확인 벤치 | `app-workbench` | `--with-workbench` | `--modules alert-jdbc,async,async-notification,auth-magic-link,auth-social-google,auth-social-kakao,auth-social-naver,auth-social-oidc,auth-social-x,author-profile,author-profile-jdbc,board,board-jdbc,config-aws-ssm,crypto,event-kafka,json,notification,notification-jdbc,notification-slack,notification-sse,notification-websocket,payment,payment-jdbc,payment-kakaopay,payment-naverpay,payment-paddle,payment-stripe,payment-toss,persistence-jpa,redis-cache,redis-core,redis-lock,redis-rate-limit,scheduler,storage,storage-s3` | 복사 대상이 아니다 — 백엔드 개발자가 모듈을 눈으로 확인하는 용도. |
 | 회원가입 · 이메일 인증 · 비밀번호 재설정 · 계정 설정(비밀번호 · 이메일 · 세션 · 삭제) | `auth` + `account-lifecycle` + `session-refresh` | (기본 포함 — 덧붙일 것 없음) | (모듈 없음) | 백엔드는 account · auth-session(+ -jdbc) 모듈과 메일(notification-mail) · 링크 주소 설정. 프런트는 createAuthRoutes 한 번(apps/starter 의 auth/routes.tsx 를 따른다), 켜는 로그인 방법은 백엔드가 알려 준다(고정하려면 new-project.sh --auth-methods 또는 VITE_AUTH_METHODS), 문구는 labels(koAuthLabels). |
 | 이메일 링크(매직링크) 로그인 | `magic-link-login` | (기본 포함 — 덧붙일 것 없음) | `--modules auth-magic-link` | 백엔드 auth-magic-link + 메일. 로그인 화면의 링크 버튼 · /magic-link 도착 화면은 백엔드가 그 방법을 열었을 때(GET /auth/methods)만 보인다. |
-| 운영자 계정 관리 표 (검색 · 정지 · 복구 · 역할) | `account-admin` | (기본 포함 — 덧붙일 것 없음) | (모듈 없음) | 백엔드 skeleton.account.admin.enabled=true. 프런트는 apps/sample 의 AdminAccountsPage 와 RequireRole 라우트를 복사한다. |
+| 운영자 계정 관리 표 (검색 · 정지 · 복구 · 역할) | `account-admin` | (기본 포함 — 덧붙일 것 없음) | (모듈 없음) | 백엔드 skeleton.account.admin.enabled=true. 프런트는 apps/sample 의 AdminAccountsPage 와 RequirePermission 라우트를 복사한다. |
 | 약관 · 개인정보 동의 (가입 체크박스 · 새 판 재동의 · 선택 동의 철회) — 문서와 동의 기록은 서버가 쥔다 | `legal` | (기본 포함 — 덧붙일 것 없음) | (모듈 없음) | 백엔드 스타터는 legal 을 켠다(문서는 TEMPLATE — stage · prod 는 자기 문서가 있어야 기동). 프런트는 createLegalApi + createReconsentController(api-client 의 recoverForbidden 에 꽂는다) + <ReconsentGate> 를 앱 맨 위에, 가입 라우트의 signUp.renderConsents 에 <SignUpConsents>, 설정에 <ConsentSettings>. 서버 없이 정적 약관만이면 legal-documents(marketing). |
 
 ## 전체 목록
@@ -133,11 +133,11 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 - 켜는 법: 모든 프로젝트에 들어간다
 - 필요한 것: `api-client` · `ui`
 - 백엔드: 모듈 `auth` · 있으면 더 켜지는 `account` · `account-jdbc` · `auth-session` · `auth-session-jdbc` · `auth-magic-link` · 경로 `/api/v1/auth` · `/api/v1/account`
-- 주요 진입점: `createTokenStore` · `createRefreshStore` · `createAuthApi` · `createAuthSession` · `createSessionRefresher` · `createAccountApi` · `createAuthRoutes` · `AuthProvider` · `useAuth` · `RequireAuth` · `RequireRole` · `SignInScreen` · `SignUpScreen` · `AccountSettings` · `createAuthHeadersProvider` · `createUnauthorizedHandler`
-- 보고 따라 할 스토리: `packages/auth/src/RequireAuth.stories.tsx`
+- 주요 진입점: `createTokenStore` · `createRefreshStore` · `createAuthApi` · `createAuthSession` · `createSessionRefresher` · `createAccountApi` · `createAuthRoutes` · `AuthProvider` · `useAuth` · `RequireAuth` · `RequireRole` · `RequirePermission` · `useCan` · `SignInScreen` · `SignUpScreen` · `AccountSettings` · `createAuthHeadersProvider` · `createUnauthorizedHandler`
+- 보고 따라 할 스토리: `packages/auth/src/RequireAuth.stories.tsx` · `packages/auth/src/RequirePermission.stories.tsx`
 - 복사해 시작할 Patterns: `apps/storybook/src/patterns/LoginPage.stories.tsx` · `apps/storybook/src/patterns/ForbiddenPage.stories.tsx` · `packages/auth/src/patterns/SignIn.stories.tsx` · `packages/auth/src/patterns/SignUp.stories.tsx` · `packages/auth/src/patterns/MailLinkLandings.stories.tsx` · `packages/auth/src/patterns/DeletionPending.stories.tsx` · `packages/auth/src/patterns/SocialEmailConflict.stories.tsx` · `packages/auth/src/patterns/EmailRequired.stories.tsx` · `packages/auth/src/patterns/LoginIdField.stories.tsx` · `packages/auth/src/patterns/LoginIdRequired.stories.tsx` · `packages/auth/src/patterns/AccountSettings.stories.tsx`
 - 문서: `packages/auth/README.md`
-- 쓰지 않는 경우: 권한(roles) 정책 자체는 백엔드 — 이 패키지는 토큰 · 라우트 가드(RequireAuth · RequireRole)만 / 약관 동의 저장은 없다 — 가입 화면의 동의 슬롯은 체크한 판을 콜백으로 보고할 뿐(문서 · 저장은 @skeleton/legal) / 로그인 화면의 모양(색 · 로고 · 문구 톤)은 앱의 몫 — 문구는 labels prop(기본 영어, koAuthLabels 한국어)
+- 쓰지 않는 경우: 권한(roles) 정책 자체는 백엔드 — 이 패키지는 토큰 · 라우트 가드(RequireAuth · RequireRole · RequirePermission)만 - 권한 문자열은 백엔드 GET /auth/me 가 주고 화면은 숨길 뿐이다 / 약관 동의 저장은 없다 — 가입 화면의 동의 슬롯은 체크한 판을 콜백으로 보고할 뿐(문서 · 저장은 @skeleton/legal) / 로그인 화면의 모양(색 · 로고 · 문구 톤)은 앱의 몫 — 문구는 labels prop(기본 영어, koAuthLabels 한국어)
 - 키워드: 로그인, 로그아웃, 인증, 토큰, JWT, 보호 라우트, 로그인 상태, 세션, 회원가입, 가입, 이메일 인증, 비밀번호 재설정, 비밀번호 찾기, 계정 설정, 계정 삭제, 탈퇴 취소, 탈퇴 유예, 토큰 갱신, 리프레시 토큰, 세션 목록, 닉네임, 표시 이름, 로그인 아이디, 아이디 찾기, 이메일 쓰기 때 받기 / login, logout, auth, authentication, jwt, token, session, protected route, sign in, sign up, registration, email verification, password reset, forgot password, account settings, delete account, cancel deletion, deletion grace, refresh token, token refresh, active sessions, nickname, display name, login id, username login, find my id, email on write
 
 ### `realtime` — 서버가 밀어 주는 실시간 연결 — SSE(탭 숨김 일시정지 · 유휴 감시 · 재연결)와 STOMP WebSocket 알림 클라이언트.
@@ -401,7 +401,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 - 주요 진입점: `@skeleton/payment/admin#createPaymentAdminApi` · `@skeleton/payment/admin#AdminOrderTable` · `@skeleton/payment/admin#AdminOrderPanel` · `@skeleton/payment/admin#AdminRefundDialog` · `@skeleton/payment/admin#RefundRequestTable` · `@skeleton/payment/admin#WebhookEventTable` · `@skeleton/payment/admin#adminAccessProblem`
 - 복사해 시작할 Patterns: `packages/payment/src/admin/AdminOrderTable.stories.tsx` · `packages/payment/src/admin/AdminOrderPanel.stories.tsx` · `packages/payment/src/admin/AdminRefundDialog.stories.tsx` · `packages/payment/src/admin/RefundRequestTable.stories.tsx` · `packages/payment/src/admin/WebhookEventTable.stories.tsx`
 - 문서: `packages/payment/README.md` · `apps/sample/src/routes/AdminPaymentPage.tsx`
-- 쓰지 않는 경우: 백엔드 skeleton.payment.admin.enabled=true 와 ADMIN 역할이 있어야 열린다(검사는 서버, RequireRole 은 화면용) — 운영자 HTTP 는 payment-jdbc 가 연다. 운영자 경로 모양의 정본은 백엔드 docs/payment-http-contract.md 이고, 이 패키지 README 의 「운영자 API」 표가 그것에 맞춘 것이다 / 사용자 지원용 검색 · 통계 · 정산 · 세금계산서 화면은 없다 — 결제 목록 · 한 건 · 환불 요청 · 웹훅 수신함이 전부다 / 샘플 화면(/admin/payments)에 웹훅 수신함은 아직 두지 않았다 — 부품(WebhookEventTable)만 있다
+- 쓰지 않는 경우: 백엔드 skeleton.payment.admin.enabled=true 와 payment.read · payment.refund · payment.operate 권한이 있어야 열린다(검사는 서버, RequirePermission 과 부품의 can 은 화면용) — 운영자 HTTP 는 payment-jdbc 가 연다. 운영자 경로 모양의 정본은 백엔드 docs/payment-http-contract.md 이고, 이 패키지 README 의 「운영자 API」 표가 그것에 맞춘 것이다 / 사용자 지원용 검색 · 통계 · 정산 · 세금계산서 화면은 없다 — 결제 목록 · 한 건 · 환불 요청 · 웹훅 수신함이 전부다 / 샘플 화면(/admin/payments)에 웹훅 수신함은 아직 두지 않았다 — 부품(WebhookEventTable)만 있다
 - 키워드: 운영자 결제, 환불 승인, 환불 처리, 결제 관리, 결제사와 맞추기, 웹훅 수신함 / payment admin, refund queue, operator refund, reconcile payment, webhook inbox
 
 ### `social-login` — 소셜 로그인의 프런트 절반 — GET /auth/methods 가 알려 준 제공자 · authorize 주소 · scope · pkce/nonce 로 인가 주소 만들기(Google · LINE · X · Kakao · Naver, PKCE S256 · nonce 는 시도마다), state 검증(탭에 묶임 · 한 번만) · 콜백의 code 를 백엔드로 보내 로그인 처리, 로그인한 계정에 제공자를 더하는 연결 흐름(createSocialLinkFlow), 제공자 마크 · 문구. 버튼 · 콜백 화면은 SignInScreen · createAuthRoutes 가 그린다.
@@ -465,7 +465,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 - 주요 진입점: `@skeleton/auth/admin#AdminAccounts` · `@skeleton/auth/admin#AdminAccountsTable` · `@skeleton/auth/admin#createAdminAccountsApi`
 - 복사해 시작할 Patterns: `packages/auth/src/admin/AdminAccounts.stories.tsx`
 - 문서: `packages/auth/README.md`
-- 쓰지 않는 경우: 백엔드 skeleton.account.admin.enabled=true 와 ADMIN 역할이 있어야 열린다(RequireRole 은 화면용, 검사는 서버) / 사용자 지원용 상세 · 감사 로그 화면은 없다
+- 쓰지 않는 경우: 백엔드 skeleton.account.admin.enabled=true 와 account.read · account.manage · account.roles 권한이 있어야 열린다(RequirePermission 은 화면용, 검사는 서버) / 사용자 지원용 상세 · 감사 로그 화면은 없다
 - 키워드: 운영자 도구, 계정 관리, 계정 정지, 관리자 화면 / admin tools, account management, suspend account, admin panel
 
 ### `live-notifications` — 알림이 새로고침 없이 즉시 뜬다 — 실시간 연결(SSE 또는 WebSocket)로 받은 이벤트를 알림 캐시에 넣어 종 · 목록 · 안 읽은 수가 바로 바뀐다.

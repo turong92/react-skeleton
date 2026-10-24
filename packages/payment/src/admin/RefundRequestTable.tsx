@@ -6,11 +6,14 @@ import { resolvePaymentLabels, type PaymentLabelsInput } from '../labels'
 import { RefundStatusBadge } from '../OrderStatusBadge'
 import { closedByOf } from './closedBy'
 import { ListFrame } from './ListFrame'
+import { allowAll, PAYMENT_PERMISSIONS, type CanFn } from './permissions'
 import { rowActionClass, type RenderRowAction } from './rowAction'
 import sharedStyles from './shared.module.css'
 import type { AdminRefund } from './types'
 
 export type RefundRequestTableProps = {
+  /** 호출자의 권한 질문 - 승인 · 거절 = `payment.refund`. 없으면 두 단추를 그리지 않는다. 기본 모두 허용 */
+  can?: CanFn
   refunds: readonly AdminRefund[]
   /** 기다리는 요청 줄의 「요청대로 환불하기」 — 돈이 나가니 부모가 확인 창(`AdminRefundDialog`)을 연다 */
   onApprove?: (refund: AdminRefund) => void
@@ -36,8 +39,9 @@ export type RefundRequestTableProps = {
  */
 export function RefundRequestTable({
   refunds,
-  onApprove,
-  onReject,
+  can = allowAll,
+  onApprove: onApproveIn,
+  onReject: onRejectIn,
   onOpenOrder,
   renderAction,
   loading,
@@ -49,6 +53,8 @@ export function RefundRequestTable({
   formatTime = (iso) => formatInstant(iso, { locale }),
   labels: input,
 }: RefundRequestTableProps) {
+  const onApprove = can(PAYMENT_PERMISSIONS.refund) ? onApproveIn : undefined
+  const onReject = can(PAYMENT_PERMISSIONS.refund) ? onRejectIn : undefined
   const labels = resolvePaymentLabels(input)
   const text = labels.admin.requests
   const panel = labels.admin.panel

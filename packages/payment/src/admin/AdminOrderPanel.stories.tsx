@@ -578,6 +578,16 @@ export const ReadOnly: Story = {
   },
 }
 
+/** CS 담당(`payment.read` + `payment.refund`) - 환불은 되지만 「결제사와 맞추기」는 `payment.operate` 라 단추가 없다(서버도 403) */
+export const CsOperatorCannotSync: Story = {
+  args: { can: (key: string) => key !== 'payment.operate' },
+  play: async ({ canvas, canvasElement }) => {
+    await expect(canvas.getByRole('button', { name: '환불하기' })).toBeVisible()
+    await expect(canvas.queryByRole('button', { name: '결제사와 맞추기' })).toBeNull()
+    await expectOneFilled(canvasElement, '환불하기')
+  },
+}
+
 export const English: Story = {
   args: {
     labels: undefined,

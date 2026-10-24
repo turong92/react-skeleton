@@ -1,4 +1,4 @@
-import { RequireAuth, RequireRole } from '@skeleton/auth'
+import { RequireAuth, RequirePermission } from '@skeleton/auth'
 import { BlockedNotice } from '../auth/BlockedNotice'
 import { accountRoutes } from '../auth/authRoutes'
 import type { RouteObject } from 'react-router-dom'
@@ -119,13 +119,18 @@ export const routes: RouteObject[] = [
           },
           { path: '/settings', element: <SettingsPage />, handle: privateSeo('nav.settings') },
           {
-            element: <RequireRole roles={['ADMIN']} forbidden={<BlockedNotice />} />,
+            element: <RequirePermission anyOf={['account.read']} forbidden={<BlockedNotice />} />,
             children: [
               {
                 path: '/admin/accounts',
                 element: <AdminAccountsPage />,
                 handle: privateSeo('nav.account'),
               },
+            ],
+          },
+          {
+            element: <RequirePermission anyOf={['payment.read']} forbidden={<BlockedNotice />} />,
+            children: [
               // 운영자 결제 도구 — 백엔드 `skeleton.payment.admin.enabled`. 정적 경로가 아니므로 `:id` 는 목록 뒤에
               {
                 path: '/admin/payments',

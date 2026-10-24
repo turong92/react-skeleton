@@ -1,5 +1,5 @@
-import { RequireAuth, RequireRole } from '@skeleton/auth'
-import { isValidElement } from 'react'
+import { RequireAuth, RequirePermission } from '@skeleton/auth'
+import { isValidElement, type ReactElement } from 'react'
 import { matchRoutes } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import { routes } from './routes'
@@ -62,18 +62,22 @@ describe('routes', () => {
     expect(leaf('/admin/payments/ord_abc')?.path).toBe('/admin/payments/:id')
   })
 
-  it('the operator payment screens sit under the auth guard and, inside it, the ADMIN role guard — the accounts tool is guarded the same way', () => {
-    const hasRoleGuard = (path: string) =>
-      chain(path).some(
-        (route) => isValidElement(route.element) && route.element.type === RequireRole,
-      )
-    for (const path of ['/admin/accounts', '/admin/payments', '/admin/payments/ord_abc']) {
+  it('the operator screens sit under the auth guard and, inside it, a permission guard of their own - payments need payment.read, accounts need account.read', () => {
+    const permissionsOf = (path: string) =>
+      chain(path)
+        .filter(
+          (route) => isValidElement(route.element) && route.element.type === RequirePermission,
+        )
+        .map((route) => (route.element as ReactElement<{ anyOf: string[] }>).props.anyOf)
+    for (const path of ['/admin/payments', '/admin/payments/ord_abc']) {
       expect(guarded(path), path).toBe(true)
-      expect(hasRoleGuard(path), path).toBe(true)
+      expect(permissionsOf(path), path).toEqual([['payment.read']])
     }
-    // 사용자 쪽 결제 화면에는 역할 가드가 없다
+    expect(guarded('/admin/accounts')).toBe(true)
+    expect(permissionsOf('/admin/accounts')).toEqual([['account.read']])
+    // 사용자 쪽 결제 화면에는 권한 가드가 없다
     for (const path of ['/cheer', '/cheers', '/payments/ord_abc'])
-      expect(hasRoleGuard(path), path).toBe(false)
+      expect(permissionsOf(path), path).toEqual([])
   })
 
   it('the signed-in screens sit under the auth guard; home, login, the legal pages, the board and the 404 are public', () => {

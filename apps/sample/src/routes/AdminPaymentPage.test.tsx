@@ -10,6 +10,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it } from 'vitest'
 import { i18n } from '../i18n'
+import { OperatorSession } from '../test-support/operatorSession'
 import { AdminPaymentPage } from './AdminPaymentPage'
 
 afterEach(async () => {
@@ -64,17 +65,19 @@ const detailOf = (over: Partial<AdminOrderDetail> = {}): AdminOrderDetail => ({
   ...over,
 })
 
-function render(seed: (client: QueryClient) => void) {
+function render(seed: (client: QueryClient) => void, permissions?: string[]) {
   const client = new QueryClient({ defaultOptions: { queries: { retryOnMount: false } } })
   seed(client)
   return renderToStaticMarkup(
-    <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={['/admin/payments/ord_1']}>
-        <Routes>
-          <Route path="/admin/payments/:id" element={<AdminPaymentPage />} />
-        </Routes>
-      </MemoryRouter>
-    </QueryClientProvider>,
+    <OperatorSession permissions={permissions}>
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={['/admin/payments/ord_1']}>
+          <Routes>
+            <Route path="/admin/payments/:id" element={<AdminPaymentPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
+    </OperatorSession>,
   )
 }
 const withDetail = (detail: AdminOrderDetail) => (client: QueryClient) =>
@@ -120,6 +123,18 @@ describe('AdminPaymentPage', () => {
     const html = render(withDetail(detailOf()))
     expect(button(html, '환불하기')).toContain('data-variant="primary"')
     expect(button(html, '결제사와 맞추기')).toContain('data-variant="secondary"')
+  })
+
+  it('a CS operator (payment.read + payment.refund) can refund but is not offered 「결제사와 맞추기」 - the server would answer 403', () => {
+    // 확인 창(`dialog`)은 늘 그려지니 패널 부분만 본다
+    const panelOf = (permissions: string[]) =>
+      render(withDetail(detailOf()), permissions).split('<dialog')[0]
+    const cs = panelOf(['payment.read', 'payment.refund'])
+    expect(cs).toContain('환불하기')
+    expect(cs).not.toContain('결제사와 맞추기')
+    const readOnly = panelOf(['payment.read'])
+    expect(readOnly).not.toContain('환불하기')
+    expect(readOnly).not.toContain('결제사와 맞추기')
   })
 
   it('a payment that needs a check says why and makes 「결제사와 맞추기」 the filled button', () => {

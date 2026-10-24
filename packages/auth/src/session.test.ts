@@ -11,6 +11,7 @@ const principal: AuthPrincipal = {
   username: 'u',
   email: 'u@e.com',
   roles: ['USER'],
+  permissions: [],
 }
 const response = (accessToken: string): AuthTokenResponse => ({
   accessToken,
@@ -58,7 +59,13 @@ describe('createAuthSession', () => {
     store.set(fakeJwt({ sub: 'acc_9', roles: ['ADMIN'] }))
     const { status, principal: decoded } = createAuthSession({ api: fakeApi(), store }).getState()
     expect(status).toBe('authenticated')
-    expect(decoded).toEqual({ accountId: 'acc_9', username: null, email: null, roles: ['ADMIN'] })
+    expect(decoded).toEqual({
+      accountId: 'acc_9',
+      username: null,
+      email: null,
+      roles: ['ADMIN'],
+      permissions: [],
+    })
   })
 
   it('login stores the token, takes the principal from the response and notifies subscribers', async () => {

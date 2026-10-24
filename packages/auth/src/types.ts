@@ -16,16 +16,24 @@ export type AuthPrincipal = {
   username?: string | null
   email?: string | null
   roles: string[]
+  /**
+   * 백엔드 권한 문자열(`payment.refund` …, 전권은 `*`) - `GET /auth/me` 가 채운다. 옛 서버 · 로그인 응답 · 토큰 claim 에는 없어서 세션이 `[]` 로 채우고 `/auth/me` 로 다시 읽는다.
+   * 화면을 숨기는 데만 쓴다(진짜 판정은 서버)
+   */
+  permissions: string[]
   /** auth-session 이 설치된 백엔드가 채운다 */
   sessionId?: string | null
 }
+
+/** 서버가 보낸 principal - 로그인 응답 · 옛 서버의 `/auth/me` 에는 `permissions` 가 없을 수 있다(세션이 `[]` 로 채운다) */
+export type WirePrincipal = Omit<AuthPrincipal, 'permissions'> & { permissions?: string[] }
 
 /** 백엔드 `AuthTokenResponse`. `expiresAt` 은 `Instant` → ISO 문자열 */
 export type AuthTokenResponse = {
   accessToken: string
   tokenType: string
   expiresAt: string
-  principal: AuthPrincipal
+  principal: WirePrincipal
   /** `body` 전달 모드(기본)에서만 — `cookie` 모드와 auth-session 이 없는 백엔드에는 없다 */
   refreshToken?: string
   refreshExpiresAt?: string

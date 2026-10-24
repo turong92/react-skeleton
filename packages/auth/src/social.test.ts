@@ -176,7 +176,7 @@ describe('createSocialLoginFlow', () => {
         getState: () => ({
           status: signedIn ? 'authenticated' : 'anonymous',
           token: signedIn ? 'jwt' : null,
-          principal: signedIn ? token.principal : null,
+          principal: signedIn ? { ...token.principal, permissions: [] } : null,
         }),
         subscribe: (listener) => {
           listeners.add(listener)

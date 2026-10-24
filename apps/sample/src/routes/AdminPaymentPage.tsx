@@ -1,4 +1,5 @@
 import { isErrorCode } from '@skeleton/api-client'
+import { useCan } from '@skeleton/auth'
 import { PaymentLedgerErrorCodes } from '@skeleton/payment'
 import {
   adminAccessProblem,
@@ -45,6 +46,7 @@ function AdminPayment({
   const language = languageOf(locale)
   const labels = paymentLabelsFor(t, language)
   const { order } = detail
+  const can = useCan()
   const sync = useSyncOrder(paymentAdminApi)
   const closeCharge = useCloseSubscriptionCharge(paymentAdminApi)
   const [closing, setClosing] = useState(false)
@@ -95,6 +97,7 @@ function AdminPayment({
       )}
       <AdminOrderPanel
         detail={detail}
+        can={can}
         onRefund={direct.ask}
         stale={refreshFailed}
         // 상태 줄은 다시 읽기가 실패한 동안에만 보인다(패널이 `stale` 일 때) - 직접 환불과 승인 중 더 최근 것을 말한다

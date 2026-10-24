@@ -31,6 +31,8 @@ export type AdminAccountsTableProps = {
   pagination: PaginationMeta
   /** 운영자가 줄 수 있는 역할(예 `['ADMIN','MODERATOR']`) */
   assignableRoles: string[]
+  /** 호출자의 권한 질문 - 정지 · 해제 · 복구 = `account.manage`, 역할 = `account.roles`. 없으면 그 명령을 메뉴에서 뺀다. 기본 모두 허용 */
+  can?: (key: string) => boolean
   query: AdminAccountsQueryState
   onQueryChange: (query: AdminAccountsQueryState) => void
   onPage: (page: number) => void
@@ -57,6 +59,7 @@ export function AdminAccountsTable({
   accounts,
   pagination,
   assignableRoles,
+  can,
   query,
   onQueryChange,
   onPage,
@@ -84,7 +87,7 @@ export function AdminAccountsTable({
   const action = useAction(labels)
 
   function items(account: AdminAccount) {
-    return rowActions(account, assignableRoles).map((a) => ({
+    return rowActions(account, assignableRoles, can).map((a) => ({
       key: a.kind,
       label:
         a.kind === 'suspend'
@@ -228,7 +231,12 @@ export function AdminAccountsTable({
           {
             key: 'actions',
             header: labels.adminColumns.actions,
-            render: (a) => <RowMenu label={`${a.email ?? a.id} ⋯`} items={items(a)} />,
+            render: (a) => {
+              const menu = items(a)
+              return menu.length > 0 ? (
+                <RowMenu label={`${a.email ?? a.id} ⋯`} items={menu} />
+              ) : null
+            },
           },
         ]}
       />

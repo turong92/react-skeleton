@@ -1495,6 +1495,7 @@
           "payment-toss",
           "persistence-jdbc",
           "platform",
+          "scheduler",
           "storage",
           "storage-s3",
           "time"

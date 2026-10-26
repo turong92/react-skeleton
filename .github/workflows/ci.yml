@@ -64,7 +64,7 @@ jobs:
   # sample-e2e-job:start
   # 참조 앱(apps/sample)의 핵심 여정 5개 파일만(돈 · 권한 · 가입/삭제 · 게시판 · 주 여정) — 전부는 `pnpm e2e:sample`(스켈레톤은 하루 한 번 전체를 돈다). 진짜 백엔드(kotlin-skeleton apps/sample + PostgreSQL + 로컬 S3 컨테이너) · 진짜 브라우저. 단위 테스트 잡과 따로라 서로 기다리지 않는다
   sample-e2e:
-    runs-on: ubuntu-24.04 # ubuntu-latest 가 2026-10-26 에 26.04 로 넘어간 뒤 이 잡의 브라우저 e2e 가 계정 만들기 흐름에서 무너졌다(같은 코드가 24.04 에서는 통과) — 러너 이미지를 고정한다
+    runs-on: ubuntu-latest
     timeout-minutes: 30 # 그레이들 첫 빌드 · 컨테이너 · rolldown(rc) 교착에 매달리지 않게 끊는다
     steps:
       - uses: actions/checkout@v4
@@ -102,6 +102,8 @@ jobs:
         timeout-minutes: 20
         env:
           SAMPLE_API_DIR: ${{ github.workspace }}/kotlin-skeleton
+          # ubuntu 26.04 의 /tmp 는 8GB 메모리 파일시스템(사용자 쿼터)이다 — 크로미엄이 요청마다 만드는 2MB 공유 메모리 파일이 vite 의 모듈 수백 개(페이지마다)로 /tmp 를 채워 「디스크 쿼터 초과」 → 요청이 ERR_INSUFFICIENT_RESOURCES 로 실패한다. 디스크의 러너 임시 폴더를 쓰게 한다
+          TMPDIR: ${{ runner.temp }}
       # 실패하면 백엔드 로그를 남긴다(러너가 사라지면 볼 곳이 없다) — 하네스가 build/sample-e2e/backend.log 에 쓴다
       - uses: actions/upload-artifact@v4
         if: failure()

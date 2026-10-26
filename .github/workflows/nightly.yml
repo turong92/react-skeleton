@@ -12,7 +12,7 @@ concurrency:
 jobs:
   # 참조 앱(apps/sample)의 e2e 전부(파일 18개) — 진짜 백엔드(kotlin-skeleton apps/sample + PostgreSQL + 로컬 S3 컨테이너) · 진짜 브라우저
   sample-e2e:
-    runs-on: ubuntu-24.04 # ubuntu-latest 가 2026-10-26 에 26.04 로 넘어간 뒤 이 잡의 브라우저 e2e 가 계정 만들기 흐름에서 무너졌다(같은 코드가 24.04 에서는 통과) — 러너 이미지를 고정한다
+    runs-on: ubuntu-latest
     timeout-minutes: 50 # 전체 25분 + 재동의 재실행 15분 + 기동·설치 여유. 그레이들 첫 빌드 · 컨테이너 · rolldown(rc) 교착에 매달리지 않게 끊는다
     steps:
       - uses: actions/checkout@v4
@@ -49,6 +49,8 @@ jobs:
         timeout-minutes: 25
         env:
           SAMPLE_API_DIR: ${{ github.workspace }}/kotlin-skeleton
+          # ubuntu 26.04 의 /tmp 는 8GB 메모리 파일시스템(사용자 쿼터)이다 — 크로미엄이 요청마다 만드는 2MB 공유 메모리 파일이 vite 의 모듈 수백 개(페이지마다)로 /tmp 를 채워 「디스크 쿼터 초과」 → 요청이 ERR_INSUFFICIENT_RESOURCES 로 실패한다. 디스크의 러너 임시 폴더를 쓰게 한다
+          TMPDIR: ${{ runner.temp }}
       # 약관 재동의 필터는 백엔드를 켠 채로 띄워야 하는 별도 구성이라 위 실행에서는 건너뛴다(legal.e2e.ts) — 그 파일만 필터를 켜고 한 번 더 돈다.
       # 모든 파일에 켜면 다른 시나리오의 호출이 403 으로 막힐 수 있어 따로 둔다
       - run: pnpm e2e:sample e2e/legal.e2e.ts
@@ -56,6 +58,8 @@ jobs:
         timeout-minutes: 15
         env:
           SAMPLE_API_DIR: ${{ github.workspace }}/kotlin-skeleton
+          # ubuntu 26.04 의 /tmp 는 8GB 메모리 파일시스템(사용자 쿼터)이다 — 크로미엄이 요청마다 만드는 2MB 공유 메모리 파일이 vite 의 모듈 수백 개(페이지마다)로 /tmp 를 채워 「디스크 쿼터 초과」 → 요청이 ERR_INSUFFICIENT_RESOURCES 로 실패한다. 디스크의 러너 임시 폴더를 쓰게 한다
+          TMPDIR: ${{ runner.temp }}
           SKELETON_LEGAL_RECONSENT_ENABLED: 'true'
           E2E_LEGAL_RECONSENT: '1'
       # 실패하면 백엔드 로그를 남긴다(러너가 사라지면 볼 곳이 없다) — 하네스가 build/sample-e2e/backend.log 에 쓴다

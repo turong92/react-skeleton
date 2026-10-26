@@ -442,7 +442,7 @@
         "docs": ["docs/modules/dashboard.md"]
       },
       "status": "experimental",
-      "id": "dashboard",
+      "id": "admin-dashboard",
       "kind": "package",
       "package": "@skeleton/dashboard",
       "path": "packages/dashboard",
@@ -2611,7 +2611,7 @@
     },
     {
       "need": "관리자 대시보드 (방문 · 가입 · 매출 · 퍼널 · 순위)",
-      "capabilities": ["dashboard"],
+      "capabilities": ["admin-dashboard"],
       "byHand": "백엔드 skeleton.dashboard.admin.enabled=true(Cloudflare · GA 는 키를 넣은 만큼). 프런트는 apps/sample 의 AdminDashboardPage 와 RequirePermission('dashboard.read') 라우트를 복사한다."
     },
     {

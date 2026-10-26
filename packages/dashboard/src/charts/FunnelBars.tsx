@@ -13,7 +13,7 @@ type Stage = { key: string; label: string; value: number }
 
 /**
  * 퍼널 막대 — 기준(방문 수 같은 것)이 있으면 맨 앞 단계, 이어서 서버가 주는 단계. 막대 길이는 첫 단계 대비 도달 수,
- * 글자는 「전 단계 대비 n%」(서버의 `rate` 의 기준이 계약에 적혀 있지 않아 도달 수에서 다시 계산한다). 첫 단계가 0 이면 막대는 가장 짧게.
+ * 글자는 「전 단계 대비 n%」(서버의 `rate` 는 첫 단계(묶음) 대비라 「전 단계 대비」는 도달 수에서 다시 계산한다). 첫 단계가 0 이면 막대는 가장 짧게.
  */
 export function FunnelBars({ funnel, labels, locale }: FunnelBarsProps) {
   const stages: Stage[] = [

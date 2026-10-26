@@ -149,6 +149,7 @@ describe('the skeleton repo', () => {
       'scripts/new-project.sh',
       'scripts/test-new-project.sh',
       '.github/workflows/new-project.yml',
+      '.github/workflows/nightly.yml',
     ])
       expect(existsSync(join(REPO, path)), path).toBe(true)
   })

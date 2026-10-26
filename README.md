@@ -85,7 +85,8 @@ pnpm tokens           # packages/tokens/tokens.json → tokens.css + docs/design
 pnpm tokens:check     # 생성물이 정본과 같은지 확인 (CI)
 pnpm capabilities       # capabilities.json → docs/capabilities.md · llms.txt 생성 + 카탈로그 가드
 pnpm capabilities:check # 생성물 · 카탈로그가 레포와 같은지 확인 (CI)
-bash scripts/test-new-project.sh --full   # 네 조합을 찍어 각각 install · lint · typecheck · test · build (+ 한 조합은 test:stories) (네트워크 필요, 수 분 — 별도 CI 워크플로)
+bash scripts/test-new-project.sh --core   # 서로 겹치지 않는 조합만(push/PR 의 CI) — 전부(--full)는 하루 한 번 nightly 워크플로
+bash scripts/test-new-project.sh --full   # 조합 전부를 찍어 각각 install · lint · typecheck · test · build (+ 한 조합은 test:stories) (네트워크 필요, 수 분 — 별도 CI 워크플로)
 ```
 
 Node 24(또는 22.18+), pnpm 10.

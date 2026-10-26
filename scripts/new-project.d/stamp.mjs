@@ -268,6 +268,7 @@ function apply(
     'scripts/test-new-project.sh',
     'scripts/new-project.d',
     '.github/workflows/new-project.yml',
+    '.github/workflows/nightly.yml', // 스켈레톤의 하루 한 번 전체 검사(e2e 전부 · 조합 열 개) — 찍힌 프로젝트에는 맞지 않는다
     'tests/skeleton.repo.test.ts',
     // 카탈로그 가드 중 스켈레톤 전용(stampFlag = new-project.sh 의 동작 · 레시피 명령) — 스크립트가 없는 프로젝트에는 맞지 않는다
     'tests/capabilities.skeleton.test.ts',

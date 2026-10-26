@@ -1,0 +1,75 @@
+name: nightly
+# 하루 한 번(한국 새벽) 전부 돈다 — push/PR 의 CI 는 빠른 검사와 핵심 e2e 5개만 돈다. 수동 실행(workflow_dispatch)도 된다
+on:
+  schedule:
+    - cron: '0 18 * * *' # UTC 18:00 = KST 03:00
+  workflow_dispatch:
+
+concurrency:
+  group: nightly
+  cancel-in-progress: false
+
+jobs:
+  # 참조 앱(apps/sample)의 e2e 전부(파일 18개) — 진짜 백엔드(kotlin-skeleton apps/sample + PostgreSQL + 로컬 S3 컨테이너) · 진짜 브라우저
+  sample-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30 # 그레이들 첫 빌드 · 컨테이너 · rolldown(rc) 교착에 매달리지 않게 끊는다
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: react-skeleton
+      - uses: actions/checkout@v4
+        with:
+          repository: turong92/kotlin-skeleton
+          path: kotlin-skeleton
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+          cache-dependency-path: react-skeleton/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+        working-directory: react-skeleton
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('react-skeleton/pnpm-lock.yaml') }}
+      - run: pnpm exec playwright install --with-deps chromium
+        working-directory: react-skeleton
+      - run: pnpm e2e:sample
+        working-directory: react-skeleton
+        timeout-minutes: 25
+        env:
+          SAMPLE_API_DIR: ${{ github.workspace }}/kotlin-skeleton
+      # 약관 재동의 필터는 백엔드를 켠 채로 띄워야 하는 별도 구성이라 위 실행에서는 건너뛴다(legal.e2e.ts) — 그 파일만 필터를 켜고 한 번 더 돈다.
+      # 모든 파일에 켜면 다른 시나리오의 호출이 403 으로 막힐 수 있어 따로 둔다
+      - run: pnpm e2e:sample e2e/legal.e2e.ts
+        working-directory: react-skeleton
+        timeout-minutes: 15
+        env:
+          SAMPLE_API_DIR: ${{ github.workspace }}/kotlin-skeleton
+          SKELETON_LEGAL_RECONSENT_ENABLED: 'true'
+          E2E_LEGAL_RECONSENT: '1'
+
+  # scripts/new-project.sh 로 조합 열 개(일곱 조합 + 레시피 셋)를 찍어 각각 install → … → build (네트워크 필요, 순차)
+  new-project:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+      - run: bash scripts/test-new-project.sh --full

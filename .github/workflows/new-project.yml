@@ -1,35 +1,38 @@
 name: new-project
-# scripts/new-project.sh 로 세 조합을 찍어 각각 pnpm install · format · tokens:check · capabilities:check · lint · typecheck · test · format:check · build (네트워크 필요, 순차)
+# scripts/new-project.sh 로 겹치지 않는 조합(--core: 기본값 · packages · ssr-without-storybook · 레시피 셋)을 찍어 각각 pnpm install · format · tokens:check · capabilities:check · lint · typecheck · test · format:check · build (네트워크 필요, 순차).
+# 열 조합 전부(--full)는 하루 한 번 nightly.yml 이 돈다. 앱 · 패키지 변경 자체는 ci.yml 의 build 잡이 검사한다
 on:
   push:
     branches: [main]
-    paths:
-      [
+    paths: [
         'scripts/**',
         'capabilities.json',
         'docs/new-project-recipe.md',
-        'apps/**',
-        'packages/**/package.json',
+        'apps/starter/**', # 찍힐 때 그대로 따라가는 앱만 — apps/sample · workbench 는 옵션이라 nightly 가 돈다
+        'apps/starter-ssr/**',
+        'apps/storybook/**',
         'package.json',
         'pnpm-workspace.yaml',
         'eslint.config.js',
-        'tests/**',
         '.github/workflows/new-project.yml',
       ]
   pull_request:
-    paths:
-      [
+    paths: [
         'scripts/**',
         'capabilities.json',
         'docs/new-project-recipe.md',
-        'apps/**',
-        'packages/**/package.json',
+        'apps/starter/**', # 찍힐 때 그대로 따라가는 앱만 — apps/sample · workbench 는 옵션이라 nightly 가 돈다
+        'apps/starter-ssr/**',
+        'apps/storybook/**',
         'package.json',
         'pnpm-workspace.yaml',
         'eslint.config.js',
-        'tests/**',
         '.github/workflows/new-project.yml',
       ]
+
+concurrency:
+  group: new-project-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   stamp-and-verify:
@@ -44,4 +47,4 @@ jobs:
         with:
           node-version: '24'
           cache: 'pnpm'
-      - run: bash scripts/test-new-project.sh --full
+      - run: bash scripts/test-new-project.sh --core

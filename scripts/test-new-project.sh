@@ -3,9 +3,10 @@
 #
 #   scripts/test-new-project.sh            # 빠른 검사 (기본, 수 초): 인자 검증 · 패키지 닫힘 · 구조 · 이름/스코프 바꾸기 · 남는 흔적
 #   scripts/test-new-project.sh --quick    # 위와 같다 (`pnpm test` 가 부른다)
+#   scripts/test-new-project.sh --core     # 위 + 서로 겹치지 않는 조합만(1·2·4 와 레시피) 찍어 돌린다 — push/PR 의 CI. 3·5·6·7 은 레시피가 품는다
 #   scripts/test-new-project.sh --full     # 위 + 일곱 조합과 레시피(docs/new-project-recipe.md)의 작업 예 명령을 임시 디렉토리에 찍어 각각 pnpm install · lint · typecheck · test · build (네트워크 필요, 순차, 수 분)
 #
-# --full 은 CI 의 별도 워크플로(.github/workflows/new-project.yml)가 돈다. 조합:
+# --core 는 CI 의 new-project.yml 이, --full 은 하루 한 번 nightly.yml 이 돈다. 조합:
 #   1. 기본값만 (스토리집 포함)
 #   2. --packages realtime,notifications,storage,i18n  (+ `pnpm test:stories` — 진짜 브라우저에서 스토리를 돌린다. Playwright chromium 이 필요하다)
 #   3. --scope @acme --packages payment
@@ -18,7 +19,7 @@
 set -euo pipefail
 
 MODE="${1:---quick}"
-case "$MODE" in --quick|--full) ;; *) echo "usage: $0 [--quick|--full]" >&2; exit 2 ;; esac
+case "$MODE" in --quick|--core|--full) ;; *) echo "usage: $0 [--quick|--core|--full]" >&2; exit 2 ;; esac
 
 SRC="$(cd "$(dirname "$0")/.." && pwd)"
 SCRIPT="$SRC/scripts/new-project.sh"
@@ -154,7 +155,7 @@ check "약관 · 동의(@skeleton/legal)가 스타터에 배선돼 있다 (백�
 [ "$(json "$A/package.json" '["storybook", "storybook:build", "test:stories"].every((k) => typeof p.scripts[k] === "string") && ["storybook", "@storybook/react-vite", "@storybook/addon-vitest", "@storybook/addon-a11y", "@vitest/browser-playwright", "playwright"].every((d) => p.devDependencies[d])')" = "true" ] && pass "스토리집 스크립트(storybook · storybook:build · test:stories)와 도구 의존이 남는다" || fail "스토리집 스크립트 · 의존이 없다"
 check "pnpm test(빠른 단위 테스트)는 스토리를 돌리지 않는다 — 브라우저가 필요한 test:stories 는 따로다" bash -c "! grep -q 'stories' <(node -e \"console.log(JSON.parse(require('fs').readFileSync('$A/package.json','utf8')).scripts.test)\")"
 check "pnpm test 가 new-project 테스트를 부르지 않는다 (새 프로젝트에는 도구가 없다)" bash -c "! grep -q 'new-project' '$A/package.json'"
-check "new-project 도구 · 스켈레톤 전용 테스트 · 워크플로가 따라오지 않는다" bash -c "test ! -e '$A/scripts' -o -z \"\$(ls '$A/scripts' 2>/dev/null)\"; test ! -e '$A/tests/skeleton.repo.test.ts'; test ! -e '$A/.github/workflows/new-project.yml'"
+check "new-project 도구 · 스켈레톤 전용 테스트 · 워크플로가 따라오지 않는다" bash -c "test ! -e '$A/scripts' -o -z \"\$(ls '$A/scripts' 2>/dev/null)\"; test ! -e '$A/tests/skeleton.repo.test.ts'; test ! -e '$A/.github/workflows/new-project.yml'; test ! -e '$A/.github/workflows/nightly.yml'"
 check "CI 워크플로(ci.yml)는 남는다" test -f "$A/.github/workflows/ci.yml"
 check "eslint 의 앱 이름 막기에 새 앱 이름이 더해진다" grep -q "'acme-app/\*\*'" "$A/eslint.config.js"
 check "pnpm-workspace.yaml 은 apps/* · packages/* 글롭 그대로" bash -c "grep -q 'apps/\*' '$A/pnpm-workspace.yaml' && grep -q 'packages/\*' '$A/pnpm-workspace.yaml'"
@@ -354,7 +355,7 @@ $(node "$SRC/scripts/capabilities.d/stampCheck.mjs" recipe-args "$SRC")
 EOF2
 [ "$(printf '%s\n' $RECIPE_IDS | grep -c .)" -ge 3 ] && pass "레시피의 작업 예가 3개 이상이다 ($RECIPE_IDS)" || fail "레시피 작업 예: [$RECIPE_IDS]"
 
-if [ "$MODE" = "--full" ]; then
+if [ "$MODE" != "--quick" ]; then
   echo "== 10. 조합마다 pnpm install · format · lint · typecheck · test · build (순차)"
   verify_composition() { # verify_composition <dir> <이름> [stories] — stories 면 test:stories(진짜 브라우저)도 돈다
     local dir="$1" name="$2" with_stories="${3:-}" started ended step idle
@@ -376,11 +377,12 @@ if [ "$MODE" = "--full" ]; then
   }
   verify_composition "$A" "1-defaults"
   verify_composition "$B" "2-packages" stories
-  verify_composition "$C" "3-scope-payment"
+  # 3 · 5 · 6 · 7 은 레시피 예(saas ⊃ 3, community ⊃ 5 · 6 · 7)가 품는다 — --core 는 건너뛴다
+  [ "$MODE" = "--full" ] && verify_composition "$C" "3-scope-payment"
   verify_composition "$SRS" "4-ssr-without-storybook"
-  verify_composition "$WS" "5-with-sample"
-  verify_composition "$BD" "6-board" stories
-  verify_composition "$MK" "7-seo-marketing" stories
+  [ "$MODE" = "--full" ] && verify_composition "$WS" "5-with-sample"
+  [ "$MODE" = "--full" ] && verify_composition "$BD" "6-board" stories
+  [ "$MODE" = "--full" ] && verify_composition "$MK" "7-seo-marketing" stories
   first=1
   for rid in $RECIPE_IDS; do # 레시피의 작업 예 — 적힌 그대로 찍은 것을 정말 돌려 본다(첫 예는 스토리까지)
     if [ "$first" = 1 ]; then verify_composition "$TMP/recipe-$rid" "recipe-$rid" stories; else verify_composition "$TMP/recipe-$rid" "recipe-$rid"; fi

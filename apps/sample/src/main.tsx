@@ -29,11 +29,14 @@ onSessionEnded((reason) => {
 })
 
 // 방문 통계 - 환경변수가 있을 때만, GA 는 동의한 방문자만(없으면 아무것도 붙지 않는다). 읽는 쪽은 관리자 대시보드(`@skeleton/dashboard`)
-createAnalyticsLoader({
+const analytics = createAnalyticsLoader({
   consent,
   gaMeasurementId: import.meta.env.VITE_GA_MEASUREMENT_ID,
   cfBeaconToken: import.meta.env.VITE_CF_BEACON_TOKEN,
-}).start()
+})
+analytics.start()
+// 화면(라우트)이 바뀔 때마다 page_view - 인증 값을 뗀 주소로, 같은 주소는 한 번만
+router.subscribe(() => analytics.trackPageView())
 
 // 저장한 테마를 읽어 <html data-theme> 에 단다(@skeleton/theme 는 불러올 때 아무것도 하지 않는다)
 initTheme()

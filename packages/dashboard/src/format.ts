@@ -80,13 +80,13 @@ export type Delta =
   | { kind: 'flat'; percent: 0 }
   | { kind: 'up' | 'down'; percent: number }
 
-/** 직전 기간 대비 증감. 돈은 같은 통화끼리(없으면 첫 값)만 비교한다 */
+/** 직전 기간 대비 증감. 돈은 같은 통화끼리만 비교하고, 같은 통화의 직전 값이 없으면 증감을 내지 않는다(`unavailable`) */
 export function deltaOf(metric: DashboardMetric, compare: boolean): Delta {
   if (!compare) return { kind: 'off' }
   const current = metric.value?.[0]
   if (metric.status !== 'OK' || !current || !metric.previousValue) return { kind: 'unavailable' }
-  const previous =
-    metric.previousValue.find((v) => v.currency === current.currency) ?? metric.previousValue[0]
+  // 같은 통화의 직전 값만 비교한다 - 다른 통화(KRW 이번 vs USD 직전)와 견주지 않는다
+  const previous = metric.previousValue.find((v) => v.currency === current.currency)
   if (!previous) return { kind: 'unavailable' }
   if (previous.amount === 0)
     return current.amount === 0 ? { kind: 'flat', percent: 0 } : { kind: 'new' }

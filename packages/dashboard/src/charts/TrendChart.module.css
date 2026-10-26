@@ -113,3 +113,9 @@
   font-size: var(--font-size-caption);
   color: var(--text-muted);
 }
+
+/* 값이 0 보다 아래로 내려가는 그래프의 0 기준선 */
+.zero {
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}

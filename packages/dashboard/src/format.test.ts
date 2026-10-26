@@ -64,6 +64,16 @@ describe('deltaOf', () => {
     })
   })
 
+  it('gives no delta when the previous period has no value in the same currency (never compares KRW with USD)', () => {
+    const money: DashboardMetric = {
+      ...base,
+      unit: 'MONEY',
+      value: [{ amount: 200, currency: 'KRW' }],
+      previousValue: [{ amount: 100, currency: 'USD' }],
+    }
+    expect(deltaOf(money, true)).toEqual({ kind: 'unavailable' })
+  })
+
   it('compares money in the same currency, not the first one it finds', () => {
     const money: DashboardMetric = {
       ...base,

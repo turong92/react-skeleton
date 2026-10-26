@@ -57,3 +57,25 @@ export const Hourly: Story = {
     await expect(canvasElement.textContent).toMatch(/00:00/)
   },
 }
+
+/** 환불이 결제보다 큰 칸(순매출 음수)은 잘리지 않는다 - 바닥이 내려가고 0 기준선이 생긴다 */
+export const NegativeValues: Story = {
+  args: {
+    previous: null,
+    points: [
+      { at: '2026-10-19T15:00:00Z', value: 12_000 },
+      { at: '2026-10-20T15:00:00Z', value: -7_000 },
+      { at: '2026-10-21T15:00:00Z', value: 4_000 },
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    const svg = canvasElement.querySelector('svg')!
+    await expect(svg.querySelector('line[class*="zero"]')).not.toBeNull()
+    const ys = [...svg.querySelectorAll('polyline')].flatMap((line) =>
+      (line.getAttribute('points') ?? '').split(' ').map((pair) => Number(pair.split(',')[1])),
+    )
+    // 모든 점이 그림(0~40) 안에 있다
+    await expect(Math.min(...ys)).toBeGreaterThanOrEqual(0)
+    await expect(Math.max(...ys)).toBeLessThanOrEqual(40)
+  },
+}

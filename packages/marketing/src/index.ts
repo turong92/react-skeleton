@@ -20,7 +20,11 @@ export type {
   ConsentBannerProps,
   ConsentCategoryInfo,
 } from './consent/ConsentBanner'
-export { createAnalyticsLoader } from './analytics/createAnalyticsLoader'
+export {
+  createAnalyticsLoader,
+  DEFAULT_REDACTED_PARAMS,
+  redactedLocation,
+} from './analytics/createAnalyticsLoader'
 export type {
   AnalyticsLoader,
   AnalyticsLoaderOptions,

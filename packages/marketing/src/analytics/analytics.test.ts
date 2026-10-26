@@ -13,7 +13,7 @@ function fakePage() {
     head: { appendChild: (node) => scripts.push(node) },
     createElement: () => ({ src: '', async: false, defer: false, dataset: {} }),
   }
-  const win: WindowLike = {}
+  const win: WindowLike = { location: { href: 'https://example.test/reset?token=SECRET&x=1' } }
   return { scripts, doc, win }
 }
 const memory = () => {
@@ -88,6 +88,79 @@ describe('createAnalyticsLoader: nothing is sent before consent', () => {
     expect(page.scripts).toEqual([])
   })
 
+  it('talks to gtag.js the way it reads: every dataLayer entry is an Arguments object, never an array (an array is ignored)', () => {
+    const page = fakePage()
+    const consent = store()
+    createAnalyticsLoader({
+      consent,
+      gaMeasurementId: 'G-ABC123XYZ',
+      document: page.doc,
+      window: page.win,
+    }).start()
+    consent.acceptAll()
+    const entries = page.win.dataLayer as unknown[]
+    expect(entries.length).toBeGreaterThan(0)
+    for (const entry of entries) {
+      expect(Object.prototype.toString.call(entry)).toBe('[object Arguments]')
+    }
+    expect(typeof page.win.gtag).toBe('function')
+  })
+
+  it('denies every storage by default before anything else, then grants only analytics_storage for a visitor who accepted', () => {
+    const page = fakePage()
+    const consent = store()
+    createAnalyticsLoader({
+      consent,
+      gaMeasurementId: 'G-ABC123XYZ',
+      document: page.doc,
+      window: page.win,
+    }).start()
+    consent.acceptAll()
+    const commands = (page.win.dataLayer as ArrayLike<unknown>[]).map((entry) => Array.from(entry))
+    expect(commands[0]).toEqual([
+      'consent',
+      'default',
+      {
+        ad_storage: 'denied',
+        ad_user_data: 'denied',
+        ad_personalization: 'denied',
+        analytics_storage: 'denied',
+      },
+    ])
+    expect(commands[1]).toEqual(['consent', 'update', { analytics_storage: 'granted' }])
+    expect(commands.map((c) => c[0])).toEqual(['consent', 'consent', 'js', 'config', 'event'])
+  })
+
+  it('sends page views with the page_location stripped of auth query values (mail-link ?token=, ?code=&state=), once per address, only while consented', () => {
+    const page = fakePage()
+    const consent = store()
+    const loader = createAnalyticsLoader({
+      consent,
+      gaMeasurementId: 'G-ABC123XYZ',
+      document: page.doc,
+      window: page.win,
+    })
+    loader.start()
+    loader.trackPageView()
+    expect(page.win.dataLayer).toBeUndefined()
+    consent.acceptAll()
+    const sent = () =>
+      (page.win.dataLayer as ArrayLike<unknown>[])
+        .map((entry) => Array.from(entry))
+        .filter((c) => c[0] === 'event')
+    expect(sent()).toEqual([
+      ['event', 'page_view', { page_location: 'https://example.test/reset?x=1' }],
+    ])
+    expect(JSON.stringify(page.win.dataLayer)).not.toContain('SECRET')
+    loader.trackPageView() // 같은 주소
+    page.win.location = { href: 'https://example.test/cb?code=abc&state=xyz#id_token=zzz&ok=1' }
+    loader.trackPageView()
+    expect(sent().map((c) => (c[2] as { page_location: string }).page_location)).toEqual([
+      'https://example.test/reset?x=1',
+      'https://example.test/cb#ok=1',
+    ])
+  })
+
   it('tells gtag the storage is denied when analytics is switched off afterwards, and granted again when back on', () => {
     const page = fakePage()
     const consent = store()
@@ -99,7 +172,7 @@ describe('createAnalyticsLoader: nothing is sent before consent', () => {
     }).start()
     consent.acceptAll()
     consent.rejectAll()
-    const last = () => (page.win.dataLayer as unknown[][]).at(-1)
+    const last = () => Array.from((page.win.dataLayer as ArrayLike<unknown>[]).at(-1)!)
     expect(last()).toEqual(['consent', 'update', { analytics_storage: 'denied' }])
     consent.acceptAll()
     expect(last()).toEqual(['consent', 'update', { analytics_storage: 'granted' }])

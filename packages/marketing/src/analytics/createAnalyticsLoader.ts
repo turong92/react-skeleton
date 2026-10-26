@@ -18,7 +18,11 @@ export type DocumentLike = {
   head: { appendChild(node: ScriptNode): unknown }
   createElement(tag: 'script'): ScriptNode
 }
-export type WindowLike = { dataLayer?: unknown[]; gtag?: (...args: unknown[]) => void }
+export type WindowLike = {
+  dataLayer?: unknown[]
+  gtag?: (...args: unknown[]) => void
+  location?: { href: string }
+}
 
 export type AnalyticsLoaderOptions = {
   consent: Pick<ConsentStore, 'has' | 'subscribe'>
@@ -28,13 +32,49 @@ export type AnalyticsLoaderOptions = {
   cfBeaconToken?: string
   /** GA 를 켜는 동의 범주(기본 `analytics`) */
   category?: string
+  /** 페이지 주소에서 GA 로 보내기 전에 뗄 쿼리 이름(메일 링크의 일회용 토큰 · 로그인 콜백 값). 기본 `DEFAULT_REDACTED_PARAMS` */
+  redactParams?: readonly string[]
   document?: DocumentLike
   window?: WindowLike
 }
 
 export type AnalyticsLoader = {
+  /**
+   * 라우트가 바뀐 뒤에 부른다 - 동의해 GA 가 붙은 상태일 때만 `page_view` 를 보낸다(주소는 인증 값을 뗀 것, 같은 주소는 다시 보내지 않는다).
+   * GA 속성의 「브라우저 기록 이벤트로 페이지 변경 측정」을 켜 두면 gtag 가 스스로도 보내니 하나만 쓴다
+   */
+  trackPageView(): void
   /** 동의 상태를 따라 켜고 끈다. 돌려주는 함수가 구독을 푼다. DOM 이 없으면(서버) 아무것도 하지 않는다 */
   start(): () => void
+}
+
+/** 인증 값이 실린 쿼리 - GA 의 `page_location` 에서 뗀다(메일 링크 `?token=` · 소셜 콜백 `?code=&state=` …) */
+export const DEFAULT_REDACTED_PARAMS = [
+  'token',
+  'code',
+  'state',
+  'access_token',
+  'id_token',
+  'refresh_token',
+  'key',
+  'password',
+] as const
+
+/** `href` 에서 민감한 쿼리(와 조각의 같은 이름 값)를 뗀 주소. 주소가 아니면 그대로 */
+export function redactedLocation(href: string, params: readonly string[]): string {
+  try {
+    const url = new URL(href)
+    for (const name of params) url.searchParams.delete(name)
+    if (url.hash.includes('=')) {
+      const fragment = new URLSearchParams(url.hash.slice(1))
+      for (const name of params) fragment.delete(name)
+      const rest = fragment.toString()
+      url.hash = rest ? `#${rest}` : ''
+    }
+    return url.toString()
+  } catch {
+    return href
+  }
 }
 
 const GA_ID = /^G-[A-Z0-9]{4,}$/
@@ -47,6 +87,7 @@ export function createAnalyticsLoader({
   gaMeasurementId,
   cfBeaconToken,
   category = 'analytics',
+  redactParams = DEFAULT_REDACTED_PARAMS,
   document: doc = typeof document === 'undefined'
     ? undefined
     : (document as unknown as DocumentLike),
@@ -57,11 +98,25 @@ export function createAnalyticsLoader({
   let gaLoaded = false
   let cfLoaded = false
 
-  function gtag(...args: unknown[]) {
+  /**
+   * gtag.js 는 `dataLayer` 에 **`arguments` 객체**가 들어와야 명령으로 읽는다(배열은 GTM 식 이벤트로 읽혀 `config` · `consent` 가 먹지 않는다) -
+   * 공식 스니펫의 `function gtag(){ dataLayer.push(arguments) }` 와 같은 꼴이어야 해서 일반 함수다.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- 선언한 인자는 호출 쪽 타입을 위한 것 - 값은 `arguments` 로 읽는다
+  function gtag(..._declared: unknown[]) {
     if (!win) return
-    // gtag.js 는 `arguments` 객체를 기다린다(배열이 아니다)
     win.dataLayer ??= []
-    win.dataLayer.push(args)
+    // eslint-disable-next-line prefer-rest-params -- `arguments` 객체여야 gtag.js 가 읽는다
+    win.dataLayer.push(arguments)
+  }
+
+  let lastPageView: string | null = null
+  function sendPageView() {
+    if (!win?.location) return
+    const location = redactedLocation(win.location.href, redactParams)
+    if (location === lastPageView) return
+    lastPageView = location
+    gtag('event', 'page_view', { page_location: location })
   }
 
   function loadGa() {
@@ -72,11 +127,19 @@ export function createAnalyticsLoader({
     }
     gaLoaded = true
     win.dataLayer ??= []
-    win.gtag = (...args: unknown[]) => {
-      win.dataLayer!.push(args)
-    }
+    win.gtag = gtag
+    // 동의 범주는 「분석」 하나 - 광고 저장소는 늘 거부, 분석 저장소는 지금 막 동의했으니 허용
+    gtag('consent', 'default', {
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied',
+      analytics_storage: 'denied',
+    })
+    gtag('consent', 'update', { analytics_storage: 'granted' })
     gtag('js', new Date())
-    gtag('config', gaId)
+    // 첫 page_view 는 우리가 보낸다 - 주소에서 인증 값을 뗀 `page_location` 으로(gtag 가 스스로 읽으면 메일 링크의 `?token=` 이 실린다)
+    gtag('config', gaId, { send_page_view: false })
+    sendPageView()
     const script = doc.createElement('script')
     script.async = true
     script.src = `${GTAG_URL}?id=${encodeURIComponent(gaId)}`
@@ -99,6 +162,9 @@ export function createAnalyticsLoader({
   }
 
   return {
+    trackPageView() {
+      if (gaLoaded && consent.has(category)) sendPageView()
+    },
     start() {
       if (!doc || !win) return () => {}
       loadBeacon()

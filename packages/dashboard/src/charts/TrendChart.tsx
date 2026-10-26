@@ -42,10 +42,14 @@ export function TrendChart({
   const titleId = useId()
   const count = points.length
   const compared = previous && previous.length > 0 ? previous : null
-  const max = Math.max(1, ...points.map((p) => p.value), ...(compared?.map((p) => p.value) ?? []))
+  const values = [...points.map((p) => p.value), ...(compared?.map((p) => p.value) ?? [])]
+  // 순매출처럼 음수가 나올 수 있다 - 가장 낮은 값이 0 보다 아래면 바닥을 내리고 0 기준선을 하나 긋는다
+  const min = Math.min(0, ...values)
+  const max = Math.max(min + 1, ...values)
   const x = (index: number, length: number) =>
     length > 1 ? (index / (length - 1)) * WIDTH : WIDTH / 2
-  const y = (value: number) => BOTTOM - (value / max) * (BOTTOM - TOP)
+  const y = (value: number) => BOTTOM - ((value - min) / (max - min)) * (BOTTOM - TOP)
+  const zeroY = y(0)
   const line = (series: DashboardPoint[]) =>
     series.length === 1
       ? `0,${y(series[0].value)} ${WIDTH},${y(series[0].value)}`
@@ -98,12 +102,13 @@ export function TrendChart({
               y2={TOP + row * 18}
             />
           ))}
+          {min < 0 && <line className={styles.zero} x1={0} x2={WIDTH} y1={zeroY} y2={zeroY} />}
           {compared && <polyline className={styles.previous} points={line(compared)} />}
           {count > 0 && (
             <>
               <polygon
                 className={styles.area}
-                points={`0,${BOTTOM} ${line(points)} ${WIDTH},${BOTTOM}`}
+                points={`0,${zeroY} ${line(points)} ${WIDTH},${zeroY}`}
               />
               <polyline className={styles.current} points={line(points)} />
             </>

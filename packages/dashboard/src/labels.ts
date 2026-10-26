@@ -59,10 +59,10 @@ export type DashboardLabels = {
     hint: string
     people: (count: string) => string
     start: string
-    fromPrevious: (rate: string) => string
-    overall: (from: string, to: string, rate: string) => string
-    /** 맨 끝 단계가 묶음(첫 단계)의 몇 %인지 - 서버의 `rate` */
+    /** 단계가 묶음(첫 단계)의 몇 %인지 - 서버의 `rate` */
     ofCohort: (cohort: string, rate: string) => string
+    /** 퍼널 위 참고 줄 - 방문(익명)과 방문 대비 묶음 비율. 인자: 방문 이름 · 방문 수 · 묶음 이름 · 비율 */
+    reference: (visits: string, count: string, cohort: string, rate: string) => string
     empty: string
   }
   app: { title: string; badge: string }
@@ -161,9 +161,9 @@ export const defaultDashboardLabels: DashboardLabels = {
     hint: 'How far visitors got',
     people: (count) => `${count}`,
     start: 'Start',
-    fromPrevious: (rate) => `${rate} of the previous step`,
-    overall: (from, to, rate) => `${from} to ${to} ${rate}`,
     ofCohort: (cohort, rate) => `${rate} of ${cohort}`,
+    reference: (visits, count, cohort, rate) =>
+      `${visits} ${count} - ${rate} of visits became ${cohort}`,
     empty: 'No funnel data yet',
   },
   app: { title: 'App stats', badge: 'Added by the app' },
@@ -257,9 +257,9 @@ export const koDashboardLabels: DashboardLabels = {
     hint: '방문한 사람이 어디까지 갔는지',
     people: (count) => `${count}명`,
     start: '시작 단계',
-    fromPrevious: (rate) => `전 단계 대비 ${rate}`,
-    overall: (from, to, rate) => `${from} → ${to} ${rate}`,
     ofCohort: (cohort, rate) => `${cohort} 대비 ${rate}`,
+    reference: (visits, count, cohort, rate) =>
+      `${visits} ${count}명 · 방문 대비 ${cohort} ${rate}`,
     empty: '아직 퍼널 데이터가 없습니다',
   },
   app: { title: '앱 통계', badge: '앱이 붙임' },

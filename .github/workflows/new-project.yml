@@ -8,12 +8,14 @@ on:
         'scripts/**',
         'capabilities.json',
         'docs/new-project-recipe.md',
-        'apps/starter/**', # 찍힐 때 그대로 따라가는 앱만 — apps/sample · workbench 는 옵션이라 nightly 가 돈다
+        'apps/starter/**', # 찍힐 때 그대로 따라가는 앱 + 레시피(community)가 --with-sample 이라 sample 도
+        'apps/sample/**',
         'apps/starter-ssr/**',
         'apps/storybook/**',
         'package.json',
         'pnpm-workspace.yaml',
         'eslint.config.js',
+        'tests/**', # 루트 tests 는 찍은 프로젝트에 따라가 그 프로젝트의 pnpm test 로 돈다
         '.github/workflows/new-project.yml',
       ]
   pull_request:
@@ -21,12 +23,14 @@ on:
         'scripts/**',
         'capabilities.json',
         'docs/new-project-recipe.md',
-        'apps/starter/**', # 찍힐 때 그대로 따라가는 앱만 — apps/sample · workbench 는 옵션이라 nightly 가 돈다
+        'apps/starter/**', # 찍힐 때 그대로 따라가는 앱 + 레시피(community)가 --with-sample 이라 sample 도
+        'apps/sample/**',
         'apps/starter-ssr/**',
         'apps/storybook/**',
         'package.json',
         'pnpm-workspace.yaml',
         'eslint.config.js',
+        'tests/**', # 루트 tests 는 찍은 프로젝트에 따라가 그 프로젝트의 pnpm test 로 돈다
         '.github/workflows/new-project.yml',
       ]
 

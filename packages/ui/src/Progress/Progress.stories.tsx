@@ -27,6 +27,13 @@ export const Indeterminate: Story = {
   },
 }
 
+export const ClampsNegative: Story = {
+  args: { value: -1, valueText: undefined },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('progressbar')).toHaveAttribute('value', '0')
+  },
+}
+
 /** 범위 밖 값은 0~1 로 자른다 */
 export const ClampsOutOfRange: Story = {
   args: { value: 7, valueText: undefined },

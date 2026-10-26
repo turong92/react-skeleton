@@ -13,7 +13,7 @@ jobs:
   # 참조 앱(apps/sample)의 e2e 전부(파일 18개) — 진짜 백엔드(kotlin-skeleton apps/sample + PostgreSQL + 로컬 S3 컨테이너) · 진짜 브라우저
   sample-e2e:
     runs-on: ubuntu-latest
-    timeout-minutes: 30 # 그레이들 첫 빌드 · 컨테이너 · rolldown(rc) 교착에 매달리지 않게 끊는다
+    timeout-minutes: 50 # 전체 25분 + 재동의 재실행 15분 + 기동·설치 여유. 그레이들 첫 빌드 · 컨테이너 · rolldown(rc) 교착에 매달리지 않게 끊는다
     steps:
       - uses: actions/checkout@v4
         with:

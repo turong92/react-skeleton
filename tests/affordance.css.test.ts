@@ -8,12 +8,11 @@ import { REPO } from './support/loadWorkspaces'
  * 눌리는 것은 한눈에 눌리는 것으로 보인다 — 쉬는 상태에서도 테두리나 채움이 있고(글자만 있는 버튼 금지) 목표는 44px 이상이며,
  * hover · focus 가 다르게 보인다(원칙: docs/ui-catalog.md 맨 위). 스타일 파일을 읽어 단정한다.
  * 정말 인라인 링크여야 하는 것은 밑줄 + 링크색. 눌리는 요소를 더하면 아래 표에 한 줄 더한다.
- * 이 레포에서 찍은 프로젝트는 패키지를 골라 가므로, 파일이 없는 줄은 건너뛴다.
+ * 이 레포에서 찍은 프로젝트는 패키지를 골라 가므로, 패키지 폴더가 없는 줄은 건너뛴다(폴더가 있는데 파일이 없으면 실패 — 이름을 바꾸면 알려야 한다).
+ * 참조 앱의 링크 부품(TextLink · LinkCard · LinkButton)은 apps 쪽 affordance.test.ts 가 맡는다.
  */
-// 참조 앱 경로는 한 덩어리로 적지 않는다 — 샘플을 떼고 찍은 프로젝트에 「샘플의 흔적」으로 걸리지 않게(이 줄들은 샘플이 없으면 건너뛴다)
-const sample = (file: string) => join('apps', 'sample', 'src', 'components', file)
 const css = (path: string) => readFileSync(join(REPO, path), 'utf8')
-const has = (path: string) => existsSync(join(REPO, path))
+const has = (dir: string) => existsSync(join(REPO, dir))
 
 /** `selector { … }` 의 본문(여러 규칙이면 이어 붙인다). 미디어 쿼리 안은 `within` 으로 */
 function body(selector: string, within: string): string {
@@ -28,103 +27,40 @@ const visible = (v: string | undefined) => v !== undefined && v !== 'transparent
 
 type Row = {
   name: string
+  /** 이 패키지 폴더가 없으면(찍힌 프로젝트가 안 가져갔다) 건너뛴다 */
+  dir: string
   file: string
   /** 쉬는 상태의 규칙 */
   base: string
-  /** 테두리가 `solid` 이고 transparent 가 아니다 */
-  bordered?: boolean
-  /** `min-height`(없으면 `height`)가 44px 이상 */
-  tall?: boolean
-  cursor?: boolean
-  /** 쉬는 상태에서 밑줄 */
-  underlined?: boolean
-  /** 이 규칙들이 있다(hover · focus 가 다르게 보인다) */
-  states?: string[]
-  /** `base[data-variant=…]` 마다 테두리나 채움이 보인다 */
-  variants?: string[]
 }
 
 const ROWS: Row[] = [
   {
-    name: 'TextLink',
-    file: sample('TextLink.module.css'),
-    base: '.link',
-    underlined: true,
-    states: ['.link:hover', '.link:focus-visible'],
-  },
-  {
-    name: 'LinkCard',
-    file: sample('LinkCard.module.css'),
-    base: '.card',
-    bordered: true,
-    tall: true,
-    states: ['.card:hover', '.card:focus-visible'],
-  },
-  {
-    name: 'LinkButton',
-    file: sample('LinkButton.module.css'),
-    base: '.link',
-    tall: true,
-    variants: ['primary', 'secondary', 'ghost'],
-  },
-  {
     name: 'NotificationBell',
+    dir: 'packages/notifications',
     file: 'packages/notifications/src/NotificationBell.module.css',
     base: '.bell',
-    bordered: true,
-    tall: true,
-    cursor: true,
   },
   {
     name: 'ThemeToggle',
+    dir: 'packages/theme',
     file: 'packages/theme/src/ThemeToggle.module.css',
     base: '.toggle',
-    bordered: true,
-    tall: true,
-    cursor: true,
   },
 ]
 
-describe.each(ROWS.filter((r) => has(r.file)))('$name affordance', (row) => {
-  const text = css(row.file)
-  const rest = body(row.base, text)
+describe.each(ROWS.filter((r) => has(r.dir)))('$name affordance', (row) => {
+  const rest = body(row.base, css(row.file))
 
-  if (row.bordered)
-    it('is boxed at rest (a visible solid border, not transparent)', () => {
-      expect(value(rest, 'border')).toMatch(/solid/)
-      expect(value(rest, 'border')).not.toMatch(/transparent/)
-    })
-  if (row.tall)
-    it('is at least 44px tall', () => {
-      expect(px(value(rest, 'min-height') ?? value(rest, 'height'))).toBeGreaterThanOrEqual(44)
-    })
-  if (row.cursor)
-    it('shows a pointer', () => {
-      expect(value(rest, 'cursor')).toBe('pointer')
-    })
-  if (row.underlined)
-    it('is underlined at rest', () => {
-      expect(value(rest, 'text-decoration')).toMatch(/underline/)
-    })
-  if (row.states)
-    it('changes on hover and shows a focus ring', () => {
-      for (const selector of row.states ?? []) expect(body(selector, text), selector).not.toBe('')
-    })
-  if (row.variants)
-    it('every variant is visibly boxed at rest', () => {
-      for (const variant of row.variants ?? []) {
-        const variantRule = body(`${row.base}[data-variant='${variant}']`, text)
-        const border = value(variantRule, 'border-color')
-        const background = value(variantRule, 'background')
-        expect(
-          visible(border) || visible(background),
-          `${variant}: ${border} / ${background}`,
-        ).toBe(true)
-      }
-    })
+  it('is a bordered box (a visible solid border), at least 44px tall, with a pointer', () => {
+    expect(value(rest, 'border')).toMatch(/solid/)
+    expect(value(rest, 'border')).not.toMatch(/transparent/)
+    expect(px(value(rest, 'min-height') ?? value(rest, 'height'))).toBeGreaterThanOrEqual(44)
+    expect(value(rest, 'cursor')).toBe('pointer')
+  })
 })
 
-describe.skipIf(!has('packages/ui/src/Button/Button.module.css'))('Button affordance', () => {
+describe.skipIf(!has('packages/ui'))('Button affordance', () => {
   const button = css('packages/ui/src/Button/Button.module.css')
   const FILLED_OR_OUTLINED = ['primary', 'secondary', 'ghost', 'danger'] as const
 
@@ -220,37 +156,34 @@ describe.skipIf(!has('packages/ui/src/Button/Button.module.css'))('Button afford
   })
 })
 
-describe.skipIf(!has('packages/ui/src/ChoiceGroup/ChoiceGroup.module.css'))(
-  'ChoiceGroup affordance',
-  () => {
-    // 선택 묶음도 눌리는 것이다 — 고른 것은 색만이 아니라 테두리 · 바탕 · 안쪽 선으로 분명하고, 안 고른 칸의 hover 는 고른 칸과 다르며, 잠긴 것은 흐려진다
-    const choice = css('packages/ui/src/ChoiceGroup/ChoiceGroup.module.css')
-    const rule = (selector: RegExp) => choice.match(selector)?.[1] ?? ''
+describe.skipIf(!has('packages/ui'))('ChoiceGroup affordance', () => {
+  // 선택 묶음도 눌리는 것이다 — 고른 것은 색만이 아니라 테두리 · 바탕 · 안쪽 선으로 분명하고, 안 고른 칸의 hover 는 고른 칸과 다르며, 잠긴 것은 흐려진다
+  const choice = css('packages/ui/src/ChoiceGroup/ChoiceGroup.module.css')
+  const rule = (selector: RegExp) => choice.match(selector)?.[1] ?? ''
 
-    it('is at least 44px tall at rest', () => {
-      const base = rule(/\.choice\s*\{([^}]*)\}/)
-      expect(Number(base.match(/min-height:\s*(\d+)px/)?.[1])).toBeGreaterThanOrEqual(44)
-    })
+  it('is at least 44px tall at rest', () => {
+    const base = rule(/\.choice\s*\{([^}]*)\}/)
+    expect(Number(base.match(/min-height:\s*(\d+)px/)?.[1])).toBeGreaterThanOrEqual(44)
+  })
 
-    it('the chosen one changes border, fill and weight — beyond colour alone', () => {
-      const chosen = rule(/\.choice\[aria-checked='true'\]\s*\{([^}]*)\}/)
-      expect(chosen).toMatch(/border-color:\s*var\(--teal\)/)
-      expect(chosen).toMatch(/background:\s*var\(--teal-wash\)/)
-      expect(chosen).toMatch(/box-shadow:\s*inset/)
-    })
+  it('the chosen one changes border, fill and weight — beyond colour alone', () => {
+    const chosen = rule(/\.choice\[aria-checked='true'\]\s*\{([^}]*)\}/)
+    expect(chosen).toMatch(/border-color:\s*var\(--teal\)/)
+    expect(chosen).toMatch(/background:\s*var\(--teal-wash\)/)
+    expect(chosen).toMatch(/box-shadow:\s*inset/)
+  })
 
-    it('hovering one that is not chosen never makes it look chosen (no teal border, no teal fill, no inner line)', () => {
-      const hover = rule(
-        /\.choice[^{]*:hover[^{]*:not\(\[aria-checked='true'\]\)[^{]*\{([^}]*)\}|\.choice[^{]*:not\(\[aria-checked='true'\]\)[^{]*:hover[^{]*\{([^}]*)\}/,
-      )
-      expect(hover, 'a hover rule for the choices that are not chosen').not.toBe('')
-      expect(hover).not.toMatch(/--teal/)
-      expect(hover).not.toMatch(/box-shadow/)
-      expect(hover).toMatch(/border-color:/)
-    })
+  it('hovering one that is not chosen never makes it look chosen (no teal border, no teal fill, no inner line)', () => {
+    const hover = rule(
+      /\.choice[^{]*:hover[^{]*:not\(\[aria-checked='true'\]\)[^{]*\{([^}]*)\}|\.choice[^{]*:not\(\[aria-checked='true'\]\)[^{]*:hover[^{]*\{([^}]*)\}/,
+    )
+    expect(hover, 'a hover rule for the choices that are not chosen').not.toBe('')
+    expect(hover).not.toMatch(/--teal/)
+    expect(hover).not.toMatch(/box-shadow/)
+    expect(hover).toMatch(/border-color:/)
+  })
 
-    it('a locked group looks locked', () => {
-      expect(choice).toMatch(/\[aria-disabled='true'\]/)
-    })
-  },
-)
+  it('a locked group looks locked', () => {
+    expect(choice).toMatch(/\[aria-disabled='true'\]/)
+  })
+})

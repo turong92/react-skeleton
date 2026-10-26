@@ -50,7 +50,7 @@ describe('with-watchdog', () => {
   })
 
   it('kills a hang on the wall-clock limit and retries until retries are used up (exit 124)', () => {
-    const r = run(['--wall', '0.5', '--retries', '2'], `${COUNT} ${HANG}`)
+    const r = run(['--wall', '1', '--retries', '2'], `${COUNT} ${HANG}`)
     expect(r.status).toBe(124)
     expect(r.attempts).toBe(3)
     expect(r.stderr).toMatch(/wall-clock/)
@@ -78,9 +78,9 @@ describe('with-watchdog', () => {
 
   it('does not kill a silent process that is busy on the CPU', () => {
     const r = run(
-      // Linux 의 ps 는 CPU 시간을 1초 단위로 보여 준다 — 바쁜 러너에서 1초 창은 "진행 없음"으로 읽힐 수 있다. 창(2초)을 CPU 눈금(1초)의 두 배로 두고, 바쁜 시간은 창보다 길게(3.5초) 둔다
-      ['--wall', '60', '--idle', '2', '--poll', '500', '--retries', '0'],
-      `const end = Date.now() + 3500; while (Date.now() < end) {} console.log('busy done')`,
+      // Linux 의 ps 는 CPU 시간을 1초 단위로 보여 준다 — 바쁜 러너에서 1초 창은 "진행 없음"으로 읽힐 수 있다. 창을 CPU 눈금보다 넉넉히 둔다
+      ['--wall', '60', '--idle', '4', '--poll', '500', '--retries', '0'],
+      `const end = Date.now() + 7000; while (Date.now() < end) {} console.log('busy done')`,
     )
     expect(r.status).toBe(0)
     expect(r.stdout).toContain('busy done')
@@ -89,7 +89,7 @@ describe('with-watchdog', () => {
   it('does not kill an idle process that keeps printing', () => {
     const r = run(
       ['--wall', '60', '--idle', '1', '--retries', '0'],
-      `let n = 0; const t = setInterval(() => { console.log('tick'); if (++n === 10) { clearInterval(t) } }, 150)`,
+      `let n = 0; const t = setInterval(() => { console.log('tick'); if (++n === 12) { clearInterval(t) } }, 250)`,
     )
     expect(r.status).toBe(0)
   })

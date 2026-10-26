@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — 검사를 푸시용 빠른 것과 하루 한 번 전체로 나눔 (2026-10-26)
+
+- CI: 같은 ref 의 앞선 실행은 취소(`concurrency`). `sample-e2e` 는 핵심 5개 파일(journey · board · account · payment · authzRoles)만 돈다 — `pnpm e2e:sample e2e/<파일>` 처럼 파일 경로를 인자로 주면 그 파일만 돈다. 새 `nightly.yml`(매일 한국 새벽 + 수동)이 e2e 18개 전부(+ 재동의 필터를 켠 `legal.e2e.ts` 한 번 더)와 `test-new-project.sh --full` 을 돈다. 찍은 프로젝트에는 따라가지 않는다.
+- `scripts/test-new-project.sh --core`: 서로 겹치지 않는 조합(기본 · packages · ssr-without-storybook · 레시피 셋)만 — `new-project.yml`(push/PR)이 쓴다. 3·5·6·7 은 레시피가 품는다. `--full` 은 그대로 열 조합.
+- 테스트: ui Badge · Spinner · Stat · Progress · Skeleton 의 서버 렌더 테스트를 스토리 play 로 일원화(스토리에 없던 단정은 옮김), `tokens.wiring` 의 docs 표 검사와 `capabilities.skeleton` 의 실제 카탈로그 검사 3개는 CI 의 `tokens:check` · `capabilities:check` 가 같은 함수를 불러 삭제, affordance CSS 테스트 7파일을 `tests/affordance.css.test.ts`(+ 참조 앱의 `apps/sample/src/components/affordance.test.ts`)로 통합.
+
 ### Added — 권한으로 화면 가리기 (2026-10-24)
 
 백엔드 짝: kotlin-skeleton 의 권한(역할 → 권한 매핑, `GET /auth/me` 의 `permissions`). 하드코딩한 `ADMIN` 은 화면에서 사라진다. `RequireRole` · JWT `roles` 는 그대로 남는다.

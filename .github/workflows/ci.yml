@@ -64,7 +64,7 @@ jobs:
   # sample-e2e-job:start
   # 참조 앱(apps/sample)의 핵심 여정 5개 파일만(돈 · 권한 · 가입/삭제 · 게시판 · 주 여정) — 전부는 `pnpm e2e:sample`(스켈레톤은 하루 한 번 전체를 돈다). 진짜 백엔드(kotlin-skeleton apps/sample + PostgreSQL + 로컬 S3 컨테이너) · 진짜 브라우저. 단위 테스트 잡과 따로라 서로 기다리지 않는다
   sample-e2e:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # ubuntu-latest 가 2026-10-26 에 26.04 로 넘어간 뒤 이 잡의 브라우저 e2e 가 계정 만들기 흐름에서 무너졌다(같은 코드가 24.04 에서는 통과) — 러너 이미지를 고정한다
     timeout-minutes: 30 # 그레이들 첫 빌드 · 컨테이너 · rolldown(rc) 교착에 매달리지 않게 끊는다
     steps:
       - uses: actions/checkout@v4

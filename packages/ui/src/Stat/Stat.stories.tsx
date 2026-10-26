@@ -13,6 +13,7 @@ type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
   play: async ({ canvas }) => {
+    await expect(canvas.getByText('Notes').tagName).toBe('DT') // 라벨 → 값 → 보조 설명 순서의 term / description
     await expect(canvas.getByText('Notes')).toBeVisible()
     await expect(canvas.getByText('12')).toBeVisible()
     await expect(canvas.getByText('3 pinned')).toBeVisible()

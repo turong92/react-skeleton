@@ -23,6 +23,7 @@ import { REPO } from './support/loadWorkspaces'
 /*
  * 이 스켈레톤 레포만의 사실 — 카탈로그의 stampFlag 가 scripts/new-project.sh 가 실제로 하는 일과 같은가, 결정표 · 레시피의 명령이
  * 카탈로그에서 계산한 것과 같은가. scripts/new-project.sh 가 새 프로젝트를 찍을 때 이 파일을 지운다(스크립트가 없으니까).
+ * 실제 카탈로그가 이 가드를 통과하는지는 CI 의 `pnpm capabilities:check`(같은 함수를 부른다)가 본다 — 여기는 가드가 어긋남을 잡아내는지만 시험한다.
  * 일반 가드(스키마 · 경로 · export · 키워드 · 생성 문서)는 capabilities.test.ts.
  */
 type Catalog = { capabilities: Json[]; decisions: Json[]; examples: Json[] } & Json
@@ -41,9 +42,6 @@ const flagOf = (over: Json) => ({
 })
 
 describe('stampFlag: what the catalog says new-project.sh does is what it does', () => {
-  it('holds for every entry of the real catalog', () => {
-    expect(checkStampFlags(real(), REPO)).toEqual([])
-  })
   it('a package name new-project.sh does not know fails and says so', () => {
     const text = checkStampFlags(
       mutate('board', { stampFlag: flagOf({ flag: '--packages nope' }) }),
@@ -88,9 +86,6 @@ describe('stampFlag: what the catalog says new-project.sh does is what it does',
 })
 
 describe('the decision table is computed from the catalog and every row is a real stamp', () => {
-  it('passes on the real catalog', () => {
-    expect(checkDecisions(real(), REPO)).toEqual([])
-  })
   it('an unknown capability id in a row fails', () => {
     const c = real()
     const bad = {
@@ -110,9 +105,6 @@ describe('the decision table is computed from the catalog and every row is a rea
 })
 
 describe('docs/new-project-recipe.md cannot rot', () => {
-  it('every example command equals what the catalog computes', () => {
-    expect(checkRecipe(real(), REPO)).toEqual([])
-  })
   it('a drifted command fails and prints the expected one', () => {
     const c = real()
     const drifted = {

@@ -21,6 +21,8 @@ export const TextLines: Story = {
     await expect(status).toHaveTextContent('Loading notes')
     await expect(status).toHaveAttribute('aria-busy', 'true')
     await expect(status.querySelectorAll('[data-shape="text"]')).toHaveLength(3)
+    await expect(status.querySelectorAll('[data-last="true"]')).toHaveLength(1) // 마지막 줄만 짧다
+    await expect(status.querySelector('[aria-hidden="true"]')).not.toBeNull() // 모양은 보조기기에서 숨는다
   },
 }
 
@@ -35,6 +37,9 @@ export const CardPlaceholder: Story = {
   ),
   play: async ({ canvas }) => {
     await expect(canvas.getAllByRole('status')).toHaveLength(2)
+    await expect(
+      canvas.getAllByRole('status')[0].querySelector('[data-shape="circle"]'),
+    ).not.toBeNull()
   },
 }
 

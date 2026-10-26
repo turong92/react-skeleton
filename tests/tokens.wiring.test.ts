@@ -1,23 +1,14 @@
 /// <reference types="node" />
-import { check } from '@skeleton/tokens/build'
 import { describe, expect, it } from 'vitest'
 import { loadWorkspaces } from './support/loadWorkspaces'
 
 /*
  * 토큰 정본 → 생성물이 레포 전체에서 한 곳(packages/tokens)에만 있고, 앱이 그것을 먼저 불러오는지.
- * (정본 ↔ tokens.css 일치는 packages/tokens 의 테스트, 표 구역 ↔ docs 는 여기)
+ * (정본 ↔ tokens.css 일치는 packages/tokens 의 테스트, 표 구역 ↔ docs 는 CI 의 `pnpm tokens:check`)
  */
 const workspaces = loadWorkspaces()
 // 화면 앱만 — 스토리집은 .storybook/preview.tsx 에서 같은 순서로 불러온다(tests/workspace.test.ts 가 확인)
 const apps = workspaces.filter((w) => w.kind === 'app' && w.dir !== 'apps/storybook')
-
-describe('docs/design-tokens.md', () => {
-  it('table region equals what the generator makes (hand-written text outside it is untouched)', () => {
-    expect(check({ docOut: '../../docs/design-tokens.md' }), 'drifted — run `pnpm tokens`').toEqual(
-      [],
-    )
-  })
-})
 
 describe.each(apps.map((w) => [w.dir, w] as const))('%s entry wiring', (_, app) => {
   // 브라우저 진입점 — SPA 는 src/main.tsx, 서버 렌더 앱은 src/entry-client.tsx

@@ -1,13 +1,14 @@
-import { todayInZone, userTimeZone, formatDate } from '@skeleton/time'
+import { todayInZone, formatDate } from '@skeleton/time'
 import { Badge, Button, type DateRange, Skeleton } from '@skeleton/ui'
 import { useMemo, useState, type ReactNode } from 'react'
 import type { DashboardApi } from './api'
 import { FunnelBars } from './charts/FunnelBars'
 import { DashboardHeader } from './DashboardHeader'
-import { useDashboard } from './hooks'
+import { useDashboard, useDashboardZone } from './hooks'
 import { defaultDashboardLabels, type DashboardLabels } from './labels'
 import { MetricChart } from './MetricChart'
 import { MetricTiles, type MetricTilesProps } from './MetricTiles'
+import { RealtimeBadge } from './RealtimeBadge'
 import { RankingCard } from './RankingCard'
 import { RankingDialog } from './RankingDialog'
 import { spanOf, spanProblem, type DashboardPeriod } from './range'
@@ -16,13 +17,15 @@ import styles from './DashboardView.module.css'
 
 export type DashboardViewProps = {
   api: DashboardApi
-  /** 대시보드의 시간대(IANA) - 「오늘」을 어느 날로 셀지. 서버의 `skeleton.dashboard.zone` 과 같게(기본 브라우저 시간대) */
+  /** 대시보드의 시간대(IANA) - 「오늘」을 어느 날로 셀지. 주지 않으면 서버가 알려 주는 시간대(`range.zone`)를 첫 응답에서 받아 쓴다 */
   zone?: string
   locale?: string
   labels?: DashboardLabels
   /** 제목 아래 한 줄(예: 서비스 이름 · 운영 현황) */
   subtitle?: string
   initialPeriod?: DashboardPeriod
+  /** 헤더의 「지금 N명」(기본 켬). 실시간 경로가 없는 서버면 알아서 숨는다 */
+  realtime?: boolean
   /** 헤더 오른쪽 끝 자리 - 지금 N명, 편집 단추 */
   headerTrailing?: ReactNode
   /** 타일의 `metric.link` 를 그리는 법(라우터 `Link`) */
@@ -43,16 +46,33 @@ function groupRankings(rankings: DashboardRanking[]): Map<string, DashboardRanki
  * 관리자 대시보드 한 덩어리(시안 E) - 헤더 → 숫자 타일 + 큰 그래프(한 카드) → 순위 카드 격자 → 퍼널 → 앱 통계.
  * 데이터는 `api`(`createDashboardApi`)로, 60초마다 새로 받는다. TanStack Query 의 `QueryClientProvider` 아래에서 쓴다.
  */
-export function DashboardView({
+export function DashboardView(props: DashboardViewProps) {
+  const labels = props.labels ?? defaultDashboardLabels
+  const resolved = useDashboardZone(props.api, props.zone)
+  if (resolved.zone) return <DashboardBody {...props} zone={resolved.zone} />
+  return resolved.isError ? (
+    <div className={styles.failed} role="alert">
+      <p>{labels.loadFailed}</p>
+      <Button variant="secondary" onClick={() => void resolved.refetch()}>
+        {labels.retry}
+      </Button>
+    </div>
+  ) : (
+    <Skeleton shape="rect" height="360px" label={labels.loading} />
+  )
+}
+
+function DashboardBody({
   api,
-  zone = userTimeZone(),
+  zone,
   locale,
   labels = defaultDashboardLabels,
   subtitle,
   initialPeriod = '7d',
   headerTrailing,
+  realtime = true,
   renderLink,
-}: DashboardViewProps) {
+}: DashboardViewProps & { zone: string }) {
   const [period, setPeriod] = useState<DashboardPeriod>(initialPeriod)
   const [compare, setCompare] = useState(true)
   const today = todayInZone(zone)
@@ -92,7 +112,12 @@ export function DashboardView({
       zone={zone}
       locale={locale}
       labels={labels}
-      trailing={headerTrailing}
+      trailing={
+        <>
+          {realtime && <RealtimeBadge api={api} locale={locale} labels={labels} />}
+          {headerTrailing}
+        </>
+      }
     />
   )
 
@@ -120,7 +145,7 @@ export function DashboardView({
     ...GROUP_ORDER.filter((g) => groups.has(g)),
     ...[...groups.keys()].filter((g) => g !== 'app' && !GROUP_ORDER.includes(g)),
   ]
-  const common = { zone: data.range.zone, includesToday, locale, labels }
+  const common = { zone: data.range.zone, includesToday, now: query.dataUpdatedAt, locale, labels }
 
   return (
     <div className={styles.view}>
@@ -141,6 +166,7 @@ export function DashboardView({
             range={data.range}
             compare={compare}
             includesToday={includesToday}
+            now={query.dataUpdatedAt}
             periodLabel={periodLabel}
             locale={locale}
             labels={labels}
@@ -193,6 +219,7 @@ export function DashboardView({
         span={span}
         zone={data.range.zone}
         includesToday={includesToday}
+        now={query.dataUpdatedAt}
         locale={locale}
         labels={labels}
         onClose={() => setOpened(null)}

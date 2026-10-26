@@ -15,6 +15,7 @@ export type RankingDialogProps = {
   span: DateSpan
   zone: string
   includesToday: boolean
+  now?: number
   locale?: string
   labels: DashboardLabels
   onClose: () => void
@@ -27,6 +28,7 @@ export function RankingDialog({
   span,
   zone,
   includesToday,
+  now,
   locale,
   labels,
   onClose,
@@ -59,6 +61,7 @@ export function RankingDialog({
             status={data.status}
             freshness={data.freshness}
             includesToday={includesToday}
+            now={now}
             zone={zone}
             locale={locale}
             labels={labels}

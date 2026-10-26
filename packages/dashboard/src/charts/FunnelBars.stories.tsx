@@ -19,6 +19,7 @@ export const WithReference: Story = {
     await expect(canvas.getByText('12,480')).toBeInTheDocument()
     await expect(canvas.getByText('1% of the previous step')).toBeInTheDocument() // 방문 → 가입 128 / 12,480
     await expect(canvas.getByText('Visits to Paid 0.3%')).toBeInTheDocument()
+    await expect(canvas.getByText('43% of Signed up')).toBeInTheDocument() // 서버 rate(묶음 대비)
   },
 }
 

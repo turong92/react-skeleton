@@ -13,6 +13,8 @@ export type MetricChartProps = {
   /** 직전 기간을 같이 그리나(`compare` 를 켠 상태) */
   compare: boolean
   includesToday: boolean
+  /** `Provenance` 의 `now` */
+  now?: number
   /** 기간 이름(「지난 7일」 …) - 제목 옆에 작게 */
   periodLabel: string
   locale?: string
@@ -25,6 +27,7 @@ export function MetricChart({
   range,
   compare,
   includesToday,
+  now,
   periodLabel,
   locale,
   labels,
@@ -63,6 +66,7 @@ export function MetricChart({
         status={metric.status}
         freshness={metric.freshness}
         includesToday={includesToday}
+        now={now}
         zone={range.zone}
         locale={locale}
         labels={labels}

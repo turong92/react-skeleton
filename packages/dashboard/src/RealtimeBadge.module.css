@@ -1,0 +1,6 @@
+.dot {
+  width: var(--space-sm);
+  height: var(--space-sm);
+  border-radius: var(--radius-full);
+  background: var(--teal);
+}

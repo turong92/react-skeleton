@@ -18,7 +18,14 @@ export type {
 } from './types'
 export { createDashboardApi } from './api'
 export type { DashboardApi, DashboardApiOptions } from './api'
-export { DASHBOARD_REFRESH_MS, dashboardKeys, useDashboard, useRanking } from './hooks'
+export {
+  DASHBOARD_REFRESH_MS,
+  dashboardKeys,
+  useDashboard,
+  useDashboardZone,
+  useRanking,
+  useRealtime,
+} from './hooks'
 export { DASHBOARD_PERIODS, MAX_SPAN_DAYS, addDays, daysIn, spanOf, spanProblem } from './range'
 export type { DashboardPeriod } from './range'
 export {
@@ -47,5 +54,9 @@ export { RankingTable } from './RankingTable'
 export type { RankingTableProps } from './RankingTable'
 export { DashboardHeader } from './DashboardHeader'
 export type { DashboardHeaderProps } from './DashboardHeader'
+export { RealtimeBadge } from './RealtimeBadge'
+export type { RealtimeBadgeProps } from './RealtimeBadge'
+export { RealtimePanel } from './RealtimePanel'
+export type { RealtimePanelProps } from './RealtimePanel'
 export { DashboardView } from './DashboardView'
 export type { DashboardViewProps } from './DashboardView'

@@ -738,6 +738,20 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
   }),
   'legal#ConsentSettings': () => ({ api: fakeLegalApi(), locale: 'ko' }),
   'dashboard#DashboardView': () => ({ api: fakeDashboardApi(), zone: 'UTC', locale: 'en-US' }),
+  'dashboard#RealtimeBadge': (ctx) => ({
+    api: fakeDashboardApi(),
+    labels: ctx.mod('dashboard').defaultDashboardLabels,
+  }),
+  'dashboard#RealtimePanel': (ctx) => ({
+    realtime: {
+      status: 'OK',
+      freshness: null,
+      activeUsers: 2,
+      pages: [{ label: '/', values: [2] }],
+      countries: [],
+    },
+    labels: ctx.mod('dashboard').defaultDashboardLabels,
+  }),
   'dashboard#DashboardHeader': (ctx) => ({
     period: '7d',
     onPeriod: noop,
@@ -966,6 +980,8 @@ export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
     { from: '2026-01-01', to: '2026-01-02' },
     true,
   ],
+  'dashboard#useDashboardZone': () => [fakeDashboardApi()],
+  'dashboard#useRealtime': () => [fakeDashboardApi()],
   'dashboard#useRanking': () => [
     fakeDashboardApi(),
     'cloudflare.paths',

@@ -15,6 +15,8 @@ export type RankingCardProps = {
   rankings: DashboardRanking[]
   zone: string
   includesToday: boolean
+  /** `Provenance` 의 `now` */
+  now?: number
   locale?: string
   labels: DashboardLabels
   /** 「전체 보기」 - 없으면 단추를 그리지 않는다 */
@@ -27,6 +29,7 @@ function RankingBody({
   ranking,
   zone,
   includesToday,
+  now,
   locale,
   labels,
   onViewAll,
@@ -48,6 +51,7 @@ function RankingBody({
         status={ranking.status}
         freshness={ranking.freshness}
         includesToday={includesToday}
+        now={now}
         zone={zone}
         locale={locale}
         labels={labels}

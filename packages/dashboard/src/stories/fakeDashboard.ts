@@ -37,6 +37,8 @@ export type FakeDashboardOptions = {
   connected?: boolean
   /** 개요 호출을 이 시간(ms) 뒤에 답한다(로딩 모습) */
   delayMs?: number
+  /** false 면 실시간 경로가 없다(404) */
+  realtime?: boolean
   /** true 면 개요 호출이 실패한다 */
   failing?: boolean
 }
@@ -264,13 +266,13 @@ const notFound = () => new Error('404 fake: this endpoint is not open')
 /** 호출 기록을 같이 돌려준다(`calls.overview` …) */
 export function createFakeDashboardApi(options: FakeDashboardOptions = {}) {
   const calls = {
-    overview: [] as { from: string; to: string; compare: boolean }[],
+    overview: [] as { from: string | null; to: string | null; compare: boolean }[],
     ranking: [] as string[],
   }
   const wait = () => new Promise<void>((resolve) => setTimeout(resolve, options.delayMs ?? 0))
   const api: DashboardApi = {
     overview: async (span, compare) => {
-      calls.overview.push({ ...span, compare })
+      calls.overview.push({ from: span?.from ?? null, to: span?.to ?? null, compare })
       await wait()
       if (options.failing) throw notFound()
       const overview = fakeOverview(options)
@@ -303,7 +305,20 @@ export function createFakeDashboardApi(options: FakeDashboardOptions = {}) {
       }
     },
     realtime: async () => {
-      throw notFound()
+      if (options.realtime === false) throw notFound()
+      return {
+        status: 'OK' as const,
+        freshness: { kind: 'CACHED' as const, asOf: ASOF },
+        activeUsers: 7,
+        pages: [
+          { label: '/s/sample-birthday', values: [4] },
+          { label: '/', values: [3] },
+        ],
+        countries: [
+          { label: 'South Korea', values: [5] },
+          { label: 'Japan', values: [2] },
+        ],
+      }
     },
     layout: async () => {
       throw notFound()

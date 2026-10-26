@@ -13,6 +13,8 @@ export type ProvenanceProps = {
   includesToday: boolean
   zone: string
   locale?: string
+  /** 지금(밀리초) - 「약 n분 전」 을 셀 기준. 없으면 그 문구 대신 갱신 시각을 쓴다(렌더 중에 시계를 읽지 않으려고 호출하는 쪽이 준다) */
+  now?: number
   labels: Pick<DashboardLabels, 'sources' | 'freshness'>
   /** 오른쪽 끝에 놓을 것(예: 「전체 보기」 단추) */
   action?: ReactNode
@@ -26,6 +28,7 @@ export function Provenance({
   includesToday,
   zone,
   locale,
+  now,
   labels,
   action,
 }: ProvenanceProps) {
@@ -40,13 +43,30 @@ export function Provenance({
             ? labels.freshness.daily(asOf)
             : labels.freshness.cached(asOf)
           : null
+  // 오늘이 든 기간의 외부 숫자: Cloudflare 는 「약 n분 전 기준」, GA 는 「GA 기준 n시 집계」
+  const todayBadge =
+    includesToday &&
+    now !== undefined &&
+    status === 'OK' &&
+    freshness?.kind === 'CACHED' &&
+    freshness.asOf
+      ? source === 'ga'
+        ? labels.freshness.gaAsOf(
+            new Intl.DateTimeFormat(locale, {
+              timeZone: zone,
+              hour: 'numeric',
+              hour12: false,
+            }).format(new Date(freshness.asOf)),
+          )
+        : labels.freshness.minutesAgo(
+            Math.max(1, Math.round((now - new Date(freshness.asOf).getTime()) / 60_000)),
+          )
+      : null
   return (
     <div className={styles.source}>
       <Badge>{labels.sources[source] ?? source}</Badge>
-      {text && <span className={styles.note}>{text}</span>}
-      {status === 'OK' && freshness?.kind === 'DAILY' && includesToday && (
-        <Badge tone="warning">{labels.freshness.todayNote}</Badge>
-      )}
+      {text && !todayBadge && <span className={styles.note}>{text}</span>}
+      {todayBadge && <Badge tone="warning">{todayBadge}</Badge>}
       {action && <span className={styles.action}>{action}</span>}
     </div>
   )

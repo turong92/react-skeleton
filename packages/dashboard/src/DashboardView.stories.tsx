@@ -18,13 +18,28 @@ function WithQuery({ children }: { children: ReactNode }) {
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>
 }
 
-function Demo({ options, korean }: { options?: FakeDashboardOptions; korean?: boolean }) {
-  const [{ api }] = useState(() => createFakeDashboardApi(options))
+function Demo({
+  options,
+  korean,
+  zone = 'Asia/Seoul',
+  onApi,
+}: {
+  options?: FakeDashboardOptions
+  korean?: boolean
+  zone?: string
+  onApi?: (fake: ReturnType<typeof createFakeDashboardApi>) => void
+}) {
+  const [fake] = useState(() => {
+    const created = createFakeDashboardApi(options)
+    onApi?.(created)
+    return created
+  })
+  const { api } = fake
   return (
     <WithQuery>
       <DashboardView
         api={api}
-        zone="Asia/Seoul"
+        zone={zone || undefined}
         locale={korean ? 'ko-KR' : 'en-US'}
         labels={korean ? koDashboardLabels : undefined}
         subtitle="Acme - operations"
@@ -151,5 +166,47 @@ export const PhoneWidthHasNoSideScroll: Story = {
     await expect(window.innerWidth).toBeLessThanOrEqual(430)
     const root = document.documentElement
     await expect(root.scrollWidth).toBeLessThanOrEqual(root.clientWidth)
+  },
+}
+
+/** 시간대를 주지 않으면 서버가 알려 준다 - 첫 호출은 기간 없이(오늘), 그다음 기간은 응답의 `range.zone` 으로 센다 */
+export const ZoneFromServer: Story = {
+  render: () => (
+    <Demo
+      zone=""
+      onApi={(fake) => {
+        zoneProbe = fake
+      }}
+    />
+  ),
+  play: async ({ canvas }) => {
+    await canvas.findByRole('heading', { name: 'Visits over time' })
+    const calls = zoneProbe!.calls.overview
+    await expect(calls[0]).toEqual({ from: null, to: null, compare: false })
+    const span = calls.find((call) => call.from !== null)!
+    await expect(span.to! >= span.from!).toBe(true)
+  },
+}
+
+let zoneProbe: ReturnType<typeof createFakeDashboardApi> | undefined
+
+export const Realtime: Story = {
+  render: () => <Demo />,
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(await canvas.findByRole('button', { name: '7 online now' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Right now' })
+    await expect(
+      within(dialog).getByText(/visitors who accepted analytics cookies/),
+    ).toBeInTheDocument()
+    await expect(within(dialog).getByText('/s/sample-birthday')).toBeInTheDocument()
+    await expect(within(dialog).getByText('South Korea')).toBeInTheDocument()
+  },
+}
+
+export const NoRealtime: Story = {
+  render: () => <Demo options={{ realtime: false }} />,
+  play: async ({ canvas }) => {
+    await canvas.findByRole('heading', { name: 'Visits over time' })
+    await expect(canvas.queryByRole('button', { name: /online now/ })).toBeNull()
   },
 }

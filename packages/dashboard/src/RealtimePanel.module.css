@@ -1,0 +1,28 @@
+.panel {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.count {
+  margin: 0;
+  font-size: var(--font-size-heading);
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.note {
+  margin: 0;
+  color: var(--text);
+  font-size: var(--font-size-small);
+}
+
+.tables {
+  display: grid;
+  gap: var(--space-xl);
+}
+
+@media (min-width: 700px) {
+  .tables {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

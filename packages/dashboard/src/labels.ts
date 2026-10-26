@@ -34,8 +34,10 @@ export type DashboardLabels = {
     live: string
     cached: (asOf: string) => string
     daily: (asOf: string) => string
-    /** 하루 한 번 적재하는 출처를 오늘 범위로 볼 때 */
-    todayNote: string
+    /** 오늘이 든 기간의 Cloudflare 숫자(약 5분 근실시간) */
+    minutesAgo: (minutes: number) => string
+    /** 오늘이 든 기간의 GA 숫자(몇 시간 늦게 집계) - 집계 시각의 시(0~23) */
+    gaAsOf: (hour: string) => string
   }
   status: {
     /** 출처 키별 안내. `*` 는 없는 출처의 기본 */
@@ -59,9 +61,22 @@ export type DashboardLabels = {
     start: string
     fromPrevious: (rate: string) => string
     overall: (from: string, to: string, rate: string) => string
+    /** 맨 끝 단계가 묶음(첫 단계)의 몇 %인지 - 서버의 `rate` */
+    ofCohort: (cohort: string, rate: string) => string
     empty: string
   }
   app: { title: string; badge: string }
+  realtime: {
+    /** 헤더의 「지금 N명」 */
+    badge: (count: string) => string
+    title: string
+    /** 패널 맨 위 - 쿠키에 동의한 방문자만 센다는 표기 */
+    note: string
+    pages: string
+    countries: string
+    users: string
+    empty: string
+  }
   /** 지표 키 → 타일 이름 */
   metrics: Record<string, string>
   /** 순위 키 → 탭 이름 */
@@ -104,7 +119,8 @@ export const defaultDashboardLabels: DashboardLabels = {
     live: 'Live',
     cached: (asOf) => `Updated ${asOf}`,
     daily: (asOf) => `Daily, loaded ${asOf}`,
-    todayNote: "Today's numbers arrive tomorrow",
+    minutesAgo: (minutes) => `About ${minutes} min ago`,
+    gaAsOf: (hour) => `GA as of ${hour}:00`,
   },
   status: {
     notConnected: {
@@ -130,9 +146,19 @@ export const defaultDashboardLabels: DashboardLabels = {
     start: 'Start',
     fromPrevious: (rate) => `${rate} of the previous step`,
     overall: (from, to, rate) => `${from} to ${to} ${rate}`,
+    ofCohort: (cohort, rate) => `${rate} of ${cohort}`,
     empty: 'No funnel data yet',
   },
   app: { title: 'App stats', badge: 'Added by the app' },
+  realtime: {
+    badge: (count) => `${count} online now`,
+    title: 'Right now',
+    note: 'GA - visitors who accepted analytics cookies',
+    pages: 'Pages',
+    countries: 'Countries',
+    users: 'Users',
+    empty: 'Nobody is on the site right now',
+  },
   metrics: {},
   rankings: {},
   columns: {},
@@ -171,7 +197,8 @@ export const koDashboardLabels: DashboardLabels = {
     live: '실시간',
     cached: (asOf) => `${asOf} 갱신`,
     daily: (asOf) => `어제치 · ${asOf} 적재`,
-    todayNote: '오늘 분은 내일 새벽',
+    minutesAgo: (minutes) => `약 ${minutes}분 전 기준`,
+    gaAsOf: (hour) => `GA 기준 ${hour}시 집계`,
   },
   status: {
     notConnected: {
@@ -196,9 +223,19 @@ export const koDashboardLabels: DashboardLabels = {
     start: '시작 단계',
     fromPrevious: (rate) => `전 단계 대비 ${rate}`,
     overall: (from, to, rate) => `${from} → ${to} ${rate}`,
+    ofCohort: (cohort, rate) => `${cohort} 대비 ${rate}`,
     empty: '아직 퍼널 데이터가 없습니다',
   },
   app: { title: '앱 통계', badge: '앱이 붙임' },
+  realtime: {
+    badge: (count) => `지금 ${count}명`,
+    title: '지금',
+    note: 'GA · 분석 쿠키에 동의한 방문자만 셉니다',
+    pages: '페이지',
+    countries: '국가',
+    users: '사용자',
+    empty: '지금 사이트에 있는 사람이 없습니다',
+  },
   metrics: {
     'cloudflare.visits': '방문',
     'cloudflare.pageviews': '페이지뷰',

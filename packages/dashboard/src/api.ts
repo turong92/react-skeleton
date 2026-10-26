@@ -8,8 +8,8 @@ import type {
 } from './types'
 
 export type DashboardApi = {
-  /** `GET {basePath}?from&to&compare` — 타일 · 순위 · 퍼널을 한 번에 */
-  overview(span: DateSpan, compare: boolean): Promise<DashboardOverview>
+  /** `GET {basePath}?from&to&compare` — 타일 · 순위 · 퍼널을 한 번에. `span` 이 null 이면 기간을 보내지 않는다(서버가 오늘 하루로 읽고 응답의 `range.zone` 으로 대시보드 시간대를 알려 준다) */
+  overview(span: DateSpan | null, compare: boolean): Promise<DashboardOverview>
   /** `GET {basePath}/rankings/{key}?from&to&limit` — 「전체 보기」(limit ≤ 500) */
   ranking(key: string, span: DateSpan, limit?: number): Promise<DashboardRanking>
   /** `GET {basePath}/realtime` — 지금 보는 사람 · 페이지 · 국가. 이 경로를 여는 모듈이 없으면 404 */
@@ -34,7 +34,7 @@ export function createDashboardApi(
   return {
     overview: (span, compare) =>
       client.value<DashboardOverview>(base, {
-        params: { from: span.from, to: span.to, compare },
+        params: span ? { from: span.from, to: span.to, compare } : { compare },
       }),
     ranking: (key, span, limit = 100) =>
       client.value<DashboardRanking>(`${base}/rankings/${encodeURIComponent(key)}`, {

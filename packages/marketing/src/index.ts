@@ -20,6 +20,13 @@ export type {
   ConsentBannerProps,
   ConsentCategoryInfo,
 } from './consent/ConsentBanner'
+export { createAnalyticsLoader } from './analytics/createAnalyticsLoader'
+export type {
+  AnalyticsLoader,
+  AnalyticsLoaderOptions,
+  DocumentLike,
+  WindowLike,
+} from './analytics/createAnalyticsLoader'
 export { createConsentStore } from './consent/consentStore'
 export type {
   ConsentState,

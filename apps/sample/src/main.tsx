@@ -19,12 +19,21 @@ import { getDevCountry } from './api/devCountry'
 import { i18n } from './i18n'
 import { initialLocale } from './i18n/initialLocale'
 import { router } from './routes'
+import { consent } from './consent/consent'
+import { createAnalyticsLoader } from '@skeleton/marketing'
 
 // 갱신이 안 돼 로그아웃되면(만료 · 재사용 감지 · 정지) 이유를 한 줄로 알린다 — 라우트 가드가 로그인으로 보낸다
 onSessionEnded((reason) => {
   const labels = i18n.getLocale() === 'ko' ? koAuthLabels : defaultAuthLabels
   toast.info(labels.sessionEnded[reason])
 })
+
+// 방문 통계 - 환경변수가 있을 때만, GA 는 동의한 방문자만(없으면 아무것도 붙지 않는다). 읽는 쪽은 관리자 대시보드(`@skeleton/dashboard`)
+createAnalyticsLoader({
+  consent,
+  gaMeasurementId: import.meta.env.VITE_GA_MEASUREMENT_ID,
+  cfBeaconToken: import.meta.env.VITE_CF_BEACON_TOKEN,
+}).start()
 
 // 저장한 테마를 읽어 <html data-theme> 에 단다(@skeleton/theme 는 불러올 때 아무것도 하지 않는다)
 initTheme()

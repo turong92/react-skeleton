@@ -63,6 +63,14 @@ export function FunnelBars({ funnel, labels, locale }: FunnelBarsProps) {
           )
         })}
       </ol>
+      {funnel.steps.length > 1 && (
+        <p className={styles.summary}>
+          {labels.funnel.ofCohort(
+            labels.funnelSteps[funnel.steps[0].key] ?? funnel.steps[0].label,
+            formatPercent(funnel.steps[funnel.steps.length - 1].rate * 100, locale),
+          )}
+        </p>
+      )}
       {stages.length > 1 && (
         <p className={styles.summary}>
           {labels.funnel.overall(

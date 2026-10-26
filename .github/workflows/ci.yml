@@ -102,4 +102,12 @@ jobs:
         timeout-minutes: 20
         env:
           SAMPLE_API_DIR: ${{ github.workspace }}/kotlin-skeleton
+      # 실패하면 백엔드 로그를 남긴다(러너가 사라지면 볼 곳이 없다) — 하네스가 build/sample-e2e/backend.log 에 쓴다
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: sample-e2e-backend-log
+          path: kotlin-skeleton/build/sample-e2e/backend.log
+          retention-days: 7
+          if-no-files-found: warn
   # sample-e2e-job:end

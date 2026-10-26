@@ -58,6 +58,14 @@ jobs:
           SAMPLE_API_DIR: ${{ github.workspace }}/kotlin-skeleton
           SKELETON_LEGAL_RECONSENT_ENABLED: 'true'
           E2E_LEGAL_RECONSENT: '1'
+      # 실패하면 백엔드 로그를 남긴다(러너가 사라지면 볼 곳이 없다) — 하네스가 build/sample-e2e/backend.log 에 쓴다
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: sample-e2e-backend-log
+          path: kotlin-skeleton/build/sample-e2e/backend.log
+          retention-days: 7
+          if-no-files-found: warn
 
   # scripts/new-project.sh 로 조합 열 개(일곱 조합 + 레시피 셋)를 찍어 각각 install → … → build (네트워크 필요, 순차)
   new-project:

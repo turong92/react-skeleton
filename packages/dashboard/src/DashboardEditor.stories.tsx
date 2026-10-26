@@ -137,3 +137,32 @@ export const ResetToTheDefaultLayout: Story = {
     await expect(canvas.getByRole('button', { name: /Pageviews/ })).toBeInTheDocument()
   },
 }
+
+export const CancelDiscardsTheChanges: Story = {
+  render: () => <Reopenable />,
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    await userEvent.click(await canvas.findByRole('button', { name: 'Edit' }))
+    await userEvent.click(canvas.getByRole('switch', { name: 'Show Funnel' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Cancel' }))
+    await waitFor(() =>
+      expect(canvas.getByRole('button', { name: 'Edit' })).toHaveAttribute('aria-pressed', 'false'),
+    )
+    await expect(cardNames(canvasElement)).toContain('Funnel')
+  },
+}
+
+/** 저장이 실패해도 편집에 갇히지 않는다 - 안내가 뜨고 「취소」로 나올 수 있다 */
+export const SaveFailureCanBeCancelled: Story = {
+  render: () => <Reopenable options={{ layout: 'rejects' }} />,
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(await canvas.findByRole('button', { name: 'Edit' }))
+    await userEvent.click(canvas.getByRole('switch', { name: 'Show Funnel' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Done' }))
+    await expect(await canvas.findByText(/could not be saved/)).toBeInTheDocument()
+    await userEvent.click(canvas.getByRole('button', { name: 'Cancel' }))
+    await waitFor(() =>
+      expect(canvas.getByRole('button', { name: 'Edit' })).toHaveAttribute('aria-pressed', 'false'),
+    )
+    await expect(canvas.queryByText(/could not be saved/)).toBeNull()
+  },
+}

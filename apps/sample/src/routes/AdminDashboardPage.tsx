@@ -13,13 +13,15 @@ export function AdminDashboardPage() {
   const { t, locale } = useT()
   const { principal } = useAuth()
   const language = languageOf(locale)
+  // 로그인 정보(계정 id)가 오기 전에는 그리지 않는다 - 화면 설정을 공용 키로 읽었다가 바꾸지 않게
+  if (!principal) return null
   return (
     <DashboardView
       api={dashboardApi}
       locale={language === 'ko' ? 'ko-KR' : 'en-US'}
       labels={language === 'ko' ? koDashboardLabels : defaultDashboardLabels}
       subtitle={t('appName')}
-      layoutKey={principal?.accountId}
+      layoutKey={principal.accountId}
       renderLink={(href, children, className) => (
         <Link to={href} className={className}>
           {children}

@@ -46,6 +46,25 @@ describe('layout', () => {
     })
   })
 
+  it('saves only the card keys the contract names: tiles, chart, funnel, app, returning, rankings.<group>', () => {
+    const available = availableCards(['traffic', 'pages', 'geo', 'sales', 'app'], true, true)
+    const { order } = layoutToSave(orderedCards(available, []), [])
+    expect(
+      order.every((key) => /^(tiles|chart|funnel|app|returning|rankings\.[^.]+)$/.test(key)),
+    ).toBe(true)
+    expect(order).toEqual([
+      'tiles',
+      'chart',
+      'rankings.traffic',
+      'rankings.pages',
+      'rankings.geo',
+      'rankings.sales',
+      'returning',
+      'funnel',
+      'app',
+    ])
+  })
+
   it('reads a stored layout it cannot trust: anything but string lists becomes the default', () => {
     expect(parseLayout('{"hidden":["a",1],"order":"nope"}')).toEqual({ hidden: ['a'], order: [] })
     expect(parseLayout('not json')).toEqual({ hidden: [], order: [] })

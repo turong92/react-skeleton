@@ -160,8 +160,10 @@ export default async function setup(project: TestProject) {
       },
     }
     // 대시보드 출처(C3 키): 외부 주소는 가짜 서버로(`dashboard-cloudflare.base-url` · `dashboard-ga.base-url` · `token-url`), 단일 프로젝트 모드의 키다(프로젝트 모드면 `skeleton.projects.<id>.config.dashboard-cloudflare.*`), 비밀은 환경변수로 준다
-    const dashboardSkeleton: Record<string, unknown> =
-      fakeCloudflare && fakeGa
+    // 대시보드: DB 숫자의 서버 캐시를 5초로(기본 75초 - 결제 뒤 건수 +1 을 기다리는 시험이 그 안에 끝나게). 출처가 가짜일 때만 외부 주소 · 키를 준다 - 가짜 소셜 제공자 스위치와 무관하다
+    const dashboardSkeleton: Record<string, unknown> = {
+      dashboard: { cache: { db: '5s' } },
+      ...(fakeCloudflare && fakeGa
         ? {
             'dashboard-cloudflare': {
               'account-id': FAKE_CLOUDFLARE.accountId,
@@ -175,7 +177,8 @@ export default async function setup(project: TestProject) {
               'token-url': `${fakeGa.url}/token`,
             },
           }
-        : {}
+        : {}),
+    }
     // 결제 시나리오가 기다릴 수 있는 시간 안에 끝나게(값과 까닭은 `paymentE2eConfig.ts`) — 응답 제한(10초)도 같이 싣는다: 백엔드는 `reconcile.first-delay` 가 그보다 길지 않으면 기동에 실패한다(스펙 §9.2)
     const e2eSkeleton = {
       ...e2eLimits,

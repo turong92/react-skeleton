@@ -9,6 +9,8 @@ export type EditControlsProps = {
   onEdit: () => void
   onDone: () => void
   onReset: () => void
+  /** 고친 것을 버리고 편집에서 나온다(저장이 실패해도 갇히지 않게) */
+  onCancel: () => void
   labels: Pick<DashboardLabels, 'edit'>
 }
 
@@ -19,10 +21,16 @@ export function EditControls({
   onEdit,
   onDone,
   onReset,
+  onCancel,
   labels,
 }: EditControlsProps) {
   return (
     <>
+      {editing && (
+        <Button variant="ghost" size="sm" onClick={onCancel}>
+          {labels.edit.cancel}
+        </Button>
+      )}
       {editing && (
         <Button variant="ghost" size="sm" onClick={onReset}>
           {labels.edit.reset}

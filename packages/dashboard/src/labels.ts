@@ -73,6 +73,8 @@ export type DashboardLabels = {
     edit: string
     done: string
     reset: string
+    /** 고친 것을 버리고 편집에서 나온다 */
+    cancel: string
     saving: string
     saveFailed: string
     /** 편집 중 맨 위 안내 */
@@ -180,6 +182,7 @@ export const defaultDashboardLabels: DashboardLabels = {
     edit: 'Edit',
     done: 'Done',
     reset: 'Reset layout',
+    cancel: 'Cancel',
     saving: 'Saving',
     saveFailed: 'The layout could not be saved. Try again',
     hint: 'Editing - turn tiles and cards on or off, and move cards with the arrows (or drag them). Press Done to save.',
@@ -277,6 +280,7 @@ export const koDashboardLabels: DashboardLabels = {
     edit: '편집',
     done: '완료',
     reset: '기본 배치로 되돌리기',
+    cancel: '취소',
     saving: '저장 중',
     saveFailed: '배치를 저장하지 못했습니다. 다시 눌러 주세요',
     hint: '편집 중 - 타일과 카드를 켜고 끄고, 카드는 화살표(또는 끌어서)로 순서를 바꿉니다. 「완료」를 누르면 저장됩니다.',

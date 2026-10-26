@@ -57,6 +57,21 @@ describe('the fake GA (contract C4)', () => {
     })
   })
 
+  it('knows screenPageViews (page transitions) and refuses another property id', async () => {
+    const headers = { Authorization: `Bearer ${FAKE_GA.accessToken}` }
+    const ok = await post(
+      `/v1beta/properties/${FAKE_GA.propertyId}:runReport`,
+      {
+        dimensions: [{ name: 'pageReferrer' }, { name: 'pagePath' }],
+        metrics: [{ name: 'screenPageViews' }],
+      },
+      headers,
+    )
+    const body = (await ok.json()) as { rows: { metricValues: { value: string }[] }[] }
+    expect(body.rows[0].metricValues[0].value).toBe(String(FAKE_GA.transitions[0].count))
+    expect((await post('/v1beta/properties/999:runReport', {}, headers)).status).toBe(403)
+  })
+
   it('realtime pages and countries each add up to the active users the header shows', () => {
     const sum = (rows: { metricValues: { value: string }[] }[]) =>
       rows.reduce((n, r) => n + Number(r.metricValues[0].value), 0)

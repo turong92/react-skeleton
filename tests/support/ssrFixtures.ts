@@ -786,6 +786,7 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
     onEdit: noop,
     onDone: noop,
     onReset: noop,
+    onCancel: noop,
     labels: ctx.mod('dashboard').defaultDashboardLabels,
   }),
   'dashboard#EditableCard': (ctx) => ({

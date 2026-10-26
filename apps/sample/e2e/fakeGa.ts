@@ -76,7 +76,7 @@ function metricsOf(
   values: { sessions?: number; users?: number; conversions?: number },
 ): Cell[] {
   return metrics.map((name) =>
-    name === 'sessions'
+    name === 'sessions' || name === 'screenPageViews'
       ? (values.sessions ?? 0)
       : name === 'activeUsers'
         ? (values.users ?? values.sessions ?? 0)
@@ -185,6 +185,11 @@ export async function startFakeGa(): Promise<FakeGa> {
       }
       const dims = (body.dimensions ?? []).map((d) => d.name)
       const metrics = (body.metrics ?? []).map((m) => m.name)
+      // 속성 id 도 본다 - 다른 id 면 진짜 GA 처럼 403
+      if (match[1] !== FAKE_GA.propertyId)
+        return json(res, 403, {
+          error: { code: 403, message: 'User does not have access to this property.' },
+        })
       const authorized = req.headers.authorization === `Bearer ${FAKE_GA.accessToken}`
       reports.push({
         realtime: match[2] === 'runRealtimeReport',

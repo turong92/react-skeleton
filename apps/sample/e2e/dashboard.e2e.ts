@@ -108,7 +108,7 @@ describe('the admin dashboard', () => {
         await cheerFor(userPage, baseUrl, 1000)
         await returnedOrderId(userPage)
         await pwExpect(resultTitle(userPage, paymentLabels.result.paid.title)).toBeVisible()
-        // 서버가 DB 숫자를 30초 캐시한다 — 그 안에서 다시 불러와 본다
+        // 서버의 DB 숫자 캐시는 e2e 백엔드에서 5초(`globalSetup.ts` 의 `dashboard.cache.db`) - 그 뒤 다시 불러오면 새 값이 나온다
         await pwExpect
           .poll(
             async () => {

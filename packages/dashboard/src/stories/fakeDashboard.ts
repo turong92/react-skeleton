@@ -40,7 +40,7 @@ export type FakeDashboardOptions = {
   /** 개요 호출을 이 시간(ms) 뒤에 답한다(로딩 모습) */
   delayMs?: number
   /** `unavailable` 이면 화면 설정 저장소가 없다(404 `DASHBOARD.LAYOUT_UNAVAILABLE`) - 기본은 메모리 안 서버 저장 */
-  layout?: 'server' | 'unavailable'
+  layout?: 'server' | 'unavailable' | 'rejects'
   /** 퍼널의 상태(기본 `OK`, 아니면 단계가 비어 온다) */
   funnelStatus?: 'OK' | 'TOO_LARGE' | 'ERROR'
   /** false 면 실시간 경로가 없다(404), `not-connected` 면 200 인데 `NOT_CONNECTED`(GA 키 없음) */
@@ -373,6 +373,7 @@ export function createFakeDashboardApi(options: FakeDashboardOptions = {}) {
     },
     saveLayout: async (next) => {
       if (options.layout === 'unavailable') throw layoutUnavailable()
+      if (options.layout === 'rejects') throw notFound() // 저장 실패(서버 오류)
       calls.layoutSaved.push(next)
       layout = next
       return layout

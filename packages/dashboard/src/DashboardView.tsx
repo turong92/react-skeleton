@@ -141,6 +141,10 @@ function DashboardBody({
       // 저장하지 못했다 - 편집 상태를 그대로 두고 안내(`saveFailed`)를 보인다
     }
   }
+  function cancelEdit() {
+    stored.resetSaveError()
+    setEditing(false)
+  }
   function resetEdit() {
     setDraftHidden([])
     setDraftOrder(available)
@@ -171,6 +175,7 @@ function DashboardBody({
               onEdit={startEdit}
               onDone={() => void finishEdit()}
               onReset={resetEdit}
+              onCancel={cancelEdit}
               labels={labels}
             />
           )}

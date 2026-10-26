@@ -116,6 +116,8 @@ export function createAnalyticsLoader({
     const location = redactedLocation(win.location.href, redactParams)
     if (location === lastPageView) return
     lastPageView = location
+    // 자동 이벤트(스크롤 · 클릭 …)도 같은 주소를 쓰게 먼저 기본값으로 둔다
+    gtag('set', { page_location: location })
     gtag('event', 'page_view', { page_location: location })
   }
 

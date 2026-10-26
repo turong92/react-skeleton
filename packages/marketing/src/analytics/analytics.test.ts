@@ -128,7 +128,14 @@ describe('createAnalyticsLoader: nothing is sent before consent', () => {
       },
     ])
     expect(commands[1]).toEqual(['consent', 'update', { analytics_storage: 'granted' }])
-    expect(commands.map((c) => c[0])).toEqual(['consent', 'consent', 'js', 'config', 'event'])
+    expect(commands.map((c) => c[0])).toEqual([
+      'consent',
+      'consent',
+      'js',
+      'config',
+      'set',
+      'event',
+    ])
   })
 
   it('sends page views with the page_location stripped of auth query values (mail-link ?token=, ?code=&state=), once per address, only while consented', () => {

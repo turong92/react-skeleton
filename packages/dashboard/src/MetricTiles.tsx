@@ -1,3 +1,4 @@
+import { Switch } from '@skeleton/ui'
 import type { ReactNode } from 'react'
 import { deltaOf, formatPercent, formatValue, type Delta } from './format'
 import type { DashboardLabels } from './labels'
@@ -22,7 +23,13 @@ export type MetricTilesProps = {
     | 'tileUnavailable'
     | 'detailsLink'
     | 'currencySuffix'
+    | 'edit'
   >
+  /** 편집 중 - 끈 타일도 자리에 보이고 스위치로 켠다 */
+  editing?: boolean
+  /** 끈 타일의 지표 키 */
+  hiddenKeys?: ReadonlySet<string>
+  onToggle?: (key: string) => void
   /** `metric.link` 를 그리는 법(라우터 `Link` 를 끼운다). 기본은 `<a href>` */
   renderLink?: (href: string, children: ReactNode, className: string) => ReactNode
 }
@@ -66,25 +73,46 @@ export function MetricTiles({
   compare,
   locale,
   labels,
+  editing = false,
+  hiddenKeys,
+  onToggle,
   renderLink = (href, children, className) => (
     <a href={href} className={className}>
       {children}
     </a>
   ),
 }: MetricTilesProps) {
+  const shown = metrics.filter((m) => editing || !hiddenKeys?.has(m.key))
   return (
     <div
       className={styles.tiles}
-      data-count={Math.min(Math.max(metrics.length, 1), 6)}
+      data-count={Math.min(Math.max(shown.length, 1), 6)}
       role="group"
       aria-label={labels.tilesLabel}
     >
-      {metrics.map((metric) => {
+      {shown.map((metric) => {
         const ok = metric.status === 'OK' && metric.value !== null && metric.value.length > 0
         const [first, ...rest] = metric.value ?? []
         const name = labels.metrics[metric.key] ?? metric.label
+        const off = hiddenKeys?.has(metric.key) ?? false
         const format = (amount: typeof first) =>
           formatValue(amount, metric.unit, { locale, currencySuffix: labels.currencySuffix })
+        const toggle = editing && (
+          <Switch
+            className={styles.toggle}
+            label={labels.edit.show(name)}
+            checked={!off}
+            onChange={() => onToggle?.(metric.key)}
+          />
+        )
+        if (off) {
+          return (
+            <div key={metric.key} className={styles.cell} data-off="true">
+              <span className={styles.gone}>{labels.edit.off(name)}</span>
+              {toggle}
+            </div>
+          )
+        }
         return (
           <div key={metric.key} className={styles.cell}>
             <button
@@ -112,6 +140,7 @@ export function MetricTiles({
               </span>
             </button>
             {metric.link && renderLink(metric.link, labels.detailsLink, styles.link)}
+            {toggle}
           </div>
         )
       })}

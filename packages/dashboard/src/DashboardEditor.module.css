@@ -1,0 +1,47 @@
+.cell {
+  display: grid;
+  gap: var(--space-sm);
+  align-content: start;
+  min-width: 0;
+}
+
+.cell[data-wide] {
+  grid-column: 1 / -1;
+}
+
+/* 편집 중: 점선 테두리 + 위에 조절 줄. 끌어 옮길 수 있다는 것은 손 모양 커서로 */
+.cell[data-editing] {
+  padding: var(--space-sm);
+  border: 2px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  cursor: grab;
+}
+
+.cell[data-editing]:active {
+  cursor: grabbing;
+}
+
+.cell[data-off] {
+  background: var(--surface-alt);
+}
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.moves {
+  display: inline-flex;
+  gap: var(--space-xs);
+}
+
+.gone {
+  margin: 0;
+  padding: var(--space-sm) var(--space-xs);
+  color: var(--text);
+  font-weight: 650;
+  font-size: var(--font-size-small);
+}

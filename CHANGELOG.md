@@ -13,6 +13,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `scripts/test-new-project.sh --core`: 서로 겹치지 않는 조합(기본 · packages · ssr-without-storybook · 레시피 셋)만 — `new-project.yml`(push/PR)이 쓴다. 3·5·6·7 은 레시피가 품는다. `--full` 은 그대로 열 조합.
 - 테스트: ui Badge · Spinner · Stat · Progress · Skeleton 의 서버 렌더 테스트를 스토리 play 로 일원화(스토리에 없던 단정은 옮김), `tokens.wiring` 의 docs 표 검사와 `capabilities.skeleton` 의 실제 카탈로그 검사 3개는 CI 의 `tokens:check` · `capabilities:check` 가 같은 함수를 불러 삭제, affordance CSS 테스트 7파일을 `tests/affordance.css.test.ts`(+ 참조 앱의 `apps/sample/src/components/affordance.test.ts`)로 통합.
 
+### Added — 관리자 대시보드 (2026-10-26)
+
+백엔드 짝: kotlin-skeleton `dashboard`(+ `dashboard-jdbc` · `dashboard-cloudflare` · `dashboard-ga`), `/api/v1/admin/dashboard`, 권한 `dashboard.read`.
+
+- 새 패키지 `@skeleton/dashboard`(capability `admin-dashboard`): `createDashboardApi`(개요 · 순위 전체 보기 · 실시간 · 화면 설정) · `useDashboard`(60초 갱신, 탭이 숨으면 멈춤) · `useDashboardZone`(「오늘」 · 7일 · 30일을 서버 시간대로) · `useRanking` · `useRealtime` · `useDashboardLayout`, 화면 `DashboardView`(기간 · 직전 기간 비교 → 숫자 타일 + 누르면 바뀌는 SVG 추이 그래프 → 탭 달린 순위 카드 → 퍼널 → 앱 통계) 와 부품 `MetricTiles` · `MetricChart` · `RankingCard` · `FunnelBars` · `TrendChart` · `RealtimeBadge`(「지금 N명」) · `EditableCard`. 차트 라이브러리 없음. 출처가 없으면 그 타일 · 탭만 「키를 넣으면 보입니다」 안내, 오늘 분은 Cloudflare 「약 n분 전 기준」 · GA 「GA 기준 n시 집계」. 문구는 영어 기본 + `koDashboardLabels`.
+- 편집 모드: 타일 · 카드 끄기, 카드 순서(▲▼ · 끌어서), 「완료」로 저장 - 서버(계정별), 저장소가 없으면 브라우저.
+- `@skeleton/api-client` `ErrorCodes` 에 `DASHBOARD_*` 넷.
+- `@skeleton/marketing`: `createAnalyticsLoader({ consent, gaMeasurementId?, cfBeaconToken? })` - GA(gtag)는 동의 범주 `analytics` 가 켜진 뒤에만(끄면 `analytics_storage: denied`), Cloudflare 비콘은 쿠키 없이 토큰이 있으면. `start()` 를 부를 때만 움직인다.
+- 샘플: `/admin/dashboard`(`dashboard.read`)와 관리자 메뉴 첫 항목, `main.tsx` 가 `VITE_GA_MEASUREMENT_ID` · `VITE_CF_BEACON_TOKEN` 으로 분석 로더를 시작한다. e2e `dashboard.e2e.ts` + 가짜 Cloudflare · GA(`E2E_FAKE_ANALYTICS=0` 이면 끈다) - 백엔드를 합친 뒤에 돌린다.
+
 ### Added — 권한으로 화면 가리기 (2026-10-24)
 
 백엔드 짝: kotlin-skeleton 의 권한(역할 → 권한 매핑, `GET /auth/me` 의 `permissions`). 하드코딩한 `ADMIN` 은 화면에서 사라진다. `RequireRole` · JWT `roles` 는 그대로 남는다.

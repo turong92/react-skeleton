@@ -1,10 +1,20 @@
 import { todayInZone, formatDate } from '@skeleton/time'
-import { Badge, Button, type DateRange, Skeleton } from '@skeleton/ui'
-import { useMemo, useState, type ReactNode } from 'react'
+import { Alert, Button, type DateRange, Skeleton } from '@skeleton/ui'
+import { useMemo, useRef, useState, type ReactNode } from 'react'
 import type { DashboardApi } from './api'
-import { FunnelBars } from './charts/FunnelBars'
+import { AppStatsCard } from './AppStatsCard'
+import { EditableCard, EditControls } from './DashboardEditor'
+import { FunnelCard } from './FunnelCard'
 import { DashboardHeader } from './DashboardHeader'
-import { useDashboard, useDashboardZone } from './hooks'
+import { useDashboard, useDashboardLayout, useDashboardZone } from './hooks'
+import {
+  availableCards,
+  dropCard,
+  layoutToSave,
+  moveCard,
+  orderedCards,
+  toggleHidden,
+} from './layout'
 import { defaultDashboardLabels, type DashboardLabels } from './labels'
 import { MetricChart } from './MetricChart'
 import { MetricTiles, type MetricTilesProps } from './MetricTiles'
@@ -26,14 +36,13 @@ export type DashboardViewProps = {
   initialPeriod?: DashboardPeriod
   /** 헤더의 「지금 N명」(기본 켬). 실시간 경로가 없는 서버면 알아서 숨는다 */
   realtime?: boolean
+  /** 화면 설정(끈 카드 · 순서)을 브라우저에 둘 때 키에 넣는 값 - 보통 계정 id. 서버에 저장소가 있으면 서버(계정별)에 저장한다 */
+  layoutKey?: string
   /** 헤더 오른쪽 끝 자리 - 지금 N명, 편집 단추 */
   headerTrailing?: ReactNode
   /** 타일의 `metric.link` 를 그리는 법(라우터 `Link`) */
   renderLink?: MetricTilesProps['renderLink']
 }
-
-/** 묶음 순서 - 이 순서로 놓고, 모르는 묶음은 그 뒤. `app` 은 따로 아래 구역 */
-const GROUP_ORDER = ['traffic', 'pages', 'geo']
 
 function groupRankings(rankings: DashboardRanking[]): Map<string, DashboardRanking[]> {
   const groups = new Map<string, DashboardRanking[]>()
@@ -71,6 +80,7 @@ function DashboardBody({
   initialPeriod = '7d',
   headerTrailing,
   realtime = true,
+  layoutKey,
   renderLink,
 }: DashboardViewProps & { zone: string }) {
   const [period, setPeriod] = useState<DashboardPeriod>(initialPeriod)
@@ -80,6 +90,11 @@ function DashboardBody({
   const [draft, setDraft] = useState<DateRange>(() => ({ start: applied.from, end: applied.to }))
   const [selected, setSelected] = useState<string | null>(null)
   const [opened, setOpened] = useState<DashboardRanking | null>(null)
+  const stored = useDashboardLayout(api, layoutKey)
+  const [editing, setEditing] = useState(false)
+  const [draftHidden, setDraftHidden] = useState<string[]>([])
+  const [draftOrder, setDraftOrder] = useState<string[]>([])
+  const dragging = useRef<string | null>(null)
 
   const span = useMemo(
     () => spanOf(period, zone, applied),
@@ -96,6 +111,32 @@ function DashboardBody({
     period === 'custom'
       ? `${formatDate(span.from, { locale })} ~ ${formatDate(span.to, { locale })}`
       : labels.periods[period]
+
+  const groups = data ? groupRankings(data.rankings) : null
+  const available = data && groups ? availableCards([...groups.keys()], data.funnel !== null) : []
+  const current = editing
+    ? { hidden: draftHidden, order: draftOrder }
+    : { hidden: stored.layout.hidden, order: orderedCards(available, stored.layout.order) }
+  const hiddenKeys = new Set(current.hidden)
+
+  function startEdit() {
+    stored.resetSaveError()
+    setDraftHidden(stored.layout.hidden)
+    setDraftOrder(orderedCards(available, stored.layout.order))
+    setEditing(true)
+  }
+  async function finishEdit() {
+    try {
+      await stored.save(layoutToSave(draftOrder, draftHidden))
+      setEditing(false)
+    } catch {
+      // 저장하지 못했다 - 편집 상태를 그대로 두고 안내(`saveFailed`)를 보인다
+    }
+  }
+  function resetEdit() {
+    setDraftHidden([])
+    setDraftOrder(available)
+  }
 
   const header = (
     <DashboardHeader
@@ -115,13 +156,23 @@ function DashboardBody({
       trailing={
         <>
           {realtime && <RealtimeBadge api={api} locale={locale} labels={labels} />}
+          {data && (
+            <EditControls
+              editing={editing}
+              saving={stored.saving}
+              onEdit={startEdit}
+              onDone={() => void finishEdit()}
+              onReset={resetEdit}
+              labels={labels}
+            />
+          )}
           {headerTrailing}
         </>
       }
     />
   )
 
-  if (!data) {
+  if (!data || !groups || stored.isPending) {
     return (
       <div className={styles.view}>
         {header}
@@ -139,17 +190,45 @@ function DashboardBody({
     )
   }
 
-  const metric = data.metrics.find((m) => m.key === selected) ?? data.metrics[0]
-  const groups = groupRankings(data.rankings)
-  const ordered = [
-    ...GROUP_ORDER.filter((g) => groups.has(g)),
-    ...[...groups.keys()].filter((g) => g !== 'app' && !GROUP_ORDER.includes(g)),
-  ]
+  const visibleMetrics = data.metrics.filter((m) => editing || !hiddenKeys.has(m.key))
+  const metric =
+    visibleMetrics.find((m) => m.key === selected && !hiddenKeys.has(m.key)) ??
+    visibleMetrics.find((m) => !hiddenKeys.has(m.key))
   const common = { zone: data.range.zone, includesToday, now: query.dataUpdatedAt, locale, labels }
+
+  const cardName = (key: string) =>
+    key === 'funnel'
+      ? labels.funnel.title
+      : key === 'app'
+        ? labels.app.title
+        : (labels.groups[key.replace('rankings.', '')] ?? key.replace('rankings.', ''))
+  const cardBody = (key: string) => {
+    if (key === 'funnel')
+      return <FunnelCard funnel={data.funnel!} locale={locale} labels={labels} />
+    if (key === 'app') {
+      return <AppStatsCard rankings={groups.get('app') ?? []} onViewAll={setOpened} {...common} />
+    }
+    const group = key.replace('rankings.', '')
+    return (
+      <RankingCard
+        group={group}
+        rankings={groups.get(group) ?? []}
+        onViewAll={setOpened}
+        {...common}
+      />
+    )
+  }
 
   return (
     <div className={styles.view}>
       {header}
+      {editing && (
+        <p className={styles.hint} role="note">
+          {labels.edit.hint}
+          {stored.where === 'browser' && <> {labels.edit.browserOnly}</>}
+        </p>
+      )}
+      {editing && stored.saveFailed && <Alert tone="danger">{labels.edit.saveFailed}</Alert>}
       <section className={styles.panel} aria-label={labels.tilesLabel}>
         <MetricTiles
           metrics={data.metrics}
@@ -158,6 +237,9 @@ function DashboardBody({
           compare={compare}
           locale={locale}
           labels={labels}
+          editing={editing}
+          hiddenKeys={hiddenKeys}
+          onToggle={(key) => setDraftHidden((list) => toggleHidden(list, key))}
           renderLink={renderLink}
         />
         {metric && (
@@ -173,46 +255,33 @@ function DashboardBody({
           />
         )}
       </section>
-      {ordered.length > 0 && (
-        <div className={styles.grid}>
-          {ordered.map((group) => (
-            <RankingCard
-              key={group}
-              group={group}
-              rankings={groups.get(group) ?? []}
-              onViewAll={setOpened}
-              {...common}
-            />
-          ))}
-        </div>
-      )}
-      {data.funnel && (
-        <section className={styles.section} aria-labelledby="dashboard-funnel">
-          <div className={styles.sectionHead}>
-            <h2 id="dashboard-funnel">{labels.funnel.title}</h2>
-            <span className={styles.hint}>{labels.funnel.hint}</span>
-          </div>
-          <div className={styles.card}>
-            <FunnelBars funnel={data.funnel} labels={labels} locale={locale} />
-          </div>
-        </section>
-      )}
-      {groups.has('app') && (
-        <section className={styles.section} aria-labelledby="dashboard-app">
-          <div className={styles.sectionHead}>
-            <h2 id="dashboard-app">{labels.app.title}</h2>
-            <Badge tone="success">{labels.app.badge}</Badge>
-          </div>
-          <div className={styles.grid}>
-            <RankingCard
-              group="app"
-              rankings={groups.get('app') ?? []}
-              onViewAll={setOpened}
-              {...common}
-            />
-          </div>
-        </section>
-      )}
+      <div className={styles.grid}>
+        {current.order.map((key, index) => (
+          <EditableCard
+            key={key}
+            id={key}
+            name={cardName(key)}
+            wide={key === 'funnel' || key === 'app'}
+            editing={editing}
+            hidden={hiddenKeys.has(key)}
+            isFirst={index === 0}
+            isLast={index === current.order.length - 1}
+            onToggle={() => setDraftHidden((list) => toggleHidden(list, key))}
+            onMove={(delta) => setDraftOrder((order) => moveCard(order, key, delta))}
+            onDragStart={(id) => {
+              dragging.current = id
+            }}
+            onDropOn={(target) => {
+              const from = dragging.current
+              dragging.current = null
+              if (from) setDraftOrder((order) => dropCard(order, from, target))
+            }}
+            labels={labels}
+          >
+            {cardBody(key)}
+          </EditableCard>
+        ))}
+      </div>
       <RankingDialog
         api={api}
         ranking={opened}

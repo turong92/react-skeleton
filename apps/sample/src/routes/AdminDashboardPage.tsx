@@ -1,3 +1,4 @@
+import { useAuth } from '@skeleton/auth'
 import { defaultDashboardLabels, koDashboardLabels, DashboardView } from '@skeleton/dashboard'
 import { Link } from 'react-router-dom'
 import { dashboardApi } from '../adminDashboard/api'
@@ -10,6 +11,7 @@ import { languageOf, useT } from '../i18n'
  */
 export function AdminDashboardPage() {
   const { t, locale } = useT()
+  const { principal } = useAuth()
   const language = languageOf(locale)
   return (
     <DashboardView
@@ -17,6 +19,7 @@ export function AdminDashboardPage() {
       locale={language === 'ko' ? 'ko-KR' : 'en-US'}
       labels={language === 'ko' ? koDashboardLabels : defaultDashboardLabels}
       subtitle={t('appName')}
+      layoutKey={principal?.accountId}
       renderLink={(href, children, className) => (
         <Link to={href} className={className}>
           {children}

@@ -162,3 +162,16 @@
     font-size: var(--font-size-subheading);
   }
 }
+
+.toggle {
+  padding: var(--space-sm) var(--space-lg) var(--space-md);
+}
+
+.gone {
+  flex: 1;
+  padding: var(--space-lg);
+  color: var(--text);
+  font-size: var(--font-size-small);
+  font-weight: 650;
+  background: var(--surface-alt);
+}

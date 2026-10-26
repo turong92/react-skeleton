@@ -66,6 +66,22 @@ export type DashboardLabels = {
     empty: string
   }
   app: { title: string; badge: string }
+  edit: {
+    edit: string
+    done: string
+    reset: string
+    saving: string
+    saveFailed: string
+    /** 편집 중 맨 위 안내 */
+    hint: string
+    /** 이 브라우저에만 저장될 때(서버에 저장소가 없다) */
+    browserOnly: string
+    show: (name: string) => string
+    moveUp: (name: string) => string
+    moveDown: (name: string) => string
+    /** 끈 카드의 자리 표시 */
+    off: (name: string) => string
+  }
   realtime: {
     /** 헤더의 「지금 N명」 */
     badge: (count: string) => string
@@ -150,6 +166,19 @@ export const defaultDashboardLabels: DashboardLabels = {
     empty: 'No funnel data yet',
   },
   app: { title: 'App stats', badge: 'Added by the app' },
+  edit: {
+    edit: 'Edit',
+    done: 'Done',
+    reset: 'Reset layout',
+    saving: 'Saving',
+    saveFailed: 'The layout could not be saved. Try again',
+    hint: 'Editing - turn tiles and cards on or off, and move cards with the arrows (or drag them). Press Done to save.',
+    browserOnly: 'Saved in this browser only',
+    show: (name) => `Show ${name}`,
+    moveUp: (name) => `Move ${name} earlier`,
+    moveDown: (name) => `Move ${name} later`,
+    off: (name) => `${name} - off`,
+  },
   realtime: {
     badge: (count) => `${count} online now`,
     title: 'Right now',
@@ -227,6 +256,19 @@ export const koDashboardLabels: DashboardLabels = {
     empty: '아직 퍼널 데이터가 없습니다',
   },
   app: { title: '앱 통계', badge: '앱이 붙임' },
+  edit: {
+    edit: '편집',
+    done: '완료',
+    reset: '기본 배치로 되돌리기',
+    saving: '저장 중',
+    saveFailed: '배치를 저장하지 못했습니다. 다시 눌러 주세요',
+    hint: '편집 중 - 타일과 카드를 켜고 끄고, 카드는 화살표(또는 끌어서)로 순서를 바꿉니다. 「완료」를 누르면 저장됩니다.',
+    browserOnly: '이 브라우저에만 저장됩니다',
+    show: (name) => `${name} 보이기`,
+    moveUp: (name) => `${name} 앞으로`,
+    moveDown: (name) => `${name} 뒤로`,
+    off: (name) => `${name} - 꺼짐`,
+  },
   realtime: {
     badge: (count) => `지금 ${count}명`,
     title: '지금',

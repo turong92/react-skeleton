@@ -6,6 +6,8 @@ import type { TestProject } from 'vitest/node'
 import { FAKE_LINE, FAKE_X, startFakeProviders, type FakeProviders } from './fakeProviders'
 import { FAKE_KAKAOPAY, startFakeKakaoPay, type FakeKakaoPay } from './fakeKakaoPay'
 import { FAKE_NAVERPAY, startFakeNaverPay, type FakeNaverPay } from './fakeNaverPay'
+import { FAKE_CLOUDFLARE, startFakeCloudflare, type FakeCloudflare } from './fakeCloudflare'
+import { FAKE_GA, startFakeGa, type FakeGa } from './fakeGa'
 import { FAKE_PADDLE, startFakePaddle, type FakePaddle } from './fakePaddle'
 import { FAKE_TOSS, startFakeToss, type FakeToss } from './fakeToss'
 import { PAYMENT_E2E_SKELETON } from './paymentE2eConfig'
@@ -55,12 +57,32 @@ declare module 'vitest' {
     fakeNaverPayUrl: string
     /** 가짜 Paddle(`fakePaddle.ts`) — `E2E_FAKE_PADDLE=0` 이거나 이미 떠 있는 백엔드를 쓰면 빈 문자열 */
     fakePaddleUrl: string
+    /** 가짜 Cloudflare(`fakeCloudflare.ts`) - `E2E_FAKE_ANALYTICS=0` 이거나 이미 떠 있는 백엔드를 쓰면 빈 문자열 */
+    fakeCloudflareUrl: string
+    /** 가짜 GA(`fakeGa.ts`) - 위와 같다 */
+    fakeGaUrl: string
   }
 }
 
 const here = dirname(fileURLToPath(import.meta.url))
 const appDir = resolve(here, '..')
 const repoRoot = resolve(appDir, '../..')
+
+/** `skeleton.*` 설정 두 덩어리를 합친다 - 같은 키의 객체는 안쪽까지(예: `http.clients` 에 결제사와 대시보드 출처가 같이) */
+function mergeSkeleton(
+  base: Record<string, unknown>,
+  extra: Record<string, unknown>,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...base }
+  for (const [key, value] of Object.entries(extra)) {
+    const mine = out[key]
+    out[key] =
+      mine && typeof mine === 'object' && value && typeof value === 'object'
+        ? mergeSkeleton(mine as Record<string, unknown>, value as Record<string, unknown>)
+        : value
+  }
+  return out
+}
 
 function freePort(): Promise<number> {
   return new Promise((done, fail) => {
@@ -94,6 +116,8 @@ export default async function setup(project: TestProject) {
   let fakePaddle: FakePaddle | null = null
   let fakeKakaoPay: FakeKakaoPay | null = null
   let fakeNaverPay: FakeNaverPay | null = null
+  let fakeCloudflare: FakeCloudflare | null = null
+  let fakeGa: FakeGa | null = null
   let apiUrl = process.env.E2E_API_URL ?? ''
   let mailUrl = process.env.E2E_MAIL_URL ?? ''
   const native = process.env.E2E_NATIVE === '1'
@@ -116,6 +140,11 @@ export default async function setup(project: TestProject) {
     if (process.env.E2E_FAKE_PADDLE !== '0') fakePaddle = await startFakePaddle()
     if (process.env.E2E_FAKE_KAKAOPAY !== '0') fakeKakaoPay = await startFakeKakaoPay()
     if (process.env.E2E_FAKE_NAVERPAY !== '0') fakeNaverPay = await startFakeNaverPay()
+    // 가짜 Cloudflare · GA 도 기본으로 켠다 - 대시보드의 방문 · 유입 · 채널 · 「지금 N명」을 진짜 계정 없이(`E2E_FAKE_ANALYTICS=0` 이면 끈다: 그 걸음은 건너뛴다)
+    if (process.env.E2E_FAKE_ANALYTICS !== '0') {
+      fakeCloudflare = await startFakeCloudflare()
+      fakeGa = await startFakeGa()
+    }
     // 링크 로그인 요청은 같은 IP(::1)에서 시간당 10번(`skeleton.auth-magic-link.per-ip`, 넘으면 429)이 한도다 — 이 실행의 시나리오는 한 백엔드에 새 계정을 여럿 만들어 10번을 넘는다. e2e 백엔드에서만 올린다
     // E2E_EMAIL_REAUTH_WINDOW=PT0S: 첫 이메일 등록의 재인증 면제 창을 없앤다 — 「1시간이 지난」 제공자 재동의 길(emailReauth.e2e.ts)을 만들 수 있는 유일한 길. 표준 실행에서는 쓰지 않는다
     // 아이디 정하기 한도(`login-id.claim-limit`: 계정마다 · IP 마다 시간당 10번 - 같은 IP 에서 계정을 여럿 만드는 이 실행은 넘는다)와 실시간 중복 확인의 IP 한도(`check-per-ip`)도 e2e 백엔드에서만 올린다
@@ -130,6 +159,23 @@ export default async function setup(project: TestProject) {
           : {}),
       },
     }
+    // 대시보드 출처(C3 키): 외부 주소는 가짜 서버로(`skeleton.http.clients.dashboard-cloudflare` · `dashboard-ga.base-url` · `token-url`), 비밀은 환경변수로 준다
+    const dashboardSkeleton: Record<string, unknown> =
+      fakeCloudflare && fakeGa
+        ? {
+            'dashboard-cloudflare': {
+              'account-id': FAKE_CLOUDFLARE.accountId,
+              'site-tag': FAKE_CLOUDFLARE.siteTag,
+            },
+            'dashboard-ga': {
+              'property-id': FAKE_GA.propertyId,
+              'key-event': FAKE_GA.keyEvent,
+              'base-url': fakeGa.url,
+              'token-url': `${fakeGa.url}/token`,
+            },
+            http: { clients: { 'dashboard-cloudflare': { 'base-url': fakeCloudflare.url } } },
+          }
+        : {}
     // 결제 시나리오가 기다릴 수 있는 시간 안에 끝나게(값과 까닭은 `paymentE2eConfig.ts`) — 응답 제한(10초)도 같이 싣는다: 백엔드는 `reconcile.first-delay` 가 그보다 길지 않으면 기동에 실패한다(스펙 §9.2)
     const e2eSkeleton = {
       ...e2eLimits,
@@ -146,11 +192,12 @@ export default async function setup(project: TestProject) {
           }
         : {}),
     }
+    const skeletonConfig = mergeSkeleton(e2eSkeleton, dashboardSkeleton)
     const fakeConfig = fake
       ? {
           SPRING_APPLICATION_JSON: JSON.stringify({
             skeleton: {
-              ...e2eSkeleton,
+              ...skeletonConfig,
               'auth-social-oidc': {
                 providers: {
                   line: {
@@ -184,7 +231,7 @@ export default async function setup(project: TestProject) {
             },
           }),
         }
-      : { SPRING_APPLICATION_JSON: JSON.stringify({ skeleton: e2eSkeleton }) }
+      : { SPRING_APPLICATION_JSON: JSON.stringify({ skeleton: skeletonConfig }) }
     const tossEnv = fakeToss
       ? {
           SKELETON_PAYMENT_TOSS_ENABLED: 'true',
@@ -233,9 +280,19 @@ export default async function setup(project: TestProject) {
           SKELETON_PAYMENT_NAVERPAY_WINDOW_BASE_URL: fakeNaverPay.url,
         }
       : {}
+    const dashboardEnv =
+      fakeCloudflare && fakeGa
+        ? {
+            SKELETON_DASHBOARD_CLOUDFLARE_API_TOKEN: FAKE_CLOUDFLARE.apiToken,
+            SKELETON_DASHBOARD_GA_CREDENTIALS: Buffer.from(fakeGa.serviceAccountJson).toString(
+              'base64',
+            ),
+          }
+        : {}
     backendEnv = {
       ...process.env,
       ...fakeConfig,
+      ...dashboardEnv,
       ...tossEnv,
       ...kakaoEnv,
       ...naverEnv,
@@ -243,7 +300,15 @@ export default async function setup(project: TestProject) {
       MARINA_DIRECT: '1',
       ...(native
         ? {
-            E2E_NATIVE_FORWARD_PORTS: [fake, fakeToss, fakePaddle, fakeKakaoPay, fakeNaverPay]
+            E2E_NATIVE_FORWARD_PORTS: [
+              fake,
+              fakeToss,
+              fakePaddle,
+              fakeKakaoPay,
+              fakeNaverPay,
+              fakeCloudflare,
+              fakeGa,
+            ]
               .flatMap((f) => (f ? [new URL(f.url).port] : []))
               .join(' '),
           }
@@ -332,6 +397,8 @@ export default async function setup(project: TestProject) {
     void fakePaddle?.close()
     void fakeKakaoPay?.close()
     void fakeNaverPay?.close()
+    void fakeCloudflare?.close()
+    void fakeGa?.close()
     if (backendScript) spawnSync('bash', [backendScript, 'stop'], { env: backendEnv })
   }
 
@@ -350,5 +417,7 @@ export default async function setup(project: TestProject) {
   project.provide('fakeKakaoPayUrl', fakeKakaoPay?.url ?? '')
   project.provide('fakeNaverPayUrl', fakeNaverPay?.url ?? '')
   project.provide('fakePaddleUrl', fakePaddle?.url ?? '')
+  project.provide('fakeCloudflareUrl', fakeCloudflare?.url ?? '')
+  project.provide('fakeGaUrl', fakeGa?.url ?? '')
   return stopAll
 }

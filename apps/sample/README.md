@@ -56,6 +56,13 @@ pnpm --filter sample dev --port 5175     # http://b.localhost:5175
 
 메모: 업로드는 화면 한 장이 아니라 **상세 화면의 한 구역**이라 별도 Pattern 이 없다. 필요하면 `FilePicker` + `useUpload` + `Progress` 세 스토리를 따라 짜면 된다.
 
+### 대시보드 e2e 가 백엔드에 기대하는 것
+
+`e2e/dashboard.e2e.ts`(한 여정: 운영자 → 「대시보드」 → 가입 · Cloudflare · GA · 「지금 7명」 · 순매출 그래프 → 응원 결제 한 건 → 결제 건수 +1)는 `e2e/globalSetup.ts` 가 가짜 Cloudflare(`fakeCloudflare.ts`) · 가짜 GA(`fakeGa.ts`, 시험용 RSA 키로 서비스 계정 JSON 을 만든다)를 띄우고 백엔드에 준다(`E2E_FAKE_ANALYTICS=0` 이면 끄고 그 걸음은 건너뛴다). 대시보드 경로가 없는 백엔드(`GET /admin/dashboard` 가 404)에서는 통째로 건너뛴다. 가짜의 모양은 계획 계약 C4(추측 - 실제 계정으로 재면 두 파일과 백엔드의 가짜를 같이 고친다)이고 값은 두 파일의 상수다.
+
+- `SPRING_APPLICATION_JSON` 의 `skeleton.dashboard-cloudflare.{account-id,site-tag}` · `skeleton.dashboard-ga.{property-id,key-event,base-url,token-url}` · `skeleton.http.clients.dashboard-cloudflare.base-url`, 비밀은 환경변수 `SKELETON_DASHBOARD_CLOUDFLARE_API_TOKEN` · `SKELETON_DASHBOARD_GA_CREDENTIALS`(base64 서비스 계정 JSON).
+- DB 숫자는 서버가 30초 캐시하므로 결제 건수는 다시 불러오며 기다린다.
+
 ### 응원하기 e2e 가 백엔드에 기대하는 것
 
 `e2e/payment.e2e.ts`(운영자 화면 시나리오는 `e2e/paymentAdmin.e2e.ts` — 같은 값을 쓰고, 운영자 경로가 닫힌 백엔드에서는 건너뛴다)는 `e2e/globalSetup.ts` 가 백엔드를 올릴 때 다음을 준다 — 백엔드(`apps/sample`)가 이것을 읽어야 한다. 응원하기(`payment-jdbc` + 샘플의 `cheer/`)가 없는 백엔드에서는 통째로 건너뛴다.

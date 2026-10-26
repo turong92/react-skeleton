@@ -22,6 +22,7 @@ export {
   DASHBOARD_REFRESH_MS,
   dashboardKeys,
   useDashboard,
+  useDashboardLayout,
   useDashboardZone,
   useRanking,
   useRealtime,
@@ -58,5 +59,21 @@ export { RealtimeBadge } from './RealtimeBadge'
 export type { RealtimeBadgeProps } from './RealtimeBadge'
 export { RealtimePanel } from './RealtimePanel'
 export type { RealtimePanelProps } from './RealtimePanel'
+export { AppStatsCard } from './AppStatsCard'
+export type { AppStatsCardProps } from './AppStatsCard'
+export { FunnelCard } from './FunnelCard'
+export type { FunnelCardProps } from './FunnelCard'
+export { EditableCard, EditControls } from './DashboardEditor'
+export type { EditableCardProps, EditControlsProps } from './DashboardEditor'
+export {
+  DEFAULT_LAYOUT,
+  availableCards,
+  dropCard,
+  layoutToSave,
+  moveCard,
+  orderedCards,
+  parseLayout,
+  toggleHidden,
+} from './layout'
 export { DashboardView } from './DashboardView'
 export type { DashboardViewProps } from './DashboardView'

@@ -30,4 +30,6 @@ const api = createDashboardApi(apiClient) // 기본 경로 /admin/dashboard
 - 날짜는 대시보드 시간대의 `YYYY-MM-DD`(양 끝 포함). 7일 · 30일은 오늘을 끝으로 센다.
 - 출처 상태: `OK` 외(`NOT_CONNECTED` · `NO_HISTORY` · `ERROR`)는 그 타일 · 탭만 안내로 바뀐다. 직전 값이 없는 지표(활성 이용자)는 「비교 불가」.
 - 돈은 통화의 최소 단위 정수, `PERCENT` 는 100분의 1 퍼센트로 가정(`format.ts`).
+- **편집 모드**: 헤더 「편집」 → 타일 · 카드를 스위치로 끄고, 카드는 ▲▼(폰에서도) 또는 끌어서(넓은 화면) 순서를 바꾸고, 「완료」로 저장한다(`useDashboardLayout`). 서버(`GET/PUT /admin/dashboard/layout`, 계정별)에 저장하고, 저장소가 없으면(404 `DASHBOARD.LAYOUT_UNAVAILABLE`) 브라우저 `localStorage` 에 둔다 - `layoutKey`(보통 계정 id)가 키에 들어간다. 저장 모양 `{ hidden: [타일 키 · 카드 키], order: ['tiles', 'chart', 'rankings.traffic', …, 'funnel', 'app'] }`.
+- 앱 통계: 묶음 `app` 의 순위는 `AppStatsCard`(「앱이 붙임」 배지)로 그려진다.
 - 스토리: `DashboardView.stories.tsx`(정본 사용법 + 키 없음 · 로딩 · 실패 · 폰 너비).

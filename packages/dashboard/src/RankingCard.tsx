@@ -21,6 +21,8 @@ export type RankingCardProps = {
   labels: DashboardLabels
   /** 「전체 보기」 - 없으면 단추를 그리지 않는다 */
   onViewAll?: (ranking: DashboardRanking) => void
+  /** 카드 제목(기본은 묶음 이름) */
+  title?: string
   /** 제목 옆 배지(예: 「앱이 붙임」) */
   badge?: ReactNode
 }
@@ -72,9 +74,15 @@ function RankingBody({
  * 순위 카드 - 카드 하나에 같은 묶음의 순위를 탭으로 담고, 탭마다 표 · 출처 배지 · 신선도 · 「전체 보기」.
  * 출처가 없으면 그 탭만 안내 상자(「Cloudflare 토큰을 넣으면 보입니다」), 다른 탭은 그대로 보인다.
  */
-export function RankingCard({ group, rankings, badge, ...body }: RankingCardProps) {
+export function RankingCard({
+  group,
+  rankings,
+  badge,
+  title: titleOverride,
+  ...body
+}: RankingCardProps) {
   const { labels } = body
-  const title = labels.groups[group] ?? group
+  const title = titleOverride ?? labels.groups[group] ?? group
   return (
     <article className={styles.card} aria-label={title}>
       <header className={styles.head}>

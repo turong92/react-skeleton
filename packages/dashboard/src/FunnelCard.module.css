@@ -1,0 +1,33 @@
+.card {
+  display: grid;
+  gap: var(--space-md);
+  min-width: 0;
+  padding: var(--space-xl);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-sm) var(--space-md);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-subheading);
+}
+
+.hint {
+  color: var(--text);
+  font-size: var(--font-size-small);
+}
+
+@media (max-width: 699px) {
+  .card {
+    padding: var(--space-lg);
+  }
+}

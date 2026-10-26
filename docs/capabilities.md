@@ -64,7 +64,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 | `realtime` | 서버가 밀어 주는 실시간 연결 — SSE(탭 숨김 일시정지 · 유휴 감시 · 재연결)와 STOMP WebSocket 알림 클라이언트. | --packages realtime | (경로만) | stable | 실시간, 실시간 알림, SSE, 웹소켓, 푸시, 연결 유지 / realtime, sse, server-sent events, websocket, stomp, push |
 | `i18n` | 화면 문구 다국어 — ICU 메시지 · 브라우저 언어 감지/저장 · 지연 로딩 사전 · useT() · 사전 짝 맞춤 테스트 도구. | --packages i18n | — | stable | 다국어, 번역, 언어 전환, 한국어 영어, 국제화, 로케일 / i18n, internationalization, localization, translation, locale, multi-language |
 | `notifications` | 알림 받은편지함 — 목록 · 안 읽은 수 · 읽음/모두 읽음 · 실시간 이벤트로 캐시 갱신, NotificationBell/List 부품과 TanStack Query 훅. | --packages notifications | notification, notification-jdbc | stable | 알림, 알림 목록, 알림 종, 안 읽은 알림, 읽음 처리, 받은편지함 / notifications, inbox, notification bell, unread count, mark as read |
-| `admin-dashboard` | 관리자 대시보드 — 기간 · 직전 기간 비교 · 숫자 타일 + 누르면 바뀌는 추이 그래프(SVG) · 탭 달린 순위 카드 · 퍼널 · 출처 배지와 신선도. DashboardView 한 덩어리와 부품, 60초 갱신 훅, 실시간 「지금 N명」 배지와 패널. | --packages dashboard | dashboard | experimental | 대시보드, 관리자 대시보드, 통계, 지표, 방문자 수, 퍼널 / dashboard, admin dashboard, analytics, metrics, kpi, funnel |
+| `admin-dashboard` | 관리자 대시보드 — 기간 · 직전 기간 비교 · 숫자 타일 + 누르면 바뀌는 추이 그래프(SVG) · 탭 달린 순위 카드 · 퍼널 · 출처 배지와 신선도. DashboardView 한 덩어리와 부품, 60초 갱신 훅, 실시간 「지금 N명」 배지와 패널 편집 모드(카드 · 타일 끄기, 순서 바꾸기, 계정별 저장). | --packages dashboard | dashboard | experimental | 대시보드, 관리자 대시보드, 통계, 지표, 방문자 수, 퍼널 / dashboard, admin dashboard, analytics, metrics, kpi, funnel |
 | `board` | 게시판 — 글 · 중첩 댓글(대댓글) · 서버 설정으로 늘어나는 반응(좋아요 · 공감 …) · 운영자 숨김/고정, 작성자 표시(닉네임 · 탈퇴한 사용자 · 익명 — 작성자 id 는 그리지 않는다) · 내 것 판정(서버의 mine) · 작성자 선택기 자리(authorPicker 렌더 prop — 작성자 프로필을 쓰는 서버에서 authorRequired 가 켜지면 고른 authorId 를 싣는다) · 목록 · 상세 · 편집기 · 댓글 · 반응 부품과 훅(반응은 낙관적 갱신). | --packages board | board, board-jdbc | stable | 게시판, 커뮤니티, 글쓰기, 댓글, 대댓글, 공감 / board, forum, community, post, comment, reply |
 | `author-profile` | 작성자 프로필 — 한 계정의 여러 닉네임(서로 이어지지 않는다)을 글 · 댓글마다 골라 쓰기. AuthorPicker(게시판 authorPicker 렌더 prop 에 꽂는 선택기 — 접힌 상태는 고른 이름#꼬리표 하나 · 처음 값은 이 스레드 → 이 기기 기억 → 비어 있음 · 이 스레드에서 쓴 닉네임과 다른 것으로 바꿀 때만 확인(한 문장 + 「이대로 쓰기」 · 「되돌리기」)) · AuthorProfileManager(목록 · 추가 · 이름 바꾸기 · 삭제 확인 · 상한 · 오류) · useProfileDialog(선택기의 「닉네임 정하기」가 여는 관리 대화상자 — 쓰던 글 유지 · 닫으면 포커스가 선택기로) · createAuthorMemory(기기 기억 — 계정 id 는 저장소 키에만) · 클라이언트와 TanStack Query 훅. 계정 id 는 화면 어디에도 그리지 않는다. | --packages author-profile | author-profile, author-profile-jdbc | stable | 작성자 프로필, 프로필 선택, 부계정, 다중 닉네임, 익명 닉네임, 닉네임 여러 개 / author profile, profile picker, multiple nicknames, alias, pseudonym, persona |
 | `storage` | 파일 업로드 — 검증 → presign → 브라우저에서 스토리지로 직접 PUT(진행률 · 취소 · 멀티파트)과 useUpload 훅. | --packages storage | storage, storage-s3 | stable | 파일 업로드, 이미지 업로드, 첨부파일, 프리사인, 대용량 업로드, 멀티파트 / file upload, image upload, attachment, presigned url, multipart, s3 |
@@ -179,18 +179,18 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 - 쓰지 않는 경우: 알림을 보내는 쪽(발행)은 백엔드 코드(NotificationPublisher) — 이 패키지는 받는 화면만 / 이메일 · Slack 알림 → 백엔드 notification-mail · notification-slack (프런트 짝 없음) / 실시간으로 즉시 뜨게 하려면 realtime 을 더한다(live-notifications)
 - 키워드: 알림, 알림 목록, 알림 종, 안 읽은 알림, 읽음 처리, 받은편지함 / notifications, inbox, notification bell, unread count, mark as read
 
-### `admin-dashboard` — 관리자 대시보드 — 기간 · 직전 기간 비교 · 숫자 타일 + 누르면 바뀌는 추이 그래프(SVG) · 탭 달린 순위 카드 · 퍼널 · 출처 배지와 신선도. DashboardView 한 덩어리와 부품, 60초 갱신 훅, 실시간 「지금 N명」 배지와 패널.
+### `admin-dashboard` — 관리자 대시보드 — 기간 · 직전 기간 비교 · 숫자 타일 + 누르면 바뀌는 추이 그래프(SVG) · 탭 달린 순위 카드 · 퍼널 · 출처 배지와 신선도. DashboardView 한 덩어리와 부품, 60초 갱신 훅, 실시간 「지금 N명」 배지와 패널 편집 모드(카드 · 타일 끄기, 순서 바꾸기, 계정별 저장).
 
 - 종류 · 상태: package · experimental
 - 위치: `@skeleton/dashboard` (`packages/dashboard`)
 - 켜는 법: `--packages dashboard` — 함께 따라오는 패키지 `api-client` · `auth` · `legal` · `theme` · `time` · `tokens` · `ui` — `--with-sample` 로도 따라온다
 - 필요한 것: `api-client` · `time` · `ui`
 - 백엔드: 모듈 `dashboard` · 있으면 더 켜지는 `dashboard-jdbc` · `dashboard-cloudflare` · `dashboard-ga` · 경로 `/api/v1/admin/dashboard`
-- 주요 진입점: `createDashboardApi` · `useDashboard` · `useRanking` · `DashboardView` · `DashboardHeader` · `MetricTiles` · `MetricChart` · `RankingCard` · `RankingTable` · `TrendChart` · `FunnelBars` · `spanOf` · `deltaOf` · `formatValue` · `defaultDashboardLabels` · `koDashboardLabels` · `useRealtime` · `useDashboardZone` · `RealtimeBadge` · `RealtimePanel`
-- 보고 따라 할 스토리: `packages/dashboard/src/DashboardView.stories.tsx` · `packages/dashboard/src/MetricTiles.stories.tsx` · `packages/dashboard/src/RankingCard.stories.tsx` · `packages/dashboard/src/charts/TrendChart.stories.tsx` · `packages/dashboard/src/charts/FunnelBars.stories.tsx`
+- 주요 진입점: `createDashboardApi` · `useDashboard` · `useRanking` · `DashboardView` · `DashboardHeader` · `MetricTiles` · `MetricChart` · `RankingCard` · `RankingTable` · `TrendChart` · `FunnelBars` · `spanOf` · `deltaOf` · `formatValue` · `defaultDashboardLabels` · `koDashboardLabels` · `useRealtime` · `useDashboardZone` · `RealtimeBadge` · `RealtimePanel` · `useDashboardLayout` · `AppStatsCard` · `FunnelCard` · `EditableCard` · `EditControls`
+- 보고 따라 할 스토리: `packages/dashboard/src/DashboardView.stories.tsx` · `packages/dashboard/src/MetricTiles.stories.tsx` · `packages/dashboard/src/RankingCard.stories.tsx` · `packages/dashboard/src/charts/TrendChart.stories.tsx` · `packages/dashboard/src/charts/FunnelBars.stories.tsx` · `packages/dashboard/src/DashboardEditor.stories.tsx`
 - 문서: `packages/dashboard/README.md`
 - 쓰지 않는 경우: 방문 수를 세는 일 자체(Cloudflare · GA 가 센다) — 이 패키지는 서버가 모아 준 숫자를 그리기만 한다 / 공개 화면 · 일반 사용자용 통계 — 관리자(dashboard.read 권한) 전용 / 차트 라이브러리를 대신하지 않는다 — 선 · 퍼널 막대 세 꼴만 직접 그린다
-- 키워드: 대시보드, 관리자 대시보드, 통계, 지표, 방문자 수, 퍼널, 그래프, 순위 / dashboard, admin dashboard, analytics, metrics, kpi, funnel, trend chart, stats
+- 키워드: 대시보드, 관리자 대시보드, 통계, 지표, 방문자 수, 퍼널, 그래프, 순위, 대시보드 편집, 카드 끄기 / dashboard, admin dashboard, analytics, metrics, kpi, funnel, trend chart, stats, dashboard layout edit, hide cards
 
 ### `board` — 게시판 — 글 · 중첩 댓글(대댓글) · 서버 설정으로 늘어나는 반응(좋아요 · 공감 …) · 운영자 숨김/고정, 작성자 표시(닉네임 · 탈퇴한 사용자 · 익명 — 작성자 id 는 그리지 않는다) · 내 것 판정(서버의 mine) · 작성자 선택기 자리(authorPicker 렌더 prop — 작성자 프로필을 쓰는 서버에서 authorRequired 가 켜지면 고른 authorId 를 싣는다) · 목록 · 상세 · 편집기 · 댓글 · 반응 부품과 훅(반응은 낙관적 갱신).
 

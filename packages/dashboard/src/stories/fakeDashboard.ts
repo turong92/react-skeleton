@@ -1,6 +1,8 @@
 import type { DashboardApi } from '../api'
+import { ApiRequestError } from '@skeleton/api-client'
 import type {
   DashboardAmount,
+  DashboardLayout,
   DashboardMetric,
   DashboardOverview,
   DashboardPoint,
@@ -37,6 +39,8 @@ export type FakeDashboardOptions = {
   connected?: boolean
   /** 개요 호출을 이 시간(ms) 뒤에 답한다(로딩 모습) */
   delayMs?: number
+  /** `unavailable` 이면 화면 설정 저장소가 없다(404 `DASHBOARD.LAYOUT_UNAVAILABLE`) - 기본은 메모리 안 서버 저장 */
+  layout?: 'server' | 'unavailable'
   /** false 면 실시간 경로가 없다(404) */
   realtime?: boolean
   /** true 면 개요 호출이 실패한다 */
@@ -261,6 +265,19 @@ export function fakeOverview({
   }
 }
 
+const layoutUnavailable = () =>
+  new ApiRequestError(
+    {
+      code: 'DASHBOARD.LAYOUT_UNAVAILABLE',
+      title: 'Layout unavailable',
+      status: 404,
+      timestamp: '2026-10-26T00:00:00Z',
+    },
+    'trace',
+    'span',
+    '00-trace-span-01',
+  )
+
 const notFound = () => new Error('404 fake: this endpoint is not open')
 
 /** 호출 기록을 같이 돌려준다(`calls.overview` …) */
@@ -268,7 +285,9 @@ export function createFakeDashboardApi(options: FakeDashboardOptions = {}) {
   const calls = {
     overview: [] as { from: string | null; to: string | null; compare: boolean }[],
     ranking: [] as string[],
+    layoutSaved: [] as DashboardLayout[],
   }
+  let layout: DashboardLayout = { hidden: [], order: [] }
   const wait = () => new Promise<void>((resolve) => setTimeout(resolve, options.delayMs ?? 0))
   const api: DashboardApi = {
     overview: async (span, compare) => {
@@ -321,10 +340,14 @@ export function createFakeDashboardApi(options: FakeDashboardOptions = {}) {
       }
     },
     layout: async () => {
-      throw notFound()
+      if (options.layout === 'unavailable') throw layoutUnavailable()
+      return layout
     },
-    saveLayout: async () => {
-      throw notFound()
+    saveLayout: async (next) => {
+      if (options.layout === 'unavailable') throw layoutUnavailable()
+      calls.layoutSaved.push(next)
+      layout = next
+      return layout
     },
   }
   return { api, calls }

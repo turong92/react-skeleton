@@ -1,0 +1,29 @@
+.section {
+  display: grid;
+  gap: var(--space-md);
+  padding: var(--space-xl);
+  min-width: 0;
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-sm) var(--space-md);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-subheading);
+}
+
+.period {
+  font-size: var(--font-size-small);
+  color: var(--text-muted);
+}
+
+@media (max-width: 699px) {
+  .section {
+    padding: var(--space-lg);
+  }
+}

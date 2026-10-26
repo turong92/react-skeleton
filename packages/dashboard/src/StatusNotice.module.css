@@ -1,0 +1,17 @@
+.notice {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  min-height: 200px;
+  padding: var(--space-lg);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-alt);
+  text-align: center;
+}
+
+.text {
+  margin: 0;
+  color: var(--text-muted);
+  font-weight: 650;
+}

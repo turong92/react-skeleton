@@ -147,6 +147,12 @@ export const ErrorCodes = {
   // 계정 역할 부여(`PUT /admin/accounts/{id}/roles/{role}`)의 새 오류: 정의되지 않은 역할 400 · 자기에게 없는 권한을 가진 역할 403
   ACCOUNT_ROLE_UNKNOWN: 'ACCOUNT.ROLE_UNKNOWN',
   ACCOUNT_ROLE_ESCALATION: 'ACCOUNT.ROLE_ESCALATION',
+
+  // modules/dashboard — DashboardErrors (kotlin-skeleton docs/dashboard-http-contract.md). RANGE_INVALID 400(날짜 · 366일 초과), RANKING_NOT_FOUND 404, LAYOUT_UNAVAILABLE 404(`dashboard-jdbc` 없음 → 화면 설정은 브라우저 저장), LAYOUT_INVALID 400
+  DASHBOARD_RANGE_INVALID: 'DASHBOARD.RANGE_INVALID',
+  DASHBOARD_RANKING_NOT_FOUND: 'DASHBOARD.RANKING_NOT_FOUND',
+  DASHBOARD_LAYOUT_UNAVAILABLE: 'DASHBOARD.LAYOUT_UNAVAILABLE',
+  DASHBOARD_LAYOUT_INVALID: 'DASHBOARD.LAYOUT_INVALID',
 } as const
 
 export type ErrorCodeValue = (typeof ErrorCodes)[keyof typeof ErrorCodes]

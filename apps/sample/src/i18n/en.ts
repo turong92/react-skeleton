@@ -575,6 +575,7 @@ const en: Record<keyof typeof ko, string> = {
   'subscription.return.leftTitle': 'The payment method was not registered',
   'subscription.return.leftBody':
     'The subscription did not start. Try again, or pick another payment method.',
+  'nav.adminDashboard': 'Dashboard',
   'nav.adminPayments': 'Payments',
   'nav.adminAccounts': 'Accounts',
   'nav.adminRoles': 'Roles',

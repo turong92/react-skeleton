@@ -565,6 +565,7 @@ export default {
   'subscription.return.leftTitle': '결제 수단을 등록하지 못했어요',
   'subscription.return.leftBody':
     '구독은 시작되지 않았어요. 다시 해 보거나 다른 결제 수단을 골라 주세요.',
+  'nav.adminDashboard': '대시보드',
   'nav.adminPayments': '결제 관리',
   'nav.adminAccounts': '계정 관리',
   'nav.adminRoles': '역할 관리',

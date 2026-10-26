@@ -1,6 +1,6 @@
 # react-skeleton — Claude Code 컨텍스트
 
-React + TypeScript + Vite 프론트엔드 스켈레톤. pnpm 워크스페이스 — 캡슐화된 패키지 17개 + 앱 5개(SPA 스타터 · SSR 스타터 · 참조 앱 샘플 · 스토리집 · 워크벤치). REST 백엔드(kotlin-skeleton)와 통신하는 SPA 출발점이고, 백엔드 `modules/` 처럼 프로젝트가 필요한 패키지만 한 줄씩 골라 쓴다.
+React + TypeScript + Vite 프론트엔드 스켈레톤. pnpm 워크스페이스 — 캡슐화된 패키지 18개 + 앱 5개(SPA 스타터 · SSR 스타터 · 참조 앱 샘플 · 스토리집 · 워크벤치). REST 백엔드(kotlin-skeleton)와 통신하는 SPA 출발점이고, 백엔드 `modules/` 처럼 프로젝트가 필요한 패키지만 한 줄씩 골라 쓴다.
 
 ## 만들기 전에 — 무엇이 이미 있는지부터 (에이전트 필독)
 
@@ -60,6 +60,7 @@ packages/                     # 서로를 이름으로만 부른다. 각자 pack
 ├── auth/                     # 토큰 저장소 · createSessionRefresher(401 → 갱신 한 번 → 재시도, 회전 안전 · 탭 락) · createAuthApi/createAccountApi · AuthProvider/useAuth/RequireAuth/RequireRole · 계정 화면(SignIn/SignUp/…/AccountSettings, labels prop) + createAuthRoutes(라우트 한 벌, 로그인 방법은 methods 설정) · 소셜 로그인/연결 흐름 · @skeleton/auth/admin(선택 운영자 표) · dev-login/break-glass 헤더
 ├── legal/                    # 법적 문서 · 동의(백엔드 modules/legal 짝) — createLegalApi · 훅 · ConsentChecklist · SignUpConsents(가입 폼 슬롯) · createReconsentController + ReconsentGate(403 LEGAL.RECONSENT_REQUIRED → 동의 → 막힌 호출 재전송, api-client 의 recoverForbidden) · ConsentSettings · ApiLegalDocumentPage · ko/en 문구
 ├── realtime/                 # createSseClient(탭 숨김 일시정지 · 유휴 감시 · 401/403/404 중지 · 429/503 느린 재시도 · onOpen) · createStompNotificationClient · useSseClient · useNotificationSocket · 재연결 정책
+├── dashboard/                # 관리자 대시보드 — createDashboardApi(`/admin/dashboard`) · useDashboard(60초 갱신, 탭이 숨으면 멈춤)/useRanking · DashboardView(기간 · 비교 → 숫자 타일 + 누르면 바뀌는 SVG 추이 그래프 → 탭 달린 순위 카드 → 퍼널 → 앱 통계) · MetricTiles/MetricChart/RankingCard/FunnelBars/TrendChart · koDashboardLabels. 차트 라이브러리 없음. 백엔드 modules/dashboard 짝(`dashboard.read`)
 ├── i18n/                     # createI18n(ICU · 감지 · 저장 · 지연 사전) · I18nProvider/useT · detectLocale · @skeleton/i18n/testing(catalogProblems) — 부품은 i18n 을 모르고 라벨은 prop, 앱이 번역해 넘긴다
 ├── notifications/            # createNotificationsApi(목록 · 읽음 · 모두 읽음) · useNotifications/useUnreadCount/useMarkRead · useNotificationIngest(실시간 → 캐시) · NotificationBell/List
 ├── board/                    # createBoardApi · useBoardConfig/usePosts/usePost/useComments/글·댓글 쓰기 · useReaction(낙관적 갱신 + 되돌리기) · nestThread · PostList/PostDetail/PostEditor/CommentThread/ReactionBar(+ 서버와 이은 BoardComments/PostReactionBar). 반응 종류는 서버가 알려 주는 코드, 문구 · 아이콘은 labels/icons 맵 prop

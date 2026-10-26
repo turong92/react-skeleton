@@ -30,6 +30,41 @@ export const fakeNotificationsApi = () => ({
   markRead: async (eventId: string) => ({ eventId, readAt: '2026-01-01T00:00:00Z' }),
   markAllRead: async () => ({ updated: 0 }),
 })
+const dashboardRange = { from: '2026-01-01', to: '2026-01-02', zone: 'UTC', interval: 'DAY' }
+const dashboardMetric = {
+  key: 'account.signed-up',
+  label: 'Signed up',
+  unit: 'PEOPLE',
+  source: 'db',
+  status: 'OK',
+  freshness: { kind: 'LIVE', asOf: '2026-01-02T00:00:00Z' },
+  value: [{ amount: 2, currency: null }],
+  previousValue: [{ amount: 1, currency: null }],
+  series: [
+    { at: '2026-01-01T00:00:00Z', value: 1 },
+    { at: '2026-01-02T00:00:00Z', value: 2 },
+  ],
+  previousSeries: null,
+  link: null,
+}
+const dashboardRanking = {
+  key: 'cloudflare.paths',
+  group: 'pages',
+  label: 'Pages',
+  source: 'cloudflare',
+  status: 'OK',
+  freshness: null,
+  columns: ['Page', 'Views'],
+  rows: [{ label: '/', values: [3] }],
+}
+/** 대답이 끝내 오지 않는 대시보드 API — 서버 렌더는 첫 화면(자리표시)만 그린다 */
+const fakeDashboardApi = () => ({
+  overview: () => new Promise(noop),
+  ranking: () => new Promise(noop),
+  realtime: () => new Promise(noop),
+  layout: () => new Promise(noop),
+  saveLayout: () => new Promise(noop),
+})
 const paymentOrder = {
   id: 'ord_1',
   status: 'PAID',
@@ -702,6 +737,63 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
     children: createElement('p', null, 'app'),
   }),
   'legal#ConsentSettings': () => ({ api: fakeLegalApi(), locale: 'ko' }),
+  'dashboard#DashboardView': () => ({ api: fakeDashboardApi(), zone: 'UTC', locale: 'en-US' }),
+  'dashboard#DashboardHeader': (ctx) => ({
+    period: '7d',
+    onPeriod: noop,
+    compare: true,
+    onCompare: noop,
+    customDraft: { start: '', end: '' },
+    onCustomDraft: noop,
+    onApplyCustom: noop,
+    customProblem: null,
+    maxDate: '2026-01-02',
+    zone: 'UTC',
+    labels: ctx.mod('dashboard').defaultDashboardLabels,
+  }),
+  'dashboard#MetricTiles': (ctx) => ({
+    metrics: [dashboardMetric],
+    selectedKey: dashboardMetric.key,
+    onSelect: noop,
+    compare: true,
+    labels: ctx.mod('dashboard').defaultDashboardLabels,
+  }),
+  'dashboard#MetricChart': (ctx) => ({
+    metric: dashboardMetric,
+    range: dashboardRange,
+    compare: true,
+    includesToday: false,
+    periodLabel: '7 days',
+    labels: ctx.mod('dashboard').defaultDashboardLabels,
+  }),
+  'dashboard#RankingCard': (ctx) => ({
+    group: 'traffic',
+    rankings: [dashboardRanking],
+    zone: 'UTC',
+    includesToday: false,
+    labels: ctx.mod('dashboard').defaultDashboardLabels,
+  }),
+  'dashboard#RankingTable': (ctx) => ({
+    ranking: dashboardRanking,
+    labels: ctx.mod('dashboard').defaultDashboardLabels,
+  }),
+  'dashboard#TrendChart': () => ({
+    points: dashboardMetric.series,
+    previous: dashboardMetric.series,
+    interval: 'DAY',
+    zone: 'UTC',
+    formatValue: String,
+    label: 'chart',
+    currentLabel: 'now',
+    previousLabel: 'before',
+  }),
+  'dashboard#FunnelBars': (ctx) => ({
+    funnel: {
+      steps: [{ key: 'a', label: 'A', reached: 10, rate: 1 }],
+      reference: { key: 'r', label: 'R', value: 100, rate: 0.1 },
+    },
+    labels: ctx.mod('dashboard').defaultDashboardLabels,
+  }),
   'notifications#NotificationBell': () => ({ api: fakeNotificationsApi() }),
   'notifications#NotificationList': () => ({ items: [notification] }),
   'author-profile#AuthorPicker': () => ({ api: fakeAuthorProfileApi(), ...authorPickerSlot }),
@@ -869,6 +961,16 @@ export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
   'auth#useAuthMethods': () => [{ methods: () => new Promise(noop) }, true],
   'auth#useSocialLoginCallback': () => [{ complete: () => new Promise(noop) }, '?code=x'],
   'captcha-turnstile#useTurnstileToken': () => [],
+  'dashboard#useDashboard': () => [
+    fakeDashboardApi(),
+    { from: '2026-01-01', to: '2026-01-02' },
+    true,
+  ],
+  'dashboard#useRanking': () => [
+    fakeDashboardApi(),
+    'cloudflare.paths',
+    { from: '2026-01-01', to: '2026-01-02' },
+  ],
   'notifications#useNotifications': () => [fakeNotificationsApi()],
   'notifications#useUnreadCount': () => [fakeNotificationsApi()],
   'notifications#useMarkRead': () => [fakeNotificationsApi()],

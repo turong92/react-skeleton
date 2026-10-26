@@ -56,11 +56,13 @@ function SignedInActions() {
 /** 운영자 화면으로 가는 메뉴 - 라우트 가드(`RequirePermission`)와 같은 판정이다. 항목마다 그 화면의 읽기 권한이 있을 때만 그린다 */
 export function AdminLinks() {
   const { t } = useT()
+  const canDashboard = usePermission('dashboard.read')
   const canPayments = usePermission('payment.read')
   const canAccounts = usePermission('account.read')
   const canRoles = usePermission('authz.roles')
   return (
     <>
+      {canDashboard && <NavLink to="/admin/dashboard">{t('nav.adminDashboard')}</NavLink>}
       {canPayments && <NavLink to="/admin/payments">{t('nav.adminPayments')}</NavLink>}
       {canAccounts && <NavLink to="/admin/accounts">{t('nav.adminAccounts')}</NavLink>}
       {canRoles && <NavLink to="/admin/roles">{t('nav.adminRoles')}</NavLink>}

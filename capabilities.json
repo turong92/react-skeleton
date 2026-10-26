@@ -406,6 +406,83 @@
       }
     },
     {
+      "patterns": [],
+      "stories": [
+        "packages/dashboard/src/DashboardView.stories.tsx",
+        "packages/dashboard/src/MetricTiles.stories.tsx",
+        "packages/dashboard/src/RankingCard.stories.tsx",
+        "packages/dashboard/src/charts/TrendChart.stories.tsx",
+        "packages/dashboard/src/charts/FunnelBars.stories.tsx"
+      ],
+      "docs": ["packages/dashboard/README.md"],
+      "entryPoints": [
+        "createDashboardApi",
+        "useDashboard",
+        "useRanking",
+        "DashboardView",
+        "DashboardHeader",
+        "MetricTiles",
+        "MetricChart",
+        "RankingCard",
+        "RankingTable",
+        "TrendChart",
+        "FunnelBars",
+        "spanOf",
+        "deltaOf",
+        "formatValue",
+        "defaultDashboardLabels",
+        "koDashboardLabels"
+      ],
+      "needs": ["api-client", "time", "ui"],
+      "backend": {
+        "modules": ["dashboard"],
+        "oneOfModules": [],
+        "optionalModules": ["dashboard-jdbc", "dashboard-cloudflare", "dashboard-ga"],
+        "basePaths": ["/api/v1/admin/dashboard"],
+        "docs": ["docs/modules/dashboard.md"]
+      },
+      "status": "experimental",
+      "id": "dashboard",
+      "kind": "package",
+      "package": "@skeleton/dashboard",
+      "path": "packages/dashboard",
+      "stampFlag": {
+        "flag": "--packages dashboard",
+        "included": "flag",
+        "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
+        "alsoVia": ["--with-sample"],
+        "optOut": null
+      },
+      "summary": "관리자 대시보드 — 기간 · 직전 기간 비교 · 숫자 타일 + 누르면 바뀌는 추이 그래프(SVG) · 탭 달린 순위 카드 · 퍼널 · 출처 배지와 신선도. DashboardView 한 덩어리와 부품, 60초 갱신 훅.",
+      "notFor": [
+        "방문 수를 세는 일 자체(Cloudflare · GA 가 센다) — 이 패키지는 서버가 모아 준 숫자를 그리기만 한다",
+        "공개 화면 · 일반 사용자용 통계 — 관리자(dashboard.read 권한) 전용",
+        "차트 라이브러리를 대신하지 않는다 — 선 · 퍼널 막대 세 꼴만 직접 그린다"
+      ],
+      "keywords": {
+        "ko": [
+          "대시보드",
+          "관리자 대시보드",
+          "통계",
+          "지표",
+          "방문자 수",
+          "퍼널",
+          "그래프",
+          "순위"
+        ],
+        "en": [
+          "dashboard",
+          "admin dashboard",
+          "analytics",
+          "metrics",
+          "kpi",
+          "funnel",
+          "trend chart",
+          "stats"
+        ]
+      }
+    },
+    {
       "patterns": [
         "apps/storybook/src/patterns/ListPage.stories.tsx",
         "apps/storybook/src/patterns/DetailPage.stories.tsx",
@@ -1520,6 +1597,7 @@
         "autoIncludes": [
           "author-profile",
           "board",
+          "dashboard",
           "i18n",
           "marketing",
           "notifications",
@@ -2530,6 +2608,11 @@
       "need": "운영자 계정 관리 표 (검색 · 정지 · 복구 · 역할)",
       "capabilities": ["account-admin"],
       "byHand": "백엔드 skeleton.account.admin.enabled=true. 프런트는 apps/sample 의 AdminAccountsPage 와 RequirePermission 라우트를 복사한다."
+    },
+    {
+      "need": "관리자 대시보드 (방문 · 가입 · 매출 · 퍼널 · 순위)",
+      "capabilities": ["dashboard"],
+      "byHand": "백엔드 skeleton.dashboard.admin.enabled=true(Cloudflare · GA 는 키를 넣은 만큼). 프런트는 apps/sample 의 AdminDashboardPage 와 RequirePermission('dashboard.read') 라우트를 복사한다."
     },
     {
       "need": "약관 · 개인정보 동의 (가입 체크박스 · 새 판 재동의 · 선택 동의 철회) — 문서와 동의 기록은 서버가 쥔다",

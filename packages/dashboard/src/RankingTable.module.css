@@ -1,0 +1,100 @@
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-small);
+}
+
+/* 표 이름은 탭이 이미 말한다 - 낭독기에만 */
+.caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.table th,
+.table td {
+  padding: var(--space-sm) 0;
+  border-top: 1px solid var(--border);
+  text-align: left;
+  font-weight: inherit;
+}
+
+.table thead th {
+  padding: 0 0 var(--space-xs);
+  border-top: 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: var(--font-size-caption);
+  font-weight: 700;
+}
+
+.table tbody tr:first-child > * {
+  border-top: 0;
+}
+
+.table [data-end] {
+  padding-left: var(--space-md);
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.table tbody td:nth-child(2) {
+  font-weight: 650;
+  color: var(--text-strong);
+}
+
+.label {
+  width: 100%;
+  max-width: 0;
+}
+
+.cell {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+  min-width: 0;
+}
+
+.rank {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: var(--space-xl);
+  height: var(--space-xl);
+  border-radius: var(--radius-full);
+  background: var(--surface-muted);
+  color: var(--text);
+  font-size: var(--font-size-caption);
+  font-weight: 700;
+}
+
+.text {
+  display: grid;
+  flex: 1;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-strong);
+}
+
+.bar {
+  height: var(--space-xs);
+  border-radius: var(--radius-full);
+  background: var(--surface-muted);
+  overflow: hidden;
+}
+
+.bar i {
+  display: block;
+  height: 100%;
+  background: var(--teal);
+  opacity: 0.75;
+}

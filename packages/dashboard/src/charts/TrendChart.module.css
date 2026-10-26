@@ -1,0 +1,115 @@
+.figure {
+  display: grid;
+  gap: var(--space-md);
+  margin: 0;
+  min-width: 0;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-lg);
+  font-size: var(--font-size-small);
+  color: var(--text-muted);
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+/* 선 모양이 곧 범례 - 실선은 이번 기간, 점선은 직전 기간 */
+.swatch {
+  display: inline-block;
+  width: var(--space-xl);
+  height: 0;
+  border-top: 2px solid var(--teal);
+}
+
+.swatch[data-line='previous'] {
+  border-top: 2px dashed var(--text-muted);
+}
+
+.chart {
+  position: relative;
+  height: 230px;
+  touch-action: pan-y;
+  cursor: crosshair;
+}
+
+.chart svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.chart svg * {
+  vector-effect: non-scaling-stroke;
+}
+
+.grid {
+  stroke: var(--border);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.current {
+  fill: none;
+  stroke: var(--teal);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.previous {
+  fill: none;
+  stroke: var(--text-muted);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+  opacity: 0.85;
+}
+
+.area {
+  fill: var(--teal-wash);
+  stroke: none;
+}
+
+.guide {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--border-strong);
+  pointer-events: none;
+}
+
+.tip {
+  position: absolute;
+  top: var(--space-xs);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--inverse);
+  color: var(--on-inverse);
+  font-size: var(--font-size-caption);
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.tip[data-align='start'] {
+  transform: none;
+}
+
+.tip[data-align='end'] {
+  transform: translateX(-100%);
+}
+
+.axis {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--font-size-caption);
+  color: var(--text-muted);
+}

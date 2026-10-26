@@ -107,6 +107,9 @@ importers:
       '@skeleton/board':
         specifier: workspace:*
         version: link:../../packages/board
+      '@skeleton/dashboard':
+        specifier: workspace:*
+        version: link:../../packages/dashboard
       '@skeleton/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
@@ -399,6 +402,28 @@ importers:
       '@skeleton/ui':
         specifier: workspace:*
         version: link:../ui
+      react:
+        specifier: ^19.2.5
+        version: 19.3.0
+      react-dom:
+        specifier: ^19.2.5
+        version: 19.3.0(react@19.3.0)
+
+  packages/dashboard:
+    dependencies:
+      '@skeleton/api-client':
+        specifier: workspace:*
+        version: link:../api-client
+      '@skeleton/time':
+        specifier: workspace:*
+        version: link:../time
+      '@skeleton/ui':
+        specifier: workspace:*
+        version: link:../ui
+    devDependencies:
+      '@tanstack/react-query':
+        specifier: ^5.99.2
+        version: 5.104.1(react@19.3.0)
       react:
         specifier: ^19.2.5
         version: 19.3.0
@@ -1968,6 +1993,7 @@ packages:
   eslint@9.39.4:
     resolution: {integrity: sha512-XoMjdBOwe/esVgEvLmNsD3IRHkm7fbKIUGvrleloJXUZgDHig2IPWNniv+GwjyJXzuNqVjlr5+4yVUZjycJwfQ==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+    deprecated: This version is no longer supported. Please see https://eslint.org/version-support for other options.
     hasBin: true
     peerDependencies:
       jiti: '*'

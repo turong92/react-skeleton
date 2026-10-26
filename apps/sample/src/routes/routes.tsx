@@ -8,6 +8,7 @@ import { AppFrame } from '../layouts/AppFrame'
 import type { MessageKey } from '../i18n'
 import type { SeoHandle } from '../seo/routeSeo'
 import { AdminAccountsPage } from './AdminAccountsPage'
+import { AdminDashboardPage } from './AdminDashboardPage'
 import { AdminRolesPage } from './AdminRolesPage'
 import { AdminPaymentPage } from './AdminPaymentPage'
 import { AdminPaymentsPage } from './AdminPaymentsPage'
@@ -120,6 +121,23 @@ export const routes: RouteObject[] = [
             handle: privateSeo('subscription.title'),
           },
           { path: '/settings', element: <SettingsPage />, handle: privateSeo('nav.settings') },
+          {
+            element: (
+              <RequirePermission
+                anyOf={['dashboard.read']}
+                forbidden={<BlockedNotice />}
+                failed={<PermissionsFailedNotice />}
+              />
+            ),
+            children: [
+              // 관리자 대시보드 — 백엔드 `skeleton.dashboard.admin.enabled`
+              {
+                path: '/admin/dashboard',
+                element: <AdminDashboardPage />,
+                handle: privateSeo('nav.adminDashboard'),
+              },
+            ],
+          },
           {
             element: (
               <RequirePermission

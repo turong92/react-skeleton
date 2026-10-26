@@ -17,6 +17,7 @@
     "@skeleton/auth": "workspace:*",
     "@skeleton/author-profile": "workspace:*",
     "@skeleton/board": "workspace:*",
+    "@skeleton/dashboard": "workspace:*",
     "@skeleton/i18n": "workspace:*",
     "@skeleton/legal": "workspace:*",
     "@skeleton/marketing": "workspace:*",

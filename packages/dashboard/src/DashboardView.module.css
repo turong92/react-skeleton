@@ -1,0 +1,69 @@
+.view {
+  display: grid;
+  gap: var(--space-lg);
+  min-width: 0;
+}
+
+/* 타일 줄 + 큰 그래프는 한 카드로 보인다 */
+.panel {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-lg);
+  align-items: start;
+}
+
+.section {
+  display: grid;
+  gap: var(--space-md);
+  margin-top: var(--space-xl);
+}
+
+.sectionHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm) var(--space-md);
+}
+
+.sectionHead h2 {
+  margin: 0;
+  font-size: var(--font-size-heading);
+}
+
+.hint {
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+}
+
+.card {
+  padding: var(--space-xl);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.failed {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-md);
+}
+
+@media (max-width: 699px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-md);
+  }
+
+  .card {
+    padding: var(--space-lg);
+  }
+}

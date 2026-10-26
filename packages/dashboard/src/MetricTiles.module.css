@@ -1,0 +1,164 @@
+/* 타일 줄은 패널(카드) 안의 격자 - 칸 사이는 얇은 선, 눌린 칸은 아래에 굵은 막대로 가리킨다 */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  overflow: hidden;
+}
+
+.tiles[data-count='1'] {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.tiles[data-count='2'] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.tiles[data-count='3'] {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.tiles[data-count='4'] {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.tiles[data-count='6'] {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.cell {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  /* 칸 사이의 선은 그림자로 - 맨 오른쪽 칸의 선은 줄 밖으로 밀려 잘린다 */
+  box-shadow:
+    1px 0 0 var(--border),
+    0 1px 0 var(--border);
+}
+
+.tile {
+  display: grid;
+  flex: 1;
+  gap: var(--space-xs);
+  align-content: start;
+  width: 100%;
+  padding: var(--space-lg);
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    transform 60ms ease;
+}
+
+.tile:hover {
+  background: var(--teal-wash);
+}
+
+.tile:active {
+  background: var(--teal-soft);
+}
+
+.tile[aria-pressed='true'] {
+  background: var(--teal-wash);
+  box-shadow: inset 0 -4px 0 var(--teal);
+}
+
+.tile:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: -3px;
+}
+
+.name {
+  font-size: var(--font-size-small);
+  font-weight: 650;
+  color: var(--text);
+}
+
+.value {
+  font-size: var(--font-size-heading);
+  font-weight: 700;
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--line-height-snug);
+  overflow-wrap: anywhere;
+}
+
+.more {
+  display: grid;
+  gap: var(--space-xs);
+  padding-top: var(--space-xs);
+  border-top: 1px dashed var(--border);
+  font-size: var(--font-size-small);
+  font-weight: 650;
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.deltaRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: var(--font-size-small);
+}
+
+.delta {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.delta[data-dir='up'] {
+  color: var(--teal);
+}
+
+.delta[data-dir='down'] {
+  color: var(--red);
+}
+
+.muted {
+  color: var(--text);
+  font-size: var(--font-size-small);
+}
+
+.caption {
+  font-size: var(--font-size-caption);
+  color: var(--text);
+}
+
+.link {
+  padding: 0 var(--space-lg) var(--space-md);
+  color: var(--teal);
+  font-size: var(--font-size-caption);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.link:hover {
+  color: var(--text-strong);
+}
+
+@media (max-width: 1099px) {
+  .tiles,
+  .tiles[data-count] {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 699px) {
+  .tiles,
+  .tiles[data-count] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cell:last-child:nth-child(odd) {
+    grid-column: span 2;
+  }
+
+  .value {
+    font-size: var(--font-size-subheading);
+  }
+}

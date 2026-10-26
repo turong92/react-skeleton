@@ -1,0 +1,121 @@
+import { formatInstant } from '@skeleton/time'
+import type { DashboardAmount, DashboardInterval, DashboardMetric, DashboardUnit } from './types'
+
+export type FormatOptions = {
+  locale?: string
+  /** 통화 → 금액 뒤에 붙는 글자(`{ KRW: '원' }`). 없으면 `Intl` 의 통화 표기 */
+  currencySuffix?: Readonly<Record<string, string>>
+}
+
+/** 돈(최소 단위 정수) — 자릿수는 `Intl` 이 통화별로 안다(KRW 0 · USD 2) */
+export function formatMoney(
+  amount: number,
+  currency: string,
+  { locale, currencySuffix }: FormatOptions = {},
+): string {
+  try {
+    const money = new Intl.NumberFormat(locale, { style: 'currency', currency })
+    const digits = money.resolvedOptions().maximumFractionDigits ?? 0
+    const value = amount / 10 ** digits
+    const suffix = currencySuffix?.[currency]
+    if (suffix) {
+      return (
+        new Intl.NumberFormat(locale, {
+          minimumFractionDigits: digits,
+          maximumFractionDigits: digits,
+        }).format(value) + suffix
+      )
+    }
+    return money.format(value)
+  } catch {
+    return `${amount} ${currency}` // 모르는 통화 코드 — 숫자만이라도 보인다
+  }
+}
+
+/**
+ * 값 한 개를 단위에 맞게 쓴다. `PERCENT` 는 **100분의 1 퍼센트(bp)** 정수로 가정한다(3820 → 38.2%) — 계약 C1 이 자릿수를 정하지 않아 이 가정을 둔다.
+ */
+export function formatValue(
+  amount: DashboardAmount,
+  unit: DashboardUnit,
+  options: FormatOptions = {},
+): string {
+  if (unit === 'MONEY' && amount.currency) {
+    return formatMoney(amount.amount, amount.currency, options)
+  }
+  if (unit === 'PERCENT') {
+    return `${new Intl.NumberFormat(options.locale, { maximumFractionDigits: 1 }).format(amount.amount / 100)}%`
+  }
+  return new Intl.NumberFormat(options.locale).format(amount.amount)
+}
+
+/** 그래프 · 순위의 숫자(통화 없음) */
+export function formatCount(value: number, locale?: string): string {
+  return new Intl.NumberFormat(locale).format(value)
+}
+
+/** 그래프의 값 — 돈이면 첫 통화로 쓴다(서버가 돈의 `series` 를 첫 통화만 준다) */
+export function formatSeriesValue(
+  value: number,
+  metric: Pick<DashboardMetric, 'unit' | 'value'>,
+  options: FormatOptions = {},
+): string {
+  return formatValue(
+    {
+      amount: value,
+      currency: metric.unit === 'MONEY' ? (metric.value?.[0]?.currency ?? null) : null,
+    },
+    metric.unit,
+    options,
+  )
+}
+
+export type Delta =
+  /** 비교를 끈 상태 — 아무것도 그리지 않는다 */
+  | { kind: 'off' }
+  /** 비교를 켰는데 서버가 직전 값을 주지 않았다(활성 이용자) 또는 값이 없다 */
+  | { kind: 'unavailable' }
+  /** 직전이 0 이라 퍼센트를 낼 수 없다 */
+  | { kind: 'new' }
+  | { kind: 'flat'; percent: 0 }
+  | { kind: 'up' | 'down'; percent: number }
+
+/** 직전 기간 대비 증감. 돈은 같은 통화끼리(없으면 첫 값)만 비교한다 */
+export function deltaOf(metric: DashboardMetric, compare: boolean): Delta {
+  if (!compare) return { kind: 'off' }
+  const current = metric.value?.[0]
+  if (metric.status !== 'OK' || !current || !metric.previousValue) return { kind: 'unavailable' }
+  const previous =
+    metric.previousValue.find((v) => v.currency === current.currency) ?? metric.previousValue[0]
+  if (!previous) return { kind: 'unavailable' }
+  if (previous.amount === 0)
+    return current.amount === 0 ? { kind: 'flat', percent: 0 } : { kind: 'new' }
+  const percent = Math.round(((current.amount - previous.amount) / previous.amount) * 1000) / 10
+  if (percent === 0) return { kind: 'flat', percent: 0 }
+  return percent > 0 ? { kind: 'up', percent } : { kind: 'down', percent: Math.abs(percent) }
+}
+
+/** 퍼센트 한 자리 — `12.4%` */
+export function formatPercent(value: number, locale?: string): string {
+  return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(value)}%`
+}
+
+/** 그래프 눈금 · 툴팁의 시각 — 시간별이면 「14:00」, 일별이면 「10/26」, 주별이면 「10/26~」 */
+export function formatPointLabel(
+  at: string,
+  interval: DashboardInterval,
+  zone: string,
+  locale?: string,
+): string {
+  const options: Intl.DateTimeFormatOptions =
+    interval === 'HOUR'
+      ? { hour: 'numeric', minute: '2-digit', hour12: false }
+      : { month: 'numeric', day: 'numeric' }
+  const text = new Intl.DateTimeFormat(locale, { timeZone: zone, ...options }).format(new Date(at))
+  return interval === 'WEEK' ? `${text}~` : text
+}
+
+/** 갱신 시각 한 줄 — 짧게(`10/26 14:00`) */
+export function formatAsOf(iso: string, zone: string, locale?: string): string {
+  return formatInstant(iso, { zone, locale, dateStyle: 'short', timeStyle: 'short' })
+}

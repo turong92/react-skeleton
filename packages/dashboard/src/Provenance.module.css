@@ -1,0 +1,19 @@
+.source {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs) var(--space-sm);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--border);
+  font-size: var(--font-size-caption);
+  color: var(--text-muted);
+}
+
+.note {
+  font-size: var(--font-size-caption);
+  color: var(--text-muted);
+}
+
+.action {
+  margin-left: auto;
+}

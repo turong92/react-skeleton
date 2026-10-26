@@ -136,7 +136,7 @@ cd ~/work/community/web && pnpm lint && pnpm typecheck && pnpm test && pnpm buil
 <!-- react-stamp: saas -->
 
 ```bash
-scripts/new-project.sh ~/work/saas/web saas --packages marketing,payment,notifications,captcha-turnstile --scope @acme
+scripts/new-project.sh ~/work/saas/web saas --packages marketing,payment,notifications,captcha-turnstile,dashboard --scope @acme
 ```
 
 <!-- kotlin-stamp: saas -->

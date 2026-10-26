@@ -446,9 +446,9 @@
       ],
       "needs": ["api-client", "time", "ui"],
       "backend": {
-        "modules": ["dashboard"],
+        "modules": ["dashboard", "dashboard-jdbc"],
         "oneOfModules": [],
-        "optionalModules": ["dashboard-jdbc", "dashboard-cloudflare", "dashboard-ga"],
+        "optionalModules": ["dashboard-cloudflare", "dashboard-ga"],
         "basePaths": ["/api/v1/admin/dashboard"],
         "docs": ["docs/modules/dashboard.md"]
       },
@@ -2669,7 +2669,8 @@
         "pricing-page",
         "payment",
         "notifications",
-        "captcha-turnstile"
+        "captcha-turnstile",
+        "admin-dashboard"
       ],
       "extraFlags": ["--scope @acme"],
       "kotlinExtraFlags": ["--db mysql"]

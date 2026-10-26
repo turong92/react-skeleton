@@ -286,7 +286,7 @@ WS="$TMP/ws"
 expect_exit 0 "샘플을 함께 찍는다" stamp "$WS" --with-sample
 check "apps/sample 이 이름 그대로 apps/acme-app 옆에 남는다" bash -c "test -f '$WS/apps/sample/package.json' && test -d '$WS/apps/acme-app' && test -d '$WS/apps/storybook'"
 [ "$(json "$WS/apps/sample/package.json" 'p.name')" = "sample" ] && pass "샘플 앱 이름은 그대로 sample" || fail "샘플 앱 이름"
-want="api-client auth author-profile board i18n legal marketing notifications payment realtime seo storage theme time tokens ui"
+want="api-client auth author-profile board dashboard i18n legal marketing notifications payment realtime seo storage theme time tokens ui"
 [ "$(listing "$WS/packages")" = "$want" ] && pass "샘플이 쓰는 패키지(i18n · marketing · payment · seo 포함)가 따라온다 ($want)" || fail "packages: [$(listing "$WS/packages")]"
 [ -z "$(dangling_deps "$WS" @skeleton)" ] && pass "끊어진 의존 없음" || fail "끊어진 의존: $(dangling_deps "$WS" @skeleton)"
 check "eslint 의 앱 이름 막기에 sample 과 새 앱 이름이 모두 있다" bash -c "grep -q \"'sample/\*\*'\" '$WS/eslint.config.js' && grep -q \"'acme-app/\*\*'\" '$WS/eslint.config.js'"

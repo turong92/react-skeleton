@@ -142,7 +142,7 @@ scripts/new-project.sh ~/work/saas/web saas --packages marketing,payment,notific
 <!-- kotlin-stamp: saas -->
 
 ```bash
-scripts/new-project.sh ~/work/saas/api dev.example.saas saas Saas --modules payment,payment-jdbc,payment-toss,notification,notification-jdbc --db mysql
+scripts/new-project.sh ~/work/saas/api dev.example.saas saas Saas --modules payment,payment-jdbc,payment-toss,notification,notification-jdbc,dashboard,dashboard-jdbc --db mysql
 ```
 
 그다음:

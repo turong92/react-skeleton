@@ -111,7 +111,7 @@ export type DashboardLabels = {
 }
 
 export const defaultDashboardLabels: DashboardLabels = {
-  title: 'Dashboard',
+  title: 'Admin dashboard',
   periodGroup: 'Period',
   periods: { today: 'Today', '7d': '7 days', '30d': '30 days', custom: 'Custom' },
   customRange: {
@@ -210,7 +210,7 @@ export const defaultDashboardLabels: DashboardLabels = {
 
 export const koDashboardLabels: DashboardLabels = {
   ...defaultDashboardLabels,
-  title: '관리자 대시보드',
+  title: '운영 대시보드',
   periodGroup: '기간 고르기',
   periods: { today: '오늘', '7d': '7일', '30d': '30일', custom: '직접' },
   customRange: {

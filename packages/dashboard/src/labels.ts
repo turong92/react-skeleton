@@ -36,8 +36,8 @@ export type DashboardLabels = {
     daily: (asOf: string) => string
     /** 오늘이 든 기간의 Cloudflare 숫자(약 5분 근실시간) */
     minutesAgo: (minutes: number) => string
-    /** 오늘이 든 기간의 GA 숫자(몇 시간 늦게 집계) - 집계 시각의 시(0~23) */
-    gaAsOf: (hour: string) => string
+    /** 오늘이 든 기간의 GA 숫자 - GA 는 오늘을 적재 · 질의하지 않아 어제까지만 나온다. 마지막 적재 시각의 시(0~23) */
+    gaThroughYesterday: (hour: string) => string
   }
   status: {
     /** 출처 키별 안내. `*` 는 없는 출처의 기본 */
@@ -139,7 +139,7 @@ export const defaultDashboardLabels: DashboardLabels = {
     cached: (asOf) => `Updated ${asOf}`,
     daily: (asOf) => `Daily, loaded ${asOf}`,
     minutesAgo: (minutes) => `About ${minutes} min ago`,
-    gaAsOf: (hour) => `GA as of ${hour}:00`,
+    gaThroughYesterday: (hour) => `GA through yesterday (loaded ${hour}:00)`,
   },
   status: {
     notConnected: {
@@ -237,7 +237,7 @@ export const koDashboardLabels: DashboardLabels = {
     cached: (asOf) => `${asOf} 갱신`,
     daily: (asOf) => `어제치 · ${asOf} 적재`,
     minutesAgo: (minutes) => `약 ${minutes}분 전 기준`,
-    gaAsOf: (hour) => `GA 기준 ${hour}시 집계`,
+    gaThroughYesterday: (hour) => `GA 는 어제까지 (${hour}시 적재)`,
   },
   status: {
     notConnected: {

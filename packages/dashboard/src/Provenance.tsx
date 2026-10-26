@@ -43,25 +43,21 @@ export function Provenance({
             ? labels.freshness.daily(asOf)
             : labels.freshness.cached(asOf)
           : null
-  // 오늘이 든 기간의 외부 숫자: Cloudflare 는 「약 n분 전 기준」, GA 는 「GA 기준 n시 집계」
+  // 오늘이 든 기간의 외부 숫자: Cloudflare 오늘은 직접 질의라 「약 n분 전 기준」, GA 는 오늘을 적재 · 질의하지 않아 「GA 는 어제까지(n시 적재)」 - asOf 는 마지막 적재 시각
+  const hourOf = (iso: string) =>
+    new Intl.DateTimeFormat(locale, { timeZone: zone, hour: 'numeric', hour12: false }).format(
+      new Date(iso),
+    )
   const todayBadge =
-    includesToday &&
-    now !== undefined &&
-    status === 'OK' &&
-    freshness?.kind === 'CACHED' &&
-    freshness.asOf
-      ? source === 'ga'
-        ? labels.freshness.gaAsOf(
-            new Intl.DateTimeFormat(locale, {
-              timeZone: zone,
-              hour: 'numeric',
-              hour12: false,
-            }).format(new Date(freshness.asOf)),
-          )
-        : labels.freshness.minutesAgo(
-            Math.max(1, Math.round((now - new Date(freshness.asOf).getTime()) / 60_000)),
-          )
-      : null
+    !includesToday || status !== 'OK' || !freshness?.asOf
+      ? null
+      : source === 'ga' && freshness.kind === 'DAILY'
+        ? labels.freshness.gaThroughYesterday(hourOf(freshness.asOf))
+        : source !== 'ga' && freshness.kind === 'CACHED' && now !== undefined
+          ? labels.freshness.minutesAgo(
+              Math.max(1, Math.round((now - new Date(freshness.asOf).getTime()) / 60_000)),
+            )
+          : null
   return (
     <div className={styles.source}>
       <Badge>{labels.sources[source] ?? source}</Badge>

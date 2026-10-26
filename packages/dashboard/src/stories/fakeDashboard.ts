@@ -43,8 +43,8 @@ export type FakeDashboardOptions = {
   layout?: 'server' | 'unavailable'
   /** 퍼널의 상태(기본 `OK`, 아니면 단계가 비어 온다) */
   funnelStatus?: 'OK' | 'TOO_LARGE' | 'ERROR'
-  /** false 면 실시간 경로가 없다(404) */
-  realtime?: boolean
+  /** false 면 실시간 경로가 없다(404), `not-connected` 면 200 인데 `NOT_CONNECTED`(GA 키 없음) */
+  realtime?: boolean | 'not-connected'
   /** true 면 개요 호출이 실패한다 */
   failing?: boolean
 }
@@ -344,6 +344,15 @@ export function createFakeDashboardApi(options: FakeDashboardOptions = {}) {
     },
     realtime: async () => {
       if (options.realtime === false) throw notFound()
+      if (options.realtime === 'not-connected') {
+        return {
+          status: 'NOT_CONNECTED' as const,
+          freshness: null,
+          activeUsers: null,
+          pages: [],
+          countries: [],
+        }
+      }
       return {
         status: 'OK' as const,
         freshness: { kind: 'CACHED' as const, asOf: ASOF },

@@ -64,7 +64,7 @@ pnpm --filter sample dev --port 5175     # http://b.localhost:5175
 
 `e2e/dashboard.e2e.ts`(한 여정: 운영자 → 「대시보드」 → 가입 · Cloudflare · GA · 「지금 7명」 · 순매출 그래프 → 응원 결제 한 건 → 결제 건수 +1)는 `e2e/globalSetup.ts` 가 가짜 Cloudflare(`fakeCloudflare.ts`) · 가짜 GA(`fakeGa.ts`, 시험용 RSA 키로 서비스 계정 JSON 을 만든다)를 띄우고 백엔드에 준다(`E2E_FAKE_ANALYTICS=0` 이면 끄고 그 걸음은 건너뛴다). 대시보드 경로가 없는 백엔드(`GET /admin/dashboard` 가 404)에서는 통째로 건너뛴다. 가짜의 모양은 계획 계약 C4(추측 - 실제 계정으로 재면 두 파일과 백엔드의 가짜를 같이 고친다)이고 값은 두 파일의 상수다.
 
-- `SPRING_APPLICATION_JSON` 의 `skeleton.dashboard-cloudflare.{account-id,site-tag,base-url}`(프로젝트 모드는 `skeleton.projects.<id>.config.dashboard-cloudflare.*`) · `skeleton.dashboard-ga.{property-id,key-event,base-url,token-url}`(GA 키 이름은 K5 확정 뒤 대조), 비밀은 환경변수 `SKELETON_DASHBOARD_CLOUDFLARE_API_TOKEN` · `SKELETON_DASHBOARD_GA_CREDENTIALS`(base64 서비스 계정 JSON).
+- `SPRING_APPLICATION_JSON` 의 `skeleton.dashboard-cloudflare.{account-id,site-tag,base-url}`(프로젝트 모드는 `skeleton.projects.<id>.config.dashboard-cloudflare.*`) · `skeleton.dashboard-ga.{property-id,key-event,base-url,token-url}`(kotlin `docs/config/modules/dashboard-ga.yml` 와 같은 이름, 프로젝트 모드는 `skeleton.projects.<id>.config.dashboard-ga.*`), 비밀은 환경변수 `SKELETON_DASHBOARD_CLOUDFLARE_API_TOKEN` · `SKELETON_DASHBOARD_GA_CREDENTIALS`(base64 서비스 계정 JSON).
 - DB 숫자는 서버가 30초 캐시하므로 결제 건수는 다시 불러오며 기다린다.
 
 ### 응원하기 e2e 가 백엔드에 기대하는 것

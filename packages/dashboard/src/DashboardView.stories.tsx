@@ -234,3 +234,12 @@ export const FunnelTooLarge: Story = {
     await expect(canvas.getByRole('article', { name: 'Traffic' })).toBeInTheDocument()
   },
 }
+
+/** GA 키가 없으면 실시간 경로는 404 가 아니라 200 `NOT_CONNECTED` - 배지는 똑같이 숨는다 */
+export const RealtimeNotConnected: Story = {
+  render: () => <Demo options={{ realtime: 'not-connected' }} />,
+  play: async ({ canvas }) => {
+    await canvas.findByRole('heading', { name: 'Visits over time' })
+    await expect(canvas.queryByRole('button', { name: /online now/ })).toBeNull()
+  },
+}

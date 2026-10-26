@@ -43,7 +43,7 @@ export const Tabs: Story = {
   },
 }
 
-/** 오늘이 든 기간: Cloudflare 는 「약 n분 전 기준」, GA 는 「GA 기준 n시 집계」 */
+/** 오늘이 든 기간: Cloudflare 는 「약 n분 전 기준」, GA 는 「GA 는 어제까지(n시 적재)」 */
 export const TodayFreshness: Story = {
   args: {
     includesToday: true,
@@ -58,14 +58,14 @@ export const TodayFreshness: Story = {
         key: 'ga.channels',
         source: 'ga',
         label: 'Channels',
-        freshness: { kind: 'CACHED', asOf: '2026-10-26T04:30:00Z' },
+        freshness: { kind: 'DAILY', asOf: '2026-10-26T04:30:00Z' },
       },
     ],
   },
   play: async ({ canvas, userEvent }) => {
     await expect(canvas.getByText('About 5 min ago')).toBeInTheDocument()
     await userEvent.click(canvas.getByRole('tab', { name: 'Channels' }))
-    await expect(canvas.getByText('GA as of 13:00')).toBeInTheDocument() // 서울 13:30
+    await expect(canvas.getByText('GA through yesterday (loaded 13:00)')).toBeInTheDocument() // 마지막 적재 서울 13:30
     await expect(canvas.queryByText(/tomorrow/)).toBeNull()
   },
 }

@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 백엔드 짝: kotlin-skeleton `dashboard`(+ `dashboard-jdbc` · `dashboard-cloudflare` · `dashboard-ga`), `/api/v1/admin/dashboard`, 권한 `dashboard.read`.
 
-- 새 패키지 `@skeleton/dashboard`(capability `admin-dashboard`): `createDashboardApi`(개요 · 순위 전체 보기 · 실시간 · 화면 설정) · `useDashboard`(60초 갱신, 탭이 숨으면 멈춤) · `useDashboardZone`(「오늘」 · 7일 · 30일을 서버 시간대로) · `useRanking` · `useRealtime` · `useDashboardLayout`, 화면 `DashboardView`(기간 · 직전 기간 비교 → 숫자 타일 + 누르면 바뀌는 SVG 추이 그래프 → 탭 달린 순위 카드 → 퍼널 → 앱 통계) 와 부품 `MetricTiles` · `MetricChart` · `RankingCard` · `FunnelBars` · `TrendChart` · `RealtimeBadge`(「지금 N명」) · `EditableCard`. 차트 라이브러리 없음. 출처가 없으면 그 타일 · 탭만 「키를 넣으면 보입니다」 안내, 오늘 분은 Cloudflare 「약 n분 전 기준」 · GA 「GA 기준 n시 집계」. 문구는 영어 기본 + `koDashboardLabels`.
+- 새 패키지 `@skeleton/dashboard`(capability `admin-dashboard`): `createDashboardApi`(개요 · 순위 전체 보기 · 실시간 · 화면 설정) · `useDashboard`(60초 갱신, 탭이 숨으면 멈춤) · `useDashboardZone`(「오늘」 · 7일 · 30일을 서버 시간대로) · `useRanking` · `useRealtime` · `useDashboardLayout`, 화면 `DashboardView`(기간 · 직전 기간 비교 → 숫자 타일 + 누르면 바뀌는 SVG 추이 그래프 → 탭 달린 순위 카드 → 퍼널 → 앱 통계) 와 부품 `MetricTiles` · `MetricChart` · `RankingCard` · `FunnelBars` · `TrendChart` · `RealtimeBadge`(「지금 N명」) · `EditableCard`. 차트 라이브러리 없음. 출처가 없으면 그 타일 · 탭만 「키를 넣으면 보입니다」 안내, 오늘 분은 Cloudflare 「약 n분 전 기준」 · GA 「GA 는 어제까지(n시 적재)」. 문구는 영어 기본 + `koDashboardLabels`.
 - 편집 모드: 타일 · 카드 끄기, 카드 순서(▲▼ · 끌어서), 「완료」로 저장 - 서버(계정별), 저장소가 없으면 브라우저.
 - `@skeleton/api-client` `ErrorCodes` 에 `DASHBOARD_*` 넷.
 - `@skeleton/marketing`: `createAnalyticsLoader({ consent, gaMeasurementId?, cfBeaconToken? })` - GA(gtag)는 동의 범주 `analytics` 가 켜진 뒤에만(끄면 `analytics_storage: denied`), Cloudflare 비콘은 쿠키 없이 토큰이 있으면. `start()` 를 부를 때만 움직인다.

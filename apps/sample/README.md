@@ -56,6 +56,10 @@ pnpm --filter sample dev --port 5175     # http://b.localhost:5175
 
 메모: 업로드는 화면 한 장이 아니라 **상세 화면의 한 구역**이라 별도 Pattern 이 없다. 필요하면 `FilePicker` + `useUpload` + `Progress` 세 스토리를 따라 짜면 된다.
 
+### 방문 통계(GA) 설정
+
+`VITE_GA_MEASUREMENT_ID` 를 넣는다면 GA 데이터 스트림의 향상된 측정에서 「브라우저 기록 이벤트를 기준으로 페이지 변경 측정」을 **꺼 둔다** - 이 앱의 분석 로더(`@skeleton/marketing` `createAnalyticsLoader`)가 인증 값을 뗀 주소로 `page_view` 를 직접 보내는데, 켜 두면 gtag 가 스스로도 보내 메일 링크의 `?token=` 이 실린 주소가 GA 로 간다.
+
 ### 대시보드 e2e 가 백엔드에 기대하는 것
 
 `e2e/dashboard.e2e.ts`(한 여정: 운영자 → 「대시보드」 → 가입 · Cloudflare · GA · 「지금 7명」 · 순매출 그래프 → 응원 결제 한 건 → 결제 건수 +1)는 `e2e/globalSetup.ts` 가 가짜 Cloudflare(`fakeCloudflare.ts`) · 가짜 GA(`fakeGa.ts`, 시험용 RSA 키로 서비스 계정 JSON 을 만든다)를 띄우고 백엔드에 준다(`E2E_FAKE_ANALYTICS=0` 이면 끄고 그 걸음은 건너뛴다). 대시보드 경로가 없는 백엔드(`GET /admin/dashboard` 가 404)에서는 통째로 건너뛴다. 가짜의 모양은 계획 계약 C4(추측 - 실제 계정으로 재면 두 파일과 백엔드의 가짜를 같이 고친다)이고 값은 두 파일의 상수다.

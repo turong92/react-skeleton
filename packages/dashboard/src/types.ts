@@ -11,7 +11,7 @@ export type DashboardFreshness = {
   asOf: string | null
 }
 
-/** 돈이 아니면 `currency` 는 null. 돈은 통화의 최소 단위 정수(KRW 0자리 · USD 센트) */
+/** 돈이 아니면 `currency` 는 null. 돈은 통화의 최소 단위 정수(KRW 0자리 · USD 센트). 매출 0 인 기간도 통화 하나의 0 한 줄(통화를 끝내 모를 때만 빈 목록) */
 export type DashboardAmount = { amount: number; currency: string | null }
 export type DashboardPoint = { at: string; value: number }
 export type DashboardRow = { label: string; values: number[] }
@@ -56,7 +56,11 @@ export type DashboardFunnelStep = {
   rate: number
 }
 
+/** `OK` · `TOO_LARGE`(기간의 묶음이 5만 계정을 넘어 못 센다 - 기간을 줄인다) · `ERROR`(계산 실패) - 둘째부터는 `steps` 가 비어 있다 */
+export type DashboardFunnelStatus = 'OK' | 'TOO_LARGE' | 'ERROR'
+
 export type DashboardFunnel = {
+  status: DashboardFunnelStatus
   steps: DashboardFunnelStep[]
   /** 퍼널 앞의 기준(예: 방문 수) — 없으면 null */
   reference: { key: string; label: string; value: number; rate: number } | null

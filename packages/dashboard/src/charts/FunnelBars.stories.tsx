@@ -31,6 +31,7 @@ export const WithReference: Story = {
 export const OverlappingSteps: Story = {
   args: {
     funnel: {
+      status: 'OK',
       steps: [
         { key: 'a', label: 'Signed up', reached: 10, rate: 1 },
         { key: 'b', label: 'Came back', reached: 3, rate: 0.3 },
@@ -55,7 +56,7 @@ export const WithoutReference: Story = {
 }
 
 export const Empty: Story = {
-  args: { funnel: { steps: [], reference: null } },
+  args: { funnel: { status: 'OK', steps: [], reference: null } },
   play: async ({ canvas }) => {
     await expect(canvas.getByText('No funnel data yet')).toBeInTheDocument()
   },

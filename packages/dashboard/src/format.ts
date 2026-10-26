@@ -54,7 +54,7 @@ export function formatCount(value: number, locale?: string): string {
   return new Intl.NumberFormat(locale).format(value)
 }
 
-/** 그래프의 값 — 돈이면 첫 통화로 쓴다(서버가 돈의 `series` 를 첫 통화만 준다) */
+/** 그래프의 값 — 돈이면 타일의 첫 통화(`value[0]`)로 쓴다. 계약상 `series` 의 통화는 `value[0]` 의 통화이고, 매출이 0 인 기간도 설정 통화(없으면 직전 기간 통화) 0 한 줄이 온다 */
 export function formatSeriesValue(
   value: number,
   metric: Pick<DashboardMetric, 'unit' | 'value'>,

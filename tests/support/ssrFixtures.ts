@@ -773,7 +773,11 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
     labels: ctx.mod('dashboard').defaultDashboardLabels,
   }),
   'dashboard#FunnelCard': (ctx) => ({
-    funnel: { steps: [{ key: 'a', label: 'A', reached: 10, rate: 1 }], reference: null },
+    funnel: {
+      status: 'OK',
+      steps: [{ key: 'a', label: 'A', reached: 10, rate: 1 }],
+      reference: null,
+    },
     labels: ctx.mod('dashboard').defaultDashboardLabels,
   }),
   'dashboard#EditControls': (ctx) => ({
@@ -849,6 +853,7 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
   }),
   'dashboard#FunnelBars': (ctx) => ({
     funnel: {
+      status: 'OK',
       steps: [{ key: 'a', label: 'A', reached: 10, rate: 1 }],
       reference: { key: 'r', label: 'R', value: 100, rate: 0.1 },
     },

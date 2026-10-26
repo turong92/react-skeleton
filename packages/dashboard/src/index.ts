@@ -2,6 +2,7 @@ export type {
   DashboardAmount,
   DashboardFreshness,
   DashboardFunnel,
+  DashboardFunnelStatus,
   DashboardFunnelStep,
   DashboardInterval,
   DashboardLayout,

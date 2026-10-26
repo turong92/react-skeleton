@@ -223,3 +223,14 @@ export const ReturningVisitors: Story = {
     await expect(within(traffic).queryByRole('tab', { name: /Returning/ })).toBeNull()
   },
 }
+
+/** 퍼널의 묶음이 너무 크면(5만 계정 초과) 막대 대신 「기간을 줄여 주세요」 안내 - 다른 카드는 그대로 */
+export const FunnelTooLarge: Story = {
+  render: () => <Demo options={{ funnelStatus: 'TOO_LARGE' }} />,
+  play: async ({ canvas }) => {
+    const card = await canvas.findByRole('article', { name: 'Funnel' })
+    await expect(within(card).getByText(/too long to count the funnel/)).toBeInTheDocument()
+    await expect(within(card).queryByRole('listitem')).toBeNull()
+    await expect(canvas.getByRole('article', { name: 'Traffic' })).toBeInTheDocument()
+  },
+}

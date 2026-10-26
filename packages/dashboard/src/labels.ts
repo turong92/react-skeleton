@@ -64,6 +64,8 @@ export type DashboardLabels = {
     /** 퍼널 위 참고 줄 - 방문(익명)과 방문 대비 묶음 비율. 인자: 방문 이름 · 방문 수 · 묶음 이름 · 비율 */
     reference: (visits: string, count: string, cohort: string, rate: string) => string
     empty: string
+    /** 묶음이 너무 커서(5만 계정 초과) 못 셀 때 */
+    tooLarge: string
   }
   app: { title: string; badge: string }
   returning: { title: string; caption: string; returning: string; first: string }
@@ -165,6 +167,7 @@ export const defaultDashboardLabels: DashboardLabels = {
     reference: (visits, count, cohort, rate) =>
       `${visits} ${count} - ${rate} of visits became ${cohort}`,
     empty: 'No funnel data yet',
+    tooLarge: 'The period is too long to count the funnel - shorten the period',
   },
   app: { title: 'App stats', badge: 'Added by the app' },
   returning: {
@@ -261,6 +264,7 @@ export const koDashboardLabels: DashboardLabels = {
     reference: (visits, count, cohort, rate) =>
       `${visits} ${count}명 · 방문 대비 ${cohort} ${rate}`,
     empty: '아직 퍼널 데이터가 없습니다',
+    tooLarge: '기간이 너무 길어 퍼널을 셀 수 없습니다 - 기간을 줄여 주세요',
   },
   app: { title: '앱 통계', badge: '앱이 붙임' },
   returning: {

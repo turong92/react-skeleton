@@ -41,6 +41,8 @@ export type FakeDashboardOptions = {
   delayMs?: number
   /** `unavailable` 이면 화면 설정 저장소가 없다(404 `DASHBOARD.LAYOUT_UNAVAILABLE`) - 기본은 메모리 안 서버 저장 */
   layout?: 'server' | 'unavailable'
+  /** 퍼널의 상태(기본 `OK`, 아니면 단계가 비어 온다) */
+  funnelStatus?: 'OK' | 'TOO_LARGE' | 'ERROR'
   /** false 면 실시간 경로가 없다(404) */
   realtime?: boolean
   /** true 면 개요 호출이 실패한다 */
@@ -86,7 +88,8 @@ function ranking(
 
 export function fakeOverview({
   connected = true,
-}: Pick<FakeDashboardOptions, 'connected'> = {}): DashboardOverview {
+  funnelStatus = 'OK',
+}: Pick<FakeDashboardOptions, 'connected' | 'funnelStatus'> = {}): DashboardOverview {
   const external: DashboardStatus = connected ? 'OK' : 'NOT_CONNECTED'
   const daily = connected ? { kind: 'DAILY' as const, asOf: ASOF } : null
   const metrics: DashboardMetric[] = [
@@ -265,11 +268,15 @@ export function fakeOverview({
     metrics,
     rankings,
     funnel: {
-      steps: [
-        { key: 'account.signed-up', label: 'Signed up', reached: 128, rate: 1 },
-        { key: 'app.activated', label: 'Activated', reached: 96, rate: 0.75 },
-        { key: 'payment.paid', label: 'Paid', reached: 41, rate: 0.43 },
-      ],
+      status: funnelStatus,
+      steps:
+        funnelStatus !== 'OK'
+          ? []
+          : [
+              { key: 'account.signed-up', label: 'Signed up', reached: 128, rate: 1 },
+              { key: 'app.activated', label: 'Activated', reached: 96, rate: 0.75 },
+              { key: 'payment.paid', label: 'Paid', reached: 41, rate: 0.43 },
+            ],
       reference: connected
         ? { key: 'cloudflare.visits', label: 'Visits', value: 12480, rate: 0.01 }
         : null,

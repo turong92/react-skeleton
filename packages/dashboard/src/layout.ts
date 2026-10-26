@@ -1,6 +1,6 @@
 import type { DashboardLayout } from './types'
 
-/** 화면 설정의 카드 키: 묶음 순위 `rankings.<group>` · `funnel` · `app`(앱 통계). 맨 위 타일 줄 `tiles` 와 그래프 `chart` 는 늘 맨 앞에 있고 옮기지 않는다 */
+/** 화면 설정의 카드 키: 묶음 순위 `rankings.<group>` · `returning`(재방문율) · `funnel` · `app`(앱 통계). 맨 위 타일 줄 `tiles` 와 그래프 `chart` 는 늘 맨 앞에 있고 옮기지 않는다 */
 export const FIXED_CARDS = ['tiles', 'chart'] as const
 
 export const DEFAULT_LAYOUT: DashboardLayout = { hidden: [], order: [] }
@@ -8,11 +8,16 @@ export const DEFAULT_LAYOUT: DashboardLayout = { hidden: [], order: [] }
 const GROUP_ORDER = ['traffic', 'pages', 'geo']
 
 /** 개요에 실제로 있는 카드의 키 - 기본 순서(유입 · 페이지 · 지역 · 그 밖의 묶음 · 퍼널 · 앱 통계) */
-export function availableCards(groups: readonly string[], hasFunnel: boolean): string[] {
+export function availableCards(
+  groups: readonly string[],
+  hasFunnel: boolean,
+  hasReturning = false,
+): string[] {
   const others = groups.filter((g) => g !== 'app' && !GROUP_ORDER.includes(g))
   return [
     ...GROUP_ORDER.filter((g) => groups.includes(g)).map((g) => `rankings.${g}`),
     ...others.map((g) => `rankings.${g}`),
+    ...(hasReturning ? ['returning'] : []),
     ...(hasFunnel ? ['funnel'] : []),
     ...(groups.includes('app') ? ['app'] : []),
   ]

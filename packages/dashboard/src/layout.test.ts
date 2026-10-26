@@ -19,6 +19,11 @@ describe('layout', () => {
       'app',
     ])
     expect(availableCards(['traffic'], false)).toEqual(['rankings.traffic'])
+    expect(availableCards(['traffic'], true, true)).toEqual([
+      'rankings.traffic',
+      'returning',
+      'funnel',
+    ])
   })
 
   it('keeps the saved order, drops cards that are gone, puts new cards last', () => {

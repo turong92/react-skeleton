@@ -210,3 +210,16 @@ export const NoRealtime: Story = {
     await expect(canvas.queryByRole('button', { name: /online now/ })).toBeNull()
   },
 }
+
+/** 재방문(`ga.returning`)은 탭이 아니라 숫자 카드 - 「New」 · 「Returning」 두 행에서 비율을 계산한다(120 / 500 = 24%) */
+export const ReturningVisitors: Story = {
+  render: () => <Demo />,
+  play: async ({ canvas }) => {
+    const card = await canvas.findByRole('article', { name: 'Returning visitors' })
+    await expect(within(card).getByText('24%')).toBeInTheDocument()
+    await expect(within(card).getByText('120')).toBeInTheDocument()
+    // 유입 카드의 탭에는 없다
+    const traffic = canvas.getByRole('article', { name: 'Traffic' })
+    await expect(within(traffic).queryByRole('tab', { name: /Returning/ })).toBeNull()
+  },
+}

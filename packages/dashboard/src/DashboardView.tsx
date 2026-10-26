@@ -20,6 +20,7 @@ import { MetricChart } from './MetricChart'
 import { MetricTiles, type MetricTilesProps } from './MetricTiles'
 import { RealtimeBadge } from './RealtimeBadge'
 import { RankingCard } from './RankingCard'
+import { ReturningCard } from './ReturningCard'
 import { RankingDialog } from './RankingDialog'
 import { spanOf, spanProblem, type DashboardPeriod } from './range'
 import type { DashboardRanking, DateSpan } from './types'
@@ -43,6 +44,8 @@ export type DashboardViewProps = {
   /** 타일의 `metric.link` 를 그리는 법(라우터 `Link`) */
   renderLink?: MetricTilesProps['renderLink']
 }
+
+const RETURNING_KEY = 'ga.returning'
 
 function groupRankings(rankings: DashboardRanking[]): Map<string, DashboardRanking[]> {
   const groups = new Map<string, DashboardRanking[]>()
@@ -112,8 +115,13 @@ function DashboardBody({
       ? `${formatDate(span.from, { locale })} ~ ${formatDate(span.to, { locale })}`
       : labels.periods[period]
 
-  const groups = data ? groupRankings(data.rankings) : null
-  const available = data && groups ? availableCards([...groups.keys()], data.funnel !== null) : []
+  // 재방문(`ga.returning`)은 탭이 아니라 작은 숫자 카드로 - 묶음의 탭에서는 뺀다
+  const returningRanking = data?.rankings.find((r) => r.key === RETURNING_KEY) ?? null
+  const groups = data ? groupRankings(data.rankings.filter((r) => r.key !== RETURNING_KEY)) : null
+  const available =
+    data && groups
+      ? availableCards([...groups.keys()], data.funnel !== null, returningRanking !== null)
+      : []
   const current = editing
     ? { hidden: draftHidden, order: draftOrder }
     : { hidden: stored.layout.hidden, order: orderedCards(available, stored.layout.order) }
@@ -199,12 +207,15 @@ function DashboardBody({
   const cardName = (key: string) =>
     key === 'funnel'
       ? labels.funnel.title
-      : key === 'app'
-        ? labels.app.title
-        : (labels.groups[key.replace('rankings.', '')] ?? key.replace('rankings.', ''))
+      : key === 'returning'
+        ? labels.returning.title
+        : key === 'app'
+          ? labels.app.title
+          : (labels.groups[key.replace('rankings.', '')] ?? key.replace('rankings.', ''))
   const cardBody = (key: string) => {
     if (key === 'funnel')
       return <FunnelCard funnel={data.funnel!} locale={locale} labels={labels} />
+    if (key === 'returning') return <ReturningCard ranking={returningRanking!} {...common} />
     if (key === 'app') {
       return <AppStatsCard rankings={groups.get('app') ?? []} onViewAll={setOpened} {...common} />
     }

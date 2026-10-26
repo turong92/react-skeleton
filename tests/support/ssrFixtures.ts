@@ -752,6 +752,20 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
     },
     labels: ctx.mod('dashboard').defaultDashboardLabels,
   }),
+  'dashboard#ReturningCard': (ctx) => ({
+    ranking: {
+      ...dashboardRanking,
+      key: 'ga.returning',
+      columns: ['Users'],
+      rows: [
+        { label: 'New', values: [3] },
+        { label: 'Returning', values: [1] },
+      ],
+    },
+    zone: 'UTC',
+    includesToday: false,
+    labels: ctx.mod('dashboard').defaultDashboardLabels,
+  }),
   'dashboard#AppStatsCard': (ctx) => ({
     rankings: [dashboardRanking],
     zone: 'UTC',

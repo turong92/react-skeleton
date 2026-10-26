@@ -1,0 +1,80 @@
+.card {
+  display: grid;
+  align-content: start;
+  gap: var(--space-md);
+  min-width: 0;
+  padding: var(--space-xl);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-subheading);
+}
+
+.body {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.caption {
+  margin: 0;
+  color: var(--text);
+  font-size: var(--font-size-small);
+  font-weight: 650;
+}
+
+.big {
+  margin: 0;
+  font-size: var(--font-size-title);
+  font-weight: 700;
+  color: var(--text-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.split {
+  display: flex;
+  height: var(--space-sm);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  background: var(--surface-muted);
+}
+
+.split i {
+  background: var(--teal);
+}
+
+.rows {
+  display: grid;
+  gap: var(--space-sm);
+  margin: 0;
+}
+
+.rows div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding-top: var(--space-sm);
+  border-top: 1px dashed var(--border);
+  font-size: var(--font-size-small);
+}
+
+.rows dt {
+  color: var(--text);
+}
+
+.rows dd {
+  margin: 0;
+  color: var(--text-strong);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 699px) {
+  .card {
+    padding: var(--space-lg);
+  }
+}

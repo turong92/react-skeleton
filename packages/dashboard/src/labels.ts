@@ -66,6 +66,7 @@ export type DashboardLabels = {
     empty: string
   }
   app: { title: string; badge: string }
+  returning: { title: string; caption: string; returning: string; first: string }
   edit: {
     edit: string
     done: string
@@ -166,6 +167,12 @@ export const defaultDashboardLabels: DashboardLabels = {
     empty: 'No funnel data yet',
   },
   app: { title: 'App stats', badge: 'Added by the app' },
+  returning: {
+    title: 'Returning visitors',
+    caption: 'Share of people who came back in this period',
+    returning: 'Returning',
+    first: 'New',
+  },
   edit: {
     edit: 'Edit',
     done: 'Done',
@@ -256,6 +263,12 @@ export const koDashboardLabels: DashboardLabels = {
     empty: '아직 퍼널 데이터가 없습니다',
   },
   app: { title: '앱 통계', badge: '앱이 붙임' },
+  returning: {
+    title: '재방문율',
+    caption: '기간 내 다시 찾아온 비율',
+    returning: '재방문',
+    first: '처음 방문',
+  },
   edit: {
     edit: '편집',
     done: '완료',

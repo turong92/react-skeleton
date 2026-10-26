@@ -68,6 +68,7 @@ export const TurnOffAndMoveThenReopen: Story = {
       'Traffic',
       'Pages',
       'Places and devices',
+      'Returning visitors',
       'Funnel',
       'App stats',
     ])
@@ -76,6 +77,7 @@ export const TurnOffAndMoveThenReopen: Story = {
       'Pages',
       'Traffic',
       'Places and devices',
+      'Returning visitors',
       'App stats',
     ])
     await expect(canvas.queryByRole('button', { name: /Pageviews/ })).toBeNull()
@@ -86,6 +88,7 @@ export const TurnOffAndMoveThenReopen: Story = {
       'Pages',
       'Traffic',
       'Places and devices',
+      'Returning visitors',
       'App stats',
     ])
     await expect(canvas.queryByRole('button', { name: /Pageviews/ })).toBeNull()
@@ -105,6 +108,7 @@ export const FallsBackToTheBrowserWhenThereIsNoStore: Story = {
       'Pages',
       'Traffic',
       'Places and devices',
+      'Returning visitors',
       'App stats',
     ])
   },
@@ -125,6 +129,7 @@ export const ResetToTheDefaultLayout: Story = {
         'Traffic',
         'Pages',
         'Places and devices',
+        'Returning visitors',
         'Funnel',
         'App stats',
       ]),

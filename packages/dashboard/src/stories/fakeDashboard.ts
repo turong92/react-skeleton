@@ -187,6 +187,18 @@ export function fakeOverview({
       'NOT_CONNECTED',
     ),
     ranking(
+      'ga.returning',
+      'traffic',
+      'Returning',
+      'ga',
+      ['Users'],
+      [
+        ['New', 380],
+        ['Returning', 120],
+      ],
+      'OK',
+    ),
+    ranking(
       'cloudflare.paths',
       'pages',
       'Top pages',

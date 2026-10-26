@@ -441,7 +441,8 @@
         "AppStatsCard",
         "FunnelCard",
         "EditableCard",
-        "EditControls"
+        "EditControls",
+        "ReturningCard"
       ],
       "needs": ["api-client", "time", "ui"],
       "backend": {

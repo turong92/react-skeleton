@@ -13,7 +13,7 @@
 - hover · active · focus-visible 이 서로 다르게 보이고, 높이는 **44px**(`sm` 은 36px, 거친 포인터에서는 44px). **꺼진(`disabled`) 버튼으로 막지 않는다** — 막힌 이유는 누르면 말한다(`FormProblems` 방식: 제출은 늘 눌리고, 보내지 않은 채 이유를 목록 · 칸 옆에 보인다 — 꺼진 버튼은 키보드 · 터치로 이유에 닿지 못한다). 이유가 늘 정해져 있어 누르게 할 까닭이 없는 단추(결제 `OrderSummary` 의 「환불 요청」이 「환불 중이에요」일 때, `ConfirmDialog` 의 `confirmBlockedBy`)는 `aria-disabled="true"`(흐리고 `not-allowed`)로 두고, **눌러도 아무 일 없게**(핸들러를 달지 않는다) **이유를 옆에 한 줄 글자로 적어 `aria-describedby` 로 잇는다** — Tab 으로 닿고 이유가 단추 설명으로 낭독된다(`Button` 의 CSS 가 `[aria-disabled='true']` 를 `disabled` 와 같은 모양으로 그린다). `disabled` 는 정말 일하는 중(`loading` · 보내는 중)일 때만.
 - 펼치는 것(`SectionCard collapsible`)은 테두리 + 화살표로, 아이콘 버튼(알림 · 테마 · ⋯ · 닫기 · 복사)도 테두리 상자로 보인다. 눌리지 않는 것(`Badge` · 읽기 전용 값)은 상자로 만들지 않는다.
 - **링크도 같다** — 어디로 가는 큰 진입(설정의 「계정 관리 →」)은 줄 전체가 테두리 + 오른쪽 화살표 + hover/focus 가 있는 **링크 카드**(`LinkCard`), 표 · 목록 안의 제목 · 「모두 보기」는 **밑줄** 글자 링크(`TextLink`), 버튼 모양의 이동은 `LinkButton`. 밑줄도 테두리도 없는 글자는 링크로 안 보인다(sample 의 `LinkCard.affordance.test.ts` · `TextLink.affordance.test.ts` 가 지킨다). 펼침 표시(▾)는 본문 글자 크기로 — 작은 점은 눌림 표시가 못 된다.
-- 색만으로 구분하지 않는다(테두리 · 밑줄 · 굵기가 함께) — 대비는 `tests/contrast.test.ts`. 이 원칙은 `packages/ui/src/Button/affordance.test.ts`(스타일 단정)와 Button 스토리의 `EveryVariantLooksPressableAtRest` 가 지킨다.
+- 색만으로 구분하지 않는다(테두리 · 밑줄 · 굵기가 함께) — 대비는 `tests/contrast.test.ts`. 이 원칙은 `tests/affordance.css.test.ts`(스타일 단정)와 Button 스토리의 `EveryVariantLooksPressableAtRest` 가 지킨다.
 
 ## @skeleton/ui — 부품
 

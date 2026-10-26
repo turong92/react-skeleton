@@ -1,5 +1,5 @@
 /*
- * 눌리는 것은 한눈에 눌리는 것으로 보인다(affordance.test.ts 가 지킨다):
+ * 눌리는 것은 한눈에 눌리는 것으로 보인다(tests/affordance.css.test.ts 가 지킨다):
  * 쉬는 상태에서도 테두리나 채움이 있고(글자만 있는 버튼 금지), hover · active · focus-visible 이 서로 다르며,
  * 높이는 터치 대상 44px(작은 크기는 36px, 거친 포인터에서는 44px). 비활성은 흐리고 `not-allowed`.
  * 한 구역의 주된 행동은 채운 `primary` 하나, 나머지는 테두리(`secondary` · `ghost`), 위험한 행동은 채운 위험색(`danger` - 진한 배경 + 반전 글자, 눌리는 단추로 또렷하게).

@@ -83,5 +83,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-          cache: 'pnpm'
+          # cache: 'pnpm' 은 두지 않는다 - 이 잡은 저장소 루트에서 pnpm install 을 안 한다(찍은 프로젝트들이 임시 폴더에서 자기 install 을 한다).
+          # setup-node 의 Post 단계는 `pnpm store path` 의 폴더를 저장하려 하는데, 찍은 프로젝트의 임시 폴더가 다른 파일시스템이면 pnpm 이 스토어를 기본 위치가 아닌
+          # 그 파일시스템 쪽(.pnpm-store)에 만들어 기본 폴더가 없고, 검사는 통과해도 「Path Validation Error」로 잡이 실패한다
       - run: bash scripts/test-new-project.sh --full

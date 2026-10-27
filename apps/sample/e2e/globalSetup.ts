@@ -393,22 +393,30 @@ export default async function setup(project: TestProject) {
     }
   }
 
-  const stopAll = () => {
+  /**
+   * 끝낼 때의 정리 — 백엔드 `stop`(JVM 의 느긋한 종료 + 컨테이너 내리기)은 30초쯤 걸린다. **비동기로 기다린다**: `spawnSync` 로 막으면 vitest 메인의 이벤트 루프가 그동안 멈춰
+   * 워커 종료 타이머가 먼저 만료한 것처럼 보여 끝마다 `[vitest-pool]: Timeout terminating forks worker` 가 찍혔다(열린 핸들 탓이 아니었다 - 워커에는 남은 핸들이 없다).
+   */
+  const stopAll = async () => {
     killWeb()
-    void fake?.close()
-    void fakeToss?.close()
-    void fakePaddle?.close()
-    void fakeKakaoPay?.close()
-    void fakeNaverPay?.close()
-    void fakeCloudflare?.close()
-    void fakeGa?.close()
-    if (backendScript) spawnSync('bash', [backendScript, 'stop'], { env: backendEnv })
+    await Promise.all(
+      [fake, fakeToss, fakePaddle, fakeKakaoPay, fakeNaverPay, fakeCloudflare, fakeGa].map((f) =>
+        f?.close(),
+      ),
+    )
+    if (backendScript) {
+      await new Promise<void>((done) => {
+        const child = spawn('bash', [backendScript, 'stop'], { env: backendEnv, stdio: 'ignore' })
+        child.once('close', () => done())
+        child.once('error', () => done())
+      })
+    }
   }
 
   try {
     await waitFor(`${baseUrl}/api/v1/auth/me`, 'backend through the web server proxy')
   } catch (error) {
-    stopAll()
+    await stopAll()
     throw error
   }
 

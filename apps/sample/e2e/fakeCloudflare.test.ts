@@ -50,8 +50,8 @@ describe('the fake Cloudflare (contract C4)', () => {
     const [account] = body.data.viewer.accounts
     expect(account.total).toEqual([
       {
-        count: FAKE_CLOUDFLARE.pageviewsSampled,
-        sum: { visits: FAKE_CLOUDFLARE.visitsSampled },
+        count: FAKE_CLOUDFLARE.pageviewsShown,
+        sum: { visits: FAKE_CLOUDFLARE.visitsShown },
         avg: { sampleInterval: 2 },
         dimensions: {},
       },
@@ -63,12 +63,12 @@ describe('the fake Cloudflare (contract C4)', () => {
       [false, 'e2e-cf-site-tag'],
       [true, 'e2e-cf-site-tag'],
     ])
-    // 환산 뒤 값이 화면 값(상수)과 맞다
-    expect(FAKE_CLOUDFLARE.visitsSampled * FAKE_CLOUDFLARE.sampleInterval).toBe(
-      FAKE_CLOUDFLARE.visitsShown,
-    )
-    expect(FAKE_CLOUDFLARE.pageviewsSampled * FAKE_CLOUDFLARE.sampleInterval).toBe(
-      FAKE_CLOUDFLARE.pageviewsShown,
-    )
+    // 자기 사이트 안의 이동은 방문 0 으로 온다 — 순위는 이 줄을 빼야 한다
+    const internal = account.refs.find(
+      (r) =>
+        (r as { dimensions: { refererHost: string } }).dimensions.refererHost ===
+        FAKE_CLOUDFLARE.internalReferer.host,
+    ) as { sum: { visits: number } } | undefined
+    expect(internal?.sum.visits).toBe(0)
   })
 })

@@ -2,11 +2,13 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 
 /*
  * 가짜 Cloudflare — 진짜 계정 없이 대시보드의 Cloudflare 카드(방문 · 유입 · 페이지 · 국가 · 기기)를 끝까지 돌려 본다. 모양은 계획 계약 C4 한 곳을 따른다
- * (추측이다 — 형이 토큰을 주면 실제 질의로 재서 이 파일 · kotlin 의 `FakeCloudflareApi` · 스펙 §3.2 를 같이 고친다):
+ * (실제 무료 계정 응답으로 맞췄다 — 2026-10-27, kotlin 의 `FakeCloudflareApi` · `docs/modules/dashboard-cloudflare.md`):
  *   POST /client/v4/graphql  (Bearer 토큰이 틀리면 403) — 질의 하나에 별칭 여러 개(`<별칭>: rumPageloadEventsAdaptiveGroups(...) { count sum { visits } avg { sampleInterval } dimensions { … } }`)
  *   응답 `{ data: { viewer: { accounts: [ { <별칭>: [ { count, sum: { visits }, avg: { sampleInterval }, dimensions } ] } ] } }, errors: null }`.
  *   별칭마다 `dimensions { … }` 의 필드 이름을 읽어 답한다: 없음 = 합계 한 줄 · `date` · `datetimeHour` = 시계열 · `refererHost` · `requestPath` · `countryName` · `deviceType` = 순위.
- * 값은 표본 환산(`× avg.sampleInterval`)을 거치게 일부러 sampleInterval 2 로 준다 — 화면에 나오는 값은 `FAKE_CLOUDFLARE` 의 `*Shown`(환산 뒤)이다.
+ * `count` · `sum.visits` 는 **이미 추정값**이다(실측: `sampleInterval` 10 인 줄의 값은 모두 10 의 배수) — 백엔드가 `sampleInterval` 을 다시 곱하면 안 된다.
+ * 그래서 일부러 `sampleInterval` 2 로 주고도 값은 화면 값(`FAKE_CLOUDFLARE` 의 `*Shown`) 그대로 준다 — 곱하면 e2e 가 깨진다.
+ * 자기 사이트 안의 이동은 `refererHost` 가 자기 호스트이고 `visits` 가 0(페이지뷰만 있다), 리퍼러 없음은 빈 문자열, 국가는 코드(`KR`).
  *
  * 제어: `GET /control` → { requests: [{ authorized, siteTag, aliases, dimensions }] } · `POST /control { reset: true }`.
  */
@@ -15,25 +17,24 @@ export const FAKE_CLOUDFLARE = {
   accountId: 'e2e-cf-account',
   siteTag: 'e2e-cf-site-tag',
   apiToken: 'e2e-cf-api-token-0123456789',
-  /** 표본 간격 — 받은 값에 이 수를 곱해야 실제 수다 */
+  /** 질의가 알리는 표본 간격 — 값은 이미 추정값이라 곱하지 않는다 */
   sampleInterval: 2,
-  /** 질의가 주는 표본 수(환산 전) */
-  visitsSampled: 500,
-  pageviewsSampled: 1500,
-  /** 화면에 나오는 값(환산 뒤) */
+  /** 질의가 주는 값 = 화면에 나오는 값 */
   visitsShown: 1000,
   pageviewsShown: 3000,
   referers: [
     { host: 'fake-referrer.example', visits: 300 },
     { host: 'other-referrer.example', visits: 120 },
   ],
+  /** 자기 사이트 안의 이동 — 방문 0, 페이지뷰만 (순위에 나오면 안 된다) */
+  internalReferer: { host: 'e2e-own-site.example', views: 900 },
   paths: [
     { path: '/', views: 700 },
     { path: '/pricing', views: 250 },
   ],
   countries: [
-    { name: 'South Korea', visits: 400 },
-    { name: 'Japan', visits: 100 },
+    { name: 'KR', visits: 400 },
+    { name: 'JP', visits: 100 },
   ],
   devices: [
     { name: 'mobile', visits: 350 },
@@ -80,14 +81,14 @@ function rowsFor(dimensions: string[], range: { from: string; to: string }) {
   const [first] = dimensions
   switch (first) {
     case undefined:
-      return [row(FAKE_CLOUDFLARE.pageviewsSampled, FAKE_CLOUDFLARE.visitsSampled)]
+      return [row(FAKE_CLOUDFLARE.pageviewsShown, FAKE_CLOUDFLARE.visitsShown)]
     case 'date':
     case 'datetimeHour': {
       const dates = datesBetween(range.from, range.to)
       return dates.map((day) =>
         row(
-          Math.round(FAKE_CLOUDFLARE.pageviewsSampled / dates.length),
-          Math.round(FAKE_CLOUDFLARE.visitsSampled / dates.length),
+          Math.round(FAKE_CLOUDFLARE.pageviewsShown / dates.length),
+          Math.round(FAKE_CLOUDFLARE.visitsShown / dates.length),
           {
             [first]: first === 'date' ? day : `${day}T00:00:00Z`,
           },
@@ -95,7 +96,12 @@ function rowsFor(dimensions: string[], range: { from: string; to: string }) {
       )
     }
     case 'refererHost':
-      return FAKE_CLOUDFLARE.referers.map((r) => row(r.visits, r.visits, { refererHost: r.host }))
+      return [
+        ...FAKE_CLOUDFLARE.referers.map((r) => row(r.visits, r.visits, { refererHost: r.host })),
+        row(FAKE_CLOUDFLARE.internalReferer.views, 0, {
+          refererHost: FAKE_CLOUDFLARE.internalReferer.host,
+        }),
+      ]
     case 'requestPath':
       return FAKE_CLOUDFLARE.paths.map((p) => row(p.views, p.views, { requestPath: p.path }))
     case 'countryName':

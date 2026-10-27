@@ -72,13 +72,14 @@ describe('the admin dashboard', () => {
         .toBeGreaterThanOrEqual(1)
 
       if (fakeCloudflareUrl) {
-        // 「오늘」은 Cloudflare 를 바로 묻는다(어제까지는 새벽 적재분) — 가짜가 준 값이 환산(× 표본 간격)된 채 나온다
+        // 「오늘」은 Cloudflare 를 바로 묻는다(어제까지는 새벽 적재분) — 가짜가 준 값이 그대로 나온다(표본 간격을 다시 곱하지 않는다)
         await page.getByRole('button', { name: L.periods.today, exact: true }).click()
         await pwExpect
           .poll(() => tileNumber(page, L.metrics['cloudflare.visits']))
           .toBe(FAKE_CLOUDFLARE.visitsShown)
         const traffic = page.getByRole('article', { name: L.groups.traffic })
         await pwExpect(traffic.getByText(FAKE_CLOUDFLARE.referers[0].host)).toBeVisible()
+        await pwExpect(traffic.getByText(FAKE_CLOUDFLARE.internalReferer.host)).toHaveCount(0) // 자기 사이트 안의 이동(방문 0)은 유입이 아니다
       }
 
       if (fakeGaUrl) {

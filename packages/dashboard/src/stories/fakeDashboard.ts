@@ -230,9 +230,10 @@ export function fakeOverview({
       'cloudflare',
       ['Country', 'Visits'],
       [
-        ['South Korea', 8120],
-        ['United States', 1240],
-        ['Japan', 980],
+        ['KR', 8120],
+        ['US', 1240],
+        ['JP', 980],
+        ['XX', 12],
       ],
       external,
     ),

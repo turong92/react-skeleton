@@ -1,4 +1,4 @@
-import { formatCount } from './format'
+import { formatCount, regionLabel } from './format'
 import type { DashboardLabels } from './labels'
 import type { DashboardRanking } from './types'
 import styles from './RankingTable.module.css'
@@ -13,6 +13,9 @@ export type RankingTableProps = {
 export function RankingTable({ ranking, locale, labels }: RankingTableProps) {
   const [labelColumn, ...valueColumns] = ranking.columns
   const max = Math.max(1, ...ranking.rows.map((row) => row.values[0] ?? 0))
+  // 국가 순위의 이름은 코드(`KR`)로 온다 - 보는 사람의 언어 이름으로
+  const isCountry = ranking.key.endsWith('.countries')
+  const nameOf = (label: string) => (isCountry ? regionLabel(label, locale) : label)
   const header = (column: string) => labels.columns[column] ?? column
   return (
     <table className={styles.table}>
@@ -36,8 +39,8 @@ export function RankingTable({ ranking, locale, labels }: RankingTableProps) {
                   {index + 1}
                 </span>
                 <div className={styles.text}>
-                  <span className={styles.name} title={row.label}>
-                    {row.label}
+                  <span className={styles.name} title={nameOf(row.label)}>
+                    {nameOf(row.label)}
                   </span>
                   <span className={styles.bar} aria-hidden="true">
                     <i style={{ width: `${((row.values[0] ?? 0) / max) * 100}%` }} />

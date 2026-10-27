@@ -115,6 +115,22 @@ export function formatPointLabel(
   return interval === 'WEEK' ? `${text}~` : text
 }
 
+/**
+ * 국가 코드(`KR`)를 보는 사람의 언어 이름(「대한민국」 · `South Korea`)으로. Cloudflare 는 ISO 국가 코드를 준다.
+ * 코드가 아니거나(`T1` 토르 · `XX` 알 수 없음 - 이름이 코드 그대로 돌아온다) 모르는 코드면 코드 그대로, GA 처럼 이미 이름이면 그대로
+ */
+export function regionLabel(code: string, locale?: string): string {
+  if (!/^([A-Za-z]{2}|\d{3})$/.test(code)) return code
+  try {
+    const name = new Intl.DisplayNames(locale ? [locale] : undefined, { type: 'region' }).of(
+      code.toUpperCase(),
+    )
+    return name && name !== code.toUpperCase() ? name : code
+  } catch {
+    return code
+  }
+}
+
 /** 갱신 시각 한 줄 — 짧게(`10/26 14:00`) */
 export function formatAsOf(iso: string, zone: string, locale?: string): string {
   return formatInstant(iso, { zone, locale, dateStyle: 'short', timeStyle: 'short' })

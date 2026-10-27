@@ -77,3 +77,14 @@ export const SingleRanking: Story = {
     await expect(canvas.getByText('Birthday board')).toBeInTheDocument()
   },
 }
+
+/** Cloudflare 의 국가는 코드(KR)로 온다 - 이름으로 보인다(모르는 코드 XX 는 그대로) */
+export const CountryNames: Story = {
+  args: { group: 'geo', rankings: rankings.filter((r) => r.group === 'geo') },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText('South Korea')).toBeInTheDocument()
+    await expect(canvas.getByText('United States')).toBeInTheDocument()
+    await expect(canvas.getByText('XX')).toBeInTheDocument()
+    await expect(canvas.queryByText('KR')).toBeNull()
+  },
+}

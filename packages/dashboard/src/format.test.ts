@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { deltaOf, formatPointLabel, formatValue } from './format'
+import { deltaOf, formatPointLabel, formatValue, regionLabel } from './format'
 import type { DashboardMetric } from './types'
 
 const base: DashboardMetric = {
@@ -108,6 +108,16 @@ describe('formatValue', () => {
     expect(formatValue({ amount: 3820, currency: null }, 'PERCENT', { locale: 'en-US' })).toBe(
       '38.2%',
     )
+  })
+})
+
+describe('regionLabel', () => {
+  it('names an ISO country code in the viewer language and leaves anything else as it is', () => {
+    expect(regionLabel('KR', 'en-US')).toBe('South Korea')
+    expect(regionLabel('kr', 'ko-KR')).toBe('대한민국')
+    expect(regionLabel('XX', 'en-US')).toBe('XX')
+    expect(regionLabel('T1', 'en-US')).toBe('T1')
+    expect(regionLabel('South Korea', 'en-US')).toBe('South Korea')
   })
 })
 

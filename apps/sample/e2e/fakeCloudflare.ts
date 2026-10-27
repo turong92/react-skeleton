@@ -184,7 +184,11 @@ export async function startFakeCloudflare(): Promise<FakeCloudflare> {
   const { port } = server.address() as { port: number }
   return {
     url: `http://127.0.0.1:${port}`,
-    close: () => new Promise<void>((resolve) => server.close(() => resolve())),
+    close: () =>
+      new Promise<void>((resolve) => {
+        server.closeAllConnections() // 백엔드(JVM)가 쥔 연결 때문에 닫기가 늦어지지 않게
+        server.close(() => resolve())
+      }),
   }
 }
 

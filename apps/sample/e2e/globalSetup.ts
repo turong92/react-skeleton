@@ -394,23 +394,25 @@ export default async function setup(project: TestProject) {
   }
 
   /**
-   * 끝낼 때의 정리 — 백엔드 `stop`(JVM 의 느긋한 종료 + 컨테이너 내리기)은 30초쯤 걸린다. **비동기로 기다린다**: `spawnSync` 로 막으면 vitest 메인의 이벤트 루프가 그동안 멈춰
+   * 끝낼 때의 정리 — vitest 가 이 정리를 기다리는 시간은 `vitest.e2e.config.ts` 의 `teardownTimeout`(120초)이다(기본 10초면 정리가 끊겨 컨테이너 · 볼륨이 남는다). 백엔드 `stop`(JVM 의 느긋한 종료 + 컨테이너 내리기)은 30초쯤 걸린다. **비동기로 기다린다**: `spawnSync` 로 막으면 vitest 메인의 이벤트 루프가 그동안 멈춰
    * 워커 종료 타이머가 먼저 만료한 것처럼 보여 끝마다 `[vitest-pool]: Timeout terminating forks worker` 가 찍혔다(열린 핸들 탓이 아니었다 - 워커에는 남은 핸들이 없다).
    */
   const stopAll = async () => {
     killWeb()
-    await Promise.all(
-      [fake, fakeToss, fakePaddle, fakeKakaoPay, fakeNaverPay, fakeCloudflare, fakeGa].map((f) =>
+    // 백엔드 정리를 먼저 시작하고 가짜 서버 닫기와 나란히 기다린다
+    const backend = backendScript
+      ? new Promise<void>((done) => {
+          const child = spawn('bash', [backendScript, 'stop'], { env: backendEnv, stdio: 'ignore' })
+          child.once('close', () => done())
+          child.once('error', () => done())
+        })
+      : Promise.resolve()
+    await Promise.all([
+      backend,
+      ...[fake, fakeToss, fakePaddle, fakeKakaoPay, fakeNaverPay, fakeCloudflare, fakeGa].map((f) =>
         f?.close(),
       ),
-    )
-    if (backendScript) {
-      await new Promise<void>((done) => {
-        const child = spawn('bash', [backendScript, 'stop'], { env: backendEnv, stdio: 'ignore' })
-        child.once('close', () => done())
-        child.once('error', () => done())
-      })
-    }
+    ])
   }
 
   try {

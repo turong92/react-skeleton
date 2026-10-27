@@ -490,7 +490,11 @@ export async function startFakePaddle(): Promise<FakePaddle> {
     setBackend: (url) => {
       backend = url.replace(/\/+$/, '')
     },
-    close: () => new Promise<void>((done) => server.close(() => done())),
+    close: () =>
+      new Promise<void>((done) => {
+        server.closeAllConnections() // 백엔드(JVM)가 쥔 연결 때문에 닫기가 늦어지지 않게
+        server.close(() => done())
+      }),
   }
 }
 

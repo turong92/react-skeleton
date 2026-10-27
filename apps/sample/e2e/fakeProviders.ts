@@ -211,6 +211,10 @@ export async function startFakeProviders(listenHost = '127.0.0.1'): Promise<Fake
   base = `http://localhost:${address.port}`
   return {
     url: base,
-    close: () => new Promise<void>((done) => server.close(() => done())),
+    close: () =>
+      new Promise<void>((done) => {
+        server.closeAllConnections() // 백엔드(JVM)가 쥔 연결 때문에 닫기가 늦어지지 않게
+        server.close(() => done())
+      }),
   }
 }

@@ -29,6 +29,8 @@ export default defineConfig({
     pool: 'forks',
     fileParallelism: false,
     testTimeout: 90_000,
+    // globalSetup 의 정리(백엔드 `stop`: JVM 종료 + 컨테이너 · 볼륨 내리기)를 기다리는 시간 - 기본 10초면 vitest 가 먼저 process.exit() 해 정리가 끊기고 컨테이너 · 볼륨 · PID 파일이 남는다
+    teardownTimeout: 120_000,
     hookTimeout: 600_000, // 컨테이너 · 백엔드 첫 기동(그레이들)이 걸린다 — 부하가 큰 기계에서는 몇 분
   },
 })

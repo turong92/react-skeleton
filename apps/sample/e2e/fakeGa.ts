@@ -218,7 +218,11 @@ export async function startFakeGa(): Promise<FakeGa> {
       client_email: FAKE_GA.clientEmail,
       token_uri: `${base}/token`,
     }),
-    close: () => new Promise<void>((resolve) => server.close(() => resolve())),
+    close: () =>
+      new Promise<void>((resolve) => {
+        server.closeAllConnections() // 백엔드(JVM)가 쥔 연결 때문에 닫기가 늦어지지 않게
+        server.close(() => resolve())
+      }),
   }
 }
 

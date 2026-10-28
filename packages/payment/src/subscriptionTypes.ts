@@ -15,7 +15,6 @@ export type SubscriptionEndReason =
   | 'RENEWAL_BLOCKED'
   | 'REFUNDED'
 
-/** 구독 응답 — 빌링키 · 고객 키는 어디에도 없다. 금액은 만들 때 박힌 값이다 */
 /** 구독 쿠폰의 혜택 단계 - 모양은 쿠폰 정의의 단계와 같다(`periods` 가 null 이면 영원히) */
 export type SubscriptionDiscountStage = {
   type: 'FREE' | 'PERCENT' | 'FIXED'
@@ -35,6 +34,7 @@ export type SubscriptionDiscount = {
   remainingPeriods: number | null
 }
 
+/** 구독 응답 — 빌링키 · 고객 키는 어디에도 없다. 금액은 만들 때 박힌 값이다 */
 export type Subscription = {
   id: string
   status: SubscriptionStatus

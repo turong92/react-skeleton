@@ -27,7 +27,7 @@ export const defaultPaymentAdminLabels: PaymentAdminLabels = {
   reviewUnknown: 'Something here needs a check',
   reviewHint: 'Press "Match with the provider" to ask the provider again.',
   reviewHintDiscount:
-    'Matching with the provider does not settle this. Look at both payments and refund the one that should not have the discount.',
+    'Matching with the provider does not settle this. Check both payments and refund if needed.',
   reviewHintRetry: 'Press "Match with the provider" to start the unfinished job again.',
   reviewHintSynced:
     'We asked the provider again, but this is still open. Please check it in the provider dashboard',

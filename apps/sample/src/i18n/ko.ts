@@ -577,13 +577,11 @@ export default {
   'rewards.title': '혜택',
   'rewards.subtitle': '출석하고, 친구를 초대하고, 쿠폰과 포인트를 모아 보세요.',
   'rewards.couponsLink': '쿠폰함 보기',
-  'rewards.invite.link': '초대 링크 복사',
   'rewards.coupons.title': '쿠폰함',
   'rewards.coupons.subtitle':
     '코드를 등록하거나, 받은 쿠폰을 확인해요. 쓰는 곳은 응원하기와 구독이에요.',
   'rewards.back': '혜택으로',
   'cheer.couponLegend': '쿠폰',
-  'cheer.couponNone': '쓸 수 있는 쿠폰이 없어요',
   'cheer.couponDropped': '고른 쿠폰을 쓸 수 없어서 뺐어요. 다시 골라 주세요.',
   'subscription.subscribe.couponLegend': '쿠폰',
   'subscription.subscribe.couponHint': '쿠폰의 혜택은 구독을 시작하는 첫 결제부터 적용돼요.',

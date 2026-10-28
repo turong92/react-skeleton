@@ -107,7 +107,6 @@ export function CheerPage() {
   const usable = usableCoupons(coupons.data ?? [], {
     purpose: 'ONE_TIME',
     itemType: CHEER_ITEM_TYPE,
-    ...(quoteItem !== null ? { itemRef: quoteItem } : {}),
   })
   const couponRef =
     pickedCoupon !== null && usable.some((coupon) => coupon.id === pickedCoupon)

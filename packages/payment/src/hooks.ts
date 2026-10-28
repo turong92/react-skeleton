@@ -36,7 +36,7 @@ export function useQuote(
 }
 
 /**
- * 주문을 만든다. 훅이 「한 번의 의도」의 `Idempotency-Key` 를 들고 있다: 같은 입력(`itemType` · `itemRef` · `quantity`)을 다시 보내면
+ * 주문을 만든다. 훅이 「한 번의 의도」의 `Idempotency-Key` 를 들고 있다: 같은 입력(`itemType` · `itemRef` · `quantity` · `provider` · 쿠폰)을 다시 보내면
  * (연속 두 번 누름 · 네트워크 오류 뒤 다시 누름) 같은 키라 서버가 같은 주문을 돌려주고, 입력이 바뀌거나 성공하거나 10분이 지나면 새 키다.
  * 변수에 `idempotencyKey` 를 주면 그것이 이긴다. 성공하면 `data.checkout` 을 `openCheckout` 에 넘긴다. 누르는 동안(`isPending`) 단추는 막는다.
  * `options.meta` 는 이 호출의 뮤테이션에 그대로 붙는다 - 전역 에러 핸들러가 읽는 표식(예: 견본 앱의 `meta.quietStatuses: [429]` - 화면이 제자리에서 말하는 상태 코드는 토스트로 한 번 더 뜨지 않게)을 싣는 자리.

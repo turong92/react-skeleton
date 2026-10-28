@@ -31,11 +31,38 @@ describe('usableCoupons', () => {
       coupon('sub', {}, { purposes: ['SUBSCRIPTION'] }),
       coupon('cheer', {}, { itemTypes: ['cheer'] }),
       coupon('other', {}, { itemTypes: ['book'] }),
-      coupon('ref', {}, { itemRefs: ['cheer-3000'] }),
-      coupon('otherRef', {}, { itemRefs: ['cheer-5000'] }),
     ]
-    const target = { purpose: 'ONE_TIME' as const, itemType: 'cheer', itemRef: 'cheer-3000' }
-    expect(usableCoupons(list, target).map((c) => c.id)).toEqual(['any', 'once', 'cheer', 'ref'])
+    expect(
+      usableCoupons(list, { purpose: 'ONE_TIME', itemType: 'cheer' }).map((c) => c.id),
+    ).toEqual(['any', 'once', 'cheer'])
+  })
+
+  it('a one-off purchase has no plan, so a coupon limited to plans does not fit it (as the server decides)', () => {
+    const list = [coupon('any'), coupon('plans', {}, { planCodes: ['pro'] })]
+    expect(
+      usableCoupons(list, { purpose: 'ONE_TIME', itemType: 'cheer' }).map((c) => c.id),
+    ).toEqual(['any'])
+    expect(
+      usableCoupons(list, {
+        purpose: 'SUBSCRIPTION',
+        itemType: 'subscription',
+        planCodes: ['pro'],
+      }).map((c) => c.id),
+    ).toEqual(['any', 'plans'])
+  })
+
+  it('a subscription is of the type "subscription": a coupon for cheers only does not fit it', () => {
+    const list = [
+      coupon('cheers', {}, { itemTypes: ['cheer'] }),
+      coupon('subs', {}, { itemTypes: ['subscription'] }),
+    ]
+    expect(
+      usableCoupons(list, {
+        purpose: 'SUBSCRIPTION',
+        itemType: 'subscription',
+        planCodes: ['pro'],
+      }).map((c) => c.id),
+    ).toEqual(['subs'])
   })
 
   it('a subscription coupon is offered when it fits any of the plans on screen', () => {
@@ -46,9 +73,11 @@ describe('usableCoupons', () => {
       coupon('once', {}, { purposes: ['ONE_TIME'] }),
     ]
     expect(
-      usableCoupons(list, { purpose: 'SUBSCRIPTION', planCodes: ['basic', 'pro'] }).map(
-        (c) => c.id,
-      ),
+      usableCoupons(list, {
+        purpose: 'SUBSCRIPTION',
+        itemType: 'subscription',
+        planCodes: ['basic', 'pro'],
+      }).map((c) => c.id),
     ).toEqual(['any', 'pro'])
   })
 })

@@ -24,7 +24,7 @@ export const koPaymentAdminLabels: PaymentAdminLabels = {
   reviewUnknown: '확인이 필요한 일이 있어요',
   reviewHint: '「결제사와 맞추기」를 누르면 결제사에 다시 물어봐요.',
   reviewHintDiscount:
-    '「결제사와 맞추기」로는 풀리지 않아요. 두 결제를 보고 할인이 없어야 할 쪽을 환불해 주세요.',
+    '「결제사와 맞추기」로는 풀리지 않아요. 두 결제를 확인하고 필요하면 환불하세요.',
   reviewHintRetry: '「결제사와 맞추기」를 누르면 끝나지 않은 그 일을 다시 걸어요.',
   reviewHintSynced: '결제사에 다시 물었지만 아직 남아 있어요. 결제사 화면에서 확인해 주세요',
   reviewHintRetrySynced: '끝나지 않은 그 일을 다시 걸었어요. 끝나면 이 표시가 사라져요',

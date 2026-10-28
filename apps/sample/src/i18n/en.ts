@@ -587,13 +587,11 @@ const en: Record<keyof typeof ko, string> = {
   'rewards.title': 'Rewards',
   'rewards.subtitle': 'Check in, invite friends, and collect coupons and points.',
   'rewards.couponsLink': 'Open the coupon wallet',
-  'rewards.invite.link': 'Copy invite link',
   'rewards.coupons.title': 'Coupon wallet',
   'rewards.coupons.subtitle':
     'Add a code or see the coupons you have. You use them when you cheer or subscribe.',
   'rewards.back': 'Back to rewards',
   'cheer.couponLegend': 'Coupon',
-  'cheer.couponNone': 'You have no coupons to use',
   'cheer.couponDropped': 'The coupon you picked cannot be used, so it was removed. Pick again.',
   'subscription.subscribe.couponLegend': 'Coupon',
   'subscription.subscribe.couponHint':

@@ -72,6 +72,7 @@ export function SubscribePage() {
   // 구독에 얹어 볼 수 있는 쿠폰만 - 다른 결제가 쥔 것(RESERVED)과 구독이 아닌 것 · 보이는 플랜 어디에도 안 맞는 것은 뺀다
   const usable = usableCoupons(coupons.data ?? [], {
     purpose: 'SUBSCRIPTION',
+    itemType: 'subscription',
     planCodes: (plans.data ?? []).map((plan) => plan.code),
   })
   const couponRef =

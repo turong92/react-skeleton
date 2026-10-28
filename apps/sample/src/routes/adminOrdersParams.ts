@@ -9,6 +9,7 @@ export function ordersParamsOf(review: boolean, filter: AdminOrderFilter, size: 
     ...(review ? { review: true } : {}),
     ...(filter.status ? { status: filter.status } : {}),
     ...(filter.q ? { q: filter.q } : {}),
+    ...(filter.settlement ? { settlement: filter.settlement } : {}),
     ...(!review && filter.includeErased ? { includeErased: true } : {}),
     size,
   }

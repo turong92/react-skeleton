@@ -101,6 +101,7 @@ export {
   useOrders,
   usePaddlePrices,
   usePaymentConfig,
+  useQuote,
   useRequestRefund,
   useWithdrawRefund,
 } from './hooks'
@@ -144,8 +145,10 @@ export {
 } from './subscriptionHooks'
 
 // 화면 부품 — 문구는 `labels` prop(기본 영어 · 한국어는 `koPaymentLabels`), 금액 · 시각 · 카드 표시는 아래 도우미로도 쓸 수 있다
-export { OrderStatusBadge } from './OrderStatusBadge'
+export { OrderStatusBadge, SettlementBadge } from './OrderStatusBadge'
 export type { OrderStatusBadgeProps } from './OrderStatusBadge'
+export { discountErrorMessage, discountLines, settlementLabel, settlementOf } from './discount'
+export type { DiscountLineView } from './discount'
 export { OrderList } from './OrderList'
 export type { OrderListProps } from './OrderList'
 export { PaymentResult, DEFAULT_SLOW_AFTER_MS } from './PaymentResult'

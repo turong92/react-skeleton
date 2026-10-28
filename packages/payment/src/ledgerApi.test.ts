@@ -161,4 +161,24 @@ describe('createPaymentLedgerApi (paths and bodies mirror the backend HTTP contr
       request: { method: 'POST' },
     })
   })
+
+  it('quote → POST /quote with the item and discounts; createOrder carries discounts in its body', async () => {
+    const { client, calls } = fakeClient()
+    const api = createPaymentLedgerApi(client)
+    const discounts = [{ type: 'coupon' as const, ref: 'c1' }]
+    await api.quote({ itemType: 'cheer', itemRef: 'cheer-3000', quantity: 2, discounts })
+    await api.createOrder(
+      { itemType: 'cheer', itemRef: 'cheer-3000', discounts },
+      { idempotencyKey: 'k' },
+    )
+    expect(calls[0]).toEqual({
+      kind: 'value',
+      path: '/payments/quote',
+      request: {
+        method: 'POST',
+        json: { itemType: 'cheer', itemRef: 'cheer-3000', quantity: 2, discounts },
+      },
+    })
+    expect(calls[1]?.request).toMatchObject({ json: { discounts } })
+  })
 })

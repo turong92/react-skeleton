@@ -79,6 +79,14 @@ const { data } = useOrder(ledger, orderId) // data.order.status, data.refunds
   - `PAYMENT.DECLINED`(결제 거절)의 `data.category`: `LIMIT_OR_BALANCE | CARD_DECLINED | TEMPORARY | OTHER` — 모르는 값은 `OTHER` 로 본다(`declineCategoryOf`).
   - `PAYMENT.REFUND_DECLINED`(환불 거절)의 `data.category`: `ALREADY_REFUNDED | AMOUNT_EXCEEDED | PARTIAL_NOT_ALLOWED | PERIOD_EXPIRED | TEMPORARY | OTHER` — 앱이 문구를 고를 때 모르는 값은 `OTHER` 로 본다(운영자 환불 창 `AdminRefundDialog` 는 이 분류를 문구로 그린다 - 사용자 쪽 부품은 환불 거절 문구를 그리지 않는다).
 
+## 할인 · 0원 · 결제 면제 (쿠폰 모듈을 붙인 서버만 — 응답에 칸을 더하기만 한다)
+
+- `api.quote({ itemType, itemRef, discounts: [{ type: 'coupon', ref }] })` · `useQuote(api, input, { enabled })` → `{ originalAmount, amount, currency, discounts, settlement }`. 주문 · 구독 시작에도 같은 `discounts` 를 싣는다(`CreateOrderInput.discounts` · `StartSubscriptionInput.discounts`). 쿠폰 화면은 `@skeleton/rewards` 의 `CouponPicker` — 이 패키지는 그것을 import 하지 않고 앱이 `selectedId` 를 `discounts` 로, 견적을 `preview` 로 옮긴다.
+- `Order` 에 `originalAmount` · `discountAmount` · `discounts[]` · `settlement`(`PROVIDER` · `FREE` 쿠폰으로 0원 · `EXEMPT` 결제 면제). `FREE` · `EXEMPT` 는 처음부터 `PAID` 이고 결제창이 없다 — `checkoutToOpen(result)` 이 `null` 이면 열지 않고 `PaymentResult` 로 간다.
+- 화면: `OrderSummary` · `PaymentResult` 는 「상품 금액 · 할인 · 결제 금액」 줄, `SettlementBadge`(「무료(쿠폰)」 · 「결제 면제」)는 요약 · 내역 · 운영 목록 · 한 건에. `MySubscriptionCard` 는 「다음 결제 3,450원(할인 2회 남음)」(`Subscription.discount`). 결제 면제는 할인이 아니라 할인 줄이 없다. 환불할 것이 없어 환불 단추도 없고, 운영 한 건 화면은 「결제사와 맞추기」도 숨긴다.
+- 운영 목록 필터 「결제 방식 → 결제 면제」(`AdminOrderFilter.settlement`, 서버 `?settlement=EXEMPT`).
+- 오류 문장: `discountErrorMessage(error, labels)` — `PAYMENT.DISCOUNT_NOT_APPLICABLE` · `_UNAVAILABLE` · `_NOT_SUPPORTED` · `_BELOW_MINIMUM` · `PAYMENT.NOTHING_TO_REFUND`.
+
 ## 구독 — 자동결제 (백엔드 `skeleton.payment.subscription.enabled=true` 인 앱만)
 
 플랜 하나를 골라 카드를 한 번 등록하면 기간마다 서버가 알아서 결제한다. 금액의 출처는 앱의 플랜(서버)이고 브라우저는 플랜 코드만 보낸다. 빌링키 · 고객 키는 어떤 응답에도 없다(카드 등록 창 값 `billingAuth.customerKey` 만 예외). 경로 · 오류는 백엔드 `docs/payment-http-contract.md` §12.

@@ -7,7 +7,9 @@ import type {
   Order,
   OrderDetail,
   OrderListParams,
+  OrderQuote,
   PaymentConfig,
+  QuoteInput,
   Refund,
   RefundRequestInput,
 } from './ledgerTypes'
@@ -15,6 +17,8 @@ import type {
 export type PaymentLedgerApi = {
   /** `GET {basePath}/config` */
   config(): Promise<PaymentConfig>
+  /** `POST {basePath}/quote` - 주문을 만들지 않고 할인 뒤 금액을 본다(`settlement: FREE` 면 0원). 할인 오류는 `PAYMENT.DISCOUNT_*` */
+  quote(input: QuoteInput): Promise<OrderQuote>
   /** `POST {basePath}/orders` + `Idempotency-Key` → `{ order, checkout }`. 같은 키 다시 → 같은 것 */
   createOrder(input: CreateOrderInput, options?: IdempotentCall): Promise<CreateOrderResult>
   /** `POST {basePath}/orders/{id}/confirm` → `PAID` 또는 `CONFIRMING`(202) 주문. 거절은 `PAYMENT.DECLINED` 로 던진다. `CONFIRMING` 인 주문에 다른 결제 키로 보내도 409 가 아니라 202 + 지금 주문이다(새 키는 버려진다) */
@@ -54,6 +58,7 @@ export function createPaymentLedgerApi(
   const enc = encodeURIComponent
   return {
     config: () => client.value<PaymentConfig>(`${base}/config`),
+    quote: (input) => client.value<OrderQuote>(`${base}/quote`, { method: 'POST', json: input }),
     createOrder: (input, { idempotencyKey = newIdempotencyKey() } = {}) =>
       client.value<CreateOrderResult>(`${base}/orders`, {
         method: 'POST',

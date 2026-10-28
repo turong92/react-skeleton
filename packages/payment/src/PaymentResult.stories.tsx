@@ -372,3 +372,25 @@ export const NotConfirmedInEnglishAt320: Story = {
     await expect(frame.scrollWidth).toBeLessThanOrEqual(frame.clientWidth)
   },
 }
+
+/** 쿠폰으로 0원 — 결제창 없이 끝났다: 설명이 이유를 말하고 결제 수단 자리에 「무료(쿠폰)」 */
+export const FreeByCoupon: Story = {
+  args: {
+    order: order({
+      orderName: '응원하기 3,000원',
+      amount: { amount: 0, currency: 'KRW' },
+      originalAmount: 3000,
+      discountAmount: 3000,
+      discounts: [{ type: 'coupon', ref: 'c2', label: '무료 이용권', amount: 3000 }],
+      settlement: 'FREE',
+      refundableAmount: 0,
+      method: null,
+      card: null,
+    }),
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('heading', { name: '결제됐어요' })).toBeVisible()
+    await expect(canvas.getByText('쿠폰으로 0원이라 결제 없이 끝났어요.')).toBeVisible()
+    await expect(canvas.getByText('무료(쿠폰)')).toBeVisible()
+  },
+}

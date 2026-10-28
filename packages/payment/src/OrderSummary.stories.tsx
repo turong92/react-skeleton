@@ -269,3 +269,68 @@ export const English: Story = {
     await expect(canvas.getByRole('button', { name: 'Request a refund' })).toBeVisible()
   },
 }
+
+/** 할인이 붙은 결제 — 금액 칸이 「상품 금액 · 할인 이름(−) · 결제 금액」 줄로 바뀐다 */
+export const Discounted: Story = {
+  args: {
+    order: order({
+      orderName: '응원하기 12,000원',
+      amount: { amount: 8400, currency: 'KRW' },
+      originalAmount: 12000,
+      discountAmount: 3600,
+      discounts: [{ type: 'coupon', ref: 'c1', label: '가입 환영 쿠폰', amount: 3600 }],
+      refundableAmount: 8400,
+    }),
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText('상품 금액')).toBeVisible()
+    await expect(canvas.getByText('12,000원')).toBeVisible()
+    await expect(canvas.getByText('가입 환영 쿠폰')).toBeVisible()
+    await expect(canvas.getByText('-3,600원')).toBeVisible()
+    await expect(canvas.getAllByText('8,400원').length).toBeGreaterThanOrEqual(1)
+    await expect(canvas.getByRole('button', { name: '환불 요청' })).toBeEnabled()
+  },
+}
+
+/** 쿠폰으로 0원 — 「무료(쿠폰)」 알약, 결제 수단 없음, 환불할 것이 없어 환불 단추도 없다 */
+export const FreeByCoupon: Story = {
+  args: {
+    order: order({
+      orderName: '응원하기 3,000원',
+      amount: { amount: 0, currency: 'KRW' },
+      originalAmount: 3000,
+      discountAmount: 3000,
+      discounts: [{ type: 'coupon', ref: 'c2', label: '무료 이용권', amount: 3000 }],
+      settlement: 'FREE',
+      refundableAmount: 0,
+      method: null,
+      card: null,
+    }),
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText('무료(쿠폰)')).toBeVisible()
+    await expect(canvas.queryByRole('button', { name: '환불 요청' })).toBeNull()
+  },
+}
+
+/** 결제 면제 계정 — 「결제 면제」 알약, 할인 줄 없음(할인이 아니다), 환불 단추 없음 */
+export const WaivedPayment: Story = {
+  args: {
+    order: order({
+      orderName: '응원하기 3,000원',
+      amount: { amount: 0, currency: 'KRW' },
+      originalAmount: 3000,
+      discountAmount: 0,
+      discounts: [],
+      settlement: 'EXEMPT',
+      refundableAmount: 0,
+      method: null,
+      card: null,
+    }),
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText('결제 면제')).toBeVisible()
+    await expect(canvas.queryByText('상품 금액')).toBeNull()
+    await expect(canvas.queryByRole('button', { name: '환불 요청' })).toBeNull()
+  },
+}

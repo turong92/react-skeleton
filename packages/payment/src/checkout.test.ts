@@ -1,6 +1,8 @@
+import { order } from './test/fixtures'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   checkoutCanOpen,
+  checkoutToOpen,
   loadTossPaymentsSdk,
   openCheckout,
   SDK_LOAD_TIMEOUT_MS,
@@ -409,4 +411,19 @@ describe('openCheckout — NAVERPAY_REDIRECT', () => {
       checkoutCanOpen({ ...naver, attributes: { windowUrl: 'data:text/html,x' } } as Checkout),
     ).toBe(false)
   })
+})
+
+describe('checkoutToOpen (a free or exempt order has nothing to pay: no checkout window, straight to the result)', () => {
+  const paid = order({ status: 'PAID' })
+  it('opens the window for a normal order and only when the server sent one', () => {
+    expect(checkoutToOpen({ order: order({ status: 'PENDING' }), checkout })).toBe(checkout)
+    expect(checkoutToOpen({ order: order({ status: 'PENDING' }), checkout: null })).toBeNull()
+  })
+  it.each(['FREE', 'EXEMPT'] as const)(
+    '%s settlement never opens a window, even if a checkout came along',
+    (settlement) => {
+      expect(checkoutToOpen({ order: { ...paid, settlement }, checkout: null })).toBeNull()
+      expect(checkoutToOpen({ order: { ...paid, settlement }, checkout })).toBeNull()
+    },
+  )
 })

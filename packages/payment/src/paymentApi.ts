@@ -1,4 +1,5 @@
 import type { ApiClient } from '@skeleton/api-client'
+import type { OrderQuote, QuoteInput } from './ledgerTypes'
 import type {
   PaymentCancelRequest,
   PaymentConfirmRequest,
@@ -24,6 +25,8 @@ export type PaymentPaths = {
   cancel?: string
   /** `POST` {@link PaymentRefundRequest} → {@link PaymentOperationResult} */
   refund?: string
+  /** `POST` {@link QuoteInput} → {@link OrderQuote} - 할인 뒤 금액 미리보기(백엔드 `POST /payments/quote`) */
+  quote?: string
 }
 
 export type PaymentCallOptions = {
@@ -45,6 +48,7 @@ export type PaymentApi = {
     request: PaymentRefundRequest,
     options?: PaymentCallOptions,
   ): Promise<PaymentOperationResult>
+  quote?(input: QuoteInput): Promise<OrderQuote>
 }
 
 /** 앱이 연 결제 엔드포인트를 부르는 얇은 호출. 경로를 준 것만 생긴다. 인증은 클라이언트의 `getAuthHeaders` */
@@ -73,5 +77,9 @@ export function createPaymentApi(
   if (paths.confirm) api.confirm = operation<PaymentConfirmRequest>(paths.confirm)
   if (paths.cancel) api.cancel = operation<PaymentCancelRequest>(paths.cancel)
   if (paths.refund) api.refund = operation<PaymentRefundRequest>(paths.refund)
+  if (paths.quote) {
+    const path = paths.quote
+    api.quote = (input) => client.value<OrderQuote>(path, { method: 'POST', json: input })
+  }
   return api
 }

@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect } from 'storybook/test'
 import { koPaymentLabels } from './labels'
 import type { OrderStatus } from './ledgerTypes'
-import { OrderStatusBadge } from './OrderStatusBadge'
+import { OrderStatusBadge, SettlementBadge } from './OrderStatusBadge'
 
 /**
  * 결제 상태 알약 — **눌리지 않는다**(단추도 링크도 아니고 포커스도 안 간다). 뜻은 글자로, 색은 거들 뿐.
@@ -89,5 +89,21 @@ export const English: Story = {
   args: { labels: undefined, status: 'CANCELED' },
   play: async ({ canvas }) => {
     await expect(canvas.getByText('Stopped')).toBeVisible()
+  },
+}
+
+/** 정산 알약 — 쿠폰으로 0원은 「무료(쿠폰)」, 결제 면제 계정은 「결제 면제」. 결제사가 받은 보통 결제에는 아무것도 없다. 눌리지 않는다 */
+export const Settlements: Story = {
+  render: (args) => (
+    <p>
+      <SettlementBadge settlement="FREE" labels={args.labels} />
+      <SettlementBadge settlement="EXEMPT" labels={args.labels} />
+      <SettlementBadge settlement="PROVIDER" labels={args.labels} />
+    </p>
+  ),
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText('무료(쿠폰)')).toBeVisible()
+    await expect(canvas.getByText('결제 면제')).toBeVisible()
+    await expect(canvas.queryByRole('button')).toBeNull()
   },
 }

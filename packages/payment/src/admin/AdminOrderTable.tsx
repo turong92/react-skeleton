@@ -4,7 +4,8 @@ import { useState } from 'react'
 import { adminMethodDisplay, formatMoney, lookup } from '../format'
 import { resolvePaymentLabels, type PaymentLabelsInput } from '../labels'
 import type { OrderStatus } from '../ledgerTypes'
-import { OrderStatusBadge } from '../OrderStatusBadge'
+import { settlementOf } from '../discount'
+import { OrderStatusBadge, SettlementBadge } from '../OrderStatusBadge'
 import { isErasedAccount } from './erasedAccount'
 import { ListFrame } from './ListFrame'
 import { rowActionClass, type RenderRowAction } from './rowAction'
@@ -16,7 +17,13 @@ import type { AdminOrder } from './types'
  * 목록 조건 — 상태 `''` 는 모든 상태, `q` 는 결제 번호 또는 결제사 결제 번호의 정확한 값(`''` 는 조건 없음).
  * `includeErased` 는 탈퇴한 계정의 결제도 보기(서버는 기본으로 숨긴다) - 없으면 꺼짐
  */
-export type AdminOrderFilter = { status: OrderStatus | ''; q: string; includeErased?: boolean }
+export type AdminOrderFilter = {
+  status: OrderStatus | ''
+  q: string
+  includeErased?: boolean
+  /** `EXEMPT` 면 결제 면제 주문만(`''` · 없음 = 모두) */
+  settlement?: 'EXEMPT' | ''
+}
 
 export type AdminOrderTableProps = {
   orders: readonly AdminOrder[]
@@ -82,7 +89,9 @@ export function AdminOrderTable({
     setSeen(applied)
     setDraft(applied)
   }
-  const filtering = Boolean(filter && (filter.status !== '' || filter.q !== ''))
+  const filtering = Boolean(
+    filter && (filter.status !== '' || filter.q !== '' || (filter.settlement ?? '') !== ''),
+  )
 
   const columns: TableColumn<AdminOrder>[] = [
     {
@@ -124,6 +133,7 @@ export function AdminOrderTable({
         return (
           <span className={sharedStyles.cell}>
             <span className={styles.flags}>
+              <SettlementBadge settlement={settlementOf(order)} labels={input} />
               <OrderStatusBadge
                 status={order.status}
                 openRefundStatus={order.openRefundStatus}
@@ -195,6 +205,24 @@ export function AdminOrderTable({
                 {labels.orderStatus[status]}
               </option>
             ))}
+          </Select>
+        )}
+      </Field>
+      <Field label={text.settlementFilter}>
+        {(control) => (
+          <Select
+            {...control}
+            value={filter.settlement ?? ''}
+            onChange={(event) =>
+              onFilterChange({
+                ...filter,
+                settlement: event.target.value as 'EXEMPT' | '',
+                q: applied,
+              })
+            }
+          >
+            <option value="">{text.settlementAll}</option>
+            <option value="EXEMPT">{text.settlementExempt}</option>
           </Select>
         )}
       </Field>

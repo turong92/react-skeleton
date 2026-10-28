@@ -110,3 +110,22 @@ export const Ended: Story = {
     await expect(canvas.queryByRole('button')).toBeNull()
   },
 }
+
+/** 할인이 붙은 구독 — 「다음 결제 3,450원(할인 2회 남음)」, 영원한 할인은 「할인 계속 적용」 */
+export const WithDiscount: Story = {
+  args: {
+    subscription: subscription({
+      discount: {
+        label: '첫 달 무료 후 반값',
+        stages: [{ type: 'PERCENT', value: 50, maxDiscount: null, periods: 3 }],
+        periodsUsed: 1,
+        nextAmount: 3450,
+        remainingPeriods: 2,
+      },
+    }),
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText('다음 결제 3,450원(할인 2회 남음)')).toBeVisible()
+    await expect(canvas.getByText('할인: 첫 달 무료 후 반값')).toBeVisible()
+  },
+}

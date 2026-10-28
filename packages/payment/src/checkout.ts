@@ -1,4 +1,4 @@
-import type { Checkout } from './ledgerTypes'
+import type { Checkout, CreateOrderResult } from './ledgerTypes'
 import { easyPaysOfCheckout } from './easyPay'
 import { openPaddleCheckout, type PaddleSdk } from './paddle'
 
@@ -124,6 +124,15 @@ export function checkoutCanOpen(checkout: Checkout): boolean {
   if (checkout.kind === 'NAVERPAY_REDIRECT')
     return webAddress(checkout.attributes?.windowUrl) !== null
   return Boolean(checkout.clientKey)
+}
+
+/**
+ * 주문을 만든 답에서 **열 결제창**. 쿠폰으로 0원(`FREE`)이거나 결제 면제(`EXEMPT`)인 주문은 이미 `PAID` 라 결제창이 없다 - `null` 이면 열지 않고 바로 결과 화면(`PaymentResult`)으로 간다.
+ * 서버가 결제창을 같이 보냈어도 그런 주문에서는 열지 않는다
+ */
+export function checkoutToOpen({ order, checkout }: CreateOrderResult): Checkout | null {
+  if (order.settlement === 'FREE' || order.settlement === 'EXEMPT') return null
+  return checkout
 }
 
 export type OpenCheckoutOptions = {

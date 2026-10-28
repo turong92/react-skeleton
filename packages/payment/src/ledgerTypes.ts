@@ -34,6 +34,18 @@ export type RefundRequestReason = 'CUSTOMER_REQUEST' | 'DUPLICATE' | 'NOT_DELIVE
 /** 카드 결제의 표시용 값 — 카드사 코드(대문자 영문)와 끝 네 글자(숫자 또는 `*`). 각각 `null` 일 수 있다 */
 export type OrderCard = { issuer: string | null; last4: string | null }
 
+/**
+ * 어떻게 정산됐나 - `PROVIDER` 결제사가 받았다(보통) · `FREE` 쿠폰으로 0원이라 결제사 없이 끝났다(`provider: "free"`) · `EXEMPT` 결제 면제 계정이라 결제사 없이 끝났다(`provider: "exempt"`, 할인이 아니다).
+ * `FREE` · `EXEMPT` 주문은 처음부터 `PAID` 이고 결제창이 없으며(`checkout: null`) 환불할 것이 없다(`refundableAmount: 0`)
+ */
+export type Settlement = 'PROVIDER' | 'FREE' | 'EXEMPT'
+
+/** 주문에 붙은 할인 한 줄 - `amount` 는 깎인 금액(최소 단위, 양수) */
+export type DiscountLine = { type: string; ref: string; label: string; amount: number }
+
+/** 주문 · 견적에 싣는 할인 수단. 첫 판은 쿠폰 하나(`ref` = 쿠폰 id) */
+export type DiscountInput = { type: 'coupon'; ref: string }
+
 /** 백엔드 주문 응답. 사용자 응답에는 결제사 이름 · 결제사 결제 번호 · 확인 필요 사유가 없다 */
 export type Order = {
   id: string
@@ -65,6 +77,13 @@ export type Order = {
   createdAt: string
   paidAt: string | null
   fulfilled: boolean
+  /** 할인 전 금액(`amount` 는 할인 뒤). 할인 모듈이 없는 서버는 칸이 없다 */
+  originalAmount?: number | null
+  /** 깎인 금액 합. 칸이 없으면 0 */
+  discountAmount?: number
+  discounts?: DiscountLine[]
+  /** 정산 방식 - 칸이 없으면(구버전 서버) `PROVIDER` 로 읽는다. 결제사 id 가 `free` · `exempt` 이면 그것으로도 안다(`settlementOf`) */
+  settlement?: Settlement
 }
 
 export type Refund = {
@@ -197,6 +216,8 @@ export type CreateOrderInput = {
    * 나라는 보내지 않는다 - 서버가 접속 나라로 정한다(`GET /config`)
    */
   provider?: string
+  /** 쿠폰 같은 할인 수단(첫 판은 하나). 견적(`quote`)으로 먼저 금액을 본다 */
+  discounts?: DiscountInput[]
   /**
    * 결제를 시작한 화면의 origin(`window.location.origin`) - 구매자를 서버가 정한 주소로 돌려보내는 결제사(카카오페이 · 네이버페이)가, 서버 설정의 허용 목록(`allowed-return-origins`)에 있을 때만
    * 그 origin 으로 돌려보낸다(로그인 저장소가 origin 마다 따로라서). 목록 밖이면 서버 설정의 주소. 토스 · Paddle 은 읽지 않는다
@@ -208,6 +229,24 @@ export type CreateOrderInput = {
  * 열 결제창이 없다. 새 주문(`201`)은 늘 값이 있다
  */
 export type CreateOrderResult = { order: Order; checkout: Checkout | null }
+
+/** 견적 요청 - 주문을 만들기 전에 할인 뒤 금액을 본다 */
+export type QuoteInput = {
+  itemType: string
+  itemRef: string
+  quantity?: number
+  provider?: string
+  discounts?: DiscountInput[]
+}
+
+/** 견적 응답 - `settlement` 가 `FREE` 면 결제창 없이 끝나는 0원이다 */
+export type OrderQuote = {
+  originalAmount: number
+  amount: number
+  currency: string
+  discounts: DiscountLine[]
+  settlement: Settlement
+}
 
 /** 결제창에서 돌아온 결제의 승인 요청. `amount` 는 주소에서 왔다 — 서버가 주문의 금액과 대조한다(최소 단위 정수) */
 export type ConfirmOrderInput = {

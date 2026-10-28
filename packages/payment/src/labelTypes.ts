@@ -77,6 +77,10 @@ export type PaymentAdminLabels = {
     filterLabel: string
     statusFilter: string
     statusAll: string
+    /** 「결제 방식」 필터 - 모두 · 결제 면제만 */
+    settlementFilter: string
+    settlementAll: string
+    settlementExempt: string
     search: string
     searchHint: string
     searchSubmit: string
@@ -524,6 +528,27 @@ export type PaymentLabels = {
     }
   }
   reference: { label: string; copy: string; copied: string }
+  /** 할인 · 정산(쿠폰으로 0원 · 결제 면제) 표시 */
+  discount: {
+    /** 금액 줄 이름 - 할인 전 · 할인 뒤(최종) */
+    original: string
+    final: string
+    /** 정산 알약: 쿠폰으로 0원 · 결제 면제 (결제사가 받은 보통 결제에는 없다) */
+    settlement: { FREE: string; EXEMPT: string }
+    /** 결제 결과 화면의 설명 - 결제창 없이 끝난 이유 */
+    settledNote: { FREE: string; EXEMPT: string }
+    /** 구독 카드 칸 이름 · 「다음 결제 3,450원(할인 2회 남음)」 - 남은 횟수가 null 이면 영원한 할인 */
+    subscriptionDiscount: string
+    nextPayment: (amount: string, remaining: number | null) => string
+    /** `PAYMENT.DISCOUNT_*` · `PAYMENT.NOTHING_TO_REFUND` 오류 문장 */
+    errors: {
+      notApplicable: string
+      unavailable: string
+      notSupported: string
+      belowMinimum: string
+      nothingToRefund: string
+    }
+  }
   subscription: SubscriptionLabels
   admin: PaymentAdminLabels
 }

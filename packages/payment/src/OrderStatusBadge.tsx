@@ -1,7 +1,8 @@
 import { Badge, type BadgeProps } from '@skeleton/ui'
 import { lookup } from './format'
 import { resolvePaymentLabels, type PaymentLabelsInput } from './labels'
-import type { OpenRefundStatus, OrderStatus, Refund, RefundStatus } from './ledgerTypes'
+import { settlementLabel } from './discount'
+import type { OpenRefundStatus, OrderStatus, Refund, RefundStatus, Settlement } from './ledgerTypes'
 
 type Tone = NonNullable<BadgeProps['tone']>
 
@@ -73,5 +74,22 @@ export function RefundStatusBadge({
       : lookup(labels.refundStatus, status)
   return (
     <Badge tone={lookup(REFUND_TONE, status) ?? 'neutral'}>{text ?? labels.unknownStatus}</Badge>
+  )
+}
+
+/**
+ * 정산 알약 - 쿠폰으로 0원이면 「무료(쿠폰)」, 결제 면제 계정이면 「결제 면제」. 결제사가 받은 보통 결제(`PROVIDER`)에는 아무것도 그리지 않는다.
+ * 상태 알약 옆에 둔다 - 눌리지 않는다
+ */
+export function SettlementBadge({
+  settlement,
+  labels: input,
+}: {
+  settlement: Settlement
+  labels?: PaymentLabelsInput
+}) {
+  const text = settlementLabel(settlement, resolvePaymentLabels(input))
+  return text === null ? null : (
+    <Badge tone={settlement === 'EXEMPT' ? 'warning' : 'info'}>{text}</Badge>
   )
 }

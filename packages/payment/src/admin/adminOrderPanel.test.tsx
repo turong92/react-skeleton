@@ -871,3 +871,47 @@ describe('AdminOrderPanel - chargebacks', () => {
     expect(html).not.toContain('PROVIDER_REJECTED')
   })
 })
+
+describe('AdminOrderPanel — free and exempt orders have no provider to talk to', () => {
+  const paid = {
+    amount: { amount: 0, currency: 'KRW' },
+    refundableAmount: 0,
+    providerPaymentId: null,
+    method: null,
+    card: null,
+  }
+  it('an exempt order says 결제 면제 and offers neither 환불하기 nor 결제사와 맞추기', () => {
+    const html = panel(
+      detail({
+        order: adminOrder({
+          ...paid,
+          provider: 'exempt',
+          settlement: 'EXEMPT',
+          originalAmount: 3000,
+        }),
+      }),
+      { onRefund: noop, onSync: noop },
+    )
+    expect(html).toContain('결제 면제')
+    expect(html).not.toContain('환불하기')
+    expect(html).not.toContain('결제사와 맞추기')
+  })
+  it('a free (coupon) order says 무료(쿠폰) and shows the discount lines', () => {
+    const html = panel(
+      detail({
+        order: adminOrder({
+          ...paid,
+          provider: 'free',
+          settlement: 'FREE',
+          originalAmount: 3000,
+          discountAmount: 3000,
+          discounts: [{ type: 'coupon', ref: 'c2', label: '무료 이용권', amount: 3000 }],
+        }),
+      }),
+      { onRefund: noop, onSync: noop },
+    )
+    expect(html).toContain('무료(쿠폰)')
+    expect(html).toContain('무료 이용권')
+    expect(html).not.toContain('결제사와 맞추기')
+  })
+})

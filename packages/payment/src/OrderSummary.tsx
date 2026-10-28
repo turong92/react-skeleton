@@ -4,7 +4,8 @@ import { useId } from 'react'
 import { cardDisplay, formatMoney, lookup, requestedAmountNote } from './format'
 import { resolvePaymentLabels, type PaymentLabelsInput } from './labels'
 import type { OpenRefundStatus, Order, Refund } from './ledgerTypes'
-import { OrderStatusBadge, RefundStatusBadge } from './OrderStatusBadge'
+import { discountLines, settlementOf } from './discount'
+import { OrderStatusBadge, RefundStatusBadge, SettlementBadge } from './OrderStatusBadge'
 import { TestModeNotice } from './TestModeNotice'
 import styles from './OrderSummary.module.css'
 
@@ -60,6 +61,8 @@ export function OrderSummary({
       { locale, currencySuffix: labels.currencySuffix },
     )
   const card = cardDisplay(order, labels)
+  const settlement = settlementOf(order)
+  const lines = discountLines(order, labels, { locale })
   const requestedNote = (refund: Refund) => requestedAmountNote(refund, labels, locale)
 
   // 열린 환불의 상태: 환불 줄이 말해 주면 그것이(같은 카드의 머리 알약과 줄이 어긋나지 않게), 아니면 주문 응답이
@@ -86,12 +89,25 @@ export function OrderSummary({
   return (
     <Card
       title={order.orderName}
-      actions={<OrderStatusBadge status={order.status} openRefundStatus={open} labels={input} />}
+      actions={
+        <span className={styles.flags}>
+          <SettlementBadge settlement={settlement} labels={input} />
+          <OrderStatusBadge status={order.status} openRefundStatus={open} labels={input} />
+        </span>
+      }
     >
       <div className={styles.body}>
         {order.testMode && <TestModeNotice labels={input} />}
         <dl className={styles.facts}>
-          <Fact label={labels.summary.amount}>{money(order.amount.amount)}</Fact>
+          {lines.length > 0 ? (
+            lines.map((line, index) => (
+              <Fact key={`${line.kind}-${index}`} label={line.label}>
+                {line.value}
+              </Fact>
+            ))
+          ) : (
+            <Fact label={labels.summary.amount}>{money(order.amount.amount)}</Fact>
+          )}
           {card && <Fact label={labels.summary.method}>{card}</Fact>}
           {order.paidAt && <Fact label={labels.summary.paidAt}>{formatTime(order.paidAt)}</Fact>}
           {order.refundedAmount > 0 && (

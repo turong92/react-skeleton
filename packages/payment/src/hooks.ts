@@ -2,7 +2,7 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tansta
 import { useState } from 'react'
 import type { PaymentLedgerApi } from './ledgerApi'
 import type { PaddlePrice, PaddlePricePreviewConfig, PaddleSdk } from './paddle'
-import type { OrderListParams } from './ledgerTypes'
+import type { OrderListParams, QuoteInput } from './ledgerTypes'
 import {
   abandonOrderMutation,
   confirmOrderMutation,
@@ -13,6 +13,7 @@ import {
   ordersQuery,
   paddlePricesQuery,
   paymentConfigQuery,
+  quoteQuery,
   requestRefundMutation,
   withdrawRefundMutation,
 } from './queries'
@@ -20,6 +21,18 @@ import {
 /** 결제를 쓸 수 있는가 · 테스트 결제인가 · 환불 요청이 켜졌는가(`GET /config`) */
 export function usePaymentConfig(api: PaymentLedgerApi) {
   return useQuery(paymentConfigQuery(api))
+}
+
+/**
+ * 할인 뒤 금액 견적(`POST /quote`) - 쿠폰을 고를 때마다 입력이 바뀌어 새로 묻는다. `enabled: false` 면 묻지 않는다.
+ * 결제 전에 보여 주는 값일 뿐이라 서버가 주문 때 다시 계산한다. 오류 문장은 `discountErrorMessage`
+ */
+export function useQuote(
+  api: Pick<PaymentLedgerApi, 'quote'>,
+  input: QuoteInput,
+  { enabled = true }: { enabled?: boolean } = {},
+) {
+  return useQuery({ ...quoteQuery(api, input), enabled, retry: false })
 }
 
 /**

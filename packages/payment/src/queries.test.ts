@@ -18,6 +18,7 @@ import {
   orderPollInterval,
   orderQuery,
   ordersQuery,
+  quoteQuery,
   paymentConfigQuery,
   paymentKeys,
   RefundRequestNotOpenError,
@@ -60,6 +61,16 @@ function fakeApi() {
     config: async () => {
       calls.push(['config'])
       return { available: true, testMode: true, refundRequestsEnabled: true }
+    },
+    quote: async (input) => {
+      calls.push(['quote', input])
+      return {
+        originalAmount: 1,
+        amount: 1,
+        currency: 'KRW',
+        discounts: [],
+        settlement: 'PROVIDER',
+      }
     },
     createOrder: async (input, options) => {
       calls.push(['createOrder', input, options])
@@ -593,4 +604,20 @@ describe('a change stays pending until the re-read it started has finished (the 
       expect(states).toEqual({ whileReading: 'pending', after: 'success' })
     },
   )
+})
+
+describe('quote query', () => {
+  it('is keyed by the input (so a new coupon is a new quote) and asks the api once', async () => {
+    const { api, calls } = fakeApi()
+    const input = {
+      itemType: 'cheer',
+      itemRef: 'a',
+      discounts: [{ type: 'coupon' as const, ref: 'c1' }],
+    }
+    const query = quoteQuery(api, input)
+    expect(query.queryKey).toEqual(['payment', 'quote', input])
+    expect(quoteQuery(api, { ...input, discounts: [] }).queryKey).not.toEqual(query.queryKey)
+    await query.queryFn()
+    expect(calls).toEqual([['quote', input]])
+  })
 })

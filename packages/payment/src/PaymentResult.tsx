@@ -3,9 +3,11 @@ import { Button, ErrorReference, Spinner } from '@skeleton/ui'
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { confirmOutcomeOf } from './errors'
 import { declineCategoryOf, referenceOf } from './failure'
+import { discountLines, settlementOf } from './discount'
 import { cardDisplay, formatMoney } from './format'
 import { resolvePaymentLabels, type PaymentLabelsInput } from './labels'
 import type { Order } from './ledgerTypes'
+import { SettlementBadge } from './OrderStatusBadge'
 import { TestModeNotice } from './TestModeNotice'
 import styles from './PaymentResult.module.css'
 
@@ -145,7 +147,14 @@ export function PaymentResult({
     expired: labels.result.expired,
     canceled: labels.result.canceled,
   }
-  const { title, description } = copy[stage]
+  const settlement = order ? settlementOf(order) : 'PROVIDER'
+  const lines = order ? discountLines(order, labels, { locale }) : []
+  const { title } = copy[stage]
+  // 쿠폰으로 0원 · 결제 면제는 결제창 없이 끝난다 - 왜 결제 수단이 없는지 말한다
+  const description =
+    stage === 'paid' && settlement !== 'PROVIDER'
+      ? labels.discount.settledNote[settlement]
+      : copy[stage].description
   const paidDetails = stage === 'paid' || stage === 'refunded'
   const ended = stage === 'failed' || stage === 'expired' || stage === 'canceled' // 다시 해 볼 수 있는 끝
   const historyButton = (variant: 'primary' | 'secondary'): ReactNode =>
@@ -180,10 +189,27 @@ export function PaymentResult({
             <dt>{labels.summary.name}</dt>
             <dd>{order.orderName}</dd>
           </div>
-          <div className={styles.fact}>
-            <dt>{labels.summary.amount}</dt>
-            <dd>{money}</dd>
-          </div>
+          {lines.length > 0 ? (
+            lines.map((line, index) => (
+              <div key={`${line.kind}-${index}`} className={styles.fact}>
+                <dt>{line.label}</dt>
+                <dd>{line.value}</dd>
+              </div>
+            ))
+          ) : (
+            <div className={styles.fact}>
+              <dt>{labels.summary.amount}</dt>
+              <dd>{money}</dd>
+            </div>
+          )}
+          {settlement !== 'PROVIDER' && (
+            <div className={styles.fact}>
+              <dt>{labels.summary.method}</dt>
+              <dd>
+                <SettlementBadge settlement={settlement} labels={input} />
+              </dd>
+            </div>
+          )}
           {paidDetails && card && (
             <div className={styles.fact}>
               <dt>{labels.summary.method}</dt>

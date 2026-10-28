@@ -139,6 +139,27 @@ export const koPaymentLabels: PaymentLabels = {
     withdrawing: '거두는 중',
     requestedAmountNote: (requested) => `요청 ${requested}`,
   },
+  discount: {
+    original: '상품 금액',
+    final: '결제 금액',
+    settlement: { FREE: '무료(쿠폰)', EXEMPT: '결제 면제' },
+    settledNote: {
+      FREE: '쿠폰으로 0원이라 결제 없이 끝났어요.',
+      EXEMPT: '결제 면제 계정이라 결제 없이 끝났어요.',
+    },
+    subscriptionDiscount: '할인',
+    nextPayment: (amount, remaining) =>
+      remaining === null
+        ? `다음 결제 ${amount}(할인 계속 적용)`
+        : `다음 결제 ${amount}(할인 ${remaining}회 남음)`,
+    errors: {
+      notApplicable: '이 쿠폰은 이 상품에 쓸 수 없어요.',
+      unavailable: '이 쿠폰은 이미 쓰는 중이거나 더는 쓸 수 없어요.',
+      notSupported: '이 결제 방법으로는 쿠폰을 쓸 수 없어요.',
+      belowMinimum: '쿠폰을 쓰기에는 결제 금액이 모자라요.',
+      nothingToRefund: '결제한 금액이 없어 환불할 것이 없어요.',
+    },
+  },
   refundBlocked: {
     requested: '이미 환불을 요청했어요',
     inProgress: '환불 중이에요',

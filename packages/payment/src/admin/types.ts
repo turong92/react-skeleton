@@ -99,6 +99,8 @@ export type AdminOrderDetail = {
 
 export type AdminOrderListParams = {
   status?: OrderStatus
+  /** `EXEMPT` 면 결제 면제 주문만 */
+  settlement?: 'EXEMPT'
   accountId?: string
   /** 결제 번호 또는 결제사 결제 번호의 정확한 값 */
   q?: string

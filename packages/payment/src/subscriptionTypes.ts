@@ -1,4 +1,4 @@
-import type { Order, OrderCard } from './ledgerTypes'
+import type { DiscountInput, Order, OrderCard } from './ledgerTypes'
 import type { PaymentAmount } from './types'
 
 /** 구독 상태(계약 §12.1). `PAST_DUE` = 갱신이 거절돼 다시 시도하는 중(이용 불가) · `CANCELING` = 해지 예약(기간 끝까지 이용) */
@@ -16,6 +16,25 @@ export type SubscriptionEndReason =
   | 'REFUNDED'
 
 /** 구독 응답 — 빌링키 · 고객 키는 어디에도 없다. 금액은 만들 때 박힌 값이다 */
+/** 구독 쿠폰의 혜택 단계 - 모양은 쿠폰 정의의 단계와 같다(`periods` 가 null 이면 영원히) */
+export type SubscriptionDiscountStage = {
+  type: 'FREE' | 'PERCENT' | 'FIXED'
+  value: number
+  maxDiscount: number | null
+  periods: number | null
+}
+
+/** 구독에 붙은 할인 - 다음 결제 금액과 남은 할인 횟수 */
+export type SubscriptionDiscount = {
+  label: string
+  stages: SubscriptionDiscountStage[]
+  periodsUsed: number
+  /** 다음 결제 금액(최소 단위, 구독 통화) */
+  nextAmount: number
+  /** 할인이 남은 횟수, 영원한 할인은 null */
+  remainingPeriods: number | null
+}
+
 export type Subscription = {
   id: string
   status: SubscriptionStatus
@@ -45,6 +64,8 @@ export type Subscription = {
   easyPayBrand?: string | null
   /** 결제사가 갱신을 직접 하는 구독(Paddle) - 플랜 변경 · 중도 해지(환불)는 열리지 않고 해지는 기간 끝에만 된다 */
   providerManaged?: boolean
+  /** 할인이 붙은 구독이면 그 내용, 아니면 `null` · 칸 없음 */
+  discount?: SubscriptionDiscount | null
 }
 
 export type SubscriptionPlan = {
@@ -118,6 +139,8 @@ export type StartSubscriptionInput = {
   provider?: string
   /** 구독을 시작한 화면의 origin(`window.location.origin`) - 서버가 정한 주소로 돌려보내는 결제사(카카오페이 · 네이버페이)가 허용 목록에 있을 때만 그 origin 으로 돌려보낸다 */
   returnOrigin?: string
+  /** 쿠폰 같은 할인 수단 - 쿠폰 범위에 이 플랜이 있어야 한다 */
+  discounts?: DiscountInput[]
 }
 
 /**

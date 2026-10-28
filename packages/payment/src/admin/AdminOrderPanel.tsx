@@ -7,7 +7,8 @@ import { referenceOf } from '../failure'
 import { adminMethodDisplay, formatMoney, lookup, requestedAmountNote } from '../format'
 import { resolvePaymentLabels, type PaymentLabels, type PaymentLabelsInput } from '../labels'
 import type { OpenRefundStatus, Refund } from '../ledgerTypes'
-import { OrderStatusBadge, RefundStatusBadge } from '../OrderStatusBadge'
+import { discountLines, settlementOf } from '../discount'
+import { OrderStatusBadge, RefundStatusBadge, SettlementBadge } from '../OrderStatusBadge'
 import { TestModeNotice } from '../TestModeNotice'
 import styles from './AdminOrderPanel.module.css'
 import { closedByOf } from './closedBy'
@@ -123,11 +124,15 @@ export function AdminOrderPanel({
   const onRefund = can(PAYMENT_PERMISSIONS.refund) ? onRefundIn : undefined
   const onApprove = can(PAYMENT_PERMISSIONS.refund) ? onApproveIn : undefined
   const onReject = can(PAYMENT_PERMISSIONS.refund) ? onRejectIn : undefined
-  const onSync = can(PAYMENT_PERMISSIONS.operate) ? onSyncIn : undefined
+  const onSyncAllowed = can(PAYMENT_PERMISSIONS.operate) ? onSyncIn : undefined
   const onCloseCharge = can(PAYMENT_PERMISSIONS.operate) ? onCloseChargeIn : undefined
   const labels = resolvePaymentLabels(input)
   const text = labels.admin
   const { order, refunds, events } = detail
+  const settlement = settlementOf(order)
+  const lines = discountLines(order, labels, { locale })
+  // 결제사 밖에서 끝난 주문(쿠폰으로 0원 · 결제 면제)은 맞출 결제사도 환불할 돈도 없다
+  const onSync = settlement === 'PROVIDER' ? onSyncAllowed : undefined
   const reasonId = useId()
   const holdId = useId()
   const money = (amount: number) =>
@@ -147,7 +152,11 @@ export function AdminOrderPanel({
     order.kind.startsWith('SUBSCRIPTION_') &&
     // 막 나간 승인은 결제사가 아직 모를 뿐이다 - 서버도 같은 조건으로만 닫는다
     (order.reviewReason === 'CONFIRM_UNRESOLVED' || order.reviewReason === 'STALE_CONFIRMING')
-  const canRefund = Boolean(onRefund) && REFUNDABLE.has(order.status) && order.refundableAmount > 0
+  const canRefund =
+    Boolean(onRefund) &&
+    settlement === 'PROVIDER' &&
+    REFUNDABLE.has(order.status) &&
+    order.refundableAmount > 0
   const review = order.reviewReason
   // 맞춘 응답이 지금 화면의 사유와 같을 때만 「맞춘 뒤」다 - 다른 사유는 맞춘 뒤에 새로 생긴 것이다
   const syncedNow = synced != null && (synced.reviewReason ?? null) === (review ?? null)
@@ -208,6 +217,7 @@ export function AdminOrderPanel({
       title={order.orderName}
       actions={
         <span className={styles.flags}>
+          <SettlementBadge settlement={settlement} labels={input} />
           <OrderStatusBadge status={order.status} openRefundStatus={open} labels={input} />
           {review && <Badge tone="warning">{labels.unknownStatus}</Badge>}
         </span>
@@ -247,13 +257,23 @@ export function AdminOrderPanel({
               )}
             </Fact>
           )}
-          <Fact label={text.panel.provider}>{order.provider}</Fact>
+          <Fact label={text.panel.provider}>
+            {settlement === 'PROVIDER' ? order.provider : labels.discount.settlement[settlement]}
+          </Fact>
           {order.providerPaymentId && (
             <Fact label={text.panel.providerPayment}>
               <span className={styles.code}>{order.providerPaymentId}</span>
             </Fact>
           )}
-          <Fact label={labels.summary.amount}>{money(order.amount.amount)}</Fact>
+          {lines.length > 0 ? (
+            lines.map((line, index) => (
+              <Fact key={`${line.kind}-${index}`} label={line.label}>
+                {line.value}
+              </Fact>
+            ))
+          ) : (
+            <Fact label={labels.summary.amount}>{money(order.amount.amount)}</Fact>
+          )}
           {card && <Fact label={labels.summary.method}>{card}</Fact>}
           {order.paidAt && <Fact label={labels.summary.paidAt}>{formatTime(order.paidAt)}</Fact>}
           {order.refundedAmount > 0 && (

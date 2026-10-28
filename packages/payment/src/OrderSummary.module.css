@@ -65,3 +65,10 @@
   font-size: var(--font-size-small);
   overflow-wrap: anywhere;
 }
+
+.flags {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs);
+}

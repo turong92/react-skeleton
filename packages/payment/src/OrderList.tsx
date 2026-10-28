@@ -4,7 +4,8 @@ import type { ReactNode } from 'react'
 import { cardDisplay, formatMoney } from './format'
 import { resolvePaymentLabels, type PaymentLabelsInput } from './labels'
 import type { Order } from './ledgerTypes'
-import { OrderStatusBadge } from './OrderStatusBadge'
+import { settlementOf } from './discount'
+import { OrderStatusBadge, SettlementBadge } from './OrderStatusBadge'
 import styles from './OrderList.module.css'
 
 export type OrderListProps = {
@@ -70,6 +71,7 @@ export function OrderList({
                 <div className={styles.main}>
                   <div className={styles.top}>
                     <span className={styles.name}>{order.orderName}</span>
+                    <SettlementBadge settlement={settlementOf(order)} labels={input} />
                     <OrderStatusBadge
                       status={order.status}
                       openRefundStatus={order.openRefundStatus}

@@ -163,8 +163,10 @@ export const Filter: Story = {
     await expect(onFilter).toHaveBeenLastCalledWith({ status: 'PAID', q: 'ord_2' })
     await userEvent.type(input, '{Enter}')
     await expect(onFilter).toHaveBeenCalledTimes(3)
-    // 모든 상태 + 여덟 상태
-    await expect(within(search).getAllByRole('option')).toHaveLength(9)
+    // 모든 상태 + 여덟 상태 (결제 방식 고르기는 따로 둘)
+    await expect(within(within(search).getByLabelText('상태')).getAllByRole('option')).toHaveLength(
+      9,
+    )
   },
 }
 
@@ -279,5 +281,47 @@ export const At375: Story = {
   play: async ({ canvas }) => {
     const frame = canvas.getByTestId('frame')
     await expect(frame.scrollWidth).toBeLessThanOrEqual(frame.clientWidth)
+  },
+}
+
+/** 결제사 밖에서 끝난 줄 — 「결제 면제」 · 「무료(쿠폰)」 알약, 「결제 방식」 필터에 「결제 면제」 */
+export const WaivedAndFree: Story = {
+  args: {
+    orders: [
+      adminOrder({
+        id: 'ord_e',
+        orderName: '응원하기 3,000원',
+        provider: 'exempt',
+        settlement: 'EXEMPT',
+        amount: { amount: 0, currency: 'KRW' },
+        originalAmount: 3000,
+        refundableAmount: 0,
+        method: null,
+        card: null,
+      }),
+      adminOrder({
+        id: 'ord_f',
+        orderName: '응원하기 1,000원',
+        provider: 'free',
+        settlement: 'FREE',
+        amount: { amount: 0, currency: 'KRW' },
+        originalAmount: 1000,
+        refundableAmount: 0,
+        method: null,
+        card: null,
+      }),
+      orders[0]!,
+    ],
+    filter: { status: '', q: '', settlement: '' },
+    onFilterChange: fn(),
+  },
+  play: async ({ canvas, args, userEvent }) => {
+    const table = within(canvas.getByRole('table'))
+    await expect(table.getByText('결제 면제')).toBeVisible()
+    await expect(table.getByText('무료(쿠폰)')).toBeVisible()
+    await userEvent.selectOptions(canvas.getByLabelText('결제 방식'), 'EXEMPT')
+    await expect(args.onFilterChange).toHaveBeenCalledWith(
+      expect.objectContaining({ settlement: 'EXEMPT' }),
+    )
   },
 }

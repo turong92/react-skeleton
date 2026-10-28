@@ -99,4 +99,24 @@ describe('createPaymentApi (shapes mirror kotlin-skeleton modules/payment Paymen
     expect(api.cancel).toBeUndefined()
     expect(api.refund).toBeUndefined()
   })
+
+  it('quote → POST <paths.quote> with the item and discounts, only when a path is given', async () => {
+    const quote = {
+      originalAmount: 12000,
+      amount: 8400,
+      currency: 'KRW',
+      discounts: [],
+      settlement: 'PROVIDER',
+    }
+    const { client, calls } = fakeClient(quote)
+    const api = createPaymentApi(client, { paths: { quote: '/payments/quote' } })
+    const input = {
+      itemType: 'cheer',
+      itemRef: 'cheer-3000',
+      discounts: [{ type: 'coupon' as const, ref: 'c1' }],
+    }
+    await expect(api.quote?.(input)).resolves.toEqual(quote)
+    expect(calls[0]).toEqual({ path: '/payments/quote', request: { method: 'POST', json: input } })
+    expect(createPaymentApi(client, { paths: {} }).quote).toBeUndefined()
+  })
 })

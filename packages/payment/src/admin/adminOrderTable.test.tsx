@@ -166,4 +166,33 @@ describe('AdminOrderTable', () => {
     expect(out).toContain('확인 필요')
     expect(out).not.toContain('SOMETHING')
   })
+
+  it('marks an exempt order 결제 면제 and a free (coupon) order 무료(쿠폰); a normal order has neither', () => {
+    const exempt = adminOrder({
+      id: 'ord_e',
+      provider: 'exempt',
+      settlement: 'EXEMPT',
+      amount: { amount: 0, currency: 'KRW' },
+    })
+    const free = adminOrder({
+      id: 'ord_f',
+      provider: 'free',
+      settlement: 'FREE',
+      amount: { amount: 0, currency: 'KRW' },
+    })
+    const out = html({ orders: [exempt, free, rows[0]!], onOpen: noop })
+    expect(out.match(/결제 면제/g)).toHaveLength(1)
+    expect(out.match(/무료\(쿠폰\)/g)).toHaveLength(1)
+    expect(html({ orders: [rows[0]!], onOpen: noop })).not.toMatch(/결제 면제|무료\(쿠폰\)/)
+  })
+
+  it('the settlement filter offers 결제 면제 and reports it', () => {
+    const out = html({
+      orders: [],
+      filter: { status: '', q: '', settlement: 'EXEMPT' },
+      onFilterChange: noop,
+    })
+    expect(out).toContain('결제 방식')
+    expect(out).toMatch(/<option value="EXEMPT" selected/)
+  })
 })

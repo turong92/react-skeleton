@@ -107,6 +107,14 @@ describe('AdminPaymentsPage', () => {
     expect(render('/admin/payments?tab=refunds', seed)).not.toContain('탈퇴한 계정의 결제도 보기')
   })
 
+  it('ordersParamsOf sends settlement=EXEMPT only for the 결제 면제 filter', () => {
+    expect(ordersParamsOf(false, { status: '', q: '', settlement: 'EXEMPT' }, 20)).toEqual({
+      settlement: 'EXEMPT',
+      size: 20,
+    })
+    expect(ordersParamsOf(false, { status: '', q: '', settlement: '' }, 20)).toEqual({ size: 20 })
+  })
+
   it('ordersParamsOf sends includeErased only when the switch is on, and never with 확인 필요', () => {
     const filter = { status: 'PAID' as const, q: 'ord_1' }
     expect(ordersParamsOf(false, filter, size)).toEqual({ status: 'PAID', q: 'ord_1', size })

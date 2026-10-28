@@ -1,6 +1,6 @@
 import { formatInstant } from '@skeleton/time'
 import { Alert, Button, Card } from '@skeleton/ui'
-import { cardDisplay, lookup, priceEveryDisplay } from './format'
+import { cardDisplay, formatMoney, lookup, priceEveryDisplay } from './format'
 import { resolvePaymentLabels, type PaymentLabelsInput } from './labels'
 import type { Order } from './ledgerTypes'
 import { OrderList, type OrderListProps } from './OrderList'
@@ -99,6 +99,20 @@ export function MySubscriptionCard({
           {status === 'CANCELING' && (
             <Fact label={mine.access}>
               {mine.endsOn(formatTime(subscription.currentPeriodEnd))}
+            </Fact>
+          )}
+          {subscription.discount && status !== 'ENDED' && (
+            <Fact label={`${labels.discount.subscriptionDiscount}: ${subscription.discount.label}`}>
+              {labels.discount.nextPayment(
+                formatMoney(
+                  {
+                    amount: subscription.discount.nextAmount,
+                    currency: subscription.amount.currency,
+                  },
+                  { locale, currencySuffix: labels.currencySuffix },
+                ),
+                subscription.discount.remainingPeriods,
+              )}
             </Fact>
           )}
           {card && status !== 'ENDED' && <Fact label={mine.card}>{card}</Fact>}

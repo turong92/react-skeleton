@@ -139,6 +139,27 @@ export const defaultPaymentLabels: PaymentLabels = {
     withdrawing: 'Taking back',
     requestedAmountNote: (requested) => `Requested ${requested}`,
   },
+  discount: {
+    original: 'Price',
+    final: 'You paid',
+    settlement: { FREE: 'Free (coupon)', EXEMPT: 'Payment waived' },
+    settledNote: {
+      FREE: 'A coupon took this to 0, so there was nothing to pay.',
+      EXEMPT: 'Payment is waived for this account, so there was nothing to pay.',
+    },
+    subscriptionDiscount: 'Discount',
+    nextPayment: (amount, remaining) =>
+      remaining === null
+        ? `Next payment ${amount} (discount keeps applying)`
+        : `Next payment ${amount} (${remaining} discounted ${remaining === 1 ? 'payment' : 'payments'} left)`,
+    errors: {
+      notApplicable: 'This coupon does not apply to this item.',
+      unavailable: 'This coupon is already in use or no longer available.',
+      notSupported: 'Coupons cannot be used with this way of paying.',
+      belowMinimum: 'The price is below the minimum this coupon needs.',
+      nothingToRefund: 'Nothing was paid, so there is nothing to refund.',
+    },
+  },
   refundBlocked: {
     requested: 'You already asked for a refund',
     inProgress: 'A refund is in progress',

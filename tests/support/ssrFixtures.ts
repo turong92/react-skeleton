@@ -126,6 +126,7 @@ export const fakePaymentLedgerApi = () => ({
   }),
   requestRefund: async () => ({}),
   withdrawRefund: async () => ({}),
+  quote: async () => ({}),
 })
 const paymentSubscription = {
   id: 'sub_1',
@@ -982,6 +983,7 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
     config: boardConfig,
   }),
   'payment#OrderStatusBadge': () => ({ status: 'PAID' }),
+  'payment#SettlementBadge': () => ({ settlement: 'EXEMPT' }),
   'payment#OrderList': () => ({ orders: [paymentOrder], onOpen: noop }),
   'payment#PaymentResult': () => ({ order: paymentOrder }),
   'payment#OrderSummary': () => ({ order: paymentOrder, refunds: [], onRequestRefund: noop }),
@@ -1107,6 +1109,7 @@ export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
   'payment#useAbandonOrder': () => [fakePaymentLedgerApi()],
   'payment#useOrder': () => [fakePaymentLedgerApi(), 'ord_1'],
   'payment#useOrders': () => [fakePaymentLedgerApi()],
+  'payment#useQuote': () => [fakePaymentLedgerApi(), { itemType: 'cheer', itemRef: 'cheer-3000' }],
   'payment#useRequestRefund': () => [fakePaymentLedgerApi()],
   'payment#useWithdrawRefund': () => [fakePaymentLedgerApi()],
   'payment#useSubscriptionPlans': () => [fakeSubscriptionApi()],

@@ -10,6 +10,7 @@ import type {
   IdempotentCall,
   Order,
   OrderListParams,
+  QuoteInput,
   Refund,
   RefundRequestInput,
   RefundStatus,
@@ -37,6 +38,7 @@ export const paymentKeys = {
   orders: () => [...paymentKeys.all, 'orders'] as const,
   orderList: (params: OrderListParams = {}) => [...paymentKeys.orders(), params] as const,
   order: (id: string) => [...paymentKeys.all, 'order', id] as const,
+  quote: (input: QuoteInput) => [...paymentKeys.all, 'quote', input] as const,
   subscriptionPlans: () => [...paymentKeys.all, 'subscription-plans'] as const,
   mySubscription: () => [...paymentKeys.all, 'my-subscription'] as const,
   cancelPreview: (id: string) => [...paymentKeys.all, 'cancel-preview', id] as const,
@@ -46,6 +48,11 @@ export const paymentKeys = {
 
 export function paymentConfigQuery(api: PaymentLedgerApi) {
   return { queryKey: paymentKeys.config(), queryFn: () => api.config() }
+}
+
+/** 할인 뒤 금액 견적. 키에 입력 전체가 들어가 쿠폰을 바꾸면 새 견적이다 */
+export function quoteQuery(api: Pick<PaymentLedgerApi, 'quote'>, input: QuoteInput) {
+  return { queryKey: paymentKeys.quote(input), queryFn: () => api.quote(input) }
 }
 
 export type OrderQueryOptions = {

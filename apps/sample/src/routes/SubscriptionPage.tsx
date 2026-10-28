@@ -69,14 +69,13 @@ export function SubscriptionPage() {
     )
 
   // 지금보다 윗등급이고 주기 · 통화가 같은 플랜만 - 서버가 같은 규칙으로 거절한다
-  // 행사가 · 옛 가격으로 산 구독은 그 가격 코드가 더는 목록에 없다 - 같은 상품의 플랜(이름이 같다)으로 찾아 업그레이드 단추가 남게 한다
-  const current =
-    plans.data?.find((plan) => plan.code === subscription.planCode) ??
-    plans.data?.find((plan) => plan.name === subscription.planName)
+  // 행사가, 옛 가격으로 산 구독은 그 가격 코드가 더는 목록에 없다 - 구독 응답의 등급(`level`)으로 가르고, 구버전 서버는 플랜 코드로 찾는다
+  const currentLevel =
+    subscription.level ?? plans.data?.find((plan) => plan.code === subscription.planCode)?.level
   const upgrades = (plans.data ?? []).filter(
     (plan) =>
-      current !== undefined &&
-      plan.level > current.level &&
+      currentLevel != null &&
+      plan.level > currentLevel &&
       plan.period === subscription.period &&
       plan.amount.currency === subscription.amount.currency,
   )

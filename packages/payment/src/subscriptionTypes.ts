@@ -58,6 +58,10 @@ export type Subscription = {
   createdAt: string
   /** 구매자 나라(ISO-3166 두 글자) - 해지·환불 정책을 고른 열쇠. 모르면 `null` */
   country: string | null
+  /** 카탈로그 상품 코드(플랜을 모르면 `planCode`) - 가격이 바뀌어도(행사, 옛 가격) 같은 상품이다. 구버전 서버는 칸이 없다 */
+  productCode?: string
+  /** 상품의 등급(높을수록 위, 모르면 `null`) - 플랜 올리기가 이것으로 윗등급을 가른다. 구버전 서버는 칸이 없다 */
+  level?: number | null
   /** 어느 결제사의 구독인가(`toss` · `paddle` …) - 구버전 서버는 칸이 없다 */
   provider?: string
   /** 결제사가 직접 받은 간편결제의 앱(`KAKAOPAY` · `NAVERPAY`) - 그 밖(토스 · Paddle)과 구버전 서버는 `null` · 칸 없음 */

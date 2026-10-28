@@ -114,9 +114,22 @@ describe('SubscriptionPage', () => {
     expect(top).toContain('기간 끝에 해지')
   })
 
-  it('a subscriber on a price that is no longer listed (a past sale price) can still be raised: the plan is found by its name', () => {
-    const html = render({ subscription: sub({ planCode: 'standard-sale-2026' }), orders: [] }, true)
+  it('a subscriber on a price that is no longer listed (a past sale price) can still be raised: the level comes with the subscription', () => {
+    const html = render(
+      {
+        subscription: sub({ planCode: 'standard-sale-2026', productCode: 'standard', level: 2 }),
+        orders: [],
+      },
+      true,
+    )
     expect(html).toMatch(/data-variant="primary"[^>]*>플랜 올리기</)
+    // 맨 위 등급이면 올릴 곳이 없다 - 가격 코드가 목록에 없어도
+    const top = sub({ planCode: 'pro-old', productCode: 'pro', level: 3 })
+    expect(render({ subscription: top, orders: [] }, true)).not.toContain('플랜 올리기')
+    // 등급을 모르는 구독(옛 서버)이 목록에 없는 가격이면 올리지 않는다
+    expect(render({ subscription: sub({ planCode: 'gone' }), orders: [] }, true)).not.toContain(
+      '플랜 올리기',
+    )
   })
 
   it('「지금 해지하고 환불」 shows only when the country policy opened it, next to the period-end cancel with the same weight; a policy that closed it leaves just the period-end cancel', () => {

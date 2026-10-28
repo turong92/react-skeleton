@@ -989,13 +989,21 @@
         "confirmRequestFromTossRedirect",
         "isPaymentError",
         "PAYMENT_ERROR_CODES",
-        "PaymentRedirectError"
+        "PaymentRedirectError",
+        "createCatalogApi",
+        "useCatalogProducts"
       ],
       "needs": ["api-client", "time", "ui"],
       "backend": {
         "modules": ["payment", "payment-jdbc"],
         "oneOfModules": [["payment-toss", "payment-stripe"]],
-        "optionalModules": ["payment-paddle", "payment-kakaopay", "payment-naverpay"],
+        "optionalModules": [
+          "payment-paddle",
+          "payment-kakaopay",
+          "payment-naverpay",
+          "catalog",
+          "catalog-jdbc"
+        ],
         "basePaths": [],
         "docs": [
           "docs/modules/payment.md",
@@ -1004,7 +1012,9 @@
           "docs/modules/payment-stripe.md",
           "docs/modules/payment-paddle.md",
           "docs/modules/payment-kakaopay.md",
-          "docs/modules/payment-naverpay.md"
+          "docs/modules/payment-naverpay.md",
+          "docs/modules/catalog.md",
+          "docs/modules/catalog-jdbc.md"
         ]
       },
       "status": "experimental",
@@ -1043,7 +1053,10 @@
           "구독",
           "정기결제",
           "자동결제",
-          "해지 예약"
+          "해지 예약",
+          "가격표",
+          "상품 가격",
+          "행사가"
         ],
         "en": [
           "payment",
@@ -1060,7 +1073,10 @@
           "subscription",
           "recurring billing",
           "billing auth",
-          "plan"
+          "plan",
+          "pricing table",
+          "product price",
+          "sale price"
         ]
       }
     },
@@ -1070,10 +1086,20 @@
         "packages/payment/src/admin/AdminOrderPanel.stories.tsx",
         "packages/payment/src/admin/AdminRefundDialog.stories.tsx",
         "packages/payment/src/admin/RefundRequestTable.stories.tsx",
-        "packages/payment/src/admin/WebhookEventTable.stories.tsx"
+        "packages/payment/src/admin/WebhookEventTable.stories.tsx",
+        "packages/payment/src/admin/AdminCatalogTable.stories.tsx",
+        "packages/payment/src/admin/AdminProductEditor.stories.tsx",
+        "packages/payment/src/admin/AdminPriceList.stories.tsx",
+        "packages/payment/src/admin/AddPriceDialog.stories.tsx",
+        "packages/payment/src/admin/SaleEndDialog.stories.tsx",
+        "packages/payment/src/admin/StopPriceDialog.stories.tsx"
       ],
       "stories": [],
-      "docs": ["packages/payment/README.md", "apps/sample/src/routes/AdminPaymentPage.tsx"],
+      "docs": [
+        "packages/payment/README.md",
+        "apps/sample/src/routes/AdminPaymentPage.tsx",
+        "apps/sample/src/routes/AdminCatalogProductPage.tsx"
+      ],
       "entryPoints": [
         "@skeleton/payment/admin#createPaymentAdminApi",
         "@skeleton/payment/admin#AdminOrderTable",
@@ -1081,15 +1107,27 @@
         "@skeleton/payment/admin#AdminRefundDialog",
         "@skeleton/payment/admin#RefundRequestTable",
         "@skeleton/payment/admin#WebhookEventTable",
-        "@skeleton/payment/admin#adminAccessProblem"
+        "@skeleton/payment/admin#adminAccessProblem",
+        "@skeleton/payment/admin#createCatalogAdminApi",
+        "@skeleton/payment/admin#AdminCatalogTable",
+        "@skeleton/payment/admin#AdminProductEditor",
+        "@skeleton/payment/admin#AdminPriceList",
+        "@skeleton/payment/admin#AddPriceDialog",
+        "@skeleton/payment/admin#SaleEndDialog",
+        "@skeleton/payment/admin#StopPriceDialog"
       ],
       "needs": ["payment"],
       "backend": {
         "modules": ["payment", "payment-jdbc"],
         "oneOfModules": [],
-        "optionalModules": [],
+        "optionalModules": ["catalog", "catalog-jdbc"],
         "basePaths": [],
-        "docs": ["docs/modules/payment.md", "docs/modules/payment-jdbc.md"]
+        "docs": [
+          "docs/modules/payment.md",
+          "docs/modules/payment-jdbc.md",
+          "docs/modules/catalog.md",
+          "docs/modules/catalog-jdbc.md"
+        ]
       },
       "status": "experimental",
       "id": "payment-admin",
@@ -1102,7 +1140,7 @@
         "alsoVia": ["--with-sample", "--with-workbench"],
         "optOut": null
       },
-      "summary": "운영자 결제 화면(선택 내보내기 @skeleton/payment/admin) — 결제 목록(상태 · 결제 번호로 찾기, 확인 필요 알약) · 한 건(환불 줄 · 이력 · 직접 환불 전액/부분 · 요청대로 환불하기 · 요청 거절하기 · 결제사와 맞추기) · 환불 요청 목록 · 웹훅 수신함. 돈이 나가는 행동은 늘 확인 창(AdminRefundDialog)을 거치고 금액은 남은 금액을 넘지 못하게 화면에서도 막는다. 샘플 화면: /admin/payments · /admin/payments/:id.",
+      "summary": "운영자 결제 화면(선택 내보내기 @skeleton/payment/admin) — 결제 목록(상태 · 결제 번호로 찾기, 확인 필요 알약) · 한 건(환불 줄 · 이력 · 직접 환불 전액/부분 · 요청대로 환불하기 · 요청 거절하기 · 결제사와 맞추기) · 환불 요청 목록 · 웹훅 수신함. 돈이 나가는 행동은 늘 확인 창(AdminRefundDialog)을 거치고 금액은 남은 금액을 넘지 못하게 화면에서도 막는다. 샘플 화면: /admin/payments · /admin/payments/:id. 상품 · 가격 운영(백엔드 catalog 를 붙인 앱, 권한 catalog.manage): 상품 목록 · 상품 폼 · 통화별 가격 표 · 가격 더하기(행사가 포함) · 행사 기간 바꾸기 · 판매 중지(기존 구독자는 산 가격 그대로) · 결제사 가격 id 연결. 샘플 화면: /admin/catalog · /admin/catalog/:code.",
       "path": "packages/payment/src/admin/index.ts",
       "notFor": [
         "백엔드 skeleton.payment.admin.enabled=true 와 payment.read · payment.refund · payment.operate 권한이 있어야 열린다(검사는 서버, RequirePermission 과 부품의 can 은 화면용) — 운영자 HTTP 는 payment-jdbc 가 연다. 운영자 경로 모양의 정본은 백엔드 docs/payment-http-contract.md 이고, 이 패키지 README 의 「운영자 API」 표가 그것에 맞춘 것이다",
@@ -1116,14 +1154,21 @@
           "환불 처리",
           "결제 관리",
           "결제사와 맞추기",
-          "웹훅 수신함"
+          "웹훅 수신함",
+          "상품 관리",
+          "가격 관리",
+          "행사가",
+          "판매 중지"
         ],
         "en": [
           "payment admin",
           "refund queue",
           "operator refund",
           "reconcile payment",
-          "webhook inbox"
+          "webhook inbox",
+          "product catalog admin",
+          "price admin",
+          "sale price"
         ]
       }
     },

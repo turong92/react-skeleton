@@ -65,11 +65,6 @@ export function savingsPercent(plans: PricingPlan[]): number {
   return best
 }
 
-/** 행사 끝 날짜 글자 — 시간대를 **명시해** 쓴다(기본 UTC, 서버 렌더와 같아야 한다) */
-export function formatSaleEnd(iso: string, locale: string, timeZone = 'UTC'): string {
-  return new Intl.DateTimeFormat(locale, { timeZone, dateStyle: 'medium' }).format(new Date(iso))
-}
-
 /** 통화 · 로케일을 **명시해** 쓴다(기기 로케일에 기대면 서버 렌더와 어긋난다). 정수 금액은 소수점 없이 */
 export function formatPrice(amount: number, currency: string, locale: string): string {
   const whole = Number.isInteger(amount)

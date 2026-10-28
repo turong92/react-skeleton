@@ -114,6 +114,11 @@ describe('SubscriptionPage', () => {
     expect(top).toContain('기간 끝에 해지')
   })
 
+  it('a subscriber on a price that is no longer listed (a past sale price) can still be raised: the plan is found by its name', () => {
+    const html = render({ subscription: sub({ planCode: 'standard-sale-2026' }), orders: [] }, true)
+    expect(html).toMatch(/data-variant="primary"[^>]*>플랜 올리기</)
+  })
+
   it('「지금 해지하고 환불」 shows only when the country policy opened it, next to the period-end cancel with the same weight; a policy that closed it leaves just the period-end cancel', () => {
     const open: CancelPreview = {
       open: true,

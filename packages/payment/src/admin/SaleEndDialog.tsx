@@ -35,7 +35,9 @@ export function SaleEndDialog({
   const text = all.admin.catalog.saleEndDialog
   const formId = useId()
   const [value, setValue] = useState(toLocalInput(price.saleEndsAt))
-  const [problem, setProblem] = useState<'timeInvalid' | 'endBeforeStart' | null>(null)
+  const [problem, setProblem] = useState<'timeInvalid' | 'endBeforeStart' | 'endRequired' | null>(
+    null,
+  )
   const [wasOpen, setWasOpen] = useState(open)
   if (open !== wasOpen) {
     setWasOpen(open)
@@ -84,7 +86,13 @@ export function SaleEndDialog({
         <Field
           label={text.end}
           hint={text.hint}
-          error={problem ? all.admin.catalog.addPrice.problems[problem] : undefined}
+          error={
+            problem === 'endRequired'
+              ? text.endRequired
+              : problem
+                ? all.admin.catalog.addPrice.problems[problem]
+                : undefined
+          }
         >
           {(control) => (
             <Input

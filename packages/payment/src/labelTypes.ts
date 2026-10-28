@@ -316,6 +316,8 @@ export type SubscriptionLabels = {
     yearly: string
     /** 행사가가 끝나는 날 안내(「11월 30일까지」) - 인자는 서식을 입힌 날짜 */
     saleUntil: (date: string) => string
+    /** 취소선 정가 앞에 낭독 전용으로 붙는 말(「정가」) */
+    regularPrice: string
   }
   mine: {
     amount: string

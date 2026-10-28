@@ -87,6 +87,27 @@ describe('catalogPricing — the catalog as a pricing table', () => {
     expect(result?.plans[1]?.price).toEqual({ monthly: 9.99, yearly: 99 })
   })
 
+  it('the short period is the month and the long one the year, whatever the codes are (the local seed uses 3 and 36 minutes)', () => {
+    const result = catalogPricing(
+      catalog([
+        product('std', [
+          price({ code: 's-y', period: 'PT36M', amount: 69000 }),
+          price({ code: 's-m', period: 'PT3M', amount: 6900 }),
+        ]),
+      ]),
+      options(),
+    )
+    expect(result?.plans[1]?.price).toEqual({ monthly: 6900, yearly: 69000 })
+  })
+
+  it('a lone period is the month, unless it is exactly one year', () => {
+    const only = (period: string) =>
+      catalogPricing(catalog([product('a', [price({ code: 'a', period })])]), options())?.plans[1]
+        ?.price
+    expect(only('PT3M')).toEqual({ monthly: 1000, yearly: null })
+    expect(only('P1Y')).toEqual({ monthly: null, yearly: 1000 })
+  })
+
   it('won stay won, and a missing interval is null (not 0)', () => {
     const result = catalogPricing(
       catalog([product('a', [price({ code: 'a-m', amount: 6900 })])]),

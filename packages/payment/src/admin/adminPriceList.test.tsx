@@ -95,20 +95,47 @@ describe('AdminPriceList', () => {
   })
 
   it('provider link cells exist only when the server lists a provider, show the linked id, and a linked price can be unlinked', () => {
-    const none = render([price()], { onSetProviderRef: noop, onRemoveProviderRef: noop })
+    const usd = (over: Partial<AdminCatalogPrice> = {}) =>
+      price({ code: 'std-m-usd', currency: 'USD', amount: 699, ...over })
+    const none = render([usd()], { onSetProviderRef: noop, onRemoveProviderRef: noop })
     expect(none).not.toContain('결제사 가격 연결')
-    const html = render([price({ providerRefs: { paddle: 'pri_1' } })], {
+    const html = render([usd({ providerRefs: { paddle: 'pri_1' } })], {
       providers: ['paddle'],
       onSetProviderRef: noop,
       onRemoveProviderRef: noop,
     })
     expect(html).toContain('결제사 가격 연결')
     expect(html).toContain('value="pri_1"')
-    expect(html).toContain('aria-label="연결 끊기: Paddle (std-m)"')
+    expect(html).toContain('aria-label="연결 끊기: Paddle (std-m-usd)"')
     // 연결된 값과 같으면 「연결」은 잠긴다
     expect(html).toMatch(
-      /<button[^>]*disabled[^>]*aria-label="연결: Paddle \(std-m\)"|<button[^>]*aria-label="연결: Paddle \(std-m\)"[^>]*disabled/,
+      /<button[^>]*disabled[^>]*aria-label="연결: Paddle \(std-m-usd\)"|<button[^>]*aria-label="연결: Paddle \(std-m-usd\)"[^>]*disabled/,
     )
+  })
+
+  it('the provider link cell is only in the table of a currency that provider sells in (Paddle: USD, not KRW)', () => {
+    const html = render([price(), price({ code: 'u', currency: 'USD', amount: 699 })], {
+      providers: ['paddle'],
+      onSetProviderRef: noop,
+      onRemoveProviderRef: noop,
+    })
+    expect(html).toContain('Paddle 가격 id (u)')
+    expect(html).not.toContain('Paddle 가격 id (std-m)')
+  })
+
+  it('unlinking asks first (the confirm dialog is there, closed text says what happens)', () => {
+    const html = render([price({ currency: 'USD', providerRefs: { paddle: 'pri_1' } })], {
+      providers: ['paddle'],
+      onSetProviderRef: noop,
+      onRemoveProviderRef: noop,
+    })
+    expect(html).toContain('결제사 가격 연결을 끊을까요?')
+  })
+
+  it('a product that is not on sale tells even its selling prices apart from a stopped one', () => {
+    const html = render([price()], { productSelling: false })
+    expect(html).toContain('상품 판매 중지')
+    expect(html).not.toContain('지금 팔려요')
   })
 
   it('a stopped price has no link cell content', () => {
@@ -120,7 +147,11 @@ describe('AdminPriceList', () => {
   })
 
   it('「행사 기간 바꾸기」 is a bordered button only on a selling sale price, named by its code', () => {
-    const sale = price({ code: 'sale', compareAtAmount: 9000 })
+    const sale = price({
+      code: 'sale',
+      compareAtAmount: 9000,
+      saleStartsAt: '2026-10-30T00:00:00Z',
+    })
     const stopped = price({
       code: 'gone',
       compareAtAmount: 9000,
@@ -135,6 +166,9 @@ describe('AdminPriceList', () => {
     expect(html).not.toContain('행사 기간 바꾸기: plain')
     expect(html).not.toContain('행사 기간 바꾸기: gone')
     expect(render([sale])).not.toContain('행사 기간 바꾸기')
+    // 시작도 끝도 없는 줄(상시 가격)에는 기간이 없다
+    const open = price({ code: 'open', compareAtAmount: 9000 })
+    expect(render([open], { onChangeSale: noop })).not.toContain('행사 기간 바꾸기: open')
   })
 
   it('a provider id that is already linked to another price says so on the link, not 「이미 쓰는 코드」', () => {

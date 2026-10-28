@@ -58,11 +58,13 @@ export const SaleNeedsAHigherRegularPrice: Story = {
     await userEvent.clear(regular)
     await userEvent.type(regular, '69000')
     await userEvent.click(within(dialog).getByRole('button', { name: '가격 더하기' }))
+    // 시작을 비웠으니 지금부터(시작도 끝도 없으면 상시 가격으로 읽힌다)
     await expect(onSubmit).toHaveBeenCalledWith({
       period: 'P1M',
       amount: 59000,
       currency: 'KRW',
       compareAtAmount: 69000,
+      saleStartsAt: expect.any(String),
     })
   },
 }

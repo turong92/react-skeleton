@@ -80,7 +80,12 @@ export function AdminProductEditor(props: AdminProductEditorProps) {
       onSubmit={(event) => {
         event.preventDefault()
         if (busy) return
-        const result = validateProduct(form, languages, props.mode)
+        const result = validateProduct(
+          form,
+          languages,
+          props.mode,
+          props.mode === 'edit' ? props.product.texts : {},
+        )
         setProblems(result.problems ?? {})
         if (result.input) (props.onSubmit as (value: typeof result.input) => void)(result.input)
       }}
@@ -116,7 +121,7 @@ export function AdminProductEditor(props: AdminProductEditorProps) {
         </>
       )}
       {subscription && (
-        <Field label={text.level} hint={text.levelHint} error={say('level')}>
+        <Field label={text.level} hint={text.levelHint} error={say('level')} required={!edit}>
           {(control) => (
             <Input
               {...control}

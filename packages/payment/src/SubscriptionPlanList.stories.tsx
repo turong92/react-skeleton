@@ -95,7 +95,7 @@ export const MonthlyAndYearlyOnOneCard: Story = {
     await expect(yearly).toHaveAttribute('aria-pressed', 'true')
     await expect(canvas.getByText('69,000원').tagName).toBe('DEL')
     await expect(canvas.getByText('59,000원 · 1년마다 결제')).toBeVisible()
-    await expect(canvas.getByText('2026. 11. 30.까지')).toBeVisible()
+    await expect(canvas.getByText(/2026\. 11\. 30\..*까지/)).toBeVisible()
     await userEvent.click(canvas.getByRole('button', { name: '구독하기: Standard' }))
     await expect(args.onSubscribe).toHaveBeenCalledWith(grouped[1])
   },

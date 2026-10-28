@@ -210,6 +210,7 @@ export const defaultPaymentLabels: PaymentLabels = {
       monthly: 'Monthly',
       yearly: 'Yearly',
       saleUntil: (date) => `Until ${date}`,
+      regularPrice: 'Regular price',
     },
     mine: {
       amount: 'Price',

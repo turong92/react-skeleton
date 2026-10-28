@@ -89,6 +89,7 @@ export function AdminCatalogProductPage() {
       <AdminPriceList
         prices={product.prices}
         providers={providers.data ?? []}
+        productSelling={product.selling}
         busyRef={refBusy}
         refError={m.setProviderRef.error ?? m.removeProviderRef.error}
         locale={language}

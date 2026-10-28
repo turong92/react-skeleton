@@ -52,6 +52,16 @@ describe('validateAddPrice', () => {
     expect(validateAddPrice(form({ code: '  ' }), 'SUBSCRIPTION').input).not.toHaveProperty('code')
   })
 
+  it('a price code uses the backend shape: underscores allowed, up to 64 characters', () => {
+    expect(validateAddPrice(form({ code: 'std_y-1' }), 'SUBSCRIPTION').input?.code).toBe('std_y-1')
+    expect(validateAddPrice(form({ code: 'Bad Code' }), 'SUBSCRIPTION').problems).toEqual({
+      code: 'codeInvalid',
+    })
+    expect(validateAddPrice(form({ code: 'a'.repeat(65) }), 'SUBSCRIPTION').problems).toEqual({
+      code: 'codeInvalid',
+    })
+  })
+
   it('names what is wrong with the amount, the period and the currency', () => {
     expect(validateAddPrice(form({ amount: '' }), 'SUBSCRIPTION').problems).toEqual({
       amount: 'amountEmpty',
@@ -92,10 +102,18 @@ describe('validateAddPrice', () => {
       expect(result.input?.saleEndsAt).toBe(new Date('2026-11-02T09:00').toISOString())
     })
 
-    it('start and end are optional (now / no end)', () => {
-      const result = validateAddPrice(sale(), 'SUBSCRIPTION')
-      expect(result.input).not.toHaveProperty('saleStartsAt')
+    it('an empty start becomes now (a sale with neither would be read as a regular price); an empty end is no end', () => {
+      const now = new Date('2026-11-01T00:00:00Z')
+      const result = validateAddPrice(sale(), 'SUBSCRIPTION', now)
+      expect(result.input?.saleStartsAt).toBe('2026-11-01T00:00:00.000Z')
       expect(result.input).not.toHaveProperty('saleEndsAt')
+    })
+
+    it('an end already past the filled-in start is refused', () => {
+      const now = new Date('2026-11-01T00:00:00Z')
+      expect(
+        validateAddPrice(sale({ saleEndsAt: '2020-01-01T09:00' }), 'SUBSCRIPTION', now).problems,
+      ).toEqual({ saleEndsAt: 'endBeforeStart' })
     })
 
     it('the regular price must be above the sale price - equal is not enough', () => {

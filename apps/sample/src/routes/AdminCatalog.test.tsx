@@ -114,7 +114,16 @@ describe('AdminCatalogProductPage (/admin/catalog/:code)', () => {
       client.setQueryData(catalogAdminKeys.products(), [product()])
       client.setQueryData(catalogAdminKeys.providers(), ['paddle'])
     }
-    expect(render('/admin/catalog/standard', seed)).toContain('Paddle 가격 id (std-m)')
+    // Paddle 은 달러 가격에만 잇는다 - 원화 줄에는 링크 칸이 없다
+    const html = render('/admin/catalog/standard', (client) => {
+      client.setQueryData(catalogAdminKeys.products(), [
+        product({ prices: [price(), price({ code: 'std-m-usd', currency: 'USD', amount: 699 })] }),
+      ])
+      client.setQueryData(catalogAdminKeys.providers(), ['paddle'])
+    })
+    expect(html).toContain('Paddle 가격 id (std-m-usd)')
+    expect(html).not.toContain('Paddle 가격 id (std-m)')
+    expect(render('/admin/catalog/standard', seed)).not.toContain('Paddle 가격 id')
     expect(render('/admin/catalog/standard', seedProducts(product()))).not.toContain(
       'Paddle 가격 id',
     )

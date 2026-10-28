@@ -21,6 +21,13 @@ export type AdminPriceListProps = {
   onChangeSale?: (price: AdminCatalogPrice) => void
   /** 가격 id 를 쓰는 켜진 결제사(`GET /providers`) - 비었거나 없으면 링크 칸이 없다 */
   providers?: readonly string[]
+  /**
+   * 결제사별로 가격 id 가 뜻을 갖는 통화 - 그 통화의 표에만 링크 칸이 생긴다(원화는 토스라 Paddle 가격 id 를 이을 곳이 없다).
+   * 여기 없는 결제사는 모든 통화. 기본 `{ paddle: ['USD'] }`
+   */
+  providerCurrencies?: Readonly<Record<string, readonly string[]>>
+  /** 상품이 판매 중이 아니면 `false` - 판매 중인 가격 줄도 「상품 판매 중지」로 말한다 */
+  productSelling?: boolean
   onSetProviderRef?: (price: AdminCatalogPrice, provider: string, externalId: string) => void
   onRemoveProviderRef?: (price: AdminCatalogPrice, provider: string) => void
   /** 결제사 링크를 잇거나 끊다 실패한 오류 - 표 위에 이유를 띄운다(이미 다른 가격에 이어진 id 는 그 말로) */
@@ -34,12 +41,15 @@ export type AdminPriceListProps = {
   labels?: PaymentLabelsInput
 }
 
+const DEFAULT_PROVIDER_CURRENCIES = { paddle: ['USD'] } as const
+
 const TONE: Record<PriceState, 'success' | 'info' | 'neutral' | 'warning'> = {
   current: 'success',
   scheduled: 'info',
   ended: 'neutral',
   covered: 'warning',
   stopped: 'neutral',
+  productStopped: 'neutral',
 }
 
 /**
@@ -52,6 +62,8 @@ export function AdminPriceList({
   onStop,
   onChangeSale,
   providers = [],
+  providerCurrencies = DEFAULT_PROVIDER_CURRENCIES,
+  productSelling = true,
   onSetProviderRef,
   onRemoveProviderRef,
   busyRef = null,
@@ -68,9 +80,14 @@ export function AdminPriceList({
   const byCurrency = new Map<string, AdminCatalogPrice[]>()
   for (const price of prices)
     byCurrency.set(price.currency, [...(byCurrency.get(price.currency) ?? []), price])
-  const showLinks = providers.length > 0 && onSetProviderRef && onRemoveProviderRef
+  const linkable = (currency: string) =>
+    onSetProviderRef && onRemoveProviderRef
+      ? providers.filter(
+          (p) => !(p in providerCurrencies) || providerCurrencies[p]!.includes(currency),
+        )
+      : []
 
-  const columns: TableColumn<AdminCatalogPrice>[] = [
+  const columnsFor = (currency: string): TableColumn<AdminCatalogPrice>[] => [
     {
       key: 'price',
       header: text.columns.price,
@@ -114,11 +131,11 @@ export function AdminPriceList({
       key: 'state',
       header: text.columns.state,
       render: (price) => {
-        const state = priceStateOf(price, now)
+        const state = priceStateOf(price, now, productSelling)
         return <Badge tone={TONE[state]}>{text.states[state]}</Badge>
       },
     },
-    ...(showLinks
+    ...(linkable(currency).length > 0
       ? [
           {
             key: 'links',
@@ -126,15 +143,15 @@ export function AdminPriceList({
             render: (price: AdminCatalogPrice) =>
               price.stoppedAt !== null ? null : (
                 <span className={sharedStyles.cell}>
-                  {providers.map((provider) => (
+                  {linkable(currency).map((provider) => (
                     <ProviderRefEditor
                       key={provider}
                       priceCode={price.code}
                       provider={provider}
                       linked={price.providerRefs[provider]}
                       busy={busyRef === `${price.code}:${provider}`}
-                      onSave={(id) => onSetProviderRef(price, provider, id)}
-                      onRemove={() => onRemoveProviderRef(price, provider)}
+                      onSave={(id) => onSetProviderRef!(price, provider, id)}
+                      onRemove={() => onRemoveProviderRef!(price, provider)}
                       labels={labels}
                     />
                   ))}
@@ -150,16 +167,19 @@ export function AdminPriceList({
         const live = price.stoppedAt === null && price.selling
         return (
           <span className={sharedStyles.actions}>
-            {onChangeSale && live && price.compareAtAmount !== null && (
-              <Button
-                variant="secondary"
-                size="sm"
-                aria-label={text.changeSaleFor(price.code)}
-                onClick={() => onChangeSale(price)}
-              >
-                {text.changeSale}
-              </Button>
-            )}
+            {onChangeSale &&
+              live &&
+              price.compareAtAmount !== null &&
+              (price.saleStartsAt !== null || price.saleEndsAt !== null) && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  aria-label={text.changeSaleFor(price.code)}
+                  onClick={() => onChangeSale(price)}
+                >
+                  {text.changeSale}
+                </Button>
+              )}
             {onStop && live && (
               <Button
                 variant="secondary"
@@ -194,7 +214,7 @@ export function AdminPriceList({
           <div className={styles.scroll}>
             <Table
               caption={text.currency(currency)}
-              columns={columns}
+              columns={columnsFor(currency)}
               rows={rows}
               rowKey={(price) => price.code}
             />

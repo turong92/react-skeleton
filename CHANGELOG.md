@@ -15,13 +15,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `@skeleton/api-client`: `ErrorCodes.CATALOG_CODE_TAKEN` · `CATALOG_LEVEL_TAKEN` · `CATALOG_PRICE_OVERLAP` · `CATALOG_PRICE_INVALID` · `CATALOG_NOT_FOUND`.
 - 샘플: 운영 메뉴 「상품 · 가격」(`catalog.manage`), `/admin/catalog` · `/admin/catalog/:code`, e2e `catalog.e2e.ts`(행사가 → 랜딩 → 구독 → 판매 중지 · 미국 방문자 USD). `journey.e2e.ts` 의 연 결제 토글 단계는 가격표가 있을 때만 돈다.
 
+### Changed — 카탈로그 리뷰 반영 (2026-10-29)
+
+- `@skeleton/time`: `formatEnd(iso, { zone, locale })` - 끝은 열린 구간이라 자정 정각이면 전날 날짜만, 아니면 날짜 + 시각. 행사 끝 안내(`SubscriptionPlanList` · `PricingTable`)가 쓴다.
+- 샘플 랜딩: 상품의 짧은 주기 가격이 월, 긴 주기 가격이 연이다(로컬 시드의 3분 · 36분 주기도 가격표에 나온다). 가격표가 없으면 푸터의 「요금제」 링크도 없다.
+- 앱 API 클라이언트가 화면 언어를 `Accept-Language` 로 보내고, 언어를 바꾸면 `['payment', …]` 쿼리를 다시 읽는다(플랜 · 구독 이름이 서버에서 요청 언어로 온다).
+- 운영 화면: 행사가를 켜고 시작을 비우면 지금부터로 채워 보낸다(시작 · 끝이 모두 없으면 상시 가격이 된다). 구독 상품은 등급 필수, 상품 · 가격 코드는 백엔드와 같은 모양(밑줄 허용 · 64자). 상품을 고칠 때 화면에 없는 언어의 글을 지우지 않는다. 가격 상태 「상품 판매 중지」, 결제사 링크는 그 결제사가 파는 통화 표(Paddle = USD)에만 · 끊기 전에 확인. 입력 오류가 칸 이름 없이 오면 `detail` 을 띠에 보인다.
+- `PaymentConfig.currency`, 취소선 정가 앞의 낭독 전용 「정가」, 주기 단추는 가격 코드가 바뀌어도 고른 주기를 유지.
+
 ### Added — 상품 · 가격 카탈로그 읽기: 가격표 · 구독 화면이 DB 의 표를 읽는다 (2026-10-29)
 
 백엔드 짝: kotlin-skeleton `catalog`(공개 읽기 `GET /catalog/products`) · `payment` 의 플랜 목록 칸 두 개(`productCode` · `regularAmount`).
 
-- `@skeleton/payment`: `createCatalogApi(client, { basePath? })` · `useCatalogProducts(api, kind?, { meta? })` · 타입 `Catalog` · `CatalogProduct` · `CatalogPrice`, 통화 최소 단위 ↔ 기본 단위 `toMajorUnits` / `toMinorUnits`(자릿수는 `Intl`), `groupPlans` · `regularAmountOf` · `formatSaleDate` · `periodUnitText`.
+- `@skeleton/payment`: `createCatalogApi(client, { basePath? })` · `useCatalogProducts(api, kind?, { meta? })` · 타입 `Catalog` · `CatalogProduct` · `CatalogPrice`, 통화 최소 단위 ↔ 기본 단위 `toMajorUnits` / `toMinorUnits`(자릿수는 `Intl`), `groupPlans` · `periodMinutes` · `regularAmountOf` · `periodUnitText`.
 - `SubscriptionPlanList`: 같은 `productCode` 의 플랜을 카드 한 장으로 묶고(월 · 연은 카드 안 주기 단추), 행사 중(`regularAmount` 가 지금 금액보다 큼)이면 정가 취소선 + `saleEndsAtOf` 로 「○월 ○일까지」. `productCode` 가 없는 옛 서버는 지금처럼 플랜 하나가 카드 하나. 새 문구 `labels.subscription.plans.{intervalCaption, monthly, yearly, saleUntil}`.
-- `@skeleton/marketing`: `PricingPlan.price` 의 주기는 `null` 일 수 있다(그 주기 화면에서는 카드를 숨기고, 연 가격이 하나도 없으면 월 · 연 토글이 없다). 행사가 `compareAt`(취소선) · `saleEndsAt`(+ `timeZone` prop) · `labels.saleUntil`. 새 도우미 `plansForInterval` · `hasYearlyPlans` · `regularMonthlyEquivalent` · `isFree` · `formatSaleEnd`.
+- `@skeleton/marketing`: `PricingPlan.price` 의 주기는 `null` 일 수 있다(그 주기 화면에서는 카드를 숨기고, 연 가격이 하나도 없으면 월 · 연 토글이 없다). 행사가 `compareAt`(취소선) · `saleEndsAt`(+ `timeZone` prop) · `labels.saleUntil`. 새 도우미 `plansForInterval` · `hasYearlyPlans` · `regularMonthlyEquivalent` · `isFree`.
 - 샘플: 랜딩 가격표는 사전의 무료 카드 + 공개 카탈로그(통화는 서버가 방문 나라로 정한 `currency`, 화면 언어는 서식만 · 읽는 중 · 실패 · 팔 상품 없음이면 가격표 자리를 그리지 않음). 구독 화면은 Paddle 미리보기 금액을 쓰지 않고 서버 표의 금액을 쓰며, 플랜 이름은 서버 이름이다.
 
 #### Changed — 업그레이드 시 할 일

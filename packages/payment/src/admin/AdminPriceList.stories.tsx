@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn } from 'storybook/test'
+import { expect, fn, screen, within } from 'storybook/test'
 import { koPaymentLabels } from '../labels'
 import { AdminPriceList } from './AdminPriceList'
 import type { AdminCatalogPrice } from './catalogAdminTypes'
@@ -42,6 +42,7 @@ const prices = [
     stoppedAt: '2026-09-01T00:00:00Z',
   }),
   price({ code: 'std-m-usd', currency: 'USD', amount: 699, providerRefs: { paddle: 'pri_01' } }),
+  price({ code: 'std-y-usd', period: 'P1Y', currency: 'USD', amount: 6990 }),
 ]
 
 const onAdd = fn()
@@ -108,12 +109,18 @@ export const WithProviderLinks: Story = {
     await expect(linked).toHaveValue('pri_01')
     // 같은 값이면 「연결」은 잠겨 있다
     await expect(canvas.getByRole('button', { name: '연결: Paddle (std-m-usd)' })).toBeDisabled()
+    // 끊기 전에 한 번 묻는다
     await userEvent.click(canvas.getByRole('button', { name: '연결 끊기: Paddle (std-m-usd)' }))
+    const dialog = await screen.findByRole('dialog', { name: '결제사 가격 연결을 끊을까요?' })
+    await expect(onRemove).not.toHaveBeenCalled()
+    await userEvent.click(within(dialog).getByRole('button', { name: '연결 끊기' }))
     await expect(onRemove).toHaveBeenCalledWith(prices[4], 'paddle')
-    const empty = canvas.getByRole('textbox', { name: 'Paddle 가격 id (std-m)' })
+    // 원화 줄에는 링크 칸이 없다
+    await expect(canvas.queryByRole('textbox', { name: 'Paddle 가격 id (std-m)' })).toBeNull()
+    const empty = canvas.getByRole('textbox', { name: 'Paddle 가격 id (std-y-usd)' })
     await userEvent.type(empty, 'pri_new')
-    await userEvent.click(canvas.getByRole('button', { name: '연결: Paddle (std-m)' }))
-    await expect(onSet).toHaveBeenCalledWith(prices[2], 'paddle', 'pri_new')
+    await userEvent.click(canvas.getByRole('button', { name: '연결: Paddle (std-y-usd)' }))
+    await expect(onSet).toHaveBeenCalledWith(prices[5], 'paddle', 'pri_new')
   },
 }
 

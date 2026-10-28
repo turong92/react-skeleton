@@ -35,6 +35,11 @@ describe('priceStateOf', () => {
     expect(priceStateOf(price({ saleEndsAt: '2026-11-01T00:00:00Z' }), now)).toBe('ended')
   })
 
+  it('a selling price of a product that is not on sale is told apart from a stopped price', () => {
+    expect(priceStateOf(price({ current: true }), now, false)).toBe('productStopped')
+    expect(priceStateOf(price({ selling: false }), now, false)).toBe('stopped')
+  })
+
   it('a selling regular price during a sale is covered', () => {
     expect(priceStateOf(price(), now)).toBe('covered')
   })

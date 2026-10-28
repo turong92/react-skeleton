@@ -13,6 +13,7 @@ import {
   type TokenStore,
 } from '@skeleton/auth'
 import { userTimeZone } from '@skeleton/time'
+import { i18n } from '../i18n'
 import { devCountryHeaders } from './devCountry'
 import { serverClock } from './serverClock'
 
@@ -60,7 +61,12 @@ export function createAppApiClient({
     recoverForbidden,
     withCredentials,
     // 개발용 나라(`X-Dev-Country`)는 모든 요청에 한 곳에서 붙인다 - 화면(`/config`)과 주문 · 구독이 같은 나라를 본다(서버가 스위치를 켠 로컬만 읽는다)
-    getAuthHeaders: () => ({ ...authHeaders(), ...devCountryHeaders() }),
+    // 화면 언어(`Accept-Language`) - 서버가 플랜 · 상품 이름을 요청 언어로 고른다
+    getAuthHeaders: () => ({
+      ...authHeaders(),
+      ...devCountryHeaders(),
+      'Accept-Language': i18n.getLocale(),
+    }),
     getTimeZone: userTimeZone,
     onResponseDate: (date) => serverClock.observeDateHeader(date),
     onError: createUnauthorizedHandler({ store: tokenStore, refreshStore, onUnauthorized }),

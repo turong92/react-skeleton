@@ -14,7 +14,6 @@ export { PricingTable } from './pricing/PricingTable'
 export type { PricingLabels, PricingTableProps } from './pricing/PricingTable'
 export {
   formatPrice,
-  formatSaleEnd,
   hasYearlyPlans,
   isFree,
   monthlyEquivalent,

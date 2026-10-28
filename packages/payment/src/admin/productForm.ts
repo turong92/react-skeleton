@@ -22,7 +22,7 @@ export type ProductForm = {
 
 export type ProductProblems = {
   code?: 'codeEmpty' | 'codeInvalid'
-  level?: 'levelInvalid'
+  level?: 'levelEmpty' | 'levelInvalid'
   sortOrder?: 'sortOrderInvalid'
   /** 이름이 빈 언어 코드들 */
   names?: string[]
@@ -59,7 +59,8 @@ export function productFormOf(
   }
 }
 
-const CODE = /^[a-z0-9][a-z0-9-]*$/
+/** 상품 코드 - 백엔드와 같은 모양(소문자 · 숫자로 시작, `-` `_` 허용, 64자까지) */
+const CODE = /^[a-z0-9][a-z0-9_-]{0,63}$/
 
 function textsOf(
   form: ProductForm,
@@ -74,13 +75,16 @@ function textsOf(
 }
 
 /**
- * 폼 → 서버로 보낼 값. 이름은 보이는 언어마다 필수(설명은 선택), 등급은 비우면 보내지 않는다(구독 상품만).
+ * 폼 → 서버로 보낼 값. 이름은 보이는 언어마다 필수(설명은 선택). 등급은 구독 상품만 - 만들 때는 필수, 고칠 때 비우면 보내지 않는다.
+ * 고칠 때 `existingTexts` 가 있으면 폼에 없는 언어의 글은 그대로 두고 폼의 언어만 덮는다.
  * 틀린 칸이 있으면 `input` 없이 칸별 이유만 돌려준다 - 코드 · 등급 중복은 서버(`CATALOG.CODE_TAKEN` · `CATALOG.LEVEL_TAKEN`)가 판단한다.
  */
 export function validateProduct(
   form: ProductForm,
   languages: readonly ProductLanguage[],
   mode: 'create' | 'edit',
+  /** 고치는 상품이 이미 가진 글 - 화면에 없는 언어의 글을 지우지 않으려고 바꾼 언어만 덮는다 */
+  existingTexts: Record<string, CatalogProductText> = {},
 ):
   | { problems: null; input: CreateCatalogProductInput | UpdateCatalogProductInput }
   | { problems: ProductProblems; input: null } {
@@ -92,7 +96,9 @@ export function validateProduct(
   }
   const subscription = form.kind === 'SUBSCRIPTION'
   const level = form.level.trim()
-  if (subscription && level !== '' && !/^[1-9]\d{0,8}$/.test(level)) problems.level = 'levelInvalid'
+  if (subscription && mode === 'create' && level === '') problems.level = 'levelEmpty'
+  else if (subscription && level !== '' && !/^[1-9]\d{0,8}$/.test(level))
+    problems.level = 'levelInvalid'
   const sort = form.sortOrder.trim()
   if (sort !== '' && !/^-?\d{1,9}$/.test(sort)) problems.sortOrder = 'sortOrderInvalid'
   const missing = languages
@@ -105,7 +111,7 @@ export function validateProduct(
     ...(subscription && level !== '' ? { level: Number(level) } : {}),
     highlighted: form.highlighted,
     ...(sort !== '' ? { sortOrder: Number(sort) } : {}),
-    texts: textsOf(form, languages),
+    texts: { ...existingTexts, ...textsOf(form, languages) },
   }
   return {
     problems: null,

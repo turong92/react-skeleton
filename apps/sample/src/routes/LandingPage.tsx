@@ -7,14 +7,12 @@ import {
   Testimonial,
   type BillingInterval,
 } from '@skeleton/marketing'
-import { useCatalogProducts } from '@skeleton/payment'
 import { userTimeZone } from '@skeleton/time'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { catalogApi, QUIET_CATALOG } from '../catalog/api'
 import { LinkButton } from '../components/LinkButton'
-import { catalogPricing } from '../landing/catalogPricing'
-import { i18n, languageOf, useT, type MessageKey } from '../i18n'
+import { usePricing } from '../landing/usePricing'
+import { languageOf, useT } from '../i18n'
 import styles from './LandingPage.module.css'
 
 /**
@@ -28,22 +26,7 @@ export function LandingPage() {
   const navigate = useNavigate()
   const [interval, setInterval] = useState<BillingInterval>('monthly')
   const language = languageOf(locale)
-  const catalog = useCatalogProducts(catalogApi, 'SUBSCRIPTION', QUIET_CATALOG)
-  const pricing = catalog.data
-    ? catalogPricing(catalog.data, {
-        language,
-        free: {
-          id: 'free',
-          name: t('landing.plan.free.name'),
-          description: t('landing.plan.free.description'),
-          price: { monthly: 0, yearly: 0 },
-          features: [t('landing.plan.free.f1'), t('landing.plan.free.f2')],
-          ctaLabel: t('landing.plan.free.cta'),
-        },
-        featuresOf: featuresFor(t),
-        ctaLabel: t('landing.pricing.cta'),
-      })
-    : null
+  const pricing = usePricing()
 
   return (
     <div className={styles.page}>
@@ -141,12 +124,4 @@ export function LandingPage() {
       </section>
     </div>
   )
-}
-
-/** 상품 코드의 기능 목록 - 사전의 `landing.pricing.features.<코드>.1, 2, …` 를 키가 끊길 때까지 읽는다(없는 코드는 빈 목록) */
-const featuresFor = (t: (key: MessageKey) => string) => (productCode: string) => {
-  const features: string[] = []
-  for (let n = 1; i18n.has(`landing.pricing.features.${productCode}.${n}`); n++)
-    features.push(t(`landing.pricing.features.${productCode}.${n}` as MessageKey))
-  return features
 }

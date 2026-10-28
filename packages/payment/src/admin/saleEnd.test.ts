@@ -8,8 +8,9 @@ describe('saleEnd', () => {
     expect(toLocalInput(null)).toBe('')
   })
 
-  it('empty means no end', () => {
+  it('empty means no end, but not for a sale that has no start (that would be a regular price)', () => {
     expect(validateSaleEnd('', '2026-11-01T00:00:00Z')).toEqual({ value: null, problem: null })
+    expect(validateSaleEnd('', null).problem).toBe('endRequired')
   })
 
   it('the end must be after the start, and must be a time', () => {

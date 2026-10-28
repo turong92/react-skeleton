@@ -8,6 +8,7 @@ import { showApiError } from '@skeleton/ui'
 import { authSession } from '../auth/session'
 import { i18n } from '../i18n'
 import { createQueryClient } from './createQueryClient'
+import { refetchOnLanguageChange } from './refetchOnLanguage'
 import { toastUnlessValidation } from './errorToast'
 
 // 쿼리/뮤테이션 에러는 전부 토스트로 — 폼 검증 실패(400)만 칸 아래에 보이므로 뺀다
@@ -25,6 +26,9 @@ export const queryClient = createQueryClient({
     })
   }),
 })
+
+// 서버가 요청 언어로 고르는 이름(플랜 · 구독 · 카탈로그)은 언어를 바꾸면 다시 읽는다
+refetchOnLanguageChange(i18n, queryClient)
 
 // 로그인한 계정이 사라지거나 바뀔 때마다 — 로그아웃 버튼 · 다른 탭의 로그아웃 · 갱신 실패 · 401 · 다른 계정의 링크 로그인 — 서버 상태를 비운다.
 // 다음 사람에게 이전 사람의 노트가 먼저 그려지지 않게. (버튼마다 `queryClient.clear()` 를 부르지 않는다 — 이 한 곳이 모든 길을 덮는다)

@@ -150,7 +150,7 @@ export type {
   CatalogProduct,
   CatalogProductText,
 } from './catalogTypes'
-export { groupPlans, regularAmountOf } from './planGroups'
+export { groupPlans, periodMinutes, regularAmountOf } from './planGroups'
 export type { PlanGroup } from './planGroups'
 export type { PaymentSubscriptionApi, PaymentSubscriptionApiOptions } from './subscriptionApi'
 export {
@@ -204,7 +204,6 @@ export type {
 export {
   cardDisplay,
   formatMoney,
-  formatSaleDate,
   periodUnitText,
   priceEveryDisplay,
   priceEveryText,

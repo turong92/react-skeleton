@@ -44,10 +44,13 @@ describe('validateProduct (create)', () => {
     expect(result.input).not.toHaveProperty('level')
   })
 
-  it('an empty level is left out', () => {
-    expect(validateProduct(filled({ level: '' }), languages, 'create').input).not.toHaveProperty(
-      'level',
-    )
+  it('a subscription product needs a level when it is created', () => {
+    expect(validateProduct(filled({ level: '' }), languages, 'create').problems).toEqual({
+      level: 'levelEmpty',
+    })
+    expect(
+      validateProduct(filled({ level: '', kind: 'ONE_TIME' }), languages, 'create').problems,
+    ).toBeNull()
   })
 
   it('names what is wrong: code, level, position and every language without a name', () => {
@@ -101,6 +104,15 @@ describe('validateProduct (edit)', () => {
     })
     expect(result.input).not.toHaveProperty('code')
     expect(result.input).not.toHaveProperty('kind')
+  })
+
+  it('keeps the texts of languages the form does not show, and overwrites only the ones it does (no data loss)', () => {
+    const kept = { ja: { name: '日本語', description: null } }
+    const form = productFormOf({ ...product, texts: { ...product.texts, ...kept } }, languages)
+    const result = validateProduct(form, languages, 'edit', { ...product.texts, ...kept })
+    const texts = (result.input as { texts: Record<string, unknown> }).texts
+    expect(texts.ja).toEqual(kept.ja)
+    expect(Object.keys(texts).sort()).toEqual(['en', 'ja', 'ko'])
   })
 
   it('does not check the code (it is read-only here)', () => {

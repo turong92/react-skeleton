@@ -6,6 +6,7 @@ import {
 } from '@skeleton/api-client'
 import { createTokenStore } from '@skeleton/auth'
 import { describe, expect, it, vi } from 'vitest'
+import { i18n } from '../i18n'
 import { createAppApiClient } from './createAppApiClient'
 import { setDevCountry } from './devCountry'
 
@@ -61,6 +62,23 @@ describe('createAppApiClient — the env wiring a project copies', () => {
     )
     expect(captured[0].headers.Authorization).toBeUndefined()
     expect(captured[1].headers.Authorization).toBe('Bearer jwt-1')
+  })
+
+  it('sends the screen language as Accept-Language, and follows a language change', async () => {
+    const captured: Captured[] = []
+    const client = createAppApiClient({
+      env: {},
+      tokenStore: createTokenStore(),
+      adapter: adapterFor(captured, ok),
+    })
+    await client.value('/hello')
+    await i18n.setLocale('en', { remember: false })
+    try {
+      await client.value('/hello')
+    } finally {
+      await i18n.setLocale('ko', { remember: false })
+    }
+    expect(captured.map((c) => c.headers['Accept-Language'])).toEqual(['ko', 'en'])
   })
 
   it('a 401 drops the token and tells the app, a 500 does not', async () => {

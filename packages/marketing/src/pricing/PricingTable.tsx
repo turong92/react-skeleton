@@ -1,8 +1,8 @@
+import { formatEnd } from '@skeleton/time'
 import { Badge, Button } from '@skeleton/ui'
 import { useId } from 'react'
 import {
   formatPrice,
-  formatSaleEnd,
   hasYearlyPlans,
   isFree,
   monthlyEquivalent,
@@ -33,6 +33,8 @@ export type PricingLabels = {
   highlight: string
   /** 행사가 끝나는 날 안내(`Until Nov 30`) — 인자는 서식을 입힌 날짜 */
   saleUntil: (date: string) => string
+  /** 취소선 정가 앞에 낭독 전용으로 붙는 말 */
+  regularPrice: string
 }
 
 const DEFAULT_LABELS: PricingLabels = {
@@ -46,6 +48,7 @@ const DEFAULT_LABELS: PricingLabels = {
   custom: 'Custom',
   highlight: 'Most popular',
   saleUntil: (date) => `Until ${date}`,
+  regularPrice: 'Regular price',
 }
 
 export type PricingTableProps = {
@@ -147,6 +150,7 @@ export function PricingTable({
                     <>
                       {regular !== null && (
                         <del className={styles.compare}>
+                          <span className={styles.srOnly}>{labels.regularPrice} </span>
                           {formatPrice(regular, currency, locale)}
                         </del>
                       )}
@@ -164,7 +168,7 @@ export function PricingTable({
                   {saleEnd && (
                     <span className={styles.sale}>
                       {' '}
-                      {labels.saleUntil(formatSaleEnd(saleEnd, locale, timeZone))}
+                      {labels.saleUntil(formatEnd(saleEnd, { locale, zone: timeZone }))}
                     </span>
                   )}
                 </p>

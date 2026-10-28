@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   formatDate,
   formatDual,
+  formatEnd,
   formatInstant,
   formatRelative,
   offsetMinutes,
@@ -100,5 +101,22 @@ describe('todayInZone', () => {
   it('날짜 경계: 자정 1초 전과 후', () => {
     expect(todayInZone('Asia/Seoul', new Date('2026-10-05T14:59:59Z'))).toBe('2026-10-05')
     expect(todayInZone('Asia/Seoul', new Date('2026-10-05T15:00:00Z'))).toBe('2026-10-06')
+  })
+})
+
+describe('formatEnd (an end is an open boundary)', () => {
+  it('at midnight the last day is the day before, and only the date is shown', () => {
+    expect(formatEnd('2026-12-01T00:00:00Z', { locale: 'en-US' })).toBe('Nov 30, 2026')
+    expect(formatEnd('2026-11-30T15:00:00Z', { zone: 'Asia/Seoul', locale: 'en-US' })).toBe(
+      'Nov 30, 2026',
+    )
+  })
+
+  it('at any other moment it reads up to that time', () => {
+    expect(formatEnd('2026-11-30T12:30:00Z', { locale: 'en-US' })).toMatch(/Nov 30, 2026.*12:30/)
+  })
+
+  it('a moment a millisecond past midnight is not midnight', () => {
+    expect(formatEnd('2026-12-01T00:00:00.001Z', { locale: 'en-US' })).toMatch(/Dec 1, 2026.*12:00/)
   })
 })

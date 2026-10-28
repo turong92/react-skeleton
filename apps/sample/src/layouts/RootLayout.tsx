@@ -1,3 +1,4 @@
+import { usePricing } from '../landing/usePricing'
 import { useAuth, usePermission } from '@skeleton/auth'
 import { NotificationBell } from '@skeleton/notifications'
 import { ConsentBanner, SiteFooter, type FooterLink } from '@skeleton/marketing'
@@ -116,6 +117,8 @@ export function RootLayout() {
   const { status } = useAuth()
   const { pathname } = useLocation()
   const signedIn = status === 'authenticated'
+  // 가격표가 없으면(카탈로그가 꺼졌거나 팔 상품이 없으면) 푸터의 「요금제」 링크도 없다
+  const pricingOn = usePricing(!signedIn) !== null
   return (
     <>
       <AppShell
@@ -130,7 +133,7 @@ export function RootLayout() {
                     {
                       title: t('footer.product'),
                       links: [
-                        { label: t('footer.pricing'), href: '/#pricing' },
+                        ...(pricingOn ? [{ label: t('footer.pricing'), href: '/#pricing' }] : []),
                         { label: t('footer.faq'), href: '/#faq' },
                       ],
                     },

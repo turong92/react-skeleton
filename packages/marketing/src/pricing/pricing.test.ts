@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
   formatPrice,
-  formatSaleEnd,
   hasYearlyPlans,
   monthlyEquivalent,
   plansForInterval,
@@ -93,10 +92,5 @@ describe('optional intervals and sale prices', () => {
     expect(regularMonthlyEquivalent(sale, 'monthly')).toBeNull()
     expect(regularMonthlyEquivalent(sale, 'yearly')).toBe(8)
     expect(regularMonthlyEquivalent({ ...sale, compareAt: { yearly: 50 } }, 'yearly')).toBeNull()
-  })
-
-  it('formatSaleEnd names the day in the zone given, UTC by default', () => {
-    expect(formatSaleEnd('2026-11-30T15:00:00Z', 'en-US')).toBe('Nov 30, 2026')
-    expect(formatSaleEnd('2026-11-30T15:00:00Z', 'en-US', 'Asia/Seoul')).toBe('Dec 1, 2026')
   })
 })

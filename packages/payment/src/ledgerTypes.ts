@@ -119,6 +119,8 @@ export type PaymentConfig = {
   easyPays?: Record<string, string[]>
   /** 서버가 이 요청마다 정한 접속 나라(ISO-3166 두 글자). 모르면 `null`, 구버전 서버는 칸이 없다 */
   country?: string | null
+  /** 이 요청의 통화(ISO 4217) - 서버가 나라로 정한다(라우팅). 모르면 `null`, 구버전 서버는 칸이 없다 */
+  currency?: string | null
   /** 그 나라로 서버가 정한 결제사 - 주문 · 구독이 실제로 쓴다(화면이 보내는 값은 없다). 정할 수 없거나 그 나라의 결제사가 못 열리면 `null`(그때 `available` 도 false) */
   provider?: string | null
   /** 그 나라의 해지·환불 정책 요약 - 화면이 `key` 로 문구를 고른다 */

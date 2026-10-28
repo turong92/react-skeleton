@@ -1,3 +1,4 @@
+import { ApiRequestError } from '@skeleton/api-client'
 import { Alert, ErrorReference } from '@skeleton/ui'
 import { referenceOf } from '../failure'
 import { resolvePaymentLabels, type PaymentLabelsInput } from '../labels'
@@ -17,6 +18,14 @@ export function CatalogErrorNotice({
   if (error === undefined || error === null) return null
   const labels = resolvePaymentLabels(input)
   const problem = catalogProblemOf(error)
+  // 칸 이름이 있는 입력 오류는 칸 아래에 이유가 있다. 칸 이름이 없거나(또는 칸이 없는 결제사 링크 줄이면) 서버의 한 줄 설명(`detail`)을 띠에 보인다
+  const fields = error instanceof ApiRequestError ? (error.apiError.errors ?? []) : []
+  const extra =
+    problem === 'invalidInput' && error instanceof ApiRequestError
+      ? fields.length > 0 && context !== 'providerLink'
+        ? ''
+        : (error.apiError.detail ?? fields[0]?.message ?? '')
+      : ''
   const reference = problem === null ? referenceOf(error) : undefined
   return (
     <>
@@ -28,6 +37,7 @@ export function CatalogErrorNotice({
               : (problem ?? 'other')
           ]
         }
+        {extra ? ` ${extra}` : ''}
       </Alert>
       {reference && (
         <ErrorReference

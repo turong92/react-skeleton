@@ -22,6 +22,29 @@ export function formatInstant(iso: string, opts: FormatOptions = {}): string {
   }).format(new Date(iso))
 }
 
+/**
+ * 끝나는 순간(**열린 구간의 끝** - 그 순간부터는 이미 끝난 뒤)을 사람이 읽는 「○○까지」 앞의 글자로.
+ * 자정 정각이면 그 전 날이 마지막 날이니 1ms 를 빼 **날짜만**(11월 30일 자정 → 11월 29일), 아니면 그 시각까지 날짜 + 시각(`formatInstant`).
+ * 시간대는 기본 `UTC`(브라우저 시간대를 따르지 않는다 - 서버 렌더와 같아야 하는 화면용; 필요하면 `zone` 을 준다).
+ */
+export function formatEnd(iso: string, opts: Pick<FormatOptions, 'zone' | 'locale'> = {}): string {
+  const zone = opts.zone ?? 'UTC'
+  const at = new Date(iso)
+  const clock = new Intl.DateTimeFormat('en-US', {
+    timeZone: zone,
+    hourCycle: 'h23',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).format(at)
+  if (clock === '00:00:00' && at.getTime() % 1000 === 0)
+    return new Intl.DateTimeFormat(opts.locale ?? userLocale(), {
+      timeZone: zone,
+      dateStyle: 'medium',
+    }).format(new Date(at.getTime() - 1))
+  return formatInstant(iso, { zone, locale: opts.locale })
+}
+
 /** `GMT+9`, `GMT-3` — 특정 시점의 오프셋 표기 */
 export function zoneLabel(
   zone: string,

@@ -7,7 +7,7 @@ export function toLocalInput(iso: string | null): string {
 }
 
 /**
- * 끝나는 시각 칸 → 서버로 보낼 값. 비우면 끝 없음(`null`). 시작 시각이 있으면 그보다 늦어야 한다.
+ * 끝나는 시각 칸 → 서버로 보낼 값. 비우면 끝 없음(`null`) - 단 시작이 없는 행사는 끝을 비우면 상시 가격이 되니 막는다. 시작 시각이 있으면 그보다 늦어야 한다.
  * 틀리면 이유만 돌려준다 - 겹침 같은 최종 판단은 서버(`CATALOG.PRICE_OVERLAP`)가 한다
  */
 export function validateSaleEnd(
@@ -15,8 +15,11 @@ export function validateSaleEnd(
   saleStartsAt: string | null,
 ):
   | { value: string | null; problem: null }
-  | { value: null; problem: 'timeInvalid' | 'endBeforeStart' } {
-  if (local === '') return { value: null, problem: null }
+  | { value: null; problem: 'timeInvalid' | 'endBeforeStart' | 'endRequired' } {
+  if (local === '')
+    return saleStartsAt === null
+      ? { value: null, problem: 'endRequired' }
+      : { value: null, problem: null }
   const at = new Date(local)
   if (Number.isNaN(at.getTime())) return { value: null, problem: 'timeInvalid' }
   if (saleStartsAt !== null && at <= new Date(saleStartsAt))

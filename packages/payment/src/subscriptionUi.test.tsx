@@ -123,9 +123,13 @@ describe('SubscriptionPlanList', () => {
   it('a sale price shows the regular price struck through, with the end date when the app knows it', () => {
     const only = grouped.filter((p) => p.code === 'standard-year')
     const html = list({ plans: only, saleEndsAtOf: () => '2026-11-30T12:00:00Z' })
-    expect(html).toMatch(/<del[^>]*>69,000원<\/del>/)
+    expect(html).toMatch(/<del[^>]*><span[^>]*>정가 <\/span>69,000원<\/del>/)
     expect(html).toContain('59,000원 · 1년마다 결제')
-    expect(html).toContain('2026. 11. 30.까지')
+    // 끝은 열린 구간 - 시각이 있으면 그 시각까지, 자정이면 전날까지
+    expect(html).toMatch(/2026\. 11\. 30\..*12:00까지/)
+    expect(list({ plans: only, saleEndsAtOf: () => '2026-12-01T00:00:00Z' })).toContain(
+      '2026. 11. 30.까지',
+    )
     expect(list({ plans: only })).not.toContain('까지')
   })
 

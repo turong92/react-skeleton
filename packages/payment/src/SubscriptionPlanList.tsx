@@ -1,6 +1,7 @@
 import { Button, Card, EmptyState } from '@skeleton/ui'
 import { useState, type ReactNode } from 'react'
-import { formatMoney, formatSaleDate, periodUnitText, priceEveryDisplay } from './format'
+import { formatEnd } from '@skeleton/time'
+import { formatMoney, periodUnitText, priceEveryDisplay } from './format'
 import { resolvePaymentLabels, type PaymentLabels, type PaymentLabelsInput } from './labels'
 import { groupPlans, regularAmountOf, type PlanGroup } from './planGroups'
 import type { SubscriptionPlan } from './subscriptionTypes'
@@ -44,8 +45,9 @@ function PlanCard({
   timeZone,
   labels,
 }: CardProps) {
-  const [pickedCode, setPickedCode] = useState(group.plans[0]!.code)
-  const plan = group.plans.find((p) => p.code === pickedCode) ?? group.plans[0]!
+  // 고른 것은 주기로 기억한다 - 행사가 끝나 같은 주기의 가격 코드가 바뀌어도 고른 주기가 남는다
+  const [pickedPeriod, setPickedPeriod] = useState(group.plans[0]!.period)
+  const plan = group.plans.find((p) => p.period === pickedPeriod) ?? group.plans[0]!
   const regular = regularAmountOf(plan)
   const saleEnd = regular ? saleEndsAtOf?.(plan) : null
   const busy = busyPlanCode === plan.code
@@ -64,7 +66,7 @@ function PlanCard({
                 variant={option.code === plan.code ? 'primary' : 'secondary'}
                 aria-pressed={option.code === plan.code}
                 disabled={busyPlanCode !== null}
-                onClick={() => setPickedCode(option.code)}
+                onClick={() => setPickedPeriod(option.period)}
               >
                 {intervalName(option.period, labels)}
               </Button>
@@ -74,6 +76,7 @@ function PlanCard({
         <p className={styles.price}>
           {regular && (
             <del className={styles.regular}>
+              <span className={styles.srOnly}>{labels.subscription.plans.regularPrice} </span>
               {formatMoney(regular, { locale, currencySuffix: labels.currencySuffix })}
             </del>
           )}
@@ -81,7 +84,7 @@ function PlanCard({
         </p>
         {saleEnd && (
           <p className={styles.sale}>
-            {labels.subscription.plans.saleUntil(formatSaleDate(saleEnd, locale, timeZone))}
+            {labels.subscription.plans.saleUntil(formatEnd(saleEnd, { locale, zone: timeZone }))}
           </p>
         )}
         <Button

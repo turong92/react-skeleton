@@ -123,11 +123,6 @@ export function periodUnitText(
   return labels.subscription.periodUnit[unit](counts[at]!)
 }
 
-/** 날짜 하나(시각 없이) - 시간대를 **명시해** 읽는다(기본 UTC). 「11월 30일까지」 같은 행사 끝 안내에 쓴다 */
-export function formatSaleDate(iso: string, locale?: string, timeZone = 'UTC'): string {
-  return new Intl.DateTimeFormat(locale, { timeZone, dateStyle: 'medium' }).format(new Date(iso))
-}
-
 /**
  * 문구 표를 코드로 찾는다 — 표에 **자기 것**으로 있는 코드만 찾는다. 서버가 보낸 코드가 `constructor` · `toString` 같은 이름이어도
  * `Object.prototype` 의 함수를 문구로 꺼내 오지 않는다.

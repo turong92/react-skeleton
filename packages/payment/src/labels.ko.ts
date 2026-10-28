@@ -210,6 +210,7 @@ export const koPaymentLabels: PaymentLabels = {
       monthly: '월간',
       yearly: '연간',
       saleUntil: (date) => `${date}까지`,
+      regularPrice: '정가',
     },
     mine: {
       amount: '금액',

@@ -135,12 +135,12 @@ describe('PricingTable', () => {
     const monthly = renderToStaticMarkup(
       <PricingTable {...base} plans={sale} labels={{ saleUntil: (d) => `Until ${d}` }} />,
     )
-    expect(monthly).toMatch(/<del[^>]*>\$10<\/del>/)
+    expect(monthly).toMatch(/<del[^>]*><span[^>]*>Regular price <\/span>\$10<\/del>/)
     expect(monthly).toContain('$8')
     expect(monthly).toContain('Until Nov 30, 2026')
     // 연 가격에는 끝 시각이 없다 - 정가(한 달 몫 $8)만 지금 가격($5)과 함께, 기간 라벨은 없다
     const yearly = renderToStaticMarkup(<PricingTable {...base} plans={sale} interval="yearly" />)
-    expect(yearly).toMatch(/<del[^>]*>\$8<\/del>/)
+    expect(yearly).toMatch(/<del[^>]*><span[^>]*>Regular price <\/span>\$8<\/del>/)
     expect(yearly).toContain('$5')
     expect(yearly).not.toContain('Until')
   })

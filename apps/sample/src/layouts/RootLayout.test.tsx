@@ -1,4 +1,6 @@
 import { AuthProvider, createAuthSession, createTokenStore, type AuthApi } from '@skeleton/auth'
+import { paymentKeys } from '@skeleton/payment'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -32,9 +34,11 @@ describe('RootLayout (signed out)', () => {
     vi.stubGlobal('document', { documentElement: { dataset: {} } })
     const html = renderToStaticMarkup(
       <AuthProvider session={createAuthSession({ api, store: createTokenStore() })}>
-        <MemoryRouter>
-          <RootLayout />
-        </MemoryRouter>
+        <QueryClientProvider client={new QueryClient()}>
+          <MemoryRouter>
+            <RootLayout />
+          </MemoryRouter>
+        </QueryClientProvider>
       </AuthProvider>,
     )
     expect(html).toContain(i18n.t('appName'))
@@ -48,9 +52,11 @@ describe('RootLayout (signed out)', () => {
     vi.stubGlobal('document', { documentElement: { dataset: {} } })
     const html = renderToStaticMarkup(
       <AuthProvider session={createAuthSession({ api, store: createTokenStore() })}>
-        <MemoryRouter>
-          <RootLayout />
-        </MemoryRouter>
+        <QueryClientProvider client={new QueryClient()}>
+          <MemoryRouter>
+            <RootLayout />
+          </MemoryRouter>
+        </QueryClientProvider>
       </AuthProvider>,
     )
     expect(html).toMatch(/<select[^>]*aria-label="언어"/)
@@ -63,9 +69,11 @@ describe('RootLayout (signed out)', () => {
     await i18n.setLocale('en', { remember: false })
     const html = renderToStaticMarkup(
       <AuthProvider session={createAuthSession({ api, store: createTokenStore() })}>
-        <MemoryRouter>
-          <RootLayout />
-        </MemoryRouter>
+        <QueryClientProvider client={new QueryClient()}>
+          <MemoryRouter>
+            <RootLayout />
+          </MemoryRouter>
+        </QueryClientProvider>
       </AuthProvider>,
     )
     expect(html).toMatch(/<select[^>]*aria-label="Language"/)
@@ -76,9 +84,11 @@ describe('RootLayout (signed out)', () => {
     vi.stubGlobal('document', { documentElement: { dataset: {} } })
     const html = renderToStaticMarkup(
       <AuthProvider session={createAuthSession({ api, store: createTokenStore() })}>
-        <MemoryRouter>
-          <RootLayout />
-        </MemoryRouter>
+        <QueryClientProvider client={new QueryClient()}>
+          <MemoryRouter>
+            <RootLayout />
+          </MemoryRouter>
+        </QueryClientProvider>
       </AuthProvider>,
     )
     expect(html).toMatch(/<footer[\s\S]*href="\/terms"[\s\S]*<\/footer>/)
@@ -88,13 +98,60 @@ describe('RootLayout (signed out)', () => {
     expect(html).not.toContain(i18n.t('consent.title'))
   })
 
+  it('the footer links to the pricing section only while there is a price table to link to', () => {
+    vi.stubGlobal('document', { documentElement: { dataset: {} } })
+    const render = (seed?: (client: QueryClient) => void) => {
+      const client = new QueryClient()
+      seed?.(client)
+      return renderToStaticMarkup(
+        <AuthProvider session={createAuthSession({ api, store: createTokenStore() })}>
+          <QueryClientProvider client={client}>
+            <MemoryRouter>
+              <RootLayout />
+            </MemoryRouter>
+          </QueryClientProvider>
+        </AuthProvider>,
+      )
+    }
+    const withPrices = render((client) =>
+      client.setQueryData(paymentKeys.catalogProducts('SUBSCRIPTION'), {
+        currency: 'KRW',
+        products: [
+          {
+            code: 'standard',
+            kind: 'SUBSCRIPTION',
+            level: 2,
+            highlighted: false,
+            sortOrder: 1,
+            texts: { ko: { name: '스탠다드', description: null } },
+            prices: [
+              {
+                code: 's-m',
+                period: 'P1M',
+                amount: 6900,
+                currency: 'KRW',
+                compareAtAmount: null,
+                saleEndsAt: null,
+              },
+            ],
+          },
+        ],
+      }),
+    )
+    expect(withPrices).toContain('href="/#pricing"')
+    expect(render()).not.toContain('href="/#pricing"')
+    expect(render()).toContain('href="/#faq"')
+  })
+
   it('a signed-out visitor has a sign-in link in the header', () => {
     vi.stubGlobal('document', { documentElement: { dataset: {} } })
     const html = renderToStaticMarkup(
       <AuthProvider session={createAuthSession({ api, store: createTokenStore() })}>
-        <MemoryRouter>
-          <RootLayout />
-        </MemoryRouter>
+        <QueryClientProvider client={new QueryClient()}>
+          <MemoryRouter>
+            <RootLayout />
+          </MemoryRouter>
+        </QueryClientProvider>
       </AuthProvider>,
     )
     expect(html).toMatch(new RegExp(`<a[^>]*href="/login"[^>]*>${i18n.t('header.signIn')}</a>`))

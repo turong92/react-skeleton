@@ -1,6 +1,7 @@
 import { Button, Checkbox, Dialog, Field, Input, Select } from '@skeleton/ui'
 import { useId, useState } from 'react'
 import type { CatalogKind } from '../catalogTypes'
+import { fractionDigits } from './amountInput'
 import { resolvePaymentLabels, type PaymentLabelsInput } from '../labels'
 import {
   currencyOf,
@@ -58,10 +59,15 @@ export function AddPriceDialog({
   const set = (patch: Partial<AddPriceForm>) => setForm((current) => ({ ...current, ...patch }))
   const say = (key: keyof AddPriceProblems) => {
     const problem = problems[key]
+    if (problem === 'codeInvalid') return all.admin.catalog.editor.problems.codeInvalid
     return problem ? text.problems[problem] : fieldMessageOf(error, key)
   }
   const currency = currencyOf(form)
-  const amountHint = text.amountHint(/^[A-Z]{3}$/.test(currency) ? currency : text.currency)
+  const known = /^[A-Z]{3}$/.test(currency)
+  const amountHint = text.amountHint(
+    known ? currency : text.currency,
+    fractionDigits(known ? currency : 'USD') === 0 ? '9900' : '9.99',
+  )
 
   return (
     <Dialog
@@ -223,7 +229,7 @@ export function AddPriceDialog({
             </Field>
           </>
         )}
-        <Field label={text.code} hint={text.codeHint} error={fieldMessageOf(error, 'code')}>
+        <Field label={text.code} hint={text.codeHint} error={say('code')}>
           {(control) => (
             <Input
               {...control}

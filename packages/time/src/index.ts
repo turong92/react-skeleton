@@ -1,6 +1,7 @@
 export {
   formatDate,
   formatDual,
+  formatEnd,
   formatInstant,
   formatRelative,
   offsetMinutes,

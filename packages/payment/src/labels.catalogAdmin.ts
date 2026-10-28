@@ -38,6 +38,7 @@ export type CatalogAdminLabels = {
       codeEmpty: string
       codeInvalid: string
       nameEmpty: (language: string) => string
+      levelEmpty: string
       levelInvalid: string
       sortOrderInvalid: string
     }
@@ -68,6 +69,14 @@ export type CatalogAdminLabels = {
       saveFor: (provider: string, code: string) => string
       remove: string
       removeFor: (provider: string, code: string) => string
+      removeDialog: {
+        title: string
+        body: string
+        confirm: string
+        dismiss: string
+        close: string
+        loading: string
+      }
     }
   }
   addPrice: {
@@ -79,7 +88,8 @@ export type CatalogAdminLabels = {
     periodCustomLabel: string
     periodCustomHint: string
     amount: string
-    amountHint: (currency: string) => string
+    /** `example` - 통화의 자릿수에 맞는 예(원 `9900` · 달러 `9.99`) */
+    amountHint: (currency: string, example: string) => string
     currency: string
     currencyCustom: string
     currencyCustomLabel: string
@@ -113,6 +123,8 @@ export type CatalogAdminLabels = {
     title: string
     which: (code: string, money: string) => string
     end: string
+    /** 시작 없는 행사는 끝을 비울 수 없다(비우면 상시 가격이 된다) */
+    endRequired: string
     hint: string
     submit: string
     cancel: string
@@ -149,7 +161,7 @@ export const koCatalogAdminLabels: CatalogAdminLabels = {
   },
   editor: {
     code: '상품 코드',
-    codeHint: '영문 소문자 · 숫자 · 하이픈. 만든 뒤에는 바꿀 수 없어요.',
+    codeHint: '영문 소문자 · 숫자 · 하이픈 · 밑줄. 만든 뒤에는 바꿀 수 없어요.',
     kind: '종류',
     level: '등급',
     levelHint: '높을수록 윗등급이에요. 구독 상품끼리 같은 등급은 쓸 수 없어요.',
@@ -165,8 +177,9 @@ export const koCatalogAdminLabels: CatalogAdminLabels = {
     saving: '저장하는 중',
     problems: {
       codeEmpty: '상품 코드를 적어 주세요',
-      codeInvalid: '영문 소문자 · 숫자 · 하이픈만 쓸 수 있어요',
+      codeInvalid: '영문 소문자 · 숫자 · 하이픈 · 밑줄만, 64자까지 쓸 수 있어요',
       nameEmpty: (language) => `${language} 이름을 적어 주세요`,
+      levelEmpty: '구독 상품은 등급을 정해 주세요',
       levelInvalid: '등급은 1 이상의 정수예요',
       sortOrderInvalid: '정렬 순서는 정수예요',
     },
@@ -183,6 +196,7 @@ export const koCatalogAdminLabels: CatalogAdminLabels = {
       ended: '행사 끝남',
       covered: '행사가에 가려짐',
       stopped: '판매 중지',
+      productStopped: '상품 판매 중지',
     },
     regular: (money) => `정가 ${money}`,
     saleFrom: (when) => `${when}부터`,
@@ -201,6 +215,14 @@ export const koCatalogAdminLabels: CatalogAdminLabels = {
       saveFor: (provider, code) => `연결: ${provider} (${code})`,
       remove: '연결 끊기',
       removeFor: (provider, code) => `연결 끊기: ${provider} (${code})`,
+      removeDialog: {
+        title: '결제사 가격 연결을 끊을까요?',
+        body: '이 가격은 결제사에서 다시 연결하기 전까지 결제사 결제창에서 팔 수 없어요. 이미 구독 중인 사람은 영향이 없어요.',
+        confirm: '연결 끊기',
+        dismiss: '닫기',
+        close: '창 닫기',
+        loading: '끊는 중',
+      },
     },
   },
   addPrice: {
@@ -212,7 +234,7 @@ export const koCatalogAdminLabels: CatalogAdminLabels = {
     periodCustomLabel: '주기 (ISO-8601)',
     periodCustomHint: '예: P3M 은 3개월마다',
     amount: '금액',
-    amountHint: (currency) => `${currency} 기준으로 적어요. 예: 9900 또는 9.99`,
+    amountHint: (currency, example) => `${currency} 기준으로 적어요. 예: ${example}`,
     currency: '통화',
     currencyCustom: '직접 입력',
     currencyCustomLabel: '통화 코드',
@@ -247,6 +269,7 @@ export const koCatalogAdminLabels: CatalogAdminLabels = {
     title: '행사 기간 바꾸기',
     which: (code, money) => `${code} · ${money}`,
     end: '끝나는 시각',
+    endRequired: '시작 시각이 없는 행사는 끝을 비울 수 없어요. 비우면 상시 가격이 돼요.',
     hint: '내 기기의 시간대로 읽어요. 비우면 끝 없이 이어져요. 지난 시각을 적으면 바로 끝나요.',
     submit: '바꾸기',
     cancel: '닫기',
@@ -296,7 +319,8 @@ export const defaultCatalogAdminLabels: CatalogAdminLabels = {
   },
   editor: {
     code: 'Product code',
-    codeHint: 'Lowercase letters, digits and hyphens. It cannot be changed after creation.',
+    codeHint:
+      'Lowercase letters, digits, hyphens and underscores. It cannot be changed after creation.',
     kind: 'Kind',
     level: 'Level',
     levelHint: 'Higher is a higher tier. Two subscription products cannot share a level.',
@@ -312,8 +336,10 @@ export const defaultCatalogAdminLabels: CatalogAdminLabels = {
     saving: 'Saving',
     problems: {
       codeEmpty: 'Enter a product code',
-      codeInvalid: 'Use lowercase letters, digits and hyphens only',
+      codeInvalid:
+        'Use lowercase letters, digits, hyphens and underscores only, up to 64 characters',
       nameEmpty: (language) => `Enter the ${language} name`,
+      levelEmpty: 'Set a level for a subscription product',
       levelInvalid: 'Level is a whole number, 1 or more',
       sortOrderInvalid: 'The position is a whole number',
     },
@@ -330,6 +356,7 @@ export const defaultCatalogAdminLabels: CatalogAdminLabels = {
       ended: 'Sale ended',
       covered: 'Covered by a sale',
       stopped: 'Stopped',
+      productStopped: 'Product not on sale',
     },
     regular: (money) => `Regular ${money}`,
     saleFrom: (when) => `From ${when}`,
@@ -348,6 +375,14 @@ export const defaultCatalogAdminLabels: CatalogAdminLabels = {
       saveFor: (provider, code) => `Link: ${provider} (${code})`,
       remove: 'Unlink',
       removeFor: (provider, code) => `Unlink: ${provider} (${code})`,
+      removeDialog: {
+        title: 'Unlink the provider price?',
+        body: 'This price cannot be sold in the provider checkout until it is linked again. People already subscribed are not affected.',
+        confirm: 'Unlink',
+        dismiss: 'Close',
+        close: 'Close dialog',
+        loading: 'Unlinking',
+      },
     },
   },
   addPrice: {
@@ -359,7 +394,7 @@ export const defaultCatalogAdminLabels: CatalogAdminLabels = {
     periodCustomLabel: 'Period (ISO-8601)',
     periodCustomHint: 'For example P3M is every 3 months',
     amount: 'Amount',
-    amountHint: (currency) => `In ${currency}. For example 9900 or 9.99`,
+    amountHint: (currency, example) => `In ${currency}. For example ${example}`,
     currency: 'Currency',
     currencyCustom: 'Other',
     currencyCustomLabel: 'Currency code',
@@ -395,6 +430,8 @@ export const defaultCatalogAdminLabels: CatalogAdminLabels = {
     title: 'Change sale period',
     which: (code, money) => `${code} - ${money}`,
     end: 'Ends at',
+    endRequired:
+      'A sale without a start cannot have an empty end. Empty would make it a regular price.',
     hint: 'Read in your device time zone. Empty means no end. A time in the past ends the sale right away.',
     submit: 'Change',
     cancel: 'Close',

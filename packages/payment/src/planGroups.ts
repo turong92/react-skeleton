@@ -8,7 +8,8 @@ const PERIOD = /^P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)W)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:
 /** 주기 길이(분) 어림 - 정렬에만 쓴다. 읽을 수 없으면 맨 뒤 */
 const MINUTES = [525_600, 43_200, 10_080, 1_440, 60, 1]
 
-function periodLength(period: string): number {
+/** 주기 길이(분) 어림 - 읽을 수 없으면 무한대. 정렬 · 짧은/긴 주기 판정에만 쓴다 */
+export function periodMinutes(period: string): number {
   const match = PERIOD.exec(period)
   if (!match) return Number.POSITIVE_INFINITY
   return match.slice(1).reduce((sum, part, at) => sum + Number(part ?? 0) * MINUTES[at]!, 0)
@@ -28,7 +29,7 @@ export function groupPlans(plans: readonly SubscriptionPlan[]): PlanGroup[] {
   }
   return [...groups].map(([key, list]) => ({
     key,
-    plans: [...list].sort((a, b) => periodLength(a.period) - periodLength(b.period)),
+    plans: [...list].sort((a, b) => periodMinutes(a.period) - periodMinutes(b.period)),
   }))
 }
 

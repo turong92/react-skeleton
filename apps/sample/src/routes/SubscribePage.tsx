@@ -74,7 +74,10 @@ export function SubscribePage() {
   const usable = usableCoupons(coupons.data ?? [], {
     purpose: 'SUBSCRIPTION',
     itemType: 'subscription',
-    planCodes: (plans.data ?? []).map((plan) => plan.code),
+    // 쿠폰 범위는 가격 코드(플랜 코드)로도, 상품 코드로도 걸린다 - 둘 다 넘긴다
+    planCodes: (plans.data ?? []).flatMap((plan) =>
+      plan.productCode ? [plan.code, plan.productCode] : [plan.code],
+    ),
     now: serverClock.now().getTime(),
   })
   const couponRef =

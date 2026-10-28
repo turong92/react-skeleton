@@ -147,6 +147,62 @@ export const KoreanWon: Story = {
   },
 }
 
+/** 행사가 — 정가는 취소선, 기간은 「Until …」. 연 가격이 없는 요금제는 연 화면에서 숨고, 연 가격이 하나도 없으면 토글이 없다 */
+export const SaleAndOptionalIntervals: Story = {
+  render: () => (
+    <Demo
+      plans={[
+        {
+          id: 'basic',
+          name: 'Basic',
+          price: { monthly: 5, yearly: null },
+          features: ['Monthly only'],
+          ctaLabel: 'Choose Basic',
+        },
+        {
+          id: 'pro',
+          name: 'Pro',
+          price: { monthly: 8, yearly: 60 },
+          compareAt: { monthly: 10, yearly: 96 },
+          saleEndsAt: { monthly: '2026-11-30T12:00:00Z' },
+          features: ['Sale on both'],
+          ctaLabel: 'Choose Pro',
+          highlighted: true,
+        },
+      ]}
+    />
+  ),
+  play: async ({ canvas, userEvent }) => {
+    await expect(canvas.getAllByRole('article')).toHaveLength(2)
+    await expect(canvas.getByText('$10').tagName).toBe('DEL')
+    await expect(canvas.getByText(/Until Nov 30, 2026/)).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: /Yearly/ }))
+    await expect(canvas.getAllByRole('article')).toHaveLength(1)
+    await expect(canvas.getByText('$8').tagName).toBe('DEL')
+    await expect(canvas.getByText('$5')).toBeVisible()
+  },
+}
+
+export const NoYearlyPrices: Story = {
+  render: () => (
+    <Demo
+      plans={[
+        {
+          id: 'a',
+          name: 'A',
+          price: { monthly: 7, yearly: null },
+          features: [],
+          ctaLabel: 'Buy A',
+        },
+      ]}
+    />
+  ),
+  play: async ({ canvas }) => {
+    await expect(canvas.queryByRole('group')).toBeNull()
+    await expect(canvas.getByText('$7')).toBeVisible()
+  },
+}
+
 export const Dark: Story = {
   globals: { theme: 'dark' },
   render: () => <Demo />,

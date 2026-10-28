@@ -12,7 +12,16 @@ export { SiteFooter } from './sections/SiteFooter'
 export type { FooterColumn, FooterLink, SiteFooterProps } from './sections/SiteFooter'
 export { PricingTable } from './pricing/PricingTable'
 export type { PricingLabels, PricingTableProps } from './pricing/PricingTable'
-export { formatPrice, monthlyEquivalent, savingsPercent } from './pricing/pricing'
+export {
+  formatPrice,
+  formatSaleEnd,
+  hasYearlyPlans,
+  isFree,
+  monthlyEquivalent,
+  plansForInterval,
+  regularMonthlyEquivalent,
+  savingsPercent,
+} from './pricing/pricing'
 export type { BillingInterval, PricingPlan } from './pricing/pricing'
 export { ConsentBanner } from './consent/ConsentBanner'
 export type {

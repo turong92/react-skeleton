@@ -88,4 +88,74 @@ describe('PricingTable', () => {
     expect(html).toMatch(/data-variant="primary"[^>]*>Buy Pro/)
     expect(html).toMatch(/data-variant="secondary"[^>]*>Start free/)
   })
+
+  it('without any yearly price there is no toggle and the prices stay monthly', () => {
+    const monthlyOnly: PricingPlan[] = [
+      { id: 'a', name: 'A', price: { monthly: 10, yearly: null }, features: [], ctaLabel: 'Buy A' },
+    ]
+    const html = renderToStaticMarkup(
+      <PricingTable {...base} plans={monthlyOnly} interval="yearly" />,
+    )
+    expect(html).not.toContain('role="group"')
+    expect(html).not.toContain('aria-pressed')
+    expect(html).toContain('$10')
+    expect(html).not.toContain('Billed')
+  })
+
+  it('a plan with no price for the shown interval is left out of that view only', () => {
+    const mixed: PricingPlan[] = [
+      {
+        id: 'm',
+        name: 'MonthOnly',
+        price: { monthly: 5, yearly: null },
+        features: [],
+        ctaLabel: 'a',
+      },
+      { id: 'b', name: 'Both', price: { monthly: 10, yearly: 96 }, features: [], ctaLabel: 'b' },
+    ]
+    const monthly = renderToStaticMarkup(<PricingTable {...base} plans={mixed} />)
+    expect(monthly.match(/<article/g)).toHaveLength(2)
+    const yearly = renderToStaticMarkup(<PricingTable {...base} plans={mixed} interval="yearly" />)
+    expect(yearly.match(/<article/g)).toHaveLength(1)
+    expect(yearly).not.toContain('MonthOnly')
+  })
+
+  it('a sale price strikes the regular price through and says until when', () => {
+    const sale: PricingPlan[] = [
+      {
+        id: 'p',
+        name: 'Sale',
+        price: { monthly: 8, yearly: 60 },
+        compareAt: { monthly: 10, yearly: 96 },
+        saleEndsAt: { monthly: '2026-11-30T12:00:00Z' },
+        features: [],
+        ctaLabel: 'Buy',
+      },
+    ]
+    const monthly = renderToStaticMarkup(
+      <PricingTable {...base} plans={sale} labels={{ saleUntil: (d) => `Until ${d}` }} />,
+    )
+    expect(monthly).toMatch(/<del[^>]*>\$10<\/del>/)
+    expect(monthly).toContain('$8')
+    expect(monthly).toContain('Until Nov 30, 2026')
+    // 연 가격에는 끝 시각이 없다 - 정가(한 달 몫 $8)만 지금 가격($5)과 함께, 기간 라벨은 없다
+    const yearly = renderToStaticMarkup(<PricingTable {...base} plans={sale} interval="yearly" />)
+    expect(yearly).toMatch(/<del[^>]*>\$8<\/del>/)
+    expect(yearly).toContain('$5')
+    expect(yearly).not.toContain('Until')
+  })
+
+  it('no strike-through when the regular price is not above the price', () => {
+    const flat: PricingPlan[] = [
+      {
+        id: 'p',
+        name: 'P',
+        price: { monthly: 10, yearly: null },
+        compareAt: { monthly: 10 },
+        features: [],
+        ctaLabel: 'Buy',
+      },
+    ]
+    expect(renderToStaticMarkup(<PricingTable {...base} plans={flat} />)).not.toContain('<del')
+  })
 })

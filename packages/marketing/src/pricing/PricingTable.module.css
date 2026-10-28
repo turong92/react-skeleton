@@ -84,6 +84,17 @@
   line-height: var(--line-height-tight);
 }
 
+.compare {
+  color: var(--text-muted);
+  font-size: var(--font-size-body);
+  font-weight: 500;
+}
+
+.sale {
+  color: var(--text-strong);
+  font-weight: 650;
+}
+
 .per,
 .note {
   color: var(--text-muted);

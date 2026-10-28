@@ -8,6 +8,7 @@ import type {
   UpdateCatalogProductInput,
 } from './catalogAdminTypes'
 import { CatalogErrorNotice } from './CatalogErrorNotice'
+import { fieldMessageOf } from './catalogErrors'
 import {
   emptyProductForm,
   productFormOf,
@@ -67,7 +68,7 @@ export function AdminProductEditor(props: AdminProductEditorProps) {
   const labelOf = (code: string) => languages.find((l) => l.code === code)?.label ?? code
   const say = (key: 'code' | 'level' | 'sortOrder') => {
     const problem = problems[key]
-    return problem ? text.problems[problem] : undefined
+    return problem ? text.problems[problem] : fieldMessageOf(error, key)
   }
   const subscription = form.kind === 'SUBSCRIPTION'
 
@@ -161,7 +162,9 @@ export function AdminProductEditor(props: AdminProductEditorProps) {
               error={
                 problems.names?.includes(language.code)
                   ? text.problems.nameEmpty(labelOf(language.code))
-                  : undefined
+                  : language === languages[0]
+                    ? fieldMessageOf(error, 'texts')
+                    : undefined
               }
               required
             >

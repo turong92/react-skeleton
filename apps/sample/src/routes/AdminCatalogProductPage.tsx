@@ -90,6 +90,7 @@ export function AdminCatalogProductPage() {
         prices={product.prices}
         providers={providers.data ?? []}
         busyRef={refBusy}
+        refError={m.setProviderRef.error ?? m.removeProviderRef.error}
         locale={language}
         labels={labels}
         onAdd={() => {

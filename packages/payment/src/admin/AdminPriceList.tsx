@@ -3,6 +3,7 @@ import { Badge, Button, EmptyState, Table, type TableColumn } from '@skeleton/ui
 import { formatMoney } from '../format'
 import { resolvePaymentLabels, type PaymentLabelsInput } from '../labels'
 import type { AdminCatalogPrice } from './catalogAdminTypes'
+import { CatalogErrorNotice } from './CatalogErrorNotice'
 import { periodName } from './catalogText'
 import { priceStateOf, type PriceState } from './priceState'
 import { ProviderRefEditor } from './ProviderRefEditor'
@@ -22,6 +23,8 @@ export type AdminPriceListProps = {
   providers?: readonly string[]
   onSetProviderRef?: (price: AdminCatalogPrice, provider: string, externalId: string) => void
   onRemoveProviderRef?: (price: AdminCatalogPrice, provider: string) => void
+  /** 결제사 링크를 잇거나 끊다 실패한 오류 - 표 위에 이유를 띄운다(이미 다른 가격에 이어진 id 는 그 말로) */
+  refError?: unknown
   /** 지금 저장 중인 링크 칸 `"<가격 코드>:<결제사>"` */
   busyRef?: string | null
   /** 상태(행사 예정 · 끝남 · 가려짐)를 가리는 기준 시각 - 기본 지금 */
@@ -52,6 +55,7 @@ export function AdminPriceList({
   onSetProviderRef,
   onRemoveProviderRef,
   busyRef = null,
+  refError,
   now = new Date(),
   locale,
   formatTime = (iso) => formatInstant(iso, { locale }),
@@ -182,6 +186,7 @@ export function AdminPriceList({
           </Button>
         )}
       </header>
+      <CatalogErrorNotice error={refError} context="providerLink" labels={input} />
       {byCurrency.size === 0 && <EmptyState headingLevel={3} title={text.empty} />}
       {[...byCurrency].map(([currency, rows]) => (
         <div key={currency} className={styles.group}>

@@ -11,6 +11,7 @@ import {
 } from './addPriceForm'
 import type { AddCatalogPriceInput } from './catalogAdminTypes'
 import { CatalogErrorNotice } from './CatalogErrorNotice'
+import { fieldMessageOf } from './catalogErrors'
 import styles from './AddPriceDialog.module.css'
 
 export type AddPriceDialogProps = {
@@ -57,7 +58,7 @@ export function AddPriceDialog({
   const set = (patch: Partial<AddPriceForm>) => setForm((current) => ({ ...current, ...patch }))
   const say = (key: keyof AddPriceProblems) => {
     const problem = problems[key]
-    return problem ? text.problems[problem] : undefined
+    return problem ? text.problems[problem] : fieldMessageOf(error, key)
   }
   const currency = currencyOf(form)
   const amountHint = text.amountHint(/^[A-Z]{3}$/.test(currency) ? currency : text.currency)
@@ -222,7 +223,7 @@ export function AddPriceDialog({
             </Field>
           </>
         )}
-        <Field label={text.code} hint={text.codeHint}>
+        <Field label={text.code} hint={text.codeHint} error={fieldMessageOf(error, 'code')}>
           {(control) => (
             <Input
               {...control}

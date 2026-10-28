@@ -1,3 +1,4 @@
+import { ApiRequestError } from '@skeleton/api-client'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { koPaymentLabels } from '../labels'
@@ -134,5 +135,17 @@ describe('AdminPriceList', () => {
     expect(html).not.toContain('행사 기간 바꾸기: plain')
     expect(html).not.toContain('행사 기간 바꾸기: gone')
     expect(render([sale])).not.toContain('행사 기간 바꾸기')
+  })
+
+  it('a provider id that is already linked to another price says so on the link, not 「이미 쓰는 코드」', () => {
+    const error = new ApiRequestError(
+      { code: 'CATALOG.CODE_TAKEN', title: 't', status: 409, timestamp: 't', traceId: 'tr' },
+      'tr',
+      'sp',
+      'tp',
+    )
+    const html = render([price()], { refError: error })
+    expect(html).toContain('이미 다른 가격에 연결된 id')
+    expect(html).not.toContain('이미 쓰는 코드')
   })
 })

@@ -129,7 +129,8 @@ export type CatalogAdminLabels = {
     close: string
     loading: string
   }
-  errors: Record<CatalogProblem | 'other', string>
+  /** `refTaken` - 이미 다른 가격에 이어진 결제사 가격 id 를 이으려 했다(`CATALOG.CODE_TAKEN` 이 결제사 링크 칸에서 오면) */
+  errors: Record<CatalogProblem | 'other' | 'refTaken', string>
 }
 
 export const koCatalogAdminLabels: CatalogAdminLabels = {
@@ -267,6 +268,8 @@ export const koCatalogAdminLabels: CatalogAdminLabels = {
     priceOverlap: '같은 주기 · 통화에 판매 기간이 겹치는 가격이 있어요. 기간을 바꿔 주세요.',
     priceInvalid: '가격 값이 올바르지 않아요. 금액 · 주기 · 행사 기간을 확인해 주세요.',
     notFound: '찾는 상품이나 가격이 없어요. 목록을 새로 읽어 주세요.',
+    invalidInput: '입력을 확인해 주세요. 틀린 칸 아래에 이유를 적었어요.',
+    refTaken: '이미 다른 가격에 연결된 id 예요. 다른 id 를 적어 주세요.',
     other: '저장하지 못했어요. 잠시 뒤 다시 해 주세요.',
   },
 }
@@ -414,6 +417,8 @@ export const defaultCatalogAdminLabels: CatalogAdminLabels = {
       'A price with an overlapping sale period already exists for that period and currency. Change the dates.',
     priceInvalid: 'The price is not valid. Check the amount, period and sale dates.',
     notFound: 'That product or price no longer exists. Reload the list.',
+    invalidInput: 'Check your input. The reason is under each wrong field.',
+    refTaken: 'That id is already linked to another price. Use a different id.',
     other: 'Could not save. Try again in a moment.',
   },
 }

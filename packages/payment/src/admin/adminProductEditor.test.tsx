@@ -88,4 +88,22 @@ describe('AdminProductEditor', () => {
     expect(html).toContain('aria-busy="true"')
     expect(html).toContain('disabled=""')
   })
+
+  it('a validation rejection shows the sentence and the server message under the wrong field', () => {
+    const error = new ApiRequestError(
+      {
+        code: 'COMMON.PARAMETER_VALIDATION_FAILED',
+        title: 't',
+        status: 400,
+        timestamp: 't',
+        errors: [{ field: 'code', code: 'PATTERN', message: 'bad code shape' }],
+      },
+      'tr',
+      'sp',
+      'tp',
+    )
+    const html = create({ error })
+    expect(html).toContain('입력을 확인해 주세요')
+    expect(html).toContain('bad code shape')
+  })
 })

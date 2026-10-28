@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `@skeleton/api-client` `ErrorCodes`: `CAMPAIGN_*` · `COUPON_CODE_*` · `POINT_INSUFFICIENT` · `PAYMENT_DISCOUNT_*` · `PAYMENT_NOTHING_TO_REFUND` · `AUTHZ_ROLE_CYCLE` · `AUTHZ_INCLUDE_UNKNOWN` · `AUTHZ_ROLE_INCLUDED`.
 - 샘플: `/rewards`(출석 · 초대 · 포인트) · `/rewards/coupons`(쿠폰함) · 응원하기와 구독 시작에 쿠폰 고르기(응원하기는 견적으로 할인 뒤 금액 미리보기) · `main.tsx` 의 초대 코드 보관 · 운영 `/admin/campaigns` · `/admin/coupons` · `/admin/points` · `/admin/reward-grants`. e2e `rewards.e2e.ts`(출석 · 쿠폰 결제 · 무료 이용권 · 이벤트 끄기 · 결제 면제)와 `authzRoles.e2e.ts` 의 위계 걸음 - 백엔드를 합친 뒤에 돌린다.
 
+### Fixed — Dialog 의 닫기 알림 (2026-10-28)
+
+- `@skeleton/ui` `Dialog`: × · Esc · 바깥(`open={false}`)에서 닫기는 정리용 `onClose` 가 **정확히 한 번** 불린다(× 로 닫을 때는 버튼이 알렸으니 뒤따르는 닫기는 건너뛴다). 바깥에서 닫을 때는 창을 닫고 포커스를 돌려준 뒤 마지막에 부른다. 예전에는 브라우저의 늦은 `close` 이벤트가 불렀는데, 그 사이 부모가 다시 열려고 `open` 을 켰다면 그 이벤트의 `onClose()` 가 새 열기를 되돌려 창이 다시 열리지 않는 드문 경합이 있었다(환불 창이 닫힌 사이 승인이 오류로 끝나 다시 열리는 스토리가 가끔 실패). 시점만 이벤트에서 닫는 순간으로 옮겼다. 바닥글 취소 버튼이 `onClose` 를 직접 부르는 `ConfirmDialog` 등은 별개다(기존과 같음). 중간 커밋 66300d6(늦은 이벤트를 아예 삼켜 정리가 끊김)은 6ce0f78 이 대체했다.
+- `@skeleton/payment` 스토리: 모름이 된 환불의 유예(실제 100ms · 400ms 창)를 보는 두 스토리는 멈춘 시계 위에서 돈다 - 부하가 큰 기계에서 창을 놓쳐 가끔 실패하던 것.
+
 ### Changed — 검사를 푸시용 빠른 것과 하루 한 번 전체로 나눔 (2026-10-26)
 
 - CI: 같은 ref 의 앞선 실행은 취소(`concurrency`). `sample-e2e` 는 핵심 5개 파일(journey · board · account · payment · authzRoles)만 돈다 — `pnpm e2e:sample e2e/<파일>` 처럼 파일 경로를 인자로 주면 그 파일만 돈다. 새 `nightly.yml`(매일 한국 새벽 + 수동)이 e2e 18개 전부(+ 재동의 필터를 켠 `legal.e2e.ts` 한 번 더)와 `test-new-project.sh --full` 을 돈다. 찍은 프로젝트에는 따라가지 않는다.

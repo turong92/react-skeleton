@@ -634,9 +634,34 @@ const lost = async (): Promise<Refund> => {
   throw new Error('network')
 }
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+/** 지금 멈춰 둔 시계(없으면 `null`) - `lostAfter` 가 실제로 자지 않고 이 시계를 흘린다 */
+let frozen: ReturnType<typeof freezeClock> | null = null
+/**
+ * 모름이 된 환불의 유예(`unsureHoldMs` · `unsureFloorMs`)는 `Date.now()` 로 센다. 실제 시간으로 기다리면 부하가 큰 기계에서 「유예 안의 첫 맞추기」가 유예를 넘겨 버려
+ * 시험이 흔들린다(100ms 안에 창을 닫고 누르는 일이 늘 되지 않는다) - 시계를 멈춰 두고 시험이 직접 흘려 보낸다. 끝나면 꼭 `restore()`(try/finally)
+ */
+function freezeClock() {
+  const real = Date.now
+  let now = real()
+  // `spyOn` 을 쓰지 않는다 - 스토리북의 spyOn 은 호출마다 기록하는데 `Date.now` 는 쉴 새 없이 불려 화면이 멈춘다
+  Date.now = () => now
+  const clock = {
+    advance: (ms: number) => {
+      now += ms
+    },
+    restore: () => {
+      Date.now = real
+      frozen = null
+    },
+  }
+  frozen = clock
+  return clock
+}
 /** 답이 `ms` 뒤에야 유실로 끝난다 - 시간 초과로 모름이 된 보내기(모름이 된 때에는 보낸 지 이미 오래다) */
 const lostAfter = (ms: number) => async (): Promise<Refund> => {
-  await sleep(ms)
+  // 시계를 멈춰 둔 시험은 그 시계를 `ms` 흘린다(보낸 때와 모름이 된 때가 달라야 유예의 바닥 규칙이 시험된다) - 아니면 실제로 잔다
+  if (frozen) frozen.advance(ms)
+  else await sleep(ms)
   throw new Error('network')
 }
 const answers = (code: string, status: number, data?: unknown) => async (): Promise<Refund> => {
@@ -1123,25 +1148,30 @@ export const MatchingRightAfterAnUnsureSendKeepsTheLockAndTheKey: Story = {
 export const MatchingAfterATimedOutSendWaitsOnceThenLetsGo: Story = {
   ...withDirectHoldingFor(100, lostAfter(300), goes('SUCCEEDED', 2000)),
   play: async ({ canvas, userEvent }) => {
-    let dialog = await openDirect(canvas, userEvent)
-    await typeAmount(dialog, userEvent, '2000')
-    await pressRefund(dialog, userEvent)
-    await expect(await within(dialog).findByRole('alert')).toHaveTextContent(
-      '환불 결과를 확인하지 못했어요',
-    ) // 보낸 지 300ms 가 지나서야 모름이 됐다(유예 100ms 는 이미 지났다)
-    await userEvent.click(within(dialog).getByRole('button', { name: '닫기' }))
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
-    await userEvent.click(canvas.getByRole('button', { name: '결제사와 맞추기' }))
-    await expect(await canvas.findByText('결제사와 맞췄어요')).toBeVisible()
-    await expect(await canvas.findByText(/보낸 환불이 아직 가는 중일 수 있어요/)).toBeVisible() // 바닥 안의 첫 맞추기는 말하고 기다린다
-    await sleep(150) // 모름이 된 지 바닥(100ms)이 지났다
-    await userEvent.click(canvas.getByRole('button', { name: '결제사와 맞추기' }))
-    await waitFor(() =>
-      expect(canvas.queryByText(/보낸 환불이 아직 가는 중일 수 있어요/)).toBeNull(),
-    )
-    dialog = await openDirect(canvas, userEvent)
-    await expect(within(dialog).queryByRole('alert')).toBeNull() // 두 번째 맞추기로 모름이 풀렸다
-    await expect(within(dialog).getByLabelText('환불할 금액')).not.toHaveAttribute('readonly')
+    const clock = freezeClock()
+    try {
+      let dialog = await openDirect(canvas, userEvent)
+      await typeAmount(dialog, userEvent, '2000')
+      await pressRefund(dialog, userEvent)
+      await expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+        '환불 결과를 확인하지 못했어요',
+      ) // 보낸 지 300ms 가 지나서야 모름이 됐다(유예 100ms 는 이미 지났다)
+      await userEvent.click(within(dialog).getByRole('button', { name: '닫기' }))
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+      await userEvent.click(canvas.getByRole('button', { name: '결제사와 맞추기' }))
+      await expect(await canvas.findByText('결제사와 맞췄어요')).toBeVisible()
+      await expect(await canvas.findByText(/보낸 환불이 아직 가는 중일 수 있어요/)).toBeVisible() // 바닥 안의 첫 맞추기는 말하고 기다린다
+      clock.advance(150) // 모름이 된 지 바닥(100ms)이 지났다
+      await userEvent.click(canvas.getByRole('button', { name: '결제사와 맞추기' }))
+      await waitFor(() =>
+        expect(canvas.queryByText(/보낸 환불이 아직 가는 중일 수 있어요/)).toBeNull(),
+      )
+      dialog = await openDirect(canvas, userEvent)
+      await expect(within(dialog).queryByRole('alert')).toBeNull() // 두 번째 맞추기로 모름이 풀렸다
+      await expect(within(dialog).getByLabelText('환불할 금액')).not.toHaveAttribute('readonly')
+    } finally {
+      clock.restore()
+    }
   },
 }
 
@@ -1152,28 +1182,33 @@ export const MatchingAfterATimedOutSendWaitsOnceThenLetsGo: Story = {
 export const AResendCountsTheHoldFromTheResend: Story = {
   ...withDirectHoldingFor(400, lost, lost, goes('SUCCEEDED', 2000)),
   play: async ({ canvas, userEvent }) => {
-    let dialog = await openDirect(canvas, userEvent)
-    await typeAmount(dialog, userEvent, '2000')
-    await pressRefund(dialog, userEvent)
-    await expect(await within(dialog).findByRole('alert')).toHaveTextContent(
-      '환불 결과를 확인하지 못했어요',
-    )
-    await sleep(500) // 첫 보내기의 유예(400ms)는 지났다
-    await pressRefund(dialog, userEvent) // 같은 내용으로 다시 보냈지만 또 모름 - 이 보내기부터 다시 센다
-    await waitFor(() => expect(sentKeys).toHaveLength(2))
-    await expect(await within(dialog).findByRole('alert')).toHaveTextContent(
-      '환불 결과를 확인하지 못했어요',
-    )
-    await userEvent.click(within(dialog).getByRole('button', { name: '닫기' }))
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
-    await userEvent.click(canvas.getByRole('button', { name: '결제사와 맞추기' }))
-    await expect(await canvas.findByText(/보낸 환불이 아직 가는 중일 수 있어요/)).toBeVisible()
-    dialog = await openDirect(canvas, userEvent)
-    await expect(within(dialog).getByLabelText('환불할 금액')).toHaveAttribute('readonly') // 풀리지 않았다
-    await pressRefund(dialog, userEvent)
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
-    await expect(sentKeys).toHaveLength(3)
-    await expect(sentKeys[2]).toBe(sentKeys[0]) // 줄곧 같은 키
+    const clock = freezeClock()
+    try {
+      let dialog = await openDirect(canvas, userEvent)
+      await typeAmount(dialog, userEvent, '2000')
+      await pressRefund(dialog, userEvent)
+      await expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+        '환불 결과를 확인하지 못했어요',
+      )
+      clock.advance(500) // 첫 보내기의 유예(400ms)는 지났다
+      await pressRefund(dialog, userEvent) // 같은 내용으로 다시 보냈지만 또 모름 - 이 보내기부터 다시 센다
+      await waitFor(() => expect(sentKeys).toHaveLength(2))
+      await expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+        '환불 결과를 확인하지 못했어요',
+      )
+      await userEvent.click(within(dialog).getByRole('button', { name: '닫기' }))
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+      await userEvent.click(canvas.getByRole('button', { name: '결제사와 맞추기' }))
+      await expect(await canvas.findByText(/보낸 환불이 아직 가는 중일 수 있어요/)).toBeVisible()
+      dialog = await openDirect(canvas, userEvent)
+      await expect(within(dialog).getByLabelText('환불할 금액')).toHaveAttribute('readonly') // 풀리지 않았다
+      await pressRefund(dialog, userEvent)
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+      await expect(sentKeys).toHaveLength(3)
+      await expect(sentKeys[2]).toBe(sentKeys[0]) // 줄곧 같은 키
+    } finally {
+      clock.restore()
+    }
   },
 }
 

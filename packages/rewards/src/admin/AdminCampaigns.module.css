@@ -1,0 +1,24 @@
+.page {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.form {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.milestone {
+  display: grid;
+  gap: var(--space-md);
+  margin: 0;
+  padding: var(--space-md);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.milestone legend {
+  padding-inline: var(--space-xs);
+  color: var(--text-strong);
+  font-weight: 600;
+}

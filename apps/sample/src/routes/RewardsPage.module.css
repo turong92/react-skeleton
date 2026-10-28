@@ -1,0 +1,16 @@
+.page {
+  display: grid;
+  gap: var(--space-xl);
+}
+
+.cards {
+  display: grid;
+  gap: var(--space-lg);
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  align-items: start;
+}
+
+.points {
+  display: grid;
+  gap: var(--space-lg);
+}

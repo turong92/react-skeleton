@@ -1,0 +1,62 @@
+.page {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.form {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.account {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.find {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-sm);
+}
+
+.scope {
+  display: grid;
+  gap: var(--space-md);
+  margin: 0;
+  padding: var(--space-md);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.scope legend {
+  padding-inline: var(--space-xs);
+  color: var(--text-strong);
+  font-weight: 600;
+}
+
+.code {
+  display: grid;
+  gap: var(--space-md);
+  justify-items: start;
+}
+
+.codeText {
+  padding: var(--space-xs) var(--space-md);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-strong);
+  letter-spacing: 0.08em;
+}
+
+.muted {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+}

@@ -128,6 +128,9 @@ importers:
       '@skeleton/realtime':
         specifier: workspace:*
         version: link:../../packages/realtime
+      '@skeleton/rewards':
+        specifier: workspace:*
+        version: link:../../packages/rewards
       '@skeleton/seo':
         specifier: workspace:*
         version: link:../../packages/seo

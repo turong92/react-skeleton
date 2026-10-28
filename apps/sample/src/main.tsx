@@ -19,6 +19,7 @@ import { getDevCountry } from './api/devCountry'
 import { i18n } from './i18n'
 import { initialLocale } from './i18n/initialLocale'
 import { router } from './routes'
+import { ReferralCapture } from './rewards/ReferralCapture'
 import { consent } from './consent/consent'
 import { createAnalyticsLoader } from '@skeleton/marketing'
 
@@ -47,6 +48,8 @@ function render() {
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <AuthProvider session={authSession}>
+            {/* 초대 링크의 ?ref= 를 보관했다가 로그인 뒤 한 번 claim - 화면은 없다 */}
+            <ReferralCapture />
             {/* 한 번에 하나, 순서는 서버 인터셉터와 같다 — 아이디 정하기 → 이메일 등록(쓰기 때: 막지 않고 쓰려 할 때 연다) → 약관 동의 → (닉네임: 막지 않는 띠 + 글쓰기 전 확인) */}
             <LoginIdGate>
               <EmailGate>

@@ -1,4 +1,5 @@
 import {
+  discountErrorMessage,
   openBillingAuth,
   priceEveryText,
   SubscriptionPlanList,
@@ -8,10 +9,13 @@ import {
   usePaymentConfig,
   type SubscriptionPlan,
 } from '@skeleton/payment'
+import { CouponPicker, useCoupons } from '@skeleton/rewards'
 import { Alert, ChoiceGroup, ErrorReference, PageHeader, Spinner } from '@skeleton/ui'
 import { useEffect, useId, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { paymentApi } from '../cheer/api'
+import { rewardsApi } from '../rewards/api'
+import { rewardsLabelsFor } from '../rewards/labels'
 import { LinkButton } from '../components/LinkButton'
 import { LoadError } from '../components/LoadError'
 import { i18n, languageOf, useT, type MessageKey } from '../i18n'
@@ -60,6 +64,15 @@ export function SubscribePage() {
   const [busyPlan, setBusyPlan] = useState<string | null>(null)
   const [notice, setNotice] = useState<Notice | null>(null)
   const providerLegendId = useId()
+  const couponLegendId = useId()
+  // 쿠폰 - 첫 결제부터 적용된다. 구독은 견적 호출이 없어 할인 뒤 금액은 미리 보이지 않는다(서버가 시작 때 계산한다)
+  const coupons = useCoupons(rewardsApi, 'AVAILABLE')
+  const [pickedCoupon, setPickedCoupon] = useState<string | null>(null)
+  const [couponProblem, setCouponProblem] = useState<string | null>(null)
+  const couponRef =
+    pickedCoupon !== null && coupons.data?.some((coupon) => coupon.id === pickedCoupon)
+      ? pickedCoupon
+      : null
 
   // 결제사는 서버가 접속 나라로 정한다(한국이면 토스 카드 등록, 아니면 Paddle 결제창 한 번 - 갱신은 Paddle 이 한다). 화면은 고르지 않는다
   const serverProvider = useServerProvider()
@@ -88,6 +101,7 @@ export function SubscribePage() {
     if (busyPlan !== null) return
     setBusyPlan(plan.code)
     setNotice(null)
+    setCouponProblem(null)
     const result = await startSubscribe(
       {
         start: (planCode) =>
@@ -96,6 +110,9 @@ export function SubscribePage() {
             ...(chosenProvider !== undefined ? { provider: chosenProvider } : {}),
             // 카카오페이 · 네이버페이는 서버가 정한 주소로 돌아온다 - 이 화면의 origin 으로 돌아오게 한다(허용 목록 안일 때만 서버가 따른다)
             returnOrigin: window.location.origin,
+            ...(couponRef !== null
+              ? { discounts: [{ type: 'coupon' as const, ref: couponRef }] }
+              : {}),
           }),
         openBillingAuth: (billingAuth, urls) =>
           openBillingAuth(billingAuth, { ...urls, locale: language }),
@@ -109,7 +126,11 @@ export function SubscribePage() {
     else if (result.kind === 'canceled') setNotice({ kind: 'closed' })
     else if (result.kind === 'window-failed')
       setNotice({ kind: 'windowFailed', error: result.error })
-    else setNotice({ kind: startFailureOf(result.error), error: result.error })
+    else if (discountErrorMessage(result.error, labels) !== null) {
+      // 쿠폰이 안 맞거나 이미 쓰는 중이다 - 이유를 말하고 쿠폰 없이 다시 고르게 한다
+      setCouponProblem(discountErrorMessage(result.error, labels))
+      setPickedCoupon(null)
+    } else setNotice({ kind: startFailureOf(result.error), error: result.error })
   }
 
   // 이름표는 사전이 가진 결제사 id 만 - 모르는 id(설정으로 바꾼 `provider-id`)는 id 그대로
@@ -165,6 +186,29 @@ export function SubscribePage() {
             disabled={busyPlan !== null}
           />
         </div>
+      )}
+      {coupons.data !== undefined && coupons.data.length > 0 && (
+        <div className={styles.group}>
+          <span id={couponLegendId} className={styles.legend}>
+            {t('subscription.subscribe.couponLegend')}
+          </span>
+          <p className={styles.legend}>{t('subscription.subscribe.couponHint')}</p>
+          <CouponPicker
+            coupons={coupons.data}
+            selectedId={couponRef}
+            onSelect={(id) => {
+              setCouponProblem(null)
+              setPickedCoupon(id)
+            }}
+            labels={rewardsLabelsFor(language)}
+            locale={language}
+          />
+        </div>
+      )}
+      {couponProblem !== null && (
+        <Alert tone="warning" toneLabel={labels.noticeLabel}>
+          {couponProblem} {t('cheer.couponDropped')}
+        </Alert>
       )}
       <CountryPolicyNotice />
       <SubscriptionPlanList

@@ -1,6 +1,7 @@
 import { isErrorCode, retryAfterSeconds, ErrorCodes } from '@skeleton/api-client'
 import {
   checkoutCanOpen,
+  checkoutToOpen,
   INTENT_KEY_TTL_MS,
   PaymentLedgerErrorCodes,
   PaymentRedirectError,
@@ -100,6 +101,8 @@ export async function startCheer(
   reuse?: CreateOrderResult,
   easyPay?: string,
   provider?: string,
+  /** 고른 쿠폰 id - 있으면 주문에 `discounts` 로 싣는다(서버가 견적과 같게 다시 계산한다) */
+  couponRef?: string | null,
 ): Promise<StartCheerResult> {
   let created: CreateOrderResult
   if (reuse) created = reuse
@@ -110,6 +113,7 @@ export async function startCheer(
         itemType: CHEER_ITEM_TYPE,
         itemRef,
         ...(provider !== undefined ? { provider } : {}),
+        ...(couponRef ? { discounts: [{ type: 'coupon' as const, ref: couponRef }] } : {}),
         ...(deps.returnOrigin !== undefined ? { returnOrigin: deps.returnOrigin } : {}),
       })
     } catch (error) {
@@ -117,7 +121,8 @@ export async function startCheer(
     }
   // 같은 키를 다시 보냈는데 주문이 이미 결제할 수 있는 상태가 아니면 서버는 결제창 값 없이 답한다(`checkout: null`) - 열 창이 없다.
   // 이미 돈이 움직인 주문(결제됨 · 승인 중 · 환불)은 실패가 아니라 그 주문의 화면으로 보낸다. 그 밖(닫힘)은 실패 - 키는 이 답으로 풀렸으니(성공) 다음 누름은 새 주문이다
-  const { checkout } = created
+  // 쿠폰으로 0원(`FREE`)이거나 결제 면제(`EXEMPT`)인 주문은 이미 `PAID` 라 열 결제창이 없다 - `checkoutToOpen` 이 `null` 이면 아래에서 그 주문의 화면으로 보낸다
+  const checkout = checkoutToOpen(created)
   if (checkout == null) {
     if (MONEY_MOVED.has(created.order.status)) return { kind: 'settled', orderId: created.order.id }
     return { kind: 'order-failed', error: new Error('The order is no longer open for payment') }
@@ -149,8 +154,10 @@ export type UnopenedOrder = {
   itemRef: string
   created: CreateOrderResult
   since: number
-  /** 사람이 고른 결제 방법 - 다른 방법으로 다시 누르면 그 주문의 창을 다시 열지 않는다 */
+  /** 사람이 , 고른 결제 방법 - 다른 방법으로 다시 누르면 그 주문의 창을 다시 열지 않는다 */
   provider?: string
+  /** 주문에 건 쿠폰 - 다른 쿠폰(또는 쿠폰 없이)으로 다시 누르면 그 주문의 창을 다시 열지 않는다 */
+  couponRef?: string
 }
 
 /**
@@ -162,8 +169,14 @@ export function reusableOrderOf(
   itemRef: string,
   now: number,
   provider?: string,
+  couponRef?: string | null,
 ): CreateOrderResult | undefined {
-  if (unopened === null || unopened.itemRef !== itemRef || unopened.provider !== provider)
+  if (
+    unopened === null ||
+    unopened.itemRef !== itemRef ||
+    unopened.provider !== provider ||
+    unopened.couponRef !== (couponRef ?? undefined)
+  )
     return undefined
   return now - unopened.since >= INTENT_KEY_TTL_MS ? undefined : unopened.created
 }
@@ -175,6 +188,7 @@ export function unopenedAfter(
   now: number,
   previous: UnopenedOrder | null,
   provider?: string,
+  couponRef?: string | null,
 ): UnopenedOrder | null {
   if (result.kind !== 'window-failed') return null
   return {
@@ -182,6 +196,7 @@ export function unopenedAfter(
     created: result.created,
     since: previous?.created === result.created ? previous.since : now,
     ...(provider !== undefined ? { provider } : {}),
+    ...(couponRef ? { couponRef } : {}),
   }
 }
 

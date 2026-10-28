@@ -189,6 +189,35 @@ describe('startCheer', () => {
     }
   })
 
+  it('a coupon travels with the order as discounts, and only when one is chosen', async () => {
+    const withCoupon = fakes()
+    await startCheer(withCoupon.deps, 'cheer-3000', undefined, undefined, undefined, 'c1')
+    expect(withCoupon.creates[0]).toMatchObject({ discounts: [{ type: 'coupon', ref: 'c1' }] })
+    const without = fakes()
+    await startCheer(without.deps, 'cheer-3000')
+    expect(without.creates[0]).not.toHaveProperty('discounts')
+  })
+
+  it('a free order (coupon took it to 0) or an exempt one has no window even if the server sent one: the person goes to that order', async () => {
+    for (const settlement of ['FREE', 'EXEMPT']) {
+      const { deps, log } = fakes()
+      deps.createOrder = async () => {
+        log.push('create')
+        return {
+          order: { id: 'ord_f', status: 'PAID', settlement },
+          checkout,
+        } as unknown as CreateOrderResult
+      }
+      await expect(
+        startCheer(deps, 'cheer-3000', undefined, undefined, undefined, 'c1'),
+      ).resolves.toEqual({
+        kind: 'settled',
+        orderId: 'ord_f',
+      })
+      expect(log, settlement).toEqual(['create'])
+    }
+  })
+
   it('an order with no checkout that is not open and not paid (closed or never payable) stays an order failure', async () => {
     for (const status of ['PENDING', 'FAILED', 'EXPIRED', 'CANCELED'] as const) {
       const { deps } = fakes()
@@ -316,6 +345,18 @@ describe('the order whose window never opened — when pressing again may reuse 
       created,
       since: 7,
       provider: 'kakaopay',
+    })
+  })
+
+  it('another coupon (or none) starts a new order - the held order was priced with the first one', () => {
+    const heldCoupon: UnopenedOrder = { ...held, couponRef: 'c1' }
+    expect(reusableOrderOf(heldCoupon, 'cheer-3000', 2_000, undefined, 'c1')).toBe(created)
+    expect(reusableOrderOf(heldCoupon, 'cheer-3000', 2_000, undefined, 'c2')).toBeUndefined()
+    expect(reusableOrderOf(heldCoupon, 'cheer-3000', 2_000)).toBeUndefined()
+    expect(reusableOrderOf(held, 'cheer-3000', 2_000, undefined, 'c1')).toBeUndefined()
+    const failed = { kind: 'window-failed', error: new Error('x'), created } as const
+    expect(unopenedAfter(failed, 'cheer-3000', 7, null, undefined, 'c1')).toMatchObject({
+      couponRef: 'c1',
     })
   })
 

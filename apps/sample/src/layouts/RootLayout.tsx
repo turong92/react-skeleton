@@ -60,12 +60,20 @@ export function AdminLinks() {
   const canPayments = usePermission('payment.read')
   const canAccounts = usePermission('account.read')
   const canRoles = usePermission('authz.roles')
+  const canCampaigns = usePermission('campaign.manage')
+  const canCoupons = usePermission('coupon.manage')
+  const canPoints = usePermission('point.manage')
+  const canGrants = usePermission('reward.operate')
   return (
     <>
       {canDashboard && <NavLink to="/admin/dashboard">{t('nav.adminDashboard')}</NavLink>}
       {canPayments && <NavLink to="/admin/payments">{t('nav.adminPayments')}</NavLink>}
       {canAccounts && <NavLink to="/admin/accounts">{t('nav.adminAccounts')}</NavLink>}
       {canRoles && <NavLink to="/admin/roles">{t('nav.adminRoles')}</NavLink>}
+      {canCampaigns && <NavLink to="/admin/campaigns">{t('nav.adminCampaigns')}</NavLink>}
+      {canCoupons && <NavLink to="/admin/coupons">{t('nav.adminCoupons')}</NavLink>}
+      {canPoints && <NavLink to="/admin/points">{t('nav.adminPoints')}</NavLink>}
+      {canGrants && <NavLink to="/admin/reward-grants">{t('nav.adminRewardGrants')}</NavLink>}
     </>
   )
 }
@@ -140,6 +148,7 @@ export function RootLayout() {
               <NavLink to="/notes">{t('nav.notes')}</NavLink>
               <NavLink to="/board">{t('nav.board')}</NavLink>
               <NavLink to="/cheer">{t('nav.cheer')}</NavLink>
+              <NavLink to="/rewards">{t('nav.rewards')}</NavLink>
               <NavLink to="/subscription">{t('nav.subscription')}</NavLink>
               <NavLink to="/settings">{t('nav.settings')}</NavLink>
               <AdminLinks />

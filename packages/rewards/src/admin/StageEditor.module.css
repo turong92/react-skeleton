@@ -1,0 +1,54 @@
+.editor {
+  display: grid;
+  gap: var(--space-md);
+  margin: 0;
+  padding: var(--space-md);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.editor legend {
+  padding-inline: var(--space-xs);
+  color: var(--text-strong);
+  font-weight: 600;
+}
+
+.templates {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-sm);
+}
+
+.months {
+  max-inline-size: 6rem;
+}
+
+.stages {
+  display: grid;
+  gap: var(--space-md);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stage {
+  display: grid;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-alt);
+}
+
+.add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.muted {
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+}

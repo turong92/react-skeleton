@@ -8,6 +8,10 @@ function leaf(path: string) {
   return matchRoutes(routes, path)?.at(-1)?.route
 }
 const chain = (path: string) => matchRoutes(routes, path)!.map((m) => m.route)
+const permissionsOf = (path: string) =>
+  chain(path)
+    .filter((route) => isValidElement(route.element) && route.element.type === RequirePermission)
+    .map((route) => (route.element as ReactElement<{ anyOf: string[] }>).props.anyOf)
 const guarded = (path: string) =>
   chain(path).some((route) => isValidElement(route.element) && route.element.type === RequireAuth)
 
@@ -63,12 +67,6 @@ describe('routes', () => {
   })
 
   it('the operator screens sit under the auth guard and, inside it, a permission guard of their own - payments need payment.read, accounts need account.read', () => {
-    const permissionsOf = (path: string) =>
-      chain(path)
-        .filter(
-          (route) => isValidElement(route.element) && route.element.type === RequirePermission,
-        )
-        .map((route) => (route.element as ReactElement<{ anyOf: string[] }>).props.anyOf)
     for (const path of ['/admin/payments', '/admin/payments/ord_abc']) {
       expect(guarded(path), path).toBe(true)
       expect(permissionsOf(path), path).toEqual([['payment.read']])
@@ -80,6 +78,25 @@ describe('routes', () => {
     // 사용자 쪽 결제 화면에는 권한 가드가 없다
     for (const path of ['/cheer', '/cheers', '/payments/ord_abc'])
       expect(permissionsOf(path), path).toEqual([])
+  })
+
+  it('has the rewards screens (/rewards, /rewards/coupons) behind sign-in only, and the four operator screens each behind their own permission', () => {
+    for (const path of ['/rewards', '/rewards/coupons']) {
+      expect(leaf(path)?.path, path).toBe(path)
+      expect(guarded(path), path).toBe(true)
+      expect(permissionsOf(path), path).toEqual([])
+    }
+    const operator: Array<[string, string]> = [
+      ['/admin/campaigns', 'campaign.manage'],
+      ['/admin/coupons', 'coupon.manage'],
+      ['/admin/points', 'point.manage'],
+      ['/admin/reward-grants', 'reward.operate'],
+    ]
+    for (const [path, permission] of operator) {
+      expect(leaf(path)?.path, path).toBe(path)
+      expect(guarded(path), path).toBe(true)
+      expect(permissionsOf(path), path).toEqual([[permission]])
+    }
   })
 
   it('the signed-in screens sit under the auth guard; home, login, the legal pages, the board and the 404 are public', () => {

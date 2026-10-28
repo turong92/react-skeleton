@@ -8,7 +8,11 @@ import { AppFrame } from '../layouts/AppFrame'
 import type { MessageKey } from '../i18n'
 import type { SeoHandle } from '../seo/routeSeo'
 import { AdminAccountsPage } from './AdminAccountsPage'
+import { AdminCampaignsPage } from './AdminCampaignsPage'
+import { AdminCouponDefinitionsPage } from './AdminCouponDefinitionsPage'
 import { AdminDashboardPage } from './AdminDashboardPage'
+import { AdminPointsPage } from './AdminPointsPage'
+import { AdminRewardGrantsPage } from './AdminRewardGrantsPage'
 import { AdminRolesPage } from './AdminRolesPage'
 import { AdminPaymentPage } from './AdminPaymentPage'
 import { AdminPaymentsPage } from './AdminPaymentsPage'
@@ -17,6 +21,7 @@ import { BoardPage } from './BoardPage'
 import { BoardPostPage } from './BoardPostPage'
 import { CheerPage } from './CheerPage'
 import { CheersPage } from './CheersPage'
+import { CouponsPage } from './CouponsPage'
 import { HomeRoute } from './HomeRoute'
 import { LegalRoute } from './LegalRoute'
 import { NoteDetailPage } from './NoteDetailPage'
@@ -25,6 +30,7 @@ import { NotesPage } from './NotesPage'
 import { NotFoundPage } from './NotFoundPage'
 import { PaymentDetailPage } from './PaymentDetailPage'
 import { PaymentReturnPage } from './PaymentReturnPage'
+import { RewardsPage } from './RewardsPage'
 import { SettingsPage } from './SettingsPage'
 import { SubscribePage } from './SubscribePage'
 import { SubscriptionPage } from './SubscriptionPage'
@@ -120,6 +126,13 @@ export const routes: RouteObject[] = [
             element: <SubscriptionPage />,
             handle: privateSeo('subscription.title'),
           },
+          // 혜택 — 출석 · 친구 초대 · 쿠폰함 · 포인트(`@skeleton/rewards`). 백엔드 `campaign` · `coupon` · `point` 모듈을 붙인 만큼 열린다
+          { path: '/rewards', element: <RewardsPage />, handle: privateSeo('nav.rewards') },
+          {
+            path: '/rewards/coupons',
+            element: <CouponsPage />,
+            handle: privateSeo('rewards.coupons.title'),
+          },
           { path: '/settings', element: <SettingsPage />, handle: privateSeo('nav.settings') },
           {
             element: (
@@ -189,6 +202,70 @@ export const routes: RouteObject[] = [
                 path: '/admin/payments/:id',
                 element: <AdminPaymentPage />,
                 handle: privateSeo('nav.adminPayments'),
+              },
+            ],
+          },
+          {
+            element: (
+              <RequirePermission
+                anyOf={['campaign.manage']}
+                forbidden={<BlockedNotice />}
+                failed={<PermissionsFailedNotice />}
+              />
+            ),
+            children: [
+              {
+                path: '/admin/campaigns',
+                element: <AdminCampaignsPage />,
+                handle: privateSeo('nav.adminCampaigns'),
+              },
+            ],
+          },
+          {
+            element: (
+              <RequirePermission
+                anyOf={['coupon.manage']}
+                forbidden={<BlockedNotice />}
+                failed={<PermissionsFailedNotice />}
+              />
+            ),
+            children: [
+              {
+                path: '/admin/coupons',
+                element: <AdminCouponDefinitionsPage />,
+                handle: privateSeo('nav.adminCoupons'),
+              },
+            ],
+          },
+          {
+            element: (
+              <RequirePermission
+                anyOf={['point.manage']}
+                forbidden={<BlockedNotice />}
+                failed={<PermissionsFailedNotice />}
+              />
+            ),
+            children: [
+              {
+                path: '/admin/points',
+                element: <AdminPointsPage />,
+                handle: privateSeo('nav.adminPoints'),
+              },
+            ],
+          },
+          {
+            element: (
+              <RequirePermission
+                anyOf={['reward.operate']}
+                forbidden={<BlockedNotice />}
+                failed={<PermissionsFailedNotice />}
+              />
+            ),
+            children: [
+              {
+                path: '/admin/reward-grants',
+                element: <AdminRewardGrantsPage />,
+                handle: privateSeo('nav.adminRewardGrants'),
               },
             ],
           },

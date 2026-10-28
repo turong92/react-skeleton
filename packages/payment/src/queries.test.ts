@@ -576,6 +576,18 @@ describe('intent keys through the mutations (several calls in flight)', () => {
     expect(f.sent[1]?.key).not.toBe(f.sent[0]?.key)
   })
 
+  it('the same item with another coupon is another intent - picking a different coupon never replays the order made with the first one', async () => {
+    const f = flight()
+    void f.press({ ...cheer3, discounts: [{ type: 'coupon', ref: 'c1' }] })
+    void f.press({ ...cheer3, discounts: [{ type: 'coupon', ref: 'c1' }] })
+    void f.press({ ...cheer3, discounts: [{ type: 'coupon', ref: 'c2' }] })
+    void f.press({ ...cheer3 })
+    await f.flush()
+    const keys = f.sent.map((call) => call.key)
+    expect(keys[1]).toBe(keys[0])
+    expect(new Set([keys[0], keys[2], keys[3]]).size).toBe(3)
+  })
+
   it('an omitted quantity and an explicit 1 are two intents — the key does not guess what the server defaults to', async () => {
     const f = flight()
     void f.press(cheer3)

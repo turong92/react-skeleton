@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "보상 사용자 화면 — 출석 카드 · 친구초대 카드(+ 초대 링크 ?ref= 보관 → 로그인 뒤 한 번 claim) · 쿠폰함 · 쿠폰 코드 등록 · 결제 쿠폰 고르기 · 포인트 잔액과 내역, 클라이언트(createRewardsApi)와 TanStack Query 훅. 백엔드 modules/campaign · coupon · point 의 사용자 HTTP 짝. 결제 화면과는 서로 import 하지 않는다(앱이 잇는다)",
+  "description": "보상 사용자 화면 — 출석 카드 · 친구초대 카드(+ 초대 링크 ?ref= 보관 → 로그인 뒤 한 번 claim) · 쿠폰함 · 쿠폰 코드 등록 · 결제 쿠폰 고르기 · 포인트 잔액과 내역, 클라이언트(createRewardsApi)와 TanStack Query 훅. 백엔드 modules/campaign · coupon · point 의 사용자 HTTP 짝. 결제 화면과는 서로 import 하지 않는다(앱이 잇는다) 선택 운영 화면은 @skeleton/rewards/admin(이벤트 · 쿠폰 정의 · 포인트 조정 · 지급 건)",
   "exports": {
     ".": {
       "types": "./src/index.ts",
@@ -20,6 +20,10 @@
     "./point": {
       "types": "./src/point/index.ts",
       "default": "./src/point/index.ts"
+    },
+    "./admin": {
+      "types": "./src/admin/index.ts",
+      "default": "./src/admin/index.ts"
     }
   },
   "types": "./src/index.ts",

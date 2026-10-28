@@ -24,6 +24,7 @@
     "@skeleton/notifications": "workspace:*",
     "@skeleton/payment": "workspace:*",
     "@skeleton/realtime": "workspace:*",
+    "@skeleton/rewards": "workspace:*",
     "@skeleton/seo": "workspace:*",
     "@skeleton/storage": "workspace:*",
     "@skeleton/theme": "workspace:*",

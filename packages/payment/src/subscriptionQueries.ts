@@ -77,7 +77,13 @@ export function startSubscriptionMutation(
     mutationFn: (variables: Variables) => {
       const { idempotencyKey, ...input } = variables
       // 결제 수단이 다르면 다른 의도다 - 같은 키면 서버가 처음 고른 결제사의 구독을 되돌려 준다
-      const intent = input.provider ? [input.planCode, input.provider] : [input.planCode]
+      // 쿠폰이 다르면(있고 없고 포함) 다른 의도다 - 같은 키면 서버가 처음 만든 구독을 되돌려 준다
+      const coupons = (input.discounts ?? []).map((d) => `${d.type}:${d.ref}`)
+      const intent = [
+        input.planCode,
+        ...(input.provider ? [input.provider] : []),
+        ...(coupons.length > 0 ? [coupons] : []),
+      ]
       const key = keyOf(keys, variables, JSON.stringify(intent), idempotencyKey)
       return _api.start(input, key !== undefined ? { idempotencyKey: key } : undefined)
     },

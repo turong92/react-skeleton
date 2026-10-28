@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — 이벤트 · 보상 (출석 · 친구초대 · 쿠폰 · 포인트) · 결제 할인 · 역할 위계 (2026-10-28)
+
+백엔드 짝: kotlin-skeleton `campaign` · `coupon` · `point` · `reward`(+ `*-jdbc`), `payment` 의 할인 · 0원 · 결제 면제, `authz` 의 역할 위계. 모두 붙인 만큼만 열린다 - 안 붙인 앱의 결제 · 권한 화면은 그대로.
+
+- 새 패키지 `@skeleton/rewards`(capability `rewards`, 하위 경로 `/campaign` · `/coupon` · `/point` · `/admin`): `createRewardsApi`(C-R) · 훅 · `AttendanceCard` · `InviteCard` + `useReferralCapture`(링크 `?ref=` 30일 보관 → 로그인 뒤 한 번 claim, 서버가 답했으면 맞든 틀리든 지움) · `CouponWallet` · `RedeemCodeForm` · `CouponPicker`(결제 패키지를 import 하지 않는다 - 앱이 `discounts` 와 견적을 잇는다) · `stageSummary`(「첫 1회 무료, 이후 3회 50%」) · `PointBalance` · `PointHistory`, ko/en 문구.
+- `@skeleton/rewards/admin`(capability `rewards-admin`): `AdminCampaigns` · `AdminCouponDefinitions` + `StageEditor` · `AdminPoints` · `AdminRewardGrants`, `createRewardsAdminApi`(C-ADM), `can(key)` 로 단추 숨김. 권한 `campaign.manage` · `coupon.manage` · `point.manage` · `reward.operate`.
+- `@skeleton/payment`(칸을 더하기만): `Order` 의 `originalAmount` · `discountAmount` · `discounts[]` · `settlement`(`PROVIDER` · `FREE` · `EXEMPT`), `CreateOrderInput.discounts` · `StartSubscriptionInput.discounts`, `quote`(장부 · 얇은 호출) · `useQuote`, `checkoutToOpen`(무료 · 면제 주문은 결제창 없이 결과로), `SettlementBadge`(「무료(쿠폰)」 · 「결제 면제」), 금액 줄(상품 금액 · 할인 · 결제 금액), `MySubscriptionCard` 「다음 결제 n원(할인 m회 남음)」, 운영 목록 「결제 방식 → 결제 면제」 필터, 면제 · 무료 주문의 환불 · 결제사 맞추기 숨김, `discountErrorMessage`. 주문 · 구독 시작의 `Idempotency-Key` 의도에 쿠폰이 들어간다(다른 쿠폰으로 다시 눌러도 처음 주문을 되돌려 받지 않는다).
+- `@skeleton/auth/admin`: 역할 위계(`includes`) - 포함할 역할 고르기(순환 후보는 이유와 함께 잠김), 물려받은 권한은 체크 · 잠금 · 「CS에서 물려받음」, 표의 「포함하는 역할」 열, `AUTHZ.ROLE_CYCLE` · `INCLUDE_UNKNOWN` · `ROLE_INCLUDED` 문장.
+- `@skeleton/api-client` `ErrorCodes`: `CAMPAIGN_*` · `COUPON_CODE_*` · `POINT_INSUFFICIENT` · `PAYMENT_DISCOUNT_*` · `PAYMENT_NOTHING_TO_REFUND` · `AUTHZ_ROLE_CYCLE` · `AUTHZ_INCLUDE_UNKNOWN` · `AUTHZ_ROLE_INCLUDED`.
+- 샘플: `/rewards`(출석 · 초대 · 포인트) · `/rewards/coupons`(쿠폰함) · 응원하기와 구독 시작에 쿠폰 고르기(응원하기는 견적으로 할인 뒤 금액 미리보기) · `main.tsx` 의 초대 코드 보관 · 운영 `/admin/campaigns` · `/admin/coupons` · `/admin/points` · `/admin/reward-grants`. e2e `rewards.e2e.ts`(출석 · 쿠폰 결제 · 무료 이용권 · 이벤트 끄기 · 결제 면제)와 `authzRoles.e2e.ts` 의 위계 걸음 - 백엔드를 합친 뒤에 돌린다.
+
 ### Changed — 검사를 푸시용 빠른 것과 하루 한 번 전체로 나눔 (2026-10-26)
 
 - CI: 같은 ref 의 앞선 실행은 취소(`concurrency`). `sample-e2e` 는 핵심 5개 파일(journey · board · account · payment · authzRoles)만 돈다 — `pnpm e2e:sample e2e/<파일>` 처럼 파일 경로를 인자로 주면 그 파일만 돈다. 새 `nightly.yml`(매일 한국 새벽 + 수동)이 e2e 18개 전부(+ 재동의 필터를 켠 `legal.e2e.ts` 한 번 더)와 `test-new-project.sh --full` 을 돈다. 찍은 프로젝트에는 따라가지 않는다.

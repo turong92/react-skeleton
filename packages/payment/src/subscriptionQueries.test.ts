@@ -230,6 +230,27 @@ describe('mutations', () => {
     expect(used[1]).toBe(used[2])
   })
 
+  it('a coupon makes another intent - the same plan with a coupon does not replay the full-price subscription', async () => {
+    const { api, calls } = fakeApi()
+    const keys = createIntentKeys()
+    const client = new QueryClient()
+    const options = startSubscriptionMutation(api, client, keys)
+    api.start = async (input, o) => {
+      calls.push(['start', input, o])
+      throw new Error('lost')
+    }
+    const observer = new MutationObserver<unknown, Error, object>(client, options as never)
+    const coupon = (ref: string) => ({ planCode: 'basic', discounts: [{ type: 'coupon', ref }] })
+    await observer.mutate({ planCode: 'basic' }).catch(() => undefined)
+    await observer.mutate(coupon('c1')).catch(() => undefined)
+    await observer.mutate(coupon('c1')).catch(() => undefined)
+    await observer.mutate(coupon('c2')).catch(() => undefined)
+    const used = calls.map((call) => (call[2] as { idempotencyKey: string }).idempotencyKey)
+    expect(used[1]).not.toBe(used[0])
+    expect(used[2]).toBe(used[1])
+    expect(used[3]).not.toBe(used[1])
+  })
+
   it('activate with a KakaoPay or NaverPay payload sends it as given', async () => {
     const kakao = await run(activateSubscriptionMutation, {
       id: 'sub_1',

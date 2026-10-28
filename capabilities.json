@@ -471,12 +471,12 @@
         "flag": "--packages rewards",
         "included": "flag",
         "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
-        "alsoVia": [],
+        "alsoVia": ["--with-sample"],
         "optOut": null
       },
       "summary": "보상 사용자 화면 — 출석 카드 · 친구초대 카드(링크의 ?ref= 를 보관했다가 로그인 뒤 한 번 claim) · 쿠폰함과 코드 등록 · 결제 때 쿠폰 고르기 · 포인트 잔액과 내역. 백엔드가 붙인 갈래(campaign · coupon · point)만 골라 쓴다.",
       "notFor": [
-        "이벤트 · 쿠폰 · 포인트 운영(만들기 · 지급 · 회수) — 운영 화면은 rewards/admin (다음 판)",
+        "이벤트 · 쿠폰 · 포인트 운영(만들기 · 지급 · 회수) — 운영 화면은 선택 하위 경로 @skeleton/rewards/admin(항목 rewards-admin)에 있다",
         "결제 화면 자체 — payment 가 그린다. 쿠폰을 결제에 적용하는 줄은 앱이 CouponPicker 와 payment 를 잇는다(두 패키지는 서로 import 하지 않는다)",
         "포인트를 쓰는 길 — 서버 API(PointWallet.spend)뿐이라 이 패키지에는 읽기만 있다"
       ],
@@ -502,6 +502,71 @@
           "coupon wallet",
           "points",
           "loyalty"
+        ]
+      }
+    },
+    {
+      "patterns": [
+        "packages/rewards/src/admin/StageEditor.stories.tsx",
+        "packages/rewards/src/admin/AdminCampaigns.stories.tsx",
+        "packages/rewards/src/admin/AdminCouponDefinitions.stories.tsx",
+        "packages/rewards/src/admin/AdminPoints.stories.tsx",
+        "packages/rewards/src/admin/AdminRewardGrants.stories.tsx"
+      ],
+      "stories": [],
+      "docs": [
+        "packages/rewards/README.md",
+        "apps/sample/src/routes/AdminCampaignsPage.tsx",
+        "apps/sample/src/routes/AdminCouponDefinitionsPage.tsx"
+      ],
+      "entryPoints": [
+        "@skeleton/rewards/admin#createRewardsAdminApi",
+        "@skeleton/rewards/admin#AdminCampaigns",
+        "@skeleton/rewards/admin#AdminCouponDefinitions",
+        "@skeleton/rewards/admin#AdminPoints",
+        "@skeleton/rewards/admin#AdminRewardGrants",
+        "@skeleton/rewards/admin#StageEditor",
+        "@skeleton/rewards/admin#koRewardsAdminLabels"
+      ],
+      "needs": ["rewards"],
+      "backend": {
+        "modules": [],
+        "oneOfModules": [],
+        "optionalModules": ["campaign", "coupon", "point", "reward"],
+        "basePaths": [],
+        "docs": [
+          "docs/modules/campaign.md",
+          "docs/modules/coupon.md",
+          "docs/modules/point.md",
+          "docs/modules/reward.md"
+        ]
+      },
+      "status": "experimental",
+      "id": "rewards-admin",
+      "kind": "pattern",
+      "package": "@skeleton/rewards",
+      "stampFlag": {
+        "flag": "--packages rewards",
+        "included": "flag",
+        "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
+        "alsoVia": ["--with-sample"],
+        "optOut": null
+      },
+      "summary": "운영자 보상 화면(선택 내보내기 @skeleton/rewards/admin) — 이벤트(켜고 끄기 · 출석 / 초대 설정 · 보상 목록) · 쿠폰 정의(단계 편집기 · 계정에 주기 · 공용 코드 · 회수) · 포인트 조정 · 지급 건(다시 지급 · 멈추기). 단추는 can(key) 로 숨긴다. 샘플 화면: /admin/campaigns · /admin/coupons · /admin/points · /admin/reward-grants.",
+      "path": "packages/rewards/src/admin/index.ts",
+      "notFor": [
+        "백엔드 각 모듈의 skeleton.<module>.admin.enabled=true 와 campaign.manage · coupon.manage · point.manage · reward.operate 권한이 있어야 열린다(검사는 서버, RequirePermission 과 can 은 화면용). 기본 역할이 없어 전권이거나 역할 화면에서 권한을 준 계정만",
+        "포인트를 쓰는(차감하는) 길은 서버 API 뿐 — 이 화면의 「조정」은 운영자 보정이다",
+        "결제 면제(payment.exempt)는 이 화면이 아니라 역할 화면에서 권한을 주는 일이다"
+      ],
+      "keywords": {
+        "ko": ["이벤트 관리", "쿠폰 관리", "포인트 조정", "지급 건", "다시 지급", "쿠폰 단계 편집"],
+        "en": [
+          "admin campaigns",
+          "coupon definitions",
+          "point adjustment",
+          "reward grants",
+          "stage editor"
         ]
       }
     },
@@ -883,6 +948,11 @@
         "readKakaoPayReturn",
         "readNaverPayReturn",
         "checkoutCanOpen",
+        "checkoutToOpen",
+        "useQuote",
+        "SettlementBadge",
+        "discountLines",
+        "discountErrorMessage",
         "SubscriptionPlanList",
         "SubscriptionStatusBadge",
         "MySubscriptionCard",
@@ -1711,7 +1781,7 @@
       "kind": "app",
       "package": "sample",
       "path": "apps/sample",
-      "summary": "참조 앱 Notes — Patterns 로 조립한 작지만 실제 같은 제품(랜딩 · 로그인 · 대시보드 · 목록 · 상세 · 폼 · 첨부 · 알림 · 게시판 · 응원하기 결제 · 구독 · 다국어 · 설정 · 404 — 로그인 아이디를 켜고 이메일은 쓰기 때 받는 서버 짝), 새 기능은 이 앱의 한 조각을 따라 한다.",
+      "summary": "참조 앱 Notes — Patterns 로 조립한 작지만 실제 같은 제품(랜딩 · 로그인 · 대시보드 · 목록 · 상세 · 폼 · 첨부 · 알림 · 게시판 · 응원하기 결제 · 구독 · 혜택(출석 · 쿠폰 · 포인트) · 다국어 · 설정 · 404 — 로그인 아이디를 켜고 이메일은 쓰기 때 받는 서버 짝), 새 기능은 이 앱의 한 조각을 따라 한다.",
       "stampFlag": {
         "flag": "--with-sample",
         "included": "flag",
@@ -1724,6 +1794,7 @@
           "notifications",
           "payment",
           "realtime",
+          "rewards",
           "seo",
           "storage"
         ],

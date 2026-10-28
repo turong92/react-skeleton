@@ -142,6 +142,8 @@ export function createOrderMutation(
           input.itemRef,
           input.quantity ?? null,
           input.provider ?? null,
+          // 쿠폰이 다르면 다른 의도다 - 같은 키면 서버가 처음 쿠폰으로 만든 주문을 되돌려 준다
+          (input.discounts ?? []).map((d) => `${d.type}:${d.ref}`),
         ]),
         idempotencyKey,
       )

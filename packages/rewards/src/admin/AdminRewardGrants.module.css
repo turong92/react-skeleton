@@ -1,0 +1,21 @@
+.page {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.status {
+  display: grid;
+  gap: var(--space-xs);
+  justify-items: start;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.muted {
+  color: var(--text-muted);
+  font-size: var(--font-size-caption);
+}

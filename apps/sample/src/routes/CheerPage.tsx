@@ -1,4 +1,5 @@
 import {
+  discountErrorMessage,
   easyPaysFor,
   EasyPayButtons,
   formatMoney,
@@ -7,7 +8,9 @@ import {
   useAbandonOrder,
   useCreateOrder,
   usePaymentConfig,
+  useQuote,
 } from '@skeleton/payment'
+import { CouponPicker, useCoupons } from '@skeleton/rewards'
 import {
   Alert,
   Button,
@@ -41,8 +44,10 @@ import {
   openingIn,
 } from '../cheer/cheerHold'
 import { paymentLabelsFor } from '../cheer/paymentLabels'
+import { rewardsApi } from '../rewards/api'
+import { rewardsLabelsFor } from '../rewards/labels'
 import { useCheerOptions } from '../cheer/queries'
-import type { CheerOption } from '../cheer/types'
+import { CHEER_ITEM_TYPE, type CheerOption } from '../cheer/types'
 import { LoadError } from '../components/LoadError'
 import { i18n, languageOf, useT } from '../i18n'
 import styles from './CheerPage.module.css'
@@ -87,6 +92,14 @@ export function CheerPage() {
   const createOrder = useCreateOrder(paymentApi, { meta: { quietStatuses: [429] } })
   const abandon = useAbandonOrder(paymentApi)
   const [chosen, setChosen] = useState<string | null>(null)
+  // 쿠폰 - 쿠폰함(`@skeleton/rewards`)이 없는 서버면 목록이 안 와서 고르기 칸이 없다. 고른 쿠폰은 견적(`useQuote`)으로 할인 뒤 금액을 먼저 본다
+  const coupons = useCoupons(rewardsApi, 'AVAILABLE')
+  const [pickedCoupon, setPickedCoupon] = useState<string | null>(null)
+  const [couponProblem, setCouponProblem] = useState<string | null>(null)
+  const couponRef =
+    pickedCoupon !== null && coupons.data?.some((coupon) => coupon.id === pickedCoupon)
+      ? pickedCoupon
+      : null
   const [busy, setBusy] = useState(false)
   // 눌린 간편결제 코드 - 창을 여는 중 스피너는 눌린 그 단추에만 뜬다(카드 단추는 `null`)
   const [pickedEasyPay, setPickedEasyPay] = useState<string | null>(null)
@@ -99,6 +112,7 @@ export function CheerPage() {
   const reasonId = useId()
   const legendId = useId()
   const providerLegendId = useId()
+  const couponLegendId = useId()
 
   // 요청이 많아 막힌 때는 풀리는 시각까지 단추를 막고 이유를 적는다(눌러도 같은 429 이고, 같은 키 재전송도 한도를 쓴다). 그 시각에 막힘과 **안내를 함께** 비운다
   useEffect(() => {
@@ -116,6 +130,23 @@ export function CheerPage() {
     window.addEventListener('pageshow', restore)
     return () => window.removeEventListener('pageshow', restore)
   }, [])
+
+  // 견적 - 고른 쿠폰으로 할인 뒤 금액을 먼저 본다(주문을 만들지 않는다). 쿠폰이 안 맞으면 이유가 여기서 먼저 나온다
+  const quoteItem =
+    options.data && options.data.length > 0
+      ? chosen !== null && options.data.some((option) => option.itemRef === chosen)
+        ? chosen
+        : defaultOf(options.data)
+      : null
+  const quote = useQuote(
+    paymentApi,
+    {
+      itemType: CHEER_ITEM_TYPE,
+      itemRef: quoteItem ?? '',
+      discounts: couponRef !== null ? [{ type: 'coupon', ref: couponRef }] : [],
+    },
+    { enabled: couponRef !== null && quoteItem !== null },
+  )
 
   if (options.isPending) return <Spinner label={t('common.loading')} />
   // 금액 목록이 이미 있는데 다시 읽기만 실패했다면 폼을 바꾸지 않는다(결제를 시작하는 중일 수 있다)
@@ -159,6 +190,7 @@ export function CheerPage() {
     setBusy(true)
     setPickedEasyPay(easyPay ?? null)
     setNotice(null)
+    setCouponProblem(null)
     const result = await startCheer(
       {
         createOrder: createOrder.mutateAsync,
@@ -169,11 +201,12 @@ export function CheerPage() {
         urlsFor: (orderId, chosen) => checkoutReturnUrls(window.location.origin, orderId, chosen),
       },
       selected,
-      reusableOrderOf(unopened, selected, nowMs(), chosenProvider),
+      reusableOrderOf(unopened, selected, nowMs(), chosenProvider, couponRef),
       easyPay,
       chosenProvider,
+      couponRef,
     )
-    setUnopened(unopenedAfter(result, selected, nowMs(), unopened, chosenProvider))
+    setUnopened(unopenedAfter(result, selected, nowMs(), unopened, chosenProvider, couponRef))
     if (result.kind === 'opened') return // 결제창이 이 화면을 떠나게 한다 — 돌아오면 `pageshow` 가 풀어 준다
     setBusy(false)
     if (result.kind === 'settled') {
@@ -186,7 +219,11 @@ export function CheerPage() {
       setKeyMissing(true) // 이유는 단추 옆에 같은 글자로 선다
     else if (result.kind === 'window-failed')
       setNotice({ kind: 'windowFailed', error: result.error })
-    else {
+    else if (discountErrorMessage(result.error, labels) !== null) {
+      // 쿠폰이 안 맞거나 이미 쓰는 중이다 - 이유를 말하고 쿠폰 없이 다시 고르게 한다(같은 쿠폰으로 다시 눌러도 같은 답이다)
+      setCouponProblem(discountErrorMessage(result.error, labels))
+      setPickedCoupon(null)
+    } else {
       // 503 도 안내로 말한다(띠 + 문의 번호) - 막지 않으니 다시 누를 수 있다
       setNotice(noticeOfOrderFailure(orderFailureOf(result.error, nowMs()), result.error))
     }
@@ -233,6 +270,42 @@ export function CheerPage() {
                   disabled={busy}
                 />
               </div>
+            )}
+            {coupons.data !== undefined && coupons.data.length > 0 && (
+              <div className={styles.group}>
+                <span id={couponLegendId} className={styles.legend}>
+                  {t('cheer.couponLegend')}
+                </span>
+                <CouponPicker
+                  coupons={coupons.data}
+                  selectedId={couponRef}
+                  onSelect={(id) => {
+                    setCouponProblem(null)
+                    setPickedCoupon(id)
+                  }}
+                  preview={
+                    couponRef !== null && quote.data
+                      ? {
+                          originalAmount: quote.data.originalAmount,
+                          amount: quote.data.amount,
+                          currency: quote.data.currency,
+                        }
+                      : undefined
+                  }
+                  labels={rewardsLabelsFor(language)}
+                  locale={language}
+                />
+                {couponRef !== null && quote.isError && (
+                  <Alert tone="warning" toneLabel={labels.noticeLabel}>
+                    {discountErrorMessage(quote.error, labels) ?? t('cheer.orderFailed')}
+                  </Alert>
+                )}
+              </div>
+            )}
+            {couponProblem !== null && (
+              <Alert tone="warning" toneLabel={labels.noticeLabel}>
+                {couponProblem} {t('cheer.couponDropped')}
+              </Alert>
             )}
             <CountryPolicyNotice />
             {config.data?.testMode && <TestModeNotice labels={labels} />}

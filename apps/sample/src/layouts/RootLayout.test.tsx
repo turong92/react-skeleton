@@ -133,6 +133,16 @@ describe('RootLayout (signed in): operator menu', () => {
     expect(support).toContain('href="/admin/accounts"')
     expect(support).not.toContain('href="/admin/payments"')
   })
+  it('shows each rewards operator screen only to someone holding its permission', () => {
+    const all = renderAs(['*'])
+    for (const href of ['campaigns', 'coupons', 'points', 'reward-grants'])
+      expect(all).toContain(`href="/admin/${href}"`)
+    const coupons = renderAs(['coupon.manage'])
+    expect(coupons).toContain('href="/admin/coupons"')
+    for (const href of ['campaigns', 'points', 'reward-grants'])
+      expect(coupons).not.toContain(`href="/admin/${href}"`)
+    expect(renderAs(['reward.operate'])).toContain('href="/admin/reward-grants"')
+  })
   it('shows nothing to a member without permissions or to a visitor, whatever the role name is', () => {
     expect(renderAs([])).not.toContain('/admin/')
     expect(renderAs(undefined)).not.toContain('/admin/')

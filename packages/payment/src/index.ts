@@ -42,6 +42,7 @@ export { CONFIRM_TIMEOUT_MS, createPaymentLedgerApi } from './ledgerApi'
 export type { PaymentLedgerApi, PaymentLedgerApiOptions } from './ledgerApi'
 export {
   checkoutCanOpen,
+  checkoutToOpen,
   openCheckout,
   loadTossPaymentsSdk,
   SDK_LOAD_TIMEOUT_MS,

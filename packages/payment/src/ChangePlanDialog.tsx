@@ -83,12 +83,8 @@ export function ChangePlanDialog({
   const money = (amount: { amount: number; currency: string }) =>
     formatMoney(amount, { locale, currencySuffix: all.currencySuffix })
   const scheduled = ready && preview.timing === 'NEXT_RENEWAL'
-  // 새 주기로 옮기면서 남은 몫을 깎아 주는 변경인가 - 서버가 `credit` 을 주면 그것으로, 아직 안 주는 서버는 주기가 달라졌는지로 짐작한다
-  const crediting =
-    ready &&
-    (preview.credit !== undefined
-      ? preview.credit !== null && preview.credit.amount > 0
-      : preview.restartsPeriod && current !== undefined && preview.period !== current.period)
+  // 새 주기로 옮기면서 남은 몫을 깎아 주는 변경인가 - 서버 미리보기의 `credit`(없거나 0 이면 전액)
+  const credit = ready && preview.credit && preview.credit.amount > 0 ? preview.credit : null
   const option = (plan: SubscriptionPlan) => (
     <option key={plan.code} value={plan.code}>
       {`${plan.name} - ${priceEveryDisplay(plan.amount, plan.period, all, locale)}`}
@@ -169,9 +165,7 @@ export function ChangePlanDialog({
           )}
           {ready && !scheduled && preview.restartsPeriod && (
             <p className={styles.note}>
-              {crediting
-                ? labels.restartCredit(preview.credit?.amount ? money(preview.credit) : null)
-                : labels.restart}
+              {credit ? labels.restartCredit(money(credit), money(preview.charge)) : labels.restart}
             </p>
           )}
           {ready && scheduledChange && (

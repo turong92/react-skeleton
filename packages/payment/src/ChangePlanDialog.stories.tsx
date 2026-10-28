@@ -115,3 +115,34 @@ export const ScheduledDowngrade: Story = {
     await expect(onConfirm).toHaveBeenCalledWith({ planCode: 'basic', expectedCharge: 0 })
   },
 }
+
+/** 주기를 늘리면 서버가 남은 몫(`credit`)을 깎아 준다 - 공제액과 결제할 금액을 같이 말한다. 공제가 없으면 「전액을 결제하고」 */
+export const LongerPeriodWithCredit: Story = {
+  args: {
+    plans: [
+      {
+        code: 'standard-yearly',
+        name: 'Standard',
+        amount: { amount: 69000, currency: 'KRW' },
+        period: 'P1Y',
+        level: 2,
+      },
+    ],
+    current: { level: 2, period: 'P1M', currency: 'KRW' },
+    planCode: 'standard-yearly',
+    preview: {
+      planCode: 'standard-yearly',
+      planName: 'Standard',
+      charge: { amount: 62100, currency: 'KRW' },
+      credit: { amount: 6900, currency: 'KRW' },
+      amount: { amount: 69000, currency: 'KRW' },
+      period: 'P1Y',
+      restartsPeriod: true,
+    },
+  },
+  play: async () => {
+    const dialog = await screen.findByRole('dialog', { name: dialogName })
+    await expect(dialog).toHaveTextContent('남은 이용분 6,900원을 빼고 62,100원 결제돼요')
+    await expect(dialog).toHaveTextContent('69,000원 · 1년마다 결제')
+  },
+}

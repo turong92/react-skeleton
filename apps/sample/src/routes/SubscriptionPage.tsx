@@ -15,6 +15,8 @@ import {
   useMySubscription,
   usePlanChangePreview,
   useSubscriptionPlans,
+  isPaymentLedgerError,
+  PaymentLedgerErrorCodes,
 } from '@skeleton/payment'
 import { EmptyState, PageHeader, Spinner } from '@skeleton/ui'
 import { useState } from 'react'
@@ -152,7 +154,17 @@ export function SubscriptionPage() {
         open={changeTo !== null && subscription.status === 'ACTIVE'}
         onClose={() => setChangeTo(null)}
         onConfirm={(input) =>
-          change.mutate({ id: subscription.id, ...input }, { onSuccess: () => setChangeTo(null) })
+          change.mutate(
+            { id: subscription.id, ...input },
+            {
+              onSuccess: () => setChangeTo(null),
+              // 그 사이 금액이 올랐다(남은 몫이 줄었다) - 새 금액을 다시 읽어 창이 새 값을 보이게 한다. 사람이 보고 다시 누른다
+              onError: (error) => {
+                if (isPaymentLedgerError(error, PaymentLedgerErrorCodes.PLAN_CHANGE_CHARGE_CHANGED))
+                  void preview.refetch()
+              },
+            },
+          )
         }
         plans={candidates}
         {...(tier ? { current: tier } : {})}

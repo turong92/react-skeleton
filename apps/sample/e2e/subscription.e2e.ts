@@ -319,9 +319,20 @@ describe('⑥ a longer period right away', () => {
         }
       }
       // 서버가 공제액을 주면 「남은 이용분을 빼고」, 아니면 「전액」 - 어느 쪽이든 새 주기가 오늘부터라는 말이 있다
-      await pwExpect(dialog.getByText(/새 (결제 주기|기간)가? ?시작/)).toBeVisible()
-      await dialog.getByRole('button', { name: subscribed.changeDialog.confirm }).click()
-      await pwExpect(dialog).toBeHidden()
+      await pwExpect(dialog.getByText(/새 (결제 주기|기간)[가이] 시작/)).toBeVisible()
+      // 25초 주기라 남은 몫이 줄어 결제할 금액이 오르면 서버가 409 로 새 금액을 보라고 한다 - 창이 새 금액을 다시 읽으면 다시 누른다(사람이 하는 대로)
+      for (let attempt = 0; ; attempt++) {
+        await dialog.getByRole('button', { name: subscribed.changeDialog.confirm }).click()
+        try {
+          await pwExpect(dialog).toBeHidden({ timeout: 8_000 })
+          break
+        } catch (error) {
+          if (attempt >= 3) throw error
+          await pwExpect(
+            dialog.getByText(subscribed.changeDialog.errors.chargeChanged),
+          ).toBeVisible()
+        }
+      }
       const sub = (await me()).subscription as unknown as { planCode: string; period: string }
       expect(sub.planCode).toBe('basic-yearly')
       expect(sub.period).not.toBe('PT25S')

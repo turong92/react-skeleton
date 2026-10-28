@@ -429,7 +429,7 @@ describe('ChangePlanDialog - the new period and the schedule already there', () 
 
   it('a credit says the unused part is deducted, with the amount; no credit with a restart says the full price is paid', () => {
     const credited = dialog({ credit: { amount: 9000, currency: 'KRW' } }, { current })
-    expect(credited).toContain('남은 이용분 9,000원을 빼고 결제돼요')
+    expect(credited).toContain('남은 이용분 9,000원을 빼고 90,000원 결제돼요')
     const full = dialog({ credit: null }, { current })
     expect(full).toContain('전액을 결제하고 오늘부터 새 기간이 시작돼요')
     expect(full).not.toContain('남은 이용분')
@@ -440,9 +440,20 @@ describe('ChangePlanDialog - the new period and the schedule already there', () 
     expect(html).toContain('전액을 결제하고 오늘부터 새 기간이 시작돼요')
   })
 
-  it('before the server sends a credit, a changed period is taken as credited and an unchanged one as full', () => {
-    expect(dialog({}, { current })).toContain('남은 이용분은 빼고 결제돼요')
-    expect(dialog({ period: 'P1M' }, { current })).toContain('전액을 결제하고')
+  it('a server that sends no credit field at all is taken as paying in full, whatever the periods are', () => {
+    expect(dialog({}, { current })).toContain('전액을 결제하고 오늘부터 새 기간이 시작돼요')
+    expect(dialog({ credit: { amount: 0, currency: 'KRW' } }, { current })).toContain(
+      '전액을 결제하고',
+    )
+  })
+
+  it('a credit as big as the new price leaves nothing to pay now and says so', () => {
+    const html = dialog(
+      { credit: { amount: 99000, currency: 'KRW' }, charge: { amount: 0, currency: 'KRW' } },
+      { current },
+    )
+    expect(html).toContain('남은 이용분 99,000원을 빼고 0원 결제돼요')
+    expect(html).toContain('추가 결제 없이 바로 바뀌어요')
   })
 
   it('an existing schedule is said to go away on a right-away change and to be replaced by a new schedule', () => {

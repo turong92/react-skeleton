@@ -429,8 +429,8 @@ export type SubscriptionLabels = {
     nextPrice: string
     /** 전액을 결제하고 오늘부터 새 기간이 시작된다(남은 이용분을 깎아 주지 않는 변경) */
     restart: string
-    /** 오늘부터 새 결제 주기가 시작되고 지금 주기의 남은 이용분을 빼고 결제된다 - 인자는 서식을 입힌 공제액(모르면 `null`) */
-    restartCredit: (credit: string | null) => string
+    /** 오늘부터 새 결제 주기가 시작되고 지금 주기의 남은 이용분을 빼고 결제된다 - 인자는 서식을 입힌 공제액과 결제할 금액 */
+    restartCredit: (credit: string, charge: string) => string
     /** 이미 예약된 변경이 있는데 바로 바꾸면 그 예약이 사라진다 - 인자는 예약된 플랜 이름과 서식을 입힌 날짜 */
     clearsSchedule: (planName: string, when: string) => string
     /** 이미 예약된 변경이 있는데 다른 예약을 하면 덮어쓴다 */

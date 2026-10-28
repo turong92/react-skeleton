@@ -298,10 +298,8 @@ export const koPaymentLabels: PaymentLabels = {
       noCharge: '추가 결제 없이 바로 바뀌어요',
       nextPrice: '다음 결제부터',
       restart: '전액을 결제하고 오늘부터 새 기간이 시작돼요',
-      restartCredit: (credit) =>
-        credit
-          ? `오늘부터 새 결제 주기가 시작되고, 남은 이용분 ${credit}을 빼고 결제돼요`
-          : '오늘부터 새 결제 주기가 시작되고, 남은 이용분은 빼고 결제돼요',
+      restartCredit: (credit, charge) =>
+        `오늘부터 새 결제 주기가 시작되고, 남은 이용분 ${credit}을 빼고 ${charge} 결제돼요`,
       clearsSchedule: (planName, when) =>
         `이미 예약된 변경(${when}부터 ${planName})은 이 변경으로 사라져요`,
       replacesSchedule: (planName, when) =>

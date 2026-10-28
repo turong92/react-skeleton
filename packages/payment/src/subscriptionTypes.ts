@@ -193,7 +193,7 @@ export type PlanChangePreview = {
   restartsPeriod: boolean
   timing?: PlanChangeTiming
   effectiveAt?: string
-  /** 새 주기로 바꿀 때 지금 주기의 남은 몫으로 깎아 주는 금액(최소 단위) - 깎아 주지 않으면 `null`. 구버전 서버는 칸이 없다 */
+  /** 새 주기로 바꿀 때 지금 주기의 남은 몫으로 깎아 주는 금액 - `amount` = `charge` + `credit`(공제가 새 가격보다 크면 `credit` = `amount`, `charge` = 0). 깎아 주지 않으면 `null`, 구버전 서버는 칸이 없다 */
   credit?: PaymentAmount | null
 }
 

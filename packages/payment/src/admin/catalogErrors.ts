@@ -23,6 +23,17 @@ export function catalogProblemOf(error: unknown): CatalogProblem | null {
   return CODES.find(([, code]) => isErrorCode(error, code))?.[0] ?? null
 }
 
+/** `texts.<언어>.…` 의 언어 태그를 정규화한다(`pt-br` → `pt-BR`) - 서버는 정규화한 태그로 칸 이름을 보낸다. 다른 칸은 그대로 */
+function canonicalField(field: string): string {
+  const match = /^texts\.([^.]+)(\..*)?$/.exec(field)
+  if (!match) return field
+  try {
+    return `texts.${Intl.getCanonicalLocales(match[1]!)[0] ?? match[1]}${match[2] ?? ''}`
+  } catch {
+    return field
+  }
+}
+
 /**
  * 입력 오류가 실어 온 칸별 메시지 - 상품은 `COMMON.VALIDATION_FAILED`, 가격은 `CATALOG.PRICE_INVALID`(둘 다 `errors[{ field, code, message }]`).
  * 칸 이름은 요청 본문의 이름 그대로다: 상품 `code` · `kind` · `level` · `texts` · `texts.<언어>.name` · `texts.<언어>.description`,
@@ -41,8 +52,10 @@ export function fieldMessageOf(
     (problem !== 'invalidInput' && problem !== 'priceInvalid')
   )
     return undefined
-  const hit = error.apiError.errors?.find(
-    (e) => e.field === field || (!exact && e.field.startsWith(`${field}.`)),
-  )
+  const wanted = canonicalField(field)
+  const hit = error.apiError.errors?.find((e) => {
+    const got = canonicalField(e.field)
+    return got === wanted || (!exact && got.startsWith(`${wanted}.`))
+  })
   return hit ? (hit.message ?? hit.code) : undefined
 }

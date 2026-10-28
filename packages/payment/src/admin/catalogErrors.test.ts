@@ -78,4 +78,22 @@ describe('input errors (the real backend shape)', () => {
     )
     expect(fieldMessageOf(state, 'amount')).toBeUndefined()
   })
+
+  it('compares language tags in their canonical form (the server sends texts.pt-BR.name for a pt-br field)', () => {
+    const error = new ApiRequestError(
+      {
+        code: 'COMMON.VALIDATION_FAILED',
+        title: 't',
+        status: 400,
+        timestamp: 't',
+        errors: [{ field: 'texts.pt-BR.name', code: 'Required', message: 'name needed' }],
+      },
+      'tr',
+      'sp',
+      'tp',
+    )
+    expect(fieldMessageOf(error, 'texts.pt-br.name')).toBe('name needed')
+    expect(fieldMessageOf(error, 'texts.PT-br.name')).toBe('name needed')
+    expect(fieldMessageOf(error, 'texts.pt.name')).toBeUndefined()
+  })
 })

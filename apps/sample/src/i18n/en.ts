@@ -538,6 +538,14 @@ const en: Record<keyof typeof ko, string> = {
   'cheer.return.invalidTitle': 'We could not read the payment result',
   'cheer.return.invalidBody':
     'The address you came back from the payment window with is not valid. Check the payment in My cheers.',
+  'settings.notifications': 'Notifications',
+  'settings.notificationsHint':
+    'Keep on only what you want to hear about. A muted kind is not added to your inbox either.',
+  'notificationType.NOTE_UPDATED': 'Note edits',
+  'notificationType.comment.created': 'Comments',
+  'notificationType.comment.replied': 'Replies',
+  'notificationType.reward.granted': 'Rewards',
+  'header.notificationCollapsed': '{count} similar notifications',
   'settings.cheers': 'Cheers',
   'settings.cheersLink': 'My cheers',
   'settings.cheersHint': 'See the cheers you sent and ask for a refund',

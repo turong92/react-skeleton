@@ -1,10 +1,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState, type ReactNode } from 'react'
-import { expect, screen, waitFor, within } from 'storybook/test'
+import { expect, fn, screen, waitFor, within } from 'storybook/test'
 import { NotificationBell } from './NotificationBell'
 import type { NotificationsApi } from './notificationsApi'
 import { createFakeInbox } from './stories/fakeInbox'
+import type { NotificationItem } from './types'
 
 /**
  * 종 버튼 + 안 읽은 수 배지 + 누르면 받은편지함 대화상자. 데이터는 `api`(`createNotificationsApi` 의 결과)로 주입한다 —
@@ -17,13 +18,21 @@ function WithQuery({ children }: { children: ReactNode }) {
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>
 }
 
-function Demo({ api }: { api: NotificationsApi }) {
+function Demo({
+  api,
+  onOpen,
+}: {
+  api: NotificationsApi
+  onOpen?: (item: NotificationItem) => void
+}) {
   return (
     <WithQuery>
-      <NotificationBell api={api} />
+      <NotificationBell api={api} onOpen={onOpen} />
     </WithQuery>
   )
 }
+
+const onOpen = fn()
 
 const meta = {
   title: 'Packages/notifications/NotificationBell',
@@ -53,6 +62,26 @@ export const MarkOneAsRead: Story = {
     await userEvent.click(
       await within(dialog).findByRole('button', { name: 'Mark as read: 환영합니다' }),
     )
+    await waitFor(() =>
+      expect(canvas.getByRole('button', { name: 'Notifications, 1 unread' })).toBeInTheDocument(),
+    )
+  },
+}
+
+/** 링크 있는 줄의 제목을 누르면 읽음 + 대화상자 닫기 + onOpen(앱이 이동) */
+export const OpenLinkedRow: Story = {
+  render: () => {
+    onOpen.mockClear()
+    return <Demo api={createFakeInbox().api} onOpen={onOpen} />
+  },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(await canvas.findByRole('button', { name: 'Notifications, 2 unread' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Notifications' })
+    // 묶인 줄은 수 배지로 보인다
+    await expect(await within(dialog).findByText('3 notifications')).toBeInTheDocument()
+    await userEvent.click(await within(dialog).findByRole('link', { name: '새 댓글이 달렸습니다' }))
+    await expect(onOpen).toHaveBeenCalledWith(expect.objectContaining({ link: '/notes/2' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     await waitFor(() =>
       expect(canvas.getByRole('button', { name: 'Notifications, 1 unread' })).toBeInTheDocument(),
     )

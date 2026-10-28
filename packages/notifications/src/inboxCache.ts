@@ -1,5 +1,6 @@
 import type { ApiPageResponse } from '@skeleton/api-client'
 import type { QueryClient } from '@tanstack/react-query'
+import { isAppLink } from './link'
 import { notificationKeys } from './queries'
 import {
   NOTIFICATION_SEVERITIES,
@@ -87,6 +88,8 @@ export function parseNotificationEvent(raw: unknown): NotificationEvent | null {
     message: text(value.message),
     payload: isRecord(value.payload) ? value.payload : {},
     createdAt: text(value.createdAt),
+    link: isAppLink(value.link) ? value.link : null,
+    collapseKey: text(value.collapseKey),
   }
 }
 
@@ -98,7 +101,7 @@ export type InboxSyncOptions = {
 }
 
 export type InboxSync = {
-  /** 실시간 페이로드를 받는다. 새 알림이면 true — 안 읽은 수(캐시가 있으면) +1, 목록 무효화 */
+  /** 실시간 페이로드를 받는다. 새 알림이면 true — 안 읽은 수(캐시가 있으면) +1(`collapseKey` 가 있으면 +1 대신 다시 읽기), 목록 무효화 */
   ingest(payload: unknown): boolean
 }
 
@@ -114,9 +117,14 @@ export function createInboxSync(
       if (!event || seen.has(event.id)) return false
       seen.add(event.id)
       if (seen.size > rememberIds) seen.delete(seen.values().next().value as string)
-      client.setQueryData<number>(notificationKeys.unread(), (count) =>
-        count === undefined ? count : count + 1,
-      )
+      if (event.collapseKey) {
+        // 안 읽은 같은 열쇠의 줄에 접혔을 수 있다 — 수가 늘었는지는 서버만 안다
+        void client.invalidateQueries({ queryKey: notificationKeys.unread() })
+      } else {
+        client.setQueryData<number>(notificationKeys.unread(), (count) =>
+          count === undefined ? count : count + 1,
+        )
+      }
       void client.invalidateQueries({ queryKey: notificationKeys.lists() })
       onNotification?.(event)
       return true

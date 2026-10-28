@@ -1,6 +1,7 @@
 import { useAuth, useEmailBeforeWrite } from '@skeleton/auth'
 import { AuthorProfileManager } from '@skeleton/author-profile'
 import { boardKeys } from '@skeleton/board'
+import { NotificationPreferences } from '@skeleton/notifications'
 import { setTheme, THEMES, useTheme, type Theme } from '@skeleton/theme'
 import { Button, Card, Field, PageHeader, Select } from '@skeleton/ui'
 import { useNavigate } from 'react-router-dom'
@@ -10,10 +11,11 @@ import { authorProfileLabels } from '../author/profileLabels'
 import { useMyProfile } from '../auth/useMyProfile'
 import { LinkCard } from '../components/LinkCard'
 import { useT } from '../i18n'
+import { notificationsApi } from '../notifications/api'
 import styles from './SettingsPage.module.css'
 
 /**
- * Patterns/Settings page — 즉시 적용(테마) 한 카드 · 읽기 전용 계정 카드(계정 이메일 · 연락받을 이메일 · 권한 + 계정 관리 링크 카드) · 응원 카드(「내 응원 내역」 링크 카드) · 글 · 댓글에 쓰는 「내 닉네임」 구역 · 세션(로그아웃). 서버에 저장할 설정은 아직 없어 저장 폼은 두지 않았다.
+ * Patterns/Settings page — 즉시 적용(테마) 한 카드 · 읽기 전용 계정 카드(계정 이메일 · 연락받을 이메일 · 권한 + 계정 관리 링크 카드) · 알림 카드(종류별 수신 스위치 — 켜진 것만 받은편지함에 쌓인다) · 응원 카드(「내 응원 내역」 링크 카드) · 글 · 댓글에 쓰는 「내 닉네임」 구역 · 세션(로그아웃). 서버에 저장할 설정은 아직 없어 저장 폼은 두지 않았다.
  * 사용자에게 닉네임은 하나다 — 계정에 붙은 이름(계정 닉네임)은 이 화면에 없다. 계정 id 는 화면 · aria 어디에도 그리지 않는다(닉네임 뒤의 계정을 드러내는 값이라 접힌 구역에도 두지 않는다)
  */
 export function SettingsPage() {
@@ -80,6 +82,19 @@ export function SettingsPage() {
         <LinkCard to="/account" description={t('settings.manageAccountHint')}>
           {t('settings.manageAccount')}
         </LinkCard>
+      </Card>
+      <Card title={t('settings.notifications')}>
+        <p>{t('settings.notificationsHint')}</p>
+        <NotificationPreferences
+          api={notificationsApi}
+          loadingLabel={t('common.loading')}
+          labels={{
+            NOTE_UPDATED: t('notificationType.NOTE_UPDATED'),
+            'comment.created': t('notificationType.comment.created'),
+            'comment.replied': t('notificationType.comment.replied'),
+            'reward.granted': t('notificationType.reward.granted'),
+          }}
+        />
       </Card>
       <Card title={t('settings.cheers')}>
         <LinkCard to="/cheers" description={t('settings.cheersHint')}>

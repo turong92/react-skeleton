@@ -17,6 +17,8 @@ const item = (eventId: string, readAt: string | null = null): NotificationItem =
   payload: {},
   createdAt: '2026-06-12T00:00:00Z',
   readAt,
+  link: null,
+  collapsedCount: 1,
 })
 const page = (...values: NotificationItem[]): ApiPageResponse<NotificationItem> => ({
   values,
@@ -134,8 +136,23 @@ describe('parseNotificationEvent — what @skeleton/realtime hands over', () => 
       message: null,
       payload: {},
       createdAt: null,
+      link: null,
+      collapseKey: null,
     })
   })
+
+  it('reads link and collapseKey', () => {
+    expect(
+      parseNotificationEvent({ ...event, link: '/notes/7', collapseKey: 'note-updated:7' }),
+    ).toMatchObject({ link: '/notes/7', collapseKey: 'note-updated:7' })
+  })
+
+  it.each(['//evil.example', 'https://evil.example/x', 'notes/7', '/\\evil.example', '', 7])(
+    'drops a link that is not an in-app path (%j)',
+    (link) => {
+      expect(parseNotificationEvent({ ...event, link })?.link).toBeNull()
+    },
+  )
 
   it('ignores anything that is not a notification: the SSE "connected" event, garbage, null', () => {
     expect(parseNotificationEvent({ topics: ['demo'], connectedAt: 't' })).toBeNull()
@@ -155,6 +172,16 @@ describe('createInboxSync.ingest', () => {
     const sync = createInboxSync(client)
     expect(sync.ingest(event)).toBe(true)
     expect(client.getQueryData(notificationKeys.unread())).toBe(3)
+    expect(client.getQueryState(notificationKeys.list({}))?.isInvalidated).toBe(true)
+  })
+
+  it('a collapsing event (collapseKey) does not bump the count — it refetches it, since the row may have been folded', () => {
+    const client = newClient()
+    client.setQueryData(notificationKeys.unread(), 2)
+    client.setQueryData(notificationKeys.list({}), page(item('a')))
+    expect(createInboxSync(client).ingest({ ...event, collapseKey: 'k' })).toBe(true)
+    expect(client.getQueryData(notificationKeys.unread())).toBe(2)
+    expect(client.getQueryState(notificationKeys.unread())?.isInvalidated).toBe(true)
     expect(client.getQueryState(notificationKeys.list({}))?.isInvalidated).toBe(true)
   })
 

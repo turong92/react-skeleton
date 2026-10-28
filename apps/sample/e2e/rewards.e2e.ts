@@ -124,8 +124,7 @@ describe('rewards: attendance, coupons on a cheer, a free voucher, switching an 
       if (!(await exists(token, '/campaigns'))) return ctx.skip()
       const before = await balanceOf(token)
       const unread = async () =>
-        (await api(apiUrl, token, 'GET', '/notifications?unreadOnly=true&size=1')).json.pagination
-          .totalElements as number
+        (await api(apiUrl, token, 'GET', '/notifications/unread-count')).json.value.count as number
       const unreadBefore = await unread()
       await ensureSignedIn(page, baseUrl)
       await page.goto(`${baseUrl}/rewards`)

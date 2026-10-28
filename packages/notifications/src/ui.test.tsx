@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { badgeText } from './badge'
 import { NotificationBell } from './NotificationBell'
 import { NotificationList } from './NotificationList'
+import { NotificationPreferences } from './NotificationPreferences'
 import type { NotificationsApi } from './notificationsApi'
 import { notificationKeys } from './queries'
 import type { NotificationItem } from './types'
@@ -20,6 +21,8 @@ const make = (over: Partial<NotificationItem>): NotificationItem => ({
   payload: {},
   createdAt: '2026-06-12T00:00:00Z',
   readAt: null,
+  link: null,
+  collapsedCount: 1,
   ...over,
 })
 
@@ -79,6 +82,107 @@ describe('NotificationList', () => {
   })
 })
 
+describe('NotificationList — links, describe, collapsed rows', () => {
+  const linked = make({ link: '/notes/7' })
+
+  it('the title is an underlined-link <a href> only when onOpen is given and the link is an in-app path', () => {
+    const html = renderToStaticMarkup(<NotificationList items={[linked]} onOpen={() => {}} />)
+    expect(html).toMatch(/<a [^>]*href="\/notes\/7"[^>]*>Order paid<\/a>/)
+    expect(renderToStaticMarkup(<NotificationList items={[linked]} />)).not.toContain('<a ')
+  })
+
+  it.each(['//evil.example/x', 'https://evil.example', '/\\evil.example'])(
+    'never links %s even if the server sent it',
+    (link) => {
+      const html = renderToStaticMarkup(
+        <NotificationList items={[make({ link })]} onOpen={() => {}} />,
+      )
+      expect(html).not.toContain('<a ')
+    },
+  )
+
+  it('describe replaces the title and the message of a row', () => {
+    const html = renderToStaticMarkup(
+      <NotificationList
+        items={[make({})]}
+        describe={(item) => ({ title: `T:${item.type}`, message: 'M!' })}
+      />,
+    )
+    expect(html).toContain('T:order.paid')
+    expect(html).toContain('M!')
+    expect(html).not.toContain('Thanks')
+  })
+
+  it('a collapsed row (count above 1) shows the count in a badge with a spoken label', () => {
+    const html = renderToStaticMarkup(
+      <NotificationList
+        items={[make({ collapsedCount: 3 }), make({ id: 'u1:e2', eventId: 'e2' })]}
+        collapsedLabel={(n) => `${n} times`}
+      />,
+    )
+    expect(html).toContain('3 times')
+    expect(html.match(/data-tone=/g)).toHaveLength(1)
+  })
+})
+
+describe('NotificationPreferences', () => {
+  it('shows a spinner while the list loads and no switch yet', () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const html = renderToStaticMarkup(
+      <QueryClientProvider client={client}>
+        <NotificationPreferences
+          api={{
+            list: async () => {
+              throw new Error('unused')
+            },
+            markRead: async () => ({ eventId: 'e', readAt: 't' }),
+            markAllRead: async () => ({ updated: 0 }),
+            unreadCount: async () => ({ count: 0 }),
+            preferences: async () => ({ items: [] }),
+            setPreference: async (type, muted) => ({ type, muted }),
+          }}
+          loadingLabel="Loading"
+        />
+      </QueryClientProvider>,
+    )
+    expect(html).toContain('Loading')
+    expect(html).not.toContain('role="switch"')
+  })
+
+  it('draws one switch per type, on unless muted, named by labels[type] or the type itself', () => {
+    const client = new QueryClient({ defaultOptions: { queries: { gcTime: Infinity } } })
+    client.setQueryData(notificationKeys.preferences(), {
+      items: [
+        { type: 'NOTE_UPDATED', muted: false },
+        { type: 'comment.created', muted: true },
+      ],
+    })
+    const html = renderToStaticMarkup(
+      <QueryClientProvider client={client}>
+        <NotificationPreferences
+          api={{} as NotificationsApi}
+          labels={{ NOTE_UPDATED: 'Note edits' }}
+        />
+      </QueryClientProvider>,
+    )
+    expect(html).toContain('Note edits')
+    expect(html).toContain('comment.created')
+    expect(html.match(/role="switch"/g)).toHaveLength(2)
+    expect(html.match(/checked=""/g)).toHaveLength(1)
+  })
+
+  it('shows an empty state when the server lists no type', () => {
+    const client = new QueryClient({ defaultOptions: { queries: { gcTime: Infinity } } })
+    client.setQueryData(notificationKeys.preferences(), { items: [] })
+    const html = renderToStaticMarkup(
+      <QueryClientProvider client={client}>
+        <NotificationPreferences api={{} as NotificationsApi} emptyTitle="Nothing to mute" />
+      </QueryClientProvider>,
+    )
+    expect(html).toContain('Nothing to mute')
+  })
+})
+
 describe('NotificationBell', () => {
   const api: NotificationsApi = {
     list: async () => {
@@ -86,6 +190,9 @@ describe('NotificationBell', () => {
     },
     markRead: async () => ({ eventId: 'e', readAt: 't' }),
     markAllRead: async () => ({ updated: 0 }),
+    unreadCount: async () => ({ count: 0 }),
+    preferences: async () => ({ items: [] }),
+    setPreference: async (type, muted) => ({ type, muted }),
   }
   const render = (unread?: number, props: Partial<Parameters<typeof NotificationBell>[0]> = {}) => {
     const client = new QueryClient({

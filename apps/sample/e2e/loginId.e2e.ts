@@ -471,7 +471,8 @@ describe('private by default: the ID of X is in no value of any response Y recei
     // 응답을 기다리는 일을 클릭보다 먼저 건다 - 클릭 뒤에 걸면 빠른 응답을 놓쳐 90초를 기다린다
     await Promise.all([
       y.waitForResponse(
-        (r) => r.url().includes('/notifications') && r.request().method() === 'GET',
+        (r) =>
+          new URL(r.url()).pathname.endsWith('/notifications') && r.request().method() === 'GET', // 종의 안 읽은 수(/unread-count)가 아니라 목록 응답
       ),
       y.getByRole('banner').getByRole('button', { name: /^알림/ }).click(),
     ])

@@ -530,6 +530,14 @@ export default {
   'cheer.return.invalidTitle': '결제 결과를 읽지 못했어요',
   'cheer.return.invalidBody':
     '결제창에서 돌아온 주소가 올바르지 않아요. 내 응원 내역에서 결제를 확인해 주세요.',
+  'settings.notifications': '알림',
+  'settings.notificationsHint':
+    '받고 싶은 알림만 켜 두세요. 끈 종류는 받은편지함에도 쌓이지 않아요.',
+  'notificationType.NOTE_UPDATED': '노트 수정',
+  'notificationType.comment.created': '댓글',
+  'notificationType.comment.replied': '답글',
+  'notificationType.reward.granted': '보상',
+  'header.notificationCollapsed': '같은 알림 {count}건',
   'settings.cheers': '응원',
   'settings.cheersLink': '내 응원 내역',
   'settings.cheersHint': '응원한 내역을 보고 환불을 요청해요',

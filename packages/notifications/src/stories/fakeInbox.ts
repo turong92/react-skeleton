@@ -1,9 +1,14 @@
 import type { NotificationsApi } from '../notificationsApi'
-import type { NotificationItem } from '../types'
+import type { NotificationItem, NotificationPreference } from '../types'
 
 const at = (minutesAgo: number) => new Date(Date.UTC(2026, 0, 1, 12, 0) - minutesAgo * 60_000)
 
-const item = (n: number, title: string, read: boolean): NotificationItem => ({
+const item = (
+  n: number,
+  title: string,
+  read: boolean,
+  extra: Partial<NotificationItem> = {},
+): NotificationItem => ({
   id: `demo:e${n}`,
   eventId: `e${n}`,
   recipientId: 'demo',
@@ -15,16 +20,24 @@ const item = (n: number, title: string, read: boolean): NotificationItem => ({
   payload: {},
   createdAt: at(n * 10).toISOString(),
   readAt: read ? at(n).toISOString() : null,
+  link: null,
+  collapsedCount: 1,
+  ...extra,
 })
 
 /** 메모리 안의 받은편지함(`empty` 면 빈 상태로 시작) — `publish()` 가 서버가 실시간으로 보낼 이벤트를 흉내 낸다 */
 export function createFakeInbox({ empty = false }: { empty?: boolean } = {}) {
+  let preferences: NotificationPreference[] = [
+    { type: 'NOTE_UPDATED', muted: false },
+    { type: 'comment.created', muted: false },
+    { type: 'reward.granted', muted: true },
+  ]
   let rows: NotificationItem[] = empty
     ? []
     : [
         item(3, '결제가 승인되었습니다', true),
-        item(2, '새 댓글이 달렸습니다', false),
-        item(1, '환영합니다', false),
+        item(2, '새 댓글이 달렸습니다', false, { link: '/notes/2' }),
+        item(1, '환영합니다', false, { collapsedCount: 3 }),
       ]
   let counter = 100
   const api: NotificationsApi = {
@@ -54,6 +67,12 @@ export function createFakeInbox({ empty = false }: { empty?: boolean } = {}) {
       rows = rows.map((row) => ({ ...row, readAt: row.readAt ?? readAt }))
       return { updated: unread }
     },
+    unreadCount: async () => ({ count: rows.filter((row) => row.readAt === null).length }),
+    preferences: async () => ({ items: preferences }),
+    setPreference: async (type, muted) => {
+      preferences = preferences.map((p) => (p.type === type ? { ...p, muted } : p))
+      return { type, muted }
+    },
   }
   return {
     api,
@@ -71,6 +90,8 @@ export function createFakeInbox({ empty = false }: { empty?: boolean } = {}) {
         message: row.message,
         payload: {},
         createdAt: row.createdAt,
+        link: null,
+        collapseKey: null,
       }
     },
   }

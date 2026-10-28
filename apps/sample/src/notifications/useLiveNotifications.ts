@@ -25,6 +25,8 @@ export function useLiveNotifications() {
   })
   const sse = useSseClient({
     url: apiClient.endpoint('/notifications/sse'),
+    // 백엔드 심장박동(notification-sse `heartbeat`, 견본 15초)의 세 배 동안 바이트가 없으면 죽은 연결로 보고 다시 잇는다
+    idleTimeoutMs: 45_000,
     getAuthHeaders,
     // 액세스 토큰이 만료돼 401 이면 갱신하고 다시 잇는다 · 다른 요청이 토큰을 갱신하면 죽은 스트림을 다시 잇는다
     recoverUnauthorized: (failed) => refresher.refresh(failed),

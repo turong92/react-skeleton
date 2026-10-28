@@ -361,7 +361,8 @@
       "patterns": [],
       "stories": [
         "packages/notifications/src/NotificationBell.stories.tsx",
-        "packages/notifications/src/NotificationList.stories.tsx"
+        "packages/notifications/src/NotificationList.stories.tsx",
+        "packages/notifications/src/NotificationPreferences.stories.tsx"
       ],
       "docs": ["packages/notifications/README.md"],
       "entryPoints": [
@@ -371,8 +372,11 @@
         "useMarkRead",
         "useMarkAllRead",
         "useNotificationIngest",
+        "usePreferences",
+        "useSetPreference",
         "NotificationBell",
-        "NotificationList"
+        "NotificationList",
+        "NotificationPreferences"
       ],
       "needs": ["api-client", "time", "ui"],
       "backend": {
@@ -394,15 +398,32 @@
         "alsoVia": ["--with-sample", "--with-workbench"],
         "optOut": null
       },
-      "summary": "알림 받은편지함 — 목록 · 안 읽은 수 · 읽음/모두 읽음 · 실시간 이벤트로 캐시 갱신, NotificationBell/List 부품과 TanStack Query 훅.",
+      "summary": "알림 받은편지함 — 목록 · 안 읽은 수(전용 엔드포인트) · 읽음/모두 읽음 · 묶인 줄의 수 · 링크로 이동 · 종류별 끄기(NotificationPreferences) · 실시간 이벤트로 캐시 갱신, NotificationBell/List 부품과 TanStack Query 훅.",
       "notFor": [
         "알림을 보내는 쪽(발행)은 백엔드 코드(NotificationPublisher) — 이 패키지는 받는 화면만",
         "이메일 · Slack 알림 → 백엔드 notification-mail · notification-slack (프런트 짝 없음)",
         "실시간으로 즉시 뜨게 하려면 realtime 을 더한다(live-notifications)"
       ],
       "keywords": {
-        "ko": ["알림", "알림 목록", "알림 종", "안 읽은 알림", "읽음 처리", "받은편지함"],
-        "en": ["notifications", "inbox", "notification bell", "unread count", "mark as read"]
+        "ko": [
+          "알림",
+          "알림 목록",
+          "알림 종",
+          "안 읽은 알림",
+          "읽음 처리",
+          "받은편지함",
+          "알림 끄기",
+          "알림 링크"
+        ],
+        "en": [
+          "notifications",
+          "inbox",
+          "notification bell",
+          "unread count",
+          "mark as read",
+          "mute notifications",
+          "notification link"
+        ]
       }
     },
     {

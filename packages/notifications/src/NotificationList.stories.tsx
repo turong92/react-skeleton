@@ -16,6 +16,8 @@ const base: NotificationItem = {
   payload: {},
   createdAt: '2026-01-01T12:00:00Z',
   readAt: null,
+  link: null,
+  collapsedCount: 1,
 }
 const items: NotificationItem[] = [
   base,
@@ -101,5 +103,47 @@ export const LongText: Story = {
   play: async ({ canvas }) => {
     await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth)
     await expect(canvas.getByRole('listitem')).toBeVisible()
+  },
+}
+
+export const LinkedRow: Story = {
+  args: { items: [{ ...base, link: '/orders/42' }], onOpen: fn() },
+  play: async ({ canvas, args, userEvent }) => {
+    // 링크는 밑줄이 있는 <a> 이고, 누르면 기본 이동 대신 onOpen 이 불린다(앱이 라우터로 이동)
+    const link = canvas.getByRole('link', { name: 'Payment received' })
+    await expect(link).toHaveAttribute('href', '/orders/42')
+    await expect(getComputedStyle(link).textDecorationLine).toBe('underline')
+    await userEvent.click(link)
+    await expect(args.onOpen).toHaveBeenCalledWith(expect.objectContaining({ link: '/orders/42' }))
+  },
+}
+
+export const LinkIgnoredOutsideTheApp: Story = {
+  args: {
+    items: [
+      { ...base, link: '//evil.example/x' },
+      { ...base, id: 'n2', eventId: 'e2', link: 'https://evil.example' },
+    ],
+    onOpen: fn(),
+  },
+  play: async ({ canvas }) => {
+    await expect(canvas.queryByRole('link')).toBeNull()
+  },
+}
+
+export const CollapsedCount: Story = {
+  args: { items: [{ ...base, collapsedCount: 3 }], collapsedLabel: (n) => `${n} similar updates` },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText('3 similar updates')).toBeInTheDocument()
+    await expect(canvas.getByText('3')).toBeVisible()
+  },
+}
+
+export const DescribedByTheApp: Story = {
+  args: { describe: (item) => ({ title: `Order #${item.eventId}`, message: 'Paid in full' }) },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText('Order #e1')).toBeVisible()
+    await expect(canvas.queryByText('Payment received')).toBeNull()
+    await expect(canvas.getAllByText('Paid in full').length).toBeGreaterThan(0)
   },
 }

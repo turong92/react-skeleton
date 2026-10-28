@@ -1,9 +1,9 @@
 {
   "name": "@skeleton/notifications",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "type": "module",
-  "description": "알림 받은편지함 — 목록(페이지)·읽음·모두 읽음 클라이언트 + TanStack Query 훅 + 안 읽은 수(@skeleton/realtime 이벤트로 갱신) + NotificationBell/NotificationList. 백엔드 modules/notification 의 NotificationInboxRepository 짝(HTTP 경로는 앱의 컨트롤러라 설정 가능)",
+  "description": "알림 받은편지함 — 목록(페이지)·읽음·모두 읽음·안 읽은 수 전용 조회·종류별 끄기 클라이언트 + TanStack Query 훅 + 안 읽은 수(@skeleton/realtime 이벤트로 갱신) + NotificationBell/NotificationList. 백엔드 modules/notification 의 NotificationInboxRepository 짝(HTTP 경로는 앱의 컨트롤러라 설정 가능)",
   "exports": {
     ".": {
       "types": "./src/index.ts",

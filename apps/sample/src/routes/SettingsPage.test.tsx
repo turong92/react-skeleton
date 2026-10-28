@@ -1,3 +1,4 @@
+import { notificationKeys } from '@skeleton/notifications'
 import { AuthProvider, createAuthSession, createTokenStore, type AuthApi } from '@skeleton/auth'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -35,9 +36,10 @@ const me = (over: object) => ({
   ...over,
 })
 
-function render(profile: object | undefined) {
+function render(profile: object | undefined, preferences?: object) {
   const client = new QueryClient()
   if (profile) client.setQueryData(myProfileKey, profile)
+  if (preferences) client.setQueryData(notificationKeys.preferences(), preferences)
   return renderToStaticMarkup(
     <QueryClientProvider client={client}>
       <AuthProvider session={createAuthSession({ api, store: createTokenStore() })}>
@@ -73,6 +75,32 @@ describe('SettingsPage — account card', () => {
     expect(html).toMatch(/<a [^>]*class="[^"]*card[^"]*"[^>]*href="\/account"/)
     expect(html).toContain('계정 관리')
     expect(html).toContain('비밀번호 · 이메일 · 로그인한 기기 · 삭제')
+  })
+})
+
+describe('SettingsPage — notifications', () => {
+  const prefs = {
+    items: [
+      { type: 'NOTE_UPDATED', muted: false },
+      { type: 'comment.created', muted: false },
+      { type: 'comment.replied', muted: true },
+      { type: 'reward.granted', muted: false },
+    ],
+  }
+
+  it('has a notifications card with one switch per type the server lists, named in Korean', () => {
+    const html = render(me({}), prefs)
+    expect(html).toContain('알림')
+    for (const label of ['노트 수정', '댓글', '답글', '보상']) expect(html).toContain(`>${label}<`)
+    expect(html.match(/role="switch"/g)).toHaveLength(4)
+    expect(html).not.toContain('NOTE_UPDATED')
+  })
+
+  it('English labels', async () => {
+    await i18n.setLocale('en', { remember: false })
+    const html = render(me({}), prefs)
+    for (const label of ['Note edits', 'Comments', 'Replies', 'Rewards'])
+      expect(html).toContain(`>${label}<`)
   })
 })
 

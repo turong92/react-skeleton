@@ -7,6 +7,7 @@ export const notificationKeys = {
   lists: () => [...notificationKeys.all, 'list'] as const,
   list: (params: NotificationListParams = {}) => [...notificationKeys.lists(), params] as const,
   unread: () => [...notificationKeys.all, 'unread'] as const,
+  preferences: () => [...notificationKeys.all, 'preferences'] as const,
 }
 
 export function notificationListQuery(api: NotificationsApi, params: NotificationListParams = {}) {
@@ -16,10 +17,18 @@ export function notificationListQuery(api: NotificationsApi, params: Notificatio
   }
 }
 
-/** 안 읽은 수 = 안 읽은 것만 1건 달라고 해서 `pagination.totalElements` — 백엔드에 전용 엔드포인트가 없다 */
+/** 안 읽은 수 = 백엔드의 전용 엔드포인트(`GET …/unread-count`)의 `count` */
 export function unreadCountQuery(api: NotificationsApi) {
   return {
     queryKey: notificationKeys.unread(),
-    queryFn: async () => (await api.list({ unreadOnly: true, size: 1 })).pagination.totalElements,
+    queryFn: async () => (await api.unreadCount()).count,
+  }
+}
+
+/** 종류별 수신 설정(서버가 정한 순서 그대로) */
+export function preferencesQuery(api: NotificationsApi) {
+  return {
+    queryKey: notificationKeys.preferences(),
+    queryFn: () => api.preferences(),
   }
 }

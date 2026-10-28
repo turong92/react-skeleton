@@ -17,6 +17,8 @@ const item: NotificationItem = {
   payload: {},
   createdAt: '2026-06-12T00:00:00Z',
   readAt: null,
+  link: null,
+  collapsedCount: 1,
 }
 const meta = { timestamp: 't' }
 
@@ -43,7 +45,15 @@ function fakeClient() {
       },
       value: async <T>(path: string, request?: ApiRequest) => {
         calls.push({ kind: 'value', path, request })
-        return { eventId: 'e1', readAt: '2026-06-12T01:00:00Z', updated: 3 } as unknown as T
+        return {
+          eventId: 'e1',
+          readAt: '2026-06-12T01:00:00Z',
+          updated: 3,
+          count: 4,
+          items: [{ type: 'a', muted: false }],
+          type: 'a/b',
+          muted: true,
+        } as unknown as T
       },
     },
   }
@@ -93,11 +103,40 @@ describe('createNotificationsApi (kotlin-skeleton apps/workbench NotificationInb
     })
   })
 
+  it('unreadCount → GET /notifications/unread-count', async () => {
+    const { client, calls } = fakeClient()
+    const result = await createNotificationsApi(client).unreadCount()
+    expect(result.count).toBe(4)
+    expect(calls[0]).toEqual({ kind: 'value', path: '/notifications/unread-count' })
+  })
+
+  it('preferences → GET /notifications/preferences', async () => {
+    const { client, calls } = fakeClient()
+    const result = await createNotificationsApi(client).preferences()
+    expect(result.items).toEqual([{ type: 'a', muted: false }])
+    expect(calls[0]).toEqual({ kind: 'value', path: '/notifications/preferences' })
+  })
+
+  it('setPreference → PUT /notifications/preferences/{type} with { muted } (the type is path-encoded)', async () => {
+    const { client, calls } = fakeClient()
+    await createNotificationsApi(client).setPreference('a/b', true)
+    expect(calls[0]).toEqual({
+      kind: 'value',
+      path: '/notifications/preferences/a%2Fb',
+      request: { method: 'PUT', json: { muted: true } },
+    })
+  })
+
   it('the base path is configurable because the inbox controller belongs to the app, not to a module', async () => {
     const { client, calls } = fakeClient()
     const api = createNotificationsApi(client, { basePath: '/me/inbox/' })
     await api.list()
     await api.markAllRead()
-    expect(calls.map((c) => c.path)).toEqual(['/me/inbox', '/me/inbox/read-all'])
+    await api.unreadCount()
+    expect(calls.map((c) => c.path)).toEqual([
+      '/me/inbox',
+      '/me/inbox/read-all',
+      '/me/inbox/unread-count',
+    ])
   })
 })

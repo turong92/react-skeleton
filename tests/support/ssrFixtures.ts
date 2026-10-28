@@ -29,6 +29,9 @@ export const fakeNotificationsApi = () => ({
   list: async () => pageOf([]),
   markRead: async (eventId: string) => ({ eventId, readAt: '2026-01-01T00:00:00Z' }),
   markAllRead: async () => ({ updated: 0 }),
+  unreadCount: async () => ({ count: 0 }),
+  preferences: async () => ({ items: [{ type: 'demo.created', muted: false }] }),
+  setPreference: async (type: string, muted: boolean) => ({ type, muted }),
 })
 const fakeRewardsApi = () => ({
   listCampaigns: async () => [],
@@ -196,6 +199,8 @@ const notification = {
   payload: {},
   createdAt: '2026-01-01T00:00:00Z',
   readAt: null,
+  link: '/notes/1',
+  collapsedCount: 2,
 }
 export const fakeUploader = () => ({
   upload: async (file: { name: string }) => ({
@@ -905,7 +910,8 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
   'rewards#PointBalance': () => ({ api: fakeRewardsApi() }),
   'rewards#PointHistory': () => ({ api: fakeRewardsApi() }),
   'notifications#NotificationBell': () => ({ api: fakeNotificationsApi() }),
-  'notifications#NotificationList': () => ({ items: [notification] }),
+  'notifications#NotificationList': () => ({ items: [notification], onOpen: () => {} }),
+  'notifications#NotificationPreferences': () => ({ api: fakeNotificationsApi() }),
   'author-profile#AuthorPicker': () => ({ api: fakeAuthorProfileApi(), ...authorPickerSlot }),
   'author-profile#AuthorPickerView': () => ({
     profiles: [authorProfile],
@@ -1102,6 +1108,8 @@ export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
   'notifications#useUnreadCount': () => [fakeNotificationsApi()],
   'notifications#useMarkRead': () => [fakeNotificationsApi()],
   'notifications#useMarkAllRead': () => [fakeNotificationsApi()],
+  'notifications#usePreferences': () => [fakeNotificationsApi()],
+  'notifications#useSetPreference': () => [fakeNotificationsApi()],
   'notifications#useNotificationIngest': () => [],
   'payment#usePaymentConfig': () => [fakePaymentLedgerApi()],
   'payment#useCreateOrder': () => [fakePaymentLedgerApi()],

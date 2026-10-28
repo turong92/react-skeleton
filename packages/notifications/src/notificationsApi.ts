@@ -2,6 +2,7 @@ import type { ApiClient, ApiPageResponse } from '@skeleton/api-client'
 import type {
   NotificationItem,
   NotificationListParams,
+  NotificationPreference,
   NotificationReadAllResponse,
   NotificationReadResponse,
 } from './types'
@@ -13,6 +14,12 @@ export type NotificationsApi = {
   markRead(eventId: string): Promise<NotificationReadResponse>
   /** `PATCH {basePath}/read-all` */
   markAllRead(): Promise<NotificationReadAllResponse>
+  /** `GET {basePath}/unread-count` */
+  unreadCount(): Promise<{ count: number }>
+  /** `GET {basePath}/preferences` — 서버가 정한 순서 그대로 */
+  preferences(): Promise<{ items: NotificationPreference[] }>
+  /** `PUT {basePath}/preferences/{type}` 본문 `{ muted }` — 목록에 없는 종류는 404 */
+  setPreference(type: string, muted: boolean): Promise<NotificationPreference>
 }
 
 export type NotificationsApiOptions = {
@@ -37,5 +44,12 @@ export function createNotificationsApi(
       }),
     markAllRead: () =>
       client.value<NotificationReadAllResponse>(`${base}/read-all`, { method: 'PATCH' }),
+    unreadCount: () => client.value<{ count: number }>(`${base}/unread-count`),
+    preferences: () => client.value<{ items: NotificationPreference[] }>(`${base}/preferences`),
+    setPreference: (type, muted) =>
+      client.value<NotificationPreference>(`${base}/preferences/${encodeURIComponent(type)}`, {
+        method: 'PUT',
+        json: { muted },
+      }),
   }
 }

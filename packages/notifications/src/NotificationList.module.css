@@ -51,6 +51,26 @@
   color: var(--teal);
 }
 
+.link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.link:hover {
+  color: var(--teal);
+}
+
+.link:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}
+
+.count {
+  margin-inline-start: var(--space-sm);
+  font-weight: 650;
+}
+
 .message {
   color: var(--text);
   overflow-wrap: anywhere;

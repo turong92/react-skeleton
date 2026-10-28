@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — 알림센터 보강: 안 읽은 수 전용 조회 · 링크 · 묶음 · 종류별 끄기 (2026-10-28)
+
+백엔드 짝: kotlin-skeleton `notification` · `notification-jdbc` · `notification-sse`(같은 묶음). `@skeleton/notifications` 1.1.0 → 1.2.0.
+
+- `createNotificationsApi`: `unreadCount()`(`GET …/unread-count`) · `preferences()`(`GET …/preferences`) · `setPreference(type, muted)`(`PUT …/preferences/{type}`). **`unreadCountQuery` 는 이제 전용 엔드포인트를 쓴다**(예전엔 `unreadOnly&size=1` 의 `totalElements`) - 백엔드 쪽을 같이 올려야 한다. `NotificationsApi` 를 직접 만든 가짜(테스트 · 스토리)는 세 메서드를 더해야 타입이 맞는다.
+- 타입: `NotificationItem.link` · `.collapsedCount`, `NotificationEvent.link` · `.collapseKey`, `NotificationPreference`. 링크는 앱 안 경로(`/` 로 시작, `//` 아님)만 인정하고 클라이언트도 다시 확인한다.
+- `NotificationList` · `NotificationBell`: `onOpen`(링크 있는 줄의 제목이 밑줄 링크, 누르면 읽음 + 대화상자 닫기 + 이동은 앱이) · `describe`(제목 · 내용을 앱이 다시 정함) · `collapsedLabel`(묶인 줄의 수 배지). 실시간 `ingest` 는 `collapseKey` 가 있으면 안 읽은 수를 +1 하지 않고 다시 읽는다.
+- 새 부품 `NotificationPreferences` + 훅 `usePreferences` · `useSetPreference` - 서버가 알려 준 종류마다 스위치(즉시 저장).
+- 샘플: 종의 줄을 누르면 해당 화면으로 이동, 설정에 「알림」 카드(노트 수정 · 댓글 · 답글 · 보상), 실시간 연결이 45초 유휴 감시(백엔드 심장박동 15초).
+
 ### Added — 쿠폰 운영 보강 (2026-10-29)
 
 - `@skeleton/rewards/admin`: `AdminCouponDefinition`(정의 한 건 — 현황 카드 · 발급 내역 표 · 회수) · `AccountSearch`(이메일 · 로그인 아이디로 찾아 고르기 — 계정 id 직접 입력 칸 대신) · 쿠폰 만들기에 발행 기간(`issueStartsAt` · `issueEndsAt`, 밖이면 `COUPON.ISSUE_CLOSED`)과 사용 시작(`validFrom`). `createRewardsAdminApi` 에 `couponStats` · `listDefinitionCoupons`.

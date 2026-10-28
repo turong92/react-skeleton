@@ -2,8 +2,13 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { useState } from 'react'
 import { applyRead, applyReadAll, createInboxSync, type InboxSyncOptions } from './inboxCache'
 import type { NotificationsApi } from './notificationsApi'
-import { notificationListQuery, unreadCountQuery } from './queries'
-import type { NotificationListParams } from './types'
+import {
+  notificationKeys,
+  notificationListQuery,
+  preferencesQuery,
+  unreadCountQuery,
+} from './queries'
+import type { NotificationListParams, NotificationPreference } from './types'
 
 /** 받은편지함 한 쪽. 쪽을 넘길 때 이전 쪽을 보여 주며(깜빡임 없이) 새로 가져온다. `enabled: false` 면 가져오지 않는다 */
 export function useNotifications(
@@ -38,6 +43,28 @@ export function useMarkAllRead(api: NotificationsApi) {
   return useMutation({
     mutationFn: () => api.markAllRead(),
     onSuccess: () => applyReadAll(client, new Date().toISOString()),
+  })
+}
+
+/** 종류별 수신 설정 목록(`data.items`) */
+export function usePreferences(api: NotificationsApi) {
+  return useQuery(preferencesQuery(api))
+}
+
+/** 한 종류를 끄거나 켠다 — 성공하면 서버가 돌려준 값으로 캐시를 고친다 */
+export function useSetPreference(api: NotificationsApi) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: ({ type, muted }: NotificationPreference) => api.setPreference(type, muted),
+    onSuccess: (saved) =>
+      client.setQueryData<{ items: NotificationPreference[] }>(
+        notificationKeys.preferences(),
+        (data) =>
+          data && {
+            ...data,
+            items: data.items.map((item) => (item.type === saved.type ? saved : item)),
+          },
+      ),
   })
 }
 

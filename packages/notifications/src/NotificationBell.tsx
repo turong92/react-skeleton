@@ -4,6 +4,7 @@ import { badgeText } from './badge'
 import { useMarkAllRead, useMarkRead, useNotifications, useUnreadCount } from './hooks'
 import { NotificationList, type NotificationListProps } from './NotificationList'
 import type { NotificationsApi } from './notificationsApi'
+import type { NotificationItem } from './types'
 import styles from './NotificationBell.module.css'
 
 export type NotificationBellProps = {
@@ -18,7 +19,9 @@ export type NotificationBellProps = {
   markAllReadLabel?: string
   loadingLabel?: string
   /** 목록 문구 · 시각 글자 · 심각도 낭독 — `NotificationList` 의 props(`items` · `onRead` 제외) */
-  listProps?: Omit<NotificationListProps, 'items' | 'onRead'>
+  listProps?: Omit<NotificationListProps, 'items' | 'onRead' | 'onOpen'>
+  /** 링크 있는 줄의 제목을 눌렀을 때 — 안 읽었으면 읽음 처리하고 대화상자를 닫은 뒤 불린다(이동은 앱이 라우터로) */
+  onOpen?: (item: NotificationItem) => void
   /** 쪽 이동 문구 — `Pagination` 의 label props */
   paginationLabels?: { label?: string; previousLabel?: string; nextLabel?: string }
 }
@@ -39,6 +42,7 @@ export function NotificationBell({
   markAllReadLabel = 'Mark all as read',
   loadingLabel,
   listProps,
+  onOpen,
   paginationLabels,
 }: NotificationBellProps) {
   const [open, setOpen] = useState(false)
@@ -104,6 +108,14 @@ export function NotificationBell({
                 {...listProps}
                 items={list.data?.values ?? []}
                 onRead={(item) => markRead.mutate(item.eventId)}
+                onOpen={
+                  onOpen &&
+                  ((item) => {
+                    if (item.readAt === null) markRead.mutate(item.eventId)
+                    setOpen(false)
+                    onOpen(item)
+                  })
+                }
               />
             )}
             <Pagination

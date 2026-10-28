@@ -33,6 +33,7 @@ function SignedInActions() {
         api={notificationsApi}
         title={t('header.notificationsTitle')}
         bellLabel={(unread) => t('header.bell', { unread })}
+        onOpen={(item) => item.link && navigate(item.link)}
         closeLabel={t('common.close')}
         markAllReadLabel={t('header.markAllRead')}
         loadingLabel={t('common.loading')}
@@ -43,6 +44,7 @@ function SignedInActions() {
         }}
         listProps={{
           markReadLabel: t('header.markRead'),
+          collapsedLabel: (count) => t('header.notificationCollapsed', { count }),
           emptyTitle: t('header.notificationsEmptyTitle'),
           emptyDescription: t('header.notificationsEmptyBody'),
         }}

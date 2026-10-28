@@ -7,13 +7,12 @@ export type PlanGroup = { key: string; plans: SubscriptionPlan[] }
 const PERIOD =
   /^P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)W)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/
 
-/** 기준 시각 - 서버는 구독의 실제 기준 시각에 `after(기준, 1)` 로 주기를 더한다. 화면은 몰라서 고정한 날을 쓴다(달 길이가 날마다 달라 한 달 = 28~31일이다) */
-const BASE = Date.UTC(2026, 0, 1)
+/** 기준 시각 - 서버의 `PlanChangeRules.ANCHOR`(2000-01-01)와 같은 고정한 날에 `after(기준, 1)` 처럼 주기를 달력으로 더해 길이를 잰다(달 길이가 달마다 달라 한 달 = 28~31일이다) */
+const BASE = Date.UTC(2000, 0, 1)
 
 /**
- * 주기 길이(분) 어림 - 정렬 · 짧은/긴 주기 판정에만 쓴다. 고정한 기준 시각에 달력으로 더해 잰다(한 달 = 그 달의 일수, 한 해 = 365일).
- * 그래서 서버처럼 `P1M` 이 `P4W` 보다 길고 `P30D` 보다 길지만, 기준 시각에 따라 갈리는 아슬아슬한 쌍(`P30D` 와 `P1M` 이 2월에는 같다)은 서버와 다를 수 있다 -
- * 이 값은 화면의 짐작이고 확정은 서버가 한다. 읽을 수 없는(복합 · 빈 · 모르는 글자 · 수가 너무 큰) 주기는 무한대(맨 뒤)
+ * 주기 길이(분) - 정렬 · 짧은/긴 주기 판정에만 쓴다. 서버 `PlanChangeRules` 와 같은 고정 기준 시각(2000-01-01)에 달력으로 더해 잰다(한 달 = 1월의 31일, 한 해 = 366일).
+ * 그래서 서버처럼 `P1M` 이 `P4W` 보다 길고 `P30D` 보다 길다. 서버의 확정 판정(`timing`)과 같은 기준이지만, 이 값은 화면의 묶음용이고 확정은 서버 미리보기가 한다. 읽을 수 없는(복합 · 빈 · 모르는 글자 · 수가 너무 큰) 주기는 무한대(맨 뒤)
  */
 export function periodMinutes(period: string): number {
   const match = typeof period === 'string' ? PERIOD.exec(period) : null
@@ -21,7 +20,7 @@ export function periodMinutes(period: string): number {
   const [years, months, weeks, days, hours, minutes, seconds] = match
     .slice(1)
     .map((part) => Number(part ?? 0))
-  const end = Date.UTC(2026 + years!, months!, 1 + weeks! * 7 + days!, hours!, minutes!, seconds!)
+  const end = Date.UTC(2000 + years!, months!, 1 + weeks! * 7 + days!, hours!, minutes!, seconds!)
   const length = (end - BASE) / 60_000
   return Number.isFinite(length) ? length : Number.POSITIVE_INFINITY
 }

@@ -365,24 +365,32 @@ describe('⑦ a downgrade waits for the renewal, and can be withdrawn', () => {
       await dialog.getByRole('button', { name: subscribed.changeDialog.confirmScheduled }).click()
       await pwExpect(dialog).toBeHidden()
 
-      // 25초 주기라 이 사이에 갱신이 끼어 예약이 이미 적용됐을 수 있다(그러면 플랜은 Basic, 예약은 없다) - 단언은 어느 쪽이든 맞는 것만
-      const after = await me()
-      const renewed = after.orders.some((o) => o.kind === 'SUBSCRIPTION_RENEWAL')
+      // 25초 주기라 이 사이에 갱신이 끼어 예약이 이미 적용됐을 수 있다 - 그러면 플랜은 Basic, 예약은 없다. 어느 갈래든 맞는 것을 단언한다
+      type Mine = { planCode: string; scheduledChange: unknown }
+      const stateNow = async () => {
+        const read = await me()
+        return { orders: read.orders, sub: read.subscription as unknown as Mine }
+      }
+      const appliedEarly = async (why: string) => {
+        const { sub } = await stateNow()
+        // 갱신이 예약을 적용했다: 새 플랜으로 바뀌었고 예약은 비었다
+        expect(sub.planCode).toBe('basic')
+        expect(sub.scheduledChange ?? null).toBeNull()
+        console.warn(`subscription ⑦ ended early: ${why} (the 25s renewal applied the schedule)`)
+        await cancelIfAny(DEMO)
+      }
+      const after = await stateNow()
       // 예약 때문에 지금 결제가 나간 적은 없다(변경 결제 없음)
       expect(after.orders.map((o) => o.kind)).not.toContain('SUBSCRIPTION_CHANGE')
-      if (renewed) {
-        await cancelIfAny(DEMO)
-        return
-      }
-      expect((after.subscription as unknown as { planCode: string }).planCode).toBe('standard')
+      if (after.sub.scheduledChange == null)
+        return appliedEarly('before the schedule could be checked')
+      expect(after.sub.planCode).toBe('standard')
       await pwExpect(page.getByText(subscribed.mine.scheduled)).toBeVisible()
 
       // 예약 거두기 → 확인 창 → 예약이 사라진다 (그 사이 갱신이 예약을 적용했다면 단추가 이미 없다)
       const withdraw = page.getByRole('button', { name: subscribed.mine.withdrawSchedule })
-      if ((await withdraw.count()) === 0) {
-        await cancelIfAny(DEMO)
-        return
-      }
+      if ((await withdraw.count()) === 0)
+        return appliedEarly('before 「예약 거두기」 could be pressed')
       await withdraw.click()
       const confirm = page.getByRole('dialog')
       await confirm.getByRole('button', { name: subscribed.cancelScheduleDialog.confirm }).click()

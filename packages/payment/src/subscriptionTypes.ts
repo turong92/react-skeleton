@@ -193,7 +193,7 @@ export type PlanChangePreview = {
   restartsPeriod: boolean
   timing?: PlanChangeTiming
   effectiveAt?: string
-  /** 새 주기로 바꿀 때 지금 주기의 남은 몫으로 깎아 주는 금액 - `amount` = `charge` + `credit`(공제가 새 가격보다 크면 `credit` = `amount`, `charge` = 0). 깎아 주지 않으면 `null`, 구버전 서버는 칸이 없다 */
+  /** 새 주기로 바꿀 때 지금 주기의 남은 몫으로 깎아 주는 금액 - `amount` = `charge` + `credit` 이 보통이다(공제가 새 가격보다 크면 `credit` = `amount`, `charge` = 0). 다만 결제할 금액이 결제사 최소 금액(`minCharge`) 미만이면 `charge` 가 0 이 되어 합이 맞지 않을 수 있다. 깎아 주지 않으면 `null`, 구버전 서버는 칸이 없다 */
   credit?: PaymentAmount | null
 }
 

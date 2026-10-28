@@ -49,7 +49,9 @@ describe('periodMinutes', () => {
   it('measures a month as the days of that month on a fixed base, so a month is longer than four weeks and than thirty days', () => {
     expect(periodMinutes('P1M')).toBeGreaterThan(periodMinutes('P4W'))
     expect(periodMinutes('P1M')).toBeGreaterThan(periodMinutes('P30D'))
-    expect(periodMinutes('P1Y')).toBe(365 * 24 * 60)
+    // 서버와 같은 기준(2000-01-01)이라 2000년은 윤년 - 한 해는 366일, 한 달은 1월의 31일
+    expect(periodMinutes('P1Y')).toBe(366 * 24 * 60)
+    expect(periodMinutes('P1M')).toBe(31 * 24 * 60)
     expect(periodMinutes('P1Y')).toBeGreaterThan(periodMinutes('P12W'))
   })
 

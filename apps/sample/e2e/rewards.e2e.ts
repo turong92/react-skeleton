@@ -214,6 +214,10 @@ describe('rewards: attendance, coupons on a cheer, a free voucher, switching an 
         await page.goto(`${baseUrl}/rewards`)
         await pwExpect(page.getByRole('heading', { name: attendance.name })).toBeVisible()
       } finally {
+        // 켜진 채로 돌려놓는다 - 중간에 실패해도 다음 실행이 꺼진 이벤트를 만나지 않게
+        await api(apiUrl, adminToken, 'PATCH', `/admin/campaigns/${attendance.id}/enabled`, {
+          enabled: true,
+        })
         await operator.close()
       }
     },
@@ -230,6 +234,9 @@ describe('rewards: attendance, coupons on a cheer, a free voucher, switching an 
         .values as Array<{ key: string }>
       if (!permissions.some((p) => p.key === 'payment.exempt')) return ctx.skip()
       await toss.set({ reset: true })
+      const userId = await accountIdOf(await tokenOf(apiUrl))
+      // 앞선 실행이 남긴 역할이 있으면 먼저 치운다 - 사용자가 면제인 채로 남으면 뒤 파일들의 결제가 모두 결제창 없이 끝난다
+      await dropWaivedRole(adminToken, userId)
       const operator = await operatorPage(browser, baseUrl)
       try {
         const op = operator.page
@@ -258,7 +265,10 @@ describe('rewards: attendance, coupons on a cheer, a free voucher, switching an 
 
         // 운영 목록에 같은 알약
         await op.goto(`${baseUrl}/admin/payments`)
-        await pwExpect(op.getByText(paymentLabels.discount.settlement.EXEMPT).first()).toBeVisible()
+        // 표 안에서 찾는다 - 같은 글자가 위의 「결제 방식」 필터 선택지에도 있다
+        await pwExpect(
+          op.getByRole('table').getByText(paymentLabels.discount.settlement.EXEMPT).first(),
+        ).toBeVisible()
 
         // 회수 - 다음 응원은 결제창
         await accountMenu(op, auth.adminRevokeRole('WAIVED'))
@@ -267,20 +277,23 @@ describe('rewards: attendance, coupons on a cheer, a free voucher, switching an 
         await submitCheer(page)
         await returnedOrderId(page)
         await pwExpect(resultTitle(page, paymentLabels.result.paid.title)).toBeVisible()
-
-        // 뒷정리
-        await op.goto(`${baseUrl}/admin/roles`)
-        await op.getByRole('button', { name: koAdminRolesLabels.remove!('WAIVED') }).click()
-        const gone = op.getByRole('dialog', { name: koAdminRolesLabels.deleteTitle!('WAIVED') })
-        await gone.getByRole('button', { name: koAdminRolesLabels.removeButton! }).click()
-        await pwExpect(gone).toBeHidden()
       } finally {
+        // 시나리오가 어디서 멈췄든 역할을 회수하고 지운다(사용자 계정은 다른 파일도 쓴다)
+        await dropWaivedRole(adminToken, userId)
         await operator.close()
       }
     },
     LATE * 2,
   )
 })
+
+/** `WAIVED` 역할을 사용자에게서 회수하고 역할을 지운다 - 없으면 아무 일도 아니다(API 로 하니 화면 단계가 어디서 멈췄어도 된다) */
+async function dropWaivedRole(adminToken: string, userId: string) {
+  await api(apiUrl, adminToken, 'DELETE', `/admin/accounts/${userId}/roles/WAIVED`).catch(
+    () => undefined,
+  )
+  await api(apiUrl, adminToken, 'DELETE', '/admin/roles/WAIVED').catch(() => undefined)
+}
 
 /** 계정 화면에서 이 사용자의 줄 메뉴로 역할을 주거나 회수한다(`authzRoles.e2e.ts` 와 같은 걸음) */
 async function accountMenu(op: Page, itemName: string) {

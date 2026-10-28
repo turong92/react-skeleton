@@ -17,6 +17,8 @@ export type AddPriceForm = {
   /** `datetime-local` 값(`2026-11-30T09:00`) - 내 기기의 시간대로 읽는다 */
   saleStartsAt: string
   saleEndsAt: string
+  /** 대신하는 옛 가격 코드(없으면 빈 글자) */
+  replaces: string
 }
 
 export const EMPTY_ADD_PRICE_FORM: AddPriceForm = {
@@ -30,11 +32,19 @@ export const EMPTY_ADD_PRICE_FORM: AddPriceForm = {
   regularAmount: '',
   saleStartsAt: '',
   saleEndsAt: '',
+  replaces: '',
 }
 
 export type AddPriceProblems = Partial<
   Record<
-    'period' | 'amount' | 'currency' | 'regularAmount' | 'saleStartsAt' | 'saleEndsAt' | 'code',
+    | 'period'
+    | 'amount'
+    | 'currency'
+    | 'regularAmount'
+    | 'saleStartsAt'
+    | 'saleEndsAt'
+    | 'code'
+    | 'replaces',
     | 'amountEmpty'
     | 'amountInvalid'
     | 'amountZero'
@@ -127,6 +137,7 @@ export function validateAddPrice(
       ...(compareAtAmount !== undefined ? { compareAtAmount } : {}),
       ...(saleStartsAt ? { saleStartsAt } : {}),
       ...(saleEndsAt ? { saleEndsAt } : {}),
+      ...(form.replaces !== '' ? { replaces: form.replaces } : {}),
     },
   }
 }

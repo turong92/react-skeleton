@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — 카탈로그 리뷰 반영 (2026-10-29)
 
+- `AddPriceDialog`: 「이 가격을 대신함 (선택)」 - 같은 주기 · 통화의 판매 중 가격을 고르면 `replaces` 로 보내 옛 가격 중지와 새 가격 추가를 한 번에 한다(`prices` · `locale` prop). 칸 오류 `replaces` 를 그 칸 아래에 보인다.
 - `@skeleton/time`: `formatEnd(iso, { zone, locale })` - 끝은 열린 구간이라 자정 정각이면 전날 날짜만, 아니면 날짜 + 시각. 행사 끝 안내(`SubscriptionPlanList` · `PricingTable`)가 쓴다.
 - 샘플 랜딩: 상품의 짧은 주기 가격이 월, 긴 주기 가격이 연이다(로컬 시드의 3분 · 36분 주기도 가격표에 나온다). 가격표가 없으면 푸터의 「요금제」 링크도 없다.
 - 앱 API 클라이언트가 화면 언어를 `Accept-Language` 로 보내고, 언어를 바꾸면 `['payment', …]` 쿼리를 다시 읽는다(플랜 · 구독 이름이 서버에서 요청 언어로 온다).

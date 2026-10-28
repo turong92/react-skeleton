@@ -117,6 +117,8 @@ export function AdminCatalogProductPage() {
         open={adding}
         onClose={() => setAdding(false)}
         kind={product.kind}
+        prices={product.prices}
+        locale={language}
         busy={m.addPrice.isPending}
         error={m.addPrice.error}
         labels={labels}

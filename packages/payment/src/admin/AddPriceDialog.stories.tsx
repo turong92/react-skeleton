@@ -91,3 +91,53 @@ export const OverlappingSalePeriod: Story = {
     await expect(dialog).toHaveTextContent('판매 기간이 겹치는 가격')
   },
 }
+
+/** 같은 주기 · 통화의 판매 중 가격만 「이 가격을 대신함」에 오른다 - 고르면 보낼 때 `replaces` 로 간다 */
+export const ReplacesAnOldPrice: Story = {
+  args: {
+    locale: 'ko-KR',
+    prices: [
+      {
+        code: 'std-m',
+        period: 'P1M',
+        amount: 6900,
+        currency: 'KRW',
+        compareAtAmount: null,
+        saleStartsAt: null,
+        saleEndsAt: null,
+        selling: true,
+        current: true,
+        stoppedAt: null,
+        providerRefs: {},
+      },
+      {
+        code: 'std-y',
+        period: 'P1Y',
+        amount: 69000,
+        currency: 'KRW',
+        compareAtAmount: null,
+        saleStartsAt: null,
+        saleEndsAt: null,
+        selling: true,
+        current: true,
+        stoppedAt: null,
+        providerRefs: {},
+      },
+    ],
+  },
+  play: async ({ userEvent }) => {
+    const dialog = await screen.findByRole('dialog', { name: dialogName })
+    const pick = within(dialog).getByLabelText('이 가격을 대신함 (선택)')
+    await expect(within(pick).queryByRole('option', { name: /std-y/ })).toBeNull()
+    await userEvent.selectOptions(pick, 'std-m')
+    await expect(dialog).toHaveTextContent('std-m 가격은 판매 중지돼요')
+    await userEvent.type(within(dialog).getByRole('textbox', { name: /^금액/ }), '7900')
+    await userEvent.click(within(dialog).getByRole('button', { name: '가격 더하기' }))
+    await expect(onSubmit).toHaveBeenCalledWith({
+      period: 'P1M',
+      amount: 7900,
+      currency: 'KRW',
+      replaces: 'std-m',
+    })
+  },
+}

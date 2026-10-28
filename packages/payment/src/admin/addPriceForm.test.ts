@@ -52,6 +52,13 @@ describe('validateAddPrice', () => {
     expect(validateAddPrice(form({ code: '  ' }), 'SUBSCRIPTION').input).not.toHaveProperty('code')
   })
 
+  it('the replaced price code is sent when one is chosen, and left out when none', () => {
+    expect(validateAddPrice(form({ replaces: 'std-m' }), 'SUBSCRIPTION').input?.replaces).toBe(
+      'std-m',
+    )
+    expect(validateAddPrice(form(), 'SUBSCRIPTION').input).not.toHaveProperty('replaces')
+  })
+
   it('a price code uses the backend shape: underscores allowed, up to 64 characters', () => {
     expect(validateAddPrice(form({ code: 'std_y-1' }), 'SUBSCRIPTION').input?.code).toBe('std_y-1')
     expect(validateAddPrice(form({ code: 'Bad Code' }), 'SUBSCRIPTION').problems).toEqual({

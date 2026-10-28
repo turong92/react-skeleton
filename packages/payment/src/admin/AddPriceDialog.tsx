@@ -10,7 +10,8 @@ import {
   type AddPriceForm,
   type AddPriceProblems,
 } from './addPriceForm'
-import type { AddCatalogPriceInput } from './catalogAdminTypes'
+import type { AddCatalogPriceInput, AdminCatalogPrice } from './catalogAdminTypes'
+import { formatMoney } from '../format'
 import { CatalogErrorNotice } from './CatalogErrorNotice'
 import { fieldMessageOf } from './catalogErrors'
 import styles from './AddPriceDialog.module.css'
@@ -18,6 +19,7 @@ import styles from './AddPriceDialog.module.css'
 /** 폼 칸 → 서버 요청 본문의 칸 이름(다른 것만) */
 const SERVER_FIELD: Record<keyof AddPriceProblems, string> = {
   period: 'period',
+  replaces: 'replaces',
   amount: 'amount',
   currency: 'currency',
   regularAmount: 'compareAtAmount',
@@ -34,6 +36,9 @@ export type AddPriceDialogProps = {
   onSubmit: (input: AddCatalogPriceInput) => void
   /** 구독 상품에만 주기 칸이 있다 */
   kind: CatalogKind
+  /** 이 상품의 가격들 - 「이 가격을 대신함」에 같은 주기 · 통화의 판매 중 가격만 고를 수 있게 준다(없으면 고르기가 없다) */
+  prices?: readonly AdminCatalogPrice[]
+  locale?: string
   busy?: boolean
   /** 더하기가 실패했을 때의 오류 - 열 때마다 묵은 오류가 보이지 않게 부모가 `reset()` 한다 */
   error?: unknown
@@ -50,6 +55,8 @@ export function AddPriceDialog({
   onClose,
   onSubmit,
   kind,
+  prices = [],
+  locale,
   busy,
   error,
   labels: input,
@@ -74,6 +81,15 @@ export function AddPriceDialog({
     return problem ? text.problems[problem] : fieldMessageOf(error, SERVER_FIELD[key])
   }
   const currency = currencyOf(form)
+  const periodNow = form.period === 'custom' ? form.customPeriod.trim() : form.period
+  // 대신할 수 있는 가격 - 같은 주기 · 같은 통화에서 지금 판매 중인 것만
+  const replaceable = prices.filter(
+    (price) =>
+      price.selling &&
+      price.stoppedAt === null &&
+      price.currency === currency &&
+      (kind === 'ONE_TIME' ? price.period === null : price.period === periodNow),
+  )
   const known = /^[A-Z]{3}$/.test(currency)
   const amountHint = text.amountHint(
     known ? currency : text.currency,
@@ -110,7 +126,9 @@ export function AddPriceDialog({
         onSubmit={(event) => {
           event.preventDefault()
           if (busy) return
-          const result = validateAddPrice(form, kind)
+          // 주기나 통화를 바꿔 더는 맞지 않는 옛 가격은 보내지 않는다
+          const keep = replaceable.some((p) => p.code === form.replaces)
+          const result = validateAddPrice({ ...form, replaces: keep ? form.replaces : '' }, kind)
           setProblems(result.problems ?? {})
           if (result.input) onSubmit(result.input)
         }}
@@ -239,6 +257,32 @@ export function AddPriceDialog({
               )}
             </Field>
           </>
+        )}
+        {replaceable.length > 0 && (
+          <Field
+            label={text.replaces}
+            hint={form.replaces !== '' ? text.replacesHint(form.replaces) : undefined}
+            error={say('replaces')}
+          >
+            {(control) => (
+              <Select
+                {...control}
+                value={replaceable.some((p) => p.code === form.replaces) ? form.replaces : ''}
+                disabled={busy}
+                onChange={(event) => set({ replaces: event.target.value })}
+              >
+                <option value="">{text.replacesNone}</option>
+                {replaceable.map((price) => (
+                  <option key={price.code} value={price.code}>
+                    {text.replacesOption(
+                      price.code,
+                      formatMoney(price, { locale, currencySuffix: all.currencySuffix }),
+                    )}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </Field>
         )}
         <Field label={text.code} hint={text.codeHint} error={say('code')}>
           {(control) => (

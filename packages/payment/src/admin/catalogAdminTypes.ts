@@ -63,4 +63,6 @@ export type AddCatalogPriceInput = {
   compareAtAmount?: number
   saleStartsAt?: string
   saleEndsAt?: string
+  /** 같은 상품의 옛 가격 코드 - 한 번에 옛 가격을 판매 중지하고 이 가격을 더한다(같은 주기 · 통화의 판매 중 가격만). 모르는 코드는 400 `CATALOG.PRICE_INVALID`(칸 `replaces`) */
+  replaces?: string
 }

@@ -46,6 +46,66 @@ describe('AddPriceDialog', () => {
     expect(html).toMatch(/data-variant="secondary"[^>]*>닫기/)
   })
 
+  it('offers only the selling prices of the same period and currency to replace, and says the old one stops', () => {
+    const price = (over: object) => ({
+      code: 'x',
+      period: 'P1M',
+      amount: 6900,
+      currency: 'KRW',
+      compareAtAmount: null,
+      saleStartsAt: null,
+      saleEndsAt: null,
+      selling: true,
+      current: true,
+      stoppedAt: null,
+      providerRefs: {},
+      ...over,
+    })
+    const html = render({
+      locale: 'ko-KR',
+      prices: [
+        price({ code: 'same' }),
+        price({ code: 'other-period', period: 'P1Y' }),
+        price({ code: 'other-currency', currency: 'USD' }),
+        price({ code: 'stopped', selling: false, stoppedAt: '2026-10-01T00:00:00Z' }),
+      ],
+    })
+    expect(html).toContain('이 가격을 대신함 (선택)')
+    expect(html).toContain('same (6,900원)')
+    for (const gone of ['other-period', 'other-currency', 'stopped'])
+      expect(html).not.toContain(gone)
+    expect(render({ prices: [] })).not.toContain('이 가격을 대신함')
+  })
+
+  it('a replaces rejection (unknown code) is said under that field', () => {
+    const error = new ApiRequestError(
+      {
+        code: 'CATALOG.PRICE_INVALID',
+        title: 't',
+        status: 400,
+        timestamp: 't',
+        errors: [{ field: 'replaces', code: 'Invalid', message: 'not a price of this product' }],
+      },
+      'tr',
+      'sp',
+      'tp',
+    )
+    const price = {
+      code: 'same',
+      period: 'P1M',
+      amount: 6900,
+      currency: 'KRW',
+      compareAtAmount: null,
+      saleStartsAt: null,
+      saleEndsAt: null,
+      selling: true,
+      current: true,
+      stoppedAt: null,
+      providerRefs: {},
+    }
+    expect(render({ error, prices: [price] })).toContain('not a price of this product')
+  })
+
   it('a rejected add says why in words: overlapping sale periods, an invalid price, a taken code', () => {
     expect(render({ error: failed('CATALOG.PRICE_OVERLAP', 409) })).toContain(
       '판매 기간이 겹치는 가격',

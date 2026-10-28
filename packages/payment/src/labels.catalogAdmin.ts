@@ -103,6 +103,11 @@ export type CatalogAdminLabels = {
     saleStarts: string
     saleEnds: string
     saleWindowHint: string
+    replaces: string
+    replacesNone: string
+    /** 고른 옛 가격이 어떻게 되는지 - 한 번에 판매 중지된다 */
+    replacesHint: (code: string) => string
+    replacesOption: (code: string, money: string) => string
     submit: string
     cancel: string
     close: string
@@ -247,6 +252,11 @@ export const koCatalogAdminLabels: CatalogAdminLabels = {
     regularAmountHint: '행사가보다 커야 해요.',
     saleStarts: '시작 시각',
     saleEnds: '끝나는 시각',
+    replaces: '이 가격을 대신함 (선택)',
+    replacesNone: '대신하는 가격 없음',
+    replacesHint: (code) =>
+      `더하는 순간 ${code} 가격은 판매 중지돼요. 기존 구독자는 그 가격 그대로예요.`,
+    replacesOption: (code, money) => `${code} (${money})`,
     saleWindowHint:
       '내 기기의 시간대로 읽어요. 시작을 비우면 지금부터, 끝을 비우면 끝 없이 이어져요.',
     submit: '가격 더하기',
@@ -409,6 +419,11 @@ export const defaultCatalogAdminLabels: CatalogAdminLabels = {
     regularAmountHint: 'Must be higher than the sale price.',
     saleStarts: 'Starts at',
     saleEnds: 'Ends at',
+    replaces: 'Replaces this price (optional)',
+    replacesNone: 'Replaces no price',
+    replacesHint: (code) =>
+      `The moment this is added, ${code} stops selling. Existing subscribers keep that price.`,
+    replacesOption: (code, money) => `${code} (${money})`,
     saleWindowHint: 'Read in your device time zone. Empty start means now, empty end means no end.',
     submit: 'Add price',
     cancel: 'Close',

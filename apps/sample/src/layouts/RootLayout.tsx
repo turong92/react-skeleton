@@ -61,6 +61,7 @@ export function AdminLinks() {
   const { t } = useT()
   const canDashboard = usePermission('dashboard.read')
   const canPayments = usePermission('payment.read')
+  const canCatalog = usePermission('catalog.manage')
   const canAccounts = usePermission('account.read')
   const canRoles = usePermission('authz.roles')
   const canCampaigns = usePermission('campaign.manage')
@@ -72,6 +73,7 @@ export function AdminLinks() {
     !(
       canDashboard ||
       canPayments ||
+      canCatalog ||
       canAccounts ||
       canRoles ||
       canCampaigns ||
@@ -85,6 +87,7 @@ export function AdminLinks() {
     <AdminMenu label={t('nav.admin')}>
       {canDashboard && <NavLink to="/admin/dashboard">{t('nav.adminDashboard')}</NavLink>}
       {canPayments && <NavLink to="/admin/payments">{t('nav.adminPayments')}</NavLink>}
+      {canCatalog && <NavLink to="/admin/catalog">{t('nav.adminCatalog')}</NavLink>}
       {canAccounts && <NavLink to="/admin/accounts">{t('nav.adminAccounts')}</NavLink>}
       {canRoles && <NavLink to="/admin/roles">{t('nav.adminRoles')}</NavLink>}
       {canCampaigns && <NavLink to="/admin/campaigns">{t('nav.adminCampaigns')}</NavLink>}

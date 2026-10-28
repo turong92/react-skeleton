@@ -89,6 +89,8 @@ describe('routes', () => {
       expect(permissionsOf(path), path).toEqual([])
     }
     const operator: Array<[string, string]> = [
+      ['/admin/catalog', 'catalog.manage'],
+      ['/admin/catalog/standard', 'catalog.manage'],
       ['/admin/campaigns', 'campaign.manage'],
       ['/admin/coupons', 'coupon.manage'],
       ['/admin/coupons/d1', 'coupon.manage'],
@@ -97,7 +99,11 @@ describe('routes', () => {
     ]
     for (const [path, permission] of operator) {
       expect(leaf(path)?.path, path).toBe(
-        path === '/admin/coupons/d1' ? '/admin/coupons/:id' : path,
+        path === '/admin/coupons/d1'
+          ? '/admin/coupons/:id'
+          : path === '/admin/catalog/standard'
+            ? '/admin/catalog/:code'
+            : path,
       )
       expect(guarded(path), path).toBe(true)
       expect(permissionsOf(path), path).toEqual([[permission]])

@@ -41,9 +41,20 @@ describe('Notes — the main journey against the real backend', () => {
     await pwExpect(heading(ko('landing.title'))).toBeVisible()
     await pwExpect(banner).toHaveCount(0) // 선택은 기억된다
 
-    // 요금제: 연 결제로 바꾸면 한 달 값 + 연 총액
-    await page.getByRole('button', { name: new RegExp(ko('landing.pricing.yearly')) }).click()
-    await pwExpect(page.getByText(/^연 .*결제$/).first()).toBeVisible()
+    // 요금제: 연 결제로 바꾸면 한 달 값 + 연 총액 - 요금제는 백엔드 카탈로그(`catalog`)에서 온다. 카탈로그가 없거나 연 가격이 없는 백엔드는 가격표(와 이 토글)가 없다
+    const yearly = page.getByRole('button', { name: new RegExp(ko('landing.pricing.yearly')) })
+    // 카탈로그는 첫 그림 뒤에 도착하니 잠깐 기다려 본다
+    const hasPricing = await yearly
+      .first()
+      .waitFor({ timeout: 5_000 })
+      .then(
+        () => true,
+        () => false,
+      )
+    if (hasPricing) {
+      await yearly.click()
+      await pwExpect(page.getByText(/^연 .*결제$/).first()).toBeVisible()
+    }
 
     // 약관(템플릿): 푸터 링크 → 템플릿 표시 → 옛 판
     await page.getByRole('link', { name: ko('footer.terms') }).click()

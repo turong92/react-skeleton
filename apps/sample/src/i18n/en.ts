@@ -583,6 +583,17 @@ const en: Record<keyof typeof ko, string> = {
   'nav.admin': 'Admin',
   'nav.adminDashboard': 'Admin dashboard',
   'nav.adminPayments': 'Payments',
+  'nav.adminCatalog': 'Products & prices',
+  'admin.catalog.title': 'Products & prices',
+  'admin.catalog.subtitle':
+    'Create what you sell, set sale prices and stop selling a price. Existing subscribers keep the price they bought.',
+  'admin.catalog.back': 'All products',
+  'admin.catalog.infoTitle': 'Product details',
+  'admin.catalog.notFoundTitle': 'That product does not exist',
+  'admin.catalog.notFoundBody': 'Check the address or pick one from the product list.',
+  'admin.catalog.disabledTitle': 'Products & prices is not available',
+  'admin.catalog.disabledBody':
+    'The operator products and prices screen is switched off on this server.',
   'nav.adminAccounts': 'Accounts',
   'nav.adminRoles': 'Roles',
   'nav.rewards': 'Rewards',

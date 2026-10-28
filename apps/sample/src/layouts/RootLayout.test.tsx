@@ -133,6 +133,12 @@ describe('RootLayout (signed in): operator menu', () => {
     expect(support).toContain('href="/admin/accounts"')
     expect(support).not.toContain('href="/admin/payments"')
   })
+  it('shows the products and prices screen only to someone holding catalog.manage', () => {
+    expect(renderAs(['*'])).toContain('href="/admin/catalog"')
+    expect(renderAs(['catalog.manage'])).toContain('href="/admin/catalog"')
+    // 결제 보기 권한만으로는 상품 · 가격을 바꿀 수 없다
+    expect(renderAs(['payment.read'])).not.toContain('href="/admin/catalog"')
+  })
   it('shows each rewards operator screen only to someone holding its permission', () => {
     const all = renderAs(['*'])
     for (const href of ['campaigns', 'coupons', 'points', 'reward-grants'])

@@ -10,6 +10,8 @@ import type { SeoHandle } from '../seo/routeSeo'
 import { AdminAccountsPage } from './AdminAccountsPage'
 import { AdminAccountPage } from './AdminAccountPage'
 import { AdminCampaignsPage } from './AdminCampaignsPage'
+import { AdminCatalogPage } from './AdminCatalogPage'
+import { AdminCatalogProductPage } from './AdminCatalogProductPage'
 import { AdminCouponDefinitionPage } from './AdminCouponDefinitionPage'
 import { AdminCouponDefinitionsPage } from './AdminCouponDefinitionsPage'
 import { AdminDashboardPage } from './AdminDashboardPage'
@@ -209,6 +211,28 @@ export const routes: RouteObject[] = [
                 path: '/admin/payments/:id',
                 element: <AdminPaymentPage />,
                 handle: privateSeo('nav.adminPayments'),
+              },
+            ],
+          },
+          {
+            element: (
+              <RequirePermission
+                anyOf={['catalog.manage']}
+                forbidden={<BlockedNotice />}
+                failed={<PermissionsFailedNotice />}
+              />
+            ),
+            children: [
+              // 운영 상품 · 가격 — 백엔드 `skeleton.catalog.admin.enabled`
+              {
+                path: '/admin/catalog',
+                element: <AdminCatalogPage />,
+                handle: privateSeo('nav.adminCatalog'),
+              },
+              {
+                path: '/admin/catalog/:code',
+                element: <AdminCatalogProductPage />,
+                handle: privateSeo('nav.adminCatalog'),
               },
             ],
           },

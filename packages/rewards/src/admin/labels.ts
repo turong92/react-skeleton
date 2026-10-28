@@ -105,7 +105,8 @@ export type RewardsAdminLabels = {
     issueTitle: (name: string) => string
     issueAccounts: string
     issueHint: string
-    issued: string
+    /** 줬거나 건너뛴 계정 수 - 건너뛴 계정은 한도 · 이미 가짐 같은 이유로 한 장도 안 갔다 */
+    issuedResult: (issued: number, skipped: number) => string
     makeCode: string
     codeTitle: (name: string) => string
     codeBody: string

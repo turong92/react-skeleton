@@ -10,7 +10,7 @@ import {
   usePaymentConfig,
   useQuote,
 } from '@skeleton/payment'
-import { CouponPicker, useCoupons } from '@skeleton/rewards'
+import { CouponPicker, useCoupons, usableCoupons } from '@skeleton/rewards'
 import {
   Alert,
   Button,
@@ -96,8 +96,21 @@ export function CheerPage() {
   const coupons = useCoupons(rewardsApi, 'AVAILABLE')
   const [pickedCoupon, setPickedCoupon] = useState<string | null>(null)
   const [couponProblem, setCouponProblem] = useState<string | null>(null)
+  // 지금 사려는 금액 칸(고른 칸, 없으면 가운데) - 쿠폰 범위와 견적이 이 칸을 본다
+  const quoteItem =
+    options.data && options.data.length > 0
+      ? chosen !== null && options.data.some((option) => option.itemRef === chosen)
+        ? chosen
+        : defaultOf(options.data)
+      : null
+  // 얹어 볼 수 있는 쿠폰만 - 다른 결제가 쥔 것(RESERVED)과 이 상품이 범위 밖인 것은 뺀다
+  const usable = usableCoupons(coupons.data ?? [], {
+    purpose: 'ONE_TIME',
+    itemType: CHEER_ITEM_TYPE,
+    ...(quoteItem !== null ? { itemRef: quoteItem } : {}),
+  })
   const couponRef =
-    pickedCoupon !== null && coupons.data?.some((coupon) => coupon.id === pickedCoupon)
+    pickedCoupon !== null && usable.some((coupon) => coupon.id === pickedCoupon)
       ? pickedCoupon
       : null
   const [busy, setBusy] = useState(false)
@@ -132,12 +145,6 @@ export function CheerPage() {
   }, [])
 
   // 견적 - 고른 쿠폰으로 할인 뒤 금액을 먼저 본다(주문을 만들지 않는다). 쿠폰이 안 맞으면 이유가 여기서 먼저 나온다
-  const quoteItem =
-    options.data && options.data.length > 0
-      ? chosen !== null && options.data.some((option) => option.itemRef === chosen)
-        ? chosen
-        : defaultOf(options.data)
-      : null
   const quote = useQuote(
     paymentApi,
     {
@@ -271,13 +278,13 @@ export function CheerPage() {
                 />
               </div>
             )}
-            {coupons.data !== undefined && coupons.data.length > 0 && (
+            {usable.length > 0 && (
               <div className={styles.group}>
                 <span id={couponLegendId} className={styles.legend}>
                   {t('cheer.couponLegend')}
                 </span>
                 <CouponPicker
-                  coupons={coupons.data}
+                  coupons={usable}
                   selectedId={couponRef}
                   onSelect={(id) => {
                     setCouponProblem(null)

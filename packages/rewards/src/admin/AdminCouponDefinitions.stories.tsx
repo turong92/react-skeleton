@@ -60,9 +60,9 @@ export const IssueAndMakeACode: Story = {
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(await canvas.findByRole('button', { name: '계정에 주기: 무료 이용권' }))
     const issue = within(await screen.findByRole('dialog', { name: '무료 이용권 주기' }))
-    await userEvent.type(issue.getByLabelText('계정 id'), 'acc_1, acc_2')
+    await userEvent.type(issue.getByLabelText('계정 id'), 'acc_1, acc_2, skip_3')
     await userEvent.click(issue.getByRole('button', { name: '계정에 주기' }))
-    await expect(await issue.findByText('줬어요.')).toBeVisible()
+    await expect(await issue.findByText('2명에게 줬고 1명은 건너뛰었어요.')).toBeVisible()
     await userEvent.click(issue.getByRole('button', { name: '닫기' }))
     await userEvent.click(canvas.getByRole('button', { name: '공용 코드 만들기: 무료 이용권' }))
     const code = within(await screen.findByRole('dialog', { name: '무료 이용권 공용 코드' }))

@@ -41,3 +41,15 @@ export function inheritedFrom(roles: readonly AdminRole[], name: string): Map<st
   }
   return out
 }
+
+/**
+ * 저장할 직접 권한 - 이미 그 역할이 직접 들고 있던 것은 그대로 보낸다(설명만 고쳐도 권한이 조용히 빠지거나 서버가 권한 상승으로 막지 않게).
+ * 이번에 새로 고른 것 중 포함한 역할이 이미 주는 것만 거른다
+ */
+export function permissionsToSend(
+  picked: readonly string[],
+  inherited: ReadonlyMap<string, string>,
+  original: readonly string[],
+): string[] {
+  return picked.filter((key) => !inherited.has(key) || original.includes(key))
+}

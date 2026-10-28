@@ -1,6 +1,7 @@
 export { createRewardsAdminApi } from './adminApi'
 export type { RewardsAdminApi } from './adminApi'
 export {
+  adminCouponDefinitionsQuery,
   adminKeys,
   useAccountCoupons,
   useAccountPoints,

@@ -23,7 +23,8 @@ export type AdminCampaign = {
   name: string
   enabled: boolean
   startsAt: string
-  endsAt: string | null
+  /** 끝이 없으면 `null` 이거나 칸이 없다 */
+  endsAt?: string | null
   config: CampaignConfig
 }
 
@@ -55,6 +56,9 @@ export type CouponDefinition = {
 }
 
 export type CouponDefinitionInput = Omit<CouponDefinition, 'id' | 'status' | 'issuedCount'>
+
+/** 계정에 쿠폰 주기의 답 - 줬거나(`issued`) 건너뛴(`skipped`: 한도 · 이미 가짐 …) 계정 id */
+export type IssueResult = { issued: string[]; skipped: string[] }
 
 /** 공용 코드 만들기의 답 - 사용자가 「쿠폰 코드」 칸에 넣는 글자 */
 export type CouponCode = { code: string }

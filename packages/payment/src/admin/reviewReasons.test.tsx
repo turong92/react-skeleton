@@ -22,6 +22,29 @@ const withReason = (
   props: Partial<ComponentProps<typeof AdminOrderPanel>> = {},
 ) => panel(detail({ order: adminOrder({ reviewReason }) }), { onSync: noop, ...props })
 
+describe('coupon conflict (DISCOUNT_CONFLICT) and the waived-payment history line', () => {
+  it('says the coupon was used twice, and that 맞추기 does not settle it (no ask-the-provider hint)', () => {
+    const html = withReason('DISCOUNT_CONFLICT')
+    expect(html).toContain('쓴 쿠폰이 다른 결제에도 쓰였어요')
+    expect(html).toContain('풀리지 않아요')
+    expect(html).not.toContain('결제사에 다시 물어봐요')
+    expect(html).not.toContain('DISCOUNT_CONFLICT')
+    expect(html).not.toContain('확인이 필요한 일이 있어요')
+  })
+  it('the same sentence reaches the list row; the hint also shows without a sync button', () => {
+    expect(withReason('DISCOUNT_CONFLICT', { onSync: undefined })).toContain('풀리지 않아요')
+  })
+  it('the EXEMPTED history line is a sentence, not the code', () => {
+    const html = panel(
+      detail({
+        events: [paymentEvent({ type: 'EXEMPTED', fromStatus: 'PENDING', toStatus: 'PAID' })],
+      }),
+    )
+    expect(html).toContain('결제 면제로 끝났어요')
+    expect(html).not.toContain('EXEMPTED')
+  })
+})
+
 describe('review reasons the backend gives beyond the first five (contract 4 · 6 · 7)', () => {
   it('money received but delivery never finished is its own sentence, and 맞추기 is said to retry the job (not to ask the provider)', () => {
     const html = withReason('FULFILMENT_UNRESOLVED')

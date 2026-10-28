@@ -111,6 +111,36 @@ describe('claimPendingReferral', () => {
     expect(capture.pending()).toBe('AB12CD34')
   })
 
+  it.each([401, 408, 429])(
+    'keeps the code on a %i - the server did not say the code is wrong (sign-in lapsed, timeout, rate limit), so the next chance may work',
+    async (status) => {
+      const capture = createReferralCapture({ storage: memoryStorage(), now: () => 0 })
+      capture.captureFrom('?ref=AB12CD34')
+      const onRejected = vi.fn()
+      await claimPendingReferral({
+        capture,
+        claim: async () => {
+          throw rejected(status, 'X')
+        },
+        onRejected,
+      })
+      expect(capture.pending()).toBe('AB12CD34')
+      expect(onRejected).not.toHaveBeenCalled()
+    },
+  )
+
+  it('clears on 409 (the event is not active) like on 400', async () => {
+    const capture = createReferralCapture({ storage: memoryStorage(), now: () => 0 })
+    capture.captureFrom('?ref=AB12CD34')
+    await claimPendingReferral({
+      capture,
+      claim: async () => {
+        throw rejected(409, 'CAMPAIGN.NOT_ACTIVE')
+      },
+    })
+    expect(capture.pending()).toBeNull()
+  })
+
   it('does nothing without a pending code', async () => {
     const capture = createReferralCapture({ storage: memoryStorage(), now: () => 0 })
     const claim = vi.fn(async () => {})

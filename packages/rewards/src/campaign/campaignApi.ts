@@ -10,7 +10,7 @@ export type CampaignApi = {
   attendanceMonth(campaignId: string, month: string): Promise<AttendanceMonth>
   /** `GET {referrals}/me` */
   myReferral(): Promise<ReferralMe>
-  /** `POST {referrals}/claim {code}` — 204, 안 되면 400 `CAMPAIGN.REFERRAL_INVALID`(이유는 detail.reason) · 409 `CAMPAIGN.NOT_ACTIVE` */
+  /** `POST {referrals}/claim {code}` — 204, 안 되면 400 `CAMPAIGN.REFERRAL_INVALID`(이유는 `data.reason`) · 409 `CAMPAIGN.NOT_ACTIVE` */
   claimReferral(code: string): Promise<void>
 }
 

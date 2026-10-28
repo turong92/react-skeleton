@@ -12,14 +12,19 @@ export function AdminCampaignsPage() {
   const { locale } = useT()
   const language = languageOf(locale)
   const can = useCan()
-  const definitions = useAdminCouponDefinitions(rewardsAdminApi)
+  // 쿠폰 보상에서 고를 쿠폰 이름 - 쿠폰 운영 권한이 있을 때만 읽는다(없으면 쿠폰 id 를 직접 적는다)
+  const definitions = useAdminCouponDefinitions(rewardsAdminApi, {
+    enabled: can('coupon.manage'),
+  })
   return (
     <AdminCampaigns
       api={rewardsAdminApi}
       can={can}
       labels={rewardsAdminLabelsFor(language)}
       locale={language}
-      couponChoices={(definitions.data ?? []).map((d) => ({ id: d.id, name: d.name }))}
+      couponChoices={
+        definitions.data ? definitions.data.map((d) => ({ id: d.id, name: d.name })) : undefined
+      }
     />
   )
 }

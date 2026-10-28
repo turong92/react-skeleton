@@ -5,7 +5,7 @@ import { createFakeRewards } from '../stories/fakeRewards'
 import { WithQuery } from '../stories/WithQuery'
 import { PointHistory } from './PointHistory'
 
-/** 포인트 내역(`GET /points/history`, 커서) — 최신순, 끝에서 「더 보기」 로 이어 받는다. 적립은 +, 사용 · 소멸은 −. */
+/** 포인트 내역(`GET /points/history`, 커서) — 최신순, 「더 보기」 로 이어 받는다. 적립은 +, 사용 · 소멸은 −. */
 const meta = {
   title: 'Packages/rewards/PointHistory',
   component: PointHistory,

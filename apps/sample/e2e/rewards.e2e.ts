@@ -238,7 +238,9 @@ describe('rewards: attendance, coupons on a cheer, a free voucher, switching an 
         await op.getByRole('button', { name: koAdminRolesLabels.create! }).click()
         const dialog = op.getByRole('dialog', { name: koAdminRolesLabels.createTitle! })
         await dialog.getByLabel(koAdminRolesLabels.nameLabel!).fill('WAIVED')
-        await dialog.getByLabel('payment.exempt', { exact: true }).check()
+        await dialog
+          .getByLabel(koAdminRolesLabels.permissionLabels!['payment.exempt']!, { exact: true })
+          .check()
         await dialog.getByRole('button', { name: koAdminRolesLabels.save!, exact: true }).click()
         await pwExpect(dialog).toBeHidden()
         await accountMenu(op, auth.adminGrantRole('WAIVED'))

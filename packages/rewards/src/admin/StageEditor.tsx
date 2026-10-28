@@ -91,6 +91,7 @@ export function StageEditor({ stages, onChange, labels: given }: StageEditorProp
                       {...control}
                       type="number"
                       min={0}
+                      max={stage.type === 'PERCENT' ? 100 : undefined}
                       value={stage.value}
                       onChange={(event) =>
                         onChange(

@@ -25,6 +25,8 @@ export type ReviewReason =
   | 'SUBSCRIPTION_CANCEL_REFUND_UNRESOLVED'
   | 'STALE_CONFIRMING'
   | 'STALE_REFUND'
+  /** 쿠폰이 만료로 풀려 다른 주문이 쥔 뒤 첫 주문이 늦게 결제됐다 - 두 주문 모두 그대로이고 늦은 주문에 이 사유가 붙는다. 결제사와 맞춰도 풀리지 않는다 */
+  | 'DISCOUNT_CONFLICT'
 
 /**
  * 서버에서 환불을 보낼 수 없는 이유(설정만 보고 서버가 계산한다 - 계약 1.4): `UNSUPPORTED` 그 결제사에 환불·조회 능력이 없다(결제사 관리 화면에서 환불한다) ·

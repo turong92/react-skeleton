@@ -18,7 +18,8 @@ export type Campaign = {
   kind: CampaignKind
   name: string
   startsAt: string
-  endsAt: string | null
+  /** 끝이 없으면 `null` 이거나 칸이 없다 */
+  endsAt?: string | null
   attendance?: AttendanceSummary
 }
 
@@ -49,7 +50,13 @@ export type CouponStatus = 'AVAILABLE' | 'RESERVED' | 'USED' | 'EXPIRED' | 'REVO
 /** 목록 탭 — `AVAILABLE` 은 쓸 수 있는 것, `PAST` 는 쓴 · 끝난 것 */
 export type CouponTab = 'AVAILABLE' | 'PAST'
 
-export type CouponScope = { purposes: string[]; itemTypes: string[]; planCodes: string[] }
+export type CouponScope = {
+  purposes: string[]
+  itemTypes: string[]
+  /** 서버가 주는 칸 - 구버전에는 없다 */
+  itemRefs?: string[]
+  planCodes: string[]
+}
 
 export type Coupon = {
   id: string

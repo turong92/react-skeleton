@@ -158,7 +158,7 @@ export const ErrorCodes = {
   DASHBOARD_LAYOUT_UNAVAILABLE: 'DASHBOARD.LAYOUT_UNAVAILABLE',
   DASHBOARD_LAYOUT_INVALID: 'DASHBOARD.LAYOUT_INVALID',
 
-  // modules/campaign · coupon · point — 사용자 HTTP (이벤트 · 보상 계획 C-R). 초대 코드 실패의 이유는 detail.reason (자기 코드 · 맞초대 · 이미 · 새 계정 아님 · 없는 코드)
+  // modules/campaign · coupon · point — 사용자 HTTP (이벤트 · 보상 계획 C-R). 초대 코드 실패의 이유는 data.reason (자기 코드 · 맞초대 · 이미 · 새 계정 아님 · 없는 코드)
   CAMPAIGN_NOT_ACTIVE: 'CAMPAIGN.NOT_ACTIVE',
   CAMPAIGN_REFERRAL_INVALID: 'CAMPAIGN.REFERRAL_INVALID',
   COUPON_CODE_INVALID: 'COUPON.CODE_INVALID',

@@ -19,7 +19,7 @@ import { useResource } from '../screens/useResource'
 import { adminBlocked } from './adminErrors'
 import styles from './AdminRoles.module.css'
 import type { AdminRole, AdminRolesApi, PermissionInfo } from './rolesApi'
-import { inheritedFrom, wouldCycle } from './roleIncludes'
+import { inheritedFrom, permissionsToSend, wouldCycle } from './roleIncludes'
 import { isRoleGone, roleErrorMessage } from './rolesErrors'
 import { mergeRolesLabels, type AdminRolesLabels } from './rolesLabels'
 
@@ -115,7 +115,7 @@ function RoleDialog({
     onSubmit({
       name: name.trim(),
       description: description.trim(),
-      permissions: picked.filter((key) => !inherited.has(key)),
+      permissions: permissionsToSend(picked, inherited, role?.permissions ?? []),
       includes,
     })
   }
@@ -167,19 +167,22 @@ function RoleDialog({
             <p className={styles.muted}>{labels.includesHint}</p>
             {candidates.map((candidate) => {
               const checked = includes.includes(candidate.name)
+              const full = !checked && isLocked(candidate)
               const cycle = !checked && wouldCycle(roles, self, candidate.name)
               const beyond = !checked && candidate.effectivePermissions?.some(outside)
-              const reason = cycle
-                ? labels.includeCycle
-                : beyond
-                  ? labels.includeOutside
-                  : (candidate.description ?? undefined) || undefined
+              const reason = full
+                ? labels.includeFullAccess
+                : cycle
+                  ? labels.includeCycle
+                  : beyond
+                    ? labels.includeOutside
+                    : (candidate.description ?? undefined) || undefined
               return (
                 <Checkbox
                   key={candidate.name}
                   label={candidate.name}
                   description={reason}
-                  disabled={cycle || Boolean(beyond)}
+                  disabled={full || cycle || Boolean(beyond)}
                   checked={checked}
                   onChange={(e) => toggleInclude(candidate.name, e.target.checked)}
                 />

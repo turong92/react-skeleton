@@ -48,6 +48,8 @@ export type AdminRolesLabels = {
   includesHint: string
   /** 포함할 수 없는 후보 옆 글자 - 이유 */
   includeCycle: string
+  /** 전권(`*`) 역할 후보 옆 글자 - 포함할 수 없는 이유 */
+  includeFullAccess: string
   includeOutside: string
   /** 물려받은 권한 체크 상자 옆 글자 */
   inheritedFrom: (role: string) => string
@@ -111,6 +113,7 @@ export const defaultAdminRolesLabels: AdminRolesLabels = {
   noIncludes: '-',
   includesLegend: 'Includes these roles',
   includesHint: 'Everything the included roles can do, this role can do too.',
+  includeFullAccess: 'A full-access role cannot be included.',
   includeCycle: 'It already includes this role, so including it would make a loop.',
   includeOutside: 'It has permissions you do not hold, so you cannot include it.',
   inheritedFrom: (role) => `Inherited from ${role}`,
@@ -126,6 +129,11 @@ export const defaultAdminRolesLabels: AdminRolesLabels = {
     'board.manage': 'Manage boards',
     'legal.read': 'View consent records',
     'authz.roles': 'Manage roles',
+    'campaign.manage': 'Manage events',
+    'coupon.manage': 'Manage coupons and give them out',
+    'point.manage': 'Adjust points',
+    'reward.operate': 'Retry and stop reward grants',
+    'payment.exempt': 'Use paid features without paying',
   },
   moduleLabels: {
     account: 'Accounts',
@@ -134,6 +142,10 @@ export const defaultAdminRolesLabels: AdminRolesLabels = {
     board: 'Board',
     legal: 'Legal',
     authz: 'Roles',
+    campaign: 'Events',
+    coupon: 'Coupons',
+    point: 'Points',
+    reward: 'Reward grants',
   },
   errors: {
     protected:
@@ -193,6 +205,7 @@ export const koAdminRolesLabels: Partial<AdminRolesLabels> = {
   noIncludes: '-',
   includesLegend: '포함하는 역할',
   includesHint: '포함한 역할이 할 수 있는 일은 이 역할도 할 수 있어요.',
+  includeFullAccess: '전권 역할은 포함할 수 없어요.',
   includeCycle: '이미 이 역할을 포함하고 있어 포함하면 고리가 생겨요.',
   includeOutside: '내게 없는 권한이 들어 있어 포함할 수 없어요.',
   inheritedFrom: (role) => `${role}에서 물려받음`,
@@ -208,6 +221,11 @@ export const koAdminRolesLabels: Partial<AdminRolesLabels> = {
     'board.manage': '게시판 관리',
     'legal.read': '동의 기록 보기',
     'authz.roles': '역할 관리',
+    'campaign.manage': '이벤트 관리',
+    'coupon.manage': '쿠폰 관리 · 주기',
+    'point.manage': '포인트 조정',
+    'reward.operate': '보상 지급 다시 하기 · 멈추기',
+    'payment.exempt': '결제 없이 이용(결제 면제)',
   },
   moduleLabels: {
     account: '계정',
@@ -216,6 +234,10 @@ export const koAdminRolesLabels: Partial<AdminRolesLabels> = {
     board: '게시판',
     legal: '약관',
     authz: '역할',
+    campaign: '이벤트',
+    coupon: '쿠폰',
+    point: '포인트',
+    reward: '보상 지급',
   },
   errors: {
     protected: '전권 역할이에요. 고치거나 지울 수 없고, 다른 역할에 전권을 줄 수도 없어요.',

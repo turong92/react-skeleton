@@ -154,7 +154,7 @@ export type UnopenedOrder = {
   itemRef: string
   created: CreateOrderResult
   since: number
-  /** 사람이 , 고른 결제 방법 - 다른 방법으로 다시 누르면 그 주문의 창을 다시 열지 않는다 */
+  /** 사람이 고른 결제 방법 - 다른 방법으로 다시 누르면 그 주문의 창을 다시 열지 않는다 */
   provider?: string
   /** 주문에 건 쿠폰 - 다른 쿠폰(또는 쿠폰 없이)으로 다시 누르면 그 주문의 창을 다시 열지 않는다 */
   couponRef?: string

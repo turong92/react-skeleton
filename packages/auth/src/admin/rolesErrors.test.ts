@@ -1,7 +1,7 @@
 import { ApiRequestError } from '@skeleton/api-client'
 import { describe, expect, it } from 'vitest'
 import { defaultAdminRolesLabels as L, koAdminRolesLabels, mergeRolesLabels } from './rolesLabels'
-import { roleErrorMessage } from './rolesErrors'
+import { isRoleGone, roleErrorMessage } from './rolesErrors'
 
 const err = (code: string, status: number) =>
   new ApiRequestError({ code, title: 't', status, timestamp: 't', traceId: 'tr' }, 'tr', 'sp', 'tp')
@@ -32,5 +32,14 @@ describe('roleErrorMessage', () => {
       expect(ko.errors[key], key).not.toBe(L.errors[key])
     for (const key of Object.keys(L.permissionLabels))
       expect(ko.permissionLabels[key], key).not.toBe(L.permissionLabels[key])
+  })
+})
+
+describe('isRoleGone', () => {
+  it('a role that no longer exists, or one that was to be included and is gone, means the list is stale', () => {
+    expect(isRoleGone(err('AUTHZ.ROLE_NOT_FOUND', 404))).toBe(true)
+    expect(isRoleGone(err('AUTHZ.INCLUDE_UNKNOWN', 400))).toBe(true)
+    expect(isRoleGone(err('AUTHZ.ROLE_CYCLE', 409))).toBe(false)
+    expect(isRoleGone(new Error('x'))).toBe(false)
   })
 })

@@ -118,7 +118,11 @@ export function createFakeAdmin() {
     },
     issueCoupons: async (id, accountIds) => {
       issued.push({ id, accountIds })
-      return { issued: accountIds.length }
+      // 한도 · 이미 가진 계정은 건너뛴다 - 이름이 skip 으로 시작하는 계정이 그렇다
+      return {
+        issued: accountIds.filter((a) => !a.startsWith('skip')),
+        skipped: accountIds.filter((a) => a.startsWith('skip')),
+      }
     },
     createCouponCode: async () => ({ code: 'WELCOME' }),
     listAccountCoupons: async () => [],

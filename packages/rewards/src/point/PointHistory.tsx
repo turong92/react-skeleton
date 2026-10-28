@@ -13,7 +13,7 @@ export type PointHistoryProps = {
   formatTime?: (iso: string) => string
 }
 
-/** 포인트 내역 — 적립 · 사용 · 소멸 · 조정 줄을 최신순으로, 끝에 닿으면 이어 받는다(「더 보기」 단추는 언제나 있다) */
+/** 포인트 내역 — 적립 · 사용 · 소멸 · 조정 줄을 최신순으로, 「더 보기」 단추로 이어 받는다 */
 export function PointHistory({
   api,
   labels = defaultRewardsLabels,

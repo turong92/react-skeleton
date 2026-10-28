@@ -9,7 +9,7 @@ import {
   usePaymentConfig,
   type SubscriptionPlan,
 } from '@skeleton/payment'
-import { CouponPicker, useCoupons } from '@skeleton/rewards'
+import { CouponPicker, useCoupons, usableCoupons } from '@skeleton/rewards'
 import { Alert, ChoiceGroup, ErrorReference, PageHeader, Spinner } from '@skeleton/ui'
 import { useEffect, useId, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -69,8 +69,13 @@ export function SubscribePage() {
   const coupons = useCoupons(rewardsApi, 'AVAILABLE')
   const [pickedCoupon, setPickedCoupon] = useState<string | null>(null)
   const [couponProblem, setCouponProblem] = useState<string | null>(null)
+  // 구독에 얹어 볼 수 있는 쿠폰만 - 다른 결제가 쥔 것(RESERVED)과 구독이 아닌 것 · 보이는 플랜 어디에도 안 맞는 것은 뺀다
+  const usable = usableCoupons(coupons.data ?? [], {
+    purpose: 'SUBSCRIPTION',
+    planCodes: (plans.data ?? []).map((plan) => plan.code),
+  })
   const couponRef =
-    pickedCoupon !== null && coupons.data?.some((coupon) => coupon.id === pickedCoupon)
+    pickedCoupon !== null && usable.some((coupon) => coupon.id === pickedCoupon)
       ? pickedCoupon
       : null
 
@@ -187,14 +192,14 @@ export function SubscribePage() {
           />
         </div>
       )}
-      {coupons.data !== undefined && coupons.data.length > 0 && (
+      {usable.length > 0 && (
         <div className={styles.group}>
           <span id={couponLegendId} className={styles.legend}>
             {t('subscription.subscribe.couponLegend')}
           </span>
           <p className={styles.legend}>{t('subscription.subscribe.couponHint')}</p>
           <CouponPicker
-            coupons={coupons.data}
+            coupons={usable}
             selectedId={couponRef}
             onSelect={(id) => {
               setCouponProblem(null)

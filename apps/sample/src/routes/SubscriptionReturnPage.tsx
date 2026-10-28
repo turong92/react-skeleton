@@ -1,10 +1,12 @@
 import {
+  discountErrorMessage,
   PaymentResult,
+  type Order,
   useActivateSubscription,
   useMySubscription,
   usePaymentConfig,
 } from '@skeleton/payment'
-import { Button, EmptyState, PageHeader } from '@skeleton/ui'
+import { Alert, Button, EmptyState, PageHeader } from '@skeleton/ui'
 import { useEffect, useMemo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { paymentApi } from '../cheer/api'
@@ -16,6 +18,10 @@ import { planNameOf } from '../subscription/planName'
 import { claimActivation, returnPlanOf, type ReturnPlan } from '../subscription/subscribeFlow'
 import { shownSubscriptionOf, subscriptionAsOrder } from '../subscription/subscriptionAsOrder'
 import styles from './SubscriptionReturnPage.module.css'
+
+/** 최근 결제 중 구독의 첫 결제 - 쿠폰이 붙었으면 금액 · 할인이 여기에 정확히 있다 */
+const initialOrderOf = (orders: readonly Order[] | undefined) =>
+  orders?.find((order) => order.kind === 'SUBSCRIPTION_INITIAL')
 
 /**
  * 카드 등록 창(토스) · 카카오페이 · 네이버페이가 돌려보내는 곳(성공 · 실패 둘 다). 성공 주소면 **같은 값(`authKey` · `pg_token` · 네이버 등록 영수증)으로 첫 결제를 한 번만 보낸다** - 효과가 두 번 돌아도, 뒤로 · 앞으로 가서 다시 떠도 같은 값은 다시 보내지 않는다
@@ -41,19 +47,32 @@ function ActivateFlow({ plan }: { plan: Extract<ReturnPlan, { kind: 'activate' }
     reply: activate.data,
   })
   const order = shown
-    ? subscriptionAsOrder(shown, planNameOf(t, { code: shown.planCode, name: shown.planName }))
+    ? subscriptionAsOrder(
+        shown,
+        planNameOf(t, { code: shown.planCode, name: shown.planName }),
+        initialOrderOf(me.data?.orders),
+      )
     : undefined
+  // 쿠폰이 그 사이 다른 곳에서 쓰였다(409 `PAYMENT.DISCOUNT_UNAVAILABLE`) 같은 오류는 서버의 영어 문장이 아니라 우리 낱말로 말한다
+  const discountProblem = activate.isError ? discountErrorMessage(activate.error, labels) : null
 
   return (
-    <PaymentResult
-      order={order}
-      error={activate.isError ? activate.error : undefined}
-      testMode={config.data?.testMode}
-      locale={language}
-      labels={labels}
-      onViewHistory={() => void navigate('/subscription')}
-      onRetry={() => void navigate('/subscribe')}
-    />
+    <>
+      {discountProblem !== null && (
+        <Alert tone="warning" toneLabel={labels.noticeLabel}>
+          {discountProblem}
+        </Alert>
+      )}
+      <PaymentResult
+        order={order}
+        error={activate.isError ? activate.error : undefined}
+        testMode={config.data?.testMode}
+        locale={language}
+        labels={labels}
+        onViewHistory={() => void navigate('/subscription')}
+        onRetry={() => void navigate('/subscribe')}
+      />
+    </>
   )
 }
 
@@ -70,7 +89,11 @@ function WatchFlow({ id }: { id: string }) {
   const me = useMySubscription(subscriptionApi, { subscriptionId: id })
   const shown = shownSubscriptionOf(id, { read: me.data?.subscription })
   const order = shown
-    ? subscriptionAsOrder(shown, planNameOf(t, { code: shown.planCode, name: shown.planName }))
+    ? subscriptionAsOrder(
+        shown,
+        planNameOf(t, { code: shown.planCode, name: shown.planName }),
+        initialOrderOf(me.data?.orders),
+      )
     : undefined
   return (
     <PaymentResult

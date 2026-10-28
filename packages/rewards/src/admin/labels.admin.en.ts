@@ -104,7 +104,8 @@ export const defaultRewardsAdminLabels: RewardsAdminLabels = {
     issueTitle: (name) => `Give ${name}`,
     issueAccounts: 'Account ids',
     issueHint: 'One per line or separated by commas.',
-    issued: 'Given.',
+    issuedResult: (issued, skipped) =>
+      skipped === 0 ? `${issued} given.` : `${issued} given, ${skipped} skipped.`,
     makeCode: 'Make a shared code',
     codeTitle: (name) => `Shared code for ${name}`,
     codeBody: 'Share this code. Each account can add it once.',

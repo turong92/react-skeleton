@@ -33,6 +33,8 @@ export function roleErrorMessage(error: unknown, labels: AdminRolesLabels): stri
   }
 }
 
-/** 이 오류가 「그 역할이 없다」 - 목록이 낡았으니 다시 읽는다 */
+/** 이 오류가 「그 역할이 없다」(또는 포함하려던 역할이 없다) - 목록이 낡았으니 다시 읽는다 */
 export const isRoleGone = (error: unknown) =>
-  error instanceof ApiRequestError && error.apiError.code === ErrorCodes.AUTHZ_ROLE_NOT_FOUND
+  error instanceof ApiRequestError &&
+  (error.apiError.code === ErrorCodes.AUTHZ_ROLE_NOT_FOUND ||
+    error.apiError.code === ErrorCodes.AUTHZ_INCLUDE_UNKNOWN)

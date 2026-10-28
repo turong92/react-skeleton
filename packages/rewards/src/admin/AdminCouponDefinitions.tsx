@@ -26,7 +26,12 @@ import type { RewardsAdminLabels } from './labels'
 import { allowAll, REWARDS_PERMISSIONS, type CanFn } from './permissions'
 import { StageEditor } from './StageEditor'
 import { freeVoucher } from './stageEdits'
-import type { CouponDefinition, CouponDefinitionInput, CouponDefinitionStatus } from './types'
+import type {
+  CouponDefinition,
+  CouponDefinitionInput,
+  CouponDefinitionStatus,
+  IssueResult,
+} from './types'
 import styles from './AdminCouponDefinitions.module.css'
 
 export type AdminCouponDefinitionsProps = {
@@ -325,7 +330,7 @@ export function AdminCouponDefinitions({
           definition={issuing}
           labels={labels}
           busy={mutations.issue.isPending}
-          done={mutations.issue.isSuccess}
+          result={mutations.issue.data ?? null}
           error={mutations.issue.isError ? adminErrorMessage(mutations.issue.error, labels) : null}
           onClose={() => {
             mutations.issue.reset()
@@ -464,7 +469,7 @@ function IssueDialog({
   definition,
   labels,
   busy,
-  done,
+  result,
   error,
   onClose,
   onSubmit,
@@ -472,7 +477,7 @@ function IssueDialog({
   definition: CouponDefinition
   labels: RewardsAdminLabels
   busy: boolean
-  done: boolean
+  result: IssueResult | null
   error: string | null
   onClose: () => void
   onSubmit: (accountIds: string[]) => void
@@ -512,7 +517,11 @@ function IssueDialog({
         }}
       >
         {error && <Alert tone="danger">{error}</Alert>}
-        {done && <Alert tone="success">{t.issued}</Alert>}
+        {result && (
+          <Alert tone={result.issued.length > 0 ? 'success' : 'warning'}>
+            {t.issuedResult(result.issued.length, result.skipped.length)}
+          </Alert>
+        )}
         <Field label={t.issueAccounts} hint={t.issueHint}>
           {(control) => (
             <Textarea {...control} value={text} onChange={(event) => setText(event.target.value)} />

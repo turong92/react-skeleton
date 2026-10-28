@@ -24,6 +24,8 @@ export type ReferralCapture = {
 }
 
 const CODE = /^[A-Za-z0-9]{4,32}$/
+/** 서버가 「이 코드는 안 된다」고 답한 상태 - 400 `CAMPAIGN.REFERRAL_INVALID` · 409 `CAMPAIGN.NOT_ACTIVE`. 401 · 408 · 429 같은 것은 코드 탓이 아니라 남겨 둔다 */
+const SERVER_SAID_NO: readonly number[] = [400, 409]
 const DAY_MS = 24 * 60 * 60 * 1000
 
 export function createReferralCapture({
@@ -74,8 +76,8 @@ export function createReferralCapture({
 }
 
 /**
- * 보관 중인 코드를 한 번 claim 한다. 서버가 답했으면(성공 · 400 · 409 …) 맞든 틀리든 코드를 지운다 —
- * 같은 코드로 다시 부르지 않는다. 서버에 닿지 못했으면(네트워크 · 5xx) 다음 기회를 위해 남긴다.
+ * 보관 중인 코드를 한 번 claim 한다. 성공했거나 서버가 코드를 거절했으면(400 · 409) 코드를 지운다 —
+ * 같은 코드로 다시 부르지 않는다. 그 밖(네트워크 · 5xx · 401 · 408 · 429)은 다음 기회를 위해 남긴다.
  */
 export async function claimPendingReferral({
   capture,
@@ -95,11 +97,7 @@ export async function claimPendingReferral({
     capture.clear()
     onClaimed?.()
   } catch (error) {
-    if (
-      error instanceof ApiRequestError &&
-      error.apiError.status >= 400 &&
-      error.apiError.status < 500
-    ) {
+    if (error instanceof ApiRequestError && SERVER_SAID_NO.includes(error.apiError.status)) {
       capture.clear()
       onRejected?.(error)
     }

@@ -18,9 +18,13 @@ export const koPaymentAdminLabels: PaymentAdminLabels = {
       '지금 해지한 구독의 환불이 나가지 못했어요 — 환불이 필요해요',
     STALE_CONFIRMING: '결제 확인 중인 채로 오래 남아 있어요',
     STALE_REFUND: '환불 중인 채로 오래 남아 있어요',
+    DISCOUNT_CONFLICT:
+      '이 결제에 쓴 쿠폰이 다른 결제에도 쓰였어요 — 어느 쪽 할인을 인정할지 확인해 주세요',
   },
   reviewUnknown: '확인이 필요한 일이 있어요',
   reviewHint: '「결제사와 맞추기」를 누르면 결제사에 다시 물어봐요.',
+  reviewHintDiscount:
+    '「결제사와 맞추기」로는 풀리지 않아요. 두 결제를 보고 할인이 없어야 할 쪽을 환불해 주세요.',
   reviewHintRetry: '「결제사와 맞추기」를 누르면 끝나지 않은 그 일을 다시 걸어요.',
   reviewHintSynced: '결제사에 다시 물었지만 아직 남아 있어요. 결제사 화면에서 확인해 주세요',
   reviewHintRetrySynced: '끝나지 않은 그 일을 다시 걸었어요. 끝나면 이 표시가 사라져요',
@@ -52,6 +56,7 @@ export const koPaymentAdminLabels: PaymentAdminLabels = {
   actors: { USER: '본인', OPERATOR: '운영자', SYSTEM: '시스템', PROVIDER: '결제사' },
   eventTypes: {
     ORDER_CREATED: '결제를 시작했어요',
+    EXEMPTED: '결제 면제로 끝났어요 — 결제사를 부르지 않았어요',
     CONFIRM_STARTED: '결제 확인을 시작했어요',
     CONFIRM_SUCCEEDED: '결제가 확인됐어요',
     CONFIRM_DECLINED: '카드사가 결제를 받아 주지 않았어요',

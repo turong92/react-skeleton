@@ -35,6 +35,8 @@ export type PaymentAdminLabels = {
   /** 확인 필요 띠 아래의 다음 걸음 안내 - 돈 쪽 사유(결제사에 다시 물어 맞춘다) */
   reviewHint: string
   /** 지급 · 회수가 끝내 안 된 사유(`FULFILMENT_UNRESOLVED` · `REFUND_APPLY_UNRESOLVED`)의 안내 - 「결제사와 맞추기」가 그 일을 다시 건다 */
+  /** 쿠폰 충돌(`DISCOUNT_CONFLICT`) - 맞추기로는 안 풀린다는 것과 다음 걸음 */
+  reviewHintDiscount: string
   reviewHintRetry: string
   /**
    * 「결제사와 맞추기」를 누른 **뒤에도** 사유가 남았을 때의 안내(돈 쪽 사유 · 오래 남은 확인 중 · 오래 남은 환불) - 오래 남은 것으로 파생된 사유는 맞춰도 안 풀릴 수 있다.

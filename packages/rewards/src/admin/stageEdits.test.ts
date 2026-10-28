@@ -55,4 +55,17 @@ describe('stage edits', () => {
     const free = updateStage([{ ...pct(10, 1), maxDiscount: 500 }], 0, { type: 'FREE' })[0]
     expect(free).toMatchObject({ type: 'FREE', value: 0, maxDiscount: null })
   })
+
+  it('switching a free step to a percent or fixed one starts from a usable value, not 0', () => {
+    const free = [{ type: 'FREE', value: 0, maxDiscount: null, periods: 1 } as CouponStage]
+    expect(updateStage(free, 0, { type: 'PERCENT' })[0]?.value).toBe(10)
+    expect(updateStage(free, 0, { type: 'FIXED' })[0]?.value).toBe(1000)
+  })
+
+  it('a percent is never above 100, and the cap only exists on a percent step', () => {
+    expect(updateStage([pct(10, 1)], 0, { value: 250 })[0]?.value).toBe(100)
+    const capped = [{ ...pct(10, 1), maxDiscount: 500 }]
+    expect(updateStage(capped, 0, { type: 'FIXED' })[0]?.maxDiscount).toBeNull()
+    expect(updateStage(capped, 0, { value: 20 })[0]?.maxDiscount).toBe(500)
+  })
 })

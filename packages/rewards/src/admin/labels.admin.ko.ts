@@ -98,7 +98,10 @@ export const koRewardsAdminLabels: RewardsAdminLabels = {
     issueTitle: (name) => `${name} 주기`,
     issueAccounts: '계정 id',
     issueHint: '한 줄에 하나, 또는 쉼표로 나눠 적어 주세요.',
-    issued: '줬어요.',
+    issuedResult: (issued, skipped) =>
+      skipped === 0
+        ? `${issued}명에게 줬어요.`
+        : `${issued}명에게 줬고 ${skipped}명은 건너뛰었어요.`,
     makeCode: '공용 코드 만들기',
     codeTitle: (name) => `${name} 공용 코드`,
     codeBody: '이 코드를 나눠 주세요. 계정마다 한 번 등록할 수 있어요.',

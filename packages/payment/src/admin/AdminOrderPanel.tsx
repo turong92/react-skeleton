@@ -15,7 +15,7 @@ import { closedByOf } from './closedBy'
 import { isErasedAccount } from './erasedAccount'
 import { allowAll, PAYMENT_PERMISSIONS, type CanFn } from './permissions'
 import { PaymentEventList } from './PaymentEventList'
-import { isMoneyOffReason, isRetryJobReason } from './reviewReason'
+import { isCouponConflictReason, isMoneyOffReason, isRetryJobReason } from './reviewReason'
 import type { AdminOrder, AdminOrderDetail, AdminRefund } from './types'
 
 export type AdminOrderPanelProps = {
@@ -228,7 +228,9 @@ export function AdminOrderPanel({
         {review && (
           <Alert tone="warning" toneLabel={labels.noticeLabel} title={labels.unknownStatus}>
             <span>{lookup(text.reviewReason, review) ?? text.reviewUnknown}</span>
-            {onSync && (
+            {isCouponConflictReason(review) ? (
+              <p className={styles.muted}>{text.reviewHintDiscount}</p>
+            ) : onSync ? (
               <p className={styles.muted}>
                 {/* 맞춘 뒤에도 사유가 남았다(오래 남은 것으로 파생된 사유는 맞춰도 안 풀릴 수 있다) - 「누르면 …」을 되풀이하지 않고 지금 사실을 말한다 */}
                 {syncedNow && !syncError
@@ -239,7 +241,7 @@ export function AdminOrderPanel({
                     ? text.reviewHintRetry
                     : text.reviewHint}
               </p>
-            )}
+            ) : null}
           </Alert>
         )}
         <dl className={styles.facts}>

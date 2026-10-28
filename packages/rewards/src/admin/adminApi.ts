@@ -10,6 +10,7 @@ import type {
   CouponDefinition,
   CouponDefinitionInput,
   CouponDefinitionStatus,
+  IssueResult,
   PointAdjustment,
   RewardGrant,
   RewardGrantStatus,
@@ -29,7 +30,7 @@ export type RewardsAdminApi = {
   /** `PATCH /admin/coupon-definitions/{id}/status` */
   setCouponDefinitionStatus(id: string, status: CouponDefinitionStatus): Promise<CouponDefinition>
   /** `POST /admin/coupon-definitions/{id}/issue {accountIds}` */
-  issueCoupons(id: string, accountIds: string[]): Promise<unknown>
+  issueCoupons(id: string, accountIds: string[]): Promise<IssueResult>
   /** `POST /admin/coupon-definitions/{id}/codes` - 공용 코드 */
   createCouponCode(id: string): Promise<CouponCode>
   /** `GET /admin/coupons?accountId` */
@@ -75,7 +76,7 @@ export function createRewardsAdminApi(
         json: { status },
       }),
     issueCoupons: (id, accountIds) =>
-      post<unknown>(`${base}/coupon-definitions/${enc(id)}/issue`, { accountIds }),
+      post<IssueResult>(`${base}/coupon-definitions/${enc(id)}/issue`, { accountIds }),
     createCouponCode: (id) => post<CouponCode>(`${base}/coupon-definitions/${enc(id)}/codes`),
     listAccountCoupons: (accountId) =>
       client.list<AdminCoupon>(`${base}/coupons`, { params: { accountId } }),

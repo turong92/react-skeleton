@@ -19,7 +19,13 @@ export function removeStage(stages: readonly CouponStage[], index: number): Coup
   return stages.filter((_, i) => i !== index)
 }
 
-/** 한 단계의 칸을 고친다. 무료로 바꾸면 값과 상한을 비운다 */
+/** 무료에서 다른 종류로 바꿀 때 시작하는 값 - 0 으로 두면 「0% 할인」이 된다 */
+const START_VALUE = { PERCENT: 10, FIXED: 1000 } as const
+
+/**
+ * 한 단계의 칸을 고친다. 무료로 바꾸면 값과 상한을 비우고, 무료에서 바꾸면 쓸 만한 값으로 시작하며,
+ * 정률은 100 을 넘지 못하고 상한은 정률에만 있다
+ */
 export function updateStage(
   stages: readonly CouponStage[],
   index: number,
@@ -28,7 +34,11 @@ export function updateStage(
   return stages.map((s, i) => {
     if (i !== index) return s
     const next = { ...s, ...patch }
-    return next.type === 'FREE' ? { ...next, value: 0, maxDiscount: null } : next
+    if (next.type === 'FREE') return { ...next, value: 0, maxDiscount: null }
+    if (s.type === 'FREE' && patch.value === undefined) next.value = START_VALUE[next.type]
+    if (next.type === 'PERCENT') next.value = Math.min(100, Math.max(0, next.value))
+    else next.maxDiscount = null
+    return next
   })
 }
 

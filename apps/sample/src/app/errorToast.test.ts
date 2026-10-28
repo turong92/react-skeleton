@@ -14,6 +14,27 @@ describe('toastUnlessValidation', () => {
     expect(show).not.toHaveBeenCalled()
   })
 
+  it('lets the rewards screens speak for their own coupon / event / point / discount errors in our words (no English server sentence in a toast)', () => {
+    const show = vi.fn()
+    for (const code of [
+      ErrorCodes.PAYMENT_DISCOUNT_NOT_APPLICABLE,
+      ErrorCodes.PAYMENT_DISCOUNT_UNAVAILABLE,
+      ErrorCodes.PAYMENT_DISCOUNT_NOT_SUPPORTED,
+      ErrorCodes.PAYMENT_DISCOUNT_BELOW_MINIMUM,
+      ErrorCodes.PAYMENT_NOTHING_TO_REFUND,
+      ErrorCodes.COUPON_CODE_INVALID,
+      ErrorCodes.COUPON_CODE_USED,
+      ErrorCodes.COUPON_CODE_EXHAUSTED,
+      ErrorCodes.CAMPAIGN_NOT_ACTIVE,
+      ErrorCodes.CAMPAIGN_REFERRAL_INVALID,
+      ErrorCodes.POINT_INSUFFICIENT,
+    ])
+      toastUnlessValidation(show)(apiError(code))
+    expect(show).not.toHaveBeenCalled()
+    toastUnlessValidation(show)(apiError('POINT.SOMETHING_ELSE'))
+    expect(show).toHaveBeenCalledTimes(1)
+  })
+
   it('lets the profile form speak for its own AUTHOR_PROFILE.* errors (no second message in a toast)', () => {
     const show = vi.fn()
     for (const code of [

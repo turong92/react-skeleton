@@ -286,3 +286,16 @@ export const DeleteIncludedRoleSaysWhy: Story = {
     await expect(await dialog.findByText(/Another role includes this one/)).toBeVisible()
   },
 }
+
+/** 전권 역할(ADMIN)은 포함할 후보가 아니다 - 비활성이고 이유가 옆에(서버도 거절한다) */
+export const FullAccessRoleCannotBeIncluded: Story = {
+  render: () => <Demo roles={hierarchy()} />,
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(await canvas.findByRole('button', { name: 'Edit EMPTY' }))
+    const dialog = within(await canvas.findByRole('dialog', { name: 'Edit EMPTY' }))
+    const admin = dialog.getByLabelText('ADMIN')
+    await expect(admin).toBeDisabled()
+    await expect(admin).toHaveAccessibleDescription('A full-access role cannot be included.')
+    await expect(dialog.getByLabelText('CS')).toBeEnabled()
+  },
+}

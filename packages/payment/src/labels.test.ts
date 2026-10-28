@@ -220,6 +220,7 @@ describe('the operator words (spec 11.2: 「결제사와 맞추기」, 「확인
       'AMOUNT_MISMATCH',
       'BUYER_COUNTRY_KR',
       'CONFIRM_UNRESOLVED',
+      'DISCOUNT_CONFLICT',
       'FULFILMENT_UNRESOLVED',
       'MODE_MISMATCH',
       'ORDER_MISMATCH',
@@ -255,6 +256,7 @@ describe('the operator words (spec 11.2: 「결제사와 맞추기」, 「확인
         'REFUND_APPLIED',
         'REVIEW_FLAGGED',
         'TRANSACTION_FAILED',
+        'EXEMPTED',
       ].sort(),
     )
     expect(Object.keys(a.webhookStatus).sort()).toEqual([

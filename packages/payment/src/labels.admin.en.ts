@@ -21,9 +21,13 @@ export const defaultPaymentAdminLabels: PaymentAdminLabels = {
       'The refund for a subscription that was ended early did not go out - it needs a refund',
     STALE_CONFIRMING: 'Stuck confirming the payment for a long time',
     STALE_REFUND: 'Stuck refunding for a long time',
+    DISCOUNT_CONFLICT:
+      'The coupon on this payment was also used by another payment - check which one keeps the discount',
   },
   reviewUnknown: 'Something here needs a check',
   reviewHint: 'Press "Match with the provider" to ask the provider again.',
+  reviewHintDiscount:
+    'Matching with the provider does not settle this. Look at both payments and refund the one that should not have the discount.',
   reviewHintRetry: 'Press "Match with the provider" to start the unfinished job again.',
   reviewHintSynced:
     'We asked the provider again, but this is still open. Please check it in the provider dashboard',
@@ -59,6 +63,7 @@ export const defaultPaymentAdminLabels: PaymentAdminLabels = {
   actors: { USER: 'Buyer', OPERATOR: 'Operator', SYSTEM: 'System', PROVIDER: 'Provider' },
   eventTypes: {
     ORDER_CREATED: 'Payment started',
+    EXEMPTED: 'Finished as payment waived - no provider was called',
     CONFIRM_STARTED: 'Started confirming the payment',
     CONFIRM_SUCCEEDED: 'Payment confirmed',
     CONFIRM_DECLINED: 'The card issuer declined the payment',

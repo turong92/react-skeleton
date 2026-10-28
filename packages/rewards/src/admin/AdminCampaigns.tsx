@@ -312,6 +312,7 @@ function CampaignDialog({
                       {...control}
                       type="number"
                       min={1}
+                      max={3650}
                       value={milestone.days}
                       onChange={(event) =>
                         setMilestone(index, { days: Math.max(1, Number(event.target.value) || 1) })
@@ -392,6 +393,7 @@ function CampaignDialog({
                   {...control}
                   type="number"
                   min={1}
+                  max={365}
                   value={draft.config.claimWithinDays ?? 7}
                   onChange={(event) =>
                     config({ claimWithinDays: Math.max(1, Number(event.target.value) || 1) })

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { AdminRole } from './rolesApi'
-import { inheritedFrom, wouldCycle } from './roleIncludes'
+import { inheritedFrom, permissionsToSend, wouldCycle } from './roleIncludes'
 
 const role = (name: string, permissions: string[], includes: string[] = []): AdminRole => ({
   name,
@@ -51,5 +51,20 @@ describe('inheritedFrom', () => {
   })
   it('is empty for a role that includes nothing', () => {
     expect(inheritedFrom([role('A', ['x'])], 'A').size).toBe(0)
+  })
+})
+
+describe('permissionsToSend', () => {
+  it('keeps what the role already held directly, even when an included role now also gives it', () => {
+    const inherited = new Map([['payment.read', 'CS']])
+    expect(
+      permissionsToSend(['payment.read', 'board.moderate'], inherited, ['payment.read']),
+    ).toEqual(['payment.read', 'board.moderate'])
+  })
+  it('drops only the ones newly picked that an included role gives anyway', () => {
+    const inherited = new Map([['payment.read', 'CS']])
+    expect(permissionsToSend(['payment.read', 'board.moderate'], inherited, [])).toEqual([
+      'board.moderate',
+    ])
   })
 })

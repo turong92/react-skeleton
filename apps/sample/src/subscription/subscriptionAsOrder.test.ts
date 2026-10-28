@@ -78,3 +78,76 @@ describe('shownSubscriptionOf — which subscription the result screen reads', (
     expect(shownSubscriptionOf('sub_1', {})).toBeUndefined()
   })
 })
+
+describe('subscriptionAsOrder with a coupon - the result shows what was actually charged first, not the plan price', () => {
+  const discounted = (stage: object, extra: object = {}) =>
+    sub({
+      discount: {
+        label: '첫 달 무료',
+        stages: [stage as never],
+        periodsUsed: 1,
+        nextAmount: 3450,
+        remainingPeriods: 2,
+      },
+      ...extra,
+    })
+
+  it('a free first stage is a 0 won first payment, settled without a provider, with the coupon as the discount line', () => {
+    const order = subscriptionAsOrder(
+      discounted({ type: 'FREE', value: 0, maxDiscount: null, periods: 1 }),
+      'Standard',
+    )
+    expect(order).toMatchObject({
+      amount: { amount: 0, currency: 'KRW' },
+      originalAmount: 6900,
+      discountAmount: 6900,
+      settlement: 'FREE',
+      discounts: [{ type: 'coupon', label: '첫 달 무료', amount: 6900 }],
+    })
+  })
+
+  it('a percent first stage is capped by its maximum; a fixed one never goes below zero', () => {
+    expect(
+      subscriptionAsOrder(
+        discounted({ type: 'PERCENT', value: 50, maxDiscount: 1000, periods: 3 }),
+        'S',
+      ).amount.amount,
+    ).toBe(5900)
+    expect(
+      subscriptionAsOrder(
+        discounted({ type: 'PERCENT', value: 50, maxDiscount: null, periods: 3 }),
+        'S',
+      ).amount.amount,
+    ).toBe(3450)
+    expect(
+      subscriptionAsOrder(
+        discounted({ type: 'FIXED', value: 9000, maxDiscount: null, periods: 1 }),
+        'S',
+      ).amount.amount,
+    ).toBe(0)
+  })
+
+  it('the real first order from the server wins when it is there', () => {
+    const initial = {
+      kind: 'SUBSCRIPTION_INITIAL',
+      amount: { amount: 4900, currency: 'KRW' },
+      originalAmount: 6900,
+      discountAmount: 2000,
+      discounts: [{ type: 'coupon', ref: 'c', label: 'x', amount: 2000 }],
+      settlement: 'PROVIDER',
+    } as never
+    expect(
+      subscriptionAsOrder(
+        discounted({ type: 'FREE', value: 0, maxDiscount: null, periods: 1 }),
+        'S',
+        initial,
+      ),
+    ).toMatchObject({ amount: { amount: 4900 }, originalAmount: 6900, discountAmount: 2000 })
+  })
+
+  it('without a coupon nothing changes: the plan price and no discount fields', () => {
+    const order = subscriptionAsOrder(sub(), 'S')
+    expect(order.amount.amount).toBe(6900)
+    expect(order.discounts).toBeUndefined()
+  })
+})

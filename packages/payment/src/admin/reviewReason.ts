@@ -19,3 +19,7 @@ export const isRetryJobReason = (reason: string | null | undefined): boolean =>
 
 export const isMoneyOffReason = (reason: string | null | undefined): boolean =>
   reason != null && MONEY_OFF.has(reason)
+
+/** 같은 쿠폰이 두 주문에 쓰였다 - 결제사에 물어도 풀리지 않고, 운영자가 금액을 보고 정한다 */
+export const isCouponConflictReason = (reason: string | null | undefined): boolean =>
+  reason === 'DISCOUNT_CONFLICT'

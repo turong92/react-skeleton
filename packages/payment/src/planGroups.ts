@@ -4,9 +4,10 @@ import type { SubscriptionPlan } from './subscriptionTypes'
 /** 한 상품의 플랜들 - 주기가 짧은 것부터 */
 export type PlanGroup = { key: string; plans: SubscriptionPlan[] }
 
-const PERIOD = /^P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)W)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?)?$/
+const PERIOD =
+  /^P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)W)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/
 /** 주기 길이(분) 어림 - 정렬에만 쓴다. 읽을 수 없으면 맨 뒤 */
-const MINUTES = [525_600, 43_200, 10_080, 1_440, 60, 1]
+const MINUTES = [525_600, 43_200, 10_080, 1_440, 60, 1, 1 / 60]
 
 /** 주기 길이(분) 어림 - 읽을 수 없으면 무한대. 정렬 · 짧은/긴 주기 판정에만 쓴다 */
 export function periodMinutes(period: string): number {

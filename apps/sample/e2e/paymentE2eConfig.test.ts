@@ -55,3 +55,12 @@ describe('the client-ip mode of the payment e2e backend', () => {
     expect(web['client-ip']['trusted-proxies']).toEqual(['127.0.0.1/32', '::1/128'])
   })
 })
+
+describe('the subscription periods the e2e seeds', () => {
+  it('has a yearly period longer than the monthly one (the landing reads the short one as the month) but short enough that a canceled yearly subscription ends within a scenario', () => {
+    const { period, 'yearly-period': yearly } = PAYMENT_E2E_SKELETON.sample.subscription
+    const secs = (iso: string) => Number(/^PT(\d+)S$/.exec(iso)?.[1])
+    expect(secs(yearly)).toBeGreaterThan(secs(period))
+    expect(secs(yearly)).toBeLessThanOrEqual(60)
+  })
+})

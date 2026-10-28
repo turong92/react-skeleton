@@ -84,7 +84,8 @@ describe('a Paddle subscription from the first payment to the end of the period'
     await page.goto(`${baseUrl}/subscribe`)
     await pwExpect(page.getByText(/결제 국가: 미국/)).toBeVisible()
     // 플랜 목록의 금액은 서버 표(카탈로그)의 달러 금액이다(견본 시드 basic = 300센트) - 원화가 아니다. 주기는 e2e 설정의 짧은 주기라 글자는 가리지 않는다
-    await pwExpect(page.getByText(/\$3\.00 · .*마다 결제/)).toBeVisible()
+    // 한국어 화면의 달러는 「US$3.00」이고, e2e 의 25초 주기는 글자로 풀지 못해 금액만 나온다(읽을 수 없는 주기는 코드를 그리지 않는다)
+    await pwExpect(page.getByText(/^US\$3\.00( · .*)?$/)).toBeVisible()
     await pwExpect(page.getByText(/원 · .*마다 결제/)).toHaveCount(0)
     await page.getByRole('button', { name: /구독하기.*베이직/ }).click()
     await page.waitForURL(/\/subscriptions\/return\?.*provider=paddle/)

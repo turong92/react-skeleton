@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { groupPlans, regularAmountOf } from './planGroups'
+import { groupPlans, periodMinutes, regularAmountOf } from './planGroups'
 import type { SubscriptionPlan } from './subscriptionTypes'
 
 const plan = (code: string, period: string, over: Partial<SubscriptionPlan> = {}) =>
@@ -25,6 +25,15 @@ describe('groupPlans', () => {
   it('plans without a product code stay one card each (old server)', () => {
     const groups = groupPlans([plan('a', 'P1M'), plan('b', 'P1M')])
     expect(groups.map((g) => g.plans.length)).toEqual([1, 1])
+  })
+
+  it('seconds count too (the e2e seed uses PT25S and PT40S), so the shorter period comes first', () => {
+    const [group] = groupPlans([
+      plan('long', 'PT40S', { productCode: 'p' }),
+      plan('short', 'PT25S', { productCode: 'p' }),
+    ])
+    expect(group?.plans.map((p) => p.code)).toEqual(['short', 'long'])
+    expect(periodMinutes('PT30S')).toBe(0.5)
   })
 
   it('an unreadable period sorts last', () => {

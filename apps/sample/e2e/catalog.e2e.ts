@@ -2,10 +2,11 @@ import { expect as baseExpect, type Browser, type BrowserContext, type Page } fr
 import { afterAll, beforeAll, describe, expect, inject, it } from 'vitest'
 import { routeTossSdk, tossControl } from './fakeToss'
 import { periodMinutes } from '@skeleton/payment'
-import { DEMO, launch, signIn } from './helpers'
+import { DEMO, launch } from './helpers'
 import {
   ADMIN,
   api,
+  ensureSignedIn,
   endLiveSubscription,
   labels,
   mySubscription,
@@ -180,7 +181,7 @@ describe('① a sale price: operator adds it, the landing and the subscribe page
         await kr.context.close()
 
         // 로그인 사용자: 구독 화면에서 긴 주기(행사가)로 시작 (토스 테스트 - 기존 구독 e2e 단계)
-        await signIn(page, baseUrl)
+        await ensureSignedIn(page, baseUrl)
         await page.goto(`${baseUrl}/subscribe`)
         const card = page
           .getByRole('listitem')
@@ -230,17 +231,25 @@ describe('② a US visitor sees only dollar prices from the table', () => {
       if (!(await yearlySeed())) return ctx.skip()
       if (!(await devCountrySwitchOn()))
         return (SKIP('the backend has no dev country switch (X-Dev-Country)'), ctx.skip())
-      const us = await visitor('US', 'en-US')
+      // 화면 말은 한국어 그대로(로그인 단계가 한국어 문구를 쓴다), 나라만 미국
+      const us = await visitor('US')
       try {
+        // 로그인하지 않은 미국 방문자의 랜딩
         await us.page.goto(baseUrl)
         await pwExpect(us.page.getByText(/\$\d/).first()).toBeVisible()
         await expect(us.page.getByText('₩').count()).resolves.toBe(0)
-        await signIn(us.page, baseUrl)
-        await us.page.goto(`${baseUrl}/subscribe`)
-        await pwExpect(us.page.getByText(/\$\d/).first()).toBeVisible()
-        await expect(us.page.getByText(/원/).count()).resolves.toBe(0)
       } finally {
         await us.context.close()
+      }
+      // 로그인한 사용자의 구독 화면 - 같은 브라우저에서 나라만 미국으로(개발용 나라 스위치)
+      await ensureSignedIn(page, baseUrl)
+      await page.evaluate(([key]) => localStorage.setItem(key!, 'US'), [COUNTRY_KEY])
+      try {
+        await page.goto(`${baseUrl}/subscribe`)
+        await pwExpect(page.getByText(/\$\d/).first()).toBeVisible()
+        await expect(page.getByText(/[\d,]+원/).count()).resolves.toBe(0)
+      } finally {
+        await page.evaluate(([key]) => localStorage.removeItem(key!), [COUNTRY_KEY])
       }
     },
   )

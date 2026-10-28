@@ -199,3 +199,24 @@ export const TooManyMatches: Story = {
     await expect(canvas.getAllByRole('button', { name: /고르기$/ })).toHaveLength(10)
   },
 }
+
+/** 검색이 404(계정 도구가 꺼진 서버)면 권한이 아니라 도구가 꺼졌다고 말한다 */
+export const SearchToolOffSaysSo: Story = {
+  render: (args) => (
+    <AdminCouponDefinitions
+      {...args}
+      api={createFakeAdmin().api}
+      searchAccounts={async () => {
+        throw fail(404, 'COMMON.NOT_FOUND')
+      }}
+    />
+  ),
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.type(await canvas.findByLabelText('이메일 또는 로그인 아이디'), 'ada')
+    await userEvent.click(canvas.getByRole('button', { name: '검색' }))
+    await expect(
+      await canvas.findByText('이 서버에서는 계정 조회 도구가 꺼져 있어요.'),
+    ).toBeVisible()
+    await expect(canvas.queryByText(/account\.read/)).toBeNull()
+  },
+}

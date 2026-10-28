@@ -149,6 +149,7 @@ export const koRewardsAdminLabels: RewardsAdminLabels = {
     picked: '고른 계정',
     change: '다른 계정 고르기',
     needsPermission: '계정을 찾으려면 계정 조회 권한(account.read)이 필요해요.',
+    toolOff: '이 서버에서는 계정 조회 도구가 꺼져 있어요.',
     tooMany: '결과가 더 있어요. 더 좁혀서 찾아 주세요.',
   },
   couponDetail: {

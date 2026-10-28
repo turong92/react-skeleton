@@ -158,11 +158,13 @@ export type RewardsAdminLabels = {
     change: string
     /** 계정 조회 권한 · 계정 모듈이 없는 서버 - 검색이 403 · 404 */
     needsPermission: string
+    /** 계정 모듈이 꺼진 서버(검색이 404) */
+    toolOff: string
     /** 결과가 한도를 넘었다 */
     tooMany: string
   }
   couponDetail: {
-    /** 목록 행의 이름 링크 낭독 - 「○○ 자세히」 */
+    /** 목록 행의 이름 링크 낭독 - 「자세히: ○○」(보이는 글자로 시작) */
     open: (name: string) => string
     back: string
     notFound: string

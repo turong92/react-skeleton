@@ -36,8 +36,9 @@ export function AccountSearch({ search, onPick, limit = 10, labels: given }: Acc
     retry: false,
     meta: { quietStatuses: [403, 404] },
   })
-  const denied =
-    found.error instanceof ApiRequestError && [403, 404].includes(found.error.apiError.status)
+  const status = found.error instanceof ApiRequestError ? found.error.apiError.status : null
+  const denied = status === 403
+  const toolOff = status === 404
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
@@ -70,7 +71,9 @@ export function AccountSearch({ search, onPick, limit = 10, labels: given }: Acc
         </Button>
       </form>
       {found.isError && (
-        <Alert tone={denied ? 'warning' : 'danger'}>{denied ? t.needsPermission : t.failed}</Alert>
+        <Alert tone={denied || toolOff ? 'warning' : 'danger'}>
+          {denied ? t.needsPermission : toolOff ? t.toolOff : t.failed}
+        </Alert>
       )}
       {found.isSuccess &&
         (found.data.length === 0 ? (

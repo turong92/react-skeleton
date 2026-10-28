@@ -155,6 +155,7 @@ export const defaultRewardsAdminLabels: RewardsAdminLabels = {
     picked: 'Chosen account',
     change: 'Choose another',
     needsPermission: 'Looking up accounts needs the account.read permission.',
+    toolOff: 'Account lookup is turned off on this server.',
     tooMany: 'There are more matches. Narrow the search.',
   },
   couponDetail: {

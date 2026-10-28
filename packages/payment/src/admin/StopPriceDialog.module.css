@@ -1,0 +1,16 @@
+.body {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.which {
+  margin: 0;
+  color: var(--text-strong);
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.text {
+  margin: 0;
+  overflow-wrap: anywhere;
+}

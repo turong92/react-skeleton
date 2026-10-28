@@ -145,3 +145,15 @@ describe('authz codes (kotlin-skeleton modules/authz, docs/authz-http-contract.m
     ])
   })
 })
+
+describe('catalog operator codes', () => {
+  it('carry the backend names, so isErrorCode matches what the operator endpoints send', () => {
+    expect(ErrorCodes.CATALOG_PRICE_OVERLAP).toBe('CATALOG.PRICE_OVERLAP')
+    expect(
+      isErrorCode(
+        requestError({ code: 'CATALOG.CODE_TAKEN', status: 409 }),
+        ErrorCodes.CATALOG_CODE_TAKEN,
+      ),
+    ).toBe(true)
+  })
+})

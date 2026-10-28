@@ -9,3 +9,6 @@ export const PAYMENT_PERMISSIONS = {
 export type CanFn = (key: string) => boolean
 
 export const allowAll: CanFn = () => true
+
+/** 백엔드 `catalog` 모듈이 선언한 권한 이름 - 기본 역할 없이 전권만 갖는다. 상품 · 가격을 만들고 고치고 멈추는 모든 운영 행동 */
+export const CATALOG_PERMISSIONS = { manage: 'catalog.manage' } as const

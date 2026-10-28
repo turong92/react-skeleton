@@ -1,4 +1,4 @@
-import { ApiRequestError } from '@skeleton/api-client'
+import { ApiRequestError, ErrorCodes } from '@skeleton/api-client'
 import { PaymentLedgerErrorCodes } from '../errors'
 
 /**
@@ -15,6 +15,8 @@ const ONE_THING_NOT_FOUND: readonly string[] = [
   PaymentLedgerErrorCodes.WEBHOOK_EVENT_NOT_FOUND,
   // 「결제사와 맞추기」 - 결제사가 그 결제를 모른다(경로는 켜져 있다)
   PaymentLedgerErrorCodes.PROVIDER_PAYMENT_NOT_FOUND,
+  // 운영 카탈로그 - 없는 상품 · 가격 한 줄(경로는 켜져 있다)
+  ErrorCodes.CATALOG_NOT_FOUND,
 ]
 
 export function adminAccessProblem(error: unknown): AdminAccessProblem | null {

@@ -1,4 +1,5 @@
 import type { PaymentAdminLabels } from './labelTypes'
+import { defaultCatalogAdminLabels } from './labels.catalogAdmin'
 
 /** 운영자 부품의 기본 문구(영어) */
 export const defaultPaymentAdminLabels: PaymentAdminLabels = {
@@ -288,4 +289,5 @@ export const defaultPaymentAdminLabels: PaymentAdminLabels = {
     retryFor: (eventType, target) => `Process again: ${eventType} (${target})`,
     retrying: 'Processing',
   },
+  catalog: defaultCatalogAdminLabels,
 }

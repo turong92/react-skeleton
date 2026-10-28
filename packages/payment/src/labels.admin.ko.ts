@@ -1,4 +1,5 @@
 import type { PaymentAdminLabels } from './labelTypes'
+import { koCatalogAdminLabels } from './labels.catalogAdmin'
 
 /** 운영자 부품의 한국어 문구 — 낱말은 스펙 §11.2 표를 따른다(환불 · 결제사와 맞추기 · 확인 필요) */
 export const koPaymentAdminLabels: PaymentAdminLabels = {
@@ -269,4 +270,5 @@ export const koPaymentAdminLabels: PaymentAdminLabels = {
     retryFor: (eventType, target) => `다시 처리: ${eventType} (${target})`,
     retrying: '다시 시도하는 중',
   },
+  catalog: koCatalogAdminLabels,
 }

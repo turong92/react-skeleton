@@ -54,5 +54,37 @@ export type { RefundRequestTableProps } from './RefundRequestTable'
 export { WebhookEventTable } from './WebhookEventTable'
 export type { WebhookEventTableProps } from './WebhookEventTable'
 export type { RenderRowAction } from './rowAction'
-export { PAYMENT_PERMISSIONS } from './permissions'
+// 운영 카탈로그(상품 · 가격) - 백엔드 `catalog` 모듈의 `skeleton.catalog.admin.enabled=true` + 권한 `catalog.manage`(없으면 403, 꺼져 있으면 404 - `adminAccessProblem`)
+export { createCatalogAdminApi } from './catalogAdminApi'
+export type { CatalogAdminApi, CatalogAdminApiOptions } from './catalogAdminApi'
+export type {
+  AddCatalogPriceInput,
+  AdminCatalogPrice,
+  AdminCatalogProduct,
+  CreateCatalogProductInput,
+  UpdateCatalogProductInput,
+} from './catalogAdminTypes'
+export {
+  catalogAdminKeys,
+  useAdminCatalogProducts,
+  useCatalogAdminMutations,
+  useCatalogProviders,
+} from './catalogAdminQueries'
+export { catalogProblemOf } from './catalogErrors'
+export type { CatalogProblem } from './catalogErrors'
+export { priceStateOf } from './priceState'
+export type { PriceState } from './priceState'
+export { productTextOf } from './catalogText'
+export { AdminCatalogTable } from './AdminCatalogTable'
+export type { AdminCatalogTableProps } from './AdminCatalogTable'
+export { AdminProductEditor } from './AdminProductEditor'
+export type { AdminProductEditorProps } from './AdminProductEditor'
+export type { ProductLanguage } from './productForm'
+export { AdminPriceList } from './AdminPriceList'
+export type { AdminPriceListProps } from './AdminPriceList'
+export { AddPriceDialog } from './AddPriceDialog'
+export type { AddPriceDialogProps } from './AddPriceDialog'
+export { StopPriceDialog } from './StopPriceDialog'
+export type { StopPriceDialogProps } from './StopPriceDialog'
+export { PAYMENT_PERMISSIONS, CATALOG_PERMISSIONS } from './permissions'
 export type { CanFn } from './permissions'

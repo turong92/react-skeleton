@@ -1,6 +1,7 @@
 import type { EasyPayCode } from './easyPay'
 import type { ReviewReason, WebhookEventStatus } from './admin/types'
 import type { OrderStatus, RefundRequestReason, RefundStatus } from './ledgerTypes'
+import type { CatalogAdminLabels } from './labels.catalogAdmin'
 import type { SubscriptionEndReason, SubscriptionStatus } from './subscriptionTypes'
 
 /** 거절의 종류(`DECLINED` 의 `data.category`) — 모르는 값은 `OTHER` 문구 */
@@ -282,6 +283,8 @@ export type PaymentAdminLabels = {
     retryFor: (eventType: string, target: string) => string
     retrying: string
   }
+  /** 운영 카탈로그(상품 · 가격) 화면 */
+  catalog: CatalogAdminLabels
 }
 
 /** 주기(`P1M` 등)의 단위 글자 — 개수를 받아 「월」(1) · 「3개월」처럼 돌려준다 */

@@ -1,0 +1,25 @@
+.form {
+  display: grid;
+  gap: var(--space-lg);
+  max-width: 40rem;
+}
+
+.texts {
+  display: grid;
+  gap: var(--space-lg);
+  margin: 0;
+  padding: var(--space-lg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.texts legend {
+  padding: 0 var(--space-sm);
+  color: var(--text-strong);
+  font-weight: 650;
+}
+
+.language {
+  display: grid;
+  gap: var(--space-md);
+}

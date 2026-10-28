@@ -25,6 +25,10 @@ describe('adminAccessProblem', () => {
     expect(adminAccessProblem(failed(404, 'PAYMENT.PROVIDER_PAYMENT_NOT_FOUND'))).toBeNull()
   })
 
+  it('a 404 about one catalog product or price is just that - the operator routes are on', () => {
+    expect(adminAccessProblem(failed(404, 'CATALOG.NOT_FOUND'))).toBeNull()
+  })
+
   it('anything else, and things that are not API errors, are not an access problem', () => {
     expect(adminAccessProblem(failed(500, 'COMMON.INTERNAL'))).toBeNull()
     expect(adminAccessProblem(failed(402, 'PAYMENT.REFUND_DECLINED'))).toBeNull()

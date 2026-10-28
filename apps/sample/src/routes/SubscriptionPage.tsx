@@ -21,7 +21,6 @@ import { LoadError } from '../components/LoadError'
 import { languageOf, useT } from '../i18n'
 import { subscriptionApi } from '../subscription/api'
 import { subscriptionLabelsFor } from '../subscription/labels'
-import { planNameOf } from '../subscription/planName'
 import styles from './SubscriptionPage.module.css'
 
 /**
@@ -71,24 +70,19 @@ export function SubscriptionPage() {
 
   // 지금보다 윗등급이고 주기 · 통화가 같은 플랜만 - 서버가 같은 규칙으로 거절한다
   const current = plans.data?.find((plan) => plan.code === subscription.planCode)
-  const upgrades = (plans.data ?? [])
-    .filter(
-      (plan) =>
-        current !== undefined &&
-        plan.level > current.level &&
-        plan.period === subscription.period &&
-        plan.amount.currency === subscription.amount.currency,
-    )
-    .map((plan) => ({ ...plan, name: planNameOf(t, plan) }))
+  const upgrades = (plans.data ?? []).filter(
+    (plan) =>
+      current !== undefined &&
+      plan.level > current.level &&
+      plan.period === subscription.period &&
+      plan.amount.currency === subscription.amount.currency,
+  )
   const cancelable = subscription.status === 'ACTIVE' || subscription.status === 'PAST_DUE'
   return (
     <div className={styles.page}>
       {header}
       <MySubscriptionCard
-        subscription={{
-          ...subscription,
-          planName: planNameOf(t, { code: subscription.planCode, name: subscription.planName }),
-        }}
+        subscription={subscription}
         orders={orders}
         {...(upgrades.length > 0 &&
         subscription.status === 'ACTIVE' &&

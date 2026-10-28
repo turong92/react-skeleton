@@ -14,7 +14,6 @@ import { LinkButton } from '../components/LinkButton'
 import { languageOf, useT } from '../i18n'
 import { subscriptionApi } from '../subscription/api'
 import { subscriptionLabelsFor } from '../subscription/labels'
-import { planNameOf } from '../subscription/planName'
 import { claimActivation, returnPlanOf, type ReturnPlan } from '../subscription/subscribeFlow'
 import { shownSubscriptionOf, subscriptionAsOrder } from '../subscription/subscriptionAsOrder'
 import styles from './SubscriptionReturnPage.module.css'
@@ -47,11 +46,7 @@ function ActivateFlow({ plan }: { plan: Extract<ReturnPlan, { kind: 'activate' }
     reply: activate.data,
   })
   const order = shown
-    ? subscriptionAsOrder(
-        shown,
-        planNameOf(t, { code: shown.planCode, name: shown.planName }),
-        initialOrderOf(me.data?.orders),
-      )
+    ? subscriptionAsOrder(shown, shown.planName, initialOrderOf(me.data?.orders))
     : undefined
   // 쿠폰이 그 사이 다른 곳에서 쓰였다(409 `PAYMENT.DISCOUNT_UNAVAILABLE`) 같은 오류는 서버의 영어 문장이 아니라 우리 낱말로 말한다
   const discountProblem = activate.isError ? discountErrorMessage(activate.error, labels) : null
@@ -89,11 +84,7 @@ function WatchFlow({ id }: { id: string }) {
   const me = useMySubscription(subscriptionApi, { subscriptionId: id })
   const shown = shownSubscriptionOf(id, { read: me.data?.subscription })
   const order = shown
-    ? subscriptionAsOrder(
-        shown,
-        planNameOf(t, { code: shown.planCode, name: shown.planName }),
-        initialOrderOf(me.data?.orders),
-      )
+    ? subscriptionAsOrder(shown, shown.planName, initialOrderOf(me.data?.orders))
     : undefined
   return (
     <PaymentResult

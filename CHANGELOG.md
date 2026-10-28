@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — 상품 · 가격 카탈로그 읽기: 가격표 · 구독 화면이 DB 의 표를 읽는다 (2026-10-29)
+
+백엔드 짝: kotlin-skeleton `catalog`(공개 읽기 `GET /catalog/products`) · `payment` 의 플랜 목록 칸 두 개(`productCode` · `regularAmount`).
+
+- `@skeleton/payment`: `createCatalogApi(client, { basePath? })` · `useCatalogProducts(api, kind?, { meta? })` · 타입 `Catalog` · `CatalogProduct` · `CatalogPrice`, 통화 최소 단위 ↔ 기본 단위 `toMajorUnits` / `toMinorUnits`(자릿수는 `Intl`), `groupPlans` · `regularAmountOf` · `formatSaleDate` · `periodUnitText`.
+- `SubscriptionPlanList`: 같은 `productCode` 의 플랜을 카드 한 장으로 묶고(월 · 연은 카드 안 주기 단추), 행사 중(`regularAmount` 가 지금 금액보다 큼)이면 정가 취소선 + `saleEndsAtOf` 로 「○월 ○일까지」. `productCode` 가 없는 옛 서버는 지금처럼 플랜 하나가 카드 하나. 새 문구 `labels.subscription.plans.{intervalCaption, monthly, yearly, saleUntil}`.
+- `@skeleton/marketing`: `PricingPlan.price` 의 주기는 `null` 일 수 있다(그 주기 화면에서는 카드를 숨기고, 연 가격이 하나도 없으면 월 · 연 토글이 없다). 행사가 `compareAt`(취소선) · `saleEndsAt`(+ `timeZone` prop) · `labels.saleUntil`. 새 도우미 `plansForInterval` · `hasYearlyPlans` · `regularMonthlyEquivalent` · `isFree` · `formatSaleEnd`.
+- 샘플: 랜딩 가격표는 사전의 무료 카드 + 공개 카탈로그(통화는 서버가 방문 나라로 정한 `currency`, 화면 언어는 서식만 · 읽는 중 · 실패 · 팔 상품 없음이면 가격표 자리를 그리지 않음). 구독 화면은 Paddle 미리보기 금액을 쓰지 않고 서버 표의 금액을 쓰며, 플랜 이름은 서버 이름이다.
+
+#### Changed — 업그레이드 시 할 일
+
+- 샘플의 `landing/pricingData.ts`(`pricingFor`) · `subscription/planName.ts` 와 사전 키 `landing.plan.pro.*` · `landing.plan.team.*` · `subscription.plan.*` 를 지웠다 - 가격 · 이름은 카탈로그에서 온다. 새 키 `landing.pricing.{saleUntil, cta, features.<상품코드>.<n>}`.
+- `PricingPlan.price` 타입이 `{ monthly: number | null; yearly: number | null } | null` 로 넓어졌다 - `price.monthly` 를 숫자로 읽던 코드는 `null` 을 다뤄야 한다.
+
 ### Added — 알림센터 보강: 안 읽은 수 전용 조회 · 링크 · 묶음 · 종류별 끄기 (2026-10-28)
 
 백엔드 짝: kotlin-skeleton `notification` · `notification-jdbc` · `notification-sse`(같은 묶음). `@skeleton/notifications` 1.1.0 → 1.2.0.

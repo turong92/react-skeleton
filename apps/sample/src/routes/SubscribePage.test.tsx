@@ -1,6 +1,6 @@
 import {
-  paddlePricesKey,
   paymentKeys,
+  type Catalog,
   type PaymentConfig,
   type SubscriptionPlan,
 } from '@skeleton/payment'
@@ -27,11 +27,6 @@ const plans = [
   plan('standard', 'Standard', 6900),
   plan('pro', 'Pro', 9900),
 ]
-const preview = {
-  clientToken: 'test_token',
-  environment: 'sandbox',
-  prices: { basic: 'pri_basic', standard: 'pri_standard' },
-}
 const paddleConfig: PaymentConfig = {
   available: true,
   testMode: true,
@@ -40,19 +35,14 @@ const paddleConfig: PaymentConfig = {
   provider: 'paddle',
   country: 'US',
   cancelPolicy: { key: 'period-end-only' },
-  pricePreviews: { paddle: preview },
 }
 const config: PaymentConfig = { available: true, testMode: true, refundRequestsEnabled: true }
 
-function render(data: {
-  plans?: SubscriptionPlan[]
-  config?: PaymentConfig
-  paddlePrices?: Record<string, { total: string; period: string | null }>
-}) {
+function render(data: { plans?: SubscriptionPlan[]; config?: PaymentConfig; catalog?: Catalog }) {
   const client = new QueryClient()
   if (data.plans) client.setQueryData(paymentKeys.subscriptionPlans(), data.plans)
   if (data.config) client.setQueryData(paymentKeys.config(), data.config)
-  if (data.paddlePrices) client.setQueryData(paddlePricesKey(preview), data.paddlePrices)
+  if (data.catalog) client.setQueryData(paymentKeys.catalogProducts('SUBSCRIPTION'), data.catalog)
   return renderToStaticMarkup(
     <QueryClientProvider client={client}>
       <MemoryRouter>
@@ -72,16 +62,14 @@ describe('SubscribePage', () => {
     ])
       expect(html).toContain(price)
     expect(html.match(/data-variant="primary"/g)).toHaveLength(3)
-    expect(html).toContain('aria-label="구독하기: 베이직"')
+    expect(html).toContain('aria-label="구독하기: Basic"')
   })
 
-  it('names plans by their code in the language of the screen, and falls back to the server name for a code it has no translation for', async () => {
+  it('names plans with the name the server gave, in any language of the screen, and prices them in the screen language', async () => {
     const extra = [...plans, plan('team', 'Team', 19900)]
-    expect(render({ plans: extra, config })).toMatch(/베이직[\s\S]*스탠다드[\s\S]*프로[\s\S]*Team/)
+    expect(render({ plans: extra, config })).toMatch(/Basic[\s\S]*Standard[\s\S]*Pro[\s\S]*Team/)
     await i18n.setLocale('en', { remember: false })
     const html = render({ plans: extra, config })
-    expect(html).toContain('Basic')
-    expect(html).toContain('Standard')
     expect(html).toContain('Team')
     expect(html).toContain('₩3,900, billed every month')
   })
@@ -116,40 +104,49 @@ describe('SubscribePage', () => {
     expect(render({})).not.toContain('구독하기')
   })
 
-  it('pays with Paddle: shows the amount Paddle quotes, never the KRW table amount, and hides the amount of a plan Paddle did not quote', () => {
+  it('pays with Paddle: the amount is the one in the catalog table (the server decided the currency), never a Paddle quote', () => {
+    const usd = (code: string, name: string, amount: number): SubscriptionPlan => ({
+      code,
+      name,
+      amount: { amount, currency: 'USD' },
+      period: 'P1M',
+      level: 1,
+    })
     const html = render({
-      plans,
+      plans: [usd('basic', 'Basic', 399), usd('standard', 'Standard', 699)],
       config: paddleConfig,
-      paddlePrices: {
-        basic: { total: '$3.99', period: 'P1M' },
-        standard: { total: '$6.99', period: 'P1M' },
-      },
     })
     expect(html).toContain('$3.99 · 1개월마다 결제')
     expect(html).toContain('$6.99 · 1개월마다 결제')
-    expect(html).toContain('결제창에서 금액을 확인하세요') // pro 는 가격 id 가 없다
-    expect(html).not.toContain('원 · 1개월마다 결제')
+    expect(html).not.toContain('금액 확인 중')
+    expect(html).not.toContain('결제창에서 금액을 확인하세요')
   })
 
-  it('while Paddle is quoting there is a placeholder and no KRW amount', () => {
-    const html = render({ plans, config: paddleConfig })
-    expect(html).toContain('금액 확인 중')
-    expect(html).not.toContain('3,900원')
-  })
-
-  it('words the cycle from the Paddle price, not from our local plan period (PT3M here), and shows only the amount for a price without a cycle', () => {
-    const html = render({
-      plans: [plan('basic', 'Basic', 3900, 'PT3M'), plan('standard', 'Standard', 6900, 'PT3M')],
-      config: paddleConfig,
-      paddlePrices: {
-        basic: { total: '$3.99', period: 'P1M' },
-        standard: { total: '$6.99', period: null },
+  it('a product with a month and a year plan is one card with an interval button each; the year sale shows the regular price and the end date from the catalog', () => {
+    const grouped: SubscriptionPlan[] = [
+      {
+        code: 'std-month',
+        name: 'Standard',
+        amount: { amount: 6900, currency: 'KRW' },
+        period: 'P1M',
+        level: 2,
+        productCode: 'standard',
       },
-    })
-    expect(html).toContain('$3.99 · 1개월마다 결제')
-    expect(html).toContain('$6.99')
-    expect(html).not.toContain('$6.99 ·')
-    expect(html).not.toContain('3분')
+      {
+        code: 'std-year',
+        name: 'Standard',
+        amount: { amount: 59000, currency: 'KRW' },
+        regularAmount: { amount: 69000, currency: 'KRW' },
+        period: 'P1Y',
+        level: 2,
+        productCode: 'standard',
+      },
+    ]
+    const html = render({ plans: grouped, config })
+    expect(html.match(/aria-label="구독하기/g)).toHaveLength(1)
+    expect(html).toMatch(/aria-pressed="true"[^>]*>월간</)
+    expect(html).toMatch(/aria-pressed="false"[^>]*>연간</)
+    expect(html).toContain('6,900원 · 1개월마다 결제')
   })
 
   it('shows the country the server decided and the rules of that country - read only, no country choice - and the refund policy link', () => {
@@ -168,7 +165,7 @@ describe('SubscribePage', () => {
     expect(korea).toContain('위약금 10%')
     expect(korea).toContain('href="/refund"')
     expect(korea).not.toContain('<select')
-    const abroad = render({ plans, config: paddleConfig, paddlePrices: {} })
+    const abroad = render({ plans, config: paddleConfig })
     expect(abroad).toContain('결제 국가: 미국')
     expect(abroad).toContain('결제는 Paddle 이 처리해요')
     expect(abroad).toContain('환불은 Paddle 이 검토해요')

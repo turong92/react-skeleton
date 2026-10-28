@@ -86,9 +86,9 @@ describe('SubscriptionPage', () => {
     expect(html).toMatch(/<a[^>]*href="\/subscribe"[^>]*>플랜 보기/)
   })
 
-  it('an active subscription: the translated plan name, the card, and a link from each recent payment to /payments/:id', () => {
+  it('an active subscription: the plan name, the card, and a link from each recent payment to /payments/:id', () => {
     const html = render({ subscription: sub(), orders: [paid] })
-    expect(html).toContain('스탠다드')
+    expect(html).toContain('Standard')
     expect(html).toContain('구독 중')
     expect(html).toContain('기간 끝에 해지')
     expect(html).toContain('href="/payments/ord_7"')

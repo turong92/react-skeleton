@@ -6,52 +6,44 @@ import {
   PricingTable,
   Testimonial,
   type BillingInterval,
-  type PricingPlan,
 } from '@skeleton/marketing'
+import { useCatalogProducts } from '@skeleton/payment'
+import { userTimeZone } from '@skeleton/time'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { catalogApi, QUIET_CATALOG } from '../catalog/api'
 import { LinkButton } from '../components/LinkButton'
-import { pricingFor } from '../landing/pricingData'
-import { languageOf, useT } from '../i18n'
+import { catalogPricing } from '../landing/catalogPricing'
+import { i18n, languageOf, useT, type MessageKey } from '../i18n'
 import styles from './LandingPage.module.css'
 
 /**
  * 로그인하지 않은 방문자의 첫 화면(`/`) — Patterns/Landing 을 옮긴 것: Hero → 기능 → 한마디 → 요금제 → FAQ → 마지막 권유.
- * 글자는 모두 `landing.*` 사전에서, 요금제 금액은 언어의 통화로(`pricingFor`). 이 샘플에는 가입 · 결제가 없어 모든 행동이 로그인으로 간다.
+ * 글자는 모두 `landing.*` 사전에서. 요금제는 앞의 무료 카드만 사전이고 나머지는 공개 카탈로그(`GET /catalog/products`)에서 온다 -
+ * 통화는 서버가 방문 나라로 정하고(`currency`), 화면 언어는 서식(로케일)만 정한다. 읽는 중 · 실패 · 팔 상품이 없으면 가격표 자리를 그리지 않는다.
+ * 이 샘플의 「시작하기」는 모두 가입으로 간다.
  */
 export function LandingPage() {
   const { t, locale } = useT()
   const navigate = useNavigate()
   const [interval, setInterval] = useState<BillingInterval>('monthly')
-  const money = pricingFor(languageOf(locale))
-
-  const plans: PricingPlan[] = [
-    {
-      id: 'free',
-      name: t('landing.plan.free.name'),
-      description: t('landing.plan.free.description'),
-      price: money.prices.free,
-      features: [t('landing.plan.free.f1'), t('landing.plan.free.f2')],
-      ctaLabel: t('landing.plan.free.cta'),
-    },
-    {
-      id: 'pro',
-      name: t('landing.plan.pro.name'),
-      description: t('landing.plan.pro.description'),
-      price: money.prices.pro,
-      features: [t('landing.plan.pro.f1'), t('landing.plan.pro.f2'), t('landing.plan.pro.f3')],
-      ctaLabel: t('landing.plan.pro.cta'),
-      highlighted: true,
-    },
-    {
-      id: 'team',
-      name: t('landing.plan.team.name'),
-      description: t('landing.plan.team.description'),
-      price: money.prices.team,
-      features: [t('landing.plan.team.f1'), t('landing.plan.team.f2')],
-      ctaLabel: t('landing.plan.team.cta'),
-    },
-  ]
+  const language = languageOf(locale)
+  const catalog = useCatalogProducts(catalogApi, 'SUBSCRIPTION', QUIET_CATALOG)
+  const pricing = catalog.data
+    ? catalogPricing(catalog.data, {
+        language,
+        free: {
+          id: 'free',
+          name: t('landing.plan.free.name'),
+          description: t('landing.plan.free.description'),
+          price: { monthly: 0, yearly: 0 },
+          features: [t('landing.plan.free.f1'), t('landing.plan.free.f2')],
+          ctaLabel: t('landing.plan.free.cta'),
+        },
+        featuresOf: featuresFor(t),
+        ctaLabel: t('landing.pricing.cta'),
+      })
+    : null
 
   return (
     <div className={styles.page}>
@@ -61,9 +53,11 @@ export function LandingPage() {
         subtitle={t('landing.subtitle')}
         primaryAction={<LinkButton to="/sign-up">{t('landing.primary')}</LinkButton>}
         secondaryAction={
-          <a className={styles.anchor} href="#pricing">
-            {t('landing.secondary')}
-          </a>
+          pricing && (
+            <a className={styles.anchor} href="#pricing">
+              {t('landing.secondary')}
+            </a>
+          )
         }
       />
       <FeatureGrid
@@ -96,29 +90,33 @@ export function LandingPage() {
           role={t('landing.quote.role')}
         />
       </section>
-      <div id="pricing" className={styles.band}>
-        <PricingTable
-          title={t('landing.pricing.title')}
-          subtitle={t('landing.pricing.subtitle')}
-          plans={plans}
-          interval={interval}
-          onIntervalChange={setInterval}
-          onSelect={() => navigate('/sign-up')}
-          currency={money.currency}
-          locale={money.locale}
-          labels={{
-            interval: t('landing.pricing.interval'),
-            monthly: t('landing.pricing.monthly'),
-            yearly: t('landing.pricing.yearly'),
-            yearlySavings: (percent) => t('landing.pricing.savings', { percent }),
-            perMonth: t('landing.pricing.perMonth'),
-            billedYearly: (total) => t('landing.pricing.billedYearly', { total }),
-            free: t('landing.pricing.free'),
-            custom: t('landing.pricing.custom'),
-            highlight: t('landing.pricing.highlight'),
-          }}
-        />
-      </div>
+      {pricing && (
+        <div id="pricing" className={styles.band}>
+          <PricingTable
+            title={t('landing.pricing.title')}
+            subtitle={t('landing.pricing.subtitle')}
+            plans={pricing.plans}
+            interval={interval}
+            onIntervalChange={setInterval}
+            onSelect={() => navigate('/sign-up')}
+            currency={pricing.currency}
+            locale={language === 'ko' ? 'ko-KR' : 'en-US'}
+            timeZone={userTimeZone()}
+            labels={{
+              interval: t('landing.pricing.interval'),
+              monthly: t('landing.pricing.monthly'),
+              yearly: t('landing.pricing.yearly'),
+              yearlySavings: (percent) => t('landing.pricing.savings', { percent }),
+              perMonth: t('landing.pricing.perMonth'),
+              billedYearly: (total) => t('landing.pricing.billedYearly', { total }),
+              free: t('landing.pricing.free'),
+              custom: t('landing.pricing.custom'),
+              highlight: t('landing.pricing.highlight'),
+              saleUntil: (date) => t('landing.pricing.saleUntil', { date }),
+            }}
+          />
+        </div>
+      )}
       <div id="faq" className={styles.band}>
         <FaqAccordion
           title={t('landing.faq.title')}
@@ -143,4 +141,12 @@ export function LandingPage() {
       </section>
     </div>
   )
+}
+
+/** 상품 코드의 기능 목록 - 사전의 `landing.pricing.features.<코드>.1, 2, …` 를 키가 끊길 때까지 읽는다(없는 코드는 빈 목록) */
+const featuresFor = (t: (key: MessageKey) => string) => (productCode: string) => {
+  const features: string[] = []
+  for (let n = 1; i18n.has(`landing.pricing.features.${productCode}.${n}`); n++)
+    features.push(t(`landing.pricing.features.${productCode}.${n}` as MessageKey))
+  return features
 }

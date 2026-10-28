@@ -47,7 +47,7 @@ describe('SubscriptionReturnPage', () => {
   it('the first payment went through: the payment result with the plan name, price and the way to 「내 구독」', () => {
     const html = render(back, { subscription: sub(), orders: [] })
     expect(html).toContain('결제됐어요')
-    expect(html).toContain('스탠다드')
+    expect(html).toContain('Standard')
     expect(html).toContain('6,900원')
     expect(html).toContain('내 구독')
   })

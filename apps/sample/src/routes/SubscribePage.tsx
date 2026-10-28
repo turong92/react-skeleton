@@ -1,18 +1,20 @@
 import {
   discountErrorMessage,
   openBillingAuth,
-  priceEveryText,
   SubscriptionPlanList,
   TestModeNotice,
+  useCatalogProducts,
   useStartSubscription,
   useSubscriptionPlans,
   usePaymentConfig,
   type SubscriptionPlan,
 } from '@skeleton/payment'
 import { CouponPicker, useCoupons, usableCoupons } from '@skeleton/rewards'
+import { userTimeZone } from '@skeleton/time'
 import { Alert, ChoiceGroup, ErrorReference, PageHeader, Spinner } from '@skeleton/ui'
 import { useEffect, useId, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { catalogApi, QUIET_CATALOG } from '../catalog/api'
 import { paymentApi } from '../cheer/api'
 import { serverClock } from '../api/serverClock'
 import { rewardsApi } from '../rewards/api'
@@ -21,11 +23,9 @@ import { LinkButton } from '../components/LinkButton'
 import { LoadError } from '../components/LoadError'
 import { i18n, languageOf, useT, type MessageKey } from '../i18n'
 import { subscriptionApi } from '../subscription/api'
-import { usePaddleAmounts } from '../payment/paddleAmounts'
 import { CountryPolicyNotice } from '../payment/CountryPolicyNotice'
 import { useServerProvider } from '../payment/useProvider'
 import { subscriptionLabelsFor } from '../subscription/labels'
-import { planNameOf } from '../subscription/planName'
 import {
   chosenSubscriptionProvider,
   startFailureOf,
@@ -50,8 +50,8 @@ const MESSAGE: Record<Notice['kind'], MessageKey> = {
 }
 
 /**
- * 플랜 카드 목록 — 서버가 준 플랜(코드 · 금액 · 주기)에서 하나를 골라 「구독하기」를 누르면 구독을 만들고 토스 카드 등록 창을 연다.
- * 창은 `/subscriptions/return` 으로 돌려보낸다. 플랜 이름은 코드로 된 이 앱의 번역이 있으면 그것을, 없으면 서버 이름을 쓴다.
+ * 플랜 카드 목록 — 서버가 준 플랜(이름 · 금액 · 주기)을 상품마다 카드 한 장으로(월 · 연은 카드 안 주기 단추) 보이고, 「구독하기」를 누르면 구독을 만들고 카드 등록 창을 연다.
+ * 창은 `/subscriptions/return` 으로 돌려보낸다. 금액은 어느 결제사든 서버 표(카탈로그)의 것이다 - 행사 중이면 정가 취소선 + 끝나는 날.
  */
 export function SubscribePage() {
   const { t, locale } = useT()
@@ -88,9 +88,14 @@ export function SubscribePage() {
   const choices = config.data?.subscriptionChoices ?? []
   const [pickedProvider, setPickedProvider] = useState<string | null>(null)
   const chosenProvider = chosenSubscriptionProvider(choices, pickedProvider, serverProvider)
-  const provider = chosenProvider ?? serverProvider
 
-  const amountOf = usePaddleAmounts(provider)
+  // 행사가가 끝나는 날은 카탈로그에 있다(플랜 코드 = 가격 코드) - 못 읽어도 화면은 그대로(날짜 줄만 없다)
+  const catalog = useCatalogProducts(catalogApi, 'SUBSCRIPTION', QUIET_CATALOG)
+  const saleEnds = new Map(
+    (catalog.data?.products ?? []).flatMap((product) =>
+      product.prices.map((price) => [price.code, price.saleEndsAt] as const),
+    ),
+  )
 
   // 카드 창에서 뒤로 가기로 돌아오면(브라우저가 이 화면을 그대로 되살린다) 「여는 중」에 갇히지 않게
   useEffect(() => {
@@ -220,21 +225,13 @@ export function SubscribePage() {
       )}
       <CountryPolicyNotice />
       <SubscriptionPlanList
-        plans={plans.data.map((plan) => ({ ...plan, name: planNameOf(t, plan) }))}
+        plans={plans.data}
         onSubscribe={(plan) => void subscribe(plan)}
         busyPlanCode={busyPlan}
         locale={language}
+        saleEndsAtOf={(plan) => saleEnds.get(plan.code)}
+        timeZone={userTimeZone()}
         labels={labels}
-        priceOf={(plan) => {
-          const slot = amountOf(plan.code)
-          if (slot.kind === 'table') return undefined
-          if (slot.kind === 'paddle')
-            // 주기도 Paddle 가격의 것이다(우리 플랜 주기가 아니다) - 1회 가격이면 금액만
-            return slot.period ? priceEveryText(slot.text, slot.period, labels) : slot.text
-          return t(
-            slot.kind === 'loading' ? 'payment.paddle.priceLoading' : 'payment.paddle.priceFailed',
-          )
-        }}
       />
     </div>
   )

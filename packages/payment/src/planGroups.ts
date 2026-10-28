@@ -35,8 +35,7 @@ export function groupPlans(plans: readonly SubscriptionPlan[]): PlanGroup[] {
 /** 취소선으로 보일 정가 - 지금 금액보다 클 때만, 아니면 `null` */
 export function regularAmountOf(plan: SubscriptionPlan): PaymentAmount | null {
   const regular = plan.regularAmount
-  if (regular == null) return null
-  const value: PaymentAmount =
-    typeof regular === 'number' ? { amount: regular, currency: plan.amount.currency } : regular
-  return value.currency === plan.amount.currency && value.amount > plan.amount.amount ? value : null
+  return regular != null && regular > plan.amount.amount
+    ? { amount: regular, currency: plan.amount.currency }
+    : null
 }

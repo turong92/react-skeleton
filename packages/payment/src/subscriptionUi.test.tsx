@@ -78,7 +78,7 @@ describe('SubscriptionPlanList', () => {
       code: 'standard-year',
       name: 'Standard',
       amount: { amount: 59000, currency: 'KRW' },
-      regularAmount: { amount: 69000, currency: 'KRW' },
+      regularAmount: 69000,
       period: 'P1Y',
       level: 2,
       productCode: 'standard',

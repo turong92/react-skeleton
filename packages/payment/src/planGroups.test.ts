@@ -37,15 +37,11 @@ describe('groupPlans', () => {
 })
 
 describe('regularAmountOf', () => {
-  it('is the regular price only when it is above the current amount, in the same currency', () => {
+  it('is the regular price only when it is above the current amount(same currency, minor units)', () => {
     const regular = { amount: 1500, currency: 'KRW' }
-    expect(regularAmountOf(plan('a', 'P1M', { regularAmount: regular }))).toEqual(regular)
     expect(regularAmountOf(plan('a', 'P1M', { regularAmount: 1500 }))).toEqual(regular)
     expect(regularAmountOf(plan('a', 'P1M', { regularAmount: 1000 }))).toBeNull()
     expect(regularAmountOf(plan('a', 'P1M', { regularAmount: null }))).toBeNull()
     expect(regularAmountOf(plan('a', 'P1M'))).toBeNull()
-    expect(
-      regularAmountOf(plan('a', 'P1M', { regularAmount: { amount: 9999, currency: 'USD' } })),
-    ).toBeNull()
   })
 })

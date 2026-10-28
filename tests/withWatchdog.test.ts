@@ -25,7 +25,7 @@ function run(flags: string[], code: string) {
     [SCRIPT, '--poll', '100', ...flags, '--', process.execPath, '-e', code],
     {
       encoding: 'utf8',
-      timeout: 30_000,
+      timeout: 50_000,
       env: { ...process.env, ATTEMPTS: attempts, DIR: dir },
     },
   )
@@ -35,6 +35,8 @@ function run(flags: string[], code: string) {
 
 const COUNT = `require('fs').appendFileSync(process.env.ATTEMPTS, 'x\\n');`
 const HANG = `setInterval(() => {}, 1000);` // 0% CPU · 출력 없음 — 교착과 같은 모양
+// 멈춤을 끊는 시험의 벽시계 제한. 자식 node 가 뜨기 전에 끊기면 시도가 안 세진다 — 부하 걸린 맥에서 node 기동이 1초를 넘긴다
+const WALL = '4'
 
 describe('with-watchdog', () => {
   it('passes through output and exit code 0', () => {
@@ -50,7 +52,7 @@ describe('with-watchdog', () => {
   })
 
   it('kills a hang on the wall-clock limit and retries until retries are used up (exit 124)', () => {
-    const r = run(['--wall', '1', '--retries', '2'], `${COUNT} ${HANG}`)
+    const r = run(['--wall', WALL, '--retries', '2'], `${COUNT} ${HANG}`)
     expect(r.status).toBe(124)
     expect(r.attempts).toBe(3)
     expect(r.stderr).toMatch(/wall-clock/)
@@ -59,7 +61,7 @@ describe('with-watchdog', () => {
   it('succeeds when a retry gets through after a hang', () => {
     const marker = join(dir, 'seen')
     const r = run(
-      ['--wall', '1', '--retries', '2'],
+      ['--wall', WALL, '--retries', '2'],
       `${COUNT} const fs = require('fs'); const m = ${JSON.stringify(marker)};
        if (!fs.existsSync(m)) { fs.writeFileSync(m, ''); ${HANG} } else { console.log('second try ok') }`,
     )
@@ -97,7 +99,7 @@ describe('with-watchdog', () => {
   it('kills the whole process tree, not just the direct child', () => {
     const pidFile = join(dir, 'grandchild.pid')
     run(
-      ['--wall', '1', '--retries', '0'],
+      ['--wall', WALL, '--retries', '0'],
       `const { spawn } = require('child_process');
        const g = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { stdio: 'ignore' });
        require('fs').writeFileSync(${JSON.stringify(pidFile)}, String(g.pid)); setInterval(() => {}, 1000)`,

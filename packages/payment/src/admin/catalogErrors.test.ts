@@ -21,16 +21,16 @@ describe('catalogProblemOf', () => {
   })
 })
 
-describe('input errors', () => {
+describe('input errors (the real backend shape)', () => {
   const invalid = new ApiRequestError(
     {
-      code: 'COMMON.PARAMETER_VALIDATION_FAILED',
+      code: 'COMMON.VALIDATION_FAILED',
       title: 't',
       status: 400,
       timestamp: 't',
       errors: [
-        { field: 'code', code: 'PATTERN', message: 'must match' },
-        { field: 'texts[ko].name', code: 'NOT_BLANK' },
+        { field: 'code', code: 'Pattern', message: 'must match' },
+        { field: 'texts.ko.name', code: 'Required' },
       ],
     },
     'tr',
@@ -41,8 +41,41 @@ describe('input errors', () => {
   it('is named, and each field finds its own message (inner fields by their root; no message → the code)', () => {
     expect(catalogProblemOf(invalid)).toBe('invalidInput')
     expect(fieldMessageOf(invalid, 'code')).toBe('must match')
-    expect(fieldMessageOf(invalid, 'texts')).toBe('NOT_BLANK')
+    expect(fieldMessageOf(invalid, 'texts')).toBe('Required')
+    expect(fieldMessageOf(invalid, 'texts', true)).toBeUndefined()
+    expect(fieldMessageOf(invalid, 'texts.ko.name')).toBe('Required')
+    expect(fieldMessageOf(invalid, 'texts.en.name')).toBeUndefined()
     expect(fieldMessageOf(invalid, 'level')).toBeUndefined()
     expect(fieldMessageOf(new Error('x'), 'code')).toBeUndefined()
+  })
+
+  it('a price rejection carries its fields too; a state rejection has none', () => {
+    const price = new ApiRequestError(
+      {
+        code: 'CATALOG.PRICE_INVALID',
+        title: 't',
+        status: 400,
+        timestamp: 't',
+        errors: [{ field: 'saleEndsAt', code: 'Invalid', message: 'must be after the start' }],
+      },
+      'tr',
+      'sp',
+      'tp',
+    )
+    expect(catalogProblemOf(price)).toBe('priceInvalid')
+    expect(fieldMessageOf(price, 'saleEndsAt')).toBe('must be after the start')
+    const state = new ApiRequestError(
+      {
+        code: 'CATALOG.PRICE_INVALID',
+        title: 't',
+        status: 400,
+        detail: 'price is stopped',
+        timestamp: 't',
+      },
+      'tr',
+      'sp',
+      'tp',
+    )
+    expect(fieldMessageOf(state, 'amount')).toBeUndefined()
   })
 })

@@ -182,4 +182,22 @@ describe('AdminPriceList', () => {
     expect(html).toContain('이미 다른 가격에 연결된 id')
     expect(html).not.toContain('이미 쓰는 코드')
   })
+
+  it('a malformed provider id (field externalId) shows the server message in the band above the table', () => {
+    const error = new ApiRequestError(
+      {
+        code: 'COMMON.VALIDATION_FAILED',
+        title: 't',
+        status: 400,
+        timestamp: 't',
+        errors: [{ field: 'externalId', code: 'Pattern', message: 'not a price id' }],
+      },
+      'tr',
+      'sp',
+      'tp',
+    )
+    const html = render([price()], { refError: error })
+    expect(html).toContain('입력을 확인해 주세요')
+    expect(html).toContain('not a price id')
+  })
 })

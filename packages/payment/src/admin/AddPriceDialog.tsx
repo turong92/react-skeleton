@@ -15,6 +15,17 @@ import { CatalogErrorNotice } from './CatalogErrorNotice'
 import { fieldMessageOf } from './catalogErrors'
 import styles from './AddPriceDialog.module.css'
 
+/** 폼 칸 → 서버 요청 본문의 칸 이름(다른 것만) */
+const SERVER_FIELD: Record<keyof AddPriceProblems, string> = {
+  period: 'period',
+  amount: 'amount',
+  currency: 'currency',
+  regularAmount: 'compareAtAmount',
+  saleStartsAt: 'saleStartsAt',
+  saleEndsAt: 'saleEndsAt',
+  code: 'code',
+}
+
 export type AddPriceDialogProps = {
   open: boolean
   /** 닫기 · × · Esc - 열림 상태는 부모가 쥔다 */
@@ -60,7 +71,7 @@ export function AddPriceDialog({
   const say = (key: keyof AddPriceProblems) => {
     const problem = problems[key]
     if (problem === 'codeInvalid') return all.admin.catalog.editor.problems.codeInvalid
-    return problem ? text.problems[problem] : fieldMessageOf(error, key)
+    return problem ? text.problems[problem] : fieldMessageOf(error, SERVER_FIELD[key])
   }
   const currency = currencyOf(form)
   const known = /^[A-Z]{3}$/.test(currency)

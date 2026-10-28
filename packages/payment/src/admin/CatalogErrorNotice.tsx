@@ -21,7 +21,7 @@ export function CatalogErrorNotice({
   // 칸 이름이 있는 입력 오류는 칸 아래에 이유가 있다. 칸 이름이 없거나(또는 칸이 없는 결제사 링크 줄이면) 서버의 한 줄 설명(`detail`)을 띠에 보인다
   const fields = error instanceof ApiRequestError ? (error.apiError.errors ?? []) : []
   const extra =
-    problem === 'invalidInput' && error instanceof ApiRequestError
+    (problem === 'invalidInput' || problem === 'priceInvalid') && error instanceof ApiRequestError
       ? fields.length > 0 && context !== 'providerLink'
         ? ''
         : (error.apiError.detail ?? fields[0]?.message ?? '')

@@ -102,7 +102,7 @@ export function AdminProductEditor(props: AdminProductEditorProps) {
               />
             )}
           </Field>
-          <Field label={text.kind}>
+          <Field label={text.kind} error={fieldMessageOf(error, 'kind')}>
             {(control) => (
               <Select
                 {...control}
@@ -167,9 +167,8 @@ export function AdminProductEditor(props: AdminProductEditorProps) {
               error={
                 problems.names?.includes(language.code)
                   ? text.problems.nameEmpty(labelOf(language.code))
-                  : language === languages[0]
-                    ? fieldMessageOf(error, 'texts')
-                    : undefined
+                  : (fieldMessageOf(error, `texts.${language.code}.name`) ??
+                    (language === languages[0] ? fieldMessageOf(error, 'texts', true) : undefined))
               }
               required
             >
@@ -184,7 +183,10 @@ export function AdminProductEditor(props: AdminProductEditorProps) {
                 />
               )}
             </Field>
-            <Field label={text.description(language.label)}>
+            <Field
+              label={text.description(language.label)}
+              error={fieldMessageOf(error, `texts.${language.code}.description`)}
+            >
               {(control) => (
                 <Textarea
                   {...control}

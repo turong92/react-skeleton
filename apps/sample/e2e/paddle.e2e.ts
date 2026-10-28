@@ -83,9 +83,9 @@ describe('a Paddle subscription from the first payment to the end of the period'
     await ensureSignedIn(page, baseUrl)
     await page.goto(`${baseUrl}/subscribe`)
     await pwExpect(page.getByText(/결제 국가: 미국/)).toBeVisible()
-    // 플랜 목록의 금액은 Paddle 가격(달러)이다 - 우리 플랜 표의 원화가 아니다
-    await pwExpect(page.getByText('$3.99 · 1개월마다 결제')).toBeVisible()
-    await pwExpect(page.getByText(/원 · 1개월마다 결제/)).toHaveCount(0)
+    // 플랜 목록의 금액은 서버 표(카탈로그)의 달러 금액이다(견본 시드 basic = 300센트) - 원화가 아니다. 주기는 e2e 설정의 짧은 주기라 글자는 가리지 않는다
+    await pwExpect(page.getByText(/\$3\.00 · .*마다 결제/)).toBeVisible()
+    await pwExpect(page.getByText(/원 · .*마다 결제/)).toHaveCount(0)
     await page.getByRole('button', { name: /구독하기.*베이직/ }).click()
     await page.waitForURL(/\/subscriptions\/return\?.*provider=paddle/)
     await pwExpect(resultTitle(page, labels.result.paid.title)).toBeVisible()
@@ -97,7 +97,7 @@ describe('a Paddle subscription from the first payment to the end of the period'
       providerManaged: true,
     })
     // 금액 · 통화는 Paddle 이 말한 그대로(미국 달러) - 우리 플랜의 원화가 아니다
-    expect(started.subscription?.amount).toEqual({ amount: 399, currency: 'USD' })
+    expect(started.subscription?.amount).toEqual({ amount: 300, currency: 'USD' })
     expect(started.orders.map((o) => o.kind)).toEqual(['SUBSCRIPTION_INITIAL'])
     const providerSub = (await paddle.state()).subscriptions[0]!
     // 거래는 백엔드가 만들었다: 서버가 정한 가격 · 우리 구독 줄 id 가 들어 있다(브라우저가 넘긴 값이 아니다)
@@ -216,7 +216,7 @@ describe('refunding a Paddle subscription charge', () => {
       admin,
       'POST',
       `/admin/payments/orders/${initial.id}/refunds`,
-      { reasonCode: 'OPERATOR', amount: 399, endSubscription: false },
+      { reasonCode: 'OPERATOR', amount: 300, endSubscription: false },
       { 'Idempotency-Key': `e2e-paddle-keep-${Date.now()}` },
     )
     expect(kept.status).toBe(202)
@@ -266,7 +266,7 @@ describe('refunding a Paddle subscription charge', () => {
       admin,
       'POST',
       `/admin/payments/orders/${renewal.id}/refunds`,
-      { reasonCode: 'OPERATOR', amount: 399 },
+      { reasonCode: 'OPERATOR', amount: 300 },
       { 'Idempotency-Key': `e2e-paddle-end-${Date.now()}` },
     )
     expect(ended.status).toBe(202)

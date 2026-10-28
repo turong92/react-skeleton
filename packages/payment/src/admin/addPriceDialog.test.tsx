@@ -61,4 +61,42 @@ describe('AddPriceDialog', () => {
     expect(html).toContain('aria-busy="true"')
     expect(html.match(/disabled=""/g)?.length).toBeGreaterThanOrEqual(4)
   })
+
+  it('a price rejection with field names puts each reason under its own field (compareAtAmount under the regular price)', () => {
+    const error = new ApiRequestError(
+      {
+        code: 'CATALOG.PRICE_INVALID',
+        title: 't',
+        status: 400,
+        timestamp: 't',
+        errors: [
+          { field: 'amount', code: 'Min', message: 'amount too small' },
+          { field: 'compareAtAmount', code: 'Min', message: 'regular too small' },
+        ],
+      },
+      'tr',
+      'sp',
+      'tp',
+    )
+    const html = render({ error })
+    expect(html).toContain('amount too small')
+    // 정가 칸은 「행사가로 팔기」를 켜야 보인다 - 꺼져 있으면 칸이 없다
+    expect(html).not.toContain('regular too small')
+  })
+
+  it('a rejection with no field (a state refusal) shows the server detail in the band', () => {
+    const error = new ApiRequestError(
+      {
+        code: 'CATALOG.PRICE_INVALID',
+        title: 't',
+        status: 400,
+        detail: 'the price is stopped',
+        timestamp: 't',
+      },
+      'tr',
+      'sp',
+      'tp',
+    )
+    expect(render({ error })).toContain('the price is stopped')
+  })
 })

@@ -24,14 +24,25 @@ export function catalogProblemOf(error: unknown): CatalogProblem | null {
 }
 
 /**
- * 입력 오류(400 `COMMON.PARAMETER_VALIDATION_FAILED`)가 실어 온 칸별 메시지 - 칸 이름(`code` · `level` …)으로 찾는다.
- * `texts[ko].name` 처럼 안쪽 칸은 `texts` 로 찾는다. 서버가 메시지를 안 주면 칸의 오류 코드를 그대로 쓴다
+ * 입력 오류가 실어 온 칸별 메시지 - 상품은 `COMMON.VALIDATION_FAILED`, 가격은 `CATALOG.PRICE_INVALID`(둘 다 `errors[{ field, code, message }]`).
+ * 칸 이름은 요청 본문의 이름 그대로다: 상품 `code` · `kind` · `level` · `texts` · `texts.<언어>.name` · `texts.<언어>.description`,
+ * 가격 `code` · `period` · `amount` · `currency` · `compareAtAmount` · `saleEndsAt`, 결제사 링크 `externalId`.
+ * 안쪽 칸(`texts.ko.name`)은 정확한 이름으로도, 뿌리(`texts`)로도 찾는다. 서버가 메시지를 안 주면 칸의 오류 코드를 그대로 쓴다
  */
-export function fieldMessageOf(error: unknown, field: string): string | undefined {
-  if (!(error instanceof ApiRequestError) || catalogProblemOf(error) !== 'invalidInput')
+export function fieldMessageOf(
+  error: unknown,
+  field: string,
+  /** true 면 그 이름 그대로인 칸만(안쪽 칸으로 내려가지 않는다) */
+  exact = false,
+): string | undefined {
+  const problem = catalogProblemOf(error)
+  if (
+    !(error instanceof ApiRequestError) ||
+    (problem !== 'invalidInput' && problem !== 'priceInvalid')
+  )
     return undefined
   const hit = error.apiError.errors?.find(
-    (e) => e.field === field || e.field.startsWith(`${field}.`) || e.field.startsWith(`${field}[`),
+    (e) => e.field === field || (!exact && e.field.startsWith(`${field}.`)),
   )
   return hit ? (hit.message ?? hit.code) : undefined
 }

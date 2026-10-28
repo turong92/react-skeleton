@@ -31,11 +31,11 @@ export const FAKE_PADDLE = {
   apiKey: 'pdl_sdbx_apikey_fake_e2e',
   clientToken: 'test_fake_e2e_client_token',
   webhookSecret: 'pdl_ntfset_fake_e2e_secret',
-  /** 가짜 Paddle 의 가격 — 이 앱의 `skeleton.payment-paddle.prices` 가 이 id 를 가리킨다(`globalSetup.ts`). 금액은 구매자의 통화로(여러 통화). */
+  /** 가짜 Paddle 의 가격 — 이 앱의 `skeleton.payment-paddle.prices` 가 이 id 를 가리킨다(`globalSetup.ts`). 금액은 견본 시드의 USD 가격(센트)과 같다 - 백엔드가 DB 금액을 그대로 청구하고 Paddle 이 확정한 금액과 같아야 경고가 없다. */
   prices: {
-    basic: { id: 'pri_e2e_basic', recurring: true, amount: 399 },
-    standard: { id: 'pri_e2e_standard', recurring: true, amount: 699 },
-    pro: { id: 'pri_e2e_pro', recurring: true, amount: 999 },
+    basic: { id: 'pri_e2e_basic', recurring: true, amount: 300 },
+    standard: { id: 'pri_e2e_standard', recurring: true, amount: 500 },
+    pro: { id: 'pri_e2e_pro', recurring: true, amount: 800 },
     cheer1000: { id: 'pri_e2e_cheer_1000', recurring: false, amount: 99 },
   },
 }

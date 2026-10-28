@@ -92,11 +92,14 @@ describe('AdminProductEditor', () => {
   it('a validation rejection shows the sentence and the server message under the wrong field', () => {
     const error = new ApiRequestError(
       {
-        code: 'COMMON.PARAMETER_VALIDATION_FAILED',
+        code: 'COMMON.VALIDATION_FAILED',
         title: 't',
         status: 400,
         timestamp: 't',
-        errors: [{ field: 'code', code: 'PATTERN', message: 'bad code shape' }],
+        errors: [
+          { field: 'code', code: 'Pattern', message: 'bad code shape' },
+          { field: 'texts.en.name', code: 'Size', message: 'name too long' },
+        ],
       },
       'tr',
       'sp',
@@ -105,5 +108,7 @@ describe('AdminProductEditor', () => {
     const html = create({ error })
     expect(html).toContain('입력을 확인해 주세요')
     expect(html).toContain('bad code shape')
+    // 언어별 이름 칸 아래(영어 칸)에 붙는다
+    expect(html).toContain('name too long')
   })
 })

@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — Dialog 의 닫기 알림 (2026-10-28)
+
+- `@skeleton/ui` `Dialog`: 부모가 `open={false}` 로 닫을 때 정리용 `onClose` 는 **그 자리에서 정확히 한 번** 불린다(닫기 버튼으로 닫을 때도 한 번 - 버튼이 알렸으면 뒤따르는 닫기는 건너뛴다). 예전에는 브라우저의 늦은 `close` 이벤트가 불렀는데, 그 사이 부모가 다시 열려고 `open` 을 켰다면 그 이벤트의 `onClose()` 가 새 열기를 되돌려 창이 다시 열리지 않는 드문 경합이 있었다(환불 창이 닫힌 사이 승인이 오류로 끝나 다시 열리는 스토리가 가끔 실패). 호출 횟수는 그대로 한 번이고 시점만 이벤트가 아니라 닫는 순간이다. 이 늦은 이벤트에 기대던 앱 코드는 없다(`onClose` 안에서 `open` 을 다시 켜는 코드가 있다면 닫는 순간 불리는 것에 주의).
+- `@skeleton/payment` 스토리: 모름이 된 환불의 유예(실제 100ms · 400ms 창)를 보는 두 스토리는 멈춘 시계 위에서 돈다 - 부하가 큰 기계에서 창을 놓쳐 가끔 실패하던 것.
+
 ### Changed — 검사를 푸시용 빠른 것과 하루 한 번 전체로 나눔 (2026-10-26)
 
 - CI: 같은 ref 의 앞선 실행은 취소(`concurrency`). `sample-e2e` 는 핵심 5개 파일(journey · board · account · payment · authzRoles)만 돈다 — `pnpm e2e:sample e2e/<파일>` 처럼 파일 경로를 인자로 주면 그 파일만 돈다. 새 `nightly.yml`(매일 한국 새벽 + 수동)이 e2e 18개 전부(+ 재동의 필터를 켠 `legal.e2e.ts` 한 번 더)와 `test-new-project.sh --full` 을 돈다. 찍은 프로젝트에는 따라가지 않는다.

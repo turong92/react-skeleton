@@ -318,7 +318,7 @@ describe('ChangePlanDialog', () => {
       '추가 결제 없이 바로 바뀌어요',
     )
     expect(dialog({ preview: { ...preview, restartsPeriod: true } })).toContain(
-      '오늘부터 새 결제 주기가 시작되고, 남은 이용분은 빼고 결제돼요',
+      '전액을 결제하고 오늘부터 새 기간이 시작돼요',
     )
   })
 
@@ -399,6 +399,64 @@ describe('ChangePlanDialog - scheduled changes', () => {
     expect(html).toContain('지금 결제할 금액')
     expect(html).toContain('이 플랜으로 바꾸기')
     expect(html).not.toContain('지금 결제되는 금액은 없어요')
+  })
+})
+
+describe('ChangePlanDialog - the new period and the schedule already there', () => {
+  const base = {
+    planCode: 'pro',
+    planName: 'Pro',
+    charge: { amount: 90000, currency: 'KRW' },
+    amount: { amount: 99000, currency: 'KRW' },
+    period: 'P1Y',
+    restartsPeriod: true,
+  }
+  const dialog = (preview: object, props: object = {}) =>
+    renderToStaticMarkup(
+      <ChangePlanDialog
+        open
+        onClose={noop}
+        onConfirm={noop}
+        plans={[plans[1]!]}
+        planCode="pro"
+        onPlanChange={noop}
+        preview={{ ...base, ...preview }}
+        {...common}
+        {...props}
+      />,
+    )
+  const current = { level: 2, period: 'P1M', currency: 'KRW' }
+
+  it('a credit says the unused part is deducted, with the amount; no credit with a restart says the full price is paid', () => {
+    const credited = dialog({ credit: { amount: 9000, currency: 'KRW' } }, { current })
+    expect(credited).toContain('남은 이용분 9,000원을 빼고 결제돼요')
+    const full = dialog({ credit: null }, { current })
+    expect(full).toContain('전액을 결제하고 오늘부터 새 기간이 시작돼요')
+    expect(full).not.toContain('남은 이용분')
+  })
+
+  it('a same-period tier raise that restarts the period (full-restart setting) is the full price, never 「남은 이용분은 빼고」', () => {
+    const html = dialog({ period: 'P1M', credit: null }, { current })
+    expect(html).toContain('전액을 결제하고 오늘부터 새 기간이 시작돼요')
+  })
+
+  it('before the server sends a credit, a changed period is taken as credited and an unchanged one as full', () => {
+    expect(dialog({}, { current })).toContain('남은 이용분은 빼고 결제돼요')
+    expect(dialog({ period: 'P1M' }, { current })).toContain('전액을 결제하고')
+  })
+
+  it('an existing schedule is said to go away on a right-away change and to be replaced by a new schedule', () => {
+    const scheduledChange = { planName: 'Basic', effectiveAt: '2026-11-01T03:00:00Z' }
+    expect(dialog({}, { scheduledChange })).toContain(
+      '이미 예약된 변경(2026. 11. 1.부터 Basic)은 이 변경으로 사라져요',
+    )
+    expect(
+      dialog(
+        { timing: 'NEXT_RENEWAL', effectiveAt: '2026-12-01T00:00:00Z', restartsPeriod: false },
+        { scheduledChange },
+      ),
+    ).toContain('이미 예약된 변경(2026. 11. 1.부터 Basic)은 이 예약으로 바뀌어요')
+    expect(dialog({})).not.toContain('이미 예약된 변경')
   })
 })
 

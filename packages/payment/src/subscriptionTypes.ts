@@ -193,6 +193,8 @@ export type PlanChangePreview = {
   restartsPeriod: boolean
   timing?: PlanChangeTiming
   effectiveAt?: string
+  /** 새 주기로 바꿀 때 지금 주기의 남은 몫으로 깎아 주는 금액(최소 단위) - 깎아 주지 않으면 `null`. 구버전 서버는 칸이 없다 */
+  credit?: PaymentAmount | null
 }
 
 /** `expectedCharge` 는 미리보기로 본 `charge.amount` - 서버가 다시 계산한 값이 더 크면 409 `PLAN_CHANGE_CHARGE_CHANGED` */

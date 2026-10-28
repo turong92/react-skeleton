@@ -427,8 +427,14 @@ export type SubscriptionLabels = {
     noCharge: string
     /** 새 플랜의 다음 결제 칸의 이름 - 값은 「6,900원 · 1개월마다 결제」 */
     nextPrice: string
-    /** 오늘부터 새 기간이 시작되고 남은 이용분은 빼고 결제된다 */
+    /** 전액을 결제하고 오늘부터 새 기간이 시작된다(남은 이용분을 깎아 주지 않는 변경) */
     restart: string
+    /** 오늘부터 새 결제 주기가 시작되고 지금 주기의 남은 이용분을 빼고 결제된다 - 인자는 서식을 입힌 공제액(모르면 `null`) */
+    restartCredit: (credit: string | null) => string
+    /** 이미 예약된 변경이 있는데 바로 바꾸면 그 예약이 사라진다 - 인자는 예약된 플랜 이름과 서식을 입힌 날짜 */
+    clearsSchedule: (planName: string, when: string) => string
+    /** 이미 예약된 변경이 있는데 다른 예약을 하면 덮어쓴다 */
+    replacesSchedule: (planName: string, when: string) => string
     /** 선택지 묶음의 이름 - 바로 바뀌는 플랜 / 다음 결제일부터 바뀌는 플랜 */
     groups: { now: string; next: string }
     /** 예약 미리보기의 「바뀌는 날」 칸의 이름 */

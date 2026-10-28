@@ -297,7 +297,15 @@ export const koPaymentLabels: PaymentLabels = {
       chargeNow: '지금 결제할 금액',
       noCharge: '추가 결제 없이 바로 바뀌어요',
       nextPrice: '다음 결제부터',
-      restart: '오늘부터 새 결제 주기가 시작되고, 남은 이용분은 빼고 결제돼요',
+      restart: '전액을 결제하고 오늘부터 새 기간이 시작돼요',
+      restartCredit: (credit) =>
+        credit
+          ? `오늘부터 새 결제 주기가 시작되고, 남은 이용분 ${credit}을 빼고 결제돼요`
+          : '오늘부터 새 결제 주기가 시작되고, 남은 이용분은 빼고 결제돼요',
+      clearsSchedule: (planName, when) =>
+        `이미 예약된 변경(${when}부터 ${planName})은 이 변경으로 사라져요`,
+      replacesSchedule: (planName, when) =>
+        `이미 예약된 변경(${when}부터 ${planName})은 이 예약으로 바뀌어요`,
       groups: { now: '바로 바꿔요', next: '다음 결제일부터 바꿔요' },
       effectiveOn: '바뀌는 날',
       scheduledNote:

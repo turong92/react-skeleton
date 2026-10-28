@@ -156,6 +156,7 @@ export function SubscriptionPage() {
         }
         plans={candidates}
         {...(tier ? { current: tier } : {})}
+        scheduledChange={subscription.scheduledChange}
         planCode={changeTo ?? ''}
         onPlanChange={(code) => {
           change.reset()

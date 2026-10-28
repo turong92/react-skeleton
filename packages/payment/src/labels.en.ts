@@ -300,7 +300,15 @@ export const defaultPaymentLabels: PaymentLabels = {
       chargeNow: 'Charged now',
       noCharge: 'No extra charge - it changes right away',
       nextPrice: 'From the next payment',
-      restart: 'A new billing period starts today, and the unused part of this one is deducted',
+      restart: 'You pay in full and a new period starts today',
+      restartCredit: (credit) =>
+        credit
+          ? `A new billing period starts today, and the unused part of this one (${credit}) is deducted`
+          : 'A new billing period starts today, and the unused part of this one is deducted',
+      clearsSchedule: (planName, when) =>
+        `The change already scheduled (${planName} from ${when}) goes away with this one`,
+      replacesSchedule: (planName, when) =>
+        `The change already scheduled (${planName} from ${when}) is replaced by this one`,
       groups: { now: 'Changes right away', next: 'Changes from the next payment' },
       effectiveOn: 'Changes on',
       scheduledNote:

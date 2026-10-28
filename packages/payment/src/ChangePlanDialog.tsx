@@ -6,7 +6,12 @@ import { formatInstant } from '@skeleton/time'
 import { formatMoney, priceEveryDisplay } from './format'
 import { resolvePaymentLabels, type PaymentLabelsInput } from './labels'
 import { planChangeTiming, type CurrentTier } from './planChange'
-import type { ChangePlanInput, PlanChangePreview, SubscriptionPlan } from './subscriptionTypes'
+import type {
+  ChangePlanInput,
+  PlanChangePreview,
+  ScheduledChange,
+  SubscriptionPlan,
+} from './subscriptionTypes'
 import styles from './ChangePlanDialog.module.css'
 
 export type ChangePlanDialogProps = {
@@ -22,6 +27,8 @@ export type ChangePlanDialogProps = {
    * 묶음은 짐작이고, 확인 창이 말하는 적용 시점은 서버 미리보기의 `timing` 이다
    */
   current?: CurrentTier
+  /** 이미 예약된 변경이 있으면 준다 - 다른 변경을 고르면 그 예약이 사라지거나 덮인다고 한 줄 말한다 */
+  scheduledChange?: Pick<ScheduledChange, 'planName' | 'effectiveAt'> | null
   /** 고른 플랜 코드 - 부모가 쥐고 이 코드로 미리보기를 묻는다 */
   planCode: string
   onPlanChange: (planCode: string) => void
@@ -34,6 +41,7 @@ export type ChangePlanDialogProps = {
   /** 바꾸기가 실패했을 때의 오류 - 알려진 오류는 이유를, 그 밖은 일반 문구와 참조 번호를 보인다 */
   error?: unknown
   locale?: string
+  formatTime?: (iso: string) => string
   labels?: PaymentLabelsInput
 }
 
@@ -48,6 +56,7 @@ export function ChangePlanDialog({
   onConfirm,
   plans,
   current,
+  scheduledChange,
   planCode,
   onPlanChange,
   preview,
@@ -56,6 +65,7 @@ export function ChangePlanDialog({
   busy,
   error,
   locale,
+  formatTime = (iso) => formatInstant(iso, { locale }),
   labels: input,
 }: ChangePlanDialogProps) {
   const all = resolvePaymentLabels(input)
@@ -73,6 +83,12 @@ export function ChangePlanDialog({
   const money = (amount: { amount: number; currency: string }) =>
     formatMoney(amount, { locale, currencySuffix: all.currencySuffix })
   const scheduled = ready && preview.timing === 'NEXT_RENEWAL'
+  // 새 주기로 옮기면서 남은 몫을 깎아 주는 변경인가 - 서버가 `credit` 을 주면 그것으로, 아직 안 주는 서버는 주기가 달라졌는지로 짐작한다
+  const crediting =
+    ready &&
+    (preview.credit !== undefined
+      ? preview.credit !== null && preview.credit.amount > 0
+      : preview.restartsPeriod && current !== undefined && preview.period !== current.period)
   const option = (plan: SubscriptionPlan) => (
     <option key={plan.code} value={plan.code}>
       {`${plan.name} - ${priceEveryDisplay(plan.amount, plan.period, all, locale)}`}
@@ -128,9 +144,7 @@ export function ChangePlanDialog({
                 preview.effectiveAt && (
                   <div className={styles.fact}>
                     <dt>{labels.effectiveOn}</dt>
-                    <dd className={styles.charge}>
-                      {formatInstant(preview.effectiveAt, { locale })}
-                    </dd>
+                    <dd className={styles.charge}>{formatTime(preview.effectiveAt)}</dd>
                   </div>
                 )
               ) : (
@@ -154,7 +168,19 @@ export function ChangePlanDialog({
             <p className={styles.note}>{labels.noCharge}</p>
           )}
           {ready && !scheduled && preview.restartsPeriod && (
-            <p className={styles.note}>{labels.restart}</p>
+            <p className={styles.note}>
+              {crediting
+                ? labels.restartCredit(preview.credit?.amount ? money(preview.credit) : null)
+                : labels.restart}
+            </p>
+          )}
+          {ready && scheduledChange && (
+            <p className={styles.note}>
+              {(scheduled ? labels.replacesSchedule : labels.clearsSchedule)(
+                scheduledChange.planName,
+                formatTime(scheduledChange.effectiveAt),
+              )}
+            </p>
           )}
           {error !== undefined && error !== null && (
             <>

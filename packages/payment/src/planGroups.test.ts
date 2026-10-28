@@ -45,6 +45,21 @@ describe('groupPlans', () => {
   })
 })
 
+describe('periodMinutes', () => {
+  it('measures a month as the days of that month on a fixed base, so a month is longer than four weeks and than thirty days', () => {
+    expect(periodMinutes('P1M')).toBeGreaterThan(periodMinutes('P4W'))
+    expect(periodMinutes('P1M')).toBeGreaterThan(periodMinutes('P30D'))
+    expect(periodMinutes('P1Y')).toBe(365 * 24 * 60)
+    expect(periodMinutes('P1Y')).toBeGreaterThan(periodMinutes('P12W'))
+  })
+
+  it('unreadable periods are infinite: empty, garbage, absurdly large numbers', () => {
+    for (const bad of ['', 'monthly', 'P1MX', 'P99999999999999999999Y'])
+      expect(periodMinutes(bad)).toBe(Number.POSITIVE_INFINITY)
+    expect(periodMinutes(undefined as unknown as string)).toBe(Number.POSITIVE_INFINITY)
+  })
+})
+
 describe('regularAmountOf', () => {
   it('is the regular price only when it is above the current amount(same currency, minor units)', () => {
     const regular = { amount: 1500, currency: 'KRW' }

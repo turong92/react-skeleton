@@ -1,4 +1,4 @@
-import type { ApiClient } from '@skeleton/api-client'
+import type { ApiClient, ApiCursorResponse } from '@skeleton/api-client'
 import type { PointEntry } from '../types'
 import type {
   AdminCampaign,
@@ -10,7 +10,10 @@ import type {
   CouponDefinition,
   CouponDefinitionInput,
   CouponDefinitionStatus,
+  CouponStats,
   IssueResult,
+  IssuedCoupon,
+  IssuedCouponQuery,
   PointAdjustment,
   RewardGrant,
   RewardGrantStatus,
@@ -29,6 +32,13 @@ export type RewardsAdminApi = {
   createCouponDefinition(input: CouponDefinitionInput): Promise<CouponDefinition>
   /** `PATCH /admin/coupon-definitions/{id}/status` */
   setCouponDefinitionStatus(id: string, status: CouponDefinitionStatus): Promise<CouponDefinition>
+  /** `GET /admin/coupon-definitions/{id}/stats` - 현황 */
+  couponStats(id: string): Promise<CouponStats>
+  /** `GET /admin/coupon-definitions/{id}/coupons?status&cursor&size` - 이 정의로 발급된 쿠폰(커서) */
+  listDefinitionCoupons(
+    id: string,
+    query?: IssuedCouponQuery,
+  ): Promise<ApiCursorResponse<IssuedCoupon>>
   /** `POST /admin/coupon-definitions/{id}/issue {accountIds}` */
   issueCoupons(id: string, accountIds: string[]): Promise<IssueResult>
   /** `POST /admin/coupon-definitions/{id}/codes` - 공용 코드 */
@@ -51,7 +61,7 @@ export type RewardsAdminApi = {
 
 /** 운영 화면이 부르는 호출 모음. 각 모듈이 `skeleton.<module>.admin.enabled=true` 일 때만 열린다(꺼져 있으면 404) */
 export function createRewardsAdminApi(
-  client: Pick<ApiClient, 'list' | 'value'>,
+  client: Pick<ApiClient, 'list' | 'value' | 'cursor'>,
   { basePath = '/admin' }: { basePath?: string } = {},
 ): RewardsAdminApi {
   const base = basePath.replace(/\/+$/, '')
@@ -74,6 +84,15 @@ export function createRewardsAdminApi(
       client.value<CouponDefinition>(`${base}/coupon-definitions/${enc(id)}/status`, {
         method: 'PATCH',
         json: { status },
+      }),
+    couponStats: (id) => client.value<CouponStats>(`${base}/coupon-definitions/${enc(id)}/stats`),
+    listDefinitionCoupons: (id, { status, cursor, size } = {}) =>
+      client.cursor<IssuedCoupon>(`${base}/coupon-definitions/${enc(id)}/coupons`, {
+        params: {
+          ...(status !== undefined ? { status } : {}),
+          ...(cursor !== undefined ? { cursor } : {}),
+          ...(size !== undefined ? { size } : {}),
+        },
       }),
     issueCoupons: (id, accountIds) =>
       post<IssueResult>(`${base}/coupon-definitions/${enc(id)}/issue`, { accountIds }),

@@ -1,6 +1,13 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
 import { rewardsRoot } from '../queryKeys'
 import type { RewardsAdminApi } from './adminApi'
+import type { CouponStatus } from '../types'
 import type {
   CampaignInput,
   CampaignUpdate,
@@ -14,6 +21,9 @@ export const adminKeys = {
   all: [...rewardsRoot, 'admin'] as const,
   campaigns: () => [...adminKeys.all, 'campaigns'] as const,
   definitions: () => [...adminKeys.all, 'coupon-definitions'] as const,
+  stats: (id: string) => [...adminKeys.all, 'coupon-stats', id] as const,
+  issued: (id: string, status: CouponStatus | '') =>
+    [...adminKeys.all, 'issued-coupons', id, status] as const,
   accountCoupons: (accountId: string) => [...adminKeys.all, 'coupons', accountId] as const,
   points: (accountId: string) => [...adminKeys.all, 'points', accountId] as const,
   grants: (status: RewardGrantStatus | '') => [...adminKeys.all, 'grants', status] as const,
@@ -150,4 +160,32 @@ export function useRewardGrantMutations(
     retry: useMutation({ mutationFn: (id: string) => api.retryRewardGrant(id), onSuccess: done }),
     cancel: useMutation({ mutationFn: (id: string) => api.cancelRewardGrant(id), onSuccess: done }),
   }
+}
+
+/** 쿠폰 정의 하나의 현황 - 회수 · 발급이 끝나면 다시 읽는다(`rewardsRoot` 무효화) */
+export const useCouponStats = (api: Pick<RewardsAdminApi, 'couponStats'>, id: string) =>
+  useQuery({ queryKey: adminKeys.stats(id), queryFn: () => api.couponStats(id), ...LIST_OPTIONS })
+
+/** 정의 하나에서 발급된 쿠폰 - 커서로 이어 받는다. `status` 가 `''` 면 모두 */
+export function useDefinitionCoupons(
+  api: Pick<RewardsAdminApi, 'listDefinitionCoupons'>,
+  id: string,
+  status: CouponStatus | '',
+  size = 20,
+) {
+  return useInfiniteQuery({
+    queryKey: adminKeys.issued(id, status),
+    queryFn: ({ pageParam }) =>
+      api.listDefinitionCoupons(id, {
+        size,
+        ...(status !== '' ? { status } : {}),
+        ...(pageParam !== undefined ? { cursor: pageParam } : {}),
+      }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last) =>
+      last.cursor.hasNext ? (last.cursor.nextCursor ?? undefined) : undefined,
+    // 상태를 바꿔도 새로 올 때까지 앞 목록을 보여 준다(표가 깜박이지 않게)
+    placeholderData: keepPreviousData,
+    ...LIST_OPTIONS,
+  })
 }

@@ -70,3 +70,16 @@ export const RedeemWrongCode: Story = {
     await expect(await canvas.findByText('이미 사용한 코드예요.')).toBeVisible()
   },
 }
+
+/** 사용 시작 전 쿠폰은 쿠폰함에 있지만 「12월 24일부터 쓸 수 있어요」 - 결제 화면의 고르기에는 서버가 빼 둔다 */
+export const NotUsableYet: Story = {
+  render: (args) => <CouponWallet {...args} api={createFakeRewards({ notYetUsable: true }).api} />,
+  play: async ({ canvas }) => {
+    const card = (await canvas.findByText('겨울 쿠폰')).closest('article')!
+    await expect(card).toHaveTextContent('12월 24일부터 쓸 수 있어요')
+    await expect(card).toHaveAttribute('data-not-yet', 'true')
+    await expect(canvas.getByText('가입 환영 쿠폰').closest('article')).not.toHaveTextContent(
+      '부터 쓸 수 있어요',
+    )
+  },
+}

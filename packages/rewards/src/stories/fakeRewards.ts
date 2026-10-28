@@ -79,6 +79,8 @@ export type FakeRewardsOptions = {
   ended?: boolean
   emptyCoupons?: boolean
   emptyPoints?: boolean
+  /** 사용 시작 전인 쿠폰 한 장을 더한다 */
+  notYetUsable?: boolean
   /** 포인트 내역 쪽 크기(기본 4) — 전체 7건 */
   pageSize?: number
 }
@@ -88,10 +90,18 @@ export function createFakeRewards({
   ended = false,
   emptyCoupons = false,
   emptyPoints = false,
+  notYetUsable = false,
   pageSize = 4,
 }: FakeRewardsOptions = {}) {
   let attendance = attendanceCampaign({ checkedToday })
-  let available = emptyCoupons ? [] : [...sampleCoupons]
+  let available = emptyCoupons
+    ? []
+    : [
+        ...sampleCoupons,
+        ...(notYetUsable
+          ? [coupon({ id: 'c9', name: '겨울 쿠폰', usableFrom: '2099-12-24T00:00:00Z' })]
+          : []),
+      ]
   const claims: string[] = []
   const entries = emptyPoints ? [] : history(7)
 

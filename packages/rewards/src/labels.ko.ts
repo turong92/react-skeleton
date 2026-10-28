@@ -34,6 +34,7 @@ export const koRewardsLabels: RewardsLabels = {
     emptyAvailable: '쓸 수 있는 쿠폰이 없어요.',
     emptyPast: '사용했거나 만료된 쿠폰이 없어요.',
     expiresAt: (date) => `${date}까지`,
+    usableFrom: (date) => `${date}부터 쓸 수 있어요`,
     noExpiry: '기한 없음',
     minAmount: (money) => `${money} 이상 결제할 때`,
     status: {
@@ -52,6 +53,7 @@ export const koRewardsLabels: RewardsLabels = {
         invalid: '맞지 않는 코드예요.',
         used: '이미 사용한 코드예요.',
         exhausted: '모두 소진된 코드예요.',
+        closed: '지금은 등록할 수 없는 코드예요.',
         other: '쿠폰을 담지 못했어요. 다시 시도해 주세요.',
       },
     },

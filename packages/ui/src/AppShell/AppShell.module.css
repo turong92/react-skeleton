@@ -30,8 +30,9 @@
 
 .nav {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-xs);
+  gap: 0 var(--space-xs);
   flex: 1;
   min-width: 0;
 }
@@ -117,6 +118,7 @@
   .nav {
     order: 3;
     flex: 1 0 100%;
+    flex-wrap: nowrap;
     overflow-x: auto;
     padding-bottom: var(--space-xs);
   }

@@ -34,6 +34,7 @@ export const defaultRewardsLabels: RewardsLabels = {
     emptyAvailable: 'You have no coupons to use.',
     emptyPast: 'No used or expired coupons.',
     expiresAt: (date) => `Valid until ${date}`,
+    usableFrom: (date) => `Usable from ${date}`,
     noExpiry: 'No expiry',
     minAmount: (money) => `For payments of ${money} or more`,
     status: {
@@ -52,6 +53,7 @@ export const defaultRewardsLabels: RewardsLabels = {
         invalid: 'This code is not valid.',
         used: 'You have already used this code.',
         exhausted: 'This code has run out.',
+        closed: 'This code cannot be added right now.',
         other: 'Could not add the coupon. Try again.',
       },
     },

@@ -8,7 +8,9 @@ import { AppFrame } from '../layouts/AppFrame'
 import type { MessageKey } from '../i18n'
 import type { SeoHandle } from '../seo/routeSeo'
 import { AdminAccountsPage } from './AdminAccountsPage'
+import { AdminAccountPage } from './AdminAccountPage'
 import { AdminCampaignsPage } from './AdminCampaignsPage'
+import { AdminCouponDefinitionPage } from './AdminCouponDefinitionPage'
 import { AdminCouponDefinitionsPage } from './AdminCouponDefinitionsPage'
 import { AdminDashboardPage } from './AdminDashboardPage'
 import { AdminPointsPage } from './AdminPointsPage'
@@ -165,6 +167,11 @@ export const routes: RouteObject[] = [
                 element: <AdminAccountsPage />,
                 handle: privateSeo('nav.account'),
               },
+              {
+                path: '/admin/accounts/:id',
+                element: <AdminAccountPage />,
+                handle: privateSeo('nav.account'),
+              },
             ],
           },
           {
@@ -233,6 +240,11 @@ export const routes: RouteObject[] = [
               {
                 path: '/admin/coupons',
                 element: <AdminCouponDefinitionsPage />,
+                handle: privateSeo('nav.adminCoupons'),
+              },
+              {
+                path: '/admin/coupons/:id',
+                element: <AdminCouponDefinitionPage />,
                 handle: privateSeo('nav.adminCoupons'),
               },
             ],

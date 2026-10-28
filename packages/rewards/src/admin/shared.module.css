@@ -1,0 +1,33 @@
+/* 줄 끝 링크 - 테두리 있는 작은 버튼 모양(글자만 있는 링크 금지) */
+.actionLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 var(--space-md);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-strong);
+  font-size: var(--font-size-small);
+  font-weight: 650;
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.actionLink:hover {
+  border-color: var(--teal);
+  background: var(--teal-wash);
+}
+
+.actionLink:active {
+  border-color: var(--teal);
+  background: var(--teal-soft);
+}
+
+.actionLink:focus-visible {
+  outline: 3px solid var(--teal);
+  outline-offset: 2px;
+}

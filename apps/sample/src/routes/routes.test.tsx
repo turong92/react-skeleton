@@ -73,6 +73,8 @@ describe('routes', () => {
     }
     expect(guarded('/admin/accounts')).toBe(true)
     expect(permissionsOf('/admin/accounts')).toEqual([['account.read']])
+    // 계정 한 건(쿠폰 발급 내역 · 운영 화면들이 잇는다)도 같은 권한
+    expect(permissionsOf('/admin/accounts/acc_1')).toEqual([['account.read']])
     expect(guarded('/admin/roles')).toBe(true)
     expect(permissionsOf('/admin/roles')).toEqual([['authz.roles']])
     // 사용자 쪽 결제 화면에는 권한 가드가 없다
@@ -89,11 +91,14 @@ describe('routes', () => {
     const operator: Array<[string, string]> = [
       ['/admin/campaigns', 'campaign.manage'],
       ['/admin/coupons', 'coupon.manage'],
+      ['/admin/coupons/d1', 'coupon.manage'],
       ['/admin/points', 'point.manage'],
       ['/admin/reward-grants', 'reward.operate'],
     ]
     for (const [path, permission] of operator) {
-      expect(leaf(path)?.path, path).toBe(path)
+      expect(leaf(path)?.path, path).toBe(
+        path === '/admin/coupons/d1' ? '/admin/coupons/:id' : path,
+      )
       expect(guarded(path), path).toBe(true)
       expect(permissionsOf(path), path).toEqual([[permission]])
     }

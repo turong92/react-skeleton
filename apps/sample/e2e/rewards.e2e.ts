@@ -24,6 +24,7 @@ import {
  *  ② 운영자가 30% 쿠폰을 주면 → 응원하기에서 그 쿠폰을 고르고 미리보기 금액 → 가짜 토스 결제 → 결과의 원가 · 할인 · 최종가, 쿠폰함에서 「사용함」
  *  ③ 「무료 이용권」 → 결제창 없이 바로 끝난다(가짜 토스 호출 없음, 「무료(쿠폰)」)
  *  ④ 운영자가 출석 이벤트를 끄면 사용자 화면에서 출석 카드가 사라진다(다시 켠다)
+ *  ⑥ 쿠폰 상세(`/admin/coupons/:id`)의 현황 숫자가 발급 · 사용을 따라간다(발급 1 · 사용 가능 1 → 쓰고 나면 사용함 1 · 깎아 준 금액)
  *  ⑤ `payment.exempt` 역할을 사용자에게 주면 응원이 결제창 없이 「결제 면제」로 끝나고 운영 목록에 같은 알약, 회수하면 다음 응원은 결제창
  * 한 시나리오의 전제가 이 백엔드에 없으면(해당 경로 404) 그 시나리오만 건너뛴다. 시드: 출석 이벤트 하나(매일 10 포인트), 로컬 프로필의 사용자 `user@example.com`.
  * 아직 실행하지 않았다 — kotlin 의 K2~K9 를 합친 백엔드(`scripts/sample-e2e-backend.sh`)가 있어야 돈다. 지휘가 합친 뒤 `pnpm e2e:sample e2e/rewards.e2e.ts`.
@@ -75,7 +76,7 @@ async function giveCoupon(
   accountId: string,
   name: string,
   stages: unknown[],
-): Promise<void> {
+): Promise<string> {
   const created = await api(apiUrl, adminToken, 'POST', '/admin/coupon-definitions', {
     name,
     stages,
@@ -95,6 +96,7 @@ async function giveCoupon(
     accountIds: [accountId],
   })
   if (issued.status >= 300) throw new Error(`issue coupon → ${issued.status}`)
+  return id
 }
 
 /** 응원하기 화면에서 금액과 쿠폰을 고르고 「응원하기」를 누른다 */
@@ -106,6 +108,13 @@ async function cheerWithCoupon(p: Page, amount: number, couponName: string) {
 }
 const submitCheer = (p: Page) =>
   p.getByRole('button', { name: ko('cheer.submit'), exact: true }).click()
+
+/** 상세 현황 카드에서 이 이름의 숫자 칸 */
+const statOf = (p: Page, name: string) =>
+  p
+    .getByRole('region', { name: A.couponDetail.stats.title })
+    .locator('dl')
+    .filter({ has: p.getByText(name, { exact: true }) })
 
 describe('rewards: attendance, coupons on a cheer, a free voucher, switching an event off, a waived payment', () => {
   it(
@@ -218,6 +227,47 @@ describe('rewards: attendance, coupons on a cheer, a free voucher, switching an 
         await api(apiUrl, adminToken, 'PATCH', `/admin/campaigns/${attendance.id}/enabled`, {
           enabled: true,
         })
+        await operator.close()
+      }
+    },
+    LATE,
+  )
+
+  it(
+    'the coupon detail page counts what was given and used: given 1 / available 1, then used 1 with the discount it took off',
+    async (ctx) => {
+      if (!toss || !(await paymentOn(apiUrl))) return ctx.skip()
+      const adminToken = await tokenOf(apiUrl, ADMIN)
+      if (!(await exists(adminToken, '/admin/coupon-definitions'))) return ctx.skip()
+      const userToken = await tokenOf(apiUrl)
+      await toss.set({ reset: true })
+      const name = `e2e stats ${Date.now()}`
+      await giveCoupon(adminToken, await accountIdOf(userToken), name, [
+        { type: 'PERCENT', value: 30, maxDiscount: null, periods: 1 },
+      ])
+      const operator = await operatorPage(browser, baseUrl)
+      try {
+        const op = operator.page
+        await op.goto(`${baseUrl}/admin/coupons`)
+        await op.getByRole('link', { name: A.couponDetail.open(name) }).click()
+        await pwExpect(op.getByRole('heading', { level: 1, name })).toBeVisible()
+        await pwExpect(statOf(op, A.couponDetail.stats.issued)).toContainText('1')
+        await pwExpect(statOf(op, A.couponDetail.stats.available)).toContainText('1')
+        await pwExpect(statOf(op, A.couponDetail.stats.used)).toContainText('0')
+
+        // 사용자가 그 쿠폰으로 결제한다
+        await ensureSignedIn(page, baseUrl)
+        await cheerWithCoupon(page, 3000, name)
+        await submitCheer(page)
+        await returnedOrderId(page)
+        await pwExpect(resultTitle(page, paymentLabels.result.paid.title)).toBeVisible()
+
+        // 다시 열면 숫자가 따라가 있다
+        await op.reload()
+        await pwExpect(statOf(op, A.couponDetail.stats.used)).toContainText('1')
+        await pwExpect(statOf(op, A.couponDetail.stats.available)).toContainText('0')
+        await pwExpect(statOf(op, A.couponDetail.stats.discountTotal)).toContainText(won(900))
+      } finally {
         await operator.close()
       }
     },

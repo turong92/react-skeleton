@@ -42,6 +42,12 @@ const ROWS: Row[] = [
     base: '.bell',
   },
   {
+    name: 'rewards admin row link',
+    dir: 'packages/rewards',
+    file: 'packages/rewards/src/admin/shared.module.css',
+    base: '.actionLink',
+  },
+  {
     name: 'ThemeToggle',
     dir: 'packages/theme',
     file: 'packages/theme/src/ThemeToggle.module.css',

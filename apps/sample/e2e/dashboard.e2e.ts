@@ -60,7 +60,8 @@ describe('the admin dashboard', () => {
     const operator = await operatorPage(browser, baseUrl)
     const page = operator.page
     try {
-      // 메뉴 첫 항목 「대시보드」
+      // 운영 메뉴(「운영」 단추)의 첫 항목 「대시보드」
+      await page.getByRole('button', { name: ko('nav.admin') }).click()
       const firstLink = page.getByRole('link', { name: ko('nav.adminDashboard'), exact: true })
       await pwExpect(firstLink).toBeVisible()
       await firstLink.click()

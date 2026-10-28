@@ -1,5 +1,9 @@
 import { useCan } from '@skeleton/auth'
+import { useMemo } from 'react'
 import { AdminCouponDefinitions } from '@skeleton/rewards/admin'
+import { Link } from 'react-router-dom'
+import { createAccountSearch } from '../rewards/searchAccounts'
+import { adminAccountsApi } from '../adminAccounts/api'
 import { languageOf, useT } from '../i18n'
 import { rewardsAdminApi } from '../rewards/api'
 import { rewardsAdminLabelsFor, rewardsLabelsFor } from '../rewards/labels'
@@ -10,6 +14,7 @@ import { rewardsAdminLabelsFor, rewardsLabelsFor } from '../rewards/labels'
  */
 export function AdminCouponDefinitionsPage() {
   const { locale } = useT()
+  const searchAccounts = useMemo(() => createAccountSearch(adminAccountsApi), [])
   const language = languageOf(locale)
   const can = useCan()
 
@@ -20,6 +25,16 @@ export function AdminCouponDefinitionsPage() {
       labels={rewardsAdminLabelsFor(language)}
       locale={language}
       userLabels={rewardsLabelsFor(language)}
+      searchAccounts={searchAccounts}
+      renderDetailLink={(definition, label, accessibleName, className) => (
+        <Link
+          to={`/admin/coupons/${encodeURIComponent(definition.id)}`}
+          className={className}
+          aria-label={accessibleName}
+        >
+          {label}
+        </Link>
+      )}
     />
   )
 }

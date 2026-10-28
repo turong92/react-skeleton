@@ -510,6 +510,7 @@
         "packages/rewards/src/admin/StageEditor.stories.tsx",
         "packages/rewards/src/admin/AdminCampaigns.stories.tsx",
         "packages/rewards/src/admin/AdminCouponDefinitions.stories.tsx",
+        "packages/rewards/src/admin/AdminCouponDefinition.stories.tsx",
         "packages/rewards/src/admin/AdminPoints.stories.tsx",
         "packages/rewards/src/admin/AdminRewardGrants.stories.tsx"
       ],
@@ -523,6 +524,8 @@
         "@skeleton/rewards/admin#createRewardsAdminApi",
         "@skeleton/rewards/admin#AdminCampaigns",
         "@skeleton/rewards/admin#AdminCouponDefinitions",
+        "@skeleton/rewards/admin#AdminCouponDefinition",
+        "@skeleton/rewards/admin#AccountSearch",
         "@skeleton/rewards/admin#AdminPoints",
         "@skeleton/rewards/admin#AdminRewardGrants",
         "@skeleton/rewards/admin#StageEditor",

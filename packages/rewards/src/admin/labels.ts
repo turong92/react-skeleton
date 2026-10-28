@@ -14,6 +14,8 @@ export type RewardsAdminLabels = {
   yes: string
   errors: {
     insufficient: string
+    /** `COUPON.ISSUE_CLOSED` - 발행 기간 밖 */
+    issueClosed: string
     notFound: string
     validation: string
     notEnabled: string
@@ -101,6 +103,8 @@ export type RewardsAdminLabels = {
     }
     status: Record<CouponDefinitionStatus, string>
     setStatus: (name: string, status: string) => string
+    /** 줄 끝 링크 - 정의 한 건 화면으로 */
+    details: string
     issue: string
     issueTitle: (name: string) => string
     issueAccounts: string
@@ -122,16 +126,78 @@ export type RewardsAdminLabels = {
     firstPurchaseOnly: string
     validDays: string
     validUntil: string
+    validFrom: string
+    validFromHint: string
+    issuePeriodLegend: string
+    issueStartsAt: string
+    issueEndsAt: string
+    issuePeriodHint: string
+    /** 입력 순서 오류 - 발행 기간 · 사용 기간 */
+    issuePeriodOrder: string
+    usePeriodOrder: string
     issueLimit: string
     perAccountLimit: string
     noLimit: string
     accountCoupons: string
-    accountId: string
-    find: string
     couponCaption: string
     revoke: (name: string) => string
     revokeButton: string
     noAccountCoupons: string
+  }
+  accountSearch: {
+    label: string
+    hint: string
+    submit: string
+    noResult: string
+    failed: string
+    results: string
+    pick: (label: string) => string
+    picked: string
+    change: string
+  }
+  couponDetail: {
+    /** 목록 행의 이름 링크 낭독 - 「○○ 자세히」 */
+    open: (name: string) => string
+    back: string
+    notFound: string
+    status: string
+    benefit: string
+    issuePeriod: string
+    usePeriod: string
+    validDays: (days: number) => string
+    until: string
+    from: string
+    always: string
+    noEnd: string
+    stats: {
+      title: string
+      issued: string
+      available: string
+      reserved: string
+      used: string
+      expired: string
+      revoked: string
+      discountTotal: string
+      noDiscount: string
+    }
+    issuedList: {
+      title: string
+      caption: string
+      statusFilter: string
+      all: string
+      columns: {
+        account: string
+        status: string
+        issuedAt: string
+        expiresAt: string
+        usedAt: string
+        order: string
+        actions: string
+      }
+      empty: string
+      more: string
+      revoke: (account: string) => string
+    }
   }
   points: {
     title: string

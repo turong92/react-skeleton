@@ -1,4 +1,4 @@
-import type { Coupon, CouponScope, CouponStage, PointEntry } from '../types'
+import type { Coupon, CouponScope, CouponStage, CouponStatus, PointEntry } from '../types'
 
 /** 보상 한 줄 - `type` 은 지급기 이름(`point` · `coupon`), `params` 는 지급기마다 다른 문자열 값 */
 export type RewardConfig = { type: string; params: Record<string, string> }
@@ -50,12 +50,43 @@ export type CouponDefinition = {
   firstPurchaseOnly: boolean
   validDays: number | null
   validUntil: string | null
+  /** 사용 시작 - 이 시각 전에는 결제에 쓸 수 없다. `validUntil` 보다 앞이어야 한다 */
+  validFrom?: string | null
+  /** 발행 기간 - 밖이면 운영자 발급 · 코드 등록 · 보상 지급이 `COUPON.ISSUE_CLOSED`(409). 시작이 끝보다 앞이어야 한다 */
+  issueStartsAt?: string | null
+  issueEndsAt?: string | null
   issueLimit: number | null
   perAccountLimit: number
   issuedCount: number
 }
 
 export type CouponDefinitionInput = Omit<CouponDefinition, 'id' | 'status' | 'issuedCount'>
+
+/** 쿠폰 정의 하나의 현황(`GET /admin/coupon-definitions/{id}/stats`) - 발급한 쿠폰의 상태별 수와, 쓴(USED) 쿠폰이 실제로 깎은 금액 합(통화마다) */
+export type CouponStats = {
+  issued: number
+  available: number
+  reserved: number
+  used: number
+  expired: number
+  revoked: number
+  discountTotals: Array<{ currency: string; amount: number }>
+}
+
+/** 정의 하나에서 발급된 쿠폰 한 장(`GET /admin/coupon-definitions/{id}/coupons`) */
+export type IssuedCoupon = {
+  id: string
+  accountId: string
+  status: CouponStatus
+  issuedAt: string
+  expiresAt: string | null
+  usableFrom: string | null
+  usedAt: string | null
+  /** 이 쿠폰을 쥔(쓴) 주문 */
+  orderRef: string | null
+}
+
+export type IssuedCouponQuery = { status?: CouponStatus; cursor?: string; size?: number }
 
 /** 계정에 쿠폰 주기의 답 - 줬거나(`issued`) 건너뛴(`skipped`: 한도 · 이미 가짐 …) 계정 id */
 export type IssueResult = { issued: string[]; skipped: string[] }

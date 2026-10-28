@@ -1,0 +1,38 @@
+.menu {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.panel {
+  display: none;
+  position: absolute;
+  inset-block-start: calc(100% + var(--space-xs));
+  inset-inline-start: 0;
+  z-index: 20;
+  min-inline-size: 12rem;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-sm);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.menu[data-open='true'] .panel {
+  display: flex;
+}
+
+/* 좁은 화면 - 내비가 가로로 밀리는 띠라 단추 없이 링크가 그대로 늘어선다 */
+@container shell (max-width: 640px) {
+  .menu,
+  .panel,
+  .menu[data-open='true'] .panel {
+    display: contents;
+  }
+
+  .trigger {
+    display: none;
+  }
+}

@@ -143,6 +143,13 @@ describe('RootLayout (signed in): operator menu', () => {
       expect(coupons).not.toContain(`href="/admin/${href}"`)
     expect(renderAs(['reward.operate'])).toContain('href="/admin/reward-grants"')
   })
+  it('groups the operator links under one 운영 button (the row of links covered the sign-out and language buttons) - the links stay in the document', () => {
+    const all = renderAs(['*'])
+    expect(all.match(/<button[^>]*aria-expanded="false"[^>]*>[^<]*운영/g)).toHaveLength(1)
+    expect(all.match(/href="\/admin\//g)?.length).toBeGreaterThanOrEqual(8)
+    // 운영 화면이 하나도 없으면 단추도 없다
+    expect(renderAs([])).not.toContain('aria-expanded')
+  })
   it('shows nothing to a member without permissions or to a visitor, whatever the role name is', () => {
     expect(renderAs([])).not.toContain('/admin/')
     expect(renderAs(undefined)).not.toContain('/admin/')

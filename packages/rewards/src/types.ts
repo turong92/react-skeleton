@@ -63,6 +63,8 @@ export type Coupon = {
   name: string
   status: CouponStatus
   expiresAt: string | null
+  /** 이 시각 전에는 쓸 수 없다(사용 시작) - 없으면 바로 쓴다. 구버전 서버는 칸이 없다 */
+  usableFrom?: string | null
   stages: CouponStage[]
   scope: CouponScope
   currency: string | null

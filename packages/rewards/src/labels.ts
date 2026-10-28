@@ -34,6 +34,8 @@ export type RewardsLabels = {
     emptyAvailable: string
     emptyPast: string
     expiresAt: (date: string) => string
+    /** 사용 시작 전 쿠폰 - 「10월 30일부터」(인자는 서식을 입힌 시각) */
+    usableFrom: (date: string) => string
     noExpiry: string
     minAmount: (money: string) => string
     status: Record<CouponStatus, string>
@@ -42,7 +44,7 @@ export type RewardsLabels = {
       hint: string
       submit: string
       success: string
-      errors: { invalid: string; used: string; exhausted: string; other: string }
+      errors: { invalid: string; used: string; exhausted: string; closed: string; other: string }
     }
     picker: {
       legend: string

@@ -114,3 +114,27 @@ describe('createRewardsAdminApi (contract C-ADM, spec §8)', () => {
     ])
   })
 })
+
+describe('coupon definition status and issued coupons (coupon-admin contract)', () => {
+  it('stats → GET /admin/coupon-definitions/{id}/stats', async () => {
+    const calls = await run((api) => api.couponStats('d/1'))
+    expect(calls).toEqual([
+      { kind: 'value', path: '/admin/coupon-definitions/d%2F1/stats', request: undefined },
+    ])
+  })
+
+  it('issued coupons → GET …/coupons with only the params given (cursor page)', async () => {
+    const calls = await run(async (api) => {
+      await api.listDefinitionCoupons('d1')
+      await api.listDefinitionCoupons('d1', { status: 'USED', cursor: 'c2', size: 20 })
+    })
+    expect(calls).toEqual([
+      { kind: 'cursor', path: '/admin/coupon-definitions/d1/coupons', request: { params: {} } },
+      {
+        kind: 'cursor',
+        path: '/admin/coupon-definitions/d1/coupons',
+        request: { params: { status: 'USED', cursor: 'c2', size: 20 } },
+      },
+    ])
+  })
+})

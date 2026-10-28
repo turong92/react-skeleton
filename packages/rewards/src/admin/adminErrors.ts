@@ -21,6 +21,7 @@ export function adminErrorMessage(error: unknown, labels: RewardsAdminLabels): s
   if (!(error instanceof ApiRequestError)) return labels.errors.generic
   const { code, status } = error.apiError
   if (code === ErrorCodes.POINT_INSUFFICIENT) return labels.errors.insufficient
+  if (code === ErrorCodes.COUPON_ISSUE_CLOSED) return labels.errors.issueClosed
   if (code === ErrorCodes.COMMON_VALIDATION_FAILED || status === 400)
     return labels.errors.validation
   if (status === 404) return labels.errors.notFound

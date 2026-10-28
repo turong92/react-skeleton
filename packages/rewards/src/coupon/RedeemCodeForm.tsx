@@ -29,6 +29,7 @@ export function RedeemCodeForm({
     if (isErrorCode(redeem.error, ErrorCodes.COUPON_CODE_INVALID)) return t.errors.invalid
     if (isErrorCode(redeem.error, ErrorCodes.COUPON_CODE_USED)) return t.errors.used
     if (isErrorCode(redeem.error, ErrorCodes.COUPON_CODE_EXHAUSTED)) return t.errors.exhausted
+    if (isErrorCode(redeem.error, ErrorCodes.COUPON_ISSUE_CLOSED)) return t.errors.closed
     return t.errors.other
   })()
 

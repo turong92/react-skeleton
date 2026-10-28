@@ -137,6 +137,8 @@ describe('authz: a CS role made on the screen, given to a user and taken back', 
 
         // ② 사용자: 새로 읽으면 메뉴에 결제만
         await page.goto(`${baseUrl}/`)
+        // 운영 링크는 「운영」 메뉴 안에 있다 - 열어서 본다(계정 · 역할 링크는 아예 없다)
+        await page.getByRole('button', { name: ko('nav.admin') }).click()
         const nav = page.getByRole('navigation').first()
         await pwExpect(nav.getByRole('link', { name: ko('nav.adminPayments') })).toBeVisible()
         await pwExpect(nav.getByRole('link', { name: ko('nav.adminAccounts') })).toHaveCount(0)

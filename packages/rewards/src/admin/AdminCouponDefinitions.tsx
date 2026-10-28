@@ -19,11 +19,15 @@ import { defaultRewardsLabels, type RewardsLabels } from '../labels'
 import { stageSummary } from '../coupon/stageSummary'
 import type { CouponStage } from '../types'
 import type { RewardsAdminApi } from './adminApi'
+import { accountLabelOf, type AccountChoice } from './accountLabel'
+import { AccountSearch } from './AccountSearch'
 import { adminErrorMessage, isToolOff, mergeAdminLabels } from './adminErrors'
-import { fromLocalInput } from './dateInput'
+import { fromLocalInput, startsBefore } from './dateInput'
 import { useAccountCoupons, useAdminCouponDefinitions, useCouponDefinitionMutations } from './hooks'
 import type { RewardsAdminLabels } from './labels'
 import { allowAll, REWARDS_PERMISSIONS, type CanFn } from './permissions'
+import type { RenderRowLink } from './rowAction'
+import { rowActionClass } from './rowAction'
 import { StageEditor } from './StageEditor'
 import { freeVoucher } from './stageEdits'
 import type {
@@ -50,6 +54,13 @@ export type AdminCouponDefinitionsProps = {
   /** 혜택 한 줄(`stageSummary`)의 문구 - 사용자 화면과 같은 사전 */
   userLabels?: RewardsLabels
   locale?: string
+  /**
+   * 계정 검색 - 앱이 계정 API 를 이 꼴로 옮겨 준다(이메일 · 로그인 아이디). 주지 않으면 「계정의 쿠폰」 칸이 없다.
+   * 계정 id 를 직접 적는 칸은 없다
+   */
+  searchAccounts?: (query: string) => Promise<AccountChoice[]>
+  /** 줄 끝 「자세히」 를 정의 한 건 화면으로 잇는 라우터 링크. 없으면 단추가 없다 */
+  renderDetailLink?: RenderRowLink<CouponDefinition>
 }
 
 const STATUSES: readonly CouponDefinitionStatus[] = ['ACTIVE', 'PAUSED', 'ARCHIVED']
@@ -71,6 +82,9 @@ type Draft = {
   firstPurchaseOnly: boolean
   validDays: string
   validUntil: string
+  validFrom: string
+  issueStartsAt: string
+  issueEndsAt: string
   issueLimit: string
   perAccountLimit: string
 }
@@ -86,6 +100,9 @@ const emptyDraft = (): Draft => ({
   firstPurchaseOnly: false,
   validDays: '',
   validUntil: '',
+  validFrom: '',
+  issueStartsAt: '',
+  issueEndsAt: '',
   issueLimit: '',
   perAccountLimit: '1',
 })
@@ -103,6 +120,9 @@ const inputOf = (draft: Draft): CouponDefinitionInput => ({
   firstPurchaseOnly: draft.firstPurchaseOnly,
   validDays: numberOrNull(draft.validDays),
   validUntil: fromLocalInput(draft.validUntil),
+  validFrom: fromLocalInput(draft.validFrom),
+  issueStartsAt: fromLocalInput(draft.issueStartsAt),
+  issueEndsAt: fromLocalInput(draft.issueEndsAt),
   issueLimit: numberOrNull(draft.issueLimit),
   perAccountLimit: Math.max(1, Number(draft.perAccountLimit) || 1),
 })
@@ -117,6 +137,8 @@ export function AdminCouponDefinitions({
   labels: given,
   userLabels = defaultRewardsLabels,
   locale,
+  searchAccounts,
+  renderDetailLink,
 }: AdminCouponDefinitionsProps) {
   const labels = mergeAdminLabels(given)
   const t = labels.coupons
@@ -126,9 +148,8 @@ export function AdminCouponDefinitions({
   const [creating, setCreating] = useState(false)
   const [issuing, setIssuing] = useState<CouponDefinition | null>(null)
   const [codeFor, setCodeFor] = useState<CouponDefinition | null>(null)
-  const [account, setAccount] = useState<string | null>(null)
-  const [accountDraft, setAccountDraft] = useState('')
-  const accountCoupons = useAccountCoupons(api, account)
+  const [account, setAccount] = useState<AccountChoice | null>(null)
+  const accountCoupons = useAccountCoupons(api, account?.id ?? null)
 
   const makeCode = (definition: CouponDefinition) => {
     setCodeFor(definition)
@@ -217,97 +238,99 @@ export function AdminCouponDefinitions({
             {
               key: 'actions',
               header: t.columns.actions,
-              render: (d) =>
-                allowed && (
-                  <span className={styles.actions}>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      aria-label={`${t.issue}: ${d.name}`}
-                      disabled={d.status !== 'ACTIVE'}
-                      onClick={() => setIssuing(d)}
-                    >
-                      {t.issue}
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      aria-label={`${t.makeCode}: ${d.name}`}
-                      disabled={d.status !== 'ACTIVE'}
-                      onClick={() => makeCode(d)}
-                    >
-                      {t.makeCode}
-                    </Button>
-                  </span>
-                ),
+              render: (d) => (
+                <span className={styles.actions}>
+                  {renderDetailLink?.(
+                    d,
+                    t.details,
+                    labels.couponDetail.open(d.name),
+                    rowActionClass,
+                  )}
+                  {allowed && (
+                    <>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        aria-label={`${t.issue}: ${d.name}`}
+                        disabled={d.status !== 'ACTIVE'}
+                        onClick={() => setIssuing(d)}
+                      >
+                        {t.issue}
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        aria-label={`${t.makeCode}: ${d.name}`}
+                        disabled={d.status !== 'ACTIVE'}
+                        onClick={() => makeCode(d)}
+                      >
+                        {t.makeCode}
+                      </Button>
+                    </>
+                  )}
+                </span>
+              ),
             },
           ]}
         />
       )}
 
-      <section className={styles.account} aria-labelledby="account-coupons">
-        <h2 id="account-coupons">{t.accountCoupons}</h2>
-        <form
-          className={styles.find}
-          onSubmit={(event) => {
-            event.preventDefault()
-            setAccount(accountDraft.trim() || null)
-          }}
-        >
-          <Field label={t.accountId}>
-            {(control) => (
-              <Input
-                {...control}
-                value={accountDraft}
-                autoComplete="off"
-                onChange={(event) => setAccountDraft(event.target.value)}
-              />
-            )}
-          </Field>
-          <Button type="submit" variant="secondary">
-            {t.find}
-          </Button>
-        </form>
-        {account !== null &&
-          (accountCoupons.isPending ? (
-            <Skeleton label={labels.loading} />
-          ) : accountCoupons.isError ? (
-            <Alert tone="danger">{adminErrorMessage(accountCoupons.error, labels)}</Alert>
+      {searchAccounts && (
+        <section className={styles.account} aria-labelledby="account-coupons">
+          <h2 id="account-coupons">{t.accountCoupons}</h2>
+          {account === null ? (
+            <AccountSearch search={searchAccounts} onPick={setAccount} labels={labels} />
           ) : (
-            <Table
-              caption={t.couponCaption}
-              rows={accountCoupons.data}
-              rowKey={(c) => c.id}
-              empty={<EmptyState title={t.noAccountCoupons} headingLevel={3} />}
-              columns={[
-                { key: 'name', header: t.columns.name, rowHeader: true, render: (c) => c.name },
-                {
-                  key: 'status',
-                  header: t.columns.status,
-                  render: (c) => userLabels.coupon.status[c.status],
-                },
-                {
-                  key: 'actions',
-                  header: t.columns.actions,
-                  render: (c) =>
-                    allowed &&
-                    c.status === 'AVAILABLE' && (
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        aria-label={t.revoke(c.name)}
-                        loading={mutations.revoke.isPending}
-                        loadingLabel={labels.loading}
-                        onClick={() => mutations.revoke.mutate(c.id)}
-                      >
-                        {t.revokeButton}
-                      </Button>
-                    ),
-                },
-              ]}
-            />
-          ))}
-      </section>
+            <p className={styles.picked}>
+              <span>
+                {labels.accountSearch.picked}: <strong>{accountLabelOf(account)}</strong>
+              </span>
+              <Button variant="secondary" size="sm" onClick={() => setAccount(null)}>
+                {labels.accountSearch.change}
+              </Button>
+            </p>
+          )}
+          {account !== null &&
+            (accountCoupons.isPending ? (
+              <Skeleton label={labels.loading} />
+            ) : accountCoupons.isError ? (
+              <Alert tone="danger">{adminErrorMessage(accountCoupons.error, labels)}</Alert>
+            ) : (
+              <Table
+                caption={t.couponCaption}
+                rows={accountCoupons.data}
+                rowKey={(c) => c.id}
+                empty={<EmptyState title={t.noAccountCoupons} headingLevel={3} />}
+                columns={[
+                  { key: 'name', header: t.columns.name, rowHeader: true, render: (c) => c.name },
+                  {
+                    key: 'status',
+                    header: t.columns.status,
+                    render: (c) => userLabels.coupon.status[c.status],
+                  },
+                  {
+                    key: 'actions',
+                    header: t.columns.actions,
+                    render: (c) =>
+                      allowed &&
+                      c.status === 'AVAILABLE' && (
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          aria-label={t.revoke(c.name)}
+                          loading={mutations.revoke.isPending}
+                          loadingLabel={labels.loading}
+                          onClick={() => mutations.revoke.mutate(c.id)}
+                        >
+                          {t.revokeButton}
+                        </Button>
+                      ),
+                  },
+                ]}
+              />
+            ))}
+        </section>
+      )}
 
       {creating && (
         <DefinitionDialog
@@ -382,6 +405,12 @@ function DefinitionDialog({
   const t = labels.coupons
   const formId = useId()
   const [draft, setDraft] = useState<Draft>(emptyDraft)
+  // 서버도 같은 순서를 검사한다(400) - 화면이 먼저 이유를 말한다
+  const issueOrdered = startsBefore(
+    fromLocalInput(draft.issueStartsAt),
+    fromLocalInput(draft.issueEndsAt),
+  )
+  const useOrdered = startsBefore(fromLocalInput(draft.validFrom), fromLocalInput(draft.validUntil))
   const patch = (next: Partial<Draft>) => setDraft((now) => ({ ...now, ...next }))
   const text = (key: keyof Draft, label: string, hint?: string, type = 'text') => (
     <Field label={label} hint={hint}>
@@ -411,7 +440,9 @@ function DefinitionDialog({
             form={formId}
             loading={busy}
             loadingLabel={labels.loading}
-            disabled={draft.stages.length === 0 || draft.name.trim() === ''}
+            disabled={
+              draft.stages.length === 0 || draft.name.trim() === '' || !issueOrdered || !useOrdered
+            }
           >
             {labels.save}
           </Button>
@@ -457,7 +488,16 @@ function DefinitionDialog({
           onChange={(event) => patch({ firstPurchaseOnly: event.target.checked })}
         />
         {text('validDays', t.validDays, undefined, 'number')}
+        {text('validFrom', t.validFrom, t.validFromHint, 'datetime-local')}
         {text('validUntil', t.validUntil, undefined, 'datetime-local')}
+        {!useOrdered && <Alert tone="warning">{t.usePeriodOrder}</Alert>}
+        <fieldset className={styles.scope}>
+          <legend>{t.issuePeriodLegend}</legend>
+          <p className={styles.muted}>{t.issuePeriodHint}</p>
+          {text('issueStartsAt', t.issueStartsAt, undefined, 'datetime-local')}
+          {text('issueEndsAt', t.issueEndsAt, undefined, 'datetime-local')}
+          {!issueOrdered && <Alert tone="warning">{t.issuePeriodOrder}</Alert>}
+        </fieldset>
         {text('issueLimit', t.issueLimit, t.noLimit, 'number')}
         {text('perAccountLimit', t.perAccountLimit, undefined, 'number')}
       </form>

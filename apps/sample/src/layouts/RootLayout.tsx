@@ -3,6 +3,7 @@ import { NotificationBell } from '@skeleton/notifications'
 import { ConsentBanner, SiteFooter, type FooterLink } from '@skeleton/marketing'
 import { ThemeToggle } from '@skeleton/theme'
 import { AppShell, Button, LanguageMenu } from '@skeleton/ui'
+import { AdminMenu } from './AdminMenu'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { NicknameGateProvider } from '../auth/NicknameGate'
@@ -64,8 +65,22 @@ export function AdminLinks() {
   const canCoupons = usePermission('coupon.manage')
   const canPoints = usePermission('point.manage')
   const canGrants = usePermission('reward.operate')
+  // 운영 화면이 하나도 없는 사람에게는 메뉴 자체가 없다
+  if (
+    !(
+      canDashboard ||
+      canPayments ||
+      canAccounts ||
+      canRoles ||
+      canCampaigns ||
+      canCoupons ||
+      canPoints ||
+      canGrants
+    )
+  )
+    return null
   return (
-    <>
+    <AdminMenu label={t('nav.admin')}>
       {canDashboard && <NavLink to="/admin/dashboard">{t('nav.adminDashboard')}</NavLink>}
       {canPayments && <NavLink to="/admin/payments">{t('nav.adminPayments')}</NavLink>}
       {canAccounts && <NavLink to="/admin/accounts">{t('nav.adminAccounts')}</NavLink>}
@@ -74,7 +89,7 @@ export function AdminLinks() {
       {canCoupons && <NavLink to="/admin/coupons">{t('nav.adminCoupons')}</NavLink>}
       {canPoints && <NavLink to="/admin/points">{t('nav.adminPoints')}</NavLink>}
       {canGrants && <NavLink to="/admin/reward-grants">{t('nav.adminRewardGrants')}</NavLink>}
-    </>
+    </AdminMenu>
   )
 }
 

@@ -109,6 +109,45 @@ export const NarrowViewport: Story = {
   },
 }
 
+/**
+ * 중간 너비에 링크가 많을 때 - 내비가 액션(알림 · 로그아웃 · 언어)을 덮지 않는다. 넘치는 링크는 내비 안에서 다음 줄로 감긴다
+ * (좁은 화면의 가로 스크롤 띠는 640px 아래에서만)
+ */
+export const ManyLinksDoNotCoverTheActions: Story = {
+  args: {
+    nav: Array.from({ length: 12 }, (_, i) => (
+      <a key={i} href={`#n${i}`}>{`Section number ${i + 1}`}</a>
+    )),
+    actions: (
+      <>
+        <Button size="sm" variant="ghost">
+          Sign out
+        </Button>
+        <Button size="sm" variant="secondary">
+          Language
+        </Button>
+      </>
+    ),
+  },
+  render: (args) => (
+    <div style={{ width: '48rem' }}>
+      <AppShell {...args} />
+    </div>
+  ),
+  play: async ({ canvas }) => {
+    const actions = canvas.getByRole('button', { name: 'Sign out' }).getBoundingClientRect()
+    for (const link of canvas.getAllByRole('link', { name: /^Section number/ })) {
+      const box = link.getBoundingClientRect()
+      const overlaps =
+        box.left < actions.right &&
+        box.right > actions.left &&
+        box.top < actions.bottom &&
+        box.bottom > actions.top
+      await expect(overlaps, link.textContent ?? '').toBe(false)
+    }
+  },
+}
+
 export const Dark: Story = {
   globals: { theme: 'dark' },
   args: ActiveLink.args,

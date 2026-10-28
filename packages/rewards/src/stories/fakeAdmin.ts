@@ -1,7 +1,20 @@
 import type { RewardsAdminApi } from '../admin/adminApi'
-import type { AdminCampaign, CouponDefinition, RewardGrant } from '../admin/types'
+import type { AccountChoice } from '../admin/accountLabel'
+import type { AdminCampaign, CouponDefinition, IssuedCoupon, RewardGrant } from '../admin/types'
+import type { CouponStatus } from '../types'
 import type { PointEntry } from '../types'
 import { fail } from './fakeRewards'
+
+export const fakeAccounts: AccountChoice[] = [
+  { id: 'acc_1', email: 'ada@example.com', loginId: 'ada' },
+  { id: 'acc_2', email: 'bob@example.com', loginId: null },
+]
+
+/** 스토리용 계정 검색 - 이메일 조각 또는 정확한 로그인 아이디 */
+export async function fakeSearchAccounts(query: string): Promise<AccountChoice[]> {
+  const q = query.toLowerCase()
+  return fakeAccounts.filter((a) => a.email?.toLowerCase().includes(q) || a.loginId === q)
+}
 
 /** 스토리 · 시험용 메모리 안의 가짜 운영 API(C-ADM 꼴). 계정 `acc_1` 잔액 1,000 · 포인트를 그보다 많이 빼면 409 `POINT.INSUFFICIENT` */
 export function createFakeAdmin() {
@@ -50,9 +63,34 @@ export function createFakeAdmin() {
       validUntil: null,
       issueLimit: null,
       perAccountLimit: 1,
-      issuedCount: 4,
+      issueStartsAt: '2026-10-01T00:00:00Z',
+      issueEndsAt: '2026-12-31T14:59:59Z',
+      validFrom: '2026-10-15T00:00:00Z',
+      issuedCount: 25,
     },
   ]
+  // 정의 d1 에서 발급된 쿠폰 25장 - 상태가 돌아가며 섞인다(두 쪽으로 나뉜다)
+  const cycle: CouponStatus[] = [
+    'AVAILABLE',
+    'AVAILABLE',
+    'USED',
+    'RESERVED',
+    'EXPIRED',
+    'AVAILABLE',
+  ]
+  let coupons: IssuedCoupon[] = Array.from({ length: 25 }, (_, i) => {
+    const status = cycle[i % cycle.length] as CouponStatus
+    return {
+      id: `k${i + 1}`,
+      accountId: i % 2 === 0 ? 'acc_1' : 'acc_2',
+      status,
+      issuedAt: new Date(Date.UTC(2026, 9, 20, 3, i)).toISOString(),
+      expiresAt: '2026-12-31T14:59:59Z',
+      usableFrom: '2026-10-15T00:00:00Z',
+      usedAt: status === 'USED' ? '2026-10-25T03:00:00Z' : null,
+      orderRef: status === 'USED' || status === 'RESERVED' ? `ord_${i + 1}` : null,
+    }
+  })
   let balance = 1000
   let entries: PointEntry[] = [
     {
@@ -125,9 +163,60 @@ export function createFakeAdmin() {
       }
     },
     createCouponCode: async () => ({ code: 'WELCOME' }),
-    listAccountCoupons: async () => [],
-    revokeCoupon: async () => {
-      throw fail(404, 'COUPON.NOT_FOUND')
+    couponStats: async () => {
+      const count = (status: CouponStatus) => coupons.filter((c) => c.status === status).length
+      const used = count('USED')
+      return {
+        issued: coupons.length,
+        available: count('AVAILABLE'),
+        reserved: count('RESERVED'),
+        used,
+        expired: count('EXPIRED'),
+        revoked: count('REVOKED'),
+        discountTotals: used > 0 ? [{ currency: 'KRW', amount: used * 3000 }] : [],
+      }
+    },
+    listDefinitionCoupons: async (_id, { status, cursor, size = 20 } = {}) => {
+      const matching = coupons.filter((c) => status === undefined || c.status === status)
+      const start = cursor ? Number(cursor) : 0
+      const next = start + size
+      return {
+        values: matching.slice(start, next),
+        cursor: {
+          hasNext: next < matching.length,
+          nextCursor: next < matching.length ? String(next) : null,
+        },
+        meta: { timestamp: 't' },
+      }
+    },
+    listAccountCoupons: async (accountId) =>
+      coupons
+        .filter((c) => c.accountId === accountId)
+        .slice(0, 3)
+        .map((c) => ({
+          id: c.id,
+          name: '무료 이용권',
+          status: c.status,
+          expiresAt: c.expiresAt,
+          stages: [{ type: 'FREE' as const, value: 0, maxDiscount: null, periods: 1 }],
+          scope: { purposes: [], itemTypes: [], planCodes: [] },
+          currency: null,
+          minAmount: null,
+        })),
+    revokeCoupon: async (id) => {
+      const target = coupons.find((c) => c.id === id)
+      if (!target || target.status !== 'AVAILABLE') throw fail(409, 'COUPON.NOT_REVOCABLE')
+      coupons = coupons.map((c) => (c.id === id ? { ...c, status: 'REVOKED' } : c))
+      return {
+        id,
+        name: '무료 이용권',
+        status: 'REVOKED' as const,
+        expiresAt: null,
+        stages: [],
+        scope: { purposes: [], itemTypes: [], planCodes: [] },
+        currency: null,
+        minAmount: null,
+      }
     },
     accountPoints: async () => ({ balance, entries: [...entries] }),
     adjustPoints: async (_accountId, input) => {

@@ -575,6 +575,7 @@ const en: Record<keyof typeof ko, string> = {
   'subscription.return.leftTitle': 'The payment method was not registered',
   'subscription.return.leftBody':
     'The subscription did not start. Try again, or pick another payment method.',
+  'nav.admin': 'Admin',
   'nav.adminDashboard': 'Admin dashboard',
   'nav.adminPayments': 'Payments',
   'nav.adminAccounts': 'Accounts',
@@ -596,6 +597,15 @@ const en: Record<keyof typeof ko, string> = {
   'subscription.subscribe.couponLegend': 'Coupon',
   'subscription.subscribe.couponHint':
     'The coupon applies from the first payment when the subscription starts.',
+  'admin.account.back': 'Back to accounts',
+  'admin.account.email': 'Email',
+  'admin.account.loginId': 'Username',
+  'admin.account.status': 'Status',
+  'admin.account.roles': 'Roles',
+  'admin.account.rolesNone': 'None',
+  'admin.account.createdAt': 'Joined',
+  'admin.account.lastLogin': 'Last sign-in',
+  'admin.account.notFound': 'This account no longer exists.',
   'admin.payments.title': 'Payments',
   'admin.payments.subtitle': 'Look at payments and handle refund requests.',
   'admin.payments.tabsLabel': 'View',

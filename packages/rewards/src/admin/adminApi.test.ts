@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { recordingClient } from '../stories/fakeClient'
+import { recordingClient } from '../test/recordingClient'
 import { createRewardsAdminApi } from './adminApi'
 
 const run = async (body: (api: ReturnType<typeof createRewardsAdminApi>) => Promise<unknown>) => {

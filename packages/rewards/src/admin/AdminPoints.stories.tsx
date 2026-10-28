@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, waitFor } from 'storybook/test'
-import { createFakeAdmin } from '../stories/fakeAdmin'
+import { createFakeAdmin, fakeSearchAccounts } from '../stories/fakeAdmin'
 import { WithQuery } from '../stories/WithQuery'
 import { AdminPoints } from './AdminPoints'
 import { koRewardsAdminLabels } from './labels'
@@ -13,7 +13,12 @@ const meta = {
   title: 'Packages/rewards/admin/AdminPoints',
   component: AdminPoints,
   parameters: { layout: 'padded' },
-  args: { api: createFakeAdmin().api, labels: koRewardsAdminLabels, locale: 'ko-KR' },
+  args: {
+    api: createFakeAdmin().api,
+    searchAccounts: fakeSearchAccounts,
+    labels: koRewardsAdminLabels,
+    locale: 'ko-KR',
+  },
   decorators: [
     (Story) => (
       <WithQuery>
@@ -29,8 +34,9 @@ async function find(
   canvas: Parameters<NonNullable<Story['play']>>[0]['canvas'],
   userEvent: Parameters<NonNullable<Story['play']>>[0]['userEvent'],
 ) {
-  await userEvent.type(canvas.getByLabelText('계정 id'), 'acc_1')
-  await userEvent.click(canvas.getByRole('button', { name: '찾기' }))
+  await userEvent.type(await canvas.findByLabelText('이메일 또는 로그인 아이디'), 'ada')
+  await userEvent.click(canvas.getByRole('button', { name: '검색' }))
+  await userEvent.click(await canvas.findByRole('button', { name: 'ada@example.com 고르기' }))
   await expect(await canvas.findByText('1,000 P')).toBeVisible()
 }
 
@@ -67,5 +73,17 @@ export const ExpiryOnlyWhenAdding: Story = {
     await userEvent.type(canvas.getByLabelText(/^변경량/), '100')
     await expect(canvas.getByLabelText(/^유효기간/)).toBeVisible()
     await expect(canvas.getByRole('button', { name: '조정' })).toBeDisabled() // 사유가 비었다
+  },
+}
+
+/** 계정 id 를 직접 적는 칸이 없다 - 검색해서 고르고, 「다른 계정 고르기」로 돌아간다 */
+export const PickAnAccountFirst: Story = {
+  render: (args) => <AdminPoints {...args} api={createFakeAdmin().api} />,
+  play: async ({ canvas, userEvent }) => {
+    await expect(canvas.queryByLabelText('계정 id')).toBeNull()
+    await expect(canvas.queryByText('잔액')).toBeNull()
+    await find(canvas, userEvent)
+    await userEvent.click(canvas.getByRole('button', { name: '다른 계정 고르기' }))
+    await expect(await canvas.findByLabelText('이메일 또는 로그인 아이디')).toBeVisible()
   },
 }

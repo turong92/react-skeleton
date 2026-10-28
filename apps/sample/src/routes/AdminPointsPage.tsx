@@ -1,8 +1,11 @@
 import { useCan } from '@skeleton/auth'
+import { useMemo } from 'react'
+import { adminAccountsApi } from '../adminAccounts/api'
 import { AdminPoints } from '@skeleton/rewards/admin'
 import { languageOf, useT } from '../i18n'
 import { rewardsAdminApi } from '../rewards/api'
 import { rewardsAdminLabelsFor } from '../rewards/labels'
+import { createAccountSearch } from '../rewards/searchAccounts'
 
 /**
  * 운영자 화면 - `@skeleton/rewards/admin` 의 `AdminPoints`. 백엔드는 해당 모듈의 `skeleton.<module>.admin.enabled=true`(이 앱은 켠다)와 운영 권한이 필요하고,
@@ -12,10 +15,12 @@ export function AdminPointsPage() {
   const { locale } = useT()
   const language = languageOf(locale)
   const can = useCan()
+  const searchAccounts = useMemo(() => createAccountSearch(adminAccountsApi), [])
 
   return (
     <AdminPoints
       api={rewardsAdminApi}
+      searchAccounts={searchAccounts}
       can={can}
       labels={rewardsAdminLabelsFor(language)}
       locale={language}

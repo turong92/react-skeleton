@@ -1,6 +1,8 @@
 import { formatInstant } from '@skeleton/time'
 import { Alert, Badge, Button, Field, Input, PageHeader, Skeleton, Stat, Table } from '@skeleton/ui'
 import { useState, type FormEvent } from 'react'
+import { accountLabelOf, type AccountChoice } from './accountLabel'
+import { AccountSearch } from './AccountSearch'
 import { adminErrorMessage, isToolOff, mergeAdminLabels } from './adminErrors'
 import type { RewardsAdminApi } from './adminApi'
 import { useAccountPoints, useAdjustPoints } from './hooks'
@@ -10,6 +12,8 @@ import styles from './AdminPoints.module.css'
 
 export type AdminPointsProps = {
   api: Pick<RewardsAdminApi, 'accountPoints' | 'adjustPoints'>
+  /** 계정 찾기 - 앱이 계정 API 를 이 꼴로 옮겨 준다. 계정 id 를 직접 적는 칸은 없다 */
+  searchAccounts: (query: string) => Promise<AccountChoice[]>
   can?: CanFn
   labels?: Partial<RewardsAdminLabels>
   locale?: string
@@ -19,6 +23,7 @@ export type AdminPointsProps = {
 /** 포인트 운영 - 계정 id 로 찾아 잔액 · 내역을 보고, 사유와 함께 더하거나 뺀다. 잔액이 모자라면 서버가 409 `POINT.INSUFFICIENT`. 백엔드 `skeleton.point.admin.enabled=true` + `point.manage` */
 export function AdminPoints({
   api,
+  searchAccounts,
   can = allowAll,
   labels: given,
   locale,
@@ -27,12 +32,11 @@ export function AdminPoints({
   const labels = mergeAdminLabels(given)
   const t = labels.points
   const allowed = can(REWARDS_PERMISSIONS.point)
-  const [draft, setDraft] = useState('')
-  const [account, setAccount] = useState<string | null>(null)
+  const [account, setAccount] = useState<AccountChoice | null>(null)
   const [delta, setDelta] = useState('')
   const [reason, setReason] = useState('')
   const [days, setDays] = useState('')
-  const query = useAccountPoints(api, account)
+  const query = useAccountPoints(api, account?.id ?? null)
   const adjust = useAdjustPoints(api)
   const number = new Intl.NumberFormat(locale)
   const signed = new Intl.NumberFormat(locale, { signDisplay: 'exceptZero' })
@@ -44,7 +48,7 @@ export function AdminPoints({
     if (!valid || account === null) return
     adjust.mutate(
       {
-        accountId: account,
+        accountId: account.id,
         input: {
           delta: amount,
           reason: reason.trim(),
@@ -64,28 +68,25 @@ export function AdminPoints({
   return (
     <div className={styles.page}>
       <PageHeader title={t.title} />
-      <form
-        className={styles.find}
-        onSubmit={(event) => {
-          event.preventDefault()
-          adjust.reset()
-          setAccount(draft.trim() || null)
-        }}
-      >
-        <Field label={t.accountId}>
-          {(control) => (
-            <Input
-              {...control}
-              value={draft}
-              autoComplete="off"
-              onChange={(event) => setDraft(event.target.value)}
-            />
-          )}
-        </Field>
-        <Button type="submit" variant="secondary">
-          {t.find}
-        </Button>
-      </form>
+      {account === null ? (
+        <AccountSearch
+          search={searchAccounts}
+          onPick={(picked) => {
+            adjust.reset()
+            setAccount(picked)
+          }}
+          labels={labels}
+        />
+      ) : (
+        <p className={styles.picked}>
+          <span>
+            {labels.accountSearch.picked}: <strong>{accountLabelOf(account)}</strong>
+          </span>
+          <Button variant="secondary" size="sm" onClick={() => setAccount(null)}>
+            {labels.accountSearch.change}
+          </Button>
+        </p>
+      )}
       {account !== null &&
         (query.isPending ? (
           <Skeleton label={labels.loading} />

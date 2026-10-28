@@ -12,7 +12,6 @@ import {
   Select,
   Skeleton,
   Table,
-  Textarea,
 } from '@skeleton/ui'
 import { useId, useState, type FormEvent } from 'react'
 import { defaultRewardsLabels, type RewardsLabels } from '../labels'
@@ -64,6 +63,7 @@ export type AdminCouponDefinitionsProps = {
 }
 
 const STATUSES: readonly CouponDefinitionStatus[] = ['ACTIVE', 'PAUSED', 'ARCHIVED']
+/** 쉼표 · 줄바꿈으로 나눈 글자 목록(범위 칸) */
 const list = (text: string) =>
   text
     .split(/[\n,]/)
@@ -348,10 +348,11 @@ export function AdminCouponDefinitions({
           }
         />
       )}
-      {issuing && (
+      {issuing && searchAccounts && (
         <IssueDialog
           definition={issuing}
           labels={labels}
+          searchAccounts={searchAccounts}
           busy={mutations.issue.isPending}
           result={mutations.issue.data ?? null}
           error={mutations.issue.isError ? adminErrorMessage(mutations.issue.error, labels) : null}
@@ -508,6 +509,7 @@ function DefinitionDialog({
 function IssueDialog({
   definition,
   labels,
+  searchAccounts,
   busy,
   result,
   error,
@@ -516,6 +518,7 @@ function IssueDialog({
 }: {
   definition: CouponDefinition
   labels: RewardsAdminLabels
+  searchAccounts: (query: string) => Promise<AccountChoice[]>
   busy: boolean
   result: IssueResult | null
   error: string | null
@@ -523,8 +526,10 @@ function IssueDialog({
   onSubmit: (accountIds: string[]) => void
 }) {
   const t = labels.coupons
-  const formId = useId()
-  const [text, setText] = useState('')
+  // 줄 계정 - 검색해서 하나씩 골라 담는다(계정 id 를 직접 적는 칸은 없다)
+  const [chosen, setChosen] = useState<AccountChoice[]>([])
+  const pick = (account: AccountChoice) =>
+    setChosen((now) => (now.some((a) => a.id === account.id) ? now : [...now, account]))
   return (
     <Dialog
       open
@@ -537,37 +542,47 @@ function IssueDialog({
             {labels.cancel}
           </Button>
           <Button
-            type="submit"
-            form={formId}
             loading={busy}
             loadingLabel={labels.loading}
-            disabled={list(text).length === 0}
+            disabled={chosen.length === 0}
+            onClick={() => onSubmit(chosen.map((a) => a.id))}
           >
             {t.issue}
           </Button>
         </>
       }
     >
-      <form
-        id={formId}
-        className={styles.form}
-        onSubmit={(event: FormEvent) => {
-          event.preventDefault()
-          onSubmit(list(text))
-        }}
-      >
+      <div className={styles.form}>
         {error && <Alert tone="danger">{error}</Alert>}
         {result && (
           <Alert tone={result.issued.length > 0 ? 'success' : 'warning'}>
             {t.issuedResult(result.issued.length, result.skipped.length)}
           </Alert>
         )}
-        <Field label={t.issueAccounts} hint={t.issueHint}>
-          {(control) => (
-            <Textarea {...control} value={text} onChange={(event) => setText(event.target.value)} />
+        <AccountSearch search={searchAccounts} onPick={pick} labels={labels} />
+        <section aria-label={t.issueAccounts}>
+          <h3 className={styles.chosenTitle}>{t.issueAccounts}</h3>
+          {chosen.length === 0 ? (
+            <p className={styles.muted}>{t.issueHint}</p>
+          ) : (
+            <ul className={styles.chosen}>
+              {chosen.map((account) => (
+                <li key={account.id} className={styles.chip}>
+                  <span>{accountLabelOf(account)}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    aria-label={`${accountLabelOf(account)} ${labels.remove}`}
+                    onClick={() => setChosen((now) => now.filter((a) => a.id !== account.id))}
+                  >
+                    {labels.remove}
+                  </Button>
+                </li>
+              ))}
+            </ul>
           )}
-        </Field>
-      </form>
+        </section>
+      </div>
     </Dialog>
   )
 }

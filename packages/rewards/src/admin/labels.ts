@@ -203,8 +203,6 @@ export type RewardsAdminLabels = {
   }
   points: {
     title: string
-    accountId: string
-    find: string
     balance: string
     history: string
     emptyHistory: string

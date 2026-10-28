@@ -68,7 +68,14 @@ export const IssueAndMakeACode: Story = {
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(await canvas.findByRole('button', { name: '계정에 주기: 무료 이용권' }))
     const issue = within(await screen.findByRole('dialog', { name: '무료 이용권 주기' }))
-    await userEvent.type(issue.getByLabelText('계정 id'), 'acc_1, acc_2, skip_3')
+    // 계정 id 를 적는 칸이 없다 - 검색해서 골라 담는다
+    await expect(issue.queryByLabelText('계정 id')).toBeNull()
+    await userEvent.type(issue.getByLabelText('이메일 또는 로그인 아이디'), 'example.com')
+    await userEvent.click(issue.getByRole('button', { name: '검색' }))
+    await userEvent.click(await issue.findByRole('button', { name: 'ada@example.com 고르기' }))
+    await userEvent.click(await issue.findByRole('button', { name: 'bob@example.com 고르기' }))
+    await userEvent.click(await issue.findByRole('button', { name: 'skip@example.com 고르기' }))
+    await expect(issue.getByRole('button', { name: 'ada@example.com 빼기' })).toBeVisible()
     await userEvent.click(issue.getByRole('button', { name: '계정에 주기' }))
     await expect(await issue.findByText('2명에게 줬고 1명은 건너뛰었어요.')).toBeVisible()
     await userEvent.click(issue.getByRole('button', { name: '닫기' }))

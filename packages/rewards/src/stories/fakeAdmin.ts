@@ -8,6 +8,8 @@ import { fail } from './fakeRewards'
 export const fakeAccounts: AccountChoice[] = [
   { id: 'acc_1', email: 'ada@example.com', loginId: 'ada' },
   { id: 'acc_2', email: 'bob@example.com', loginId: null },
+  // 쿠폰을 줄 때 건너뛰어지는 계정(한도를 채웠다)
+  { id: 'skip_3', email: 'skip@example.com', loginId: null },
 ]
 
 /** 스토리용 계정 검색 - 이메일 조각 또는 정확한 로그인 아이디 */

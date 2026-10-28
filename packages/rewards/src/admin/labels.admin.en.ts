@@ -106,8 +106,8 @@ export const defaultRewardsAdminLabels: RewardsAdminLabels = {
     details: 'Details',
     issue: 'Give to accounts',
     issueTitle: (name) => `Give ${name}`,
-    issueAccounts: 'Account ids',
-    issueHint: 'One per line or separated by commas.',
+    issueAccounts: 'Accounts to give to',
+    issueHint: 'Search and pick the accounts one by one.',
     issuedResult: (issued, skipped) =>
       skipped === 0 ? `${issued} given.` : `${issued} given, ${skipped} skipped.`,
     makeCode: 'Make a shared code',
@@ -200,8 +200,6 @@ export const defaultRewardsAdminLabels: RewardsAdminLabels = {
   },
   points: {
     title: 'Points',
-    accountId: 'Account id',
-    find: 'Find',
     balance: 'Balance',
     history: 'History',
     emptyHistory: 'No history yet.',

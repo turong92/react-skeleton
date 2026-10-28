@@ -99,8 +99,8 @@ export const koRewardsAdminLabels: RewardsAdminLabels = {
     details: '자세히',
     issue: '계정에 주기',
     issueTitle: (name) => `${name} 주기`,
-    issueAccounts: '계정 id',
-    issueHint: '한 줄에 하나, 또는 쉼표로 나눠 적어 주세요.',
+    issueAccounts: '줄 계정',
+    issueHint: '검색해서 하나씩 골라 담아 주세요.',
     issuedResult: (issued, skipped) =>
       skipped === 0
         ? `${issued}명에게 줬어요.`
@@ -194,8 +194,6 @@ export const koRewardsAdminLabels: RewardsAdminLabels = {
   },
   points: {
     title: '포인트',
-    accountId: '계정 id',
-    find: '찾기',
     balance: '잔액',
     history: '내역',
     emptyHistory: '아직 내역이 없어요.',

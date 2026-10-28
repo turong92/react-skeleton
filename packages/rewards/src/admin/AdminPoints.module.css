@@ -28,3 +28,11 @@
   display: grid;
   gap: var(--space-md);
 }
+
+.picked {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-md);
+  margin: 0;
+}

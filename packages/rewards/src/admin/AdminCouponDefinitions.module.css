@@ -68,3 +68,27 @@
   gap: var(--space-md);
   margin: 0;
 }
+
+.chosenTitle {
+  margin: 0 0 var(--space-xs);
+  color: var(--text-strong);
+  font-size: var(--font-size-body);
+}
+
+.chosen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding-inline-start: var(--space-md);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+}

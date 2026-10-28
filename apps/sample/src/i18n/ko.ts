@@ -532,6 +532,7 @@ export default {
     '결제창에서 돌아온 주소가 올바르지 않아요. 내 응원 내역에서 결제를 확인해 주세요.',
   'settings.notifications': '알림',
   'settings.notificationsLoadFailed': '알림 설정을 불러오지 못했어요.',
+  'settings.notificationsSaveFailed': '바꾼 내용을 저장하지 못했어요. 다시 눌러 주세요.',
   'settings.notificationsHint':
     '받고 싶은 알림만 켜 두세요. 끈 종류는 받은편지함에도 쌓이지 않아요.',
   'notificationType.NOTE_UPDATED': '노트 수정',

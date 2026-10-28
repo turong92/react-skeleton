@@ -1,6 +1,9 @@
 import { Alert, Button, EmptyState, Spinner, SwitchRow } from '@skeleton/ui'
+import { useMutationState } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { usePreferences, useSetPreference } from './hooks'
+import { notificationKeys } from './queries'
+import type { NotificationPreference } from './types'
 import type { NotificationsApi } from './notificationsApi'
 import styles from './NotificationPreferences.module.css'
 
@@ -19,6 +22,8 @@ export type NotificationPreferencesProps = {
   errorMessage?: string
   /** 다시 시도 단추 이름(기본 `Try again`) */
   retryLabel?: string
+  /** 저장에 실패했을 때 목록 위에 띄우는 한 줄(기본 영어) */
+  saveErrorMessage?: string
 }
 
 /**
@@ -34,9 +39,17 @@ export function NotificationPreferences({
   emptyTitle = 'No notification types to configure',
   errorMessage = 'Could not load the notification settings.',
   retryLabel = 'Try again',
+  saveErrorMessage = 'Could not save the change.',
 }: NotificationPreferencesProps) {
   const preferences = usePreferences(api)
   const save = useSetPreference(api)
+  // 여러 줄을 잇달아 눌러도 진행 중인 저장마다 그 줄이 busy 다
+  const saving = new Set(
+    useMutationState({
+      filters: { mutationKey: notificationKeys.setPreference(), status: 'pending' },
+      select: (mutation) => (mutation.state.variables as NotificationPreference).type,
+    }),
+  )
   if (preferences.isPending) return <Spinner label={loadingLabel} />
   if (preferences.isError && !preferences.data)
     return (
@@ -60,6 +73,7 @@ export function NotificationPreferences({
   return (
     <div className={styles.root}>
       {title && <h3 className={styles.title}>{title}</h3>}
+      {save.isError && <Alert tone="danger">{saveErrorMessage}</Alert>}
       {items.length === 0 ? (
         <EmptyState title={emptyTitle} />
       ) : (
@@ -70,7 +84,7 @@ export function NotificationPreferences({
               title={labels?.[item.type] ?? item.type}
               description={descriptions?.[item.type]}
               checked={!item.muted}
-              busy={save.isPending && save.variables?.type === item.type}
+              busy={saving.has(item.type)}
               onChange={(enabled) => save.mutate({ type: item.type, muted: !enabled })}
             />
           ))}

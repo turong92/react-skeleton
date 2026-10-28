@@ -98,3 +98,24 @@ export const LoadFailedThenRetry: Story = {
     await expect(await canvas.findByRole('switch', { name: 'NOTE_UPDATED' })).toBeChecked()
   },
 }
+
+/** 저장에 실패하면 목록 위에 한 줄 — 스위치는 서버 값 그대로 */
+export const SaveFailed: Story = {
+  render: (args) => (
+    <Demo
+      {...args}
+      api={{
+        ...createFakeInbox().api,
+        setPreference: async () => {
+          throw new Error('boom')
+        },
+      }}
+      saveErrorMessage="Could not save the change."
+    />
+  ),
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(await canvas.findByRole('switch', { name: 'NOTE_UPDATED' }))
+    await expect(await canvas.findByRole('alert')).toHaveTextContent('Could not save the change.')
+    await expect(canvas.getByRole('switch', { name: 'NOTE_UPDATED' })).toBeChecked()
+  },
+}

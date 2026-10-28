@@ -22,6 +22,10 @@ export type NotificationBellProps = {
   listProps?: Omit<NotificationListProps, 'items' | 'onRead' | 'onOpen'>
   /** 링크 있는 줄의 제목을 눌렀을 때 — 안 읽었으면 읽음 처리하고 대화상자를 닫은 뒤 불린다(이동은 앱이 라우터로) */
   onOpen?: (item: NotificationItem) => void
+  /** 줄의 제목 · 내용을 앱이 다시 정한다(`NotificationList.describe` 와 같다) */
+  describe?: NotificationListProps['describe']
+  /** 묶인 줄의 수 배지 낭독 문구(`NotificationList.collapsedLabel` 과 같다) */
+  collapsedLabel?: NotificationListProps['collapsedLabel']
   /** 쪽 이동 문구 — `Pagination` 의 label props */
   paginationLabels?: { label?: string; previousLabel?: string; nextLabel?: string }
 }
@@ -43,6 +47,8 @@ export function NotificationBell({
   loadingLabel,
   listProps,
   onOpen,
+  describe,
+  collapsedLabel,
   paginationLabels,
 }: NotificationBellProps) {
   const [open, setOpen] = useState(false)
@@ -106,6 +112,8 @@ export function NotificationBell({
             ) : (
               <NotificationList
                 {...listProps}
+                describe={describe ?? listProps?.describe}
+                collapsedLabel={collapsedLabel ?? listProps?.collapsedLabel}
                 items={list.data?.values ?? []}
                 onRead={(item) => markRead.mutate(item.eventId)}
                 onOpen={

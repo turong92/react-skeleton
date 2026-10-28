@@ -55,6 +55,7 @@ export function usePreferences(api: NotificationsApi) {
 export function useSetPreference(api: NotificationsApi) {
   const client = useQueryClient()
   return useMutation({
+    mutationKey: notificationKeys.setPreference(),
     mutationFn: ({ type, muted }: NotificationPreference) => api.setPreference(type, muted),
     onSuccess: (saved) =>
       client.setQueryData<{ items: NotificationPreference[] }>(

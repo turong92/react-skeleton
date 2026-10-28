@@ -147,12 +147,19 @@ describe('parseNotificationEvent — what @skeleton/realtime hands over', () => 
     ).toMatchObject({ link: '/notes/7', collapseKey: 'note-updated:7' })
   })
 
-  it.each(['//evil.example', 'https://evil.example/x', 'notes/7', '/\\evil.example', '', 7])(
-    'drops a link that is not an in-app path (%j)',
-    (link) => {
-      expect(parseNotificationEvent({ ...event, link })?.link).toBeNull()
-    },
-  )
+  it.each([
+    '//evil.example',
+    'https://evil.example/x',
+    'notes/7',
+    '/\\evil.example',
+    '/\t/evil.example',
+    '/\n/evil.example',
+    '/a/..//evil.example',
+    '',
+    7,
+  ])('drops a link that is not an in-app path (%j)', (link) => {
+    expect(parseNotificationEvent({ ...event, link })?.link).toBeNull()
+  })
 
   it('ignores anything that is not a notification: the SSE "connected" event, garbage, null', () => {
     expect(parseNotificationEvent({ topics: ['demo'], connectedAt: 't' })).toBeNull()

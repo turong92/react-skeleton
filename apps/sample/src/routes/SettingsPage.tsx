@@ -90,6 +90,7 @@ export function SettingsPage() {
           loadingLabel={t('common.loading')}
           errorMessage={t('settings.notificationsLoadFailed')}
           retryLabel={t('common.retry')}
+          saveErrorMessage={t('settings.notificationsSaveFailed')}
           labels={{
             NOTE_UPDATED: t('notificationType.NOTE_UPDATED'),
             'comment.created': t('notificationType.comment.created'),

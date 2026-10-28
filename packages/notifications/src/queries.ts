@@ -8,6 +8,8 @@ export const notificationKeys = {
   list: (params: NotificationListParams = {}) => [...notificationKeys.lists(), params] as const,
   unread: () => [...notificationKeys.all, 'unread'] as const,
   preferences: () => [...notificationKeys.all, 'preferences'] as const,
+  /** 수신 설정 저장 mutation 의 키 — 진행 중인 저장을 `useMutationState` 로 본다 */
+  setPreference: () => [...notificationKeys.all, 'preferences', 'set'] as const,
 }
 
 export function notificationListQuery(api: NotificationsApi, params: NotificationListParams = {}) {

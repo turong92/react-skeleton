@@ -91,15 +91,19 @@ describe('NotificationList — links, describe, collapsed rows', () => {
     expect(renderToStaticMarkup(<NotificationList items={[linked]} />)).not.toContain('<a ')
   })
 
-  it.each(['//evil.example/x', 'https://evil.example', '/\\evil.example'])(
-    'never links %s even if the server sent it',
-    (link) => {
-      const html = renderToStaticMarkup(
-        <NotificationList items={[make({ link })]} onOpen={() => {}} />,
-      )
-      expect(html).not.toContain('<a ')
-    },
-  )
+  it.each([
+    '//evil.example/x',
+    'https://evil.example',
+    '/\\evil.example',
+    '/\t/evil.example',
+    '/\n/evil.example',
+    '/a/..//evil.example',
+  ])('never links %s even if the server sent it', (link) => {
+    const html = renderToStaticMarkup(
+      <NotificationList items={[make({ link })]} onOpen={() => {}} />,
+    )
+    expect(html).not.toContain('<a ')
+  })
 
   it('describe replaces the title and the message of a row', () => {
     const html = renderToStaticMarkup(
@@ -221,6 +225,15 @@ describe('NotificationBell', () => {
   it('the bell label is a prop so a Korean app can say it its own way', () => {
     const html = render(2, { bellLabel: (n) => `알림 ${n}개 안 읽음` })
     expect(html).toContain('aria-label="알림 2개 안 읽음"')
+  })
+
+  it('accepts describe and collapsedLabel directly (listProps still works)', () => {
+    const own = renderToStaticMarkup(
+      <QueryClientProvider client={new QueryClient()}>
+        <NotificationBell api={api} describe={() => ({ title: 'X' })} collapsedLabel={() => 'y'} />
+      </QueryClientProvider>,
+    )
+    expect(own).toContain('<dialog')
   })
 
   it('opens a dialog (native, focus-trapped) that starts closed', () => {

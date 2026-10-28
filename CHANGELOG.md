@@ -11,11 +11,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 백엔드 짝: kotlin-skeleton `notification` · `notification-jdbc` · `notification-sse`(같은 묶음). `@skeleton/notifications` 1.1.0 → 1.2.0.
 
-- `createNotificationsApi`: `unreadCount()`(`GET …/unread-count`) · `preferences()`(`GET …/preferences`) · `setPreference(type, muted)`(`PUT …/preferences/{type}`). **`unreadCountQuery` 는 이제 전용 엔드포인트를 쓴다**(예전엔 `unreadOnly&size=1` 의 `totalElements`) - 백엔드 쪽을 같이 올려야 한다. `NotificationsApi` 를 직접 만든 가짜(테스트 · 스토리)는 세 메서드를 더해야 타입이 맞는다.
+- `createNotificationsApi`: `unreadCount()`(`GET …/unread-count`) · `preferences()`(`GET …/preferences`) · `setPreference(type, muted)`(`PUT …/preferences/{type}`). `unreadCountQuery` 는 전용 엔드포인트를 쓴다(아래 「업그레이드 시 할 일」).
 - 타입: `NotificationItem.link` · `.collapsedCount`, `NotificationEvent.link` · `.collapseKey`, `NotificationPreference`. 링크는 앱 안 경로(`/` 로 시작, `//` 아님)만 인정하고 클라이언트도 다시 확인한다.
 - `NotificationList` · `NotificationBell`: `onOpen`(링크 있는 줄의 제목이 밑줄 링크, 누르면 읽음 + 대화상자 닫기 + 이동은 앱이) · `describe`(제목 · 내용을 앱이 다시 정함) · `collapsedLabel`(묶인 줄의 수 배지). 실시간 `ingest` 는 `collapseKey` 가 있으면 안 읽은 수를 +1 하지 않고 다시 읽는다.
 - 새 부품 `NotificationPreferences` + 훅 `usePreferences` · `useSetPreference` - 서버가 알려 준 종류마다 스위치(즉시 저장).
-- 샘플: 종의 줄을 누르면 해당 화면으로 이동, 설정에 「알림」 카드(노트 수정 · 댓글 · 답글 · 보상), 실시간 연결이 45초 유휴 감시(백엔드 심장박동 15초).
+- `NotificationPreferences`: 불러오기 실패는 오류 띠 + 다시 시도 단추(`errorMessage` · `retryLabel`), 저장 실패는 목록 위 한 줄(`saveErrorMessage`), 저장 중인 줄마다 `busy`(여러 줄을 잇달아 눌러도). `NotificationBell` 이 `describe` · `collapsedLabel` 을 직접 받는다(`listProps` 로도 계속 된다).
+- 링크 확인: 백슬래시 · 제어 문자(C0 · DEL · C1)를 어디서든 거절하고, 정규화한 경로가 `//` 로 시작해도(`/a/..//x`) 거절한다.
+- 샘플: 종과 대시보드 「읽지 않은 알림」 카드의 줄을 누르면 읽음 + 해당 화면으로 이동, 설정에 「알림」 카드(노트 수정 · 댓글 · 답글 · 보상, 불러오기 · 저장 실패 문구 포함), 실시간 연결이 45초 유휴 감시(백엔드 심장박동 15초).
+
+#### Changed — 업그레이드 시 할 일
+
+- `unreadCountQuery` 가 `GET …/unread-count` 를 요구한다(예전엔 `unreadOnly&size=1` 의 `totalElements`) - 백엔드를 같이 올리지 않으면 종의 안 읽은 수가 404 가 된다.
+- `NotificationsApi` 를 직접 만든 가짜(테스트 · 스토리)는 `unreadCount` · `preferences` · `setPreference` 를 더해야 타입이 맞는다. `NotificationItem` 리터럴은 `link` · `collapsedCount` 를 더한다.
 
 ### Added — 쿠폰 운영 보강 (2026-10-29)
 

@@ -16,14 +16,25 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-function Demo({ onConfirm, text }: { onConfirm?: () => void; text: string }) {
+function Demo({
+  onConfirm,
+  onClosed,
+  text,
+}: {
+  onConfirm?: () => void
+  onClosed?: () => void
+  text: string
+}) {
   const [open, setOpen] = useState(false)
   return (
     <>
       <Button onClick={() => setOpen(true)}>Open dialog</Button>
       <Dialog
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={() => {
+          onClosed?.()
+          setOpen(false)
+        }}
         title="Delete project"
         footer={
           <>
@@ -65,8 +76,8 @@ export const Default: Story = {
  * 같은 경로(cancel → close → `onClose`)를 타는 `requestClose()` 로 Esc 를 대신한다 — 열림 상태가 부모로 돌아가고 포커스가 연 버튼으로 돌아오는지를 본다.
  */
 export const EscapeClosesAndFocusReturns: Story = {
-  render: () => <Demo text="Press Escape to close." />,
-  play: async ({ canvas, userEvent }) => {
+  render: (args) => <Demo text="Press Escape to close." onClosed={args.onClose} />,
+  play: async ({ canvas, userEvent, args }) => {
     const trigger = canvas.getByRole('button', { name: 'Open dialog' })
     await userEvent.click(trigger)
     const dialog = await screen.findByRole('dialog', { name: 'Delete project' })
@@ -77,6 +88,7 @@ export const EscapeClosesAndFocusReturns: Story = {
     ;(dialog as HTMLDialogElement).requestClose()
     await closed
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    await expect(args.onClose).toHaveBeenCalledTimes(1) // Esc 로 닫아도 정리 알림은 한 번
     await expect(trigger).toHaveFocus()
     // 부모의 열림 상태도 닫혔다 — 그래서 다시 눌러 열 수 있다(`onClose` 가 안 이어지면 상태가 `open` 에 남아 다시 안 열린다)
     await userEvent.click(trigger)

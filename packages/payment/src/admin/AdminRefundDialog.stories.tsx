@@ -634,12 +634,12 @@ const lost = async (): Promise<Refund> => {
   throw new Error('network')
 }
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+/** 지금 멈춰 둔 시계(없으면 `null`) - `lostAfter` 가 실제로 자지 않고 이 시계를 흘린다 */
+let frozen: ReturnType<typeof freezeClock> | null = null
 /**
  * 모름이 된 환불의 유예(`unsureHoldMs` · `unsureFloorMs`)는 `Date.now()` 로 센다. 실제 시간으로 기다리면 부하가 큰 기계에서 「유예 안의 첫 맞추기」가 유예를 넘겨 버려
  * 시험이 흔들린다(100ms 안에 창을 닫고 누르는 일이 늘 되지 않는다) - 시계를 멈춰 두고 시험이 직접 흘려 보낸다. 끝나면 꼭 `restore()`(try/finally)
  */
-/** 지금 멈춰 둔 시계(없으면 `null`) - `lostAfter` 가 실제로 자지 않고 이 시계를 흘린다 */
-let frozen: ReturnType<typeof freezeClock> | null = null
 function freezeClock() {
   const real = Date.now
   let now = real()

@@ -47,14 +47,16 @@ export function Dialog({
     if (!open && dialog.open) {
       // 부모가 닫았다(`open={false}`): 정리(`onClose`)는 **지금** 한 번 알린다 - 닫기 버튼이 이미 알렸으면 건너뛴다.
       // 뒤늦게 오는 `close` 이벤트로 알리지 않는다: 그 사이 부모가 다시 열려고 `open` 을 켰다면 그 이벤트의 `onClose()` 가 새 열기를 되돌려 창이 다시 열리지 않는다
+      // 부모 콜백은 창을 닫고 포커스를 돌려준 **뒤 마지막에** 부른다 - 콜백이 던져도 창은 닫힌다
       closedByProp.current = true
-      if (!notifiedByButton.current) onCloseRef.current()
+      const notify = !notifiedByButton.current
       notifiedByButton.current = false
       dialog.close()
       // 브라우저가 연 곳으로 포커스를 돌려주지만(창이 포커스를 잃었을 때 등) 늘 그렇지는 않다 — 직접 돌려준다
       const opener = openerRef.current
       openerRef.current = null
       if (opener?.isConnected && document.activeElement !== opener) opener.focus()
+      if (notify) onCloseRef.current()
     }
   }, [open])
 

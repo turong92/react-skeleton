@@ -25,7 +25,8 @@ export function AdminCouponDefinitionsPage() {
       labels={rewardsAdminLabelsFor(language)}
       locale={language}
       userLabels={rewardsLabelsFor(language)}
-      searchAccounts={searchAccounts}
+      // 계정 찾기는 계정 조회 권한(`account.read`)이 있을 때만 - 없으면 화면이 이유를 보인다(없는 권한으로 부르면 403 이다)
+      searchAccounts={can('account.read') ? searchAccounts : undefined}
       renderDetailLink={(definition, label, accessibleName, className) => (
         <Link
           to={`/admin/coupons/${encodeURIComponent(definition.id)}`}

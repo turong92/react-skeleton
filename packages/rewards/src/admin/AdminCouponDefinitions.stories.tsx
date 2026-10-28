@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, screen, waitFor, within } from 'storybook/test'
 import { koRewardsLabels } from '../labels'
 import { createFakeAdmin, fakeSearchAccounts } from '../stories/fakeAdmin'
+import { fail } from '../stories/fakeRewards'
 import { WithQuery } from '../stories/WithQuery'
 import { AdminCouponDefinitions } from './AdminCouponDefinitions'
 import { koRewardsAdminLabels } from './labels'
@@ -45,7 +46,7 @@ export const Default: Story = {
     await expect(table.getByText('무료')).toBeVisible()
     await expect(table.getByText('25')).toBeVisible()
     // 줄 끝 「자세히」 는 테두리 있는 링크 단추 모양이다
-    await expect(table.getByRole('link', { name: '무료 이용권 자세히' })).toBeVisible()
+    await expect(table.getByRole('link', { name: '자세히: 무료 이용권' })).toBeVisible()
   },
 }
 
@@ -75,7 +76,7 @@ export const IssueAndMakeACode: Story = {
     await userEvent.click(await issue.findByRole('button', { name: 'ada@example.com 고르기' }))
     await userEvent.click(await issue.findByRole('button', { name: 'bob@example.com 고르기' }))
     await userEvent.click(await issue.findByRole('button', { name: 'skip@example.com 고르기' }))
-    await expect(issue.getByRole('button', { name: 'ada@example.com 빼기' })).toBeVisible()
+    await expect(issue.getByRole('button', { name: '빼기: ada@example.com' })).toBeVisible()
     await userEvent.click(issue.getByRole('button', { name: '계정에 주기' }))
     await expect(await issue.findByText('2명에게 줬고 1명은 건너뛰었어요.')).toBeVisible()
     await userEvent.click(issue.getByRole('button', { name: '닫기' }))
@@ -142,5 +143,59 @@ export const PeriodsMustBeInOrder: Story = {
     await userEvent.type(dialog.getByLabelText('유효기간 끝'), '2027-01-01T10:00')
     await expect(dialog.getByText('사용 시작이 유효기간 끝보다 앞이어야 해요.')).toBeVisible()
     await expect(save).toBeDisabled()
+  },
+}
+
+/** 계정 조회 권한이 없는 운영자(`searchAccounts` 를 못 받는다) - 「계정에 주기」 단추 대신 이유를 보인다 */
+export const WithoutAccountLookup: Story = {
+  render: (args) => (
+    <AdminCouponDefinitions {...args} api={createFakeAdmin().api} searchAccounts={undefined} />
+  ),
+  play: async ({ canvas }) => {
+    const table = within(await canvas.findByRole('table', { name: '쿠폰 정의 목록' }))
+    await expect(table.queryByRole('button', { name: /계정에 주기/ })).toBeNull()
+    await expect(
+      canvas.getByText('계정을 찾으려면 계정 조회 권한(account.read)이 필요해요.'),
+    ).toBeVisible()
+    await expect(canvas.queryByLabelText('이메일 또는 로그인 아이디')).toBeNull()
+  },
+}
+
+/** 검색이 403(권한 없음)이면 「실패」가 아니라 권한이 필요하다고 말한다 */
+export const SearchDeniedSaysWhy: Story = {
+  render: (args) => (
+    <AdminCouponDefinitions
+      {...args}
+      api={createFakeAdmin().api}
+      searchAccounts={async () => {
+        throw fail(403, 'COMMON.FORBIDDEN')
+      }}
+    />
+  ),
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.type(await canvas.findByLabelText('이메일 또는 로그인 아이디'), 'ada')
+    await userEvent.click(canvas.getByRole('button', { name: '검색' }))
+    await expect(
+      await canvas.findByText('계정을 찾으려면 계정 조회 권한(account.read)이 필요해요.'),
+    ).toBeVisible()
+  },
+}
+
+/** 결과가 한도(10)를 넘으면 열 개만 보이고 「더 좁혀서 찾아 주세요」 */
+export const TooManyMatches: Story = {
+  render: (args) => (
+    <AdminCouponDefinitions
+      {...args}
+      api={createFakeAdmin().api}
+      searchAccounts={async () =>
+        Array.from({ length: 11 }, (_, i) => ({ id: `a${i}`, email: `user${i}@example.com` }))
+      }
+    />
+  ),
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.type(await canvas.findByLabelText('이메일 또는 로그인 아이디'), 'user')
+    await userEvent.click(canvas.getByRole('button', { name: '검색' }))
+    await expect(await canvas.findByText('결과가 더 있어요. 더 좁혀서 찾아 주세요.')).toBeVisible()
+    await expect(canvas.getAllByRole('button', { name: /고르기$/ })).toHaveLength(10)
   },
 }

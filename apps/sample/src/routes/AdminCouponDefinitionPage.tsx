@@ -16,11 +16,12 @@ export function AdminCouponDefinitionPage() {
   const { locale } = useT()
   const language = languageOf(locale)
   const labels = rewardsAdminLabelsFor(language)
+  const can = useCan()
   return (
     <AdminCouponDefinition
       api={rewardsAdminApi}
       definitionId={id}
-      can={useCan()}
+      can={can}
       labels={labels}
       userLabels={rewardsLabelsFor(language)}
       locale={language}
@@ -29,9 +30,16 @@ export function AdminCouponDefinitionPage() {
           {labels.couponDetail.back}
         </LinkButton>
       }
-      renderAccountLink={(accountId, children) => (
-        <TextLink to={`/admin/accounts/${encodeURIComponent(accountId)}`}>{children}</TextLink>
-      )}
+      // 계정 한 건 화면은 `account.read` 라서 그 권한이 있을 때만 잇는다(없으면 계정 칸은 글자)
+      renderAccountLink={
+        can('account.read')
+          ? (accountId, children) => (
+              <TextLink to={`/admin/accounts/${encodeURIComponent(accountId)}`}>
+                {children}
+              </TextLink>
+            )
+          : undefined
+      }
     />
   )
 }

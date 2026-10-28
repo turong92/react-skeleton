@@ -156,6 +156,10 @@ export type RewardsAdminLabels = {
     pick: (label: string) => string
     picked: string
     change: string
+    /** 계정 조회 권한 · 계정 모듈이 없는 서버 - 검색이 403 · 404 */
+    needsPermission: string
+    /** 결과가 한도를 넘었다 */
+    tooMany: string
   }
   couponDetail: {
     /** 목록 행의 이름 링크 낭독 - 「○○ 자세히」 */
@@ -167,8 +171,9 @@ export type RewardsAdminLabels = {
     issuePeriod: string
     usePeriod: string
     validDays: (days: number) => string
-    until: string
-    from: string
+    /** 「10월 1일까지」 · 「Until Oct 1」 - 인자는 서식을 입힌 시각 */
+    until: (date: string) => string
+    from: (date: string) => string
     always: string
     noEnd: string
     stats: {

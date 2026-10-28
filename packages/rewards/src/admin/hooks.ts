@@ -105,7 +105,7 @@ export function useCouponDefinitionMutations(
       onSuccess: done,
     }),
     code: useMutation({ mutationFn: (id: string) => api.createCouponCode(id) }),
-    revoke: useMutation({ mutationFn: (id: string) => api.revokeCoupon(id), onSuccess: done }),
+    revoke: useMutation({ mutationFn: (id: string) => api.revokeCoupon(id), onSettled: done }),
   }
 }
 

@@ -73,7 +73,7 @@ export const RevokeUpdatesTheNumbers: Story = {
     const stats = within(await canvas.findByRole('region', { name: '현황' }))
     await expect(stats.getByText('회수').closest('dl')).toHaveTextContent('0')
     await userEvent.selectOptions(await canvas.findByLabelText('상태'), 'AVAILABLE')
-    const first = (await canvas.findAllByRole('button', { name: /쿠폰 회수/ }))[0]!
+    const first = (await canvas.findAllByRole('button', { name: /회수/ }))[0]!
     await userEvent.click(first)
     await waitFor(() => expect(stats.getByText('회수').closest('dl')).toHaveTextContent('1'))
   },
@@ -85,7 +85,7 @@ export const NoPermissionNoRevoke: Story = {
   ),
   play: async ({ canvas }) => {
     await canvas.findByRole('table')
-    await expect(canvas.queryByRole('button', { name: /쿠폰 회수/ })).toBeNull()
+    await expect(canvas.queryByRole('button', { name: /회수/ })).toBeNull()
   },
 }
 

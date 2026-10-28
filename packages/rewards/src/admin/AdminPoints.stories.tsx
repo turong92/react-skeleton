@@ -87,3 +87,16 @@ export const PickAnAccountFirst: Story = {
     await expect(await canvas.findByLabelText('이메일 또는 로그인 아이디')).toBeVisible()
   },
 }
+
+/** 계정 조회 권한이 없으면(`searchAccounts` 없음) 계정을 고를 수 없다 - 이유만 보인다 */
+export const WithoutAccountLookup: Story = {
+  render: (args) => (
+    <AdminPoints {...args} api={createFakeAdmin().api} searchAccounts={undefined} />
+  ),
+  play: async ({ canvas }) => {
+    await expect(
+      await canvas.findByText('계정을 찾으려면 계정 조회 권한(account.read)이 필요해요.'),
+    ).toBeVisible()
+    await expect(canvas.queryByLabelText('이메일 또는 로그인 아이디')).toBeNull()
+  },
+}

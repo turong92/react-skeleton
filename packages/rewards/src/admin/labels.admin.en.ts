@@ -140,7 +140,7 @@ export const defaultRewardsAdminLabels: RewardsAdminLabels = {
     noLimit: 'No limit',
     accountCoupons: 'An account’s coupons',
     couponCaption: 'Coupons of the account',
-    revoke: (name) => `Take back ${name}`,
+    revoke: (name) => `Take back: ${name}`,
     revokeButton: 'Take back',
     noAccountCoupons: 'This account has no coupons.',
   },
@@ -154,6 +154,8 @@ export const defaultRewardsAdminLabels: RewardsAdminLabels = {
     pick: (label) => `Choose ${label}`,
     picked: 'Chosen account',
     change: 'Choose another',
+    needsPermission: 'Looking up accounts needs the account.read permission.',
+    tooMany: 'There are more matches. Narrow the search.',
   },
   couponDetail: {
     open: (name) => `Details: ${name}`,
@@ -164,8 +166,8 @@ export const defaultRewardsAdminLabels: RewardsAdminLabels = {
     issuePeriod: 'Giving period',
     usePeriod: 'Use period',
     validDays: (days) => `${days} days after it is given`,
-    until: 'until',
-    from: 'from',
+    until: (date) => `Until ${date}`,
+    from: (date) => `From ${date}`,
     always: 'No limit',
     noEnd: 'No end',
     stats: {
@@ -195,7 +197,7 @@ export const defaultRewardsAdminLabels: RewardsAdminLabels = {
       },
       empty: 'No coupons for this filter.',
       more: 'Show more',
-      revoke: (account) => `Take back the coupon of ${account}`,
+      revoke: (account) => `Take back: ${account}`,
     },
   },
   points: {

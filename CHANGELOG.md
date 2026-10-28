@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added — 쿠폰 운영 보강 (2026-10-29)
 
 - `@skeleton/rewards/admin`: `AdminCouponDefinition`(정의 한 건 — 현황 카드 · 발급 내역 표 · 회수) · `AccountSearch`(이메일 · 로그인 아이디로 찾아 고르기 — 계정 id 직접 입력 칸 대신) · 쿠폰 만들기에 발행 기간(`issueStartsAt` · `issueEndsAt`, 밖이면 `COUPON.ISSUE_CLOSED`)과 사용 시작(`validFrom`). `createRewardsAdminApi` 에 `couponStats` · `listDefinitionCoupons`.
+- `AdminPoints` 의 계정 id 입력 칸은 `searchAccounts`(선택 prop)로 바뀌었다 - 앱은 `account.read` 가 있을 때만 준다. 쿠폰 「계정에 주기」도 검색해서 골라 담는다. 쿠폰 응원 · 구독 선택지는 사용 시작(서버 시계) 전 쿠폰을 뺀다.
 - 사용자 쿠폰함: 사용 시작 전 쿠폰은 「○월 ○일부터 쓸 수 있어요」.
 - 샘플: `/admin/coupons/:id` · `/admin/accounts/:id`(읽기), 운영 메뉴를 「운영」 드롭다운 하나로 묶음(운영자의 상단 메뉴가 알림 · 로그아웃 · 언어 단추를 덮던 것), e2e `rewards.e2e.ts` 에 현황 숫자 시나리오.
 - `@skeleton/ui` `AppShell`: 내비 링크가 많으면 액션을 덮지 않고 내비 안에서 다음 줄로 감긴다(640px 아래의 가로 스크롤 띠는 그대로).

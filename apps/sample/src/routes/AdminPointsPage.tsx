@@ -20,7 +20,8 @@ export function AdminPointsPage() {
   return (
     <AdminPoints
       api={rewardsAdminApi}
-      searchAccounts={searchAccounts}
+      // 계정 찾기는 계정 조회 권한(`account.read`)이 있을 때만 - 없으면 화면이 이유를 보인다
+      searchAccounts={can('account.read') ? searchAccounts : undefined}
       can={can}
       labels={rewardsAdminLabelsFor(language)}
       locale={language}

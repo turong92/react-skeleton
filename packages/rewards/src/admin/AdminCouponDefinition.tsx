@@ -12,7 +12,7 @@ import {
   Stat,
   Table,
 } from '@skeleton/ui'
-import { useState, type ReactNode } from 'react'
+import { useId, useState, type ReactNode } from 'react'
 import { stageSummary } from '../coupon/stageSummary'
 import { formatMoney } from '../format'
 import { defaultRewardsLabels, type RewardsLabels } from '../labels'
@@ -82,6 +82,7 @@ export function AdminCouponDefinition({
   const labels = mergeAdminLabels(given)
   const t = labels.couponDetail
   const allowed = can(REWARDS_PERMISSIONS.coupon)
+  const issuedTitleId = useId()
   const [status, setStatus] = useState<CouponStatus | ''>('')
   const definitions = useAdminCouponDefinitions(api)
   const stats = useCouponStats(api, definitionId)
@@ -158,8 +159,8 @@ export function AdminCouponDefinition({
         )}
       </Card>
 
-      <section className={styles.issued} aria-labelledby="issued-title">
-        <h2 id="issued-title">{t.issuedList.title}</h2>
+      <section className={styles.issued} aria-labelledby={issuedTitleId}>
+        <h2 id={issuedTitleId}>{t.issuedList.title}</h2>
         <Field label={t.issuedList.statusFilter}>
           {(control) => (
             <Select
@@ -192,67 +193,73 @@ export function AdminCouponDefinition({
           </Alert>
         ) : (
           <>
-            <Table
-              caption={t.issuedList.caption}
-              rows={rows}
-              rowKey={(coupon) => coupon.id}
-              empty={<EmptyState title={t.issuedList.empty} headingLevel={3} />}
-              columns={[
-                {
-                  key: 'account',
-                  header: t.issuedList.columns.account,
-                  rowHeader: true,
-                  render: (coupon) => account(coupon.accountId),
-                },
-                {
-                  key: 'status',
-                  header: t.issuedList.columns.status,
-                  render: (coupon) => (
-                    <Badge tone={TONE[coupon.status]}>
-                      {userLabels.coupon.status[coupon.status]}
-                    </Badge>
-                  ),
-                },
-                {
-                  key: 'issuedAt',
-                  header: t.issuedList.columns.issuedAt,
-                  render: (coupon) => formatTime(coupon.issuedAt),
-                },
-                {
-                  key: 'expiresAt',
-                  header: t.issuedList.columns.expiresAt,
-                  render: (coupon) => (coupon.expiresAt ? formatTime(coupon.expiresAt) : '-'),
-                },
-                {
-                  key: 'usedAt',
-                  header: t.issuedList.columns.usedAt,
-                  render: (coupon) => (coupon.usedAt ? formatTime(coupon.usedAt) : '-'),
-                },
-                {
-                  key: 'order',
-                  header: t.issuedList.columns.order,
-                  render: (coupon) => coupon.orderRef ?? '-',
-                },
-                {
-                  key: 'actions',
-                  header: t.issuedList.columns.actions,
-                  render: (coupon) =>
-                    allowed &&
-                    coupon.status === 'AVAILABLE' && (
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        aria-label={t.issuedList.revoke(coupon.accountId)}
-                        loading={revoke.isPending && revoke.variables === coupon.id}
-                        loadingLabel={labels.loading}
-                        onClick={() => revoke.mutate(coupon.id)}
-                      >
-                        {labels.coupons.revokeButton}
-                      </Button>
+            {/* 상태를 바꾼 직후에는 새로 오는 동안 앞 목록이 흐리게 보인다 */}
+            <div
+              className={issued.isPlaceholderData ? styles.stale : undefined}
+              aria-busy={issued.isPlaceholderData}
+            >
+              <Table
+                caption={t.issuedList.caption}
+                rows={rows}
+                rowKey={(coupon) => coupon.id}
+                empty={<EmptyState title={t.issuedList.empty} headingLevel={3} />}
+                columns={[
+                  {
+                    key: 'account',
+                    header: t.issuedList.columns.account,
+                    rowHeader: true,
+                    render: (coupon) => account(coupon.accountId),
+                  },
+                  {
+                    key: 'status',
+                    header: t.issuedList.columns.status,
+                    render: (coupon) => (
+                      <Badge tone={TONE[coupon.status]}>
+                        {userLabels.coupon.status[coupon.status]}
+                      </Badge>
                     ),
-                },
-              ]}
-            />
+                  },
+                  {
+                    key: 'issuedAt',
+                    header: t.issuedList.columns.issuedAt,
+                    render: (coupon) => formatTime(coupon.issuedAt),
+                  },
+                  {
+                    key: 'expiresAt',
+                    header: t.issuedList.columns.expiresAt,
+                    render: (coupon) => (coupon.expiresAt ? formatTime(coupon.expiresAt) : '-'),
+                  },
+                  {
+                    key: 'usedAt',
+                    header: t.issuedList.columns.usedAt,
+                    render: (coupon) => (coupon.usedAt ? formatTime(coupon.usedAt) : '-'),
+                  },
+                  {
+                    key: 'order',
+                    header: t.issuedList.columns.order,
+                    render: (coupon) => coupon.orderRef ?? '-',
+                  },
+                  {
+                    key: 'actions',
+                    header: t.issuedList.columns.actions,
+                    render: (coupon) =>
+                      allowed &&
+                      coupon.status === 'AVAILABLE' && (
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          aria-label={t.issuedList.revoke(coupon.accountId)}
+                          loading={revoke.isPending && revoke.variables === coupon.id}
+                          loadingLabel={labels.loading}
+                          onClick={() => revoke.mutate(coupon.id)}
+                        >
+                          {labels.coupons.revokeButton}
+                        </Button>
+                      ),
+                  },
+                ]}
+              />
+            </div>
             {issued.hasNextPage && (
               <div>
                 <Button
@@ -292,7 +299,7 @@ function periodText(
 ): string {
   if (!from && !to) return t.always
   if (from && to) return `${format(from)} ~ ${format(to)}`
-  return from ? `${format(from)} ${t.from}` : `${format(to as string)} ${t.until}`
+  return from ? t.from(format(from)) : t.until(format(to as string))
 }
 
 /** 사용 기간 - 사용 시작 · 고정 끝 · 받은 날부터 N일(이른 쪽이 이긴다) */

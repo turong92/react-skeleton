@@ -99,7 +99,7 @@ export function createFakeRewards({
     : [
         ...sampleCoupons,
         ...(notYetUsable
-          ? [coupon({ id: 'c9', name: '겨울 쿠폰', usableFrom: '2099-12-24T00:00:00Z' })]
+          ? [coupon({ id: 'c9', name: '겨울 쿠폰', usableFrom: '2099-12-24T12:00:00Z' })]
           : []),
       ]
   const claims: string[] = []

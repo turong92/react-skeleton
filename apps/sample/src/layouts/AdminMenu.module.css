@@ -32,7 +32,15 @@
     display: contents;
   }
 
-  .trigger {
+  /* 선택자를 두 겹으로 - `Button` 의 `display` 보다 읽는 순서와 상관없이 이긴다 */
+  .menu .trigger {
     display: none;
   }
+}
+
+/* 운영 화면에 있을 때 - 내비의 현재 쪽 링크와 같은 말(바탕 + 아래 막대) */
+.menu .trigger[aria-current='true'] {
+  border-color: var(--teal);
+  background: var(--teal-wash);
+  box-shadow: inset 0 -3px 0 var(--teal);
 }

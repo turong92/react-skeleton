@@ -13,6 +13,8 @@ export function AdminMenu({ label, children }: { label: string; children: ReactN
   const root = useRef<HTMLDivElement>(null)
   const panelId = useId()
   const { pathname } = useLocation()
+  // 운영 화면에 있으면 단추가 현재 위치를 말한다(내비 링크의 현재 쪽 표시와 같은 말)
+  const onAdminScreen = pathname.startsWith('/admin')
 
   // 화면을 옮기면 닫는다(그리는 중에 상태를 맞춘다 - effect 안에서 상태를 바꾸지 않는다)
   const [seen, setSeen] = useState(pathname)
@@ -24,7 +26,11 @@ export function AdminMenu({ label, children }: { label: string; children: ReactN
   useEffect(() => {
     if (!open) return
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false)
+      if (event.key !== 'Escape') return
+      // 패널 안에 있던 포커스는 닫히면서 사라진다 - 단추로 돌려준다(포커스가 문서 맨 위로 날아가지 않게)
+      if (root.current?.contains(document.activeElement))
+        root.current?.querySelector<HTMLButtonElement>('button')?.focus()
+      setOpen(false)
     }
     const onPointer = (event: PointerEvent) => {
       if (!root.current?.contains(event.target as Node)) setOpen(false)
@@ -38,13 +44,27 @@ export function AdminMenu({ label, children }: { label: string; children: ReactN
   }, [open])
 
   return (
-    <div className={styles.menu} data-open={open ? 'true' : 'false'} ref={root}>
+    <div
+      className={styles.menu}
+      data-open={open ? 'true' : 'false'}
+      ref={root}
+      onBlur={(event) => {
+        // Tab 으로 메뉴 밖으로 나가면 닫는다(포커스가 닫힌 패널 뒤에 남지 않게)
+        if (
+          open &&
+          event.relatedTarget &&
+          !event.currentTarget.contains(event.relatedTarget as Node)
+        )
+          setOpen(false)
+      }}
+    >
       <Button
         variant="secondary"
         size="sm"
         className={styles.trigger}
         aria-expanded={open}
         aria-controls={panelId}
+        aria-current={onAdminScreen ? 'true' : undefined}
         onClick={() => setOpen((now) => !now)}
       >
         {label} <span aria-hidden="true">▾</span>

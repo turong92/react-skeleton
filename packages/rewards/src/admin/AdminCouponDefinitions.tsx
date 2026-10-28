@@ -54,8 +54,8 @@ export type AdminCouponDefinitionsProps = {
   userLabels?: RewardsLabels
   locale?: string
   /**
-   * 계정 검색 - 앱이 계정 API 를 이 꼴로 옮겨 준다(이메일 · 로그인 아이디). 주지 않으면 「계정의 쿠폰」 칸이 없다.
-   * 계정 id 를 직접 적는 칸은 없다
+   * 계정 검색 - 앱이 계정 API 를 이 꼴로 옮겨 준다(이메일 · 로그인 아이디). 계정 id 를 직접 적는 칸은 없다.
+   * 앱은 계정 조회 권한(`account.read`)이 있을 때만 준다 - 없으면 「계정의 쿠폰」 칸과 「계정에 주기」 단추 대신 그 이유를 보인다
    */
   searchAccounts?: (query: string) => Promise<AccountChoice[]>
   /** 줄 끝 「자세히」 를 정의 한 건 화면으로 잇는 라우터 링크. 없으면 단추가 없다 */
@@ -142,6 +142,7 @@ export function AdminCouponDefinitions({
 }: AdminCouponDefinitionsProps) {
   const labels = mergeAdminLabels(given)
   const t = labels.coupons
+  const accountTitleId = useId()
   const allowed = can(REWARDS_PERMISSIONS.coupon)
   const query = useAdminCouponDefinitions(api)
   const mutations = useCouponDefinitionMutations(api)
@@ -248,15 +249,17 @@ export function AdminCouponDefinitions({
                   )}
                   {allowed && (
                     <>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        aria-label={`${t.issue}: ${d.name}`}
-                        disabled={d.status !== 'ACTIVE'}
-                        onClick={() => setIssuing(d)}
-                      >
-                        {t.issue}
-                      </Button>
+                      {searchAccounts && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          aria-label={`${t.issue}: ${d.name}`}
+                          disabled={d.status !== 'ACTIVE'}
+                          onClick={() => setIssuing(d)}
+                        >
+                          {t.issue}
+                        </Button>
+                      )}
                       <Button
                         variant="secondary"
                         size="sm"
@@ -275,9 +278,12 @@ export function AdminCouponDefinitions({
         />
       )}
 
+      {!searchAccounts && allowed && (
+        <Alert tone="info">{labels.accountSearch.needsPermission}</Alert>
+      )}
       {searchAccounts && (
-        <section className={styles.account} aria-labelledby="account-coupons">
-          <h2 id="account-coupons">{t.accountCoupons}</h2>
+        <section className={styles.account} aria-labelledby={accountTitleId}>
+          <h2 id={accountTitleId}>{t.accountCoupons}</h2>
           {account === null ? (
             <AccountSearch search={searchAccounts} onPick={setAccount} labels={labels} />
           ) : (
@@ -572,7 +578,7 @@ function IssueDialog({
                   <Button
                     variant="ghost"
                     size="sm"
-                    aria-label={`${accountLabelOf(account)} ${labels.remove}`}
+                    aria-label={`${labels.remove}: ${accountLabelOf(account)}`}
                     onClick={() => setChosen((now) => now.filter((a) => a.id !== account.id))}
                   >
                     {labels.remove}

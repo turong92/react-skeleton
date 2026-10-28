@@ -12,15 +12,18 @@ import styles from './AdminPoints.module.css'
 
 export type AdminPointsProps = {
   api: Pick<RewardsAdminApi, 'accountPoints' | 'adjustPoints'>
-  /** 계정 찾기 - 앱이 계정 API 를 이 꼴로 옮겨 준다. 계정 id 를 직접 적는 칸은 없다 */
-  searchAccounts: (query: string) => Promise<AccountChoice[]>
+  /**
+   * 계정 찾기 - 앱이 계정 API 를 이 꼴로 옮겨 준다. 계정 id 를 직접 적는 칸은 없다.
+   * 앱은 계정 조회 권한(`account.read`)이 있을 때만 준다 - 없으면 포인트 조정을 할 계정을 고를 수 없어서 그 이유를 보인다
+   */
+  searchAccounts?: (query: string) => Promise<AccountChoice[]>
   can?: CanFn
   labels?: Partial<RewardsAdminLabels>
   locale?: string
   formatTime?: (iso: string) => string
 }
 
-/** 포인트 운영 - 계정 id 로 찾아 잔액 · 내역을 보고, 사유와 함께 더하거나 뺀다. 잔액이 모자라면 서버가 409 `POINT.INSUFFICIENT`. 백엔드 `skeleton.point.admin.enabled=true` + `point.manage` */
+/** 포인트 운영 - 계정을 검색해 골라 잔액 · 내역을 보고, 사유와 함께 더하거나 뺀다. 잔액이 모자라면 서버가 409 `POINT.INSUFFICIENT`. 백엔드 `skeleton.point.admin.enabled=true` + `point.manage` */
 export function AdminPoints({
   api,
   searchAccounts,
@@ -68,7 +71,9 @@ export function AdminPoints({
   return (
     <div className={styles.page}>
       <PageHeader title={t.title} />
-      {account === null ? (
+      {!searchAccounts ? (
+        <Alert tone="warning">{labels.accountSearch.needsPermission}</Alert>
+      ) : account === null ? (
         <AccountSearch
           search={searchAccounts}
           onPick={(picked) => {

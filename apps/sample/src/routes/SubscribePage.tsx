@@ -14,6 +14,7 @@ import { Alert, ChoiceGroup, ErrorReference, PageHeader, Spinner } from '@skelet
 import { useEffect, useId, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { paymentApi } from '../cheer/api'
+import { serverClock } from '../api/serverClock'
 import { rewardsApi } from '../rewards/api'
 import { rewardsLabelsFor } from '../rewards/labels'
 import { LinkButton } from '../components/LinkButton'
@@ -74,6 +75,7 @@ export function SubscribePage() {
     purpose: 'SUBSCRIPTION',
     itemType: 'subscription',
     planCodes: (plans.data ?? []).map((plan) => plan.code),
+    now: serverClock.now().getTime(),
   })
   const couponRef =
     pickedCoupon !== null && usable.some((coupon) => coupon.id === pickedCoupon)

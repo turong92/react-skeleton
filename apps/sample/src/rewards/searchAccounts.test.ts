@@ -28,7 +28,7 @@ describe('createAccountSearch (existing GET /admin/accounts, no new API)', () =>
     await expect(createAccountSearch(api)('ada@x.io')).resolves.toEqual([
       { id: 'a1', email: 'ada@x.io', loginId: 'ada' },
     ])
-    expect(calls).toEqual([{ email: 'ada@x.io', size: 10 }])
+    expect(calls).toEqual([{ email: 'ada@x.io', size: 11 }])
   })
 
   it('without an @ it asks by exact login id and by email piece, and merges without duplicates', async () => {
@@ -46,5 +46,28 @@ describe('createAccountSearch (existing GET /admin/accounts, no new API)', () =>
     const { api, calls } = fakeApi({})
     await expect(createAccountSearch(api)('  ')).resolves.toEqual([])
     expect(calls).toEqual([])
+  })
+
+  it('a server that ignores loginId (login ids are off) and hands back arbitrary accounts adds none of them - only rows that match the query stay', async () => {
+    const { api } = fakeApi({
+      'loginId:ada': [account('x1', 'someone@x.io', 'other'), account('x2', 'else@x.io', null)],
+      'email:ada': [account('a1', 'Ada@X.io', 'ADA')],
+    })
+    const found = await createAccountSearch(api)('Ada')
+    expect(found.map((a) => a.id)).toEqual(['a1'])
+  })
+
+  it('an exact login id matches whatever the case', async () => {
+    const { api } = fakeApi({
+      'loginId:ada': [account('a1', null, 'Ada')],
+      'email:ada': [],
+    })
+    expect((await createAccountSearch(api)('ADA')).map((a) => a.id)).toEqual(['a1'])
+  })
+
+  it('asks for one more than it shows, so the screen can say there are more', async () => {
+    const many = Array.from({ length: 11 }, (_, i) => account(`m${i}`, `m${i}@x.io`))
+    const { api } = fakeApi({ 'email:@x.io': many })
+    expect(await createAccountSearch(api)('@x.io')).toHaveLength(11)
   })
 })

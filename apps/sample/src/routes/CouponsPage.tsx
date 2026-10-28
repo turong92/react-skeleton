@@ -2,6 +2,7 @@ import { CouponWallet } from '@skeleton/rewards'
 import { PageHeader } from '@skeleton/ui'
 import { LinkButton } from '../components/LinkButton'
 import { languageOf, useT } from '../i18n'
+import { serverClock } from '../api/serverClock'
 import { rewardsApi } from '../rewards/api'
 import { rewardsLabelsFor } from '../rewards/labels'
 import styles from './RewardsPage.module.css'
@@ -21,7 +22,12 @@ export function CouponsPage() {
           </LinkButton>
         }
       />
-      <CouponWallet api={rewardsApi} labels={rewardsLabelsFor(language)} locale={language} />
+      <CouponWallet
+        api={rewardsApi}
+        labels={rewardsLabelsFor(language)}
+        locale={language}
+        now={() => serverClock.now().getTime()}
+      />
     </div>
   )
 }

@@ -35,3 +35,8 @@
   display: grid;
   gap: var(--space-md);
 }
+
+.stale {
+  opacity: 0.55;
+  transition: opacity 120ms;
+}

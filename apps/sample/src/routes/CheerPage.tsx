@@ -44,6 +44,7 @@ import {
   openingIn,
 } from '../cheer/cheerHold'
 import { paymentLabelsFor } from '../cheer/paymentLabels'
+import { serverClock } from '../api/serverClock'
 import { rewardsApi } from '../rewards/api'
 import { rewardsLabelsFor } from '../rewards/labels'
 import { useCheerOptions } from '../cheer/queries'
@@ -107,6 +108,8 @@ export function CheerPage() {
   const usable = usableCoupons(coupons.data ?? [], {
     purpose: 'ONE_TIME',
     itemType: CHEER_ITEM_TYPE,
+    // 사용 시작은 서버 시계로 가른다(서버가 견적 · 예약에서 같은 시계로 판정한다 - 기기 시계가 틀려도 같은 답)
+    now: serverClock.now().getTime(),
   })
   const couponRef =
     pickedCoupon !== null && usable.some((coupon) => coupon.id === pickedCoupon)

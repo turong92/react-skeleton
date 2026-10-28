@@ -102,7 +102,7 @@ describe('RootLayout (signed out)', () => {
 })
 
 describe('RootLayout (signed in): operator menu', () => {
-  const renderAs = (permissions: string[] | undefined) => {
+  const renderAs = (permissions: string[] | undefined, at = '/') => {
     vi.stubGlobal('document', { documentElement: { dataset: {} } })
     const session = createAuthSession({ api, store: createTokenStore() })
     if (permissions)
@@ -114,7 +114,7 @@ describe('RootLayout (signed in): operator menu', () => {
       })
     return renderToStaticMarkup(
       <AuthProvider session={session}>
-        <MemoryRouter>
+        <MemoryRouter initialEntries={[at]}>
           <AdminLinks />
         </MemoryRouter>
       </AuthProvider>,
@@ -149,6 +149,12 @@ describe('RootLayout (signed in): operator menu', () => {
     expect(all.match(/href="\/admin\//g)?.length).toBeGreaterThanOrEqual(8)
     // 운영 화면이 하나도 없으면 단추도 없다
     expect(renderAs([])).not.toContain('aria-expanded')
+  })
+  it('the 운영 button says it is the current place on an operator screen (aria-current), and not elsewhere', () => {
+    expect(renderAs(['*'], '/admin/coupons')).toMatch(
+      /<button[^>]*aria-current="true"[^>]*>[^<]*운영/,
+    )
+    expect(renderAs(['*'], '/notes')).not.toContain('aria-current="true"')
   })
   it('shows nothing to a member without permissions or to a visitor, whatever the role name is', () => {
     expect(renderAs([])).not.toContain('/admin/')

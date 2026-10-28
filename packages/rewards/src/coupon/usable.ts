@@ -7,7 +7,7 @@ export type CouponTarget = {
   itemType?: string
   /** 화면이 보이는 플랜들 - 이 중 하나에라도 맞으면 보인다. 플랜이 없는 결제(단건)는 비워 둔다 - 플랜 코드가 찬 쿠폰은 맞지 않는다 */
   planCodes?: readonly string[]
-  /** 지금(ms) - 사용 시작(`usableFrom`)이 이보다 뒤인 쿠폰은 뺀다. 안 주면 이 함수를 부른 때 */
+  /** 지금(ms) - 사용 시작(`usableFrom`)이 이보다 뒤인 쿠폰은 뺀다. 앱은 서버 시계를 준다(서버가 견적 · 예약에서 같은 시계로 판정한다). 안 주면 기기 시계 */
   now?: number
 }
 

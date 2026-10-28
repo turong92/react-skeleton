@@ -13,6 +13,8 @@ export type CouponWalletProps = {
   labels?: RewardsLabels
   locale?: string
   formatTime?: (iso: string) => string
+  /** 서버 시계(ms) - 사용 시작 전 쿠폰 표시 판정. 안 주면 기기 시계 */
+  now?: () => number
 }
 
 function CouponList({
@@ -22,6 +24,7 @@ function CouponList({
   labels,
   locale,
   formatTime,
+  now,
 }: Omit<CouponWalletProps, 'labels'> & { tab: CouponTab; active: boolean; labels: RewardsLabels }) {
   const query = useCoupons(api, tab, { enabled: active })
   if (!active) return null
@@ -49,7 +52,13 @@ function CouponList({
     <ul className={styles.list}>
       {query.data.map((coupon) => (
         <li key={coupon.id}>
-          <CouponCard coupon={coupon} labels={labels} locale={locale} formatTime={formatTime} />
+          <CouponCard
+            coupon={coupon}
+            labels={labels}
+            locale={locale}
+            formatTime={formatTime}
+            now={now}
+          />
         </li>
       ))}
     </ul>
@@ -62,6 +71,7 @@ export function CouponWallet({
   labels = defaultRewardsLabels,
   locale,
   formatTime,
+  now,
 }: CouponWalletProps) {
   const [tab, setTab] = useState<CouponTab>('AVAILABLE')
   const item = (id: CouponTab, label: string) => ({
@@ -75,6 +85,7 @@ export function CouponWallet({
         labels={labels}
         locale={locale}
         formatTime={formatTime}
+        now={now}
       />
     ),
   })

@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { CancelNowDialog } from './CancelNowDialog'
 import { CancelNowResultNotice } from './CancelNowResultNotice'
 import { CancelSubscriptionDialog } from './CancelSubscriptionDialog'
+import { CancelScheduledChangeDialog } from './CancelScheduledChangeDialog'
 import { ChangePlanDialog } from './ChangePlanDialog'
 import { koPaymentLabels } from './labels'
 import { MySubscriptionCard } from './MySubscriptionCard'
@@ -317,7 +318,7 @@ describe('ChangePlanDialog', () => {
       '추가 결제 없이 바로 바뀌어요',
     )
     expect(dialog({ preview: { ...preview, restartsPeriod: true } })).toContain(
-      '오늘부터 새 기간이 시작돼요',
+      '오늘부터 새 결제 주기가 시작되고, 남은 이용분은 빼고 결제돼요',
     )
   })
 
@@ -325,7 +326,7 @@ describe('ChangePlanDialog', () => {
     const html = dialog({ preview: undefined, previewLoading: true })
     expect(html).toContain('결제할 금액을 확인하는 중')
     expect(html).toMatch(
-      /aria-disabled="true"[^>]*>[^<]*플랜 바꾸기|플랜 바꾸기[^]*aria-disabled="true"/,
+      /aria-disabled="true"[^>]*>[^<]*이 플랜으로 바꾸기|이 플랜으로 바꾸기[^]*aria-disabled="true"/,
     )
   })
 
@@ -344,6 +345,123 @@ describe('ChangePlanDialog', () => {
   })
 })
 
+describe('ChangePlanDialog - scheduled changes', () => {
+  const scheduledPreview = {
+    planCode: 'basic',
+    planName: 'Basic',
+    charge: { amount: 0, currency: 'KRW' },
+    amount: { amount: 3900, currency: 'KRW' },
+    period: 'P1M',
+    restartsPeriod: false,
+    timing: 'NEXT_RENEWAL' as const,
+    effectiveAt: '2026-11-01T03:00:00Z',
+  }
+  const dialog = (props: object = {}) =>
+    renderToStaticMarkup(
+      <ChangePlanDialog
+        open
+        onClose={noop}
+        onConfirm={noop}
+        plans={[plans[0]!, plans[1]!]}
+        current={{ level: 2, period: 'P1M', currency: 'KRW' }}
+        planCode="basic"
+        onPlanChange={noop}
+        preview={scheduledPreview}
+        {...common}
+        {...props}
+      />,
+    )
+
+  it('groups the choices into 「바로 바꿔요」 and 「다음 결제일부터 바꿔요」 by the current tier', () => {
+    const html = dialog()
+    expect(html).toContain('<optgroup label="다음 결제일부터 바꿔요">')
+    expect(html).toContain('<optgroup label="바로 바꿔요">')
+    expect(html.indexOf('바로 바꿔요')).toBeLessThan(html.indexOf('다음 결제일부터 바꿔요'))
+  })
+
+  it('without the current tier the choices are not grouped', () => {
+    expect(dialog({ current: undefined })).not.toContain('<optgroup')
+  })
+
+  it('a scheduled change shows the day it takes effect instead of a charge, says nothing is charged now, and confirms with 「변경 예약」', () => {
+    const html = dialog()
+    expect(html).toContain('바뀌는 날')
+    expect(html).toContain('3,900원 · 1개월마다 결제')
+    expect(html).not.toContain('지금 결제할 금액')
+    expect(html).toContain('지금 결제되는 금액은 없어요')
+    expect(html).toMatch(/data-variant="primary"[^>]*>변경 예약</)
+  })
+
+  it('a change right away keeps the charge now and the ordinary confirm', () => {
+    const html = dialog({
+      preview: { ...scheduledPreview, timing: 'NOW', charge: { amount: 1500, currency: 'KRW' } },
+    })
+    expect(html).toContain('지금 결제할 금액')
+    expect(html).toContain('이 플랜으로 바꾸기')
+    expect(html).not.toContain('지금 결제되는 금액은 없어요')
+  })
+})
+
+describe('MySubscriptionCard - scheduled change', () => {
+  const scheduledChange = {
+    planCode: 'basic',
+    planName: 'Basic',
+    amount: { amount: 3900, currency: 'KRW' },
+    period: 'P1M',
+    effectiveAt: '2026-11-01T03:00:00Z',
+  }
+  const card = (over: Parameters<typeof subscription>[0] = {}, props: object = {}) =>
+    renderToStaticMarkup(
+      <MySubscriptionCard
+        subscription={subscription({ scheduledChange, ...over })}
+        orders={[]}
+        onCancel={noop}
+        onChangePlan={noop}
+        onCancelScheduledChange={noop}
+        {...common}
+        {...props}
+      />,
+    )
+
+  it('shows what changes and from when, with a bordered 「예약 거두기」; the filled button stays the plan change', () => {
+    const html = card()
+    expect(html).toContain('예약된 변경')
+    expect(html).toContain('2026. 11. 1.부터 Basic · 3,900원 · 1개월마다 결제')
+    expect(html).toMatch(/data-variant="secondary"[^>]*>예약 거두기</)
+    expect(html).toMatch(/data-variant="primary"[^>]*>플랜 바꾸기</)
+  })
+
+  it('no schedule, no row and no button; a schedule on an ended subscription is not shown', () => {
+    expect(card({ scheduledChange: null })).not.toContain('예약된 변경')
+    expect(card({ scheduledChange: null })).not.toContain('예약 거두기')
+    expect(card({ status: 'ENDED', endReason: 'USER_CANCELED' })).not.toContain('예약된 변경')
+  })
+
+  it('without the handler there is no withdraw button (the row still tells)', () => {
+    const html = card({}, { onCancelScheduledChange: undefined })
+    expect(html).toContain('예약된 변경')
+    expect(html).not.toContain('예약 거두기')
+  })
+})
+
+describe('CancelScheduledChangeDialog', () => {
+  it('says which plan and from when, and that the current plan carries on', () => {
+    const html = renderToStaticMarkup(
+      <CancelScheduledChangeDialog
+        open
+        onClose={noop}
+        onConfirm={noop}
+        scheduledChange={{ planName: 'Basic', effectiveAt: '2026-11-01T03:00:00Z' }}
+        {...common}
+      />,
+    )
+    expect(html).toContain('예약된 플랜 변경을 거둘까요?')
+    expect(html).toContain('2026. 11. 1.부터 Basic(으)로 바뀔 예정이었어요')
+    expect(html).toContain('지금 플랜 그대로 이어져요')
+    expect(html).toMatch(/data-variant="primary"[^>]*>예약 거두기</)
+  })
+})
+
 describe('MySubscriptionCard plan change', () => {
   const card = (over: Parameters<typeof subscription>[0] = {}, props: object = {}) =>
     renderToStaticMarkup(
@@ -357,20 +475,20 @@ describe('MySubscriptionCard plan change', () => {
       />,
     )
 
-  it('an active subscription gets one filled 「플랜 올리기」 and the cancel steps back to an outline', () => {
+  it('an active subscription gets one filled 「플랜 바꾸기」 and the cancel steps back to an outline', () => {
     const html = card()
-    expect(html).toMatch(/data-variant="primary"[^>]*>플랜 올리기</)
+    expect(html).toMatch(/data-variant="primary"[^>]*>플랜 바꾸기</)
     expect(html).toMatch(/data-variant="secondary"[^>]*>기간 끝에 해지</)
   })
 
   it('while the change is being confirmed it says so and offers no second change', () => {
     const html = card({ pendingPlanCode: 'pro' })
     expect(html).toContain('플랜 변경 결제를 확인하고 있어요')
-    expect(html).not.toContain('플랜 올리기</button>')
+    expect(html).not.toContain('플랜 바꾸기</button>')
   })
 
   it('a canceling subscription is not offered a change', () => {
-    expect(card({ status: 'CANCELING' })).not.toContain('플랜 올리기')
+    expect(card({ status: 'CANCELING' })).not.toContain('플랜 바꾸기')
   })
 })
 

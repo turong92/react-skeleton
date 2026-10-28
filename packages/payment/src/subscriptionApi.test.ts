@@ -123,4 +123,13 @@ describe('createSubscriptionApi (paths and bodies mirror the backend HTTP contra
       },
     ])
   })
+
+  it('cancelScheduledChange → DELETE /subscriptions/{id}/scheduled-change', async () => {
+    const { client, calls } = fakeClient()
+    await createSubscriptionApi(client).cancelScheduledChange('sub/1')
+    expect(calls[0]).toEqual({
+      path: '/payments/subscriptions/sub%2F1/scheduled-change',
+      request: { method: 'DELETE' },
+    })
+  })
 })

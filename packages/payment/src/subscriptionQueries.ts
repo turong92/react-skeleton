@@ -122,6 +122,14 @@ export function cancelSubscriptionMutation(api: PaymentSubscriptionApi, client: 
   }
 }
 
+/** 예약된 플랜 변경을 거둔다 - 끝나면 어느 쪽이든 캐시를 새로 고친다 */
+export function cancelScheduledChangeMutation(api: PaymentSubscriptionApi, client: QueryClient) {
+  return {
+    mutationFn: (id: string) => api.cancelScheduledChange(id),
+    onSettled: () => invalidateRoot(client),
+  }
+}
+
 /** 지금 해지하면 얼마가 돌아오는가 - 남은 기간이 줄수록 금액이 변하므로 캐시에 오래 두지 않는다(`staleTime` 0). 창을 열 때 `refetch()` 로 새로 묻는다 */
 export function cancelPreviewQuery(api: PaymentSubscriptionApi, id: string) {
   return {

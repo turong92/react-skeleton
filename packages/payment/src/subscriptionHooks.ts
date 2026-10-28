@@ -7,6 +7,7 @@ import {
   activateSubscriptionMutation,
   cancelNowMutation,
   cancelPreviewQuery,
+  cancelScheduledChangeMutation,
   cancelSubscriptionMutation,
   changePlanMutation,
   mySubscriptionQuery,
@@ -73,6 +74,12 @@ export function useChangeSubscriptionPlan(api: PaymentSubscriptionApi) {
   const client = useQueryClient()
   const [keys] = useState(() => createIntentKeys())
   return useMutation(changePlanMutation(api, client, keys))
+}
+
+/** 예약된 플랜 변경을 거둔다 - 변수는 구독 id. 끝나면 캐시를 새로 고친다 */
+export function useCancelScheduledChange(api: PaymentSubscriptionApi) {
+  const client = useQueryClient()
+  return useMutation(cancelScheduledChangeMutation(api, client))
 }
 
 /** 지금 해지하면 얼마가 돌아오는가(`data.open` 이 `false` 면 이 나라는 기간 끝 해지만). `enabled` 가 `false` 면 묻지 않는다. 금액이 변하니 확인 창을 열 때 `refetch()` 한다 */

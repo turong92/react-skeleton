@@ -7,6 +7,7 @@ import type { PaymentSubscriptionApi } from './subscriptionApi'
 import {
   activateSubscriptionMutation,
   cancelNowMutation,
+  cancelScheduledChangeMutation,
   cancelSubscriptionMutation,
   changePlanMutation,
   mySubscriptionQuery,
@@ -68,6 +69,10 @@ function fakeApi() {
     changePlan: async (id, input, options) => {
       calls.push(['changePlan', id, input, options])
       return subscription({ planCode: input.planCode })
+    },
+    cancelScheduledChange: async (id) => {
+      calls.push(['cancelScheduledChange', id])
+      return subscription()
     },
   }
   return { api, calls }
@@ -343,5 +348,18 @@ describe('cancelNowMutation', () => {
     await observer.mutate('sub_1')
     expect(calls).toEqual([['cancelNow', 'sub_1']])
     expect(invalidate).toHaveBeenCalled()
+  })
+})
+
+describe('cancelScheduledChangeMutation', () => {
+  it('withdraws the schedule of that subscription and then rereads every payment query', async () => {
+    const { api, calls } = fakeApi()
+    const client = new QueryClient()
+    client.setQueryData(paymentKeys.mySubscription(), { subscription: null, orders: [] })
+    await new MutationObserver(client, cancelScheduledChangeMutation(api, client) as never).mutate(
+      'sub_1' as never,
+    )
+    expect(calls).toEqual([['cancelScheduledChange', 'sub_1']])
+    expect(client.getQueryState(paymentKeys.mySubscription())?.isInvalidated).toBe(true)
   })
 })

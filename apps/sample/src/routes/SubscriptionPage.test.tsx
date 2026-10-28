@@ -105,13 +105,39 @@ describe('SubscriptionPage', () => {
     expect(html).not.toContain('기간 끝에 해지</button>')
   })
 
-  it('with higher plans on offer an active subscription can be raised; the top plan has nothing above it', () => {
+  it('an active subscription can change its plan - up right away, down by schedule - so even the top plan has the button', () => {
     expect(render({ subscription: sub(), orders: [] }, true)).toMatch(
-      /data-variant="primary"[^>]*>플랜 올리기</,
+      /data-variant="primary"[^>]*>플랜 바꾸기</,
     )
-    const top = render({ subscription: sub({ planCode: 'pro' }), orders: [] }, true)
-    expect(top).not.toContain('플랜 올리기')
+    const top = render({ subscription: sub({ planCode: 'pro', level: 3 }), orders: [] }, true)
+    expect(top).toMatch(/data-variant="primary"[^>]*>플랜 바꾸기</)
     expect(top).toContain('기간 끝에 해지')
+  })
+
+  it('with nothing to change to (a single plan on offer), there is no change button', () => {
+    const only = render({ subscription: sub(), orders: [] }, false)
+    expect(only).not.toContain('플랜 바꾸기')
+  })
+
+  it('a scheduled change is shown with a way to withdraw it', () => {
+    const html = render(
+      {
+        subscription: sub({
+          scheduledChange: {
+            planCode: 'basic',
+            planName: 'Basic',
+            amount: { amount: 3900, currency: 'KRW' },
+            period: 'P1M',
+            effectiveAt: '2026-11-01T03:00:00Z',
+          },
+        }),
+        orders: [],
+      },
+      true,
+    )
+    expect(html).toContain('예약된 변경')
+    expect(html).toMatch(/data-variant="secondary"[^>]*>예약 거두기</)
+    expect(html).toContain('예약된 플랜 변경을 거둘까요?')
   })
 
   it('a subscriber on a price that is no longer listed (a past sale price) can still be raised: the level comes with the subscription', () => {
@@ -122,13 +148,10 @@ describe('SubscriptionPage', () => {
       },
       true,
     )
-    expect(html).toMatch(/data-variant="primary"[^>]*>플랜 올리기</)
-    // 맨 위 등급이면 올릴 곳이 없다 - 가격 코드가 목록에 없어도
-    const top = sub({ planCode: 'pro-old', productCode: 'pro', level: 3 })
-    expect(render({ subscription: top, orders: [] }, true)).not.toContain('플랜 올리기')
-    // 등급을 모르는 구독(옛 서버)이 목록에 없는 가격이면 올리지 않는다
+    expect(html).toMatch(/data-variant="primary"[^>]*>플랜 바꾸기</)
+    // 등급을 모르는 구독(옛 서버)이 목록에 없는 가격이면 바꿀 곳을 가를 수 없다
     expect(render({ subscription: sub({ planCode: 'gone' }), orders: [] }, true)).not.toContain(
-      '플랜 올리기',
+      '플랜 바꾸기',
     )
   })
 

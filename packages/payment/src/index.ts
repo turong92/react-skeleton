@@ -124,6 +124,8 @@ export type {
   BillingAuth,
   MySubscription,
   PlanChangePreview,
+  PlanChangeTiming,
+  ScheduledChange,
   StartSubscriptionInput,
   StartSubscriptionResult,
   Subscription,
@@ -139,6 +141,8 @@ export type {
   TossBillingAuth,
 } from './subscriptionTypes'
 export { createSubscriptionApi } from './subscriptionApi'
+export { changeChoices, planChangeTiming } from './planChange'
+export type { CurrentTier } from './planChange'
 export { currencyDigits, toMajorUnits, toMinorUnits } from './money'
 export { createCatalogApi } from './catalogApi'
 export type { CatalogApi, CatalogApiOptions } from './catalogApi'
@@ -158,6 +162,7 @@ export {
   useCancelPreview,
   useCancelSubscription,
   useCancelSubscriptionNow,
+  useCancelScheduledChange,
   useChangeSubscriptionPlan,
   useMySubscription,
   usePlanChangePreview,
@@ -190,6 +195,8 @@ export { CancelNowDialog } from './CancelNowDialog'
 export type { CancelNowDialogProps } from './CancelNowDialog'
 export { CancelNowResultNotice } from './CancelNowResultNotice'
 export type { CancelNowResultNoticeProps } from './CancelNowResultNotice'
+export { CancelScheduledChangeDialog } from './CancelScheduledChangeDialog'
+export type { CancelScheduledChangeDialogProps } from './CancelScheduledChangeDialog'
 export { CancelSubscriptionDialog } from './CancelSubscriptionDialog'
 export type { CancelSubscriptionDialogProps } from './CancelSubscriptionDialog'
 export { TestModeNotice } from './TestModeNotice'

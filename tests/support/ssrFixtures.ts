@@ -189,6 +189,7 @@ export const fakeSubscriptionApi = () => ({
     restartsPeriod: false,
   }),
   changePlan: async () => paymentSubscription,
+  cancelScheduledChange: async () => paymentSubscription,
 })
 const notification = {
   id: 'u1:e1',
@@ -1052,6 +1053,12 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
       refunds: [],
     },
   }),
+  'payment#CancelScheduledChangeDialog': () => ({
+    open: true,
+    scheduledChange: { planName: 'Basic', effectiveAt: '2026-11-01T03:00:00Z' },
+    onClose: noop,
+    onConfirm: noop,
+  }),
   'payment#CancelSubscriptionDialog': () => ({
     open: true,
     subscription: paymentSubscription,
@@ -1132,6 +1139,7 @@ export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
   'payment#useCancelSubscriptionNow': () => [fakeSubscriptionApi()],
   'payment#useCancelPreview': () => [fakeSubscriptionApi(), 'sub_1'],
   'payment#useChangeSubscriptionPlan': () => [fakeSubscriptionApi()],
+  'payment#useCancelScheduledChange': () => [fakeSubscriptionApi()],
   'payment#usePlanChangePreview': () => [fakeSubscriptionApi(), 'sub_1', 'pro'],
   'author-profile#useAuthorProfiles': () => [fakeAuthorProfileApi()],
   'author-profile#useProfileDialog': () => [{ api: fakeAuthorProfileApi(), title: 'Profiles' }],

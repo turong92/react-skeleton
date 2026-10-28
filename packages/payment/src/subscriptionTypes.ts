@@ -62,6 +62,8 @@ export type Subscription = {
   productCode?: string
   /** 상품의 등급(높을수록 위, 모르면 `null`) - 플랜 올리기가 이것으로 윗등급을 가른다. 구버전 서버는 칸이 없다 */
   level?: number | null
+  /** 예약된 플랜 변경(없으면 `null`) - 구버전 서버는 칸이 없다 */
+  scheduledChange?: ScheduledChange | null
   /** 어느 결제사의 구독인가(`toss` · `paddle` …) - 구버전 서버는 칸이 없다 */
   provider?: string
   /** 결제사가 직접 받은 간편결제의 앱(`KAKAOPAY` · `NAVERPAY`) - 그 밖(토스 · Paddle)과 구버전 서버는 `null` · 칸 없음 */
@@ -165,7 +167,23 @@ export type ActivateSubscriptionInput = { providerPayload: ActivationPayload }
 /** `GET /subscriptions/me` — 구독이 없으면 `subscription: null`. `orders` 는 최근 결제 5건 */
 export type MySubscription = { subscription: Subscription | null; orders: Order[] }
 
-/** `GET /subscriptions/{id}/change-preview` - `charge` 가 지금 결제될 금액(0 이면 과금 없이 바뀐다), `amount` 는 새 플랜의 전체 가격, `restartsPeriod` 면 오늘부터 새 기간 */
+/** 플랜 변경이 적용되는 때 - `NOW` 바로(올리기 · 주기를 늘리기), `NEXT_RENEWAL` 다음 결제일부터(내리기 · 주기를 줄이기 - 예약) */
+export type PlanChangeTiming = 'NOW' | 'NEXT_RENEWAL'
+
+/** 예약된 플랜 변경 - 갱신 작업이 `effectiveAt` 에 플랜 · 금액 · 주기를 바꾼 뒤 새 금액으로 결제한다 */
+export type ScheduledChange = {
+  planCode: string
+  planName: string
+  amount: PaymentAmount
+  /** ISO-8601 주기 */
+  period: string
+  effectiveAt: string
+}
+
+/**
+ * `GET /subscriptions/{id}/change-preview` - `charge` 가 지금 결제될 금액(0 이면 과금 없이 바뀐다), `amount` 는 새 플랜의 전체 가격, `restartsPeriod` 면 오늘부터 새 기간.
+ * `timing` 이 `NEXT_RENEWAL` 이면 예약이다 - 지금 결제는 없고(`charge` 0) `effectiveAt` 부터 바뀐다. 구버전 서버는 칸이 없다(= `NOW`)
+ */
 export type PlanChangePreview = {
   planCode: string
   planName: string
@@ -173,6 +191,8 @@ export type PlanChangePreview = {
   amount: PaymentAmount
   period: string
   restartsPeriod: boolean
+  timing?: PlanChangeTiming
+  effectiveAt?: string
 }
 
 /** `expectedCharge` 는 미리보기로 본 `charge.amount` - 서버가 다시 계산한 값이 더 크면 409 `PLAN_CHANGE_CHARGE_CHANGED` */

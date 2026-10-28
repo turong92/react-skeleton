@@ -129,3 +129,34 @@ export const WithDiscount: Story = {
     await expect(canvas.getByText('할인: 첫 달 무료 후 반값')).toBeVisible()
   },
 }
+
+/** 예약된 플랜 변경 - 어느 플랜으로 언제 바뀌는지 한 칸, 테두리 「예약 거두기」(확인 창은 부모가 연다) */
+export const WithAScheduledChange: Story = {
+  args: {
+    subscription: subscription({
+      scheduledChange: {
+        planCode: 'basic',
+        planName: 'Basic',
+        amount: { amount: 3900, currency: 'KRW' },
+        period: 'P1M',
+        effectiveAt: '2026-11-01T03:00:00Z',
+      },
+    }),
+    onChangePlan: fn(),
+    onCancelScheduledChange: fn(),
+  },
+  play: async ({ canvas, args, userEvent }) => {
+    await expect(canvas.getByText('예약된 변경')).toBeVisible()
+    await expect(
+      canvas.getByText('2026. 11. 1. 오후 12:00부터 Basic · 3,900원 · 1개월마다 결제'),
+    ).toBeVisible()
+    await expect(canvas.getByRole('button', { name: '플랜 바꾸기' })).toHaveAttribute(
+      'data-variant',
+      'primary',
+    )
+    const withdraw = canvas.getByRole('button', { name: '예약 거두기' })
+    await expect(withdraw).toHaveAttribute('data-variant', 'secondary')
+    await userEvent.click(withdraw)
+    await expect(args.onCancelScheduledChange).toHaveBeenCalledOnce()
+  },
+}

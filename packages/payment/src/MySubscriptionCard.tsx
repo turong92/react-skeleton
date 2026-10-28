@@ -20,8 +20,10 @@ export type MySubscriptionCardProps = {
    * 부모가 주지 않는다. 확인 창을 여는 것은 부모(`CancelNowDialog`)
    */
   onCancelNow?: () => void
-  /** 주면 이용 중(`ACTIVE`)일 때 채우지 않은 보조 「플랜 올리기」 단추가 생긴다. 창을 여는 것은 부모(`ChangePlanDialog`) */
+  /** 주면 이용 중(`ACTIVE`)일 때 채운 「플랜 바꾸기」 단추가 생긴다(내리기는 예약). 창을 여는 것은 부모(`ChangePlanDialog`) */
   onChangePlan?: () => void
+  /** 주면 예약된 플랜 변경(`scheduledChange`)이 있을 때 테두리 「예약 거두기」 단추가 생긴다. 확인 창을 여는 것은 부모(`CancelScheduledChangeDialog`) */
+  onCancelScheduledChange?: () => void
   /** 최근 결제 줄 끝의 「자세히」 링크(라우터 `<Link>`) — `OrderList` 의 `renderAction` 과 같다 */
   renderOrderAction?: OrderListProps['renderAction']
   locale?: string
@@ -39,6 +41,7 @@ export function MySubscriptionCard({
   onCancel,
   onCancelNow,
   onChangePlan,
+  onCancelScheduledChange,
   renderOrderAction,
   locale,
   formatTime = (iso) => formatInstant(iso, { locale }),
@@ -60,6 +63,8 @@ export function MySubscriptionCard({
   const canChange = !!onChangePlan && status === 'ACTIVE' && !subscription.pendingPlanCode
   // 해지 예약 중이어도 지금 해지할 수 있다 - 두 해지 단추는 같은 무게(테두리)
   const canCancelNow = !!onCancelNow && (status === 'ACTIVE' || status === 'CANCELING')
+  const schedule =
+    status === 'ACTIVE' || status === 'PAST_DUE' ? subscription.scheduledChange : null
   const dated = status === 'ACTIVE' || status === 'PAST_DUE' || status === 'CANCELING'
   return (
     <Card
@@ -101,6 +106,15 @@ export function MySubscriptionCard({
               {mine.endsOn(formatTime(subscription.currentPeriodEnd))}
             </Fact>
           )}
+          {schedule && (
+            <Fact label={mine.scheduled}>
+              {mine.scheduledValue(
+                formatTime(schedule.effectiveAt),
+                schedule.planName,
+                priceEveryDisplay(schedule.amount, schedule.period, labels, locale),
+              )}
+            </Fact>
+          )}
           {subscription.discount && status !== 'ENDED' && (
             <Fact label={`${labels.discount.subscriptionDiscount}: ${subscription.discount.label}`}>
               {labels.discount.nextPayment(
@@ -129,11 +143,16 @@ export function MySubscriptionCard({
             />
           </section>
         )}
-        {(onCancel || canChange || canCancelNow) && (
+        {(onCancel || canChange || canCancelNow || (schedule && onCancelScheduledChange)) && (
           <div className={styles.action}>
             {canChange && (
               <Button variant="primary" onClick={onChangePlan}>
                 {mine.changePlan}
+              </Button>
+            )}
+            {schedule && onCancelScheduledChange && (
+              <Button variant="secondary" onClick={onCancelScheduledChange}>
+                {mine.withdrawSchedule}
               </Button>
             )}
             {onCancel && (status === 'ACTIVE' || status === 'PAST_DUE') && (

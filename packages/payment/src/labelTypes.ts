@@ -333,6 +333,12 @@ export type SubscriptionLabels = {
     cancelNow: string
     /** 「플랜 올리기」 단추 */
     changePlan: string
+    /** 예약된 플랜 변경 칸의 이름 */
+    scheduled: string
+    /** 「11월 1일부터 Basic · 3,900원 · 1개월마다 결제」 - 인자는 서식을 입힌 날짜와 플랜 이름, 금액 글자 */
+    scheduledValue: (when: string, planName: string, price: string) => string
+    /** 예약된 변경을 거두는 단추 */
+    withdrawSchedule: string
     /** 플랜 변경의 결제를 결제사가 아직 답하지 않았다(`pendingPlanCode`) */
     changePending: string
     /** 첫 결제를 결제사가 아직 답하지 않았다(`PENDING`) */
@@ -356,6 +362,17 @@ export type SubscriptionLabels = {
     /** 창을 닫는 단추 - 「취소」가 결제 취소로 읽히지 않게 「닫기」 */
     dismiss: string
     /** 모서리의 × 단추의 낭독 이름 */
+    close: string
+    error: string
+  }
+  cancelScheduleDialog: {
+    title: string
+    /** 예약된 플랜과 바뀌는 날(서식을 입힌 글자)을 말하고, 거두면 지금 플랜 그대로라고 한다 */
+    body: (planName: string, when: string) => string
+    confirm: string
+    /** 확인 단추가 일하는 동안의 낭독 이름 */
+    loading: string
+    dismiss: string
     close: string
     error: string
   }
@@ -410,8 +427,16 @@ export type SubscriptionLabels = {
     noCharge: string
     /** 새 플랜의 다음 결제 칸의 이름 - 값은 「6,900원 · 1개월마다 결제」 */
     nextPrice: string
-    /** 전액을 결제하고 오늘부터 새 기간이 시작된다 */
+    /** 오늘부터 새 기간이 시작되고 남은 이용분은 빼고 결제된다 */
     restart: string
+    /** 선택지 묶음의 이름 - 바로 바뀌는 플랜 / 다음 결제일부터 바뀌는 플랜 */
+    groups: { now: string; next: string }
+    /** 예약 미리보기의 「바뀌는 날」 칸의 이름 */
+    effectiveOn: string
+    /** 예약이라 지금 결제는 없다 */
+    scheduledNote: string
+    /** 예약일 때 확인 단추 */
+    confirmScheduled: string
     loadingPreview: string
     previewError: string
     confirm: string

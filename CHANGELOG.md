@@ -15,6 +15,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `@skeleton/api-client`: `ErrorCodes.CATALOG_CODE_TAKEN` · `CATALOG_LEVEL_TAKEN` · `CATALOG_PRICE_OVERLAP` · `CATALOG_PRICE_INVALID` · `CATALOG_NOT_FOUND`.
 - 샘플: 운영 메뉴 「상품 · 가격」(`catalog.manage`), `/admin/catalog` · `/admin/catalog/:code`, e2e `catalog.e2e.ts`(행사가 → 랜딩 → 구독 → 판매 중지 · 미국 방문자 USD). `journey.e2e.ts` 의 연 결제 토글 단계는 가격표가 있을 때만 돈다.
 
+### Added — 플랜 바꾸기 넓히기: 주기 늘리기 · 내리기 예약 (2026-10-30)
+
+백엔드 짝: kotlin-skeleton `payment` 의 갈아타기 넓히기(계약 C-CHG).
+
+- `ChangePlanDialog`: 같은 통화의 다른 플랜을 모두 보인다. `current`(등급 · 주기 · 통화)를 주면 선택지가 「바로 바꿔요」/「다음 결제일부터 바꿔요」로 묶인다. 서버 미리보기 `timing: 'NEXT_RENEWAL'` 이면 결제 금액 대신 바뀌는 날(`effectiveAt`)을 보이고 확인은 「변경 예약」(`expectedCharge` 0). 제목 「플랜을 바꿀까요?」, 확인 「이 플랜으로 바꾸기」로 문구가 바뀌었다.
+- `MySubscriptionCard`: 예약된 변경(`scheduledChange`) 칸 + 테두리 「예약 거두기」(`onCancelScheduledChange`). 「플랜 올리기」 단추는 「플랜 바꾸기」가 됐다(`labels.subscription.mine.changePlan`).
+- 새 부품 `CancelScheduledChangeDialog`, 훅 `useCancelScheduledChange`, `createSubscriptionApi().cancelScheduledChange(id)`(`DELETE …/scheduled-change`), 도우미 `planChangeTiming` · `changeChoices`, 타입 `ScheduledChange` · `PlanChangeTiming`, `PlanChangePreview.timing` · `effectiveAt`, `Subscription.scheduledChange`.
+- 한국어 문구 규칙(「취소」 안 씀)에 따라 단추는 「예약 취소」가 아니라 「예약 거두기」(환불 요청의 「요청 거두기」와 같은 낱말).
+
+#### Changed — 업그레이드 시 할 일
+
+- 문구 `labels.subscription.changeDialog.title` · `confirm` · `restart` 와 `mine.changePlan` 이 바뀌었다 - 글자를 직접 단언하는 시험이 있으면 고친다. `PaymentSubscriptionApi` 를 직접 만든 가짜는 `cancelScheduledChange` 를 더해야 타입이 맞는다.
+
 ### Changed — 카탈로그 리뷰 반영 (2026-10-29)
 
 - `AddPriceDialog`: 「이 가격을 대신함 (선택)」 - 같은 주기 · 통화의 판매 중 가격을 고르면 `replaces` 로 보내 옛 가격 중지와 새 가격 추가를 한 번에 한다(`prices` · `locale` prop). 칸 오류 `replaces` 를 그 칸 아래에 보인다.

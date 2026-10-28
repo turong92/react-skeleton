@@ -2,8 +2,10 @@ import { Alert, ConfirmDialog, ErrorReference, Field, Select } from '@skeleton/u
 import { useId } from 'react'
 import { PaymentLedgerErrorCodes, isPaymentLedgerError } from './errors'
 import { referenceOf } from './failure'
+import { formatInstant } from '@skeleton/time'
 import { formatMoney, priceEveryDisplay } from './format'
 import { resolvePaymentLabels, type PaymentLabelsInput } from './labels'
+import { planChangeTiming, type CurrentTier } from './planChange'
 import type { ChangePlanInput, PlanChangePreview, SubscriptionPlan } from './subscriptionTypes'
 import styles from './ChangePlanDialog.module.css'
 
@@ -13,8 +15,13 @@ export type ChangePlanDialogProps = {
   onClose: () => void
   /** 「플랜 바꾸기」 - **창이 보인 그 금액을 `expectedCharge` 로** 보낸다(그 사이 올랐으면 서버가 409 로 거절한다). 호출과 닫는 것은 부모 */
   onConfirm: (input: ChangePlanInput) => void
-  /** 바꿀 수 있는 플랜 - 지금보다 윗등급만 부모가 걸러 넘긴다 */
+  /** 바꿀 수 있는 플랜 - 지금 플랜과 통화가 다른 것은 부모가 걸러 넘긴다(`changeChoices`). 등급이 낮은 플랜도 온다(예약) */
   plans: readonly SubscriptionPlan[]
+  /**
+   * 지금 구독의 등급 · 주기 · 통화 - 주면 선택지를 「바로 바꿔요」/「다음 결제일부터 바꿔요」로 묶는다. 안 주면 묶지 않는다(모두 바로).
+   * 묶음은 짐작이고, 확인 창이 말하는 적용 시점은 서버 미리보기의 `timing` 이다
+   */
+  current?: CurrentTier
   /** 고른 플랜 코드 - 부모가 쥐고 이 코드로 미리보기를 묻는다 */
   planCode: string
   onPlanChange: (planCode: string) => void
@@ -31,7 +38,8 @@ export type ChangePlanDialogProps = {
 }
 
 /**
- * 플랜 올리기 확인 창 - 플랜을 고르면 **지금 결제될 금액**(0 이면 「추가 결제 없이」)과 다음 결제부터의 가격을 미리 보이고, 「플랜 바꾸기」/「닫기」.
+ * 플랜 바꾸기 확인 창 - 플랜을 고르면 **지금 결제될 금액**(0 이면 「추가 결제 없이」)과 다음 결제부터의 가격을 미리 보이고, 「이 플랜으로 바꾸기」/「닫기」.
+ * 내리기 · 주기 줄이기는 예약이다(서버 미리보기 `timing: 'NEXT_RENEWAL'`) - 결제 금액 대신 **바뀌는 날**을 보이고 확인은 「변경 예약」이 된다. 선택지는 `current` 를 주면 바로/다음 결제일부터로 묶인다.
  * 금액을 읽기 전에는 확인이 잠긴다. 처음 포커스는 「닫기」.
  */
 export function ChangePlanDialog({
@@ -39,6 +47,7 @@ export function ChangePlanDialog({
   onClose,
   onConfirm,
   plans,
+  current,
   planCode,
   onPlanChange,
   preview,
@@ -63,6 +72,18 @@ export function ChangePlanDialog({
   const reference = error ? referenceOf(error) : undefined
   const money = (amount: { amount: number; currency: string }) =>
     formatMoney(amount, { locale, currencySuffix: all.currencySuffix })
+  const scheduled = ready && preview.timing === 'NEXT_RENEWAL'
+  const option = (plan: SubscriptionPlan) => (
+    <option key={plan.code} value={plan.code}>
+      {`${plan.name} - ${priceEveryDisplay(plan.amount, plan.period, all, locale)}`}
+    </option>
+  )
+  const grouped = current
+    ? {
+        now: plans.filter((plan) => planChangeTiming(current, plan) !== 'NEXT_RENEWAL'),
+        next: plans.filter((plan) => planChangeTiming(current, plan) === 'NEXT_RENEWAL'),
+      }
+    : null
 
   return (
     <ConfirmDialog
@@ -70,7 +91,7 @@ export function ChangePlanDialog({
       onClose={onClose}
       onConfirm={() => preview && onConfirm({ planCode, expectedCharge: preview.charge.amount })}
       title={labels.title}
-      confirmLabel={labels.confirm}
+      confirmLabel={scheduled ? labels.confirmScheduled : labels.confirm}
       cancelLabel={labels.dismiss}
       closeLabel={labels.close}
       loadingLabel={labels.loading}
@@ -86,20 +107,38 @@ export function ChangePlanDialog({
                 value={planCode}
                 onChange={(event) => onPlanChange(event.target.value)}
               >
-                {plans.map((plan) => (
-                  <option key={plan.code} value={plan.code}>
-                    {`${plan.name} - ${priceEveryDisplay(plan.amount, plan.period, all, locale)}`}
-                  </option>
-                ))}
+                {grouped ? (
+                  <>
+                    {grouped.now.length > 0 && (
+                      <optgroup label={labels.groups.now}>{grouped.now.map(option)}</optgroup>
+                    )}
+                    {grouped.next.length > 0 && (
+                      <optgroup label={labels.groups.next}>{grouped.next.map(option)}</optgroup>
+                    )}
+                  </>
+                ) : (
+                  plans.map(option)
+                )}
               </Select>
             )}
           </Field>
           {ready ? (
             <dl className={styles.facts}>
-              <div className={styles.fact}>
-                <dt>{labels.chargeNow}</dt>
-                <dd className={styles.charge}>{money(preview.charge)}</dd>
-              </div>
+              {scheduled ? (
+                preview.effectiveAt && (
+                  <div className={styles.fact}>
+                    <dt>{labels.effectiveOn}</dt>
+                    <dd className={styles.charge}>
+                      {formatInstant(preview.effectiveAt, { locale })}
+                    </dd>
+                  </div>
+                )
+              ) : (
+                <div className={styles.fact}>
+                  <dt>{labels.chargeNow}</dt>
+                  <dd className={styles.charge}>{money(preview.charge)}</dd>
+                </div>
+              )}
               <div className={styles.fact}>
                 <dt>{labels.nextPrice}</dt>
                 <dd>{priceEveryDisplay(preview.amount, preview.period, all, locale)}</dd>
@@ -110,8 +149,13 @@ export function ChangePlanDialog({
               {previewError ? labels.previewError : labels.loadingPreview}
             </p>
           )}
-          {ready && preview.charge.amount === 0 && <p className={styles.note}>{labels.noCharge}</p>}
-          {ready && preview.restartsPeriod && <p className={styles.note}>{labels.restart}</p>}
+          {scheduled && <p className={styles.note}>{labels.scheduledNote}</p>}
+          {ready && !scheduled && preview.charge.amount === 0 && (
+            <p className={styles.note}>{labels.noCharge}</p>
+          )}
+          {ready && !scheduled && preview.restartsPeriod && (
+            <p className={styles.note}>{labels.restart}</p>
+          )}
           {error !== undefined && error !== null && (
             <>
               <Alert tone="danger" toneLabel={all.errorLabel}>

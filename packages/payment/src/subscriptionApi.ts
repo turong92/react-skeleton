@@ -35,10 +35,12 @@ export type PaymentSubscriptionApi = {
   /** `GET {basePath}/subscriptions/{id}/change-preview?planCode=` - 위 등급으로 바꾸면 지금 얼마가 결제되는가 */
   changePreview(id: string, planCode: string): Promise<PlanChangePreview>
   /**
-   * `POST {basePath}/subscriptions/{id}/change` + `Idempotency-Key` - 바뀐 구독(200) 또는 결제 확인 중(202, `pendingPlanCode`).
+   * `POST {basePath}/subscriptions/{id}/change` + `Idempotency-Key` - 바뀐 구독(200) 또는 결제 확인 중(202, `pendingPlanCode`). 내리기 · 주기 줄이기는 예약이라 200 + `scheduledChange`(`expectedCharge` 는 0).
    * 거절은 `PAYMENT.DECLINED`(플랜 그대로), 금액이 올랐으면 409 `PAYMENT.PLAN_CHANGE_CHARGE_CHANGED`. 첫 결제처럼 결제사를 부르므로 `activateTimeoutMs` 를 쓴다
    */
   changePlan(id: string, input: ChangePlanInput, options?: IdempotentCall): Promise<Subscription>
+  /** `DELETE {basePath}/subscriptions/{id}/scheduled-change` - 예약된 플랜 변경을 거둔다(지금 플랜 그대로). 구독을 돌려준다 */
+  cancelScheduledChange(id: string): Promise<Subscription>
 }
 
 export type PaymentSubscriptionApiOptions = {
@@ -91,5 +93,7 @@ export function createSubscriptionApi(
         idempotencyKey,
         timeoutMs: activateTimeoutMs,
       }),
+    cancelScheduledChange: (id) =>
+      client.value<Subscription>(`${base}/${enc(id)}/scheduled-change`, { method: 'DELETE' }),
   }
 }

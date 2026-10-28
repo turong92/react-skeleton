@@ -1,10 +1,13 @@
 import {
   CancelNowDialog,
+  CancelScheduledChangeDialog,
   CancelNowResultNotice,
   CancelSubscriptionDialog,
+  changeChoices,
   ChangePlanDialog,
   MySubscriptionCard,
   useCancelPreview,
+  useCancelScheduledChange,
   useCancelSubscription,
   useCancelSubscriptionNow,
   type CancelNowResult,
@@ -33,6 +36,8 @@ export function SubscriptionPage() {
   const labels = subscriptionLabelsFor(t, language)
   const me = useMySubscription(subscriptionApi)
   const cancel = useCancelSubscription(subscriptionApi)
+  const withdraw = useCancelScheduledChange(subscriptionApi)
+  const [withdrawing, setWithdrawing] = useState(false)
   const change = useChangeSubscriptionPlan(subscriptionApi)
   const plans = useSubscriptionPlans(subscriptionApi)
   // 지금 해지: 정책이 열었는지(`open`)를 이용 중일 때만 묻고, 확인 창을 열 때마다 새로 읽는다(남은 기간에 따라 금액이 변한다)
@@ -44,7 +49,7 @@ export function SubscriptionPage() {
   const [endingNow, setEndingNow] = useState(false)
   const [endedNow, setEndedNow] = useState<CancelNowResult | null>(null)
   const [confirming, setConfirming] = useState(false)
-  // 플랜 올리기 창: 열려 있는 동안 고른 플랜(없으면 닫힘)
+  // 플랜 바꾸기 창: 열려 있는 동안 고른 플랜(없으면 닫힘)
   const [changeTo, setChangeTo] = useState<string | null>(null)
   const preview = usePlanChangePreview(subscriptionApi, me.data?.subscription?.id ?? '', changeTo)
 
@@ -68,17 +73,18 @@ export function SubscriptionPage() {
       </div>
     )
 
-  // 지금보다 윗등급이고 주기 · 통화가 같은 플랜만 - 서버가 같은 규칙으로 거절한다
+  // 바꿀 수 있는 플랜 - 같은 통화의 다른 등급 · 다른 주기 플랜. 올리기와 주기 늘리기는 바로, 내리기와 주기 줄이기는 다음 결제일부터(예약) - 서버가 같은 표로 판정한다
   // 행사가, 옛 가격으로 산 구독은 그 가격 코드가 더는 목록에 없다 - 구독 응답의 등급(`level`)으로 가르고, 구버전 서버는 플랜 코드로 찾는다
   const currentLevel =
     subscription.level ?? plans.data?.find((plan) => plan.code === subscription.planCode)?.level
-  const upgrades = (plans.data ?? []).filter(
-    (plan) =>
-      currentLevel != null &&
-      plan.level > currentLevel &&
-      plan.period === subscription.period &&
-      plan.amount.currency === subscription.amount.currency,
-  )
+  const tier =
+    currentLevel != null
+      ? { level: currentLevel, period: subscription.period, currency: subscription.amount.currency }
+      : undefined
+  const choices = tier
+    ? changeChoices(plans.data ?? [], tier, subscription.planCode)
+    : { now: [], next: [] }
+  const candidates = [...choices.now, ...choices.next]
   const cancelable = subscription.status === 'ACTIVE' || subscription.status === 'PAST_DUE'
   return (
     <div className={styles.page}>
@@ -86,13 +92,21 @@ export function SubscriptionPage() {
       <MySubscriptionCard
         subscription={subscription}
         orders={orders}
-        {...(upgrades.length > 0 &&
+        {...(candidates.length > 0 &&
         subscription.status === 'ACTIVE' &&
         !subscription.providerManaged
           ? {
               onChangePlan: () => {
                 change.reset() // 묵은 오류가 새로 연 창에 보이지 않게
-                setChangeTo(upgrades[0]!.code)
+                setChangeTo(candidates[0]!.code)
+              },
+            }
+          : {})}
+        {...(subscription.scheduledChange
+          ? {
+              onCancelScheduledChange: () => {
+                withdraw.reset()
+                setWithdrawing(true)
               },
             }
           : {})}
@@ -140,7 +154,8 @@ export function SubscriptionPage() {
         onConfirm={(input) =>
           change.mutate({ id: subscription.id, ...input }, { onSuccess: () => setChangeTo(null) })
         }
-        plans={upgrades}
+        plans={candidates}
+        {...(tier ? { current: tier } : {})}
         planCode={changeTo ?? ''}
         onPlanChange={(code) => {
           change.reset()
@@ -154,6 +169,20 @@ export function SubscriptionPage() {
         locale={language}
         labels={labels}
       />
+      {subscription.scheduledChange && (
+        <CancelScheduledChangeDialog
+          open={withdrawing}
+          onClose={() => setWithdrawing(false)}
+          onConfirm={() =>
+            withdraw.mutate(subscription.id, { onSuccess: () => setWithdrawing(false) })
+          }
+          scheduledChange={subscription.scheduledChange}
+          busy={withdraw.isPending}
+          error={withdraw.error}
+          locale={language}
+          labels={labels}
+        />
+      )}
       <CancelNowDialog
         open={endingNow && inUse}
         onClose={() => setEndingNow(false)}

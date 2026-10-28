@@ -206,6 +206,10 @@ export const defaultPaymentLabels: PaymentLabels = {
       subscribing: 'Opening the card window',
       emptyTitle: 'No plans to pick from',
       emptyDescription: 'Please come back in a moment.',
+      intervalCaption: 'Billing period',
+      monthly: 'Monthly',
+      yearly: 'Yearly',
+      saleUntil: (date) => `Until ${date}`,
     },
     mine: {
       amount: 'Price',

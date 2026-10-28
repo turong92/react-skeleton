@@ -206,6 +206,10 @@ export const koPaymentLabels: PaymentLabels = {
       subscribing: '카드 등록 창을 여는 중',
       emptyTitle: '고를 수 있는 플랜이 없어요',
       emptyDescription: '잠시 뒤에 다시 들러 주세요.',
+      intervalCaption: '결제 주기',
+      monthly: '월간',
+      yearly: '연간',
+      saleUntil: (date) => `${date}까지`,
     },
     mine: {
       amount: '금액',

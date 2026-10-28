@@ -24,3 +24,23 @@
   color: var(--text-strong);
   overflow-wrap: anywhere;
 }
+
+.intervals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.regular {
+  margin-right: var(--space-sm);
+  color: var(--text-muted);
+  font-size: var(--font-size-body);
+  font-weight: 500;
+}
+
+.sale {
+  margin: 0;
+  color: var(--text-strong);
+  font-size: var(--font-size-small);
+  font-weight: 650;
+}

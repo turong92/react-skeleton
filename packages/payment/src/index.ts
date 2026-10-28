@@ -139,6 +139,19 @@ export type {
   TossBillingAuth,
 } from './subscriptionTypes'
 export { createSubscriptionApi } from './subscriptionApi'
+export { currencyDigits, toMajorUnits, toMinorUnits } from './money'
+export { createCatalogApi } from './catalogApi'
+export type { CatalogApi, CatalogApiOptions } from './catalogApi'
+export { catalogProductsQuery, useCatalogProducts } from './catalogQueries'
+export type {
+  Catalog,
+  CatalogKind,
+  CatalogPrice,
+  CatalogProduct,
+  CatalogProductText,
+} from './catalogTypes'
+export { groupPlans, regularAmountOf } from './planGroups'
+export type { PlanGroup } from './planGroups'
 export type { PaymentSubscriptionApi, PaymentSubscriptionApiOptions } from './subscriptionApi'
 export {
   useActivateSubscription,
@@ -188,6 +201,13 @@ export type {
   PaymentLabelsInput,
   SubscriptionLabels,
 } from './labels'
-export { cardDisplay, formatMoney, priceEveryDisplay, priceEveryText } from './format'
+export {
+  cardDisplay,
+  formatMoney,
+  formatSaleDate,
+  periodUnitText,
+  priceEveryDisplay,
+  priceEveryText,
+} from './format'
 export type { FormatMoneyOptions } from './format'
 export { declineCategoryOf } from './failure'

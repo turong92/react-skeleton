@@ -106,12 +106,26 @@ export function priceEveryText(
   period: string,
   labels: Pick<PaymentLabels, 'subscription'>,
 ): string {
+  const unit = periodUnitText(period, labels)
+  return unit === null ? money : labels.subscription.priceEvery(money, unit)
+}
+
+/** 주기의 첫 0 아닌 단위 글자(`P1M` → 「1개월」). 읽을 수 없는 주기(복합 · 0 · 모르는 글자)는 `null` */
+export function periodUnitText(
+  period: string,
+  labels: Pick<PaymentLabels, 'subscription'>,
+): string | null {
   const match = PERIOD.exec(period)
   const counts = match?.slice(1).map((part) => Number(part ?? 0))
   const at = counts?.findIndex((count) => count > 0) ?? -1
   const unit = at >= 0 ? PERIOD_UNITS[at] : undefined
-  if (!counts || unit === undefined) return money
-  return labels.subscription.priceEvery(money, labels.subscription.periodUnit[unit](counts[at]!))
+  if (!counts || unit === undefined) return null
+  return labels.subscription.periodUnit[unit](counts[at]!)
+}
+
+/** 날짜 하나(시각 없이) - 시간대를 **명시해** 읽는다(기본 UTC). 「11월 30일까지」 같은 행사 끝 안내에 쓴다 */
+export function formatSaleDate(iso: string, locale?: string, timeZone = 'UTC'): string {
+  return new Intl.DateTimeFormat(locale, { timeZone, dateStyle: 'medium' }).format(new Date(iso))
 }
 
 /**

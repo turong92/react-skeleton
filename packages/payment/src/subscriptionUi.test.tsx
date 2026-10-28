@@ -73,6 +73,66 @@ describe('SubscriptionPlanList', () => {
     expect(html.match(/disabled=""/g)).toHaveLength(2) // the busy one (loading) and the other
   })
 
+  const grouped: SubscriptionPlan[] = [
+    {
+      code: 'standard-year',
+      name: 'Standard',
+      amount: { amount: 59000, currency: 'KRW' },
+      regularAmount: { amount: 69000, currency: 'KRW' },
+      period: 'P1Y',
+      level: 2,
+      productCode: 'standard',
+    },
+    {
+      code: 'standard-month',
+      name: 'Standard',
+      amount: { amount: 6900, currency: 'KRW' },
+      period: 'P1M',
+      level: 2,
+      productCode: 'standard',
+    },
+    {
+      code: 'pro',
+      name: 'Pro',
+      amount: { amount: 9900, currency: 'KRW' },
+      period: 'P1M',
+      level: 3,
+    },
+  ]
+
+  it('plans of one product share one card with a pressed-state interval button each; the shortest period is picked first', () => {
+    const html = list({ plans: grouped })
+    expect(html.match(/<li>/g)).toHaveLength(2)
+    expect(html).toContain('role="group"')
+    expect(html).toContain('aria-label="결제 주기"')
+    expect(html).toMatch(/aria-pressed="true"[^>]*>월간</)
+    expect(html).toMatch(/aria-pressed="false"[^>]*>연간</)
+    expect(html).toContain('6,900원 · 1개월마다 결제')
+    expect(html).not.toContain('59,000원')
+    // 구독하기 단추는 카드마다 하나 - 주기 단추는 채움(primary) 하나 + 테두리(secondary) 하나
+    expect(html).toContain('aria-label="구독하기: Standard"')
+    expect(html.match(/aria-label="구독하기/g)).toHaveLength(2)
+  })
+
+  it('a card of one period (or an old server without productCode) has no interval buttons', () => {
+    const html = list()
+    expect(html).not.toContain('aria-pressed')
+    expect(html).not.toContain('role="group"')
+  })
+
+  it('a sale price shows the regular price struck through, with the end date when the app knows it', () => {
+    const only = grouped.filter((p) => p.code === 'standard-year')
+    const html = list({ plans: only, saleEndsAtOf: () => '2026-11-30T12:00:00Z' })
+    expect(html).toMatch(/<del[^>]*>69,000원<\/del>/)
+    expect(html).toContain('59,000원 · 1년마다 결제')
+    expect(html).toContain('2026. 11. 30.까지')
+    expect(list({ plans: only })).not.toContain('까지')
+  })
+
+  it('no strike-through when there is no regular price above the amount', () => {
+    expect(list()).not.toContain('<del')
+  })
+
   it('no plans → an empty state, not an empty list', () => {
     const html = list({ plans: [] })
     expect(html).toContain('고를 수 있는 플랜이 없어요')

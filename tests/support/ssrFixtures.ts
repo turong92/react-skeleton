@@ -147,6 +147,9 @@ const paymentSubscription = {
   testMode: true,
   createdAt: '2026-01-01T00:00:00Z',
 }
+export const fakeCatalogApi = () => ({
+  products: async () => ({ currency: 'KRW', products: [] }),
+})
 export const fakeSubscriptionApi = () => ({
   plans: async () => [
     {
@@ -1121,6 +1124,7 @@ export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
   'payment#useRequestRefund': () => [fakePaymentLedgerApi()],
   'payment#useWithdrawRefund': () => [fakePaymentLedgerApi()],
   'payment#useSubscriptionPlans': () => [fakeSubscriptionApi()],
+  'payment#useCatalogProducts': () => [fakeCatalogApi(), 'SUBSCRIPTION'],
   'payment#useMySubscription': () => [fakeSubscriptionApi()],
   'payment#useStartSubscription': () => [fakeSubscriptionApi()],
   'payment#useActivateSubscription': () => [fakeSubscriptionApi()],

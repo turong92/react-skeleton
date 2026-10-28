@@ -75,6 +75,10 @@ export type SubscriptionPlan = {
   period: string
   /** 높을수록 윗등급 */
   level: number
+  /** 카탈로그 상품 코드 - 같은 코드의 플랜(월 · 연)은 한 카드로 묶인다. 옛 서버 · 코드로 만든 플랜은 칸이 없다(플랜 하나가 카드 하나) */
+  productCode?: string
+  /** 행사 중이면 정가(같은 통화). 지금 금액보다 클 때만 취소선으로 보인다. 숫자로 오면 `amount` 의 통화 최소 단위 */
+  regularAmount?: PaymentAmount | number | null
 }
 
 /** 카드 등록 창에 넘길 값 — 결제사 모듈이 만들고 프론트가 `kind` 로 갈라 연다. `customerKey` 만 공개해도 되는 값이다 */

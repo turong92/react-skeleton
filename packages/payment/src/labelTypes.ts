@@ -306,6 +306,13 @@ export type SubscriptionLabels = {
     subscribing: string
     emptyTitle: string
     emptyDescription: string
+    /** 한 상품에 주기가 둘 이상일 때 카드 안 주기 단추 묶음의 이름 */
+    intervalCaption: string
+    /** 주기 단추의 글자 - 한 달 · 한 해 주기는 이 낱말, 그 밖(`P3M`)은 「3개월」 같은 주기 글자 */
+    monthly: string
+    yearly: string
+    /** 행사가가 끝나는 날 안내(「11월 30일까지」) - 인자는 서식을 입힌 날짜 */
+    saleUntil: (date: string) => string
   }
   mine: {
     amount: string

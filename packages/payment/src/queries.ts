@@ -1,5 +1,6 @@
 import type { QueryClient } from '@tanstack/react-query'
 import type { ApiCursorResponse } from '@skeleton/api-client'
+import type { CatalogKind } from './catalogTypes'
 import { confirmOutcomeOf } from './errors'
 import { previewPaddlePrices, type PaddlePricePreviewConfig, type PaddleSdk } from './paddle'
 import type { IntentKeys } from './intentKeys'
@@ -41,6 +42,8 @@ export const paymentKeys = {
   quote: (input: QuoteInput) => [...paymentKeys.all, 'quote', input] as const,
   subscriptionPlans: () => [...paymentKeys.all, 'subscription-plans'] as const,
   mySubscription: () => [...paymentKeys.all, 'my-subscription'] as const,
+  catalogProducts: (kind?: CatalogKind) =>
+    [...paymentKeys.all, 'catalog-products', kind ?? 'all'] as const,
   cancelPreview: (id: string) => [...paymentKeys.all, 'cancel-preview', id] as const,
   planChangePreview: (id: string, planCode: string) =>
     [...paymentKeys.all, 'plan-change-preview', id, planCode] as const,

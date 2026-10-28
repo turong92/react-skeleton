@@ -408,6 +408,106 @@
     {
       "patterns": [],
       "stories": [
+        "packages/rewards/src/campaign/AttendanceCard.stories.tsx",
+        "packages/rewards/src/campaign/InviteCard.stories.tsx",
+        "packages/rewards/src/coupon/CouponWallet.stories.tsx",
+        "packages/rewards/src/coupon/CouponPicker.stories.tsx",
+        "packages/rewards/src/point/PointBalance.stories.tsx",
+        "packages/rewards/src/point/PointHistory.stories.tsx"
+      ],
+      "docs": ["packages/rewards/README.md"],
+      "entryPoints": [
+        "createRewardsApi",
+        "createCampaignApi",
+        "createCouponApi",
+        "createPointApi",
+        "useCampaigns",
+        "useAttendance",
+        "useAttendanceMonth",
+        "useCheckIn",
+        "useReferral",
+        "useClaimReferral",
+        "useReferralCapture",
+        "useCoupons",
+        "useRedeemCoupon",
+        "usePoints",
+        "usePointHistory",
+        "stageSummary",
+        "AttendanceCard",
+        "InviteCard",
+        "CouponCard",
+        "CouponWallet",
+        "RedeemCodeForm",
+        "CouponPicker",
+        "PointBalance",
+        "PointHistory",
+        "defaultRewardsLabels",
+        "koRewardsLabels"
+      ],
+      "needs": ["api-client", "time", "ui"],
+      "backend": {
+        "modules": [],
+        "oneOfModules": [],
+        "optionalModules": ["campaign", "coupon", "point", "reward"],
+        "basePaths": [
+          "/api/v1/campaigns",
+          "/api/v1/referrals",
+          "/api/v1/coupons",
+          "/api/v1/points"
+        ],
+        "docs": [
+          "docs/modules/campaign.md",
+          "docs/modules/coupon.md",
+          "docs/modules/point.md",
+          "docs/modules/reward.md"
+        ]
+      },
+      "status": "experimental",
+      "id": "rewards",
+      "kind": "package",
+      "package": "@skeleton/rewards",
+      "path": "packages/rewards",
+      "stampFlag": {
+        "flag": "--packages rewards",
+        "included": "flag",
+        "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
+        "alsoVia": [],
+        "optOut": null
+      },
+      "summary": "보상 사용자 화면 — 출석 카드 · 친구초대 카드(링크의 ?ref= 를 보관했다가 로그인 뒤 한 번 claim) · 쿠폰함과 코드 등록 · 결제 때 쿠폰 고르기 · 포인트 잔액과 내역. 백엔드가 붙인 갈래(campaign · coupon · point)만 골라 쓴다.",
+      "notFor": [
+        "이벤트 · 쿠폰 · 포인트 운영(만들기 · 지급 · 회수) — 운영 화면은 rewards/admin (다음 판)",
+        "결제 화면 자체 — payment 가 그린다. 쿠폰을 결제에 적용하는 줄은 앱이 CouponPicker 와 payment 를 잇는다(두 패키지는 서로 import 하지 않는다)",
+        "포인트를 쓰는 길 — 서버 API(PointWallet.spend)뿐이라 이 패키지에는 읽기만 있다"
+      ],
+      "keywords": {
+        "ko": [
+          "출석",
+          "출석 체크",
+          "친구 초대",
+          "초대 코드",
+          "쿠폰",
+          "쿠폰함",
+          "쿠폰 코드",
+          "포인트",
+          "적립"
+        ],
+        "en": [
+          "rewards",
+          "attendance",
+          "check-in",
+          "referral",
+          "invite friends",
+          "coupon",
+          "coupon wallet",
+          "points",
+          "loyalty"
+        ]
+      }
+    },
+    {
+      "patterns": [],
+      "stories": [
         "packages/dashboard/src/DashboardView.stories.tsx",
         "packages/dashboard/src/MetricTiles.stories.tsx",
         "packages/dashboard/src/RankingCard.stories.tsx",
@@ -2629,6 +2729,11 @@
       "need": "운영자 계정 관리 표 (검색 · 정지 · 복구 · 역할)",
       "capabilities": ["account-admin"],
       "byHand": "백엔드 skeleton.account.admin.enabled=true. 프런트는 apps/sample 의 AdminAccountsPage 와 RequirePermission 라우트를 복사한다."
+    },
+    {
+      "need": "출석 · 친구초대 이벤트, 쿠폰함, 포인트 (사용자 화면)",
+      "capabilities": ["rewards"],
+      "byHand": "백엔드 campaign · coupon · point 모듈을 붙인 갈래만 쓴다(skeleton.<module>.* 설정). 프런트는 createRewardsApi(apiClient) 한 줄 + AttendanceCard · CouponWallet · PointBalance 를 라우트에 놓고, 가입 화면 근처에서 useReferralCapture 를 한 번 부른다."
     },
     {
       "need": "관리자 대시보드 (방문 · 가입 · 매출 · 퍼널 · 순위)",

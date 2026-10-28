@@ -1,0 +1,12 @@
+.wallet {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.list {
+  display: grid;
+  gap: var(--space-md);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

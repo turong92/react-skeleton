@@ -1,0 +1,9 @@
+.form {
+  display: grid;
+  gap: var(--space-md);
+  justify-items: start;
+}
+
+.form > :first-child {
+  justify-self: stretch;
+}

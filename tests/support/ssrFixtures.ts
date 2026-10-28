@@ -30,6 +30,34 @@ export const fakeNotificationsApi = () => ({
   markRead: async (eventId: string) => ({ eventId, readAt: '2026-01-01T00:00:00Z' }),
   markAllRead: async () => ({ updated: 0 }),
 })
+const fakeRewardsApi = () => ({
+  listCampaigns: async () => [],
+  checkIn: async () => ({ alreadyChecked: false, total: 1, streak: 1, rewards: [] }),
+  attendanceMonth: async () => ({ days: [] }),
+  myReferral: async () => ({ code: 'AB12CD34', invited: 0, rewarded: 0 }),
+  claimReferral: async () => {},
+  listCoupons: async () => [],
+  redeemCoupon: async () => {
+    throw new Error('not used on the server')
+  },
+  points: async () => ({ balance: 0, expiringSoon: null }),
+  pointHistory: async () => ({
+    values: [],
+    cursor: { hasNext: false, nextCursor: null },
+    meta: { timestamp: '2026-01-01T00:00:00Z' },
+  }),
+})
+const rewardsCoupon = {
+  id: 'c1',
+  name: 'Welcome',
+  status: 'AVAILABLE',
+  expiresAt: null,
+  stages: [{ type: 'PERCENT', value: 10, maxDiscount: null, periods: 1 }],
+  scope: { purposes: [], itemTypes: [], planCodes: [] },
+  currency: 'USD',
+  minAmount: null,
+}
+const noopStorage = { getItem: () => null, setItem: () => {}, removeItem: () => {} }
 const dashboardRange = { from: '2026-01-01', to: '2026-01-02', zone: 'UTC', interval: 'DAY' }
 const dashboardMetric = {
   key: 'account.signed-up',
@@ -860,6 +888,21 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
     },
     labels: ctx.mod('dashboard').defaultDashboardLabels,
   }),
+  'rewards#AttendanceCard': () => ({ api: fakeRewardsApi(), campaignId: 'att' }),
+  'rewards#InviteCard': () => ({ api: fakeRewardsApi() }),
+  'rewards#CouponCard': (ctx) => ({
+    coupon: rewardsCoupon,
+    labels: ctx.mod('rewards').defaultRewardsLabels,
+  }),
+  'rewards#CouponWallet': () => ({ api: fakeRewardsApi() }),
+  'rewards#RedeemCodeForm': () => ({ api: fakeRewardsApi() }),
+  'rewards#CouponPicker': () => ({
+    coupons: [rewardsCoupon],
+    selectedId: null,
+    onSelect: () => {},
+  }),
+  'rewards#PointBalance': () => ({ api: fakeRewardsApi() }),
+  'rewards#PointHistory': () => ({ api: fakeRewardsApi() }),
   'notifications#NotificationBell': () => ({ api: fakeNotificationsApi() }),
   'notifications#NotificationList': () => ({ items: [notification] }),
   'author-profile#AuthorPicker': () => ({ api: fakeAuthorProfileApi(), ...authorPickerSlot }),
@@ -1040,6 +1083,19 @@ export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
     'cloudflare.paths',
     { from: '2026-01-01', to: '2026-01-02' },
   ],
+  'rewards#useCampaigns': () => [fakeRewardsApi()],
+  'rewards#useAttendance': () => [fakeRewardsApi(), 'att'],
+  'rewards#useAttendanceMonth': () => [fakeRewardsApi(), 'att', '2026-10'],
+  'rewards#useCheckIn': () => [fakeRewardsApi()],
+  'rewards#useReferral': () => [fakeRewardsApi()],
+  'rewards#useClaimReferral': () => [fakeRewardsApi()],
+  'rewards#useReferralCapture': () => [
+    { storage: noopStorage, claim: async () => {}, signedIn: false, search: '' },
+  ],
+  'rewards#useCoupons': () => [fakeRewardsApi(), 'AVAILABLE'],
+  'rewards#useRedeemCoupon': () => [fakeRewardsApi()],
+  'rewards#usePoints': () => [fakeRewardsApi()],
+  'rewards#usePointHistory': () => [fakeRewardsApi()],
   'notifications#useNotifications': () => [fakeNotificationsApi()],
   'notifications#useUnreadCount': () => [fakeNotificationsApi()],
   'notifications#useMarkRead': () => [fakeNotificationsApi()],

@@ -1,0 +1,45 @@
+.body {
+  display: grid;
+  gap: var(--space-md);
+  justify-items: start;
+}
+
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  margin: 0;
+  padding: 0;
+  color: var(--text-strong);
+  font-weight: 700;
+  list-style: none;
+}
+
+.next {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-caption);
+}
+
+.monthTitle {
+  margin: 0 0 var(--space-xs);
+  color: var(--text-muted);
+  font-size: var(--font-size-caption);
+}
+
+.days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.day {
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: var(--font-size-caption);
+}

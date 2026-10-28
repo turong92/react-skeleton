@@ -1,0 +1,40 @@
+.card {
+  display: grid;
+  gap: var(--space-xs);
+  padding: var(--space-md) var(--space-lg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.card[data-status='AVAILABLE'] {
+  border-left: 3px solid var(--teal);
+}
+
+.card:not([data-status='AVAILABLE']) {
+  color: var(--text-muted);
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.name {
+  color: var(--text-strong);
+}
+
+.benefit {
+  margin: 0;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.meta {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-caption);
+}

@@ -13,6 +13,7 @@ export const koRewardsAdminLabels: RewardsAdminLabels = {
   yes: '예',
   errors: {
     insufficient: '잔액이 모자라 이만큼 뺄 수 없어요.',
+    definitionInvalid: '쿠폰의 값이나 기간이 맞지 않아요. 단계와 날짜를 확인해 주세요.',
     issueClosed: '지금은 이 쿠폰을 줄 수 없는 기간이에요. 발행 기간을 확인해 주세요.',
     notFound: '이제 없는 항목이에요. 목록을 새로 불러왔어요.',
     validation: '값을 확인하고 다시 해 보세요.',

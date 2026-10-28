@@ -26,6 +26,7 @@ describe('toastUnlessValidation', () => {
       ErrorCodes.COUPON_CODE_USED,
       ErrorCodes.COUPON_CODE_EXHAUSTED,
       ErrorCodes.COUPON_ISSUE_CLOSED,
+      ErrorCodes.COUPON_DEFINITION_INVALID,
       ErrorCodes.CAMPAIGN_NOT_ACTIVE,
       ErrorCodes.CAMPAIGN_REFERRAL_INVALID,
       ErrorCodes.POINT_INSUFFICIENT,

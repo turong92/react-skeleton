@@ -80,4 +80,16 @@ describe('usableCoupons', () => {
       }).map((c) => c.id),
     ).toEqual(['any', 'pro'])
   })
+
+  it('a coupon that is usable only from a later time is not offered yet (the server lists it as AVAILABLE and refuses it in the quote)', () => {
+    const list = [
+      coupon('now'),
+      coupon('soon', { usableFrom: '2026-11-02T00:00:00Z' }),
+      coupon('past', { usableFrom: '2026-10-01T00:00:00Z' }),
+    ]
+    const now = Date.parse('2026-10-29T00:00:00Z')
+    expect(
+      usableCoupons(list, { purpose: 'ONE_TIME', itemType: 'cheer', now }).map((c) => c.id),
+    ).toEqual(['now', 'past'])
+  })
 })

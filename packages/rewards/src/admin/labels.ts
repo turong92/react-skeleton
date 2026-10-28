@@ -16,6 +16,8 @@ export type RewardsAdminLabels = {
     insufficient: string
     /** `COUPON.ISSUE_CLOSED` - 발행 기간 밖 */
     issueClosed: string
+    /** `COUPON.DEFINITION_INVALID` - 쿠폰 값 · 기간이 맞지 않다 */
+    definitionInvalid: string
     notFound: string
     validation: string
     notEnabled: string

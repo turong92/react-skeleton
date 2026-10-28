@@ -13,6 +13,8 @@ export const defaultRewardsAdminLabels: RewardsAdminLabels = {
   yes: 'Yes',
   errors: {
     insufficient: 'The balance is too low for this adjustment.',
+    definitionInvalid:
+      'The coupon values or periods do not fit together. Check the steps and dates.',
     issueClosed: 'Giving this coupon is closed right now. Check its issue period.',
     notFound: 'This no longer exists. The list was refreshed.',
     validation: 'Check the values and try again.',

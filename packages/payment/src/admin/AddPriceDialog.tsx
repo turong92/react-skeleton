@@ -82,11 +82,12 @@ export function AddPriceDialog({
   }
   const currency = currencyOf(form)
   const periodNow = form.period === 'custom' ? form.customPeriod.trim() : form.period
-  // 대신할 수 있는 가격 - 같은 주기 · 같은 통화에서 지금 판매 중인 것만
+  // 대신할 수 있는 가격 - 같은 주기, 같은 통화에서 지금 판매 중인 것만. 행사가를 더할 때는 상시 가격(기간이 없는 것)을 뺀다 - 행사가는 상시 가격을 멈추지 않고 그 위에 얹힌다
   const replaceable = prices.filter(
     (price) =>
       price.selling &&
       price.stoppedAt === null &&
+      (!form.sale || price.saleStartsAt !== null || price.saleEndsAt !== null) &&
       price.currency === currency &&
       (kind === 'ONE_TIME' ? price.period === null : price.period === periodNow),
   )

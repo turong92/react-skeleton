@@ -137,6 +137,8 @@ describe('① a sale price: operator adds it, the landing and the subscribe page
   run(
     'KR visitor sees the struck-through regular price; the subscriber keeps the sale price after it is stopped',
     async (ctx) => {
+      // 앞 실행이 남긴 행사가가 있으면 연 가격 판정(현재 가격)이 흐려진다 - 먼저 치운다
+      await stopLeftoverSales()
       const yearly = await yearlySeed()
       if (!yearly) return ctx.skip()
       const regular = yearly.amount

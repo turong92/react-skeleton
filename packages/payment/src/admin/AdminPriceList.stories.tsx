@@ -103,7 +103,12 @@ export const ChangeSalePeriod: Story = {
 }
 
 export const WithProviderLinks: Story = {
-  args: { providers: ['paddle'], onSetProviderRef: onSet, onRemoveProviderRef: onRemove },
+  args: {
+    providers: ['paddle'],
+    providerCurrencies: { paddle: ['USD'] },
+    onSetProviderRef: onSet,
+    onRemoveProviderRef: onRemove,
+  },
   play: async ({ canvas, userEvent }) => {
     const linked = canvas.getByRole('textbox', { name: 'Paddle 가격 id (std-m-usd)' })
     await expect(linked).toHaveValue('pri_01')

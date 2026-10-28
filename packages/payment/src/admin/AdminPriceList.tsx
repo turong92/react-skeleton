@@ -23,7 +23,7 @@ export type AdminPriceListProps = {
   providers?: readonly string[]
   /**
    * 결제사별로 가격 id 가 뜻을 갖는 통화 - 그 통화의 표에만 링크 칸이 생긴다(원화는 토스라 Paddle 가격 id 를 이을 곳이 없다).
-   * 여기 없는 결제사는 모든 통화. 기본 `{ paddle: ['USD'] }`
+   * 여기 없는 결제사는 모든 통화(기본). 견본 앱은 `{ paddle: ['USD'] }` 를 넘긴다
    */
   providerCurrencies?: Readonly<Record<string, readonly string[]>>
   /** 상품이 판매 중이 아니면 `false` - 판매 중인 가격 줄도 「상품 판매 중지」로 말한다 */
@@ -41,7 +41,7 @@ export type AdminPriceListProps = {
   labels?: PaymentLabelsInput
 }
 
-const DEFAULT_PROVIDER_CURRENCIES = { paddle: ['USD'] } as const
+const ALL_CURRENCIES: Readonly<Record<string, readonly string[]>> = {}
 
 const TONE: Record<PriceState, 'success' | 'info' | 'neutral' | 'warning'> = {
   current: 'success',
@@ -62,7 +62,7 @@ export function AdminPriceList({
   onStop,
   onChangeSale,
   providers = [],
-  providerCurrencies = DEFAULT_PROVIDER_CURRENCIES,
+  providerCurrencies = ALL_CURRENCIES,
   productSelling = true,
   onSetProviderRef,
   onRemoveProviderRef,

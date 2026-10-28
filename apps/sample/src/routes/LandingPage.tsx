@@ -96,6 +96,7 @@ export function LandingPage() {
               custom: t('landing.pricing.custom'),
               highlight: t('landing.pricing.highlight'),
               saleUntil: (date) => t('landing.pricing.saleUntil', { date }),
+              regularPrice: t('landing.pricing.regularPrice'),
             }}
           />
         </div>

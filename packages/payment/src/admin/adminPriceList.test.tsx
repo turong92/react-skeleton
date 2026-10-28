@@ -113,14 +113,24 @@ describe('AdminPriceList', () => {
     )
   })
 
-  it('the provider link cell is only in the table of a currency that provider sells in (Paddle: USD, not KRW)', () => {
+  it('the provider link cell is only in the table of a currency that provider sells in (Paddle: USD, not KRW - the app says so; the package default is every currency)', () => {
     const html = render([price(), price({ code: 'u', currency: 'USD', amount: 699 })], {
       providers: ['paddle'],
+      providerCurrencies: { paddle: ['USD'] },
       onSetProviderRef: noop,
       onRemoveProviderRef: noop,
     })
     expect(html).toContain('Paddle 가격 id (u)')
     expect(html).not.toContain('Paddle 가격 id (std-m)')
+  })
+
+  it('without a currency map a provider is linkable in every currency table', () => {
+    const html = render([price()], {
+      providers: ['paddle'],
+      onSetProviderRef: noop,
+      onRemoveProviderRef: noop,
+    })
+    expect(html).toContain('Paddle 가격 id (std-m)')
   })
 
   it('unlinking asks first (the confirm dialog is there, closed text says what happens)', () => {

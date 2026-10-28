@@ -415,6 +415,7 @@ const en: Record<keyof typeof ko, string> = {
   'landing.pricing.free': 'Free',
   'landing.pricing.custom': 'Custom',
   'landing.pricing.highlight': 'Most popular',
+  'landing.pricing.regularPrice': 'Regular price',
   'landing.pricing.saleUntil': 'Until {date}',
   'landing.pricing.cta': 'Get started',
   'landing.pricing.features.basic.1': '5 projects',

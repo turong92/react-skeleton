@@ -23,6 +23,9 @@ import { languageOf, useT } from '../i18n'
 import { AdminAccessNotice } from '../paymentAdmin/AdminAccessNotice'
 import styles from './AdminCatalogPage.module.css'
 
+/** 결제사 가격 id 를 잇는 통화 - Paddle 은 달러 가격에만(원화는 토스라 이을 곳이 없다) */
+const PROVIDER_CURRENCIES = { paddle: ['USD'] }
+
 /**
  * 운영 상품 한 건(`/admin/catalog/:code`) — 상품 정보 폼(`AdminProductEditor`), 가격 표(`AdminPriceList`), 「가격 더하기」(`AddPriceDialog`)와 「판매 중지」(`StopPriceDialog`).
  * 결제사 가격 id 링크 칸은 서버가 가격 id 를 쓰는 결제사(`GET /admin/catalog/providers`)를 알릴 때만 생긴다. 가격 줄은 고치지 않는다.
@@ -90,6 +93,7 @@ export function AdminCatalogProductPage() {
         prices={product.prices}
         providers={providers.data ?? []}
         productSelling={product.selling}
+        providerCurrencies={PROVIDER_CURRENCIES}
         busyRef={refBusy}
         refError={m.setProviderRef.error ?? m.removeProviderRef.error}
         locale={language}

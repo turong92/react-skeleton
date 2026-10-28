@@ -410,6 +410,7 @@ export default {
   'landing.pricing.free': '무료',
   'landing.pricing.custom': '문의',
   'landing.pricing.highlight': '가장 인기',
+  'landing.pricing.regularPrice': '정가',
   'landing.pricing.saleUntil': '{date}까지',
   'landing.pricing.cta': '시작하기',
   'landing.pricing.features.basic.1': '프로젝트 5개',

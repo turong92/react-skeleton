@@ -141,3 +141,46 @@ export const ReplacesAnOldPrice: Story = {
     })
   },
 }
+
+/** 행사가를 더할 때는 상시 가격(기간 없는 것)을 대신할 후보에서 뺀다 - 행사가는 상시 가격 위에 얹힌다 */
+export const SaleCannotReplaceARegularPrice: Story = {
+  args: {
+    locale: 'ko-KR',
+    prices: [
+      {
+        code: 'std-m',
+        period: 'P1M',
+        amount: 6900,
+        currency: 'KRW',
+        compareAtAmount: null,
+        saleStartsAt: null,
+        saleEndsAt: null,
+        selling: true,
+        current: true,
+        stoppedAt: null,
+        providerRefs: {},
+      },
+      {
+        code: 'std-m-sale',
+        period: 'P1M',
+        amount: 4900,
+        currency: 'KRW',
+        compareAtAmount: 6900,
+        saleStartsAt: '2026-10-30T00:00:00Z',
+        saleEndsAt: '2026-12-01T00:00:00Z',
+        selling: true,
+        current: true,
+        stoppedAt: null,
+        providerRefs: {},
+      },
+    ],
+  },
+  play: async ({ userEvent }) => {
+    const dialog = await screen.findByRole('dialog', { name: dialogName })
+    const pick = within(dialog).getByLabelText('이 가격을 대신함 (선택)')
+    await expect(within(pick).getByRole('option', { name: /std-m \(/ })).toBeVisible()
+    await userEvent.click(within(dialog).getByRole('checkbox', { name: /행사가로 팔기/ }))
+    await expect(within(pick).queryByRole('option', { name: /std-m \(/ })).toBeNull()
+    await expect(within(pick).getByRole('option', { name: /std-m-sale/ })).toBeVisible()
+  },
+}

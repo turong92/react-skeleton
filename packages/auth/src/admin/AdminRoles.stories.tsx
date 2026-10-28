@@ -5,7 +5,7 @@ import { ApiRequestError } from '@skeleton/api-client'
 import { createFakeRolesApi, fakeRoles } from '../stories/fakeRolesApi'
 import { koAdminRolesLabels } from './rolesLabels'
 import { AdminRoles } from './AdminRoles'
-import type { AdminRolesApi } from './rolesApi'
+import type { AdminRole, AdminRolesApi } from './rolesApi'
 
 /**
  * 역할 관리 표(`@skeleton/auth/admin` - 선택). 목록 · 만들기 · 고치기 · 지우기, 권한은 모듈별 체크 묶음(모르는 키는 키 그대로).
@@ -15,15 +15,17 @@ import type { AdminRolesApi } from './rolesApi'
 function Demo({
   prepare,
   callerPermissions,
+  roles,
 }: {
   prepare?: (api: ReturnType<typeof createFakeRolesApi>) => void
   callerPermissions?: string[]
+  roles?: AdminRole[]
 }) {
   const api = useMemo(() => {
-    const created = createFakeRolesApi()
+    const created = createFakeRolesApi(roles)
     prepare?.(created)
     return created
-  }, [prepare])
+  }, [prepare, roles])
   return <AdminRoles api={api} callerPermissions={callerPermissions} />
 }
 
@@ -198,5 +200,89 @@ export const PermissionsBeyondMineAreLocked: Story = {
       'You do not hold this permission, so you cannot change it.',
     )
     await expect(dialog.getByLabelText('View payments')).toBeEnabled()
+  },
+}
+
+/** 위계: STAFF 가 CS 를 포함한다 - CS 의 권한은 STAFF 창에서 체크 · 잠금 · 「CS에서 물려받음」 으로 보이고, 표에는 포함하는 역할이 알약으로 */
+const hierarchy = (): AdminRole[] => [
+  ...fakeRoles(),
+  {
+    name: 'CS',
+    description: 'Support',
+    permissions: ['payment.read', 'payment.refund'],
+    protected: false,
+    holders: 0,
+  },
+  {
+    name: 'STAFF',
+    description: 'Staff',
+    permissions: ['board.moderate'],
+    protected: false,
+    holders: 0,
+    includes: ['CS'],
+  },
+]
+
+export const InheritedPermissionsAreLocked: Story = {
+  render: () => <Demo roles={hierarchy()} />,
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(await canvas.findByRole('button', { name: 'Edit STAFF' }))
+    const dialog = within(await canvas.findByRole('dialog', { name: 'Edit STAFF' }))
+    await expect(dialog.getByLabelText('CS')).toBeChecked()
+    const inherited = dialog.getByLabelText('View payments')
+    await expect(inherited).toBeChecked()
+    await expect(inherited).toBeDisabled()
+    await expect(inherited).toHaveAccessibleDescription('Inherited from CS')
+    await expect(dialog.getByLabelText('Hide posts and comments')).toBeEnabled()
+  },
+}
+
+/** 이미 STAFF 가 CS 를 포함하니 CS 창에서 STAFF 는 고를 수 없다 - 이유가 옆에 적힌다(서버도 409 ROLE_CYCLE) */
+export const CycleCandidateIsDisabledWithReason: Story = {
+  render: () => <Demo roles={hierarchy()} />,
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(await canvas.findByRole('button', { name: 'Edit CS' }))
+    const dialog = within(await canvas.findByRole('dialog', { name: 'Edit CS' }))
+    const staff = dialog.getByLabelText('STAFF')
+    await expect(staff).toBeDisabled()
+    await expect(staff).toHaveAccessibleDescription(
+      'It already includes this role, so including it would make a loop.',
+    )
+    await expect(dialog.queryByLabelText('CS')).toBeNull()
+  },
+}
+
+/** 포함 역할을 고르고 저장하면 PUT 본문에 includes 가 실리고, 그 권한은 물려받은 것이라 own 권한으로는 보내지 않는다 */
+export const SaveSendsIncludes: Story = {
+  render: () => {
+    const prepare = (api: ReturnType<typeof createFakeRolesApi>) => {
+      const update = api.update
+      api.update = async (name, input) => {
+        lastUpdate = input
+        return update(name, input)
+      }
+    }
+    return <Demo roles={hierarchy()} prepare={prepare} />
+  },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(await canvas.findByRole('button', { name: 'Edit EMPTY' }))
+    const dialog = within(await canvas.findByRole('dialog', { name: 'Edit EMPTY' }))
+    await userEvent.click(dialog.getByLabelText('CS'))
+    await expect(dialog.getByLabelText('View payments')).toBeChecked()
+    await userEvent.click(dialog.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(canvas.queryByRole('dialog')).toBeNull())
+    await expect(lastUpdate).toEqual({ description: '', permissions: [], includes: ['CS'] })
+  },
+}
+let lastUpdate: unknown
+
+/** 다른 역할이 포함 중인 역할을 지우면 409 ROLE_INCLUDED - 이유가 창 안에 보인다 */
+export const DeleteIncludedRoleSaysWhy: Story = {
+  render: () => <Demo roles={hierarchy()} />,
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(await canvas.findByRole('button', { name: 'Delete CS' }))
+    const dialog = within(await canvas.findByRole('dialog', { name: 'Delete CS?' }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Delete' }))
+    await expect(await dialog.findByText(/Another role includes this one/)).toBeVisible()
   },
 }

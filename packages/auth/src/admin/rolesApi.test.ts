@@ -52,6 +52,14 @@ describe('createAdminRolesApi (opt-in backend: skeleton.authz.admin.enabled, con
       request: { method: 'PUT', json: { description: 'd', permissions: ['a.b'] } },
     })
   })
+  it('create and update carry includes when given; update without it leaves the body as before', async () => {
+    const { client, calls } = fake()
+    const api = createAdminRolesApi(client)
+    await api.create({ name: 'STAFF', description: '', permissions: [], includes: ['CS'] })
+    await api.update('STAFF', { description: '', permissions: [], includes: [] })
+    expect(calls[0].request).toMatchObject({ json: { includes: ['CS'] } })
+    expect(calls[1].request).toMatchObject({ json: { includes: [] } })
+  })
   it('remove → DELETE /admin/roles/{name}', async () => {
     const { client, calls } = fake()
     await createAdminRolesApi(client).remove('CS')

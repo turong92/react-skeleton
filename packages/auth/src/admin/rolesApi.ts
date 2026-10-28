@@ -11,10 +11,20 @@ export type AdminRole = {
   permissions: string[]
   protected: boolean
   holders: number | null
+  /** 이 역할이 통째로 포함하는 다른 역할들(위계). 위계 없는 서버는 안 준다 */
+  includes?: string[]
+  /** 물려받은 것까지 펼친 권한(서버가 계산). 위계 없는 서버는 안 준다 */
+  effectivePermissions?: string[]
 }
 
-export type CreateRoleInput = { name: string; description: string; permissions: string[] }
-export type UpdateRoleInput = { description: string; permissions: string[] }
+export type CreateRoleInput = {
+  name: string
+  description: string
+  permissions: string[]
+  includes?: string[]
+}
+/** `includes` 를 빼면 서버가 지금 값을 유지한다 */
+export type UpdateRoleInput = { description: string; permissions: string[]; includes?: string[] }
 
 export type AdminRolesApi = {
   permissions(): Promise<PermissionInfo[]>

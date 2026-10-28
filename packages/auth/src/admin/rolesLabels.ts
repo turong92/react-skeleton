@@ -40,6 +40,17 @@ export type AdminRolesLabels = {
   permissionOutside: string
   /** 호출자 권한 밖 권한을 가진 역할 줄 옆 글자 - 지울 수 없는 이유 */
   deleteOutside: string
+  /** 표의 「포함하는 역할」 열 머리와 비었을 때 */
+  includesColumn: string
+  noIncludes: string
+  /** 만들기 · 고치기 창의 포함 역할 묶음 */
+  includesLegend: string
+  includesHint: string
+  /** 포함할 수 없는 후보 옆 글자 - 이유 */
+  includeCycle: string
+  includeOutside: string
+  /** 물려받은 권한 체크 상자 옆 글자 */
+  inheritedFrom: (role: string) => string
   /** 모르는 권한 키는 키 그대로 보인다 - 아는 키의 이름 */
   permissionLabels: Record<string, string>
   /** 권한 묶음 제목(모듈 이름). 모르는 모듈은 이름 그대로 */
@@ -52,6 +63,9 @@ export type AdminRolesLabels = {
     permissionUnknown: string
     escalation: string
     selfLockout: string
+    roleCycle: string
+    includeUnknown: string
+    roleIncluded: string
     validation: string
     generic: string
   }
@@ -93,6 +107,13 @@ export const defaultAdminRolesLabels: AdminRolesLabels = {
   holdersUnknown: '-',
   permissionOutside: 'You do not hold this permission, so you cannot change it.',
   deleteOutside: 'It has permissions you do not hold, so you cannot delete it.',
+  includesColumn: 'Includes',
+  noIncludes: '-',
+  includesLegend: 'Includes these roles',
+  includesHint: 'Everything the included roles can do, this role can do too.',
+  includeCycle: 'It already includes this role, so including it would make a loop.',
+  includeOutside: 'It has permissions you do not hold, so you cannot include it.',
+  inheritedFrom: (role) => `Inherited from ${role}`,
   permissionLabels: {
     'account.read': 'View accounts',
     'account.manage': 'Suspend and restore accounts',
@@ -123,6 +144,10 @@ export const defaultAdminRolesLabels: AdminRolesLabels = {
     permissionUnknown: 'One of the permissions is not known to this server. Refresh and try again.',
     escalation: 'You can only give a role permissions that you hold yourself.',
     selfLockout: 'This change would take away your own right to manage roles.',
+    roleCycle: 'Those roles include each other, which would make a loop. Pick a different role.',
+    includeUnknown: 'One of the included roles does not exist. The list was refreshed.',
+    roleIncluded:
+      'Another role includes this one, so it cannot be deleted. Remove it from that role first.',
     validation: 'Check the role name and try again.',
     generic: 'Something went wrong. Try again.',
   },
@@ -164,6 +189,13 @@ export const koAdminRolesLabels: Partial<AdminRolesLabels> = {
   holdersUnknown: '-',
   permissionOutside: '내게 없는 권한이라 바꿀 수 없어요.',
   deleteOutside: '내게 없는 권한이 들어 있어 지울 수 없어요.',
+  includesColumn: '포함하는 역할',
+  noIncludes: '-',
+  includesLegend: '포함하는 역할',
+  includesHint: '포함한 역할이 할 수 있는 일은 이 역할도 할 수 있어요.',
+  includeCycle: '이미 이 역할을 포함하고 있어 포함하면 고리가 생겨요.',
+  includeOutside: '내게 없는 권한이 들어 있어 포함할 수 없어요.',
+  inheritedFrom: (role) => `${role}에서 물려받음`,
   permissionLabels: {
     'account.read': '계정 보기',
     'account.manage': '계정 정지 · 복구',
@@ -193,6 +225,9 @@ export const koAdminRolesLabels: Partial<AdminRolesLabels> = {
     permissionUnknown: '이 서버가 모르는 권한이 들어 있어요. 새로 고친 뒤 다시 해 보세요.',
     escalation: '내가 가진 권한만 역할에 담을 수 있어요.',
     selfLockout: '이렇게 바꾸면 내가 역할을 관리할 수 없게 돼요.',
+    roleCycle: '두 역할이 서로를 포함해 고리가 생겨요. 다른 역할을 골라 주세요.',
+    includeUnknown: '포함하려는 역할 중 이제 없는 것이 있어요. 목록을 새로 불러왔어요.',
+    roleIncluded: '다른 역할이 이 역할을 포함하고 있어 지울 수 없어요. 먼저 그 역할에서 빼 주세요.',
     validation: '역할 이름을 확인하고 다시 해 보세요.',
     generic: '문제가 생겼어요. 다시 해 보세요.',
   },

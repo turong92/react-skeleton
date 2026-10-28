@@ -19,6 +19,7 @@ import { useResource } from '../screens/useResource'
 import { adminBlocked } from './adminErrors'
 import styles from './AdminRoles.module.css'
 import type { AdminRole, AdminRolesApi, PermissionInfo } from './rolesApi'
+import { inheritedFrom, wouldCycle } from './roleIncludes'
 import { isRoleGone, roleErrorMessage } from './rolesErrors'
 import { mergeRolesLabels, type AdminRolesLabels } from './rolesLabels'
 
@@ -55,17 +56,36 @@ function catalogOf(permissions: PermissionInfo[], extra: readonly string[]): Cat
 
 type FormProps = {
   role: AdminRole | null
+  /** 모든 역할 - 포함할 후보와 물려받는 권한을 계산한다 */
+  roles: AdminRole[]
   permissions: PermissionInfo[]
   labels: AdminRolesLabels
   busy: boolean
   error: string | null
-  onSubmit: (value: { name: string; description: string; permissions: string[] }) => void
+  onSubmit: (value: {
+    name: string
+    description: string
+    permissions: string[]
+    includes: string[]
+  }) => void
   onClose: () => void
   outside: (key: string) => boolean
 }
 
+const EMPTY_ROLE: AdminRole = {
+  name: '',
+  description: null,
+  permissions: [],
+  protected: false,
+  holders: null,
+}
+
+/** 새 역할을 계산에 넣을 때 쓰는 자리 이름 - 실제 역할 이름과 겹치지 않는다 */
+const DRAFT = '\u0000draft'
+
 function RoleDialog({
   role,
+  roles,
   permissions,
   labels,
   busy,
@@ -78,12 +98,26 @@ function RoleDialog({
   const [name, setName] = useState(role?.name ?? '')
   const [description, setDescription] = useState(role?.description ?? '')
   const [picked, setPicked] = useState<string[]>(role?.permissions ?? [])
-  const catalog = catalogOf(permissions, picked)
+  const [includes, setIncludes] = useState<string[]>(role?.includes ?? [])
+  const self = role?.name ?? (name.trim() || DRAFT)
+  const inherited = inheritedFrom(
+    [...roles.filter((r) => r.name !== self), { ...(role ?? EMPTY_ROLE), name: self, includes }],
+    self,
+  )
+  const catalog = catalogOf(permissions, [...picked, ...inherited.keys()])
+  const candidates = roles.filter((r) => r.name !== role?.name)
+  const toggleInclude = (target: string, on: boolean) =>
+    setIncludes((now) => (on ? [...now, target] : now.filter((n) => n !== target)))
   const toggle = (key: string, on: boolean) =>
     setPicked((now) => (on ? [...now, key] : now.filter((k) => k !== key)))
   const submit = (event: FormEvent) => {
     event.preventDefault()
-    onSubmit({ name: name.trim(), description: description.trim(), permissions: picked })
+    onSubmit({
+      name: name.trim(),
+      description: description.trim(),
+      permissions: picked.filter((key) => !inherited.has(key)),
+      includes,
+    })
   }
   return (
     <Dialog
@@ -127,6 +161,32 @@ function RoleDialog({
             />
           )}
         </Field>
+        {candidates.length > 0 && (
+          <fieldset className={styles.group}>
+            <legend>{labels.includesLegend}</legend>
+            <p className={styles.muted}>{labels.includesHint}</p>
+            {candidates.map((candidate) => {
+              const checked = includes.includes(candidate.name)
+              const cycle = !checked && wouldCycle(roles, self, candidate.name)
+              const beyond = !checked && candidate.effectivePermissions?.some(outside)
+              const reason = cycle
+                ? labels.includeCycle
+                : beyond
+                  ? labels.includeOutside
+                  : (candidate.description ?? undefined) || undefined
+              return (
+                <Checkbox
+                  key={candidate.name}
+                  label={candidate.name}
+                  description={reason}
+                  disabled={cycle || Boolean(beyond)}
+                  checked={checked}
+                  onChange={(e) => toggleInclude(candidate.name, e.target.checked)}
+                />
+              )
+            })}
+          </fieldset>
+        )}
         <fieldset className={styles.permissions}>
           <legend>{labels.permissionsLegend}</legend>
           {catalog.groups.map((group) => (
@@ -137,14 +197,16 @@ function RoleDialog({
                   key={key}
                   label={labels.permissionLabels[key] ?? key}
                   description={
-                    outside(key)
-                      ? labels.permissionOutside
-                      : labels.permissionLabels[key]
-                        ? key
-                        : undefined
+                    inherited.has(key)
+                      ? labels.inheritedFrom(inherited.get(key) as string)
+                      : outside(key)
+                        ? labels.permissionOutside
+                        : labels.permissionLabels[key]
+                          ? key
+                          : undefined
                   }
-                  disabled={outside(key)}
-                  checked={picked.includes(key)}
+                  disabled={inherited.has(key) || outside(key)}
+                  checked={inherited.has(key) || picked.includes(key)}
                   onChange={(e) => toggle(key, e.target.checked)}
                 />
               ))}
@@ -268,6 +330,20 @@ export function AdminRoles({
                 ),
             },
             {
+              key: 'includes',
+              header: labels.includesColumn,
+              render: (role) =>
+                role.includes && role.includes.length > 0 ? (
+                  <span className={styles.chips}>
+                    {role.includes.map((name) => (
+                      <Badge key={name}>{name}</Badge>
+                    ))}
+                  </span>
+                ) : (
+                  <span className={styles.muted}>{labels.noIncludes}</span>
+                ),
+            },
+            {
               key: 'holders',
               header: labels.columns.holders,
               align: 'end',
@@ -324,6 +400,7 @@ export function AdminRoles({
         <RoleDialog
           key={editing === 'new' ? 'new' : editing.name}
           role={editing === 'new' ? null : editing}
+          roles={list.data.roles}
           permissions={list.data.permissions}
           labels={labels}
           busy={busy}
@@ -337,6 +414,7 @@ export function AdminRoles({
                 : api.update(editing.name, {
                     description: value.description,
                     permissions: value.permissions,
+                    includes: value.includes,
                   }),
             )
           }

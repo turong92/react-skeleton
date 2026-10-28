@@ -20,6 +20,12 @@ export function roleErrorMessage(error: unknown, labels: AdminRolesLabels): stri
       return e.escalation
     case ErrorCodes.AUTHZ_SELF_LOCKOUT:
       return e.selfLockout
+    case ErrorCodes.AUTHZ_ROLE_CYCLE:
+      return e.roleCycle
+    case ErrorCodes.AUTHZ_INCLUDE_UNKNOWN:
+      return e.includeUnknown
+    case ErrorCodes.AUTHZ_ROLE_INCLUDED:
+      return e.roleIncluded
     case ErrorCodes.COMMON_VALIDATION_FAILED:
       return e.validation
     default:

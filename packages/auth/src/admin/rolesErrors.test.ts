@@ -15,6 +15,9 @@ describe('roleErrorMessage', () => {
     ['AUTHZ.PERMISSION_UNKNOWN', 400, L.errors.permissionUnknown],
     ['AUTHZ.ESCALATION', 403, L.errors.escalation],
     ['AUTHZ.SELF_LOCKOUT', 409, L.errors.selfLockout],
+    ['AUTHZ.ROLE_CYCLE', 409, L.errors.roleCycle],
+    ['AUTHZ.INCLUDE_UNKNOWN', 400, L.errors.includeUnknown],
+    ['AUTHZ.ROLE_INCLUDED', 409, L.errors.roleIncluded],
     ['COMMON.VALIDATION_FAILED', 400, L.errors.validation],
     ['COMMON.INTERNAL_SERVER_ERROR', 500, L.errors.generic],
   ])('%s → its sentence', (code, status, text) => {

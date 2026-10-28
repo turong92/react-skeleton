@@ -22,10 +22,10 @@ import {
 
 /*
  * 역할 · 권한 (스펙 §8.2) — 진짜 백엔드(`authz` 모듈이 있고 `skeleton.authz.admin.enabled=true`) · 브라우저 · 가짜 토스.
- *  ① 관리자가 역할 화면에서 `CS`(결제 보기 + 환불)를 만들고, 계정 화면에서 시드 사용자에게 준다
+ *  ① 관리자가 역할 화면에서 `CS`(결제 보기 + 환불)를 만들고, 그 `CS` 를 포함하는 `STAFF`(권한 없이 위계만)를 만들어 계정 화면에서 시드 사용자에게 준다
  *  ② 그 사용자는 메뉴에 결제만(계정 · 역할 메뉴 없음), 열린 환불 요청을 승인할 수 있고, 「결제사와 맞추기」 단추는 없고 직접 호출은 서버가 403
- *  ③ 가진 계정이 있는 `CS` 는 지울 수 없다는 안내가 뜨고, 전권(ADMIN) 행은 잠겨 있다
- *  ④ 관리자가 `CS` 를 회수하면 사용자는 **다시 로그인하지 않아도** 다음 동작이 403(접근 차단 안내)
+ *  ③ 다른 역할이 포함 중인 `CS` 와 가진 계정이 있는 `STAFF` 는 지울 수 없다는 안내가 뜨고, 전권(ADMIN) 행은 잠겨 있다
+ *  ④ 관리자가 `STAFF` 를 회수하면 사용자는 **다시 로그인하지 않아도** 다음 동작이 403(접근 차단 안내)
  * 아직 실행하지 않았다 — kotlin 의 K2 · K3 · K4 를 합친 백엔드(`scripts/sample-e2e-backend.sh`)가 있어야 돈다.
  * 역할 API(`GET /admin/roles`)가 404 인 백엔드, 운영자 결제 경로가 닫힌 백엔드, 가짜 토스가 없는 실행에서는 통째로 건너뛴다.
  */
@@ -107,13 +107,30 @@ describe('authz: a CS role made on the screen, given to a user and taken back', 
           op.getByRole('button', { name: koAdminRolesLabels.edit!('ADMIN') }),
         ).toHaveAttribute('aria-disabled', 'true')
 
-        // 시드 사용자에게 준다
-        await accountMenu(op, auth.adminGrantRole('CS'))
+        // 위계: STAFF 는 CS 를 포함한다(자기 권한은 없다) - 시드 사용자에게는 STAFF 만 준다
+        await op.getByRole('button', { name: koAdminRolesLabels.create! }).click()
+        const staffDialog = op.getByRole('dialog', { name: koAdminRolesLabels.createTitle! })
+        await staffDialog.getByLabel(koAdminRolesLabels.nameLabel!).fill('STAFF')
+        await staffDialog.getByLabel('CS', { exact: true }).check()
+        // 포함한 CS 의 권한은 물려받은 것으로 체크 · 잠금
+        await pwExpect(
+          staffDialog.getByLabel(roles['payment.refund']!, { exact: true }),
+        ).toBeDisabled()
+        await staffDialog
+          .getByRole('button', { name: koAdminRolesLabels.save!, exact: true })
+          .click()
+        await pwExpect(staffDialog).toBeHidden()
+        await accountMenu(op, auth.adminGrantRole('STAFF'))
 
-        // ③ 가진 계정이 있으면 지울 수 없다
+        // ③ 포함된 역할 · 가진 계정이 있는 역할은 지울 수 없다
         await op.goto(`${baseUrl}/admin/roles`)
         await op.getByRole('button', { name: koAdminRolesLabels.remove!('CS') }).click()
-        const del = op.getByRole('dialog', { name: koAdminRolesLabels.deleteTitle!('CS') })
+        const included = op.getByRole('dialog', { name: koAdminRolesLabels.deleteTitle!('CS') })
+        await included.getByRole('button', { name: koAdminRolesLabels.removeButton! }).click()
+        await pwExpect(included.getByText(koAdminRolesLabels.errors!.roleIncluded!)).toBeVisible()
+        await included.getByRole('button', { name: koAdminRolesLabels.cancel! }).click()
+        await op.getByRole('button', { name: koAdminRolesLabels.remove!('STAFF') }).click()
+        const del = op.getByRole('dialog', { name: koAdminRolesLabels.deleteTitle!('STAFF') })
         await del.getByRole('button', { name: koAdminRolesLabels.removeButton! }).click()
         await pwExpect(del.getByText(koAdminRolesLabels.errors!.inUse!)).toBeVisible()
         await del.getByRole('button', { name: koAdminRolesLabels.cancel! }).click()
@@ -135,7 +152,7 @@ describe('authz: a CS role made on the screen, given to a user and taken back', 
         pwExpect(sync.status).toBe(403)
 
         // ④ 회수 - 다시 로그인하지 않고 다음 동작이 403
-        await accountMenu(op, auth.adminRevokeRole('CS'))
+        await accountMenu(op, auth.adminRevokeRole('STAFF'))
         await page.goto(`${baseUrl}/admin/payments`)
         await pwExpect(page.getByRole('heading', { name: auth.blockedTitle })).toBeVisible()
         const refused = await api(
@@ -146,13 +163,15 @@ describe('authz: a CS role made on the screen, given to a user and taken back', 
         )
         pwExpect(refused.status).toBe(403)
 
-        // 뒷정리: 이제 가진 계정이 없어 지워진다
+        // 뒷정리: STAFF 가 먼저(가진 계정이 없어졌다), 그다음 포함하던 CS
         await op.goto(`${baseUrl}/admin/roles`)
-        await op.getByRole('button', { name: koAdminRolesLabels.remove!('CS') }).click()
-        const gone = op.getByRole('dialog', { name: koAdminRolesLabels.deleteTitle!('CS') })
-        await gone.getByRole('button', { name: koAdminRolesLabels.removeButton! }).click()
-        await pwExpect(gone).toBeHidden()
-        await pwExpect(op.getByRole('row').filter({ hasText: 'CS' })).toHaveCount(0)
+        for (const name of ['STAFF', 'CS']) {
+          await op.getByRole('button', { name: koAdminRolesLabels.remove!(name) }).click()
+          const gone = op.getByRole('dialog', { name: koAdminRolesLabels.deleteTitle!(name) })
+          await gone.getByRole('button', { name: koAdminRolesLabels.removeButton! }).click()
+          await pwExpect(gone).toBeHidden()
+          await pwExpect(op.getByRole('row').filter({ hasText: name })).toHaveCount(0)
+        }
       } finally {
         await operator.close()
       }

@@ -88,6 +88,8 @@ export function SettingsPage() {
         <NotificationPreferences
           api={notificationsApi}
           loadingLabel={t('common.loading')}
+          errorMessage={t('settings.notificationsLoadFailed')}
+          retryLabel={t('common.retry')}
           labels={{
             NOTE_UPDATED: t('notificationType.NOTE_UPDATED'),
             'comment.created': t('notificationType.comment.created'),

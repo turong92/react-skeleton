@@ -539,6 +539,7 @@ const en: Record<keyof typeof ko, string> = {
   'cheer.return.invalidBody':
     'The address you came back from the payment window with is not valid. Check the payment in My cheers.',
   'settings.notifications': 'Notifications',
+  'settings.notificationsLoadFailed': 'Could not load your notification settings.',
   'settings.notificationsHint':
     'Keep on only what you want to hear about. A muted kind is not added to your inbox either.',
   'notificationType.NOTE_UPDATED': 'Note edits',

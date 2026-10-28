@@ -69,3 +69,32 @@ export const NothingToConfigure: Story = {
     ).toBeVisible()
   },
 }
+
+/** 불러오기에 실패하면 빈 상태가 아니라 오류 문장 + 다시 시도 단추 */
+export const LoadFailedThenRetry: Story = {
+  render: (args) => {
+    const inbox = createFakeInbox().api
+    let failures = 1
+    return (
+      <Demo
+        {...args}
+        api={{
+          ...inbox,
+          preferences: async () => {
+            if (failures-- > 0) throw new Error('boom')
+            return inbox.preferences()
+          },
+        }}
+        errorMessage="Could not load your notification settings."
+        retryLabel="Try again"
+      />
+    )
+  },
+  play: async ({ canvas, userEvent }) => {
+    await expect(await canvas.findByRole('alert')).toHaveTextContent(
+      'Could not load your notification settings.',
+    )
+    await userEvent.click(canvas.getByRole('button', { name: 'Try again' }))
+    await expect(await canvas.findByRole('switch', { name: 'NOTE_UPDATED' })).toBeChecked()
+  },
+}

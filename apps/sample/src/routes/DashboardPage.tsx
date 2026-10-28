@@ -148,6 +148,11 @@ export function DashboardPage() {
             <NotificationList
               items={unread.data.values}
               onRead={(item) => markRead.mutate(item.eventId)}
+              onOpen={(item) => {
+                if (item.readAt === null) markRead.mutate(item.eventId)
+                if (item.link) navigate(item.link)
+              }}
+              collapsedLabel={(count) => t('header.notificationCollapsed', { count })}
               markReadLabel={t('header.markRead')}
               emptyTitle={t('dashboard.unreadEmptyTitle')}
               emptyDescription={t('dashboard.unreadEmptyBody')}

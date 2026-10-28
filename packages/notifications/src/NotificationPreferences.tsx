@@ -1,4 +1,4 @@
-import { EmptyState, Spinner, SwitchRow } from '@skeleton/ui'
+import { Alert, Button, EmptyState, Spinner, SwitchRow } from '@skeleton/ui'
 import type { ReactNode } from 'react'
 import { usePreferences, useSetPreference } from './hooks'
 import type { NotificationsApi } from './notificationsApi'
@@ -15,6 +15,10 @@ export type NotificationPreferencesProps = {
   loadingLabel?: string
   /** 서버가 끌 수 있는 종류를 하나도 알려 주지 않을 때 */
   emptyTitle?: string
+  /** 불러오기에 실패했을 때의 문장(기본 영어) */
+  errorMessage?: string
+  /** 다시 시도 단추 이름(기본 `Try again`) */
+  retryLabel?: string
 }
 
 /**
@@ -28,10 +32,30 @@ export function NotificationPreferences({
   title,
   loadingLabel,
   emptyTitle = 'No notification types to configure',
+  errorMessage = 'Could not load the notification settings.',
+  retryLabel = 'Try again',
 }: NotificationPreferencesProps) {
   const preferences = usePreferences(api)
   const save = useSetPreference(api)
   if (preferences.isPending) return <Spinner label={loadingLabel} />
+  if (preferences.isError && !preferences.data)
+    return (
+      <Alert
+        tone="danger"
+        action={
+          <Button
+            variant="secondary"
+            size="sm"
+            loading={preferences.isFetching}
+            onClick={() => void preferences.refetch()}
+          >
+            {retryLabel}
+          </Button>
+        }
+      >
+        {errorMessage}
+      </Alert>
+    )
   const items = preferences.data?.items ?? []
   return (
     <div className={styles.root}>

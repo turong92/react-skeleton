@@ -56,6 +56,8 @@ export type CatalogAdminLabels = {
     periods: { monthly: string; yearly: string; once: string }
     stop: string
     stopFor: (code: string) => string
+    changeSale: string
+    changeSaleFor: (code: string) => string
     links: {
       legend: string
       provider: (id: string) => string
@@ -106,6 +108,16 @@ export type CatalogAdminLabels = {
       endBeforeStart: string
       timeInvalid: string
     }
+  }
+  saleEndDialog: {
+    title: string
+    which: (code: string, money: string) => string
+    end: string
+    hint: string
+    submit: string
+    cancel: string
+    close: string
+    loading: string
   }
   stopDialog: {
     title: string
@@ -177,6 +189,8 @@ export const koCatalogAdminLabels: CatalogAdminLabels = {
     periods: { monthly: '월간', yearly: '연간', once: '한 번' },
     stop: '판매 중지',
     stopFor: (code) => `판매 중지: ${code}`,
+    changeSale: '행사 기간 바꾸기',
+    changeSaleFor: (code) => `행사 기간 바꾸기: ${code}`,
     links: {
       legend: '결제사 가격 연결',
       provider: (id) => (id === 'paddle' ? 'Paddle' : id),
@@ -227,6 +241,16 @@ export const koCatalogAdminLabels: CatalogAdminLabels = {
       endBeforeStart: '끝나는 시각이 시작 시각보다 늦어야 해요',
       timeInvalid: '시각을 다시 확인해 주세요',
     },
+  },
+  saleEndDialog: {
+    title: '행사 기간 바꾸기',
+    which: (code, money) => `${code} · ${money}`,
+    end: '끝나는 시각',
+    hint: '내 기기의 시간대로 읽어요. 비우면 끝 없이 이어져요. 지난 시각을 적으면 바로 끝나요.',
+    submit: '바꾸기',
+    cancel: '닫기',
+    close: '창 닫기',
+    loading: '바꾸는 중',
   },
   stopDialog: {
     title: '이 가격의 판매를 중지할까요?',
@@ -310,6 +334,8 @@ export const defaultCatalogAdminLabels: CatalogAdminLabels = {
     periods: { monthly: 'Monthly', yearly: 'Yearly', once: 'One time' },
     stop: 'Stop selling',
     stopFor: (code) => `Stop selling: ${code}`,
+    changeSale: 'Change sale period',
+    changeSaleFor: (code) => `Change sale period: ${code}`,
     links: {
       legend: 'Provider price links',
       provider: (id) => (id === 'paddle' ? 'Paddle' : id),
@@ -361,6 +387,16 @@ export const defaultCatalogAdminLabels: CatalogAdminLabels = {
       endBeforeStart: 'The end must be after the start',
       timeInvalid: 'Check the time',
     },
+  },
+  saleEndDialog: {
+    title: 'Change sale period',
+    which: (code, money) => `${code} - ${money}`,
+    end: 'Ends at',
+    hint: 'Read in your device time zone. Empty means no end. A time in the past ends the sale right away.',
+    submit: 'Change',
+    cancel: 'Close',
+    close: 'Close dialog',
+    loading: 'Changing',
   },
   stopDialog: {
     title: 'Stop selling this price?',

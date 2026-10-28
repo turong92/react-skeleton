@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 백엔드 짝: kotlin-skeleton `catalog`(운영 경로 `/admin/catalog`, 권한 `catalog.manage`).
 
-- `@skeleton/payment/admin`: `createCatalogAdminApi` · `useAdminCatalogProducts` · `useCatalogProviders` · `useCatalogAdminMutations` · 부품 `AdminCatalogTable` · `AdminProductEditor` · `AdminPriceList` · `AddPriceDialog` · `StopPriceDialog`(문구는 `labels.admin.catalog`, ko · en), `CATALOG_PERMISSIONS`. `adminAccessProblem` 은 `CATALOG.NOT_FOUND` 404 를 「꺼짐」으로 읽지 않는다.
+- `@skeleton/payment/admin`: `createCatalogAdminApi` · `useAdminCatalogProducts` · `useCatalogProviders` · `useCatalogAdminMutations` · 부품 `AdminCatalogTable` · `AdminProductEditor` · `AdminPriceList`(행사가 줄의 「행사 기간 바꾸기」 `onChangeSale`) · `AddPriceDialog` · `SaleEndDialog` · `StopPriceDialog`(문구는 `labels.admin.catalog`, ko · en), `CATALOG_PERMISSIONS`. `adminAccessProblem` 은 `CATALOG.NOT_FOUND` 404 를 「꺼짐」으로 읽지 않는다.
 - `@skeleton/api-client`: `ErrorCodes.CATALOG_CODE_TAKEN` · `CATALOG_LEVEL_TAKEN` · `CATALOG_PRICE_OVERLAP` · `CATALOG_PRICE_INVALID` · `CATALOG_NOT_FOUND`.
 - 샘플: 운영 메뉴 「상품 · 가격」(`catalog.manage`), `/admin/catalog` · `/admin/catalog/:code`, e2e `catalog.e2e.ts`(행사가 → 랜딩 → 구독 → 판매 중지 · 미국 방문자 USD). `journey.e2e.ts` 의 연 결제 토글 단계는 가격표가 있을 때만 돈다.
 

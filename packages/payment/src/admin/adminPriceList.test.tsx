@@ -117,4 +117,22 @@ describe('AdminPriceList', () => {
     )
     expect(html).not.toContain('Paddle 가격 id')
   })
+
+  it('「행사 기간 바꾸기」 is a bordered button only on a selling sale price, named by its code', () => {
+    const sale = price({ code: 'sale', compareAtAmount: 9000 })
+    const stopped = price({
+      code: 'gone',
+      compareAtAmount: 9000,
+      selling: false,
+      current: false,
+      stoppedAt: '2026-10-01T00:00:00Z',
+    })
+    const html = render([sale, price({ code: 'plain' }), stopped], { onChangeSale: noop })
+    expect(html).toMatch(
+      /data-variant="secondary"[^>]*aria-label="행사 기간 바꾸기: sale"|aria-label="행사 기간 바꾸기: sale"[^>]*data-variant="secondary"/,
+    )
+    expect(html).not.toContain('행사 기간 바꾸기: plain')
+    expect(html).not.toContain('행사 기간 바꾸기: gone')
+    expect(render([sale])).not.toContain('행사 기간 바꾸기')
+  })
 })

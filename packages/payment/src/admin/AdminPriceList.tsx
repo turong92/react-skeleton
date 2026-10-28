@@ -16,6 +16,8 @@ export type AdminPriceListProps = {
   onAdd?: () => void
   /** 「판매 중지」 - 확인 창을 여는 것은 부모. 이미 멈춘 가격에는 단추가 없다 */
   onStop?: (price: AdminCatalogPrice) => void
+  /** 「행사 기간 바꾸기」 - 창을 여는 것은 부모. 행사가(정가가 있는) 판매 중 줄에만 단추가 있다 */
+  onChangeSale?: (price: AdminCatalogPrice) => void
   /** 가격 id 를 쓰는 켜진 결제사(`GET /providers`) - 비었거나 없으면 링크 칸이 없다 */
   providers?: readonly string[]
   onSetProviderRef?: (price: AdminCatalogPrice, provider: string, externalId: string) => void
@@ -45,6 +47,7 @@ export function AdminPriceList({
   prices,
   onAdd,
   onStop,
+  onChangeSale,
   providers = [],
   onSetProviderRef,
   onRemoveProviderRef,
@@ -139,17 +142,33 @@ export function AdminPriceList({
     {
       key: 'action',
       header: <span className={sharedStyles.srOnly}>{text.stop}</span>,
-      render: (price) =>
-        onStop && price.stoppedAt === null && price.selling ? (
-          <Button
-            variant="secondary"
-            size="sm"
-            aria-label={text.stopFor(price.code)}
-            onClick={() => onStop(price)}
-          >
-            {text.stop}
-          </Button>
-        ) : null,
+      render: (price) => {
+        const live = price.stoppedAt === null && price.selling
+        return (
+          <span className={sharedStyles.actions}>
+            {onChangeSale && live && price.compareAtAmount !== null && (
+              <Button
+                variant="secondary"
+                size="sm"
+                aria-label={text.changeSaleFor(price.code)}
+                onClick={() => onChangeSale(price)}
+              >
+                {text.changeSale}
+              </Button>
+            )}
+            {onStop && live && (
+              <Button
+                variant="secondary"
+                size="sm"
+                aria-label={text.stopFor(price.code)}
+                onClick={() => onStop(price)}
+              >
+                {text.stop}
+              </Button>
+            )}
+          </span>
+        )
+      },
     },
   ]
 

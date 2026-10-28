@@ -4,6 +4,7 @@ import {
   AdminPriceList,
   AdminProductEditor,
   productTextOf,
+  SaleEndDialog,
   StopPriceDialog,
   useAdminCatalogProducts,
   useCatalogAdminMutations,
@@ -35,6 +36,7 @@ export function AdminCatalogProductPage() {
   const providers = useCatalogProviders(catalogAdminApi)
   const m = useCatalogAdminMutations(catalogAdminApi)
   const [adding, setAdding] = useState(false)
+  const [changingSale, setChangingSale] = useState<AdminCatalogPrice | null>(null)
   const [stopping, setStopping] = useState<AdminCatalogPrice | null>(null)
 
   const problem = adminAccessProblem(products.error)
@@ -94,6 +96,10 @@ export function AdminCatalogProductPage() {
           m.addPrice.reset()
           setAdding(true)
         }}
+        onChangeSale={(price) => {
+          m.setSaleEnd.reset()
+          setChangingSale(price)
+        }}
         onStop={(price) => {
           m.stopPrice.reset()
           setStopping(price)
@@ -119,6 +125,23 @@ export function AdminCatalogProductPage() {
           )
         }
       />
+      {changingSale && (
+        <SaleEndDialog
+          open
+          onClose={() => setChangingSale(null)}
+          price={changingSale}
+          busy={m.setSaleEnd.isPending}
+          error={m.setSaleEnd.error}
+          locale={language}
+          labels={labels}
+          onSubmit={(saleEndsAt) =>
+            m.setSaleEnd.mutate(
+              { code: changingSale.code, saleEndsAt },
+              { onSuccess: () => setChangingSale(null) },
+            )
+          }
+        />
+      )}
       {stopping && (
         <StopPriceDialog
           open

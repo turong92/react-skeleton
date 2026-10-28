@@ -46,6 +46,7 @@ const prices = [
 
 const onAdd = fn()
 const onStop = fn()
+const onChangeSale = fn()
 const onSet = fn()
 const onRemove = fn()
 const meta = {
@@ -56,12 +57,13 @@ const meta = {
     now,
     onAdd,
     onStop,
+    onChangeSale,
     locale: 'ko-KR',
     formatTime: (iso: string) => iso.slice(0, 10),
     labels: koPaymentLabels,
   },
   beforeEach: () => {
-    for (const mock of [onAdd, onStop, onSet, onRemove]) mock.mockClear()
+    for (const mock of [onAdd, onStop, onChangeSale, onSet, onRemove]) mock.mockClear()
   },
 } satisfies Meta<typeof AdminPriceList>
 export default meta
@@ -85,6 +87,17 @@ export const Default: Story = {
     await expect(stop).toHaveAttribute('data-variant', 'secondary')
     await userEvent.click(stop)
     await expect(onStop).toHaveBeenCalledWith(prices[2])
+  },
+}
+
+/** 행사가 줄에만 「행사 기간 바꾸기」 - 눌리는 테두리 단추 */
+export const ChangeSalePeriod: Story = {
+  play: async ({ canvas, userEvent }) => {
+    const change = canvas.getByRole('button', { name: '행사 기간 바꾸기: std-y-sale' })
+    await expect(change).toHaveAttribute('data-variant', 'secondary')
+    await expect(canvas.queryByRole('button', { name: '행사 기간 바꾸기: std-m' })).toBeNull()
+    await userEvent.click(change)
+    await expect(onChangeSale).toHaveBeenCalledWith(prices[0])
   },
 }
 

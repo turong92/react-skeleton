@@ -347,7 +347,9 @@ describe('⑦ a downgrade waits for the renewal, and can be withdrawn', () => {
         ),
       ).toHaveCount(1)
       await choice.selectOption('basic')
-      await pwExpect(dialog.getByText(subscribed.changeDialog.effectiveOn)).toBeVisible()
+      await pwExpect(
+        dialog.getByText(subscribed.changeDialog.effectiveOn, { exact: true }),
+      ).toBeVisible()
       await pwExpect(dialog.getByText(subscribed.changeDialog.chargeNow)).toHaveCount(0)
       await dialog.getByRole('button', { name: subscribed.changeDialog.confirmScheduled }).click()
       await pwExpect(dialog).toBeHidden()

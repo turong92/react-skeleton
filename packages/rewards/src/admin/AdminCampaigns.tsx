@@ -192,7 +192,11 @@ export function AdminCampaigns({
               name: draft.name.trim(),
               startsAt: fromLocalInput(draft.startsAt) ?? new Date().toISOString(),
               endsAt: fromLocalInput(draft.endsAt),
-              config: draft.config,
+              // 업적의 수치 이름은 검사한 값(앞뒤 공백 없음) 그대로 보낸다
+              config:
+                draft.kind === 'achievement'
+                  ? { ...draft.config, metric: (draft.config.metric ?? '').trim() }
+                  : draft.config,
             }
             const done = { onSuccess: () => setEditing(null) }
             if (editing === 'new') mutations.create.mutate({ kind: draft.kind, ...common }, done)

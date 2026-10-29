@@ -29,7 +29,8 @@ const filled = (reward: RewardConfig) => {
 export function achievementProblems(config: CampaignConfig): AchievementProblems {
   const steps = (config.milestones ?? []) as AchievementStepConfig[]
   return {
-    metric: !ACHIEVEMENT_METRIC.test(config.metric ?? ''),
+    // 서버는 앞뒤 공백을 걷어 낸 뒤 검사한다(`AchievementConfig.parse`)
+    metric: !ACHIEVEMENT_METRIC.test((config.metric ?? '').trim()),
     count: steps.length < 1 || steps.length > MAX_ACHIEVEMENT_STEPS,
     value: steps.map(
       (step, i) => !(step.value >= 1) || (i > 0 && step.value <= steps[i - 1].value),

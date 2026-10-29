@@ -14,6 +14,11 @@ describe('achievementProblems', () => {
       expect(achievementProblems({ ...ok, metric }).metric, metric).toBe(true)
   })
 
+  it('trims the metric name before checking, as the server does', () => {
+    expect(achievementProblems({ ...ok, metric: '  notes.created ' }).metric).toBe(false)
+    expect(achievementProblems({ ...ok, metric: '   ' }).metric).toBe(true)
+  })
+
   it('rejects zero steps and more than 20', () => {
     expect(achievementProblems({ ...ok, milestones: [] }).count).toBe(true)
     const many = Array.from({ length: 21 }, (_, i) => ({ value: i + 1, rewards: [point] }))

@@ -136,6 +136,8 @@ export type RewardsAdminLabels = {
     reason: string
     reasonHint: string
     awardedResult: (awarded: number, alreadyHeld: number) => string
+    /** 이미 가지고 있던 계정 이름들 - 「이미 가진 사람: a, b」 */
+    alreadyHeldList: (names: string) => string
   }
   badgeAwards: {
     title: string

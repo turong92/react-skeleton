@@ -383,6 +383,8 @@ function AwardDialog({
   // 계정은 검색해서 하나씩 골라 담는다(계정 id 를 직접 적는 칸은 없다)
   const [chosen, setChosen] = useState<AccountChoice[]>([])
   const [reason, setReason] = useState('')
+  // 보낸 계정 - 성공 뒤 선택을 비워도 「이미 가진 사람」을 이름으로 보이려고 비우기 전에 잡아 둔다
+  const [sent, setSent] = useState<AccountChoice[]>([])
   const pick = (account: AccountChoice) => {
     onSelectionChange()
     setChosen((now) =>
@@ -411,6 +413,7 @@ function AwardDialog({
                 chosen.map((a) => a.id),
                 reason.trim() || undefined,
                 () => {
+                  setSent(chosen)
                   setChosen([])
                   setReason('')
                 },
@@ -427,6 +430,19 @@ function AwardDialog({
         {result && (
           <Alert tone={result.awarded.length > 0 ? 'success' : 'warning'}>
             {t.awardedResult(result.awarded.length, result.alreadyHeld.length)}
+            {result.alreadyHeld.length > 0 && (
+              <>
+                {' '}
+                {t.alreadyHeldList(
+                  result.alreadyHeld
+                    .map((id) => {
+                      const known = sent.find((a) => a.id === id)
+                      return known ? accountLabelOf(known) : id
+                    })
+                    .join(', '),
+                )}
+              </>
+            )}
           </Alert>
         )}
         <AccountSearch search={searchAccounts} onPick={pick} labels={labels} />

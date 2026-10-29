@@ -136,6 +136,7 @@ export const koRewardsAdminLabels: RewardsAdminLabels = {
     reason: '사유(선택)',
     reasonHint: '내역에 남아요. 200자까지.',
     awardedResult: (awarded, alreadyHeld) => `${awarded}명 수여 · ${alreadyHeld}명 이미 보유`,
+    alreadyHeldList: (names) => `이미 가진 사람: ${names}`,
   },
   badgeAwards: {
     title: '배지 수여 내역',

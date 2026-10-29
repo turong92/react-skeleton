@@ -99,7 +99,9 @@ export const AwardByHand: Story = {
     await userEvent.click(await dialog.findByRole('button', { name: /ada@example.com/ }))
     await userEvent.click(await dialog.findByRole('button', { name: /bob@example.com/ }))
     await userEvent.click(dialog.getByRole('button', { name: '수동 수여' }))
-    await expect(await dialog.findByText('1명 수여 · 1명 이미 보유')).toBeVisible()
+    await expect(await dialog.findByText(/1명 수여 · 1명 이미 보유/)).toBeVisible()
+    // 선택을 비운 뒤에도 이미 가진 사람은 이름으로 보인다
+    await expect(dialog.getByText(/이미 가진 사람: ada@example.com/)).toBeVisible()
   },
 }
 

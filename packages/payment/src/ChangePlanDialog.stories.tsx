@@ -146,3 +146,29 @@ export const LongerPeriodWithCredit: Story = {
     await expect(dialog).toHaveTextContent('69,000원 · 1년마다 결제')
   },
 }
+
+/** 결제사가 갱신을 직접 하는 구독(Paddle)의 올리기 - `current` 를 안 줘 선택지를 묶지 않고, 금액은 결제사가 계산한 그대로 바로 결제된다 */
+export const ProviderUpgrade: Story = {
+  args: {
+    plans: [plans[1]!],
+    planCode: 'pro',
+    preview: {
+      planCode: 'pro',
+      planName: 'Pro',
+      charge: { amount: 2300, currency: 'KRW' },
+      credit: { amount: 400, currency: 'KRW' },
+      amount: { amount: 9900, currency: 'KRW' },
+      period: 'P1M',
+      restartsPeriod: false,
+      timing: 'NOW',
+    },
+  },
+  play: async ({ userEvent }) => {
+    const dialog = await screen.findByRole('dialog', { name: dialogName })
+    await expect(within(dialog).queryByRole('group')).not.toBeInTheDocument()
+    await expect(dialog).toHaveTextContent('2,300원')
+    await expect(dialog).toHaveTextContent('9,900원 · 1개월마다 결제')
+    await userEvent.click(within(dialog).getByRole('button', { name: '이 플랜으로 바꾸기' }))
+    await expect(onConfirm).toHaveBeenCalledWith({ planCode: 'pro', expectedCharge: 2300 })
+  },
+}

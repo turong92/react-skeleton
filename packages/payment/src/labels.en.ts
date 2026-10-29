@@ -314,6 +314,8 @@ export const defaultPaymentLabels: PaymentLabels = {
       confirmScheduled: 'Schedule the change',
       loadingPreview: 'Checking the amount',
       previewError: 'Could not load the amount. Try again.',
+      previewNotAllowed:
+        'You cannot switch to this plan. With this payment method you can only move to a higher plan or a longer billing period.',
       confirm: 'Switch to this plan',
       loading: 'Changing',
       dismiss: 'Close',

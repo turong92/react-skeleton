@@ -156,7 +156,14 @@ export function ChangePlanDialog({
             </dl>
           ) : (
             <p id={statusId} className={styles.note}>
-              {previewError ? labels.previewError : labels.loadingPreview}
+              {previewError
+                ? isPaymentLedgerError(
+                    previewError,
+                    PaymentLedgerErrorCodes.PLAN_CHANGE_NOT_ALLOWED,
+                  )
+                  ? labels.previewNotAllowed
+                  : labels.previewError
+                : labels.loadingPreview}
             </p>
           )}
           {scheduled && <p className={styles.note}>{labels.scheduledNote}</p>}

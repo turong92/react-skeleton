@@ -343,6 +343,27 @@ describe('ChangePlanDialog', () => {
       '결제할 금액이 달라졌어요',
     )
   })
+
+  it('a refused preview says why when the server says the change is not allowed, and keeps the confirm locked', () => {
+    const refused = new ApiRequestError(
+      {
+        code: 'PAYMENT.PLAN_CHANGE_NOT_ALLOWED',
+        title: 't',
+        status: 409,
+        timestamp: '2026-01-01T00:00:00Z',
+        traceId: 'tr',
+      },
+      'tr',
+      'sp',
+      'tp',
+    )
+    const html = dialog({ preview: undefined, previewError: refused })
+    expect(html).toContain('더 높은 플랜이나 더 긴 결제 주기로만')
+    expect(html).not.toContain('결제할 금액을 불러오지 못했어요')
+    expect(dialog({ preview: undefined, previewError: new Error('x') })).toContain(
+      '결제할 금액을 불러오지 못했어요',
+    )
+  })
 })
 
 describe('ChangePlanDialog - scheduled changes', () => {

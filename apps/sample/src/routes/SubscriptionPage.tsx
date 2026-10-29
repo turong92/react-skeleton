@@ -77,11 +77,16 @@ export function SubscriptionPage() {
 
   // 바꿀 수 있는 플랜 - 같은 통화의 다른 등급 · 다른 주기 플랜. 올리기와 주기 늘리기는 바로, 내리기와 주기 줄이기는 다음 결제일부터(예약) - 서버가 같은 표로 판정한다
   // 행사가, 옛 가격으로 산 구독은 그 가격 코드가 더는 목록에 없다 - 구독 응답의 등급(`level`)으로 가르고, 구버전 서버는 플랜 코드로 찾는다
-  const currentLevel =
-    subscription.level ?? plans.data?.find((plan) => plan.code === subscription.planCode)?.level
+  const currentPlan = plans.data?.find((plan) => plan.code === subscription.planCode)
+  const currentLevel = subscription.level ?? currentPlan?.level
+  // 결제사 관리 구독(Paddle)은 구매자 통화로 환산돼 구독 금액의 통화가 플랜 표와 다를 수 있다 - 플랜 표의 같은 코드 플랜 통화로 거른다
   const tier =
     currentLevel != null
-      ? { level: currentLevel, period: subscription.period, currency: subscription.amount.currency }
+      ? {
+          level: currentLevel,
+          period: subscription.period,
+          currency: currentPlan?.amount.currency ?? subscription.amount.currency,
+        }
       : undefined
   const choices = tier
     ? changeChoices(plans.data ?? [], tier, subscription.planCode)
@@ -94,9 +99,7 @@ export function SubscriptionPage() {
       <MySubscriptionCard
         subscription={subscription}
         orders={orders}
-        {...(candidates.length > 0 &&
-        subscription.status === 'ACTIVE' &&
-        !subscription.providerManaged
+        {...(candidates.length > 0 && subscription.status === 'ACTIVE'
           ? {
               onChangePlan: () => {
                 change.reset() // 묵은 오류가 새로 연 창에 보이지 않게
@@ -167,7 +170,7 @@ export function SubscriptionPage() {
           )
         }
         plans={candidates}
-        {...(tier ? { current: tier } : {})}
+        {...(tier && !subscription.providerManaged ? { current: tier } : {})}
         scheduledChange={subscription.scheduledChange}
         planCode={changeTo ?? ''}
         onPlanChange={(code) => {

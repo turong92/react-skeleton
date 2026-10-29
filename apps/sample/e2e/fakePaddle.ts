@@ -10,6 +10,8 @@ import type { BrowserContext } from 'playwright'
  * 환불(adjustment): GET /transactions/{id}?include=adjustments(거래 조회 - Bearer 키가 틀리면 403) · POST /adjustments {action:'refund', transaction_id, type, items?} - 검토 중인 환불이 있으면 409 `adjustment_pending_refund_request`,
  *   남은 금액을 넘으면 400 `adjustment_total_above_remaining_allowed`. 기본은 Paddle 실계정처럼 **검토 중**(`pending_approval`)으로 답하고 `adjustment.created` 를 쏜다 - 결정은 시험이 `{ decide }` 로 내린다(`adjustment.updated`).
  * Paddle API(백엔드가 부른다): POST /transactions {items:[{price_id,quantity}], custom_data} - 서버가 거래를 먼저 만든다(Bearer 키가 틀리면 403) → {data:{id:'txn_…'}}.
+ *   PATCH /subscriptions/{id}/preview · PATCH /subscriptions/{id} {items:[{price_id,quantity}], proration_billing_mode} - 플랜 바꾸기. **`prorated_immediately` 만** 받는다(아니면 400). 남은 시간 비율로 일할:
+ *     새 가격 × 비율 = `total`, 옛 가격 × 비율 = `credit`, `grand_total` = max(total − credit, 0). 실행이면 `transaction.completed`(`origin: subscription_update`, `details.totals.credit`) + `subscription.updated`(새 `items`)를 쏜다.
  *   POST /subscriptions/{id}/cancel {effective_from} — Bearer 키가 틀리면 403. `next_billing_period` 면 해지 예약(`scheduled_change`)을 걸고 `subscription.updated` 를 쏜다.
  * 결제창(Paddle.js)은 이 서버에 없다 — 시험이 스크립트(`https://cdn.paddle.com/paddle/v2/paddle.js`)를 가로채 `fakePaddleSdkScript` 로 바꾼다(`routePaddleSdk`).
  * 그 대역은 `Checkout.open({ transactionId })` 에서 이 서버의 `POST /sdk/checkout` 을 부르고(거래 id 만) 곧장 successUrl 로 돌려보낸다. 이 서버는 그때 미리 만들어진 거래(가격 · customData 는 백엔드가 정한 것)를 결제하고 구독을 만들어 웹훅 셋을 쏜다.
@@ -23,6 +25,7 @@ import type { BrowserContext } from 'playwright'
  *   { decide: { id, status } }       검토 중인 환불 `id`(adj_…)에 결정(`approved` · `rejected`)을 내리고 `adjustment.updated` 를 쏜다
  *   { chargeback: { transaction, warning? } }  구매자가 카드사에 이의를 제기했다 - Paddle 이 스스로 `chargeback`(경고면 `chargeback_warning`) adjustment 를 `approved` 로 만들고 `adjustment.created` 를 쏜다
  *   { winDispute: <adj_…> }          분쟁에서 이겼다 - 원래 adjustment 가 `reversed` 로 바뀌고(`adjustment.updated`) 되돌림 adjustment(`chargeback_reverse`)가 만들어진다(`adjustment.created`)
+ *   { prorationRatio: <0~1 | null> }  플랜 변경의 일할 비율을 고정한다(null = 남은 시간 비율) - 시험이 금액을 정확히 말할 수 있게
  *   { reset: true }                  모든 기록을 지운다
  * `GET /control` → { subscriptions, calls, sent } — `calls` 는 Paddle API 호출, `sent` 는 쏜 웹훅(event_id · event_type · 응답 상태).
  */
@@ -58,7 +61,14 @@ type Sub = {
   txnCount: number
   priceId: string
 }
-export type FakePaddleCall = { method: string; path: string; authorized: boolean; body: unknown }
+export type FakePaddleCall = {
+  method: string
+  path: string
+  authorized: boolean
+  body: unknown
+  /** 플랜 변경(PATCH)이 돌려준 답의 `immediate_transaction.details.totals` - 창의 금액과 맞춰 보는 증거 */
+  totals?: { total: string; credit: string; grand_total: string }
+}
 export type SentWebhook = { eventId: string; eventType: string; status: number }
 export type FakePaddleTransaction = {
   id: string
@@ -106,6 +116,7 @@ export async function startFakePaddle(): Promise<FakePaddle> {
   const transactions = new Map<string, FakePaddleTransaction>() // 백엔드가 만든 거래
   const paid = new Map<string, PaidTransaction>() // 결제가 끝난(completed) 거래 - 환불이 걸린다
   let refundMode: 'approve' | 'pending' = 'pending'
+  let prorationRatio: number | null = null // 플랜 변경의 일할 비율 - null 이면 남은 시간 비율
   const cors = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
@@ -147,6 +158,7 @@ export async function startFakePaddle(): Promise<FakePaddle> {
     status: s.status,
     currency_code: s.currency,
     custom_data: s.customData,
+    items: [{ price: { id: s.priceId }, quantity: 1 }],
     scheduled_change: s.scheduledCancel
       ? { action: 'cancel', effective_at: s.periodEnd, resume_at: null }
       : null,
@@ -161,6 +173,7 @@ export async function startFakePaddle(): Promise<FakePaddle> {
     origin: string,
     priceId: string,
     transactionId?: string,
+    credit = 0,
   ) {
     const at = iso(new Date())
     return {
@@ -178,6 +191,8 @@ export async function startFakePaddle(): Promise<FakePaddle> {
           subtotal: String(amount),
           tax: '0',
           total: String(amount),
+          credit: String(credit),
+          grand_total: String(Math.max(amount - credit, 0)),
           currency_code: currency,
         },
       },
@@ -195,7 +210,7 @@ export async function startFakePaddle(): Promise<FakePaddle> {
     paid.set(entity.id, {
       id: entity.id,
       currency: entity.currency_code,
-      total: Number(totals.total),
+      total: Number(totals.grand_total),
       priceId,
       adjustments: [],
     })
@@ -334,8 +349,11 @@ export async function startFakePaddle(): Promise<FakePaddle> {
       await fire('adjustment.updated', adjustmentEntity(original))
       await fire('adjustment.created', adjustmentEntity(reverse))
     }
+    if ('prorationRatio' in patch)
+      prorationRatio = typeof patch.prorationRatio === 'number' ? patch.prorationRatio : null
     if (patch.reset) {
       refundMode = 'pending'
+      prorationRatio = null
       paid.clear()
       subs.clear()
       calls = []
@@ -399,7 +417,7 @@ export async function startFakePaddle(): Promise<FakePaddle> {
   async function handle(req: IncomingMessage, res: ServerResponse) {
     const path = (req.url ?? '/').split('?')[0] as string
     if (req.method === 'OPTIONS') {
-      res.writeHead(204, { ...cors, 'Access-Control-Allow-Methods': 'POST, GET, OPTIONS' })
+      res.writeHead(204, { ...cors, 'Access-Control-Allow-Methods': 'POST, GET, PATCH, OPTIONS' })
       return res.end()
     }
     const text = await readBody(req)
@@ -463,6 +481,78 @@ export async function startFakePaddle(): Promise<FakePaddle> {
       found.adjustments.push(adjustment)
       await fire('adjustment.created', adjustmentEntity(adjustment))
       return send(res, 201, { data: adjustmentEntity(adjustment) })
+    }
+
+    const change = /^\/subscriptions\/([^/]+?)(\/preview)?$/.exec(path)
+    if (change && req.method === 'PATCH') {
+      const authorized = req.headers.authorization === `Bearer ${FAKE_PADDLE.apiKey}`
+      const call: FakePaddleCall = { method: req.method, path, authorized, body }
+      calls.push(call)
+      if (!authorized) return send(res, 403, { error: { code: 'forbidden' } })
+      const s = subs.get(decodeURIComponent(change[1] as string))
+      if (!s) return send(res, 404, { error: { code: 'not_found' } })
+      const target = Object.values(FAKE_PADDLE.prices).find(
+        (p) =>
+          p.recurring &&
+          p.id === (body?.items as Array<{ price_id?: string }> | undefined)?.[0]?.price_id,
+      )
+      if (!target || body?.proration_billing_mode !== 'prorated_immediately')
+        return send(res, 400, { error: { code: 'invalid_field' } })
+      // 일할 - 남은 시간 비율로 새 가격은 청구, 옛 가격은 크레딧
+      const left = new Date(s.periodEnd).getTime() - Date.now()
+      const ratio =
+        prorationRatio ??
+        Math.min(
+          Math.max(left / (new Date(s.periodEnd).getTime() - new Date(s.periodStart).getTime()), 0),
+          1,
+        )
+      const total = Math.round(target.amount * ratio)
+      const credit = Math.round(s.amount * ratio)
+      const grand = Math.max(total - credit, 0)
+      call.totals = { total: String(total), credit: String(credit), grand_total: String(grand) }
+      const period = { starts_at: s.periodStart, ends_at: s.periodEnd }
+      const money = (amount: number) => ({ amount: String(amount), currency_code: s.currency })
+      if (change[2])
+        return send(res, 200, {
+          data: {
+            ...subscriptionEntity(s),
+            immediate_transaction: {
+              billing_period: period,
+              details: {
+                totals: { ...call.totals, currency_code: s.currency },
+              },
+            },
+            recurring_transaction_details: {
+              totals: { total: String(target.amount), currency_code: s.currency },
+            },
+            update_summary: {
+              credit: money(credit),
+              charge: money(total),
+              result: {
+                action: total >= credit ? 'charge' : 'credit',
+                amount: String(Math.abs(total - credit)),
+              },
+            },
+          },
+        })
+      s.priceId = target.id
+      s.amount = target.amount
+      send(res, 200, { data: subscriptionEntity(s) })
+      // Paddle 은 응답한 뒤 웹훅으로 알린다
+      const paidChange = transactionEntity(
+        s,
+        s.customData,
+        s.currency,
+        total,
+        'subscription_update',
+        target.id,
+        undefined,
+        credit,
+      )
+      remember(paidChange, target.id)
+      await fire('transaction.completed', paidChange)
+      await fire('subscription.updated', subscriptionEntity(s))
+      return
     }
 
     const cancel = /^\/subscriptions\/([^/]+)\/cancel$/.exec(path)

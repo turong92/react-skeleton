@@ -68,7 +68,7 @@ export type Subscription = {
   provider?: string
   /** 결제사가 직접 받은 간편결제의 앱(`KAKAOPAY` · `NAVERPAY`) - 그 밖(토스 · Paddle)과 구버전 서버는 `null` · 칸 없음 */
   easyPayBrand?: string | null
-  /** 결제사가 갱신을 직접 하는 구독(Paddle) - 플랜 변경 · 중도 해지(환불)는 열리지 않고 해지는 기간 끝에만 된다 */
+  /** 결제사가 갱신을 직접 하는 구독(Paddle) - 중도 해지(환불)는 열리지 않고 해지는 기간 끝에만 된다. 플랜 바꾸기는 올리기(더 높은 등급 · 더 긴 주기)만 열리고 내리기는 서버가 409 로 거절한다 */
   providerManaged?: boolean
   /** 할인이 붙은 구독이면 그 내용, 아니면 `null` · 칸 없음 */
   discount?: SubscriptionDiscount | null

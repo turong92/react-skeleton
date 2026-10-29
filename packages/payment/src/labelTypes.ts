@@ -445,6 +445,8 @@ export type SubscriptionLabels = {
     confirmScheduled: string
     loadingPreview: string
     previewError: string
+    /** 미리보기가 「바꿀 수 없다」(409)로 거절됐다 - 결제사가 올리기만 받는 구독에 낮은 플랜 · 짧은 주기를 골랐을 때 이유를 말한다 */
+    previewNotAllowed: string
     confirm: string
     /** 확인 단추가 일하는 동안의 낭독 이름 */
     loading: string

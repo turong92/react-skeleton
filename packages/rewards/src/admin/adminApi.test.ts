@@ -137,4 +137,68 @@ describe('coupon definition status and issued coupons (coupon-admin contract)', 
       },
     ])
   })
+  it('badges: list / create / update (no code) / status', async () => {
+    const input = { name: 'N', description: '', imageUrl: null, hidden: false, sortOrder: 0 }
+    const calls = await run(async (api) => {
+      await api.listBadges()
+      await api.createBadge({ code: 'early', ...input })
+      await api.updateBadge('b/1', input)
+      await api.setBadgeStatus('b/1', 'ARCHIVED')
+    })
+    expect(calls).toEqual([
+      { kind: 'list', path: '/admin/badges', request: undefined },
+      {
+        kind: 'value',
+        path: '/admin/badges',
+        request: { method: 'POST', json: { code: 'early', ...input } },
+      },
+      { kind: 'value', path: '/admin/badges/b%2F1', request: { method: 'PUT', json: input } },
+      {
+        kind: 'value',
+        path: '/admin/badges/b%2F1/status',
+        request: { method: 'PATCH', json: { status: 'ARCHIVED' } },
+      },
+    ])
+  })
+
+  it('badge awards: manual award, revoke with a reason, history by cursor with only the filters given', async () => {
+    const calls = await run(async (api) => {
+      await api.awardBadge('b1', { accountIds: ['a1'], reason: '행사' })
+      await api.revokeBadgeAward('w/1', '잘못 줌')
+      await api.listBadgeAwards()
+      await api.listBadgeAwards({ badgeId: 'b1', accountId: 'a1', cursor: 'c2' })
+    })
+    expect(calls).toEqual([
+      {
+        kind: 'value',
+        path: '/admin/badges/b1/awards',
+        request: { method: 'POST', json: { accountIds: ['a1'], reason: '행사' } },
+      },
+      {
+        kind: 'value',
+        path: '/admin/badge-awards/w%2F1/revoke',
+        request: { method: 'POST', json: { reason: '잘못 줌' } },
+      },
+      { kind: 'cursor', path: '/admin/badge-awards', request: { params: {} } },
+      {
+        kind: 'cursor',
+        path: '/admin/badge-awards',
+        request: { params: { badgeId: 'b1', accountId: 'a1', cursor: 'c2' } },
+      },
+    ])
+  })
+
+  it('achievement campaigns carry {metric, milestones:[{value, rewards}]} in config unchanged', async () => {
+    const config = {
+      metric: 'notes.created',
+      milestones: [{ value: 10, rewards: [{ type: 'badge', params: { code: 'writer' } }] }],
+    }
+    const calls = await run((api) =>
+      api.createCampaign({ kind: 'achievement', name: 'A', startsAt: 's', endsAt: null, config }),
+    )
+    expect(calls[0].request).toEqual({
+      method: 'POST',
+      json: { kind: 'achievement', name: 'A', startsAt: 's', endsAt: null, config },
+    })
+  })
 })

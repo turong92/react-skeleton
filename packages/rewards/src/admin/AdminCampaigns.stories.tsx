@@ -75,3 +75,28 @@ export const ReferralHasItsOwnSettings: Story = {
     await expect(dialog.getByLabelText('초대받은 사람의 보상 1 쿠폰')).toHaveValue('d1')
   },
 }
+
+export const CreateAnAchievementEvent: Story = {
+  render: (args) => (
+    <AdminCampaigns
+      {...args}
+      api={createFakeAdmin().api}
+      badgeChoices={[{ code: 'writer-10', name: '열 번째 노트' }]}
+    />
+  ),
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(await canvas.findByRole('button', { name: '이벤트 만들기' }))
+    const dialog = within(await screen.findByRole('dialog', { name: '이벤트 만들기' }))
+    await userEvent.type(dialog.getByLabelText(/^이름/), '노트 업적')
+    await userEvent.selectOptions(dialog.getByLabelText('종류'), '업적')
+    await userEvent.type(dialog.getByLabelText(/^수치 이름/), 'notes.created')
+    await userEvent.clear(dialog.getByLabelText('달성 단계 1 기준값'))
+    await userEvent.type(dialog.getByLabelText('달성 단계 1 기준값'), '10')
+    await userEvent.click(dialog.getByRole('button', { name: '보상 더하기' }))
+    await userEvent.selectOptions(dialog.getByLabelText('달성 단계 1 1 보상 종류'), '배지')
+    await userEvent.selectOptions(dialog.getByLabelText('달성 단계 1 1 배지'), '열 번째 노트')
+    await userEvent.click(dialog.getByRole('button', { name: '저장' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    await expect(await canvas.findByText('노트 업적')).toBeVisible()
+  },
+}

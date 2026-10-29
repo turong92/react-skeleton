@@ -18,6 +18,8 @@ export type RewardsAdminLabels = {
     issueClosed: string
     /** `COUPON.DEFINITION_INVALID` - 쿠폰 값 · 기간이 맞지 않다 */
     definitionInvalid: string
+    /** `BADGE.CODE_TAKEN` - 같은 코드의 배지가 이미 있다 */
+    codeTaken: string
     notFound: string
     validation: string
     notEnabled: string
@@ -27,10 +29,11 @@ export type RewardsAdminLabels = {
     legend: string
     add: string
     type: string
-    types: { point: string; coupon: string }
+    types: { point: string; coupon: string; badge: string }
     amount: string
     expiresInDays: string
     definition: string
+    badge: string
     remove: (n: number) => string
     none: string
   }
@@ -62,7 +65,7 @@ export type RewardsAdminLabels = {
     editTitle: (name: string) => string
     empty: string
     columns: { name: string; kind: string; period: string; enabled: string; actions: string }
-    kinds: { attendance: string; referral: string }
+    kinds: { attendance: string; referral: string; achievement: string }
     enabledSwitch: (name: string) => string
     noEnd: string
     kind: string
@@ -79,6 +82,14 @@ export type RewardsAdminLabels = {
       total: string
       removeMilestone: (n: number) => string
     }
+    achievement: {
+      metric: string
+      metricHint: string
+      steps: string
+      addStep: string
+      value: string
+      removeStep: (n: number) => string
+    }
     referral: {
       invitee: string
       inviter: string
@@ -89,6 +100,66 @@ export type RewardsAdminLabels = {
       inviterCap: string
       inviterCapHint: string
     }
+  }
+  badges: {
+    title: string
+    caption: string
+    create: string
+    createTitle: string
+    editTitle: (name: string) => string
+    empty: string
+    columns: { badge: string; holders: string; status: string; actions: string }
+    status: { ACTIVE: string; ARCHIVED: string }
+    hiddenTag: string
+    code: string
+    codeHint: string
+    name: string
+    description: string
+    imageUrl: string
+    imageUrlHint: string
+    hidden: string
+    hiddenHint: string
+    sortOrder: string
+    archive: string
+    restore: string
+    archiveFor: (name: string) => string
+    restoreFor: (name: string) => string
+    award: string
+    awardFor: (name: string) => string
+    awardTitle: (name: string) => string
+    awardAccounts: string
+    awardHint: string
+    awardLimit: (max: number) => string
+    reason: string
+    reasonHint: string
+    awardedResult: (awarded: number, alreadyHeld: number) => string
+  }
+  badgeAwards: {
+    title: string
+    caption: string
+    empty: string
+    badgeFilter: string
+    allBadges: string
+    accountFilter: string
+    clearAccount: string
+    columns: {
+      when: string
+      badge: string
+      account: string
+      action: string
+      source: string
+      reason: string
+      actions: string
+    }
+    actions: { AWARDED: string; REVOKED: string }
+    sources: { APP: string; ADMIN: string; GRANT: string }
+    more: string
+    revoke: string
+    revokeFor: (badge: string, account: string) => string
+    revokeTitle: string
+    revokeReason: string
+    revokeReasonHint: string
+    deletedBadge: string
   }
   coupons: {
     title: string

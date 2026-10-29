@@ -5,6 +5,10 @@ export {
   adminKeys,
   useAccountCoupons,
   useAccountPoints,
+  useAdminBadges,
+  useBadgeAwards,
+  useBadgeMutations,
+  useRevokeBadgeAward,
   useAdjustPoints,
   useAdminCampaigns,
   useAdminCouponDefinitions,
@@ -30,7 +34,7 @@ export {
 export { StageEditor } from './StageEditor'
 export type { StageEditorProps } from './StageEditor'
 export { RewardListEditor } from './RewardListEditor'
-export type { CouponChoice, RewardListEditorProps } from './RewardListEditor'
+export type { BadgeChoice, CouponChoice, RewardListEditorProps } from './RewardListEditor'
 export { AdminCampaigns } from './AdminCampaigns'
 export type { AdminCampaignsProps } from './AdminCampaigns'
 export { AdminCouponDefinitions } from './AdminCouponDefinitions'
@@ -49,3 +53,8 @@ export type { AccountChoice } from './accountLabel'
 export { rowActionClass } from './rowAction'
 export type { RenderRowLink } from './rowAction'
 export { useCouponStats, useDefinitionCoupons } from './hooks'
+export { AdminBadges } from './AdminBadges'
+export type { AdminBadgesProps } from './AdminBadges'
+export { AdminBadgeAwards } from './AdminBadgeAwards'
+export type { AdminBadgeAwardsProps } from './AdminBadgeAwards'
+export { BADGE_CODE } from './badgeRows'

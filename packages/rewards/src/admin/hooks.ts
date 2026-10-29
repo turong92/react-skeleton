@@ -9,6 +9,9 @@ import { rewardsRoot } from '../queryKeys'
 import type { RewardsAdminApi } from './adminApi'
 import type { CouponStatus } from '../types'
 import type {
+  BadgeInput,
+  BadgeDefinitionStatus,
+  BadgeUpdate,
   CampaignInput,
   CampaignUpdate,
   CouponDefinitionInput,
@@ -20,6 +23,9 @@ import type {
 export const adminKeys = {
   all: [...rewardsRoot, 'admin'] as const,
   campaigns: () => [...adminKeys.all, 'campaigns'] as const,
+  badges: () => [...adminKeys.all, 'badges'] as const,
+  badgeAwards: (badgeId: string, accountId: string) =>
+    [...adminKeys.all, 'badge-awards', badgeId, accountId] as const,
   definitions: () => [...adminKeys.all, 'coupon-definitions'] as const,
   stats: (id: string) => [...adminKeys.all, 'coupon-stats', id] as const,
   issued: (id: string, status: CouponStatus | '') =>
@@ -185,6 +191,70 @@ export function useDefinitionCoupons(
     getNextPageParam: (last) =>
       last.cursor.hasNext ? (last.cursor.nextCursor ?? undefined) : undefined,
     // 상태를 바꿔도 새로 올 때까지 앞 목록을 보여 준다(표가 깜박이지 않게)
+    placeholderData: keepPreviousData,
+    ...LIST_OPTIONS,
+  })
+}
+
+export const useAdminBadges = (api: Pick<RewardsAdminApi, 'listBadges'>) =>
+  useQuery({ queryKey: adminKeys.badges(), queryFn: () => api.listBadges(), ...LIST_OPTIONS })
+
+/** 만들기 · 고치기 · 보관 · 수동 수여 - 성공하면 목록 · 내역 · 사용자 배지 화면을 다시 읽는다 */
+export function useBadgeMutations(
+  api: Pick<RewardsAdminApi, 'createBadge' | 'updateBadge' | 'setBadgeStatus' | 'awardBadge'>,
+) {
+  const client = useQueryClient()
+  const done = () => client.invalidateQueries({ queryKey: rewardsRoot })
+  return {
+    create: useMutation({
+      mutationFn: (input: BadgeInput) => api.createBadge(input),
+      onSuccess: done,
+    }),
+    update: useMutation({
+      mutationFn: (v: { id: string; input: BadgeUpdate }) => api.updateBadge(v.id, v.input),
+      onSuccess: done,
+    }),
+    setStatus: useMutation({
+      mutationFn: (v: { id: string; status: BadgeDefinitionStatus }) =>
+        api.setBadgeStatus(v.id, v.status),
+      onSuccess: done,
+    }),
+    award: useMutation({
+      mutationFn: (v: { id: string; accountIds: string[]; reason?: string }) =>
+        api.awardBadge(v.id, { accountIds: v.accountIds, reason: v.reason }),
+      onSuccess: done,
+    }),
+  }
+}
+
+/** 회수(사유 필수) - 성공하면 내역 · 목록 · 사용자 배지 화면을 다시 읽는다 */
+export function useRevokeBadgeAward(api: Pick<RewardsAdminApi, 'revokeBadgeAward'>) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { awardId: string; reason: string }) =>
+      api.revokeBadgeAward(v.awardId, v.reason),
+    onSuccess: () => client.invalidateQueries({ queryKey: rewardsRoot }),
+  })
+}
+
+/** 수여 · 회수 내역 - 커서로 이어 받는다. 필터가 `''` 면 모두 */
+export function useBadgeAwards(
+  api: Pick<RewardsAdminApi, 'listBadgeAwards'>,
+  { badgeId = '', accountId = '' }: { badgeId?: string; accountId?: string } = {},
+  size = 20,
+) {
+  return useInfiniteQuery({
+    queryKey: adminKeys.badgeAwards(badgeId, accountId),
+    queryFn: ({ pageParam }) =>
+      api.listBadgeAwards({
+        size,
+        ...(badgeId !== '' ? { badgeId } : {}),
+        ...(accountId !== '' ? { accountId } : {}),
+        ...(pageParam !== undefined ? { cursor: pageParam } : {}),
+      }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last) =>
+      last.cursor.hasNext ? (last.cursor.nextCursor ?? undefined) : undefined,
     placeholderData: keepPreviousData,
     ...LIST_OPTIONS,
   })

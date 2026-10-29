@@ -20,8 +20,9 @@ import { fromLocalInput, toLocalInput } from './dateInput'
 import { useAdminCampaigns, useCampaignMutations } from './hooks'
 import type { RewardsAdminLabels } from './labels'
 import { allowAll, REWARDS_PERMISSIONS, type CanFn } from './permissions'
-import { RewardListEditor, type CouponChoice } from './RewardListEditor'
+import { RewardListEditor, type BadgeChoice, type CouponChoice } from './RewardListEditor'
 import type {
+  AchievementStepConfig,
   AdminCampaign,
   AttendanceMilestoneConfig,
   CampaignConfig,
@@ -36,6 +37,8 @@ export type AdminCampaignsProps = {
   >
   /** 쿠폰 보상에서 고를 쿠폰 정의(`useAdminCouponDefinitions` 의 이름 목록) */
   couponChoices?: readonly CouponChoice[]
+  /** 배지 보상에서 고를 배지(`badge` 모듈이 있는 앱) - 없으면 코드를 직접 적는다 */
+  badgeChoices?: readonly BadgeChoice[]
   /** 권한 질문 - 단추를 숨긴다(서버가 다시 판정한다). 기본 모두 허용 */
   can?: CanFn
   labels?: Partial<RewardsAdminLabels>
@@ -51,6 +54,9 @@ type Draft = {
   config: CampaignConfig
 }
 
+/** 서버 한도(`AchievementConfig.MAX_STEPS`) */
+const MAX_ACHIEVEMENT_STEPS = 20
+
 const emptyDraft = (): Draft => ({
   kind: 'attendance',
   name: '',
@@ -62,12 +68,15 @@ const emptyDraft = (): Draft => ({
 const configFor = (kind: Draft['kind']): CampaignConfig =>
   kind === 'attendance'
     ? { daily: [], milestones: [] }
-    : { invitee: [], inviter: [], qualifyOn: 'SIGNAL', claimWithinDays: 7, inviterCap: null }
+    : kind === 'achievement'
+      ? { metric: '', milestones: [{ value: 1, rewards: [] }] }
+      : { invitee: [], inviter: [], qualifyOn: 'SIGNAL', claimWithinDays: 7, inviterCap: null }
 
 /** 이벤트 운영 - 목록, 켜고 끄는 스위치, 만들기 · 고치기(종류별 설정 + 보상 목록). 백엔드 `skeleton.campaign.admin.enabled=true` + `campaign.manage` */
 export function AdminCampaigns({
   api,
   couponChoices,
+  badgeChoices,
   can = allowAll,
   labels: given,
   locale,
@@ -165,6 +174,7 @@ export function AdminCampaigns({
           campaign={editing === 'new' ? null : editing}
           labels={labels}
           couponChoices={couponChoices}
+          badgeChoices={badgeChoices}
           busy={mutations.create.isPending || mutations.update.isPending}
           error={failure && editing !== null ? adminErrorMessage(failure, labels) : null}
           onClose={() => {
@@ -193,6 +203,7 @@ function CampaignDialog({
   campaign,
   labels,
   couponChoices,
+  badgeChoices,
   busy,
   error,
   onClose,
@@ -201,6 +212,7 @@ function CampaignDialog({
   campaign: AdminCampaign | null
   labels: RewardsAdminLabels
   couponChoices?: readonly CouponChoice[]
+  badgeChoices?: readonly BadgeChoice[]
   busy: boolean
   error: string | null
   onClose: () => void
@@ -222,7 +234,10 @@ function CampaignDialog({
   const patch = (next: Partial<Draft>) => setDraft((now) => ({ ...now, ...next }))
   const config = (next: Partial<CampaignConfig>) =>
     setDraft((now) => ({ ...now, config: { ...now.config, ...next } }))
-  const milestones = draft.config.milestones ?? []
+  const milestones = (draft.config.milestones ?? []) as AttendanceMilestoneConfig[]
+  const steps = (draft.config.milestones ?? []) as AchievementStepConfig[]
+  const setStep = (index: number, next: Partial<AchievementStepConfig>) =>
+    config({ milestones: steps.map((s, i) => (i === index ? { ...s, ...next } : s)) })
   const setMilestone = (index: number, next: Partial<AttendanceMilestoneConfig>) =>
     config({ milestones: milestones.map((m, i) => (i === index ? { ...m, ...next } : m)) })
   const submit = (event: FormEvent) => {
@@ -261,6 +276,7 @@ function CampaignDialog({
             >
               <option value="attendance">{t.kinds.attendance}</option>
               <option value="referral">{t.kinds.referral}</option>
+              <option value="achievement">{t.kinds.achievement}</option>
             </Select>
           )}
         </Field>
@@ -294,13 +310,82 @@ function CampaignDialog({
             />
           )}
         </Field>
-        {draft.kind === 'attendance' ? (
+        {draft.kind === 'achievement' ? (
+          <>
+            <Field label={t.achievement.metric} hint={t.achievement.metricHint} required>
+              {(control) => (
+                <Input
+                  {...control}
+                  value={draft.config.metric ?? ''}
+                  maxLength={64}
+                  autoComplete="off"
+                  spellCheck={false}
+                  onChange={(event) => config({ metric: event.target.value })}
+                />
+              )}
+            </Field>
+            {steps.map((step, index) => (
+              <fieldset key={index} className={styles.milestone}>
+                <legend>{`${t.achievement.steps} ${index + 1}`}</legend>
+                <Field label={`${t.achievement.steps} ${index + 1} ${t.achievement.value}`}>
+                  {(control) => (
+                    <Input
+                      {...control}
+                      type="number"
+                      min={1}
+                      value={step.value}
+                      onChange={(event) =>
+                        setStep(index, { value: Math.max(1, Number(event.target.value) || 1) })
+                      }
+                    />
+                  )}
+                </Field>
+                <RewardListEditor
+                  legend={`${t.achievement.steps} ${index + 1}`}
+                  rewards={step.rewards}
+                  onChange={(rewards: RewardConfig[]) => setStep(index, { rewards })}
+                  coupons={couponChoices}
+                  badges={badgeChoices}
+                  labels={labels}
+                />
+                <div>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    aria-label={t.achievement.removeStep(index + 1)}
+                    onClick={() => config({ milestones: steps.filter((_, i) => i !== index) })}
+                  >
+                    {labels.remove}
+                  </Button>
+                </div>
+              </fieldset>
+            ))}
+            <div>
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={steps.length >= MAX_ACHIEVEMENT_STEPS}
+                onClick={() =>
+                  config({
+                    milestones: [
+                      ...steps,
+                      { value: (steps[steps.length - 1]?.value ?? 0) + 1, rewards: [] },
+                    ],
+                  })
+                }
+              >
+                {t.achievement.addStep}
+              </Button>
+            </div>
+          </>
+        ) : draft.kind === 'attendance' ? (
           <>
             <RewardListEditor
               legend={t.attendance.daily}
               rewards={draft.config.daily ?? []}
               onChange={(daily) => config({ daily })}
               coupons={couponChoices}
+              badges={badgeChoices}
               labels={labels}
             />
             {milestones.map((milestone, index) => (
@@ -331,6 +416,7 @@ function CampaignDialog({
                   rewards={milestone.rewards}
                   onChange={(rewards: RewardConfig[]) => setMilestone(index, { rewards })}
                   coupons={couponChoices}
+                  badges={badgeChoices}
                   labels={labels}
                 />
                 <div>
@@ -364,6 +450,7 @@ function CampaignDialog({
               rewards={draft.config.invitee ?? []}
               onChange={(invitee) => config({ invitee })}
               coupons={couponChoices}
+              badges={badgeChoices}
               labels={labels}
             />
             <RewardListEditor
@@ -371,6 +458,7 @@ function CampaignDialog({
               rewards={draft.config.inviter ?? []}
               onChange={(inviter) => config({ inviter })}
               coupons={couponChoices}
+              badges={badgeChoices}
               labels={labels}
             />
             <Field label={t.referral.qualifyOn}>

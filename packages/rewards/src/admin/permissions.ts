@@ -1,5 +1,6 @@
 /** 백엔드 모듈이 선언한 운영 권한(기본 역할 없음 - 전권만) */
 export const REWARDS_PERMISSIONS = {
+  badge: 'badge.manage',
   campaign: 'campaign.manage',
   coupon: 'coupon.manage',
   point: 'point.manage',

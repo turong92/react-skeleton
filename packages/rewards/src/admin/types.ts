@@ -5,11 +5,17 @@ export type RewardConfig = { type: string; params: Record<string, string> }
 
 export type AttendanceMilestoneConfig = { days: number; streak: boolean; rewards: RewardConfig[] }
 
+/** 업적 한 단계 - 수치가 `value` 에 닿으면 `rewards` 를 모두 준다 */
+export type AchievementStepConfig = { value: number; rewards: RewardConfig[] }
+
 /** 이벤트 설정 - 종류별 칸(C-ADM). 칸이 없으면 화면이 빈 값으로 읽는다 */
 export type CampaignConfig = {
   rewards?: RewardConfig[]
   daily?: RewardConfig[]
-  milestones?: AttendanceMilestoneConfig[]
+  /** 출석은 `AttendanceMilestoneConfig`, 업적(`achievement`)은 `AchievementStepConfig` - 종류가 정한다(와이어 키가 같다) */
+  milestones?: Array<AttendanceMilestoneConfig | AchievementStepConfig>
+  /** 업적: 앱이 `CampaignSignals.report` 로 보고하는 수치 이름(`[a-z0-9._-]{1,64}`) */
+  metric?: string
   invitee?: RewardConfig[]
   inviter?: RewardConfig[]
   qualifyOn?: 'CLAIM' | 'SIGNAL'
@@ -19,7 +25,7 @@ export type CampaignConfig = {
 
 export type AdminCampaign = {
   id: string
-  kind: 'attendance' | 'referral'
+  kind: 'attendance' | 'referral' | 'achievement'
   name: string
   enabled: boolean
   startsAt: string
@@ -116,3 +122,60 @@ export type RewardGrant = {
 }
 
 export type AdminCoupon = Coupon & { accountId?: string }
+
+export type BadgeDefinitionStatus = 'ACTIVE' | 'ARCHIVED'
+
+/** 배지 정의 한 개(운영) - `code` 는 만든 뒤 바꾸지 않는다. `holders` 는 지금 가진 사람 수 */
+export type AdminBadge = {
+  id: string
+  code: string
+  name: string
+  description: string
+  imageUrl: string | null
+  hidden: boolean
+  sortOrder: number
+  status: BadgeDefinitionStatus
+  holders: number
+  createdAt: string
+  updatedAt: string
+}
+
+export type BadgeUpdate = {
+  name: string
+  description: string
+  imageUrl: string | null
+  hidden: boolean
+  sortOrder: number
+}
+export type BadgeInput = BadgeUpdate & { code: string }
+
+/** 수동 수여의 답 - 새로 준 계정과 이미 가진 계정 id */
+export type BadgeAwardResult = { awarded: string[]; alreadyHeld: string[] }
+
+export type BadgeAwardAction = 'AWARDED' | 'REVOKED'
+export type BadgeAwardSource = 'APP' | 'ADMIN' | 'GRANT'
+
+/** 수여 · 회수 내역 한 줄(최신순). 같은 보유 줄(`awardId`)이 회수 뒤 다시 수여되면 같은 `awardId` 가 다시 나온다 */
+export type BadgeAwardEvent = {
+  id: string
+  awardId: string
+  badgeId: string
+  badgeCode: string | null
+  badgeName: string | null
+  accountId: string
+  /** 사람이 알아볼 계정 이름 - 서버가 낼 수 없으면 없다(화면은 `accountId`) */
+  accountLabel?: string | null
+  action: BadgeAwardAction
+  source: BadgeAwardSource
+  sourceRef: string | null
+  actorId: string | null
+  reason: string | null
+  createdAt: string
+}
+
+export type BadgeAwardQuery = {
+  badgeId?: string
+  accountId?: string
+  cursor?: string
+  size?: number
+}

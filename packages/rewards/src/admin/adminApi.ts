@@ -2,7 +2,14 @@ import type { ApiClient, ApiCursorResponse } from '@skeleton/api-client'
 import type { PointEntry } from '../types'
 import type {
   AdminCampaign,
+  AdminBadge,
   AdminCoupon,
+  BadgeAwardEvent,
+  BadgeAwardQuery,
+  BadgeAwardResult,
+  BadgeDefinitionStatus,
+  BadgeInput,
+  BadgeUpdate,
   AdminPointAccount,
   CampaignInput,
   CampaignUpdate,
@@ -27,6 +34,22 @@ export type RewardsAdminApi = {
   updateCampaign(id: string, input: CampaignUpdate): Promise<AdminCampaign>
   /** `PATCH /admin/campaigns/{id}/enabled` */
   setCampaignEnabled(id: string, enabled: boolean): Promise<AdminCampaign>
+  /** `GET /admin/badges` (`badge.manage`) - 보유자 수 포함 */
+  listBadges(): Promise<AdminBadge[]>
+  createBadge(input: BadgeInput): Promise<AdminBadge>
+  /** `PUT /admin/badges/{id}` - `code` 는 못 바꾼다 */
+  updateBadge(id: string, input: BadgeUpdate): Promise<AdminBadge>
+  /** `PATCH /admin/badges/{id}/status` - 보관 / 되살리기 */
+  setBadgeStatus(id: string, status: BadgeDefinitionStatus): Promise<AdminBadge>
+  /** `POST /admin/badges/{id}/awards {accountIds(≤100), reason}` */
+  awardBadge(
+    id: string,
+    input: { accountIds: string[]; reason?: string },
+  ): Promise<BadgeAwardResult>
+  /** `POST /admin/badge-awards/{awardId}/revoke {reason}` - 사유 필수 */
+  revokeBadgeAward(awardId: string, reason: string): Promise<{ awardId: string }>
+  /** `GET /admin/badge-awards?badgeId&accountId&cursor&size` - 수여 · 회수 내역(최신순 커서) */
+  listBadgeAwards(query?: BadgeAwardQuery): Promise<ApiCursorResponse<BadgeAwardEvent>>
   /** `GET /admin/coupon-definitions` (`coupon.manage`) */
   listCouponDefinitions(): Promise<CouponDefinition[]>
   createCouponDefinition(input: CouponDefinitionInput): Promise<CouponDefinition>
@@ -77,6 +100,27 @@ export function createRewardsAdminApi(
       client.value<AdminCampaign>(`${base}/campaigns/${enc(id)}/enabled`, {
         method: 'PATCH',
         json: { enabled },
+      }),
+    listBadges: () => client.list<AdminBadge>(`${base}/badges`),
+    createBadge: (input) => post<AdminBadge>(`${base}/badges`, input),
+    updateBadge: (id, input) =>
+      client.value<AdminBadge>(`${base}/badges/${enc(id)}`, { method: 'PUT', json: input }),
+    setBadgeStatus: (id, status) =>
+      client.value<AdminBadge>(`${base}/badges/${enc(id)}/status`, {
+        method: 'PATCH',
+        json: { status },
+      }),
+    awardBadge: (id, input) => post<BadgeAwardResult>(`${base}/badges/${enc(id)}/awards`, input),
+    revokeBadgeAward: (awardId, reason) =>
+      post<{ awardId: string }>(`${base}/badge-awards/${enc(awardId)}/revoke`, { reason }),
+    listBadgeAwards: ({ badgeId, accountId, cursor, size } = {}) =>
+      client.cursor<BadgeAwardEvent>(`${base}/badge-awards`, {
+        params: {
+          ...(badgeId !== undefined ? { badgeId } : {}),
+          ...(accountId !== undefined ? { accountId } : {}),
+          ...(cursor !== undefined ? { cursor } : {}),
+          ...(size !== undefined ? { size } : {}),
+        },
       }),
     listCouponDefinitions: () => client.list<CouponDefinition>(`${base}/coupon-definitions`),
     createCouponDefinition: (input) => post<CouponDefinition>(`${base}/coupon-definitions`, input),

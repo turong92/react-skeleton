@@ -1,6 +1,13 @@
 import type { RewardsAdminApi } from '../admin/adminApi'
 import type { AccountChoice } from '../admin/accountLabel'
-import type { AdminCampaign, CouponDefinition, IssuedCoupon, RewardGrant } from '../admin/types'
+import type {
+  AdminBadge,
+  AdminCampaign,
+  BadgeAwardEvent,
+  CouponDefinition,
+  IssuedCoupon,
+  RewardGrant,
+} from '../admin/types'
 import type { CouponStatus } from '../types'
 import type { PointEntry } from '../types'
 import { fail } from './fakeRewards'
@@ -94,6 +101,83 @@ export function createFakeAdmin() {
       orderRef: status === 'USED' || status === 'RESERVED' ? `ord_${i + 1}` : null,
     }
   })
+  let badges: AdminBadge[] = [
+    {
+      id: 'b1',
+      code: 'early-bird',
+      name: '얼리 버드',
+      description: '첫 주에 가입했어요',
+      imageUrl: null,
+      hidden: false,
+      sortOrder: 0,
+      status: 'ACTIVE',
+      holders: 2,
+      createdAt: '2026-10-01T00:00:00Z',
+      updatedAt: '2026-10-01T00:00:00Z',
+    },
+    {
+      id: 'b2',
+      code: 'night-owl',
+      name: '올빼미',
+      description: '',
+      imageUrl: null,
+      hidden: true,
+      sortOrder: 1,
+      status: 'ARCHIVED',
+      holders: 0,
+      createdAt: '2026-10-02T00:00:00Z',
+      updatedAt: '2026-10-02T00:00:00Z',
+    },
+  ]
+  // 최신순 - w1 은 수여(회수 가능), w2 는 수여 → 회수(단추 없음)
+  let badgeEvents: BadgeAwardEvent[] = [
+    {
+      id: 'ev3',
+      awardId: 'w2',
+      badgeId: 'b1',
+      badgeCode: 'early-bird',
+      badgeName: '얼리 버드',
+      accountId: 'acc_2',
+      accountLabel: 'bob@example.com',
+      action: 'REVOKED',
+      source: 'ADMIN',
+      sourceRef: null,
+      actorId: 'op1',
+      reason: '잘못 줌',
+      createdAt: '2026-10-27T03:00:00Z',
+    },
+    {
+      id: 'ev2',
+      awardId: 'w2',
+      badgeId: 'b1',
+      badgeCode: 'early-bird',
+      badgeName: '얼리 버드',
+      accountId: 'acc_2',
+      accountLabel: 'bob@example.com',
+      action: 'AWARDED',
+      source: 'ADMIN',
+      sourceRef: null,
+      actorId: 'op1',
+      reason: null,
+      createdAt: '2026-10-26T03:00:00Z',
+    },
+    {
+      id: 'ev1',
+      awardId: 'w1',
+      badgeId: 'b1',
+      badgeCode: 'early-bird',
+      badgeName: '얼리 버드',
+      accountId: 'acc_1',
+      accountLabel: 'ada@example.com',
+      action: 'AWARDED',
+      source: 'APP',
+      sourceRef: 'signup',
+      actorId: null,
+      reason: null,
+      createdAt: '2026-10-25T03:00:00Z',
+    },
+  ]
+  const revoked: Array<{ awardId: string; reason: string }> = []
   let balance = 1000
   let entries: PointEntry[] = [
     {
@@ -146,6 +230,53 @@ export function createFakeAdmin() {
     setCampaignEnabled: async (id, enabled) => {
       campaigns = campaigns.map((c) => (c.id === id ? { ...c, enabled } : c))
       return campaigns.find((c) => c.id === id) as AdminCampaign
+    },
+    listBadges: async () => badges.map((b) => ({ ...b })),
+    createBadge: async (input) => {
+      if (badges.some((b) => b.code === input.code)) throw fail(409, 'BADGE.CODE_TAKEN')
+      const created: AdminBadge = {
+        ...input,
+        id: `b${seq++}`,
+        status: 'ACTIVE',
+        holders: 0,
+        createdAt: '2026-10-28T09:00:00Z',
+        updatedAt: '2026-10-28T09:00:00Z',
+      }
+      badges = [...badges, created]
+      return created
+    },
+    updateBadge: async (id, input) => {
+      badges = badges.map((b) => (b.id === id ? { ...b, ...input } : b))
+      return badges.find((b) => b.id === id) as AdminBadge
+    },
+    setBadgeStatus: async (id, status) => {
+      badges = badges.map((b) => (b.id === id ? { ...b, status } : b))
+      return badges.find((b) => b.id === id) as AdminBadge
+    },
+    awardBadge: async (_id, { accountIds }) => ({
+      awarded: accountIds.filter((a) => a !== 'acc_1'),
+      alreadyHeld: accountIds.filter((a) => a === 'acc_1'),
+    }),
+    revokeBadgeAward: async (awardId, reason) => {
+      revoked.push({ awardId, reason })
+      const last = badgeEvents.find((e) => e.awardId === awardId) as BadgeAwardEvent
+      badgeEvents = [
+        { ...last, id: `ev${seq++}`, action: 'REVOKED', source: 'ADMIN', reason },
+        ...badgeEvents,
+      ]
+      return { awardId }
+    },
+    listBadgeAwards: async ({ badgeId, accountId, cursor } = {}) => {
+      const all = badgeEvents.filter(
+        (e) => (!badgeId || e.badgeId === badgeId) && (!accountId || e.accountId === accountId),
+      )
+      const start = cursor ? Number(cursor) : 0
+      const next = start + 2
+      return {
+        values: all.slice(start, next),
+        cursor: { hasNext: next < all.length, nextCursor: next < all.length ? String(next) : null },
+        meta: { timestamp: 't' },
+      }
     },
     listCouponDefinitions: async () => definitions.map((d) => ({ ...d })),
     createCouponDefinition: async (input) => {
@@ -247,5 +378,5 @@ export function createFakeAdmin() {
       return grants.find((g) => g.id === id) as RewardGrant
     },
   }
-  return { api, issued }
+  return { api, issued, revoked }
 }

@@ -5,6 +5,8 @@ import type { RewardConfig } from './types'
 import styles from './RewardListEditor.module.css'
 
 export type CouponChoice = { id: string; name: string }
+/** 배지 보상에서 고를 배지 - `code` 가 지급기에 가는 값이다 */
+export type BadgeChoice = { code: string; name: string }
 
 export type RewardListEditorProps = {
   /** 이 목록의 이름(필드 이름 앞에 붙는다) */
@@ -13,13 +15,17 @@ export type RewardListEditorProps = {
   onChange: (rewards: RewardConfig[]) => void
   /** 쿠폰 보상에서 고를 쿠폰 정의 - 없으면 id 를 직접 적는다 */
   coupons?: readonly CouponChoice[]
+  /** 배지 보상에서 고를 배지 정의 - 없으면 코드를 직접 적는다 */
+  badges?: readonly BadgeChoice[]
   labels?: Partial<RewardsAdminLabels>
 }
 
 const blank = (type: string): RewardConfig =>
   type === 'coupon'
     ? { type, params: { definitionId: '' } }
-    : { type: 'point', params: { amount: '' } }
+    : type === 'badge'
+      ? { type, params: { code: '' } }
+      : { type: 'point', params: { amount: '' } }
 
 /** 보상 목록 편집 - 줄마다 종류(포인트 · 쿠폰)와 지급기 값. 유효기간은 비우면 보내지 않는다(서버가 정한다) */
 export function RewardListEditor({
@@ -27,6 +33,7 @@ export function RewardListEditor({
   rewards,
   onChange,
   coupons,
+  badges,
   labels: given,
 }: RewardListEditorProps) {
   const all = mergeAdminLabels(given)
@@ -54,6 +61,7 @@ export function RewardListEditor({
               >
                 <option value="point">{t.types.point}</option>
                 <option value="coupon">{t.types.coupon}</option>
+                <option value="badge">{t.types.badge}</option>
               </Select>
             )}
           </Field>
@@ -82,6 +90,31 @@ export function RewardListEditor({
                     onChange={(event) =>
                       set(index, param(reward, 'definitionId', event.target.value))
                     }
+                  />
+                )
+              }
+            </Field>
+          ) : reward.type === 'badge' ? (
+            <Field label={`${legend} ${index + 1} ${t.badge}`}>
+              {(control) =>
+                badges ? (
+                  <Select
+                    {...control}
+                    value={reward.params.code ?? ''}
+                    onChange={(event) => set(index, param(reward, 'code', event.target.value))}
+                  >
+                    <option value="" />
+                    {badges.map((badge) => (
+                      <option key={badge.code} value={badge.code}>
+                        {badge.name}
+                      </option>
+                    ))}
+                  </Select>
+                ) : (
+                  <Input
+                    {...control}
+                    value={reward.params.code ?? ''}
+                    onChange={(event) => set(index, param(reward, 'code', event.target.value))}
                   />
                 )
               }

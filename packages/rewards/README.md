@@ -39,7 +39,7 @@ const api = createRewardsApi(apiClient) // 기본 경로 /campaigns · /referral
 | `points()` · `pointHistory(cursor?)`      | `GET /points` · `GET /points/history?cursor`                                                             |
 
 - **결제와 잇기**: 이 패키지는 `@skeleton/payment` 를 import 하지 않는다. 앱이 `CouponPicker` 의 `selectedId` 를 견적·주문 요청의 `discounts: [{ type: 'coupon', ref }]` 에 싣고, 견적 응답을 `preview`(`{ originalAmount, amount, currency }`)로 옮겨 준다.
-- **배지**: 그림은 주소(`imageUrl`)만 받는다 - 없으면 이름 첫 글자를 원 안에 그리고, 앱은 `renderImage(src, name)` 으로 그리는 방식을 바꾼다. `ProfileBadges` 는 공개 응답(`code · name · description · imageUrl`)만 안다. 주소에 계정 id 가 담기므로 **필명(`author-profile`) 화면에는 붙이지 않는다**.
+- **배지**: 그림은 주소(`imageUrl`)만 받는다 - 없으면 이름 첫 글자를 원 안에 그리고, 앱은 `renderImage(src, name)` 으로 그리는 방식을 바꾼다. `ProfileBadges` 는 공개 응답(`code · name · description · imageUrl`)만 안다. 공개 경로는 서버 모듈 기본이 꺼짐이라 **앱이 `skeleton.badge.http.allow-anonymous-read: true` 로 켠다**(꺼져 있으면 비로그인 호출이 401). 주소에 계정 id 가 담기므로 **필명(`author-profile`) 화면에는 붙이지 않는다**.
 - 포인트를 **쓰는** 길은 HTTP 가 없다(서버 API `PointWallet.spend`) — 읽기만 있다.
 - 쿠폰의 적용 범위(`scope`)는 카드에 그리지 않는다 — 어느 쿠폰이 이 결제에 맞는지는 서버(`PAYMENT.DISCOUNT_NOT_APPLICABLE`)가 판정한다.
 - 스토리: `AttendanceCard` · `InviteCard` · `CouponWallet`(코드 등록 · 잘못된 코드) · `CouponPicker` · `PointBalance` · `PointHistory`, 가짜 API 는 `src/stories/fakeRewards.ts`.

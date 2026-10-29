@@ -94,7 +94,7 @@ export const routes: RouteObject[] = [
       { path: '/board/new', element: <BoardFormPage />, handle: privateSeo('nav.board') },
       { path: '/board/:id', element: <BoardPostPage />, handle: privateSeo('nav.board') },
       { path: '/board/:id/edit', element: <BoardFormPage />, handle: privateSeo('nav.board') },
-      // 프로필 배지 - 로그인 없이 읽는다(서버 `allow-anonymous-read`). 주소에 계정 id 가 있어 검색에 내지 않고, 필명 화면에는 붙이지 않는다
+      // 프로필 배지 - 로그인 없이 읽는다(견본 앱이 서버 `skeleton.badge.http.allow-anonymous-read: true` 로 켠다). 주소에 계정 id 가 있어 검색에 내지 않고, 필명 화면에는 붙이지 않는다
       {
         path: '/profile/:accountId',
         element: <ProfilePage />,

@@ -14,7 +14,8 @@ export type ProfileBadgesProps = {
 
 /**
  * 계정의 공개 배지 한 줄 — 로그인 없이 그린다. 불러오는 중 · 실패 · 배지 없음이면 아무것도 그리지 않는다
- * (프로필에 빈 상자를 남기지 않는다). 공개 응답 모양(이름 · 설명 · 그림)만 안다.
+ * (프로필에 빈 상자를 남기지 않는다).
+ * 서버의 공개 경로는 기본이 꺼짐이다 - 앱이 `skeleton.badge.http.allow-anonymous-read: true` 로 켠다. 공개 응답 모양(이름 · 설명 · 그림)만 안다.
  */
 export function ProfileBadges({
   api,

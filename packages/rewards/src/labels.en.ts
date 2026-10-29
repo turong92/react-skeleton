@@ -93,4 +93,17 @@ export const defaultRewardsLabels: RewardsLabels = {
     expiresAt: (date) => `Expires ${date}`,
     loadMore: 'Show more',
   },
+  badge: {
+    earned: 'Earned',
+    locked: 'Not earned yet',
+    emptyEarned: 'You have not earned any badges yet.',
+    emptyAll: 'There are no badges yet.',
+    hiddenName: 'Hidden badge',
+    hiddenHint: 'Keep going to find out.',
+    showOnProfile: 'Show on profile',
+    archived: 'No longer awarded',
+    awardedAt: (date) => `Earned ${date}`,
+    visibleFailed: 'Could not change that. Please try again.',
+    profileTitle: 'Badges',
+  },
 }

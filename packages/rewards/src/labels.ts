@@ -86,6 +86,21 @@ export type RewardsLabels = {
     expiresAt: (date: string) => string
     loadMore: string
   }
+  badge: {
+    earned: string
+    locked: string
+    emptyEarned: string
+    emptyAll: string
+    /** 아직 받지 못한 숨은 업적의 이름 자리 */
+    hiddenName: string
+    hiddenHint: string
+    showOnProfile: string
+    archived: string
+    awardedAt: (date: string) => string
+    visibleFailed: string
+    /** 프로필 배지 줄의 낭독 이름 */
+    profileTitle: string
+  }
 }
 
 /** 앱이 준 일부 문구(안쪽도 일부만 가능) */

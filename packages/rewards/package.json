@@ -21,6 +21,10 @@
       "types": "./src/point/index.ts",
       "default": "./src/point/index.ts"
     },
+    "./badge": {
+      "types": "./src/badge/index.ts",
+      "default": "./src/badge/index.ts"
+    },
     "./admin": {
       "types": "./src/admin/index.ts",
       "default": "./src/admin/index.ts"

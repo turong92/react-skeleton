@@ -89,4 +89,17 @@ export const koRewardsLabels: RewardsLabels = {
     expiresAt: (date) => `${date} 소멸`,
     loadMore: '더 보기',
   },
+  badge: {
+    earned: '받은 배지',
+    locked: '아직 받지 못한 배지',
+    emptyEarned: '아직 받은 배지가 없어요.',
+    emptyAll: '준비된 배지가 아직 없어요.',
+    hiddenName: '숨은 배지',
+    hiddenHint: '계속 하다 보면 알게 돼요.',
+    showOnProfile: '프로필에 보이기',
+    archived: '지금은 받을 수 없어요',
+    awardedAt: (date) => `${date}에 받음`,
+    visibleFailed: '바꾸지 못했어요. 다시 시도해 주세요.',
+    profileTitle: '배지',
+  },
 }

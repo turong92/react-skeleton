@@ -1,4 +1,6 @@
 import { ApiRequestError } from '@skeleton/api-client'
+import type { BadgeApi } from '../badge/badgeApi'
+import type { EarnedBadge, LockedBadge, PublicBadge } from '../badge/types'
 import type { RewardsApi } from '../rewardsApi'
 import type { Campaign, Coupon, PointEntry } from '../types'
 
@@ -166,4 +168,84 @@ export function createFakeRewards({
     },
   }
   return { api, claims }
+}
+
+export type FakeBadgesOptions = {
+  /** 받은 것 없이 아직인 것만 */
+  noneEarned?: boolean
+  /** 받은 것도 아직인 것도 없음 */
+  empty?: boolean
+  /** 프로필 줄 — 공개 응답 */
+  profile?: PublicBadge[]
+}
+
+const earnedBadge = (
+  over: Partial<EarnedBadge> & Pick<EarnedBadge, 'awardId' | 'code' | 'name'>,
+): EarnedBadge => ({
+  description: '',
+  imageUrl: null,
+  hidden: false,
+  archived: false,
+  visible: true,
+  awardedAt: '2026-10-28T03:00:00Z',
+  ...over,
+})
+
+export const sampleProfileBadges: PublicBadge[] = [
+  { code: 'early-bird', name: '얼리 버드', description: '첫 주에 가입했어요', imageUrl: null },
+  {
+    code: 'writer-10',
+    name: '열 번째 노트',
+    description: '노트를 열 개 만들었어요',
+    imageUrl: null,
+  },
+]
+
+/** 스토리 · 시험용 메모리 안의 가짜 배지 API. 스위치는 메모리에서 바로 바뀐다 */
+export function createFakeBadges({
+  noneEarned = false,
+  empty = false,
+  profile = sampleProfileBadges,
+}: FakeBadgesOptions = {}) {
+  let earned: EarnedBadge[] =
+    empty || noneEarned
+      ? []
+      : [
+          earnedBadge({
+            awardId: 'a1',
+            code: 'early-bird',
+            name: '얼리 버드',
+            description: '첫 주에 가입했어요',
+          }),
+          earnedBadge({
+            awardId: 'a2',
+            code: 'writer-10',
+            name: '열 번째 노트',
+            description: '노트를 열 개 만들었어요',
+            visible: false,
+          }),
+        ]
+  const locked: LockedBadge[] = empty
+    ? []
+    : [
+        {
+          hidden: false,
+          code: 'writer-100',
+          name: '백 번째 노트',
+          description: '노트를 백 개 만들면 받아요',
+          imageUrl: null,
+        },
+        { hidden: true, code: null, name: null, description: null, imageUrl: null },
+      ]
+  const calls: { awardId: string; visible: boolean }[] = []
+  const api: BadgeApi = {
+    myBadges: async () => ({ earned, locked }),
+    setBadgeVisible: async (awardId, visible) => {
+      calls.push({ awardId, visible })
+      earned = earned.map((b) => (b.awardId === awardId ? { ...b, visible } : b))
+      return { awardId, visible }
+    },
+    profileBadges: async () => profile,
+  }
+  return { api, calls }
 }

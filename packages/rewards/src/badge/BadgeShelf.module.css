@@ -1,0 +1,35 @@
+.shelf {
+  display: grid;
+  gap: var(--space-xl);
+}
+
+.section {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.heading {
+  margin: 0;
+  color: var(--text-strong);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: var(--space-md);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cell {
+  padding: var(--space-md);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.meta {
+  color: var(--text-muted);
+  font-size: var(--font-size-caption);
+}

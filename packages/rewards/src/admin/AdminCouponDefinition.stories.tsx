@@ -62,7 +62,7 @@ export const IssuedListFiltersAndPages: Story = {
     await waitFor(() => expect(rowsNow()).toHaveLength(5))
     const used = within(canvas.getByRole('table'))
     await expect(used.queryByRole('button', { name: /회수/ })).toBeNull()
-    await expect(used.getAllByRole('link', { name: /acc_/ }).length).toBeGreaterThan(0)
+    await expect(used.getAllByRole('link', { name: /@example\.com/ }).length).toBeGreaterThan(0)
   },
 }
 

@@ -1,5 +1,6 @@
 import { formatInstant } from '@skeleton/time'
 import { Alert, Button, EmptyState, Skeleton, Switch } from '@skeleton/ui'
+import { useId } from 'react'
 import { defaultRewardsLabels, type RewardsLabels } from '../labels'
 import type { BadgeApi } from './badgeApi'
 import { BadgeTile, type BadgeTileProps } from './BadgeTile'
@@ -26,6 +27,8 @@ export function BadgeShelf({
   renderImage,
 }: BadgeShelfProps) {
   const t = labels.badge
+  const earnedId = useId()
+  const lockedId = useId()
   const query = useMyBadges(api)
   const setVisible = useSetBadgeVisible(api)
   if (query.isPending) return <Skeleton lines={3} label={labels.loading} />
@@ -47,8 +50,8 @@ export function BadgeShelf({
   return (
     <div className={styles.shelf}>
       {setVisible.isError && <Alert tone="danger">{t.visibleFailed}</Alert>}
-      <section aria-labelledby="badge-earned" className={styles.section}>
-        <h3 id="badge-earned" className={styles.heading}>
+      <section aria-labelledby={earnedId} className={styles.section}>
+        <h3 id={earnedId} className={styles.heading}>
           {t.earned}
         </h3>
         {earned.length === 0 ? (
@@ -70,7 +73,7 @@ export function BadgeShelf({
                     {badge.archived && ` · ${t.archived}`}
                   </span>
                   <Switch
-                    label={t.showOnProfile}
+                    label={t.showOnProfileFor(badge.name)}
                     checked={badge.visible}
                     disabled={
                       setVisible.isPending && setVisible.variables?.awardId === badge.awardId
@@ -86,8 +89,8 @@ export function BadgeShelf({
         )}
       </section>
       {locked.length > 0 && (
-        <section aria-labelledby="badge-locked" className={styles.section}>
-          <h3 id="badge-locked" className={styles.heading}>
+        <section aria-labelledby={lockedId} className={styles.section}>
+          <h3 id={lockedId} className={styles.heading}>
             {t.locked}
           </h3>
           <ul className={styles.grid}>

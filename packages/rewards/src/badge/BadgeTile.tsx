@@ -50,7 +50,7 @@ export function BadgeTile({
   const shownName = hidden ? labels.badge.hiddenName : (name ?? '')
   return (
     <div className={styles.tile} data-state={state} data-size={size}>
-      <span className={styles.circle} role="img" aria-label={shownName}>
+      <span className={styles.circle} aria-hidden="true">
         {hidden ? (
           <span aria-hidden="true">?</span>
         ) : imageUrl ? (
@@ -63,7 +63,10 @@ export function BadgeTile({
       {hidden ? (
         <span className={styles.description}>{labels.badge.hiddenHint}</span>
       ) : (
-        description && size === 'md' && <span className={styles.description}>{description}</span>
+        description && (
+          // 작은 줄(프로필)은 설명을 눈에는 안 보이고 낭독기에만 읽어 준다
+          <span className={size === 'md' ? styles.description : styles.srOnly}>{description}</span>
+        )
       )}
       {children}
     </div>

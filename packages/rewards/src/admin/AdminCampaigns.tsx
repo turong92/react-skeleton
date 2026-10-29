@@ -16,6 +16,11 @@ import {
 import { useId, useState, type FormEvent } from 'react'
 import type { RewardsAdminApi } from './adminApi'
 import { adminErrorMessage, isToolOff, mergeAdminLabels } from './adminErrors'
+import {
+  achievementProblems,
+  hasAchievementProblem,
+  MAX_ACHIEVEMENT_STEPS,
+} from './achievementDraft'
 import { fromLocalInput, toLocalInput } from './dateInput'
 import { useAdminCampaigns, useCampaignMutations } from './hooks'
 import type { RewardsAdminLabels } from './labels'
@@ -54,9 +59,6 @@ type Draft = {
   config: CampaignConfig
 }
 
-/** 서버 한도(`AchievementConfig.MAX_STEPS`) */
-const MAX_ACHIEVEMENT_STEPS = 20
-
 const emptyDraft = (): Draft => ({
   kind: 'attendance',
   name: '',
@@ -65,11 +67,14 @@ const emptyDraft = (): Draft => ({
   config: { daily: [], milestones: [] },
 })
 
+/** 업적 단계의 첫 보상 줄 - 비어 있는 채로 저장하지 못하게 처음부터 한 줄을 깔아 둔다 */
+const blankReward = (): RewardConfig => ({ type: 'point', params: { amount: '' } })
+
 const configFor = (kind: Draft['kind']): CampaignConfig =>
   kind === 'attendance'
     ? { daily: [], milestones: [] }
     : kind === 'achievement'
-      ? { metric: '', milestones: [{ value: 1, rewards: [] }] }
+      ? { metric: '', milestones: [{ value: 1, rewards: [blankReward()] }] }
       : { invitee: [], inviter: [], qualifyOn: 'SIGNAL', claimWithinDays: 7, inviterCap: null }
 
 /** 이벤트 운영 - 목록, 켜고 끄는 스위치, 만들기 · 고치기(종류별 설정 + 보상 목록). 백엔드 `skeleton.campaign.admin.enabled=true` + `campaign.manage` */
@@ -240,9 +245,11 @@ function CampaignDialog({
     config({ milestones: steps.map((s, i) => (i === index ? { ...s, ...next } : s)) })
   const setMilestone = (index: number, next: Partial<AttendanceMilestoneConfig>) =>
     config({ milestones: milestones.map((m, i) => (i === index ? { ...m, ...next } : m)) })
+  const problems = draft.kind === 'achievement' ? achievementProblems(draft.config) : null
+  const blocked = problems !== null && hasAchievementProblem(problems)
   const submit = (event: FormEvent) => {
     event.preventDefault()
-    onSubmit(draft)
+    if (!blocked) onSubmit(draft)
   }
   return (
     <Dialog
@@ -255,7 +262,13 @@ function CampaignDialog({
           <Button variant="ghost" onClick={onClose} disabled={busy}>
             {labels.cancel}
           </Button>
-          <Button type="submit" form={formId} loading={busy} loadingLabel={labels.loading}>
+          <Button
+            type="submit"
+            form={formId}
+            disabled={blocked}
+            loading={busy}
+            loadingLabel={labels.loading}
+          >
             {labels.save}
           </Button>
         </>
@@ -312,7 +325,16 @@ function CampaignDialog({
         </Field>
         {draft.kind === 'achievement' ? (
           <>
-            <Field label={t.achievement.metric} hint={t.achievement.metricHint} required>
+            <Field
+              label={t.achievement.metric}
+              hint={t.achievement.metricHint}
+              required
+              error={
+                problems?.metric && (draft.config.metric ?? '') !== ''
+                  ? t.achievement.errors.metric
+                  : undefined
+              }
+            >
               {(control) => (
                 <Input
                   {...control}
@@ -327,7 +349,10 @@ function CampaignDialog({
             {steps.map((step, index) => (
               <fieldset key={index} className={styles.milestone}>
                 <legend>{`${t.achievement.steps} ${index + 1}`}</legend>
-                <Field label={`${t.achievement.steps} ${index + 1} ${t.achievement.value}`}>
+                <Field
+                  label={`${t.achievement.steps} ${index + 1} ${t.achievement.value}`}
+                  error={problems?.value[index] ? t.achievement.errors.value : undefined}
+                >
                   {(control) => (
                     <Input
                       {...control}
@@ -348,10 +373,14 @@ function CampaignDialog({
                   badges={badgeChoices}
                   labels={labels}
                 />
+                {problems?.rewards[index] && (
+                  <Alert tone="warning">{t.achievement.errors.rewards}</Alert>
+                )}
                 <div>
                   <Button
                     variant="danger"
                     size="sm"
+                    disabled={steps.length <= 1}
                     aria-label={t.achievement.removeStep(index + 1)}
                     onClick={() => config({ milestones: steps.filter((_, i) => i !== index) })}
                   >
@@ -360,6 +389,7 @@ function CampaignDialog({
                 </div>
               </fieldset>
             ))}
+            {problems?.count && <Alert tone="warning">{t.achievement.errors.count}</Alert>}
             <div>
               <Button
                 variant="secondary"
@@ -369,7 +399,10 @@ function CampaignDialog({
                   config({
                     milestones: [
                       ...steps,
-                      { value: (steps[steps.length - 1]?.value ?? 0) + 1, rewards: [] },
+                      {
+                        value: (steps[steps.length - 1]?.value ?? 0) + 1,
+                        rewards: [blankReward()],
+                      },
                     ],
                   })
                 }

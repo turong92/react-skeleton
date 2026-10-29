@@ -1,7 +1,7 @@
-import { koRewardsLabels } from '@skeleton/rewards'
 import { koRewardsAdminLabels } from '@skeleton/rewards/admin'
 import { expect as baseExpect, type Browser, type BrowserContext, type Page } from 'playwright/test'
 import { afterAll, beforeAll, describe, inject, it } from 'vitest'
+import { rewardsLabelsFor } from '../src/rewards/labels'
 import { dismissConsent, ko, launch } from './helpers'
 import { ADMIN, api, ensureSignedIn, operatorPage, tokenOf } from './paymentSteps'
 
@@ -18,7 +18,8 @@ import { ADMIN, api, ensureSignedIn, operatorPage, tokenOf } from './paymentStep
 const pwExpect = baseExpect.configure({ timeout: 20_000 })
 const baseUrl = inject('baseUrl')
 const apiUrl = inject('apiUrl')
-const L = koRewardsLabels
+// 화면이 쓰는 문구 그대로 - 앱이 패키지 문구를 덮어쓴다(「프로필」 대신 「공개 배지」)
+const L = rewardsLabelsFor('ko')
 const A = koRewardsAdminLabels
 const LATE = 120_000
 
@@ -216,7 +217,7 @@ describe('badges: a note brings one, the public profile shows it, an operator aw
         const tile = section(page, L.badge.earned)
           .getByRole('listitem')
           .filter({ hasText: FIRST_NOTE.name })
-        const toggle = tile.getByRole('switch', { name: L.badge.showOnProfile })
+        const toggle = tile.getByRole('switch', { name: L.badge.showOnProfileFor(FIRST_NOTE.name) })
         await pwExpect(toggle).toBeChecked()
         await toggle.click()
         await pwExpect(toggle).not.toBeChecked()
@@ -243,6 +244,9 @@ describe('badges: a note brings one, the public profile shows it, an operator aw
       if (!(await exists(adminToken, '/admin/badges'))) return ctx.skip()
       const token = await tokenOf(apiUrl)
       await resetState()
+      const unread = async () =>
+        (await api(apiUrl, token, 'GET', '/notifications/unread-count')).json.value.count as number
+      const unreadBefore = await unread()
       const operator = await operatorPage(browser, baseUrl)
       try {
         const op = operator.page
@@ -251,8 +255,10 @@ describe('badges: a note brings one, the public profile shows it, an operator aw
         const dialog = op.getByRole('dialog', { name: A.badges.awardTitle(EARLY_BIRD.name) })
         await dialog.getByLabel(A.accountSearch.label).fill(USER_EMAIL)
         await dialog.getByRole('button', { name: A.accountSearch.submit }).click()
-        await dialog.getByRole('button', { name: A.accountSearch.pick(USER_EMAIL) }).click()
-        await dialog.getByLabel(new RegExp(`^${A.badges.reason}`)).fill('e2e 수동 수여')
+        await dialog
+          .getByRole('button', { name: A.accountSearch.pick(USER_EMAIL), exact: true })
+          .click()
+        await dialog.getByLabel(A.badges.reason).fill('e2e 수동 수여')
         await dialog.getByRole('button', { name: A.badges.award, exact: true }).click()
         await pwExpect(dialog.getByText(A.badges.awardedResult(1, 0))).toBeVisible()
 
@@ -262,6 +268,19 @@ describe('badges: a note brings one, the public profile shows it, an operator aw
         await ensureSignedIn(page, baseUrl)
         await openShelf(page)
         await pwExpect(section(page, L.badge.earned).getByText(EARLY_BIRD.name)).toBeVisible()
+        // 받았다는 알림이 하나 도착한다
+        await pwExpect.poll(unread, { timeout: 60_000 }).toBeGreaterThan(unreadBefore)
+        // 내역에 운영자가 준 「수여」 줄이 남는다
+        await op.goto(`${baseUrl}/admin/badge-awards`)
+        await pwExpect(
+          op
+            .getByRole('table', { name: A.badgeAwards.caption })
+            .getByRole('row')
+            .filter({ hasText: EARLY_BIRD.name })
+            .filter({ hasText: A.badgeAwards.actions.AWARDED })
+            .filter({ hasText: A.badgeAwards.sources.ADMIN })
+            .first(),
+        ).toBeVisible()
       } finally {
         await operator.close()
         await resetState()

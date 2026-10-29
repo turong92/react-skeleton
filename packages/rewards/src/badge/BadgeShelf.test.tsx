@@ -5,6 +5,8 @@ import { koRewardsLabels } from '../labels'
 import { BadgeTile } from './BadgeTile'
 import { ProfileBadges } from './ProfileBadges'
 import type { BadgeApi } from './badgeApi'
+import { badgeKeys } from './queries'
+import type { PublicBadge } from './types'
 
 describe('BadgeTile', () => {
   it('draws the first letter in a circle when there is no picture address', () => {
@@ -55,13 +57,27 @@ describe('BadgeTile', () => {
 })
 
 describe('ProfileBadges', () => {
-  it('draws nothing while there is nothing to show (no empty box on a profile)', () => {
-    const api: Pick<BadgeApi, 'profileBadges'> = { profileBadges: async () => [] }
-    const html = renderToStaticMarkup(
-      <QueryClientProvider client={new QueryClient()}>
+  const api: Pick<BadgeApi, 'profileBadges'> = { profileBadges: async () => [] }
+  const html = (badges: PublicBadge[]) => {
+    const client = new QueryClient()
+    client.setQueryData(badgeKeys.profile('a1'), badges)
+    return renderToStaticMarkup(
+      <QueryClientProvider client={client}>
         <ProfileBadges api={api} accountId="a1" labels={koRewardsLabels} />
       </QueryClientProvider>,
     )
-    expect(html).toBe('')
+  }
+
+  it('draws nothing when the account has no public badge (no empty box on a profile)', () => {
+    expect(html([])).toBe('')
+  })
+
+  it('draws each badge by name and keeps the description readable for a screen reader, not only as a hover title', () => {
+    const out = html([
+      { code: 'early', name: '얼리 버드', description: '초기에 함께했어요', imageUrl: null },
+    ])
+    expect(out).toContain('얼리 버드')
+    expect(out).toContain('초기에 함께했어요')
+    expect(out).not.toContain('title=')
   })
 })

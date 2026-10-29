@@ -617,6 +617,7 @@ const en: Record<keyof typeof ko, string> = {
   'profile.title': 'Public badges',
   'profile.subtitle': 'The badges this account chose to show.',
   'profile.badgesHeading': 'Badges',
+  'profile.empty': 'No badges to show.',
   'settings.badges': 'My public badges',
   'settings.badgesHint': 'What others can see. Pick them on the badges screen.',
   'cheer.couponLegend': 'Coupon',

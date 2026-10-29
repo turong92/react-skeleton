@@ -119,13 +119,13 @@ export function AdminBadges({
               header: t.columns.badge,
               rowHeader: true,
               render: (b) => (
-                <span className={styles.badgeCell}>
+                <div className={styles.badgeCell}>
                   <BadgeTile state="earned" size="sm" name={b.name} imageUrl={b.imageUrl} />
                   <span className={styles.muted}>
                     {b.code}
                     {b.hidden && ` · ${t.hiddenTag}`}
                   </span>
-                </span>
+                </div>
               ),
             },
             { key: 'holders', header: t.columns.holders, render: (b) => b.holders },
@@ -225,8 +225,9 @@ export function AdminBadges({
             mutations.award.reset()
             setAwarding(null)
           }}
-          onSubmit={(accountIds, reason) =>
-            mutations.award.mutate({ id: awarding.id, accountIds, reason })
+          onSelectionChange={() => mutations.award.reset()}
+          onSubmit={(accountIds, reason, onDone) =>
+            mutations.award.mutate({ id: awarding.id, accountIds, reason }, { onSuccess: onDone })
           }
         />
       )}
@@ -363,6 +364,7 @@ function AwardDialog({
   result,
   error,
   onClose,
+  onSelectionChange,
   onSubmit,
 }: {
   badge: AdminBadge
@@ -372,18 +374,23 @@ function AwardDialog({
   result: BadgeAwardResult | null
   error: string | null
   onClose: () => void
-  onSubmit: (accountIds: string[], reason?: string) => void
+  /** 고른 계정이 바뀌면 이전 결과 안내를 지운다 */
+  onSelectionChange: () => void
+  /** 성공하면 `onDone` 을 부른다 - 고른 계정을 비워 같은 계정에 다시 보내지 않게 */
+  onSubmit: (accountIds: string[], reason: string | undefined, onDone: () => void) => void
 }) {
   const t = labels.badges
   // 계정은 검색해서 하나씩 골라 담는다(계정 id 를 직접 적는 칸은 없다)
   const [chosen, setChosen] = useState<AccountChoice[]>([])
   const [reason, setReason] = useState('')
-  const pick = (account: AccountChoice) =>
+  const pick = (account: AccountChoice) => {
+    onSelectionChange()
     setChosen((now) =>
       now.some((a) => a.id === account.id) || now.length >= MAX_AWARD_ACCOUNTS
         ? now
         : [...now, account],
     )
+  }
   return (
     <Dialog
       open
@@ -403,6 +410,10 @@ function AwardDialog({
               onSubmit(
                 chosen.map((a) => a.id),
                 reason.trim() || undefined,
+                () => {
+                  setChosen([])
+                  setReason('')
+                },
               )
             }
           >
@@ -432,7 +443,10 @@ function AwardDialog({
                     variant="ghost"
                     size="sm"
                     aria-label={`${labels.remove}: ${accountLabelOf(account)}`}
-                    onClick={() => setChosen((now) => now.filter((a) => a.id !== account.id))}
+                    onClick={() => {
+                      onSelectionChange()
+                      setChosen((now) => now.filter((a) => a.id !== account.id))
+                    }}
                   >
                     {labels.remove}
                   </Button>

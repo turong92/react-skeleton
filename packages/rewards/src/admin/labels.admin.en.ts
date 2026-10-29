@@ -17,6 +17,7 @@ export const defaultRewardsAdminLabels: RewardsAdminLabels = {
       'The coupon values or periods do not fit together. Check the steps and dates.',
     issueClosed: 'Giving this coupon is closed right now. Check its issue period.',
     codeTaken: 'That code is already taken. Pick another.',
+    badgeArchived: 'An archived badge cannot be awarded. Restore it first.',
     notFound: 'This no longer exists. The list was refreshed.',
     validation: 'Check the values and try again.',
     notEnabled: 'This tool is turned off on the server.',
@@ -87,6 +88,12 @@ export const defaultRewardsAdminLabels: RewardsAdminLabels = {
       addStep: 'Add a milestone',
       value: 'Target value',
       removeStep: (n) => `Remove milestone ${n}`,
+      errors: {
+        metric: 'Use lowercase letters, digits and . _ - only, 1 to 64 characters.',
+        count: 'There must be 1 to 20 milestones.',
+        value: 'Must be at least 1 and greater than the previous milestone.',
+        rewards: 'Give at least one reward and fill in its value.',
+      },
     },
     referral: {
       invitee: 'Rewards for the invited friend',

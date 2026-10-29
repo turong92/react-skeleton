@@ -97,6 +97,7 @@ export const koRewardsLabels: RewardsLabels = {
     hiddenName: '숨은 배지',
     hiddenHint: '계속 하다 보면 알게 돼요.',
     showOnProfile: '프로필에 보이기',
+    showOnProfileFor: (name) => `${name}: 프로필에 보이기`,
     archived: '지금은 받을 수 없어요',
     awardedAt: (date) => `${date}에 받음`,
     visibleFailed: '바꾸지 못했어요. 다시 시도해 주세요.',

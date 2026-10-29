@@ -21,7 +21,8 @@ export function adminErrorMessage(error: unknown, labels: RewardsAdminLabels): s
   if (!(error instanceof ApiRequestError)) return labels.errors.generic
   const { code, status } = error.apiError
   if (code === ErrorCodes.POINT_INSUFFICIENT) return labels.errors.insufficient
-  if (code === 'BADGE.CODE_TAKEN') return labels.errors.codeTaken
+  if (code === ErrorCodes.BADGE_CODE_TAKEN) return labels.errors.codeTaken
+  if (code === ErrorCodes.BADGE_ARCHIVED) return labels.errors.badgeArchived
   if (code === ErrorCodes.COUPON_ISSUE_CLOSED) return labels.errors.issueClosed
   if (code === ErrorCodes.COUPON_DEFINITION_INVALID) return labels.errors.definitionInvalid
   if (code === ErrorCodes.COMMON_VALIDATION_FAILED || status === 400)

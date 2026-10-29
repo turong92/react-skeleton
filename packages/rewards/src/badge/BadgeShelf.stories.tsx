@@ -57,13 +57,13 @@ export const NoneEarned: Story = {
 export const ProfileSwitch: Story = {
   render: (args) => <BadgeShelf {...args} api={createFakeBadges().api} />,
   play: async ({ canvas, userEvent }) => {
-    const switches = await canvas.findAllByRole('switch', { name: '프로필에 보이기' })
+    const switches = await canvas.findAllByRole('switch', { name: /프로필에 보이기$/ })
     await expect(switches[0]).toBeChecked()
     await expect(switches[1]).not.toBeChecked()
     await userEvent.click(switches[0])
     await waitFor(async () =>
       expect(
-        (await canvas.findAllByRole('switch', { name: '프로필에 보이기' }))[0],
+        (await canvas.findAllByRole('switch', { name: /프로필에 보이기$/ }))[0],
       ).not.toBeChecked(),
     )
   },

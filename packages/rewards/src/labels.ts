@@ -95,6 +95,8 @@ export type RewardsLabels = {
     hiddenName: string
     hiddenHint: string
     showOnProfile: string
+    /** 스위치마다 다른 낭독 이름 - 「얼리 버드: 프로필에 보이기」 */
+    showOnProfileFor: (name: string) => string
     archived: string
     awardedAt: (date: string) => string
     visibleFailed: string

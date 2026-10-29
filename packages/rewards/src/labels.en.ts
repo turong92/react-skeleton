@@ -101,6 +101,7 @@ export const defaultRewardsLabels: RewardsLabels = {
     hiddenName: 'Hidden badge',
     hiddenHint: 'Keep going to find out.',
     showOnProfile: 'Show on profile',
+    showOnProfileFor: (name) => `${name}: show on profile`,
     archived: 'No longer awarded',
     awardedAt: (date) => `Earned ${date}`,
     visibleFailed: 'Could not change that. Please try again.',

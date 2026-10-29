@@ -217,32 +217,33 @@ export function useBadgeMutations(
   return {
     create: useMutation({
       mutationFn: (input: BadgeInput) => api.createBadge(input),
-      onSuccess: done,
+      onSettled: done,
     }),
     update: useMutation({
       mutationFn: (v: { id: string; input: BadgeUpdate }) => api.updateBadge(v.id, v.input),
-      onSuccess: done,
+      onSettled: done,
     }),
     setStatus: useMutation({
       mutationFn: (v: { id: string; status: BadgeDefinitionStatus }) =>
         api.setBadgeStatus(v.id, v.status),
-      onSuccess: done,
+      onSettled: done,
     }),
     award: useMutation({
       mutationFn: (v: { id: string; accountIds: string[]; reason?: string }) =>
         api.awardBadge(v.id, { accountIds: v.accountIds, reason: v.reason }),
-      onSuccess: done,
+      onSettled: done,
     }),
   }
 }
 
-/** 회수(사유 필수) - 성공하면 내역 · 목록 · 사용자 배지 화면을 다시 읽는다 */
+/** 회수(사유 필수) - 끝나면(실패해도) 내역 · 목록 · 사용자 배지 화면을 다시 읽는다 */
 export function useRevokeBadgeAward(api: Pick<RewardsAdminApi, 'revokeBadgeAward'>) {
   const client = useQueryClient()
   return useMutation({
     mutationFn: (v: { awardId: string; reason: string }) =>
       api.revokeBadgeAward(v.awardId, v.reason),
-    onSuccess: () => client.invalidateQueries({ queryKey: rewardsRoot }),
+    // 실패해도 다시 읽는다 - 이미 회수된 줄(404)의 안내가 「목록을 새로 불러왔어요」 이다
+    onSettled: () => client.invalidateQueries({ queryKey: rewardsRoot }),
   })
 }
 

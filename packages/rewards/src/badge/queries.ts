@@ -28,5 +28,8 @@ export function useProfileBadges(api: Pick<BadgeApi, 'profileBadges'>, accountId
   return useQuery({
     queryKey: badgeKeys.profile(accountId),
     queryFn: () => api.profileBadges(accountId),
+    // 공개 화면 - 실패해도 토스트 · 재시도 없이 줄만 없다(401 은 공개 경로가 꺼진 서버, 404 는 배지 모듈이 없는 서버)
+    retry: false,
+    meta: { quietStatuses: [401, 404] },
   })
 }

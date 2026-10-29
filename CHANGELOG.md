@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — 배지 · 업적 (2026-10-29)
+
+백엔드 짝: kotlin-skeleton `badge` · `badge-jdbc`(경로 `/api/v1/badges`, 운영 `/api/v1/admin/badges` · `/badge-awards`, 권한 `badge.manage`)와 `campaign` 의 `achievement` 종류.
+
+- `@skeleton/rewards/badge`(새 하위 경로): `createBadgeApi`(`createRewardsApi` 에 섞이지 않는 따로 선 갈래) · `useMyBadges` · `useSetBadgeVisible` · `useProfileBadges`, `BadgeShelf`(받은 것 + 「프로필에 보이기」 스위치 · 아직인 것 흐리게 · 숨은 업적 「?」), `BadgeTile`(그림은 주소만 - 없으면 이름 첫 글자 원, `renderImage` 로 바꾼다), `ProfileBadges`(**로그인 없이** 읽는 공개 줄 - 이름 · 설명 · 그림만, 없으면 아무것도 안 그림). 공개 경로는 서버 모듈 기본이 꺼짐이라 앱이 `skeleton.badge.http.allow-anonymous-read: true` 로 켠다. 필명(`author-profile`) 화면에는 붙이지 않는다(주소에 계정 id 가 담긴다).
+- `@skeleton/rewards/admin`: `AdminBadges`(목록 · 보유자 수 · 만들기/고치기 · 보관/되살리기 · 수동 수여), `AdminBadgeAwards`(수여 · 회수 내역 · 회수는 사유 필수), `RewardListEditor` 의 종류 `badge`(`badges` 를 주면 보인다), `AdminCampaigns` 의 종류 `achievement`(수치 이름 + 기준값 단계마다 보상, 저장 전에 로컬 검사), `REWARDS_PERMISSIONS.badge`, `ErrorCodes.BADGE_CODE_TAKEN` · `BADGE_ARCHIVED`.
+- 샘플: `/rewards/badges`, 공개 `/profile/:accountId`, 설정의 「내 공개 배지」, 운영 `/admin/badges` · `/admin/badge-awards`, 새 e2e `badges.e2e.ts`(노트 → 첫 노트 · 공개 줄 · 수동 수여 · 사유 있는 회수).
+
 ### Changed — 쿠폰 발급 내역의 계정 칸 (2026-10-29)
 
 백엔드 짝: kotlin-skeleton `coupon` 의 발급 내역 `accountLabel`.

@@ -606,6 +606,7 @@ export default {
   'profile.title': '공개 배지',
   'profile.subtitle': '이 계정이 보이기로 한 배지예요.',
   'profile.badgesHeading': '배지',
+  'profile.empty': '보이는 배지가 없어요.',
   'settings.badges': '내 공개 배지',
   'settings.badgesHint': '다른 사람이 보는 배지예요. 보일 배지는 배지 화면에서 골라요.',
   'cheer.couponLegend': '쿠폰',

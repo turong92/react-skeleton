@@ -25,7 +25,11 @@ export function AdminCampaignsPage() {
       labels={rewardsAdminLabelsFor(language)}
       locale={language}
       badgeChoices={
-        badges.data ? badges.data.map((b) => ({ code: b.code, name: b.name })) : undefined
+        badges.data
+          ? badges.data
+              .filter((b) => b.status === 'ACTIVE')
+              .map((b) => ({ code: b.code, name: b.name }))
+          : undefined
       }
       couponChoices={
         definitions.data ? definitions.data.map((d) => ({ id: d.id, name: d.name })) : undefined

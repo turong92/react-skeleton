@@ -15,7 +15,10 @@ export type RewardListEditorProps = {
   onChange: (rewards: RewardConfig[]) => void
   /** 쿠폰 보상에서 고를 쿠폰 정의 - 없으면 id 를 직접 적는다 */
   coupons?: readonly CouponChoice[]
-  /** 배지 보상에서 고를 배지 정의 - 없으면 코드를 직접 적는다 */
+  /**
+   * 배지 보상에서 고를 배지 정의(앱이 `badge` 모듈을 조립했을 때 준다). **주면 「배지」 종류가 보인다** - 안 주면 종류 선택지에 없다.
+   * 이미 배지 보상이 저장된 줄은 안 줘도 그대로 보이고(코드를 적는 칸) 고칠 수 있다. 보관된 배지는 목록에서 빼도 저장된 값은 선택지로 남는다
+   */
   badges?: readonly BadgeChoice[]
   labels?: Partial<RewardsAdminLabels>
 }
@@ -61,7 +64,9 @@ export function RewardListEditor({
               >
                 <option value="point">{t.types.point}</option>
                 <option value="coupon">{t.types.coupon}</option>
-                <option value="badge">{t.types.badge}</option>
+                {(badges || reward.type === 'badge') && (
+                  <option value="badge">{t.types.badge}</option>
+                )}
               </Select>
             )}
           </Field>
@@ -109,6 +114,10 @@ export function RewardListEditor({
                         {badge.name}
                       </option>
                     ))}
+                    {/* 저장된 값이 목록에 없으면(보관된 배지) 값이 조용히 비지 않게 코드 그대로 남긴다 */}
+                    {reward.params.code && !badges.some((b) => b.code === reward.params.code) && (
+                      <option value={reward.params.code}>{reward.params.code}</option>
+                    )}
                   </Select>
                 ) : (
                   <Input

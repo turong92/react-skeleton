@@ -169,6 +169,11 @@ export const ErrorCodes = {
   /** 쿠폰 정의 값 · 기간 검증 실패 400 (발행 시작 < 끝, 사용 시작 < 유효기간 끝 …) */
   COUPON_DEFINITION_INVALID: 'COUPON.DEFINITION_INVALID',
   POINT_INSUFFICIENT: 'POINT.INSUFFICIENT',
+  // modules/badge BadgeErrors.kt
+  /** 같은 코드의 배지 정의가 이미 있다(409) */
+  BADGE_CODE_TAKEN: 'BADGE.CODE_TAKEN',
+  /** 보관된 배지는 줄 수 없다(409) */
+  BADGE_ARCHIVED: 'BADGE.ARCHIVED',
 
   // payment 할인 · 0원 (이벤트 · 보상 계획 C-P): 쿠폰이 이 상품에 안 맞음 400 · 이미 쓰는 중 409 · 이 결제 방법은 쿠폰 불가 400 · 최소 금액 미달 400 · 결제한 금액이 없어 환불할 것 없음 409
   PAYMENT_DISCOUNT_NOT_APPLICABLE: 'PAYMENT.DISCOUNT_NOT_APPLICABLE',

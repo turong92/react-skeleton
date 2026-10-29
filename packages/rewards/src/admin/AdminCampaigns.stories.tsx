@@ -92,11 +92,33 @@ export const CreateAnAchievementEvent: Story = {
     await userEvent.type(dialog.getByLabelText(/^수치 이름/), 'notes.created')
     await userEvent.clear(dialog.getByLabelText('달성 단계 1 기준값'))
     await userEvent.type(dialog.getByLabelText('달성 단계 1 기준값'), '10')
-    await userEvent.click(dialog.getByRole('button', { name: '보상 더하기' }))
+    // 저장은 수치 이름 · 기준값 · 보상이 갖춰져야 열린다
+    await expect(dialog.getByRole('button', { name: '저장' })).toBeDisabled()
     await userEvent.selectOptions(dialog.getByLabelText('달성 단계 1 1 보상 종류'), '배지')
     await userEvent.selectOptions(dialog.getByLabelText('달성 단계 1 1 배지'), '열 번째 노트')
+    await expect(dialog.getByRole('button', { name: '저장' })).toBeEnabled()
     await userEvent.click(dialog.getByRole('button', { name: '저장' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     await expect(await canvas.findByText('노트 업적')).toBeVisible()
+  },
+}
+
+export const AchievementStepsAreChecked: Story = {
+  render: (args) => <AdminCampaigns {...args} api={createFakeAdmin().api} />,
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(await canvas.findByRole('button', { name: '이벤트 만들기' }))
+    const dialog = within(await screen.findByRole('dialog', { name: '이벤트 만들기' }))
+    await userEvent.selectOptions(dialog.getByLabelText('종류'), '업적')
+    await userEvent.type(dialog.getByLabelText(/^수치 이름/), 'Bad Name')
+    await expect(
+      await dialog.findByText('영소문자 · 숫자 · . _ - 만, 1~64자로 적어 주세요.'),
+    ).toBeVisible()
+    // 둘째 단계(2)가 첫째(10)보다 크지 않으면 그 칸에 오류
+    await userEvent.click(dialog.getByRole('button', { name: '단계 더하기' }))
+    await userEvent.type(dialog.getByLabelText('달성 단계 1 기준값'), '0')
+    await expect(await dialog.findByText('1 이상이고, 앞 단계보다 커야 해요.')).toBeVisible()
+    // 마지막 하나 남은 단계는 뺄 수 없다
+    await userEvent.click(dialog.getByRole('button', { name: '단계 2 빼기' }))
+    await expect(dialog.getByRole('button', { name: '단계 1 빼기' })).toBeDisabled()
   },
 }

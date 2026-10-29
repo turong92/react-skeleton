@@ -1,0 +1,9 @@
+.page {
+  display: grid;
+  gap: var(--space-xl);
+}
+
+.badges {
+  display: grid;
+  gap: var(--space-lg);
+}

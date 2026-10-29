@@ -69,6 +69,11 @@ describe('ErrorCodes', () => {
     expect(ErrorCodes.BOARD_AUTHOR_NOT_ALLOWED).toBe('BOARD.AUTHOR_NOT_ALLOWED')
   })
 
+  it('carries the badge module codes', () => {
+    expect(ErrorCodes.BADGE_CODE_TAKEN).toBe('BADGE.CODE_TAKEN')
+    expect(ErrorCodes.BADGE_ARCHIVED).toBe('BADGE.ARCHIVED')
+  })
+
   it('has unique values, each shaped DOMAIN.REASON', () => {
     const values = Object.values(ErrorCodes)
     expect(new Set(values).size).toBe(values.length)

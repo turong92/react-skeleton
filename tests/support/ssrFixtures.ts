@@ -50,6 +50,11 @@ const fakeRewardsApi = () => ({
     meta: { timestamp: '2026-01-01T00:00:00Z' },
   }),
 })
+const fakeBadgeApi = () => ({
+  myBadges: async () => ({ earned: [], locked: [] }),
+  setBadgeVisible: async (awardId: string, visible: boolean) => ({ awardId, visible }),
+  profileBadges: async () => [],
+})
 const rewardsCoupon = {
   id: 'c1',
   name: 'Welcome',
@@ -913,6 +918,9 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
   }),
   'rewards#PointBalance': () => ({ api: fakeRewardsApi() }),
   'rewards#PointHistory': () => ({ api: fakeRewardsApi() }),
+  'rewards#BadgeTile': () => ({ state: 'earned', name: 'Early bird', imageUrl: null }),
+  'rewards#BadgeShelf': () => ({ api: fakeBadgeApi() }),
+  'rewards#ProfileBadges': () => ({ api: fakeBadgeApi(), accountId: 'acc_1' }),
   'notifications#NotificationBell': () => ({ api: fakeNotificationsApi() }),
   'notifications#NotificationList': () => ({ items: [notification], onOpen: () => {} }),
   'notifications#NotificationPreferences': () => ({ api: fakeNotificationsApi() }),
@@ -1114,6 +1122,9 @@ export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
   'rewards#useRedeemCoupon': () => [fakeRewardsApi()],
   'rewards#usePoints': () => [fakeRewardsApi()],
   'rewards#usePointHistory': () => [fakeRewardsApi()],
+  'rewards#useMyBadges': () => [fakeBadgeApi()],
+  'rewards#useSetBadgeVisible': () => [fakeBadgeApi()],
+  'rewards#useProfileBadges': () => [fakeBadgeApi(), 'acc_1'],
   'notifications#useNotifications': () => [fakeNotificationsApi()],
   'notifications#useUnreadCount': () => [fakeNotificationsApi()],
   'notifications#useMarkRead': () => [fakeNotificationsApi()],

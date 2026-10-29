@@ -27,7 +27,8 @@ describe('createBadgeApi', () => {
     const result = await createBadgeApi(client).profileBadges('acc/1')
     expect(result).toEqual([badge])
     expect(calls).toEqual([
-      { kind: 'value', path: '/badges/accounts/acc%2F1', request: { skipAuth: true } },
+      // skipAuth 를 주면 공개 경로 401 이 로그인한 사람을 로그아웃시킨다(앱의 401 처리가 토큰을 지운다)
+      { kind: 'value', path: '/badges/accounts/acc%2F1', request: undefined },
     ])
   })
 

@@ -28,11 +28,12 @@ export function ProfileBadges({
   return (
     <ul className={styles.row} aria-label={labels.badge.profileTitle}>
       {query.data.map((badge) => (
-        <li key={badge.code} className={styles.item} title={badge.description}>
+        <li key={badge.code} className={styles.item}>
           <BadgeTile
             state="earned"
             size="sm"
             name={badge.name}
+            description={badge.description}
             imageUrl={badge.imageUrl}
             renderImage={renderImage}
             labels={labels}

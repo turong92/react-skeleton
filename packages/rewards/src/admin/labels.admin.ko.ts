@@ -16,6 +16,7 @@ export const koRewardsAdminLabels: RewardsAdminLabels = {
     definitionInvalid: '쿠폰의 값이나 기간이 맞지 않아요. 단계와 날짜를 확인해 주세요.',
     issueClosed: '지금은 이 쿠폰을 줄 수 없는 기간이에요. 발행 기간을 확인해 주세요.',
     codeTaken: '이미 쓰는 코드예요. 다른 코드로 바꿔 주세요.',
+    badgeArchived: '보관된 배지는 줄 수 없어요. 먼저 되살려 주세요.',
     notFound: '이제 없는 항목이에요. 목록을 새로 불러왔어요.',
     validation: '값을 확인하고 다시 해 보세요.',
     notEnabled: '서버에서 이 도구가 꺼져 있어요.',
@@ -85,6 +86,12 @@ export const koRewardsAdminLabels: RewardsAdminLabels = {
       addStep: '단계 더하기',
       value: '기준값',
       removeStep: (n) => `단계 ${n} 빼기`,
+      errors: {
+        metric: '영소문자 · 숫자 · . _ - 만, 1~64자로 적어 주세요.',
+        count: '단계는 1개에서 20개까지예요.',
+        value: '1 이상이고, 앞 단계보다 커야 해요.',
+        rewards: '보상을 하나 이상 정하고, 값을 채워 주세요.',
+      },
     },
     referral: {
       invitee: '초대받은 사람의 보상',

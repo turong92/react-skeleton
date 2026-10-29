@@ -8,6 +8,7 @@
 }
 
 .item {
+  position: relative;
   padding: var(--space-xs) var(--space-sm);
   border: 1px solid var(--border);
   border-radius: var(--radius-full);

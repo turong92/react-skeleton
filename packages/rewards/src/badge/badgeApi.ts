@@ -23,12 +23,12 @@ export function createBadgeApi(
         method: 'PATCH',
         json: { visible },
       }),
+    // `skipAuth` 를 주지 않는다 - 공개 경로가 꺼진 서버(기본)의 401 이 `skipAuth` 요청이면 앱의 401 처리가 로그인한 사람의 토큰을 지운다.
+    // 비로그인 방문자는 원래 토큰이 없어 헤더가 붙지 않는다
     profileBadges: async (accountId) =>
       (
         await client.value<{ badges: PublicBadge[] }>(
           `${base}/accounts/${encodeURIComponent(accountId)}`,
-          // 공개 경로 — 만료된 토큰이 갱신 소동을 일으키지 않게 인증 헤더를 붙이지 않는다
-          { skipAuth: true },
         )
       ).badges,
   }

@@ -20,6 +20,8 @@ export type RewardsAdminLabels = {
     definitionInvalid: string
     /** `BADGE.CODE_TAKEN` - 같은 코드의 배지가 이미 있다 */
     codeTaken: string
+    /** `BADGE.ARCHIVED` - 보관된 배지는 줄 수 없다 */
+    badgeArchived: string
     notFound: string
     validation: string
     notEnabled: string
@@ -89,6 +91,7 @@ export type RewardsAdminLabels = {
       addStep: string
       value: string
       removeStep: (n: number) => string
+      errors: { metric: string; count: string; value: string; rewards: string }
     }
     referral: {
       invitee: string

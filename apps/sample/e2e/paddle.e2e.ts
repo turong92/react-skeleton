@@ -196,72 +196,79 @@ describe('changing the plan of a Paddle subscription', () => {
     await page.waitForURL(/\/subscriptions\/return\?.*provider=paddle/)
     await pwExpect(resultTitle(page, labels.result.paid.title)).toBeVisible()
     const providerSub = (await paddle.state()).subscriptions[0]!
-    // 일할 비율을 고정한다 - 새 가격 500 × 0.6 = 300, 옛 가격 300 × 0.6 = 180 → 지금 결제 120센트
-    await paddle.set({ prorationRatio: 0.6 })
+    try {
+      // 일할 비율을 고정한다 - 새 가격 500 × 0.6 = 300, 옛 가격 300 × 0.6 = 180 → 지금 결제 120센트
+      await paddle.set({ prorationRatio: 0.6 })
 
-    // 올리기 - 창의 금액은 Paddle 미리보기의 grand_total 이다
-    const dialog = page.getByRole('dialog')
-    await page.goto(`${baseUrl}/subscription`)
-    await page.getByRole('button', { name: subscribed.mine.changePlan, exact: true }).click()
-    await dialog.getByLabel(subscribed.changeDialog.plan).selectOption('standard-usd')
-    await pwExpect(dialog.getByText(subscribed.changeDialog.chargeNow)).toBeVisible()
-    await pwExpect(dialog.getByText('US$1.20', { exact: true })).toBeVisible()
-    const previewed = (await paddle.state()).calls.filter(
-      (c) => c.method === 'PATCH' && c.path.endsWith('/preview'),
-    )
-    expect(previewed.at(-1)?.totals?.grand_total).toBe('120')
-    await dialog.getByRole('button', { name: subscribed.changeDialog.confirm }).click()
-    await pwExpect(dialog).toBeHidden()
+      // 올리기 - 창의 금액은 Paddle 미리보기의 grand_total 이다
+      const dialog = page.getByRole('dialog')
+      await page.goto(`${baseUrl}/subscription`)
+      await page.getByRole('button', { name: subscribed.mine.changePlan, exact: true }).click()
+      await dialog.getByLabel(subscribed.changeDialog.plan).selectOption('standard-usd')
+      await pwExpect(dialog.getByText(subscribed.changeDialog.chargeNow)).toBeVisible()
+      await pwExpect(dialog.getByText('US$1.20', { exact: true })).toBeVisible()
+      const previewed = (await paddle.state()).calls.filter(
+        (c) => c.method === 'PATCH' && c.path.endsWith('/preview'),
+      )
+      expect(previewed.at(-1)?.totals?.grand_total).toBe('120')
+      await dialog.getByRole('button', { name: subscribed.changeDialog.confirm }).click()
+      await pwExpect(dialog).toBeHidden()
 
-    await pwExpect
-      .poll(async () => (await mine()).subscription?.planCode, {
-        timeout: 30_000,
-        intervals: [500],
-      })
-      .toBe('standard-usd')
-    await pwExpect
-      .poll(async () => (await mine()).orders.map((o) => o.kind).sort(), {
-        timeout: 30_000,
-        intervals: [500],
-      })
-      .toEqual(['SUBSCRIPTION_CHANGE', 'SUBSCRIPTION_INITIAL'])
-    const changeOrder = (await mine()).orders.find((o) => o.kind === 'SUBSCRIPTION_CHANGE')!
-    expect(changeOrder.amount).toEqual({ amount: 120, currency: 'USD' })
-    // 변경 결제(120)가 구독 금액을 덮지 않는다 - 새 플랜의 가격 그대로
-    expect((await mine()).subscription?.amount).toEqual({ amount: 500, currency: 'USD' })
-    // 가짜 Paddle 이 받은 청구 방식 - 올리기는 바로 일할
-    const applied = (await paddle.state()).calls.filter(
-      (c) => c.method === 'PATCH' && !c.path.endsWith('/preview'),
-    )
-    expect(applied).toHaveLength(1)
-    expect(applied[0]).toMatchObject({
-      path: `/subscriptions/${providerSub.id}`,
-      authorized: true,
-      body: {
-        items: [{ price_id: 'pri_e2e_standard', quantity: 1 }],
-        proration_billing_mode: 'prorated_immediately',
-      },
-    })
-
-    // 내리기 - Paddle 구독은 올리기만 연다: 낮은 플랜은 선택지에 없다. Paddle 은 바뀌지 않는다
-    await page.goto(`${baseUrl}/subscription`)
-    await page.getByRole('button', { name: subscribed.mine.changePlan, exact: true }).click()
-    await pwExpect(dialog.getByLabel(subscribed.changeDialog.plan)).toBeVisible()
-    await pwExpect(dialog.locator('option[value="pro-usd"]')).toHaveCount(1)
-    await pwExpect(dialog.locator('option[value="basic-usd"]')).toHaveCount(0)
-    await dialog.getByRole('button', { name: subscribed.changeDialog.dismiss }).click()
-    expect((await paddle.state()).subscriptions[0]).toMatchObject({ priceId: 'pri_e2e_standard' })
-    expect(
-      (await paddle.state()).calls.filter(
+      await pwExpect
+        .poll(async () => (await mine()).subscription?.planCode, {
+          timeout: 30_000,
+          intervals: [500],
+        })
+        .toBe('standard-usd')
+      await pwExpect
+        .poll(async () => (await mine()).orders.map((o) => o.kind).sort(), {
+          timeout: 30_000,
+          intervals: [500],
+        })
+        .toEqual(['SUBSCRIPTION_CHANGE', 'SUBSCRIPTION_INITIAL'])
+      const changeOrder = (await mine()).orders.find((o) => o.kind === 'SUBSCRIPTION_CHANGE')!
+      expect(changeOrder.amount).toEqual({ amount: 120, currency: 'USD' })
+      // 변경 결제(120)가 구독 금액을 덮지 않는다 - 새 플랜의 가격 그대로
+      expect((await mine()).subscription?.amount).toEqual({ amount: 500, currency: 'USD' })
+      // 가짜 Paddle 이 받은 청구 방식 - 올리기는 바로 일할
+      const applied = (await paddle.state()).calls.filter(
         (c) => c.method === 'PATCH' && !c.path.endsWith('/preview'),
-      ),
-    ).toHaveLength(1)
+      )
+      expect(applied).toHaveLength(1)
+      expect(applied[0]).toMatchObject({
+        path: `/subscriptions/${providerSub.id}`,
+        authorized: true,
+        body: {
+          items: [{ price_id: 'pri_e2e_standard', quantity: 1 }],
+          proration_billing_mode: 'prorated_immediately',
+        },
+      })
 
-    // 다른 시나리오가 새 계정 상태를 쓰도록 구독을 끝낸다
-    await paddle.set({ endPeriod: providerSub.id })
-    await pwExpect
-      .poll(async () => (await mine()).subscription?.status, { timeout: 30_000, intervals: [500] })
-      .toBe('ENDED')
+      // 내리기 - Paddle 구독은 올리기만 연다: 낮은 플랜은 선택지에 없다. Paddle 은 바뀌지 않는다
+      await page.goto(`${baseUrl}/subscription`)
+      await page.getByRole('button', { name: subscribed.mine.changePlan, exact: true }).click()
+      await pwExpect(dialog.getByLabel(subscribed.changeDialog.plan)).toBeVisible()
+      await pwExpect(dialog.locator('option[value="pro-usd"]')).toHaveCount(1)
+      await pwExpect(dialog.locator('option[value="basic-usd"]')).toHaveCount(0)
+      await dialog
+        .getByRole('button', { name: subscribed.changeDialog.dismiss, exact: true })
+        .click()
+      expect((await paddle.state()).subscriptions[0]).toMatchObject({ priceId: 'pri_e2e_standard' })
+      expect(
+        (await paddle.state()).calls.filter(
+          (c) => c.method === 'PATCH' && !c.path.endsWith('/preview'),
+        ),
+      ).toHaveLength(1)
+    } finally {
+      // 어디서 실패해도 구독을 끝낸다 - 남으면 같은 계정을 쓰는 뒤 시나리오가 전부 막힌다
+      await paddle.set({ endPeriod: providerSub.id })
+      await pwExpect
+        .poll(async () => (await mine()).subscription?.status, {
+          timeout: 30_000,
+          intervals: [500],
+        })
+        .toBe('ENDED')
+    }
     expect((await paddle.state()).sent.every((s) => s.status === 200)).toBe(true)
   }, 180_000)
 })

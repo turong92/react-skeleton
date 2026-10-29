@@ -311,6 +311,7 @@ export const koPaymentLabels: PaymentLabels = {
       confirmScheduled: '변경 예약',
       loadingPreview: '결제할 금액을 확인하는 중',
       previewError: '결제할 금액을 불러오지 못했어요. 다시 해 보세요.',
+      previewUnavailable: '이 결제 방식으로는 아직 준비되지 않은 플랜이에요.',
       previewDowngradeUnsupported:
         '이 플랜으로는 바꿀 수 없어요. 이 결제 방식은 더 높은 플랜이나 더 긴 결제 주기로만 바꿀 수 있어요.',
       confirm: '이 플랜으로 바꾸기',

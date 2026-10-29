@@ -203,7 +203,7 @@ describe('changing the plan of a Paddle subscription', () => {
     const dialog = page.getByRole('dialog')
     await page.goto(`${baseUrl}/subscription`)
     await page.getByRole('button', { name: subscribed.mine.changePlan, exact: true }).click()
-    await dialog.getByLabel(subscribed.changeDialog.plan).selectOption('standard')
+    await dialog.getByLabel(subscribed.changeDialog.plan).selectOption('standard-usd')
     await pwExpect(dialog.getByText(subscribed.changeDialog.chargeNow)).toBeVisible()
     await pwExpect(dialog.getByText('US$1.20', { exact: true })).toBeVisible()
     const previewed = (await paddle.state()).calls.filter(
@@ -218,7 +218,7 @@ describe('changing the plan of a Paddle subscription', () => {
         timeout: 30_000,
         intervals: [500],
       })
-      .toBe('standard')
+      .toBe('standard-usd')
     await pwExpect
       .poll(async () => (await mine()).orders.map((o) => o.kind).sort(), {
         timeout: 30_000,
@@ -227,6 +227,8 @@ describe('changing the plan of a Paddle subscription', () => {
       .toEqual(['SUBSCRIPTION_CHANGE', 'SUBSCRIPTION_INITIAL'])
     const changeOrder = (await mine()).orders.find((o) => o.kind === 'SUBSCRIPTION_CHANGE')!
     expect(changeOrder.amount).toEqual({ amount: 120, currency: 'USD' })
+    // 변경 결제(120)가 구독 금액을 덮지 않는다 - 새 플랜의 가격 그대로
+    expect((await mine()).subscription?.amount).toEqual({ amount: 500, currency: 'USD' })
     // 가짜 Paddle 이 받은 청구 방식 - 올리기는 바로 일할
     const applied = (await paddle.state()).calls.filter(
       (c) => c.method === 'PATCH' && !c.path.endsWith('/preview'),
@@ -241,16 +243,12 @@ describe('changing the plan of a Paddle subscription', () => {
       },
     })
 
-    // 내리기 - 서버가 거절하고, 창은 이유를 보이며 확인이 잠긴다. Paddle 은 바뀌지 않는다
+    // 내리기 - Paddle 구독은 올리기만 연다: 낮은 플랜은 선택지에 없다. Paddle 은 바뀌지 않는다
     await page.goto(`${baseUrl}/subscription`)
     await page.getByRole('button', { name: subscribed.mine.changePlan, exact: true }).click()
-    await dialog.getByLabel(subscribed.changeDialog.plan).selectOption('basic')
-    await pwExpect(
-      dialog.getByText(subscribed.changeDialog.previewDowngradeUnsupported),
-    ).toBeVisible()
-    await pwExpect(
-      dialog.getByRole('button', { name: subscribed.changeDialog.confirm }),
-    ).toHaveAttribute('aria-disabled', 'true')
+    await pwExpect(dialog.getByLabel(subscribed.changeDialog.plan)).toBeVisible()
+    await pwExpect(dialog.locator('option[value="pro-usd"]')).toHaveCount(1)
+    await pwExpect(dialog.locator('option[value="basic-usd"]')).toHaveCount(0)
     await dialog.getByRole('button', { name: subscribed.changeDialog.dismiss }).click()
     expect((await paddle.state()).subscriptions[0]).toMatchObject({ priceId: 'pri_e2e_standard' })
     expect(

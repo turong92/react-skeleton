@@ -11,7 +11,7 @@ import type { BrowserContext } from 'playwright'
  *   남은 금액을 넘으면 400 `adjustment_total_above_remaining_allowed`. 기본은 Paddle 실계정처럼 **검토 중**(`pending_approval`)으로 답하고 `adjustment.created` 를 쏜다 - 결정은 시험이 `{ decide }` 로 내린다(`adjustment.updated`).
  * Paddle API(백엔드가 부른다): POST /transactions {items:[{price_id,quantity}], custom_data} - 서버가 거래를 먼저 만든다(Bearer 키가 틀리면 403) → {data:{id:'txn_…'}}.
  *   PATCH /subscriptions/{id}/preview · PATCH /subscriptions/{id} {items:[{price_id,quantity}], proration_billing_mode} - 플랜 바꾸기. **`prorated_immediately` 만** 받는다(아니면 400). 남은 시간 비율로 일할:
- *     새 가격 × 비율 = `total`, 옛 가격 × 비율 = `credit`, `grand_total` = max(total − credit, 0). 실행이면 `transaction.completed`(`origin: subscription_update`, `total` = 실제 낸 돈, `credit` 0, `line_items` 새 품목 + · 옛 품목 -1) + `subscription.updated`(새 `items`)를 쏜다. 미리보기의 `update_summary.credit.amount` 는 음수, 실행 응답의 금액 칸은 null.
+ *     새 가격 × 비율 − 옛 가격 × 비율 = 낼 돈(`grand_total`, 음수면 0). 미리보기의 `immediate_transaction.details.totals` 는 `{total: 낼 돈, credit: 0, grand_total: 낼 돈}`, 총액 · 크레딧은 `update_summary.charge` · `update_summary.credit.amount`(음수). 실행이면 `transaction.completed`(`origin: subscription_update`, `total` = 실제 낸 돈, `credit` 0, `line_items` 새 품목 + · 옛 품목 -1) + `subscription.updated`(새 `items`)를 쏜다. 미리보기의 `update_summary.credit.amount` 는 음수, 실행 응답의 금액 칸은 null.
  *   POST /subscriptions/{id}/cancel {effective_from} — Bearer 키가 틀리면 403. `next_billing_period` 면 해지 예약(`scheduled_change`)을 걸고 `subscription.updated` 를 쏜다.
  * 결제창(Paddle.js)은 이 서버에 없다 — 시험이 스크립트(`https://cdn.paddle.com/paddle/v2/paddle.js`)를 가로채 `fakePaddleSdkScript` 로 바꾼다(`routePaddleSdk`).
  * 그 대역은 `Checkout.open({ transactionId })` 에서 이 서버의 `POST /sdk/checkout` 을 부르고(거래 id 만) 곧장 successUrl 로 돌려보낸다. 이 서버는 그때 미리 만들어진 거래(가격 · customData 는 백엔드가 정한 것)를 결제하고 구독을 만들어 웹훅 셋을 쏜다.
@@ -173,7 +173,6 @@ export async function startFakePaddle(): Promise<FakePaddle> {
     origin: string,
     priceId: string,
     transactionId?: string,
-    credit = 0,
   ) {
     const at = iso(new Date())
     return {
@@ -191,8 +190,8 @@ export async function startFakePaddle(): Promise<FakePaddle> {
           subtotal: String(amount),
           tax: '0',
           total: String(amount),
-          credit: String(credit),
-          grand_total: String(Math.max(amount - credit, 0)),
+          credit: '0',
+          grand_total: String(amount),
           currency_code: currency,
         },
       },
@@ -509,7 +508,8 @@ export async function startFakePaddle(): Promise<FakePaddle> {
       const total = Math.round(target.amount * ratio)
       const credit = Math.round(s.amount * ratio)
       const grand = Math.max(total - credit, 0)
-      call.totals = { total: String(total), credit: String(credit), grand_total: String(grand) }
+      // 미리보기의 거래 합계는 낼 돈(`grand_total`)뿐이다 - 총액 · 크레딧은 `update_summary` 에만 있다
+      call.totals = { total: String(grand), credit: '0', grand_total: String(grand) }
       const period = { starts_at: s.periodStart, ends_at: s.periodEnd }
       const money = (amount: number) => ({ amount: String(amount), currency_code: s.currency })
       if (change[2])

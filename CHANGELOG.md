@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Paddle 구독도 플랜 바꾸기 (올리기만) (2026-10-29)
+
+백엔드 짝: kotlin-skeleton `payment` 의 결제사 관리 구독 플랜 변경.
+
+- `@skeleton/payment`: `PaymentLedgerErrorCodes.PLAN_CHANGE_DOWNGRADE_UNSUPPORTED`(409). `ChangePlanDialog` 가 미리보기 · 변경 오류를 가려 말한다 - 올리기만 받는 결제사의 내리기(`labels.subscription.changeDialog.previewDowngradeUnsupported`), 바꿀 수 없음(`errors.notAllowed`), 결제사에 가격이 없는 플랜(`previewUnavailable`). 이야기 `ProviderUpgrade`.
+- 샘플: `SubscriptionPage` 가 Paddle 구독(`providerManaged`)에도 「플랜 바꾸기」를 연다(올리기 후보만, 중도 해지는 그대로). 가짜 Paddle 이 `PATCH /subscriptions/{id}[/preview]`(`prorated_immediately`)와 변경 거래 · `subscription.updated` 웹훅을 흉내 내고, `paddle.e2e.ts` 에 Paddle 올리기 시나리오.
+
 ### Added — 운영 상품 · 가격 화면 (2026-10-29)
 
 백엔드 짝: kotlin-skeleton `catalog`(운영 경로 `/admin/catalog`, 권한 `catalog.manage`).

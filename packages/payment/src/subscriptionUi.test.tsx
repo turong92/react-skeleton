@@ -361,6 +361,23 @@ describe('ChangePlanDialog', () => {
     expect(html).toContain('더 높은 플랜이나 더 긴 결제 주기로만')
     expect(html).not.toContain('결제할 금액을 불러오지 못했어요')
     expect(dialog({ error: refused })).toContain('더 높은 플랜이나 더 긴 결제 주기로만') // 변경 오류로 와도 같은 이유
+    const coded = (code: string, status: number) =>
+      new ApiRequestError(
+        { code, title: 't', status, timestamp: '2026-01-01T00:00:00Z', traceId: 'tr' },
+        'tr',
+        'sp',
+        'tp',
+      )
+    // 바꿀 수 없는 때는 그 문구, 결제사에 그 플랜의 가격이 없으면(503) 아직 준비되지 않았다고 말한다
+    expect(
+      dialog({
+        preview: undefined,
+        previewError: coded('PAYMENT.PLAN_CHANGE_NOT_ALLOWED', 409),
+      }),
+    ).toContain('지금은 플랜을 바꿀 수 없어요')
+    expect(
+      dialog({ preview: undefined, previewError: coded('PAYMENT.UNAVAILABLE', 503) }),
+    ).toContain('아직 준비되지 않은 플랜이에요')
     expect(dialog({ preview: undefined, previewError: new Error('x') })).toContain(
       '결제할 금액을 불러오지 못했어요',
     )

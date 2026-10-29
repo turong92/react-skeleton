@@ -447,6 +447,8 @@ export type SubscriptionLabels = {
     previewError: string
     /** 결제사가 올리기만 받는 구독에 낮은 플랜 · 짧은 주기를 골라 미리보기 · 변경이 409 `PLAN_CHANGE_DOWNGRADE_UNSUPPORTED` 로 거절됐다 - 이유를 말한다 */
     previewDowngradeUnsupported: string
+    /** 미리보기가 503 `UNAVAILABLE` - 결제사에 그 플랜의 가격이 아직 없다 */
+    previewUnavailable: string
     confirm: string
     /** 확인 단추가 일하는 동안의 낭독 이름 */
     loading: string

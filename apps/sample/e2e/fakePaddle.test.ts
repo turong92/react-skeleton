@@ -67,15 +67,16 @@ describe('plan change', () => {
       ).json()) as {
         data: {
           immediate_transaction: { details: { totals: Totals } }
-          update_summary: { credit: { amount: string } }
+          update_summary: { charge: { amount: string }; credit: { amount: string } }
           recurring_transaction_details: { totals: { total: string } }
         }
       }
       expect(preview.data.immediate_transaction.details.totals).toMatchObject({
-        total: '250',
-        credit: '150',
+        total: '100',
+        credit: '0',
         grand_total: '100',
       })
+      expect(preview.data.update_summary.charge.amount).toBe('250')
       expect(preview.data.update_summary.credit.amount).toBe('-150')
       expect(preview.data.recurring_transaction_details.totals.total).toBe('500')
       expect((await control.state()).subscriptions[0]!.priceId).toBe('pri_e2e_basic')

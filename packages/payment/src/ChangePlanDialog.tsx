@@ -81,6 +81,17 @@ export function ChangePlanDialog({
         : isPaymentLedgerError(error, PaymentLedgerErrorCodes.PLAN_CHANGE_NOT_ALLOWED)
           ? labels.errors.notAllowed
           : labels.errors.other
+  // 미리보기가 거절된 이유 - 알려진 거절은 이유를, 그 밖은 일반 문구
+  const previewMessage = isPaymentLedgerError(
+    previewError,
+    PaymentLedgerErrorCodes.PLAN_CHANGE_DOWNGRADE_UNSUPPORTED,
+  )
+    ? labels.previewDowngradeUnsupported
+    : isPaymentLedgerError(previewError, PaymentLedgerErrorCodes.PLAN_CHANGE_NOT_ALLOWED)
+      ? labels.errors.notAllowed
+      : isPaymentLedgerError(previewError, PaymentLedgerErrorCodes.UNAVAILABLE)
+        ? labels.previewUnavailable
+        : labels.previewError
   const reference = error ? referenceOf(error) : undefined
   const money = (amount: { amount: number; currency: string }) =>
     formatMoney(amount, { locale, currencySuffix: all.currencySuffix })
@@ -158,14 +169,7 @@ export function ChangePlanDialog({
             </dl>
           ) : (
             <p id={statusId} className={styles.note}>
-              {previewError
-                ? isPaymentLedgerError(
-                    previewError,
-                    PaymentLedgerErrorCodes.PLAN_CHANGE_DOWNGRADE_UNSUPPORTED,
-                  )
-                  ? labels.previewDowngradeUnsupported
-                  : labels.previewError
-                : labels.loadingPreview}
+              {previewError ? previewMessage : labels.loadingPreview}
             </p>
           )}
           {scheduled && <p className={styles.note}>{labels.scheduledNote}</p>}

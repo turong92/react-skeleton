@@ -170,7 +170,9 @@ describe('badges: a note brings one, the public profile shows it, an operator aw
         .poll(async () => (await earnedOf(token)).map((b) => b.code), { timeout: 60_000 })
         .toContain(FIRST_NOTE.code)
       await openShelf(page)
-      await pwExpect(section(page, L.badge.earned).getByText(FIRST_NOTE.name)).toBeVisible()
+      await pwExpect(
+        section(page, L.badge.earned).getByText(FIRST_NOTE.name, { exact: true }),
+      ).toBeVisible()
       // 숨은 배지는 이름 없이 「숨은 배지」 로만 있다
       const locked = section(page, L.badge.locked)
       await pwExpect(locked.getByText(L.badge.hiddenName)).toBeVisible()
@@ -205,8 +207,8 @@ describe('badges: a note brings one, the public profile shows it, an operator aw
         const visitor = await profileRow(browser, userId)
         try {
           const row = visitor.page.getByRole('list', { name: L.badge.profileTitle })
-          await pwExpect(row.getByText(FIRST_NOTE.name)).toBeVisible()
-          await pwExpect(row.getByText(SECRET_GUEST.name)).toBeVisible() // 손으로 받아 보이게 둔 배지는 나간다
+          await pwExpect(row.getByText(FIRST_NOTE.name, { exact: true })).toBeVisible()
+          await pwExpect(row.getByText(SECRET_GUEST.name, { exact: true })).toBeVisible() // 손으로 받아 보이게 둔 배지는 나간다
         } finally {
           await visitor.close()
         }
@@ -225,7 +227,7 @@ describe('badges: a note brings one, the public profile shows it, an operator aw
         const again = await profileRow(browser, userId)
         try {
           const row = again.page.getByRole('list', { name: L.badge.profileTitle })
-          await pwExpect(row.getByText(SECRET_GUEST.name)).toBeVisible()
+          await pwExpect(row.getByText(SECRET_GUEST.name, { exact: true })).toBeVisible()
           await pwExpect(again.page.getByText(FIRST_NOTE.name)).toHaveCount(0)
         } finally {
           await again.close()
@@ -267,7 +269,9 @@ describe('badges: a note brings one, the public profile shows it, an operator aw
           .toContain(EARLY_BIRD.code)
         await ensureSignedIn(page, baseUrl)
         await openShelf(page)
-        await pwExpect(section(page, L.badge.earned).getByText(EARLY_BIRD.name)).toBeVisible()
+        await pwExpect(
+          section(page, L.badge.earned).getByText(EARLY_BIRD.name, { exact: true }),
+        ).toBeVisible()
         // 받았다는 알림이 하나 도착한다
         await pwExpect.poll(unread, { timeout: 60_000 }).toBeGreaterThan(unreadBefore)
         // 내역에 운영자가 준 「수여」 줄이 남는다

@@ -174,7 +174,7 @@ export const koRewardsAdminLabels: RewardsAdminLabels = {
       expired: '만료',
       revoked: '회수',
       discountTotal: '깎아 준 금액',
-      noDiscount: '아직 없어요',
+      noDiscount: '없음',
     },
     issuedList: {
       title: '발급 내역',

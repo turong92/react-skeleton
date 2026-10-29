@@ -77,6 +77,8 @@ export type CouponStats = {
 export type IssuedCoupon = {
   id: string
   accountId: string
+  /** 사람이 알아볼 계정 이름(이메일, 없으면 아이디). 서버가 낼 수 없으면 없다 - 화면은 `accountId` 를 보인다 */
+  accountLabel?: string | null
   status: CouponStatus
   issuedAt: string
   expiresAt: string | null

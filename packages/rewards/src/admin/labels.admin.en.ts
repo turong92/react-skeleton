@@ -180,7 +180,7 @@ export const defaultRewardsAdminLabels: RewardsAdminLabels = {
       expired: 'Expired',
       revoked: 'Taken back',
       discountTotal: 'Discount given',
-      noDiscount: 'None yet',
+      noDiscount: 'None',
     },
     issuedList: {
       title: 'Given coupons',

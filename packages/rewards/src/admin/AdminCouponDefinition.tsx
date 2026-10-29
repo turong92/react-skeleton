@@ -108,7 +108,10 @@ export function AdminCouponDefinition({
     )
 
   const rows = issued.data?.pages.flatMap((page) => page.values) ?? []
-  const account = (id: string) => (renderAccountLink ? renderAccountLink(id, id) : id)
+  const account = (id: string, label?: string | null) => {
+    const text = label || id
+    return renderAccountLink ? renderAccountLink(id, text) : text
+  }
 
   return (
     <div className={styles.page}>
@@ -208,7 +211,7 @@ export function AdminCouponDefinition({
                     key: 'account',
                     header: t.issuedList.columns.account,
                     rowHeader: true,
-                    render: (coupon) => account(coupon.accountId),
+                    render: (coupon) => account(coupon.accountId, coupon.accountLabel),
                   },
                   {
                     key: 'status',

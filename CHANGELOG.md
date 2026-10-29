@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — 쿠폰 발급 내역의 계정 칸 (2026-10-29)
+
+백엔드 짝: kotlin-skeleton `coupon` 의 발급 내역 `accountLabel`.
+
+- `@skeleton/rewards/admin`: `IssuedCoupon.accountLabel`(선택) - `AdminCouponDefinition` 발급 내역 표의 계정 칸이 계정 id 대신 이메일(없으면 아이디)을 보이고, 이름이 없으면 id 를 그대로 보인다(`renderAccountLink` 의 링크 글자도 같다). 「깎아 준 금액」 칸의 빈 문구를 줄바꿈 없는 짧은 말로(`noDiscount`: 「없음」 · `None`).
+
 ### Added — Paddle 구독도 플랜 바꾸기 (올리기만) (2026-10-29)
 
 백엔드 짝: kotlin-skeleton `payment` 의 결제사 관리 구독 플랜 변경.

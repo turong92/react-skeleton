@@ -69,6 +69,7 @@ export function AdminLinks() {
   const canCoupons = usePermission('coupon.manage')
   const canPoints = usePermission('point.manage')
   const canGrants = usePermission('reward.operate')
+  const canBadges = usePermission('badge.manage')
   // 운영 화면이 하나도 없는 사람에게는 메뉴 자체가 없다
   if (
     !(
@@ -80,7 +81,8 @@ export function AdminLinks() {
       canCampaigns ||
       canCoupons ||
       canPoints ||
-      canGrants
+      canGrants ||
+      canBadges
     )
   )
     return null
@@ -95,6 +97,8 @@ export function AdminLinks() {
       {canCoupons && <NavLink to="/admin/coupons">{t('nav.adminCoupons')}</NavLink>}
       {canPoints && <NavLink to="/admin/points">{t('nav.adminPoints')}</NavLink>}
       {canGrants && <NavLink to="/admin/reward-grants">{t('nav.adminRewardGrants')}</NavLink>}
+      {canBadges && <NavLink to="/admin/badges">{t('nav.adminBadges')}</NavLink>}
+      {canBadges && <NavLink to="/admin/badge-awards">{t('nav.adminBadgeAwards')}</NavLink>}
     </AdminMenu>
   )
 }

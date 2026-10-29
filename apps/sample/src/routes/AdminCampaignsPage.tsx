@@ -1,5 +1,5 @@
 import { useCan } from '@skeleton/auth'
-import { AdminCampaigns, useAdminCouponDefinitions } from '@skeleton/rewards/admin'
+import { AdminCampaigns, useAdminBadges, useAdminCouponDefinitions } from '@skeleton/rewards/admin'
 import { languageOf, useT } from '../i18n'
 import { rewardsAdminApi } from '../rewards/api'
 import { rewardsAdminLabelsFor } from '../rewards/labels'
@@ -16,12 +16,17 @@ export function AdminCampaignsPage() {
   const definitions = useAdminCouponDefinitions(rewardsAdminApi, {
     enabled: can('coupon.manage'),
   })
+  // 배지 보상에서 고를 배지 - 배지 운영 권한이 있을 때만 읽는다(없으면 코드를 직접 적는다)
+  const badges = useAdminBadges(rewardsAdminApi, { enabled: can('badge.manage') })
   return (
     <AdminCampaigns
       api={rewardsAdminApi}
       can={can}
       labels={rewardsAdminLabelsFor(language)}
       locale={language}
+      badgeChoices={
+        badges.data ? badges.data.map((b) => ({ code: b.code, name: b.name })) : undefined
+      }
       couponChoices={
         definitions.data ? definitions.data.map((d) => ({ id: d.id, name: d.name })) : undefined
       }

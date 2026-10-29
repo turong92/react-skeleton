@@ -83,7 +83,7 @@ describe('routes', () => {
   })
 
   it('has the rewards screens (/rewards, /rewards/coupons) behind sign-in only, and the four operator screens each behind their own permission', () => {
-    for (const path of ['/rewards', '/rewards/coupons']) {
+    for (const path of ['/rewards', '/rewards/coupons', '/rewards/badges']) {
       expect(leaf(path)?.path, path).toBe(path)
       expect(guarded(path), path).toBe(true)
       expect(permissionsOf(path), path).toEqual([])
@@ -96,6 +96,8 @@ describe('routes', () => {
       ['/admin/coupons/d1', 'coupon.manage'],
       ['/admin/points', 'point.manage'],
       ['/admin/reward-grants', 'reward.operate'],
+      ['/admin/badges', 'badge.manage'],
+      ['/admin/badge-awards', 'badge.manage'],
     ]
     for (const [path, permission] of operator) {
       expect(leaf(path)?.path, path).toBe(
@@ -145,6 +147,8 @@ describe('routes', () => {
       '/board/new',
       '/board/abc',
       '/board/abc/edit',
+      // 프로필 배지 - 로그인 없이 읽는다(서버 `allow-anonymous-read`)
+      '/profile/acc_1',
     ])
       expect(guarded(path), path).toBe(false)
   })
@@ -175,6 +179,9 @@ describe('routes', () => {
       '/payments/return',
       '/cheers',
       '/payments/ord_abc',
+      '/rewards/badges',
+      // 주소에 계정 id 가 있다 - 검색에 내지 않는다
+      '/profile/acc_1',
     ])
       expect(seoOf(path)?.indexable, path).toBe(false)
     expect(seoOf('/nope')?.indexable).toBe(false)

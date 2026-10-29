@@ -29,9 +29,14 @@ export function RewardsPage() {
         title={t('rewards.title')}
         description={t('rewards.subtitle')}
         actions={
-          <LinkButton to="/rewards/coupons" variant="secondary">
-            {t('rewards.couponsLink')}
-          </LinkButton>
+          <>
+            <LinkButton to="/rewards/badges" variant="secondary">
+              {t('rewards.badgesLink')}
+            </LinkButton>
+            <LinkButton to="/rewards/coupons" variant="secondary">
+              {t('rewards.couponsLink')}
+            </LinkButton>
+          </>
         }
       />
       <div className={styles.cards}>

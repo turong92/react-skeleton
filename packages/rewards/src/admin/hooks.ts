@@ -196,8 +196,17 @@ export function useDefinitionCoupons(
   })
 }
 
-export const useAdminBadges = (api: Pick<RewardsAdminApi, 'listBadges'>) =>
-  useQuery({ queryKey: adminKeys.badges(), queryFn: () => api.listBadges(), ...LIST_OPTIONS })
+/** 배지 정의 목록. 배지 운영 권한이 없는 사람 화면(이벤트 운영이 배지 이름을 고르려고 읽는다)에서는 `enabled: false` - 403 을 부르지 않는다 */
+export const useAdminBadges = (
+  api: Pick<RewardsAdminApi, 'listBadges'>,
+  { enabled = true }: { enabled?: boolean } = {},
+) =>
+  useQuery({
+    queryKey: adminKeys.badges(),
+    queryFn: () => api.listBadges(),
+    enabled,
+    ...LIST_OPTIONS,
+  })
 
 /** 만들기 · 고치기 · 보관 · 수동 수여 - 성공하면 목록 · 내역 · 사용자 배지 화면을 다시 읽는다 */
 export function useBadgeMutations(

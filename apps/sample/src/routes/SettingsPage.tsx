@@ -3,15 +3,18 @@ import { AuthorProfileManager } from '@skeleton/author-profile'
 import { boardKeys } from '@skeleton/board'
 import { NotificationPreferences } from '@skeleton/notifications'
 import { setTheme, THEMES, useTheme, type Theme } from '@skeleton/theme'
+import { ProfileBadges } from '@skeleton/rewards/badge'
 import { Button, Card, Field, PageHeader, Select } from '@skeleton/ui'
 import { useNavigate } from 'react-router-dom'
 import { emailRequired } from '../api/emailRequired'
 import { profileApi } from '../author/api'
 import { authorProfileLabels } from '../author/profileLabels'
+import { badgeApi } from '../badges/api'
 import { useMyProfile } from '../auth/useMyProfile'
 import { LinkCard } from '../components/LinkCard'
-import { useT } from '../i18n'
+import { languageOf, useT } from '../i18n'
 import { notificationsApi } from '../notifications/api'
+import { rewardsLabelsFor } from '../rewards/labels'
 import styles from './SettingsPage.module.css'
 
 /**
@@ -19,7 +22,7 @@ import styles from './SettingsPage.module.css'
  * 사용자에게 닉네임은 하나다 — 계정에 붙은 이름(계정 닉네임)은 이 화면에 없다. 계정 id 는 화면 · aria 어디에도 그리지 않는다(닉네임 뒤의 계정을 드러내는 값이라 접힌 구역에도 두지 않는다)
  */
 export function SettingsPage() {
-  const { t } = useT()
+  const { t, locale } = useT()
   const { principal, logout } = useAuth()
   const profile = useMyProfile().data
   const theme = useTheme()
@@ -83,6 +86,17 @@ export function SettingsPage() {
           {t('settings.manageAccount')}
         </LinkCard>
       </Card>
+      {principal?.accountId && (
+        // 내 계정의 프로필 배지(다른 사람이 보는 줄) - 계정 id 는 호출에만 쓰고 화면에는 그리지 않는다. 필명(닉네임) 구역에는 붙이지 않는다
+        <Card title={t('settings.badges')}>
+          <p>{t('settings.badgesHint')}</p>
+          <ProfileBadges
+            api={badgeApi}
+            accountId={principal.accountId}
+            labels={rewardsLabelsFor(languageOf(locale))}
+          />
+        </Card>
+      )}
       <Card title={t('settings.notifications')}>
         <p>{t('settings.notificationsHint')}</p>
         <NotificationPreferences

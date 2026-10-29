@@ -9,6 +9,8 @@ import type { MessageKey } from '../i18n'
 import type { SeoHandle } from '../seo/routeSeo'
 import { AdminAccountsPage } from './AdminAccountsPage'
 import { AdminAccountPage } from './AdminAccountPage'
+import { AdminBadgeAwardsPage } from './AdminBadgeAwardsPage'
+import { AdminBadgesPage } from './AdminBadgesPage'
 import { AdminCampaignsPage } from './AdminCampaignsPage'
 import { AdminCatalogPage } from './AdminCatalogPage'
 import { AdminCatalogProductPage } from './AdminCatalogProductPage'
@@ -20,6 +22,7 @@ import { AdminRewardGrantsPage } from './AdminRewardGrantsPage'
 import { AdminRolesPage } from './AdminRolesPage'
 import { AdminPaymentPage } from './AdminPaymentPage'
 import { AdminPaymentsPage } from './AdminPaymentsPage'
+import { BadgesPage } from './BadgesPage'
 import { BoardFormPage } from './BoardFormPage'
 import { BoardPage } from './BoardPage'
 import { BoardPostPage } from './BoardPostPage'
@@ -34,6 +37,7 @@ import { NotesPage } from './NotesPage'
 import { NotFoundPage } from './NotFoundPage'
 import { PaymentDetailPage } from './PaymentDetailPage'
 import { PaymentReturnPage } from './PaymentReturnPage'
+import { ProfilePage } from './ProfilePage'
 import { RewardsPage } from './RewardsPage'
 import { SettingsPage } from './SettingsPage'
 import { SubscribePage } from './SubscribePage'
@@ -90,6 +94,12 @@ export const routes: RouteObject[] = [
       { path: '/board/new', element: <BoardFormPage />, handle: privateSeo('nav.board') },
       { path: '/board/:id', element: <BoardPostPage />, handle: privateSeo('nav.board') },
       { path: '/board/:id/edit', element: <BoardFormPage />, handle: privateSeo('nav.board') },
+      // 프로필 배지 - 로그인 없이 읽는다(서버 `allow-anonymous-read`). 주소에 계정 id 가 있어 검색에 내지 않고, 필명 화면에는 붙이지 않는다
+      {
+        path: '/profile/:accountId',
+        element: <ProfilePage />,
+        handle: privateSeo('profile.title'),
+      },
       {
         element: <RequireAuth />,
         children: [
@@ -136,6 +146,11 @@ export const routes: RouteObject[] = [
             path: '/rewards/coupons',
             element: <CouponsPage />,
             handle: privateSeo('rewards.coupons.title'),
+          },
+          {
+            path: '/rewards/badges',
+            element: <BadgesPage />,
+            handle: privateSeo('rewards.badges.title'),
           },
           { path: '/settings', element: <SettingsPage />, handle: privateSeo('nav.settings') },
           {
@@ -286,6 +301,27 @@ export const routes: RouteObject[] = [
                 path: '/admin/points',
                 element: <AdminPointsPage />,
                 handle: privateSeo('nav.adminPoints'),
+              },
+            ],
+          },
+          {
+            element: (
+              <RequirePermission
+                anyOf={['badge.manage']}
+                forbidden={<BlockedNotice />}
+                failed={<PermissionsFailedNotice />}
+              />
+            ),
+            children: [
+              {
+                path: '/admin/badges',
+                element: <AdminBadgesPage />,
+                handle: privateSeo('nav.adminBadges'),
+              },
+              {
+                path: '/admin/badge-awards',
+                element: <AdminBadgeAwardsPage />,
+                handle: privateSeo('nav.adminBadgeAwards'),
               },
             ],
           },

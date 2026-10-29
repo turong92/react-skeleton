@@ -11,7 +11,7 @@ import type { BrowserContext } from 'playwright'
  *   남은 금액을 넘으면 400 `adjustment_total_above_remaining_allowed`. 기본은 Paddle 실계정처럼 **검토 중**(`pending_approval`)으로 답하고 `adjustment.created` 를 쏜다 - 결정은 시험이 `{ decide }` 로 내린다(`adjustment.updated`).
  * Paddle API(백엔드가 부른다): POST /transactions {items:[{price_id,quantity}], custom_data} - 서버가 거래를 먼저 만든다(Bearer 키가 틀리면 403) → {data:{id:'txn_…'}}.
  *   PATCH /subscriptions/{id}/preview · PATCH /subscriptions/{id} {items:[{price_id,quantity}], proration_billing_mode} - 플랜 바꾸기. **`prorated_immediately` 만** 받는다(아니면 400). 남은 시간 비율로 일할:
- *     새 가격 × 비율 = `total`, 옛 가격 × 비율 = `credit`, `grand_total` = max(total − credit, 0). 실행이면 `transaction.completed`(`origin: subscription_update`, `details.totals.credit`) + `subscription.updated`(새 `items`)를 쏜다.
+ *     새 가격 × 비율 = `total`, 옛 가격 × 비율 = `credit`, `grand_total` = max(total − credit, 0). 실행이면 `transaction.completed`(`origin: subscription_update`, `total` = 실제 낸 돈, `credit` 0, `line_items` 새 품목 + · 옛 품목 -1) + `subscription.updated`(새 `items`)를 쏜다. 미리보기의 `update_summary.credit.amount` 는 음수, 실행 응답의 금액 칸은 null.
  *   POST /subscriptions/{id}/cancel {effective_from} — Bearer 키가 틀리면 403. `next_billing_period` 면 해지 예약(`scheduled_change`)을 걸고 `subscription.updated` 를 쏜다.
  * 결제창(Paddle.js)은 이 서버에 없다 — 시험이 스크립트(`https://cdn.paddle.com/paddle/v2/paddle.js`)를 가로채 `fakePaddleSdkScript` 로 바꾼다(`routePaddleSdk`).
  * 그 대역은 `Checkout.open({ transactionId })` 에서 이 서버의 `POST /sdk/checkout` 을 부르고(거래 id 만) 곧장 successUrl 로 돌려보낸다. 이 서버는 그때 미리 만들어진 거래(가격 · customData 는 백엔드가 정한 것)를 결제하고 구독을 만들어 웹훅 셋을 쏜다.
@@ -526,7 +526,7 @@ export async function startFakePaddle(): Promise<FakePaddle> {
               totals: { total: String(target.amount), currency_code: s.currency },
             },
             update_summary: {
-              credit: money(credit),
+              credit: money(-credit),
               charge: money(total),
               result: {
                 action: total >= credit ? 'charge' : 'credit',
@@ -535,20 +535,37 @@ export async function startFakePaddle(): Promise<FakePaddle> {
             },
           },
         })
+      // 실제 응답은 금액 칸이 null 이고 바뀐 품목만 온다
+      const before = s.priceId
       s.priceId = target.id
       s.amount = target.amount
-      send(res, 200, { data: subscriptionEntity(s) })
-      // Paddle 은 응답한 뒤 웹훅으로 알린다
-      const paidChange = transactionEntity(
+      send(res, 200, {
+        data: {
+          ...subscriptionEntity(s),
+          immediate_transaction: null,
+          recurring_transaction_details: null,
+          update_summary: null,
+        },
+      })
+      // Paddle 은 응답한 뒤 웹훅으로 알린다 - 변경 거래의 total 은 실제 낸 돈(크레딧을 뺀 뒤), credit 은 0, 품목은 새 것 +1 · 옛 것 -1
+      const changed = transactionEntity(
         s,
         s.customData,
         s.currency,
-        total,
+        grand,
         'subscription_update',
         target.id,
-        undefined,
-        credit,
       )
+      const paidChange = {
+        ...changed,
+        details: {
+          ...changed.details,
+          line_items: [
+            { price_id: target.id, quantity: 1 },
+            { price_id: before, quantity: -1 },
+          ],
+        },
+      }
       remember(paidChange, target.id)
       await fire('transaction.completed', paidChange)
       await fire('subscription.updated', subscriptionEntity(s))

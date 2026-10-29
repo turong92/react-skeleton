@@ -15,7 +15,7 @@ describe('plan change', () => {
   type Totals = { total: string; credit: string; grand_total: string }
   const received: Array<{
     event_type: string
-    data: { origin?: string; items?: unknown; details: { totals: Totals } }
+    data: { origin?: string; items?: unknown; details: { totals: Totals; line_items: unknown } }
   }> = []
   const backend = createServer((req, res) => {
     let text = ''
@@ -76,7 +76,7 @@ describe('plan change', () => {
         credit: '150',
         grand_total: '100',
       })
-      expect(preview.data.update_summary.credit.amount).toBe('150')
+      expect(preview.data.update_summary.credit.amount).toBe('-150')
       expect(preview.data.recurring_transaction_details.totals.total).toBe('500')
       expect((await control.state()).subscriptions[0]!.priceId).toBe('pri_e2e_basic')
       expect(received).toHaveLength(0)
@@ -91,9 +91,13 @@ describe('plan change', () => {
       await expect.poll(() => received.length).toBe(2)
       const paid = received.find((e) => e.event_type === 'transaction.completed')!
       expect(paid.data.origin).toBe('subscription_update')
+      expect(paid.data.details.line_items).toEqual([
+        { price_id: 'pri_e2e_standard', quantity: 1 },
+        { price_id: 'pri_e2e_basic', quantity: -1 },
+      ])
       expect(paid.data.details.totals).toMatchObject({
-        total: '250',
-        credit: '150',
+        total: '100',
+        credit: '0',
         grand_total: '100',
       })
       const updated = received.find((e) => e.event_type === 'subscription.updated')!

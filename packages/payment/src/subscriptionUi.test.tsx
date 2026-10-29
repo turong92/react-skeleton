@@ -344,10 +344,10 @@ describe('ChangePlanDialog', () => {
     )
   })
 
-  it('a refused preview says why when the server says the change is not allowed, and keeps the confirm locked', () => {
+  it('a refused preview or change says why when the server says the provider takes upgrades only, and keeps the confirm locked', () => {
     const refused = new ApiRequestError(
       {
-        code: 'PAYMENT.PLAN_CHANGE_NOT_ALLOWED',
+        code: 'PAYMENT.PLAN_CHANGE_DOWNGRADE_UNSUPPORTED',
         title: 't',
         status: 409,
         timestamp: '2026-01-01T00:00:00Z',
@@ -360,6 +360,7 @@ describe('ChangePlanDialog', () => {
     const html = dialog({ preview: undefined, previewError: refused })
     expect(html).toContain('더 높은 플랜이나 더 긴 결제 주기로만')
     expect(html).not.toContain('결제할 금액을 불러오지 못했어요')
+    expect(dialog({ error: refused })).toContain('더 높은 플랜이나 더 긴 결제 주기로만') // 변경 오류로 와도 같은 이유
     expect(dialog({ preview: undefined, previewError: new Error('x') })).toContain(
       '결제할 금액을 불러오지 못했어요',
     )

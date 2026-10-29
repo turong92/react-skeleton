@@ -49,6 +49,8 @@ export const PaymentLedgerErrorCodes = {
   SUBSCRIPTION_NOT_CANCELABLE: 'PAYMENT.SUBSCRIPTION_NOT_CANCELABLE',
   /** 플랜을 바꿀 수 없다(위 등급이 아니다 · 이용 중이 아니다 · 결제가 오가는 중이다 · 꺼져 있다) → 409 */
   PLAN_CHANGE_NOT_ALLOWED: 'PAYMENT.PLAN_CHANGE_NOT_ALLOWED',
+  /** 결제사가 올리기만 받는 구독(Paddle)에 내리기 · 주기 줄이기를 했다 → 409. 미리보기 · 변경 둘 다, 결제사를 부르기 전에 나간다 */
+  PLAN_CHANGE_DOWNGRADE_UNSUPPORTED: 'PAYMENT.PLAN_CHANGE_DOWNGRADE_UNSUPPORTED',
   /** 서버가 다시 계산한 변경 금액이 본 금액보다 크다 → 409. 미리보기를 다시 한다 */
   PLAN_CHANGE_CHARGE_CHANGED: 'PAYMENT.PLAN_CHANGE_CHARGE_CHANGED',
   /** 중도 해지를 할 수 없다(이 나라의 정책이 닫음 · 이용 중이 아니다) → 409 */

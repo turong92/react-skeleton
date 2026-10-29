@@ -245,7 +245,9 @@ describe('changing the plan of a Paddle subscription', () => {
     await page.goto(`${baseUrl}/subscription`)
     await page.getByRole('button', { name: subscribed.mine.changePlan, exact: true }).click()
     await dialog.getByLabel(subscribed.changeDialog.plan).selectOption('basic')
-    await pwExpect(dialog.getByText(subscribed.changeDialog.previewNotAllowed)).toBeVisible()
+    await pwExpect(
+      dialog.getByText(subscribed.changeDialog.previewDowngradeUnsupported),
+    ).toBeVisible()
     await pwExpect(
       dialog.getByRole('button', { name: subscribed.changeDialog.confirm }),
     ).toHaveAttribute('aria-disabled', 'true')

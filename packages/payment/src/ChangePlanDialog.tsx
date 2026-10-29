@@ -74,11 +74,13 @@ export function ChangePlanDialog({
   const ready = preview !== undefined && !previewLoading && preview.planCode === planCode
   const message = isPaymentLedgerError(error, PaymentLedgerErrorCodes.PLAN_CHANGE_CHARGE_CHANGED)
     ? labels.errors.chargeChanged
-    : isPaymentLedgerError(error, PaymentLedgerErrorCodes.DECLINED)
-      ? labels.errors.declined
-      : isPaymentLedgerError(error, PaymentLedgerErrorCodes.PLAN_CHANGE_NOT_ALLOWED)
-        ? labels.errors.notAllowed
-        : labels.errors.other
+    : isPaymentLedgerError(error, PaymentLedgerErrorCodes.PLAN_CHANGE_DOWNGRADE_UNSUPPORTED)
+      ? labels.previewDowngradeUnsupported
+      : isPaymentLedgerError(error, PaymentLedgerErrorCodes.DECLINED)
+        ? labels.errors.declined
+        : isPaymentLedgerError(error, PaymentLedgerErrorCodes.PLAN_CHANGE_NOT_ALLOWED)
+          ? labels.errors.notAllowed
+          : labels.errors.other
   const reference = error ? referenceOf(error) : undefined
   const money = (amount: { amount: number; currency: string }) =>
     formatMoney(amount, { locale, currencySuffix: all.currencySuffix })
@@ -159,9 +161,9 @@ export function ChangePlanDialog({
               {previewError
                 ? isPaymentLedgerError(
                     previewError,
-                    PaymentLedgerErrorCodes.PLAN_CHANGE_NOT_ALLOWED,
+                    PaymentLedgerErrorCodes.PLAN_CHANGE_DOWNGRADE_UNSUPPORTED,
                   )
-                  ? labels.previewNotAllowed
+                  ? labels.previewDowngradeUnsupported
                   : labels.previewError
                 : labels.loadingPreview}
             </p>

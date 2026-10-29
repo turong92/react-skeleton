@@ -37,3 +37,15 @@ export function changeChoices(
   }
   return { now, next }
 }
+
+/**
+ * 후보 순서 - 지금 주기와 같은 주기의 플랜이 먼저(바로 위 등급부터), 그다음 더 긴 주기.
+ * 첫 후보가 창의 기본 선택이라, 결제사에 연 가격이 아직 없어도 창이 열리자마자 거절되지 않게 같은 주기 윗등급을 앞에 둔다
+ */
+export function sameCycleFirst(
+  plans: readonly SubscriptionPlan[],
+  current: Pick<CurrentTier, 'period'>,
+): SubscriptionPlan[] {
+  const rank = (plan: SubscriptionPlan) => (plan.period === current.period ? 0 : 1)
+  return [...plans].sort((a, b) => rank(a) - rank(b) || a.level - b.level)
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { changeChoices, planChangeTiming } from './planChange'
+import { changeChoices, planChangeTiming, sameCycleFirst } from './planChange'
 import type { SubscriptionPlan } from './subscriptionTypes'
 
 const plan = (code: string, level: number, period: string, currency = 'KRW'): SubscriptionPlan => ({
@@ -52,5 +52,23 @@ describe('changeChoices', () => {
     const { now, next } = changeChoices(plans, standardMonth, 'std-m')
     expect(now.map((p) => p.code)).toEqual(['std-y', 'pro-m'])
     expect(next.map((p) => p.code)).toEqual(['basic-m'])
+  })
+})
+
+describe('sameCycleFirst', () => {
+  it('puts the plans of the current period first, the next level up leading, then the longer periods', () => {
+    const plans = [
+      plan('std-y', 2, 'P1Y'),
+      plan('pro-m', 3, 'P1M'),
+      plan('max-m', 4, 'P1M'),
+      plan('pro-y', 3, 'P1Y'),
+    ]
+    expect(sameCycleFirst(plans, standardMonth).map((p) => p.code)).toEqual([
+      'pro-m',
+      'max-m',
+      'std-y',
+      'pro-y',
+    ])
+    expect(plans.map((p) => p.code)[0]).toBe('std-y') // 받은 배열은 그대로
   })
 })

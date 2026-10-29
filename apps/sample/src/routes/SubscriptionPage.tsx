@@ -4,6 +4,7 @@ import {
   CancelNowResultNotice,
   CancelSubscriptionDialog,
   changeChoices,
+  sameCycleFirst,
   ChangePlanDialog,
   MySubscriptionCard,
   useCancelPreview,
@@ -92,7 +93,11 @@ export function SubscriptionPage() {
     ? changeChoices(plans.data ?? [], tier, subscription.planCode)
     : { now: [], next: [] }
   // 결제사 관리 구독(Paddle)은 올리기(바로 바뀌는 플랜)만 연다 - 내리기는 서버가 거절한다
-  const candidates = subscription.providerManaged ? choices.now : [...choices.now, ...choices.next]
+  const candidates = subscription.providerManaged
+    ? tier
+      ? sameCycleFirst(choices.now, tier)
+      : []
+    : [...choices.now, ...choices.next]
   const cancelable = subscription.status === 'ACTIVE' || subscription.status === 'PAST_DUE'
   return (
     <div className={styles.page}>

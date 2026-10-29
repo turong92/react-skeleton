@@ -141,7 +141,7 @@ export type {
   TossBillingAuth,
 } from './subscriptionTypes'
 export { createSubscriptionApi } from './subscriptionApi'
-export { changeChoices, planChangeTiming } from './planChange'
+export { changeChoices, planChangeTiming, sameCycleFirst } from './planChange'
 export type { CurrentTier } from './planChange'
 export { currencyDigits, toMajorUnits, toMinorUnits } from './money'
 export { createCatalogApi } from './catalogApi'

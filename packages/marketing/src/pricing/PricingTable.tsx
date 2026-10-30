@@ -1,6 +1,6 @@
 import { formatEnd } from '@skeleton/time'
 import { Badge, Button } from '@skeleton/ui'
-import { useId } from 'react'
+import { useId, type ReactNode } from 'react'
 import {
   formatPrice,
   hasYearlyPlans,
@@ -68,6 +68,8 @@ export type PricingTableProps = {
   /** 제목 단계(기본 2) */
   headingLevel?: 2 | 3
   labels?: Partial<PricingLabels>
+  /** 카드의 행동 버튼 아래에 앱이 덧붙이는 것(예: 상품 화면으로 가는 링크). 아무것도 안 돌려주면 그 카드는 그대로 */
+  renderPlanExtra?: (plan: PricingPlan) => ReactNode
 }
 
 /**
@@ -87,6 +89,7 @@ export function PricingTable({
   subtitle,
   headingLevel = 2,
   labels: given,
+  renderPlanExtra,
 }: PricingTableProps) {
   const labels = { ...DEFAULT_LABELS, ...given }
   const headingId = useId()
@@ -188,6 +191,7 @@ export function PricingTable({
                 >
                   {plan.ctaLabel}
                 </Button>
+                {renderPlanExtra?.(plan)}
               </article>
             </li>
           )

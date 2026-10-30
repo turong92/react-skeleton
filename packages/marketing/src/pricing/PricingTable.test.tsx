@@ -40,6 +40,19 @@ describe('PricingTable', () => {
     expect(html).toContain('Contact sales')
   })
 
+  it("renderPlanExtra puts the app's own link under a plan's call to action, and skips plans it returns nothing for", () => {
+    const html = renderToStaticMarkup(
+      <PricingTable
+        {...base}
+        renderPlanExtra={(plan) =>
+          plan.id === 'pro' ? <a href="/products/pro">See reviews</a> : null
+        }
+      />,
+    )
+    expect(html.match(/See reviews/g)).toHaveLength(1)
+    expect(html).toContain('href="/products/pro"')
+  })
+
   it('monthly: shows the monthly price, free as a word, custom as contact text', () => {
     const html = renderToStaticMarkup(
       <PricingTable {...base} labels={{ free: 'Free forever', custom: 'Let us talk' }} />,

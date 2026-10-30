@@ -601,7 +601,7 @@ export default {
   'search.type.note': '노트',
   'search.type.product': '상품',
   'reviews.edit.photosReplace':
-    '사진을 새로 올리면 지금 사진이 모두 새 사진으로 바뀌어요. 올리지 않으면 그대로예요.',
+    '사진 칸을 건드리면(올리거나 지우면) 지금 사진이 이 칸의 사진으로 모두 바뀌어요. 건드리지 않으면 그대로예요.',
   'products.title': '상품',
   'products.back': '홈으로',
   'products.reviews': '리뷰',

@@ -8,17 +8,20 @@ const authHeaders = createAuthHeadersProvider(tokenStore)
 
 /**
  * 리뷰 사진 한 장. 서버의 사진 경로(`GET …/{id}/photos/{index}`)는 로그인이 필요하고 짧은 서명 주소로 `302` 로 넘긴다 -
- * `<img src>` 는 토큰을 못 실으니 클라이언트의 axios(401 처리 · 오류 변환 인터셉터가 걸려 있다)로 받아 data URL 로 그린다.
+ * `<img src>` 는 토큰을 못 실으니 클라이언트의 axios 에 토큰 헤더를 붙여 받아 data URL 로 그린다(토큰 갱신 · 오류 변환은 `perform()` 안에만 있어 여기엔 없다 - 만료되면 자리가 빈다).
  * 같은 사진은 쿼리 캐시가 쥔다. 못 받으면(로그인 전 · 숨겨져 못 보는 사진 · 만료) 자리를 비운다.
  */
 export function ReviewPhoto({ path, alt }: { path: string; alt: string }) {
   const photo = useQuery({
     queryKey: ['reviews', 'photo', path],
     queryFn: async () => {
-      const { data } = await apiClient.axios.get<Blob>(path, {
+      const { data, status } = await apiClient.axios.get<Blob>(path, {
         responseType: 'blob',
         headers: authHeaders(),
       })
+      // 이 axios 는 모든 상태를 성공으로 푼다(`validateStatus: () => true`) - 오류 본문이 그림이 되지 않게 직접 실패로 다룬다
+      if (status !== 200 || !data.type.startsWith('image/'))
+        throw new Error(`review photo ${path} → ${status}`)
       return toDataUrl(data)
     },
     retry: false,

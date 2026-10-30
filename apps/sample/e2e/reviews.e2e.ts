@@ -278,7 +278,7 @@ describe('reviews: buy, write, help, report, read signed-out, reply, hide', () =
         const rp = await reader.newPage()
         await rp.goto(`${baseUrl}/products/basic`)
         await dismissConsent(rp)
-        await pwExpect(rp.getByText(L.summary.empty)).toBeVisible()
+        await pwExpect(rp.getByText(L.summary.empty).first()).toBeVisible()
         await pwExpect(reviewItem(rp, BODY)).toHaveCount(0)
       } finally {
         await reader.close()

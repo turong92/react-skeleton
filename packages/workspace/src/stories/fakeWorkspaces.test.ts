@@ -47,6 +47,7 @@ describe('createFakeWorkspaces (the in-memory server behind the stories — same
       invited: ['a@example.com'],
       alreadyInvited: ['live@example.com'],
       seatLimited: ['b@example.com'],
+      alreadyMember: [],
     })
     expect((await api.get('ws_1')).pendingInvitations).toBe(2)
   })

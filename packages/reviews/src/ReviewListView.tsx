@@ -21,6 +21,8 @@ export type ReviewListViewProps = {
   item?: ReviewItemActions
   /** 도움돼요 요청이 가는 중인 리뷰 id */
   helpfulPendingId?: string | null
+  /** 빈 상태 제목 단계(기본 3) - 이 목록 위의 제목에 맞춘다 */
+  emptyHeadingLevel?: 2 | 3 | 4
 }
 
 /** 리뷰 목록의 모양 - 정렬 · 거르기 칩 · 줄들 · 쪽 이동 · 빈 상태(데이터는 `ReviewList` 가 가져온다) */
@@ -32,12 +34,14 @@ export function ReviewListView({
   fetching = false,
   item,
   helpfulPendingId = null,
+  emptyHeadingLevel = 3,
 }: ReviewListViewProps) {
   const t = labels.list
   const { params } = filters
   const filtered = hasFilters(params)
 
-  if (reviews.length === 0 && !filtered) return <EmptyState title={t.empty} />
+  if (reviews.length === 0 && !filtered)
+    return <EmptyState title={t.empty} headingLevel={emptyHeadingLevel} />
 
   const chip = (pressed: boolean, label: string, onClick: () => void) => (
     <Button
@@ -84,14 +88,7 @@ export function ReviewListView({
       </div>
 
       {reviews.length === 0 ? (
-        <EmptyState
-          title={t.emptyFiltered}
-          action={
-            <Button variant="secondary" onClick={filters.clear}>
-              {t.clearFilters}
-            </Button>
-          }
-        />
+        <EmptyState title={t.emptyFiltered} headingLevel={emptyHeadingLevel} />
       ) : (
         <ul className={styles.list} aria-busy={fetching || undefined} data-fetching={fetching}>
           {reviews.map((review) => (

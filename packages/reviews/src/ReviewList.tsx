@@ -4,7 +4,7 @@ import { defaultReviewsLabels, type ReviewsLabels } from './labels'
 import { useRemoveReview, useReportReview, useReviews, useSetHelpful } from './queries'
 import type { ReviewsApi } from './reviewsApi'
 import type { ReviewItemProps } from './ReviewItem'
-import { ReviewListView } from './ReviewListView'
+import { ReviewListView, type ReviewListViewProps } from './ReviewListView'
 import type { ReportReason, ReviewTarget } from './types'
 
 export type ReviewListProps = {
@@ -26,6 +26,8 @@ export type ReviewListProps = {
   locale?: string
   /** 한 쪽의 개수 */
   pageSize?: number
+  /** 빈 상태 제목 단계(기본 3) */
+  emptyHeadingLevel?: ReviewListViewProps['emptyHeadingLevel']
 }
 
 /** 대상 하나의 리뷰 목록 — 서버에서 가져와 정렬 · 거르기 · 쪽 이동 · 도움돼요 · 신고 · 지우기까지 이어 준다 */
@@ -40,6 +42,7 @@ export function ReviewList({
   renderPhoto,
   locale,
   pageSize,
+  emptyHeadingLevel,
 }: ReviewListProps) {
   const own = useReviewFilters()
   const filters = given ?? own
@@ -70,6 +73,7 @@ export function ReviewList({
       filters={filters}
       labels={labels}
       fetching={query.isFetching}
+      emptyHeadingLevel={emptyHeadingLevel}
       helpfulPendingId={helpful.isPending ? (helpful.variables?.id ?? null) : null}
       item={{
         locale,

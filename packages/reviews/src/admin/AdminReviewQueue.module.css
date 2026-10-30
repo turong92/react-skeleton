@@ -1,0 +1,64 @@
+.page,
+.view {
+  display: grid;
+  gap: var(--space-lg);
+  min-width: 0;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  align-items: end;
+}
+
+.review {
+  display: grid;
+  gap: var(--space-xs);
+  min-width: 14rem;
+  max-width: 32rem;
+}
+
+.body {
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-caption);
+}
+
+.reports {
+  display: grid;
+  gap: var(--space-xs);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.form {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.stale {
+  opacity: 0.6;
+}

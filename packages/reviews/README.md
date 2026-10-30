@@ -1,6 +1,6 @@
 # @skeleton/reviews
 
-리뷰 · 평점 사용자 화면 한 벌 — 아무 대상(종류 + id: 상품 · 글 …)에 별점 1~5 · 본문 · 사진. 백엔드 `modules/review`(+ `review-jdbc`)의 사용자 HTTP 짝이다. 운영 화면(신고 큐 · 숨김 · 답글 쓰기)은 선택 하위 경로 `@skeleton/reviews/admin` 에 오며 아직 없다.
+리뷰 · 평점 사용자 화면 한 벌 — 아무 대상(종류 + id: 상품 · 글 …)에 별점 1~5 · 본문 · 사진. 백엔드 `modules/review`(+ `review-jdbc`)의 사용자 HTTP 짝이다. 운영 화면(신고 큐 · 숨김 · 답글 쓰기)은 선택 하위 경로 `@skeleton/reviews/admin` 이다(아래 「운영 화면」).
 
 ```tsx
 const api = createReviewsApi(apiClient) // 기본 경로 /reviews
@@ -84,3 +84,20 @@ function ProductReviews() {
 - **내 리뷰**: 서버의 `mine` 으로 판정한다. 운영자가 숨긴 내 리뷰(`status: 'HIDDEN'`)는 「숨겨졌어요 + 사유」 띠와 함께 나만 보이고, 고칠 수 없고 지우기만 된다. 내 리뷰에는 도움돼요를 못 누른다(서버 403) — 숫자만 보인다.
 - **눌리는 것은 눌리게**: 별점 칸 · 분포 막대 · 거르기 칩 · 신고 사유는 쉬는 상태에서도 테두리가 있고 44px 이상이며, 눌린 상태는 ✓ · 테두리 · 바탕으로 말한다(색만으로 말하지 않는다).
 - 스토리: 부품마다(`RatingStars` · `RatingInput` · `ReviewSummary` · `ReviewItem` · `ReviewList` · `ReviewForm`) + `ReviewsPage`(조립). 가짜 API 는 `src/stories/fakeReviews.ts`.
+
+## 운영 화면 `@skeleton/reviews/admin`
+
+백엔드 `skeleton.review.admin.enabled=true`(기본 꺼짐 → 목록이 404 면 화면이 「서버에서 이 도구가 꺼져 있어요」라고 제자리에서 말한다) + 권한 `review.moderate`(숨김 · 되살림 · 문제없음, MODERATOR 기본 포함) · `review.reply`(답글, 전권만).
+
+| 호출 (`createReviewsAdminApi`)           | 경로                                                                                    |
+| ---------------------------------------- | --------------------------------------------------------------------------------------- |
+| `listReviews({queue, cursor})`           | `GET /admin/reviews?queue=reported\|hidden\|all&targetType&cursor`                      |
+| `moderate(id, {status, reason})`         | `PUT /admin/reviews/{id}/moderation` (HIDDEN 은 사유 필수 · PUBLISHED 는 되살리기, 204) |
+| `dismissReports(id)`                     | `POST /admin/reviews/{id}/reports/dismiss` (「문제없음」, 204)                          |
+| `setReply(id, body)` · `removeReply(id)` | `PUT` · `DELETE /admin/reviews/{id}/reply` (리뷰당 하나, 204)                           |
+
+- `AdminReviewQueue` — 큐(신고됨 · 숨김 · 전체) 표, 신고 사유 칩과 수, 「숨기기」(사유 필수 대화상자) · 「문제없음」 · 「되살리기」 · 「답글」. 단추는 `can(key)` 와 그 줄의 상태로 갈린다(공개 + 신고 있음 → 숨기기 · 문제없음, 숨김 → 되살리기, 답글은 `review.reply`). `renderTargetLink` 로 대상(상품)을 그 화면에 잇는다.
+- `ReviewReplyEditor` — 답글 폼(있으면 그 자리에서 고침 · 지우기는 확인 창 뒤). 큐의 「답글」 대화상자가 쓴다.
+- 숨기기 · 답글 뒤에는 운영 큐와 공개 리뷰(목록 · 요약 · 평균) 쿼리를 함께 무효화한다.
+- 계정 이름 칸은 서버가 `account.read` 도 가진 운영자에게만 준다(`accountLabel`, 아니면 null).
+- 스토리: `AdminReviewQueue` · `ReviewReplyEditor`(가짜 API `src/admin/stories/fakeAdmin.ts`).

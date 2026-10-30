@@ -3,11 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "리뷰 · 평점 사용자 화면 — 아무 대상(type+id)에 별점 1~5 · 본문 · 사진 리뷰. createReviewsApi(`/reviews`)와 TanStack Query 훅, RatingStars · RatingInput(라디오 묶음) · ReviewSummary(평균 + 분포 막대, 누르면 거름) · ReviewList(정렬 · 거르기 칩 · 쪽 이동) · ReviewItem(구매 인증 · 도움돼요 · 신고 · 숨겨짐 · 운영자 답글) · ReviewForm(사진 올리기는 renderPhotos 로 앱이 잇는다 — 패키지는 storage 를 모른다). 백엔드 modules/review 짝",
+  "description": "리뷰 · 평점 사용자 화면 — 아무 대상(type+id)에 별점 1~5 · 본문 · 사진 리뷰. createReviewsApi(`/reviews`)와 TanStack Query 훅, RatingStars · RatingInput(라디오 묶음) · ReviewSummary(평균 + 분포 막대, 누르면 거름) · ReviewList(정렬 · 거르기 칩 · 쪽 이동) · ReviewItem(구매 인증 · 도움돼요 · 신고 · 숨겨짐 · 운영자 답글) · ReviewForm(사진 올리기는 renderPhotos 로 앱이 잇는다 — 패키지는 storage 를 모른다). 백엔드 modules/review 짝. 운영 화면은 @skeleton/reviews/admin(AdminReviewQueue 신고 큐 · 숨김 사유 · 문제없음 · 되살리기, ReviewReplyEditor 운영자 답글)",
   "exports": {
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./admin": {
+      "types": "./src/admin/index.ts",
+      "default": "./src/admin/index.ts"
     }
   },
   "types": "./src/index.ts",

@@ -44,6 +44,21 @@ describe('createCampaignApi', () => {
     ])
   })
 
+  it('lists my invitees with GET /referrals/me/invitees, cursor and size only when given', async () => {
+    const { client, calls } = recordingClient({ values: [] })
+    const api = createCampaignApi(client)
+    await api.myInvitees()
+    await api.myInvitees('c1', 20)
+    expect(calls).toEqual([
+      { kind: 'cursor', path: '/referrals/me/invitees', request: { params: {} } },
+      {
+        kind: 'cursor',
+        path: '/referrals/me/invitees',
+        request: { params: { cursor: 'c1', size: 20 } },
+      },
+    ])
+  })
+
   it('paths are settings', async () => {
     const { client, calls } = recordingClient([])
     await createCampaignApi(client, {

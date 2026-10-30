@@ -10,12 +10,15 @@ export type {
   CouponStageType,
   CouponStatus,
   CouponTab,
+  Invitee,
+  InviteeStatus,
   Milestone,
   PointBalanceValue,
   PointEntry,
   PointEntryKind,
   QuotePreview,
   ReferralMe,
+  ReferralRejection,
   RewardLine,
 } from './types'
 export { createRewardsApi } from './rewardsApi'

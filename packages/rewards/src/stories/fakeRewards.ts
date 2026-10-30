@@ -2,12 +2,12 @@ import { ApiRequestError } from '@skeleton/api-client'
 import type { BadgeApi } from '../badge/badgeApi'
 import type { EarnedBadge, LockedBadge, PublicBadge } from '../badge/types'
 import type { RewardsApi } from '../rewardsApi'
-import type { Campaign, Coupon, PointEntry } from '../types'
+import type { Campaign, Coupon, Invitee, PointEntry } from '../types'
 
 /** 스토리 · 시험용 메모리 안의 가짜 보상 API(C-R 꼴). 코드: SPRING 성공 · BAD 맞지 않음 · USED 이미 씀 · EMPTY 소진 */
 
-export const fail = (status: number, code: string) =>
-  new ApiRequestError({ code, title: code, status } as never, 'trace', 'span', 'parent')
+export const fail = (status: number, code: string, data?: unknown) =>
+  new ApiRequestError({ code, title: code, status, data } as never, 'trace', 'span', 'parent')
 
 const attendanceCampaign = (over: Partial<NonNullable<Campaign['attendance']>> = {}): Campaign => ({
   id: 'att',
@@ -74,7 +74,27 @@ const history = (count: number): PointEntry[] =>
     createdAt: new Date(Date.UTC(2026, 9, 28 - i, 3)).toISOString(),
   }))
 
+/** 초대 현황 — 상태 넷, 가린 이름이 없는(null) 줄 하나. 새것부터 */
+export const sampleInvitees: Invitee[] = [
+  { label: '김수***', status: 'REWARDED', claimedAt: '2026-10-25T03:00:00Z', rewardAt: null },
+  {
+    label: null,
+    status: 'PENDING',
+    claimedAt: '2026-10-24T03:00:00Z',
+    rewardAt: '2026-10-31T03:00:00Z',
+  },
+  { label: 'lee***', status: 'WAITING', claimedAt: '2026-10-23T03:00:00Z', rewardAt: null },
+  { label: 'pa***', status: 'NOT_REWARDED', claimedAt: '2026-10-22T03:00:00Z', rewardAt: null },
+  { label: 'ch***', status: 'PENDING', claimedAt: '2026-10-21T03:00:00Z', rewardAt: null },
+]
+
 export type FakeRewardsOptions = {
+  /** 직접 입력을 받을 수 있는 계정(`canClaim`) — 코드 BAD 계열은 거절: OWN · NOPE · DUP · MUTUAL · OLD · ENDED */
+  canClaim?: boolean
+  /** 초대 현황이 비어 있다 */
+  emptyInvitees?: boolean
+  /** 초대 현황 쪽 크기(기본 3) — 전체 5건 */
+  inviteePageSize?: number
   /** 출석 이벤트가 이미 오늘 출석한 상태로 시작 */
   checkedToday?: boolean
   /** 출석하면 409 `CAMPAIGN.NOT_ACTIVE` */
@@ -94,7 +114,32 @@ export function createFakeRewards({
   emptyPoints = false,
   notYetUsable = false,
   pageSize = 4,
+  canClaim = false,
+  emptyInvitees = false,
+  inviteePageSize = 3,
 }: FakeRewardsOptions = {}) {
+  let claimable = canClaim
+  const rejections: Record<string, () => never> = {
+    NOPE: () => {
+      throw fail(400, 'CAMPAIGN.REFERRAL_INVALID', { reason: 'UNKNOWN_CODE' })
+    },
+    OWN: () => {
+      throw fail(400, 'CAMPAIGN.REFERRAL_INVALID', { reason: 'OWN_CODE' })
+    },
+    DUP: () => {
+      throw fail(400, 'CAMPAIGN.REFERRAL_INVALID', { reason: 'ALREADY_INVITED' })
+    },
+    MUTUAL: () => {
+      throw fail(400, 'CAMPAIGN.REFERRAL_INVALID', { reason: 'MUTUAL' })
+    },
+    OLD: () => {
+      throw fail(400, 'CAMPAIGN.REFERRAL_INVALID', { reason: 'NOT_NEW_ACCOUNT' })
+    },
+    ENDED: () => {
+      throw fail(409, 'CAMPAIGN.NOT_ACTIVE')
+    },
+  }
+  const invitees = emptyInvitees ? [] : sampleInvitees
   let attendance = attendanceCampaign({ checkedToday })
   let available = emptyCoupons
     ? []
@@ -136,9 +181,29 @@ export function createFakeRewards({
       }
     },
     attendanceMonth: async () => ({ days: ['2026-10-26', '2026-10-27', '2026-10-28'] }),
-    myReferral: async () => ({ code: 'AB12CD34', invited: 3, rewarded: 2 }),
+    myReferral: async () => ({
+      code: 'AB12CD34',
+      invited: 3,
+      rewarded: 2,
+      canClaim: claimable,
+      claimUntil: claimable ? '2026-11-15T14:59:59Z' : null,
+    }),
+    myInvitees: async (cursor) => {
+      const start = cursor ? Number(cursor) : 0
+      const next = start + inviteePageSize
+      return {
+        values: invitees.slice(start, next),
+        cursor: {
+          hasNext: next < invitees.length,
+          nextCursor: next < invitees.length ? String(next) : null,
+        },
+        meta: { timestamp: 't' },
+      }
+    },
     claimReferral: async (code) => {
+      rejections[code]?.()
       claims.push(code)
+      claimable = false
     },
     listCoupons: async (tab) => (tab === 'AVAILABLE' ? available : emptyCoupons ? [] : pastCoupons),
     redeemCoupon: async (code) => {

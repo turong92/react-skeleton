@@ -34,7 +34,37 @@ export type CheckInResult = {
 
 export type AttendanceMonth = { days: string[] }
 
-export type ReferralMe = { code: string; invited: number; rewarded: number }
+export type ReferralMe = {
+  code: string
+  invited: number
+  rewarded: number
+  /** 아직 초대받지 않았고 진행 중인 초대 이벤트의 기간 안이라 코드를 직접 입력할 수 있다. 구버전 서버는 칸이 없다 */
+  canClaim?: boolean
+  /** 직접 입력할 수 있는 마지막 시각 — 정해진 기한이 없으면 null. 구버전 서버는 칸이 없다 */
+  claimUntil?: string | null
+}
+
+/** 내가 초대한 사람의 상태 — 대기(가입만 함) · 확인 중(보류 · 운영자 확인) · 보상 지급 · 보상 없음(상한 · 취소) */
+export type InviteeStatus = 'WAITING' | 'PENDING' | 'REWARDED' | 'NOT_REWARDED'
+
+export type Invitee = {
+  /** 가린 이름(`김수***`). 서버에 이름 구현이 없으면 null */
+  label: string | null
+  status: InviteeStatus
+  claimedAt: string
+  /** 보상 예정 시각 — 보류 중(`PENDING`)일 때만 */
+  rewardAt: string | null
+}
+
+/** `POST /referrals/claim` 이 거절된 이유(`data.reason`) + 이벤트 끝남(`CLOSED`) · 그 밖(`OTHER`) */
+export type ReferralRejection =
+  | 'UNKNOWN_CODE'
+  | 'OWN_CODE'
+  | 'ALREADY_INVITED'
+  | 'MUTUAL'
+  | 'NOT_NEW_ACCOUNT'
+  | 'CLOSED'
+  | 'OTHER'
 
 export type CouponStageType = 'FREE' | 'PERCENT' | 'FIXED'
 

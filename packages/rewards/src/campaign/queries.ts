@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { rewardsRoot } from '../queryKeys'
 import type { CampaignApi } from './campaignApi'
 
@@ -8,6 +8,7 @@ export const campaignKeys = {
   month: (campaignId: string, month: string) =>
     [...campaignKeys.all, 'month', campaignId, month] as const,
   referral: () => [...rewardsRoot, 'referral'] as const,
+  invitees: () => [...rewardsRoot, 'referral', 'invitees'] as const,
 }
 
 /** 진행 중인 이벤트와 내 상태 */
@@ -56,5 +57,16 @@ export function useClaimReferral(api: Pick<CampaignApi, 'claimReferral'>) {
   return useMutation({
     mutationFn: (code: string) => api.claimReferral(code),
     onSuccess: () => client.invalidateQueries({ queryKey: rewardsRoot }),
+  })
+}
+
+/** 내가 초대한 사람들 — 커서로 이어 받는다(`fetchNextPage` · `hasNextPage`) */
+export function useInvitees(api: Pick<CampaignApi, 'myInvitees'>, size?: number) {
+  return useInfiniteQuery({
+    queryKey: campaignKeys.invitees(),
+    queryFn: ({ pageParam }) => api.myInvitees(pageParam, size),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last) =>
+      last.cursor.hasNext ? (last.cursor.nextCursor ?? undefined) : undefined,
   })
 }

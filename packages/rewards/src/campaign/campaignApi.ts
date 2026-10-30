@@ -1,5 +1,5 @@
-import type { ApiClient } from '@skeleton/api-client'
-import type { AttendanceMonth, Campaign, CheckInResult, ReferralMe } from '../types'
+import type { ApiClient, ApiCursorResponse } from '@skeleton/api-client'
+import type { AttendanceMonth, Campaign, CheckInResult, Invitee, ReferralMe } from '../types'
 
 export type CampaignApi = {
   /** `GET {campaigns}` — 진행 중인 이벤트와 내 상태 */
@@ -10,7 +10,9 @@ export type CampaignApi = {
   attendanceMonth(campaignId: string, month: string): Promise<AttendanceMonth>
   /** `GET {referrals}/me` */
   myReferral(): Promise<ReferralMe>
-  /** `POST {referrals}/claim {code}` — 204, 안 되면 400 `CAMPAIGN.REFERRAL_INVALID`(이유는 `data.reason`) · 409 `CAMPAIGN.NOT_ACTIVE` */
+  /** `GET {referrals}/me/invitees?cursor&size` — 내가 초대한 사람들, 새것부터. 첫 쪽은 cursor 없이 */
+  myInvitees(cursor?: string, size?: number): Promise<ApiCursorResponse<Invitee>>
+  /** `POST {referrals}/claim {code}` — 204, 안 되면 400 `CAMPAIGN.REFERRAL_INVALID`(이유는 `data.reason` — `referralRejection`) · 409 `CAMPAIGN.NOT_ACTIVE` */
   claimReferral(code: string): Promise<void>
 }
 
@@ -24,7 +26,7 @@ export type CampaignApiPaths = {
 const trim = (path: string) => path.replace(/\/+$/, '')
 
 export function createCampaignApi(
-  client: Pick<ApiClient, 'list' | 'value' | 'noContent'>,
+  client: Pick<ApiClient, 'list' | 'value' | 'noContent' | 'cursor'>,
   { campaigns = '/campaigns', referrals = '/referrals' }: CampaignApiPaths = {},
 ): CampaignApi {
   const events = trim(campaigns)
@@ -37,6 +39,13 @@ export function createCampaignApi(
     attendanceMonth: (id, month) =>
       client.value<AttendanceMonth>(`${events}/${enc(id)}/attendance`, { params: { month } }),
     myReferral: () => client.value<ReferralMe>(`${invites}/me`),
+    myInvitees: (cursor, size) =>
+      client.cursor<Invitee>(`${invites}/me/invitees`, {
+        params: {
+          ...(cursor === undefined ? {} : { cursor }),
+          ...(size === undefined ? {} : { size }),
+        },
+      }),
     claimReferral: (code) =>
       client.noContent(`${invites}/claim`, { method: 'POST', json: { code } }),
   }

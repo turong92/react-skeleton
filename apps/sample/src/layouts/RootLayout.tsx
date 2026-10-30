@@ -77,7 +77,7 @@ export function AdminLinks() {
   const canGrants = usePermission('reward.operate')
   const canBadges = usePermission('badge.manage')
   const canWorkspaces = usePermission('workspace.read')
-  const canReviews = usePermission('review.moderate') || usePermission('review.reply')
+  const canReviews = usePermission(['review.moderate', 'review.reply'])
   // 운영 화면이 하나도 없는 사람에게는 메뉴 자체가 없다
   if (
     !(

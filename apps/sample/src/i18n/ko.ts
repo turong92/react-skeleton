@@ -600,6 +600,8 @@ export default {
   'search.subtitle': '노트나 상품을 제목이나 내용으로 찾아요. 2글자 이상 입력해 주세요.',
   'search.type.note': '노트',
   'search.type.product': '상품',
+  'reviews.edit.photosReplace':
+    '사진을 새로 올리면 지금 사진이 모두 새 사진으로 바뀌어요. 올리지 않으면 그대로예요.',
   'products.title': '상품',
   'products.back': '홈으로',
   'products.reviews': '리뷰',

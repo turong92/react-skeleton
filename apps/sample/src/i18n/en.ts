@@ -607,6 +607,8 @@ const en: Record<keyof typeof ko, string> = {
   'search.subtitle': 'Find notes and products by title or content. Type at least 2 characters.',
   'search.type.note': 'Note',
   'search.type.product': 'Product',
+  'reviews.edit.photosReplace':
+    'Uploading photos replaces all current photos. Leave it alone to keep them.',
   'products.title': 'Product',
   'products.back': 'Home',
   'products.reviews': 'Reviews',

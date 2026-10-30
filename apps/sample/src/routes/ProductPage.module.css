@@ -20,3 +20,23 @@
 .signIn p {
   margin: 0;
 }
+
+.editPhotos {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.existing {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hint {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-caption);
+}

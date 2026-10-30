@@ -267,11 +267,19 @@ describe('reviews: buy, write, help, report, read signed-out, reply, hide', () =
         .poll(() => unreadOf(userToken), { timeout: 60_000 })
         .toBeGreaterThan(unreadBefore)
       // 상품 화면에는 리뷰가 없다(평균도 사라진다)
-      const reader = await accountPage(SECOND)
+      // (운영 권한이 없는 씨앗 계정은 user 뿐이라, 읽는 쪽은 로그아웃 상태 - 공개 목록은 PUBLISHED 만 준다)
+      const reader = await browser.newContext({
+        locale: 'ko-KR',
+        timezoneId: 'Asia/Seoul',
+        viewport: { width: 1280, height: 800 },
+      })
+      reader.setDefaultTimeout(15_000)
       try {
-        await reader.page.goto(`${baseUrl}/products/basic`)
-        await pwExpect(reader.page.getByText(L.summary.empty)).toBeVisible()
-        await pwExpect(reviewItem(reader.page, BODY)).toHaveCount(0)
+        const rp = await reader.newPage()
+        await rp.goto(`${baseUrl}/products/basic`)
+        await dismissConsent(rp)
+        await pwExpect(rp.getByText(L.summary.empty)).toBeVisible()
+        await pwExpect(reviewItem(rp, BODY)).toHaveCount(0)
       } finally {
         await reader.close()
       }

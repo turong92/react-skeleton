@@ -61,9 +61,12 @@ function WriteArea({ target, summary }: { target: ReviewTarget; summary: TargetS
   return blocked ? <Alert tone="info">{blocked}</Alert> : null
 }
 
-/** 내 리뷰 고치기 창 — 사진 칸을 만졌을 때만 사진이 실린다(서버 응답에 저장 키가 없다) */
+/**
+ * 내 리뷰 고치기 창 — 기존 사진을 보여 준다. 사진 칸(새로 올리기)을 만졌을 때만 PATCH 에 `photos` 가 실리고, 실리면 그 목록으로 **전체 교체**다
+ * (빈 목록 = 모두 지움). 서버 응답에 저장 키가 없어 기존 사진을 유지한 채 하나 더하는 것은 아직 못 한다 - 그래서 칸 위에 그렇게 알린다.
+ */
 function EditDialog({ review, onClose }: { review: Review; onClose: () => void }) {
-  const { locale } = useT()
+  const { t, locale } = useT()
   const labels = reviewsLabelsFor(languageOf(locale))
   const config = useReviewConfig(reviewsApi)
   const update = useUpdateReview(reviewsApi)
@@ -74,7 +77,26 @@ function EditDialog({ review, onClose }: { review: Review; onClose: () => void }
           config={config.data}
           labels={labels}
           initial={{ rating: review.rating, body: review.body }}
-          renderPhotos={renderPhotos}
+          renderPhotos={(slot) => (
+            <div className={styles.editPhotos}>
+              {review.photos.length > 0 && (
+                <>
+                  <ul className={styles.existing} aria-label={labels.item.photos}>
+                    {review.photos.map((photo) => (
+                      <li key={photo.index}>
+                        <ReviewPhoto
+                          path={reviewsApi.photoPath(review.id, photo.index)}
+                          alt={labels.item.photo(photo.index + 1)}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                  <p className={styles.hint}>{t('reviews.edit.photosReplace')}</p>
+                </>
+              )}
+              {renderPhotos(slot)}
+            </div>
+          )}
           onCancel={onClose}
           onSubmit={async (input) => {
             await update.mutateAsync({ id: review.id, patch: input })

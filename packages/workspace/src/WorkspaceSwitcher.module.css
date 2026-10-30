@@ -1,0 +1,17 @@
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.name {
+  display: inline-block;
+  max-inline-size: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chevron {
+  font-size: var(--font-size-caption);
+}

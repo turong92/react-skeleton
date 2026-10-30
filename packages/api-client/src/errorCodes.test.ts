@@ -117,6 +117,26 @@ describe('author-profile codes (kotlin-skeleton modules/author-profile)', () => 
   })
 })
 
+describe('workspace codes (kotlin-skeleton modules/workspace)', () => {
+  it('carries the codes the workspace screens branch on', () => {
+    expect([
+      ErrorCodes.WORKSPACE_NOT_FOUND,
+      ErrorCodes.WORKSPACE_FORBIDDEN,
+      ErrorCodes.WORKSPACE_REQUIRED,
+      ErrorCodes.WORKSPACE_SLUG_TAKEN,
+      ErrorCodes.WORKSPACE_OWNER_CANNOT_LEAVE,
+      ErrorCodes.WORKSPACE_MEMBER_NOT_FOUND,
+    ]).toEqual([
+      'WORKSPACE.NOT_FOUND',
+      'WORKSPACE.FORBIDDEN',
+      'WORKSPACE.REQUIRED',
+      'WORKSPACE.SLUG_TAKEN',
+      'WORKSPACE.OWNER_CANNOT_LEAVE',
+      'WORKSPACE.MEMBER_NOT_FOUND',
+    ])
+  })
+})
+
 describe('login id codes (account contract FINAL-7 L12)', () => {
   it('names the three codes the login id endpoints answer with', () => {
     expect(ErrorCodes.ACCOUNT_LOGIN_ID_TAKEN).toBe('ACCOUNT.LOGIN_ID_TAKEN') // 409

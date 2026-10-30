@@ -42,6 +42,7 @@ packages/
 ├── notifications/       # 알림 받은편지함 클라이언트 · TanStack Query 훅 · 안 읽은 수(실시간 갱신) · NotificationBell/List
 ├── board/               # 게시판 — 글 · 대댓글 · 타입이 있는 반응(좋아요 · 공감 … 서버가 알려 주는 코드, 문구 · 아이콘은 맵 prop) · 낙관적 반응 · PostList/PostDetail/PostEditor/CommentThread/ReactionBar
 ├── author-profile/      # 작성자 프로필 — 한 계정의 여러 닉네임(서로 이어지지 않는다) · AuthorPicker(board 의 authorPicker 에 꽂는 선택기) · AuthorProfileManager · createAuthorMemory(기기 기억) · 클라이언트와 훅
+├── workspace/           # 워크스페이스(팀) — 주소 `/w/<slug>` 에서 팀을 읽는 WorkspaceProvider/useWorkspace(탭마다 독립) · createWorkspaceHeaders(X-Workspace-Id) · WorkspaceSwitcher · CreateWorkspaceForm · WorkspaceSettings(이름 · 주소 이름 · 멤버 · 역할 · 소유권 이전 · 탈퇴). 라우터를 모른다
 ├── storage/             # 프리사인 업로드 — 검증 · presign · 직접 PUT(진행률 · 취소) · 멀티파트 · useUpload
 ├── payment/             # 결제 한 벌 — 장부 API · 훅 · 토스 결제창 · Paddle 오버레이 · 구독(카드 등록 · 플랜 올리기 · 지금 해지) · 돌아온 주소 읽기 + 운영자 부품(@skeleton/payment/admin) + 장부 없이 쓰는 얇은 호출
 ├── captcha-turnstile/   # Cloudflare Turnstile 로더 · <Turnstile> · 토큰 붙이기

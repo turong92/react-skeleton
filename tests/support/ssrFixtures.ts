@@ -239,6 +239,28 @@ const fakeAuthorProfileApi = () =>
       },
     },
   )
+/** 워크스페이스 api — 서버 렌더에서는 아무것도 부르지 않는다(쿼리는 끝내 오지 않는 대답) */
+const fakeWorkspaceApi = () => ({
+  list: () => new Promise(noop),
+  create: () => new Promise(noop),
+  get: () => new Promise(noop),
+  bySlug: () => new Promise(noop),
+  update: () => new Promise(noop),
+  members: () => new Promise(noop),
+  setMemberRole: () => new Promise(noop),
+  removeMember: () => new Promise(noop),
+  leave: () => new Promise(noop),
+  transfer: () => new Promise(noop),
+})
+const workspaceDetail = {
+  id: 'ws_1',
+  name: 'Acme',
+  slug: 'acme',
+  role: 'OWNER',
+  memberCount: 1,
+  pendingInvitations: 0,
+  createdAt: '2026-01-01T00:00:00Z',
+}
 const authorProfile = { id: 'prf_a', name: 'Ann', tag: '0001', createdAt: '2026-01-01T00:00:00Z' }
 const authorPickerSlot = {
   boardCode: 'free',
@@ -931,6 +953,24 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
     value: 'prf_a',
   }),
   'author-profile#AuthorProfileManager': () => ({ api: fakeAuthorProfileApi() }),
+  'workspace#WorkspaceProvider': (ctx) => ({
+    api: fakeWorkspaceApi(),
+    slug: 'acme',
+    current: call(ctx.mod('workspace').createCurrentWorkspace),
+    children: createElement('p', null, 'app'),
+  }),
+  'workspace#WorkspaceSwitcher': () => ({
+    api: fakeWorkspaceApi(),
+    currentSlug: 'acme',
+    onSelect: noop,
+  }),
+  'workspace#CreateWorkspaceForm': () => ({ api: fakeWorkspaceApi(), onCreated: noop }),
+  'workspace#WorkspaceSettings': () => ({
+    api: fakeWorkspaceApi(),
+    workspace: workspaceDetail,
+    accountId: 'acc_1',
+    onLeft: noop,
+  }),
   'board#ReactionBar': () => ({
     types: ['LIKE', 'EMPATHY'],
     counts: { LIKE: 2 },
@@ -1158,6 +1198,16 @@ export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
   'author-profile#useCreateAuthorProfile': () => [fakeAuthorProfileApi()],
   'author-profile#useRenameAuthorProfile': () => [fakeAuthorProfileApi()],
   'author-profile#useRemoveAuthorProfile': () => [fakeAuthorProfileApi()],
+  'workspace#useWorkspace': () => [],
+  'workspace#useWorkspaces': () => [fakeWorkspaceApi()],
+  'workspace#useWorkspaceBySlug': () => [fakeWorkspaceApi(), 'acme'],
+  'workspace#useWorkspaceMembers': () => [fakeWorkspaceApi(), 'ws_1'],
+  'workspace#useCreateWorkspace': () => [fakeWorkspaceApi()],
+  'workspace#useUpdateWorkspace': () => [fakeWorkspaceApi(), 'ws_1'],
+  'workspace#useSetMemberRole': () => [fakeWorkspaceApi(), 'ws_1'],
+  'workspace#useRemoveMember': () => [fakeWorkspaceApi(), 'ws_1'],
+  'workspace#useTransferOwnership': () => [fakeWorkspaceApi(), 'ws_1'],
+  'workspace#useLeaveWorkspace': () => [fakeWorkspaceApi(), 'ws_1'],
   'board#useBoardConfig': () => [fakeBoardApi()],
   'board#useBoards': () => [fakeBoardApi()],
   'board#useBoard': () => [fakeBoardApi(), 'free'],

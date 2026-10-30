@@ -20,7 +20,7 @@ const dirs = (kind: 'app' | 'package') =>
     .sort()
 
 describe('the skeleton repo', () => {
-  it('has the five apps and the nineteen packages', () => {
+  it('has the five apps and the twenty packages', () => {
     expect(dirs('app')).toEqual([
       'apps/sample',
       'apps/starter',
@@ -48,6 +48,7 @@ describe('the skeleton repo', () => {
       'packages/time',
       'packages/tokens',
       'packages/ui',
+      'packages/workspace',
     ])
   })
 
@@ -107,6 +108,7 @@ describe('the skeleton repo', () => {
       'packages/theme',
       'packages/time',
       'packages/ui',
+      'packages/workspace',
     ])
   })
 

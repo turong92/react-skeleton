@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — `@skeleton/workspace` (워크스페이스 · 팀) R1 (2026-10-30)
+
+새 패키지. 백엔드 짝: kotlin-skeleton `workspace` · `workspace-jdbc`(경로 `/api/v1/workspaces`). 이 조각은 사용자 화면의 앞부분 — 초대 · 수락 · 운영 화면은 다음 조각. 라우터를 모른다(앱이 slug 와 이동 콜백을 넘긴다), 문구는 모두 `labels` prop(기본 영어, `koWorkspaceLabels`).
+
+- **팀은 주소에서 읽는다**: `WorkspaceProvider`(`/w/<slug>` 의 slug → `GET /workspaces/by-slug/{slug}`, 풀린 뒤에만 자식을 그린다 · 404 는 「찾을 수 없음」 · 옛 slug 는 풀리고 `onCanonicalSlug` 로 앱이 주소를 replace) · `useWorkspace()` · `createCurrentWorkspace` + `createWorkspaceHeaders`(풀린 id 를 `X-Workspace-Id` 로 — 앱이 `getAuthHeaders` 와 합친다). 「마지막에 쓴 팀」(`createLastWorkspaceMemory` · `pickLandingSlug` · `forgetLastWorkspace`)은 첫 화면으로 보낼 때만 쓴다.
+- `createWorkspaceApi`(목록 · 만들기 · 상세 · by-slug · `PATCH` 이름 / slug · 멤버 · 역할 · 추방 · 탈퇴 · 이전) · TanStack Query 훅.
+- `WorkspaceSwitcher`(머리줄 팀 고르기 + 새 워크스페이스) · `CreateWorkspaceForm`(이름 + 주소 이름 제안) · `WorkspaceSettings`(이름 · 주소 이름 · 멤버 표: 역할 고르기 · 내보내기 · 소유권 이전 대화상자 · 탈퇴) — 단추는 내 역할로 숨긴다(검사는 서버).
+- `@skeleton/api-client`: `ErrorCodes.WORKSPACE_NOT_FOUND` · `FORBIDDEN` · `REQUIRED` · `SLUG_TAKEN` · `OWNER_CANNOT_LEAVE` · `MEMBER_NOT_FOUND`.
+
 ### Added — 배지 · 업적 (2026-10-29)
 
 백엔드 짝: kotlin-skeleton `badge` · `badge-jdbc`(경로 `/api/v1/badges`, 운영 `/api/v1/admin/badges` · `/badge-awards`, 권한 `badge.manage`)와 `campaign` 의 `achievement` 종류.

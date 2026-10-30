@@ -1,0 +1,40 @@
+.stack {
+  display: grid;
+  gap: var(--space-xl);
+}
+
+.section {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.readonly {
+  display: grid;
+  gap: var(--space-xs);
+  margin: 0;
+}
+
+.readonlyTerm {
+  color: var(--text-muted);
+  font-size: var(--font-size-caption);
+}
+
+.readonlyValue {
+  margin: 0;
+  color: var(--text-strong);
+}
+
+.hint {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.you {
+  margin-inline-start: var(--space-xs);
+  color: var(--text-muted);
+  font-size: var(--font-size-caption);
+}
+
+.nowrap {
+  white-space: nowrap;
+}

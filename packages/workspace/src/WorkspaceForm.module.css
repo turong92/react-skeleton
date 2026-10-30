@@ -1,0 +1,17 @@
+.form {
+  display: grid;
+  gap: var(--space-md);
+  max-inline-size: 28rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.saved {
+  color: var(--text-muted);
+  font-size: var(--font-size-caption);
+}

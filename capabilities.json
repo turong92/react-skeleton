@@ -899,6 +899,92 @@
     {
       "patterns": [],
       "stories": [
+        "packages/workspace/src/WorkspaceSwitcher.stories.tsx",
+        "packages/workspace/src/CreateWorkspaceForm.stories.tsx",
+        "packages/workspace/src/WorkspaceProvider.stories.tsx",
+        "packages/workspace/src/WorkspaceSettings.stories.tsx"
+      ],
+      "docs": ["packages/workspace/README.md"],
+      "entryPoints": [
+        "createWorkspaceApi",
+        "useWorkspaces",
+        "useWorkspaceBySlug",
+        "useWorkspaceMembers",
+        "useCreateWorkspace",
+        "useUpdateWorkspace",
+        "useSetMemberRole",
+        "useRemoveMember",
+        "useTransferOwnership",
+        "useLeaveWorkspace",
+        "WorkspaceProvider",
+        "useWorkspace",
+        "createCurrentWorkspace",
+        "createWorkspaceHeaders",
+        "createLastWorkspaceMemory",
+        "pickLandingSlug",
+        "WorkspaceSwitcher",
+        "CreateWorkspaceForm",
+        "WorkspaceSettings",
+        "memberActions",
+        "koWorkspaceLabels",
+        "defaultWorkspaceLabels"
+      ],
+      "needs": ["api-client", "time", "ui"],
+      "backend": {
+        "modules": ["workspace", "workspace-jdbc"],
+        "oneOfModules": [],
+        "optionalModules": [],
+        "basePaths": ["/api/v1/workspaces"],
+        "docs": ["docs/modules/workspace.md", "docs/modules/workspace-jdbc.md"]
+      },
+      "status": "experimental",
+      "id": "workspace",
+      "kind": "package",
+      "package": "@skeleton/workspace",
+      "path": "packages/workspace",
+      "stampFlag": {
+        "flag": "--packages workspace",
+        "included": "flag",
+        "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
+        "alsoVia": [],
+        "optOut": null
+      },
+      "summary": "워크스페이스(팀) 사용자 화면 — 주소 `/w/<slug>/…` 에서 팀을 읽는 WorkspaceProvider/useWorkspace(탭마다 독립 · 옛 slug 는 새 주소로 replace · 풀린 id 를 X-Workspace-Id 헤더로: createWorkspaceHeaders) · WorkspaceSwitcher(머리줄 팀 고르기 + 새 워크스페이스) · CreateWorkspaceForm(이름 + 주소 이름) · WorkspaceSettings(이름 · 주소 이름 · 멤버 표: 역할 고르기 · 내보내기 · 소유권 이전 · 탈퇴, 단추는 역할로 숨김) · 「마지막에 쓴 팀」 기억은 첫 화면으로 보낼 때만. 라우터를 모른다(앱이 slug 와 이동 콜백을 준다). 초대 · 수락 · 운영 화면은 다음 조각.",
+      "notFor": [
+        "서비스 운영자의 역할 · 권한(authz) → auth 의 역할 화면 — 워크스페이스 역할(소유자 · 관리자 · 멤버)은 멤버십 한 줄의 값이라 서로 섞지 않는다",
+        "초대 메일 · 초대 수락 화면 · 운영자의 워크스페이스 목록 → 이 패키지의 다음 조각(아직 없다)",
+        "앱 데이터에 팀 경계를 거는 일 → 앱이 한다(요청 헤더 X-Workspace-Id + 서버의 CurrentWorkspace 검사, 캐시 키에는 팀 id)",
+        "좌석 요금 · 팀 결제 → 만들지 않는다(좌석 상한 계약만 서버에 있다)"
+      ],
+      "keywords": {
+        "ko": [
+          "워크스페이스",
+          "팀",
+          "조직",
+          "멤버 관리",
+          "소유권 이전",
+          "팀 전환",
+          "팀 만들기",
+          "멀티 테넌트",
+          "주소 이름"
+        ],
+        "en": [
+          "workspace",
+          "team",
+          "organization",
+          "org",
+          "tenant",
+          "multi-tenant",
+          "members",
+          "switch workspace",
+          "transfer ownership",
+          "slug"
+        ]
+      }
+    },
+    {
+      "patterns": [],
+      "stories": [
         "packages/storage/src/useUpload.stories.tsx",
         "packages/ui/src/FilePicker/FilePicker.stories.tsx",
         "packages/ui/src/Progress/Progress.stories.tsx"
@@ -2780,6 +2866,11 @@
       "need": "한 사람이 여러 닉네임(프로필)으로 글 · 댓글을 쓰고, 서로 같은 사람인 줄 모르게 (팬덤 · 익명 커뮤니티)",
       "capabilities": ["board", "author-profile"],
       "byHand": "백엔드에 author-profile 모듈을 끼우면(board 는 빈의 유무가 스위치) GET /boards/config 의 authorRequired 가 켜진다. 글쓰기 · 댓글 폼의 authorPicker 렌더 prop 에 <AuthorPicker {...args} api boardCode memory/> 를 꽂고, 설정 화면에 <AuthorProfileManager alsoInvalidate={[boardKeys.all]}/>, 로그아웃 때 memory.forget(). 전역 오류 토스트는 isAuthorProfileFormError 를 건너뛴다. 문구(ko/en)는 labels prop 으로 앱이 공급."
+    },
+    {
+      "need": "사용자가 팀(워크스페이스)을 만들고 멤버를 두고 역할(소유자 · 관리자 · 멤버)로 나눠 쓰며, 앱 데이터가 그 팀 안에 묶인다 (팀 전환 · 소유권 이전 · 탈퇴)",
+      "capabilities": ["workspace"],
+      "byHand": "백엔드에 workspace 모듈을 끼운다. 라우트 /w/:slug/* 를 <WorkspaceProvider api slug current onCanonicalSlug> 로 감싸 팀을 주소에서 읽고(탭마다 독립), 앱의 getAuthHeaders 에 createWorkspaceHeaders(current)() 를 합쳐 앱 데이터 요청에 X-Workspace-Id 를 싣는다. 머리줄에 WorkspaceSwitcher, 첫 화면은 pickLandingSlug 로 보내고, 설정에 WorkspaceSettings. 앱 데이터의 캐시 키에는 팀 id 를 넣는다. 문구(ko/en)는 labels prop 으로 앱이 공급."
     },
     {
       "need": "알림 (종 · 목록 · 안 읽은 수)",

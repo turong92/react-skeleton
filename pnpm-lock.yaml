@@ -640,6 +640,28 @@ importers:
         specifier: ^2.0.7
         version: 2.0.8(@types/react@19.2.14)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
 
+  packages/workspace:
+    dependencies:
+      '@skeleton/api-client':
+        specifier: workspace:*
+        version: link:../api-client
+      '@skeleton/time':
+        specifier: workspace:*
+        version: link:../time
+      '@skeleton/ui':
+        specifier: workspace:*
+        version: link:../ui
+    devDependencies:
+      '@tanstack/react-query':
+        specifier: ^5.99.2
+        version: 5.104.1(react@19.3.0)
+      react:
+        specifier: ^19.2.5
+        version: 19.3.0
+      react-dom:
+        specifier: ^19.2.5
+        version: 19.3.0(react@19.3.0)
+
 packages:
 
   '@adobe/css-tools@4.5.0':

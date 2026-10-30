@@ -1,0 +1,32 @@
+{
+  "name": "@skeleton/workspace",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "워크스페이스(팀) 사용자 화면 — 클라이언트(createWorkspaceApi) · TanStack Query 훅 · WorkspaceProvider/useWorkspace(주소의 slug 로 팀을 풀어 낸다 — 탭마다 독립) · createWorkspaceHeaders(X-Workspace-Id) · WorkspaceSwitcher · CreateWorkspaceForm · WorkspaceSettings(이름 · 주소 이름 · 멤버 표: 역할 · 추방 · 소유권 이전 · 탈퇴). 라우터를 모른다(앱이 slug 와 이동 콜백을 준다). 백엔드 modules/workspace 짝",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "types": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run --pool forks --testTimeout 30000 --hookTimeout 60000",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@skeleton/api-client": "workspace:*",
+    "@skeleton/time": "workspace:*",
+    "@skeleton/ui": "workspace:*"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "^5.0.0",
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@tanstack/react-query": "^5.99.2",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
+  }
+}

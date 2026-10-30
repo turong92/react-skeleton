@@ -2199,6 +2199,8 @@
           "account-jdbc",
           "alert",
           "alert-jdbc",
+          "api-key",
+          "api-key-jdbc",
           "auth",
           "auth-magic-link",
           "auth-session",
@@ -2379,6 +2381,8 @@
           "account-jdbc",
           "alert",
           "alert-jdbc",
+          "api-key",
+          "api-key-jdbc",
           "async",
           "async-notification",
           "auth",
@@ -2818,7 +2822,7 @@
         "oneOfModules": [],
         "optionalModules": [],
         "basePaths": ["/api/v1/api-keys", "/api/v1/admin/api-keys"],
-        "docs": ["docs/modules/api-key.md"]
+        "docs": ["docs/modules/api-key.md", "docs/modules/api-key-jdbc.md"]
       },
       "status": "stable",
       "id": "api-keys",

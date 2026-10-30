@@ -1,0 +1,11 @@
+.form {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-width: 0;
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+}

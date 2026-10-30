@@ -1,0 +1,8 @@
+/* 일치한 곳 - 색만이 아니라 굵기도 바꾼다(글자 색은 본문 그대로라 대비가 깨지지 않는다) */
+.mark {
+  padding-inline: var(--space-xs);
+  border-radius: var(--radius-sm);
+  background: var(--teal-soft);
+  color: inherit;
+  font-weight: 600;
+}

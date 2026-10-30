@@ -122,6 +122,9 @@ const reviewsReview = {
   createdAt: '2026-01-01T00:00:00Z',
   updatedAt: '2026-01-01T00:00:00Z',
 }
+const fakeSearchApi = () => ({ search: async () => pageOf([]) })
+const searchLabels = (ctx: FixtureContext) => ctx.mod('search').defaultSearchLabels
+const searchDescribe = (type: string) => ({ label: type, href: (id: string) => `/${type}/${id}` })
 const rewardsCoupon = {
   id: 'c1',
   name: 'Welcome',
@@ -1054,6 +1057,15 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
     labels: reviewsLabels(ctx),
     onSubmit: () => {},
   }),
+  'search#Highlight': () => ({ text: 'a <b> c', ranges: [[2, 5]] }),
+  'search#SearchBox': (ctx) => ({ labels: searchLabels(ctx), onSearch: noop }),
+  'search#SearchResults': (ctx) => ({
+    api: fakeSearchApi(),
+    query: 'bag',
+    describe: searchDescribe,
+    types: ['note', 'product'],
+    labels: searchLabels(ctx),
+  }),
   'notifications#NotificationBell': () => ({ api: fakeNotificationsApi() }),
   'notifications#NotificationList': () => ({ items: [notification], onOpen: () => {} }),
   'notifications#NotificationPreferences': () => ({ api: fakeNotificationsApi() }),
@@ -1297,6 +1309,7 @@ export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
   'reviews#useSetHelpful': () => [fakeReviewsApi()],
   'reviews#useReportReview': () => [fakeReviewsApi()],
   'reviews#useReviewFilters': () => [],
+  'search#useSearch': () => [fakeSearchApi(), { q: 'bag' }],
   'notifications#useNotifications': () => [fakeNotificationsApi()],
   'notifications#useUnreadCount': () => [fakeNotificationsApi()],
   'notifications#useMarkRead': () => [fakeNotificationsApi()],

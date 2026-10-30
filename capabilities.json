@@ -769,6 +769,64 @@
       }
     },
     {
+      "patterns": ["apps/storybook/src/patterns/ListPage.stories.tsx"],
+      "stories": [
+        "packages/search/src/SearchBox.stories.tsx",
+        "packages/search/src/SearchResults.stories.tsx",
+        "packages/search/src/useSearch.stories.tsx"
+      ],
+      "docs": ["packages/search/README.md", "apps/sample/src/routes/SearchPage.tsx"],
+      "entryPoints": [
+        "createSearchApi",
+        "useSearch",
+        "isSearchable",
+        "SearchBox",
+        "SearchResults",
+        "Highlight",
+        "splitHighlights",
+        "defaultSearchLabels",
+        "koSearchLabels"
+      ],
+      "needs": ["api-client", "ui"],
+      "backend": {
+        "modules": ["search", "search-jdbc"],
+        "oneOfModules": [],
+        "optionalModules": [],
+        "basePaths": ["/api/v1/search"],
+        "docs": ["docs/modules/search.md", "docs/modules/search-jdbc.md"]
+      },
+      "status": "experimental",
+      "id": "search",
+      "kind": "package",
+      "package": "@skeleton/search",
+      "path": "packages/search",
+      "stampFlag": {
+        "flag": "--packages search",
+        "included": "flag",
+        "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
+        "alsoVia": ["--with-sample"],
+        "optOut": null
+      },
+      "summary": "전문 검색 — 검색창(SearchBox: 입력 + 제출 단추) · 결과 화면(SearchResults: 종류 칩 · 개수 · 제목 링크 + 발췌 · 쪽 이동 · 빈/로딩/오류 · 「2글자 이상」 안내) · useSearch(입력 늦춤 · 이전 쪽 유지) · Highlight(서버가 준 [시작,끝) UTF-16 위치를 <mark> 로, 문자열은 글자로만). 종류 이름과 링크는 앱이 describe(type) 로 준다 - 패키지는 노트 · 상품을 모른다.",
+      "notFor": [
+        "운영 재색인 화면 — 서버의 POST /api/v1/admin/search/rebuild 는 있지만 이 패키지에 화면은 없다(다음 판)",
+        "자동 완성 · 오타 교정 · 형태소 분석 — 서버가 2글자 조각의 부분 문자열 일치만 한다",
+        "로그인 전 검색 — 서버 skeleton.search.http.allow-anonymous-read 를 앱이 켜야 열린다(견본은 꺼 둠, 머리말 검색창은 로그인한 사람에게만)",
+        "라우터를 모른다 — 링크는 describe 의 href 와 renderLink 로 앱이 이동 방식을 정한다"
+      ],
+      "keywords": {
+        "ko": ["검색", "검색창", "검색 결과", "전문 검색", "하이라이트", "강조 표시", "통합 검색"],
+        "en": [
+          "search",
+          "search box",
+          "search results",
+          "full-text search",
+          "highlight",
+          "mark matches"
+        ]
+      }
+    },
+    {
       "patterns": [],
       "stories": [
         "packages/dashboard/src/DashboardView.stories.tsx",
@@ -2206,6 +2264,7 @@
           "realtime",
           "reviews",
           "rewards",
+          "search",
           "seo",
           "storage",
           "workspace"
@@ -3232,6 +3291,11 @@
       "need": "리뷰 · 별점 (상품 후기 · 평균 별점 · 구매 인증 · 포토 리뷰 · 도움돼요 · 신고)",
       "capabilities": ["reviews"],
       "byHand": "백엔드 review + review-jdbc 를 붙이고(skeleton.review.http.* · 대상 종류와 ReviewTargets 는 앱이 준다) 프런트는 Packages/reviews/ReviewsPage 스토리를 복사한다: useReviewFilters 한 벌을 ReviewSummary 와 ReviewList 에 건네고, summary.canWrite 면 ReviewForm 아니면 writeBlockedMessage. 사진 칸은 renderPhotos 에 @skeleton/storage 업로더를 꽂는다. 구매 인증은 앱이 결제 이벤트에서 서버의 구매 신호를 넣는다."
+    },
+    {
+      "need": "전문 검색 (머리말 검색창 · 결과 화면 · 일치한 글자 강조 · 종류별 거르기)",
+      "capabilities": ["search"],
+      "byHand": "백엔드 search + search-jdbc 를 붙이고(skeleton.search.http.* · 문서는 catalog 나 앱이 SearchIndexer 로 밀어 넣는다) 프런트는 apps/sample 의 HeaderSearch(SearchBox → /search?q=)와 SearchPage(SearchResults + describe: 종류 → {label, href(id)} + renderLink 로 라우터 링크)를 복사한다. 검색은 로그인한 사람만(서버 기본)."
     },
     {
       "need": "약관 · 개인정보 동의 (가입 체크박스 · 새 판 재동의 · 선택 동의 철회) — 문서와 동의 기록은 서버가 쥔다",

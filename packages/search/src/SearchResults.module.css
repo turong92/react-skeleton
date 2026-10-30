@@ -1,0 +1,77 @@
+.root {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+/* 눌린 칩은 테두리와 바탕이 바뀌고 앞에 ✓ 가 붙는다 */
+.chip[aria-pressed='true'] {
+  border-color: var(--teal);
+  background: var(--teal-soft);
+}
+
+.count {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+}
+
+.list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  transition: opacity 120ms ease;
+}
+
+.list[data-fetching='true'] {
+  opacity: 0.6;
+}
+
+.row {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-xs);
+  padding-block: var(--space-lg);
+  border-block-end: 1px solid var(--border);
+}
+
+.row:first-child {
+  padding-block-start: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-subheading);
+  line-height: var(--line-height-snug);
+}
+
+/* 제목은 링크다 - 밑줄이 있고 올리면 진해진다 */
+.title a {
+  color: var(--text-strong);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.title a:hover {
+  color: var(--teal);
+}
+
+.title a:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.snippet {
+  margin: 0;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}

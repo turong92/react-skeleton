@@ -1,0 +1,30 @@
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.main {
+  display: grid;
+  flex: 1 1 12rem;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.name {
+  color: var(--text-strong);
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  color: var(--text-muted);
+  font-size: var(--font-size-caption);
+}
+
+.empty {
+  margin: 0;
+  color: var(--text-muted);
+}

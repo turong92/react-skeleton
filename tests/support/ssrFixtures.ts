@@ -37,7 +37,18 @@ const fakeRewardsApi = () => ({
   listCampaigns: async () => [],
   checkIn: async () => ({ alreadyChecked: false, total: 1, streak: 1, rewards: [] }),
   attendanceMonth: async () => ({ days: [] }),
-  myReferral: async () => ({ code: 'AB12CD34', invited: 0, rewarded: 0 }),
+  myReferral: async () => ({
+    code: 'AB12CD34',
+    invited: 0,
+    rewarded: 0,
+    canClaim: false,
+    claimUntil: null,
+  }),
+  myInvitees: async () => ({
+    values: [],
+    cursor: { hasNext: false, nextCursor: null },
+    meta: { timestamp: '2026-01-01T00:00:00Z' },
+  }),
   claimReferral: async () => {},
   listCoupons: async () => [],
   redeemCoupon: async () => {
@@ -1003,6 +1014,8 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
   }),
   'rewards#AttendanceCard': () => ({ api: fakeRewardsApi(), campaignId: 'att' }),
   'rewards#InviteCard': () => ({ api: fakeRewardsApi() }),
+  'rewards#InviteList': () => ({ api: fakeRewardsApi() }),
+  'rewards#ReferralCodeForm': () => ({ api: fakeRewardsApi() }),
   'rewards#CouponCard': (ctx) => ({
     coupon: rewardsCoupon,
     labels: ctx.mod('rewards').defaultRewardsLabels,
@@ -1288,6 +1301,7 @@ export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
   'rewards#useCheckIn': () => [fakeRewardsApi()],
   'rewards#useReferral': () => [fakeRewardsApi()],
   'rewards#useClaimReferral': () => [fakeRewardsApi()],
+  'rewards#useInvitees': () => [fakeRewardsApi()],
   'rewards#useReferralCapture': () => [
     { storage: noopStorage, claim: async () => {}, signedIn: false, search: '' },
   ],

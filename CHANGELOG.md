@@ -16,6 +16,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 견본 앱: 설정에 API 키 카드(범위 `notes.read` / `notes.write` 이름, 수명 상한 365일), 운영 메뉴 「API 키」(`/admin/api-keys`, `api-key.read`).
 - e2e `apiKeys.e2e.ts`: 키를 브라우저 밖에서 쓴다(GET 200 · POST 403 · `/account/me` 403) → 화면 회수 뒤 401, 운영자 사유 회수 → 「운영자가 회수」.
 
+### Added — `@skeleton/rewards` 초대 현황 · 코드 직접 입력 R1 (2026-10-31)
+
+백엔드 짝: kotlin-skeleton `campaign` 의 `GET /referrals/me`(새 칸 `canClaim` · `claimUntil`) · `GET /referrals/me/invitees` · `POST /referrals/claim`(거절 이유 `data.reason`).
+
+- `InviteList`(초대 현황 — 가린 이름 · 상태 배지 넷 · 보상 예정일 · 더 보기, 이름이 null 이면 「친구 n」) · `ReferralCodeForm`(`canClaim` 일 때만 그림, 거절 이유별 문구) · `createCampaignApi().myInvitees(cursor?, size?)` · `useInvitees` · `referralRejection`. `InviteCard` 는 그대로.
+- `ReferralMe` 에 선택 칸 `canClaim` · `claimUntil`(구버전 서버는 없음), 타입 `Invitee` · `InviteeStatus` · `ReferralRejection`. 문구 ko/en `invite.list` · `invite.claim`. 스토리 + `play`, `ssrFixtures`, `ui-catalog`, `capabilities.json` 갱신.
+
 ### Added — 견본 앱에 워크스페이스(팀) 조립 R3 (2026-10-30)
 
 백엔드 짝: kotlin-skeleton `apps/sample` 의 팀 노트(`X-Workspace-Id` 가 있으면 그 팀의 노트, 없으면 예전 그대로 내 노트).

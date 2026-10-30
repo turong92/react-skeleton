@@ -15,11 +15,12 @@ const api = createRewardsApi(apiClient) // 기본 경로 /campaigns · /referral
 | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `createRewardsApi(client, paths?)` (`createCampaignApi` · `createCouponApi` · `createPointApi`)     | 호출 모음. 일부 모듈만 붙였으면 그 갈래의 `create…Api` 만 써도 된다                                                                                         |
 | `useCampaigns` · `useAttendance(api, id)` · `useAttendanceMonth(api, id, '2026-10')` · `useCheckIn` | 이벤트 목록 · 출석 이벤트 하나 · 출석한 날 · 출석(성공하면 보상이 들어왔을 수 있어 `['rewards']` 전부 무효화)                                               |
-| `useReferral` · `useClaimReferral`                                                                  | 내 초대 코드와 현황 · 코드로 가입                                                                                                                           |
+| `useReferral` · `useClaimReferral` · `useInvitees(api, size?)`                                      | 내 초대 코드와 숫자(`canClaim` · `claimUntil` 포함) · 코드로 가입 · 초대한 사람 목록(커서)                                                                  |
 | `useReferralCapture({ storage, signedIn, claim, onClaimed, onRejected })`                           | 초대 링크 `?ref=` 를 30일 보관 → 로그인한 뒤 claim 한 번 → 지움(400 · 409 도 지움, 서버에 못 닿았으면 남김). 가입 화면 근처에서 한 번                       |
 | `useCoupons(api, 'AVAILABLE' \| 'PAST')` · `useRedeemCoupon`                                        | 쿠폰함 · 코드 등록                                                                                                                                          |
 | `usePoints` · `usePointHistory`                                                                     | 잔액(곧 소멸) · 내역(커서)                                                                                                                                  |
 | `AttendanceCard` · `InviteCard`                                                                     | 출석 카드(「출석하기」 → 「오늘 출석함」) · 내 코드 + 복사                                                                                                  |
+| `InviteList` · `ReferralCodeForm` · `referralRejection(error)`                                      | 초대 현황 표(가린 이름 · 상태 배지 · 날짜 · 더 보기) · 코드 직접 입력(`canClaim` 일 때만 그림, 거절 이유 `data.reason` 별 문구) · 오류 → 거절 이유          |
 | `CouponWallet` (`RedeemCodeForm` · `CouponCard`)                                                    | 코드 등록 + 「사용 가능 / 사용·만료」 탭                                                                                                                    |
 | `CouponPicker { coupons, selectedId, onSelect, preview? }`                                          | 결제 때 쿠폰 하나 고르기 + 할인 전 → 후 금액                                                                                                                |
 | `stageSummary(stages, labels.coupon, { currency })`                                                 | 혜택 단계 → 「첫 1회 무료, 이후 3회 50%」 · 「매번 10%」                                                                                                    |
@@ -42,7 +43,8 @@ const api = createRewardsApi(apiClient) // 기본 경로 /campaigns · /referral
 - **배지**: 그림은 주소(`imageUrl`)만 받는다 - 없으면 이름 첫 글자를 원 안에 그리고, 앱은 `renderImage(src, name)` 으로 그리는 방식을 바꾼다. `ProfileBadges` 는 공개 응답(`code · name · description · imageUrl`)만 안다. 공개 경로는 서버 모듈 기본이 꺼짐이라 **앱이 `skeleton.badge.http.allow-anonymous-read: true` 로 켠다**(꺼져 있으면 비로그인 호출이 401). 주소에 계정 id 가 담기므로 **필명(`author-profile`) 화면에는 붙이지 않는다**.
 - 포인트를 **쓰는** 길은 HTTP 가 없다(서버 API `PointWallet.spend`) — 읽기만 있다.
 - 쿠폰의 적용 범위(`scope`)는 카드에 그리지 않는다 — 어느 쿠폰이 이 결제에 맞는지는 서버(`PAYMENT.DISCOUNT_NOT_APPLICABLE`)가 판정한다.
-- 스토리: `AttendanceCard` · `InviteCard` · `CouponWallet`(코드 등록 · 잘못된 코드) · `CouponPicker` · `PointBalance` · `PointHistory`, 가짜 API 는 `src/stories/fakeRewards.ts`.
+- **초대 현황 · 직접 입력**: `InviteCard` 는 그대로 두고 옆에 `InviteList` · `ReferralCodeForm` 을 둔다. 현황의 `status` 는 사용자용 넷(`WAITING` 가입함 · `PENDING` 확인 중 · `REWARDED` · `NOT_REWARDED`)이고, 가린 이름(`label`)이 null 이면 「친구 n」(n = 목록 속 위치)이다. 운영자 확인 · 표시 · 사유는 서버가 내보내지 않는다. `ReferralCodeForm` 은 `canClaim`(진행 중 초대 이벤트 · 아직 초대받지 않음 · 기간 안)이 아니면 아무것도 그리지 않고, 거절은 `UNKNOWN_CODE` · `OWN_CODE` · `ALREADY_INVITED` · `MUTUAL` · `NOT_NEW_ACCOUNT`(400) · 이벤트 끝남(409, `CLOSED`) · 그 밖(`OTHER`) 문구로 나뉜다(`labels.invite.claim.errors`). 구버전 서버는 `canClaim` 칸이 없어 폼이 안 그려진다.
+- 스토리: `AttendanceCard` · `InviteCard` · `InviteList` · `ReferralCodeForm`(거절 이유별) · `CouponWallet`(코드 등록 · 잘못된 코드) · `CouponPicker` · `PointBalance` · `PointHistory`, 가짜 API 는 `src/stories/fakeRewards.ts`.
 
 ## 운영 화면 — `@skeleton/rewards/admin`
 

@@ -1,4 +1,4 @@
-import type { CouponStatus, PointEntryKind } from './types'
+import type { CouponStatus, InviteeStatus, PointEntryKind, ReferralRejection } from './types'
 import { defaultRewardsLabels } from './labels.en'
 
 export type RewardsLabels = {
@@ -27,6 +27,28 @@ export type RewardsLabels = {
     copyFailed: string
     invited: (count: number) => string
     rewarded: (count: number) => string
+    /** 초대 현황 표(`InviteList`) */
+    list: {
+      title: string
+      empty: string
+      loadMore: string
+      /** 가린 이름이 없는 줄 - 「친구 2」 */
+      friend: (position: number) => string
+      status: Record<InviteeStatus, string>
+      joinedAt: (date: string) => string
+      /** 보류 중인 건의 보상 예정일 */
+      rewardAt: (date: string) => string
+    }
+    /** 코드 직접 입력(`ReferralCodeForm`) */
+    claim: {
+      label: string
+      hint: string
+      /** 입력할 수 있는 마지막 날 - 「11월 15일까지 입력할 수 있어요」 */
+      until: (date: string) => string
+      submit: string
+      success: string
+      errors: Record<ReferralRejection, string>
+    }
   }
   coupon: {
     available: string

@@ -36,9 +36,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `WorkspaceSwitcher`(머리줄 팀 고르기 + 새 워크스페이스) · `CreateWorkspaceForm`(이름 + 주소 이름 제안) · `WorkspaceSettings`(이름 · 주소 이름 · 멤버 표: 역할 고르기 · 내보내기 · 소유권 이전 대화상자 · 탈퇴) — 단추는 내 역할로 숨긴다(검사는 서버).
 - `@skeleton/api-client`: `ErrorCodes.WORKSPACE_NOT_FOUND` · `FORBIDDEN` · `REQUIRED` · `SLUG_TAKEN` · `OWNER_CANNOT_LEAVE` · `MEMBER_NOT_FOUND`.
 
+### Added — 리뷰 운영 화면 `@skeleton/reviews/admin` + 견본 상품 화면 (2026-10-30)
+
+- `@skeleton/reviews/admin`(선택 하위 경로): `createReviewsAdminApi` · 훅 · `AdminReviewQueue`(신고됨/숨김/전체 큐 · 사유 칩 · 숨기기(사유 필수) · 문제없음 · 되살리기 · 답글, 단추는 `can(key)`) · `ReviewReplyEditor`(운영자 답글 리뷰당 하나) · ko/en 문구, 스토리 play. 권한 `review.moderate` · `review.reply`.
+- `@skeleton/marketing` `PricingTable`: 선택 prop `renderPlanExtra(plan)` - 카드의 행동 버튼 아래에 앱이 링크 등을 덧붙인다(안 쓰면 그대로).
+- 견본 앱: 공개 상품 화면 `/products/:code`(카탈로그 공개 읽기 + `ReviewSummary` · `ReviewList` · `ReviewForm`, 사진 칸은 게시판과 같은 `PicturePicker`, 사진 보기는 앱이 토큰으로 받아 그린다) · 랜딩 가격표 카드의 「리뷰 보기」 링크 · 운영 메뉴/화면 `/admin/reviews` · `e2e/reviews.e2e.ts`(§7 여정, 아직 실행하지 않음).
+
 ### Added — 리뷰 · 평점 사용자 화면 `@skeleton/reviews` (2026-10-30)
 
-백엔드 짝: kotlin-skeleton `review` · `review-jdbc`(경로 `/api/v1/reviews`, 설계 `docs/superpowers/specs/2026-10-30-review-search-design.md` §A5). 운영 화면(`@skeleton/reviews/admin`)은 다음 조각.
+백엔드 짝: kotlin-skeleton `review` · `review-jdbc`(경로 `/api/v1/reviews`, 설계 `docs/superpowers/specs/2026-10-30-review-search-design.md` §A5). 운영 화면은 아래 「리뷰 운영 화면」.
 
 - 새 패키지 `@skeleton/reviews`: `createReviewsApi`(설정 · 요약 · 일괄 요약 · 목록 · 쓰기(멱등 키) · 고치기 · 지우기 · 도움돼요 · 신고 · 내 리뷰 · `photoPath`) · 훅(`useReviewSummary` · `useReviews` · `useCreateReview` · `useSetHelpful`(응답의 서버 집계를 캐시에 그대로 꽂는다) …) · `useReviewFilters`(조건이 바뀌면 첫 쪽).
 - 부품: `RatingStars`(읽는 이름 「5점 만점에 4.3점」) · `RatingInput`(라디오 묶음 · 화살표 키) · `ReviewSummary`(분포 막대를 누르면 그 별점으로 거름) · `ReviewList`(정렬 · 거르기 칩 · 쪽 이동 · 빈 상태) · `ReviewItem`(구매 인증 배지 · 도움돼요 · ⋯ 신고 창 · 수정/삭제 · 숨겨짐 안내 · 사진 칸 · 운영자 답글) · `ReviewForm`(사진 칸은 `renderPhotos`) · `writeBlockedMessage`, ko/en 문구, 스토리 7개(play).

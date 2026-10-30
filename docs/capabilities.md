@@ -99,6 +99,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 | id | 무엇을 주는가 | 켜는 법 | 백엔드 | 상태 | 키워드 (ko / en) |
 |---|---|---|---|---|---|
 | `rewards-admin` | 운영자 보상 화면(선택 내보내기 @skeleton/rewards/admin) — 이벤트(켜고 끄기 · 출석 / 초대 / 업적 설정 · 보상 목록 - 쿠폰 · 포인트 · 배지) · 배지(정의 · 보관 · 수동 수여 · 수여 내역과 회수) · 쿠폰 정의(단계 편집기 · 계정에 주기 · 공용 코드 · 회수) · 포인트 조정 · 지급 건(다시 지급 · 멈추기). 단추는 can(key) 로 숨긴다. 샘플 화면: /admin/campaigns · /admin/coupons · /admin/points · /admin/reward-grants · /admin/badges · /admin/badge-awards. | --packages rewards | (경로만) | experimental | 이벤트 관리, 쿠폰 관리, 포인트 조정, 지급 건, 다시 지급, 쿠폰 단계 편집 / admin campaigns, coupon definitions, point adjustment, reward grants, stage editor, badge admin |
+| `reviews-admin` | 운영자 리뷰 화면(선택 내보내기 @skeleton/reviews/admin) — 신고 큐 · 숨김 · 전체 표(사유 칩 · 신고 수 · 최근 신고) · 숨기기(사유 필수 대화상자) · 문제없음 · 되살리기 · 운영자 답글(리뷰당 하나, 쓰기 · 고치기 · 지우기). 단추는 can(key) 로 숨긴다. 샘플 화면: /admin/reviews. | --packages reviews | (경로만) | experimental | 리뷰 관리, 리뷰 신고 큐, 리뷰 숨기기, 리뷰 답글, 문제없음, 운영자 답글 / review moderation, report queue, hide review, reply to review, operator reply |
 | `workspace-admin` | 운영자의 워크스페이스 목록(선택 내보내기 @skeleton/workspace/admin) — 이름 · 주소 이름 검색 · 커서 「더 보기」 · 한 건의 상세(멤버 표 · 기다리는 초대 수). 읽기만 한다 — 만들기 · 고치기 · 닫기는 없다. can('workspace.read') 로 가린다. | --packages workspace | (경로만) | experimental | 워크스페이스 운영, 팀 목록 관리, 운영자 팀 조회 / admin workspaces, workspace admin, list all workspaces, operator team list |
 | `payment-admin` | 운영자 결제 화면(선택 내보내기 @skeleton/payment/admin) — 결제 목록(상태 · 결제 번호로 찾기, 확인 필요 알약) · 한 건(환불 줄 · 이력 · 직접 환불 전액/부분 · 요청대로 환불하기 · 요청 거절하기 · 결제사와 맞추기) · 환불 요청 목록 · 웹훅 수신함. 돈이 나가는 행동은 늘 확인 창(AdminRefundDialog)을 거치고 금액은 남은 금액을 넘지 못하게 화면에서도 막는다. 샘플 화면: /admin/payments · /admin/payments/:id. 상품 · 가격 운영(백엔드 catalog 를 붙인 앱, 권한 catalog.manage): 상품 목록 · 상품 폼 · 통화별 가격 표 · 가격 더하기(행사가 포함) · 행사 기간 바꾸기 · 판매 중지(기존 구독자는 산 가격 그대로) · 결제사 가격 id 연결. 샘플 화면: /admin/catalog · /admin/catalog/:code. | --packages payment | payment, payment-jdbc | experimental | 운영자 결제, 환불 승인, 환불 처리, 결제 관리, 결제사와 맞추기, 웹훅 수신함 / payment admin, refund queue, operator refund, reconcile payment, webhook inbox, product catalog admin |
 | `social-login` | 소셜 로그인의 프런트 절반 — GET /auth/methods 가 알려 준 제공자 · authorize 주소 · scope · pkce/nonce 로 인가 주소 만들기(Google · LINE · X · Kakao · Naver, PKCE S256 · nonce 는 시도마다), state 검증(탭에 묶임 · 한 번만) · 콜백의 code 를 백엔드로 보내 로그인 처리, 로그인한 계정에 제공자를 더하는 연결 흐름(createSocialLinkFlow), 제공자 마크 · 문구. 버튼 · 콜백 화면은 SignInScreen · createAuthRoutes 가 그린다. | 항상 | auth-social | stable | 소셜 로그인, 구글 로그인, 카카오 로그인, 네이버 로그인, 간편 로그인, OAuth / social login, google login, kakao login, naver login, oauth, sso |
@@ -204,14 +205,14 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 
 - 종류 · 상태: package · experimental
 - 위치: `@skeleton/reviews` (`packages/reviews`)
-- 켜는 법: `--packages reviews` — 함께 따라오는 패키지 `api-client` · `auth` · `legal` · `theme` · `time` · `tokens` · `ui`
+- 켜는 법: `--packages reviews` — 함께 따라오는 패키지 `api-client` · `auth` · `legal` · `theme` · `time` · `tokens` · `ui` — `--with-sample` 로도 따라온다
 - 필요한 것: `api-client` · `time` · `ui`
 - 백엔드: 모듈 `review` · `review-jdbc` · 있으면 더 켜지는 `notification` · `idempotency` · 경로 `/api/v1/reviews`
 - 주요 진입점: `createReviewsApi` · `useReviewConfig` · `useReviewSummary` · `useReviews` · `useReviewFilters` · `useCreateReview` · `useSetHelpful` · `RatingStars` · `RatingInput` · `ReviewSummary` · `ReviewList` · `ReviewItem` · `ReviewForm` · `writeBlockedMessage` · `defaultReviewsLabels` · `koReviewsLabels`
 - 보고 따라 할 스토리: `packages/reviews/src/RatingStars.stories.tsx` · `packages/reviews/src/RatingInput.stories.tsx` · `packages/reviews/src/ReviewSummary.stories.tsx` · `packages/reviews/src/ReviewItem.stories.tsx` · `packages/reviews/src/ReviewList.stories.tsx` · `packages/reviews/src/ReviewForm.stories.tsx` · `packages/reviews/src/ReviewsPage.stories.tsx`
 - 복사해 시작할 Patterns: `apps/storybook/src/patterns/DetailPage.stories.tsx` · `apps/storybook/src/patterns/ListPage.stories.tsx` · `apps/storybook/src/patterns/FormPage.stories.tsx`
 - 문서: `packages/reviews/README.md`
-- 쓰지 않는 경우: 운영 화면(신고 큐 · 숨김 · 답글 쓰기) — 선택 하위 경로 @skeleton/reviews/admin 에 둔다(아직 없음) / 사진 올리기 — 패키지는 storage 를 모른다. 앱이 renderPhotos 에 @skeleton/storage 업로더를 꽂는다 / 구매 확인 · 보상 — 서버가 앱의 구매 신호로 verified 를 맞춘다. 이 패키지는 응답의 verified 를 그릴 뿐이다 / 댓글 · 대화 — 리뷰는 대상당 계정 하나, 별점이 있다. 글에 달리는 댓글은 board
+- 쓰지 않는 경우: 운영 화면(신고 큐 · 숨김 · 답글 쓰기) — 선택 하위 경로 @skeleton/reviews/admin(항목 reviews-admin)에 있다 / 사진 올리기 — 패키지는 storage 를 모른다. 앱이 renderPhotos 에 @skeleton/storage 업로더를 꽂는다 / 구매 확인 · 보상 — 서버가 앱의 구매 신호로 verified 를 맞춘다. 이 패키지는 응답의 verified 를 그릴 뿐이다 / 댓글 · 대화 — 리뷰는 대상당 계정 하나, 별점이 있다. 글에 달리는 댓글은 board
 - 키워드: 리뷰, 후기, 별점, 평점, 평균 별점, 구매 인증, 포토 리뷰, 사진 리뷰, 도움돼요, 리뷰 신고, 상품 후기 / reviews, ratings, star rating, rating distribution, verified purchase, helpful, photo reviews, report review, product reviews
 
 ### `admin-dashboard` — 관리자 대시보드 — 기간 · 직전 기간 비교 · 숫자 타일 + 누르면 바뀌는 추이 그래프(SVG) · 탭 달린 순위 카드 · 퍼널 · 출처 배지와 신선도. DashboardView 한 덩어리와 부품, 60초 갱신 훅, 실시간 「지금 N명」 배지와 패널 편집 모드(카드 · 타일 끄기, 순서 바꾸기, 계정별 저장).
@@ -422,7 +423,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 
 - 종류 · 상태: app · template-only
 - 위치: `sample` (`apps/sample`)
-- 켜는 법: `--with-sample` — 함께 따라오는 패키지 `author-profile` · `board` · `dashboard` · `i18n` · `marketing` · `notifications` · `payment` · `realtime` · `rewards` · `seo` · `storage` · `workspace`
+- 켜는 법: `--with-sample` — 함께 따라오는 패키지 `author-profile` · `board` · `dashboard` · `i18n` · `marketing` · `notifications` · `payment` · `realtime` · `reviews` · `rewards` · `seo` · `storage` · `workspace`
 - 필요한 것: `api-client` · `auth` · `author-profile` · `board` · `i18n` · `marketing` · `notifications` · `realtime` · `seo` · `storage` · `theme` · `time` · `tokens` · `ui` · `workspace`
 - 백엔드: 모듈 `account` · `account-jdbc` · `alert` · `alert-jdbc` · `auth` · `auth-magic-link` · `auth-session` · `auth-session-jdbc` · `auth-social` · `auth-social-google` · `auth-social-kakao` · `auth-social-naver` · `auth-social-oidc` · `auth-social-x` · `author-profile` · `author-profile-jdbc` · `authz` · `authz-jdbc` · `badge` · `badge-jdbc` · `board` · `board-jdbc` · `campaign` · `campaign-jdbc` · `captcha-turnstile` · `catalog` · `catalog-jdbc` · `coupon` · `coupon-jdbc` · `crypto` · `dashboard` · `dashboard-cloudflare` · `dashboard-ga` · `dashboard-jdbc` · `db-postgresql` · `idempotency` · `job-queue-jdbc` · `json` · `legal` · `legal-jdbc` · `migration` · `migration-flyway` · `notification` · `notification-jdbc` · `notification-mail` · `notification-sse` · `payment` · `payment-jdbc` · `payment-kakaopay` · `payment-naverpay` · `payment-paddle` · `payment-toss` · `persistence-jdbc` · `platform` · `point` · `point-jdbc` · `reward` · `reward-jdbc` · `scheduler` · `storage` · `storage-s3` · `time` · `workspace` · `workspace-jdbc` · 경로 `/api/v1/notes` · `/api/v1/cheers` · 짝 앱 `apps/sample`
 - 주요 진입점: `apps/sample/src/routes/routes.tsx` · `apps/sample/src/layouts/RootLayout.tsx` · `apps/sample/src/i18n/index.ts` · `apps/sample/src/board/api.ts` · `apps/sample/src/notifications/useLiveNotifications.ts` · `apps/sample/src/routes/LandingPage.tsx` · `apps/sample/src/workspace/WorkspaceLayout.tsx`
@@ -466,6 +467,19 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 - 문서: `packages/rewards/README.md` · `apps/sample/src/routes/AdminCampaignsPage.tsx` · `apps/sample/src/routes/AdminCouponDefinitionsPage.tsx`
 - 쓰지 않는 경우: 백엔드 각 모듈의 skeleton.<module>.admin.enabled=true 와 campaign.manage · coupon.manage · point.manage · reward.operate · badge.manage 권한이 있어야 열린다(검사는 서버, RequirePermission 과 can 은 화면용). 기본 역할이 없어 전권이거나 역할 화면에서 권한을 준 계정만 / 계정 찾기(AccountSearch)는 계정 조회 권한(account.read)과 계정 운영 모듈(skeleton.account.admin.enabled)이 있어야 열린다 — 앱이 권한이 있을 때만 searchAccounts 를 넘기고, 없으면 화면이 이유를 보인다 / 포인트를 쓰는(차감하는) 길은 서버 API 뿐 — 이 화면의 「조정」은 운영자 보정이다 / 결제 면제(payment.exempt)는 이 화면이 아니라 역할 화면에서 권한을 주는 일이다
 - 키워드: 이벤트 관리, 쿠폰 관리, 포인트 조정, 지급 건, 다시 지급, 쿠폰 단계 편집, 배지 관리, 배지 수여, 업적 이벤트 / admin campaigns, coupon definitions, point adjustment, reward grants, stage editor, badge admin, award badge, achievement campaign
+
+### `reviews-admin` — 운영자 리뷰 화면(선택 내보내기 @skeleton/reviews/admin) — 신고 큐 · 숨김 · 전체 표(사유 칩 · 신고 수 · 최근 신고) · 숨기기(사유 필수 대화상자) · 문제없음 · 되살리기 · 운영자 답글(리뷰당 하나, 쓰기 · 고치기 · 지우기). 단추는 can(key) 로 숨긴다. 샘플 화면: /admin/reviews.
+
+- 종류 · 상태: pattern · experimental
+- 위치: `@skeleton/reviews` (`packages/reviews/src/admin/index.ts`)
+- 켜는 법: `--packages reviews` — 함께 따라오는 패키지 `api-client` · `auth` · `legal` · `theme` · `time` · `tokens` · `ui` — `--with-sample` 로도 따라온다
+- 필요한 것: `reviews`
+- 백엔드: 있으면 더 켜지는 `review` · `review-jdbc` · HTTP 를 열지 않는다(앱이 컨트롤러를 둔다)
+- 주요 진입점: `@skeleton/reviews/admin#createReviewsAdminApi` · `@skeleton/reviews/admin#AdminReviewQueue` · `@skeleton/reviews/admin#ReviewReplyEditor` · `@skeleton/reviews/admin#koReviewsAdminLabels`
+- 복사해 시작할 Patterns: `packages/reviews/src/admin/AdminReviewQueue.stories.tsx` · `packages/reviews/src/admin/ReviewReplyEditor.stories.tsx`
+- 문서: `packages/reviews/README.md` · `apps/sample/src/routes/AdminReviewsPage.tsx`
+- 쓰지 않는 경우: 백엔드 skeleton.review.admin.enabled=true 와 review.moderate(숨김 · 되살림 · 문제없음) · review.reply(답글, 전권만) 권한이 있어야 열린다(검사는 서버, RequirePermission 과 can 은 화면용) / 계정 이름 칸은 서버가 account.read 도 가진 운영자에게만 준다 — 없으면 칸이 비어 있다 / 신고를 보내는 쪽(사용자 화면)은 @skeleton/reviews 의 ReviewItem 이다
+- 키워드: 리뷰 관리, 리뷰 신고 큐, 리뷰 숨기기, 리뷰 답글, 문제없음, 운영자 답글 / review moderation, report queue, hide review, reply to review, operator reply
 
 ### `workspace-admin` — 운영자의 워크스페이스 목록(선택 내보내기 @skeleton/workspace/admin) — 이름 · 주소 이름 검색 · 커서 「더 보기」 · 한 건의 상세(멤버 표 · 기다리는 초대 수). 읽기만 한다 — 만들기 · 고치기 · 닫기는 없다. can('workspace.read') 로 가린다.
 

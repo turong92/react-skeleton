@@ -1,0 +1,22 @@
+.page {
+  display: grid;
+  gap: var(--space-xl);
+  max-width: 52rem;
+}
+
+.reviews {
+  display: grid;
+  gap: var(--space-lg);
+  min-width: 0;
+}
+
+.signIn {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  align-items: center;
+}
+
+.signIn p {
+  margin: 0;
+}

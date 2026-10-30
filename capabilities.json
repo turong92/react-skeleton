@@ -681,12 +681,12 @@
         "flag": "--packages reviews",
         "included": "flag",
         "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
-        "alsoVia": [],
+        "alsoVia": ["--with-sample"],
         "optOut": null
       },
       "summary": "리뷰 · 평점 — 아무 대상(종류 + id)에 별점 1~5 · 본문 · 사진 리뷰. 별점 표시(「5점 만점에 4.3점」)와 고르기(라디오 묶음 · 화살표 키) · 평균 + 분포 막대(누르면 그 별점으로 거름) · 정렬 · 거르기 칩(구매 인증 · 사진) · 쪽 이동 · 구매 인증 배지 · 도움돼요 · 신고 대화상자 · 운영자가 숨긴 내 리뷰 안내 · 운영자 답글 · 쓰기/고치기 폼(사진 칸은 renderPhotos 로 앱이 storage 를 꽂는다) · 쓸 수 없는 까닭 문구(구매한 분만 · 이미 씀 · 숨겨져 잠김 · 로그인). 작성자는 이름#꼬리표만 - 계정 id 는 응답에도 화면에도 없다.",
       "notFor": [
-        "운영 화면(신고 큐 · 숨김 · 답글 쓰기) — 선택 하위 경로 @skeleton/reviews/admin 에 둔다(아직 없음)",
+        "운영 화면(신고 큐 · 숨김 · 답글 쓰기) — 선택 하위 경로 @skeleton/reviews/admin(항목 reviews-admin)에 있다",
         "사진 올리기 — 패키지는 storage 를 모른다. 앱이 renderPhotos 에 @skeleton/storage 업로더를 꽂는다",
         "구매 확인 · 보상 — 서버가 앱의 구매 신호로 verified 를 맞춘다. 이 패키지는 응답의 verified 를 그릴 뿐이다",
         "댓글 · 대화 — 리뷰는 대상당 계정 하나, 별점이 있다. 글에 달리는 댓글은 board"
@@ -715,6 +715,56 @@
           "photo reviews",
           "report review",
           "product reviews"
+        ]
+      }
+    },
+    {
+      "patterns": [
+        "packages/reviews/src/admin/AdminReviewQueue.stories.tsx",
+        "packages/reviews/src/admin/ReviewReplyEditor.stories.tsx"
+      ],
+      "stories": [],
+      "docs": ["packages/reviews/README.md", "apps/sample/src/routes/AdminReviewsPage.tsx"],
+      "entryPoints": [
+        "@skeleton/reviews/admin#createReviewsAdminApi",
+        "@skeleton/reviews/admin#AdminReviewQueue",
+        "@skeleton/reviews/admin#ReviewReplyEditor",
+        "@skeleton/reviews/admin#koReviewsAdminLabels"
+      ],
+      "needs": ["reviews"],
+      "backend": {
+        "modules": [],
+        "oneOfModules": [],
+        "optionalModules": ["review", "review-jdbc"],
+        "basePaths": [],
+        "docs": ["docs/modules/review.md", "docs/modules/review-jdbc.md"]
+      },
+      "status": "experimental",
+      "id": "reviews-admin",
+      "kind": "pattern",
+      "package": "@skeleton/reviews",
+      "stampFlag": {
+        "flag": "--packages reviews",
+        "included": "flag",
+        "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
+        "alsoVia": ["--with-sample"],
+        "optOut": null
+      },
+      "summary": "운영자 리뷰 화면(선택 내보내기 @skeleton/reviews/admin) — 신고 큐 · 숨김 · 전체 표(사유 칩 · 신고 수 · 최근 신고) · 숨기기(사유 필수 대화상자) · 문제없음 · 되살리기 · 운영자 답글(리뷰당 하나, 쓰기 · 고치기 · 지우기). 단추는 can(key) 로 숨긴다. 샘플 화면: /admin/reviews.",
+      "path": "packages/reviews/src/admin/index.ts",
+      "notFor": [
+        "백엔드 skeleton.review.admin.enabled=true 와 review.moderate(숨김 · 되살림 · 문제없음) · review.reply(답글, 전권만) 권한이 있어야 열린다(검사는 서버, RequirePermission 과 can 은 화면용)",
+        "계정 이름 칸은 서버가 account.read 도 가진 운영자에게만 준다 — 없으면 칸이 비어 있다",
+        "신고를 보내는 쪽(사용자 화면)은 @skeleton/reviews 의 ReviewItem 이다"
+      ],
+      "keywords": {
+        "ko": ["리뷰 관리", "리뷰 신고 큐", "리뷰 숨기기", "리뷰 답글", "문제없음", "운영자 답글"],
+        "en": [
+          "review moderation",
+          "report queue",
+          "hide review",
+          "reply to review",
+          "operator reply"
         ]
       }
     },
@@ -2154,6 +2204,7 @@
           "notifications",
           "payment",
           "realtime",
+          "reviews",
           "rewards",
           "seo",
           "storage",

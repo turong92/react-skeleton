@@ -82,6 +82,14 @@ export function LandingPage() {
             interval={interval}
             onIntervalChange={setInterval}
             onSelect={() => navigate('/sign-up')}
+            // 유료 카드마다 상품 화면(리뷰)으로 가는 링크 - 무료 카드는 상품이 아니다
+            renderPlanExtra={(plan) =>
+              plan.id === 'free' ? null : (
+                <LinkButton to={`/products/${encodeURIComponent(plan.id)}`} variant="ghost">
+                  {t('landing.pricing.reviews')}
+                </LinkButton>
+              )
+            }
             currency={pricing.currency}
             locale={language === 'ko' ? 'ko-KR' : 'en-US'}
             timeZone={userTimeZone()}

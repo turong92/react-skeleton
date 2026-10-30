@@ -22,6 +22,7 @@ import { AdminCouponDefinitionPage } from './AdminCouponDefinitionPage'
 import { AdminCouponDefinitionsPage } from './AdminCouponDefinitionsPage'
 import { AdminDashboardPage } from './AdminDashboardPage'
 import { AdminPointsPage } from './AdminPointsPage'
+import { AdminReviewsPage } from './AdminReviewsPage'
 import { AdminRewardGrantsPage } from './AdminRewardGrantsPage'
 import { AdminRolesPage } from './AdminRolesPage'
 import { AdminWorkspacesPage } from './AdminWorkspacesPage'
@@ -42,6 +43,7 @@ import { NotesPage } from './NotesPage'
 import { NotFoundPage } from './NotFoundPage'
 import { PaymentDetailPage } from './PaymentDetailPage'
 import { PaymentReturnPage } from './PaymentReturnPage'
+import { ProductPage } from './ProductPage'
 import { ProfilePage } from './ProfilePage'
 import { RewardsPage } from './RewardsPage'
 import { SettingsPage } from './SettingsPage'
@@ -107,6 +109,8 @@ export const routes: RouteObject[] = [
         element: <ProfilePage />,
         handle: privateSeo('profile.title'),
       },
+      // 상품 화면 - 로그인 없이 읽는다(카탈로그 공개 읽기 + 서버 리뷰 `allow-anonymous-read`). 랜딩 가격표 카드가 여기로 잇는다. 상품마다 제목이 달라 검색에는 내지 않는다
+      { path: '/products/:code', element: <ProductPage />, handle: privateSeo('products.title') },
       {
         element: <RequireAuth />,
         children: [
@@ -394,6 +398,23 @@ export const routes: RouteObject[] = [
                 path: '/admin/reward-grants',
                 element: <AdminRewardGrantsPage />,
                 handle: privateSeo('nav.adminRewardGrants'),
+              },
+            ],
+          },
+          {
+            element: (
+              <RequirePermission
+                anyOf={['review.moderate', 'review.reply']}
+                forbidden={<BlockedNotice />}
+                failed={<PermissionsFailedNotice />}
+              />
+            ),
+            children: [
+              // 리뷰 운영 - 백엔드 `skeleton.review.admin.enabled`
+              {
+                path: '/admin/reviews',
+                element: <AdminReviewsPage />,
+                handle: privateSeo('nav.adminReviews'),
               },
             ],
           },

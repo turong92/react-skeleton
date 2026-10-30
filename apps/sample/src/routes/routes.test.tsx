@@ -201,4 +201,13 @@ describe('routes', () => {
       expect(seoOf(path)?.indexable, path).toBe(false)
     expect(seoOf('/nope')?.indexable).toBe(false)
   })
+
+  it('the product screen (/products/:code) is public — reviews are read without signing in — and the review operator screen sits behind either review permission', () => {
+    expect(leaf('/products/basic')?.path).toBe('/products/:code')
+    expect(guarded('/products/basic')).toBe(false)
+    expect(permissionsOf('/products/basic')).toEqual([])
+    expect(leaf('/admin/reviews')?.path).toBe('/admin/reviews')
+    expect(guarded('/admin/reviews')).toBe(true)
+    expect(permissionsOf('/admin/reviews')).toEqual([['review.moderate', 'review.reply']])
+  })
 })

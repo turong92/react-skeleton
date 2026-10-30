@@ -1,0 +1,6 @@
+.photo {
+  display: block;
+  max-width: 12rem;
+  max-height: 12rem;
+  border-radius: var(--radius-sm);
+}

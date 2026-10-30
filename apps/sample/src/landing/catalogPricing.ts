@@ -17,7 +17,7 @@ type Options = {
   ctaLabel: string
 }
 
-function textOf(product: CatalogProduct, language: 'ko' | 'en') {
+export function textOf(product: CatalogProduct, language: 'ko' | 'en') {
   return (
     product.texts[language] ??
     product.texts.en ??

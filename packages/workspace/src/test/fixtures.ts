@@ -1,5 +1,10 @@
 import type { WorkspaceApi } from '../workspaceApi'
-import type { WorkspaceDetail, WorkspaceMember, WorkspaceSummary } from '../types'
+import type {
+  WorkspaceDetail,
+  WorkspaceInvitation,
+  WorkspaceMember,
+  WorkspaceSummary,
+} from '../types'
 
 export const summary = (over: Partial<WorkspaceSummary> = {}): WorkspaceSummary => ({
   id: 'ws_1',
@@ -26,6 +31,17 @@ export const member = (over: Partial<WorkspaceMember> = {}): WorkspaceMember => 
   ...over,
 })
 
+export const invitation = (over: Partial<WorkspaceInvitation> = {}): WorkspaceInvitation => ({
+  id: 'wsi_1',
+  email: 'new@example.com',
+  role: 'MEMBER',
+  expiresAt: '2026-11-06T09:00:00Z',
+  expired: false,
+  sentCount: 1,
+  invitedBy: 'acc_1',
+  ...over,
+})
+
 /** 부르면 던지는 가짜 api — 시험이 쓰는 호출만 덮어쓴다 */
 export function stubApi(over: Partial<WorkspaceApi> = {}): WorkspaceApi {
   const unused = async (): Promise<never> => {
@@ -42,6 +58,12 @@ export function stubApi(over: Partial<WorkspaceApi> = {}): WorkspaceApi {
     removeMember: unused,
     leave: unused,
     transfer: unused,
+    invitations: unused,
+    invite: unused,
+    resendInvitation: unused,
+    revokeInvitation: unused,
+    previewInvitation: unused,
+    acceptInvitation: unused,
     ...over,
   }
 }

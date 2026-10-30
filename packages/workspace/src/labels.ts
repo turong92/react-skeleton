@@ -72,6 +72,73 @@ export type WorkspaceLabels = {
       failed: string
     }
   }
+  invitations: {
+    title: string
+    description: string
+    noPermission: string
+    /** 좌석 `n / 상한`(멤버 + 대기 초대) */
+    seats: (used: number, limit: number) => string
+    seatsFull: string
+    emailsLabel: string
+    emailsHint: string
+    emailsRequired: string
+    /** 모양이 틀린 주소들을 쉼표로 이은 글을 받는다 */
+    emailsInvalid: (addresses: string) => string
+    emailsTooMany: (max: number) => string
+    roleLabel: string
+    send: string
+    sendFailed: string
+    tooManyPending: string
+    forbidden: string
+    result: {
+      invited: (count: number) => string
+      alreadyInvited: (count: number) => string
+      seatLimited: (count: number) => string
+    }
+    pendingTitle: string
+    pendingCount: (count: number) => string
+    pendingCaption: string
+    pendingEmpty: string
+    columnEmail: string
+    columnRole: string
+    columnExpires: string
+    columnSent: string
+    columnActions: string
+    expired: string
+    sentCount: (count: number) => string
+    resend: string
+    resendFor: (email: string) => string
+    resent: (email: string) => string
+    /** 같은 초대는 60초 안에 다시 못 보낸다 — 서버가 알려 준 기다릴 초가 있으면 받는다 */
+    resendTooSoon: (seconds: number | undefined) => string
+    resendFailed: string
+    revoke: string
+    revokeFor: (email: string) => string
+    revokeDialog: { title: (email: string) => string; description: string; confirm: string }
+    revokeFailed: string
+  }
+  accept: {
+    title: string
+    invitedTo: (workspaceName: string) => string
+    invitedBy: (inviter: string) => string
+    asRole: (role: string) => string
+    sentTo: (emailMasked: string) => string
+    expiresAt: (when: string) => string
+    signInHint: string
+    signIn: string
+    accept: string
+    goHome: string
+    problems: {
+      expired: string
+      used: string
+      invalid: string
+      emailMismatch: (emailMasked: string) => string
+      emailUnverified: string
+      alreadyMember: string
+      seatLimit: string
+      failed: string
+    }
+  }
 }
 
 /** 앱이 준 일부 문구(안쪽도 일부만 가능) */

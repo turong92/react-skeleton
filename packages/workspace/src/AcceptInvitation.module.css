@@ -1,0 +1,33 @@
+.page {
+  display: grid;
+  gap: var(--space-md);
+  max-inline-size: 32rem;
+  margin-inline: auto;
+}
+
+.facts {
+  display: grid;
+  gap: var(--space-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fact {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.lead {
+  margin: 0;
+  color: var(--text-strong);
+  font-size: var(--font-size-body);
+  font-weight: 600;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  align-items: center;
+}

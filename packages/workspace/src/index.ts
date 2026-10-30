@@ -1,7 +1,12 @@
 export type {
   CreateWorkspaceInput,
+  InvitationPreview,
+  InvitationRole,
+  InviteInput,
+  InviteResult,
   UpdateWorkspaceInput,
   WorkspaceDetail,
+  WorkspaceInvitation,
   WorkspaceMember,
   WorkspaceRole,
   WorkspaceSummary,
@@ -10,13 +15,19 @@ export { createWorkspaceApi } from './workspaceApi'
 export type { WorkspaceApi, WorkspaceApiOptions } from './workspaceApi'
 export { workspaceKeys } from './queries'
 export {
+  useAcceptInvitation,
   useCreateWorkspace,
+  useInvitationPreview,
+  useInviteMembers,
   useLeaveWorkspace,
   useRemoveMember,
+  useResendInvitation,
+  useRevokeInvitation,
   useSetMemberRole,
   useTransferOwnership,
   useUpdateWorkspace,
   useWorkspaceBySlug,
+  useWorkspaceInvitations,
   useWorkspaceMembers,
   useWorkspaces,
 } from './hooks'
@@ -33,12 +44,26 @@ export {
   pickLandingSlug,
 } from './lastWorkspace'
 export type { LastWorkspaceMemory, StorageLike } from './lastWorkspace'
-export { canManageWorkspace, memberActions, roleAtLeast } from './permissions'
+export {
+  canInvite,
+  canManageWorkspace,
+  invitableRoles,
+  memberActions,
+  roleAtLeast,
+} from './permissions'
 export type { MemberActions } from './permissions'
 export { slugFromName, slugProblem } from './slug'
 export type { SlugProblem } from './slug'
-export { workspaceProblem } from './errors'
-export type { WorkspaceProblem } from './errors'
+export { invitationProblem, workspaceProblem } from './errors'
+export type { InvitationProblem, WorkspaceProblem } from './errors'
+export { MAX_INVITE_EMAILS, parseInviteEmails, seatUsage } from './inviteInput'
+export type { ParsedEmails, SeatUsage } from './inviteInput'
+export {
+  browserSessionStorage,
+  createInvitationTokenStore,
+  takeInvitationToken,
+} from './invitationToken'
+export type { InvitationTokenStore, TokenStorage, UrlHost } from './invitationToken'
 export { defaultWorkspaceLabels, koWorkspaceLabels, resolveWorkspaceLabels } from './labels'
 export type { WorkspaceLabels, WorkspaceLabelsInput } from './labels'
 export { useWorkspace } from './workspaceContext'
@@ -50,3 +75,7 @@ export { CreateWorkspaceForm } from './CreateWorkspaceForm'
 export type { CreateWorkspaceFormProps } from './CreateWorkspaceForm'
 export { WorkspaceSettings } from './WorkspaceSettings'
 export type { WorkspaceSettingsProps } from './WorkspaceSettings'
+export { WorkspaceInvitations } from './WorkspaceInvitations'
+export type { WorkspaceInvitationsProps } from './WorkspaceInvitations'
+export { AcceptInvitation } from './AcceptInvitation'
+export type { AcceptInvitationProps } from './AcceptInvitation'

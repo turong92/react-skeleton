@@ -3,11 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "워크스페이스(팀) 사용자 화면 — 클라이언트(createWorkspaceApi) · TanStack Query 훅 · WorkspaceProvider/useWorkspace(주소의 slug 로 팀을 풀어 낸다 — 탭마다 독립) · createWorkspaceHeaders(X-Workspace-Id) · WorkspaceSwitcher · CreateWorkspaceForm · WorkspaceSettings(이름 · 주소 이름 · 멤버 표: 역할 · 추방 · 소유권 이전 · 탈퇴). 라우터를 모른다(앱이 slug 와 이동 콜백을 준다). 백엔드 modules/workspace 짝",
+  "description": "워크스페이스(팀) 사용자 화면 — 클라이언트(createWorkspaceApi) · TanStack Query 훅 · WorkspaceProvider/useWorkspace(주소의 slug 로 팀을 풀어 낸다 — 탭마다 독립) · createWorkspaceHeaders(X-Workspace-Id) · WorkspaceSwitcher · CreateWorkspaceForm · WorkspaceSettings(이름 · 주소 이름 · 멤버 표: 역할 · 추방 · 소유권 이전 · 탈퇴) · WorkspaceInvitations(여러 주소 초대 · 대기 표 · 재발송 · 취소 · 좌석 n / 상한) · AcceptInvitation(/invite — 미리보기 → 로그인 · 가입 후 수락, 토큰은 주소창에서 지우고 탭 저장소에). 선택 운영 화면은 @skeleton/workspace/admin(AdminWorkspaces, 읽기만). 라우터를 모른다(앱이 slug 와 이동 콜백을 준다). 백엔드 modules/workspace 짝",
   "exports": {
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./admin": {
+      "types": "./src/admin/index.ts",
+      "default": "./src/admin/index.ts"
     }
   },
   "types": "./src/index.ts",

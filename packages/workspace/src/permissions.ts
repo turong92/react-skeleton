@@ -1,4 +1,4 @@
-import type { WorkspaceMember, WorkspaceRole } from './types'
+import type { InvitationRole, WorkspaceMember, WorkspaceRole } from './types'
 
 const RANK: Record<WorkspaceRole, number> = { MEMBER: 0, ADMIN: 1, OWNER: 2 }
 
@@ -24,4 +24,14 @@ export function memberActions(
   if (viewerRole === 'OWNER') return { changeRole: true, remove: true, transfer: true }
   if (viewerRole === 'ADMIN' && target.role === 'MEMBER') return { ...none, remove: true }
   return none
+}
+
+/** 초대 보내기 · 대기 표 — ADMIN 이상 */
+export const canInvite = (role: WorkspaceRole): boolean => roleAtLeast(role, 'ADMIN')
+
+/** 내가 줄 수 있는 역할 — 소유자는 관리자도, 관리자는 멤버만. 소유자는 초대로 못 만든다 */
+export function invitableRoles(role: WorkspaceRole): InvitationRole[] {
+  if (role === 'OWNER') return ['MEMBER', 'ADMIN']
+  if (role === 'ADMIN') return ['MEMBER']
+  return []
 }

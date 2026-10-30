@@ -1,13 +1,23 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  acceptInvitationMutation,
   createWorkspaceMutation,
+  inviteMutation,
+  resendInvitationMutation,
+  revokeInvitationMutation,
   leaveWorkspaceMutation,
   removeMemberMutation,
   setMemberRoleMutation,
   transferOwnershipMutation,
   updateWorkspaceMutation,
 } from './mutations'
-import { bySlugQuery, listQuery, membersQuery } from './queries'
+import {
+  bySlugQuery,
+  invitationPreviewQuery,
+  invitationsQuery,
+  listQuery,
+  membersQuery,
+} from './queries'
 import type { WorkspaceApi } from './workspaceApi'
 
 /** 내가 속한 워크스페이스 */
@@ -52,4 +62,40 @@ export function useTransferOwnership(api: Pick<WorkspaceApi, 'transfer'>, id: st
 export function useLeaveWorkspace(api: Pick<WorkspaceApi, 'leave'>, id: string) {
   const client = useQueryClient()
   return useMutation(leaveWorkspaceMutation(client, api, id))
+}
+
+/** 대기 중인 초대(ADMIN 이상) */
+export function useWorkspaceInvitations(api: Pick<WorkspaceApi, 'invitations'>, id: string) {
+  return useQuery(invitationsQuery(api, id))
+}
+
+export function useInviteMembers(api: Pick<WorkspaceApi, 'invite'>, id: string) {
+  const client = useQueryClient()
+  return useMutation(inviteMutation(client, api, id))
+}
+
+export function useResendInvitation(api: Pick<WorkspaceApi, 'resendInvitation'>, id: string) {
+  const client = useQueryClient()
+  return useMutation(resendInvitationMutation(client, api, id))
+}
+
+export function useRevokeInvitation(api: Pick<WorkspaceApi, 'revokeInvitation'>, id: string) {
+  const client = useQueryClient()
+  return useMutation(revokeInvitationMutation(client, api, id))
+}
+
+/** 초대 미리보기 — 토큰을 읽기 전(`null`)에는 묻지 않는다 */
+export function useInvitationPreview(
+  api: Pick<WorkspaceApi, 'previewInvitation'>,
+  token: string | null,
+) {
+  return useQuery({
+    ...invitationPreviewQuery(api, token ?? ''),
+    enabled: token !== null,
+  })
+}
+
+export function useAcceptInvitation(api: Pick<WorkspaceApi, 'acceptInvitation'>) {
+  const client = useQueryClient()
+  return useMutation(acceptInvitationMutation(client, api))
 }

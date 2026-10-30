@@ -1,6 +1,8 @@
 import type { MutationOptions, QueryClient } from '@tanstack/react-query'
 import { workspaceKeys } from './queries'
 import type {
+  InviteInput,
+  InviteResult,
   UpdateWorkspaceInput,
   WorkspaceDetail,
   WorkspaceRole,
@@ -91,5 +93,50 @@ export function leaveWorkspaceMutation(
   return {
     mutationFn: () => api.leave(id),
     onSuccess: () => client.invalidateQueries({ queryKey: workspaceKeys.list() }),
+  }
+}
+
+/** 초대 보내기 — 결과(보냄 · 이미 대기 · 좌석 모자람)는 부른 쪽이 받아 보여 준다. 대기 수 · 좌석이 바뀐다 */
+export function inviteMutation(
+  client: QueryClient,
+  api: Pick<WorkspaceApi, 'invite'>,
+  id: string,
+): MutationOptions<InviteResult, Error, InviteInput> {
+  return {
+    mutationFn: (input) => api.invite(id, input),
+    onSettled: refreshAll(client),
+  }
+}
+
+export function resendInvitationMutation(
+  client: QueryClient,
+  api: Pick<WorkspaceApi, 'resendInvitation'>,
+  id: string,
+): MutationOptions<void, Error, string> {
+  return {
+    mutationFn: (invitationId) => api.resendInvitation(id, invitationId),
+    onSettled: refreshAll(client),
+  }
+}
+
+export function revokeInvitationMutation(
+  client: QueryClient,
+  api: Pick<WorkspaceApi, 'revokeInvitation'>,
+  id: string,
+): MutationOptions<void, Error, string> {
+  return {
+    mutationFn: (invitationId) => api.revokeInvitation(id, invitationId),
+    onSettled: refreshAll(client),
+  }
+}
+
+/** 수락 — 성공했을 때만 내 목록을 다시 가져온다(실패한 수락은 아무것도 바꾸지 않았다) */
+export function acceptInvitationMutation(
+  client: QueryClient,
+  api: Pick<WorkspaceApi, 'acceptInvitation'>,
+): MutationOptions<WorkspaceSummary, Error, string> {
+  return {
+    mutationFn: (token) => api.acceptInvitation(token),
+    onSuccess: () => client.invalidateQueries({ queryKey: workspaceKeys.all }),
   }
 }

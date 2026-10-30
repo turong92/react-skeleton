@@ -251,6 +251,12 @@ const fakeWorkspaceApi = () => ({
   removeMember: () => new Promise(noop),
   leave: () => new Promise(noop),
   transfer: () => new Promise(noop),
+  invitations: () => new Promise(noop),
+  invite: () => new Promise(noop),
+  resendInvitation: () => new Promise(noop),
+  revokeInvitation: () => new Promise(noop),
+  previewInvitation: () => new Promise(noop),
+  acceptInvitation: () => new Promise(noop),
 })
 const workspaceDetail = {
   id: 'ws_1',
@@ -971,6 +977,16 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
     accountId: 'acc_1',
     onLeft: noop,
   }),
+  'workspace#WorkspaceInvitations': () => ({
+    api: fakeWorkspaceApi(),
+    workspace: workspaceDetail,
+  }),
+  'workspace#AcceptInvitation': () => ({
+    api: fakeWorkspaceApi(),
+    signedIn: false,
+    onSignIn: noop,
+    onAccepted: noop,
+  }),
   'board#ReactionBar': () => ({
     types: ['LIKE', 'EMPATHY'],
     counts: { LIKE: 2 },
@@ -1208,6 +1224,12 @@ export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
   'workspace#useRemoveMember': () => [fakeWorkspaceApi(), 'ws_1'],
   'workspace#useTransferOwnership': () => [fakeWorkspaceApi(), 'ws_1'],
   'workspace#useLeaveWorkspace': () => [fakeWorkspaceApi(), 'ws_1'],
+  'workspace#useWorkspaceInvitations': () => [fakeWorkspaceApi(), 'ws_1'],
+  'workspace#useInviteMembers': () => [fakeWorkspaceApi(), 'ws_1'],
+  'workspace#useResendInvitation': () => [fakeWorkspaceApi(), 'ws_1'],
+  'workspace#useRevokeInvitation': () => [fakeWorkspaceApi(), 'ws_1'],
+  'workspace#useInvitationPreview': () => [fakeWorkspaceApi(), 'tok'],
+  'workspace#useAcceptInvitation': () => [fakeWorkspaceApi()],
   'board#useBoardConfig': () => [fakeBoardApi()],
   'board#useBoards': () => [fakeBoardApi()],
   'board#useBoard': () => [fakeBoardApi(), 'free'],

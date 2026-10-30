@@ -7,6 +7,9 @@ export const workspaceKeys = {
   list: () => [...workspaceKeys.all, 'list'] as const,
   bySlug: (slug: string) => [...workspaceKeys.all, 'by-slug', slug] as const,
   members: (id: string) => [...workspaceKeys.all, 'members', id] as const,
+  invitations: (id: string) => [...workspaceKeys.all, 'invitations', id] as const,
+  invitationPreview: (token: string) =>
+    [...workspaceKeys.all, 'invitation-preview', token] as const,
 }
 
 /** 쿼리 정의(키 + 함수)를 훅과 따로 둔다 — 가짜 api 로 테스트하고 서버 렌더의 `prefetch` 에도 쓴다 */
@@ -30,4 +33,23 @@ export const bySlugQuery = (api: Pick<WorkspaceApi, 'bySlug'>, slug: string) => 
   queryFn: () => api.bySlug(slug),
   retry: shouldRetryResolve,
   meta: { quietStatuses: [404] },
+})
+
+export const invitationsQuery = (api: Pick<WorkspaceApi, 'invitations'>, id: string) => ({
+  queryKey: workspaceKeys.invitations(id),
+  queryFn: () => api.invitations(id),
+})
+
+/**
+ * 초대 미리보기 — 죽은 토큰의 대답은 다시 물어도 같아서 다시 시도하지 않고, 400 은 화면이 문장으로 말하므로 전역 오류 토스트를 막는다.
+ * 토큰은 이 키로 메모리에만 있다(저장소 · 주소에는 없다)
+ */
+export const invitationPreviewQuery = (
+  api: Pick<WorkspaceApi, 'previewInvitation'>,
+  token: string,
+) => ({
+  queryKey: workspaceKeys.invitationPreview(token),
+  queryFn: () => api.previewInvitation(token),
+  retry: false as const,
+  meta: { quietStatuses: [400, 404] },
 })

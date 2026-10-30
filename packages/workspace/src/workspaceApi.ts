@@ -1,8 +1,12 @@
 import { newIdempotencyKey, type ApiClient } from '@skeleton/api-client'
 import type {
   CreateWorkspaceInput,
+  InvitationPreview,
+  InviteInput,
+  InviteResult,
   UpdateWorkspaceInput,
   WorkspaceDetail,
+  WorkspaceInvitation,
   WorkspaceMember,
   WorkspaceRole,
   WorkspaceSummary,
@@ -34,11 +38,25 @@ export type WorkspaceApi = {
   leave(id: string): Promise<void>
   /** `POST {base}/{id}/transfer { accountId }` — 소유자만, 지금 멤버 하나에게 */
   transfer(id: string, accountId: string): Promise<void>
+  /** `GET {base}/{id}/invitations` — 대기 중인 초대(ADMIN 이상) */
+  invitations(id: string): Promise<WorkspaceInvitation[]>
+  /** `POST {base}/{id}/invitations { emails(≤20), role }` — 주소마다 invited / alreadyInvited / seatLimited */
+  invite(id: string, input: InviteInput): Promise<InviteResult>
+  /** `POST {base}/{id}/invitations/{invId}/resend` — 새 토큰(옛 링크 무효). 60초 안에 또 보내면 429 `WORKSPACE.RESEND_TOO_SOON` */
+  resendInvitation(id: string, invitationId: string): Promise<void>
+  /** `DELETE {base}/{id}/invitations/{invId}` — 취소 */
+  revokeInvitation(id: string, invitationId: string): Promise<void>
+  /** `POST {invitationsPath}/preview { token }` — 로그인 없이. 죽은 토큰은 400 `WORKSPACE.INVITATION_INVALID`(`reason`) */
+  previewInvitation(token: string): Promise<InvitationPreview>
+  /** `POST {invitationsPath}/accept { token }` — 로그인. 들어간 워크스페이스를 돌려준다(가정: 목록 한 줄과 같은 모양) */
+  acceptInvitation(token: string): Promise<WorkspaceSummary>
 }
 
 export type WorkspaceApiOptions = {
   /** 컨트롤러 경로(기본 `/workspaces`, `/api/v1` 은 클라이언트의 baseUrl) */
   basePath?: string
+  /** 미리보기 · 수락 경로(기본 `/workspace-invitations`) — 워크스페이스 id 없이 토큰으로 간다 */
+  invitationsPath?: string
 }
 
 /**
@@ -47,9 +65,13 @@ export type WorkspaceApiOptions = {
  */
 export function createWorkspaceApi(
   client: WorkspaceClient,
-  { basePath = '/workspaces' }: WorkspaceApiOptions = {},
+  {
+    basePath = '/workspaces',
+    invitationsPath = '/workspace-invitations',
+  }: WorkspaceApiOptions = {},
 ): WorkspaceApi {
   const base = basePath.replace(/\/+$/, '')
+  const tokenBase = invitationsPath.replace(/\/+$/, '')
   const one = (id: string) => `${base}/${encodeURIComponent(id)}`
   const member = (id: string, accountId: string) =>
     `${one(id)}/members/${encodeURIComponent(accountId)}`
@@ -71,5 +93,25 @@ export function createWorkspaceApi(
     leave: (id) => client.noContent(`${one(id)}/leave`, { method: 'POST' }),
     transfer: (id, accountId) =>
       client.noContent(`${one(id)}/transfer`, { method: 'POST', json: { accountId } }),
+    invitations: (id) => client.list<WorkspaceInvitation>(`${one(id)}/invitations`),
+    invite: (id, input) =>
+      client.value<InviteResult>(`${one(id)}/invitations`, { method: 'POST', json: input }),
+    resendInvitation: (id, invitationId) =>
+      client.noContent(`${one(id)}/invitations/${encodeURIComponent(invitationId)}/resend`, {
+        method: 'POST',
+      }),
+    revokeInvitation: (id, invitationId) =>
+      client.noContent(`${one(id)}/invitations/${encodeURIComponent(invitationId)}`, {
+        method: 'DELETE',
+      }),
+    // 토큰은 주소가 아니라 본문으로 — 접근 로그에 안 남게. 미리보기는 로그인 없이도 되므로 인증 헤더를 붙이지 않는다
+    previewInvitation: (token) =>
+      client.value<InvitationPreview>(`${tokenBase}/preview`, {
+        method: 'POST',
+        json: { token },
+        skipAuth: true,
+      }),
+    acceptInvitation: (token) =>
+      client.value<WorkspaceSummary>(`${tokenBase}/accept`, { method: 'POST', json: { token } }),
   }
 }

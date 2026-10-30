@@ -1,7 +1,11 @@
 import { MutationObserver, QueryClient } from '@tanstack/react-query'
 import { describe, expect, it, vi } from 'vitest'
 import {
+  acceptInvitationMutation,
   createWorkspaceMutation,
+  inviteMutation,
+  resendInvitationMutation,
+  revokeInvitationMutation,
   leaveWorkspaceMutation,
   removeMemberMutation,
   setMemberRoleMutation,
@@ -70,5 +74,66 @@ describe('workspace mutations', () => {
     ).mutate(undefined)
     expect(leave).toHaveBeenCalledWith('ws_1')
     expect(invalidated(spy)).toEqual([workspaceKeys.list()])
+  })
+
+  it('invite passes the api result through (the form shows who was sent / skipped / short of seats) and refetches the workspace (seat counts)', async () => {
+    const client = newClient()
+    const spy = vi.spyOn(client, 'invalidateQueries')
+    const result = { invited: ['a@example.com'], alreadyInvited: [], seatLimited: [] }
+    const invite = vi.fn(async () => result)
+    const out = await new MutationObserver(
+      client,
+      inviteMutation(client, stubApi({ invite }), 'ws_1'),
+    ).mutate({ emails: ['a@example.com'], role: 'MEMBER' })
+    expect(invite).toHaveBeenCalledWith('ws_1', { emails: ['a@example.com'], role: 'MEMBER' })
+    expect(out).toEqual(result)
+    expect(invalidated(spy)).toEqual([workspaceKeys.all])
+  })
+
+  it('resend and revoke act on one invitation and refetch the workspace (the pending count moves)', async () => {
+    const client = newClient()
+    const spy = vi.spyOn(client, 'invalidateQueries')
+    const resendInvitation = vi.fn(async () => undefined)
+    const revokeInvitation = vi.fn(async () => undefined)
+    const api = stubApi({ resendInvitation, revokeInvitation })
+    await new MutationObserver(client, resendInvitationMutation(client, api, 'ws_1')).mutate(
+      'wsi_1',
+    )
+    await new MutationObserver(client, revokeInvitationMutation(client, api, 'ws_1')).mutate(
+      'wsi_2',
+    )
+    expect(resendInvitation).toHaveBeenCalledWith('ws_1', 'wsi_1')
+    expect(revokeInvitation).toHaveBeenCalledWith('ws_1', 'wsi_2')
+    expect(invalidated(spy)).toEqual([workspaceKeys.all, workspaceKeys.all])
+  })
+
+  it('accept returns the joined workspace and refetches my list; a failed accept refetches nothing', async () => {
+    const client = newClient()
+    const spy = vi.spyOn(client, 'invalidateQueries')
+    const acceptInvitation = vi.fn(async () => summary({ slug: 'globex' }))
+    const joined = await new MutationObserver(
+      client,
+      acceptInvitationMutation(client, stubApi({ acceptInvitation })),
+    ).mutate('tok')
+    expect(acceptInvitation).toHaveBeenCalledWith('tok')
+    expect(joined.slug).toBe('globex')
+    expect(invalidated(spy)).toEqual([workspaceKeys.all])
+
+    const failing = newClient()
+    const failSpy = vi.spyOn(failing, 'invalidateQueries')
+    await expect(
+      new MutationObserver(
+        failing,
+        acceptInvitationMutation(
+          failing,
+          stubApi({
+            acceptInvitation: async () => {
+              throw new Error('409')
+            },
+          }),
+        ),
+      ).mutate('tok'),
+    ).rejects.toThrow('409')
+    expect(failSpy).not.toHaveBeenCalled()
   })
 })

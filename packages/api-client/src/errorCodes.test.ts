@@ -137,6 +137,28 @@ describe('workspace codes (kotlin-skeleton modules/workspace)', () => {
   })
 })
 
+describe('workspace invitation codes (kotlin-skeleton modules/workspace, invitations)', () => {
+  it('carries the codes the invitation screens branch on', () => {
+    expect([
+      ErrorCodes.WORKSPACE_INVITATION_INVALID,
+      ErrorCodes.WORKSPACE_INVITATION_EMAIL_MISMATCH,
+      ErrorCodes.WORKSPACE_EMAIL_UNVERIFIED,
+      ErrorCodes.WORKSPACE_ALREADY_MEMBER,
+      ErrorCodes.WORKSPACE_SEAT_LIMIT,
+      ErrorCodes.WORKSPACE_RESEND_TOO_SOON,
+      ErrorCodes.WORKSPACE_TOO_MANY_PENDING,
+    ]).toEqual([
+      'WORKSPACE.INVITATION_INVALID',
+      'WORKSPACE.INVITATION_EMAIL_MISMATCH',
+      'WORKSPACE.EMAIL_UNVERIFIED',
+      'WORKSPACE.ALREADY_MEMBER',
+      'WORKSPACE.SEAT_LIMIT',
+      'WORKSPACE.RESEND_TOO_SOON',
+      'WORKSPACE.TOO_MANY_PENDING',
+    ])
+  })
+})
+
 describe('login id codes (account contract FINAL-7 L12)', () => {
   it('names the three codes the login id endpoints answer with', () => {
     expect(ErrorCodes.ACCOUNT_LOGIN_ID_TAKEN).toBe('ACCOUNT.LOGIN_ID_TAKEN') // 409

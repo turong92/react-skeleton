@@ -7,9 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — `@skeleton/workspace` R2: 초대 · 수락 · 운영 목록 (2026-10-30)
+
+백엔드 짝: kotlin-skeleton `workspace` 의 초대(`/api/v1/workspaces/{id}/invitations`, 공개 `/api/v1/workspace-invitations/preview` · `/accept`)와 운영(`/api/v1/admin/workspaces`, 권한 `workspace.read`).
+
+- `createWorkspaceApi` 에 `invitations` · `invite` · `resendInvitation` · `revokeInvitation` · `previewInvitation`(로그인 없이, 토큰은 본문) · `acceptInvitation`, 훅(`useWorkspaceInvitations` · `useInviteMembers` · `useResendInvitation` · `useRevokeInvitation` · `useInvitationPreview` · `useAcceptInvitation`).
+- `WorkspaceInvitations`(여러 주소 입력 · 한 번에 20개 · 주소 형식 · 결과 invited / alreadyInvited / seatLimited · 좌석 `n / 상한` · 기다리는 표: 만료 표시 · 재발송(429 `RESEND_TOO_SOON` 안내) · 취소) — 소유자는 관리자로도 초대하고 관리자는 멤버로만, 멤버에게는 안내 한 줄.
+- `AcceptInvitation`(`/invite`) — 토큰은 읽자마자 주소창에서 지우고(`history.replaceState`) 이 탭 저장소(`sessionStorage`)에 둔다. 로그인 전 「로그인 · 가입 후 수락」, 돌아오면 이어서 「초대 수락」 → `onAccepted(workspace)` 로 앱이 `/w/<slug>` 로 이동. `INVITATION_INVALID`(`EXPIRED` · `USED` · `INVALID`) · `INVITATION_EMAIL_MISMATCH` · `EMAIL_UNVERIFIED` · `ALREADY_MEMBER` · `SEAT_LIMIT` 를 문장으로 푼다. `@skeleton/auth` 를 import 하지 않아 `takeInvitationToken` 이 같은 일을 한다.
+- `@skeleton/workspace/admin`(새 하위 경로): `createWorkspaceAdminApi` · `AdminWorkspaces`(목록 · 검색 · 커서 · 상세 — 읽기만, `can('workspace.read')`) · `WORKSPACE_PERMISSIONS`.
+- `@skeleton/api-client`: `ErrorCodes.WORKSPACE_INVITATION_INVALID` · `INVITATION_EMAIL_MISMATCH` · `EMAIL_UNVERIFIED` · `ALREADY_MEMBER` · `SEAT_LIMIT` · `RESEND_TOO_SOON` · `TOO_MANY_PENDING`.
+
 ### Added — `@skeleton/workspace` (워크스페이스 · 팀) R1 (2026-10-30)
 
-새 패키지. 백엔드 짝: kotlin-skeleton `workspace` · `workspace-jdbc`(경로 `/api/v1/workspaces`). 이 조각은 사용자 화면의 앞부분 — 초대 · 수락 · 운영 화면은 다음 조각. 라우터를 모른다(앱이 slug 와 이동 콜백을 넘긴다), 문구는 모두 `labels` prop(기본 영어, `koWorkspaceLabels`).
+새 패키지. 백엔드 짝: kotlin-skeleton `workspace` · `workspace-jdbc`(경로 `/api/v1/workspaces`). 이 조각은 사용자 화면의 앞부분 — 초대 · 수락 · 운영 화면은 R2(위). 라우터를 모른다(앱이 slug 와 이동 콜백을 넘긴다), 문구는 모두 `labels` prop(기본 영어, `koWorkspaceLabels`).
 
 - **팀은 주소에서 읽는다**: `WorkspaceProvider`(`/w/<slug>` 의 slug → `GET /workspaces/by-slug/{slug}`, 풀린 뒤에만 자식을 그린다 · 404 는 「찾을 수 없음」 · 옛 slug 는 풀리고 `onCanonicalSlug` 로 앱이 주소를 replace) · `useWorkspace()` · `createCurrentWorkspace` + `createWorkspaceHeaders`(풀린 id 를 `X-Workspace-Id` 로 — 앱이 `getAuthHeaders` 와 합친다). 「마지막에 쓴 팀」(`createLastWorkspaceMemory` · `pickLandingSlug` · `forgetLastWorkspace`)은 첫 화면으로 보낼 때만 쓴다.
 - `createWorkspaceApi`(목록 · 만들기 · 상세 · by-slug · `PATCH` 이름 / slug · 멤버 · 역할 · 추방 · 탈퇴 · 이전) · TanStack Query 훅.

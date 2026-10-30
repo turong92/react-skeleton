@@ -81,3 +81,64 @@ describe('createWorkspaceApi (kotlin-skeleton modules/workspace — see packages
     expect(calls[0].path).toBe('/teams')
   })
 })
+
+describe('createWorkspaceApi — invitations (spec §5)', () => {
+  it('invitations → GET /workspaces/{id}/invitations; invite → POST { emails, role }', async () => {
+    const { client, calls } = recordingClient()
+    const api = createWorkspaceApi(client)
+    await api.invitations('ws_1')
+    await api.invite('ws_1', { emails: ['a@example.com'], role: 'MEMBER' })
+    expect(calls).toEqual([
+      { kind: 'list', path: '/workspaces/ws_1/invitations', request: undefined },
+      {
+        kind: 'value',
+        path: '/workspaces/ws_1/invitations',
+        request: { method: 'POST', json: { emails: ['a@example.com'], role: 'MEMBER' } },
+      },
+    ])
+  })
+
+  it('resend → POST …/{invId}/resend; revoke → DELETE …/{invId}; ids are path-encoded', async () => {
+    const { client, calls } = recordingClient()
+    const api = createWorkspaceApi(client)
+    await api.resendInvitation('ws_1', 'wsi_1')
+    await api.revokeInvitation('ws_1', 'a/b')
+    expect(calls).toEqual([
+      {
+        kind: 'noContent',
+        path: '/workspaces/ws_1/invitations/wsi_1/resend',
+        request: { method: 'POST' },
+      },
+      {
+        kind: 'noContent',
+        path: '/workspaces/ws_1/invitations/a%2Fb',
+        request: { method: 'DELETE' },
+      },
+    ])
+  })
+
+  it('preview and accept put the token in the BODY of /workspace-invitations (never the address — access logs)', async () => {
+    const { client, calls } = recordingClient()
+    const api = createWorkspaceApi(client)
+    await api.previewInvitation('tok')
+    await api.acceptInvitation('tok')
+    expect(calls).toEqual([
+      {
+        kind: 'value',
+        path: '/workspace-invitations/preview',
+        request: { method: 'POST', json: { token: 'tok' }, skipAuth: true },
+      },
+      {
+        kind: 'value',
+        path: '/workspace-invitations/accept',
+        request: { method: 'POST', json: { token: 'tok' } },
+      },
+    ])
+  })
+
+  it('the invitation path can be moved with invitationsPath', async () => {
+    const { client, calls } = recordingClient()
+    await createWorkspaceApi(client, { invitationsPath: '/x/invites/' }).previewInvitation('t')
+    expect(calls[0].path).toBe('/x/invites/preview')
+  })
+})

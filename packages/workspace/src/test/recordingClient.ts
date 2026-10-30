@@ -16,6 +16,7 @@ export function recordingClient(reply: unknown = {}) {
     client: {
       value: record('value'),
       list: record('list'),
+      cursor: record('cursor'),
       noContent: async (path: string, request?: ApiRequest) => {
         calls.push({ kind: 'noContent', path, request })
       },

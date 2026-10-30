@@ -78,4 +78,84 @@ export const defaultWorkspaceLabels: WorkspaceLabels = {
       failed: 'Could not leave. Try again.',
     },
   },
+  invitations: {
+    title: 'Invite people',
+    description: 'They get an email with a link that lasts 7 days.',
+    noPermission: 'Only owners and admins can invite people.',
+    seats: (used, limit) => `Seats ${used} / ${limit}`,
+    seatsFull: 'All seats are taken. Remove someone or cancel an invitation to invite more.',
+    emailsLabel: 'Email addresses',
+    emailsHint: 'Separate several addresses with commas, spaces or new lines. Up to 20 at a time.',
+    emailsRequired: 'Enter at least one email address.',
+    emailsInvalid: (addresses) => `These do not look like email addresses: ${addresses}`,
+    emailsTooMany: (max) => `Invite at most ${max} people at a time.`,
+    roleLabel: 'Role',
+    send: 'Send invitations',
+    sendFailed: 'Could not send the invitations. Try again.',
+    tooManyPending: 'Too many invitations are waiting. Cancel some first.',
+    forbidden: 'You are not allowed to invite people to this workspace.',
+    result: {
+      invited: (count) => (count === 1 ? 'Invited 1 person' : `Invited ${count} people`),
+      alreadyInvited: (count) =>
+        count === 1
+          ? '1 address already has an invitation waiting (resend it from the table)'
+          : `${count} addresses already have an invitation waiting (resend them from the table)`,
+      seatLimited: (count) =>
+        count === 1
+          ? '1 address was not invited: no seats left'
+          : `${count} addresses were not invited: no seats left`,
+    },
+    pendingTitle: 'Waiting for an answer',
+    pendingCount: (count) => (count === 1 ? '1 invitation' : `${count} invitations`),
+    pendingCaption: 'Pending invitations',
+    pendingEmpty: 'No invitations are waiting.',
+    columnEmail: 'Email',
+    columnRole: 'Role',
+    columnExpires: 'Expires',
+    columnSent: 'Sent',
+    columnActions: 'Actions',
+    expired: 'Expired',
+    sentCount: (count) => (count === 1 ? 'Once' : `${count} times`),
+    resend: 'Resend',
+    resendFor: (email) => `Resend the invitation to ${email}`,
+    resent: (email) => `Sent again to ${email}. The old link no longer works.`,
+    resendTooSoon: (seconds) =>
+      seconds === undefined
+        ? 'You just sent this. Wait a moment before sending it again.'
+        : `You just sent this. Try again in ${seconds} seconds.`,
+    resendFailed: 'Could not resend. Try again.',
+    revoke: 'Cancel',
+    revokeFor: (email) => `Cancel the invitation to ${email}`,
+    revokeDialog: {
+      title: (email) => `Cancel the invitation to ${email}?`,
+      description: 'The link in the email stops working right away.',
+      confirm: 'Cancel invitation',
+    },
+    revokeFailed: 'Could not cancel the invitation. Try again.',
+  },
+  accept: {
+    title: 'Workspace invitation',
+    invitedTo: (workspaceName) => `You are invited to ${workspaceName}`,
+    invitedBy: (inviter) => `Invited by ${inviter}`,
+    asRole: (role) => `You will join as ${role}`,
+    sentTo: (emailMasked) => `This invitation was sent to ${emailMasked}.`,
+    expiresAt: (when) => `Valid until ${when}`,
+    signInHint:
+      'Sign in or create an account with that email address first, then come back to accept.',
+    signIn: 'Sign in or sign up to accept',
+    accept: 'Accept invitation',
+    goHome: 'Go to the start page',
+    problems: {
+      expired: 'This invitation has expired. Ask the person who invited you to send a new one.',
+      used: 'This invitation was already used or cancelled. Ask for a new one if you still need to join.',
+      invalid: 'This invitation link is not valid. Check that you opened the latest email.',
+      emailMismatch: (emailMasked) =>
+        `You are signed in with a different account. Sign in with the account for ${emailMasked} to accept.`,
+      emailUnverified:
+        'Your email address is not verified yet. Verify it from the email we sent, then accept again.',
+      alreadyMember: 'You are already a member of this workspace.',
+      seatLimit: 'This workspace has no seats left. Ask an owner or admin to make room.',
+      failed: 'Could not accept the invitation. Try again.',
+    },
+  },
 }

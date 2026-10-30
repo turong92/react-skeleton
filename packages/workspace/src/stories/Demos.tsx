@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { AcceptInvitation } from '../AcceptInvitation'
 import { CreateWorkspaceForm } from '../CreateWorkspaceForm'
 import { createCurrentWorkspace, createWorkspaceHeaders } from '../currentWorkspace'
+import { INVITATION_TOKEN_STORAGE_KEY, type UrlHost } from '../invitationToken'
 import { koWorkspaceLabels } from '../labels'
 import { createLastWorkspaceMemory } from '../lastWorkspace'
 import { memoryStorage } from '../test/memoryStorage'
 import { useWorkspace } from '../workspaceContext'
 import { WorkspaceProvider } from '../WorkspaceProvider'
+import { WorkspaceInvitations } from '../WorkspaceInvitations'
 import { WorkspaceSettings } from '../WorkspaceSettings'
 import { WorkspaceSwitcher } from '../WorkspaceSwitcher'
 import { createFakeWorkspaces, ME, type FakeWorkspacesOptions } from './fakeWorkspaces'
@@ -140,6 +143,91 @@ export function ProviderDemo({ slug }: { slug: string }) {
         <Body>{(name) => <p>{`app:${name}`}</p>}</Body>
         <HeaderProbe headers={headers} />
       </WorkspaceProvider>
+      <Log lines={lines} />
+    </WithQuery>
+  )
+}
+
+function InvitationsBody({ api }: { api: ReturnType<typeof createFakeWorkspaces>['api'] }) {
+  const workspace = useWorkspace()
+  if (!workspace) return null
+  return (
+    <WorkspaceInvitations
+      api={api}
+      workspace={workspace}
+      labels={koWorkspaceLabels}
+      locale="ko-KR"
+    />
+  )
+}
+
+/** 앱이 하는 조립 그대로 — Provider 가 풀어 준 워크스페이스(좌석 수 포함)를 초대 부품이 받는다 */
+export function InvitationsDemo({ role, seatLimit }: FakeWorkspacesOptions) {
+  const [{ api }] = useState(() => createFakeWorkspaces({ role, seatLimit }))
+  const [current] = useState(createCurrentWorkspace)
+  return (
+    <WithQuery>
+      <WorkspaceProvider
+        api={api}
+        slug="acme"
+        current={current}
+        labels={koWorkspaceLabels}
+        onCanonicalSlug={() => {}}
+      >
+        <InvitationsBody api={api} />
+      </WorkspaceProvider>
+    </WithQuery>
+  )
+}
+
+/**
+ * 수락 화면 — `token` 은 메일 링크가 주소에 실어 온 값(`inAddress`) 아니면 로그인하고 돌아온 탭 저장소의 값.
+ * 주소창은 가짜라 지워지는 모습이 「앱이 한 일」 줄에 `address:<지운 뒤 주소>` 로 남는다
+ */
+export function AcceptDemo({
+  token,
+  signedIn,
+  inAddress = false,
+}: {
+  token: string | null
+  signedIn: boolean
+  inAddress?: boolean
+}) {
+  const [{ api }] = useState(() => createFakeWorkspaces())
+  const [lines, setLines] = useState<string[]>([])
+  const [storage] = useState(() =>
+    memoryStorage(token && !inAddress ? { [INVITATION_TOKEN_STORAGE_KEY]: token } : {}),
+  )
+  const [host] = useState<UrlHost>(() => ({
+    location: {
+      pathname: '/invite',
+      search: token && inAddress ? `?token=${token}` : '',
+      hash: '',
+    },
+    history: {
+      state: null,
+      replaceState: (_s, _t, url) => setLines((l) => [...l, `address:${url}`]),
+    },
+  }))
+  return (
+    <WithQuery>
+      <AcceptInvitation
+        api={api}
+        signedIn={signedIn}
+        storage={storage}
+        urlHost={host}
+        labels={koWorkspaceLabels}
+        locale="ko-KR"
+        onSignIn={() => setLines((l) => [...l, 'sign-in'])}
+        onAccepted={(w) =>
+          setLines((l) => [
+            ...l,
+            `accepted:${w.slug}`,
+            `stored:${storage.getItem(INVITATION_TOKEN_STORAGE_KEY) ?? 'none'}`,
+          ])
+        }
+        onGoHome={() => setLines((l) => [...l, 'home'])}
+      />
       <Log lines={lines} />
     </WithQuery>
   )

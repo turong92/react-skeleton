@@ -902,7 +902,9 @@
         "packages/workspace/src/WorkspaceSwitcher.stories.tsx",
         "packages/workspace/src/CreateWorkspaceForm.stories.tsx",
         "packages/workspace/src/WorkspaceProvider.stories.tsx",
-        "packages/workspace/src/WorkspaceSettings.stories.tsx"
+        "packages/workspace/src/WorkspaceSettings.stories.tsx",
+        "packages/workspace/src/WorkspaceInvitations.stories.tsx",
+        "packages/workspace/src/AcceptInvitation.stories.tsx"
       ],
       "docs": ["packages/workspace/README.md"],
       "entryPoints": [
@@ -927,14 +929,24 @@
         "WorkspaceSettings",
         "memberActions",
         "koWorkspaceLabels",
-        "defaultWorkspaceLabels"
+        "defaultWorkspaceLabels",
+        "useWorkspaceInvitations",
+        "useInviteMembers",
+        "useResendInvitation",
+        "useRevokeInvitation",
+        "useInvitationPreview",
+        "useAcceptInvitation",
+        "WorkspaceInvitations",
+        "AcceptInvitation",
+        "takeInvitationToken",
+        "parseInviteEmails"
       ],
       "needs": ["api-client", "time", "ui"],
       "backend": {
         "modules": ["workspace", "workspace-jdbc"],
         "oneOfModules": [],
         "optionalModules": [],
-        "basePaths": ["/api/v1/workspaces"],
+        "basePaths": ["/api/v1/workspaces", "/api/v1/workspace-invitations"],
         "docs": ["docs/modules/workspace.md", "docs/modules/workspace-jdbc.md"]
       },
       "status": "experimental",
@@ -949,10 +961,10 @@
         "alsoVia": [],
         "optOut": null
       },
-      "summary": "워크스페이스(팀) 사용자 화면 — 주소 `/w/<slug>/…` 에서 팀을 읽는 WorkspaceProvider/useWorkspace(탭마다 독립 · 옛 slug 는 새 주소로 replace · 풀린 id 를 X-Workspace-Id 헤더로: createWorkspaceHeaders) · WorkspaceSwitcher(머리줄 팀 고르기 + 새 워크스페이스) · CreateWorkspaceForm(이름 + 주소 이름) · WorkspaceSettings(이름 · 주소 이름 · 멤버 표: 역할 고르기 · 내보내기 · 소유권 이전 · 탈퇴, 단추는 역할로 숨김) · 「마지막에 쓴 팀」 기억은 첫 화면으로 보낼 때만. 라우터를 모른다(앱이 slug 와 이동 콜백을 준다). 초대 · 수락 · 운영 화면은 다음 조각.",
+      "summary": "워크스페이스(팀) 사용자 화면 — 주소 `/w/<slug>/…` 에서 팀을 읽는 WorkspaceProvider/useWorkspace(탭마다 독립 · 옛 slug 는 새 주소로 replace · 풀린 id 를 X-Workspace-Id 헤더로: createWorkspaceHeaders) · WorkspaceSwitcher(머리줄 팀 고르기 + 새 워크스페이스) · CreateWorkspaceForm(이름 + 주소 이름) · WorkspaceSettings(이름 · 주소 이름 · 멤버 표: 역할 고르기 · 내보내기 · 소유권 이전 · 탈퇴, 단추는 역할로 숨김) · 「마지막에 쓴 팀」 기억은 첫 화면으로 보낼 때만. 라우터를 모른다(앱이 slug 와 이동 콜백을 준다). WorkspaceInvitations(여러 주소 초대 · 한 번에 20개 · 대기 표 · 만료 표시 · 재발송 · 취소 · 좌석 n / 상한 · 결과 invited / alreadyInvited / seatLimited) · AcceptInvitation(/invite — 미리보기 → 로그인 안 했으면 「로그인 · 가입 후 수락」, 토큰은 주소창에서 지우고 이 탭 저장소에, 돌아와 수락 → 앱이 그 워크스페이스로 이동 · 오류 코드별 문장). 운영자 목록은 @skeleton/workspace/admin(항목 workspace-admin).",
       "notFor": [
         "서비스 운영자의 역할 · 권한(authz) → auth 의 역할 화면 — 워크스페이스 역할(소유자 · 관리자 · 멤버)은 멤버십 한 줄의 값이라 서로 섞지 않는다",
-        "초대 메일 · 초대 수락 화면 · 운영자의 워크스페이스 목록 → 이 패키지의 다음 조각(아직 없다)",
+        "운영자의 워크스페이스 목록 → 선택 하위 경로 @skeleton/workspace/admin(항목 workspace-admin). 초대 메일 본문 · 링크 주소는 서버가 만든다(skeleton.workspace.mail.link-base-url + /invite?token=…) — 이 패키지는 그 주소의 수락 화면만 그린다",
         "앱 데이터에 팀 경계를 거는 일 → 앱이 한다(요청 헤더 X-Workspace-Id + 서버의 CurrentWorkspace 검사, 캐시 키에는 팀 id)",
         "좌석 요금 · 팀 결제 → 만들지 않는다(좌석 상한 계약만 서버에 있다)"
       ],
@@ -966,7 +978,11 @@
           "팀 전환",
           "팀 만들기",
           "멀티 테넌트",
-          "주소 이름"
+          "주소 이름",
+          "초대",
+          "팀 초대",
+          "초대 수락",
+          "좌석"
         ],
         "en": [
           "workspace",
@@ -978,8 +994,53 @@
           "members",
           "switch workspace",
           "transfer ownership",
-          "slug"
+          "slug",
+          "invite",
+          "invitation",
+          "accept invitation",
+          "seats"
         ]
+      }
+    },
+    {
+      "patterns": ["packages/workspace/src/admin/AdminWorkspaces.stories.tsx"],
+      "stories": [],
+      "docs": ["packages/workspace/README.md"],
+      "entryPoints": [
+        "@skeleton/workspace/admin#createWorkspaceAdminApi",
+        "@skeleton/workspace/admin#AdminWorkspaces",
+        "@skeleton/workspace/admin#useAdminWorkspaces",
+        "@skeleton/workspace/admin#koWorkspaceAdminLabels"
+      ],
+      "needs": ["workspace"],
+      "backend": {
+        "modules": [],
+        "oneOfModules": [],
+        "optionalModules": ["workspace"],
+        "basePaths": [],
+        "docs": ["docs/modules/workspace.md"]
+      },
+      "status": "experimental",
+      "id": "workspace-admin",
+      "kind": "pattern",
+      "package": "@skeleton/workspace",
+      "stampFlag": {
+        "flag": "--packages workspace",
+        "included": "flag",
+        "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
+        "alsoVia": [],
+        "optOut": null
+      },
+      "summary": "운영자의 워크스페이스 목록(선택 내보내기 @skeleton/workspace/admin) — 이름 · 주소 이름 검색 · 커서 「더 보기」 · 한 건의 상세(멤버 표 · 기다리는 초대 수). 읽기만 한다 — 만들기 · 고치기 · 닫기는 없다. can('workspace.read') 로 가린다.",
+      "path": "packages/workspace/src/admin/index.ts",
+      "notFor": [
+        "백엔드 skeleton.workspace.admin.enabled=true 와 workspace.read 권한이 있어야 열린다(검사는 서버, can 은 화면용). 기본 역할이 없어 전권이거나 역할 화면에서 권한을 준 계정만",
+        "소유자 이름은 서버가 account.read 권한이 있는 운영자에게만 준다 — 없으면 「소유자 없음」으로 그려진다",
+        "워크스페이스를 대신 고치는 운영 도구가 아니다(멤버 추방 · 소유권 이전 · 닫기 없음)"
+      ],
+      "keywords": {
+        "ko": ["워크스페이스 운영", "팀 목록 관리", "운영자 팀 조회"],
+        "en": ["admin workspaces", "workspace admin", "list all workspaces", "operator team list"]
       }
     },
     {

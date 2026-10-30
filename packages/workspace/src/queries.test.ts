@@ -1,6 +1,14 @@
 import { ApiRequestError } from '@skeleton/api-client'
 import { describe, expect, it } from 'vitest'
-import { bySlugQuery, listQuery, membersQuery, shouldRetryResolve, workspaceKeys } from './queries'
+import {
+  bySlugQuery,
+  invitationPreviewQuery,
+  invitationsQuery,
+  listQuery,
+  membersQuery,
+  shouldRetryResolve,
+  workspaceKeys,
+} from './queries'
 import { detail, stubApi, summary } from './test/fixtures'
 
 const failure = (status: number) =>
@@ -41,5 +49,34 @@ describe('resolving a slug', () => {
   })
   it('marks the 404 as expected so the global error toast stays quiet (the screen says it)', () => {
     expect(bySlugQuery(stubApi(), 'x').meta).toEqual({ quietStatuses: [404] })
+  })
+})
+
+describe('invitation queries', () => {
+  it('pending invitations live under the workspace root; the list asks the api for its workspace', async () => {
+    expect(workspaceKeys.invitations('ws_1')).toEqual(['workspace', 'invitations', 'ws_1'])
+    const seen: string[] = []
+    const query = invitationsQuery(
+      stubApi({ invitations: async (id) => (seen.push(id), []) }),
+      'ws_1',
+    )
+    await query.queryFn()
+    expect(query.queryKey).toEqual(workspaceKeys.invitations('ws_1'))
+    expect(seen).toEqual(['ws_1'])
+  })
+
+  it('the preview is asked once (the answer for a dead token never changes) and its 400 is spoken by the screen, not a toast', async () => {
+    const seen: string[] = []
+    const query = invitationPreviewQuery(
+      stubApi({
+        previewInvitation: async (token) => (seen.push(token), {} as never),
+      }),
+      'tok',
+    )
+    await query.queryFn()
+    expect(seen).toEqual(['tok'])
+    expect(query.retry).toBe(false)
+    expect(query.meta).toEqual({ quietStatuses: [400, 404] })
+    expect(query.queryKey[0]).toBe('workspace')
   })
 })

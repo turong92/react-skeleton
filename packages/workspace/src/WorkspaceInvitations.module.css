@@ -1,0 +1,43 @@
+.stack {
+  display: grid;
+  gap: var(--space-xl);
+}
+
+.section {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.form {
+  display: grid;
+  gap: var(--space-md);
+  max-inline-size: 36rem;
+}
+
+.seats {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-caption);
+  font-variant-numeric: tabular-nums;
+}
+
+.hint {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.results {
+  margin: var(--space-xs) 0 0;
+  padding-inline-start: var(--space-lg);
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.rowActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-xs);
+}

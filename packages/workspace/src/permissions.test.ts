@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { canManageWorkspace, memberActions, roleAtLeast } from './permissions'
+import {
+  canInvite,
+  canManageWorkspace,
+  invitableRoles,
+  memberActions,
+  roleAtLeast,
+} from './permissions'
 import type { WorkspaceMember } from './types'
 
 const member = (accountId: string, role: WorkspaceMember['role']): WorkspaceMember => ({
@@ -53,5 +59,18 @@ describe('memberActions — which buttons a row shows (the server still decides)
     })
     expect(memberActions('ADMIN', me, member(me, 'ADMIN')).remove).toBe(false)
     expect(memberActions('OWNER', me, member('acc_owner', 'OWNER')).remove).toBe(false)
+  })
+})
+
+describe('invitation permissions — the buttons follow the role, the server still decides', () => {
+  it('owner and admin invite; members do not', () => {
+    expect(canInvite('OWNER')).toBe(true)
+    expect(canInvite('ADMIN')).toBe(true)
+    expect(canInvite('MEMBER')).toBe(false)
+  })
+  it('an owner may invite an admin or a member; an admin only a member; nobody invites an owner', () => {
+    expect(invitableRoles('OWNER')).toEqual(['MEMBER', 'ADMIN'])
+    expect(invitableRoles('ADMIN')).toEqual(['MEMBER'])
+    expect(invitableRoles('MEMBER')).toEqual([])
   })
 })

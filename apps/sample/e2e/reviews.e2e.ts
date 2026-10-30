@@ -17,7 +17,7 @@ import {
 
 /*
  * 리뷰 (스펙 §7 「리뷰」 여정) — 진짜 백엔드(`review` · `review-jdbc` · `payment` 구독 · `notification` · 보상, `skeleton.review.admin.enabled=true`, 견본 yml `require-purchase: true`) · 가짜 토스 · 브라우저.
- *  ① user 가 가짜 결제사로 베이직을 구독 → `/products/basic` 에서 5점 · 본문을 써서 올리면 요약이 「리뷰 1개 · 5.0」, 리뷰에 「구매 인증」 → 보상 「100포인트」가 포인트와 알림함에 도착
+ *  ① user 가 가짜 결제사로 베이직을 구독 → `/products/basic` 에서 5점 · 본문을 써서 올리면 요약이 「리뷰 1개 · 5.0」, 리뷰에 「구매 인증」 → 보상 포인트 100점이 포인트와 알림함(제목 「포인트 100점」)에 도착
  *  ② 구매 없는 user2(`moderator@example.com`)는 쓰기 칸 대신 「구매한 분만 쓸 수 있어요」, user 의 리뷰에 「도움돼요」(1) · 신고(스팸)
  *  ④ 로그아웃 상태(새 브라우저)에서도 상품 화면의 리뷰가 보인다 - 숨기기 전이어야 하므로 ③ 앞에 돈다
  *  ③ admin 이 `/admin/reviews` 신고 큐에서 신고 사유 칩(스팸)을 보고 답글(리뷰당 하나) → 숨기기(사유 필수) → user 에게 알림, 상품 화면은 리뷰가 없고, user 는 자기 리뷰에서 「숨겨짐」 + 사유
@@ -150,12 +150,12 @@ describe('reviews: buy, write, help, report, read signed-out, reply, hide', () =
       // 이제 쓸 수 없다 - 이미 썼다
       await pwExpect(page.getByText(L.writeBlocked.ALREADY_WRITTEN)).toBeVisible()
 
-      // 보상: 일꾼을 거쳐 포인트 +100, 알림함에 「100포인트」
+      // 보상: 일꾼을 거쳐 포인트 +100, 알림함에 「포인트 100점」(reward 모듈 문구)
       await pwExpect
         .poll(() => balanceOf(token), { timeout: 60_000 })
         .toBeGreaterThanOrEqual(pointsBefore + 100)
       await page.getByRole('button', { name: /^알림/ }).click()
-      await pwExpect(page.getByText(/100\s*포인트/).first()).toBeVisible()
+      await pwExpect(page.getByText(/포인트 100점/).first()).toBeVisible()
     },
   )
 

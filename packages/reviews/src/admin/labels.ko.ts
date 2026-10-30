@@ -32,7 +32,7 @@ export const koReviewsAdminLabels: ReviewsAdminLabels = {
       actions: '작업',
     },
     rating: (value) => `5점 만점에 ${value}점`,
-    status: { PUBLISHED: '공개', HIDDEN: '숨김', DELETED: '삭제됨' },
+    status: { PUBLISHED: '공개', HIDDEN: '숨김', DELETED: '작성자 삭제' },
     reasons: {
       SPAM: '스팸 · 광고',
       ABUSE: '욕설 · 비하',
@@ -47,6 +47,7 @@ export const koReviewsAdminLabels: ReviewsAdminLabels = {
     hiddenReason: (reason) => `사유: ${reason}`,
     reply: '답글',
     hasReply: '답글 있음',
+    deletedBody: '작성자가 지운 리뷰예요.',
     hide: '숨기기',
     dismiss: '문제없음',
     restore: '되살리기',

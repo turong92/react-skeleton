@@ -32,7 +32,7 @@ export const defaultReviewsAdminLabels: ReviewsAdminLabels = {
       actions: 'Actions',
     },
     rating: (value) => `${value} out of 5`,
-    status: { PUBLISHED: 'Public', HIDDEN: 'Hidden', DELETED: 'Deleted' },
+    status: { PUBLISHED: 'Public', HIDDEN: 'Hidden', DELETED: 'Deleted by author' },
     reasons: {
       SPAM: 'Spam / ads',
       ABUSE: 'Abuse',
@@ -47,6 +47,7 @@ export const defaultReviewsAdminLabels: ReviewsAdminLabels = {
     hiddenReason: (reason) => `Reason: ${reason}`,
     reply: 'Reply',
     hasReply: 'Replied',
+    deletedBody: 'The author deleted this review.',
     hide: 'Hide',
     dismiss: 'No problem',
     restore: 'Restore',

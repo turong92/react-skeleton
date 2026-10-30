@@ -74,6 +74,15 @@ describe('AdminReviewQueueView', () => {
     expect(onlyModerate).not.toContain('답글: ')
   })
 
+  it('a review the author deleted shows as 작성자 삭제 with a placeholder body and offers no action at all (the server would not publish it again)', () => {
+    const html = render([
+      row({ status: 'DELETED', body: '', reportCount: 0, reportReasons: {}, lastReportedAt: null }),
+    ])
+    expect(html).toContain('작성자 삭제')
+    expect(html).toContain('작성자가 지운 리뷰예요')
+    expect(html).not.toMatch(/되살리기: |숨기기: |문제없음: |답글: /)
+  })
+
   it('names the empty state after the queue', () => {
     expect(render([])).toContain('기다리는 신고가 없어요.')
   })

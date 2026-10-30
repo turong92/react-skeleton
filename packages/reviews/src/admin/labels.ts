@@ -37,6 +37,8 @@ export type ReviewsAdminLabels = {
     hiddenReason: (reason: string) => string
     reply: string
     hasReply: string
+    /** 작성자가 지운 리뷰의 본문 자리 - 서버는 본문을 비워 준다(개인정보) */
+    deletedBody: string
     hide: string
     dismiss: string
     restore: string

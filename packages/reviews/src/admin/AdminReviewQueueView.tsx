@@ -88,7 +88,9 @@ export function AdminReviewQueueView({
                     </span>
                     {row.accountLabel && <span>{row.accountLabel}</span>}
                   </p>
-                  <p className={styles.body}>{row.body}</p>
+                  <p className={styles.body}>
+                    {row.status === 'DELETED' ? t.deletedBody : row.body}
+                  </p>
                   {row.status === 'HIDDEN' && row.moderationReason && (
                     <p className={styles.meta}>{t.hiddenReason(row.moderationReason)}</p>
                   )}

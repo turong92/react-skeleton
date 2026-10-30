@@ -439,7 +439,6 @@ export function createFakeAdmin() {
         throw fail(409, 'CAMPAIGN.REFERRAL_NOT_PENDING')
       const done = { ...row, status: 'QUALIFIED' as const, settledAt: 't', settledBy: 'admin' }
       referrals = referrals.map((r) => (r === row ? done : r))
-      return done
     },
     cancelReferral: async (inviteeId, reason) => {
       if (!reason.trim()) throw fail(400, 'CAMPAIGN.REFERRAL_REASON_INVALID')
@@ -455,7 +454,6 @@ export function createFakeAdmin() {
         settledBy: 'admin',
       }
       referrals = referrals.map((r) => (r === row ? done : r))
-      return done
     },
     retryRewardGrant: async (id) => {
       grants = grants.map((g) => (g.id === id ? { ...g, status: 'PENDING', lastError: null } : g))

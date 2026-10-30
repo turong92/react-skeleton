@@ -38,10 +38,10 @@ export type RewardsAdminApi = {
   setCampaignEnabled(id: string, enabled: boolean): Promise<AdminCampaign>
   /** `GET /admin/referrals?status&inviterId&inviteeId&campaignId&flag&cursor&size` (`campaign.manage`) - 초대 내역(새것부터 커서) */
   listReferrals(query?: AdminReferralQuery): Promise<ApiCursorResponse<AdminReferral>>
-  /** `POST /admin/referrals/{inviteeId}/approve` - 확인 필요 · 보류 중만(그 밖 409 `CAMPAIGN.REFERRAL_NOT_PENDING`) */
-  approveReferral(inviteeId: string): Promise<AdminReferral>
-  /** `POST /admin/referrals/{inviteeId}/cancel {reason}` - 사유 필수(1~200자), 끝난 건은 409 `CAMPAIGN.REFERRAL_NOT_CANCELABLE` */
-  cancelReferral(inviteeId: string, reason: string): Promise<AdminReferral>
+  /** `POST /admin/referrals/{inviteeId}/approve` → 204 - 확인 필요 · 보류 중만(그 밖 409 `CAMPAIGN.REFERRAL_NOT_PENDING`) */
+  approveReferral(inviteeId: string): Promise<void>
+  /** `POST /admin/referrals/{inviteeId}/cancel {reason}` → 204 - 사유 필수(1~200자), 끝난 건은 409 `CAMPAIGN.REFERRAL_NOT_CANCELABLE` */
+  cancelReferral(inviteeId: string, reason: string): Promise<void>
   /** `GET /admin/badges` (`badge.manage`) - 보유자 수 포함 */
   listBadges(): Promise<AdminBadge[]>
   createBadge(input: BadgeInput): Promise<AdminBadge>
@@ -92,7 +92,7 @@ export type RewardsAdminApi = {
 
 /** 운영 화면이 부르는 호출 모음. 각 모듈이 `skeleton.<module>.admin.enabled=true` 일 때만 열린다(꺼져 있으면 404) */
 export function createRewardsAdminApi(
-  client: Pick<ApiClient, 'list' | 'value' | 'cursor'>,
+  client: Pick<ApiClient, 'list' | 'value' | 'cursor' | 'noContent'>,
   { basePath = '/admin' }: { basePath?: string } = {},
 ): RewardsAdminApi {
   const base = basePath.replace(/\/+$/, '')
@@ -114,9 +114,12 @@ export function createRewardsAdminApi(
         params: Object.fromEntries(Object.entries(query).filter(([, v]) => v !== undefined)),
       }),
     approveReferral: (inviteeId) =>
-      post<AdminReferral>(`${base}/referrals/${enc(inviteeId)}/approve`),
+      client.noContent(`${base}/referrals/${enc(inviteeId)}/approve`, { method: 'POST' }),
     cancelReferral: (inviteeId, reason) =>
-      post<AdminReferral>(`${base}/referrals/${enc(inviteeId)}/cancel`, { reason }),
+      client.noContent(`${base}/referrals/${enc(inviteeId)}/cancel`, {
+        method: 'POST',
+        json: { reason },
+      }),
     listBadges: () => client.list<AdminBadge>(`${base}/badges`),
     createBadge: (input) => post<AdminBadge>(`${base}/badges`, input),
     updateBadge: (id, input) =>

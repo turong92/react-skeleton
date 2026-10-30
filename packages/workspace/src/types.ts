@@ -53,11 +53,12 @@ export type WorkspaceInvitation = {
 /** 초대하기 — 한 번에 20개까지 */
 export type InviteInput = { emails: string[]; role: InvitationRole }
 
-/** 주소마다 어떻게 됐는지: 새로 보냄 · 이미 대기 중이라 건너뜀 · 좌석이 모자라 못 보냄 */
+/** 주소마다 어떻게 됐는지: 새로 보냄 · 이미 대기 중이라 건너뜀 · 좌석이 모자라 못 보냄 · 이미 멤버라 거절(좌석을 잡지 않는다) */
 export type InviteResult = {
   invited: string[]
   alreadyInvited: string[]
   seatLimited: string[]
+  alreadyMember: string[]
 }
 
 /** `POST /workspace-invitations/preview` — 로그인 없이 보이는 초대 안내(주소는 가려서) */

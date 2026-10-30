@@ -13,6 +13,8 @@ import type { WorkspaceApi } from '../workspaceApi'
 
 /** 스토리 · 시험용 메모리 안의 가짜 워크스페이스 서버 — 내 계정은 `ME` */
 export const ME = 'acc_me'
+/** 가짜 서버에서 이미 멤버인 사람의 이메일 */
+export const MEMBER_EMAIL = 'existing@example.com'
 
 const fail = (status: number, code: string, data?: unknown) =>
   new ApiRequestError({ code, title: code, status, data } as never, 'trace', 'span', 'parent')
@@ -253,8 +255,14 @@ export function createFakeWorkspaces({
         invited: [] as string[],
         alreadyInvited: [] as string[],
         seatLimited: [] as string[],
+        alreadyMember: [] as string[],
       }
       for (const email of emails) {
+        // 가짜 서버의 멤버 주소 하나 - 이미 멤버라 거절되고 좌석을 잡지 않는다
+        if (email === MEMBER_EMAIL) {
+          out.alreadyMember.push(email)
+          continue
+        }
         if (t.invitations.some((i) => i.email === email)) {
           out.alreadyInvited.push(email)
           continue

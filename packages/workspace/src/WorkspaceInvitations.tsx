@@ -316,7 +316,7 @@ function InvitationsBody({
   )
 }
 
-/** 보낸 결과 — 주소마다 보냄 · 이미 기다리는 초대 · 좌석 모자람. 한 줄이라도 못 보낸 게 있으면 경고색 */
+/** 보낸 결과 — 주소마다 보냄 · 이미 기다리는 초대 · 좌석 모자람 · 이미 멤버. 한 줄이라도 못 보낸 게 있으면 경고색 */
 function ResultNotice({ result, labels }: { result: InviteResult; labels: WorkspaceLabels }) {
   const t = labels.invitations.result
   const lines = [
@@ -335,8 +335,16 @@ function ResultNotice({ result, labels }: { result: InviteResult; labels: Worksp
       text: t.seatLimited(result.seatLimited.length),
       list: result.seatLimited,
     },
+    result.alreadyMember.length > 0 && {
+      key: 'member',
+      text: t.alreadyMember(result.alreadyMember.length),
+      list: result.alreadyMember,
+    },
   ].filter((line) => line !== false)
-  const skipped = result.alreadyInvited.length > 0 || result.seatLimited.length > 0
+  const skipped =
+    result.alreadyInvited.length > 0 ||
+    result.seatLimited.length > 0 ||
+    result.alreadyMember.length > 0
   return (
     <Alert tone={skipped ? 'warning' : 'success'}>
       <ul className={styles.results}>

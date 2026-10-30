@@ -40,7 +40,7 @@ export type WorkspaceApi = {
   transfer(id: string, accountId: string): Promise<void>
   /** `GET {base}/{id}/invitations` — 대기 중인 초대(ADMIN 이상) */
   invitations(id: string): Promise<WorkspaceInvitation[]>
-  /** `POST {base}/{id}/invitations { emails(≤20), role }` — 주소마다 invited / alreadyInvited / seatLimited */
+  /** `POST {base}/{id}/invitations { emails(≤20), role }` — 주소마다 invited / alreadyInvited / seatLimited / alreadyMember */
   invite(id: string, input: InviteInput): Promise<InviteResult>
   /** `POST {base}/{id}/invitations/{invId}/resend` — 새 토큰(옛 링크 무효). 60초 안에 또 보내면 429 `WORKSPACE.RESEND_TOO_SOON` */
   resendInvitation(id: string, invitationId: string): Promise<void>
@@ -94,8 +94,14 @@ export function createWorkspaceApi(
     transfer: (id, accountId) =>
       client.noContent(`${one(id)}/transfer`, { method: 'POST', json: { accountId } }),
     invitations: (id) => client.list<WorkspaceInvitation>(`${one(id)}/invitations`),
-    invite: (id, input) =>
-      client.value<InviteResult>(`${one(id)}/invitations`, { method: 'POST', json: input }),
+    invite: async (id, input) => {
+      const result = await client.value<InviteResult>(`${one(id)}/invitations`, {
+        method: 'POST',
+        json: input,
+      })
+      // 이 칸이 없는 옛 응답은 빈 배열로 읽는다
+      return { ...result, alreadyMember: result.alreadyMember ?? [] }
+    },
     resendInvitation: (id, invitationId) =>
       client.noContent(`${one(id)}/invitations/${encodeURIComponent(invitationId)}/resend`, {
         method: 'POST',

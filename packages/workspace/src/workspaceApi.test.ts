@@ -83,6 +83,20 @@ describe('createWorkspaceApi (kotlin-skeleton modules/workspace — see packages
 })
 
 describe('createWorkspaceApi — invitations (spec §5)', () => {
+  it('invite reads a reply without alreadyMember (older server) as an empty list', async () => {
+    const { client } = recordingClient({
+      invited: ['a@example.com'],
+      alreadyInvited: [],
+      seatLimited: [],
+    })
+    const result = await createWorkspaceApi(client).invite('ws_1', {
+      emails: ['a@example.com'],
+      role: 'MEMBER',
+    })
+    expect(result.alreadyMember).toEqual([])
+    expect(result.invited).toEqual(['a@example.com'])
+  })
+
   it('invitations → GET /workspaces/{id}/invitations; invite → POST { emails, role }', async () => {
     const { client, calls } = recordingClient()
     const api = createWorkspaceApi(client)

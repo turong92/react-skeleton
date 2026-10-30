@@ -104,6 +104,8 @@ export const defaultWorkspaceLabels: WorkspaceLabels = {
         count === 1
           ? '1 address was not invited: no seats left'
           : `${count} addresses were not invited: no seats left`,
+      alreadyMember: (count) =>
+        count === 1 ? '1 address is already a member' : `${count} addresses are already members`,
     },
     pendingTitle: 'Waiting for an answer',
     pendingCount: (count) => (count === 1 ? '1 invitation' : `${count} invitations`),

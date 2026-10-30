@@ -79,7 +79,12 @@ describe('workspace mutations', () => {
   it('invite passes the api result through (the form shows who was sent / skipped / short of seats) and refetches the workspace (seat counts)', async () => {
     const client = newClient()
     const spy = vi.spyOn(client, 'invalidateQueries')
-    const result = { invited: ['a@example.com'], alreadyInvited: [], seatLimited: [] }
+    const result = {
+      invited: ['a@example.com'],
+      alreadyInvited: [],
+      seatLimited: [],
+      alreadyMember: [],
+    }
     const invite = vi.fn(async () => result)
     const out = await new MutationObserver(
       client,

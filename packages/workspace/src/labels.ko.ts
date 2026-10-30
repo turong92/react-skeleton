@@ -98,6 +98,7 @@ export const koWorkspaceLabels: WorkspaceLabels = {
       alreadyInvited: (count) =>
         `${count}개 주소는 이미 기다리는 초대가 있어요(아래 표에서 다시 보낼 수 있어요)`,
       seatLimited: (count) => `${count}개 주소는 좌석이 모자라 초대하지 못했어요`,
+      alreadyMember: (count) => `${count}개 주소는 이미 멤버예요`,
     },
     pendingTitle: '답을 기다리는 초대',
     pendingCount: (count) => `${count}건`,

@@ -94,6 +94,7 @@ export type WorkspaceLabels = {
       invited: (count: number) => string
       alreadyInvited: (count: number) => string
       seatLimited: (count: number) => string
+      alreadyMember: (count: number) => string
     }
     pendingTitle: string
     pendingCount: (count: number) => string

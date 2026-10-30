@@ -92,6 +92,15 @@ export const SeatsAreShownAndTheRestStayInTheField: Story = {
   },
 }
 
+export const AnAddressThatIsAlreadyAMemberIsToldSo: Story = {
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.type(await emails(canvas), 'existing@example.com new@example.com')
+    await userEvent.click(canvas.getByRole('button', { name: '초대 보내기' }))
+    await expect(await canvas.findByText('1명에게 초대를 보냈어요')).toBeVisible()
+    await expect(canvas.getByText('1개 주소는 이미 멤버예요: existing@example.com')).toBeVisible()
+  },
+}
+
 export const AFullWorkspaceCannotSend: Story = {
   args: { seatLimit: 6 },
   play: async ({ canvas }) => {

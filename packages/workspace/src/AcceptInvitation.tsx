@@ -35,6 +35,14 @@ export type AcceptInvitationProps = {
   urlHost?: UrlHost
 }
 
+/** `ALREADY_MEMBER` 오류 본문의 `{id, slug}` — 없거나 모양이 다르면 null(그때는 안내 문장만) */
+function memberOf(error: unknown): { id: string; slug: string } | null {
+  const data = (error as { apiError?: { data?: unknown } }).apiError?.data
+  if (typeof data !== 'object' || data === null) return null
+  const { id, slug } = data as { id?: unknown; slug?: unknown }
+  return typeof id === 'string' && typeof slug === 'string' ? { id, slug } : null
+}
+
 /** 토큰이 쓸모없어진 문제 — 탭에서 지운다 */
 const DEAD: readonly InvitationProblem[] = ['expired', 'used', 'invalid', 'alreadyMember']
 /** 같은 계정으로 다시 해 봐도 소용없는 문제 — 「수락」 단추를 거둔다(주소가 다른 계정은 토큰을 지우지 않는다: 계정을 바꿔 돌아오면 이어서 쓴다) */
@@ -184,6 +192,10 @@ export function AcceptInvitation({
                     onError: (error) => {
                       // 이미 멤버면 초대는 서버가 닫았고, 죽은 토큰은 쓸 데가 없다
                       if (DEAD.includes(invitationProblem(error))) store.current?.clear()
+                      // 이미 멤버: 서버가 알려 준 그 팀으로 보낸다(수락과 같은 길). 역할은 이 초대의 것 - 앱은 slug 만 쓴다
+                      const member = invitationProblem(error) === 'alreadyMember' && memberOf(error)
+                      if (member)
+                        onAccepted({ ...member, name: info.workspaceName, role: info.role })
                     },
                   })
                 }

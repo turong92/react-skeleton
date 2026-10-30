@@ -54,6 +54,11 @@ describe('notes queries', () => {
     expect(stale(['notifications', 'unread'])).toBeFalsy()
   })
 
+  it('the summary query of a team is keyed by the team, so another team or my own never shows its numbers', () => {
+    expect(noteSummaryQuery(api, 'ws_1').queryKey).toEqual(['notes', 'ws_1', 'summary'])
+    expect(noteSummaryQuery(api, 'ws_1').queryKey).not.toEqual(noteSummaryQuery(api).queryKey)
+  })
+
   it('dropTeamNotes removes every team notes cache and keeps my own', () => {
     const client = new QueryClient()
     client.setQueryData(notesKeys.list({}), 1)

@@ -109,6 +109,8 @@ export const AlreadyAMemberIsToldSo: Story = {
     await userEvent.click(await canvas.findByRole('button', { name: '초대 수락' }))
     await expect(await canvas.findByText('이미 이 워크스페이스의 멤버예요.')).toBeVisible()
     await expect(canvas.queryByRole('button', { name: '초대 수락' })).toBeNull()
+    // 서버가 알려 준 그 팀으로도 보낸다(수락과 같은 길)
+    await expect(canvas.getByRole('status', { name: 'log' })).toHaveTextContent('accepted:acme')
   },
 }
 

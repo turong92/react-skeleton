@@ -56,7 +56,7 @@ export function useNote(id: string) {
 }
 
 export function useNoteSummary() {
-  return useQuery(noteSummaryQuery(notesApi))
+  return useQuery(noteSummaryQuery(notesApi, useWorkspace()?.id))
 }
 
 /** 만들기 · 고치기 · 지우기는 성공하면 노트 쿼리를 모두 무효화한다. 백엔드가 알림도 발행하므로 알림도 다시 센다 */

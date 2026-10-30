@@ -303,7 +303,8 @@ export function createFakeWorkspaces({
     acceptInvitation: async (token) => {
       if (token === FAKE_TOKENS.mismatch) throw fail(403, 'WORKSPACE.INVITATION_EMAIL_MISMATCH')
       if (token === FAKE_TOKENS.unverified) throw fail(403, 'WORKSPACE.EMAIL_UNVERIFIED')
-      if (token === FAKE_TOKENS.member) throw fail(409, 'WORKSPACE.ALREADY_MEMBER')
+      if (token === FAKE_TOKENS.member)
+        throw fail(409, 'WORKSPACE.ALREADY_MEMBER', { id: 'ws_1', slug: 'acme' })
       if (token === FAKE_TOKENS.seat) throw fail(409, 'WORKSPACE.SEAT_LIMIT')
       if (token !== FAKE_TOKENS.ok)
         throw fail(400, 'WORKSPACE.INVITATION_INVALID', { reason: 'INVALID' })

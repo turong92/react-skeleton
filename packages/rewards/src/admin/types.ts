@@ -149,8 +149,12 @@ export type BadgeUpdate = {
 }
 export type BadgeInput = BadgeUpdate & { code: string }
 
-/** 수동 수여의 답 - 새로 준 계정과 이미 가진 계정 id */
-export type BadgeAwardResult = { awarded: string[]; alreadyHeld: string[] }
+/** 수동 수여의 답 - 새로 준 계정 · 이미 가진 계정 · 없는 계정(수여 안 함) id */
+export type BadgeAwardResult = {
+  awarded: string[]
+  alreadyHeld: string[]
+  unknownAccountIds: string[]
+}
 
 export type BadgeAwardAction = 'AWARDED' | 'REVOKED'
 export type BadgeAwardSource = 'APP' | 'ADMIN' | 'GRANT'

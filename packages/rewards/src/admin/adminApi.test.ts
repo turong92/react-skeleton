@@ -161,6 +161,12 @@ describe('coupon definition status and issued coupons (coupon-admin contract)', 
     ])
   })
 
+  it('badge award: a reply from an older server without unknownAccountIds reads as empty', async () => {
+    const { client } = recordingClient({ awarded: ['a1'], alreadyHeld: [] })
+    const result = await createRewardsAdminApi(client).awardBadge('b1', { accountIds: ['a1'] })
+    expect(result.unknownAccountIds).toEqual([])
+  })
+
   it('badge awards: manual award, revoke with a reason, history by cursor with only the filters given', async () => {
     const calls = await run(async (api) => {
       await api.awardBadge('b1', { accountIds: ['a1'], reason: '행사' })

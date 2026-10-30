@@ -443,6 +443,15 @@ function AwardDialog({
                 )}
               </>
             )}
+            {result.unknownAccountIds.length > 0 && (
+              <>
+                {' '}
+                {t.unknownAccountsList(
+                  result.unknownAccountIds.length,
+                  result.unknownAccountIds.join(', '),
+                )}
+              </>
+            )}
           </Alert>
         )}
         <AccountSearch search={searchAccounts} onPick={pick} labels={labels} />

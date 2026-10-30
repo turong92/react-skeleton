@@ -105,6 +105,19 @@ export const AwardByHand: Story = {
   },
 }
 
+export const AwardSkipsUnknownAccounts: Story = {
+  render: (args) => <AdminBadges {...args} api={createFakeAdmin().api} />,
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(await canvas.findByRole('button', { name: '수동 수여: 얼리 버드' }))
+    const dialog = within(await screen.findByRole('dialog', { name: '얼리 버드 수여' }))
+    await userEvent.type(dialog.getByLabelText('이메일 또는 로그인 아이디'), 'ghost@example.com')
+    await userEvent.click(dialog.getByRole('button', { name: '검색' }))
+    await userEvent.click(await dialog.findByRole('button', { name: /ghost@example.com/ }))
+    await userEvent.click(dialog.getByRole('button', { name: '수동 수여' }))
+    await expect(await dialog.findByText(/1명은 없는 계정이라 건너뜀: acc_missing/)).toBeVisible()
+  },
+}
+
 export const ReadOnlyWithoutPermission: Story = {
   render: (args) => <AdminBadges {...args} api={createFakeAdmin().api} can={() => false} />,
   play: async ({ canvas }) => {

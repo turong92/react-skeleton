@@ -17,6 +17,8 @@ export const fakeAccounts: AccountChoice[] = [
   { id: 'acc_2', email: 'bob@example.com', loginId: null },
   // 쿠폰을 줄 때 건너뛰어지는 계정(한도를 채웠다)
   { id: 'skip_3', email: 'skip@example.com', loginId: null },
+  // 배지를 줄 때 없는 계정으로 돌아온다
+  { id: 'acc_missing', email: 'ghost@example.com', loginId: null },
 ]
 
 /** 스토리용 계정 검색 - 이메일 조각 또는 정확한 로그인 아이디 */
@@ -254,8 +256,9 @@ export function createFakeAdmin() {
       return badges.find((b) => b.id === id) as AdminBadge
     },
     awardBadge: async (_id, { accountIds }) => ({
-      awarded: accountIds.filter((a) => a !== 'acc_1'),
+      awarded: accountIds.filter((a) => a !== 'acc_1' && a !== 'acc_missing'),
       alreadyHeld: accountIds.filter((a) => a === 'acc_1'),
+      unknownAccountIds: accountIds.filter((a) => a === 'acc_missing'),
     }),
     revokeBadgeAward: async (awardId, reason) => {
       revoked.push({ awardId, reason })

@@ -110,7 +110,11 @@ export function createRewardsAdminApi(
         method: 'PATCH',
         json: { status },
       }),
-    awardBadge: (id, input) => post<BadgeAwardResult>(`${base}/badges/${enc(id)}/awards`, input),
+    awardBadge: async (id, input) => {
+      const r = await post<BadgeAwardResult>(`${base}/badges/${enc(id)}/awards`, input)
+      // 이전 서버는 이 필드가 없다
+      return { ...r, unknownAccountIds: r.unknownAccountIds ?? [] }
+    },
     revokeBadgeAward: (awardId, reason) =>
       post<{ awardId: string }>(`${base}/badge-awards/${enc(awardId)}/revoke`, { reason }),
     listBadgeAwards: ({ badgeId, accountId, cursor, size } = {}) =>

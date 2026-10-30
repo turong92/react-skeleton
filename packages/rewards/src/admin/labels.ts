@@ -138,6 +138,8 @@ export type RewardsAdminLabels = {
     awardedResult: (awarded: number, alreadyHeld: number) => string
     /** 이미 가지고 있던 계정 이름들 - 「이미 가진 사람: a, b」 */
     alreadyHeldList: (names: string) => string
+    /** 없는 계정이라 수여하지 않은 id - 「k명은 없는 계정이라 건너뜀: id, id」 */
+    unknownAccountsList: (count: number, ids: string) => string
   }
   badgeAwards: {
     title: string

@@ -140,6 +140,7 @@ export const defaultRewardsAdminLabels: RewardsAdminLabels = {
     reasonHint: 'Kept in the history. Up to 200 characters.',
     awardedResult: (awarded, alreadyHeld) => `${awarded} awarded · ${alreadyHeld} already had it`,
     alreadyHeldList: (names) => `Already had it: ${names}`,
+    unknownAccountsList: (count, ids) => `${count} skipped, no such account: ${ids}`,
   },
   badgeAwards: {
     title: 'Badge history',

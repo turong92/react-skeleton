@@ -36,6 +36,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `WorkspaceSwitcher`(머리줄 팀 고르기 + 새 워크스페이스) · `CreateWorkspaceForm`(이름 + 주소 이름 제안) · `WorkspaceSettings`(이름 · 주소 이름 · 멤버 표: 역할 고르기 · 내보내기 · 소유권 이전 대화상자 · 탈퇴) — 단추는 내 역할로 숨긴다(검사는 서버).
 - `@skeleton/api-client`: `ErrorCodes.WORKSPACE_NOT_FOUND` · `FORBIDDEN` · `REQUIRED` · `SLUG_TAKEN` · `OWNER_CANNOT_LEAVE` · `MEMBER_NOT_FOUND`.
 
+### Added — 리뷰 · 평점 사용자 화면 `@skeleton/reviews` (2026-10-30)
+
+백엔드 짝: kotlin-skeleton `review` · `review-jdbc`(경로 `/api/v1/reviews`, 설계 `docs/superpowers/specs/2026-10-30-review-search-design.md` §A5). 운영 화면(`@skeleton/reviews/admin`)은 다음 조각.
+
+- 새 패키지 `@skeleton/reviews`: `createReviewsApi`(설정 · 요약 · 일괄 요약 · 목록 · 쓰기(멱등 키) · 고치기 · 지우기 · 도움돼요 · 신고 · 내 리뷰 · `photoPath`) · 훅(`useReviewSummary` · `useReviews` · `useCreateReview` · `useSetHelpful`(응답의 서버 집계를 캐시에 그대로 꽂는다) …) · `useReviewFilters`(조건이 바뀌면 첫 쪽).
+- 부품: `RatingStars`(읽는 이름 「5점 만점에 4.3점」) · `RatingInput`(라디오 묶음 · 화살표 키) · `ReviewSummary`(분포 막대를 누르면 그 별점으로 거름) · `ReviewList`(정렬 · 거르기 칩 · 쪽 이동 · 빈 상태) · `ReviewItem`(구매 인증 배지 · 도움돼요 · ⋯ 신고 창 · 수정/삭제 · 숨겨짐 안내 · 사진 칸 · 운영자 답글) · `ReviewForm`(사진 칸은 `renderPhotos`) · `writeBlockedMessage`, ko/en 문구, 스토리 7개(play).
+
 ### Added — 배지 · 업적 (2026-10-29)
 
 백엔드 짝: kotlin-skeleton `badge` · `badge-jdbc`(경로 `/api/v1/badges`, 운영 `/api/v1/admin/badges` · `/badge-awards`, 권한 `badge.manage`)와 `campaign` 의 `achievement` 종류.

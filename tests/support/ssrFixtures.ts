@@ -55,6 +55,73 @@ const fakeBadgeApi = () => ({
   setBadgeVisible: async (awardId: string, visible: boolean) => ({ awardId, visible }),
   profileBadges: async () => [],
 })
+const reviewsPage = {
+  values: [],
+  pagination: {
+    page: 0,
+    size: 10,
+    totalElements: 0,
+    totalPages: 0,
+    hasNext: false,
+    hasPrevious: false,
+  },
+  meta: { timestamp: '2026-01-01T00:00:00Z' },
+}
+const fakeReviewsApi = () => ({
+  getConfig: async () => ({
+    targetTypes: ['product'],
+    bodyMinLength: 10,
+    bodyMaxLength: 2000,
+    maxPhotos: 3,
+    reportReasons: ['SPAM', 'OTHER'],
+    canModerate: false,
+    canReply: false,
+  }),
+  getSummary: async () => ({
+    count: 0,
+    average: null,
+    distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+    myReviewId: null,
+    canWrite: true,
+    writeBlockedReason: null,
+  }),
+  listSummaries: async () => [],
+  listReviews: async () => reviewsPage,
+  createReview: async () => {
+    throw new Error('not used on the server')
+  },
+  updateReview: async () => {
+    throw new Error('not used on the server')
+  },
+  removeReview: async () => {},
+  setHelpful: async () => ({ helpfulCount: 0, helpful: false }),
+  reportReview: async () => {},
+  myReviews: async () => ({
+    values: [],
+    cursor: { hasNext: false, nextCursor: null },
+    meta: { timestamp: '2026-01-01T00:00:00Z' },
+  }),
+  photoPath: (id: string, index: number) => `/reviews/${id}/photos/${index}`,
+})
+const reviewsLabels = (ctx: FixtureContext) => ctx.mod('reviews').defaultReviewsLabels
+const reviewsTarget = { type: 'product', id: 'sku-1' }
+const reviewsReview = {
+  id: 'r1',
+  rating: 4,
+  body: 'Nice',
+  verified: true,
+  helpfulCount: 1,
+  helpful: false,
+  mine: false,
+  authorName: 'Ada',
+  authorTag: '0001',
+  authorDeleted: false,
+  edited: false,
+  photos: [],
+  reply: null,
+  createdAt: '2026-01-01T00:00:00Z',
+  updatedAt: '2026-01-01T00:00:00Z',
+}
 const rewardsCoupon = {
   id: 'c1',
   name: 'Welcome',
@@ -949,6 +1016,44 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
   'rewards#BadgeTile': () => ({ state: 'earned', name: 'Early bird', imageUrl: null }),
   'rewards#BadgeShelf': () => ({ api: fakeBadgeApi() }),
   'rewards#ProfileBadges': () => ({ api: fakeBadgeApi(), accountId: 'acc_1' }),
+  'reviews#RatingStars': (ctx) => ({ value: 4.3, labels: reviewsLabels(ctx) }),
+  'reviews#RatingInput': (ctx) => ({ value: 3, onChange: () => {}, labels: reviewsLabels(ctx) }),
+  'reviews#ReviewSummary': (ctx) => ({
+    summary: { count: 3, average: 4, distribution: { 1: 0, 2: 0, 3: 1, 4: 1, 5: 1 } },
+    onToggleRating: () => {},
+    labels: reviewsLabels(ctx),
+  }),
+  'reviews#ReviewItem': (ctx) => ({ review: reviewsReview, labels: reviewsLabels(ctx) }),
+  'reviews#ReportDialog': (ctx) => ({
+    open: true,
+    reasons: ['SPAM', 'OTHER'],
+    labels: reviewsLabels(ctx),
+    onClose: () => {},
+    onSubmit: () => {},
+  }),
+  'reviews#ReviewList': (ctx) => ({
+    api: fakeReviewsApi(),
+    target: reviewsTarget,
+    labels: reviewsLabels(ctx),
+  }),
+  'reviews#ReviewListView': (ctx) => ({
+    reviews: [reviewsReview],
+    pagination: reviewsPage.pagination,
+    filters: {
+      params: { sort: 'recent', page: 0 },
+      setSort: () => {},
+      toggleRating: () => {},
+      toggleFlag: () => {},
+      setPage: () => {},
+      clear: () => {},
+    },
+    labels: reviewsLabels(ctx),
+  }),
+  'reviews#ReviewForm': (ctx) => ({
+    config: { bodyMinLength: 10, bodyMaxLength: 2000, maxPhotos: 3 },
+    labels: reviewsLabels(ctx),
+    onSubmit: () => {},
+  }),
   'notifications#NotificationBell': () => ({ api: fakeNotificationsApi() }),
   'notifications#NotificationList': () => ({ items: [notification], onOpen: () => {} }),
   'notifications#NotificationPreferences': () => ({ api: fakeNotificationsApi() }),
@@ -1181,6 +1286,17 @@ export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
   'rewards#useMyBadges': () => [fakeBadgeApi()],
   'rewards#useSetBadgeVisible': () => [fakeBadgeApi()],
   'rewards#useProfileBadges': () => [fakeBadgeApi(), 'acc_1'],
+  'reviews#useReviewConfig': () => [fakeReviewsApi()],
+  'reviews#useReviewSummary': () => [fakeReviewsApi(), reviewsTarget],
+  'reviews#useTargetRatings': () => [fakeReviewsApi(), [reviewsTarget]],
+  'reviews#useReviews': () => [fakeReviewsApi(), reviewsTarget, { sort: 'recent', page: 0 }],
+  'reviews#useMyReviews': () => [fakeReviewsApi()],
+  'reviews#useCreateReview': () => [fakeReviewsApi(), reviewsTarget],
+  'reviews#useUpdateReview': () => [fakeReviewsApi()],
+  'reviews#useRemoveReview': () => [fakeReviewsApi()],
+  'reviews#useSetHelpful': () => [fakeReviewsApi()],
+  'reviews#useReportReview': () => [fakeReviewsApi()],
+  'reviews#useReviewFilters': () => [],
   'notifications#useNotifications': () => [fakeNotificationsApi()],
   'notifications#useUnreadCount': () => [fakeNotificationsApi()],
   'notifications#useMarkRead': () => [fakeNotificationsApi()],

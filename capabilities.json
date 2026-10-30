@@ -631,6 +631,94 @@
       }
     },
     {
+      "patterns": [
+        "apps/storybook/src/patterns/DetailPage.stories.tsx",
+        "apps/storybook/src/patterns/ListPage.stories.tsx",
+        "apps/storybook/src/patterns/FormPage.stories.tsx"
+      ],
+      "stories": [
+        "packages/reviews/src/RatingStars.stories.tsx",
+        "packages/reviews/src/RatingInput.stories.tsx",
+        "packages/reviews/src/ReviewSummary.stories.tsx",
+        "packages/reviews/src/ReviewItem.stories.tsx",
+        "packages/reviews/src/ReviewList.stories.tsx",
+        "packages/reviews/src/ReviewForm.stories.tsx",
+        "packages/reviews/src/ReviewsPage.stories.tsx"
+      ],
+      "docs": ["packages/reviews/README.md"],
+      "entryPoints": [
+        "createReviewsApi",
+        "useReviewConfig",
+        "useReviewSummary",
+        "useReviews",
+        "useReviewFilters",
+        "useCreateReview",
+        "useSetHelpful",
+        "RatingStars",
+        "RatingInput",
+        "ReviewSummary",
+        "ReviewList",
+        "ReviewItem",
+        "ReviewForm",
+        "writeBlockedMessage",
+        "defaultReviewsLabels",
+        "koReviewsLabels"
+      ],
+      "needs": ["api-client", "time", "ui"],
+      "backend": {
+        "modules": ["review", "review-jdbc"],
+        "oneOfModules": [],
+        "optionalModules": ["notification", "idempotency"],
+        "basePaths": ["/api/v1/reviews"],
+        "docs": ["docs/modules/review.md", "docs/modules/review-jdbc.md"]
+      },
+      "status": "experimental",
+      "id": "reviews",
+      "kind": "package",
+      "package": "@skeleton/reviews",
+      "path": "packages/reviews",
+      "stampFlag": {
+        "flag": "--packages reviews",
+        "included": "flag",
+        "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
+        "alsoVia": [],
+        "optOut": null
+      },
+      "summary": "리뷰 · 평점 — 아무 대상(종류 + id)에 별점 1~5 · 본문 · 사진 리뷰. 별점 표시(「5점 만점에 4.3점」)와 고르기(라디오 묶음 · 화살표 키) · 평균 + 분포 막대(누르면 그 별점으로 거름) · 정렬 · 거르기 칩(구매 인증 · 사진) · 쪽 이동 · 구매 인증 배지 · 도움돼요 · 신고 대화상자 · 운영자가 숨긴 내 리뷰 안내 · 운영자 답글 · 쓰기/고치기 폼(사진 칸은 renderPhotos 로 앱이 storage 를 꽂는다) · 쓸 수 없는 까닭 문구(구매한 분만 · 이미 씀 · 숨겨져 잠김 · 로그인). 작성자는 이름#꼬리표만 - 계정 id 는 응답에도 화면에도 없다.",
+      "notFor": [
+        "운영 화면(신고 큐 · 숨김 · 답글 쓰기) — 선택 하위 경로 @skeleton/reviews/admin 에 둔다(아직 없음)",
+        "사진 올리기 — 패키지는 storage 를 모른다. 앱이 renderPhotos 에 @skeleton/storage 업로더를 꽂는다",
+        "구매 확인 · 보상 — 서버가 앱의 구매 신호로 verified 를 맞춘다. 이 패키지는 응답의 verified 를 그릴 뿐이다",
+        "댓글 · 대화 — 리뷰는 대상당 계정 하나, 별점이 있다. 글에 달리는 댓글은 board"
+      ],
+      "keywords": {
+        "ko": [
+          "리뷰",
+          "후기",
+          "별점",
+          "평점",
+          "평균 별점",
+          "구매 인증",
+          "포토 리뷰",
+          "사진 리뷰",
+          "도움돼요",
+          "리뷰 신고",
+          "상품 후기"
+        ],
+        "en": [
+          "reviews",
+          "ratings",
+          "star rating",
+          "rating distribution",
+          "verified purchase",
+          "helpful",
+          "photo reviews",
+          "report review",
+          "product reviews"
+        ]
+      }
+    },
+    {
       "patterns": [],
       "stories": [
         "packages/dashboard/src/DashboardView.stories.tsx",
@@ -3088,6 +3176,11 @@
       "need": "관리자 대시보드 (방문 · 가입 · 매출 · 퍼널 · 순위)",
       "capabilities": ["admin-dashboard"],
       "byHand": "백엔드 skeleton.dashboard.admin.enabled=true(Cloudflare · GA 는 키를 넣은 만큼). 프런트는 apps/sample 의 AdminDashboardPage 와 RequirePermission('dashboard.read') 라우트를 복사한다."
+    },
+    {
+      "need": "리뷰 · 별점 (상품 후기 · 평균 별점 · 구매 인증 · 포토 리뷰 · 도움돼요 · 신고)",
+      "capabilities": ["reviews"],
+      "byHand": "백엔드 review + review-jdbc 를 붙이고(skeleton.review.http.* · 대상 종류와 ReviewTargets 는 앱이 준다) 프런트는 Packages/reviews/ReviewsPage 스토리를 복사한다: useReviewFilters 한 벌을 ReviewSummary 와 ReviewList 에 건네고, summary.canWrite 면 ReviewForm 아니면 writeBlockedMessage. 사진 칸은 renderPhotos 에 @skeleton/storage 업로더를 꽂는다. 구매 인증은 앱이 결제 이벤트에서 서버의 구매 신호를 넣는다."
     },
     {
       "need": "약관 · 개인정보 동의 (가입 체크박스 · 새 판 재동의 · 선택 동의 철회) — 문서와 동의 기록은 서버가 쥔다",

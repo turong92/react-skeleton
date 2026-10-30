@@ -5,7 +5,7 @@ import { ConsentBanner, SiteFooter, type FooterLink } from '@skeleton/marketing'
 import { ThemeToggle } from '@skeleton/theme'
 import { AppShell, Button, LanguageMenu } from '@skeleton/ui'
 import { AdminMenu } from './AdminMenu'
-import { browserLocalStorage, forgetLastWorkspace, hasPendingInvitation } from '@skeleton/workspace'
+import { hasPendingInvitation } from '@skeleton/workspace'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useEffect, useRef, type ReactNode } from 'react'
 import { TeamSwitcher } from '../workspace/TeamSwitcher'
@@ -28,7 +28,6 @@ function SignedInActions() {
   useLiveNotifications()
 
   function signOut() {
-    forgetLastWorkspace(browserLocalStorage()) // 기기를 같이 쓰는 사람에게 「마지막에 쓴 팀」을 남기지 않는다
     logout()
     navigate('/login', { replace: true })
   }

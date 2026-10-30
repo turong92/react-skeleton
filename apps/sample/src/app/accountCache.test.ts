@@ -68,3 +68,36 @@ describe('author-profile device memory — dropped in the same place as the cach
     expect([...store.keys()]).toEqual(['theme'])
   })
 })
+
+describe('workspace device memory — dropped in the same place as the cache', () => {
+  const session = new Map<string, string>()
+  const local = new Map<string, string>()
+  const fake = (store: Map<string, string>) => ({
+    get length() {
+      return store.size
+    },
+    key: (index: number) => [...store.keys()][index] ?? null,
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => void store.set(key, value),
+    removeItem: (key: string) => void store.delete(key),
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    session.clear()
+    local.clear()
+  })
+
+  it('a different account arriving drops the previous person’s invitation token and last team; the first sign-in keeps the token', () => {
+    vi.stubGlobal('sessionStorage', fake(session))
+    vi.stubGlobal('localStorage', fake(local))
+    authSession.signIn(login('A'))
+    session.set('skeleton.workspace.invitation', 'tok')
+    local.set('skeleton.workspace:last:A', 'acme')
+    local.set('theme', 'dark')
+    authSession.signIn({ ...login('A'), accessToken: 'rotated' })
+    expect(session.get('skeleton.workspace.invitation')).toBe('tok') // 같은 계정의 갱신
+    authSession.signIn(login('B'))
+    expect(session.has('skeleton.workspace.invitation')).toBe(false)
+    expect([...local.keys()]).toEqual(['theme'])
+  })
+})

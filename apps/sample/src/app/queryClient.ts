@@ -5,7 +5,13 @@ import {
   refreshProfilesOnAuthorRefusal,
 } from '@skeleton/author-profile'
 import { showApiError } from '@skeleton/ui'
-import { refreshOnWorkspaceGone } from '@skeleton/workspace'
+import {
+  browserLocalStorage as workspaceLocalStorage,
+  browserSessionStorage,
+  createInvitationTokenStore,
+  forgetLastWorkspace,
+  refreshOnWorkspaceGone,
+} from '@skeleton/workspace'
 import { dropTeamNotes } from '../notes/queries'
 import { authSession } from '../auth/session'
 import { i18n } from '../i18n'
@@ -40,4 +46,7 @@ refetchOnLanguageChange(i18n, queryClient)
 onAccountChange(authSession, () => {
   queryClient.clear()
   forgetAuthorMemory(browserLocalStorage())
+  // 팀도 같다 - 「마지막에 쓴 팀」과, 앞 사람이 수락하지 않고 둔 초대 토큰(다음 사람이 /invite 에서 팀 이름 · 가린 이메일을 보지 않게)
+  forgetLastWorkspace(workspaceLocalStorage())
+  createInvitationTokenStore(browserSessionStorage()).clear()
 })

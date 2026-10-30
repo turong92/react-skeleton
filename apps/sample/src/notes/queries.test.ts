@@ -1,6 +1,13 @@
 import { QueryClient } from '@tanstack/react-query'
 import { describe, expect, it } from 'vitest'
-import { invalidateNotes, noteQuery, notesKeys, notesQuery, noteSummaryQuery } from './queries'
+import {
+  dropTeamNotes,
+  invalidateNotes,
+  noteQuery,
+  notesKeys,
+  notesQuery,
+  noteSummaryQuery,
+} from './queries'
 import type { NotesApi } from './notesApi'
 
 const api = {
@@ -45,5 +52,22 @@ describe('notes queries', () => {
     expect(stale(notesKeys.detail('n1'))).toBe(true)
     expect(stale(notesKeys.summary())).toBe(true)
     expect(stale(['notifications', 'unread'])).toBeFalsy()
+  })
+
+  it('dropTeamNotes removes every team notes cache and keeps my own', () => {
+    const client = new QueryClient()
+    client.setQueryData(notesKeys.list({}), 1)
+    client.setQueryData(notesKeys.detail('n1'), 2)
+    client.setQueryData(notesKeys.summary(), 3)
+    client.setQueryData(notesKeys.list({}, 'ws_1'), 4)
+    client.setQueryData(notesKeys.detail('n1', 'ws_1'), 5)
+    client.setQueryData(notesKeys.summary('ws_2'), 6)
+    dropTeamNotes(client)
+    expect(client.getQueryData(notesKeys.list({}))).toBe(1)
+    expect(client.getQueryData(notesKeys.detail('n1'))).toBe(2)
+    expect(client.getQueryData(notesKeys.summary())).toBe(3)
+    expect(client.getQueryData(notesKeys.list({}, 'ws_1'))).toBeUndefined()
+    expect(client.getQueryData(notesKeys.detail('n1', 'ws_1'))).toBeUndefined()
+    expect(client.getQueryData(notesKeys.summary('ws_2'))).toBeUndefined()
   })
 })

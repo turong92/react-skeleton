@@ -96,3 +96,12 @@ export function useDeleteNote() {
 export function useExportNote() {
   return useMutation({ mutationFn: (id: string) => notesApi.startExport(id) })
 }
+
+/** 그 팀에서 쫓겨났다 · 나갔다 — 팀 노트 캐시(`['notes', 팀 id, …]`)를 모두 버린다. 내 노트 캐시는 그대로 */
+export function dropTeamNotes(client: QueryClient) {
+  client.removeQueries({
+    queryKey: notesKeys.all,
+    predicate: (query) => !PERSONAL_SEGMENTS.includes(query.queryKey[1] as string),
+  })
+}
+const PERSONAL_SEGMENTS = ['list', 'detail', 'summary']

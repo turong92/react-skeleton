@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { createInvitationTokenStore, takeInvitationToken, type UrlHost } from './invitationToken'
+import {
+  createInvitationTokenStore,
+  hasPendingInvitation,
+  takeInvitationToken,
+  type UrlHost,
+} from './invitationToken'
 import { memoryStorage } from './test/memoryStorage'
 
 function host(search: string, hash = '') {
@@ -71,5 +76,16 @@ describe('takeInvitationToken — read the one-time token, keep it in the tab, w
   it('on the server (no host, no storage) there is nothing to read', () => {
     const store = createInvitationTokenStore(undefined)
     expect(takeInvitationToken(store, undefined)).toBeNull()
+  })
+})
+
+describe('hasPendingInvitation', () => {
+  it('is true only while this tab holds an unaccepted token', () => {
+    const storage = memoryStorage()
+    expect(hasPendingInvitation(storage)).toBe(false)
+    createInvitationTokenStore(storage).write('tok')
+    expect(hasPendingInvitation(storage)).toBe(true)
+    createInvitationTokenStore(storage).clear()
+    expect(hasPendingInvitation(storage)).toBe(false)
   })
 })

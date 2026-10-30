@@ -5,9 +5,9 @@ import { ConsentBanner, SiteFooter, type FooterLink } from '@skeleton/marketing'
 import { ThemeToggle } from '@skeleton/theme'
 import { AppShell, Button, LanguageMenu } from '@skeleton/ui'
 import { AdminMenu } from './AdminMenu'
-import { browserLocalStorage, forgetLastWorkspace } from '@skeleton/workspace'
+import { browserLocalStorage, forgetLastWorkspace, hasPendingInvitation } from '@skeleton/workspace'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import type { ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { TeamSwitcher } from '../workspace/TeamSwitcher'
 import { NicknameGateProvider } from '../auth/NicknameGate'
 import { NicknameNudge } from '../auth/NicknameNudge'
@@ -17,6 +17,8 @@ import { notificationsApi } from '../notifications/api'
 import { useLiveNotifications } from '../notifications/useLiveNotifications'
 import { useT } from '../i18n'
 import styles from './RootLayout.module.css'
+
+const AUTH_SCREENS = ['/login', '/sign-up', '/verify-email', '/magic-link', '/auth/callback']
 
 /** 로그인한 사람만 보는 부분 — 실시간 알림 연결은 여기서 시작하고 로그아웃하면 함께 끊긴다 */
 function SignedInActions() {
@@ -127,6 +129,18 @@ export function RootLayout() {
   const { status } = useAuth()
   const { pathname } = useLocation()
   const signedIn = status === 'authenticated'
+  const navigate = useNavigate()
+  // 초대 링크로 와서 로그인 · 가입을 거쳤다 - 로그인된 순간 이 탭에 수락 안 한 초대 토큰이 있으면 `/invite` 로 돌려보내 이어서 수락하게 한다(가입 화면은 돌아올 곳을 잇지 않는다).
+  // 로그인한 순간에 한 번만 - 수락을 미루고 다른 화면으로 가는 사람을 붙잡지 않는다
+  const returned = useRef(false)
+  useEffect(() => {
+    if (!signedIn) returned.current = false
+    // 로그인 · 가입 화면이 아직 자기 이동을 하는 중이면(가입 확인 뒤 `/` 로) 그 이동이 끝난 첫 화면에서 한다
+    else if (!returned.current && !AUTH_SCREENS.some((p) => pathname.startsWith(p))) {
+      returned.current = true
+      if (pathname !== '/invite' && hasPendingInvitation()) navigate('/invite', { replace: true })
+    }
+  }, [signedIn, pathname, navigate])
   // 가격표가 없으면(카탈로그가 꺼졌거나 팔 상품이 없으면) 푸터의 「요금제」 링크도 없다
   const pricingOn = usePricing(!signedIn) !== null
   return (

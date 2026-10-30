@@ -139,10 +139,9 @@ describe('workspace journey', () => {
     await invitee.getByRole('button', { name: auth.signUpSubmit }).click()
     const verify = await waitForCode(mailUrl, inviteeEmail, 'verify', { seen })
     await enterCode(invitee, verify.code)
-    await pwExpect(invitee.getByRole('heading', { name: /안녕하세요/ })).toBeVisible()
 
-    // 같은 탭이라 토큰이 남아 있다 - 메일의 링크를 다시 열면 이어서 수락한다
-    await invitee.goto(`${baseUrl}${link.path}`)
+    // 가입이 끝나 로그인되면 이 탭에 남은 초대 토큰이 앱을 `/invite` 로 돌려보낸다 - 메일 링크를 다시 열지 않아도 이어서 수락한다
+    await pwExpect(invitee).toHaveURL(/\/invite$/)
     await invitee.getByRole('button', { name: w.accept.accept }).click()
     await pwExpect(invitee).toHaveURL(new RegExp(`/w/${slug}/notes$`))
     await pwExpect(switcher(invitee)).toHaveAccessibleName(w.switcher.trigger(teamName))
@@ -244,7 +243,36 @@ describe('workspace journey', () => {
     }
   })
 
-  it('user removes the invitee: from their next request the team is gone from the list, its address and notes are 404', async () => {
+  it('a role change takes effect on the next request - up: invitations open, down: closed again (the token carries no role)', async () => {
+    const patch = async () =>
+      (
+        await fetch(`${apiUrl}/api/v1/workspaces/${teamId}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${await tokenOf(invitee)}`,
+          },
+          body: JSON.stringify({ name: teamName }),
+        })
+      ).status
+    const roleSelect = user.getByRole('combobox', { name: /의 역할$/ })
+    await user.goto(`${baseUrl}/w/${slug}/settings`)
+    pwExpect(await patch()).toBe(403) // 멤버는 이름을 바꿀 수 없다
+
+    await roleSelect.selectOption('ADMIN')
+    await pwExpect(roleSelect).toHaveValue('ADMIN')
+    pwExpect(await patch()).toBe(200) // 같은 토큰 - 다음 요청부터 관리자
+    await invitee.goto(`${baseUrl}/w/${slug}/settings`)
+    await pwExpect(invitee.getByRole('heading', { name: w.invitations.title })).toBeVisible()
+
+    await roleSelect.selectOption('MEMBER')
+    await pwExpect(roleSelect).toHaveValue('MEMBER')
+    pwExpect(await patch()).toBe(403)
+    await invitee.goto(`${baseUrl}/w/${slug}/settings`)
+    await pwExpect(invitee.getByText(w.invitations.noPermission)).toBeVisible()
+  })
+
+  it('user removes the invitee: on their next request - without a reload - the team is gone from the screen and the list, its notes are 404', async () => {
     await user.goto(`${baseUrl}/w/${slug}/settings`)
     await user.getByRole('button', { name: /더보기$/ }).click()
     await user.getByRole('menuitem', { name: w.settings.removeAction }).click()
@@ -260,7 +288,11 @@ describe('workspace journey', () => {
     })
     pwExpect(response.status).toBe(404)
 
-    await invitee.reload()
+    // 새로고침 없이 앱 안에서 팀 화면(노트)으로 가면 그 요청의 404 가 화면을 「찾을 수 없음」으로 바꾼다
+    await invitee
+      .getByRole('navigation', { name: ko('workspace.tabsLabel') })
+      .getByRole('link', { name: ko('nav.notes') })
+      .click()
     await pwExpect(invitee.getByRole('heading', { name: w.notFound.title })).toBeVisible()
     await pwExpect(invitee.getByRole('link', { name: noteTitle })).toHaveCount(0)
     await invitee.getByRole('button', { name: /^워크스페이스 (고르기|바꾸기)/ }).click()

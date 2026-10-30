@@ -77,6 +77,8 @@ export type FakeWorkspacesOptions = {
   seatLimit?: number | null
   /** 「Acme」에 기다리는 초대를 미리 둔다(기본: 살아 있는 하나 + 만료된 하나) */
   invitations?: WorkspaceInvitation[]
+  /** 만들기 · 고치기 · 역할 바꾸기 · 나가기가 서버 오류(500, 참조 번호 포함)로 끝난다 — 실패 상태 스토리용 */
+  breakWrites?: boolean
 }
 
 const pendingInvitation = (over: Partial<WorkspaceInvitation>): WorkspaceInvitation => ({
@@ -94,6 +96,7 @@ export function createFakeWorkspaces({
   role = 'OWNER',
   oldSlug,
   seatLimit = null,
+  breakWrites = false,
   invitations = [
     pendingInvitation({}),
     pendingInvitation({ id: 'wsi_old', email: 'old@example.com', expired: true, sentCount: 2 }),
@@ -167,9 +170,14 @@ export function createFakeWorkspaces({
   const slugUsedByOthers = (slug: string, self?: Team) =>
     teams.some((t) => t !== self && (t.slug === slug || t.retired.includes(slug)))
 
+  const broken = () => {
+    if (breakWrites) throw fail(500, 'COMMON.INTERNAL_SERVER_ERROR')
+  }
+
   const api: WorkspaceApi = {
     list: async () => teams.filter(mine).map(summary),
     create: async ({ name, slug }) => {
+      broken()
       if (slug && slugUsedByOthers(slug)) throw fail(409, 'WORKSPACE.SLUG_TAKEN')
       let chosen = slug ?? (slugFromName(name) || 'team')
       for (let n = 2; !slug && slugUsedByOthers(chosen); n += 1)
@@ -193,6 +201,7 @@ export function createFakeWorkspaces({
       return detail(found)
     },
     update: async (id, { name, slug }) => {
+      broken()
       const t = memberTeam(id)
       if (mine(t)?.role === 'MEMBER') throw fail(403, 'WORKSPACE.FORBIDDEN')
       if (slug !== undefined && slug !== t.slug) {
@@ -206,6 +215,7 @@ export function createFakeWorkspaces({
     },
     members: async (id) => memberTeam(id).members.map((m) => ({ ...m })),
     setMemberRole: async (id, accountId, newRole) => {
+      broken()
       const target = memberTeam(id).members.find((m) => m.accountId === accountId)
       if (!target) throw fail(404, 'WORKSPACE.MEMBER_NOT_FOUND')
       target.role = newRole
@@ -217,6 +227,7 @@ export function createFakeWorkspaces({
       t.members = t.members.filter((m) => m.accountId !== accountId)
     },
     leave: async (id) => {
+      broken()
       const t = memberTeam(id)
       if (mine(t)?.role === 'OWNER') throw fail(409, 'WORKSPACE.OWNER_CANNOT_LEAVE')
       t.members = t.members.filter((m) => m.accountId !== ME)

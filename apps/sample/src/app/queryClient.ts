@@ -5,6 +5,8 @@ import {
   refreshProfilesOnAuthorRefusal,
 } from '@skeleton/author-profile'
 import { showApiError } from '@skeleton/ui'
+import { refreshOnWorkspaceGone } from '@skeleton/workspace'
+import { dropTeamNotes } from '../notes/queries'
 import { authSession } from '../auth/session'
 import { i18n } from '../i18n'
 import { createQueryClient } from './createQueryClient'
@@ -17,6 +19,8 @@ export const queryClient = createQueryClient({
   onError: toastUnlessValidation((error) => {
     // 게시판이 작성자 id 를 거절했다(다른 탭에서 프로필을 지웠다) — 선택기가 낡은 목록을 그리지 않게 목록을 다시 받는다. 토스트는 그대로 뜬다
     refreshProfilesOnAuthorRefusal(queryClient, error)
+    // 팀 요청이 404(추방 · 탈퇴 · 닫힘) - 풀어 둔 팀 · 내 팀 목록을 다시 묻고 그 팀 노트 캐시를 버린다: 낡은 멤버십을 그리지 않는다
+    if (refreshOnWorkspaceGone(queryClient, error)) dropTeamNotes(queryClient)
     showApiError(error, {
       messages: {
         copy: i18n.t('common.copy'),

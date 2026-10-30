@@ -61,11 +61,13 @@ export type { ParsedEmails, SeatUsage } from './inviteInput'
 export {
   browserSessionStorage,
   createInvitationTokenStore,
+  hasPendingInvitation,
   takeInvitationToken,
 } from './invitationToken'
 export type { InvitationTokenStore, TokenStorage, UrlHost } from './invitationToken'
 export { defaultWorkspaceLabels, koWorkspaceLabels, resolveWorkspaceLabels } from './labels'
 export type { WorkspaceLabels, WorkspaceLabelsInput } from './labels'
+export { refreshOnWorkspaceGone } from './workspaceGone'
 export { useWorkspace } from './workspaceContext'
 export { WorkspaceProvider } from './WorkspaceProvider'
 export type { WorkspaceProviderProps } from './WorkspaceProvider'

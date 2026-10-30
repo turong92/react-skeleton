@@ -72,10 +72,10 @@ export function CreateWorkspaceForm({
         )}
       </Field>
       {create.isError && problem !== 'slugTaken' && (
-        <Alert tone="danger">
-          {labels.form.failed}
+        <>
+          <Alert tone="danger">{labels.form.failed}</Alert>
           <ErrorReference error={create.error} />
-        </Alert>
+        </>
       )}
       <div className={styles.actions}>
         <Button type="submit" loading={create.isPending} loadingLabel={labels.loading}>

@@ -43,8 +43,8 @@ export function SwitcherDemo({ currentSlug }: { currentSlug?: string }) {
   )
 }
 
-export function CreateDemo() {
-  const [{ api }] = useState(() => createFakeWorkspaces())
+export function CreateDemo({ breakWrites }: Pick<FakeWorkspacesOptions, 'breakWrites'>) {
+  const [{ api }] = useState(() => createFakeWorkspaces({ breakWrites }))
   const [lines, setLines] = useState<string[]>([])
   return (
     <WithQuery>
@@ -86,8 +86,12 @@ function SettingsBody({
 }
 
 /** 앱이 하는 조립 그대로 — Provider 가 주소의 slug 를 풀고, 설정 화면은 풀린 워크스페이스를 받는다 */
-export function SettingsDemo({ role, slug = 'acme' }: FakeWorkspacesOptions & { slug?: string }) {
-  const [{ api }] = useState(() => createFakeWorkspaces({ role }))
+export function SettingsDemo({
+  role,
+  breakWrites,
+  slug = 'acme',
+}: FakeWorkspacesOptions & { slug?: string }) {
+  const [{ api }] = useState(() => createFakeWorkspaces({ role, breakWrites }))
   const [current] = useState(createCurrentWorkspace)
   const [address, setAddress] = useState(slug)
   const [lines, setLines] = useState<string[]>([])

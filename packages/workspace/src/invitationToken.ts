@@ -91,3 +91,8 @@ export function takeInvitationToken(
   )
   return token
 }
+
+/** 이 탭에 아직 수락하지 않은 초대 토큰이 있는가 — 로그인 · 가입으로 다녀온 앱이 `/invite` 로 돌려보낼지 정한다 */
+export function hasPendingInvitation(storage: TokenStorage | undefined = browserSessionStorage()) {
+  return createInvitationTokenStore(storage).read() !== null
+}

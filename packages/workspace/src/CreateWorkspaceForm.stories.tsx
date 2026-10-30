@@ -79,3 +79,16 @@ export const CancelLeavesTheFormToTheApp: Story = {
     await expect(await canvas.findByRole('status', { name: 'log' })).toHaveTextContent('cancel')
   },
 }
+
+/** 서버가 실패하면 안내 + 참조 번호가 알림 상자 **밖**에 놓인다(상자 안에 두면 대비가 모자라다) - 접근성 검사가 이 상태도 지킨다 */
+export const AServerFailureShowsTheMessageAndTheReference: Story = {
+  args: { breakWrites: true },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.type(await canvas.findByLabelText(/워크스페이스 이름/), 'Anything')
+    await userEvent.click(canvas.getByRole('button', { name: '워크스페이스 만들기' }))
+    const alert = await canvas.findByRole('alert')
+    await expect(alert).toHaveTextContent('저장하지 못했어요. 다시 시도해 주세요.')
+    await expect(alert).not.toHaveTextContent('trace')
+    await expect(await canvas.findByText(/trace/i)).toBeVisible()
+  },
+}

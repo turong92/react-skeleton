@@ -192,10 +192,18 @@ export function WorkspaceSettings({
       >
         <div className={styles.section}>
           {memberError !== null && (
-            <Alert tone="danger" onDismiss={() => setMemberError(null)} dismissLabel={labels.close}>
-              {workspaceProblem(memberError) === 'memberGone' ? t.memberGone : t.memberChangeFailed}
+            <>
+              <Alert
+                tone="danger"
+                onDismiss={() => setMemberError(null)}
+                dismissLabel={labels.close}
+              >
+                {workspaceProblem(memberError) === 'memberGone'
+                  ? t.memberGone
+                  : t.memberChangeFailed}
+              </Alert>
               <ErrorReference error={memberError} />
-            </Alert>
+            </>
           )}
           {members.isPending ? (
             <Skeleton lines={3} label={labels.loading} />
@@ -225,12 +233,14 @@ export function WorkspaceSettings({
       <SectionCard id="workspace-leave" title={t.leave.title} description={t.leave.description}>
         <div className={styles.section}>
           {leave.isError && (
-            <Alert tone="danger">
-              {workspaceProblem(leave.error) === 'ownerCannotLeave'
-                ? t.leave.ownerCannotLeave
-                : t.leave.failed}
+            <>
+              <Alert tone="danger">
+                {workspaceProblem(leave.error) === 'ownerCannotLeave'
+                  ? t.leave.ownerCannotLeave
+                  : t.leave.failed}
+              </Alert>
               <ErrorReference error={leave.error} />
-            </Alert>
+            </>
           )}
           {isOwner ? (
             <p className={styles.hint}>{t.leave.ownerHint}</p>
@@ -376,10 +386,10 @@ function GeneralForm({
         )}
       </Field>
       {update.isError && problem !== 'slugTaken' && (
-        <Alert tone="danger">
-          {labels.form.failed}
+        <>
+          <Alert tone="danger">{labels.form.failed}</Alert>
           <ErrorReference error={update.error} />
-        </Alert>
+        </>
       )}
       <div className={formStyles.actions}>
         <Button

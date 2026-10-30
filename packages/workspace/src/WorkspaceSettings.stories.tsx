@@ -125,3 +125,40 @@ export const ATakenAddressIsExplainedOnTheField: Story = {
     ).toBeVisible()
   },
 }
+
+/** 멤버 역할 · 주소 저장 · 나가기가 서버 오류로 끝나면 안내 + 참조 번호가 알림 상자 밖에 놓인다 - 접근성 검사(대비)가 이 상태도 지킨다 */
+export const AFailedRoleChangeShowsTheMessageAndTheReference: Story = {
+  args: { breakWrites: true },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.selectOptions(
+      await canvas.findByRole('combobox', { name: 'Ann의 역할' }),
+      'ADMIN',
+    )
+    await expect(
+      await canvas.findByText('멤버를 바꾸지 못했어요. 다시 시도해 주세요.'),
+    ).toBeVisible()
+    await expect(await canvas.findByText(/trace/i)).toBeVisible()
+  },
+}
+
+export const AFailedSaveShowsTheMessageAndTheReference: Story = {
+  args: { breakWrites: true },
+  play: async ({ canvas, userEvent }) => {
+    const name = await canvas.findByLabelText(/워크스페이스 이름/)
+    await userEvent.type(name, ' 2')
+    await userEvent.click(canvas.getByRole('button', { name: '변경 저장' }))
+    await expect(await canvas.findByText('저장하지 못했어요. 다시 시도해 주세요.')).toBeVisible()
+    await expect(await canvas.findByText(/trace/i)).toBeVisible()
+  },
+}
+
+export const AFailedLeaveShowsTheMessageAndTheReference: Story = {
+  args: { role: 'MEMBER', breakWrites: true },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(await canvas.findByRole('button', { name: '워크스페이스 나가기' }))
+    const dialog = await within(document.body).findByRole('dialog')
+    await userEvent.click(within(dialog).getByRole('button', { name: '나가기' }))
+    await expect(await canvas.findByText('나가지 못했어요. 다시 시도해 주세요.')).toBeVisible()
+    await expect(await canvas.findByText(/trace/i)).toBeVisible()
+  },
+}

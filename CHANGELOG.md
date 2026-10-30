@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — API 키 화면 R-B1/R-B2 (2026-10-31)
+
+백엔드 짝: kotlin-skeleton `api-key` 모듈(`GET/POST /api/v1/api-keys` · `GET /api-keys/scopes` · `DELETE /api-keys/{id}`, 운영 `GET /api/v1/admin/api-keys` · `POST …/{id}/revoke`, 권한 `api-key.read` · `api-key.revoke`).
+
+- `@skeleton/auth/api-keys`(새 하위 경로): `ApiKeysSection`(목록 · 만들기 대화상자: 이름 · 범위 · 만료 · 다시 인증 → 토큰은 한 번만, 복사 · 회수 확인) · `createApiKeysApi` · `koApiKeysLabels`. `@skeleton/auth/admin`: `AdminApiKeys`(전체 표 · 주인/상태 필터 · 커서 · 사유 필수 회수, 회수 사유 표시) · `createAdminApiKeysApi` · `koAdminApiKeysLabels`.
+- **의존 변화**: 이 두 하위 경로는 `@tanstack/react-query` 를 import 한다(선택 peer — 쓰는 앱만 필요). 발급 뮤테이션은 `gcTime: 0`(토큰 · 비밀번호가 캐시에 남지 않는다), 오류는 `meta.quietStatuses` 로 앱의 전역 토스트와 겹치지 않게 한다. 비밀번호도 이메일도 없는 계정은 키를 만들 수 없다(안내만).
+- 견본 앱: 설정에 API 키 카드(범위 `notes.read` / `notes.write` 이름, 수명 상한 365일), 운영 메뉴 「API 키」(`/admin/api-keys`, `api-key.read`).
+- e2e `apiKeys.e2e.ts`: 키를 브라우저 밖에서 쓴다(GET 200 · POST 403 · `/account/me` 403) → 화면 회수 뒤 401, 운영자 사유 회수 → 「운영자가 회수」.
+
 ### Added — 견본 앱에 워크스페이스(팀) 조립 R3 (2026-10-30)
 
 백엔드 짝: kotlin-skeleton `apps/sample` 의 팀 노트(`X-Workspace-Id` 가 있으면 그 팀의 노트, 없으면 예전 그대로 내 노트).

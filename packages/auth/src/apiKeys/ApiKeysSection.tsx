@@ -241,7 +241,7 @@ function CreateKeyDialog({
   const ready = name.trim() !== '' && picked.length > 0 && proof !== null
 
   function close() {
-    create.reset() // 토큰을 mutation 캐시에서 버린다
+    create.reset() // 관찰자를 뗀다 - 발급 뮤테이션은 `gcTime: 0` 이라 토큰 · 비밀번호가 캐시에서 바로 빠진다
     setName('')
     setPicked([])
     setDays(choices[0])
@@ -256,7 +256,7 @@ function CreateKeyDialog({
     create.mutate({
       name: name.trim(),
       scopes: picked,
-      expiresAt: expiresAtFor(days, now()),
+      expiresAt: expiresAtFor(days, now(), maxLifetimeDays),
       ...proof,
     })
   }
@@ -367,17 +367,23 @@ function CreateKeyDialog({
               </Select>
             )}
           </Field>
-          <p className={styles.meta}>{t.reauthHint}</p>
-          <ReauthProof
-            key={round}
-            kind={kind}
-            email={subject.email}
-            providers={subject.providers}
-            requestCode={requestReauthCode}
-            onChange={setProof}
-            failure={failure}
-            labels={givenAuth}
-          />
+          {kind === 'provider' ? (
+            <Alert tone="warning">{t.providerReauthUnsupported}</Alert>
+          ) : (
+            <>
+              <p className={styles.meta}>{t.reauthHint}</p>
+              <ReauthProof
+                key={round}
+                kind={kind}
+                email={subject.email}
+                providers={subject.providers}
+                requestCode={requestReauthCode}
+                onChange={setProof}
+                failure={failure}
+                labels={givenAuth}
+              />
+            </>
+          )}
         </form>
       )}
     </Dialog>

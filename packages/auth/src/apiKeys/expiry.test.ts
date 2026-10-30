@@ -20,4 +20,9 @@ describe('expiresAtFor', () => {
     expect(expiresAtFor(30, now)).toBe('2026-11-30T00:00:00.000Z')
     expect(expiresAtFor(null, now)).toBeUndefined()
   })
+  it('keeps a minute of slack under the app cap so a browser clock a little ahead of the server is not refused', () => {
+    const now = Date.parse('2026-10-31T00:00:00Z')
+    expect(expiresAtFor(365, now, 365)).toBe('2027-10-30T23:59:00.000Z')
+    expect(expiresAtFor(30, now, 365)).toBe('2026-11-30T00:00:00.000Z')
+  })
 })

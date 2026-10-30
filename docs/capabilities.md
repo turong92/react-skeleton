@@ -598,7 +598,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 - 주요 진입점: `@skeleton/auth/api-keys#ApiKeysSection` · `@skeleton/auth/api-keys#createApiKeysApi` · `@skeleton/auth/api-keys#koApiKeysLabels` · `@skeleton/auth/admin#AdminApiKeys` · `@skeleton/auth/admin#createAdminApiKeysApi`
 - 복사해 시작할 Patterns: `packages/auth/src/apiKeys/ApiKeysSection.stories.tsx` · `packages/auth/src/admin/AdminApiKeys.stories.tsx`
 - 문서: `packages/auth/README.md`
-- 쓰지 않는 경우: 범위의 이름은 앱이 scopeLabels 로 정한다 - 범위 선언과 어떤 경로를 열지는 백엔드(@ApiKeyScope, 기본 거부) / 백엔드 skeleton.api-key.http.enabled(사용자) · skeleton.api-key.admin.enabled(운영, 기본 꺼짐 → 404 안내)와 api-key.read · api-key.revoke 권한이 있어야 열린다 / 키 요청 인증(Authorization: Bearer <접두사>_…)은 백엔드 몫 - 이 패키지는 발급 · 목록 · 회수 화면만. 토큰은 만든 직후 한 번만 보이고 다시 볼 수 없다
+- 쓰지 않는 경우: 범위의 이름은 앱이 scopeLabels 로 정한다 - 범위 선언과 어떤 경로를 열지는 백엔드(@ApiKeyScope, 기본 거부) / 백엔드 skeleton.api-key.http.enabled(사용자) · skeleton.api-key.admin.enabled(운영, 기본 꺼짐 → 404 안내)와 api-key.read · api-key.revoke 권한이 있어야 열린다 / 키 요청 인증(Authorization: Bearer <접두사>_…)은 백엔드 몫 - 이 패키지는 발급 · 목록 · 회수 화면만. 토큰은 만든 직후 한 번만 보이고 다시 볼 수 없다 / 비밀번호도 이메일도 없는 계정(제공자 다시 인증만 가능)은 키를 만들 수 없다 - 제공자 왕복을 받지 않고 비밀번호나 이메일을 먼저 등록하라는 안내를 보인다
 - 키워드: API 키, 액세스 토큰 발급, 개인 액세스 토큰, 키 회수, 범위 선택, 외부 연동 키 / api key, personal access token, api token, revoke key, key scopes, developer settings
 
 ### `live-notifications` — 알림이 새로고침 없이 즉시 뜬다 — 실시간 연결(SSE 또는 WebSocket)로 받은 이벤트를 알림 캐시에 넣어 종 · 목록 · 안 읽은 수가 바로 바뀐다.

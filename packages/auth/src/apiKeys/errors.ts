@@ -7,6 +7,7 @@ import type { ApiKeysLabels } from './labels'
 export const API_KEY_CODES = {
   LIMIT_REACHED: 'API_KEY.LIMIT_REACHED',
   SCOPE_UNKNOWN: 'API_KEY.SCOPE_UNKNOWN',
+  EXPIRES_INVALID: 'API_KEY.EXPIRES_INVALID',
 } as const
 
 /** 이 도구가 꺼진 서버(경로 404) - 키 모듈의 `http.enabled` / `admin.enabled` 가 꺼져 있다 */
@@ -21,6 +22,7 @@ export function apiKeyErrorMessage(
 ): string {
   if (isErrorCode(error, API_KEY_CODES.LIMIT_REACHED)) return labels.errors.limitReached
   if (isErrorCode(error, API_KEY_CODES.SCOPE_UNKNOWN)) return labels.errors.scopeUnknown
+  if (isErrorCode(error, API_KEY_CODES.EXPIRES_INVALID)) return labels.errors.expiresInvalid
   if (error instanceof ApiRequestError && error.apiError.status === 404)
     return labels.errors.notFound
   return authErrorMessage(error, authLabels).message

@@ -75,7 +75,7 @@ export const CreateShowsTheTokenOnce: Story = {
     await expect(token).toHaveTextContent(FAKE_KEY_TOKEN)
     await expect(screen.getByText('이 키는 다시 볼 수 없어요.')).toBeVisible()
     await expect(screen.getByRole('button', { name: '복사' })).toBeVisible()
-    // 닫으면 토큰은 어디에도 없다 - 다시 열어도 처음 입력 단계다
+    // 닫으면 토큰은 화면에 없다(캐시는 queries.test.ts) - 다시 열어도 처음 입력 단계다
     await userEvent.click(screen.getByRole('button', { name: '복사했어요' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     await expect(screen.queryByText(FAKE_KEY_TOKEN)).toBeNull()

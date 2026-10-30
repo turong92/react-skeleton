@@ -39,6 +39,8 @@ export type ApiKeysLabels = {
   expiryChoice: (days: number) => string
   expiryNone: string
   reauthHint: string
+  /** 비밀번호도 이메일도 없는 계정(제공자 다시 인증만 가능) - 이 화면은 그 왕복을 받지 않는다 */
+  providerReauthUnsupported: string
   submit: string
   tokenTitle: string
   tokenWarning: string
@@ -54,6 +56,7 @@ export type ApiKeysLabels = {
   errors: {
     limitReached: string
     scopeUnknown: string
+    expiresInvalid: string
     notFound: string
     notEnabled: string
     generic: string
@@ -94,6 +97,8 @@ export const defaultApiKeysLabels: ApiKeysLabels = {
   expiryChoice: (days) => `After ${days} days`,
   expiryNone: 'Never',
   reauthHint: 'Confirm it is you before a key is created.',
+  providerReauthUnsupported:
+    'Your account has no password or email yet. Add one in your account settings, then come back to create a key.',
   submit: 'Create key',
   tokenTitle: 'Your new API key',
   tokenWarning:
@@ -110,6 +115,7 @@ export const defaultApiKeysLabels: ApiKeysLabels = {
   errors: {
     limitReached: 'You have reached the limit of active keys. Revoke one you no longer use.',
     scopeUnknown: 'One of the scopes is not known to this server. Reload and try again.',
+    expiresInvalid: 'That expiry is beyond what this app allows. Pick a shorter one.',
     notFound: 'This key no longer exists. The list was refreshed.',
     notEnabled: 'API keys are not turned on for this server.',
     generic: 'Something went wrong. Try again.',
@@ -150,6 +156,8 @@ export const koApiKeysLabels: Partial<ApiKeysLabels> = {
   expiryChoice: (days) => `${days}일 뒤`,
   expiryNone: '없음',
   reauthHint: '키를 만들기 전에 본인인지 한 번 확인해요.',
+  providerReauthUnsupported:
+    '비밀번호나 이메일이 없는 계정이에요. 계정 설정에서 하나를 먼저 등록한 뒤 키를 만들어 주세요.',
   submit: '키 만들기',
   tokenTitle: '새 API 키',
   tokenWarning:
@@ -166,6 +174,7 @@ export const koApiKeysLabels: Partial<ApiKeysLabels> = {
   errors: {
     limitReached: '사용 중인 키가 한도에 닿았어요. 안 쓰는 키를 회수해 주세요.',
     scopeUnknown: '서버가 모르는 범위가 있어요. 새로 고친 뒤 다시 해 주세요.',
+    expiresInvalid: '이 앱이 허용하는 기간보다 길어요. 더 짧은 기간을 골라 주세요.',
     notFound: '이 키는 이미 없어요. 목록을 새로 고쳤어요.',
     notEnabled: '이 서버는 API 키를 켜지 않았어요.',
     generic: '문제가 생겼어요. 다시 시도해 주세요.',

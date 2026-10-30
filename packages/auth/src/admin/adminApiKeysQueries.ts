@@ -32,6 +32,8 @@ export function useAdminApiKeys(
     getNextPageParam: (last) =>
       last.cursor.hasNext ? (last.cursor.nextCursor ?? undefined) : undefined,
     placeholderData: keepPreviousData,
+    retry: false,
+    meta: { quietStatuses: [403, 404] },
   })
 }
 
@@ -39,6 +41,7 @@ export function useRevokeAdminApiKey(api: Pick<AdminApiKeysApi, 'revoke'>) {
   const client = useQueryClient()
   return useMutation({
     mutationFn: ({ id, reason }: { id: string; reason: string }) => api.revoke(id, reason),
+    meta: { quietStatuses: [400, 404] },
     onSettled: () => client.invalidateQueries({ queryKey: adminApiKeyKeys.all }),
   })
 }

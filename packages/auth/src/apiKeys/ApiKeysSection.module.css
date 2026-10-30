@@ -1,0 +1,42 @@
+.stack {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.meta {
+  display: grid;
+  gap: var(--space-xs);
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.fieldset {
+  display: grid;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.legend {
+  padding: 0;
+  font-weight: 600;
+}
+
+.token {
+  margin: 0;
+  padding: var(--space-md);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+}

@@ -2799,6 +2799,65 @@
       }
     },
     {
+      "patterns": [
+        "packages/auth/src/apiKeys/ApiKeysSection.stories.tsx",
+        "packages/auth/src/admin/AdminApiKeys.stories.tsx"
+      ],
+      "stories": [],
+      "docs": ["packages/auth/README.md"],
+      "entryPoints": [
+        "@skeleton/auth/api-keys#ApiKeysSection",
+        "@skeleton/auth/api-keys#createApiKeysApi",
+        "@skeleton/auth/api-keys#koApiKeysLabels",
+        "@skeleton/auth/admin#AdminApiKeys",
+        "@skeleton/auth/admin#createAdminApiKeysApi"
+      ],
+      "needs": ["auth"],
+      "backend": {
+        "modules": ["api-key", "api-key-jdbc"],
+        "oneOfModules": [],
+        "optionalModules": [],
+        "basePaths": ["/api/v1/api-keys", "/api/v1/admin/api-keys"],
+        "docs": ["docs/modules/api-key.md"]
+      },
+      "status": "stable",
+      "id": "api-keys",
+      "kind": "pattern",
+      "package": "@skeleton/auth",
+      "stampFlag": {
+        "flag": null,
+        "included": "always",
+        "autoIncludes": [],
+        "alsoVia": [],
+        "optOut": null
+      },
+      "summary": "API 키 화면(선택 내보내기 @skeleton/auth/api-keys) — 설정 구역 ApiKeysSection: 내 키 목록(상태 ACTIVE · EXPIRED · REVOKED, 운영자가 회수한 키 표시) · 만들기 대화상자(이름 · 앱이 선언한 범위 체크 · 만료 30/90/365일/없음 · 다시 인증) → 토큰을 한 번만 보여 주고 복사 · 회수 확인. 운영자용 AdminApiKeys(@skeleton/auth/admin): 전체 키 표 · 주인/상태 필터 · 커서 · 사유 필수 회수. TanStack Query 훅 포함(선택 peer).",
+      "path": "packages/auth/src/apiKeys/ApiKeysSection.tsx",
+      "notFor": [
+        "범위의 이름은 앱이 scopeLabels 로 정한다 - 범위 선언과 어떤 경로를 열지는 백엔드(@ApiKeyScope, 기본 거부)",
+        "백엔드 skeleton.api-key.http.enabled(사용자) · skeleton.api-key.admin.enabled(운영, 기본 꺼짐 → 404 안내)와 api-key.read · api-key.revoke 권한이 있어야 열린다",
+        "키 요청 인증(Authorization: Bearer <접두사>_…)은 백엔드 몫 - 이 패키지는 발급 · 목록 · 회수 화면만. 토큰은 만든 직후 한 번만 보이고 다시 볼 수 없다"
+      ],
+      "keywords": {
+        "ko": [
+          "API 키",
+          "액세스 토큰 발급",
+          "개인 액세스 토큰",
+          "키 회수",
+          "범위 선택",
+          "외부 연동 키"
+        ],
+        "en": [
+          "api key",
+          "personal access token",
+          "api token",
+          "revoke key",
+          "key scopes",
+          "developer settings"
+        ]
+      }
+    },
+    {
       "patterns": [],
       "stories": [],
       "docs": [

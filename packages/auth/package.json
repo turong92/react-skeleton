@@ -3,7 +3,7 @@
   "version": "1.1.0",
   "private": true,
   "type": "module",
-  "description": "인증 · 계정 수명주기 — 토큰 갱신(single-flight · 회전 안전 · 탭 동기화) · 로그인/가입/메일 확인/비밀번호 재설정/링크 로그인/소셜 콜백/계정 설정 화면(방법은 설정으로 켜고 끈다) · 가드 · 선택 관리자 표(@skeleton/auth/admin)",
+  "description": "인증 · 계정 수명주기 — 토큰 갱신(single-flight · 회전 안전 · 탭 동기화) · 로그인/가입/메일 확인/비밀번호 재설정/링크 로그인/소셜 콜백/계정 설정 화면(방법은 설정으로 켜고 끈다) · 가드 · 선택 관리자 표(@skeleton/auth/admin) · API 키 화면(@skeleton/auth/api-keys)",
   "exports": {
     ".": {
       "types": "./src/index.ts",
@@ -12,6 +12,10 @@
     "./admin": {
       "types": "./src/admin/index.ts",
       "default": "./src/admin/index.ts"
+    },
+    "./api-keys": {
+      "types": "./src/apiKeys/index.ts",
+      "default": "./src/apiKeys/index.ts"
     }
   },
   "types": "./src/index.ts",
@@ -25,11 +29,18 @@
   },
   "peerDependencies": {
     "react": "^19.0.0",
-    "react-router-dom": "^7.0.0"
+    "react-router-dom": "^7.0.0",
+    "@tanstack/react-query": "^5.0.0"
   },
   "devDependencies": {
+    "@tanstack/react-query": "^5.99.2",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-router-dom": "^7.14.1"
+  },
+  "peerDependenciesMeta": {
+    "@tanstack/react-query": {
+      "optional": true
+    }
   }
 }

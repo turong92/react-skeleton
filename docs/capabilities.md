@@ -109,6 +109,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 | `session-refresh` | 액세스 토큰 자동 갱신 — 401 이면 갱신을 한 번으로 합쳐(single-flight) 요청을 한 번만 다시 보낸다. 회전하는 리프레시 토큰을 안전하게 저장하고 탭 사이를 락 · storage 이벤트로 맞추며, 재사용 · 만료 때는 깨끗이 로그아웃. body · cookie 모드. | 항상 | auth-session, auth-session-jdbc | stable | 토큰 갱신, 리프레시 토큰, 자동 로그인 유지, 세션 만료, 탭 동기화 / token refresh, refresh token, silent refresh, session expiry, cross-tab sync |
 | `magic-link-login` | 이메일 링크 로그인 — 로그인 화면의 「링크 받기」 · 메일 확인 안내 · 링크를 열면 로그인되는 도착 화면. 비밀번호 없이 쓰거나 비밀번호와 나란히 켠다. | 항상 | auth-magic-link | stable | 링크 로그인, 매직링크, 비밀번호 없는 로그인, 이메일 로그인 / magic link, passwordless, email sign in |
 | `account-admin` | 운영자 계정 표(선택 내보내기 @skeleton/auth/admin) — 검색 · 상태 필터 · 정지 · 해제 · 삭제 유예 복구 · 역할 부여/회수. 역할 관리 화면(AdminRoles — 만들기 · 권한 고르기 · 고치기 · 지우기)은 백엔드 authz 모듈이 있을 때. | 항상 | account | stable | 운영자 도구, 계정 관리, 계정 정지, 관리자 화면 / admin tools, account management, suspend account, admin panel |
+| `api-keys` | API 키 화면(선택 내보내기 @skeleton/auth/api-keys) — 설정 구역 ApiKeysSection: 내 키 목록(상태 ACTIVE · EXPIRED · REVOKED, 운영자가 회수한 키 표시) · 만들기 대화상자(이름 · 앱이 선언한 범위 체크 · 만료 30/90/365일/없음 · 다시 인증) → 토큰을 한 번만 보여 주고 복사 · 회수 확인. 운영자용 AdminApiKeys(@skeleton/auth/admin): 전체 키 표 · 주인/상태 필터 · 커서 · 사유 필수 회수. TanStack Query 훅 포함(선택 peer). | 항상 | api-key, api-key-jdbc | stable | API 키, 액세스 토큰 발급, 개인 액세스 토큰, 키 회수, 범위 선택, 외부 연동 키 / api key, personal access token, api token, revoke key, key scopes, developer settings |
 | `live-notifications` | 알림이 새로고침 없이 즉시 뜬다 — 실시간 연결(SSE 또는 WebSocket)로 받은 이벤트를 알림 캐시에 넣어 종 · 목록 · 안 읽은 수가 바로 바뀐다. | --packages notifications | (경로만) | stable | 실시간 알림, 알림 즉시 표시, 푸시 알림, 알림 종 실시간 / live notifications, realtime notifications, push notifications, sse notifications |
 | `landing-page` | 공개 첫 화면 — Hero · 기능 · 한마디 · 요금제 · FAQ · 마지막 권유 · 푸터를 Patterns/Landing 한 장으로 조립해 시작한다. | --packages marketing | — | stable | 랜딩, 랜딩 페이지, 홍보 페이지, 첫 화면, 홈페이지 / landing page, homepage, marketing page, hero section |
 | `pricing-page` | 요금제 페이지 — 월/연 토글 · 절약 % · 강조 요금제 · 문의형 · 결제 질문 FAQ 를 데이터(plans)로 그리고 선택은 onSelect 로 받는다. | --packages marketing | — | stable | 요금제, 가격표, 플랜, 월 연 결제 토글, 구독 요금 / pricing page, pricing table, plans, subscription pricing |
@@ -586,6 +587,19 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 - 문서: `packages/auth/README.md`
 - 쓰지 않는 경우: 백엔드 skeleton.account.admin.enabled=true 와 account.read · account.manage · account.roles 권한이 있어야 열린다(RequirePermission 은 화면용, 검사는 서버) / 사용자 지원용 상세 · 감사 로그 화면은 없다
 - 키워드: 운영자 도구, 계정 관리, 계정 정지, 관리자 화면 / admin tools, account management, suspend account, admin panel
+
+### `api-keys` — API 키 화면(선택 내보내기 @skeleton/auth/api-keys) — 설정 구역 ApiKeysSection: 내 키 목록(상태 ACTIVE · EXPIRED · REVOKED, 운영자가 회수한 키 표시) · 만들기 대화상자(이름 · 앱이 선언한 범위 체크 · 만료 30/90/365일/없음 · 다시 인증) → 토큰을 한 번만 보여 주고 복사 · 회수 확인. 운영자용 AdminApiKeys(@skeleton/auth/admin): 전체 키 표 · 주인/상태 필터 · 커서 · 사유 필수 회수. TanStack Query 훅 포함(선택 peer).
+
+- 종류 · 상태: pattern · stable
+- 위치: `@skeleton/auth` (`packages/auth/src/apiKeys/ApiKeysSection.tsx`)
+- 켜는 법: 모든 프로젝트에 들어간다
+- 필요한 것: `auth`
+- 백엔드: 모듈 `api-key` · `api-key-jdbc` · 경로 `/api/v1/api-keys` · `/api/v1/admin/api-keys`
+- 주요 진입점: `@skeleton/auth/api-keys#ApiKeysSection` · `@skeleton/auth/api-keys#createApiKeysApi` · `@skeleton/auth/api-keys#koApiKeysLabels` · `@skeleton/auth/admin#AdminApiKeys` · `@skeleton/auth/admin#createAdminApiKeysApi`
+- 복사해 시작할 Patterns: `packages/auth/src/apiKeys/ApiKeysSection.stories.tsx` · `packages/auth/src/admin/AdminApiKeys.stories.tsx`
+- 문서: `packages/auth/README.md`
+- 쓰지 않는 경우: 범위의 이름은 앱이 scopeLabels 로 정한다 - 범위 선언과 어떤 경로를 열지는 백엔드(@ApiKeyScope, 기본 거부) / 백엔드 skeleton.api-key.http.enabled(사용자) · skeleton.api-key.admin.enabled(운영, 기본 꺼짐 → 404 안내)와 api-key.read · api-key.revoke 권한이 있어야 열린다 / 키 요청 인증(Authorization: Bearer <접두사>_…)은 백엔드 몫 - 이 패키지는 발급 · 목록 · 회수 화면만. 토큰은 만든 직후 한 번만 보이고 다시 볼 수 없다
+- 키워드: API 키, 액세스 토큰 발급, 개인 액세스 토큰, 키 회수, 범위 선택, 외부 연동 키 / api key, personal access token, api token, revoke key, key scopes, developer settings
 
 ### `live-notifications` — 알림이 새로고침 없이 즉시 뜬다 — 실시간 연결(SSE 또는 WebSocket)로 받은 이벤트를 알림 캐시에 넣어 종 · 목록 · 안 읽은 수가 바로 바뀐다.
 

@@ -1,0 +1,20 @@
+.page {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-md);
+}
+
+.form {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.stale {
+  opacity: 0.6;
+}

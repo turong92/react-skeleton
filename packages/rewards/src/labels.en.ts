@@ -40,6 +40,7 @@ export const defaultRewardsLabels: RewardsLabels = {
       },
       joinedAt: (date) => `Joined ${date}`,
       rewardAt: (date) => `Reward due ${date}`,
+      rewardedAt: (date) => `Rewarded ${date}`,
     },
     claim: {
       label: 'Friend invite code',

@@ -52,7 +52,7 @@ export type Invitee = {
   label: string | null
   status: InviteeStatus
   claimedAt: string
-  /** 보상 예정 시각 — 보류 중(`PENDING`)일 때만 */
+  /** `PENDING` 이면 보상 예정 시각(보류 중일 때만 있다), `REWARDED` 면 보상을 받은 때 */
   rewardAt: string | null
 }
 

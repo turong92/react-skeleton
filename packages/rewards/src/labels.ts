@@ -38,6 +38,8 @@ export type RewardsLabels = {
       joinedAt: (date: string) => string
       /** 보류 중인 건의 보상 예정일 */
       rewardAt: (date: string) => string
+      /** 보상을 받은 건 - 받은 때 */
+      rewardedAt: (date: string) => string
     }
     /** 코드 직접 입력(`ReferralCodeForm`) */
     claim: {

@@ -76,7 +76,12 @@ const history = (count: number): PointEntry[] =>
 
 /** 초대 현황 — 상태 넷, 가린 이름이 없는(null) 줄 하나. 새것부터 */
 export const sampleInvitees: Invitee[] = [
-  { label: '김수***', status: 'REWARDED', claimedAt: '2026-10-25T03:00:00Z', rewardAt: null },
+  {
+    label: '김수***',
+    status: 'REWARDED',
+    claimedAt: '2026-10-25T03:00:00Z',
+    rewardAt: '2026-10-26T03:00:00Z',
+  },
   {
     label: null,
     status: 'PENDING',

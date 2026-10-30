@@ -40,6 +40,7 @@ export const koRewardsLabels: RewardsLabels = {
       },
       joinedAt: (date) => `${date} 가입`,
       rewardAt: (date) => `보상 예정 ${date}`,
+      rewardedAt: (date) => `${date} 지급`,
     },
     claim: {
       label: '친구 초대 코드',
@@ -51,7 +52,7 @@ export const koRewardsLabels: RewardsLabels = {
         UNKNOWN_CODE: '없는 초대 코드예요. 다시 확인해 주세요.',
         OWN_CODE: '내 초대 코드는 쓸 수 없어요.',
         ALREADY_INVITED: '이미 초대를 받았어요.',
-        MUTUAL: '나를 초대한 친구의 코드는 쓸 수 없어요.',
+        MUTUAL: '내가 초대한 친구의 코드는 쓸 수 없어요.',
         NOT_NEW_ACCOUNT: '새로 가입한 계정만 쓸 수 있어요.',
         CLOSED: '지금은 초대 이벤트가 열려 있지 않아요.',
         OTHER: '코드를 적용하지 못했어요. 다시 시도해 주세요.',

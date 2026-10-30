@@ -75,7 +75,12 @@ export function InviteList({
                 <time dateTime={invitee.claimedAt}>
                   {t.joinedAt(formatTime(invitee.claimedAt))}
                 </time>
-                {invitee.rewardAt && ` · ${t.rewardAt(formatTime(invitee.rewardAt))}`}
+                {invitee.rewardAt &&
+                  invitee.status === 'PENDING' &&
+                  ` · ${t.rewardAt(formatTime(invitee.rewardAt))}`}
+                {invitee.rewardAt &&
+                  invitee.status === 'REWARDED' &&
+                  ` · ${t.rewardedAt(formatTime(invitee.rewardAt))}`}
               </span>
             </div>
             <Badge tone={tones[invitee.status]}>{t.status[invitee.status]}</Badge>

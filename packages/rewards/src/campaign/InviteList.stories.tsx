@@ -33,7 +33,9 @@ export const Default: Story = {
     await expect(canvas.getByText('보상 지급')).toBeVisible()
     await expect(canvas.getByText('친구 2')).toBeVisible()
     await expect(canvas.getByText('확인 중')).toBeVisible()
-    await expect(canvas.getByText(/보상 예정/)).toBeVisible()
+    // 보상 예정일은 확인 중인 줄에만, 받은 줄에는 받은 때 - 「보상 예정」 이 한 번만 나온다
+    await expect(canvas.getAllByText(/보상 예정/)).toHaveLength(1)
+    await expect(canvas.getByText(/· .*지급$/)).toBeVisible()
     await expect(canvas.getByText('lee***')).toBeVisible()
     await expect(canvas.getByText('가입함')).toBeVisible()
     await expect(canvas.getAllByRole('listitem')).toHaveLength(3)

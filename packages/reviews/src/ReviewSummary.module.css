@@ -1,0 +1,106 @@
+.root {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: var(--space-xl);
+}
+
+@media (max-width: 36rem) {
+  .root {
+    grid-template-columns: 1fr;
+  }
+}
+
+.headline {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-xs);
+}
+
+.average {
+  margin: 0;
+  color: var(--text-strong);
+  font-size: var(--font-size-title);
+  font-weight: 700;
+  line-height: var(--line-height-tight);
+  font-variant-numeric: tabular-nums;
+}
+
+.count,
+.empty {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.bars {
+  display: grid;
+  gap: var(--space-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* 막대 한 줄은 눌리는 단추다 — 쉬는 상태에서도 테두리가 있고 높이 44px(눌리는 것은 눌리게) */
+.bar {
+  display: grid;
+  grid-template-columns: 1.5ch 1fr 4ch;
+  align-items: center;
+  gap: var(--space-md);
+  inline-size: 100%;
+  min-block-size: 44px;
+  padding: 0 var(--space-md);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  text-align: start;
+}
+
+button.bar {
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease;
+}
+
+button.bar:hover:not(:disabled) {
+  border-color: var(--teal);
+  background: var(--teal-wash);
+}
+
+button.bar:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}
+
+button.bar[aria-pressed='true'] {
+  border-color: var(--teal);
+  background: var(--teal-soft);
+  box-shadow: inset 0 0 0 1px var(--teal);
+}
+
+button.bar:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.track {
+  block-size: var(--space-sm);
+  border-radius: var(--radius-full);
+  background: var(--border);
+  overflow: hidden;
+}
+
+.fill {
+  display: block;
+  block-size: 100%;
+  border-radius: var(--radius-full);
+  background: var(--amber);
+}
+
+.number {
+  text-align: end;
+  color: var(--text-muted);
+}

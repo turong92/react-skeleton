@@ -1,0 +1,82 @@
+.group {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.legend {
+  padding: 0;
+  margin-block-end: var(--space-xs);
+  color: var(--text-strong);
+  font-weight: 650;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+/* 칸은 쉬는 상태에서도 테두리가 있고 44px 이상이다(눌리는 것은 눌리게) */
+.choice {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: 44px;
+  min-block-size: 44px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--border-strong);
+  font-size: var(--font-size-title);
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease;
+}
+
+.choice:hover {
+  border-color: var(--teal);
+  background: var(--teal-wash);
+}
+
+.choice[data-filled='true'] {
+  color: var(--amber);
+  border-color: var(--amber);
+  background: var(--amber-soft);
+}
+
+/* 라디오 자체는 시각적으로 숨기고 포커스는 칸의 바깥 선으로 보인다 */
+.input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: inherit;
+}
+
+.choice:has(.input:focus-visible) {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}
+
+.choice:has(.input:disabled) {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.name {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.group[aria-invalid='true'] .choice {
+  border-color: var(--red-border);
+}

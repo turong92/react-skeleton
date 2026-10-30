@@ -1,0 +1,39 @@
+.root {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: var(--font-size-body);
+}
+
+.root[data-size='sm'] {
+  font-size: var(--font-size-small);
+}
+
+.root[data-size='lg'] {
+  font-size: var(--font-size-title);
+}
+
+.stars {
+  display: inline-flex;
+  line-height: 1;
+}
+
+.star {
+  position: relative;
+  display: inline-block;
+  color: var(--border-strong);
+}
+
+.fill {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  overflow: hidden;
+  color: var(--amber);
+}
+
+.value {
+  color: var(--text-strong);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}

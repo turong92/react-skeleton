@@ -1,0 +1,47 @@
+.root {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+/* 눌린 칩은 테두리와 바탕이 바뀌고 앞에 ✓ 가 붙는다 */
+.chip[aria-pressed='true'] {
+  border-color: var(--teal);
+  background: var(--teal-soft);
+}
+
+.list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  transition: opacity 120ms ease;
+}
+
+.list[data-fetching='true'] {
+  opacity: 0.6;
+}
+
+.row {
+  padding-block: var(--space-lg);
+  border-block-end: 1px solid var(--border);
+}
+
+.row:first-child {
+  padding-block-start: 0;
+}

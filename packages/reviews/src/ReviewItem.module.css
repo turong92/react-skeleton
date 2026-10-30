@@ -1,0 +1,85 @@
+.item {
+  display: grid;
+  gap: var(--space-sm);
+  min-width: 0;
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.author {
+  color: var(--text-strong);
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.time {
+  color: var(--text-muted);
+  font-size: var(--font-size-caption);
+}
+
+.menu {
+  margin-inline-start: auto;
+}
+
+.body,
+.hiddenBody {
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.hiddenBody {
+  color: var(--text-muted);
+}
+
+.noticeLine {
+  margin: 0;
+}
+
+.photos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.photo {
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+}
+
+.reply {
+  display: grid;
+  gap: var(--space-xs);
+  padding: var(--space-md);
+  border-inline-start: 3px solid var(--teal);
+  border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+}
+
+.replyTitle {
+  margin: 0;
+  color: var(--text-strong);
+  font-size: var(--font-size-small);
+  font-weight: 650;
+}
+
+.foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+/* 눌린 도움돼요는 테두리와 바탕이 바뀌고 앞에 ✓ 가 붙는다(색만으로 말하지 않는다) */
+.helpful[aria-pressed='true'] {
+  border-color: var(--teal);
+  background: var(--teal-soft);
+}

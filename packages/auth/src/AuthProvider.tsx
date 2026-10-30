@@ -12,6 +12,7 @@ export function AuthProvider({ session, children }: { session: AuthSession; chil
       socialLogin: session.socialLogin,
       magicLinkLogin: session.magicLinkLogin,
       cancelDeletion: session.cancelDeletion,
+      mfaLogin: session.mfaLogin,
       signIn: session.signIn,
       restore: session.restore,
       logout: session.logout,

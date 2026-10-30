@@ -9,6 +9,8 @@ import {
 } from '@skeleton/ui'
 import { useId, useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import { mfaRequiredOf } from '../mfa/mfaRequired'
+import type { MfaRequired } from '../mfa/types'
 import { deletionPendingOf, type DeletionPending } from '../pendingDeletion'
 import { AuthLayout } from './AuthLayout'
 import { CheckEmailPanel } from './CheckEmailPanel'
@@ -56,6 +58,11 @@ export type SignInScreenProps = {
   onCancelDeletion?: (restoreToken: string) => Promise<unknown>
   /** 삭제 예정일 표기 */
   formatDate?: (iso: string) => string
+  /**
+   * 1단계(비밀번호)가 맞았지만 2단계 인증이 켜진 계정이다(`403 AUTH.MFA_REQUIRED`) - 호출자가 두 번째 단계 화면으로 보낸다(`mfaToken` 은 라우터 state 로만).
+   * 안 주면 일반 실패 문구가 보인다. 탈퇴 취소 뒤에 오는 2단계도 같은 길이다
+   */
+  onMfaRequired?: (mfa: MfaRequired) => void
 }
 
 /** 로그인 화면 — 방법(비밀번호 · 링크 · 소셜)은 `methods` 가 정한다. 코드 분기(`AUTH.*`)는 `errors.ts` 한 곳 */
@@ -74,6 +81,7 @@ export function SignInScreen({
   initialEmail = '',
   onCancelDeletion,
   formatDate,
+  onMfaRequired,
 }: SignInScreenProps) {
   const labels = mergeLabels(given)
   const enabled = resolveMethods(methods)
@@ -105,6 +113,12 @@ export function SignInScreen({
   ]
 
   function fail(error: unknown) {
+    const mfa = onMfaRequired && mfaRequiredOf(error)
+    if (mfa) {
+      setPassword('') // 두 번째 단계에서 돌아와도 비밀번호는 다시 받는다
+      onMfaRequired(mfa)
+      return
+    }
     const pending = deletionPendingOf(error)
     if (pending) {
       setPassword('') // 「그대로 두기」로 돌아와도 비밀번호는 다시 받는다
@@ -141,6 +155,7 @@ export function SignInScreen({
       <DeletionPendingScreen
         pending={pendingDeletion}
         onCancel={onCancelDeletion}
+        onMfaRequired={onMfaRequired}
         onLeave={() => setPendingDeletion(null)}
         formatDate={formatDate}
         labels={given}

@@ -114,6 +114,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 | `magic-link-login` | 이메일 링크 로그인 — 로그인 화면의 「링크 받기」 · 메일 확인 안내 · 링크를 열면 로그인되는 도착 화면. 비밀번호 없이 쓰거나 비밀번호와 나란히 켠다. | 항상 | auth-magic-link | stable | 링크 로그인, 매직링크, 비밀번호 없는 로그인, 이메일 로그인 / magic link, passwordless, email sign in |
 | `account-admin` | 운영자 계정 표(선택 내보내기 @skeleton/auth/admin) — 검색 · 상태 필터 · 정지 · 해제 · 삭제 유예 복구 · 역할 부여/회수. 역할 관리 화면(AdminRoles — 만들기 · 권한 고르기 · 고치기 · 지우기)은 백엔드 authz 모듈이 있을 때. | 항상 | account | stable | 운영자 도구, 계정 관리, 계정 정지, 관리자 화면 / admin tools, account management, suspend account, admin panel |
 | `api-keys` | API 키 화면(선택 내보내기 @skeleton/auth/api-keys) — 설정 구역 ApiKeysSection: 내 키 목록(상태 ACTIVE · EXPIRED · REVOKED, 운영자가 회수한 키 표시) · 만들기 대화상자(이름 · 앱이 선언한 범위 체크 · 만료 30/90/365일/없음 · 다시 인증) → 토큰을 한 번만 보여 주고 복사 · 회수 확인. 운영자용 AdminApiKeys(@skeleton/auth/admin): 전체 키 표 · 주인/상태 필터 · 커서 · 사유 필수 회수. TanStack Query 훅 포함(선택 peer). | 항상 | api-key, api-key-jdbc | stable | API 키, 액세스 토큰 발급, 개인 액세스 토큰, 키 회수, 범위 선택, 외부 연동 키 / api key, personal access token, api token, revoke key, key scopes, developer settings |
+| `two-factor` | 2단계 인증(TOTP) 화면 — 로그인의 두 번째 단계 TwoFactorChallengeScreen(6자리 인증 앱 코드 · 「복구 코드로 들어가기」 · 남은 시도 · 만료 · 한도 안내; 비밀번호 · 링크 · 소셜 · 탈퇴 취소 네 길이 모두 /login/two-factor 로 — mfaToken 은 라우터 state 에만) · 설정의 TwoFactorSection(켜기 마법사: 본인 확인 → 서버가 만든 QR 경로를 <svg><path> 로 + 비밀 문자열 + 앱에서 열기 → 6자리 확인 → 복구 코드 복사/내려받기, 「저장했어요」 전에는 안 닫힘 · 복구 코드 다시 만들기 · 인증 앱 바꾸기 · 끄기). createAuthRoutes 가 라우트를 두고 AccountSettings 의 twoFactor 가 줄을 연다. | 항상 | auth-mfa, auth-mfa-jdbc | stable | 2단계 인증, 이중 인증, OTP, TOTP, 인증 앱, 복구 코드 / two-factor, 2fa, mfa, totp, authenticator app, recovery codes |
 | `live-notifications` | 알림이 새로고침 없이 즉시 뜬다 — 실시간 연결(SSE 또는 WebSocket)로 받은 이벤트를 알림 캐시에 넣어 종 · 목록 · 안 읽은 수가 바로 바뀐다. | --packages notifications | (경로만) | stable | 실시간 알림, 알림 즉시 표시, 푸시 알림, 알림 종 실시간 / live notifications, realtime notifications, push notifications, sse notifications |
 | `landing-page` | 공개 첫 화면 — Hero · 기능 · 한마디 · 요금제 · FAQ · 마지막 권유 · 푸터를 Patterns/Landing 한 장으로 조립해 시작한다. | --packages marketing | — | stable | 랜딩, 랜딩 페이지, 홍보 페이지, 첫 화면, 홈페이지 / landing page, homepage, marketing page, hero section |
 | `pricing-page` | 요금제 페이지 — 월/연 토글 · 절약 % · 강조 요금제 · 문의형 · 결제 질문 FAQ 를 데이터(plans)로 그리고 선택은 onSelect 로 받는다. | --packages marketing | — | stable | 요금제, 가격표, 플랜, 월 연 결제 토글, 구독 요금 / pricing page, pricing table, plans, subscription pricing |
@@ -631,6 +632,19 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 - 문서: `packages/auth/README.md`
 - 쓰지 않는 경우: 범위의 이름은 앱이 scopeLabels 로 정한다 - 범위 선언과 어떤 경로를 열지는 백엔드(@ApiKeyScope, 기본 거부) / 백엔드 skeleton.api-key.http.enabled(사용자) · skeleton.api-key.admin.enabled(운영, 기본 꺼짐 → 404 안내)와 api-key.read · api-key.revoke 권한이 있어야 열린다 / 키 요청 인증(Authorization: Bearer <접두사>_…)은 백엔드 몫 - 이 패키지는 발급 · 목록 · 회수 화면만. 토큰은 만든 직후 한 번만 보이고 다시 볼 수 없다 / 비밀번호도 이메일도 없는 계정(제공자 다시 인증만 가능)은 키를 만들 수 없다 - 제공자 왕복을 받지 않고 비밀번호나 이메일을 먼저 등록하라는 안내를 보인다
 - 키워드: API 키, 액세스 토큰 발급, 개인 액세스 토큰, 키 회수, 범위 선택, 외부 연동 키 / api key, personal access token, api token, revoke key, key scopes, developer settings
+
+### `two-factor` — 2단계 인증(TOTP) 화면 — 로그인의 두 번째 단계 TwoFactorChallengeScreen(6자리 인증 앱 코드 · 「복구 코드로 들어가기」 · 남은 시도 · 만료 · 한도 안내; 비밀번호 · 링크 · 소셜 · 탈퇴 취소 네 길이 모두 /login/two-factor 로 — mfaToken 은 라우터 state 에만) · 설정의 TwoFactorSection(켜기 마법사: 본인 확인 → 서버가 만든 QR 경로를 <svg><path> 로 + 비밀 문자열 + 앱에서 열기 → 6자리 확인 → 복구 코드 복사/내려받기, 「저장했어요」 전에는 안 닫힘 · 복구 코드 다시 만들기 · 인증 앱 바꾸기 · 끄기). createAuthRoutes 가 라우트를 두고 AccountSettings 의 twoFactor 가 줄을 연다.
+
+- 종류 · 상태: pattern · stable
+- 위치: `@skeleton/auth` (`packages/auth/src/mfa/TwoFactorSection.tsx`)
+- 켜는 법: 모든 프로젝트에 들어간다
+- 필요한 것: `auth`
+- 백엔드: 모듈 `auth-mfa` · `auth-mfa-jdbc` · 경로 `/api/v1/auth/mfa`
+- 주요 진입점: `mfaRequiredOf` · `TwoFactorChallengeScreen` · `TwoFactorSection` · `createMfaApi`
+- 복사해 시작할 Patterns: `packages/auth/src/mfa/TwoFactorChallengeScreen.stories.tsx` · `packages/auth/src/mfa/TwoFactorSection.stories.tsx`
+- 문서: `packages/auth/README.md`
+- 쓰지 않는 경우: 인증 앱(TOTP) 코드와 복구 코드만 — SMS · 이메일 코드 · 패스키는 없다 / 백엔드 auth-mfa 모듈(skeleton.auth-mfa)이 켜져 있어야 한다 - 꺼진 서버(404)에서는 설정 줄이 안내만 보인다 / QR 은 서버가 만든다 - 프런트에 QR 라이브러리가 없고 otpauth:// 를 바깥 서비스로 보내지 않는다 / 등록 필수 문 화면 · 운영자 해제 줄 메뉴는 아직 없다(다음 조각)
+- 키워드: 2단계 인증, 이중 인증, OTP, TOTP, 인증 앱, 복구 코드, QR 코드 등록, MFA / two-factor, 2fa, mfa, totp, authenticator app, recovery codes, second factor, one-time password
 
 ### `live-notifications` — 알림이 새로고침 없이 즉시 뜬다 — 실시간 연결(SSE 또는 WebSocket)로 받은 이벤트를 알림 캐시에 넣어 종 · 목록 · 안 읽은 수가 바로 바뀐다.
 

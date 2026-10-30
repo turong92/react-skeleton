@@ -1,5 +1,6 @@
 import { ApiRequestError } from '@skeleton/api-client'
 import type { AuthApi, RefreshDelivery } from './authApi'
+import type { MfaVerifyInput } from './mfa/types'
 import { decodeTokenPrincipal } from './principal'
 import type { RefreshStore } from './refreshStore'
 import { isRetryableRefreshError, type SessionRefresher } from './sessionRefresher'
@@ -28,6 +29,8 @@ export type AuthSession = {
   magicLinkLogin(token: string): Promise<AuthTokenResponse>
   /** 탈퇴 유예 중 로그인이 준 `restoreToken` 으로 탈퇴를 취소하고 로그인한다(`403 AUTH.ACCOUNT_DELETION_PENDING` 뒤) */
   cancelDeletion(restoreToken: string): Promise<AuthTokenResponse>
+  /** 2단계 인증을 켠 계정의 두 번째 단계 - 1단계가 준 `mfaToken` 과 코드(또는 복구 코드)로 로그인한다(`403 AUTH.MFA_REQUIRED` 뒤) */
+  mfaLogin(input: { mfaToken: string } & MfaVerifyInput): Promise<AuthTokenResponse>
   /** 다른 흐름이 받은 토큰 응답을 이 세션에 들인다 */
   signIn(response: AuthTokenResponse): AuthTokenResponse
   /** 이 기기에서 먼저 로그아웃(저장소 비움 — 동기)한 뒤 서버에 세션 폐기를 알린다. 서버가 실패해도 로그아웃은 유지 */
@@ -310,6 +313,8 @@ export function createAuthSession({
           ? api.cancelDeletion(restoreToken, { deviceName })
           : api.cancelDeletion(restoreToken)),
       ),
+    mfaLogin: async (input) =>
+      accept(await (deviceName ? api.mfaVerify(input, { deviceName }) : api.mfaVerify(input))),
     signIn: accept,
     async logout() {
       setReconnecting(false)

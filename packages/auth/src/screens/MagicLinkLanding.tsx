@@ -1,4 +1,7 @@
 import { Link } from 'react-router-dom'
+import { MfaHandoff } from '../mfa/MfaHandoff'
+import { mfaRequiredOf } from '../mfa/mfaRequired'
+import type { MfaRequired } from '../mfa/types'
 import { deletionPendingOf } from '../pendingDeletion'
 import { DeletionPendingScreen } from './DeletionPendingScreen'
 import type { OnceRunner } from './runOnce'
@@ -16,6 +19,8 @@ export type MagicLinkLandingProps = {
   requestTo: string
   /** 탈퇴 대기 중인 계정(`403 AUTH.ACCOUNT_DELETION_PENDING`)이 링크로 들어왔을 때 「탈퇴 취소」 — 토큰으로 취소하고 로그인한 뒤 이동은 호출자가. 안 주면 안내만 */
   onCancelDeletion?: (restoreToken: string) => Promise<unknown>
+  /** 링크가 맞았지만 2단계 인증이 켜진 계정이다(`403 AUTH.MFA_REQUIRED`) - 호출자가 두 번째 단계로 보낸다 */
+  onMfaRequired?: (mfa: MfaRequired) => void
   /** 삭제 예정일 표기 */
   formatDate?: (iso: string) => string
   labels?: Partial<AuthLabels>
@@ -30,6 +35,7 @@ export function MagicLinkLanding({
   onDone,
   requestTo,
   onCancelDeletion,
+  onMfaRequired,
   formatDate,
   labels: given,
   once,
@@ -43,11 +49,14 @@ export function MagicLinkLanding({
       run={onRedeem}
       onDone={onDone}
       renderFailure={(error) => {
+        const mfa = mfaRequiredOf(error)
+        if (mfa && onMfaRequired) return <MfaHandoff mfa={mfa} onMfaRequired={onMfaRequired} />
         const pending = deletionPendingOf(error)
         return pending ? (
           <DeletionPendingScreen
             pending={pending}
             onCancel={onCancelDeletion}
+            onMfaRequired={onMfaRequired}
             leaveTo={requestTo}
             formatDate={formatDate}
             labels={given}

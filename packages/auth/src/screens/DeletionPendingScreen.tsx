@@ -2,6 +2,8 @@ import { ErrorCodes } from '@skeleton/api-client'
 import { Alert, Button } from '@skeleton/ui'
 import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { mfaRequiredOf } from '../mfa/mfaRequired'
+import type { MfaRequired } from '../mfa/types'
 import type { DeletionPending } from '../pendingDeletion'
 import { AuthLayout } from './AuthLayout'
 import styles from './auth.module.css'
@@ -20,6 +22,8 @@ export type DeletionPendingScreenProps = {
   leaveTo?: string
   /** 로그인 화면 안에서: 화면을 닫고 양식으로 돌아간다(토큰을 버린다) */
   onLeave?: () => void
+  /** 탈퇴를 취소했더니 2단계 인증이 남았다(`403 AUTH.MFA_REQUIRED`) - 호출자가 두 번째 단계로 보낸다. 안 주면 일반 실패 문구 */
+  onMfaRequired?: (mfa: MfaRequired) => void
   /** 삭제 예정일 표기 — 기본은 브라우저 로케일의 날짜. 앱은 자기 로케일 · 시간대 규칙(`@skeleton/time`)을 넘긴다 */
   formatDate?: (iso: string) => string
   labels?: Partial<AuthLabels>
@@ -37,6 +41,7 @@ export function DeletionPendingScreen({
   onCancel,
   leaveTo,
   onLeave,
+  onMfaRequired,
   formatDate = defaultFormat,
   labels: given,
 }: DeletionPendingScreenProps) {
@@ -57,6 +62,11 @@ export function DeletionPendingScreen({
       await onCancel(token)
       // 성공이면 호출자가 이동한다 — 그 사이 다시 누르지 못하게 busy 를 유지한다
     } catch (error) {
+      const mfa = onMfaRequired && mfaRequiredOf(error)
+      if (mfa) {
+        onMfaRequired(mfa) // 취소는 받아들여졌다 - 남은 것은 두 번째 단계. 화면은 호출자가 바꾼다
+        return
+      }
       inFlight.current = false
       setBusy(false)
       const info = authErrorMessage(error, labels)

@@ -26,6 +26,7 @@ const api = (login: Wire, me: Wire): AuthApi => {
     magicLinkRequest: async () => undefined,
     magicLinkRedeem: unused,
     cancelDeletion: unused,
+    mfaVerify: unused,
     methods: unused,
   }
 }

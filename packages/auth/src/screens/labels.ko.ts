@@ -1,3 +1,4 @@
+import { koTwoFactorLabels } from '../mfa/labels'
 import type { AuthLabels } from './labels'
 
 /**
@@ -476,4 +477,5 @@ export const koAuthLabels: AuthLabels = {
   adminPrevious: '이전',
   adminNext: '다음',
   adminPurgeAfter: (date) => `${date} 에 지워짐`,
+  ...koTwoFactorLabels,
 }

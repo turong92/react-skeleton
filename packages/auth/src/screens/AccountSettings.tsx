@@ -5,6 +5,8 @@ import type { AccountApi, SocialReauth } from '../account/accountApi'
 import { DEFAULT_LOGIN_ID_RULES, type LoginIdRules } from '../account/loginIdRules'
 import { supportedTimeZones, withCurrent } from '../account/timeZones'
 import type { AccountMe, DeletionResult, PasswordPolicy } from '../account/types'
+import type { MfaApi } from '../mfa/mfaApi'
+import { TwoFactorSection } from '../mfa/TwoFactorSection'
 import { reauthSubjectOf } from '../reauth/kind'
 import type { ProviderAction } from '../socialLink'
 import { AccountStateNotice } from './AccountStateNotice'
@@ -31,6 +33,7 @@ export type AccountSectionName =
   | 'email'
   | 'contact'
   | 'methods'
+  | 'twoFactor'
   | 'sessions'
   | 'delete'
 
@@ -85,6 +88,11 @@ export type AccountSettingsProps = {
   onDiscarded?: (provider: string) => void
   /** `resume` 을 읽었다(앱이 돌아온 주소의 state 를 비운다) */
   onResumeConsumed?: () => void
+  /**
+   * 2단계 인증 줄(`createMfaApi(client)`) - 주면 보안 카드에 「2단계 인증」이 생긴다(서버가 `auth-mfa` 를 켠 앱만; 꺼진 서버면 줄이 안내만 한다).
+   * 기본 꺼짐 = 예전 화면 그대로. 줄만 감추려면 `sections.twoFactor: false`
+   */
+  twoFactor?: MfaApi
   /** 「환경」 카드에 더할 줄들(예: `@skeleton/legal` 의 `<ConsentSettings row />`) - 줄은 `SettingsRow` */
   preferenceRows?: ReactNode
 }
@@ -96,12 +104,14 @@ const ALL: AccountSectionName[] = [
   'email',
   'contact',
   'methods',
+  'twoFactor',
   'sessions',
   'delete',
 ]
 
 /** 구역의 주소 해시(`#email` …) — 나머지는 이름 그대로 */
-const hashOf = (name: AccountSectionName): string => (name === 'loginId' ? 'login-id' : name)
+const hashOf = (name: AccountSectionName): string =>
+  name === 'loginId' ? 'login-id' : name === 'twoFactor' ? 'two-factor' : name
 
 /** 카드 세 장 - 목차의 앵커이고, 해시 · 제공자 왕복 재개가 스크롤해 가는 곳이다 */
 type CardId = 'account' | 'security' | 'preferences'
@@ -113,6 +123,7 @@ const CARD_OF: Record<AccountSectionName, CardId> = {
   delete: 'account',
   password: 'security',
   methods: 'security',
+  twoFactor: 'security',
   sessions: 'security',
 }
 
@@ -147,6 +158,7 @@ export function AccountSettings({
   onResumeConsumed,
   onDiscarded,
   preferenceRows,
+  twoFactor,
 }: AccountSettingsProps) {
   const labels = mergeLabels(given)
   const on = (name: AccountSectionName) =>
@@ -363,7 +375,9 @@ export function AccountSettings({
   const canGo = goTarget === 'password' ? !restricted && on('password') : restricted || on('email')
   const contactShown = !restricted && on('contact') && account.contactEmail !== undefined
   const accountCard = loginIdShown || restricted || on('email') || contactShown || on('delete')
-  const securityCard = !restricted && (on('password') || on('methods') || on('sessions'))
+  const twoFactorShown = !restricted && !!twoFactor && on('twoFactor')
+  const securityCard =
+    !restricted && (on('password') || on('methods') || twoFactorShown || on('sessions'))
   const preferencesCard = !restricted && (on('profile') || !!preferenceRows)
   const items = [
     accountCard && { id: 'account', label: labels.groupAccount },
@@ -495,6 +509,17 @@ export function AccountSettings({
                 me.reload()
                 sessions.reload() // 서버가 이 계정의 다른 세션을 닫는다
               }}
+            />
+          )}
+          {twoFactorShown && twoFactor && (
+            <TwoFactorSection
+              row
+              api={twoFactor}
+              subject={subject}
+              requestReauthCode={requestReauthCode}
+              formatDate={formatDate}
+              labels={given}
+              onChanged={sessions.reload} // 켤 때 서버가 이 세션만 남기고 다른 세션을 닫는다
             />
           )}
           {on('sessions') && (

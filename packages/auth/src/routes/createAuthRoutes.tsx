@@ -28,6 +28,7 @@ import {
   SignUpPage,
   SocialCallbackPage,
   SocialLinkCallbackPage,
+  TwoFactorPage,
   WithLabels,
   type AuthPaths,
   type PageContext,
@@ -69,6 +70,7 @@ export const DEFAULT_AUTH_PATHS: AuthPaths = {
   socialLinkCallback: '/account/link-callback',
   account: '/account',
   accountDeleted: '/account-deleted',
+  twoFactor: '/login/two-factor',
 }
 
 /** 오래된 메일의 링크(가입 인증 · 이메일 변경 · 본인 확인 · 삭제 확인 — 이제는 6자리 인증번호)가 닿는 길 — 한 장의 안내 화면으로 보낸다 */
@@ -91,6 +93,7 @@ export type AuthPageName =
   | 'legacyLink'
   | 'account'
   | 'accountDeleted'
+  | 'twoFactor'
 
 export type AuthRoutesOptions = {
   /** 앱의 세션 — 서버 렌더 앱처럼 세션이 이 라우트를 만드는 자리에 없으면 생략한다(제공자 동의 왕복은 state 에 계정 id 를 묶어 다른 계정은 이어 가지 못한다) */
@@ -202,6 +205,11 @@ export function createAuthRoutes(options: AuthRoutesOptions): RouteObject[] {
       path: paths.signIn,
       element: page((c) => <SignInPage ctx={c} notice={options.signInNotice} />),
       ...handle('signIn'),
+    },
+    {
+      path: paths.twoFactor,
+      element: page((c) => <TwoFactorPage ctx={c} />),
+      ...handle('twoFactor'),
     },
   ]
   if (options.signUp !== false)

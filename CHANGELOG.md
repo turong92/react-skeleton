@@ -57,6 +57,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `@skeleton/api-client`: 오류 코드 `INQUIRY_INVALID` · `INQUIRY_CAPTCHA_FAILED` · `INQUIRY_TOO_MANY` · `INQUIRY_NOT_FOUND`.
 - `apps/sample`: 도움말 `/help`(FAQ 4문항 + 문의 폼 - 로그인하면 이메일이 채워지고 사람 확인이 없다, `VITE_TURNSTILE_SITE_KEY` 가 있고 로그인하지 않았을 때만 Turnstile) + 꼬리말 「도움말」 링크(`/help`). `captcha-turnstile` 을 `--with-sample` 에 더했다.
 
+### Added — 2단계 인증(TOTP) 화면 R-A1 (2026-10-31)
+
+백엔드 짝: kotlin-skeleton `auth-mfa` 모듈(`POST /auth/mfa/verify` · `GET /auth/mfa` · `POST /auth/mfa/totp/enrollment[/confirm]` · `POST /auth/mfa/recovery-codes` · `POST /auth/mfa/disable`, 오류 `AUTH.MFA_REQUIRED` · `MFA.*`).
+
+- `@skeleton/auth`: `mfaRequiredOf(error)`(탈퇴 대기의 `deletionPendingOf` 와 같은 꼴) · `TwoFactorChallengeScreen`(6자리 `CodeEntry` + 「복구 코드로 들어가기」, 남은 시도 · 만료 · 한도 안내) · `createAuthRoutes` 의 `/login/two-factor`(`paths.twoFactor`) · `session.mfaLogin` / `authApi.mfaVerify` · 계정 설정 새 칸 `twoFactor`(`TwoFactorSection`: 상태 · 켜기 마법사 · 복구 코드 다시 만들기 · 인증 앱 바꾸기 · 끄기) · `createMfaApi`. 비밀번호 로그인 · 링크 · 소셜 콜백 · 탈퇴 취소가 모두 같은 화면으로 넘기고 `mfaToken` 은 라우터 state 에만 둔다.
+- `@skeleton/ui` `Dialog` 에 `dismissible`(기본 true) - `false` 면 × 도 Esc 도 없다(복구 코드를 저장했다고 하기 전에는 닫히지 않는 창).
+- 문구는 `AuthLabels` 에 합쳐졌다(`TwoFactorLabels`, ko/en). 등록 필수 문 화면 · 운영자 해제 줄 메뉴 · 견본 조립은 다음 조각(R-A2).
+
 ### Added — API 키 화면 R-B1/R-B2 (2026-10-31)
 
 백엔드 짝: kotlin-skeleton `api-key` 모듈(`GET/POST /api/v1/api-keys` · `GET /api-keys/scopes` · `DELETE /api-keys/{id}`, 운영 `GET /api/v1/admin/api-keys` · `POST …/{id}/revoke`, 권한 `api-key.read` · `api-key.revoke`).

@@ -9,6 +9,7 @@ export type AuthContextValue = AuthState &
     | 'socialLogin'
     | 'magicLinkLogin'
     | 'cancelDeletion'
+    | 'mfaLogin'
     | 'signIn'
     | 'restore'
     | 'logout'

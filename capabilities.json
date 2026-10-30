@@ -3056,6 +3056,69 @@
       }
     },
     {
+      "id": "two-factor",
+      "kind": "pattern",
+      "package": "@skeleton/auth",
+      "path": "packages/auth/src/mfa/TwoFactorSection.tsx",
+      "summary": "2단계 인증(TOTP) 화면 — 로그인의 두 번째 단계 TwoFactorChallengeScreen(6자리 인증 앱 코드 · 「복구 코드로 들어가기」 · 남은 시도 · 만료 · 한도 안내; 비밀번호 · 링크 · 소셜 · 탈퇴 취소 네 길이 모두 /login/two-factor 로 — mfaToken 은 라우터 state 에만) · 설정의 TwoFactorSection(켜기 마법사: 본인 확인 → 서버가 만든 QR 경로를 <svg><path> 로 + 비밀 문자열 + 앱에서 열기 → 6자리 확인 → 복구 코드 복사/내려받기, 「저장했어요」 전에는 안 닫힘 · 복구 코드 다시 만들기 · 인증 앱 바꾸기 · 끄기). createAuthRoutes 가 라우트를 두고 AccountSettings 의 twoFactor 가 줄을 연다.",
+      "patterns": [
+        "packages/auth/src/mfa/TwoFactorChallengeScreen.stories.tsx",
+        "packages/auth/src/mfa/TwoFactorSection.stories.tsx"
+      ],
+      "stories": [],
+      "docs": ["packages/auth/README.md"],
+      "entryPoints": [
+        "mfaRequiredOf",
+        "TwoFactorChallengeScreen",
+        "TwoFactorSection",
+        "createMfaApi"
+      ],
+      "needs": ["auth"],
+      "backend": {
+        "modules": ["auth-mfa", "auth-mfa-jdbc"],
+        "oneOfModules": [],
+        "optionalModules": [],
+        "basePaths": ["/api/v1/auth/mfa"],
+        "docs": ["docs/modules/auth-mfa.md"]
+      },
+      "status": "stable",
+      "stampFlag": {
+        "flag": null,
+        "included": "always",
+        "autoIncludes": [],
+        "alsoVia": [],
+        "optOut": null
+      },
+      "notFor": [
+        "인증 앱(TOTP) 코드와 복구 코드만 — SMS · 이메일 코드 · 패스키는 없다",
+        "백엔드 auth-mfa 모듈(skeleton.auth-mfa)이 켜져 있어야 한다 - 꺼진 서버(404)에서는 설정 줄이 안내만 보인다",
+        "QR 은 서버가 만든다 - 프런트에 QR 라이브러리가 없고 otpauth:// 를 바깥 서비스로 보내지 않는다",
+        "등록 필수 문 화면 · 운영자 해제 줄 메뉴는 아직 없다(다음 조각)"
+      ],
+      "keywords": {
+        "ko": [
+          "2단계 인증",
+          "이중 인증",
+          "OTP",
+          "TOTP",
+          "인증 앱",
+          "복구 코드",
+          "QR 코드 등록",
+          "MFA"
+        ],
+        "en": [
+          "two-factor",
+          "2fa",
+          "mfa",
+          "totp",
+          "authenticator app",
+          "recovery codes",
+          "second factor",
+          "one-time password"
+        ]
+      }
+    },
+    {
       "patterns": [],
       "stories": [],
       "docs": [

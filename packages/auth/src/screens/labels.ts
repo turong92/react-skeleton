@@ -1,10 +1,11 @@
 import type { PasswordViolation } from '../account/types'
+import { defaultTwoFactorLabels, type TwoFactorLabels } from '../mfa/labels'
 
 /**
  * 화면 문구. `@skeleton/auth` 는 번역을 모른다 — 모든 화면이 `labels?: Partial<AuthLabels>` 를 받고, 기본은 영어다.
  * 앱이 자기 i18n 으로 채워 넘긴다(`createAuthRoutes` 의 `useLabels` 훅). 값이 함수인 항목은 자리값이 낀 문장이다.
  */
-export type AuthLabels = {
+export type AuthLabels = TwoFactorLabels & {
   // 공통
   email: string
   password: string
@@ -957,6 +958,7 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   adminPrevious: 'Previous',
   adminNext: 'Next',
   adminPurgeAfter: (date) => `Erased on ${date}`,
+  ...defaultTwoFactorLabels,
 })
 
 /** 기본 영어 위에 앱이 준 문구를 덮는다 */

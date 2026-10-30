@@ -1,5 +1,6 @@
 import { ApiRequestError, ErrorCodes } from '@skeleton/api-client'
 import type { AuthApi } from '../authApi'
+import { FAKE_RECOVERY_CODE, FAKE_TOTP_CODE } from './fakeMfaApi'
 import type { AuthPrincipal, AuthTokenResponse } from '../types'
 
 /** 데모 계정 — 화면에 그대로 적어 둔다(진짜 비밀이 아니다) */
@@ -46,6 +47,9 @@ const invalidCredentials = () =>
     '00-trace-demo-span-demo-01',
   )
 
+/** 가짜 서버가 2단계 대기에 내주는 토큰 */
+export const FAKE_MFA_TOKEN = 'mfa-opaque'
+
 /** 가짜 서버가 탈퇴 대기 계정의 로그인에 내주는 취소용 토큰 */
 export const FAKE_RESTORE_TOKEN = 'restore-opaque'
 
@@ -61,6 +65,8 @@ export type FakeAuthOptions = {
   socialEmailConflict?: boolean
   /** 소셜 로그인이 주소 없는 계정을 연다(카카오 · 네이버 · X · LINE 이 이메일을 주지 않았다) — 이메일이 필수인 앱이면 `GET /account/me` 의 `emailRequired` 가 true 인 계정(`createFakeAccountApi({ emailRequired })`) */
   socialWithoutAddress?: boolean
+  /** 데모 계정이 2단계 인증을 켰다 - 맞는 1단계 증거로 들어오면 세션 대신 `403 AUTH.MFA_REQUIRED`(`mfaVerify` 가 `FAKE_TOTP_CODE` · `FAKE_RECOVERY_CODE` 만 받는다) */
+  mfa?: boolean
 }
 
 const apiFailure = (code: string, status: number, data?: unknown) =>
@@ -77,10 +83,20 @@ export function createFakeAuthApi({
   cancelExpired,
   socialEmailConflict,
   socialWithoutAddress,
+  mfa,
 }: FakeAuthOptions = {}): AuthApi {
+  /** 2단계 대기의 시도 - 5번 안에 맞히지 못하면 410 */
+  let mfaAttempts = 0
+  const secondStep = (): never => {
+    throw apiFailure('AUTH.MFA_REQUIRED', 403, {
+      mfaToken: FAKE_MFA_TOKEN,
+      methods: ['totp', 'recovery_code'],
+      expiresAt: new Date(Date.now() + 5 * 60_000).toISOString(),
+    })
+  }
   /** 맞는 증거로 들어왔다 — 유예 중이면 세션 대신 403 */
   const admit = (): AuthTokenResponse => {
-    if (!pendingDeletion) return token()
+    if (!pendingDeletion) return mfa ? secondStep() : token()
     throw apiFailure('AUTH.ACCOUNT_DELETION_PENDING', 403, {
       purgeAfter: '2026-11-05T00:00:00Z',
       ...(pendingDeletion === 'with-token'
@@ -99,6 +115,18 @@ export function createFakeAuthApi({
     cancelDeletion: async (restoreToken) => {
       if (cancelExpired || pendingDeletion !== 'with-token' || restoreToken !== FAKE_RESTORE_TOKEN)
         throw apiFailure('ACCOUNT.TOKEN_INVALID', 410)
+      return mfa ? secondStep() : token()
+    },
+    mfaVerify: async (input) => {
+      if (input.mfaToken !== FAKE_MFA_TOKEN || mfaAttempts >= 5)
+        throw apiFailure('MFA.CHALLENGE_EXPIRED', 410)
+      const ok =
+        ('code' in input && input.code === FAKE_TOTP_CODE) ||
+        ('recoveryCode' in input && input.recoveryCode === FAKE_RECOVERY_CODE)
+      if (!ok) {
+        mfaAttempts += 1
+        throw apiFailure('MFA.CODE_INVALID', 400, { attemptsLeft: 5 - mfaAttempts })
+      }
       return token()
     },
     socialLogin: async () => {

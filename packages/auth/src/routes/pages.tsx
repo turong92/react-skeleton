@@ -49,6 +49,8 @@ import type { SignUpPendingStore } from '../signUpPending'
 import type { OnceRunner } from '../screens/runOnce'
 import { useSocialLoginCallback } from '../useSocialLoginCallback'
 import { loginIdSettingsProps } from './loginIdWiring'
+import { mfaChallengeOf, mfaChallengeState } from '../mfa/challengeState'
+import { TwoFactorChallengeScreen } from '../mfa/TwoFactorChallengeScreen'
 
 export type AuthPaths = {
   signIn: string
@@ -63,6 +65,8 @@ export type AuthPaths = {
   account: string
   /** 삭제를 마친 직후의 안내(로그아웃 상태) */
   accountDeleted: string
+  /** 로그인의 두 번째 단계(2단계 인증을 켠 계정) - 1단계가 맞은 네 길(비밀번호 · 링크 · 소셜 · 탈퇴 취소)이 모두 여기로 온다 */
+  twoFactor: string
 }
 
 /** 콜백이 돌려준 그 시도의 PKCE verifier · nonce · 콜백의 state — verifier · nonce 는 제공자가 쓴 것만(없으면 undefined: 서버로 아무것도 더 보내지 않는다) */
@@ -179,6 +183,9 @@ export function SignInPage({
       }}
       onMagicLinkRequest={(email) => ctx.authApi.magicLinkRequest(email)}
       formatDate={ctx.formatDate}
+      onMfaRequired={(mfa) =>
+        navigate(ctx.paths.twoFactor, { state: mfaChallengeState(mfa, target, arrival) })
+      }
       onCancelDeletion={async (restoreToken) => {
         // 일반 로그인과 같은 처리 — 세션을 저장하고 가려던 곳으로(약관 재동의 등은 그 뒤 첫 호출의 가드가 이어 받는다)
         await auth.cancelDeletion(restoreToken)
@@ -338,6 +345,12 @@ export function MagicLinkPage({ ctx }: { ctx: PageContext }) {
           onRedeem={(t) => auth.magicLinkLogin(t)}
           onDone={() => navigate(ctx.afterSignIn, { replace: true })}
           formatDate={ctx.formatDate}
+          onMfaRequired={(mfa) =>
+            navigate(ctx.paths.twoFactor, {
+              replace: true, // 일회용 링크 주소로 되돌아오지 않게
+              state: mfaChallengeState(mfa, ctx.afterSignIn),
+            })
+          }
           onCancelDeletion={async (restoreToken) => {
             await auth.cancelDeletion(restoreToken)
             navigate(ctx.afterSignIn, { replace: true })
@@ -345,6 +358,39 @@ export function MagicLinkPage({ ctx }: { ctx: PageContext }) {
         />
       )}
     </TokenPage>
+  )
+}
+
+/** `/login/two-factor` - 1단계가 맞은 사람이 코드를 낸다. `mfaToken` 은 넘겨받은 라우터 state 에서 한 번 읽고 곧 주소의 state 에서 지운다(새로고침하면 처음부터 로그인) */
+export function TwoFactorPage({ ctx }: { ctx: PageContext }) {
+  const auth = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
+  const [challenge] = useState(() => mfaChallengeOf(location.state))
+  const scrubbed = useRef(false)
+  useEffect(() => {
+    if (scrubbed.current || !challenge) return // 없으면 아래 `Navigate` 가 로그인으로 보낸다 - 이 이동이 그것을 덮지 않게
+    scrubbed.current = true
+    navigate(location.pathname, { replace: true, state: null })
+  }, [navigate, location.pathname, challenge])
+  if (auth.status === 'authenticated') return <Navigate to={ctx.afterSignIn} replace />
+  if (!challenge) return <Navigate to={ctx.paths.signIn} replace />
+  return (
+    <TwoFactorChallengeScreen
+      mfa={challenge.mfa}
+      labels={ctx.labels}
+      onRestart={() => navigate(ctx.paths.signIn, { replace: true })}
+      onVerify={async (input) => {
+        await auth.mfaLogin({ mfaToken: challenge.mfa.mfaToken, ...input })
+        // 소셜 길은 「가려던 곳」을 따로 적어 둔다(읽으면 지워진다) - 성공한 지금 읽는다
+        const target =
+          challenge.target ?? consumeReturnTo(ctx.afterSignIn, undefined, ctx.keys.returnTo)
+        navigate(target, {
+          replace: true,
+          ...(challenge.arrival ? { state: challenge.arrival } : {}),
+        })
+      }}
+    />
   )
 }
 
@@ -374,6 +420,10 @@ function SocialCallbackInner({ flow, ctx }: { flow: SocialLoginFlow; ctx: PageCo
       linkTo={{ pathname: ctx.paths.account, hash: '#methods' }}
       provider={state.status === 'error' ? flow.providerOfFailure(state.error) : undefined}
       formatDate={ctx.formatDate}
+      // 「가려던 곳」은 여기서 읽지 않는다(읽으면 지워진다) - 두 번째 단계가 끝난 뒤에 읽는다
+      onMfaRequired={(mfa) =>
+        navigate(ctx.paths.twoFactor, { replace: true, state: mfaChallengeState(mfa) })
+      }
       onCancelDeletion={async (restoreToken) => {
         // 탈퇴 대기 계정의 소셜 로그인 — 취소하면 일반 로그인 성공과 같은 이동(가려던 곳을 읽고 지운다)
         await auth.cancelDeletion(restoreToken)
@@ -626,6 +676,7 @@ export type SettingsExtras = Partial<
     | 'showDisplayName'
     | 'contactEmail'
     | 'preferenceRows'
+    | 'twoFactor'
   >
 > & {
   locales: AccountSettingsProps['locales']

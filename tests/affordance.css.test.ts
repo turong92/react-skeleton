@@ -48,6 +48,12 @@ const ROWS: Row[] = [
     base: '.actionLink',
   },
   {
+    name: 'two-factor "open in the app" link',
+    dir: 'packages/auth',
+    file: 'packages/auth/src/mfa/TwoFactorSection.module.css',
+    base: '.openInApp',
+  },
+  {
     name: 'ThemeToggle',
     dir: 'packages/theme',
     file: 'packages/theme/src/ThemeToggle.module.css',

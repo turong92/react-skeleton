@@ -202,3 +202,37 @@ export const TheCloseButtonNotifiesOnce: Story = {
     await expect(args.onClose).toHaveBeenCalledTimes(1)
   },
 }
+
+/** `dismissible={false}` - 다 읽기 전에 닫히면 안 되는 창(한 번만 보이는 복구 코드). × 가 없고, Esc(cancel)도 · 브라우저가 cancel 을 건너뛰고 닫아도 열려 있다. 닫기는 부모가 `open` 을 끄는 것뿐 */
+function Sticky() {
+  const [open, setOpen] = useState(true)
+  return (
+    <Dialog
+      open={open}
+      onClose={() => setOpen(false)}
+      title="Save your codes"
+      dismissible={false}
+      footer={<Button onClick={() => setOpen(false)}>I saved them</Button>}
+    >
+      <p>Shown once.</p>
+    </Dialog>
+  )
+}
+
+export const NotDismissibleStaysOpenUntilTheParentCloses: Story = {
+  render: () => <Sticky />,
+  play: async ({ userEvent }) => {
+    const dialog = (await screen.findByRole('dialog', {
+      name: 'Save your codes',
+    })) as HTMLDialogElement
+    await expect(within(dialog).queryByRole('button', { name: 'Close' })).toBeNull()
+    dialog.requestClose() // Esc
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    await expect(screen.getByRole('dialog', { name: 'Save your codes' })).toBeVisible()
+    // 브라우저가 cancel 을 건너뛰고 닫았다(Esc 를 연달아 눌렀을 때) - 다시 모달로 연다
+    dialog.close()
+    await waitFor(() => expect(dialog.open).toBe(true))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'I saved them' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  },
+}

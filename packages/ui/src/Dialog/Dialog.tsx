@@ -9,6 +9,11 @@ export type DialogProps = {
   /** 닫기 버튼 이름(기본 `Close`) */
   closeLabel?: string
   footer?: ReactNode
+  /**
+   * 기본 true. `false` 면 × 버튼이 없고 Esc 로도 닫히지 않는다(브라우저가 cancel 을 건너뛰고 닫아도 다시 모달로 연다) - 닫기는 부모가 `open` 을 끄는 것뿐.
+   * 다 읽기 전에 닫히면 안 되는 창(한 번만 보이는 복구 코드)에만 쓴다
+   */
+  dismissible?: boolean
   children: ReactNode
 }
 
@@ -19,6 +24,7 @@ export function Dialog({
   title,
   closeLabel = 'Close',
   footer,
+  dismissible = true,
   children,
 }: DialogProps) {
   const ref = useRef<HTMLDialogElement>(null)
@@ -65,6 +71,9 @@ export function Dialog({
       ref={ref}
       className={styles.dialog}
       aria-labelledby={titleId}
+      onCancel={(event) => {
+        if (!dismissible) event.preventDefault() // Esc
+      }}
       onClose={() => {
         // 우리가 닫은 것의 늦은 `close` 이벤트 - 정리는 이미 알렸다
         if (closedByProp.current) {
@@ -72,22 +81,28 @@ export function Dialog({
           return
         }
         // `close` 이벤트는 비동기로 온다 - 닫자마자 다시 열었다면 앞선 닫기의 늦은 이벤트다. 지금 열려 있는 창을 닫으면 안 된다
-        if (!ref.current?.open) onClose()
+        if (!ref.current?.open) {
+          // 닫히면 안 되는 창인데 닫혔다(Esc 를 연달아 누르면 브라우저가 cancel 을 건너뛴다) - 다시 모달로 연다
+          if (!dismissible) ref.current?.showModal()
+          else onClose()
+        }
       }}
     >
       <div className={styles.header}>
         <h2 id={titleId}>{title}</h2>
-        <button
-          type="button"
-          className={styles.close}
-          aria-label={closeLabel}
-          onClick={() => {
-            notifiedByButton.current = true
-            onClose()
-          }}
-        >
-          ×
-        </button>
+        {dismissible && (
+          <button
+            type="button"
+            className={styles.close}
+            aria-label={closeLabel}
+            onClick={() => {
+              notifiedByButton.current = true
+              onClose()
+            }}
+          >
+            ×
+          </button>
+        )}
       </div>
       <div className={styles.body}>{children}</div>
       {footer && <div className={styles.footer}>{footer}</div>}

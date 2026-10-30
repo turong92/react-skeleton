@@ -14,6 +14,7 @@ import { authStorageKeys } from '../storageKeys'
 import { createFakeAccountApi } from '../stories/fakeAccountApi'
 import { createAuthRoutes, DEFAULT_AUTH_PATHS } from './createAuthRoutes'
 import { createFakeAuthApi, FAKE_ACCESS_TOKEN, type FakeAuthOptions } from '../stories/fakeAuthApi'
+import { FAKE_RECOVERY_CODE, FAKE_TOTP_CODE } from '../stories/fakeMfaApi'
 import { PkceUnavailableError } from '../pkce'
 import {
   AccountPage,
@@ -22,6 +23,7 @@ import {
   SignInPage,
   SocialCallbackPage,
   SocialLinkCallbackPage,
+  TwoFactorPage,
   type PageContext,
 } from './pages'
 
@@ -686,6 +688,174 @@ export const SocialCallbackOfAPendingDeletionCancelsAndKeepsTheWantedPage: Story
     )
     await expect(await canvas.findByTestId('here')).toHaveTextContent('/notes')
     await expect(canvas.getByTestId('token')).toHaveTextContent(FAKE_ACCESS_TOKEN)
+  },
+}
+
+/* 2단계 인증을 켠 계정 - 네 길(비밀번호 · 링크 · 소셜 · 탈퇴 취소)이 모두 1단계 뒤 `/login/two-factor` 로 넘기고, `mfaToken` 은 라우터 state 에만 있다 */
+function Probe() {
+  const location = useLocation()
+  return <p data-testid="probe">{`${location.pathname}${location.search}${location.hash}`}</p>
+}
+function mfaApp(initial: string, extra: Partial<PageContext> = {}, options: FakeAuthOptions = {}) {
+  const api = createFakeAuthApi({ mfa: true, ...options })
+  const store = createTokenStore()
+  return mfaAppWith(api, store, createAuthSession({ api, store }), initial, extra)
+}
+function mfaAppWith(
+  api: ReturnType<typeof createFakeAuthApi>,
+  store: ReturnType<typeof createTokenStore>,
+  session: ReturnType<typeof createAuthSession>,
+  initial: string,
+  extra: Partial<PageContext> = {},
+) {
+  const ctx = context({ authApi: api, ...extra })
+  return (
+    <AuthProvider session={session}>
+      <MemoryRouter initialEntries={[initial]}>
+        <Probe />
+        <Routes>
+          <Route path="/login" element={<SignInPage ctx={ctx} />} />
+          <Route path="/magic-link" element={<MagicLinkPage ctx={ctx} />} />
+          <Route path="/auth/callback" element={<SocialCallbackPage ctx={ctx} />} />
+          <Route path="/login/two-factor" element={<TwoFactorPage ctx={ctx} />} />
+          <Route
+            path="*"
+            element={
+              <>
+                <Here />
+                <StoredToken store={store} />
+              </>
+            }
+          />
+        </Routes>
+      </MemoryRouter>
+    </AuthProvider>
+  )
+}
+/** 2단계 화면에 닿았다 - 주소에는 아무것도 없고, 세션도 아직 없다, 토큰은 어느 저장소에도 없다 */
+async function expectTheSecondStep(canvas: Parameters<NonNullable<Story['play']>>[0]['canvas']) {
+  await expect(await canvas.findByRole('heading', { name: 'Two-step verification' })).toBeVisible()
+  await expect(canvas.getByTestId('probe')).toHaveTextContent(/^\/login\/two-factor$/)
+  await expect(JSON.stringify({ ...localStorage, ...sessionStorage })).not.toContain('mfa-opaque')
+}
+
+export const PasswordSignInOfAnMfaAccountGoesToTheSecondStep: Story = {
+  render: () => mfaApp('/login'),
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.type(await canvas.findByLabelText(/Email/), 'demo@example.com')
+    await userEvent.type(canvas.getByLabelText(/^Password/), 'demo{Enter}')
+    await expectTheSecondStep(canvas)
+    await userEvent.type(canvas.getByLabelText('Digit 1 of 6'), FAKE_TOTP_CODE)
+    await expect(await canvas.findByTestId('here')).toHaveTextContent('/')
+    await expect(canvas.getByTestId('token')).toHaveTextContent(FAKE_ACCESS_TOKEN)
+  },
+}
+
+export const PasswordSignInKeepsTheWantedPageAcrossTheSecondStep: Story = {
+  render: () => {
+    const api = createFakeAuthApi({ mfa: true })
+    const store = createTokenStore()
+    const ctx = context({ authApi: api })
+    return (
+      <AuthProvider session={createAuthSession({ api, store })}>
+        <MemoryRouter
+          initialEntries={[{ pathname: '/login', state: { from: { pathname: '/notes' } } }]}
+        >
+          <Routes>
+            <Route path="/login" element={<SignInPage ctx={ctx} />} />
+            <Route path="/login/two-factor" element={<TwoFactorPage ctx={ctx} />} />
+            <Route path="*" element={<Here />} />
+          </Routes>
+        </MemoryRouter>
+      </AuthProvider>
+    )
+  },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.type(await canvas.findByLabelText(/Email/), 'demo@example.com')
+    await userEvent.type(canvas.getByLabelText(/^Password/), 'demo{Enter}')
+    await userEvent.type(await canvas.findByLabelText('Digit 1 of 6'), FAKE_TOTP_CODE)
+    await expect(await canvas.findByTestId('here')).toHaveTextContent('/notes')
+  },
+}
+
+export const RecoveryCodeSignsInAtTheSecondStep: Story = {
+  render: () => mfaApp('/login'),
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.type(await canvas.findByLabelText(/Email/), 'demo@example.com')
+    await userEvent.type(canvas.getByLabelText(/^Password/), 'demo{Enter}')
+    await userEvent.click(await canvas.findByRole('button', { name: 'Use a recovery code' }))
+    await userEvent.type(canvas.getByLabelText('Recovery code'), FAKE_RECOVERY_CODE)
+    await userEvent.click(canvas.getByRole('button', { name: 'Verify' }))
+    await expect(await canvas.findByTestId('here')).toHaveTextContent('/')
+    await expect(canvas.getByTestId('token')).toHaveTextContent(FAKE_ACCESS_TOKEN)
+  },
+}
+
+export const MagicLinkOfAnMfaAccountGoesToTheSecondStep: Story = {
+  render: () => mfaApp('/magic-link?token=tok'),
+  play: async ({ canvas, userEvent }) => {
+    await expectTheSecondStep(canvas)
+    await userEvent.type(canvas.getByLabelText('Digit 1 of 6'), FAKE_TOTP_CODE)
+    await expect(await canvas.findByTestId('here')).toHaveTextContent('/')
+    await expect(canvas.getByTestId('token')).toHaveTextContent(FAKE_ACCESS_TOKEN)
+  },
+}
+
+export const SocialCallbackOfAnMfaAccountKeepsTheWantedPageAcrossTheSecondStep: Story = {
+  beforeEach: () => {
+    sessionStorage.clear()
+    rememberReturnTo('/notes', undefined, keys.returnTo)
+  },
+  render: () => {
+    const api = createFakeAuthApi({ mfa: true })
+    const store = createTokenStore()
+    const session = createAuthSession({ api, store })
+    const storage = memoryStorage()
+    const flow = createSocialLoginFlow({
+      providers: { google: { clientId: 'c', redirectUri: 'https://app.test/auth/callback' } },
+      session,
+      storage,
+      createState: () => 'st',
+    })
+    storage.setItem(
+      'skeleton.social.st',
+      JSON.stringify({
+        provider: 'google',
+        redirectUri: 'https://app.test/auth/callback',
+        purpose: 'login',
+        action: 'login',
+      }),
+    )
+    return mfaAppWith(api, store, session, '/auth/callback?code=c&state=st', { socialFlow: flow })
+  },
+  play: async ({ canvas, userEvent }) => {
+    await expectTheSecondStep(canvas)
+    await userEvent.type(canvas.getByLabelText('Digit 1 of 6'), FAKE_TOTP_CODE)
+    await expect(await canvas.findByTestId('here')).toHaveTextContent('/notes')
+    await expect(canvas.getByTestId('token')).toHaveTextContent(FAKE_ACCESS_TOKEN)
+  },
+}
+
+export const CancellingADeletionOfAnMfaAccountGoesToTheSecondStep: Story = {
+  render: () => mfaApp('/login', {}, { pendingDeletion: 'with-token' }),
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.type(await canvas.findByLabelText(/Email/), 'demo@example.com')
+    await userEvent.type(canvas.getByLabelText(/^Password/), 'demo{Enter}')
+    await userEvent.click(
+      await canvas.findByRole('button', { name: 'Cancel the deletion and keep using it' }),
+    )
+    await expectTheSecondStep(canvas)
+    await userEvent.type(canvas.getByLabelText('Digit 1 of 6'), FAKE_TOTP_CODE)
+    await expect(await canvas.findByTestId('here')).toHaveTextContent('/')
+    await expect(canvas.getByTestId('token')).toHaveTextContent(FAKE_ACCESS_TOKEN)
+  },
+}
+
+export const TheSecondStepOpenedDirectlyOrReloadedGoesBackToSignIn: Story = {
+  render: () => mfaApp('/login/two-factor'),
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByRole('heading', { name: 'Sign in' })).toBeVisible()
+    await expect(canvas.getByTestId('probe')).toHaveTextContent(/^\/login$/)
   },
 }
 

@@ -1,4 +1,5 @@
 import { ApiRequestError, ErrorCodes, isErrorCode, retryAfterSeconds } from '@skeleton/api-client'
+import { MFA_CODES } from '../mfa/codes'
 import { PkceUnavailableError } from '../pkce'
 import type { AuthLabels } from './labels'
 
@@ -18,6 +19,8 @@ const byCode = (labels: AuthLabels): Record<string, string> => ({
   [ErrorCodes.AUTH_EMAIL_NOT_VERIFIED]: labels.errorEmailNotVerified,
   [ErrorCodes.AUTH_ACCOUNT_SUSPENDED]: labels.errorSuspended,
   [ErrorCodes.AUTH_ACCOUNT_DELETION_PENDING]: labels.errorDeletionPending,
+  [MFA_CODES.REQUIRED_BY_POLICY]: labels.mfaRequiredByPolicyError,
+  [MFA_CODES.CHALLENGE_EXPIRED]: labels.mfaExpiredBody,
   [ErrorCodes.ACCOUNT_SUSPENDED_CANNOT_DELETE]: labels.errorSuspendedCannotDelete,
   [ErrorCodes.ACCOUNT_REGISTRATION_BLOCKED]: labels.errorRegistrationBlocked,
   [ErrorCodes.ACCOUNT_TOKEN_INVALID]: labels.errorTokenInvalid,
@@ -63,7 +66,9 @@ export function authErrorMessage(error: unknown, labels: AuthLabels): AuthErrorI
         ? labels.errorTooManyAttempts
         : code === ErrorCodes.AUTH_TOO_MANY_REFRESHES
           ? labels.errorTooManyRefreshes
-          : labels.errorRateLimited
+          : code === MFA_CODES.TOO_MANY_ATTEMPTS
+            ? labels.mfaTooManyAttempts
+            : labels.errorRateLimited
     return {
       code,
       retryAfterSeconds: wait,

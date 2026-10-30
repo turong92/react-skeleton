@@ -26,6 +26,7 @@
     "@skeleton/realtime": "workspace:*",
     "@skeleton/reviews": "workspace:*",
     "@skeleton/rewards": "workspace:*",
+    "@skeleton/search": "workspace:*",
     "@skeleton/seo": "workspace:*",
     "@skeleton/storage": "workspace:*",
     "@skeleton/theme": "workspace:*",

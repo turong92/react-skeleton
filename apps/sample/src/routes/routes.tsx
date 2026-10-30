@@ -46,6 +46,7 @@ import { PaymentReturnPage } from './PaymentReturnPage'
 import { ProductPage } from './ProductPage'
 import { ProfilePage } from './ProfilePage'
 import { RewardsPage } from './RewardsPage'
+import { SearchPage } from './SearchPage'
 import { SettingsPage } from './SettingsPage'
 import { SubscribePage } from './SubscribePage'
 import { SubscriptionPage } from './SubscriptionPage'
@@ -195,6 +196,8 @@ export const routes: RouteObject[] = [
             element: <BadgesPage />,
             handle: privateSeo('rewards.badges.title'),
           },
+          // 검색 - 백엔드 `search` · `search-jdbc`. 서버가 로그인한 호출자만 받는다(남의 노트는 결과에 없다). 글자마다 화면이 달라 검색 엔진에는 내지 않는다
+          { path: '/search', element: <SearchPage />, handle: privateSeo('search.title') },
           { path: '/settings', element: <SettingsPage />, handle: privateSeo('nav.settings') },
           {
             element: (

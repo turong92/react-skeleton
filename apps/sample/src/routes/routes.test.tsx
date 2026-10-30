@@ -127,6 +127,12 @@ describe('routes', () => {
     }
   })
 
+  it('has the search screen (/search?q=) behind sign-in only - the server answers signed-in callers (and the screen is not offered to search engines)', () => {
+    expect(leaf('/search')?.path).toBe('/search')
+    expect(guarded('/search')).toBe(true)
+    expect(permissionsOf('/search')).toEqual([])
+  })
+
   it('the signed-in screens sit under the auth guard; home, login, the legal pages, the board and the 404 are public', () => {
     for (const path of [
       '/notes',

@@ -6,6 +6,7 @@ import { ThemeToggle } from '@skeleton/theme'
 import { AppShell, Button, LanguageMenu } from '@skeleton/ui'
 import { AdminMenu } from './AdminMenu'
 import { hasPendingInvitation } from '@skeleton/workspace'
+import { HeaderSearch } from './HeaderSearch'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useEffect, useRef, type ReactNode } from 'react'
 import { TeamSwitcher } from '../workspace/TeamSwitcher'
@@ -34,6 +35,7 @@ function SignedInActions() {
 
   return (
     <>
+      <HeaderSearch />
       <NotificationBell
         api={notificationsApi}
         title={t('header.notificationsTitle')}

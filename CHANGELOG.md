@@ -36,6 +36,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `WorkspaceSwitcher`(머리줄 팀 고르기 + 새 워크스페이스) · `CreateWorkspaceForm`(이름 + 주소 이름 제안) · `WorkspaceSettings`(이름 · 주소 이름 · 멤버 표: 역할 고르기 · 내보내기 · 소유권 이전 대화상자 · 탈퇴) — 단추는 내 역할로 숨긴다(검사는 서버).
 - `@skeleton/api-client`: `ErrorCodes.WORKSPACE_NOT_FOUND` · `FORBIDDEN` · `REQUIRED` · `SLUG_TAKEN` · `OWNER_CANNOT_LEAVE` · `MEMBER_NOT_FOUND`.
 
+### Added — 전문 검색 화면 `@skeleton/search` + 견본 머리말 검색창 (2026-10-30)
+
+백엔드 짝: kotlin-skeleton `search` · `search-jdbc`(경로 `/api/v1/search`, 설계 `docs/superpowers/specs/2026-10-30-review-search-design.md` §B5 · §B6). 운영 재색인 화면은 다음 판.
+
+- 새 패키지 `@skeleton/search`: `createSearchApi` · `useSearch`(입력 늦춤 300ms · 2글자 미만은 묻지 않음 · 이전 쪽 유지) · `isSearchable`(서버와 같은 판정) · `SearchBox`(`role="search"` + `Input` + 제출 단추) · `SearchResults`(종류 칩 · 「결과 N개」 · 제목 링크 + 발췌 · `Pagination` · 빈/로딩/오류 · 「2글자 이상」 안내) · `Highlight`(서버의 `[시작,끝)` UTF-16 위치를 `<mark>` 로, 문자열은 글자로만 - 서로게이트 쌍 · 결합 문자 한가운데는 넓혀 가르지 않는다) · ko/en 문구, 스토리 3개(play).
+- 종류 이름과 링크는 앱이 `describe(type) → { label, href(id) }` 로 준다(패키지는 노트 · 상품을 모른다), 링크는 `renderLink` 로 라우터 링크로.
+- 견본 앱: 로그인한 사람의 머리말 검색창(`HeaderSearch`, 이름은 노트 목록의 「검색」칸과 겹치지 않게 「전체 찾기」) → `/search?q=`(`SearchPage`, 노트 → `/notes/:id`, 상품 → `/products/:code`) · `e2e/search.e2e.ts`(§7 여정 ①~⑤, 아직 실행하지 않음).
+
 ### Added — 리뷰 운영 화면 `@skeleton/reviews/admin` + 견본 상품 화면 (2026-10-30)
 
 - `@skeleton/reviews/admin`(선택 하위 경로): `createReviewsAdminApi` · 훅 · `AdminReviewQueue`(신고됨/숨김/전체 큐 · 사유 칩 · 숨기기(사유 필수) · 문제없음 · 되살리기 · 답글, 단추는 `can(key)`) · `ReviewReplyEditor`(운영자 답글 리뷰당 하나) · ko/en 문구, 스토리 play. 권한 `review.moderate` · `review.reply`.

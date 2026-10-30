@@ -20,10 +20,10 @@ export type ReviewFormProps = {
   config: Pick<ReviewConfig, 'bodyMinLength' | 'bodyMaxLength' | 'maxPhotos'>
   labels: ReviewsLabels
   /** 고칠 때의 처음 값. 있으면 「수정 저장」 단추 */
-  initial?: { rating: Rating; body: string }
+  initial?: { rating: Rating; body: string; photos?: string[] }
   /**
    * 보내는 일 — 약속이 풀리면 끝이고, 던지면(서버 오류) 쓴 글을 그대로 둔다. 오류 표시는 앱의 전역 핸들러.
-   * `photos` 는 사진 칸을 만졌을 때만 실린다(서버 응답에는 저장 키가 없어서 고칠 때 처음 값을 알 수 없다 - 안 만지면 그대로)
+   * `photos` 는 사진 칸을 만졌을 때만 실린다(안 만지면 서버가 그대로 둔다). 만지면 그 목록으로 전체 교체 - 그래서 고칠 때는 `initial.photos` 에 기존 저장 키를 줘야 유지 · 하나만 빼기가 된다
    */
   onSubmit: (input: ReviewInput) => Promise<unknown> | void
   /** 있으면 취소 단추가 생긴다 */
@@ -45,7 +45,7 @@ export function ReviewForm({
   const ratingErrorId = useId()
   const [rating, setRating] = useState<Rating | null>(initial?.rating ?? null)
   const [body, setBody] = useState(initial?.body ?? '')
-  const [photos, setPhotos] = useState<string[]>([])
+  const [photos, setPhotos] = useState<string[]>(initial?.photos ?? [])
   const [photosTouched, setPhotosTouched] = useState(false)
   const [problems, setProblems] = useState<ReviewProblems>({})
   const [pending, setPending] = useState(false)

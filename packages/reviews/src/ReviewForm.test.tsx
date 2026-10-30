@@ -56,6 +56,14 @@ describe('ReviewForm', () => {
     )
   })
 
+  it('editing hands the saved photo keys to the photo slot, so keeping one and adding another is possible', () => {
+    const html = render({
+      initial: { rating: 4, body: '맛있어요 정말로요', photos: ['a.jpg', 'b.jpg'] },
+      renderPhotos: (p: { photos: string[] }) => <div data-keys={p.photos.join(',')}>slot</div>,
+    })
+    expect(html).toContain('data-keys="a.jpg,b.jpg"')
+  })
+
   it('shows a cancel button only when the app can close the form', () => {
     expect(render()).not.toContain('취소')
     expect(render({ onCancel: () => undefined })).toContain('취소')

@@ -73,8 +73,11 @@ export type ReviewReply = { body: string; createdAt: string; updatedAt: string }
 /** 리뷰 상태 — 남에게는 `PUBLISHED` 만 온다. 작성자 본인 · 운영자에게만 `status` 가 실린다 */
 export type ReviewStatus = 'PUBLISHED' | 'HIDDEN' | 'DELETED'
 
-/** 사진 한 칸 — 저장 키는 응답에 없다. 보려면 `reviewsApi.photoPath(reviewId, index)` (서버가 짧은 서명 주소로 302) */
-export type ReviewPhoto = { index: number }
+/**
+ * 사진 한 칸. 보려면 `reviewsApi.photoPath(reviewId, index)` (서버가 짧은 서명 주소로 302).
+ * 저장 키 `key` 는 작성자 본인 줄에만 실린다 - 고치기 폼이 기존 사진을 유지하려면 이 키가 필요하다
+ */
+export type ReviewPhoto = { index: number; key?: string }
 
 /** 리뷰 한 줄 — 계정 id 는 어떤 응답에도 없다 */
 export type Review = {

@@ -21,7 +21,8 @@ export function ReviewPhoto({ path, alt }: { path: string; alt: string }) {
       })
       // 이 axios 는 모든 상태를 성공으로 푼다(`validateStatus: () => true`) - 오류 본문이 그림이 되지 않게 직접 실패로 다룬다
       if (status !== 200 || !data.type.startsWith('image/'))
-        throw new Error(`review photo ${path} → ${status}`)
+        // createQueryClient 가 meta.quietStatuses 를 맞춰 볼 수 있게 apiError.status 를 싣는다 - 맨 Error 면 비로그인 화면에 토스트가 장수만큼 뜬다
+        throw Object.assign(new Error(`review photo ${path} → ${status}`), { apiError: { status } })
       return toDataUrl(data)
     },
     retry: false,

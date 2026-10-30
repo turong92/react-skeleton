@@ -3,6 +3,7 @@ import type { AccountChoice } from '../admin/accountLabel'
 import type {
   AdminBadge,
   AdminCampaign,
+  AdminReferral,
   BadgeAwardEvent,
   CouponDefinition,
   IssuedCoupon,
@@ -55,6 +56,9 @@ export function createFakeAdmin() {
         invitee: [{ type: 'coupon', params: { definitionId: 'd1' } }],
         inviter: [{ type: 'point', params: { amount: '500' } }],
         qualifyOn: 'SIGNAL',
+        qualifyEvent: 'first-payment',
+        holdDays: 7,
+        reviewSameNetwork: true,
         claimWithinDays: 7,
         inviterCap: null,
       },
@@ -217,6 +221,50 @@ export function createFakeAdmin() {
   ]
   const issued: Array<{ id: string; accountIds: string[] }> = []
   let seq = 10
+  const referral = (
+    over: Partial<AdminReferral> & Pick<AdminReferral, 'inviteeId'>,
+  ): AdminReferral => ({
+    inviterId: 'acc_1',
+    inviteeLabel: null,
+    inviterLabel: 'ada@example.com',
+    campaignId: 'ref',
+    status: 'CLAIMED',
+    flags: [],
+    qualifyEvent: null,
+    claimedAt: '2026-10-25T03:00:00Z',
+    qualifiedAt: null,
+    releaseAt: null,
+    settledAt: null,
+    settledBy: null,
+    cancelReason: null,
+    ...over,
+  })
+  // 새것부터 - 확인 필요(같은 네트워크) · 보류 중(이름 없음) · 끝난 건 · 가입만 한 건
+  let referrals: AdminReferral[] = [
+    referral({
+      inviteeId: 'acc_8',
+      inviteeLabel: 'bob@example.com',
+      status: 'REVIEW',
+      flags: ['SAME_NETWORK'],
+      qualifyEvent: 'first-payment',
+      qualifiedAt: '2026-10-28T03:00:00Z',
+    }),
+    referral({
+      inviteeId: 'acc_9',
+      status: 'HELD',
+      qualifyEvent: 'first-payment',
+      qualifiedAt: '2026-10-27T03:00:00Z',
+      releaseAt: '2026-11-03T03:00:00Z',
+    }),
+    referral({
+      inviteeId: 'acc_7',
+      inviteeLabel: 'cho@example.com',
+      status: 'QUALIFIED',
+      qualifiedAt: '2026-10-26T03:00:00Z',
+      settledAt: '2026-10-26T03:00:00Z',
+    }),
+    referral({ inviteeId: 'acc_6', inviteeLabel: 'dan@example.com', status: 'CLAIMED' }),
+  ]
 
   const api: RewardsAdminApi = {
     listCampaigns: async () => campaigns.map((c) => ({ ...c })),
@@ -372,6 +420,43 @@ export function createFakeAdmin() {
     },
     listRewardGrants: async (status) =>
       grants.filter((g) => status === undefined || g.status === status),
+    listReferrals: async ({ status, flag, cursor } = {}) => {
+      const all = referrals.filter(
+        (r) => (!status || r.status === status) && (!flag || r.flags.includes(flag)),
+      )
+      const start = cursor ? Number(cursor) : 0
+      const next = start + 3
+      return {
+        values: all.slice(start, next),
+        cursor: { hasNext: next < all.length, nextCursor: next < all.length ? String(next) : null },
+        meta: { timestamp: 't' },
+      }
+    },
+    approveReferral: async (inviteeId) => {
+      const row = referrals.find((r) => r.inviteeId === inviteeId)
+      if (!row) throw fail(404, 'CAMPAIGN.REFERRAL_NOT_FOUND')
+      if (row.status !== 'REVIEW' && row.status !== 'HELD')
+        throw fail(409, 'CAMPAIGN.REFERRAL_NOT_PENDING')
+      const done = { ...row, status: 'QUALIFIED' as const, settledAt: 't', settledBy: 'admin' }
+      referrals = referrals.map((r) => (r === row ? done : r))
+      return done
+    },
+    cancelReferral: async (inviteeId, reason) => {
+      if (!reason.trim()) throw fail(400, 'CAMPAIGN.REFERRAL_REASON_INVALID')
+      const row = referrals.find((r) => r.inviteeId === inviteeId)
+      if (!row) throw fail(404, 'CAMPAIGN.REFERRAL_NOT_FOUND')
+      if (row.status === 'QUALIFIED' || row.status === 'CAPPED' || row.status === 'CANCELED')
+        throw fail(409, 'CAMPAIGN.REFERRAL_NOT_CANCELABLE')
+      const done = {
+        ...row,
+        status: 'CANCELED' as const,
+        cancelReason: reason,
+        settledAt: 't',
+        settledBy: 'admin',
+      }
+      referrals = referrals.map((r) => (r === row ? done : r))
+      return done
+    },
     retryRewardGrant: async (id) => {
       grants = grants.map((g) => (g.id === id ? { ...g, status: 'PENDING', lastError: null } : g))
       return grants.find((g) => g.id === id) as RewardGrant

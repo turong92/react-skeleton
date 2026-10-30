@@ -177,6 +177,10 @@ export const ErrorCodes = {
   // modules/campaign · coupon · point — 사용자 HTTP (이벤트 · 보상 계획 C-R). 초대 코드 실패의 이유는 data.reason (자기 코드 · 맞초대 · 이미 · 새 계정 아님 · 없는 코드)
   CAMPAIGN_NOT_ACTIVE: 'CAMPAIGN.NOT_ACTIVE',
   CAMPAIGN_REFERRAL_INVALID: 'CAMPAIGN.REFERRAL_INVALID',
+  /** 운영: 승인할 수 없는 상태(확인 필요 · 보류 중이 아님) 409 */
+  CAMPAIGN_REFERRAL_NOT_PENDING: 'CAMPAIGN.REFERRAL_NOT_PENDING',
+  /** 운영: 이미 끝난 초대(지급 · 상한 · 취소)는 취소할 수 없다 409 */
+  CAMPAIGN_REFERRAL_NOT_CANCELABLE: 'CAMPAIGN.REFERRAL_NOT_CANCELABLE',
   COUPON_CODE_INVALID: 'COUPON.CODE_INVALID',
   COUPON_CODE_USED: 'COUPON.CODE_USED',
   COUPON_CODE_EXHAUSTED: 'COUPON.CODE_EXHAUSTED',

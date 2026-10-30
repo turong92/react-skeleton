@@ -25,6 +25,9 @@ export function adminErrorMessage(error: unknown, labels: RewardsAdminLabels): s
   if (code === ErrorCodes.BADGE_ARCHIVED) return labels.errors.badgeArchived
   if (code === ErrorCodes.COUPON_ISSUE_CLOSED) return labels.errors.issueClosed
   if (code === ErrorCodes.COUPON_DEFINITION_INVALID) return labels.errors.definitionInvalid
+  if (code === ErrorCodes.CAMPAIGN_REFERRAL_NOT_PENDING) return labels.errors.referralNotPending
+  if (code === ErrorCodes.CAMPAIGN_REFERRAL_NOT_CANCELABLE)
+    return labels.errors.referralNotCancelable
   if (code === ErrorCodes.COMMON_VALIDATION_FAILED || status === 400)
     return labels.errors.validation
   if (status === 404) return labels.errors.notFound

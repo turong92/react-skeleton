@@ -11,6 +11,8 @@ import type {
   BadgeInput,
   BadgeUpdate,
   AdminPointAccount,
+  AdminReferral,
+  AdminReferralQuery,
   CampaignInput,
   CampaignUpdate,
   CouponCode,
@@ -34,6 +36,12 @@ export type RewardsAdminApi = {
   updateCampaign(id: string, input: CampaignUpdate): Promise<AdminCampaign>
   /** `PATCH /admin/campaigns/{id}/enabled` */
   setCampaignEnabled(id: string, enabled: boolean): Promise<AdminCampaign>
+  /** `GET /admin/referrals?status&inviterId&inviteeId&campaignId&flag&cursor&size` (`campaign.manage`) - 초대 내역(새것부터 커서) */
+  listReferrals(query?: AdminReferralQuery): Promise<ApiCursorResponse<AdminReferral>>
+  /** `POST /admin/referrals/{inviteeId}/approve` - 확인 필요 · 보류 중만(그 밖 409 `CAMPAIGN.REFERRAL_NOT_PENDING`) */
+  approveReferral(inviteeId: string): Promise<AdminReferral>
+  /** `POST /admin/referrals/{inviteeId}/cancel {reason}` - 사유 필수(1~200자), 끝난 건은 409 `CAMPAIGN.REFERRAL_NOT_CANCELABLE` */
+  cancelReferral(inviteeId: string, reason: string): Promise<AdminReferral>
   /** `GET /admin/badges` (`badge.manage`) - 보유자 수 포함 */
   listBadges(): Promise<AdminBadge[]>
   createBadge(input: BadgeInput): Promise<AdminBadge>
@@ -101,6 +109,14 @@ export function createRewardsAdminApi(
         method: 'PATCH',
         json: { enabled },
       }),
+    listReferrals: (query = {}) =>
+      client.cursor<AdminReferral>(`${base}/referrals`, {
+        params: Object.fromEntries(Object.entries(query).filter(([, v]) => v !== undefined)),
+      }),
+    approveReferral: (inviteeId) =>
+      post<AdminReferral>(`${base}/referrals/${enc(inviteeId)}/approve`),
+    cancelReferral: (inviteeId, reason) =>
+      post<AdminReferral>(`${base}/referrals/${enc(inviteeId)}/cancel`, { reason }),
     listBadges: () => client.list<AdminBadge>(`${base}/badges`),
     createBadge: (input) => post<AdminBadge>(`${base}/badges`, input),
     updateBadge: (id, input) =>

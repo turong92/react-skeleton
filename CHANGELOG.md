@@ -16,6 +16,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 견본 앱: 설정에 API 키 카드(범위 `notes.read` / `notes.write` 이름, 수명 상한 365일), 운영 메뉴 「API 키」(`/admin/api-keys`, `api-key.read`).
 - e2e `apiKeys.e2e.ts`: 키를 브라우저 밖에서 쓴다(GET 200 · POST 403 · `/account/me` 403) → 화면 회수 뒤 401, 운영자 사유 회수 → 「운영자가 회수」.
 
+### Added — `@skeleton/rewards/admin` 초대 내역 운영 R2 (2026-10-31)
+
+백엔드 짝: kotlin-skeleton `campaign` 의 `GET /admin/referrals` · `POST /admin/referrals/{inviteeId}/approve` · `/cancel {reason}`(권한 `campaign.manage`).
+
+- `AdminReferrals`(상태 · 표시 걸러 보기, 「같은 네트워크」 배지, 줄 메뉴 승인 · 초대 취소(사유 필수), 이름 없으면 계정 id) · `RewardsAdminApi.listReferrals` · `approveReferral` · `cancelReferral` · `useAdminReferrals` · `useReferralMutations`. 오류 코드 `CAMPAIGN.REFERRAL_NOT_PENDING` · `REFERRAL_NOT_CANCELABLE` 문구.
+- `AdminCampaigns` 초대 폼에 칸 셋: 신호 이름(`qualifyEvent`, 시점이 SIGNAL 일 때만) · 보류 일수(`holdDays` 0~90) · 같은 네트워크 확인(`reviewSameNetwork`). 신호 이름은 SIGNAL 이 아니면 저장 때 빠진다.
+
 ### Added — `@skeleton/rewards` 초대 현황 · 코드 직접 입력 R1 (2026-10-31)
 
 백엔드 짝: kotlin-skeleton `campaign` 의 `GET /referrals/me`(새 칸 `canClaim` · `claimUntil`) · `GET /referrals/me/invitees` · `POST /referrals/claim`(거절 이유 `data.reason`).

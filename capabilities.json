@@ -569,7 +569,8 @@
         "packages/rewards/src/admin/AdminPoints.stories.tsx",
         "packages/rewards/src/admin/AdminRewardGrants.stories.tsx",
         "packages/rewards/src/admin/AdminBadges.stories.tsx",
-        "packages/rewards/src/admin/AdminBadgeAwards.stories.tsx"
+        "packages/rewards/src/admin/AdminBadgeAwards.stories.tsx",
+        "packages/rewards/src/admin/AdminReferrals.stories.tsx"
       ],
       "stories": [],
       "docs": [
@@ -586,6 +587,7 @@
         "@skeleton/rewards/admin#AdminPoints",
         "@skeleton/rewards/admin#AdminBadges",
         "@skeleton/rewards/admin#AdminBadgeAwards",
+        "@skeleton/rewards/admin#AdminReferrals",
         "@skeleton/rewards/admin#AdminRewardGrants",
         "@skeleton/rewards/admin#StageEditor",
         "@skeleton/rewards/admin#koRewardsAdminLabels"

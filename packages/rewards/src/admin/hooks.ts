@@ -17,6 +17,8 @@ import type {
   CouponDefinitionInput,
   CouponDefinitionStatus,
   PointAdjustment,
+  ReferralFlag,
+  ReferralStatus,
   RewardGrantStatus,
 } from './types'
 
@@ -26,6 +28,8 @@ export const adminKeys = {
   badges: () => [...adminKeys.all, 'badges'] as const,
   badgeAwards: (badgeId: string, accountId: string) =>
     [...adminKeys.all, 'badge-awards', badgeId, accountId] as const,
+  referrals: (status: ReferralStatus | '', flag: ReferralFlag | '') =>
+    [...adminKeys.all, 'referrals', status, flag] as const,
   definitions: () => [...adminKeys.all, 'coupon-definitions'] as const,
   stats: (id: string) => [...adminKeys.all, 'coupon-stats', id] as const,
   issued: (id: string, status: CouponStatus | '') =>
@@ -268,4 +272,46 @@ export function useBadgeAwards(
     placeholderData: keepPreviousData,
     ...LIST_OPTIONS,
   })
+}
+
+/** 초대 내역 - 커서로 이어 받는다. 필터가 `''` 면 모두 */
+export function useAdminReferrals(
+  api: Pick<RewardsAdminApi, 'listReferrals'>,
+  { status = '', flag = '' }: { status?: ReferralStatus | ''; flag?: ReferralFlag | '' } = {},
+  size = 20,
+) {
+  return useInfiniteQuery({
+    queryKey: adminKeys.referrals(status, flag),
+    queryFn: ({ pageParam }) =>
+      api.listReferrals({
+        size,
+        ...(status !== '' ? { status } : {}),
+        ...(flag !== '' ? { flag } : {}),
+        ...(pageParam !== undefined ? { cursor: pageParam } : {}),
+      }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last) =>
+      last.cursor.hasNext ? (last.cursor.nextCursor ?? undefined) : undefined,
+    placeholderData: keepPreviousData,
+    ...LIST_OPTIONS,
+  })
+}
+
+/** 승인 · 취소(사유 필수) - 끝나면(실패해도) 내역과 사용자 현황을 다시 읽는다 */
+export function useReferralMutations(
+  api: Pick<RewardsAdminApi, 'approveReferral' | 'cancelReferral'>,
+) {
+  const client = useQueryClient()
+  const done = () => client.invalidateQueries({ queryKey: rewardsRoot })
+  return {
+    approve: useMutation({
+      mutationFn: (inviteeId: string) => api.approveReferral(inviteeId),
+      onSettled: done,
+    }),
+    cancel: useMutation({
+      mutationFn: (v: { inviteeId: string; reason: string }) =>
+        api.cancelReferral(v.inviteeId, v.reason),
+      onSettled: done,
+    }),
+  }
 }

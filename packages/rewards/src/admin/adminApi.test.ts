@@ -194,6 +194,29 @@ describe('coupon definition status and issued coupons (coupon-admin contract)', 
     ])
   })
 
+  it('referrals: filtered cursor list / approve / cancel with a reason', async () => {
+    const calls = await run(async (api) => {
+      await api.listReferrals()
+      await api.listReferrals({ status: 'REVIEW', flag: 'SAME_NETWORK', cursor: 'c2', size: 20 })
+      await api.approveReferral('i/1')
+      await api.cancelReferral('i/1', '가짜 계정')
+    })
+    expect(calls).toEqual([
+      { kind: 'cursor', path: '/admin/referrals', request: { params: {} } },
+      {
+        kind: 'cursor',
+        path: '/admin/referrals',
+        request: { params: { status: 'REVIEW', flag: 'SAME_NETWORK', cursor: 'c2', size: 20 } },
+      },
+      { kind: 'value', path: '/admin/referrals/i%2F1/approve', request: { method: 'POST' } },
+      {
+        kind: 'value',
+        path: '/admin/referrals/i%2F1/cancel',
+        request: { method: 'POST', json: { reason: '가짜 계정' } },
+      },
+    ])
+  })
+
   it('achievement campaigns carry {metric, milestones:[{value, rewards}]} in config unchanged', async () => {
     const config = {
       metric: 'notes.created',

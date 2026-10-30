@@ -1,4 +1,4 @@
-import type { CouponDefinitionStatus, RewardGrantStatus } from './types'
+import type { CouponDefinitionStatus, ReferralStatus, RewardGrantStatus } from './types'
 import type { PointEntryKind } from '../types'
 
 export type RewardsAdminLabels = {
@@ -22,6 +22,10 @@ export type RewardsAdminLabels = {
     codeTaken: string
     /** `BADGE.ARCHIVED` - 보관된 배지는 줄 수 없다 */
     badgeArchived: string
+    /** `CAMPAIGN.REFERRAL_NOT_PENDING` - 이미 처리된 초대 */
+    referralNotPending: string
+    /** `CAMPAIGN.REFERRAL_NOT_CANCELABLE` - 이미 끝난 초대 */
+    referralNotCancelable: string
     notFound: string
     validation: string
     notEnabled: string
@@ -102,6 +106,13 @@ export type RewardsAdminLabels = {
       claimWithinDays: string
       inviterCap: string
       inviterCapHint: string
+      /** 신호 이름 - `qualifyOn` 이 SIGNAL 일 때만 */
+      qualifyEvent: string
+      qualifyEventHint: string
+      holdDays: string
+      holdDaysHint: string
+      reviewSameNetwork: string
+      reviewSameNetworkHint: string
     }
   }
   badges: {
@@ -140,6 +151,35 @@ export type RewardsAdminLabels = {
     alreadyHeldList: (names: string) => string
     /** 없는 계정이라 수여하지 않은 id - 「k명은 없는 계정이라 건너뜀: id, id」 */
     unknownAccountsList: (count: number, ids: string) => string
+  }
+  referrals: {
+    title: string
+    caption: string
+    empty: string
+    statusFilter: string
+    flagFilter: string
+    all: string
+    columns: {
+      invitee: string
+      inviter: string
+      status: string
+      claimedAt: string
+      detail: string
+      actions: string
+    }
+    status: Record<ReferralStatus, string>
+    sameNetwork: string
+    /** 보류 중 - 「11월 3일에 풀려요」 */
+    releaseAt: (date: string) => string
+    cancelReason: (reason: string) => string
+    more: string
+    rowMenu: (name: string) => string
+    approve: string
+    cancel: string
+    cancelTitle: string
+    cancelReasonLabel: string
+    cancelReasonHint: string
+    cancelSubmit: string
   }
   badgeAwards: {
     title: string

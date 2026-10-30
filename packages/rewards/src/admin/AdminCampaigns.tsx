@@ -59,6 +59,15 @@ type Draft = {
   config: CampaignConfig
 }
 
+/** 신호 이름은 「앱이 알릴 때」 일 때만 보낸다(서버가 그 밖에는 거절) - 앞뒤 공백을 걷고, 비면 칸을 뺀다 */
+function referralConfig(config: CampaignConfig): CampaignConfig {
+  const { qualifyEvent, ...rest } = config
+  const event = (qualifyEvent ?? '').trim()
+  return (config.qualifyOn ?? 'SIGNAL') === 'SIGNAL' && event !== ''
+    ? { ...rest, qualifyEvent: event }
+    : rest
+}
+
 const emptyDraft = (): Draft => ({
   kind: 'attendance',
   name: '',
@@ -75,7 +84,15 @@ const configFor = (kind: Draft['kind']): CampaignConfig =>
     ? { daily: [], milestones: [] }
     : kind === 'achievement'
       ? { metric: '', milestones: [{ value: 1, rewards: [blankReward()] }] }
-      : { invitee: [], inviter: [], qualifyOn: 'SIGNAL', claimWithinDays: 7, inviterCap: null }
+      : {
+          invitee: [],
+          inviter: [],
+          qualifyOn: 'SIGNAL',
+          holdDays: 0,
+          reviewSameNetwork: false,
+          claimWithinDays: 7,
+          inviterCap: null,
+        }
 
 /** 이벤트 운영 - 목록, 켜고 끄는 스위치, 만들기 · 고치기(종류별 설정 + 보상 목록). 백엔드 `skeleton.campaign.admin.enabled=true` + `campaign.manage` */
 export function AdminCampaigns({
@@ -196,7 +213,9 @@ export function AdminCampaigns({
               config:
                 draft.kind === 'achievement'
                   ? { ...draft.config, metric: (draft.config.metric ?? '').trim() }
-                  : draft.config,
+                  : draft.kind === 'referral'
+                    ? referralConfig(draft.config)
+                    : draft.config,
             }
             const done = { onSuccess: () => setEditing(null) }
             if (editing === 'new') mutations.create.mutate({ kind: draft.kind, ...common }, done)
@@ -512,6 +531,44 @@ function CampaignDialog({
                 </Select>
               )}
             </Field>
+            {(draft.config.qualifyOn ?? 'SIGNAL') === 'SIGNAL' && (
+              <Field label={t.referral.qualifyEvent} hint={t.referral.qualifyEventHint}>
+                {(control) => (
+                  <Input
+                    {...control}
+                    value={draft.config.qualifyEvent ?? ''}
+                    maxLength={64}
+                    autoComplete="off"
+                    onChange={(event) => config({ qualifyEvent: event.target.value })}
+                  />
+                )}
+              </Field>
+            )}
+            <Field label={t.referral.holdDays} hint={t.referral.holdDaysHint}>
+              {(control) => (
+                <Input
+                  {...control}
+                  type="number"
+                  min={0}
+                  max={90}
+                  value={draft.config.holdDays ?? 0}
+                  onChange={(event) =>
+                    config({
+                      holdDays: Math.min(
+                        90,
+                        Math.max(0, Math.trunc(Number(event.target.value) || 0)),
+                      ),
+                    })
+                  }
+                />
+              )}
+            </Field>
+            <Switch
+              label={t.referral.reviewSameNetwork}
+              description={t.referral.reviewSameNetworkHint}
+              checked={draft.config.reviewSameNetwork ?? false}
+              onChange={(event) => config({ reviewSameNetwork: event.target.checked })}
+            />
             <Field label={t.referral.claimWithinDays}>
               {(control) => (
                 <Input

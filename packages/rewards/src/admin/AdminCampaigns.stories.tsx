@@ -76,6 +76,21 @@ export const ReferralHasItsOwnSettings: Story = {
   },
 }
 
+export const ReferralHoldAndSignalFields: Story = {
+  render: (args) => <AdminCampaigns {...args} api={createFakeAdmin().api} />,
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(await canvas.findByRole('button', { name: '고치기: 친구 초대' }))
+    const dialog = within(await screen.findByRole('dialog', { name: '친구 초대 고치기' }))
+    // 신호 이름은 「앱이 알릴 때」 일 때만 - 보류 일수와 같은 네트워크 확인은 늘 있다
+    await expect(dialog.getByLabelText('신호 이름')).toHaveValue('first-payment')
+    await expect(dialog.getByLabelText('보류 일수')).toHaveValue(7)
+    await expect(dialog.getByRole('switch', { name: '같은 네트워크면 운영자 확인' })).toBeChecked()
+    await userEvent.selectOptions(dialog.getByLabelText('초대한 사람 보상 시점'), 'CLAIM')
+    await expect(dialog.queryByLabelText('신호 이름')).toBeNull()
+    await expect(dialog.getByLabelText('보류 일수')).toBeVisible()
+  },
+}
+
 export const CreateAnAchievementEvent: Story = {
   render: (args) => (
     <AdminCampaigns

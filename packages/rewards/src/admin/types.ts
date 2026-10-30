@@ -19,6 +19,12 @@ export type CampaignConfig = {
   invitee?: RewardConfig[]
   inviter?: RewardConfig[]
   qualifyOn?: 'CLAIM' | 'SIGNAL'
+  /** 초대: 이 이름의 신호만 먹는다(`qualifyOn: SIGNAL` 일 때만, `[a-z0-9._-]{1,64}`) - 없으면 아무 신호나 */
+  qualifyEvent?: string
+  /** 초대: 신호 뒤 보상까지 붙잡아 두는 일수(0~90, 없으면 0) */
+  holdDays?: number
+  /** 초대: 초대자와 같은 네트워크에서 가입했으면 운영자 확인을 거친다(없으면 false) */
+  reviewSameNetwork?: boolean
   claimWithinDays?: number
   inviterCap?: number | null
 }
@@ -180,6 +186,41 @@ export type BadgeAwardEvent = {
 export type BadgeAwardQuery = {
   badgeId?: string
   accountId?: string
+  cursor?: string
+  size?: number
+}
+
+/** 초대 관계의 상태 - 가입함 · 확인 필요 · 보류 중 · 보상 지급 시작 · 상한 초과 · 취소 */
+export type ReferralStatus = 'CLAIMED' | 'REVIEW' | 'HELD' | 'QUALIFIED' | 'CAPPED' | 'CANCELED'
+/** 판정 때 붙는 표시 - 1차는 `SAME_NETWORK`(초대자와 같은 네트워크) 하나 */
+export type ReferralFlag = 'SAME_NETWORK'
+
+/** 운영자가 보는 초대 내역(`GET /admin/referrals`). 이름은 `account.read` 가 없으면 null - 화면은 id 를 보인다 */
+export type AdminReferral = {
+  inviteeId: string
+  inviterId: string
+  inviteeLabel: string | null
+  inviterLabel: string | null
+  campaignId: string
+  status: ReferralStatus
+  flags: ReferralFlag[]
+  qualifyEvent: string | null
+  claimedAt: string
+  qualifiedAt: string | null
+  /** 보류가 풀리는 시각 */
+  releaseAt: string | null
+  settledAt: string | null
+  /** 끝낸 쪽 - 운영자 id · `app` · 자동이면 null */
+  settledBy: string | null
+  cancelReason: string | null
+}
+
+export type AdminReferralQuery = {
+  status?: ReferralStatus
+  inviterId?: string
+  inviteeId?: string
+  campaignId?: string
+  flag?: ReferralFlag
   cursor?: string
   size?: number
 }

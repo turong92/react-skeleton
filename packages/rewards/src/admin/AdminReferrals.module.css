@@ -1,0 +1,26 @@
+.page {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+}
+
+.detail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.form {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.stale {
+  opacity: 0.6;
+}

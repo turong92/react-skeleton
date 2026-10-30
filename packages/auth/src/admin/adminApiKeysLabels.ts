@@ -21,6 +21,7 @@ export type AdminApiKeysLabels = {
   status: Record<ApiKeyStatus, string>
   revokedByOperator: string
   revokedByUser: string
+  revokedReason: (reason: string) => string
   neverExpires: string
   neverUsed: string
   columns: {
@@ -61,6 +62,7 @@ export const defaultAdminApiKeysLabels: AdminApiKeysLabels = {
   status: { ACTIVE: 'Active', EXPIRED: 'Expired', REVOKED: 'Revoked' },
   revokedByOperator: 'Revoked by an operator',
   revokedByUser: 'Revoked by the owner',
+  revokedReason: (reason) => `Reason: ${reason}`,
   neverExpires: 'Never',
   neverUsed: 'Never',
   columns: {
@@ -105,6 +107,7 @@ export const koAdminApiKeysLabels: Partial<AdminApiKeysLabels> = {
   status: { ACTIVE: '사용 중', EXPIRED: '만료', REVOKED: '회수됨' },
   revokedByOperator: '운영자가 회수',
   revokedByUser: '주인이 회수',
+  revokedReason: (reason) => `사유: ${reason}`,
   neverExpires: '없음',
   neverUsed: '없음',
   columns: {

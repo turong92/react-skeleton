@@ -13,6 +13,7 @@ import type { MessageKey } from '../i18n'
 import type { SeoHandle } from '../seo/routeSeo'
 import { AdminAccountsPage } from './AdminAccountsPage'
 import { AdminAccountPage } from './AdminAccountPage'
+import { AdminApiKeysPage } from './AdminApiKeysPage'
 import { AdminBadgeAwardsPage } from './AdminBadgeAwardsPage'
 import { AdminBadgesPage } from './AdminBadgesPage'
 import { AdminCampaignsPage } from './AdminCampaignsPage'
@@ -250,6 +251,23 @@ export const routes: RouteObject[] = [
                 path: '/admin/roles',
                 element: <AdminRolesPage />,
                 handle: privateSeo('nav.adminRoles'),
+              },
+            ],
+          },
+          // 운영자 API 키 - 백엔드 `skeleton.api-key.admin.enabled`
+          {
+            element: (
+              <RequirePermission
+                anyOf={['api-key.read']}
+                forbidden={<BlockedNotice />}
+                failed={<PermissionsFailedNotice />}
+              />
+            ),
+            children: [
+              {
+                path: '/admin/api-keys',
+                element: <AdminApiKeysPage />,
+                handle: privateSeo('nav.adminApiKeys'),
               },
             ],
           },

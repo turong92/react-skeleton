@@ -155,7 +155,16 @@ export function AdminApiKeys({
                     <>
                       <Badge tone={tone[r.status]}>{t.status[r.status]}</Badge>
                       {r.status === 'REVOKED' && (
-                        <> {r.revokedBy === 'OPERATOR' ? t.revokedByOperator : t.revokedByUser}</>
+                        <>
+                          {' '}
+                          {r.revokedBy === 'OPERATOR' ? t.revokedByOperator : t.revokedByUser}
+                          {r.revokedReason && (
+                            <>
+                              <br />
+                              <small>{t.revokedReason(r.revokedReason)}</small>
+                            </>
+                          )}
+                        </>
                       )}
                     </>
                   ),

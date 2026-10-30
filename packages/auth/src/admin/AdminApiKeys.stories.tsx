@@ -38,6 +38,7 @@ export const ListWithMore: Story = {
     await userEvent.click(canvas.getByRole('button', { name: '더 보기' }))
     await waitFor(() => expect(within(table).getAllByRole('row')).toHaveLength(5))
     await expect(within(table).getByText('운영자가 회수')).toBeVisible()
+    await expect(within(table).getByText('사유: 유출 신고')).toBeVisible()
   },
 }
 

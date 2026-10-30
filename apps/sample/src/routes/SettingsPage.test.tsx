@@ -33,6 +33,8 @@ const me = (over: object) => ({
   emailVerified: true,
   displayName: null,
   roles: ['USER'],
+  hasPassword: true,
+  methods: [],
   ...over,
 })
 
@@ -184,5 +186,17 @@ describe('SettingsPage — nicknames section', () => {
     const html = render(me({ displayName: 'Sumin' }))
     expect(html).toContain('My nicknames')
     expect(html).not.toMatch(/profile/i)
+  })
+})
+
+describe('SettingsPage — API keys', () => {
+  it('has the API keys section once the profile is known, in Korean and English', async () => {
+    expect(render(me({}))).toContain('API 키')
+    await i18n.setLocale('en', { remember: false })
+    expect(render(me({}))).toContain('API keys')
+  })
+
+  it('has no API keys section before the profile is known (the re-auth kind comes from it)', () => {
+    expect(render(undefined)).not.toContain('API 키')
   })
 })

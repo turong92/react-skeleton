@@ -87,7 +87,7 @@ export function createFakeAdminApiKeysApi() {
       'acc_2',
       'Bob',
     ),
-    owned(fakeKeys()[2], 'acc_1', 'Ann'),
+    { ...owned(fakeKeys()[2], 'acc_1', 'Ann'), revokedReason: '유출 신고' },
     owned(fakeKeys()[1], 'acc_2', 'Bob'),
   ]
   const revoked: { id: string; reason: string }[] = []

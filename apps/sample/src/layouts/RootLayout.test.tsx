@@ -190,6 +190,11 @@ describe('RootLayout (signed in): operator menu', () => {
     expect(support).toContain('href="/admin/accounts"')
     expect(support).not.toContain('href="/admin/payments"')
   })
+  it('shows the API keys screen only to someone holding api-key.read', () => {
+    expect(renderAs(['*'])).toContain('href="/admin/api-keys"')
+    expect(renderAs(['api-key.read'])).toContain('href="/admin/api-keys"')
+    expect(renderAs(['account.read'])).not.toContain('href="/admin/api-keys"')
+  })
   it('shows the products and prices screen only to someone holding catalog.manage', () => {
     expect(renderAs(['*'])).toContain('href="/admin/catalog"')
     expect(renderAs(['catalog.manage'])).toContain('href="/admin/catalog"')

@@ -24,4 +24,9 @@ export type ApiKeyScope = { key: string; module: string }
 export type CreatedApiKey = { key: ApiKey; token: string }
 
 /** 운영자 목록의 한 줄 - 주인 id 가 더 있다. `ownerName` 은 `account.read` 도 가진 운영자에게만 온다 */
-export type AdminApiKey = ApiKey & { ownerId: string; ownerName?: string | null }
+export type AdminApiKey = ApiKey & {
+  ownerId: string
+  ownerName?: string | null
+  /** 운영자가 회수할 때 적은 사유 - 운영자에게만 온다(주인의 목록에는 없다) */
+  revokedReason?: string | null
+}

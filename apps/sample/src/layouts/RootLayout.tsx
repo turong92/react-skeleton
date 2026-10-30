@@ -71,6 +71,7 @@ export function AdminLinks() {
   const canCatalog = usePermission('catalog.manage')
   const canAccounts = usePermission('account.read')
   const canRoles = usePermission('authz.roles')
+  const canApiKeys = usePermission('api-key.read')
   const canCampaigns = usePermission('campaign.manage')
   const canCoupons = usePermission('coupon.manage')
   const canPoints = usePermission('point.manage')
@@ -86,6 +87,7 @@ export function AdminLinks() {
       canCatalog ||
       canAccounts ||
       canRoles ||
+      canApiKeys ||
       canCampaigns ||
       canCoupons ||
       canPoints ||
@@ -103,6 +105,7 @@ export function AdminLinks() {
       {canCatalog && <NavLink to="/admin/catalog">{t('nav.adminCatalog')}</NavLink>}
       {canAccounts && <NavLink to="/admin/accounts">{t('nav.adminAccounts')}</NavLink>}
       {canRoles && <NavLink to="/admin/roles">{t('nav.adminRoles')}</NavLink>}
+      {canApiKeys && <NavLink to="/admin/api-keys">{t('nav.adminApiKeys')}</NavLink>}
       {canCampaigns && <NavLink to="/admin/campaigns">{t('nav.adminCampaigns')}</NavLink>}
       {canCoupons && <NavLink to="/admin/coupons">{t('nav.adminCoupons')}</NavLink>}
       {canPoints && <NavLink to="/admin/points">{t('nav.adminPoints')}</NavLink>}

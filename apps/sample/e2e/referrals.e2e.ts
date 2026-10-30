@@ -1,6 +1,12 @@
 import { koRewardsLabels } from '@skeleton/rewards'
 import { koRewardsAdminLabels } from '@skeleton/rewards/admin'
-import { expect as baseExpect, type Browser, type BrowserContext, type Page } from 'playwright/test'
+import {
+  expect as baseExpect,
+  type Browser,
+  type BrowserContext,
+  type Locator,
+  type Page,
+} from 'playwright/test'
 import { afterAll, beforeAll, describe, inject, it } from 'vitest'
 import { routeTossSdk, tossControl } from './fakeToss'
 import {
@@ -58,6 +64,25 @@ afterAll(async () => {
   await browser?.close()
 })
 
+/** 이 자리가 보일 때까지 다시 읽는다 - 초대 인정 · 쿠폰 지급은 가입 직후 화면 뒤에서(claim → 일꾼) 도착한다 */
+async function showsAfterReload(p: Page, url: string, find: (p: Page) => Locator) {
+  await pwExpect
+    .poll(
+      async () => {
+        await p.goto(url)
+        return find(p)
+          .first()
+          .waitFor({ timeout: 5_000 })
+          .then(
+            () => true,
+            () => false,
+          )
+      },
+      { timeout: 90_000, intervals: [1_000] },
+    )
+    .toBe(true)
+}
+
 describe('referrals: copy the link, a friend signs up with it, the first cheer waits for review, the operator approves', () => {
   it(
     'an invited friend gets the 응원 30% coupon, the inviter sees 가입함, then 확인 중 after the friend pays, then 보상 지급 and 500 points once the operator approves',
@@ -105,22 +130,26 @@ describe('referrals: copy the link, a friend signs up with it, the first cheer w
         const code = await waitForCode(mailUrl, email, 'verify')
         await fp.getByLabel(auth.codeDigit(1, 6)).click()
         await fp.keyboard.type(code.code)
-        await pwExpect(fp.getByRole('heading', { level: 1 }).first()).toBeVisible()
+        // 가입 화면의 제목도 h1 이라 그것으로는 끝났는지 모른다 - 로그인한 첫 화면의 인사말까지 기다린다
+        await pwExpect(fp.getByRole('heading', { level: 1, name: /안녕하세요/ })).toBeVisible()
 
         // B 의 쿠폰함에 「응원 30%」
-        await fp.goto(`${baseUrl}/rewards/coupons`)
-        await pwExpect(fp.getByRole('article').filter({ hasText: /응원 30%/ })).toBeVisible()
+        await showsAfterReload(fp, `${baseUrl}/rewards/coupons`, (p) =>
+          p.getByRole('article').filter({ hasText: /응원 30%/ }),
+        )
 
         // A 의 초대 현황: 가입함
-        await page.goto(`${baseUrl}/rewards`)
-        await pwExpect(page.getByText(L.invite.list.status.WAITING, { exact: true })).toBeVisible()
+        await showsAfterReload(page, `${baseUrl}/rewards`, (p) =>
+          p.getByText(L.invite.list.status.WAITING, { exact: true }),
+        )
 
         // ③ B 가 첫 응원을 결제한다 → 같은 기계라 확인 중
         await cheerFor(fp, baseUrl, 3000)
         await returnedOrderId(fp)
         await pwExpect(resultTitle(fp, paymentLabels.result.paid.title)).toBeVisible()
-        await page.goto(`${baseUrl}/rewards`)
-        await pwExpect(page.getByText(L.invite.list.status.PENDING, { exact: true })).toBeVisible()
+        await showsAfterReload(page, `${baseUrl}/rewards`, (p) =>
+          p.getByText(L.invite.list.status.PENDING, { exact: true }),
+        )
         baseExpect((await api(apiUrl, userToken, 'GET', '/points')).json.value.balance).toBe(
           pointsBefore,
         ) // 승인 전에는 포인트가 없다
@@ -134,12 +163,15 @@ describe('referrals: copy the link, a friend signs up with it, the first cheer w
           await pwExpect(
             op.getByRole('heading', { level: 1, name: A.referrals.title }),
           ).toBeVisible()
-          const row = op.getByRole('row').filter({ hasText: '초대받은 친구' })
+          // 새 백엔드에는 초대 내역이 이것 하나다 - 운영 표의 이름 칸은 가린 이름이나 계정 id 일 수 있어 상태 알약으로 줄을 찾는다
+          const row = op.getByRole('row').filter({ hasText: A.referrals.status.REVIEW })
           await pwExpect(row.getByText(A.referrals.sameNetwork)).toBeVisible()
           await pwExpect(row.getByText(A.referrals.status.REVIEW)).toBeVisible()
-          await row.getByRole('button', { name: A.referrals.rowMenu('초대받은 친구') }).click()
+          await row.getByRole('button', { name: /더보기/ }).click()
           await op.getByRole('menuitem', { name: A.referrals.approve, exact: true }).click()
-          await pwExpect(row.getByText(A.referrals.status.QUALIFIED)).toBeVisible()
+          await pwExpect(
+            op.getByRole('row').filter({ hasText: A.referrals.status.QUALIFIED }),
+          ).toBeVisible()
         } finally {
           await operator.close()
         }
@@ -150,8 +182,9 @@ describe('referrals: copy the link, a friend signs up with it, the first cheer w
             timeout: 60_000,
           })
           .toBe(pointsBefore + REWARD_POINTS)
-        await page.goto(`${baseUrl}/rewards`)
-        await pwExpect(page.getByText(L.invite.list.status.REWARDED, { exact: true })).toBeVisible()
+        await showsAfterReload(page, `${baseUrl}/rewards`, (p) =>
+          p.getByText(L.invite.list.status.REWARDED, { exact: true }),
+        )
         await page.getByRole('button', { name: /^알림/ }).click()
         await pwExpect(
           page.getByRole('dialog', { name: ko('header.notificationsTitle') }),

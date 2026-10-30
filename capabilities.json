@@ -958,7 +958,7 @@
         "flag": "--packages workspace",
         "included": "flag",
         "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
-        "alsoVia": [],
+        "alsoVia": ["--with-sample"],
         "optOut": null
       },
       "summary": "워크스페이스(팀) 사용자 화면 — 주소 `/w/<slug>/…` 에서 팀을 읽는 WorkspaceProvider/useWorkspace(탭마다 독립 · 옛 slug 는 새 주소로 replace · 풀린 id 를 X-Workspace-Id 헤더로: createWorkspaceHeaders) · WorkspaceSwitcher(머리줄 팀 고르기 + 새 워크스페이스) · CreateWorkspaceForm(이름 + 주소 이름) · WorkspaceSettings(이름 · 주소 이름 · 멤버 표: 역할 고르기 · 내보내기 · 소유권 이전 · 탈퇴, 단추는 역할로 숨김) · 「마지막에 쓴 팀」 기억은 첫 화면으로 보낼 때만. 라우터를 모른다(앱이 slug 와 이동 콜백을 준다). WorkspaceInvitations(여러 주소 초대 · 한 번에 20개 · 대기 표 · 만료 표시 · 재발송 · 취소 · 좌석 n / 상한 · 결과 invited / alreadyInvited / seatLimited) · AcceptInvitation(/invite — 미리보기 → 로그인 안 했으면 「로그인 · 가입 후 수락」, 토큰은 주소창에서 지우고 이 탭 저장소에, 돌아와 수락 → 앱이 그 워크스페이스로 이동 · 오류 코드별 문장). 운영자 목록은 @skeleton/workspace/admin(항목 workspace-admin).",
@@ -1028,7 +1028,7 @@
         "flag": "--packages workspace",
         "included": "flag",
         "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
-        "alsoVia": [],
+        "alsoVia": ["--with-sample"],
         "optOut": null
       },
       "summary": "운영자의 워크스페이스 목록(선택 내보내기 @skeleton/workspace/admin) — 이름 · 주소 이름 검색 · 커서 「더 보기」 · 한 건의 상세(멤버 표 · 기다리는 초대 수). 읽기만 한다 — 만들기 · 고치기 · 닫기는 없다. can('workspace.read') 로 가린다.",
@@ -1955,7 +1955,8 @@
         "apps/sample/src/i18n/index.ts",
         "apps/sample/src/board/api.ts",
         "apps/sample/src/notifications/useLiveNotifications.ts",
-        "apps/sample/src/routes/LandingPage.tsx"
+        "apps/sample/src/routes/LandingPage.tsx",
+        "apps/sample/src/workspace/WorkspaceLayout.tsx"
       ],
       "needs": [
         "api-client",
@@ -1971,7 +1972,8 @@
         "theme",
         "time",
         "tokens",
-        "ui"
+        "ui",
+        "workspace"
       ],
       "backend": {
         "modules": [
@@ -1993,10 +1995,22 @@
           "author-profile-jdbc",
           "authz",
           "authz-jdbc",
+          "badge",
+          "badge-jdbc",
           "board",
           "board-jdbc",
+          "campaign",
+          "campaign-jdbc",
           "captcha-turnstile",
+          "catalog",
+          "catalog-jdbc",
+          "coupon",
+          "coupon-jdbc",
           "crypto",
+          "dashboard",
+          "dashboard-cloudflare",
+          "dashboard-ga",
+          "dashboard-jdbc",
           "db-postgresql",
           "idempotency",
           "job-queue-jdbc",
@@ -2017,10 +2031,16 @@
           "payment-toss",
           "persistence-jdbc",
           "platform",
+          "point",
+          "point-jdbc",
+          "reward",
+          "reward-jdbc",
           "scheduler",
           "storage",
           "storage-s3",
-          "time"
+          "time",
+          "workspace",
+          "workspace-jdbc"
         ],
         "oneOfModules": [],
         "optionalModules": [],
@@ -2048,7 +2068,8 @@
           "realtime",
           "rewards",
           "seo",
-          "storage"
+          "storage",
+          "workspace"
         ],
         "alsoVia": [],
         "optOut": null

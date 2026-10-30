@@ -2,9 +2,13 @@ import { RequireAuth, RequirePermission } from '@skeleton/auth'
 import { BlockedNotice } from '../auth/BlockedNotice'
 import { PermissionsFailedNotice } from '../auth/PermissionsFailedNotice'
 import { accountRoutes } from '../auth/authRoutes'
-import type { RouteObject } from 'react-router-dom'
+import { Navigate, type RouteObject } from 'react-router-dom'
 import { landingJsonLd } from '../landing/landingSeo'
 import { AppFrame } from '../layouts/AppFrame'
+import { InvitePage } from '../workspace/InvitePage'
+import { WorkspaceLayout } from '../workspace/WorkspaceLayout'
+import { WorkspaceSettingsPage } from '../workspace/WorkspaceSettingsPage'
+import { NewWorkspacePage, WorkspacesHomePage } from '../workspace/WorkspacesHomePage'
 import type { MessageKey } from '../i18n'
 import type { SeoHandle } from '../seo/routeSeo'
 import { AdminAccountsPage } from './AdminAccountsPage'
@@ -20,6 +24,7 @@ import { AdminDashboardPage } from './AdminDashboardPage'
 import { AdminPointsPage } from './AdminPointsPage'
 import { AdminRewardGrantsPage } from './AdminRewardGrantsPage'
 import { AdminRolesPage } from './AdminRolesPage'
+import { AdminWorkspacesPage } from './AdminWorkspacesPage'
 import { AdminPaymentPage } from './AdminPaymentPage'
 import { AdminPaymentsPage } from './AdminPaymentsPage'
 import { BadgesPage } from './BadgesPage'
@@ -89,6 +94,8 @@ export const routes: RouteObject[] = [
         element: <LegalRoute doc="refund" />,
         handle: publicSeo('seo.refund.title', 'seo.refund.description'),
       },
+      // 팀 초대 수락 - 메일의 링크(`/invite?token=…`)는 로그인 없이 열린다(미리보기). 로그인 · 가입은 이 화면이 보내고, 돌아와 수락한다
+      { path: '/invite', element: <InvitePage />, handle: privateSeo('workspace.tabsLabel') },
       // 게시판은 로그인하지 않아도 열린다(서버 `allow-anonymous-read`) - 읽기는 누구나, 쓰기는 로그인했거나 게시판이 비회원 쓰기를 허락할 때(화면이 가린다). 검색에는 노출하지 않는다
       { path: '/board', element: <BoardPage />, handle: privateSeo('nav.board') },
       { path: '/board/new', element: <BoardFormPage />, handle: privateSeo('nav.board') },
@@ -110,6 +117,38 @@ export const routes: RouteObject[] = [
             path: '/notes/:id/edit',
             element: <NoteFormPage />,
             handle: privateSeo('nav.notes'),
+          },
+          // 워크스페이스(팀) - 팀은 주소의 slug 에서 읽는다(`/w/:slug/…`, 탭마다 독립). `/workspaces` 는 첫 화면(마지막에 쓴 팀으로 보낸다)
+          {
+            path: '/workspaces',
+            element: <WorkspacesHomePage />,
+            handle: privateSeo('workspace.tabsLabel'),
+          },
+          {
+            path: '/workspaces/new',
+            element: <NewWorkspacePage />,
+            handle: privateSeo('workspace.tabsLabel'),
+          },
+          {
+            path: '/w/:slug',
+            element: <WorkspaceLayout />,
+            handle: privateSeo('workspace.tabsLabel'),
+            children: [
+              { index: true, element: <Navigate to="notes" replace /> },
+              { path: 'notes', element: <NotesPage />, handle: privateSeo('nav.notes') },
+              { path: 'notes/new', element: <NoteFormPage />, handle: privateSeo('nav.notes') },
+              { path: 'notes/:id', element: <NoteDetailPage />, handle: privateSeo('nav.notes') },
+              {
+                path: 'notes/:id/edit',
+                element: <NoteFormPage />,
+                handle: privateSeo('nav.notes'),
+              },
+              {
+                path: 'settings',
+                element: <WorkspaceSettingsPage />,
+                handle: privateSeo('nav.settings'),
+              },
+            ],
           },
           // 응원하기 — 결제는 `@skeleton/payment`. `/payments/return` 은 `/payments/:id` 보다 먼저 맞는다(정적 경로가 앞선다)
           { path: '/cheer', element: <CheerPage />, handle: privateSeo('nav.cheer') },
@@ -204,6 +243,23 @@ export const routes: RouteObject[] = [
                 path: '/admin/roles',
                 element: <AdminRolesPage />,
                 handle: privateSeo('nav.adminRoles'),
+              },
+            ],
+          },
+          {
+            element: (
+              <RequirePermission
+                anyOf={['workspace.read']}
+                forbidden={<BlockedNotice />}
+                failed={<PermissionsFailedNotice />}
+              />
+            ),
+            children: [
+              // 운영자 워크스페이스 목록(읽기만) — 백엔드 `skeleton.workspace.admin.enabled`
+              {
+                path: '/admin/workspaces',
+                element: <AdminWorkspacesPage />,
+                handle: privateSeo('nav.adminWorkspaces'),
               },
             ],
           },

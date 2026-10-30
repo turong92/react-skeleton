@@ -1,0 +1,33 @@
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
+}
+
+/* 눌리는 것은 눌리게 보인다 - 테두리 있는 알약, 지금 화면은 채운다 */
+.tabs a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 var(--space-md);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-strong);
+  text-decoration: none;
+}
+
+.tabs a:hover {
+  background: var(--teal-soft);
+}
+
+.tabs a:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}
+
+.tabs a[aria-current='page'] {
+  background: var(--teal-soft);
+  border-color: var(--teal);
+  font-weight: 600;
+}

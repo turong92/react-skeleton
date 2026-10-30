@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — 견본 앱에 워크스페이스(팀) 조립 R3 (2026-10-30)
+
+백엔드 짝: kotlin-skeleton `apps/sample` 의 팀 노트(`X-Workspace-Id` 가 있으면 그 팀의 노트, 없으면 예전 그대로 내 노트).
+
+- `apps/sample/src/workspace/`: `WorkspaceLayout`(라우트 `/w/:slug/…` 를 `WorkspaceProvider` 로 감싼다 · 옛 slug 는 새 slug 로 replace) · `WorkspaceSettingsPage`(`WorkspaceSettings` + `WorkspaceInvitations`) · `WorkspacesHomePage`(`/workspaces` 첫 화면 — 「마지막에 쓴 팀」으로 보낸다 · 팀이 없으면 만들기 폼) · `InvitePage`(`/invite`, 로그인 없이) · `TeamSwitcher`(머리줄) · `AdminWorkspacesPage`(`/admin/workspaces`, `workspace.read`).
+- `api/client.ts`: 앱 클라이언트는 `extraHeaders`(`createAppApiClient`)로 팀 헤더를 합치고, 워크스페이스 자기 관리 호출은 헤더 없는 `workspaceClient` 로 한다.
+- 노트 화면(`NotesPage` · `NoteDetailPage` · `NoteFormPage`)이 팀 안에서도 그대로 쓰인다 — 주소 뿌리는 `useNotesBase()`, 캐시 키는 팀 id 로 갈린다(`notesKeys`), 팀 노트에는 첨부 탭이 없다.
+- `capabilities.json`: `app-sample` 의 `backend.modules` 가 gradle 닫힘과 같아졌다(`workspace` · `workspace-jdbc` 와 앞서 빠져 있던 배지 · 캠페인 · 카탈로그 · 쿠폰 · 대시보드 · 포인트 · 보상), `needs`/`autoIncludes` 에 `workspace`, `workspace` · `workspace-admin` 의 `alsoVia: ["--with-sample"]`.
+- e2e `workspace.e2e.ts` 한 여정(만들기 → 초대 메일 → 가입 · 수락 → 같은 팀 노트 → 두 탭 → slug 바꾸기 → 로그인 복귀 → 추방), `e2e/mail.ts` 링크 종류에 `invite`.
+
 ### Added — `@skeleton/workspace` R2: 초대 · 수락 · 운영 목록 (2026-10-30)
 
 백엔드 짝: kotlin-skeleton `workspace` 의 초대(`/api/v1/workspaces/{id}/invitations`, 공개 `/api/v1/workspace-invitations/preview` · `/accept`)와 운영(`/api/v1/admin/workspaces`, 권한 `workspace.read`).

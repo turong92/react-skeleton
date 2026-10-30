@@ -5,8 +5,10 @@ import { ConsentBanner, SiteFooter, type FooterLink } from '@skeleton/marketing'
 import { ThemeToggle } from '@skeleton/theme'
 import { AppShell, Button, LanguageMenu } from '@skeleton/ui'
 import { AdminMenu } from './AdminMenu'
+import { browserLocalStorage, forgetLastWorkspace } from '@skeleton/workspace'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import type { ReactNode } from 'react'
+import { TeamSwitcher } from '../workspace/TeamSwitcher'
 import { NicknameGateProvider } from '../auth/NicknameGate'
 import { NicknameNudge } from '../auth/NicknameNudge'
 import { LinkButton } from '../components/LinkButton'
@@ -24,6 +26,7 @@ function SignedInActions() {
   useLiveNotifications()
 
   function signOut() {
+    forgetLastWorkspace(browserLocalStorage()) // 기기를 같이 쓰는 사람에게 「마지막에 쓴 팀」을 남기지 않는다
     logout()
     navigate('/login', { replace: true })
   }
@@ -70,6 +73,7 @@ export function AdminLinks() {
   const canPoints = usePermission('point.manage')
   const canGrants = usePermission('reward.operate')
   const canBadges = usePermission('badge.manage')
+  const canWorkspaces = usePermission('workspace.read')
   // 운영 화면이 하나도 없는 사람에게는 메뉴 자체가 없다
   if (
     !(
@@ -82,7 +86,8 @@ export function AdminLinks() {
       canCoupons ||
       canPoints ||
       canGrants ||
-      canBadges
+      canBadges ||
+      canWorkspaces
     )
   )
     return null
@@ -99,6 +104,7 @@ export function AdminLinks() {
       {canGrants && <NavLink to="/admin/reward-grants">{t('nav.adminRewardGrants')}</NavLink>}
       {canBadges && <NavLink to="/admin/badges">{t('nav.adminBadges')}</NavLink>}
       {canBadges && <NavLink to="/admin/badge-awards">{t('nav.adminBadgeAwards')}</NavLink>}
+      {canWorkspaces && <NavLink to="/admin/workspaces">{t('nav.adminWorkspaces')}</NavLink>}
     </AdminMenu>
   )
 }
@@ -178,6 +184,7 @@ export function RootLayout() {
               <NavLink to="/rewards">{t('nav.rewards')}</NavLink>
               <NavLink to="/subscription">{t('nav.subscription')}</NavLink>
               <NavLink to="/settings">{t('nav.settings')}</NavLink>
+              <TeamSwitcher />
               <AdminLinks />
             </>
           )

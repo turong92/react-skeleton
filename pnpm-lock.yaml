@@ -149,6 +149,9 @@ importers:
       '@skeleton/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@skeleton/workspace':
+        specifier: workspace:*
+        version: link:../../packages/workspace
       '@tanstack/react-query':
         specifier: ^5.99.2
         version: 5.104.1(react@19.3.0)

@@ -197,3 +197,24 @@ describe('M3 — an unrecoverable 401 clears both credentials', () => {
     }
   })
 })
+
+describe('extraHeaders — the team header the workspace feature adds', () => {
+  it('merges the extra headers into every request, and a client without them sends none', async () => {
+    const captured: Captured[] = []
+    const withTeam = createAppApiClient({
+      env: {},
+      tokenStore: createTokenStore(),
+      extraHeaders: () => ({ 'X-Workspace-Id': 'ws_1' }),
+      adapter: adapterFor(captured, ok),
+    })
+    const without = createAppApiClient({
+      env: {},
+      tokenStore: createTokenStore(),
+      adapter: adapterFor(captured, ok),
+    })
+    await withTeam.value('/notes')
+    await without.value('/workspaces')
+    expect(captured[0].headers['X-Workspace-Id']).toBe('ws_1')
+    expect(captured[1].headers['X-Workspace-Id']).toBeUndefined()
+  })
+})

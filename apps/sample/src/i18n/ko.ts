@@ -593,6 +593,8 @@ export default {
   'nav.adminRewardGrants': '지급 관리',
   'nav.adminBadges': '배지 관리',
   'nav.adminBadgeAwards': '배지 내역',
+  'nav.adminWorkspaces': '워크스페이스 관리',
+  'workspace.tabsLabel': '워크스페이스',
   'rewards.title': '혜택',
   'rewards.subtitle': '출석하고, 친구를 초대하고, 쿠폰과 포인트를 모아 보세요.',
   'rewards.couponsLink': '쿠폰함 보기',

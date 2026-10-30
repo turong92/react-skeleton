@@ -16,6 +16,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { createKeyRing } from '../notes/idempotencyKey'
 import { fieldErrorsOf, isValidationFailure, type FieldErrors } from '../notes/formErrors'
 import { useCreateNote, useNote, useUpdateNote } from '../notes/queries'
+import { useNotesBase } from '../notes/useNotesBase'
 import { NOTE_STATUSES, type Note, type NoteInput, type NoteStatus } from '../notes/types'
 import { useT } from '../i18n'
 import styles from './NoteFormPage.module.css'
@@ -158,6 +159,7 @@ const inputOf = (values: Values, note?: Note): NoteInput => ({
 function CreateNote() {
   const { t } = useT()
   const navigate = useNavigate()
+  const base = useNotesBase()
   const create = useCreateNote()
   const keyFor = useRef(createKeyRing(newIdempotencyKey))
   return (
@@ -166,13 +168,13 @@ function CreateNote() {
       <NoteForm
         initial={EMPTY}
         submitLabel={t('form.submitCreate')}
-        onCancel={() => navigate('/notes')}
+        onCancel={() => navigate(base)}
         onSubmit={async (values) => {
           const note = await create.mutateAsync({
             input: inputOf(values),
             idempotencyKey: keyFor.current(values),
           })
-          navigate(`/notes/${note.id}`)
+          navigate(`${base}/${note.id}`)
         }}
       />
     </>
@@ -182,6 +184,7 @@ function CreateNote() {
 function EditNote({ note }: { note: Note }) {
   const { t } = useT()
   const navigate = useNavigate()
+  const base = useNotesBase()
   const update = useUpdateNote(note.id)
   return (
     <>
@@ -189,10 +192,10 @@ function EditNote({ note }: { note: Note }) {
       <NoteForm
         initial={{ title: note.title, body: note.body, status: note.status, pinned: note.pinned }}
         submitLabel={t('form.submitEdit')}
-        onCancel={() => navigate(`/notes/${note.id}`)}
+        onCancel={() => navigate(`${base}/${note.id}`)}
         onSubmit={async (values) => {
           await update.mutateAsync(inputOf(values, note))
-          navigate(`/notes/${note.id}`)
+          navigate(`${base}/${note.id}`)
         }}
       />
     </>
@@ -201,6 +204,7 @@ function EditNote({ note }: { note: Note }) {
 
 function EditNoteLoader({ id }: { id: string }) {
   const { t } = useT()
+  const base = useNotesBase()
   const note = useNote(id)
   if (note.isPending) return <Spinner label={t('common.loading')} />
   if (note.isError || !note.data)
@@ -209,7 +213,7 @@ function EditNoteLoader({ id }: { id: string }) {
         headingLevel={2}
         title={t('detail.notFoundTitle')}
         description={t('detail.notFoundBody')}
-        action={<Link to="/notes">{t('detail.back')}</Link>}
+        action={<Link to={base}>{t('detail.back')}</Link>}
       />
     )
   return <EditNote note={note.data} />

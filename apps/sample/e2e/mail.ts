@@ -1,8 +1,8 @@
 /** 메일 캐처(mailpit)의 HTTP API 에서 받은 메일의 링크 · 6자리 인증번호를 읽는다 — 백엔드가 비동기로 보내므로 올 때까지 기다린다 */
 type Summary = { ID: string; To: Array<{ Address: string }>; Subject: string }
 
-// 링크가 남은 메일은 링크 로그인 · 비밀번호 재설정뿐이다(나머지는 6자리 인증번호)
-const LINK = /https?:\/\/[^\s"'<>)]+\/(magic-link|reset-password)\?token=[A-Za-z0-9_\-.~%]+/
+// 링크가 남은 메일은 링크 로그인 · 비밀번호 재설정 · 워크스페이스 초대(`/invite`)뿐이다(나머지는 6자리 인증번호)
+const LINK = /https?:\/\/[^\s"'<>)]+\/(magic-link|reset-password|invite)\?token=[A-Za-z0-9_\-.~%]+/
 
 export type MailLink = {
   kind: string

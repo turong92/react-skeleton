@@ -1,6 +1,7 @@
 import { useEmailBeforeWrite } from '@skeleton/auth'
 import { formatInstant } from '@skeleton/time'
 import { Badge, Button, Card, Dialog, EmptyState, PageHeader, Spinner, Tabs } from '@skeleton/ui'
+import { useWorkspace } from '@skeleton/workspace'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -9,6 +10,7 @@ import { AttachmentPanel } from '../components/AttachmentPanel'
 import { LoadError } from '../components/LoadError'
 import { NoteStatusBadge } from '../components/NoteStatusBadge'
 import { useDeleteNote, useExportNote, useNote } from '../notes/queries'
+import { useNotesBase } from '../notes/useNotesBase'
 import { NoteErrorCodes, type Note } from '../notes/types'
 import { isErrorCode } from '@skeleton/api-client'
 import { useT } from '../i18n'
@@ -17,6 +19,8 @@ import styles from './NoteDetailPage.module.css'
 function NoteDetail({ note }: { note: Note }) {
   const { t } = useT()
   const navigate = useNavigate()
+  const base = useNotesBase()
+  const inWorkspace = useWorkspace() !== null
   const remove = useDeleteNote()
   const exportNote = useExportNote()
   const [confirming, setConfirming] = useState(false)
@@ -25,7 +29,7 @@ function NoteDetail({ note }: { note: Note }) {
   async function confirmDelete() {
     await remove.mutateAsync(note.id)
     setConfirming(false)
-    navigate('/notes', { replace: true })
+    navigate(base, { replace: true })
   }
 
   async function startExport() {
@@ -36,7 +40,7 @@ function NoteDetail({ note }: { note: Note }) {
   return (
     <div className={styles.page}>
       <PageHeader
-        back={<Link to="/notes">← {t('detail.back')}</Link>}
+        back={<Link to={base}>← {t('detail.back')}</Link>}
         title={note.title}
         description={`${t('detail.updated')} ${formatInstant(note.updatedAt)}`}
         actions={
@@ -49,7 +53,7 @@ function NoteDetail({ note }: { note: Note }) {
             >
               {t('detail.export')}
             </Button>
-            <Button onClick={() => navigate(`/notes/${note.id}/edit`)}>{t('common.edit')}</Button>
+            <Button onClick={() => navigate(`${base}/${note.id}/edit`)}>{t('common.edit')}</Button>
           </>
         }
       />
@@ -84,11 +88,16 @@ function NoteDetail({ note }: { note: Note }) {
               </Card>
             ),
           },
-          {
-            id: 'attachment',
-            label: t('detail.tabAttachment'),
-            content: <AttachmentPanel note={note} />,
-          },
+          // 첨부는 내 노트만(서버의 키 검사가 계정 기준) — 팀 노트에는 탭이 없다
+          ...(inWorkspace
+            ? []
+            : [
+                {
+                  id: 'attachment',
+                  label: t('detail.tabAttachment'),
+                  content: <AttachmentPanel note={note} />,
+                },
+              ]),
         ]}
       />
 
@@ -131,6 +140,7 @@ function NoteDetail({ note }: { note: Note }) {
 export function NoteDetailPage() {
   const { t } = useT()
   const { id = '' } = useParams()
+  const base = useNotesBase()
   const note = useNote(id)
   if (note.isPending) return <Spinner label={t('common.loading')} />
   if (note.isError) {
@@ -140,7 +150,7 @@ export function NoteDetailPage() {
           headingLevel={2}
           title={t('detail.notFoundTitle')}
           description={t('detail.notFoundBody')}
-          action={<Link to="/notes">{t('detail.back')}</Link>}
+          action={<Link to={base}>{t('detail.back')}</Link>}
         />
       )
     return <LoadError error={note.error} onRetry={() => void note.refetch()} />

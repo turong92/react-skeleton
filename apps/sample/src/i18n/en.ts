@@ -603,6 +603,8 @@ const en: Record<keyof typeof ko, string> = {
   'nav.adminPoints': 'Points',
   'nav.adminBadges': 'Badges',
   'nav.adminBadgeAwards': 'Badge history',
+  'nav.adminWorkspaces': 'Workspaces',
+  'workspace.tabsLabel': 'Workspaces',
   'nav.adminRewardGrants': 'Reward grants',
   'rewards.title': 'Rewards',
   'rewards.subtitle': 'Check in, invite friends, and collect coupons and points.',

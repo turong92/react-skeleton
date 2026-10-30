@@ -31,6 +31,7 @@
     "@skeleton/time": "workspace:*",
     "@skeleton/tokens": "workspace:*",
     "@skeleton/ui": "workspace:*",
+    "@skeleton/workspace": "workspace:*",
     "@tanstack/react-query": "^5.99.2",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",

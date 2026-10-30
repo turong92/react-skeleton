@@ -16,6 +16,14 @@ describe('notes queries', () => {
     expect(notesKeys.summary()).toEqual(['notes', 'summary'])
   })
 
+  it('keys of a team nest under the same root but never collide with my own notes', () => {
+    expect(notesKeys.list({ q: 'a' }, 'ws_1')).toEqual(['notes', 'ws_1', 'list', { q: 'a' }])
+    expect(notesKeys.detail('n1', 'ws_1')).toEqual(['notes', 'ws_1', 'detail', 'n1'])
+    expect(notesKeys.summary('ws_1')).toEqual(['notes', 'ws_1', 'summary'])
+    expect(notesKeys.list({}, 'ws_1')).not.toEqual(notesKeys.list({}, 'ws_2'))
+    expect(notesKeys.list({}, 'ws_1')).not.toEqual(notesKeys.list({}))
+  })
+
   it('each query function calls the matching api method with the same arguments', async () => {
     await expect(notesQuery(api, { page: 1 }).queryFn()).resolves.toMatchObject({
       called: 'list',

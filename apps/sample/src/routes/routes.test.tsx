@@ -45,6 +45,21 @@ describe('routes', () => {
     expect(leaf('/nope/nope')?.path).toBe('*')
   })
 
+  it('has the workspace screens: every /w/:slug/… screen sits behind sign-in (the 401 return address is the team address), /invite is public, the operator list needs workspace.read', () => {
+    for (const path of [
+      '/w/acme/notes',
+      '/w/acme/notes/new',
+      '/w/acme/notes/n1',
+      '/w/acme/notes/n1/edit',
+      '/w/acme/settings',
+    ])
+      expect(guarded(path), path).toBe(true)
+    expect(leaf('/w/acme/notes/n1')?.path).toBe('notes/:id')
+    expect(guarded('/invite')).toBe(false)
+    expect(leaf('/invite')?.path).toBe('/invite')
+    expect(permissionsOf('/admin/workspaces')).toEqual([['workspace.read']])
+  })
+
   it('has the cheer journey: choose (/cheer), come back from the payment window (/payments/return), my cheers (/cheers), one payment (/payments/:id)', () => {
     expect(leaf('/cheer')?.path).toBe('/cheer')
     // 정적 경로가 `:id` 보다 먼저 맞는다 — 결제창이 돌아오는 주소가 결제 한 건으로 읽히지 않는다

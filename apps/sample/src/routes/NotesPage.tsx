@@ -21,6 +21,7 @@ import { LoadError } from '../components/LoadError'
 import { NoteStatusBadge } from '../components/NoteStatusBadge'
 import { hasFilters, queryFromSearch, searchFromQuery } from '../notes/listParams'
 import { useNotes } from '../notes/queries'
+import { useNotesBase } from '../notes/useNotesBase'
 import { NOTE_STATUSES, type Note, type NotesQuery } from '../notes/types'
 import { TextLink } from '../components/TextLink'
 import { useT } from '../i18n'
@@ -28,7 +29,7 @@ import styles from './NotesPage.module.css'
 
 type Translate = ReturnType<typeof useT>['t']
 
-function columnsOf(t: Translate): TableColumn<Note>[] {
+function columnsOf(t: Translate, base: string): TableColumn<Note>[] {
   return [
     {
       key: 'title',
@@ -36,7 +37,7 @@ function columnsOf(t: Translate): TableColumn<Note>[] {
       rowHeader: true,
       render: (note) => (
         <span className={styles.titleCell}>
-          <TextLink to={`/notes/${note.id}`}>{note.title}</TextLink>
+          <TextLink to={`${base}/${note.id}`}>{note.title}</TextLink>
           {note.pinned && <Badge tone="info">{t('notes.pinned')}</Badge>}
           {note.attachmentName && <Badge>{t('notes.hasAttachment')}</Badge>}
         </span>
@@ -88,6 +89,7 @@ export function NotesPage() {
   const { t } = useT()
   const [search, setSearch] = useSearchParams()
   const navigate = useNavigate()
+  const base = useNotesBase()
   const query = queryFromSearch(search)
   const notes = useNotes(query)
 
@@ -97,7 +99,7 @@ export function NotesPage() {
   // 쓰기 때 방식의 서버(주소 없는 계정은 읽기만)에서는 만들기 화면으로 가기 전에 이메일 등록을 먼저 묻는다 - 등록한 뒤 사용자가 다시 누른다
   const emailBeforeWrite = useEmailBeforeWrite(emailRequired)
   const create = (
-    <Button onClick={() => emailBeforeWrite.ensure() && navigate('/notes/new')}>
+    <Button onClick={() => emailBeforeWrite.ensure() && navigate(`${base}/new`)}>
       {t('notes.create')}
     </Button>
   )
@@ -145,7 +147,7 @@ export function NotesPage() {
         <>
           <Table
             caption={t('notes.caption')}
-            columns={columnsOf(t)}
+            columns={columnsOf(t, base)}
             rows={notes.data.values}
             rowKey={(note) => note.id}
             empty={

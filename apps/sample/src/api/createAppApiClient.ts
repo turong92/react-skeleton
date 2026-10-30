@@ -33,6 +33,8 @@ export type AppApiClientOptions = {
   withCredentials?: boolean
   /** true 면 요청마다 콘솔 로그(보통 `import.meta.env.DEV`) */
   debug?: boolean
+  /** 모든 요청에 덧붙일 헤더 — 워크스페이스 기능이 팀 헤더(`X-Workspace-Id`)를 싣는다. 팀 헤더가 없어야 하는 호출(워크스페이스 자기 관리)은 이것을 안 준 클라이언트로 한다 */
+  extraHeaders?: () => Record<string, string>
   /** 테스트용 */
   adapter?: AxiosAdapter
 }
@@ -49,6 +51,7 @@ export function createAppApiClient({
   recoverUnauthorized,
   recoverForbidden,
   withCredentials,
+  extraHeaders,
   debug = false,
   adapter,
 }: AppApiClientOptions): ApiClient {
@@ -65,6 +68,7 @@ export function createAppApiClient({
     getAuthHeaders: () => ({
       ...authHeaders(),
       ...devCountryHeaders(),
+      ...extraHeaders?.(),
       'Accept-Language': i18n.getLocale(),
     }),
     getTimeZone: userTimeZone,

@@ -107,6 +107,7 @@ export function AdminLinks() {
       {canRoles && <NavLink to="/admin/roles">{t('nav.adminRoles')}</NavLink>}
       {canApiKeys && <NavLink to="/admin/api-keys">{t('nav.adminApiKeys')}</NavLink>}
       {canCampaigns && <NavLink to="/admin/campaigns">{t('nav.adminCampaigns')}</NavLink>}
+      {canCampaigns && <NavLink to="/admin/referrals">{t('nav.adminReferrals')}</NavLink>}
       {canCoupons && <NavLink to="/admin/coupons">{t('nav.adminCoupons')}</NavLink>}
       {canPoints && <NavLink to="/admin/points">{t('nav.adminPoints')}</NavLink>}
       {canGrants && <NavLink to="/admin/reward-grants">{t('nav.adminRewardGrants')}</NavLink>}

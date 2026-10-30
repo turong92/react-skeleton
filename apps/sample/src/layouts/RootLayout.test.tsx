@@ -210,6 +210,10 @@ describe('RootLayout (signed in): operator menu', () => {
     for (const href of ['campaigns', 'points', 'reward-grants'])
       expect(coupons).not.toContain(`href="/admin/${href}"`)
     expect(renderAs(['reward.operate'])).toContain('href="/admin/reward-grants"')
+    // 친구 초대 내역은 이벤트 운영(campaign.manage)과 같은 권한이다
+    expect(all).toContain('href="/admin/referrals"')
+    expect(renderAs(['campaign.manage'])).toContain('href="/admin/referrals"')
+    expect(coupons).not.toContain('href="/admin/referrals"')
   })
   it('groups the operator links under one 운영 button (the row of links covered the sign-out and language buttons) - the links stay in the document', () => {
     const all = renderAs(['*'])

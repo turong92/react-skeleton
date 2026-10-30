@@ -1,8 +1,10 @@
 import {
   AttendanceCard,
   InviteCard,
+  InviteList,
   PointBalance,
   PointHistory,
+  ReferralCodeForm,
   useCampaigns,
 } from '@skeleton/rewards'
 import { PageHeader } from '@skeleton/ui'
@@ -13,7 +15,7 @@ import { rewardsLabelsFor } from '../rewards/labels'
 import styles from './RewardsPage.module.css'
 
 /**
- * 혜택 - 진행 중인 출석 이벤트마다 출석 카드, 초대 이벤트가 있으면 내 초대 코드, 포인트 잔액과 내역.
+ * 혜택 - 진행 중인 출석 이벤트마다 출석 카드, 초대 이벤트가 있으면 내 초대 코드 · 코드 직접 입력(받을 수 있을 때만) · 초대 현황, 포인트 잔액과 내역.
  * 이벤트가 꺼지면(운영자) 카드가 사라진다. 모듈을 안 붙인 갈래의 카드는 자기 자리에서 「불러오지 못했어요」.
  */
 export function RewardsPage() {
@@ -55,6 +57,8 @@ export function RewardsPage() {
             shareText={(code) => `${window.location.origin}/?ref=${encodeURIComponent(code)}`}
           />
         )}
+        {hasReferral && <ReferralCodeForm api={rewardsApi} labels={labels} locale={language} />}
+        {hasReferral && <InviteList api={rewardsApi} labels={labels} locale={language} />}
       </div>
       <section className={styles.points} aria-labelledby="points-heading">
         <h2 id="points-heading">{labels.point.balance}</h2>

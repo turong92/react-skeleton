@@ -628,7 +628,7 @@
         "alsoVia": ["--with-sample"],
         "optOut": null
       },
-      "summary": "운영자 보상 화면(선택 내보내기 @skeleton/rewards/admin) — 이벤트(켜고 끄기 · 출석 / 초대 / 업적 설정 · 보상 목록 - 쿠폰 · 포인트 · 배지) · 배지(정의 · 보관 · 수동 수여 · 수여 내역과 회수) · 쿠폰 정의(단계 편집기 · 계정에 주기 · 공용 코드 · 회수) · 포인트 조정 · 지급 건(다시 지급 · 멈추기). 단추는 can(key) 로 숨긴다. 샘플 화면: /admin/campaigns · /admin/coupons · /admin/points · /admin/reward-grants · /admin/badges · /admin/badge-awards.",
+      "summary": "운영자 보상 화면(선택 내보내기 @skeleton/rewards/admin) — 이벤트(켜고 끄기 · 출석 / 초대 / 업적 설정 · 보상 목록 - 쿠폰 · 포인트 · 배지) · 배지(정의 · 보관 · 수동 수여 · 수여 내역과 회수) · 쿠폰 정의(단계 편집기 · 계정에 주기 · 공용 코드 · 회수) · 포인트 조정 · 지급 건(다시 지급 · 멈추기). 단추는 can(key) 로 숨긴다. 샘플 화면: /admin/campaigns · /admin/referrals · /admin/coupons · /admin/points · /admin/reward-grants · /admin/badges · /admin/badge-awards.",
       "path": "packages/rewards/src/admin/index.ts",
       "notFor": [
         "백엔드 각 모듈의 skeleton.<module>.admin.enabled=true 와 campaign.manage · coupon.manage · point.manage · reward.operate · badge.manage 권한이 있어야 열린다(검사는 서버, RequirePermission 과 can 은 화면용). 기본 역할이 없어 전권이거나 역할 화면에서 권한을 준 계정만",

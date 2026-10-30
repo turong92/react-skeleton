@@ -591,6 +591,7 @@ export default {
   'apiKeys.scope.notesWrite': '노트 쓰기',
   'nav.rewards': '혜택',
   'nav.adminCampaigns': '이벤트 관리',
+  'nav.adminReferrals': '친구 초대',
   'nav.adminCoupons': '쿠폰 관리',
   'nav.adminPoints': '포인트 관리',
   'nav.adminRewardGrants': '지급 관리',

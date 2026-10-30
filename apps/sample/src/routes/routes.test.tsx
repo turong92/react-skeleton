@@ -109,6 +109,7 @@ describe('routes', () => {
       ['/admin/catalog', 'catalog.manage'],
       ['/admin/catalog/standard', 'catalog.manage'],
       ['/admin/campaigns', 'campaign.manage'],
+      ['/admin/referrals', 'campaign.manage'],
       ['/admin/coupons', 'coupon.manage'],
       ['/admin/coupons/d1', 'coupon.manage'],
       ['/admin/points', 'point.manage'],

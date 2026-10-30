@@ -16,6 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 견본 앱: 설정에 API 키 카드(범위 `notes.read` / `notes.write` 이름, 수명 상한 365일), 운영 메뉴 「API 키」(`/admin/api-keys`, `api-key.read`).
 - e2e `apiKeys.e2e.ts`: 키를 브라우저 밖에서 쓴다(GET 200 · POST 403 · `/account/me` 403) → 화면 회수 뒤 401, 운영자 사유 회수 → 「운영자가 회수」.
 
+### Added — 샘플 앱 초대 · 추천 보상 조립 R3 (2026-10-31)
+
+- 샘플: 보상 화면(`/rewards`)에 초대 이벤트가 있으면 `InviteCard` 아래 `ReferralCodeForm`(받을 수 있을 때만) · `InviteList`, 운영 메뉴 「친구 초대」(`/admin/referrals`, 권한 `campaign.manage`) → `AdminReferrals`.
+- 새 e2e `referrals.e2e.ts`: 링크 복사 → 새 문맥에서 가입(메일 코드) → 쿠폰 「응원 30%」 · 현황 「가입함」 → 첫 응원 결제(같은 기계라 확인 중) → 운영자가 「같은 네트워크」 표시를 보고 승인 → 500포인트 · 알림 · 「보상 지급」. 견본 백엔드의 새 씨앗이 필요하다(이미 만든 로컬 DB 는 `docker compose down -v`).
+
 ### Added — `@skeleton/rewards/admin` 초대 내역 운영 R2 (2026-10-31)
 
 백엔드 짝: kotlin-skeleton `campaign` 의 `GET /admin/referrals` · `POST /admin/referrals/{inviteeId}/approve` · `/cancel {reason}`(권한 `campaign.manage`).

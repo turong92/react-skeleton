@@ -23,6 +23,7 @@ import { AdminCouponDefinitionPage } from './AdminCouponDefinitionPage'
 import { AdminCouponDefinitionsPage } from './AdminCouponDefinitionsPage'
 import { AdminDashboardPage } from './AdminDashboardPage'
 import { AdminPointsPage } from './AdminPointsPage'
+import { AdminReferralsPage } from './AdminReferralsPage'
 import { AdminReviewsPage } from './AdminReviewsPage'
 import { AdminRewardGrantsPage } from './AdminRewardGrantsPage'
 import { AdminRolesPage } from './AdminRolesPage'
@@ -345,6 +346,11 @@ export const routes: RouteObject[] = [
                 path: '/admin/campaigns',
                 element: <AdminCampaignsPage />,
                 handle: privateSeo('nav.adminCampaigns'),
+              },
+              {
+                path: '/admin/referrals',
+                element: <AdminReferralsPage />,
+                handle: privateSeo('nav.adminReferrals'),
               },
             ],
           },

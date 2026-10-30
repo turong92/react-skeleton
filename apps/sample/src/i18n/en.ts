@@ -602,6 +602,7 @@ const en: Record<keyof typeof ko, string> = {
   'apiKeys.scope.notesWrite': 'Write notes',
   'nav.rewards': 'Rewards',
   'nav.adminCampaigns': 'Events',
+  'nav.adminReferrals': 'Referrals',
   'nav.adminCoupons': 'Coupons',
   'nav.adminPoints': 'Points',
   'nav.adminBadges': 'Badges',

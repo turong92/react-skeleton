@@ -21,7 +21,7 @@
 .star {
   position: relative;
   display: inline-block;
-  color: var(--border-strong);
+  color: var(--text-muted);
 }
 
 .fill {

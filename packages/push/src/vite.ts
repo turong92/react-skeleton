@@ -1,4 +1,4 @@
-import { pushWorkerSource, type PushWorkerOptions } from './serviceWorker'
+import { pushWorkerSource, type PushWorkerOptions } from './serviceWorker.ts'
 
 export type PushServiceWorkerOptions = PushWorkerOptions & {
   /** 워커 파일 이름 — 빌드 뿌리에 나가고 개발 서버도 같은 주소로 내준다(기본 `push-sw.js`) */

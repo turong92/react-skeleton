@@ -39,6 +39,9 @@ import { PAYMENT_E2E_SKELETON } from './paymentE2eConfig'
  * 네이티브 백엔드: E2E_NATIVE=1 이면 백엔드 스크립트가 `apps/sample` 을 GraalVM 네이티브로 빌드해 리눅스 컨테이너로 띄운다(JVM 대신 — 같은 시나리오가 네이티브에서도 도는지). 컨테이너 안의 앱이 호스트의 가짜 서버(소셜 · 토스 · Paddle)를
  *   `localhost:<포트>` 로 보도록 그 포트들을 `E2E_NATIVE_FORWARD_PORTS` 로 넘긴다. 첫 빌드는 오래 걸려(몇 분) 기동 제한을 늘린다. 이미 만든 실행 파일은 `E2E_NATIVE_SKIP_BUILD=1`. 나머지는 위와 같다.
  *
+ * 가짜 푸시 서비스: 포트만 여기서 정한다(`fakePushPort`) - 백엔드의 웹 푸시 끝점 허용 목록(`SKELETON_NOTIFICATION_WEBPUSH_ALLOWED_HOSTS=http://127.0.0.1:<포트>`, 기본 네 개를 대체한다)에 그 주소를 올려 두면 시험 파일(push.e2e.ts)이 그 포트에 서버를 띄운다.
+ *   `http://` 항목은 로컬 프로필 전용이다(보호 환경에서는 기동 실패). 이미 떠 있는 백엔드(`E2E_API_URL`)를 쓰면 그 백엔드의 허용 목록과 같은 포트를 `E2E_PUSH_PORT` 로 준다.
+ *
  * 환경변수: E2E_API_URL — 이미 떠 있는 백엔드를 쓴다(기동 · 정리를 건너뜀) · SAMPLE_API_DIR — 백엔드 레포 위치(기본: 이 레포 옆 ../kotlin-skeleton)
  */
 declare module 'vitest' {
@@ -61,6 +64,8 @@ declare module 'vitest' {
     fakeCloudflareUrl: string
     /** 가짜 GA(`fakeGa.ts`) - 위와 같다 */
     fakeGaUrl: string
+    /** 푸시 여정(push.e2e.ts)의 가짜 푸시 서비스가 받을 포트 — 서버가 그 끝점(`http://127.0.0.1:<포트>`)으로 보내도록 허용 목록에 올려 두었다. 이 준비 단계는 포트만 정하고, 서버는 시험 파일이 띄운다 */
+    fakePushPort: number
   }
 }
 
@@ -119,6 +124,7 @@ export default async function setup(project: TestProject) {
   let fakeCloudflare: FakeCloudflare | null = null
   let fakeGa: FakeGa | null = null
   let apiUrl = process.env.E2E_API_URL ?? ''
+  const fakePushPort = Number(process.env.E2E_PUSH_PORT) || (await freePort())
   let mailUrl = process.env.E2E_MAIL_URL ?? ''
   const native = process.env.E2E_NATIVE === '1'
   // 게시판 사진의 공개 주소 `/files/...` 를 vite 가 넘길 곳 - 하네스가 로컬 S3 를 띄우면 그 포트
@@ -300,6 +306,7 @@ export default async function setup(project: TestProject) {
       ...kakaoEnv,
       ...naverEnv,
       ...paddleEnv,
+      SKELETON_NOTIFICATION_WEBPUSH_ALLOWED_HOSTS: `http://127.0.0.1:${fakePushPort}`,
       MARINA_DIRECT: '1',
       ...(native
         ? {
@@ -313,6 +320,7 @@ export default async function setup(project: TestProject) {
               fakeGa,
             ]
               .flatMap((f) => (f ? [new URL(f.url).port] : []))
+              .concat(String(fakePushPort))
               .join(' '),
           }
         : {}),
@@ -432,5 +440,6 @@ export default async function setup(project: TestProject) {
   project.provide('fakePaddleUrl', fakePaddle?.url ?? '')
   project.provide('fakeCloudflareUrl', fakeCloudflare?.url ?? '')
   project.provide('fakeGaUrl', fakeGa?.url ?? '')
+  project.provide('fakePushPort', fakePushPort)
   return stopAll
 }

@@ -4,7 +4,7 @@ import { Badge, Button, Card, Dialog, EmptyState, PageHeader, Spinner, Tabs } fr
 import { useWorkspace } from '@skeleton/workspace'
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { emailRequired } from '../api/emailRequired'
 import { AttachmentPanel } from '../components/AttachmentPanel'
 import { LoadError } from '../components/LoadError'
@@ -13,12 +13,14 @@ import { useDeleteNote, useExportNote, useNote } from '../notes/queries'
 import { useNotesBase } from '../notes/useNotesBase'
 import { NoteErrorCodes, type Note } from '../notes/types'
 import { isErrorCode } from '@skeleton/api-client'
+import { NotePushPrompt } from '../push/NotePushPrompt'
 import { useT } from '../i18n'
 import styles from './NoteDetailPage.module.css'
 
 function NoteDetail({ note }: { note: Note }) {
   const { t } = useT()
   const navigate = useNavigate()
+  const justSaved = (useLocation().state as { saved?: boolean } | null)?.saved === true
   const base = useNotesBase()
   const inWorkspace = useWorkspace() !== null
   const remove = useDeleteNote()
@@ -57,6 +59,7 @@ function NoteDetail({ note }: { note: Note }) {
           </>
         }
       />
+      <NotePushPrompt open={justSaved} />
       <div className={styles.badges}>
         <NoteStatusBadge status={note.status} />
         {note.pinned && <Badge tone="info">{t('notes.pinned')}</Badge>}

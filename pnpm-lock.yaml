@@ -125,6 +125,9 @@ importers:
       '@skeleton/payment':
         specifier: workspace:*
         version: link:../../packages/payment
+      '@skeleton/push':
+        specifier: workspace:*
+        version: link:../../packages/push
       '@skeleton/realtime':
         specifier: workspace:*
         version: link:../../packages/realtime

@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
+import { pushServiceWorker } from '@skeleton/push/vite'
 import { seoFiles } from '@skeleton/seo/vite'
 import { themePrePaint } from '@skeleton/theme/vite'
 import { apiProxy, filesPathGuard } from './devProxy.ts'
@@ -22,6 +23,8 @@ export default defineConfig(({ mode, command }) => {
       filesPathGuard(),
       react(),
       themePrePaint(),
+      // 웹 푸시 서비스 워커(`/push-sw.js`) — 빌드가 뿌리에 내고 개발 서버도 같은 주소로 내준다. `base` 를 쓰면 usePush 의 serviceWorkerUrl 도 맞춘다
+      pushServiceWorker({ icon: '/icon-192.png' }),
       // 빌드가 sitemap.xml · robots.txt 를 낸다 — 공개 페이지만 적고(랜딩 · 약관 · 방침), 로그인 뒤 화면은 robots 에서 막는다.
       // 공개 주소는 VITE_SITE_URL(.env 또는 빌드 환경변수) — 없으면 robots.txt 만 내고 경고한다
       seoFiles({

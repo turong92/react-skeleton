@@ -16,6 +16,8 @@ import { LinkButton } from '../components/LinkButton'
 import { consent } from '../consent/consent'
 import { notificationsApi } from '../notifications/api'
 import { useLiveNotifications } from '../notifications/useLiveNotifications'
+import { useSignOut } from '../auth/useSignOut'
+import { PushSync } from '../push/PushSync'
 import { useT } from '../i18n'
 import styles from './RootLayout.module.css'
 
@@ -24,17 +26,13 @@ const AUTH_SCREENS = ['/login', '/sign-up', '/verify-email', '/magic-link', '/au
 /** 로그인한 사람만 보는 부분 — 실시간 알림 연결은 여기서 시작하고 로그아웃하면 함께 끊긴다 */
 function SignedInActions() {
   const { t } = useT()
-  const { logout } = useAuth()
   const navigate = useNavigate()
+  const signOut = useSignOut()
   useLiveNotifications()
-
-  function signOut() {
-    logout()
-    navigate('/login', { replace: true })
-  }
 
   return (
     <>
+      <PushSync />
       <HeaderSearch />
       <NotificationBell
         api={notificationsApi}
@@ -56,7 +54,7 @@ function SignedInActions() {
           emptyDescription: t('header.notificationsEmptyBody'),
         }}
       />
-      <Button variant="ghost" size="sm" onClick={signOut}>
+      <Button variant="ghost" size="sm" onClick={() => void signOut()}>
         {t('header.signOut')}
       </Button>
     </>

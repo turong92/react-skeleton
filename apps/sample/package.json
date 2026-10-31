@@ -23,6 +23,7 @@
     "@skeleton/marketing": "workspace:*",
     "@skeleton/notifications": "workspace:*",
     "@skeleton/payment": "workspace:*",
+    "@skeleton/push": "workspace:*",
     "@skeleton/realtime": "workspace:*",
     "@skeleton/reviews": "workspace:*",
     "@skeleton/rewards": "workspace:*",

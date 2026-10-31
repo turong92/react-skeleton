@@ -3,6 +3,8 @@ import { ApiKeysSection, koApiKeysLabels } from '@skeleton/auth/api-keys'
 import { AuthorProfileManager } from '@skeleton/author-profile'
 import { boardKeys } from '@skeleton/board'
 import { NotificationPreferences } from '@skeleton/notifications'
+import { PushSettings } from '@skeleton/push'
+import { AdvertisingSettings } from '@skeleton/push/advertising'
 import { setTheme, THEMES, useTheme, type Theme } from '@skeleton/theme'
 import { ProfileBadges } from '@skeleton/rewards/badge'
 import { Button, Card, Field, PageHeader, Select } from '@skeleton/ui'
@@ -10,6 +12,8 @@ import { useNavigate } from 'react-router-dom'
 import { apiKeysApi } from '../apiKeys/api'
 import { API_KEY_MAX_LIFETIME_DAYS, noteScopeLabels } from '../apiKeys/scopeLabels'
 import { accountApi } from '../auth/session'
+import { useSignOut } from '../auth/useSignOut'
+import { legalApi } from '../api/legal'
 import { emailRequired } from '../api/emailRequired'
 import { profileApi } from '../author/api'
 import { authorProfileLabels } from '../author/profileLabels'
@@ -18,6 +22,8 @@ import { useMyProfile } from '../auth/useMyProfile'
 import { LinkCard } from '../components/LinkCard'
 import { languageOf, useT } from '../i18n'
 import { notificationsApi } from '../notifications/api'
+import { pushApi } from '../push/api'
+import { advertisingLabelsFor, pushLabelsFor } from '../push/labels'
 import { rewardsLabelsFor } from '../rewards/labels'
 import styles from './SettingsPage.module.css'
 
@@ -27,17 +33,14 @@ import styles from './SettingsPage.module.css'
  */
 export function SettingsPage() {
   const { t, locale } = useT()
-  const { principal, logout } = useAuth()
+  const { principal } = useAuth()
   const profile = useMyProfile().data
   const theme = useTheme()
   const navigate = useNavigate()
   const emailBeforeWrite = useEmailBeforeWrite(emailRequired)
   const email = profile?.email ?? principal?.email ?? null
 
-  function signOut() {
-    logout()
-    navigate('/login', { replace: true })
-  }
+  const signOut = useSignOut()
 
   return (
     <div className={styles.page}>
@@ -116,6 +119,32 @@ export function SettingsPage() {
             'reward.granted': t('notificationType.reward.granted'),
           }}
         />
+        {principal?.accountId && (
+          // 알림 끄기 칸 아래 — 이 기기에서 푸시 받기 · 시험 · 내 기기 · 종류별 푸시 스위치, 그 아래 광고성 수신 동의(광고 종류를 켠 백엔드에서만 그려진다)
+          <>
+            <PushSettings
+              api={pushApi}
+              accountId={principal.accountId}
+              labels={pushLabelsFor(languageOf(locale) === 'ko', {
+                NOTE_UPDATED: t('notificationType.NOTE_UPDATED'),
+                'comment.created': t('notificationType.comment.created'),
+                'comment.replied': t('notificationType.comment.replied'),
+                'reward.granted': t('notificationType.reward.granted'),
+                'badge.awarded': t('notificationType.badge.awarded'),
+                'advertising.consent.changed': t('notificationType.advertising.consent.changed'),
+                'advertising.consent.reconfirm': t(
+                  'notificationType.advertising.consent.reconfirm',
+                ),
+              })}
+            />
+            <AdvertisingSettings
+              push={pushApi}
+              legal={legalApi}
+              labels={advertisingLabelsFor(languageOf(locale) === 'ko')}
+              locale={languageOf(locale)}
+            />
+          </>
+        )}
       </Card>
       <Card title={t('settings.cheers')}>
         <LinkCard to="/cheers" description={t('settings.cheersHint')}>
@@ -146,7 +175,7 @@ export function SettingsPage() {
       <Card title={t('settings.session')}>
         <div className={styles.session}>
           <p>{t('settings.sessionHint')}</p>
-          <Button variant="secondary" onClick={signOut}>
+          <Button variant="secondary" onClick={() => void signOut()}>
             {t('header.signOut')}
           </Button>
         </div>

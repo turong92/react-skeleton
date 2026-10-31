@@ -174,7 +174,8 @@ function CreateNote() {
             input: inputOf(values),
             idempotencyKey: keyFor.current(values),
           })
-          navigate(`${base}/${note.id}`)
+          // 처음 저장한 직후 — 상세가 푸시 띠를 띄울지 이 표시로 안다(수정 뒤에는 없다)
+          navigate(`${base}/${note.id}`, { state: { saved: true } })
         }}
       />
     </>

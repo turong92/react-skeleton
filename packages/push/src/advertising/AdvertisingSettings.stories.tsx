@@ -285,3 +285,35 @@ export const ServerError: Story = {
     await expect(canvas.queryByRole('button', { name: /동의하기/ })).toBeNull()
   },
 }
+
+/** 광고를 철회하면 남은 야간 동의도 함께 철회한다 — 확인 문구가 알리고, 두 철회가 차례로 나간다 */
+export const WithdrawWithNight: Story = {
+  render: () => (
+    <Demo
+      onFake={track}
+      seed={{
+        consent: {
+          state: 'AGREED',
+          effective: true,
+          agreedAt: '2026-10-02T03:04:05Z',
+          expiresAt: '2028-10-01T03:04:05Z',
+        },
+        night: {
+          state: 'AGREED',
+          effective: true,
+          agreedAt: '2026-10-03T03:04:05Z',
+          expiresAt: '2028-10-02T03:04:05Z',
+        },
+      }}
+    />
+  ),
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(await canvas.findByRole('switch', { name: '광고성 정보 수신' }))
+    const dialog = within(await within(document.body).findByRole('dialog'))
+    await expect(dialog.getByText(/야간 수신도 함께 꺼져요/)).toBeVisible()
+    await userEvent.click(dialog.getByRole('button', { name: '동의 철회' }))
+    await expect(await canvas.findByText(/^철회했어요 \(/)).toBeVisible()
+    await expect(current?.withdrawn).toEqual(['marketing', 'marketing-night'])
+    await expect(canvas.queryByRole('switch')).toBeNull()
+  },
+}

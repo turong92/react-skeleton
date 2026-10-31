@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import type { PushAdvertising } from '../types'
 import { advertisingFixture } from './fixture'
-import { AdvertisingBlockedError, agreementRequest, daysLeft, isOn, needsReconfirm } from './logic'
+import {
+  AdvertisingBlockedError,
+  agreementRequest,
+  daysLeft,
+  isOn,
+  needsReconfirm,
+  withdrawAdvertising,
+} from './logic'
 
 const doc = { version: 'v7', locale: 'ko' }
 
@@ -61,6 +68,43 @@ describe('agreementRequest — what gets recorded as the consent', () => {
       advertisingFixture({ consent: { state: 'EXPIRED', effective: false } }),
     ])
       expect(() => agreementRequest(ad, 'night', doc)).toThrow(AdvertisingBlockedError)
+  })
+})
+
+describe('withdrawAdvertising — withdrawing advertising consent takes the night consent with it', () => {
+  const recorder = () => {
+    const calls: string[] = []
+    return { calls, legal: { withdraw: async (type: string) => void calls.push(type) } }
+  }
+
+  it('advertising with a night consent on record: withdraws advertising, then night, so a later re-consent does not revive night silently', async () => {
+    const { calls, legal } = recorder()
+    const ad = advertisingFixture({
+      consent: { state: 'AGREED', effective: true },
+      night: { state: 'AGREED', effective: true },
+    })
+    await withdrawAdvertising(legal, ad, 'consent')
+    expect(calls).toEqual(['marketing', 'marketing-night'])
+  })
+
+  it('advertising without a night consent: only advertising', async () => {
+    const { calls, legal } = recorder()
+    await withdrawAdvertising(
+      legal,
+      advertisingFixture({ consent: { state: 'AGREED', effective: true } }),
+      'consent',
+    )
+    expect(calls).toEqual(['marketing'])
+  })
+
+  it('night alone leaves advertising consent', async () => {
+    const { calls, legal } = recorder()
+    const ad = advertisingFixture({
+      consent: { state: 'AGREED', effective: true },
+      night: { state: 'AGREED', effective: true },
+    })
+    await withdrawAdvertising(legal, ad, 'night')
+    expect(calls).toEqual(['marketing-night'])
   })
 })
 

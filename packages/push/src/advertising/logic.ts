@@ -46,3 +46,20 @@ export function agreementRequest(
 export function daysLeft(expiresAt: string, nowMs: number): number {
   return Math.max(0, Math.ceil((Date.parse(expiresAt) - nowMs) / 86_400_000))
 }
+
+/**
+ * 철회 — 광고 수신을 철회하면 야간 동의가 남아 있을 때 그것도 철회한다(광고에 다시 동의했을 때 야간이 말없이 되살아나지 않게).
+ * 광고 → 야간 순서이고, 야간만 철회하면 광고 동의는 그대로다.
+ */
+export async function withdrawAdvertising(
+  legal: { withdraw(type: string): Promise<unknown> },
+  ad: PushAdvertising,
+  kind: ConsentKind,
+): Promise<void> {
+  if (kind === 'night') {
+    await legal.withdraw(ad.night.type)
+    return
+  }
+  await legal.withdraw(ad.consent.type)
+  if (ad.night.state === 'AGREED') await legal.withdraw(ad.night.type)
+}

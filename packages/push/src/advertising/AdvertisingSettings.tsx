@@ -164,7 +164,12 @@ export function AdvertisingSettings({
         open={withdrawing !== null}
         onClose={() => setWithdrawing(null)}
         title={text.withdraw.title}
-        description={`${withdrawing ? title(withdrawing) : ''} — ${text.withdraw.description}`}
+        description={[
+          `${withdrawing ? title(withdrawing) : ''} — ${text.withdraw.description}`,
+          withdrawing === 'consent' && ad.night.state === 'AGREED' ? text.withdraw.alsoNight : null,
+        ]
+          .filter(Boolean)
+          .join(' ')}
         confirmLabel={text.withdraw.confirm}
         cancelLabel={text.withdraw.cancel}
         closeLabel={text.dialog.close}

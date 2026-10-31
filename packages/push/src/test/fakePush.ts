@@ -67,6 +67,7 @@ export function fakePushEnv(
       state.permission = state.answer
       return state.permission
     },
+    existingSubscription: async () => state.subscription,
     registration: async () => ({
       pushManager: {
         getSubscription: async () => state.subscription,

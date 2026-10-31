@@ -77,6 +77,16 @@ describe('syncPush (runs by itself after sign-in and when the window shows again
     expect(log).toHaveLength(1)
   })
 
+  it('no enabled mark for this account but a browser subscription exists (a previous account left it): drops it', async () => {
+    const { deps, env, storage } = setup(
+      fakePushEnv({ permission: 'granted', subscribedWith: KEY_A }),
+    )
+    expect(isPushEnabled(storage, 'acc_1')).toBe(false)
+    expect(await syncPush(deps)).toBe('off')
+    expect(env.state.log).toEqual(['unsubscribe'])
+    expect(env.state.subscription).toBeNull()
+  })
+
   it('permission turned to denied: removes the device on the server and clears the mark', async () => {
     const { deps, storage, log } = setup(fakePushEnv({ permission: 'denied' }))
     storage.setItem('skeleton.push.enabled.acc_1', '1')
@@ -109,9 +119,12 @@ describe('disablePush / unregisterPush', () => {
       },
     }
     const storage = memoryStorage({ 'skeleton.push.installation-id': INSTALLATION })
-    await unregisterPush(slow, { storage })
+    const env = fakePushEnv({ permission: 'granted', subscribedWith: KEY_A })
+    await unregisterPush(slow, { storage, env })
     events.push('token cleared')
     expect(events).toEqual([`deleted ${INSTALLATION}`, 'token cleared'])
+    // 서버 줄 뒤에 브라우저 구독도 거둔다
+    expect(env.state.log).toEqual(['unsubscribe'])
   })
 
   it('a failing DELETE never blocks the sign-out', async () => {
@@ -123,5 +136,28 @@ describe('disablePush / unregisterPush', () => {
       },
     }
     await expect(unregisterPush(failing, { storage: memoryStorage() })).resolves.toBeUndefined()
+  })
+
+  it('a failing DELETE still drops the browser subscription, so the next person on a shared browser gets nothing of this account', async () => {
+    const { api } = fakePushApi()
+    const failing = {
+      ...api,
+      removeDevice: async () => {
+        throw new Error('offline')
+      },
+    }
+    const env = fakePushEnv({ permission: 'granted', subscribedWith: KEY_A })
+    await unregisterPush(failing, { storage: memoryStorage(), env })
+    expect(env.state.subscription).toBeNull()
+  })
+
+  it('a failing unsubscribe never blocks the sign-out either', async () => {
+    const { api } = fakePushApi()
+    const env = {
+      existingSubscription: async () => {
+        throw new Error('no worker')
+      },
+    }
+    await expect(unregisterPush(api, { storage: memoryStorage(), env })).resolves.toBeUndefined()
   })
 })

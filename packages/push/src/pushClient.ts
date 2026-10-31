@@ -31,6 +31,8 @@ export type PushEnv = {
   requestPermission(): Promise<NotificationPermission>
   /** 서비스 워커를 등록하고(이미 있으면 그대로) 준비된 등록을 돌려준다 */
   registration(): Promise<PushRegistrationLike>
+  /** 이미 있는 구독(없으면 null) — 서비스 워커를 새로 등록하지 않는다. 로그아웃 · 다른 계정이 남긴 구독을 거둘 때 */
+  existingSubscription(): Promise<PushSubscriptionLike | null>
 }
 
 export type PushDeps = {
@@ -123,7 +125,11 @@ export type SyncResult = 'off' | 'synced' | 'revoked' | 'unavailable'
  * 권한이 `denied` 로 바뀌었으면 서버에서 이 기기를 지우고 표시를 거둔다.
  */
 export async function syncPush(deps: PushDeps): Promise<SyncResult> {
-  if (!isPushEnabled(deps.storage, deps.accountId)) return 'off'
+  if (!isPushEnabled(deps.storage, deps.accountId)) {
+    // 이 계정이 켠 적 없는데 브라우저에 구독이 남아 있다 = 앞 사용자(공용 브라우저)의 것 — 거둔다
+    await dropExistingSubscription(deps.env)
+    return 'off'
+  }
   if (deps.env.support() !== 'supported') return 'unavailable'
   const permission = deps.env.permission()
   if (permission === 'denied') {
@@ -133,6 +139,15 @@ export async function syncPush(deps: PushDeps): Promise<SyncResult> {
   }
   if (permission !== 'granted') return 'off'
   return (await subscribeAndRegister(deps)) ? 'synced' : 'unavailable'
+}
+
+/** 있는 브라우저 구독을 거둔다 — 실패는 삼킨다(최선 노력) */
+async function dropExistingSubscription(env: Pick<PushEnv, 'existingSubscription'>): Promise<void> {
+  try {
+    await (await env.existingSubscription())?.unsubscribe()
+  } catch {
+    // 거두지 못해도 흐름을 막지 않는다
+  }
 }
 
 /** 「푸시 끄기」 — 서버의 이 기기 줄을 지우고 브라우저 구독을 거둔다 */
@@ -151,13 +166,18 @@ export async function disablePush(deps: PushDeps): Promise<void> {
  */
 export async function unregisterPush(
   api: Pick<PushApi, 'removeDevice'>,
-  { storage = browserPushStorage() }: { storage?: PushStorage } = {},
+  {
+    storage = browserPushStorage(),
+    env = { existingSubscription: browserExistingSubscription },
+  }: { storage?: PushStorage; env?: Pick<PushEnv, 'existingSubscription'> } = {},
 ): Promise<void> {
   try {
     await api.removeDevice(getInstallationId(storage))
   } catch {
     // 로그아웃을 막지 않는다
   }
+  // DELETE 가 실패했어도 브라우저 구독은 거둔다 — 공용 브라우저에서 다음 사용자에게 이 계정의 알림이 뜨지 않게
+  await dropExistingSubscription(env)
 }
 
 /** 이 브라우저의 푸시 지원 — iOS 는 홈 화면에 추가한 앱에서만 되고, 서비스 워커 · `PushManager` · `Notification` 중 없으면 안 된다 */
@@ -179,6 +199,13 @@ export function pushSupport(
 }
 
 /** 실제 브라우저 — `serviceWorkerUrl` 의 워커를 등록한다(`pushServiceWorker` 플러그인이 내는 파일) */
+/** 서비스 워커를 새로 등록하지 않고 이미 있는 구독만 읽는다 */
+async function browserExistingSubscription(): Promise<PushSubscriptionLike | null> {
+  if (typeof navigator === 'undefined' || !navigator.serviceWorker) return null
+  const registration = await navigator.serviceWorker.getRegistration()
+  return (await registration?.pushManager?.getSubscription()) ?? null
+}
+
 export function browserPushEnv({ serviceWorkerUrl }: { serviceWorkerUrl: string }): PushEnv {
   return {
     support: () => pushSupport(),
@@ -188,6 +215,7 @@ export function browserPushEnv({ serviceWorkerUrl }: { serviceWorkerUrl: string 
       await navigator.serviceWorker.register(serviceWorkerUrl)
       return navigator.serviceWorker.ready
     },
+    existingSubscription: browserExistingSubscription,
   }
 }
 

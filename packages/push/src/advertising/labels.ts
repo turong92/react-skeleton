@@ -46,6 +46,8 @@ export type AdvertisingLabels = {
   withdraw: {
     title: string
     description: string
+    /** 광고를 철회하는데 야간 동의가 남아 있을 때 덧붙인다 */
+    alsoNight: string
     confirm: string
     cancel: string
     done: (when: string) => string
@@ -104,6 +106,7 @@ export const defaultAdvertisingLabels: AdvertisingLabels = {
   withdraw: {
     title: 'Stop promotional notifications?',
     description: 'You will stop receiving them right away. You can agree again later.',
+    alsoNight: 'Night notifications are turned off too.',
     confirm: 'Withdraw consent',
     cancel: 'Keep receiving',
     done: (when) => `Withdrawn (${when}).`,
@@ -154,6 +157,7 @@ export const koAdvertisingLabels: AdvertisingLabels = {
   withdraw: {
     title: '광고성 알림을 그만 받을까요?',
     description: '바로 받지 않게 돼요. 나중에 다시 동의할 수 있어요.',
+    alsoNight: '야간 수신도 함께 꺼져요.',
     confirm: '동의 철회',
     cancel: '계속 받기',
     done: (when) => `철회했어요 (${when}).`,

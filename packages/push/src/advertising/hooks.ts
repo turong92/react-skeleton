@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { PushApi } from '../pushApi'
 import { advertisingQuery, pushKeys } from '../queries'
 import type { PushAdvertising } from '../types'
-import { agreementRequest, type ConsentKind } from './logic'
+import { agreementRequest, withdrawAdvertising, type ConsentKind } from './logic'
 
 /** 이 백엔드에 광고 동의 경로가 없다(`notification-push-legal` 없음 · 광고 종류 미설정) */
 export function isAdvertisingAbsent(error: unknown): boolean {
@@ -49,12 +49,12 @@ export function useAgreeAdvertising(legal: LegalApi) {
   })
 }
 
-/** 철회 — 광고를 철회하면 야간 동의도 효력을 잃는다(서버 계산) */
+/** 철회 — 광고를 철회하면 남은 야간 동의도 함께 철회한다 */
 export function useWithdrawAdvertising(legal: LegalApi) {
   const refresh = useRefresh()
   return useMutation({
     mutationFn: (input: { ad: PushAdvertising; kind: ConsentKind }) =>
-      legal.withdraw((input.kind === 'consent' ? input.ad.consent : input.ad.night).type),
+      withdrawAdvertising(legal, input.ad, input.kind),
     onSuccess: refresh,
   })
 }

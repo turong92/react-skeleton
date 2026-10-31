@@ -55,6 +55,7 @@ export function useWithdrawAdvertising(legal: LegalApi) {
   return useMutation({
     mutationFn: (input: { ad: PushAdvertising; kind: ConsentKind }) =>
       withdrawAdvertising(legal, input.ad, input.kind),
-    onSuccess: refresh,
+    // 실패해도 다시 읽는다 — 광고 철회만 먹고 야간 철회가 실패한 경우 화면이 옛 상태(켜짐)로 남지 않게
+    onSettled: refresh,
   })
 }

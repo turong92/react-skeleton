@@ -61,5 +61,11 @@ export async function withdrawAdvertising(
     return
   }
   await legal.withdraw(ad.consent.type)
-  if (ad.night.state === 'AGREED') await legal.withdraw(ad.night.type)
+  if (ad.night.state !== 'AGREED') return
+  // 광고는 이미 철회됐다 — 야간만 실패하면 한 번 더 해 보고, 그래도 안 되면 던진다(호출한 쪽이 상태를 다시 읽고 오류를 보인다)
+  try {
+    await legal.withdraw(ad.night.type)
+  } catch {
+    await legal.withdraw(ad.night.type)
+  }
 }

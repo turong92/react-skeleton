@@ -97,6 +97,22 @@ describe('withdrawAdvertising — withdrawing advertising consent takes the nigh
     expect(calls).toEqual(['marketing'])
   })
 
+  it('advertising withdrawn but the night withdrawal keeps failing: night is retried once, then the error surfaces (the caller re-reads the state)', async () => {
+    const calls: string[] = []
+    const legal = {
+      withdraw: async (type: string) => {
+        calls.push(type)
+        if (type === 'marketing-night') throw new Error('offline')
+      },
+    }
+    const ad = advertisingFixture({
+      consent: { state: 'AGREED', effective: true },
+      night: { state: 'AGREED', effective: true },
+    })
+    await expect(withdrawAdvertising(legal, ad, 'consent')).rejects.toThrow('offline')
+    expect(calls).toEqual(['marketing', 'marketing-night', 'marketing-night'])
+  })
+
   it('night alone leaves advertising consent', async () => {
     const { calls, legal } = recorder()
     const ad = advertisingFixture({

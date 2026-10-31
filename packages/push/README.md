@@ -1,7 +1,7 @@
 # @skeleton/push
 
 웹 푸시 — 브라우저가 앱을 닫아 둬도 새 알림을 받게 한다. 앱 안 띠(`PushPrompt`) → 클릭 안에서 권한 · 구독 · 서버 등록(`usePush`), 로그인 뒤 · 창이 보일 때 구독 맞추기(`usePushSync`), 로그아웃 직전 해지(`unregisterPush`), 설정 칸(`PushSettings`), 서비스 워커를 내는 Vite 플러그인(`@skeleton/push/vite`).
-의존: `@skeleton/api-client` · `@skeleton/time`(`formatInstant`) · `@skeleton/ui`. peer: `react` `@tanstack/react-query`(앱에 `sonner` 도 — `ui` 가 쓴다), 선택 peer `@skeleton/legal`(광고 동의 칸 `@skeleton/push/advertising` 을 쓸 때만). Firebase JS SDK 는 쓰지 않는다 — 표준 Web Push(VAPID)만이라 모든 브라우저가 한 길이다.
+의존: `@skeleton/api-client` · `@skeleton/legal`(광고 동의 칸 `@skeleton/push/advertising` 이 동의문 · 동의 호출에 쓴다) · `@skeleton/time`(`formatInstant`) · `@skeleton/ui`. peer: `react` `@tanstack/react-query`(앱에 `sonner` 도 — `ui` 가 쓴다). Firebase JS SDK 는 쓰지 않는다 — 표준 Web Push(VAPID)만이라 모든 브라우저가 한 길이다.
 
 ## 어느 백엔드와 짝인가
 

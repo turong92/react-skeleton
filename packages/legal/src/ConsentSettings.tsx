@@ -14,7 +14,7 @@ import {
 } from '@skeleton/ui'
 import { ApiRequestError } from '@skeleton/api-client'
 import { useState } from 'react'
-import { pickDocuments } from './consentLogic'
+import { omitTypes, pickDocuments } from './consentLogic'
 import { DocumentDialog } from './DocumentDialog'
 import { formatWhen } from './format'
 import { useAgree, useConsentHistory, useLegalDocuments, useMyConsents, useWithdraw } from './hooks'
@@ -36,6 +36,8 @@ export type ConsentSettingsProps = {
   /** 줄만 그린다(`@skeleton/auth` 의 `AccountSettings` 의 `preferenceRows` 로 「환경」 카드 안에) - 「보기」가 연 대화상자에 목록 · 이력이 든다. 아니면 제목 있는 절 한 장 */
   row?: boolean
   labels?: Partial<LegalLabels>
+  /** 이 설정에서 빼는 문서 종류(기본 없음 = 모두). 다른 화면이 동의문을 보여 주고 따로 받는 동의(예: 광고 푸시의 `marketing-night`)가 스위치 하나로 바로 켜지지 않게 */
+  excludeTypes?: readonly string[]
 }
 
 const TONE: Record<ConsentState, NonNullable<BadgeProps['tone']>> = {
@@ -60,6 +62,7 @@ export function ConsentSettings({
   id = 'consents',
   row = false,
   labels: given,
+  excludeTypes,
 }: ConsentSettingsProps) {
   const labels = mergeLegalLabels(given)
   const mine = useMyConsents(api)
@@ -127,7 +130,7 @@ export function ConsentSettings({
       {row && <p className={styles.muted}>{labels.settingsDescription}</p>}
       {failure && <Alert tone="danger">{labels.withdrawFailed}</Alert>}
       <ul className={styles.list}>
-        {mine.data.items.map((item) => {
+        {omitTypes(mine.data.items, excludeTypes).map((item) => {
           const doc = picked.find((d) => d.type === item.type)
           const title = titleOf(item.type)
           const on = item.state === 'CURRENT' || item.state === 'GRACE'

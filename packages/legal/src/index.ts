@@ -8,6 +8,7 @@ export {
   isReconsentExcluded,
   isSignUpComplete,
   missingFromError,
+  omitTypes,
   pickDocuments,
   rowsFromMissing,
   signUpRows,

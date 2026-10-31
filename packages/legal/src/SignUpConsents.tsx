@@ -5,6 +5,7 @@ import { ConsentChecklist } from './ConsentChecklist'
 import {
   consentRequestsOf,
   isSignUpComplete,
+  omitTypes,
   pickDocuments,
   signUpRows,
   type ConsentRow,
@@ -39,6 +40,11 @@ export type SignUpConsentsProps = {
   formatLocale?: string
   zone?: string
   labels?: Partial<LegalLabels>
+  /**
+   * 이 폼에서 빼는 문서 종류(기본 없음 = 서버가 준 문서를 모두). 다른 화면이 따로 받는 동의를 가입 「전체 동의」 한 번으로 받지 않게 한다
+   * (예: 광고 푸시 화면 `AdvertisingSettings` 가 동의문을 보여 주고 받는 `marketing-night`)
+   */
+  excludeTypes?: readonly string[]
 }
 
 /**
@@ -61,14 +67,18 @@ export function SignUpConsents({
   formatLocale,
   zone,
   labels: given,
+  excludeTypes,
 }: SignUpConsentsProps) {
   const labels = mergeLegalLabels(given)
   const documents = useLegalDocuments(api)
   const [checked, setChecked] = useState<Record<string, boolean>>({})
   const [open, setOpen] = useState<ConsentRow | null>(null)
   const rows = useMemo(
-    () => signUpRows(pickDocuments(documents.data ?? [], locale, fallbackLocale)),
-    [documents.data, locale, fallbackLocale],
+    () =>
+      signUpRows(
+        omitTypes(pickDocuments(documents.data ?? [], locale, fallbackLocale), excludeTypes),
+      ),
+    [documents.data, locale, fallbackLocale, excludeTypes],
   )
   const unavailable = documents.isError && isNotFound(documents.error)
   const { onChange } = slot

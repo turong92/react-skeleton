@@ -56,7 +56,7 @@ import { AdvertisingSettings, koAdvertisingLabels } from '@skeleton/push/adverti
 - **야간은 광고 동의 없이는 못 켠다.** 광고 수신이 꺼져 있으면 야간 「동의하기」가 잠기고, 서버에 야간 동의 기록이 남아 있어도 켜진 것으로 보이지 않는다. 호출 쪽도 막는다(`agreementRequest` 가 `AdvertisingBlockedError`).
 - **응답이 실패하면 켠 것으로 보이지 않는다.** `GET /push/advertising` 읽기에 실패하면(이미 읽은 값이 있어도) 스위치 · 「동의하기」 없이 오류와 「다시 시도」만 보인다. 켬 표시는 서버의 `state == AGREED` **이고** `effective` 일 때만. 동의 · 철회 뒤에는 낙관적 갱신 없이 서버 값을 다시 읽는다.
 - 재확인 띠: 만료 임박(`reconfirmDue`) 「수신 동의를 확인해 주세요 (D-n)」 + 「확인」, 만료(`EXPIRED`) 「동의가 만료되어 광고를 받지 않고 있어요」 + 「다시 동의」 — 둘 다 `source: reconfirm`.
-- 끄기 = 확인 대화상자 → `POST /legal/consents/{type}/withdraw` → 「철회했어요 (일시)」. 광고를 철회하면 야간 동의도 효력을 잃는다(서버 계산).
+- 끄기 = 확인 대화상자 → `POST /legal/consents/{type}/withdraw` → 「철회했어요 (일시)」. 광고를 철회할 때 야간 동의가 남아 있으면 **함께 철회**한다(광고에 다시 동의해도 야간이 말없이 되살아나지 않는다 — 확인 문구가 알린다).
 - 광고를 못 받는다고 서비스 이용을 막지 않는다(선택 종류 — 광고 문서는 `required` 로 두지 않는다). 광고 경로가 없는 백엔드(404)에서는 아무것도 그리지 않는다.
 - export: `AdvertisingSettings`(`push` · `legal` · `labels?` · `locale?` · `formatTime?` · `now?`) · `useAdvertising` · `useAgreeAdvertising` · `useWithdrawAdvertising` · `agreementRequest` · `isOn` · `needsReconfirm` · `koAdvertisingLabels` · `defaultAdvertisingLabels` · `resolveAdvertisingLabels`. 타입 `PushAdvertising` · `AdvertisingConsent`. `createPushApi(...).getAdvertising()` 이 `GET /push/advertising`.
 - 앱이 할 일: 백엔드에 `marketing` 과 **`marketing-night`** 문서를 둔다(둘 다 `required` 가 아니게). 두 문서가 없으면 대화상자가 문서 오류를 보이고 동의를 기록하지 않는다.
@@ -67,7 +67,7 @@ import { AdvertisingSettings, koAdvertisingLabels } from '@skeleton/push/adverti
 - **켬 표시는 계정별** 로 브라우저 저장소에 둔다(`skeleton.push.enabled.<accountId>`). 공용 PC 에서 다른 사람이 로그인해도 자동으로 켜지지 않는다.
 - **키가 바뀌면 다시 구독한다.** `usePushSync` 는 구독이 없거나 서버의 공개 키와 다르면 옛 구독을 지우고 새로 만들어 `PUT` 한다(VAPID 키를 바꾸면 모든 웹 구독이 다음 방문까지 끊긴다).
 - **권한이 `denied` 로 바뀌었으면** 서버의 이 기기를 `DELETE` 하고 켬 표시를 거둔다(푸시 서버로 계속 보내지 않는다).
-- **로그아웃이 막히지 않는다.** `unregisterPush` 는 `DELETE` 가 끝난 뒤 돌아오고, 실패해도 던지지 않는다(서버는 세션이 끊길 때 그 세션의 기기도 정리한다).
+- **로그아웃이 막히지 않는다.** `unregisterPush` 는 `DELETE` 가 끝난 뒤 돌아오고, 실패해도 던지지 않는다. `DELETE` 가 실패해도 브라우저 구독은 거둔다(공용 브라우저에서 다음 사용자에게 옛 계정 알림이 뜨지 않게, 최선 노력). `usePushSync` 도 이 계정이 켠 적 없는데 구독이 남아 있으면 거둔다(서버는 세션이 끊길 때 그 세션의 기기도 정리한다).
 - **서비스 워커는 늘 알림을 띄운다**(Chrome `userVisibleOnly` — 안 띄우면 기본 문구를 대신 띄운다). 알림을 눌렀을 때 `link` 는 `/` 로 시작하고 `//` · `\` · 제어 문자가 없는 앱 안 경로일 때만 따라간다(아니면 앱 첫 화면). `pushsubscriptionchange` 는 다루지 않는다(워커에는 로그인이 없다 — 다음 `usePushSync` 가 고친다).
 - iOS(16.4+)는 홈 화면에 추가한 앱에서만 된다(`pushSupport()` → `needs-install`). 서비스 워커 · `PushManager` · `Notification` 중 없으면 `unsupported`.
 

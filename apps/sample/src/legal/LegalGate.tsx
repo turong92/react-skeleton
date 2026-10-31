@@ -6,6 +6,7 @@ import { emailRequired } from '../api/emailRequired'
 import { legalApi } from '../api/legal'
 import { loginIdRequired } from '../api/loginIdRequired'
 import { reconsent } from '../api/reconsent'
+import { releasePush } from '../auth/useSignOut'
 import { useLegalLocale } from './useLegalLocale'
 
 /** 약관 재동의 막(새 판 · 소셜 첫 로그인; 이메일 등록이 끝난 뒤에) — 동의가 끝나면 막혔던 호출이 다시 나가 가던 자리에서 이어진다. `main.tsx` 가 `AuthProvider` 안에 둔다 */
@@ -31,7 +32,7 @@ export function LegalGate({ children }: { children: ReactNode }) {
       api={legalApi}
       accountId={auth.principal?.accountId ?? null}
       deferCheck={idFirst || emailFirst}
-      onLeave={() => void auth.logout()}
+      onLeave={() => void releasePush().then(() => auth.logout())}
       locale={locale}
       formatLocale={formatLocale}
       labels={labels}

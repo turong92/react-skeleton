@@ -7,6 +7,7 @@ import {
   missingFromError,
   pickDocuments,
   rowsFromMissing,
+  omitTypes,
   signUpRows,
 } from './consentLogic'
 import type { LegalDocumentSummary } from './types'
@@ -137,5 +138,18 @@ describe('re-consent', () => {
 
   it('a different legal base path is honoured', () => {
     expect(isReconsentExcluded('/policies/consents', ['/policies', '/auth', '/account'])).toBe(true)
+  })
+})
+
+describe('omitTypes — documents another screen owns are not offered here', () => {
+  const list = [{ type: 'marketing' }, { type: 'marketing-night' }, { type: 'terms' }]
+
+  it('drops the listed types and keeps the order of the rest', () => {
+    expect(omitTypes(list, ['marketing-night']).map((d) => d.type)).toEqual(['marketing', 'terms'])
+  })
+
+  it('an empty or missing list changes nothing (the default behaviour)', () => {
+    expect(omitTypes(list, [])).toEqual(list)
+    expect(omitTypes(list)).toEqual(list)
   })
 })

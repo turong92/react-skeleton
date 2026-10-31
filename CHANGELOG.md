@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — 광고 동의 · 공용 브라우저 리뷰 지적 (2026-10-31)
+
+- `@skeleton/legal`: `SignUpConsents` · `ConsentSettings` 에 `excludeTypes`(기본 없음 = 지금 동작 그대로) — 다른 화면이 동의문을 보여 주고 따로 받는 문서(견본의 `marketing-night`)가 가입 「전체 동의」 · 설정 스위치로 바로 기록되지 않게. 견본은 `marketing-night` 만 뺀다.
+- `@skeleton/push`: 광고 수신 철회가 남은 야간 동의도 함께 철회한다 · `unregisterPush` 는 `DELETE` 가 실패해도 브라우저 구독을 거두고 `usePushSync` 는 이 계정이 켜지 않은 구독을 거둔다 · `@skeleton/legal` 은 선택 peer 가 아니라 `dependencies`(스펙 §11.7 의 「선택 peer」에서 바뀜).
+- 견본: 아이디 · 이메일 막 · 약관 막의 로그아웃도 푸시 해지를 먼저 한다.
+
 ### Added — `@skeleton/push` 광고성 푸시 수신 동의 R3 (2026-10-31)
 
 `@skeleton/push` 1.1.0. 새 하위 경로 `@skeleton/push/advertising`(`@skeleton/legal` 은 `dependencies` — 소스가 import 하고 stamp 가 peer 를 닫아 가져가 선택으로 둘 수 없다). 백엔드 짝: kotlin-skeleton `notification-push-legal`(`GET /api/v1/push/advertising`, 동의 · 철회 · 재확인은 `legal` 경로).

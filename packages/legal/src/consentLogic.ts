@@ -55,6 +55,12 @@ const rowOf = (d: LegalDocumentSummary, kind: ConsentRow['kind']): ConsentRow =>
   effectiveFrom: d.effectiveFrom,
 })
 
+/** 다른 화면이 맡은 문서 종류를 뺀다(예: 광고 푸시 화면이 따로 받는 야간 동의 `marketing-night`) — 빈 목록이면 그대로 */
+export const omitTypes = <T extends { type: string }>(
+  items: readonly T[],
+  excludeTypes: readonly string[] = [],
+): T[] => items.filter((item) => !excludeTypes.includes(item.type))
+
 /**
  * 가입 폼의 줄 — 가입에 꼭 필요한 문서(`requiredAtSignUp`)는 필수, 나머지(마케팅 · 가입엔 필요 없지만 필수인 문서)는 꺼진 선택 상자.
  * 후자를 안 켜면 첫 로그인 뒤 재동의 화면이 묻는다(서버가 막는다).

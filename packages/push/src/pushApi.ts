@@ -1,5 +1,11 @@
 import type { ApiClient } from '@skeleton/api-client'
-import type { PushConfig, PushDevice, PushPreference, WebPushRegistration } from './types'
+import type {
+  PushAdvertising,
+  PushConfig,
+  PushDevice,
+  PushPreference,
+  WebPushRegistration,
+} from './types'
 
 export type PushApi = {
   /** `GET {basePath}/config` — 구독에 쓸 공개 키 */
@@ -16,6 +22,8 @@ export type PushApi = {
   preferences(): Promise<{ items: PushPreference[] }>
   /** `PUT {basePath}/preferences/{type}` 본문 `{ enabled }` — 푸시만 끈다/켠다(알림함에는 그대로 쌓인다). 목록 밖 종류는 404 */
   setPreference(type: string, enabled: boolean): Promise<PushPreference>
+  /** `GET {basePath}/advertising` — 광고 수신 동의 상태(`notification-push-legal` + 광고 종류가 설정된 서버만, 아니면 404). 동의 · 철회는 `legal` 경로 */
+  getAdvertising(): Promise<PushAdvertising>
 }
 
 export type PushApiOptions = {
@@ -45,5 +53,6 @@ export function createPushApi(
         method: 'PUT',
         json: { enabled },
       }),
+    getAdvertising: () => client.value<PushAdvertising>(`${base}/advertising`),
   }
 }

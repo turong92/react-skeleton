@@ -1,6 +1,6 @@
 import type { PushApi } from '../pushApi'
 import type { PushEnv, PushStorage, PushSubscriptionLike } from '../pushClient'
-import type { PushConfig, PushDevice, PushPreference, PushSupport } from '../types'
+import type { PushAdvertising, PushConfig, PushDevice, PushPreference, PushSupport } from '../types'
 
 /** URL-safe base64 로 적은 65바이트(0x04 로 시작하는 P-256 점) — 시험용 VAPID 공개 키 */
 export const KEY_A = `BA${'A'.repeat(85)}`
@@ -99,6 +99,7 @@ export function fakePushApi(
     config?: Partial<PushConfig>
     devices?: PushDevice[]
     preferences?: PushPreference[]
+    advertising?: PushAdvertising | (() => Promise<PushAdvertising>)
   } = {},
 ) {
   const log: string[] = []
@@ -133,6 +134,11 @@ export function fakePushApi(
       log.push(`PREF ${type} ${enabled}`)
       preferences = preferences.map((p) => (p.type === type ? { ...p, push: enabled } : p))
       return preferences.find((p) => p.type === type)!
+    },
+    getAdvertising: async () => {
+      const ad = overrides.advertising
+      if (!ad) throw new Error('no advertising in this fake')
+      return typeof ad === 'function' ? ad() : ad
     },
   }
   return { api, log }

@@ -1,6 +1,6 @@
 {
   "name": "@skeleton/push",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
   "description": "웹 푸시 — 클라이언트(createPushApi: 설정 · 기기 · 시험 발송 · 종류별 푸시 스위치) · 지원 판정(pushSupport) · usePush(권한 요청은 클릭 안에서만) · usePushSync(로그인 뒤 · 창이 보일 때 구독 다시 맞추기) · unregisterPush(로그아웃 직전) · PushPrompt(앱 안 띠) · PushSettings(기기 스위치 · 시험 · 내 기기 표 · 종류별 스위치). 서비스 워커는 @skeleton/push/vite 의 pushServiceWorker 플러그인이 낸다. 백엔드 notification-push 짝",
@@ -12,6 +12,10 @@
     "./vite": {
       "types": "./src/vite.ts",
       "default": "./src/vite.ts"
+    },
+    "./advertising": {
+      "types": "./src/advertising/index.ts",
+      "default": "./src/advertising/index.ts"
     }
   },
   "types": "./src/index.ts",
@@ -26,11 +30,18 @@
   },
   "peerDependencies": {
     "@tanstack/react-query": "^5.0.0",
-    "react": "^19.0.0"
+    "react": "^19.0.0",
+    "@skeleton/legal": "workspace:*"
   },
   "devDependencies": {
+    "@skeleton/legal": "workspace:*",
     "@tanstack/react-query": "^5.99.2",
     "react": "^19.2.5",
     "react-dom": "^19.2.5"
+  },
+  "peerDependenciesMeta": {
+    "@skeleton/legal": {
+      "optional": true
+    }
   }
 }

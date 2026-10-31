@@ -65,15 +65,15 @@ export { koPushLabels } from './labels.ko'
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
 
-function merge<T>(base: T, over: unknown): T {
+export function mergeLabels<T>(base: T, over: unknown): T {
   if (!isPlainObject(base) || !isPlainObject(over)) return (over === undefined ? base : over) as T
   const out: Record<string, unknown> = { ...base }
   for (const [key, value] of Object.entries(over))
-    if (value !== undefined) out[key] = merge(base[key], value)
+    if (value !== undefined) out[key] = mergeLabels(base[key], value)
   return out as T
 }
 
 /** 기본 문구(영어) 위에 앱의 문구를 얹는다. 한국어는 `resolvePushLabels(koPushLabels)` */
 export function resolvePushLabels(input: PushLabelsInput = {}): PushLabels {
-  return merge<PushLabels>(defaultPushLabels, input)
+  return mergeLabels<PushLabels>(defaultPushLabels, input)
 }

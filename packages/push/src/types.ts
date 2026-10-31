@@ -38,3 +38,27 @@ export type PushPreference = {
 }
 
 export type PushSupport = 'supported' | 'needs-install' | 'unsupported'
+
+/** 광고 수신 동의 한 종류의 상태 — `GET /push/advertising` */
+export type AdvertisingConsentState = 'AGREED' | 'EXPIRED' | 'OUTDATED' | 'WITHDRAWN' | 'NONE'
+
+export type AdvertisingConsent = {
+  /** `legal` 문서 종류(`marketing` · `marketing-night`) */
+  type: string
+  state: AdvertisingConsentState
+  agreedAt: string | null
+  expiresAt: string | null
+  /** `AGREED` 이고 만료까지 안내 기간 이내 — 「확인」(재확인)을 받는다 */
+  reconfirmDue: boolean
+  /** 서버가 실제로 보낼 수 있다고 본다(야간은 광고 동의도 유효해야 true) */
+  effective: boolean
+}
+
+/** `GET /push/advertising` — 광고 종류가 설정된 서버만 연다(없으면 404) */
+export type PushAdvertising = {
+  advertisingTypes: string[]
+  senderName: string
+  consent: AdvertisingConsent
+  night: AdvertisingConsent
+  nightWindow: { start: string; end: string; zone: string }
+}

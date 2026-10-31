@@ -559,6 +559,9 @@ importers:
         specifier: workspace:*
         version: link:../ui
     devDependencies:
+      '@skeleton/legal':
+        specifier: workspace:*
+        version: link:../legal
       '@tanstack/react-query':
         specifier: ^5.99.2
         version: 5.104.1(react@19.3.0)

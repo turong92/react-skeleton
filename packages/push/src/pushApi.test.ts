@@ -18,6 +18,7 @@ describe('createPushApi (kotlin-skeleton notification-push, /api/v1/push)', () =
     await api.sendTest('inst_0123456789abcdef')
     await api.preferences()
     await api.setPreference('comment.created', false)
+    await api.getAdvertising()
     expect(calls).toEqual([
       { kind: 'value', path: '/push/config' },
       { kind: 'value', path: '/push/devices' },
@@ -50,6 +51,7 @@ describe('createPushApi (kotlin-skeleton notification-push, /api/v1/push)', () =
         path: '/push/preferences/comment.created',
         request: { method: 'PUT', json: { enabled: false } },
       },
+      { kind: 'value', path: '/push/advertising' },
     ])
   })
 

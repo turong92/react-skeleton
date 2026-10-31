@@ -7,6 +7,7 @@ export const pushKeys = {
   devices: () => [...pushKeys.all, 'devices'] as const,
   preferences: () => [...pushKeys.all, 'preferences'] as const,
   setPreference: () => [...pushKeys.all, 'set-preference'] as const,
+  advertising: () => [...pushKeys.all, 'advertising'] as const,
 }
 
 /** 쿼리 정의(키 + 함수)를 훅과 따로 둔다 — 가짜 api 로 테스트하고 서버 렌더의 `prefetch` 에도 쓴다 */
@@ -25,4 +26,9 @@ export const devicesQuery = (api: Pick<PushApi, 'devices'>) => ({
 export const preferencesQuery = (api: Pick<PushApi, 'preferences'>) => ({
   queryKey: pushKeys.preferences(),
   queryFn: async () => (await api.preferences()).items,
+})
+
+export const advertisingQuery = (api: Pick<PushApi, 'getAdvertising'>) => ({
+  queryKey: pushKeys.advertising(),
+  queryFn: () => api.getAdvertising(),
 })

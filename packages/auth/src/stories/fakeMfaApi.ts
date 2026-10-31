@@ -6,6 +6,8 @@ import { apiError } from '../test/apiFixtures'
 export const FAKE_MFA_PASSWORD = 'old-password-1'
 export const FAKE_TOTP_CODE = '123456'
 export const FAKE_RECOVERY_CODE = 'ABCD-EFGH-JKLM-NPQR'
+/** 제공자 동의 왕복에서 받은 새 인가 코드 - 한 번 쓰면 끝이다(다시 쓰면 `ACCOUNT.REAUTH_FAILED`) */
+export const FAKE_SOCIAL_CODE = 'provider-code-1'
 export const FAKE_TOTP_SECRET = 'JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP'
 export const FAKE_RECOVERY_CODES = Array.from(
   { length: 10 },
@@ -40,7 +42,21 @@ export function createFakeMfaApi({
     required,
   }
   const calls: string[] = []
-  const proof = (input: { currentPassword?: string }) => {
+  /** 서버에 닿은 본문 - 증거가 실렸는지 본다 */
+  const inputs: unknown[] = []
+  const usedSocial = new Set<string>()
+  const proof = (input: {
+    currentPassword?: string
+    socialReauth?: { authorizationCode: string }
+  }) => {
+    inputs.push(input)
+    if (input.socialReauth) {
+      const code = input.socialReauth.authorizationCode
+      if (code !== FAKE_SOCIAL_CODE || usedSocial.has(code))
+        throw apiError('ACCOUNT.REAUTH_FAILED', 400)
+      usedSocial.add(code)
+      return
+    }
     if (input.currentPassword !== FAKE_MFA_PASSWORD)
       throw apiError('ACCOUNT.CURRENT_PASSWORD_INVALID', 400)
   }
@@ -59,7 +75,7 @@ export function createFakeMfaApi({
         secret: FAKE_TOTP_SECRET,
         otpauthUri: FAKE_OTPAUTH,
         qr: FAKE_QR,
-        expiresAt: '2026-10-31T00:10:00Z',
+        expiresAt: new Date(Date.now() + 10 * 60_000).toISOString(), // 진짜 시계로 10분 - 고정 시각이면 날이 지나 만료로 보인다
       }
     },
     confirmEnrollment: async (code) => {
@@ -91,5 +107,5 @@ export function createFakeMfaApi({
       state = { ...state, enabled: false, enabledAt: null, recoveryCodesRemaining: 0 }
     },
   }
-  return { api, calls }
+  return { api, calls, inputs: () => inputs }
 }

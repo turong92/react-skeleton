@@ -24,6 +24,7 @@ const api: AuthApi = {
   },
   magicLinkRedeem: unused,
   cancelDeletion: unused,
+  mfaVerify: unused,
 }
 
 const price = (code: string, period: string, amount: number, currency: string) => ({

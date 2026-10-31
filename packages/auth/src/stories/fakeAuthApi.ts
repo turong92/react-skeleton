@@ -94,9 +94,8 @@ export function createFakeAuthApi({
       expiresAt: new Date(Date.now() + 5 * 60_000).toISOString(),
     })
   }
-  /** 맞는 증거로 들어왔다 — 유예 중이면 세션 대신 403 */
-  const admit = (): AuthTokenResponse => {
-    if (!pendingDeletion) return mfa ? secondStep() : token()
+  /** 유예 중인 계정이 맞는 증거(2단계가 켜졌으면 코드까지)로 들어왔다 - 세션 대신 403 */
+  const deletionPending = (): never => {
     throw apiFailure('AUTH.ACCOUNT_DELETION_PENDING', 403, {
       purgeAfter: '2026-11-05T00:00:00Z',
       ...(pendingDeletion === 'with-token'
@@ -107,6 +106,11 @@ export function createFakeAuthApi({
         : {}),
     })
   }
+  /** 맞는 1단계 증거로 들어왔다 - 2단계가 켜졌으면 먼저 그것을 묻고, 유예 중이면 세션 대신 403 */
+  const admit = (): AuthTokenResponse => {
+    if (mfa) return secondStep()
+    return pendingDeletion ? deletionPending() : token()
+  }
   return {
     login: async ({ email, password }) => {
       if (email === DEMO_LOGIN.email && password === DEMO_LOGIN.password) return admit()
@@ -115,7 +119,7 @@ export function createFakeAuthApi({
     cancelDeletion: async (restoreToken) => {
       if (cancelExpired || pendingDeletion !== 'with-token' || restoreToken !== FAKE_RESTORE_TOKEN)
         throw apiFailure('ACCOUNT.TOKEN_INVALID', 410)
-      return mfa ? secondStep() : token()
+      return token()
     },
     mfaVerify: async (input) => {
       if (input.mfaToken !== FAKE_MFA_TOKEN || mfaAttempts >= 5)
@@ -127,7 +131,7 @@ export function createFakeAuthApi({
         mfaAttempts += 1
         throw apiFailure('MFA.CODE_INVALID', 400, { attemptsLeft: 5 - mfaAttempts })
       }
-      return token()
+      return pendingDeletion ? deletionPending() : token()
     },
     socialLogin: async () => {
       if (socialEmailConflict) throw apiFailure('ACCOUNT.SOCIAL_EMAIL_CONFLICT', 409)

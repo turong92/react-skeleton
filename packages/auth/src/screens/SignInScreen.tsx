@@ -60,7 +60,7 @@ export type SignInScreenProps = {
   formatDate?: (iso: string) => string
   /**
    * 1단계(비밀번호)가 맞았지만 2단계 인증이 켜진 계정이다(`403 AUTH.MFA_REQUIRED`) - 호출자가 두 번째 단계 화면으로 보낸다(`mfaToken` 은 라우터 state 로만).
-   * 안 주면 일반 실패 문구가 보인다. 탈퇴 취소 뒤에 오는 2단계도 같은 길이다
+   * 안 주면 일반 실패 문구가 보인다. 탈퇴 대기 계정도 같다 - 2단계를 먼저 묻고, 탈퇴 대기 안내는 두 번째 단계가 끝난 뒤에 온다
    */
   onMfaRequired?: (mfa: MfaRequired) => void
 }
@@ -155,7 +155,6 @@ export function SignInScreen({
       <DeletionPendingScreen
         pending={pendingDeletion}
         onCancel={onCancelDeletion}
-        onMfaRequired={onMfaRequired}
         onLeave={() => setPendingDeletion(null)}
         formatDate={formatDate}
         labels={given}

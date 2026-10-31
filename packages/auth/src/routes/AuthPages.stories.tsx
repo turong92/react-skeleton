@@ -836,16 +836,19 @@ export const SocialCallbackOfAnMfaAccountKeepsTheWantedPageAcrossTheSecondStep: 
   },
 }
 
-export const CancellingADeletionOfAnMfaAccountGoesToTheSecondStep: Story = {
+export const AMfaAccountPendingDeletionAsksForTheCodeFirstThenOffersTheCancel: Story = {
   render: () => mfaApp('/login', {}, { pendingDeletion: 'with-token' }),
   play: async ({ canvas, userEvent }) => {
     await userEvent.type(await canvas.findByLabelText(/Email/), 'demo@example.com')
     await userEvent.type(canvas.getByLabelText(/^Password/), 'demo{Enter}')
+    // 탈퇴 대기 안내보다 2단계가 먼저다 - 코드를 맞춰야 취소 토큰이 나온다
+    await expectTheSecondStep(canvas)
+    await expect(canvas.queryByRole('heading', { name: 'Cancel the deletion?' })).toBeNull()
+    await userEvent.type(canvas.getByLabelText('Digit 1 of 6'), FAKE_TOTP_CODE)
     await userEvent.click(
       await canvas.findByRole('button', { name: 'Cancel the deletion and keep using it' }),
     )
-    await expectTheSecondStep(canvas)
-    await userEvent.type(canvas.getByLabelText('Digit 1 of 6'), FAKE_TOTP_CODE)
+    // 취소는 2단계를 다시 묻지 않고 로그인한다
     await expect(await canvas.findByTestId('here')).toHaveTextContent('/')
     await expect(canvas.getByTestId('token')).toHaveTextContent(FAKE_ACCESS_TOKEN)
   },

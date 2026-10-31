@@ -70,7 +70,6 @@ export function SocialCallbackScreen({
       <DeletionPendingScreen
         pending={pendingDeletion}
         onCancel={onCancelDeletion}
-        onMfaRequired={onMfaRequired}
         leaveTo={signInTo}
         formatDate={formatDate}
         labels={given}

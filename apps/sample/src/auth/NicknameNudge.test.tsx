@@ -25,6 +25,7 @@ const api: AuthApi = {
   methods: unused,
   magicLinkRedeem: unused,
   cancelDeletion: unused,
+  mfaVerify: unused,
 }
 
 const named = { id: 'prf_a', name: 'Ann', tag: '0001', createdAt: '2026-10-01T00:00:00Z' }

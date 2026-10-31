@@ -10,9 +10,10 @@ import {
   Skeleton,
 } from '@skeleton/ui'
 import { useCallback, useState, type FormEvent, type ReactNode } from 'react'
-import type { ReauthCredential } from '../account/accountApi'
+import type { ReauthCredential, SocialReauth } from '../account/accountApi'
 import { useCodeClock } from '../codeClockContext'
 import { isReauthFailure, reauthKindOf, type ReauthSubject } from '../reauth/kind'
+import type { ProviderAction } from '../socialLink'
 import { authErrorMessage } from '../screens/errors'
 import { mergeLabels, type AuthLabels } from '../screens/labels'
 import { ReauthProof } from '../screens/ReauthProof'
@@ -35,11 +36,29 @@ export type TwoFactorSectionProps = {
   /** 줄만 그린다(`AccountSettings` 의 카드 안) - 아니면 제목 있는 카드 한 장에 담는다 */
   row?: boolean
   labels?: Partial<AuthLabels>
+  /**
+   * 비밀번호도 이메일도 없는 계정(소셜 로그인만)의 본인 확인 - 이 제공자의 동의 화면으로 보낸다(앱이 `socialLinkFlow.start` 로 `action` 을 state 에 묶는다; `AccountSettings` 가 이어 준다).
+   * 없으면 그 계정은 이 구역에서 일을 못 하고 안내만 본다
+   */
+  onProviderReauth?: (provider: string, action: ProviderAction) => void
+  /** 동의를 마치고 돌아왔다 - 하려던 일(`mfa-*`)의 대화상자가 본인 확인이 끝난 단계로 다시 열린다. 인가 코드는 한 번 쓰면 끝이라 쓰고 나면 `onResumeSpent` */
+  resume?: { action: ProviderAction; socialReauth: SocialReauth } | null
+  onResumeSpent?: () => void
   /** 켜기 · 끄기 · 복구 코드 재발급이 끝났다 - 서버가 켤 때 다른 세션을 닫으므로 설정은 세션 목록을 다시 읽는다 */
   onChanged?: () => void
 }
 
 type DialogName = 'enable' | 'change' | 'regenerate' | 'disable'
+
+const ACTION_OF: Record<DialogName, ProviderAction> = {
+  enable: { kind: 'mfa-enable' },
+  change: { kind: 'mfa-change' },
+  regenerate: { kind: 'mfa-regenerate' },
+  disable: { kind: 'mfa-disable' },
+}
+const dialogOf = (action: ProviderAction | undefined): DialogName | null =>
+  (Object.keys(ACTION_OF) as DialogName[]).find((name) => ACTION_OF[name].kind === action?.kind) ??
+  null
 
 const defaultFormat = (iso: string) => new Date(iso).toLocaleDateString()
 /** 복구 코드가 이만큼 이하로 남으면 새로 만들라고 권한다 */
@@ -57,11 +76,14 @@ export function TwoFactorSection({
   formatDate = defaultFormat,
   row,
   labels: given,
+  onProviderReauth,
+  resume,
+  onResumeSpent,
   onChanged,
 }: TwoFactorSectionProps) {
   const labels = mergeLabels(given)
   const status = useResource(useCallback(() => api.status(), [api]))
-  const [dialog, setDialog] = useState<DialogName | null>(null)
+  const [dialog, setDialog] = useState<DialogName | null>(() => dialogOf(resume?.action))
   const [notice, setNotice] = useState<string | null>(null)
   const current = status.data
 
@@ -84,6 +106,13 @@ export function TwoFactorSection({
     onClose: () => setDialog(null),
     onDone: finish,
   }
+  /** 이 대화상자가 쓸 제공자 왕복 - 하려던 일이 이 대화상자의 것일 때만 돌아온 증거를 쥔다 */
+  const trip = (name: DialogName) => ({
+    onProvider:
+      onProviderReauth && ((provider: string) => onProviderReauth(provider, ACTION_OF[name])),
+    resume: resume && dialogOf(resume.action) === name ? resume.socialReauth : null,
+    onResumeSpent,
+  })
 
   return (
     <SectionShell row={row} id="two-factor" title={labels.sectionTwoFactor}>
@@ -143,10 +172,24 @@ export function TwoFactorSection({
           }
           dialogs={
             <>
-              <EnrollDialog {...common} open={dialog === 'enable'} mode="enable" />
-              <EnrollDialog {...common} open={dialog === 'change'} mode="change" />
-              <RegenerateDialog {...common} open={dialog === 'regenerate'} />
-              <DisableDialog {...common} open={dialog === 'disable'} />
+              <EnrollDialog
+                {...common}
+                {...trip('enable')}
+                open={dialog === 'enable'}
+                mode="enable"
+              />
+              <EnrollDialog
+                {...common}
+                {...trip('change')}
+                open={dialog === 'change'}
+                mode="change"
+              />
+              <RegenerateDialog
+                {...common}
+                {...trip('regenerate')}
+                open={dialog === 'regenerate'}
+              />
+              <DisableDialog {...common} {...trip('disable')} open={dialog === 'disable'} />
             </>
           }
         >
@@ -184,6 +227,11 @@ type DialogProps = {
   onClose: () => void
   /** 일이 끝났다 - 부모가 닫고 알린다 */
   onDone: (message: string) => void
+  /** 소셜 전용 계정: 이 제공자의 동의 화면으로 보낸다 */
+  onProvider?: (provider: string) => void
+  /** 동의를 마치고 돌아왔다 - 본인 확인이 끝난 증거(한 번 쓰면 끝) */
+  resume?: SocialReauth | null
+  onResumeSpent?: () => void
 }
 
 /** 본인 확인(`ReauthProof`) + 이 단계의 일을 하는 단추 - 증거가 없으면 단추는 눌리고 이유를 말한다. 닫을 때마다 `key` 가 바뀌어 입력이 처음부터다 */
@@ -192,6 +240,9 @@ function ReauthForm({
   requestReauthCode,
   labels,
   givenLabels,
+  onProvider,
+  resume,
+  onResumeSpent,
   intro,
   submitLabel,
   submitVariant,
@@ -199,7 +250,16 @@ function ReauthForm({
   run,
   onCancel,
   children,
-}: Pick<DialogProps, 'subject' | 'requestReauthCode' | 'labels' | 'givenLabels'> & {
+}: Pick<
+  DialogProps,
+  | 'subject'
+  | 'requestReauthCode'
+  | 'labels'
+  | 'givenLabels'
+  | 'onProvider'
+  | 'resume'
+  | 'onResumeSpent'
+> & {
   intro: string
   submitLabel: string
   submitVariant?: 'primary' | 'danger'
@@ -215,7 +275,7 @@ function ReauthForm({
   const kind = reauthKindOf(subject)
   const failure = isReauthFailure(action.raw) ? action.raw : undefined
 
-  if (kind === 'provider')
+  if (kind === 'provider' && !onProvider && !resume)
     return (
       <div className={styles.stack}>
         <Alert tone="warning">{labels.mfaProviderReauthUnsupported}</Alert>
@@ -230,9 +290,12 @@ function ReauthForm({
   async function submit(event: FormEvent) {
     event.preventDefault()
     if (canRun && !canRun()) return
-    if (!proof) return setMissing(true)
+    const credential: ReauthCredential | null = resume ? { socialReauth: resume } : proof
+    if (!credential) return setMissing(true)
     setMissing(false)
-    await action.run(() => run(proof))
+    await action.run(() => run(credential))
+    // 인가 코드는 한 번 쓰면 끝이다 - 결과가 어떻든 증거는 비운다(틀렸으면 제공자에 다시 다녀온다)
+    if (resume) onResumeSpent?.()
   }
 
   return (
@@ -249,6 +312,8 @@ function ReauthForm({
           if (credential) setMissing(false)
         }}
         failure={failure}
+        onProvider={onProvider}
+        confirmedWith={resume?.provider}
         labels={givenLabels}
       />
       {missing && <Alert tone="danger">{labels.problemProofMissing}</Alert>}
@@ -301,19 +366,17 @@ function RecoveryCodes({ codes, labels }: { codes: string[]; labels: AuthLabels 
   )
 }
 
-/** 서버가 만든 QR 의 모듈 경로를 그대로 그린다 - 라이브러리 · `innerHTML` · data 주소 없이 `<path d>` 하나. 가장자리 4칸 여백은 viewBox 가 만든다 */
+/** 서버가 만든 QR 의 모듈 경로를 그대로 그린다 - 라이브러리 · `innerHTML` · data 주소 없이 `<path d>` 하나. 서버의 `size` 는 사방 4칸 여백을 포함한다(viewBox 는 `0 0 size size`) */
 function QrCode({ size, path, label }: { size: number; path: string; label: string }) {
-  const pad = 4
-  const box = size + pad * 2
   return (
     <svg
       className={styles.qr}
-      viewBox={`${-pad} ${-pad} ${box} ${box}`}
+      viewBox={`0 0 ${size} ${size}`}
       role="img"
       aria-label={label}
       shapeRendering="crispEdges"
     >
-      <rect x={-pad} y={-pad} width={box} height={box} fill="#fff" />
+      <rect width={size} height={size} fill="#fff" />
       <path d={path} fill="#000" />
     </svg>
   )
@@ -326,6 +389,9 @@ function EnrollDialog({
   requestReauthCode,
   labels,
   givenLabels,
+  onProvider,
+  resume,
+  onResumeSpent,
   open,
   mode,
   onClose,
@@ -350,6 +416,7 @@ function EnrollDialog({
     setRound((n) => n + 1)
   }
   function close() {
+    if (resume) onResumeSpent?.() // 닫으면 쓰지 않은 인가 코드도 버린다
     reset()
     onClose()
   }
@@ -396,6 +463,9 @@ function EnrollDialog({
           requestReauthCode={requestReauthCode}
           labels={labels}
           givenLabels={givenLabels}
+          onProvider={onProvider}
+          resume={resume}
+          onResumeSpent={onResumeSpent}
           intro={labels.mfaReauthHint}
           submitLabel={labels.mfaContinue}
           onCancel={close}
@@ -463,6 +533,9 @@ function RegenerateDialog({
   requestReauthCode,
   labels,
   givenLabels,
+  onProvider,
+  resume,
+  onResumeSpent,
   open,
   onClose,
   onDone,
@@ -470,6 +543,7 @@ function RegenerateDialog({
   const [round, setRound] = useState(0)
   const [codes, setCodes] = useState<string[] | null>(null)
   function close() {
+    if (resume) onResumeSpent?.() // 닫으면 쓰지 않은 인가 코드도 버린다
     setCodes(null)
     setRound((n) => n + 1)
     onClose()
@@ -496,6 +570,9 @@ function RegenerateDialog({
           requestReauthCode={requestReauthCode}
           labels={labels}
           givenLabels={givenLabels}
+          onProvider={onProvider}
+          resume={resume}
+          onResumeSpent={onResumeSpent}
           intro={labels.mfaRegenerateBody}
           submitLabel={labels.mfaRegenerateSubmit}
           onCancel={close}
@@ -517,6 +594,9 @@ function DisableDialog({
   requestReauthCode,
   labels,
   givenLabels,
+  onProvider,
+  resume,
+  onResumeSpent,
   open,
   onClose,
   onDone,
@@ -525,6 +605,7 @@ function DisableDialog({
   const [code, setCode] = useState('')
   const [codeError, setCodeError] = useState<string | undefined>(undefined)
   function close() {
+    if (resume) onResumeSpent?.() // 닫으면 쓰지 않은 인가 코드도 버린다
     setCode('')
     setCodeError(undefined)
     setRound((n) => n + 1)
@@ -539,6 +620,9 @@ function DisableDialog({
           requestReauthCode={requestReauthCode}
           labels={labels}
           givenLabels={givenLabels}
+          onProvider={onProvider}
+          resume={resume}
+          onResumeSpent={onResumeSpent}
           intro={labels.mfaDisableBody}
           submitLabel={labels.mfaDisableAction}
           submitVariant="danger"

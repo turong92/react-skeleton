@@ -27,6 +27,7 @@ const api: AuthApi = {
   },
   magicLinkRedeem: unused,
   cancelDeletion: unused,
+  mfaVerify: unused,
 }
 
 describe('RootLayout (signed out)', () => {

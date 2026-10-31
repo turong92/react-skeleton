@@ -62,6 +62,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 백엔드 짝: kotlin-skeleton `auth-mfa` 모듈(`POST /auth/mfa/verify` · `GET /auth/mfa` · `POST /auth/mfa/totp/enrollment[/confirm]` · `POST /auth/mfa/recovery-codes` · `POST /auth/mfa/disable`, 오류 `AUTH.MFA_REQUIRED` · `MFA.*`).
 
 - `@skeleton/auth`: `mfaRequiredOf(error)`(탈퇴 대기의 `deletionPendingOf` 와 같은 꼴) · `TwoFactorChallengeScreen`(6자리 `CodeEntry` + 「복구 코드로 들어가기」, 남은 시도 · 만료 · 한도 안내) · `createAuthRoutes` 의 `/login/two-factor`(`paths.twoFactor`) · `session.mfaLogin` / `authApi.mfaVerify` · 계정 설정 새 칸 `twoFactor`(`TwoFactorSection`: 상태 · 켜기 마법사 · 복구 코드 다시 만들기 · 인증 앱 바꾸기 · 끄기) · `createMfaApi`. 비밀번호 로그인 · 링크 · 소셜 콜백 · 탈퇴 취소가 모두 같은 화면으로 넘기고 `mfaToken` 은 라우터 state 에만 둔다.
+- 백엔드 계약 맞춤: 탈퇴 대기 + 2단계 켜짐은 로그인 -> `MFA_REQUIRED` -> `verify` 가 `ACCOUNT_DELETION_PENDING` -> 취소(2단계 다시 안 묻는다)이고, `TwoFactorChallengeScreen` 이 `onCancelDeletion` 으로 이어 받는다. QR `size` 는 4칸 여백 포함(viewBox `0 0 size size`). `MFA.ENROLLMENT_EXPIRED` · `MFA.NOT_ENABLED` 문구.
+- 소셜 전용 계정의 제공자 왕복 다시 인증: `ProviderAction` 에 `mfa-enable|change|regenerate|disable` · `api-key-create`, `TwoFactorSection` / `ApiKeysSection` 의 `onProviderReauth` · `resume` · `onResumeSpent`, `AccountSettings` 의 `preferenceRows` 함수형(`ProviderRoundTrip`). 모든 `AuthApi` 가짜(시험)에 `mfaVerify` 가 필요하다.
 - `@skeleton/ui` `Dialog` 에 `dismissible`(기본 true) - `false` 면 × 도 Esc 도 없다(복구 코드를 저장했다고 하기 전에는 닫히지 않는 창).
 - 문구는 `AuthLabels` 에 합쳐졌다(`TwoFactorLabels`, ko/en). 등록 필수 문 화면 · 운영자 해제 줄 메뉴 · 견본 조립은 다음 조각(R-A2).
 

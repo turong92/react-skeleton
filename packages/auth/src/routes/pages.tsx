@@ -375,20 +375,29 @@ export function TwoFactorPage({ ctx }: { ctx: PageContext }) {
   }, [navigate, location.pathname, challenge])
   if (auth.status === 'authenticated') return <Navigate to={ctx.afterSignIn} replace />
   if (!challenge) return <Navigate to={ctx.paths.signIn} replace />
+  // 소셜 길은 「가려던 곳」을 따로 적어 둔다(읽으면 지워진다) - 로그인이 끝난 지금 읽는다
+  const goOn = () => {
+    const target =
+      challenge.target ?? consumeReturnTo(ctx.afterSignIn, undefined, ctx.keys.returnTo)
+    navigate(target, {
+      replace: true,
+      ...(challenge.arrival ? { state: challenge.arrival } : {}),
+    })
+  }
   return (
     <TwoFactorChallengeScreen
       mfa={challenge.mfa}
       labels={ctx.labels}
+      formatDate={ctx.formatDate}
       onRestart={() => navigate(ctx.paths.signIn, { replace: true })}
       onVerify={async (input) => {
         await auth.mfaLogin({ mfaToken: challenge.mfa.mfaToken, ...input })
-        // 소셜 길은 「가려던 곳」을 따로 적어 둔다(읽으면 지워진다) - 성공한 지금 읽는다
-        const target =
-          challenge.target ?? consumeReturnTo(ctx.afterSignIn, undefined, ctx.keys.returnTo)
-        navigate(target, {
-          replace: true,
-          ...(challenge.arrival ? { state: challenge.arrival } : {}),
-        })
+        goOn()
+      }}
+      onCancelDeletion={async (restoreToken) => {
+        // 탈퇴 대기 계정 - 코드를 맞춘 뒤 서버가 취소 토큰을 줬다. 취소는 일반 로그인 성공과 같은 처리(2단계는 다시 묻지 않는다)
+        await auth.cancelDeletion(restoreToken)
+        goOn()
       }}
     />
   )
@@ -577,7 +586,18 @@ function SocialLinkCallbackInner({ flow, ctx }: { flow: SocialLinkFlow; ctx: Pag
     callback &&
     !gateReturn &&
     action &&
-    ['email-change', 'unlink', 'delete', 'discard', 'contact-email'].includes(action.kind)
+    [
+      'email-change',
+      'unlink',
+      'delete',
+      'discard',
+      'contact-email',
+      'mfa-enable',
+      'mfa-change',
+      'mfa-regenerate',
+      'mfa-disable',
+      'api-key-create',
+    ].includes(action.kind)
   )
     return (
       <Navigate

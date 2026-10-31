@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, screen, waitFor, within } from 'storybook/test'
+import { expect, fn, screen, waitFor, within } from 'storybook/test'
 import { koAuthLabels } from '../screens/labels.ko'
 import type { ReauthSubject } from '../reauth/kind'
 import {
@@ -8,6 +8,7 @@ import {
   FAKE_KEY_TOKEN,
   FAKE_SCOPE_LABELS,
 } from '../stories/fakeApiKeysApi'
+import { FAKE_SOCIAL_CODE } from '../stories/fakeMfaApi'
 import { WithQuery } from '../stories/WithQuery'
 import { ApiKeysSection } from './ApiKeysSection'
 import { koApiKeysLabels } from './labels'
@@ -156,5 +157,62 @@ export const RevokeConfirm: Story = {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     await waitFor(() => expect(canvas.queryByRole('button', { name: 'CI 서버 회수' })).toBeNull())
     await expect(canvas.getAllByText('내가 회수')).toHaveLength(2)
+  },
+}
+
+/* 소셜 로그인만 쓰는 계정 - 제공자 동의를 다녀온다(적던 이름 · 범위 · 만료는 따라가고, 토큰은 다녀온 뒤에 만든다) */
+const socialOnly: ReauthSubject = { hasPassword: false, email: null, providers: ['google'] }
+
+export const SocialOnlyAccountCarriesTheTypedValuesToTheProvider: Story = {
+  args: { subject: socialOnly, onProviderReauth: fn() },
+  render: (args) => <ApiKeysSection {...args} api={createFakeApiKeysApi().api} />,
+  play: async ({ canvas, userEvent, args }) => {
+    await canvas.findByText('CI 서버')
+    await userEvent.click(canvas.getByRole('button', { name: '키 만들기' }))
+    const dialog = within(await screen.findByRole('dialog', { name: 'API 키 만들기' }))
+    await userEvent.type(dialog.getByLabelText(/^이름/), '배포 봇')
+    await userEvent.click(await dialog.findByRole('checkbox', { name: /노트 읽기/ }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Google 로 확인' }))
+    await expect(args.onProviderReauth).toHaveBeenCalledWith('google', {
+      kind: 'api-key-create',
+      name: '배포 봇',
+      scopes: ['notes.read'],
+      days: 30,
+    })
+  },
+}
+
+export const BackFromTheProviderTheDialogReopensFilledAndTheKeyIsMadeWithTheEvidence: Story = {
+  args: {
+    subject: socialOnly,
+    onProviderReauth: fn(),
+    onResumeSpent: fn(),
+    resume: {
+      action: { kind: 'api-key-create', name: '배포 봇', scopes: ['notes.read'], days: 90 },
+      socialReauth: { provider: 'google', authorizationCode: FAKE_SOCIAL_CODE },
+    },
+  },
+  render: (args) => {
+    const fake = createFakeApiKeysApi()
+    ;(window as unknown as { __keys: typeof fake }).__keys = fake
+    return <ApiKeysSection {...args} api={fake.api} />
+  },
+  play: async ({ userEvent, args }) => {
+    const dialog = within(await screen.findByRole('dialog', { name: 'API 키 만들기' }))
+    await expect(dialog.getByLabelText(/^이름/)).toHaveValue('배포 봇')
+    await expect(await dialog.findByRole('checkbox', { name: /노트 읽기/ })).toBeChecked()
+    await expect(dialog.getByLabelText('만료')).toHaveValue('90')
+    await expect(dialog.getByText('Google 로 확인했어요.')).toBeVisible()
+    await userEvent.click(dialog.getByRole('button', { name: '키 만들기' }))
+    await expect(await screen.findByTestId('api-key-token')).toHaveTextContent(FAKE_KEY_TOKEN)
+    const { created } = (window as unknown as { __keys: ReturnType<typeof createFakeApiKeysApi> })
+      .__keys
+    const sent = created()[0] as Record<string, unknown>
+    await expect(sent.socialReauth).toEqual({
+      provider: 'google',
+      authorizationCode: FAKE_SOCIAL_CODE,
+    })
+    await expect(sent.currentPassword).toBeUndefined()
+    await expect(args.onResumeSpent).toHaveBeenCalled()
   },
 }

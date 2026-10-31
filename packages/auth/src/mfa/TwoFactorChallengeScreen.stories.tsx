@@ -152,3 +152,42 @@ export const ASecondAttemptWhileCheckingIsIgnored: Story = {
     await expect(args.onVerify).toHaveBeenCalledOnce()
   },
 }
+
+const pendingAfterTheCode = () =>
+  apiError('AUTH.ACCOUNT_DELETION_PENDING', 403, {
+    purgeAfter: '2026-11-05T00:00:00Z',
+    restoreToken: 'restore-opaque',
+    restoreTokenExpiresAt: '2026-10-31T00:15:00Z',
+  })
+
+export const PendingDeletionAfterTheCodeOffersTheCancelWithItsToken: Story = {
+  args: {
+    onVerify: fn(async () => {
+      throw pendingAfterTheCode()
+    }),
+    onCancelDeletion: fn(async () => undefined),
+  },
+  play: async ({ canvas, userEvent, args }) => {
+    await userEvent.type(canvas.getByLabelText('6자리 중 1번째'), FAKE_TOTP_CODE)
+    await userEvent.click(await canvas.findByRole('button', { name: '탈퇴 취소하고 계속 쓰기' }))
+    await expect(args.onCancelDeletion).toHaveBeenCalledOnce()
+    await expect(args.onCancelDeletion).toHaveBeenCalledWith('restore-opaque')
+  },
+}
+
+export const PendingDeletionWhoseTokenExpiredStartsOver: Story = {
+  args: {
+    onVerify: fn(async () => {
+      throw pendingAfterTheCode()
+    }),
+    onCancelDeletion: fn(async () => {
+      throw apiError('ACCOUNT.TOKEN_INVALID', 410)
+    }),
+  },
+  play: async ({ canvas, userEvent, args }) => {
+    await userEvent.type(canvas.getByLabelText('6자리 중 1번째'), FAKE_TOTP_CODE)
+    await userEvent.click(await canvas.findByRole('button', { name: '탈퇴 취소하고 계속 쓰기' }))
+    await expect(await canvas.findByRole('button', { name: '로그인으로 돌아가기' })).toBeVisible()
+    await expect(args.onRestart).not.toHaveBeenCalled()
+  },
+}

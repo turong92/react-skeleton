@@ -232,7 +232,11 @@ export type { TwoFactorLabels } from './mfa/labels'
 export type { MfaMethod, MfaRequired, MfaStatus, MfaVerifyInput, TotpEnrollment } from './mfa/types'
 export { AccountStateNotice } from './screens/AccountStateNotice'
 export { AccountSettings } from './screens/AccountSettings'
-export type { AccountSectionName, AccountSettingsProps } from './screens/AccountSettings'
+export type {
+  AccountSectionName,
+  AccountSettingsProps,
+  ProviderRoundTrip,
+} from './screens/AccountSettings'
 export { ProfileSection } from './screens/ProfileSection'
 export { PasswordSection } from './screens/PasswordSection'
 export { EmailSection } from './screens/EmailSection'

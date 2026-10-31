@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, screen, userEvent as user, waitFor, within } from 'storybook/test'
+import { useState } from 'react'
+import { expect, fn, screen, userEvent as user, waitFor, within } from 'storybook/test'
 import type { ReauthSubject } from '../reauth/kind'
 import { koAuthLabels } from '../screens/labels.ko'
 import {
@@ -9,6 +10,7 @@ import {
   FAKE_QR,
   FAKE_RECOVERY_CODE,
   FAKE_RECOVERY_CODES,
+  FAKE_SOCIAL_CODE,
   FAKE_TOTP_CODE,
   FAKE_TOTP_SECRET,
 } from '../stories/fakeMfaApi'
@@ -82,6 +84,8 @@ export const EnableWizardKeepsTheRecoveryCodesUntilSaved: Story = {
     const scan = await openDialog('2단계 인증 켜기')
     const qr = await scan.findByRole('img', { name: '인증 앱용 QR 코드' })
     await expect(qr.querySelector('path')?.getAttribute('d')).toBe(FAKE_QR.path)
+    // 서버의 size 는 사방 4칸 여백을 포함한다 - viewBox 는 그대로 `0 0 size size`
+    await expect(qr.getAttribute('viewBox')).toBe(`0 0 ${FAKE_QR.size} ${FAKE_QR.size}`)
     await expect(scan.getByText(FAKE_TOTP_SECRET)).toBeVisible()
     await expect(scan.getByRole('link', { name: '앱에서 바로 열기' })).toHaveAttribute(
       'href',
@@ -203,5 +207,88 @@ export const NotEnabledOnTheServer: Story = {
   play: async ({ canvas }) => {
     await expect(await canvas.findByText(/서버에서 2단계 인증을 켜지 않았어요/)).toBeVisible()
     await expect(canvas.queryByRole('button', { name: '2단계 인증 켜기' })).toBeNull()
+  },
+}
+
+/* 비밀번호도 이메일도 없는 계정(소셜 로그인만) - 제공자 동의를 다녀온다. 인가 코드는 한 번 쓰면 끝이고, 쓰자마자 비운다 */
+const socialOnly: ReauthSubject = { hasPassword: false, email: null, providers: ['google'] }
+const googleBack = {
+  action: { kind: 'mfa-enable' as const },
+  socialReauth: { provider: 'google', authorizationCode: FAKE_SOCIAL_CODE },
+}
+
+export const SocialOnlyAccountGoesToTheProviderToConfirm: Story = {
+  args: { subject: socialOnly, onProviderReauth: fn() },
+  render: (args) => <TwoFactorSection {...args} api={createFakeMfaApi().api} />,
+  play: async ({ canvas, userEvent, args }) => {
+    await userEvent.click(await canvas.findByRole('button', { name: '2단계 인증 켜기' }))
+    const dialog = await openDialog('2단계 인증 켜기')
+    await userEvent.click(dialog.getByRole('button', { name: 'Google 로 확인' }))
+    await expect(args.onProviderReauth).toHaveBeenCalledWith('google', { kind: 'mfa-enable' })
+  },
+}
+
+export const SocialOnlyAccountWithoutTheProviderFlowOnlyGetsAGuide: Story = {
+  args: { subject: socialOnly },
+  render: (args) => <TwoFactorSection {...args} api={createFakeMfaApi().api} />,
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(await canvas.findByRole('button', { name: '2단계 인증 켜기' }))
+    const dialog = await openDialog('2단계 인증 켜기')
+    await expect(dialog.getByText(/비밀번호나 이메일을 먼저 등록해 주세요/)).toBeVisible()
+  },
+}
+
+export const BackFromTheProviderTheDialogReopensConfirmedAndSendsTheEvidenceOnce: Story = {
+  args: { subject: socialOnly, onProviderReauth: fn(), resume: googleBack, onResumeSpent: fn() },
+  render: (args) => {
+    const fake = createFakeMfaApi()
+    ;(window as unknown as { __mfa: typeof fake }).__mfa = fake
+    return <TwoFactorSection {...args} api={fake.api} />
+  },
+  play: async ({ userEvent, args }) => {
+    const dialog = await openDialog('2단계 인증 켜기')
+    await expect(await dialog.findByText('Google 로 확인했어요.')).toBeVisible()
+    await userEvent.click(dialog.getByRole('button', { name: '계속' }))
+    await screen.findByRole('img', { name: '인증 앱용 QR 코드' })
+    const { inputs } = (window as unknown as { __mfa: ReturnType<typeof createFakeMfaApi> }).__mfa
+    // 비밀번호 없이 제공자 증거만 실렸고, 그 코드는 곧 비워졌다
+    await expect(inputs()).toEqual([
+      { socialReauth: { provider: 'google', authorizationCode: FAKE_SOCIAL_CODE } },
+    ])
+    await expect(args.onResumeSpent).toHaveBeenCalledOnce()
+  },
+}
+
+/** 앱처럼 쓰고 난 증거를 비운다 */
+function Spendable(args: React.ComponentProps<typeof TwoFactorSection>) {
+  const [resume, setResume] = useState(args.resume)
+  return (
+    <TwoFactorSection
+      {...args}
+      resume={resume}
+      onResumeSpent={() => {
+        setResume(null)
+        args.onResumeSpent?.()
+      }}
+    />
+  )
+}
+
+export const ARejectedProviderCodeIsSpentAndAsksForAnotherTrip: Story = {
+  args: {
+    subject: socialOnly,
+    onProviderReauth: fn(),
+    resume: { ...googleBack, socialReauth: { provider: 'google', authorizationCode: 'stale' } },
+    onResumeSpent: fn(),
+  },
+  render: (args) => <Spendable {...args} api={createFakeMfaApi().api} />,
+  play: async ({ userEvent, args }) => {
+    const dialog = await openDialog('2단계 인증 켜기')
+    await userEvent.click(await dialog.findByRole('button', { name: '계속' }))
+    await expect(await dialog.findByText(koAuthLabels.errorReauth)).toBeVisible()
+    await expect(args.onResumeSpent).toHaveBeenCalledOnce()
+    // 쓴 증거는 비워져 다시 제공자에 다녀와야 한다
+    await expect(await dialog.findByRole('button', { name: 'Google 로 확인' })).toBeVisible()
+    await expect(screen.queryByRole('img', { name: '인증 앱용 QR 코드' })).toBeNull()
   },
 }

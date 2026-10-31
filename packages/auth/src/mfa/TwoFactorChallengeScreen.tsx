@@ -1,7 +1,9 @@
 import { Alert, Button, CodeEntry, Field, Input } from '@skeleton/ui'
 import { useRef, useState, type FormEvent } from 'react'
 import { useCodeClock } from '../codeClockContext'
+import { deletionPendingOf, type DeletionPending } from '../pendingDeletion'
 import { AuthLayout } from '../screens/AuthLayout'
+import { DeletionPendingScreen } from '../screens/DeletionPendingScreen'
 import styles from '../screens/auth.module.css'
 import { authErrorMessage } from '../screens/errors'
 import { mergeLabels, type AuthLabels } from '../screens/labels'
@@ -20,6 +22,13 @@ export type TwoFactorChallengeScreenProps = {
   onVerify: (input: MfaVerifyInput) => Promise<unknown>
   /** 「로그인으로 돌아가기」 - 대기가 끝났다(1단계부터 다시) */
   onRestart: () => void
+  /**
+   * 탈퇴 대기 계정이 코드까지 맞췄다(`403 AUTH.ACCOUNT_DELETION_PENDING` - 2단계를 **먼저** 묻고, 탈퇴 대기 안내는 그 뒤에 온다) - 「탈퇴를 취소할까요?」로 바뀌고,
+   * 취소는 토큰으로 로그인한다(`session.cancelDeletion` + 이동; 서버가 2단계를 다시 묻지 않는다). 안 주면 안내만
+   */
+  onCancelDeletion?: (restoreToken: string) => Promise<unknown>
+  /** 삭제 예정일 표기 */
+  formatDate?: (iso: string) => string
   /** 시계(기본: 인증번호 시계 - 서버 보정을 넣은 앱은 그 시계) */
   now?: () => number
   labels?: Partial<AuthLabels>
@@ -35,6 +44,8 @@ export function TwoFactorChallengeScreen({
   mfa,
   onVerify,
   onRestart,
+  onCancelDeletion,
+  formatDate,
   now: givenNow,
   labels: given,
 }: TwoFactorChallengeScreenProps) {
@@ -46,6 +57,8 @@ export function TwoFactorChallengeScreen({
   const [error, setError] = useState<string | undefined>(undefined)
   const [expired, setExpired] = useState(false)
   const [recovery, setRecovery] = useState('')
+  /** 코드는 맞았고 이 계정은 탈퇴 대기 중이다 - 취소용 토큰은 이 상태(메모리)에만 있다 */
+  const [pending, setPending] = useState<DeletionPending | null>(null)
   const wrong = useRef(0)
   const inFlight = useRef(false)
   const wait = useCountdown()
@@ -61,7 +74,9 @@ export function TwoFactorChallengeScreen({
       await onVerify(input)
       return // 성공이면 호출자가 이동한다 - 그 사이 다시 누르지 못하게 busy 를 유지한다
     } catch (caught) {
-      if (isMfaChallengeExpired(caught)) setExpired(true)
+      const waiting = deletionPendingOf(caught)
+      if (waiting) setPending(waiting)
+      else if (isMfaChallengeExpired(caught)) setExpired(true)
       else if (isMfaCodeWrong(caught)) {
         wrong.current += 1
         setError(
@@ -90,6 +105,17 @@ export function TwoFactorChallengeScreen({
     setError(undefined)
     setRecovery('')
   }
+
+  if (pending)
+    return (
+      <DeletionPendingScreen
+        pending={pending}
+        onCancel={onCancelDeletion}
+        onLeave={onRestart}
+        formatDate={formatDate}
+        labels={given}
+      />
+    )
 
   if (expired)
     return (

@@ -3,6 +3,7 @@ import type { AdminApiKeysApi } from '../admin/adminApiKeysApi'
 import type { ApiKeysApi } from '../apiKeys/apiKeysApi'
 import type { AdminApiKey, ApiKey } from '../apiKeys/types'
 import { apiError } from '../test/apiFixtures'
+import { FAKE_SOCIAL_CODE } from './fakeMfaApi'
 
 /** 스토리의 다시 인증 비밀번호 */
 export const FAKE_KEY_PASSWORD = 'old-password-1'
@@ -49,7 +50,10 @@ export function createFakeApiKeysApi({
     scopes: async () => FAKE_KEY_SCOPES,
     create: async (input) => {
       created.push(input)
-      if (input.currentPassword !== FAKE_KEY_PASSWORD)
+      if (input.socialReauth) {
+        if (input.socialReauth.authorizationCode !== FAKE_SOCIAL_CODE)
+          throw apiError('ACCOUNT.REAUTH_FAILED', 400)
+      } else if (input.currentPassword !== FAKE_KEY_PASSWORD)
         throw apiError('ACCOUNT.CURRENT_PASSWORD_INVALID', 400)
       if (rows.filter((k) => k.status === 'ACTIVE').length >= limit)
         throw apiError('API_KEY.LIMIT_REACHED', 409)

@@ -13,11 +13,12 @@ import {
   Skeleton,
 } from '@skeleton/ui'
 import { useId, useState, type FormEvent } from 'react'
-import type { ReauthCredential } from '../account/accountApi'
+import type { ReauthCredential, SocialReauth } from '../account/accountApi'
 import { isReauthFailure, reauthKindOf, type ReauthSubject } from '../reauth/kind'
 import { ReauthProof } from '../screens/ReauthProof'
 import { mergeLabels, type AuthLabels } from '../screens/labels'
 import { SectionShell } from '../screens/SectionShell'
+import type { ProviderAction } from '../socialLink'
 import type { ApiKeysApi } from './apiKeysApi'
 import { apiKeyErrorMessage, isApiKeysOff } from './errors'
 import { expiresAtFor, expiryChoices } from './expiry'
@@ -37,6 +38,15 @@ export type ApiKeysSectionProps = {
   /** 앱이 정한 키 수명 상한(일, 백엔드 `max-lifetime`). 주면 그보다 긴 칸과 「없음」을 숨긴다 */
   maxLifetimeDays?: number
   formatDate?: (iso: string) => string
+  /**
+   * 비밀번호도 이메일도 없는 계정(소셜 로그인만)의 본인 확인 - 이 제공자의 동의 화면으로 보낸다. `action` 은 적던 이름 · 범위 · 만료를 들고 돌아온다
+   * (`AccountSettings` 의 `preferenceRows={(trip) => <ApiKeysSection … onProviderReauth={trip.onProviderReauth} resume={trip.resume} onResumeSpent={trip.onResumeSpent} />}` 가 이어 준다).
+   * 없으면 그 계정은 키를 만들지 못하고 안내만 본다
+   */
+  onProviderReauth?: (provider: string, action: ProviderAction) => void
+  /** 동의를 마치고 돌아왔다 - 만들기 대화상자가 적던 값 그대로, 본인 확인이 끝난 채 다시 열린다. 인가 코드는 한 번 쓰면 끝이라 쓰고 나면 `onResumeSpent` */
+  resume?: { action: ProviderAction; socialReauth: SocialReauth } | null
+  onResumeSpent?: () => void
   /** 줄만 그린다(`AccountSettings` 의 카드 안) - 아니면 제목 있는 카드 한 장에 담는다 */
   row?: boolean
   /** 시계 - 만료 시각 계산용(시험 · 스토리에서 고정) */
@@ -66,6 +76,9 @@ export function ApiKeysSection({
   formatDate = defaultFormat,
   row,
   now = Date.now,
+  onProviderReauth,
+  resume,
+  onResumeSpent,
   labels: givenLabels,
   authLabels: givenAuth,
 }: ApiKeysSectionProps) {
@@ -73,7 +86,7 @@ export function ApiKeysSection({
   const authLabels = mergeLabels(givenAuth)
   const keys = useApiKeys(api)
   const revoke = useRevokeApiKey(api)
-  const [creating, setCreating] = useState(false)
+  const [creating, setCreating] = useState(() => resume?.action.kind === 'api-key-create')
   const [revoking, setRevoking] = useState<ApiKey | null>(null)
 
   const keyLine = (key: ApiKey) => {
@@ -110,6 +123,9 @@ export function ApiKeysSection({
               requestReauthCode={requestReauthCode}
               scopeLabels={scopeLabels}
               maxLifetimeDays={maxLifetimeDays}
+              onProviderReauth={onProviderReauth}
+              resume={resume}
+              onResumeSpent={onResumeSpent}
               now={now}
               labels={t}
               authLabels={authLabels}
@@ -201,7 +217,13 @@ export function ApiKeysSection({
 
 type CreateKeyDialogProps = Pick<
   ApiKeysSectionProps,
-  'api' | 'subject' | 'requestReauthCode' | 'maxLifetimeDays'
+  | 'api'
+  | 'subject'
+  | 'requestReauthCode'
+  | 'maxLifetimeDays'
+  | 'onProviderReauth'
+  | 'resume'
+  | 'onResumeSpent'
 > & {
   open: boolean
   onClose: () => void
@@ -221,6 +243,9 @@ function CreateKeyDialog({
   requestReauthCode,
   scopeLabels,
   maxLifetimeDays,
+  onProviderReauth,
+  resume,
+  onResumeSpent,
   now,
   labels: t,
   authLabels,
@@ -229,18 +254,22 @@ function CreateKeyDialog({
   const formId = useId()
   const scopes = useApiKeyScopes(api)
   const create = useCreateApiKey(api)
-  const [name, setName] = useState('')
-  const [picked, setPicked] = useState<string[]>([])
+  // 제공자 동의를 다녀왔으면 적던 값 그대로 - 비밀은 없다(이름 · 범위 · 만료)
+  const back = resume?.action.kind === 'api-key-create' ? resume.action : null
+  const [name, setName] = useState(back?.name ?? '')
+  const [picked, setPicked] = useState<string[]>(back?.scopes ?? [])
   const choices = expiryChoices(maxLifetimeDays)
-  const [days, setDays] = useState<number | null>(choices[0])
+  const [days, setDays] = useState<number | null>(back ? back.days : choices[0])
   const [proof, setProof] = useState<ReauthCredential | null>(null)
   /** 닫을 때마다 늘어 `ReauthProof` 와 입력을 새로 시작하게 한다 */
   const [round, setRound] = useState(0)
   const kind = reauthKindOf(subject)
   const created = create.data
-  const ready = name.trim() !== '' && picked.length > 0 && proof !== null
+  const credential: ReauthCredential | null = resume ? { socialReauth: resume.socialReauth } : proof
+  const ready = name.trim() !== '' && picked.length > 0 && credential !== null
 
   function close() {
+    if (resume) onResumeSpent?.() // 닫으면 쓰지 않은 인가 코드도 버린다
     create.reset() // 관찰자를 뗀다 - 발급 뮤테이션은 `gcTime: 0` 이라 토큰 · 비밀번호가 캐시에서 바로 빠진다
     setName('')
     setPicked([])
@@ -253,12 +282,20 @@ function CreateKeyDialog({
   function submit(event: FormEvent) {
     event.preventDefault()
     if (!ready || create.isPending) return
-    create.mutate({
-      name: name.trim(),
-      scopes: picked,
-      expiresAt: expiresAtFor(days, now(), maxLifetimeDays),
-      ...proof,
-    })
+    create.mutate(
+      {
+        name: name.trim(),
+        scopes: picked,
+        expiresAt: expiresAtFor(days, now(), maxLifetimeDays),
+        ...credential,
+      },
+      {
+        // 인가 코드는 한 번 쓰면 끝이다 - 결과가 어떻든 비운다(틀렸으면 제공자에 다시 다녀온다)
+        onSettled: () => {
+          if (resume) onResumeSpent?.()
+        },
+      },
+    )
   }
 
   const failure = create.isError && isReauthFailure(create.error) ? create.error : undefined
@@ -367,7 +404,7 @@ function CreateKeyDialog({
               </Select>
             )}
           </Field>
-          {kind === 'provider' ? (
+          {kind === 'provider' && !onProviderReauth && !resume ? (
             <Alert tone="warning">{t.providerReauthUnsupported}</Alert>
           ) : (
             <>
@@ -380,6 +417,17 @@ function CreateKeyDialog({
                 requestCode={requestReauthCode}
                 onChange={setProof}
                 failure={failure}
+                onProvider={
+                  onProviderReauth &&
+                  ((provider) =>
+                    onProviderReauth(provider, {
+                      kind: 'api-key-create',
+                      name: name.trim(),
+                      scopes: picked,
+                      days,
+                    }))
+                }
+                confirmedWith={resume?.socialReauth.provider}
                 labels={givenAuth}
               />
             </>

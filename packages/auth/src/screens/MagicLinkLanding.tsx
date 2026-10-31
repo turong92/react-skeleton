@@ -56,7 +56,6 @@ export function MagicLinkLanding({
           <DeletionPendingScreen
             pending={pending}
             onCancel={onCancelDeletion}
-            onMfaRequired={onMfaRequired}
             leaveTo={requestTo}
             formatDate={formatDate}
             labels={given}

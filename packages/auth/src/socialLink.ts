@@ -16,6 +16,13 @@ export type ProviderAction =
   | { kind: 'discard' }
   /** 계정 이메일이 없는 계정의 연락받을 이메일 등록 - 새 주소를 들고 제공자 동의를 다녀온다 */
   | { kind: 'contact-email'; email: string }
+  /** 2단계 인증 줄의 일 - 제공자 동의를 다녀온 뒤 같은 대화상자가 본인 확인이 끝난 단계로 다시 열린다 */
+  | { kind: 'mfa-enable' }
+  | { kind: 'mfa-change' }
+  | { kind: 'mfa-regenerate' }
+  | { kind: 'mfa-disable' }
+  /** API 키 만들기 - 적던 이름 · 범위 · 만료(일)를 들고 다녀온다(비밀 아님). 토큰은 다녀온 뒤 만든다 */
+  | { kind: 'api-key-create'; name: string; scopes: string[]; days: number | null }
   /** 이 동의가 **연결할** 제공자의 것이다(비밀번호 · 코드로 다시 인증하는 계정) */
   | { kind: 'link' }
   /** 이 동의는 이미 연결된 제공자의 **다시 인증**이고, 연결하려던 제공자의 코드는 `target` 에 있다 */

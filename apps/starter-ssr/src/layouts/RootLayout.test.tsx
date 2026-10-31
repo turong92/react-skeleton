@@ -25,6 +25,7 @@ describe('RootLayout', () => {
         },
         magicLinkRedeem: unused,
         cancelDeletion: unused,
+        mfaVerify: unused,
       },
       tokens: createDeferredTokens(),
     })

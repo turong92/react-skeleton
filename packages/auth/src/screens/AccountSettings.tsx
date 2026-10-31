@@ -37,6 +37,15 @@ export type AccountSectionName =
   | 'sessions'
   | 'delete'
 
+/** 「환경」 카드의 줄(예: API 키 구역)이 제공자 동의 왕복을 쓸 때 받는 것 - `preferenceRows` 를 함수로 주면 인자로 온다 */
+export type ProviderRoundTrip = {
+  /** 이 제공자의 동의 화면으로 보낸다(하려던 작업은 `action` 에 묶여 돌아온다). 앱이 제공자 흐름을 안 꽂았으면 없다 */
+  onProviderReauth?: (provider: string, action: ProviderAction) => void
+  /** 동의를 마치고 돌아왔고 하려던 작업이 이 줄의 것이다(`api-key-create`) - 한 번 쓰면 `onResumeSpent` */
+  resume: { action: ProviderAction; socialReauth: SocialReauth } | null
+  onResumeSpent: () => void
+}
+
 export type AccountSettingsProps = {
   api: AccountApi
   labels?: Partial<AuthLabels>
@@ -94,7 +103,7 @@ export type AccountSettingsProps = {
    */
   twoFactor?: MfaApi
   /** 「환경」 카드에 더할 줄들(예: `@skeleton/legal` 의 `<ConsentSettings row />`) - 줄은 `SettingsRow` */
-  preferenceRows?: ReactNode
+  preferenceRows?: ReactNode | ((roundTrip: ProviderRoundTrip) => ReactNode)
 }
 
 const ALL: AccountSectionName[] = [
@@ -193,6 +202,13 @@ export function AccountSettings({
       ? { email: resume.action.email, socialReauth: resume.socialReauth }
       : null,
   )
+  // 2단계 인증 줄 · 환경 카드의 줄(API 키)이 이어 갈 작업 - 인가 코드는 한 번 쓰면 끝이라 쓰자마자 비운다
+  const [mfaResume, setMfaResume] = useState(() =>
+    resume?.action.kind.startsWith('mfa-') ? resume : null,
+  )
+  const [rowResume, setRowResume] = useState(() =>
+    resume?.action.kind === 'api-key-create' ? resume : null,
+  )
   const resumed = useRef(false)
   const sessions = useResource(
     useCallback(() => (sessionsOn ? api.sessions() : Promise.resolve([])), [api, sessionsOn]),
@@ -270,6 +286,11 @@ export function AccountSettings({
           discard: undefined,
           link: undefined,
           'link-reauth': undefined,
+          'mfa-enable': CARD_OF.twoFactor,
+          'mfa-change': CARD_OF.twoFactor,
+          'mfa-regenerate': CARD_OF.twoFactor,
+          'mfa-disable': CARD_OF.twoFactor,
+          'api-key-create': 'preferences' as CardId,
         }[resume.action.kind]
       : undefined,
   )
@@ -519,6 +540,9 @@ export function AccountSettings({
               requestReauthCode={requestReauthCode}
               formatDate={formatDate}
               labels={given}
+              onProviderReauth={onProviderReauth}
+              resume={mfaResume}
+              onResumeSpent={() => setMfaResume(null)}
               onChanged={sessions.reload} // 켤 때 서버가 이 세션만 남기고 다른 세션을 닫는다
             />
           )}
@@ -559,7 +583,13 @@ export function AccountSettings({
               }}
             />
           )}
-          {preferenceRows}
+          {typeof preferenceRows === 'function'
+            ? preferenceRows({
+                onProviderReauth,
+                resume: rowResume,
+                onResumeSpent: () => setRowResume(null),
+              })
+            : preferenceRows}
         </SettingsGroup>
       )}
     </div>

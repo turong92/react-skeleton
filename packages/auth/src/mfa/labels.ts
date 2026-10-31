@@ -72,6 +72,7 @@ export type TwoFactorLabels = {
   mfaDisableCodeMissing: string
   mfaDisabledDone: string
   mfaRequiredByPolicyError: string
+  mfaNotEnabledError: string
 }
 
 export const defaultTwoFactorLabels: TwoFactorLabels = {
@@ -145,6 +146,7 @@ export const defaultTwoFactorLabels: TwoFactorLabels = {
   mfaDisableCodeMissing: 'Enter an authenticator code or a recovery code.',
   mfaDisabledDone: 'Two-step verification is off.',
   mfaRequiredByPolicyError: 'This account must keep two-step verification on.',
+  mfaNotEnabledError: 'Two-step verification is not on for this account.',
 }
 
 export const koTwoFactorLabels: TwoFactorLabels = {
@@ -216,4 +218,5 @@ export const koTwoFactorLabels: TwoFactorLabels = {
   mfaDisableCodeMissing: '인증 앱 코드나 복구 코드를 입력해 주세요.',
   mfaDisabledDone: '2단계 인증을 껐어요.',
   mfaRequiredByPolicyError: '이 계정은 2단계 인증을 계속 켜 두어야 해요.',
+  mfaNotEnabledError: '이 계정은 2단계 인증이 켜져 있지 않아요.',
 }

@@ -8,6 +8,10 @@ export const MFA_CODES = {
   CHALLENGE_EXPIRED: 'MFA.CHALLENGE_EXPIRED',
   /** 계정의 틀린 시도 한도(429, `Retry-After`) */
   TOO_MANY_ATTEMPTS: 'MFA.TOO_MANY_ATTEMPTS',
+  /** 등록을 시작한 적 없거나 10분이 지났다(410) - 처음부터 */
+  ENROLLMENT_EXPIRED: 'MFA.ENROLLMENT_EXPIRED',
+  /** 꺼져 있는데 끄기 · 재발급(409) */
+  NOT_ENABLED: 'MFA.NOT_ENABLED',
   /** 필수 대상이라 끌 수 없다(409) - 재등록은 된다 */
   REQUIRED_BY_POLICY: 'MFA.REQUIRED_BY_POLICY',
 } as const

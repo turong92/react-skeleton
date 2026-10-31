@@ -152,6 +152,9 @@ export const ErrorCodes = {
   WORKSPACE_RESEND_TOO_SOON: 'WORKSPACE.RESEND_TOO_SOON',
   WORKSPACE_TOO_MANY_PENDING: 'WORKSPACE.TOO_MANY_PENDING',
 
+  // modules/notification-push (kotlin-skeleton docs/push-http-contract.md). TEST_TOO_SOON 429(시험 알림은 계정당 60초에 한 번)
+  PUSH_TEST_TOO_SOON: 'PUSH.TEST_TOO_SOON',
+
   // modules/authz — AuthzErrors (kotlin-skeleton docs/authz-http-contract.md). ROLE_PROTECTED · ROLE_IN_USE · ROLE_EXISTS · SELF_LOCKOUT 409, ROLE_NOT_FOUND 404, PERMISSION_UNKNOWN 400, ESCALATION 403
   AUTHZ_ROLE_PROTECTED: 'AUTHZ.ROLE_PROTECTED',
   AUTHZ_ROLE_IN_USE: 'AUTHZ.ROLE_IN_USE',

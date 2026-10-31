@@ -430,7 +430,8 @@
       "patterns": [],
       "stories": [
         "packages/push/src/PushPrompt.stories.tsx",
-        "packages/push/src/PushSettings.stories.tsx"
+        "packages/push/src/PushSettings.stories.tsx",
+        "packages/push/src/advertising/AdvertisingSettings.stories.tsx"
       ],
       "docs": ["packages/push/README.md"],
       "entryPoints": [
@@ -443,7 +444,9 @@
         "PushSettings",
         "usePushPreferences",
         "useSetPushPreference",
-        "koPushLabels"
+        "koPushLabels",
+        "@skeleton/push/advertising#AdvertisingSettings",
+        "@skeleton/push/advertising#koAdvertisingLabels"
       ],
       "needs": ["api-client", "time", "ui"],
       "backend": {
@@ -470,12 +473,12 @@
         "alsoVia": [],
         "optOut": null
       },
-      "summary": "웹 푸시 — 앱 안 띠(PushPrompt, 「나중에」 14일) 뒤 클릭 안에서만 권한을 묻고 구독 · 서버 등록(usePush), 로그인 뒤 · 창이 보일 때 구독 다시 맞추기(usePushSync, 키가 바뀌면 재구독 · 권한이 거절로 바뀌면 기기 삭제), 로그아웃 직전 해지(unregisterPush), 설정 칸(PushSettings — 이 기기 스위치 · 거절됨 · 홈 화면 추가 필요 · 미지원 안내 · 시험 알림 · 내 다른 기기 표 · 종류별 푸시 스위치). 서비스 워커는 Vite 플러그인 pushServiceWorker(@skeleton/push/vite)가 낸다.",
+      "summary": "웹 푸시 — 앱 안 띠(PushPrompt, 「나중에」 14일) 뒤 클릭 안에서만 권한을 묻고 구독 · 서버 등록(usePush), 로그인 뒤 · 창이 보일 때 구독 다시 맞추기(usePushSync, 키가 바뀌면 재구독 · 권한이 거절로 바뀌면 기기 삭제), 로그아웃 직전 해지(unregisterPush), 설정 칸(PushSettings — 이 기기 스위치 · 거절됨 · 홈 화면 추가 필요 · 미지원 안내 · 시험 알림 · 내 다른 기기 표 · 종류별 푸시 스위치). 서비스 워커는 Vite 플러그인 pushServiceWorker(@skeleton/push/vite)가 낸다. 광고성 푸시를 보내는 앱은 광고 수신 동의 칸(@skeleton/push/advertising 의 AdvertisingSettings — 광고 · 야간(21~08시) 따로, 미리 체크 없음, 야간은 광고 동의 없이는 잠김, 2년 재확인 띠, 철회 확인; @skeleton/legal 은 선택 peer)을 PushSettings 아래에 둔다.",
       "notFor": [
         "알림을 보내는 쪽(발행)은 백엔드 코드(NotificationPublisher) — 푸시는 그 알림이 받는 사람의 기기로도 가는 채널이다",
         "모바일 앱(안드로이드 · iOS)의 푸시 — 앱은 FCM 토큰을 같은 API(PUT /push/devices/{id})로 등록한다. 이 패키지는 브라우저 화면만",
         "앱 안 알림함(목록 · 안 읽은 수 · 읽음)은 notifications",
-        "광고 푸시 수신 동의 화면은 다음 조각(@skeleton/push/advertising)"
+        "광고를 안 보내는 앱(백엔드 advertising-types 가 비어 있음) — @skeleton/push/advertising 을 붙이지 않는다. 광고 문서(marketing · marketing-night)의 본문 · 전송자 정보는 앱 몫(@skeleton/legal 문서)"
       ],
       "keywords": {
         "ko": [

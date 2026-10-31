@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — `@skeleton/push` 광고성 푸시 수신 동의 R3 (2026-10-31)
+
+`@skeleton/push` 1.1.0. 새 하위 경로 `@skeleton/push/advertising`(`@skeleton/legal` 은 선택 peer). 백엔드 짝: kotlin-skeleton `notification-push-legal`(`GET /api/v1/push/advertising`, 동의 · 철회 · 재확인은 `legal` 경로).
+
+- `AdvertisingSettings`: 광고 수신 · 야간(21~08시) 수신을 따로, 처음엔 꺼짐(미리 체크 없음). 동의는 동의문을 읽고 체크를 직접 켠 뒤에만 기록(`source: push-settings`, 재확인은 `reconfirm`). 야간은 광고 동의 없이는 잠김(호출도 막음). 서버 읽기가 실패하면 켠 것으로 보이지 않음. 재확인 띠(D-n · 만료) · 철회 확인 대화상자. 광고 경로가 없는 백엔드(404)에서는 아무것도 그리지 않음.
+- `createPushApi().getAdvertising()` · `useAdvertising` · `useAgreeAdvertising` · `useWithdrawAdvertising` · `agreementRequest` · ko/en `labels`(`koAdvertisingLabels`). 스토리 + `play` 9개.
+
 ### Added — `@skeleton/push` (웹 푸시) R1 (2026-10-31)
 
 새 패키지 1.0.0. 백엔드 짝: kotlin-skeleton `notification-push` · `-jdbc` · `notification-webpush`(경로 `/api/v1/push`, 계약은 백엔드 설계 문서 §5). 견본 앱 조립 · e2e 와 광고 동의 화면(`@skeleton/push/advertising`)은 다음 조각. 문구는 모두 `labels` prop(기본 영어, `koPushLabels`).

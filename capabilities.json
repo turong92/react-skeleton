@@ -429,6 +429,80 @@
     {
       "patterns": [],
       "stories": [
+        "packages/push/src/PushPrompt.stories.tsx",
+        "packages/push/src/PushSettings.stories.tsx"
+      ],
+      "docs": ["packages/push/README.md"],
+      "entryPoints": [
+        "createPushApi",
+        "pushSupport",
+        "usePush",
+        "usePushSync",
+        "unregisterPush",
+        "PushPrompt",
+        "PushSettings",
+        "usePushPreferences",
+        "useSetPushPreference",
+        "koPushLabels"
+      ],
+      "needs": ["api-client", "time", "ui"],
+      "backend": {
+        "modules": ["notification-push", "notification-push-jdbc", "notification-webpush"],
+        "oneOfModules": [],
+        "optionalModules": ["notification-fcm", "notification-push-legal"],
+        "basePaths": ["/api/v1/push"],
+        "docs": [
+          "docs/modules/notification-push.md",
+          "docs/modules/notification-push-jdbc.md",
+          "docs/modules/notification-webpush.md",
+          "docs/push-http-contract.md"
+        ]
+      },
+      "status": "experimental",
+      "id": "push",
+      "kind": "package",
+      "package": "@skeleton/push",
+      "path": "packages/push",
+      "stampFlag": {
+        "flag": "--packages push",
+        "included": "flag",
+        "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
+        "alsoVia": [],
+        "optOut": null
+      },
+      "summary": "웹 푸시 — 앱 안 띠(PushPrompt, 「나중에」 14일) 뒤 클릭 안에서만 권한을 묻고 구독 · 서버 등록(usePush), 로그인 뒤 · 창이 보일 때 구독 다시 맞추기(usePushSync, 키가 바뀌면 재구독 · 권한이 거절로 바뀌면 기기 삭제), 로그아웃 직전 해지(unregisterPush), 설정 칸(PushSettings — 이 기기 스위치 · 거절됨 · 홈 화면 추가 필요 · 미지원 안내 · 시험 알림 · 내 다른 기기 표 · 종류별 푸시 스위치). 서비스 워커는 Vite 플러그인 pushServiceWorker(@skeleton/push/vite)가 낸다.",
+      "notFor": [
+        "알림을 보내는 쪽(발행)은 백엔드 코드(NotificationPublisher) — 푸시는 그 알림이 받는 사람의 기기로도 가는 채널이다",
+        "모바일 앱(안드로이드 · iOS)의 푸시 — 앱은 FCM 토큰을 같은 API(PUT /push/devices/{id})로 등록한다. 이 패키지는 브라우저 화면만",
+        "앱 안 알림함(목록 · 안 읽은 수 · 읽음)은 notifications",
+        "광고 푸시 수신 동의 화면은 다음 조각(@skeleton/push/advertising)"
+      ],
+      "keywords": {
+        "ko": [
+          "푸시 알림",
+          "웹 푸시",
+          "브라우저 알림",
+          "알림 권한",
+          "알림 받기",
+          "서비스 워커",
+          "푸시 구독",
+          "시험 알림"
+        ],
+        "en": [
+          "push notifications",
+          "web push",
+          "browser notifications",
+          "notification permission",
+          "service worker",
+          "push subscription",
+          "vapid",
+          "test notification"
+        ]
+      }
+    },
+    {
+      "patterns": [],
+      "stories": [
         "packages/rewards/src/campaign/AttendanceCard.stories.tsx",
         "packages/rewards/src/campaign/InviteCard.stories.tsx",
         "packages/rewards/src/campaign/InviteList.stories.tsx",
@@ -3281,6 +3355,11 @@
       "need": "알림이 즉시 뜬다 (실시간)",
       "capabilities": ["live-notifications"],
       "byHand": "연결 훅 한 개(apps/sample/src/notifications/useLiveNotifications.ts 를 복사)와 백엔드의 SSE 또는 WebSocket 모듈 선택."
+    },
+    {
+      "need": "탭을 닫아도 알림이 온다 (웹 푸시 · 브라우저 알림)",
+      "capabilities": ["push"],
+      "byHand": "서비스 워커(vite 플러그인 pushServiceWorker) · 권한 요청 UX(PushPrompt) · 구독 등록과 로그아웃 해지를 직접 짜야 하고, 백엔드는 notification-push(+ -jdbc) · notification-webpush 에 VAPID 키가 필요하다."
     },
     {
       "need": "다국어 (한국어 · 영어 전환)",

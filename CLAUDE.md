@@ -1,6 +1,6 @@
 # react-skeleton — Claude Code 컨텍스트
 
-React + TypeScript + Vite 프론트엔드 스켈레톤. pnpm 워크스페이스 — 캡슐화된 패키지 20개 + 앱 5개(SPA 스타터 · SSR 스타터 · 참조 앱 샘플 · 스토리집 · 워크벤치). REST 백엔드(kotlin-skeleton)와 통신하는 SPA 출발점이고, 백엔드 `modules/` 처럼 프로젝트가 필요한 패키지만 한 줄씩 골라 쓴다.
+React + TypeScript + Vite 프론트엔드 스켈레톤. pnpm 워크스페이스 — 캡슐화된 패키지 23개 + 앱 5개(SPA 스타터 · SSR 스타터 · 참조 앱 샘플 · 스토리집 · 워크벤치). REST 백엔드(kotlin-skeleton)와 통신하는 SPA 출발점이고, 백엔드 `modules/` 처럼 프로젝트가 필요한 패키지만 한 줄씩 골라 쓴다.
 
 ## 만들기 전에 — 무엇이 이미 있는지부터 (에이전트 필독)
 
@@ -71,6 +71,7 @@ packages/                     # 서로를 이름으로만 부른다. 각자 pack
 ├── workspace/                # 워크스페이스(팀) — createWorkspaceApi(`/workspaces`, 내 목록 · 만들기 · by-slug · PATCH 이름/slug · 멤버 · 역할 · 추방 · 탈퇴 · 이전) · 훅 · WorkspaceProvider/useWorkspace(**팀은 주소 `/w/<slug>` 에서만 읽는다 — 탭마다 독립**, 풀린 slug 가 주소와 다르면 `onCanonicalSlug` 로 앱이 replace, 자식은 풀린 뒤에만 그려진다) · createCurrentWorkspace + createWorkspaceHeaders(풀린 id 를 `X-Workspace-Id` 로 — 앱이 getAuthHeaders 와 합친다) · 「마지막에 쓴 팀」(createLastWorkspaceMemory · pickLandingSlug)은 첫 화면으로 보낼 때만 · WorkspaceSwitcher · CreateWorkspaceForm · WorkspaceSettings(단추는 내 역할로 숨김) · WorkspaceInvitations(여러 주소 초대 · 대기 표 · 재발송 · 취소 · 좌석 n / 상한) · AcceptInvitation(`/invite` — 토큰은 주소창에서 지우고 탭 저장소에, 로그인 · 가입 뒤 이어서 수락) · 선택 하위 경로 `@skeleton/workspace/admin`(AdminWorkspaces, 읽기만). 라우터를 모른다(앱이 slug 와 이동 콜백을 준다). 백엔드 modules/workspace 짝, 문구는 labels prop
 ├── storage/                  # createStorageApi · createUploader(검증 → presign → 직접 PUT, 멀티파트) · useUpload · validateFile
 ├── payment/                  # 장부: createPaymentLedgerApi(기본 경로 `/payments`) · 훅(키는 훅이 들고 있다) · openCheckout · readCheckoutReturn · 화면 부품 여섯 개 · `@skeleton/payment/admin`(선택 운영자 부품 다섯 개 + 훅 — 목록 · 한 건 · 환불 결정 창 · 환불 요청 · 웹훅 수신함) · 오류 코드 + 얇은 호출: PaymentContracts 타입 · createPaymentApi(경로는 앱이 준다) · confirmRequestFromTossRedirect
+├── push/                     # 웹 푸시 — createPushApi(`/push`: config · devices · 시험 · preferences) · pushSupport · usePush(**권한은 클릭 안에서만**) · usePushSync(로그인 뒤 · 창이 보일 때, 키가 바뀌면 재구독 · denied 면 DELETE, 권한은 묻지 않는다) · unregisterPush(로그아웃이 토큰을 지우기 **전에**) · PushPrompt(앱 안 띠) · PushSettings(이 기기 스위치 · 시험 · 다른 기기 · 종류별 스위치) · `@skeleton/push/vite` 의 pushServiceWorker(의존 없는 워커, link 는 앱 안 경로만)
 ├── captcha-turnstile/        # loadTurnstile · <Turnstile> · useTurnstileToken · attachTurnstileToken
 ├── seo/                      # buildHeadSpec(제목 템플릿 · 설명 · canonical · OG/Twitter · hreflang · JSON-LD) · renderHeadHtml(서버) · applyHead/useSeo/<Seo>(브라우저) · sitemapXml · robotsTxt · @skeleton/seo/vite 의 seoFiles(빌드가 sitemap.xml · robots.txt)
 ├── marketing/                # Hero · FeatureGrid · FaqAccordion · Testimonial · CtaBand · SiteFooter · PricingTable(plans 데이터 · 월/연) · createConsentStore + ConsentBanner(추적 코드 없음) · LegalDocumentPage(판 바꾸기 · 템플릿 표시) · NotFoundPage/ServerErrorPage/MaintenancePage + src/patterns/ 의 Patterns/Landing · Pricing · LegalDocument · NotFound

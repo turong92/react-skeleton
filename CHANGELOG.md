@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — `@skeleton/push` (웹 푸시) R1 (2026-10-31)
+
+새 패키지 1.0.0. 백엔드 짝: kotlin-skeleton `notification-push` · `-jdbc` · `notification-webpush`(경로 `/api/v1/push`, 계약은 백엔드 설계 문서 §5). 견본 앱 조립 · e2e 와 광고 동의 화면(`@skeleton/push/advertising`)은 다음 조각. 문구는 모두 `labels` prop(기본 영어, `koPushLabels`).
+
+- `createPushApi`(설정 · 기기 · 등록 · 지우기 · 시험 알림 · 종류별 푸시 `preferences`) · `getInstallationId` · `pushSupport`(`supported` / `needs-install` / `unsupported`).
+- `usePush`(**권한은 `enable()` 클릭 안에서만** 묻고 → 구독 → 서버 등록, 켬 표시는 계정별) · `usePushSync`(로그인 뒤 · 창이 보일 때 — 권한은 묻지 않고, 키가 바뀌면 재구독, 권한이 거절로 바뀌면 `DELETE`) · `unregisterPush`(앱의 로그아웃이 토큰을 지우기 전에, 실패해도 던지지 않음).
+- `PushPrompt`(앱 안 띠 · 「나중에」 14일) · `PushSettings`(이 기기 스위치 · 거절됨 / 홈 화면 추가 필요 / 미지원 안내 · 시험 알림 · 내 다른 기기 표 · 종류별 푸시 스위치, 「모든 채널 끄기」인 종류는 잠김). 스토리 + `play`.
+- `@skeleton/push/vite` 의 `pushServiceWorker({ fileName, icon })`: 의존 없는 서비스 워커를 빌드 뿌리에 내고 개발 서버도 같은 주소로 내준다. 워커는 푸시를 늘 띄우고, 알림 클릭의 `link` 는 앱 안 경로(`/` 로 시작, `//` · `\` · 제어 문자 없음)일 때만 따라간다.
+- `@skeleton/api-client`: `ErrorCodes.PUSH_TEST_TOO_SOON`.
+
 ### Added — API 키 화면 R-B1/R-B2 (2026-10-31)
 
 백엔드 짝: kotlin-skeleton `api-key` 모듈(`GET/POST /api/v1/api-keys` · `GET /api-keys/scopes` · `DELETE /api-keys/{id}`, 운영 `GET /api/v1/admin/api-keys` · `POST …/{id}/revoke`, 권한 `api-key.read` · `api-key.revoke`).

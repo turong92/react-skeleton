@@ -28,6 +28,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 | 사용자가 팀(워크스페이스)을 만들고 멤버를 두고 역할(소유자 · 관리자 · 멤버)로 나눠 쓰며, 앱 데이터가 그 팀 안에 묶인다 (팀 전환 · 소유권 이전 · 탈퇴) | `workspace` | `--packages workspace` | `--modules workspace,workspace-jdbc` | 백엔드에 workspace 모듈을 끼운다. 라우트 /w/:slug/* 를 <WorkspaceProvider api slug current onCanonicalSlug> 로 감싸 팀을 주소에서 읽고(탭마다 독립), 앱의 getAuthHeaders 에 createWorkspaceHeaders(current)() 를 합쳐 앱 데이터 요청에 X-Workspace-Id 를 싣는다. 머리줄에 WorkspaceSwitcher, 첫 화면은 pickLandingSlug 로 보내고, 설정에 WorkspaceSettings. 앱 데이터의 캐시 키에는 팀 id 를 넣는다. 문구(ko/en)는 labels prop 으로 앱이 공급. |
 | 알림 (종 · 목록 · 안 읽은 수) | `notifications` | `--packages notifications` | `--modules notification,notification-jdbc` | 헤더에 NotificationBell 배치와 알림 API 인스턴스(앱이 한 번 만든다). 알림을 만드는 쪽은 백엔드 코드(NotificationPublisher.publish). |
 | 알림이 즉시 뜬다 (실시간) | `live-notifications` | `--packages notifications,realtime` | `--modules notification,notification-jdbc,notification-sse` — `notification-sse` \| `notification-websocket` 중 고른다 | 연결 훅 한 개(apps/sample/src/notifications/useLiveNotifications.ts 를 복사)와 백엔드의 SSE 또는 WebSocket 모듈 선택. |
+| 탭을 닫아도 알림이 온다 (웹 푸시 · 브라우저 알림) | `push` | `--packages push` | `--modules notification-push,notification-push-jdbc,notification-webpush` | 서비스 워커(vite 플러그인 pushServiceWorker) · 권한 요청 UX(PushPrompt) · 구독 등록과 로그아웃 해지를 직접 짜야 하고, 백엔드는 notification-push(+ -jdbc) · notification-webpush 에 VAPID 키가 필요하다. |
 | 다국어 (한국어 · 영어 전환) | `i18n` | `--packages i18n` | (모듈 없음) | 문구 사전(ko.ts · en.ts)과 부품 prop 에 t() 로 문구 넘기기, 헤더의 LanguageMenu 배치(apps/sample/src/i18n 을 복사). |
 | 랜딩 페이지 + 검색 노출 | `landing-page` + `seo` | `--packages marketing,seo` | (모듈 없음) | 문구 · 이미지 · 요금제 데이터 · 푸터 링크, 라우트마다 handle.seo(제목 · 설명). 첫 HTML 노출이 중요하면 서버 렌더(다음 줄). |
 | 서버 렌더링 (크롤러 · 링크 미리보기가 내용을 본다) | `app-starter-ssr` | `--ssr` | (모듈 없음) | 라우트마다 handle(제목 · 설명 · prefetch), 렌더 중 window · localStorage 금지, SITE_URL(공개 주소) — apps/starter-ssr/README.md. |
@@ -68,6 +69,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 | `realtime` | 서버가 밀어 주는 실시간 연결 — SSE(탭 숨김 일시정지 · 유휴 감시 · 재연결)와 STOMP WebSocket 알림 클라이언트. | --packages realtime | (경로만) | stable | 실시간, 실시간 알림, SSE, 웹소켓, 푸시, 연결 유지 / realtime, sse, server-sent events, websocket, stomp, push |
 | `i18n` | 화면 문구 다국어 — ICU 메시지 · 브라우저 언어 감지/저장 · 지연 로딩 사전 · useT() · 사전 짝 맞춤 테스트 도구. | --packages i18n | — | stable | 다국어, 번역, 언어 전환, 한국어 영어, 국제화, 로케일 / i18n, internationalization, localization, translation, locale, multi-language |
 | `notifications` | 알림 받은편지함 — 목록 · 안 읽은 수(전용 엔드포인트) · 읽음/모두 읽음 · 묶인 줄의 수 · 링크로 이동 · 종류별 끄기(NotificationPreferences) · 실시간 이벤트로 캐시 갱신, NotificationBell/List 부품과 TanStack Query 훅. | --packages notifications | notification, notification-jdbc | stable | 알림, 알림 목록, 알림 종, 안 읽은 알림, 읽음 처리, 받은편지함 / notifications, inbox, notification bell, unread count, mark as read, mute notifications |
+| `push` | 웹 푸시 — 앱 안 띠(PushPrompt, 「나중에」 14일) 뒤 클릭 안에서만 권한을 묻고 구독 · 서버 등록(usePush), 로그인 뒤 · 창이 보일 때 구독 다시 맞추기(usePushSync, 키가 바뀌면 재구독 · 권한이 거절로 바뀌면 기기 삭제), 로그아웃 직전 해지(unregisterPush), 설정 칸(PushSettings — 이 기기 스위치 · 거절됨 · 홈 화면 추가 필요 · 미지원 안내 · 시험 알림 · 내 다른 기기 표 · 종류별 푸시 스위치). 서비스 워커는 Vite 플러그인 pushServiceWorker(@skeleton/push/vite)가 낸다. | --packages push | notification-push, notification-push-jdbc, notification-webpush | experimental | 푸시 알림, 웹 푸시, 브라우저 알림, 알림 권한, 알림 받기, 서비스 워커 / push notifications, web push, browser notifications, notification permission, service worker, push subscription |
 | `rewards` | 보상 사용자 화면 — 출석 카드 · 친구초대 카드(링크의 ?ref= 를 보관했다가 로그인 뒤 한 번 claim) · 초대 현황 표 · 초대 코드 직접 입력 · 쿠폰함과 코드 등록 · 결제 때 쿠폰 고르기 · 포인트 잔액과 내역 · 내 배지 선반과 프로필 배지 줄(로그인 없이). 백엔드가 붙인 갈래(badge · campaign · coupon · point)만 골라 쓴다. | --packages rewards | (경로만) | experimental | 출석, 출석 체크, 친구 초대, 초대 코드, 쿠폰, 쿠폰함 / rewards, attendance, check-in, referral, invite friends, coupon |
 | `reviews` | 리뷰 · 평점 — 아무 대상(종류 + id)에 별점 1~5 · 본문 · 사진 리뷰. 별점 표시(「5점 만점에 4.3점」)와 고르기(라디오 묶음 · 화살표 키) · 평균 + 분포 막대(누르면 그 별점으로 거름) · 정렬 · 거르기 칩(구매 인증 · 사진) · 쪽 이동 · 구매 인증 배지 · 도움돼요 · 신고 대화상자 · 운영자가 숨긴 내 리뷰 안내 · 운영자 답글 · 쓰기/고치기 폼(사진 칸은 renderPhotos 로 앱이 storage 를 꽂는다) · 쓸 수 없는 까닭 문구(구매한 분만 · 이미 씀 · 숨겨져 잠김 · 로그인). 작성자는 이름#꼬리표만 - 계정 id 는 응답에도 화면에도 없다. | --packages reviews | review, review-jdbc | experimental | 리뷰, 후기, 별점, 평점, 평균 별점, 구매 인증 / reviews, ratings, star rating, rating distribution, verified purchase, helpful |
 | `search` | 전문 검색 — 검색창(SearchBox: 입력 + 제출 단추) · 결과 화면(SearchResults: 종류 칩 · 개수 · 제목 링크 + 발췌 · 쪽 이동 · 빈/로딩/오류 · 「2글자 이상」 안내) · useSearch(입력 늦춤 · 이전 쪽 유지) · Highlight(서버가 준 [시작,끝) UTF-16 위치를 <mark> 로, 문자열은 글자로만). 종류 이름과 링크는 앱이 describe(type) 로 준다 - 패키지는 노트 · 상품을 모른다. | --packages search | search, search-jdbc | experimental | 검색, 검색창, 검색 결과, 전문 검색, 하이라이트, 강조 표시 / search, search box, search results, full-text search, highlight, mark matches |
@@ -190,6 +192,19 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 - 문서: `packages/notifications/README.md`
 - 쓰지 않는 경우: 알림을 보내는 쪽(발행)은 백엔드 코드(NotificationPublisher) — 이 패키지는 받는 화면만 / 이메일 · Slack 알림 → 백엔드 notification-mail · notification-slack (프런트 짝 없음) / 실시간으로 즉시 뜨게 하려면 realtime 을 더한다(live-notifications)
 - 키워드: 알림, 알림 목록, 알림 종, 안 읽은 알림, 읽음 처리, 받은편지함, 알림 끄기, 알림 링크 / notifications, inbox, notification bell, unread count, mark as read, mute notifications, notification link
+
+### `push` — 웹 푸시 — 앱 안 띠(PushPrompt, 「나중에」 14일) 뒤 클릭 안에서만 권한을 묻고 구독 · 서버 등록(usePush), 로그인 뒤 · 창이 보일 때 구독 다시 맞추기(usePushSync, 키가 바뀌면 재구독 · 권한이 거절로 바뀌면 기기 삭제), 로그아웃 직전 해지(unregisterPush), 설정 칸(PushSettings — 이 기기 스위치 · 거절됨 · 홈 화면 추가 필요 · 미지원 안내 · 시험 알림 · 내 다른 기기 표 · 종류별 푸시 스위치). 서비스 워커는 Vite 플러그인 pushServiceWorker(@skeleton/push/vite)가 낸다.
+
+- 종류 · 상태: package · experimental
+- 위치: `@skeleton/push` (`packages/push`)
+- 켜는 법: `--packages push` — 함께 따라오는 패키지 `api-client` · `auth` · `legal` · `theme` · `time` · `tokens` · `ui`
+- 필요한 것: `api-client` · `time` · `ui`
+- 백엔드: 모듈 `notification-push` · `notification-push-jdbc` · `notification-webpush` · 있으면 더 켜지는 `notification-fcm` · `notification-push-legal` · 경로 `/api/v1/push`
+- 주요 진입점: `createPushApi` · `pushSupport` · `usePush` · `usePushSync` · `unregisterPush` · `PushPrompt` · `PushSettings` · `usePushPreferences` · `useSetPushPreference` · `koPushLabels`
+- 보고 따라 할 스토리: `packages/push/src/PushPrompt.stories.tsx` · `packages/push/src/PushSettings.stories.tsx`
+- 문서: `packages/push/README.md`
+- 쓰지 않는 경우: 알림을 보내는 쪽(발행)은 백엔드 코드(NotificationPublisher) — 푸시는 그 알림이 받는 사람의 기기로도 가는 채널이다 / 모바일 앱(안드로이드 · iOS)의 푸시 — 앱은 FCM 토큰을 같은 API(PUT /push/devices/{id})로 등록한다. 이 패키지는 브라우저 화면만 / 앱 안 알림함(목록 · 안 읽은 수 · 읽음)은 notifications / 광고 푸시 수신 동의 화면은 다음 조각(@skeleton/push/advertising)
+- 키워드: 푸시 알림, 웹 푸시, 브라우저 알림, 알림 권한, 알림 받기, 서비스 워커, 푸시 구독, 시험 알림 / push notifications, web push, browser notifications, notification permission, service worker, push subscription, vapid, test notification
 
 ### `rewards` — 보상 사용자 화면 — 출석 카드 · 친구초대 카드(링크의 ?ref= 를 보관했다가 로그인 뒤 한 번 claim) · 초대 현황 표 · 초대 코드 직접 입력 · 쿠폰함과 코드 등록 · 결제 때 쿠폰 고르기 · 포인트 잔액과 내역 · 내 배지 선반과 프로필 배지 줄(로그인 없이). 백엔드가 붙인 갈래(badge · campaign · coupon · point)만 골라 쓴다.
 

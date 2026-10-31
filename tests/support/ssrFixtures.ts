@@ -33,6 +33,19 @@ export const fakeNotificationsApi = () => ({
   preferences: async () => ({ items: [{ type: 'demo.created', muted: false }] }),
   setPreference: async (type: string, muted: boolean) => ({ type, muted }),
 })
+const fakePushApi = () => ({
+  config: async () => ({ webPush: null, fcm: false, types: [], advertisingTypes: [] }),
+  devices: async () => ({ items: [] }),
+  registerDevice: async () => ({}),
+  removeDevice: async () => {},
+  sendTest: async () => {},
+  preferences: async () => ({ items: [] }),
+  setPreference: async (type: string, enabled: boolean) => ({
+    type,
+    push: enabled,
+    allChannelsMuted: false,
+  }),
+})
 const fakeRewardsApi = () => ({
   listCampaigns: async () => [],
   checkIn: async () => ({ alreadyChecked: false, total: 1, streak: 1, rewards: [] }),
@@ -1082,6 +1095,8 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
   'notifications#NotificationBell': () => ({ api: fakeNotificationsApi() }),
   'notifications#NotificationList': () => ({ items: [notification], onOpen: () => {} }),
   'notifications#NotificationPreferences': () => ({ api: fakeNotificationsApi() }),
+  'push#PushPrompt': () => ({ api: fakePushApi(), accountId: 'acc_1' }),
+  'push#PushSettings': () => ({ api: fakePushApi(), accountId: 'acc_1' }),
   'author-profile#AuthorPicker': () => ({ api: fakeAuthorProfileApi(), ...authorPickerSlot }),
   'author-profile#AuthorPickerView': () => ({
     profiles: [authorProfile],
@@ -1331,6 +1346,13 @@ export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
   'notifications#usePreferences': () => [fakeNotificationsApi()],
   'notifications#useSetPreference': () => [fakeNotificationsApi()],
   'notifications#useNotificationIngest': () => [],
+  'push#usePushConfig': () => [fakePushApi()],
+  'push#usePushDevices': () => [fakePushApi()],
+  'push#usePushPreferences': () => [fakePushApi()],
+  'push#useRemovePushDevice': () => [fakePushApi()],
+  'push#useSetPushPreference': () => [fakePushApi()],
+  'push#usePush': () => [fakePushApi(), { accountId: 'acc_1' }],
+  'push#usePushSync': () => [fakePushApi(), { accountId: 'acc_1' }],
   'payment#usePaymentConfig': () => [fakePaymentLedgerApi()],
   'payment#useCreateOrder': () => [fakePaymentLedgerApi()],
   'payment#useConfirmOrder': () => [fakePaymentLedgerApi()],

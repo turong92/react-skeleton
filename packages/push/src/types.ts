@@ -15,8 +15,8 @@ export type PushDeviceKind = 'WEBPUSH' | 'FCM'
 export type PushDevice = {
   installationId: string
   kind: PushDeviceKind
-  /** FCM 만 `android` · `ios` */
-  platform: string | null
+  /** 웹 푸시는 `web`, FCM 은 `android` · `ios` */
+  platform: string
   label: string | null
   createdAt: string
   lastSeenAt: string

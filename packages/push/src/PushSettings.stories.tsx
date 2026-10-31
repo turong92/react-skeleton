@@ -16,7 +16,7 @@ const device = (
 ): PushDevice => ({
   installationId: id,
   kind,
-  platform: kind === 'FCM' ? 'android' : null,
+  platform: kind === 'FCM' ? 'android' : 'web',
   label,
   createdAt: '2026-01-01T00:00:00Z',
   lastSeenAt: '2026-01-03T09:30:00Z',

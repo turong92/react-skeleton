@@ -211,6 +211,12 @@ export const ErrorCodes = {
   CATALOG_PRICE_OVERLAP: 'CATALOG.PRICE_OVERLAP',
   CATALOG_PRICE_INVALID: 'CATALOG.PRICE_INVALID',
   CATALOG_NOT_FOUND: 'CATALOG.NOT_FOUND',
+
+  // modules/inquiry InquiryErrorCode — 문의 보내기: 값이 틀림 400(data.violations) · 사람 확인 실패 400 · 너무 잦음 429(data.retryAfterSeconds) · 운영: 없는 문의 404
+  INQUIRY_INVALID: 'INQUIRY.INVALID',
+  INQUIRY_CAPTCHA_FAILED: 'INQUIRY.CAPTCHA_FAILED',
+  INQUIRY_TOO_MANY: 'INQUIRY.TOO_MANY',
+  INQUIRY_NOT_FOUND: 'INQUIRY.NOT_FOUND',
 } as const
 
 export type ErrorCodeValue = (typeof ErrorCodes)[keyof typeof ErrorCodes]

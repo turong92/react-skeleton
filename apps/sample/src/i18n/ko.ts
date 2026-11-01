@@ -607,6 +607,29 @@ export default {
   'search.subtitle': '노트나 상품을 제목이나 내용으로 찾아요. 2글자 이상 입력해 주세요.',
   'search.type.note': '노트',
   'search.type.product': '상품',
+  'help.title': '도움말',
+  'help.subtitle': '자주 묻는 질문을 먼저 살펴보고, 없으면 물어봐 주세요.',
+  'help.faq.start.title': '시작하기',
+  'help.faq.start.write.q': '노트는 어떻게 쓰나요?',
+  'help.faq.start.write.a':
+    '로그인한 뒤 「노트」 메뉴에서 「새 노트」를 누르세요. 제목과 내용을 적고 저장하면 목록에 나타나요.',
+  'help.faq.start.attach.q': '파일도 붙일 수 있나요?',
+  'help.faq.start.attach.a':
+    '네, 노트마다 파일을 붙일 수 있어요. 파일 크기와 종류는 첨부 칸 아래 안내를 따라 주세요.',
+  'help.faq.account.title': '계정',
+  'help.faq.account.email.q': '이메일을 바꾸고 싶어요.',
+  'help.faq.account.email.a':
+    '「설정」에서 새 이메일을 등록하면 새 주소로 확인 코드를 보내 드려요. 확인이 끝나야 바뀌어요.',
+  'help.faq.account.leave.q': '탈퇴하려면 어떻게 하나요?',
+  'help.faq.account.leave.a':
+    '「설정」의 계정 삭제에서 탈퇴를 신청할 수 있어요. 정해진 유예 기간 안에는 취소할 수 있어요.',
+  'help.contact.title': '문의하기',
+  'help.contact.description': '찾는 답이 없다면 질문이나 제안, 오류를 알려 주세요.',
+  'help.contact.privacy': '적어 주신 내용과 이메일은 문의에 답하는 데만 쓰여요.',
+  'help.contact.sent': '잘 받았어요. 알려 주셔서 고마워요.',
+  'help.contact.sentWithEmail': '잘 받았어요. 적어 주신 이메일로 답을 드릴게요.',
+  'footer.support': '지원',
+  'footer.help': '도움말',
   'reviews.edit.photosReplace':
     '사진 칸을 건드리면(올리거나 지우면) 지금 사진이 이 칸의 사진으로 모두 바뀌어요. 건드리지 않으면 그대로예요.',
   'reviews.photo.enlarge': '크게 보기',

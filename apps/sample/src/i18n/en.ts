@@ -614,6 +614,30 @@ const en: Record<keyof typeof ko, string> = {
   'search.subtitle': 'Find notes and products by title or content. Type at least 2 characters.',
   'search.type.note': 'Note',
   'search.type.product': 'Product',
+  'help.title': 'Help',
+  'help.subtitle': 'Check the common questions first — if yours is not there, ask us.',
+  'help.faq.start.title': 'Getting started',
+  'help.faq.start.write.q': 'How do I write a note?',
+  'help.faq.start.write.a':
+    'After signing in, open “Notes” and press “New note”. Add a title and some text and save it — it shows up in your list.',
+  'help.faq.start.attach.q': 'Can I attach files?',
+  'help.faq.start.attach.a':
+    'Yes, every note can carry files. Follow the size and type notes under the attachment field.',
+  'help.faq.account.title': 'Account',
+  'help.faq.account.email.q': 'I want to change my email.',
+  'help.faq.account.email.a':
+    'Register the new address in “Settings” and we send a confirmation code to it. The change applies once you confirm.',
+  'help.faq.account.leave.q': 'How do I delete my account?',
+  'help.faq.account.leave.a':
+    'Request deletion under “Settings”. You can cancel during the grace period.',
+  'help.contact.title': 'Contact us',
+  'help.contact.description':
+    'If you cannot find the answer, send us a question, an idea or a problem.',
+  'help.contact.privacy': 'What you write and your email are used only to answer this message.',
+  'help.contact.sent': 'We got it. Thank you for letting us know.',
+  'help.contact.sentWithEmail': 'We got it. We will reply to the email you gave.',
+  'footer.support': 'Support',
+  'footer.help': 'Help',
   'reviews.edit.photosReplace':
     'Touching the photos field (adding or removing) replaces all current photos with what is in it. Leave it alone to keep them.',
   'reviews.photo.enlarge': 'View larger',

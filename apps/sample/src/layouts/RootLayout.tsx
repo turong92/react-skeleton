@@ -156,8 +156,8 @@ export function RootLayout() {
           <SiteFooter
             brand={t('appName')}
             tagline={t('footer.tagline')}
-            columns={
-              signedIn
+            columns={[
+              ...(signedIn
                 ? []
                 : [
                     {
@@ -167,8 +167,9 @@ export function RootLayout() {
                         { label: t('footer.faq'), href: '/#faq' },
                       ],
                     },
-                  ]
-            }
+                  ]),
+              { title: t('footer.support'), links: [{ label: t('footer.help'), href: '/help' }] },
+            ]}
             legalLabel={t('footer.legalLabel')}
             legalLinks={[
               { label: t('footer.terms'), href: '/terms' },

@@ -49,6 +49,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 견본 앱: 업로더 `complete: true`(회원 · 비회원 경로), `PicturePicker` 가 `ImageUploadField`, 게시판 사진이 `StoredImage`(`attachmentImages` · 변환 중이면 「처리 중」 뒤 다시 읽기), 리뷰 사진은 목록 `?variant=thumb` · 눌러서 크게 볼 때 `display`. 새 e2e `files.e2e.ts`.
 - **의존 변화**: `@skeleton/ui` 가 devDependency 에서 dependency 로(새 부품이 `FilePicker` · `Progress` · `Button` 을 쓴다).
 
+### Added — 문의 · 의견 받기 `@skeleton/inquiry` (2026-11-01)
+
+백엔드 짝: kotlin-skeleton `inquiry` + `inquiry-jdbc` 모듈(`POST /api/v1/inquiries` - 로그인 없이도, 운영 `GET /api/v1/admin/inquiries` · `PUT …/{id}/status`).
+
+- `@skeleton/inquiry`(새 패키지): `createInquiryApi`(`/inquiries`) · `useInquiryForm`(상태 · 검증 · 전송, 문구를 모른다, 틀린 곳은 한 번 보내 보려 한 뒤부터) · `ContactForm`(종류 · 내용 10~2000자 · 답장 이메일 · 앱이 꽂는 사람 확인 `captcha` · 고지 자리 `beforeSubmit`) · `FaqList`(네이티브 `<details>` 접기 목록 - 질문 · 답은 앱이) · ko/en 문구. 사람 확인 위젯은 포함하지 않는다(board 의 `renderCaptcha` 와 같은 결 - 앱이 `@skeleton/captcha-turnstile` 을 꽂는다).
+- `@skeleton/api-client`: 오류 코드 `INQUIRY_INVALID` · `INQUIRY_CAPTCHA_FAILED` · `INQUIRY_TOO_MANY` · `INQUIRY_NOT_FOUND`.
+- `apps/sample`: 도움말 `/help`(FAQ 4문항 + 문의 폼 - 로그인하면 이메일이 채워지고 사람 확인이 없다, `VITE_TURNSTILE_SITE_KEY` 가 있고 로그인하지 않았을 때만 Turnstile) + 꼬리말 「도움말」 링크(`/help`). `captcha-turnstile` 을 `--with-sample` 에 더했다.
+
 ### Added — API 키 화면 R-B1/R-B2 (2026-10-31)
 
 백엔드 짝: kotlin-skeleton `api-key` 모듈(`GET/POST /api/v1/api-keys` · `GET /api-keys/scopes` · `DELETE /api-keys/{id}`, 운영 `GET /api/v1/admin/api-keys` · `POST …/{id}/revoke`, 권한 `api-key.read` · `api-key.revoke`).

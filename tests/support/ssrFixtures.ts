@@ -146,6 +146,7 @@ const reviewsReview = {
   createdAt: '2026-01-01T00:00:00Z',
   updatedAt: '2026-01-01T00:00:00Z',
 }
+const fakeInquiryApi = () => ({ send: async () => ({ status: 'RECEIVED' }) })
 const fakeSearchApi = () => ({ search: async () => pageOf([]) })
 const searchLabels = (ctx: FixtureContext) => ctx.mod('search').defaultSearchLabels
 const searchDescribe = (type: string) => ({ label: type, href: (id: string) => `/${type}/${id}` })
@@ -1085,6 +1086,10 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
     labels: reviewsLabels(ctx),
     onSubmit: () => {},
   }),
+  'inquiry#ContactForm': () => ({ api: fakeInquiryApi(), onSent: noop }),
+  'inquiry#FaqList': () => ({
+    sections: [{ id: 's', title: 'Start', items: [{ id: 'q', question: 'Q?', answer: 'A.' }] }],
+  }),
   'search#Highlight': () => ({ text: 'a <b> c', ranges: [[2, 5]] }),
   'search#SearchBox': (ctx) => ({ labels: searchLabels(ctx), onSearch: noop }),
   'search#SearchResults': (ctx) => ({
@@ -1340,6 +1345,7 @@ export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
   'reviews#useSetHelpful': () => [fakeReviewsApi()],
   'reviews#useReportReview': () => [fakeReviewsApi()],
   'reviews#useReviewFilters': () => [],
+  'inquiry#useInquiryForm': () => [fakeInquiryApi()],
   'search#useSearch': () => [fakeSearchApi(), { q: 'bag' }],
   'notifications#useNotifications': () => [fakeNotificationsApi()],
   'notifications#useUnreadCount': () => [fakeNotificationsApi()],

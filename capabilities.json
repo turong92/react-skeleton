@@ -876,6 +876,73 @@
       }
     },
     {
+      "patterns": ["apps/storybook/src/patterns/FormPage.stories.tsx"],
+      "stories": [
+        "packages/inquiry/src/ContactForm.stories.tsx",
+        "packages/inquiry/src/FaqList.stories.tsx"
+      ],
+      "docs": ["packages/inquiry/README.md", "apps/sample/src/routes/HelpPage.tsx"],
+      "entryPoints": [
+        "createInquiryApi",
+        "useInquiryForm",
+        "ContactForm",
+        "FaqList",
+        "inquiryProblem",
+        "inquiryFieldProblems",
+        "defaultInquiryLabels",
+        "koInquiryLabels"
+      ],
+      "needs": ["api-client", "ui"],
+      "backend": {
+        "modules": ["inquiry"],
+        "oneOfModules": [],
+        "optionalModules": ["inquiry-jdbc", "captcha-turnstile", "alert"],
+        "basePaths": ["/api/v1/inquiries"],
+        "docs": ["docs/modules/inquiry.md", "docs/modules/inquiry-jdbc.md"]
+      },
+      "status": "experimental",
+      "id": "inquiry",
+      "kind": "package",
+      "package": "@skeleton/inquiry",
+      "path": "packages/inquiry",
+      "stampFlag": {
+        "flag": "--packages inquiry",
+        "included": "flag",
+        "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
+        "alsoVia": ["--with-sample"],
+        "optOut": null
+      },
+      "summary": "문의 · 의견 받기 — 한 줄 폼 ContactForm(종류 하나 고르기 · 내용 10~2000자 · 답장 받을 이메일(선택) · 앱이 꽂는 사람 확인 위젯 · 고지 자리) · useInquiryForm(상태 · 검증 · 전송, 문구를 모른다) · FaqList(자주 묻는 질문 접기 목록, 질문 · 답은 앱이 준다). 로그인 없이도 보내고 로그인했으면 계정이 붙는다. 「잘 받았어요」 화면 · 문항 · 개인정보 고지는 앱의 몫.",
+      "notFor": [
+        "운영자 화면(목록 · 처리 표시) — 서버의 GET /api/v1/admin/inquiries · PUT …/{id}/status 는 있지만 이 패키지에 화면은 없다(앱이 Table 로)",
+        "티켓 · 대화 · 첨부가 있는 고객 지원 도구가 아니다 — 한 번 보내는 한 줄 폼이다",
+        "사람 확인 위젯을 포함하지 않는다 — 서버에 Turnstile 을 켰다면 앱이 @skeleton/captcha-turnstile 로 captcha 를 꽂는다(서버 기본은 통과)",
+        "라우터를 모른다 — 폼 위치와 보낸 뒤 화면은 앱이 정한다"
+      ],
+      "keywords": {
+        "ko": [
+          "문의",
+          "문의하기",
+          "의견 보내기",
+          "피드백",
+          "기능 제안",
+          "오류 신고",
+          "자주 묻는 질문",
+          "도움말",
+          "고객센터"
+        ],
+        "en": [
+          "inquiry",
+          "contact form",
+          "feedback",
+          "feature request",
+          "bug report",
+          "faq",
+          "help center"
+        ]
+      }
+    },
+    {
       "patterns": ["apps/storybook/src/patterns/ListPage.stories.tsx"],
       "stories": [
         "packages/search/src/SearchBox.stories.tsx",
@@ -1699,7 +1766,7 @@
         "flag": "--packages captcha-turnstile",
         "included": "flag",
         "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
-        "alsoVia": ["--with-workbench"],
+        "alsoVia": ["--with-sample", "--with-workbench"],
         "optOut": null
       },
       "summary": "봇 방지 — Cloudflare Turnstile 스크립트 로더 · <Turnstile> · 토큰 훅 · 요청에 토큰 붙이기.",
@@ -2332,6 +2399,8 @@
           "dashboard-jdbc",
           "db-postgresql",
           "idempotency",
+          "inquiry",
+          "inquiry-jdbc",
           "job-queue-jdbc",
           "json",
           "legal",
@@ -2392,8 +2461,10 @@
         "autoIncludes": [
           "author-profile",
           "board",
+          "captcha-turnstile",
           "dashboard",
           "i18n",
+          "inquiry",
           "marketing",
           "notifications",
           "payment",
@@ -2528,6 +2599,8 @@
           "db-postgresql",
           "event-kafka",
           "idempotency",
+          "inquiry",
+          "inquiry-jdbc",
           "job-queue-jdbc",
           "json",
           "legal",
@@ -3533,6 +3606,11 @@
       "need": "전문 검색 (머리말 검색창 · 결과 화면 · 일치한 글자 강조 · 종류별 거르기)",
       "capabilities": ["search"],
       "byHand": "백엔드 search + search-jdbc 를 붙이고(skeleton.search.http.* · 문서는 catalog 나 앱이 SearchIndexer 로 밀어 넣는다) 프런트는 apps/sample 의 HeaderSearch(SearchBox → /search?q=)와 SearchPage(SearchResults + describe: 종류 → {label, href(id)} + renderLink 로 라우터 링크)를 복사한다. 검색은 로그인한 사람만(서버 기본)."
+    },
+    {
+      "need": "문의 · 의견 받기 · 도움말 (질문 · 기능 제안 · 오류 신고 · 자주 묻는 질문 · 고객센터)",
+      "capabilities": ["inquiry"],
+      "byHand": "백엔드 inquiry + inquiry-jdbc 를 붙이고(skeleton.inquiry.* · 운영자 목록은 skeleton.inquiry.admin.enabled) 프런트는 apps/sample 의 HelpPage(FaqList + ContactForm)를 복사한다: 문항은 앱이 sections 로 주고, 로그인하지 않은 사람에게 서버가 사람 확인을 켰다면 captcha 에 @skeleton/captcha-turnstile 의 useTurnstileToken + Turnstile 을 꽂는다. 「잘 받았어요」 화면과 개인정보 고지는 앱이 정한다."
     },
     {
       "need": "약관 · 개인정보 동의 (가입 체크박스 · 새 판 재동의 · 선택 동의 철회) — 문서와 동의 기록은 서버가 쥔다",

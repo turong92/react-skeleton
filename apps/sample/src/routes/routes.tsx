@@ -48,6 +48,7 @@ import { PaymentReturnPage } from './PaymentReturnPage'
 import { ProductPage } from './ProductPage'
 import { ProfilePage } from './ProfilePage'
 import { RewardsPage } from './RewardsPage'
+import { HelpPage } from './HelpPage'
 import { SearchPage } from './SearchPage'
 import { SettingsPage } from './SettingsPage'
 import { SubscribePage } from './SubscribePage'
@@ -99,6 +100,8 @@ export const routes: RouteObject[] = [
         element: <LegalRoute doc="refund" />,
         handle: publicSeo('seo.refund.title', 'seo.refund.description'),
       },
+      // 도움말 - 자주 묻는 질문 + 문의 폼(`@skeleton/inquiry`). 로그인 없이 열린다(서버 `POST /api/v1/inquiries` 가 공개). 검색에는 내지 않는다
+      { path: '/help', element: <HelpPage />, handle: privateSeo('help.title') },
       // 팀 초대 수락 - 메일의 링크(`/invite?token=…`)는 로그인 없이 열린다(미리보기). 로그인 · 가입은 이 화면이 보내고, 돌아와 수락한다
       { path: '/invite', element: <InvitePage />, handle: privateSeo('workspace.tabsLabel') },
       // 게시판은 로그인하지 않아도 열린다(서버 `allow-anonymous-read`) - 읽기는 누구나, 쓰기는 로그인했거나 게시판이 비회원 쓰기를 허락할 때(화면이 가린다). 검색에는 노출하지 않는다

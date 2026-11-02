@@ -215,3 +215,86 @@
     --shadow: var(--p-shadow-raised-dark);
   }
 }
+
+/* component — the handles component CSS uses (--<part>-<name>). They reference semantic tokens, so
+   every theme follows; re-declared on [data-theme] containers so a themed container re-resolves them */
+:root,
+[data-theme] {
+  /* Component · Button */
+  --button-radius: var(--radius-md);
+  --button-primary-bg: var(--inverse);
+  --button-primary-fg: var(--on-inverse);
+  --button-primary-border: var(--inverse);
+  --button-primary-hover-bg: var(--teal);
+  --button-secondary-bg: var(--surface);
+  --button-secondary-border: var(--border-strong);
+  --button-hover-wash: var(--teal-wash);
+  --button-hover-border: var(--teal);
+  --button-quiet-hover-bg: var(--surface-muted);
+  --button-quiet-border: var(--border);
+  --button-backdrop: none;
+
+  /* Component · Field */
+  --field-radius: var(--radius-md);
+  --field-bg: var(--surface);
+  --field-border: var(--border);
+  --field-focus-border: var(--teal);
+  --field-focus-ring: var(--teal-soft);
+  --field-disabled-bg: var(--surface-muted);
+
+  /* Component · Card */
+  --card-radius: var(--radius-md);
+  --card-bg: var(--surface);
+  --card-border: var(--border);
+  --card-shadow: var(--shadow);
+  --card-backdrop: none;
+
+  /* Component · Overlay */
+  --overlay-radius: var(--radius-md);
+  --overlay-bg: var(--surface);
+  --overlay-border: var(--border-strong);
+  --overlay-shadow: var(--shadow);
+  --overlay-backdrop: none;
+  --overlay-item-radius: var(--radius-sm);
+  --overlay-scrim: color-mix(in srgb, var(--inverse) 55%, transparent);
+
+  /* Component · Shell */
+  --shell-bg: var(--header-bg);
+  --shell-border: var(--border);
+  --shell-backdrop: none;
+  --shell-nav-radius: var(--radius-md);
+  --shell-nav-active-bg: var(--teal-wash);
+
+  /* Component · Progress */
+  --progress-radius: var(--radius-full);
+  --progress-track: var(--border);
+  --progress-fill: var(--teal);
+  --progress-indeterminate: var(--teal);
+  --progress-indeterminate-still: var(--teal-wash);
+
+  /* Component · Choice */
+  --choice-selected-bg: var(--teal-wash);
+  --choice-selected-border: var(--teal);
+
+  /* Component · Switch */
+  --switch-track: var(--border-strong);
+  --switch-track-on: var(--teal);
+  --switch-thumb: var(--surface);
+
+  /* Component · Badge */
+  --badge-radius: var(--radius-full);
+
+  /* Component · Alert */
+  --alert-radius: var(--radius-md);
+
+  /* Component · Tooltip */
+  --tooltip-radius: var(--radius-sm);
+  --tooltip-bg: var(--inverse);
+  --tooltip-fg: var(--on-inverse);
+
+  /* Component · Avatar */
+  --avatar-radius: var(--radius-full);
+
+  /* Component · Skeleton */
+  --skeleton-bg: var(--surface-muted);
+}

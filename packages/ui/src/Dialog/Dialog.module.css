@@ -1,15 +1,17 @@
 .dialog {
   width: min(480px, calc(100vw - 32px));
   padding: 0;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  background: var(--surface);
+  border: 1px solid var(--overlay-border);
+  border-radius: var(--overlay-radius);
+  background: var(--overlay-bg);
   color: var(--text);
-  box-shadow: var(--shadow);
+  box-shadow: var(--overlay-shadow);
+  backdrop-filter: var(--overlay-backdrop);
+  -webkit-backdrop-filter: var(--overlay-backdrop);
 }
 
 .dialog::backdrop {
-  background: color-mix(in srgb, var(--inverse) 55%, transparent);
+  background: var(--overlay-scrim);
 }
 
 .header {
@@ -25,11 +27,13 @@
   width: 44px;
   height: 44px;
   cursor: pointer;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  background: var(--surface);
+  border: 1px solid var(--button-secondary-border);
+  border-radius: var(--button-radius);
+  background: var(--button-secondary-bg);
   color: var(--text-strong);
   line-height: 1;
+  backdrop-filter: var(--button-backdrop);
+  -webkit-backdrop-filter: var(--button-backdrop);
 }
 
 .body {

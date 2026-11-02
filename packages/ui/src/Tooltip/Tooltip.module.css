@@ -10,9 +10,9 @@
   width: max-content;
   max-width: 16rem;
   padding: var(--space-xs) var(--space-sm);
-  border-radius: var(--radius-sm);
-  background: var(--inverse);
-  color: var(--on-inverse);
+  border-radius: var(--tooltip-radius);
+  background: var(--tooltip-bg);
+  color: var(--tooltip-fg);
   font-size: var(--font-size-caption);
   line-height: var(--line-height-snug);
   transform: translateX(-50%);

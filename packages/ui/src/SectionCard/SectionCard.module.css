@@ -2,13 +2,15 @@
   display: grid;
   gap: var(--space-lg);
   padding: var(--space-xl);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  background: var(--card-bg);
   color: var(--text);
-  box-shadow: var(--shadow);
+  box-shadow: var(--card-shadow);
   /* 목차가 눌러 가져온 절이 고정 머리에 가리지 않게 — 머리 높이는 AppShell 이 문서의 `scroll-padding-top` 으로 더한다 */
   scroll-margin-top: var(--space-xl);
+  backdrop-filter: var(--card-backdrop);
+  -webkit-backdrop-filter: var(--card-backdrop);
 }
 
 .head {
@@ -36,18 +38,20 @@
   min-height: 44px;
   max-width: 100%;
   padding: 0 var(--space-md);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  background: var(--surface);
+  border: 1px solid var(--button-secondary-border);
+  border-radius: var(--button-radius);
+  background: var(--button-secondary-bg);
   color: var(--text-strong);
   font: inherit;
   text-align: left;
   cursor: pointer;
+  backdrop-filter: var(--button-backdrop);
+  -webkit-backdrop-filter: var(--button-backdrop);
 }
 
 .toggle:hover {
-  border-color: var(--teal);
-  background: var(--teal-wash);
+  border-color: var(--button-hover-border);
+  background: var(--button-hover-wash);
 }
 
 .toggle:focus-visible {

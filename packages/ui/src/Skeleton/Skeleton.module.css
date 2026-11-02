@@ -5,7 +5,7 @@
 
 .bar {
   display: block;
-  background: var(--surface-muted);
+  background: var(--skeleton-bg);
   animation: pulse 1.4s ease-in-out infinite;
 }
 

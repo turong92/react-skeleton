@@ -20,7 +20,7 @@
   margin: 0;
   appearance: none;
   border-radius: var(--radius-full);
-  background: var(--border-strong);
+  background: var(--switch-track);
   cursor: inherit;
   transition: background-color 120ms ease;
 }
@@ -33,12 +33,12 @@
   width: 18px;
   height: 18px;
   border-radius: var(--radius-full);
-  background: var(--surface);
+  background: var(--switch-thumb);
   transition: transform 120ms ease;
 }
 
 .input:checked {
-  background: var(--teal);
+  background: var(--switch-track-on);
 }
 
 .input:checked::before {

@@ -3,7 +3,7 @@
   align-items: center;
   padding: var(--space-xs) var(--space-sm);
   border: 1px solid transparent;
-  border-radius: var(--radius-full);
+  border-radius: var(--badge-radius);
   font-size: var(--font-size-caption);
   font-weight: 650;
   line-height: var(--line-height-snug);

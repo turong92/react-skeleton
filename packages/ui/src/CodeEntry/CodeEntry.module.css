@@ -14,9 +14,9 @@
   flex: 0 1 44px; /* 좁은 칸에서는 줄어든다(320px 화면에서도 가로로 밀리지 않게) */
   min-width: 0;
   min-height: 52px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface);
+  border: 1px solid var(--field-border);
+  border-radius: var(--field-radius);
+  background: var(--field-bg);
   color: var(--text-strong);
   font-size: var(--font-size-subheading);
   text-align: center;
@@ -24,8 +24,8 @@
 }
 
 .cell:focus {
-  border-color: var(--teal);
-  outline: 3px solid var(--teal-soft);
+  border-color: var(--field-focus-border);
+  outline: 3px solid var(--field-focus-ring);
 }
 
 .cell[aria-invalid='true'] {
@@ -33,7 +33,7 @@
 }
 
 .cell:disabled {
-  background: var(--surface-muted);
+  background: var(--field-disabled-bg);
 }
 
 .error {

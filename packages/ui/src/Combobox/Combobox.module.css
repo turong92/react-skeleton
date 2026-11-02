@@ -15,17 +15,19 @@
   padding: var(--space-xs);
   overflow-y: auto;
   list-style: none;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  box-shadow: var(--shadow);
+  border: 1px solid var(--overlay-border);
+  border-radius: var(--overlay-radius);
+  background: var(--overlay-bg);
+  box-shadow: var(--overlay-shadow);
+  backdrop-filter: var(--overlay-backdrop);
+  -webkit-backdrop-filter: var(--overlay-backdrop);
 }
 
 .option {
   display: grid;
   gap: var(--space-xs);
   padding: var(--space-sm) var(--space-md);
-  border-radius: var(--radius-sm);
+  border-radius: var(--overlay-item-radius);
   color: var(--text-strong);
   cursor: pointer;
 }
@@ -56,12 +58,14 @@
   top: calc(100% + var(--space-xs));
   z-index: 10;
   padding: var(--space-sm) var(--space-md);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  background: var(--surface);
+  border: 1px solid var(--overlay-border);
+  border-radius: var(--overlay-radius);
+  background: var(--overlay-bg);
   color: var(--text-muted);
   font-size: var(--font-size-small);
-  box-shadow: var(--shadow);
+  box-shadow: var(--overlay-shadow);
+  backdrop-filter: var(--overlay-backdrop);
+  -webkit-backdrop-filter: var(--overlay-backdrop);
 }
 
 .srOnly {

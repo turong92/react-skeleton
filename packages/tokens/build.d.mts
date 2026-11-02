@@ -1,4 +1,4 @@
-export type TokenLayer = 'primitive' | 'semantic'
+export type TokenLayer = 'primitive' | 'semantic' | 'component'
 
 export interface ThemeValue {
   /** 정본 $extensions.skeleton.<테마> 그대로 — 없으면 null(기본 값이 그 테마에서도 쓰인다) */
@@ -16,7 +16,7 @@ export interface Token {
   layer: TokenLayer
   /** 부모 묶음 경로 */
   group: string
-  /** CSS 이름 — 원시 `--p-…`, 의미 `--<이름>` */
+  /** CSS 이름 — 원시 `--p-…`, 의미 `--<이름>`, 부품 `--<부품>-<이름>` */
   cssName: string
   /** W3C $type(묶음에서 물려받은 값 포함) */
   type: string | undefined

@@ -4,7 +4,7 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  border-radius: var(--radius-full);
+  border-radius: var(--avatar-radius);
   background: var(--surface-muted);
   color: var(--text-strong);
   font-weight: 650;

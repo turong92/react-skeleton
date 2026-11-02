@@ -257,7 +257,7 @@ await apiClient.response<ApiValueResponse<OrderResponse>>('/orders', {
 
 ## 디자인 토큰 · 테마
 
-- 색 · 그림자 · 서체 · **간격 · 모서리 · 글자 크기**는 `packages/tokens/tokens.json` 한 곳에서 정하고 `pnpm tokens` 가 `tokens.css` 를 만든다. 층은 둘: 원시(`--p-*`, 화면 CSS 에서 직접 쓰지 않음) → 의미(`--bg` · `--text` · `--teal` · `--space-md` · `--radius-md` · `--font-size-body` …).
+- 색 · 그림자 · 서체 · **간격 · 모서리 · 글자 크기**는 `packages/tokens/tokens.json` 한 곳에서 정하고 `pnpm tokens` 가 `tokens.css` 를 만든다. 층은 셋: 원시(`--p-*`, 화면 CSS 에서 직접 쓰지 않음) → 의미(`--bg` · `--text` · `--teal` · `--space-md` · `--radius-md` · `--font-size-body` …) → 부품(`--button-radius` · `--card-bg` · `--overlay-backdrop` … — `@skeleton/ui` 부품 모양의 손잡이, 값을 바꿔 부품 모양을 정한다).
 - 화면 CSS · 인라인 style 에는 색 날값을 쓰지 않고 `var(--bg)` 처럼 의미 토큰만 쓴다 — 두 앱과 모든 패키지를 루트 `tests/` 가 막는다. `padding` · `margin` · `gap` · `border-radius` · `font-size` 의 px/rem/em 날값도 같다(`--space-*` · `--radius-*` · `--font-size-*`). **예외는 `apps/workbench` CSS 뿐**(540줄 — 옮기려면 `tests/support/layoutExempt.ts` 를 비운다).
 - 라이트 + 다크. `<html data-theme="light|dark">`, 없거나 `system` 이면 OS 설정을 따른다. 토글은 `@skeleton/theme`, 저장은 `localStorage`.
 - 프로젝트는 `tokens.json` 의 값만 바꿔 자기 색을 입힌다. 모든 글자/바탕 짝이 두 테마에서 WCAG AA 인지는 `pnpm test` 가 잰다.

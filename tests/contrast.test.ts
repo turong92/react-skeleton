@@ -56,6 +56,29 @@ const PAIRS: Pair[] = [
   },
   { fg: '--inverse', bg: '--surface-muted', min: BODY, use: 'button on an inverse band, hover' },
   { fg: '--on-inverse', bg: '--red', min: BODY, use: 'notification badge' },
+  // 부품 토큰(component) — 바탕을 바꾸는 손잡이와 그 위 글자. 프로젝트가 값을 바꾸면 여기서 대비가 잡힌다
+  { fg: '--button-primary-fg', bg: '--button-primary-bg', min: BODY, use: 'primary button' },
+  {
+    fg: '--button-primary-fg',
+    bg: '--button-primary-hover-bg',
+    min: BODY,
+    use: 'primary button hover',
+  },
+  { fg: '--text-strong', bg: '--button-secondary-bg', min: BODY, use: 'secondary button' },
+  { fg: '--text-strong', bg: '--button-hover-wash', min: BODY, use: 'secondary button hover' },
+  ...['--button-secondary-bg', '--button-hover-wash'].map(
+    (bg): Pair => ({
+      fg: '--teal',
+      bg,
+      min: BODY,
+      use: 'accent text on a button-like part (hover)',
+    }),
+  ),
+  { fg: '--tooltip-fg', bg: '--tooltip-bg', min: BODY, use: 'tooltip' },
+  ...['--card-bg', '--overlay-bg', '--field-bg'].map(
+    (bg): Pair => ({ fg: '--text', bg, min: BODY, use: 'text on a component surface' }),
+  ),
+  { fg: '--text', bg: '--shell-bg', min: BODY, use: 'header links' },
   // UI 경계 · 포커스
   { fg: '--teal', bg: '--surface', min: UI, use: 'focus border' },
   { fg: '--teal', bg: '--bg', min: UI, use: 'focus border' },

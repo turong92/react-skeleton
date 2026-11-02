@@ -13,7 +13,7 @@
   gap: var(--space-sm);
   padding: 0 var(--space-lg);
   border: 1px solid transparent;
-  border-radius: var(--radius-md);
+  border-radius: var(--button-radius);
   font-weight: 650;
   white-space: nowrap;
   line-height: 1;
@@ -43,39 +43,41 @@
 }
 
 .button[data-variant='primary'] {
-  border-color: var(--inverse);
-  background: var(--inverse);
-  color: var(--on-inverse);
+  border-color: var(--button-primary-border);
+  background: var(--button-primary-bg);
+  color: var(--button-primary-fg);
 }
 
 .button[data-variant='primary']:hover:not(:disabled):not([aria-disabled='true']) {
-  border-color: var(--teal);
-  background: var(--teal);
-  color: var(--on-inverse);
+  border-color: var(--button-primary-hover-bg);
+  background: var(--button-primary-hover-bg);
+  color: var(--button-primary-fg);
 }
 
 .button[data-variant='secondary'] {
-  border-color: var(--border-strong);
-  background: var(--surface);
+  border-color: var(--button-secondary-border);
+  background: var(--button-secondary-bg);
   color: var(--text-strong);
+  backdrop-filter: var(--button-backdrop);
+  -webkit-backdrop-filter: var(--button-backdrop);
 }
 
 .button[data-variant='secondary']:hover:not(:disabled):not([aria-disabled='true']) {
-  border-color: var(--teal);
-  background: var(--teal-wash);
+  border-color: var(--button-hover-border);
+  background: var(--button-hover-wash);
   color: var(--text-strong);
 }
 
 /* 덜 중요한 행동(취소 · 나중에 · 보기) — 채우지 않되 테두리는 있다 */
 .button[data-variant='ghost'] {
-  border-color: var(--border-strong);
+  border-color: var(--button-secondary-border);
   background: transparent;
   color: var(--text-strong);
 }
 
 .button[data-variant='ghost']:hover:not(:disabled):not([aria-disabled='true']) {
-  border-color: var(--teal);
-  background: var(--teal-wash);
+  border-color: var(--button-hover-border);
+  background: var(--button-hover-wash);
   color: var(--text-strong);
 }
 

@@ -23,6 +23,8 @@ const byCode = (labels: AuthLabels): Record<string, string> => ({
   [MFA_CODES.CHALLENGE_EXPIRED]: labels.mfaExpiredBody,
   [MFA_CODES.ENROLLMENT_EXPIRED]: labels.mfaEnrollExpired,
   [MFA_CODES.NOT_ENABLED]: labels.mfaNotEnabledError,
+  [MFA_CODES.SELF_RESET]: labels.mfaSelfResetError,
+  [MFA_CODES.ESCALATION]: labels.mfaEscalationError,
   [ErrorCodes.ACCOUNT_SUSPENDED_CANNOT_DELETE]: labels.errorSuspendedCannotDelete,
   [ErrorCodes.ACCOUNT_REGISTRATION_BLOCKED]: labels.errorRegistrationBlocked,
   [ErrorCodes.ACCOUNT_TOKEN_INVALID]: labels.errorTokenInvalid,

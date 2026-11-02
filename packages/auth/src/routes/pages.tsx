@@ -7,6 +7,7 @@ import type { LoginIdRules } from '../account/loginIdRules'
 import { discardReauthOf, emailReauthOf } from '../emailReauth'
 import type { EmailRequiredController } from '../emailRequired'
 import type { LoginIdRequiredController } from '../loginIdRequired'
+import type { MfaEnrollmentRequiredController } from '../mfa/mfaEnrollmentRequired'
 import type { AuthApi } from '../authApi'
 import { linkIntentOf, linkIntentState } from '../linkIntent'
 import { postSignInTarget, rememberReturnTo, consumeReturnTo, safeReturnPath } from '../returnTo'
@@ -123,6 +124,7 @@ export type PageContext = {
   emailRequired?: EmailRequiredController
   /** 아이디 막의 컨트롤러 - 설정에서 아이디를 정하면 막을 걷는다 */
   loginIdRequired?: LoginIdRequiredController
+  mfaEnrollmentRequired?: MfaEnrollmentRequiredController
   /** 진행 중인 가입 시도(코드 입력 단계가 새로고침을 견딘다) */
   signUpPending?: SignUpPendingStore
   /** 저장 키 · 락 · 채널 이름(앱 이름공간) */
@@ -840,6 +842,9 @@ export function AccountPage({
         }
         onDeleted={() => void auth.logout()}
         onEmailRegistered={ctx.emailRequired && (() => ctx.emailRequired?.registered())}
+        onTwoFactorChanged={
+          ctx.mfaEnrollmentRequired && (() => ctx.mfaEnrollmentRequired?.enrolled())
+        }
         {...loginIdSettingsProps(ctx)}
         onDiscarded={(provider) => {
           // 서버가 모든 세션을 닫았다 - 이 기기의 세션도 지우고, 로그인한 뒤 설정에서 그 제공자 연결을 이어 가게 한다.

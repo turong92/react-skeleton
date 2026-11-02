@@ -80,6 +80,8 @@ export type AccountSettingsProps = {
   contactEmail?: boolean
   /** 주소가 없던 계정의 첫 이메일이 확인됐다(이메일 필수 앱의 막을 걷는다 — 보통 `emailRequired.registered()`) */
   onEmailRegistered?: () => void
+  /** 2단계 인증을 켜기 · 끄기 · 복구 코드 재발급이 끝났다(2단계 필수 앱의 막을 걷는다 - 보통 `mfaEnrollmentRequired.enrolled()`) */
+  onTwoFactorChanged?: () => void
   /** 접근 불가 · 정지일 때 「문의」 링크 */
   supportHref?: string
   /** 방금 연결한 소셜 제공자(연결 콜백이 돌아온 직후) — 서버가 계정 주소로 알림 메일을 보냈다는 안내를 보인다 */
@@ -160,6 +162,7 @@ export function AccountSettings({
   supportHref,
   contactEmail: contactOn = false,
   onEmailRegistered,
+  onTwoFactorChanged,
   linkedProvider,
   linkIntent,
   onProviderReauth,
@@ -543,7 +546,10 @@ export function AccountSettings({
               onProviderReauth={onProviderReauth}
               resume={mfaResume}
               onResumeSpent={() => setMfaResume(null)}
-              onChanged={sessions.reload} // 켤 때 서버가 이 세션만 남기고 다른 세션을 닫는다
+              onChanged={() => {
+                sessions.reload() // 켤 때 서버가 이 세션만 남기고 다른 세션을 닫는다
+                onTwoFactorChanged?.()
+              }}
             />
           )}
           {on('sessions') && (

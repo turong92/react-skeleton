@@ -4,6 +4,7 @@ import { expect, fn, waitFor, within } from 'storybook/test'
 import { ApiRequestError } from '@skeleton/api-client'
 import type { AdminAccount } from '../account/types'
 import { koAuthLabels } from '../screens/labels.ko'
+import { apiError } from '../test/apiFixtures'
 import { AdminAccounts } from './AdminAccounts'
 import type { AdminAccountsApi } from './adminApi'
 import { AdminAccountsTable, type AdminAccountsTableProps } from './AdminAccountsTable'
@@ -82,6 +83,53 @@ export const SuspendWithReason: Story = {
     const confirm = (await canvas.findAllByRole('button', { name: 'Suspend' })).at(-1)!
     await userEvent.click(confirm)
     await expect(args.onSuspend).toHaveBeenCalledWith('acc_1', 'abuse')
+  },
+}
+
+export const ResetTwoFactorNeedsAReason: Story = {
+  args: { onResetMfa: fn(async () => undefined) },
+  play: async ({ canvas, args, userEvent }) => {
+    await userEvent.click(canvas.getByRole('button', { name: 'ann@example.com ⋯' }))
+    await userEvent.click(
+      await canvas.findByRole('menuitem', { name: 'Reset two-step verification' }),
+    )
+    const dialog = within(await canvas.findByRole('dialog'))
+    // 사유가 비어 있으면 해제 단추가 눌리지 않는다
+    await expect(dialog.getByRole('button', { name: /^Reset$/ })).toBeDisabled()
+    await userEvent.type(dialog.getByLabelText(/Reason/), 'lost phone')
+    await userEvent.click(dialog.getByRole('button', { name: /^Reset$/ }))
+    await expect(args.onResetMfa).toHaveBeenCalledWith('acc_1', 'lost phone')
+    await expect(
+      await canvas.findByText('Two-step verification was reset for ann@example.com.'),
+    ).toBeVisible()
+  },
+}
+
+export const ResetTwoFactorExplainsARefusalInTheDialog: Story = {
+  args: {
+    onResetMfa: fn(async () => {
+      throw apiError('MFA.SELF_RESET', 409)
+    }),
+  },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole('button', { name: 'ann@example.com ⋯' }))
+    await userEvent.click(
+      await canvas.findByRole('menuitem', { name: 'Reset two-step verification' }),
+    )
+    const dialog = within(await canvas.findByRole('dialog'))
+    await userEvent.type(dialog.getByLabelText(/Reason/), 'mine')
+    await userEvent.click(dialog.getByRole('button', { name: /^Reset$/ }))
+    // 창은 닫히지 않고 이유를 말한다
+    await expect(await dialog.findByText(/cannot reset your own/)).toBeVisible()
+  },
+}
+
+export const NoResetMenuWithoutThePermission: Story = {
+  args: { onResetMfa: fn(async () => undefined), can: (key: string) => key !== 'mfa.reset' },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole('button', { name: 'ann@example.com ⋯' }))
+    await expect(await canvas.findByRole('menuitem', { name: 'Suspend' })).toBeVisible()
+    await expect(canvas.queryByRole('menuitem', { name: 'Reset two-step verification' })).toBeNull()
   },
 }
 

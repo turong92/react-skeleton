@@ -73,6 +73,22 @@ export type TwoFactorLabels = {
   mfaDisabledDone: string
   mfaRequiredByPolicyError: string
   mfaNotEnabledError: string
+  // 등록 필수 문
+  mfaGateTitle: string
+  mfaGateBody: string
+  mfaGateStart: string
+  mfaGateSignOut: string
+  mfaGateDone: string
+  // 운영자 해제(계정 표의 줄 메뉴)
+  adminMfaReset: string
+  adminMfaResetTitle: (email: string) => string
+  adminMfaResetBody: string
+  adminMfaResetReason: string
+  adminMfaResetReasonHint: string
+  adminMfaResetConfirm: string
+  adminMfaResetDone: (email: string) => string
+  mfaSelfResetError: string
+  mfaEscalationError: string
 }
 
 export const defaultTwoFactorLabels: TwoFactorLabels = {
@@ -147,6 +163,22 @@ export const defaultTwoFactorLabels: TwoFactorLabels = {
   mfaDisabledDone: 'Two-step verification is off.',
   mfaRequiredByPolicyError: 'This account must keep two-step verification on.',
   mfaNotEnabledError: 'Two-step verification is not on for this account.',
+  mfaGateTitle: 'Turn on two-step verification',
+  mfaGateBody:
+    'This account has to use two-step verification. Set it up now, and you will go straight back to what you were doing.',
+  mfaGateStart: 'Set it up now',
+  mfaGateSignOut: 'Sign out',
+  mfaGateDone: 'Two-step verification is on.',
+  adminMfaReset: 'Reset two-step verification',
+  adminMfaResetTitle: (email) => `Reset two-step verification for ${email}?`,
+  adminMfaResetBody:
+    'Their authenticator app and recovery codes stop working, every session is signed out, and they are emailed. They can set it up again after signing in.',
+  adminMfaResetReason: 'Reason',
+  adminMfaResetReasonHint: 'Required. For example: lost phone and recovery codes.',
+  adminMfaResetConfirm: 'Reset',
+  adminMfaResetDone: (email) => `Two-step verification was reset for ${email}.`,
+  mfaSelfResetError: 'You cannot reset your own two-step verification. Ask another operator.',
+  mfaEscalationError: 'You cannot reset an account that has more permissions than you.',
 }
 
 export const koTwoFactorLabels: TwoFactorLabels = {
@@ -219,4 +251,19 @@ export const koTwoFactorLabels: TwoFactorLabels = {
   mfaDisabledDone: '2단계 인증을 껐어요.',
   mfaRequiredByPolicyError: '이 계정은 2단계 인증을 계속 켜 두어야 해요.',
   mfaNotEnabledError: '이 계정은 2단계 인증이 켜져 있지 않아요.',
+  mfaGateTitle: '2단계 인증을 켜 주세요',
+  mfaGateBody: '이 계정은 2단계 인증을 꼭 써야 해요. 지금 켜면 하던 일로 바로 돌아가요.',
+  mfaGateStart: '지금 켜기',
+  mfaGateSignOut: '로그아웃',
+  mfaGateDone: '2단계 인증을 켰어요.',
+  adminMfaReset: '2단계 해제',
+  adminMfaResetTitle: (email) => `${email} 의 2단계 인증을 해제할까요?`,
+  adminMfaResetBody:
+    '인증 앱과 복구 코드가 더는 쓸 수 없게 되고, 모든 기기에서 로그아웃되며, 본인에게 메일이 가요. 다시 로그인한 뒤 새로 켤 수 있어요.',
+  adminMfaResetReason: '사유',
+  adminMfaResetReasonHint: '꼭 적어 주세요. 예: 휴대폰과 복구 코드를 모두 잃어버림',
+  adminMfaResetConfirm: '해제',
+  adminMfaResetDone: (email) => `${email} 의 2단계 인증을 해제했어요.`,
+  mfaSelfResetError: '자기 자신의 2단계 인증은 해제할 수 없어요. 다른 운영자에게 요청해 주세요.',
+  mfaEscalationError: '나보다 권한이 많은 계정의 2단계 인증은 해제할 수 없어요.',
 }

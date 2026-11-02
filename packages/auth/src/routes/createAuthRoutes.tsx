@@ -3,6 +3,7 @@ import type { AccountApi } from '../account/accountApi'
 import type { AuthApi } from '../authApi'
 import type { EmailRequiredController } from '../emailRequired'
 import type { LoginIdRequiredController } from '../loginIdRequired'
+import type { MfaEnrollmentRequiredController } from '../mfa/mfaEnrollmentRequired'
 import { RequireAuth } from '../RequireAuth'
 import type { SignUpScreenProps } from '../screens/SignUpScreen'
 import type { ReactElement, ReactNode } from 'react'
@@ -129,6 +130,11 @@ export type AuthRoutesOptions = {
    * 「아이디를 정해 주세요」 막(`LoginIdGate`)을 걷고 붙잡힌 호출을 푼다. 기본 꺼짐. 설정의 길이 규칙은 발견(`discovery`)이 준 `loginId` 를 따른다
    */
   loginIdRequired?: LoginIdRequiredController
+  /**
+   * 2단계 인증을 필수로 켠 앱의 막 컨트롤러(`createMfaEnrollmentRequiredController()`) - 계정 설정에서 2단계를 켜면 앱을 덮은 「2단계 인증을 켜 주세요」 막(`MfaEnrollmentRequiredGate`)을 걷고
+   * 붙잡힌 호출을 푼다. 기본 꺼짐. `settings.twoFactor` 가 있어야 설정에 켜는 줄이 생긴다
+   */
+  mfaEnrollmentRequired?: MfaEnrollmentRequiredController
   /** 새 비밀번호를 한 번 더 입력받는다(가입 · 재설정 · 변경 · 첫 설정, 기본 false — 모듈은 중립이라 앱이 켠다). 가입만 따로 바꾸려면 `signUp: { confirmPassword }` */
   confirmPassword?: boolean
   /**
@@ -180,6 +186,7 @@ export function createAuthRoutes(options: AuthRoutesOptions): RouteObject[] {
     labels: options.labels,
     emailRequired: options.emailRequired,
     loginIdRequired: options.loginIdRequired,
+    mfaEnrollmentRequired: options.mfaEnrollmentRequired,
     confirmPassword: options.confirmPassword,
     now: options.now,
     formatDate: options.settings?.formatDate,

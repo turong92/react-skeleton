@@ -225,6 +225,15 @@ export { TwoFactorChallengeScreen } from './mfa/TwoFactorChallengeScreen'
 export type { TwoFactorChallengeScreenProps } from './mfa/TwoFactorChallengeScreen'
 export { TwoFactorSection } from './mfa/TwoFactorSection'
 export type { TwoFactorSectionProps } from './mfa/TwoFactorSection'
+export { MfaEnrollmentRequiredGate } from './mfa/MfaEnrollmentRequiredGate'
+export type { MfaEnrollmentRequiredGateProps } from './mfa/MfaEnrollmentRequiredGate'
+export { MfaEnrollmentRequiredScreen } from './mfa/MfaEnrollmentRequiredScreen'
+export type { MfaEnrollmentRequiredScreenProps } from './mfa/MfaEnrollmentRequiredScreen'
+export {
+  createMfaEnrollmentRequiredController,
+  isMfaEnrollmentRequiredError,
+} from './mfa/mfaEnrollmentRequired'
+export type { MfaEnrollmentRequiredController } from './mfa/mfaEnrollmentRequired'
 export { createMfaApi } from './mfa/mfaApi'
 export type { MfaApi } from './mfa/mfaApi'
 export { defaultTwoFactorLabels, koTwoFactorLabels } from './mfa/labels'

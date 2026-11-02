@@ -26,6 +26,8 @@ export type FakeMfaOptions = {
   remaining?: number
   /** 서버가 2단계 인증 모듈을 켜지 않았다(404) */
   off?: boolean
+  /** 필수 문의 등록 면제 - 방금 로그인했으면 서버가 증거 없는 등록 시작(`{}`)을 받는다. 아니면 `ACCOUNT.REAUTH_REQUIRED`(403) */
+  exempt?: boolean
 }
 
 /** 메모리 가짜 - 다시 인증은 비밀번호만, 코드는 `FAKE_TOTP_CODE` 만 맞는다 */
@@ -34,6 +36,7 @@ export function createFakeMfaApi({
   required = false,
   remaining = 8,
   off = false,
+  exempt = false,
 }: FakeMfaOptions = {}) {
   let state: MfaStatus = {
     enabled,
@@ -70,7 +73,10 @@ export function createFakeMfaApi({
     },
     startEnrollment: async (input) => {
       calls.push('startEnrollment')
-      proof(input)
+      if (Object.keys(input).length === 0) {
+        inputs.push(input)
+        if (!exempt) throw apiError('ACCOUNT.REAUTH_REQUIRED', 403)
+      } else proof(input)
       return {
         secret: FAKE_TOTP_SECRET,
         otpauthUri: FAKE_OTPAUTH,

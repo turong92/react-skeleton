@@ -57,6 +57,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `@skeleton/api-client`: 오류 코드 `INQUIRY_INVALID` · `INQUIRY_CAPTCHA_FAILED` · `INQUIRY_TOO_MANY` · `INQUIRY_NOT_FOUND`.
 - `apps/sample`: 도움말 `/help`(FAQ 4문항 + 문의 폼 - 로그인하면 이메일이 채워지고 사람 확인이 없다, `VITE_TURNSTILE_SITE_KEY` 가 있고 로그인하지 않았을 때만 Turnstile) + 꼬리말 「도움말」 링크(`/help`). `captcha-turnstile` 을 `--with-sample` 에 더했다.
 
+### Added — 2단계 인증 R-A2: 등록 필수 문 · 운영자 해제 · 견본 조립 (2026-11-02)
+
+백엔드 짝: kotlin-skeleton `auth-mfa` 의 필수 문(`required-for`: 등록 전 계정의 허용 목록 밖 호출은 `403 MFA.ENROLLMENT_REQUIRED`)과 운영 해제(`GET /admin/mfa/accounts/{id}` · `POST …/{id}/reset {reason}`, 권한 `mfa.reset`).
+
+- `@skeleton/auth`: `MfaEnrollmentRequiredGate` · `MfaEnrollmentRequiredScreen` · `createMfaEnrollmentRequiredController`(403 을 붙잡았다가 켜면 같은 호출을 다시 보낸다 - 이메일 필수 막과 같은 상태 기계) · `isMfaEnrollmentRequiredError`. 켜기 마법사는 설정의 것(`EnrollDialog`)을 꺼내 재사용하고, 필수 문에서는 열자마자 **본인 확인 없이(`{}`) 시작해 본다** - 방금 로그인한 계정은 서버가 증거 없이 받는다(소셜 전용 계정도 지나간다). 서버가 증거를 요구하면(`ACCOUNT.REAUTH_REQUIRED`) 평소처럼 비밀번호 · 메일 코드를 묻고, 소셜 전용 계정은 제공자 동의 왕복이 있는 계정 설정으로 보낸다(`onProviderReauth`). `createAuthRoutes({ mfaEnrollmentRequired })` 를 주면 계정 설정에서 켠 순간 막이 걷힌다(`AccountSettings.onTwoFactorChanged`).
+- `@skeleton/auth/admin`: `AdminAccounts` 에 `mfaReset`(기본 꺼짐) - 줄 메뉴 「2단계 해제」(`can('mfa.reset')`, 사유 필수, 자기 자신 `MFA.SELF_RESET` · 권한 상승 `MFA.ESCALATION` · 꺼짐 `MFA.NOT_ENABLED` 는 창 안에서 이유를 말한다). `AdminAccountsApi.resetMfa(id, reason)`.
+- 견본(`apps/sample`): 설정 `twoFactor: createMfaApi`, 「API 키」 구역은 계정 설정의 함수형 `preferenceRows` 로 옮겨 소셜 전용 계정의 제공자 왕복을 잇는다(`/settings` 에는 링크 카드), `MfaGate`(가장 바깥 막), 운영 계정 표의 「2단계 해제」. e2e `mfa.e2e.ts`(흐름 ① ~ ④) - 인증 앱은 시험 도우미(`totp.ts`, Node `crypto`)가 계산하고, 운영 계정(admin · moderator)은 전역 준비가 한 번 등록해 비밀을 파일에 보관한다(`adminMfa.ts`).
+
 ### Added — 2단계 인증(TOTP) 화면 R-A1 (2026-10-31)
 
 백엔드 짝: kotlin-skeleton `auth-mfa` 모듈(`POST /auth/mfa/verify` · `GET /auth/mfa` · `POST /auth/mfa/totp/enrollment[/confirm]` · `POST /auth/mfa/recovery-codes` · `POST /auth/mfa/disable`, 오류 `AUTH.MFA_REQUIRED` · `MFA.*`).

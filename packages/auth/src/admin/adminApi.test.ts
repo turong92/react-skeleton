@@ -48,6 +48,16 @@ describe('createAdminAccountsApi (opt-in backend: skeleton.account.admin.enabled
     expect(calls[1].request?.params).toEqual({ page: 2, size: 1 })
   })
 
+  it('resetMfa → POST /admin/mfa/accounts/{id}/reset with the reason (the id is encoded)', async () => {
+    const { client, calls } = fake()
+    await createAdminAccountsApi(client).resetMfa('acc/1', 'lost phone')
+    expect(calls[0]).toMatchObject({
+      kind: 'noContent',
+      path: '/admin/mfa/accounts/acc%2F1/reset',
+      request: { method: 'POST', json: { reason: 'lost phone' } },
+    })
+  })
+
   it('commands hit the contract paths', async () => {
     const { client, calls } = fake()
     const api = createAdminAccountsApi(client)

@@ -10,6 +10,12 @@ export const MFA_CODES = {
   TOO_MANY_ATTEMPTS: 'MFA.TOO_MANY_ATTEMPTS',
   /** 등록을 시작한 적 없거나 10분이 지났다(410) - 처음부터 */
   ENROLLMENT_EXPIRED: 'MFA.ENROLLMENT_EXPIRED',
+  /** 필수 대상인데 아직 등록 전이다(403) - 허용 목록 밖의 모든 호출이 이 코드로 막힌다. 등록하면 바로 풀린다 */
+  ENROLLMENT_REQUIRED: 'MFA.ENROLLMENT_REQUIRED',
+  /** 운영 해제: 자기 자신은 못 한다(409) */
+  SELF_RESET: 'MFA.SELF_RESET',
+  /** 운영 해제: 대상이 호출자보다 권한이 많다(403) */
+  ESCALATION: 'MFA.ESCALATION',
   /** 꺼져 있는데 끄기 · 재발급(409) */
   NOT_ENABLED: 'MFA.NOT_ENABLED',
   /** 필수 대상이라 끌 수 없다(409) - 재등록은 된다 */

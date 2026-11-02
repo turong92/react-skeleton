@@ -1,5 +1,6 @@
 import {
   ApiRequestError,
+  ClientErrorCodes,
   ErrorCodes,
   retryAfterSeconds,
   type UnauthorizedContext,
@@ -47,7 +48,7 @@ export type SessionRefresher = {
 
 /**
  * 서버가 응답을 못 줬거나(네트워크 · 타임아웃 · 408 · 429 · 5xx) 백엔드가 만들지 않은 401(프록시 등, `AUTH.*` 코드가 없다) — 세션에 대한 판정이 아니다.
- * `AUTH.*` 의 401 은 서버의 확정이다. 코드 없는 401 은 재시도 한 바퀴 안에서만 일시 오류이고, 바퀴가 401 로 끝나면 로그아웃이다.
+ * `AUTH.*` 의 401 은 서버의 확정이다. 코드 없는 401 은 연달아 5번까지만 일시 오류이고, 그 뒤에도 401 이면 로그아웃이다.
  */
 function isTransient(error: unknown): boolean {
   if (!(error instanceof ApiRequestError)) return false
@@ -74,21 +75,26 @@ const DEFAULT_LOCK_NAME = 'skeleton.auth.refresh'
 /** `429 AUTH.TOO_MANY_REFRESHES` 뒤의 기다림 — `Retry-After` 가 없으면 30초, 연속이면 두 배씩, 10분을 넘지 않는다 */
 const DEFAULT_BACKOFF_SECONDS = 30
 const MAX_BACKOFF_SECONDS = 600
-/** 일시 오류의 재시도 간격 - 같은 토큰으로, 첫 시도부터 50초 안에만 다시 보낸다(서버의 `reuse-grace` 권장 60초 안) */
+/**
+ * 일시 오류의 재시도 간격 - **같은 토큰으로 일시 오류가 이어지는 동안 계속** 보낸다. 간격은 2·4·8·16·30초, 그 뒤 30초 고정.
+ * 불변식: **재시도 간격 ≤ 서버 `reuse-grace` ÷ 2** (권장 grace 60초 → 30초). 서버의 유예 시계는 서버가 깨어나 회전을 처리한 순간부터 도므로,
+ * 서버가 기동에 몇 초(몇 분)가 걸리든 회전 뒤 다음 재시도는 반드시 유예 안에 들어온다. 간격을 30초 위로 올리거나 재시도를 시간으로 끊지 않는다.
+ */
 const TRANSIENT_RETRY_DELAYS_MS = [2_000, 4_000, 8_000, 16_000, 30_000]
-const TRANSIENT_RETRY_BUDGET_MS = 50_000
-/** 바퀴가 다 소진된 뒤 서버를 다시 부르기 전의 쉬는 시간 - 15초에서 두 배씩, 5분까지 */
-const IDLE_BACKOFF_SECONDS = 15
-const MAX_IDLE_BACKOFF_SECONDS = 300
+const MAX_RETRY_INTERVAL_MS = 30_000
+/** 코드 없는 401 이 이만큼 연달아 오면(다른 오류 없이) 프록시가 아니라 서버의 답으로 보고 로그아웃한다 */
+/** 일반 요청이 갱신 비행을 기다리는 상한 - 갱신 요청 타임아웃(45초)과 같다 */
+const REQUEST_WAIT_LIMIT_MS = 45_000
+const MAX_CODELESS_401_IN_A_ROW = 5
 
 /**
  * 액세스 토큰 갱신 — 401 마다 세우지 않고 한 번으로 합치고(single-flight), 갱신이 돌려준 **새 리프레시 토큰을 먼저 저장**한 뒤
  * 새 액세스 토큰을 내보낸다(옛 리프레시 토큰은 두 번 다시 보내지 않는다 — 재사용은 서버가 세션 전체를 끊는다).
  * 여러 탭은 `navigator.locks` 로 줄 세우고, 락 안에서 저장소를 다시 읽어 이미 갱신됐으면 그 결과를 쓴다.
  * `AUTH.REFRESH_INVALID` · `REFRESH_REUSED` · `ACCOUNT_SUSPENDED` 이면 두 저장소를 비우고 `onSessionEnded` 를 부른다.
- * **일시 오류**(네트워크 · 타임아웃 · 408 · 429 · 5xx · `AUTH.*` 코드 없는 401)는 서버가 회전에 성공했는데 응답만 잃었을 수 있다 — **같은 토큰으로** 지수 백오프(첫 시도부터 50초 안)로 다시 보낸다
- * (서버의 `reuse-grace` 가 같은 후속 토큰을 돌려준다). 대기는 탭 락 밖에서 하고 시도마다 락을 다시 잡는다. 바퀴가 5xx · 네트워크로 끝나면 오류만 내보내고 세션은 그대로이며(다음 호출 전에 쉰다),
- * **코드 없는 401 로 끝나면 로그아웃**한다(앞단이 백엔드 오류 본문을 그대로 넘겨야 한다).
+ * **일시 오류**(네트워크 · 타임아웃 · 408 · 429 · 5xx · `AUTH.*` 코드 없는 401)는 서버가 회전에 성공했는데 응답만 잃었을 수 있다 — **같은 토큰으로** 지수 백오프(일시 오류가 이어지는 동안 계속, 간격 30초 상한)로 다시 보낸다
+ * (서버의 `reuse-grace` 가 같은 후속 토큰을 돌려준다). 대기는 탭 락 밖에서 하고 시도마다 락을 다시 잡으며, 숨은 탭은 멈췄다가 보이면 곧바로 이어 간다.
+ * **코드 없는 401 이 연달아 5번이면 로그아웃**한다(앞단이 백엔드 오류 본문을 그대로 넘겨야 한다).
  * `429 AUTH.TOO_MANY_REFRESHES`(세션이 10분에 30번 넘게 회전)는 **세션이 멀쩡하다** — 로그아웃하지 않고 그 429 를 일시 오류로 내보낸 뒤,
  * 기다릴 시간(`Retry-After`, 연속이면 두 배씩 · 최대 10분)이 지나기 전에는 서버를 다시 부르지 않고 같은 오류를 돌려준다.
  */
@@ -111,25 +117,39 @@ export function createSessionRefresher(options: SessionRefresherOptions): Sessio
   type Attempt = { done: boolean } | { error: unknown; sent: string }
 
   async function run(failedToken: string | undefined): Promise<boolean> {
-    const started = now()
     let first: string | null = null // 첫 시도에 쓴 자격 - 이 자격이 바뀌면 더 보내지 않는다
+    let codeless401 = 0
     for (let attempt = 0; ; attempt += 1) {
       const result = await withLock<Attempt>(() => once(failedToken, attempt === 0, first))
       if ('done' in result) return result.done
       first ??= result.sent
-      const wait = TRANSIENT_RETRY_DELAYS_MS[attempt]
-      if (
-        isTransient(result.error) &&
-        wait !== undefined &&
-        now() - started + wait <= TRANSIENT_RETRY_BUDGET_MS
-      ) {
-        transientHooks.forEach((hook) => hook())
-        transientHooks.clear()
-        await new Promise((resolve) => setTimeout(resolve, wait)) // 락 밖에서 쉰다
-        continue
-      }
-      return settleFailure(result.error)
+      const { error } = result
+      codeless401 =
+        isTransient(error) && (error as ApiRequestError).apiError.status === 401
+          ? codeless401 + 1
+          : 0
+      if (!isTransient(error) || codeless401 >= MAX_CODELESS_401_IN_A_ROW)
+        return settleFailure(error)
+      transientHooks.forEach((hook) => hook())
+      transientHooks.clear()
+      const wait = TRANSIENT_RETRY_DELAYS_MS[attempt] ?? MAX_RETRY_INTERVAL_MS
+      await new Promise((resolve) => setTimeout(resolve, wait)) // 락 밖에서 쉰다
+      await untilVisible() // 숨은 탭은 멈췄다가 보이면 곧바로 이어 간다
     }
+  }
+
+  function untilVisible(): Promise<void> {
+    if (typeof document === 'undefined' || document.visibilityState !== 'hidden') {
+      return Promise.resolve()
+    }
+    return new Promise((resolve) => {
+      const onChange = () => {
+        if (document.visibilityState === 'hidden') return
+        document.removeEventListener('visibilitychange', onChange)
+        resolve()
+      }
+      document.addEventListener('visibilitychange', onChange)
+    })
   }
 
   /** 락 안에서 서버를 한 번 부른다 */
@@ -172,7 +192,7 @@ export function createSessionRefresher(options: SessionRefresherOptions): Sessio
     return { done: true }
   }
 
-  /** 재시도로도 안 풀린 실패 - 서버가 세션을 닫았다고 말했거나 바퀴가 401 로 끝났으면 로그아웃, 아니면 쉬었다 던진다(세션은 그대로) */
+  /** 재시도할 수 없는 실패 - 서버가 세션을 닫았다고 말했거나 코드 없는 401 이 계속되면 로그아웃, 아니면 던진다(세션은 그대로) */
   function settleFailure(error: unknown): false {
     if (error instanceof ApiRequestError) {
       const { code, status } = error.apiError
@@ -183,9 +203,6 @@ export function createSessionRefresher(options: SessionRefresherOptions): Sessio
       if (code === ErrorCodes.AUTH_TOO_MANY_REFRESHES) {
         const asked = retryAfterSeconds(error) ?? DEFAULT_BACKOFF_SECONDS
         const wait = Math.min(MAX_BACKOFF_SECONDS, Math.max(1, asked) * 2 ** (streak - 1))
-        backoff = { until: now() + wait * 1000, error, streak }
-      } else if (isTransient(error)) {
-        const wait = Math.min(MAX_IDLE_BACKOFF_SECONDS, IDLE_BACKOFF_SECONDS * 2 ** (streak - 1))
         backoff = { until: now() + wait * 1000, error, streak }
       }
     }
@@ -219,8 +236,32 @@ export function createSessionRefresher(options: SessionRefresherOptions): Sessio
     return flight
   }
 
+  /** 갱신 비행에 붙은 일반 요청은 최대 45초(갱신 타임아웃과 같게)만 기다린다 - 그 뒤엔 일시 오류로 실패해 화면이 오류 · 다시 시도를 보이게 한다. 비행 자체는 뒤에서 계속된다 */
+  function withWaitLimit(flight: Promise<boolean>): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(
+        () =>
+          reject(
+            new ApiRequestError(
+              {
+                code: ClientErrorCodes.NETWORK_ERROR,
+                title: 'Session refresh is taking too long',
+                status: 0,
+                timestamp: new Date().toISOString(),
+              },
+              'refresh-wait',
+              'refresh-wait',
+              'refresh-wait',
+            ),
+          ),
+        REQUEST_WAIT_LIMIT_MS,
+      )
+      flight.then(resolve, reject).finally(() => clearTimeout(timer))
+    })
+  }
+
   return {
     refresh,
-    recover: ({ failedAuthorization }) => refresh(failedAuthorization),
+    recover: ({ failedAuthorization }) => withWaitLimit(refresh(failedAuthorization)),
   }
 }

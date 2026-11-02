@@ -152,17 +152,55 @@ describe('session refresher', () => {
     expect(ended).not.toHaveBeenCalled()
   })
 
-  it('when every attempt fails the error is surfaced after about a minute, and the session is still there', async () => {
+  it('while the failure stays transient the SAME token keeps being sent - at most 30 s apart - and the session is untouched', async () => {
     const { client, call, ended, access, refresh } = setup()
     call.mockRejectedValue(failure(503, 'CLIENT.HTTP_ERROR'))
     const request = client.value('/a').catch((error: unknown) => error)
-    await vi.advanceTimersByTimeAsync(70_000)
-    await expect(request).resolves.toMatchObject({ apiError: { status: 503 } })
-    expect(call.mock.calls.length).toBeGreaterThan(2)
+    await vi.advanceTimersByTimeAsync(300_000)
+    expect(call.mock.calls.length).toBeGreaterThan(10)
     expect(new Set(call.mock.calls.map(([token]) => token))).toEqual(new Set(['r1.1']))
     expect(ended).not.toHaveBeenCalled()
     expect(access.get()).toBe('access-1')
     expect(refresh.get()?.refreshToken).toBe('r1.1')
+    call.mockResolvedValue(tokens(2))
+    await vi.advanceTimersByTimeAsync(31_000)
+    await request // the request itself gave up after 45 s; the flight went on and rotated
+    expect(refresh.get()?.refreshToken).toBe('r1.2')
+    expect(access.get()).toBe('access-2')
+  })
+
+  it('a request waiting on a long refresh flight fails as a transient error after 45 s while the flight carries on', async () => {
+    const { client, call, ended } = setup()
+    call.mockRejectedValue(failure(503, 'CLIENT.HTTP_ERROR'))
+    const request = client.value('/a').catch((error: unknown) => error)
+    await vi.advanceTimersByTimeAsync(46_000)
+    await expect(request).resolves.toMatchObject({ apiError: { status: 0 } })
+    const before = call.mock.calls.length
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(call.mock.calls.length).toBeGreaterThan(before)
+    expect(ended).not.toHaveBeenCalled()
+  })
+
+  it('a server that needs 3 minutes to wake: it rotates, the response is lost, and the next retry (<= 30 s later) is inside the grace and gets the same successor', async () => {
+    const { client, call, ended, refresh } = setup()
+    const wakesAt = Date.now() + 180_000
+    let rotatedAt: number | null = null
+    call.mockImplementation(async (token) => {
+      if (Date.now() < wakesAt) throw failure(504, 'CLIENT.HTTP_ERROR')
+      if (rotatedAt === null) {
+        rotatedAt = Date.now() // the server rotated...
+        throw failure(504, 'CLIENT.HTTP_ERROR') // ...but the proxy cut the response
+      }
+      if (token !== 'r1.1' || Date.now() - rotatedAt > 60_000) {
+        throw failure(401, ErrorCodes.AUTH_REFRESH_REUSED)
+      }
+      return tokens(2)
+    })
+    const request = client.value('/a').catch((error: unknown) => error)
+    await vi.advanceTimersByTimeAsync(260_000)
+    await request
+    expect(ended).not.toHaveBeenCalled()
+    expect(refresh.get()?.refreshToken).toBe('r1.2') // the flight carried on and got the same successor
   })
 
   it('a 401 without an AUTH.* code (a proxy) is retried, and kept as a session if a retry succeeds', async () => {
@@ -174,23 +212,20 @@ describe('session refresher', () => {
     expect(ended).not.toHaveBeenCalled()
   })
 
-  it('a retry cycle that ends in a code-less 401 signs out; a 5xx-ended cycle does not and rests before the next call', async () => {
+  it('code-less 401s that never stop end the session; an AUTH.* 401 other than the three is final at once', async () => {
     const a = setup()
     a.call.mockRejectedValue(failure(401, 'COMMON.UNAUTHORIZED'))
     const lost = a.client.value('/a').catch((error: unknown) => error)
-    await vi.advanceTimersByTimeAsync(70_000)
+    await vi.advanceTimersByTimeAsync(120_000)
     await lost
     expect(a.ended).toHaveBeenCalledWith('expired')
+    expect(a.call).toHaveBeenCalledTimes(5)
 
     const b = setup()
-    b.call.mockRejectedValue(failure(503, 'CLIENT.HTTP_ERROR'))
-    const down = b.client.value('/a').catch((error: unknown) => error)
-    await vi.advanceTimersByTimeAsync(31_000) // the last retry went out at 30 s; the 15 s rest has just begun
-    await down
-    const calls = b.call.mock.calls.length
-    await expect(b.client.value('/a')).rejects.toMatchObject({ apiError: { status: 503 } })
-    expect(b.call.mock.calls.length).toBe(calls) // resting: no new server call yet
-    expect(b.ended).not.toHaveBeenCalled()
+    b.call.mockRejectedValue(failure(401, 'AUTH.SOMETHING_ELSE'))
+    await expect(b.client.value('/a')).rejects.toBeDefined()
+    expect(b.call).toHaveBeenCalledTimes(1)
+    expect(b.ended).toHaveBeenCalledWith('expired')
   })
 
   it('without any refresh credential the 401 simply ends the session', async () => {

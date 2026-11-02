@@ -148,7 +148,7 @@ export function createAuthSession({
 
   const RECONNECT_DELAY_MS = 15_000
   const FIRST_ATTEMPT_WAIT_MS = 3_000
-  const MAX_RECONNECT_DELAY_MS = 300_000
+  const MAX_RECONNECT_DELAY_MS = 30_000 // 재시도 간격은 서버 reuse-grace 의 절반(30초)을 넘지 않는다 - sessionRefresher.ts 의 불변식
   const RETRY_ATTEMPTS = 3
   const RETRY_DELAY_MS = 2000
 

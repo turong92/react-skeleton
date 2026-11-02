@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, screen, userEvent as user, within } from 'storybook/test'
+import { expect, fn, screen, userEvent as user, waitFor, within } from 'storybook/test'
 import { koAuthLabels } from '../screens/labels.ko'
+import { apiError } from '../test/apiFixtures'
 import {
   createFakeMfaApi,
   FAKE_MFA_PASSWORD,
@@ -8,6 +9,8 @@ import {
   FAKE_TOTP_CODE,
   FAKE_TOTP_SECRET,
 } from '../stories/fakeMfaApi'
+import { createMfaEnrollmentRequiredController } from './mfaEnrollmentRequired'
+import { MfaEnrollmentRequiredGate } from './MfaEnrollmentRequiredGate'
 import { MfaEnrollmentRequiredScreen } from './MfaEnrollmentRequiredScreen'
 
 /**
@@ -88,5 +91,46 @@ export const SigningOutIsAlwaysThere: Story = {
   play: async ({ canvas, args, userEvent }) => {
     await userEvent.click(canvas.getByRole('button', { name: '로그아웃' }))
     await expect(args.onSignOut).toHaveBeenCalledTimes(1)
+  },
+}
+
+export const ComingBackFromAnotherWindowKeepsTheRecoveryCodes: Story = {
+  render: () => {
+    const fake = createFakeMfaApi({ exempt: true })
+    const controller = createMfaEnrollmentRequiredController()
+    void controller.recover({
+      path: '/notes',
+      method: 'GET',
+      error: apiError('MFA.ENROLLMENT_REQUIRED', 403),
+    })
+    const account = {
+      me: async () => ({ hasPassword: true, email: 'ann@example.com', methods: [] }) as never,
+      requestReauthConfirmation: async () => undefined as never,
+    }
+    return (
+      <MfaEnrollmentRequiredGate
+        controller={controller}
+        api={fake.api}
+        account={account}
+        accountId="a"
+        labels={koAuthLabels}
+        onSignOut={() => undefined}
+      >
+        <p>앱 화면</p>
+      </MfaEnrollmentRequiredGate>
+    )
+  },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(await canvas.findByRole('button', { name: '지금 켜기' }))
+    await typeCode(FAKE_TOTP_CODE)
+    const codes = within(await screen.findByRole('dialog', { name: '복구 코드를 저장해 주세요' }))
+    // 서버는 이미 켜졌다 - 비밀번호 관리자 같은 다른 창에 다녀와도(focus) 저장 확인 전에는 막이 걷히지 않는다
+    window.dispatchEvent(new Event('focus'))
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    await expect(codes.getByText(FAKE_RECOVERY_CODES[0])).toBeVisible()
+    await userEvent.click(codes.getByRole('button', { name: '저장했어요' }))
+    await waitFor(() =>
+      expect(canvas.queryByRole('heading', { name: '2단계 인증을 켜 주세요' })).toBeNull(),
+    )
   },
 }

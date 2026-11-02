@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, inject, it } from 'vitest'
 import { signOut } from './boardSteps'
 import { auth, DEMO, dismissConsent, launch, signIn } from './helpers'
 import { ADMIN, api, operatorPage, tokenOf } from './paymentSteps'
-import { nextStep, totpAt } from './totp'
+import { createAuthenticatorApp, stepOf } from './totp'
 
 /*
  * 2단계 인증 (스펙 §6 흐름 ① ~ ④) - 진짜 백엔드(`auth-mfa` 모듈, `skeleton.auth-mfa.admin.enabled`) · 브라우저. 인증 앱은 시험 도우미(`totp.ts`)가 화면이 보여 준 비밀로 계산한다.
@@ -25,18 +25,11 @@ let adminToken: string
 let userId = ''
 let resetOn = false
 
-/** 사용자의 인증 앱 - 화면이 보여 준 비밀 · 마지막으로 쓴 걸음 · 복구 코드 */
-let secret = ''
-let lastStep = -1
+/** 사용자의 인증 앱(화면이 보여 준 비밀로 만든다) · 복구 코드 · 방금 로그인에 쓴 코드와 그 걸음 */
+let app!: ReturnType<typeof createAuthenticatorApp>
 let recoveryCodes: string[] = []
 let usedCode = ''
-/** 지금 낼 6자리 - 같은 걸음은 두 번 못 쓰므로 걸음은 앞으로만 간다(서버는 한 걸음 앞까지 받는다) */
-async function appCode(): Promise<string> {
-  const { step, waitMs } = nextStep(lastStep, Date.now())
-  lastStep = step
-  if (waitMs > 0) await new Promise((done) => setTimeout(done, waitMs + 250))
-  return totpAt(secret, step)
-}
+let usedStep = -1
 
 beforeAll(async () => {
   ;({ browser, page } = await launch())
@@ -100,10 +93,11 @@ describe('two-factor: turned on in settings, asked at every sign-in', () => {
       await wizard.getByRole('button', { name: auth.mfaContinue, exact: true }).click()
       // 인증 앱에 넣는 비밀 문자열 - 화면이 보여 준 그대로 코드를 계산한다
       await pwExpect(wizard.getByRole('img', { name: auth.mfaQrLabel })).toBeVisible()
-      secret = (await wizard.locator('code').first().innerText()).trim()
+      const secret = (await wizard.locator('code').first().innerText()).trim()
       baseExpect(secret).toMatch(/^[A-Z2-7]{16,}$/)
+      app = createAuthenticatorApp(secret)
       await wizard.getByLabel(auth.codeDigit(1, 6)).click()
-      await page.keyboard.type(await appCode())
+      await page.keyboard.type(await app.code())
       const codes = page.getByRole('dialog', { name: auth.mfaCodesTitle })
       await pwExpect(codes.locator('li code')).toHaveCount(10)
       recoveryCodes = (await codes.locator('li code').allInnerTexts()).map((c) => c.trim())
@@ -116,7 +110,8 @@ describe('two-factor: turned on in settings, asked at every sign-in', () => {
   run('① signing in now asks for a code, and the app code gets in', async () => {
     await signOut(page)
     await passwordStep()
-    usedCode = await appCode()
+    usedCode = await app.code()
+    usedStep = app.last
     await typeCode(usedCode)
     await signedIn()
   })
@@ -135,7 +130,13 @@ describe('two-factor: turned on in settings, asked at every sign-in', () => {
   run('③ the code that was just used is refused the second time', async () => {
     await signOut(page)
     await passwordStep()
+    // 이 거절이 「시간 창 밖」이 아니라 「같은 걸음 재사용」 때문임을 보장한다 - 서버는 지금 걸음 ±1 의 코드를 받으므로, 쓴 걸음이 아직 그 안에 있어야 한다
+    baseExpect(Math.abs(stepOf(Date.now()) - usedStep)).toBeLessThanOrEqual(1)
+    const verifying = page.waitForResponse((r) => r.url().endsWith('/auth/mfa/verify'))
     await typeCode(usedCode)
+    const answer = await verifying
+    baseExpect(answer.status()).toBe(400)
+    baseExpect(((await answer.json()) as { code: string }).code).toBe('MFA.CODE_INVALID')
     await pwExpect(page.getByText(auth.mfaCodeWrong().replace(/\.$/, ''))).toBeVisible()
     await pwExpect(page).toHaveURL(/\/login\/two-factor$/)
   })

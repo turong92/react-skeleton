@@ -196,7 +196,11 @@ export async function operatorRejectsRequest(page: Page, baseUrl: string, orderI
 export async function operatorOpensPayment(page: Page, baseUrl: string, orderId: string) {
   await page.goto(`${baseUrl}/admin/payments`)
   await page.getByLabel(labels.admin.orders.search, { exact: true }).fill(orderId)
-  await page.getByRole('button', { name: labels.admin.orders.searchSubmit, exact: true }).click()
+  // 머리글의 전체 찾기도 같은 「찾기」 단추라 결제 찾기 폼 안에서 찾는다
+  await page
+    .getByRole('search', { name: labels.admin.orders.filterLabel })
+    .getByRole('button', { name: labels.admin.orders.searchSubmit, exact: true })
+    .click()
   const row = page
     .getByRole('table', { name: labels.admin.orders.caption })
     .getByRole('row')

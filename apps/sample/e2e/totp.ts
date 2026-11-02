@@ -38,3 +38,20 @@ export function totpAt(secret: string, step: number): string {
   const binary = hmac.readUInt32BE(offset) & 0x7fffffff
   return String(binary % 1_000_000).padStart(6, '0')
 }
+
+/** 사용자 한 명의 인증 앱 - 코드를 낼 때마다 걸음이 앞으로만 간다(`nextStep`). `last` 는 마지막으로 쓴 걸음 */
+export function createAuthenticatorApp(secret: string, initialLast = -1) {
+  let last = initialLast
+  return {
+    secret,
+    get last() {
+      return last
+    },
+    async code(): Promise<string> {
+      const { step, waitMs } = nextStep(last, Date.now())
+      last = step
+      if (waitMs > 0) await new Promise((done) => setTimeout(done, waitMs + 250))
+      return totpAt(secret, step)
+    },
+  }
+}

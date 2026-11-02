@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from 'react'
 import type { AccountApi } from '../account/accountApi'
 import { CodeClockProvider } from '../codeClock'
 import { reauthSubjectOf, type ReauthSubject } from '../reauth/kind'
@@ -50,6 +57,15 @@ export function MfaEnrollmentRequiredGate({
   const required = state.status === 'required'
   const [read, setRead] = useState<{ for: string; subject: ReauthSubject } | null>(null)
   const [failed, setFailed] = useState(false)
+  // 마법사가 열려 있는 동안은 「이미 켰나」를 묻지 않는다 - 서버는 확인 순간 켜지므로, 복구 코드 단계에서 다른 창에 다녀오면 막이 걷혀 코드를 잃는다
+  const wizardOpen = useRef(false)
+  const onEnrolledRef = useRef(onEnrolled)
+  useEffect(() => {
+    onEnrolledRef.current = onEnrolled
+  })
+  const onWizardOpenChange = useCallback((open: boolean) => {
+    wizardOpen.current = open
+  }, [])
   const subject = read && read.for === accountId ? read.subject : null
 
   useEffect(() => {
@@ -71,9 +87,9 @@ export function MfaEnrollmentRequiredGate({
     const recheck = () =>
       api.status().then(
         (status) => {
-          if (status.enabled) {
+          if (status.enabled && !wizardOpen.current) {
             controller.enrolled()
-            onEnrolled?.()
+            onEnrolledRef.current?.()
           }
         },
         () => undefined,
@@ -86,7 +102,7 @@ export function MfaEnrollmentRequiredGate({
       document.removeEventListener('visibilitychange', onVisible)
       window.removeEventListener('focus', onVisible)
     }
-  }, [required, accountId, api, controller, load, onEnrolled])
+  }, [required, accountId, api, controller, load])
   // 로그아웃으로 떠나면 접는다(붙잡힌 호출은 403 으로 끝난다)
   useEffect(() => {
     if (!accountId && required) controller.decline()
@@ -108,6 +124,7 @@ export function MfaEnrollmentRequiredGate({
         controller.decline()
         onSignOut()
       }}
+      onWizardOpenChange={onWizardOpenChange}
       loadFailed={failed}
       onRetry={() => {
         setFailed(false)

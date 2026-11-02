@@ -839,6 +839,29 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
     onDelete: noop,
     children: createElement('p', null, 'app'),
   }),
+  'auth#TwoFactorChallengeScreen': () => ({
+    mfa: { mfaToken: 't', methods: ['totp', 'recovery_code'], expiresAt: null },
+    onVerify: asyncNoop,
+    onRestart: noop,
+  }),
+  'auth#TwoFactorSection': () => ({
+    api: fakeAccountApi(),
+    subject: { hasPassword: true, email: 'a@example.com', providers: [] },
+  }),
+  'auth#MfaEnrollmentRequiredScreen': () => ({
+    api: fakeAccountApi(),
+    subject: { hasPassword: true, email: 'a@example.com', providers: [] },
+    onEnrolled: noop,
+    onSignOut: noop,
+  }),
+  'auth#MfaEnrollmentRequiredGate': (ctx) => ({
+    controller: call(ctx.mod('auth').createMfaEnrollmentRequiredController),
+    api: fakeAccountApi(),
+    account: fakeAccountApi(),
+    accountId: null,
+    onSignOut: noop,
+    children: createElement('p', null, 'app'),
+  }),
   'auth#EmailWriteNotice': (ctx) => ({
     controller: call(ctx.mod('auth').createEmailRequiredController),
   }),

@@ -20,6 +20,8 @@ export type MfaEnrollmentRequiredScreenProps = {
    */
   onProviderReauth?: (provider: string) => void
   onSignOut: () => void
+  /** 켜기 마법사가 열리고 닫힐 때 - 열려 있는 동안(특히 한 번만 보이는 복구 코드 단계) 막은 다른 창에 다녀와도 걷히지 않아야 한다(`MfaEnrollmentRequiredGate` 가 쓴다) */
+  onWizardOpenChange?: (open: boolean) => void
   /** `me` 를 못 읽었다(다시 시도) */
   loadFailed?: boolean
   onRetry?: () => void
@@ -38,6 +40,7 @@ export function MfaEnrollmentRequiredScreen({
   onEnrolled,
   onProviderReauth,
   onSignOut,
+  onWizardOpenChange,
   loadFailed,
   onRetry,
   labels: given,
@@ -47,6 +50,10 @@ export function MfaEnrollmentRequiredScreen({
   const heading = useRef<HTMLHeadingElement>(null)
   const [open, setOpen] = useState(false)
   useEffect(() => heading.current?.focus(), [])
+  useEffect(() => {
+    onWizardOpenChange?.(open)
+    return () => onWizardOpenChange?.(false)
+  }, [open, onWizardOpenChange])
 
   return (
     <div className={styles.overlay} role="dialog" aria-modal="true" aria-labelledby={titleId}>

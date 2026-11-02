@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 콜드스타트로 로그인이 풀리는 문제 (2026-11-02)
+
+- `createSessionRefresher`: 일시 오류(네트워크 · 타임아웃 · 5xx · 백엔드 `AUTH.*` 코드가 없는 401)는 로그아웃하지 않고 **같은 토큰으로** 2·4·8·16·30초 백오프(합쳐 약 60초) 재시도; `AUTH.REFRESH_INVALID` 만 「expired」(예전엔 모든 401). `createAuthApi.refresh` 는 요청 제한 45초.
+- `createApiClient` 의 `onError(error, { authVerdict })` — 갱신 호출 자신 · 복구 중 실패는 `false`; `createUnauthorizedHandler` 는 `false` 면 자격을 지우지 않는다.
+- `AuthStatus` 에 `reconnecting` — `restore()` 가 일시 오류로 막히면(자격은 그대로) 15초마다 스스로 다시 시도; `<RequireAuth reconnecting>` 가 로그인으로 보내지 않고 「Reconnecting…」을 보인다. 다른 가드(`RequireRole` · `RequirePermission`)는 그대로.
+
 ### Fixed — 광고 동의 · 공용 브라우저 리뷰 지적 (2026-10-31)
 
 - `@skeleton/legal`: `SignUpConsents` · `ConsentSettings` 에 `excludeTypes`(기본 없음 = 지금 동작 그대로) — 다른 화면이 동의문을 보여 주고 따로 받는 문서(견본의 `marketing-night`)가 가입 「전체 동의」 · 설정 스위치로 바로 기록되지 않게. 견본은 `marketing-night` 만 뺀다.

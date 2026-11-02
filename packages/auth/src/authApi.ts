@@ -51,6 +51,8 @@ export type AuthApiOptions = {
   delivery?: RefreshDelivery
 }
 
+/** `/auth/refresh` 의 요청 제한 시간 — 클라이언트 기본(15초)보다 길게: 0대에서 뜨는 서버의 첫 갱신이 20초를 넘길 수 있다 */
+const REFRESH_TIMEOUT_MS = 45_000
 const CSRF_HEADERS = { 'X-Requested-With': 'fetch' }
 
 /** 백엔드 `modules/auth` · `auth-social` · `auth-session` · `auth-magic-link` 계약을 그대로 부르는 얇은 호출 모음. 토큰은 저장하지 않는다(`createAuthSession`) */
@@ -82,6 +84,8 @@ export function createAuthApi(
         method: 'POST',
         json: tokenBody(refreshToken),
         skipAuth: true,
+        // 콜드 스타트로 느린 갱신도 기다린다 — 서버는 성공했는데 클라이언트가 먼저 끊으면 새 토큰을 잃는다
+        timeoutMs: REFRESH_TIMEOUT_MS,
         ...csrf,
       }),
     logout: (refreshToken) =>

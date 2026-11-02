@@ -60,17 +60,30 @@ describe('M4 — restore() shares the single-flight and drops dead credentials',
     expect(session.getState().status).toBe('anonymous')
   })
 
-  it('a network failure keeps the credential and surfaces the error', async () => {
-    const net = new ApiRequestError(
-      { code: 'CLIENT.NETWORK_ERROR', title: 'n', status: 0, timestamp: 't' },
-      't',
-      's',
-      'p',
-    )
-    const { session, refreshStore } = setup(async () => {
-      throw net
-    })
-    await expect(session.restore()).rejects.toBe(net)
-    expect(refreshStore.get()?.refreshToken).toBe('r1.1')
+  it('a lasting network failure keeps the credential, shows "reconnecting" (never "anonymous") and reconnects on its own', async () => {
+    vi.useFakeTimers()
+    try {
+      const net = new ApiRequestError(
+        { code: 'CLIENT.NETWORK_ERROR', title: 'n', status: 0, timestamp: 't' },
+        't',
+        's',
+        'p',
+      )
+      let down = true
+      const { session, refreshStore } = setup(async () => {
+        if (down) throw net
+        return fresh()
+      })
+      const restoring = session.restore().catch((error: unknown) => error)
+      await vi.advanceTimersByTimeAsync(70_000)
+      await expect(restoring).resolves.toBe(net)
+      expect(session.getState().status).toBe('reconnecting')
+      expect(refreshStore.get()?.refreshToken).toBe('r1.1')
+      down = false
+      await vi.advanceTimersByTimeAsync(20_000)
+      expect(session.getState().status).toBe('authenticated')
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

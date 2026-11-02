@@ -79,11 +79,16 @@ export function createAuthSession({
   } | null = null
   /** 이 토큰의 권한을 받으려다 포기했다 - 화면이 「다시 시도」를 보인다 */
   let permissionsFailedFor: string | null = null
+  /** `restore()` 가 갱신 자격은 있는데 일시 오류로 결과를 못 얻었다 - 상태는 `reconnecting`, 잠시 뒤 스스로 다시 시도한다 */
+  let reconnecting = false
+  let reconnectTimer: ReturnType<typeof setTimeout> | null = null
   let state = compute()
 
   function compute(): AuthState {
     const token = store.get()
-    if (!token) return { status: 'anonymous', token: null, principal: null }
+    if (!token) {
+      return { status: reconnecting ? 'reconnecting' : 'anonymous', token: null, principal: null }
+    }
     const failed = permissionsFailedFor === token ? { permissionsFailed: true as const } : {}
     if (known?.token === token)
       return { status: 'authenticated', token, principal: known.principal, ...failed }
@@ -100,6 +105,15 @@ export function createAuthSession({
 
   // 저장소를 둘 다 바꾸는 동안에는 알리지 않는다 — 한쪽만 바뀐 중간 상태(옛 토큰 + 새 principal)가 구독자에게 새면 계정이 잠깐 「모르는 사람」으로 보인다
   let batching = false
+  function setReconnecting(value: boolean) {
+    reconnecting = value
+    if (!value && reconnectTimer) {
+      clearTimeout(reconnectTimer)
+      reconnectTimer = null
+    }
+    refreshState()
+  }
+
   function refreshState() {
     if (batching) return
     const next = compute()
@@ -124,6 +138,7 @@ export function createAuthSession({
       lastPermissions = { accountId: principal.accountId, permissions: principal.permissions }
   }
 
+  const RECONNECT_DELAY_MS = 15_000
   const RETRY_ATTEMPTS = 3
   const RETRY_DELAY_MS = 2000
 
@@ -175,6 +190,7 @@ export function createAuthSession({
         : null
     const principal = withPermissions(response.principal, carried)
     known = { token: response.accessToken, principal }
+    reconnecting = false
     remember(principal)
     permissionsAskedFor = response.principal.permissions ? response.accessToken : null
     // 리프레시 자격을 먼저 — 액세스 토큰이 보이는 순간 갱신이 필요해도 새 자격이 있다
@@ -191,6 +207,43 @@ export function createAuthSession({
     }
     refreshState()
     return response
+  }
+
+  async function restore(): Promise<void> {
+    if (store.get()) {
+      if (reconnecting) setReconnecting(false)
+      return
+    }
+    const credentials = refreshStore?.get()
+    const usable = delivery === 'cookie' ? credentials != null : !!credentials?.refreshToken
+    if (!usable) return
+    try {
+      if (refresher) {
+        // 락 · single-flight 안에서 한 번만 — 죽은 자격이면 갱신기가 두 저장소를 비운다
+        await refresher.refresh()
+      } else {
+        try {
+          accept(await api.refresh(credentials?.refreshToken ?? null))
+        } catch (error) {
+          if (error instanceof ApiRequestError && error.apiError.status === 401) {
+            refreshStore?.clear() // 죽은 자격을 매 로드마다 내밀지 않는다
+            return
+          }
+          throw error
+        }
+      }
+      setReconnecting(false)
+    } catch (error) {
+      // 일시 오류: 자격은 그대로 - 로그인 화면으로 보내지 않고 잠시 뒤 다시 시도한다
+      if (refreshStore?.get() != null) {
+        setReconnecting(true)
+        reconnectTimer ??= setTimeout(() => {
+          reconnectTimer = null
+          void restore().catch(() => undefined)
+        }, RECONNECT_DELAY_MS)
+      } else setReconnecting(false)
+      throw error
+    }
   }
 
   return {
@@ -224,6 +277,7 @@ export function createAuthSession({
       ),
     signIn: accept,
     async logout() {
+      setReconnecting(false)
       const refreshToken = refreshStore?.get()?.refreshToken ?? null
       const hadSession = store.get() !== null || refreshStore?.get() != null
       known = null
@@ -267,25 +321,6 @@ export function createAuthSession({
       refreshState()
       return principal
     },
-    async restore() {
-      if (store.get()) return
-      const credentials = refreshStore?.get()
-      const usable = delivery === 'cookie' ? credentials != null : !!credentials?.refreshToken
-      if (!usable) return
-      if (refresher) {
-        // 락 · single-flight 안에서 한 번만 — 죽은 자격이면 갱신기가 두 저장소를 비운다
-        await refresher.refresh()
-        return
-      }
-      try {
-        accept(await api.refresh(credentials?.refreshToken ?? null))
-      } catch (error) {
-        if (error instanceof ApiRequestError && error.apiError.status === 401) {
-          refreshStore?.clear() // 죽은 자격을 매 로드마다 내밀지 않는다
-          return
-        }
-        throw error
-      }
-    },
+    restore,
   }
 }

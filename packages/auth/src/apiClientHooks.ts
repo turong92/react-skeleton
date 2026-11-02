@@ -21,14 +21,16 @@ export type UnauthorizedHandlerOptions = {
   ignoreCodes?: readonly string[]
 }
 
-/** `createApiClient({ onError })` 에 꽂는 401 처리 지점: 토큰을 지우고 앱에 알린다 */
+/** `createApiClient({ onError })` 에 꽂는 401 처리 지점: 인증 요청에 대한 401 판정이면(갱신 뒤 재시도도 401) 토큰을 지우고 앱에 알린다 */
 export function createUnauthorizedHandler({
   store,
   refreshStore,
   onUnauthorized,
   ignoreCodes = [ErrorCodes.AUTH_INVALID_CREDENTIALS],
-}: UnauthorizedHandlerOptions): (error: ApiRequestError) => void {
-  return (error) => {
+}: UnauthorizedHandlerOptions): (error: ApiRequestError, context?: ErrorContext) => void {
+  return (error, context) => {
+    // 갱신 호출 자신의 401 · 복구 중의 실패는 이 토큰에 대한 판정이 아니다 — 확정 로그아웃은 갱신기가 판단한다
+    if (context?.authVerdict === false) return
     if (!(error instanceof ApiRequestError) || error.apiError.status !== 401) return
     if (ignoreCodes.includes(error.apiError.code)) return
     refreshStore?.clear()

@@ -131,7 +131,12 @@ describe('createAuthApi (mirrors kotlin-skeleton modules/auth and auth-social)',
     expect(calls).toEqual([
       {
         path: '/auth/refresh',
-        request: { method: 'POST', json: { refreshToken: 'r1.abc' }, skipAuth: true },
+        request: {
+          method: 'POST',
+          json: { refreshToken: 'r1.abc' },
+          skipAuth: true,
+          timeoutMs: 45_000,
+        },
       },
     ])
   })
@@ -146,6 +151,7 @@ describe('createAuthApi (mirrors kotlin-skeleton modules/auth and auth-social)',
         json: {},
         headers: { 'X-Requested-With': 'fetch' },
         skipAuth: true,
+        timeoutMs: 45_000,
       },
     })
   })

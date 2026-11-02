@@ -131,17 +131,48 @@ describe('session refresher', () => {
     expect(b.ended).toHaveBeenCalledWith('suspended')
   })
 
-  it('a network failure during refresh keeps the session and surfaces that error, not a 401', async () => {
+  it('a 504 from the proxy while the server rotated: the same token is presented again after a backoff and the session survives', async () => {
     const { client, call, ended, access, refresh } = setup()
+    call.mockRejectedValueOnce(failure(504, 'CLIENT.HTTP_ERROR'))
+    const request = client.value('/a')
+    await vi.advanceTimersByTimeAsync(5_000)
+    await expect(request).resolves.toBe('/a')
+    expect(call.mock.calls.map(([token]) => token)).toEqual(['r1.1', 'r1.1'])
+    expect(ended).not.toHaveBeenCalled()
+    expect(access.get()).toBe('access-2')
+    expect(refresh.get()?.refreshToken).toBe('r1.2')
+  })
+
+  it('a network failure during refresh is retried the same way', async () => {
+    const { client, call, ended } = setup()
     call.mockRejectedValueOnce(failure(0, 'CLIENT.NETWORK_ERROR'))
-    await expect(client.value('/a')).rejects.toMatchObject({ apiError: { status: 0 } })
+    const request = client.value('/a')
+    await vi.advanceTimersByTimeAsync(5_000)
+    await expect(request).resolves.toBe('/a')
+    expect(ended).not.toHaveBeenCalled()
+  })
+
+  it('when every attempt fails the error is surfaced after about a minute, and the session is still there', async () => {
+    const { client, call, ended, access, refresh } = setup()
+    call.mockRejectedValue(failure(503, 'CLIENT.HTTP_ERROR'))
+    const request = client.value('/a').catch((error: unknown) => error)
+    await vi.advanceTimersByTimeAsync(70_000)
+    await expect(request).resolves.toMatchObject({ apiError: { status: 503 } })
+    expect(call.mock.calls.length).toBeGreaterThan(2)
+    expect(new Set(call.mock.calls.map(([token]) => token))).toEqual(new Set(['r1.1']))
     expect(ended).not.toHaveBeenCalled()
     expect(access.get()).toBe('access-1')
     expect(refresh.get()?.refreshToken).toBe('r1.1')
-    // and the next 401 may try again
-    const retry = client.value('/a')
-    await vi.advanceTimersByTimeAsync(60)
-    await expect(retry).resolves.toBe('/a')
+  })
+
+  it('a 401 on /auth/refresh that the backend did not produce (proxy, no AUTH.* code) is not a sign-out', async () => {
+    const { client, call, ended, refresh } = setup()
+    call.mockRejectedValue(failure(401, 'CLIENT.HTTP_ERROR'))
+    const request = client.value('/a').catch((error: unknown) => error)
+    await vi.advanceTimersByTimeAsync(70_000)
+    await expect(request).resolves.toMatchObject({ apiError: { status: 401 } })
+    expect(ended).not.toHaveBeenCalled()
+    expect(refresh.get()?.refreshToken).toBe('r1.1')
   })
 
   it('without any refresh credential the 401 simply ends the session', async () => {

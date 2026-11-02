@@ -72,7 +72,8 @@ export type SocialLoginRequest = {
   redirectUri?: string
 } & SocialProof
 
-export type AuthStatus = 'anonymous' | 'authenticated'
+/** `reconnecting`: 새로고침 뒤 갱신이 일시 오류(네트워크 · 5xx)로 막혀 로그인 여부를 아직 모른다 - 로그인 화면으로 보내지 말고 기다린다 */
+export type AuthStatus = 'anonymous' | 'authenticated' | 'reconnecting'
 
 export type AuthState = {
   status: AuthStatus

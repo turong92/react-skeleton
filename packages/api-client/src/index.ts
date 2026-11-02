@@ -10,6 +10,7 @@ export type {
   ApiResponseInterceptor,
   ApiRetryOptions,
   HeaderRecord,
+  ErrorContext,
   UnauthorizedContext,
   ForbiddenContext,
 } from './createApiClient'

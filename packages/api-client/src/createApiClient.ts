@@ -42,7 +42,7 @@ export type ApiClientConfig = {
   /** 모든 응답(에러 포함)의 `Date` 헤더 — 서버 시각 보정(`createServerClock().observeDateHeader`)을 여기에 건다 */
   onResponseDate?: (date: string | undefined) => void
   /** 실패한 요청이 `ApiRequestError` 로 던져지기 직전에 한 번. 401 처리(`@skeleton/auth`)나 로깅을 건다. 여기서 던져도 원래 에러가 나간다 */
-  onError?: (error: ApiRequestError) => void
+  onError?: (error: ApiRequestError, context: ErrorContext) => void
   /**
    * 인증이 붙은 요청이 401 을 받았을 때 한 번 부른다 — true 를 돌려주면 (새 인증 헤더로) 같은 요청을 **한 번만** 다시 보낸다(무한 재시도 없음).
    * false 면 원래 401 이 그대로 나가고, 던지면 던진 에러가 나간다(예: 갱신 중 네트워크 오류). `skipAuth` 요청(로그인 · 갱신 자신)은 부르지 않는다.
@@ -65,6 +65,12 @@ export type ApiClientConfig = {
   responseInterceptors?: ApiResponseInterceptor[]
   errorInterceptors?: ApiErrorInterceptor[]
 }
+
+/**
+ * `onError` 의 두 번째 인자. `authVerdict` 는 이 에러가 **인증 요청에 대한 서버의 판정**일 때만 true 다 —
+ * 인증 없는 요청(로그인 · 갱신 자신 · 로그아웃)의 실패와 401 복구(토큰 갱신) 중에 난 실패는 false. 401 처리기는 true 일 때만 세션을 지운다.
+ */
+export type ErrorContext = { authVerdict: boolean }
 
 export type UnauthorizedContext = {
   error: ApiRequestError
@@ -226,7 +232,7 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
             recoveryError instanceof ApiRequestError
               ? recoveryError
               : apiRequestErrorFromTransport(recoveryError, path, traceContext)
-          notifyError(config.onError, surfaced)
+          notifyError(config.onError, surfaced, { authVerdict: false })
           throw surfaced
         }
         if (recovered) return perform<TEnvelope>(path, request, false, recoveredForbidden)
@@ -245,7 +251,7 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
             recoveryError instanceof ApiRequestError
               ? recoveryError
               : apiRequestErrorFromTransport(recoveryError, path, traceContext)
-          notifyError(config.onError, surfaced)
+          notifyError(config.onError, surfaced, { authVerdict: false })
           throw surfaced
         }
         if (recovered)
@@ -254,7 +260,7 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
             failure.apiError.code,
           ])
       }
-      notifyError(config.onError, failure)
+      notifyError(config.onError, failure, { authVerdict: !request.skipAuth })
       throw failure
     }
   }
@@ -312,9 +318,13 @@ async function providerHeaders(
   return headers
 }
 
-function notifyError(handler: ApiClientConfig['onError'], error: ApiRequestError) {
+function notifyError(
+  handler: ApiClientConfig['onError'],
+  error: ApiRequestError,
+  context: ErrorContext,
+) {
   try {
-    handler?.(error)
+    handler?.(error, context)
   } catch {
     // 훅이 던져도 호출자는 원래 에러를 받는다
   }

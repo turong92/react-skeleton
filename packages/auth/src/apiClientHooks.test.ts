@@ -32,6 +32,15 @@ describe('createUnauthorizedHandler (for createApiClient({ onError }))', () => {
     expect(onUnauthorized).toHaveBeenCalledExactlyOnceWith(error)
   })
 
+  it('ignores a 401 that is not a verdict on the session token (the refresh call itself, a recovery failure)', () => {
+    const store = createTokenStore()
+    store.set('still-valid')
+    const onUnauthorized = vi.fn()
+    createUnauthorizedHandler({ store, onUnauthorized })(failure(401), { authVerdict: false })
+    expect(store.get()).toBe('still-valid')
+    expect(onUnauthorized).not.toHaveBeenCalled()
+  })
+
   it('leaves other statuses alone (403 is a permission problem, not an expired session)', () => {
     const store = createTokenStore()
     store.set('still-valid')

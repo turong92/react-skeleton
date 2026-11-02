@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { AuthProvider } from './AuthProvider'
+import { RequireAuth } from './RequireAuth'
 import { RequireRole } from './RequireRole'
 import { createAuthSession } from './session'
 import { createTokenStore } from './tokenStore'
@@ -112,5 +113,28 @@ describe('redirect back after sign-in', () => {
   })
   it('never bounces back to an auth page itself', () => {
     expect(postSignInTarget({ from: { pathname: '/login', search: '', hash: '' } }, '/')).toBe('/')
+  })
+})
+
+describe('RequireAuth while the session is reconnecting', () => {
+  it('shows a status line instead of sending the visitor to the login', () => {
+    const store = createTokenStore()
+    const session = createAuthSession({ api, store })
+    vi.spyOn(session, 'getState').mockReturnValue({
+      status: 'reconnecting',
+      token: null,
+      principal: null,
+    })
+    const out = renderToStaticMarkup(
+      <AuthProvider session={session}>
+        <MemoryRouter initialEntries={['/admin']}>
+          <Routes>
+            <Route path="/admin" element={<RequireAuth />} />
+          </Routes>
+        </MemoryRouter>
+      </AuthProvider>,
+    )
+    expect(out).not.toContain('data-redirect')
+    expect(out).toContain('role="status"')
   })
 })

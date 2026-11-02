@@ -209,6 +209,15 @@ export function createAuthSession({
     return response
   }
 
+  function scheduleReconnect() {
+    if (refreshStore?.get() == null) return setReconnecting(false)
+    setReconnecting(true)
+    reconnectTimer ??= setTimeout(() => {
+      reconnectTimer = null
+      void restore().catch(() => undefined)
+    }, RECONNECT_DELAY_MS)
+  }
+
   async function restore(): Promise<void> {
     if (store.get()) {
       if (reconnecting) setReconnecting(false)
@@ -219,8 +228,26 @@ export function createAuthSession({
     if (!usable) return
     try {
       if (refresher) {
-        // 락 · single-flight 안에서 한 번만 — 죽은 자격이면 갱신기가 두 저장소를 비운다
-        await refresher.refresh()
+        // 락 · single-flight 안에서 한 번만 — 죽은 자격이면 갱신기가 두 저장소를 비운다.
+        // 첫 시도가 일시 오류면 백오프(약 60초)를 기다리지 않고 「연결 중」으로 넘어간다 - 재시도는 뒤에서 계속되어 성공하면 로그인, 확정 로그아웃이면 로그아웃이 된다
+        let early = false
+        let resolveEarly: () => void = () => undefined
+        const gate = new Promise<void>((resolve) => (resolveEarly = resolve))
+        const flight = refresher.refresh(undefined, {
+          onTransient: () => {
+            early = true
+            setReconnecting(true)
+            resolveEarly()
+          },
+        })
+        await Promise.race([flight.then(() => undefined), gate])
+        if (early) {
+          flight.then(
+            () => setReconnecting(false),
+            () => scheduleReconnect(),
+          )
+          return
+        }
       } else {
         try {
           accept(await api.refresh(credentials?.refreshToken ?? null))
@@ -235,13 +262,7 @@ export function createAuthSession({
       setReconnecting(false)
     } catch (error) {
       // 일시 오류: 자격은 그대로 - 로그인 화면으로 보내지 않고 잠시 뒤 다시 시도한다
-      if (refreshStore?.get() != null) {
-        setReconnecting(true)
-        reconnectTimer ??= setTimeout(() => {
-          reconnectTimer = null
-          void restore().catch(() => undefined)
-        }, RECONNECT_DELAY_MS)
-      } else setReconnecting(false)
+      scheduleReconnect()
       throw error
     }
   }

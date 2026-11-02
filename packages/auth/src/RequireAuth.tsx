@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
+import { RECONNECTING_NOTICE } from './reconnectingNotice'
 import { useAuth } from './useAuth'
 
 export type RequireAuthProps = {
@@ -15,7 +16,7 @@ export type RequireAuthProps = {
 export function RequireAuth({
   redirectTo = '/login',
   children,
-  reconnecting = <p role="status">Reconnecting…</p>,
+  reconnecting = RECONNECTING_NOTICE,
 }: RequireAuthProps) {
   const { status } = useAuth()
   const location = useLocation()

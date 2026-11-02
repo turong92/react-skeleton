@@ -4,6 +4,7 @@ import { Alert, Button } from '@skeleton/ui'
 import { hasPermission } from './permissions'
 import { AccountStateNotice } from './screens/AccountStateNotice'
 import { mergeLabels, type AuthLabels } from './screens/labels'
+import { RECONNECTING_NOTICE } from './reconnectingNotice'
 import { useAuth } from './useAuth'
 
 export type RequirePermissionProps = {
@@ -37,6 +38,7 @@ export function RequirePermission({
 }: RequirePermissionProps) {
   const { status, principal, permissionsFailed, retryPermissions } = useAuth()
   const location = useLocation()
+  if (status === 'reconnecting') return RECONNECTING_NOTICE
   if (status !== 'authenticated')
     return <Navigate to={redirectTo} replace state={{ from: location }} />
   if (!principal || principal.permissions === null) {

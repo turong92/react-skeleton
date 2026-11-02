@@ -3,6 +3,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { AuthProvider } from './AuthProvider'
 import { RequireAuth } from './RequireAuth'
+import { RequirePermission } from './RequirePermission'
 import { RequireRole } from './RequireRole'
 import { createAuthSession } from './session'
 import { createTokenStore } from './tokenStore'
@@ -113,6 +114,35 @@ describe('redirect back after sign-in', () => {
   })
   it('never bounces back to an auth page itself', () => {
     expect(postSignInTarget({ from: { pathname: '/login', search: '', hash: '' } }, '/')).toBe('/')
+  })
+})
+
+function renderReconnecting(element: React.ReactElement) {
+  const session = createAuthSession({ api, store: createTokenStore() })
+  vi.spyOn(session, 'getState').mockReturnValue({
+    status: 'reconnecting',
+    token: null,
+    principal: null,
+  })
+  return renderToStaticMarkup(
+    <AuthProvider session={session}>
+      <MemoryRouter initialEntries={['/admin']}>
+        <Routes>
+          <Route path="/admin" element={element} />
+        </Routes>
+      </MemoryRouter>
+    </AuthProvider>,
+  )
+}
+
+describe('role and permission guards while the session is reconnecting', () => {
+  it.each([
+    ['RequireRole', <RequireRole key="r" roles={['ADMIN']} />],
+    ['RequirePermission', <RequirePermission key="p" permission="x.y" />],
+  ])('%s shows the waiting status instead of redirecting to the login', (_name, element) => {
+    const out = renderReconnecting(element)
+    expect(out).not.toContain('data-redirect')
+    expect(out).toContain('role="status"')
   })
 })
 

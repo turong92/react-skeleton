@@ -60,7 +60,7 @@ describe('M4 — restore() shares the single-flight and drops dead credentials',
     expect(session.getState().status).toBe('anonymous')
   })
 
-  it('a lasting network failure keeps the credential, shows "reconnecting" (never "anonymous") and reconnects on its own', async () => {
+  it('a network failure on the first attempt returns restore() at once, keeps the credential, shows "reconnecting" (never "anonymous") and reconnects on its own', async () => {
     vi.useFakeTimers()
     try {
       const net = new ApiRequestError(
@@ -74,14 +74,40 @@ describe('M4 — restore() shares the single-flight and drops dead credentials',
         if (down) throw net
         return fresh()
       })
-      const restoring = session.restore().catch((error: unknown) => error)
+      const restoring = session.restore()
+      await vi.advanceTimersByTimeAsync(10) // the first attempt failed: restore() returns now, it does not wait out the ~60 s of retries
+      await expect(restoring).resolves.toBeUndefined()
+      expect(session.getState().status).toBe('reconnecting')
       await vi.advanceTimersByTimeAsync(70_000)
-      await expect(restoring).resolves.toBe(net)
       expect(session.getState().status).toBe('reconnecting')
       expect(refreshStore.get()?.refreshToken).toBe('r1.1')
       down = false
       await vi.advanceTimersByTimeAsync(20_000)
       expect(session.getState().status).toBe('authenticated')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('a background retry that ends in AUTH.REFRESH_INVALID turns "reconnecting" into "anonymous"', async () => {
+    vi.useFakeTimers()
+    try {
+      const net = new ApiRequestError(
+        { code: 'CLIENT.NETWORK_ERROR', title: 'n', status: 0, timestamp: 't' },
+        't',
+        's',
+        'p',
+      )
+      let calls = 0
+      const { session, refreshStore } = setup(async () => {
+        if (calls++ === 0) throw net
+        throw expired()
+      })
+      await session.restore()
+      expect(session.getState().status).toBe('reconnecting')
+      await vi.advanceTimersByTimeAsync(5_000)
+      expect(session.getState().status).toBe('anonymous')
+      expect(refreshStore.get()).toBeNull()
     } finally {
       vi.useRealTimers()
     }

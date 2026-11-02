@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { AccountStateNotice } from './screens/AccountStateNotice'
+import { RECONNECTING_NOTICE } from './reconnectingNotice'
 import { useAuth } from './useAuth'
 
 export type RequireRoleProps = {
@@ -22,6 +23,7 @@ export function RequireRole({
 }: RequireRoleProps) {
   const { status, principal } = useAuth()
   const location = useLocation()
+  if (status === 'reconnecting') return RECONNECTING_NOTICE
   if (status !== 'authenticated')
     return <Navigate to={redirectTo} replace state={{ from: location }} />
   const allowed = roles.some((role) => principal?.roles.includes(role))

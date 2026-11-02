@@ -32,12 +32,15 @@ export type SessionRefresherOptions = {
   now?: () => number
 }
 
+/** `onTransient`: 일시 오류로 첫 시도가 실패해 백오프로 들어갈 때 한 번 - 호출자가 기다리지 않고 「연결 중」으로 넘어가게 한다 */
+export type RefreshHooks = { onTransient?: () => void }
+
 export type SessionRefresher = {
   /**
    * 갱신 한 번(탭 안에서는 진행 중인 것 하나로 합친다). 이미 다른 요청 · 탭이 갱신했으면 서버를 부르지 않고 true.
    * 갱신할 수 없어 세션이 끝났으면 false, 네트워크 · 서버 오류는 던진다(세션은 그대로).
    */
-  refresh(failedAuthorization?: string): Promise<boolean>
+  refresh(failedAuthorization?: string, hooks?: RefreshHooks): Promise<boolean>
   /** `createApiClient({ recoverUnauthorized })` 에 꽂는다 */
   recover(context: UnauthorizedContext): Promise<boolean>
 }
@@ -77,6 +80,7 @@ export function createSessionRefresher(options: SessionRefresherOptions): Sessio
   const { tokens, refreshTokens, delivery, onSessionEnded } = options
   const now = options.now ?? Date.now
   let inFlight: Promise<boolean> | null = null
+  const transientHooks = new Set<() => void>()
   /** 백오프 중이면 그때까지 · 마지막 429 · 연속 횟수 */
   let backoff: { until: number; error: ApiRequestError; streak: number } | null = null
 
@@ -110,6 +114,8 @@ export function createSessionRefresher(options: SessionRefresherOptions): Sessio
           wait !== undefined &&
           now() - started + wait <= TRANSIENT_RETRY_BUDGET_MS
         ) {
+          transientHooks.forEach((hook) => hook())
+          transientHooks.clear()
           await new Promise((resolve) => setTimeout(resolve, wait))
           // 기다리는 사이 로그아웃했거나 다른 탭이 갱신했으면 더 보내지 않는다
           tokens.reload()
@@ -165,12 +171,14 @@ export function createSessionRefresher(options: SessionRefresherOptions): Sessio
     return locks ? locks.request(options.lockName ?? DEFAULT_LOCK_NAME, task) : task()
   }
 
-  function refresh(failedAuthorization?: string): Promise<boolean> {
+  function refresh(failedAuthorization?: string, hooks?: RefreshHooks): Promise<boolean> {
+    if (hooks?.onTransient) transientHooks.add(hooks.onTransient)
     if (inFlight) return inFlight
     if (backoff && now() < backoff.until) return Promise.reject(backoff.error)
     const failedToken = failedAuthorization?.replace(/^Bearer\s+/i, '')
     const flight = withLock(() => run(failedToken)).finally(() => {
       if (inFlight === flight) inFlight = null
+      transientHooks.clear()
     })
     inFlight = flight
     return flight

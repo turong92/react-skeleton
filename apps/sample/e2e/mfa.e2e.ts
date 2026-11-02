@@ -105,6 +105,7 @@ describe('two-factor: turned on in settings, asked at every sign-in', () => {
       await wizard.getByLabel(auth.codeDigit(1, 6)).click()
       await page.keyboard.type(await appCode())
       const codes = page.getByRole('dialog', { name: auth.mfaCodesTitle })
+      await pwExpect(codes.locator('li code')).toHaveCount(10)
       recoveryCodes = (await codes.locator('li code').allInnerTexts()).map((c) => c.trim())
       baseExpect(recoveryCodes).toHaveLength(10)
       await codes.getByRole('button', { name: auth.mfaCodesSaved }).click()

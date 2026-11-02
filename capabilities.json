@@ -1349,6 +1349,8 @@
     {
       "patterns": [],
       "stories": [
+        "packages/storage/src/ImageUploadField.stories.tsx",
+        "packages/storage/src/StoredImage.stories.tsx",
         "packages/storage/src/useUpload.stories.tsx",
         "packages/ui/src/FilePicker/FilePicker.stories.tsx",
         "packages/ui/src/Progress/Progress.stories.tsx"
@@ -1360,13 +1362,16 @@
         "useUpload",
         "validateFile",
         "storageEndpoints",
-        "createXhrTransport"
+        "createXhrTransport",
+        "ImageUploadField",
+        "StoredImage",
+        "useFilePreview"
       ],
-      "needs": ["api-client"],
+      "needs": ["api-client", "ui"],
       "backend": {
         "modules": ["storage", "storage-s3"],
         "oneOfModules": [],
-        "optionalModules": [],
+        "optionalModules": ["storage-image"],
         "basePaths": ["/api/v1/storage"],
         "docs": ["docs/modules/storage.md", "docs/modules/storage-s3.md"]
       },
@@ -1382,10 +1387,10 @@
         "alsoVia": ["--with-sample", "--with-workbench"],
         "optOut": null
       },
-      "summary": "파일 업로드 — 검증 → presign → 브라우저에서 스토리지로 직접 PUT(진행률 · 취소 · 멀티파트)과 useUpload 훅.",
+      "summary": "파일 업로드 — 검증 → presign → 브라우저에서 스토리지로 직접 PUT(진행률 · 취소 · 멀티파트)과 useUpload 훅, 올린 뒤 서버 검사(완료 호출)와 사진 부품(ImageUploadField · StoredImage · useFilePreview).",
       "notFor": [
-        "이미지 리사이즈 · 변환은 하지 않는다",
-        "업로드 화면 한 장(Pattern)은 없다 — FilePicker + useUpload + Progress 를 상세 화면의 한 구역으로 조립한다"
+        "이미지 리사이즈 · 변환은 이 패키지가 하지 않는다 — 서버 storage-image 모듈이 변환본을 만들고 StoredImage 가 그린다",
+        "업로드 화면 한 장(Pattern)은 없다 — 사진은 ImageUploadField, 그 밖의 파일은 FilePicker + useUpload + Progress 를 상세 화면의 한 구역으로 조립한다"
       ],
       "keywords": {
         "ko": [
@@ -1395,7 +1400,11 @@
           "프리사인",
           "대용량 업로드",
           "멀티파트",
-          "S3"
+          "S3",
+          "사진 업로드",
+          "썸네일",
+          "미리보기",
+          "업로드 검사"
         ],
         "en": [
           "file upload",
@@ -1405,7 +1414,12 @@
           "multipart",
           "s3",
           "r2",
-          "upload progress"
+          "upload progress",
+          "photo upload",
+          "thumbnail",
+          "image preview",
+          "srcset",
+          "upload inspection"
         ]
       }
     },

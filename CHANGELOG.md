@@ -30,6 +30,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `@skeleton/push/vite` 의 `pushServiceWorker({ fileName, icon })`: 의존 없는 서비스 워커를 빌드 뿌리에 내고 개발 서버도 같은 주소로 내준다. 워커는 푸시를 늘 띄우고, 알림 클릭의 `link` 는 앱 안 경로(`/` 로 시작, `//` · `\` · 제어 문자 없음)일 때만 따라간다.
 - `@skeleton/api-client`: `ErrorCodes.PUSH_TEST_TOO_SOON`.
 
+### Added — `@skeleton/storage` 1.2.0 업로드 검사 · 이미지 부품 R1 (2026-11-02)
+
+백엔드 짝: kotlin-skeleton `storage` 의 `POST /api/v1/storage/complete` · `/guest/complete`, `storage-image` 의 `POST /api/v1/storage/images`(서버가 아직 없어도 §5 계약대로 가짜 API 로 시험한다).
+
+- `storageEndpoints()` 에 `complete` · `guestComplete` · `images`, `createStorageApi` 가 `complete?(key)` · `images?(keys)` 를 낸다.
+- `createUploader({ complete: true })` — PUT(멀티파트면 조각 합치기) 뒤에 완료를 부르고 `UploadResult.inspection`(`contentType` · `sizeBytes` · `image`)을 싣는다. **기본 `false`** — 옛 서버와 짝일 때 그대로다. 서버가 거절하면(400 `STORAGE.FILE_REJECTED`) 새 `UploadRejectedError`(`errors` 코드 목록 — `StorageValidationError` 와 같은 모양, 객체는 서버가 이미 지웠다).
+- `useFilePreview(file)`(고른 즉시 로컬 미리보기, 바뀌거나 사라지면 `revoke`) · `ImageUploadField`(`FilePicker` 위: 여러 장 · 진행률 · 거절 문구 · 「처리 중」 · 지우기, 이미 붙은 키는 `api.images` 의 썸네일) · `StoredImage`(`srcset` · `width` · `height` · `loading="lazy"`) · `koImageUploadLabels`.
+- `validateFile` 코드 목록에 서버 쪽 `CONTENT_MISMATCH` · `UNRECOGNIZED_CONTENT` · `IMAGE_TOO_LARGE` · `INSPECTION_REJECTED`(완료 단계에서 오는 코드)를 문서로 더했다.
+- **의존 변화**: `@skeleton/ui` 가 devDependency 에서 dependency 로(새 부품이 `FilePicker` · `Progress` · `Button` 을 쓴다).
+
 ### Added — API 키 화면 R-B1/R-B2 (2026-10-31)
 
 백엔드 짝: kotlin-skeleton `api-key` 모듈(`GET/POST /api/v1/api-keys` · `GET /api-keys/scopes` · `DELETE /api-keys/{id}`, 운영 `GET /api/v1/admin/api-keys` · `POST …/{id}/revoke`, 권한 `api-key.read` · `api-key.revoke`).

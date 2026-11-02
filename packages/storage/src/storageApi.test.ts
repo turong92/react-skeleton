@@ -167,6 +167,9 @@ describe('default endpoints (kotlin-skeleton modules/storage opens /api/v1/stora
         complete: '/storage/multipart/complete',
         abort: '/storage/multipart/abort',
       },
+      complete: '/storage/complete',
+      guestComplete: '/storage/guest/complete',
+      images: '/storage/images',
     })
   })
 
@@ -207,5 +210,67 @@ describe('default endpoints (kotlin-skeleton modules/storage opens /api/v1/stora
     const { client } = fakeClient(() => ({}))
     const api = createStorageApi(client, { presign: '/files/presign' })
     expect(() => publicUrlFromDownload(api)).toThrow(/download/)
+  })
+})
+
+describe('upload completion and image lookup (kotlin-skeleton storage §5 — POST complete, POST images)', () => {
+  it('complete(key) → POST <complete> {key}, returns the inspection with a plain string key', async () => {
+    const { client, calls } = fakeClient(() => ({
+      key: { value: 'uploads/u/cat.png' },
+      contentType: 'image/png',
+      sizeBytes: 12,
+      image: { status: 'PENDING', width: 800, height: 600 },
+    }))
+    const api = createStorageApi(client, { ...endpoints, complete: '/files/complete' })
+    expect(await api.complete?.('uploads/u/cat.png')).toEqual({
+      key: 'uploads/u/cat.png',
+      contentType: 'image/png',
+      sizeBytes: 12,
+      image: { status: 'PENDING', width: 800, height: 600 },
+    })
+    expect(calls).toEqual([
+      { path: '/files/complete', request: { method: 'POST', json: { key: 'uploads/u/cat.png' } } },
+    ])
+  })
+
+  it('a non-image file has image: null; without endpoints.complete the api has no complete', async () => {
+    const { client } = fakeClient(() => ({ key: 'k', contentType: 'text/plain', sizeBytes: 1 }))
+    const api = createStorageApi(client, { ...endpoints, complete: '/files/complete' })
+    expect((await api.complete?.('k'))?.image).toBeNull()
+    expect(createStorageApi(client, endpoints).complete).toBeUndefined()
+  })
+
+  it('images(keys) → POST <images> {keys}, flattens variants to thumb / display with their sizes', async () => {
+    const { client, calls } = fakeClient(() => ({
+      items: [
+        {
+          key: 'uploads/u/cat.png',
+          status: 'READY',
+          width: 3000,
+          height: 2000,
+          variants: {
+            thumb: { url: 'https://s3.test/t.jpg', width: 400, height: 267 },
+            display: { url: 'https://s3.test/d.jpg', width: 1600, height: 1067 },
+          },
+        },
+        { key: 'uploads/u/new.png', status: 'PENDING', width: null, height: null, variants: {} },
+      ],
+    }))
+    const api = createStorageApi(client, { ...endpoints, images: '/files/images' })
+    expect(await api.images?.(['uploads/u/cat.png', 'uploads/u/new.png'])).toEqual([
+      {
+        key: 'uploads/u/cat.png',
+        status: 'READY',
+        width: 3000,
+        height: 2000,
+        thumb: { url: 'https://s3.test/t.jpg', width: 400, height: 267 },
+        display: { url: 'https://s3.test/d.jpg', width: 1600, height: 1067 },
+      },
+      { key: 'uploads/u/new.png', status: 'PENDING' },
+    ])
+    expect(calls[0]).toEqual({
+      path: '/files/images',
+      request: { method: 'POST', json: { keys: ['uploads/u/cat.png', 'uploads/u/new.png'] } },
+    })
   })
 })

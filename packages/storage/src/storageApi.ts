@@ -33,6 +33,43 @@ export type StorageEndpoints = {
   validate?: string
   /** 멀티파트를 쓰려면 네 개 모두 */
   multipart?: { start: string; part: string; complete: string; abort: string }
+  /** `POST { key }` → {@link UploadInspection} — 올린 뒤 서버가 내용을 검사한다. 있으면 `api.complete` */
+  complete?: string
+  /** `complete` 의 비회원 경로(비회원 업로드를 켠 서버만). 비회원 업로더는 이것을 `complete` 로 준다 */
+  guestComplete?: string
+  /** `POST { keys }` → `{ items }`(이미지 모듈이 있는 서버만). 있으면 `api.images` */
+  images?: string
+}
+
+/** 서버가 정한 이미지 처리 상태 — `PENDING` 변환 중 · `READY` · `REJECTED` · `UNSUPPORTED`(미리보기를 못 만드는 형식) · `FAILED` */
+export type ImageStatus = 'PENDING' | 'READY' | 'REJECTED' | 'UNSUPPORTED' | 'FAILED'
+
+/** 완료 응답의 이미지 부분 — 이미지가 아니거나 이미지 모듈이 없는 서버면 {@link UploadInspection} 의 `image` 가 `null` */
+export type ImageInspection = {
+  status: ImageStatus
+  width?: number
+  height?: number
+}
+
+/** 완료 호출의 응답 — `contentType` 은 서버가 내용으로 판정한 형식. PDF 키에도 `image`(1쪽 썸네일 상태)가 올 수 있다 */
+export type UploadInspection = {
+  key: string
+  contentType: string
+  sizeBytes: number
+  image: ImageInspection | null
+}
+
+/** 변환본 하나(`thumb` · `display`) — 주소는 서명 또는 공개 주소 */
+export type ImageVariant = { url: string; width?: number; height?: number }
+
+/** `images` 의 한 줄 — 서버의 `variants: { thumb?, display? }` 를 펼친 모양(`StoredImage` 가 바로 받는다) */
+export type StoredImageItem = {
+  key: string
+  status: ImageStatus
+  width?: number
+  height?: number
+  thumb?: ImageVariant
+  display?: ImageVariant
 }
 
 export type MultipartApi = {
@@ -59,6 +96,10 @@ export type StorageApi = {
   validate?(candidate: StorageCandidate): Promise<StorageValidationIssue[]>
   /** `endpoints.multipart` 가 있을 때만 */
   multipart?: MultipartApi
+  /** 업로드 완료 호출 — 서버가 올라온 내용을 검사한다(거절이면 400 `STORAGE.FILE_REJECTED` 를 던진다). `endpoints.complete` 가 있을 때만 */
+  complete?(key: string): Promise<UploadInspection>
+  /** 내 키들의 이미지 상태 · 변환본(20개까지). `endpoints.images` 가 있을 때만 */
+  images?(keys: string[]): Promise<StoredImageItem[]>
 }
 
 type Raw = Record<string, unknown>
@@ -93,6 +134,9 @@ export function storageEndpoints(basePath = '/storage'): Required<StorageEndpoin
       complete: `${base}/multipart/complete`,
       abort: `${base}/multipart/abort`,
     },
+    complete: `${base}/complete`,
+    guestComplete: `${base}/guest/complete`,
+    images: `${base}/images`,
   }
 }
 
@@ -135,7 +179,55 @@ export function createStorageApi(
       abort: (request) => post(abort, request),
     }
   }
+  if (endpoints.complete) {
+    const path = endpoints.complete
+    api.complete = async (key) => {
+      const raw = await post<Raw>(path, { key })
+      return {
+        key: keyOf(raw.key),
+        contentType: String(raw.contentType),
+        sizeBytes: Number(raw.sizeBytes),
+        image: raw.image ? imageInspection(raw.image as Raw) : null,
+      }
+    }
+  }
+  if (endpoints.images) {
+    const path = endpoints.images
+    api.images = async (keys) => {
+      const result = await post<{ items?: Raw[] }>(path, { keys })
+      return (result.items ?? []).map(storedImageItem)
+    }
+  }
   return api
+}
+
+const sized = (raw: Raw) => ({
+  ...(typeof raw.width === 'number' && { width: raw.width }),
+  ...(typeof raw.height === 'number' && { height: raw.height }),
+})
+
+function imageInspection(raw: Raw): ImageInspection {
+  return { status: raw.status as ImageStatus, ...sized(raw) }
+}
+
+function variantOf(raw: unknown): ImageVariant | undefined {
+  const variant = raw as Raw | undefined
+  return variant && typeof variant.url === 'string'
+    ? { url: variant.url, ...sized(variant) }
+    : undefined
+}
+
+function storedImageItem(raw: Raw): StoredImageItem {
+  const variants = (raw.variants ?? {}) as Raw
+  const thumb = variantOf(variants.thumb)
+  const display = variantOf(variants.display)
+  return {
+    key: keyOf(raw.key),
+    status: raw.status as ImageStatus,
+    ...sized(raw),
+    ...(thumb && { thumb }),
+    ...(display && { display }),
+  }
 }
 
 export type PublicUrlResolver = (key: string) => string | null | Promise<string | null>

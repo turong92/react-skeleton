@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import { UploadAbortedError, StorageValidationError } from './errors'
+import { ApiRequestError } from '@skeleton/api-client'
+import { UploadAbortedError, StorageValidationError, UploadRejectedError } from './errors'
 import type { CompletedPart, StorageApi } from './storageApi'
 import { createUploader } from './uploader'
 import type { PutRequest, UploadTransport } from './xhrTransport'
@@ -263,5 +264,119 @@ describe('createUploader — multipart', () => {
         (c) => c[0].contentLength,
       ),
     ).toEqual(expect.arrayContaining([4]))
+  })
+})
+
+describe('createUploader — complete call (upload inspection)', () => {
+  const inspection = {
+    key: 'uploads/cat.png',
+    contentType: 'image/png',
+    sizeBytes: 100,
+    image: { status: 'PENDING' as const, width: 800, height: 600 },
+  }
+  const withComplete = (
+    options: Parameters<typeof fakes>[0] = {},
+    complete: StorageApi['complete'] = async () => inspection,
+  ) => {
+    const fake = fakes(options)
+    const calls = fake.calls
+    fake.api.complete = vi.fn(async (key: string) => {
+      calls.push(`inspect:${key}`)
+      return (await complete?.(key)) as NonNullable<
+        Awaited<ReturnType<NonNullable<StorageApi['complete']>>>
+      >
+    })
+    return fake
+  }
+  const rejection = (codes: string[]) =>
+    new ApiRequestError(
+      {
+        code: 'STORAGE.FILE_REJECTED',
+        title: 'File rejected',
+        status: 400,
+        timestamp: '2026-11-02T00:00:00Z',
+        data: { errors: codes.map((code) => ({ code, message: `${code} message` })) },
+      },
+      't',
+      's',
+      'tp',
+    )
+
+  it('calls complete after the PUT finished and puts the inspection on the result', async () => {
+    const { api, transport } = withComplete()
+    const order: string[] = []
+    const put = transport.put.bind(transport)
+    transport.put = async (request) => (order.push('put'), put(request))
+    ;(api.complete as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+      order.push('complete')
+      return inspection
+    })
+    const result = await createUploader({ api, transport, complete: true }).upload(file(100))
+    expect(order).toEqual(['put', 'complete'])
+    expect(result.inspection).toEqual(inspection)
+  })
+
+  it('for a multipart upload complete comes after the multipart complete', async () => {
+    const { api, transport, calls } = withComplete({ multipart: true })
+    await createUploader({
+      api,
+      transport,
+      complete: true,
+      multipart: { thresholdBytes: 10, partSizeBytes: 10 },
+    }).upload(file(25, 'big.bin'))
+    expect(calls.at(-2)).toMatch(/^complete:/)
+    expect(calls.at(-1)).toBe('inspect:uploads/big.bin')
+  })
+
+  it('complete: false (the default) never calls it and the result has no inspection', async () => {
+    const { api, transport } = withComplete()
+    const result = await createUploader({ api, transport }).upload(file(100))
+    expect(api.complete).not.toHaveBeenCalled()
+    expect(result).not.toHaveProperty('inspection')
+  })
+
+  it('a server rejection (400 STORAGE.FILE_REJECTED) becomes UploadRejectedError with the codes', async () => {
+    const { api, transport } = withComplete({}, async () => {
+      throw rejection(['CONTENT_MISMATCH', 'IMAGE_TOO_LARGE'])
+    })
+    const failure = await createUploader({ api, transport, complete: true })
+      .upload(file(100))
+      .catch((e: unknown) => e)
+    expect(failure).toBeInstanceOf(UploadRejectedError)
+    expect((failure as UploadRejectedError).errors.map((e) => e.code)).toEqual([
+      'CONTENT_MISMATCH',
+      'IMAGE_TOO_LARGE',
+    ])
+  })
+
+  it('any other complete failure is passed through unchanged', async () => {
+    const boom = new Error('network down')
+    const { api, transport } = withComplete({}, async () => {
+      throw boom
+    })
+    const failure = await createUploader({ api, transport, complete: true })
+      .upload(file(100))
+      .catch((e: unknown) => e)
+    expect(failure).toBe(boom)
+  })
+
+  it('a rejection after a multipart upload does not try to abort the already completed multipart', async () => {
+    const { api, transport, calls } = withComplete({ multipart: true }, async () => {
+      throw rejection(['CONTENT_MISMATCH'])
+    })
+    await createUploader({
+      api,
+      transport,
+      complete: true,
+      multipart: { thresholdBytes: 10, partSizeBytes: 10 },
+    })
+      .upload(file(25, 'big.bin'))
+      .catch(() => undefined)
+    expect(calls).not.toContain('abort')
+  })
+
+  it('complete: true on an api without a complete endpoint fails at creation, not silently', () => {
+    const { api, transport } = fakes()
+    expect(() => createUploader({ api, transport, complete: true })).toThrow(/complete/)
   })
 })

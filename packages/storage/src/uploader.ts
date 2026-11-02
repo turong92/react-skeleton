@@ -1,5 +1,17 @@
-import { StorageValidationError, UploadAbortedError } from './errors'
-import type { PublicUrlResolver, StorageApi, StorageCandidate, CompletedPart } from './storageApi'
+import { ApiRequestError, ErrorCodes } from '@skeleton/api-client'
+import {
+  StorageValidationError,
+  UploadAbortedError,
+  UploadRejectedError,
+  type StorageValidationIssue,
+} from './errors'
+import type {
+  CompletedPart,
+  PublicUrlResolver,
+  StorageApi,
+  StorageCandidate,
+  UploadInspection,
+} from './storageApi'
 import { validateFile, type StorageFileRules } from './validateFile'
 import { createXhrTransport, type UploadTransport } from './xhrTransport'
 
@@ -12,6 +24,8 @@ export type UploadResult = {
   publicUrl: string | null
   etag: string | null
   multipart: boolean
+  /** `complete: true` 일 때만 — 서버가 올라온 내용을 보고 판정한 결과(형식 · 크기 · 이미지 상태) */
+  inspection?: UploadInspection
 }
 
 export type UploadOptions = {
@@ -40,9 +54,33 @@ export type UploaderOptions = {
   multipart?: MultipartOptions
   /** 키 → 공개 주소(`publicUrlFromBase` · `publicUrlFromEndpoint` · 직접) */
   publicUrl?: PublicUrlResolver
+  /**
+   * PUT(멀티파트면 합치기) 뒤에 `api.complete` 를 불러 서버가 올라온 내용을 검사하게 한다 — 기본 `false`(옛 서버와 짝일 때 그대로).
+   * 서버가 거절하면 {@link UploadRejectedError}. `api.complete` 가 없으면 만들 때 던진다.
+   */
+  complete?: boolean
 }
 
 const MIB = 1024 * 1024
+
+function rejectionIssues(error: ApiRequestError): StorageValidationIssue[] {
+  const listed = (error.apiError.data as { errors?: unknown } | null | undefined)?.errors
+  const issues = Array.isArray(listed)
+    ? listed.flatMap((item: { code?: unknown; message?: unknown }) =>
+        typeof item?.code === 'string'
+          ? [
+              {
+                code: item.code,
+                message: typeof item.message === 'string' ? item.message : item.code,
+              },
+            ]
+          : [],
+      )
+    : []
+  return issues.length > 0
+    ? issues
+    : [{ code: 'INSPECTION_REJECTED', message: error.apiError.title }]
+}
 
 const throwIfAborted = (signal?: AbortSignal) => {
   if (signal?.aborted) throw new UploadAbortedError()
@@ -59,22 +97,41 @@ export function createUploader({
   rules = {},
   multipart = {},
   publicUrl,
+  complete = false,
 }: UploaderOptions): Uploader {
+  if (complete && !api.complete)
+    throw new Error(
+      'createUploader({ complete: true }) needs an api with a complete endpoint (endpoints.complete)',
+    )
   const thresholdBytes = multipart.thresholdBytes ?? 16 * MIB
   const partSizeBytes = multipart.partSizeBytes ?? 8 * MIB
   const concurrency = Math.max(1, multipart.concurrency ?? 3)
   const maxParts = multipart.maxParts ?? 10_000
 
-  async function finish(
-    key: string,
-    etag: string | null,
-    viaMultipart: boolean,
-  ): Promise<UploadResult> {
-    return {
+  type Stored = { key: string; etag: string | null; multipart: boolean }
+
+  async function finish({ key, etag, multipart: viaMultipart }: Stored): Promise<UploadResult> {
+    const result: UploadResult = {
       key,
       publicUrl: publicUrl ? await publicUrl(key) : null,
       etag,
       multipart: viaMultipart,
+    }
+    if (complete && api.complete) result.inspection = await inspect(api.complete, key)
+    return result
+  }
+
+  /** 거절(400 `STORAGE.FILE_REJECTED`)만 {@link UploadRejectedError} 로 — 나머지 오류는 그대로 */
+  async function inspect(call: NonNullable<StorageApi['complete']>, key: string) {
+    try {
+      return await call(key)
+    } catch (error) {
+      if (
+        error instanceof ApiRequestError &&
+        error.apiError.code === ErrorCodes.STORAGE_FILE_REJECTED
+      )
+        throw new UploadRejectedError(rejectionIssues(error))
+      throw error
     }
   }
 
@@ -91,7 +148,7 @@ export function createUploader({
         options.onProgress?.({ loaded, total, fraction: total > 0 ? loaded / total : 1 }),
     })
     options.onProgress?.({ loaded: file.size, total: file.size, fraction: 1 })
-    return finish(presigned.key, response.etag, false)
+    return { key: presigned.key, etag: response.etag, multipart: false }
   }
 
   async function multipartUpload(
@@ -168,7 +225,7 @@ export function createUploader({
         uploadId: started.uploadId,
         parts: completed,
       })) as { eTag?: string | null } | undefined
-      return await finish(started.key, result?.eTag ?? null, true)
+      return { key: started.key, etag: result?.eTag ?? null, multipart: true }
     } catch (error) {
       await Promise.resolve(parts.abort({ key: started.key, uploadId: started.uploadId })).catch(
         () => {},
@@ -195,9 +252,11 @@ export function createUploader({
       }
       throwIfAborted(options.signal)
       const parts = api.multipart
-      return parts && file.size > thresholdBytes
-        ? multipartUpload(file, candidate, options, parts)
-        : single(file, candidate, options)
+      const stored =
+        parts && file.size > thresholdBytes
+          ? await multipartUpload(file, candidate, options, parts)
+          : await single(file, candidate, options)
+      return finish(stored)
     },
   }
 }

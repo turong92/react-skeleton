@@ -177,7 +177,9 @@ describe('Board — guests, approval and edited versions against the real backen
           'base64',
         ),
       })
-    await pwExpect(page.getByText(ko('board.pictures.attached'))).toBeVisible({ timeout: 30_000 })
+    await pwExpect(page.getByRole('button', { name: ko('board.pictures.remove') })).toBeVisible({
+      timeout: 30_000,
+    })
     await fillGuest(commentForm(page), '지나가는손님')
     await page.getByRole('button', { name: ko('board.comments.postComment') }).click()
     await pwExpect(page.getByText(ko('board.guest.pending'))).toBeVisible()
@@ -218,7 +220,9 @@ describe('Board — guests, approval and edited versions against the real backen
       .locator('input[type=file]')
       .first()
       .setInputFiles({ name: 'dot.png', mimeType: 'image/png', buffer: png })
-    await pwExpect(page.getByText(ko('board.pictures.attached'))).toBeVisible({ timeout: 30_000 })
+    await pwExpect(page.getByRole('button', { name: ko('board.pictures.remove') })).toBeVisible({
+      timeout: 30_000,
+    })
     await fillGuest(page, NAME)
     const written = page.waitForResponse(
       (r) => r.request().method() === 'POST' && /\/posts\/\d+\/comments$/.test(r.url()),

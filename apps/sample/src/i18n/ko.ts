@@ -380,7 +380,7 @@ export default {
   'board.pictures.pickHint': 'PNG, JPEG, GIF, WebP · 5MB까지.',
   'board.pictures.pickButton': '사진 고르기',
   'board.pictures.guestHint': 'PNG, JPEG, GIF, WebP · 10MB까지. 로그인 없이 올릴 수 있어요.',
-  'board.pictures.attached': '사진을 붙였어요',
+  'board.pictures.processing': '사진을 처리하는 중이에요…',
   'board.pictures.remove': '사진 빼기',
   'board.pictures.alt': '붙인 사진',
   'header.signIn': '로그인',
@@ -609,6 +609,8 @@ export default {
   'search.type.product': '상품',
   'reviews.edit.photosReplace':
     '사진 칸을 건드리면(올리거나 지우면) 지금 사진이 이 칸의 사진으로 모두 바뀌어요. 건드리지 않으면 그대로예요.',
+  'reviews.photo.enlarge': '크게 보기',
+  'reviews.photo.close': '닫기',
   'products.title': '상품',
   'products.back': '홈으로',
   'products.reviews': '리뷰',

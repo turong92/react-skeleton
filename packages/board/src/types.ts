@@ -138,12 +138,26 @@ export type PostSummary = {
   pendingRevision?: PendingRevision | null
 }
 
+/** 공개된 이미지 첨부의 변환본(이미지 모듈이 있는 서버) — 주소는 공개 주소, 폭 · 높이는 표시본 기준. `@skeleton/storage` 의 `StoredImage` 가 그대로 받는다 */
+export type AttachmentImage = {
+  width: number
+  height: number
+  thumb: string
+  display: string
+  /** 같은 그림의 다른 형식(`image/webp` …) — 서버 엔진이 만들 때만 채워지고 아니면 `{}` */
+  alternates?: Record<string, { thumb: string; display: string }>
+}
+
 /** 글 한 건 — 목록 줄 + 본문 · 첨부(스토리지 키) */
 export type PostDetail = PostSummary & {
   body: string
   attachments: string[]
   /** 공개 영역이 켜진 서버가 공개된 글에만 싣는다: 첨부 키 → 공개 주소(CDN) */
   attachmentUrls?: Record<string, string>
+  /** 이미지 모듈이 있는 서버가 공개된 글에 싣는다: 첨부 키 → 변환본(변환이 끝난 이미지만). 없는 키는 `attachmentUrls` 로 그린다 */
+  attachmentImages?: Record<string, AttachmentImage>
+  /** 변환 중인 이미지 첨부 키 — 「처리 중」 으로 보이고 잠시 뒤 다시 읽는다(없으면 키 없음) */
+  attachmentsPending?: string[]
   /** 호출자가 이 글의 댓글을 승인 · 가릴 수 있다(운영자 · 댓글 관리가 켜진 게시판의 글 주인) — 승인 · 가리기 단추의 근거 */
   canManageComments?: boolean
   /** 글마다 정한 댓글 승인 규칙 — null 이면 게시판 값 */
@@ -221,6 +235,10 @@ export type Comment = {
   pendingRevision?: PendingRevision | null
   /** 공개 영역이 켜진 서버가 공개된 댓글에만 싣는다: 첨부 키 → 공개 주소(CDN). 없으면 `renderAttachment` 가 서명 주소로 본다 */
   attachmentUrls?: Record<string, string>
+  /** 글의 `attachmentImages` 와 같다 — 공개된 댓글의 변환본 */
+  attachmentImages?: Record<string, AttachmentImage>
+  /** 글의 `attachmentsPending` 과 같다 */
+  attachmentsPending?: string[]
   /** 댓글을 관리하는 사람에게만 실린다 — `false` 면 이 댓글의 상태를 지금 못 바꾼다(운영자가 가린 댓글을 글 주인이 되살릴 수 없다). 복원 단추의 근거 */
   canManage?: boolean
 }

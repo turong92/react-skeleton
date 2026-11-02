@@ -384,7 +384,7 @@ const en: Record<keyof typeof ko, string> = {
   'board.pictures.pickHint': 'PNG, JPEG, GIF or WebP, up to 5 MB.',
   'board.pictures.pickButton': 'Choose picture',
   'board.pictures.guestHint': 'PNG, JPEG, GIF or WebP, up to 10 MB. No sign-in needed.',
-  'board.pictures.attached': 'Picture attached',
+  'board.pictures.processing': 'Processing the picture…',
   'board.pictures.remove': 'Remove picture',
   'board.pictures.alt': 'Attached picture',
   'header.signIn': 'Sign in',
@@ -616,6 +616,8 @@ const en: Record<keyof typeof ko, string> = {
   'search.type.product': 'Product',
   'reviews.edit.photosReplace':
     'Touching the photos field (adding or removing) replaces all current photos with what is in it. Leave it alone to keep them.',
+  'reviews.photo.enlarge': 'View larger',
+  'reviews.photo.close': 'Close',
   'products.title': 'Product',
   'products.back': 'Home',
   'products.reviews': 'Reviews',

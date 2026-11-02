@@ -75,6 +75,8 @@ export function GuestOwnerQueue({
     <BoardPicture
       key={`${from}:${key}`}
       url={from === 'current' ? c.attachmentUrls?.[key] : undefined}
+      image={from === 'current' ? c.attachmentImages?.[key] : undefined}
+      pending={from === 'current' ? c.attachmentsPending?.includes(key) : undefined}
       access={() =>
         boardApi
           .commentAttachmentAccess(code, postId, c.id, index, {

@@ -38,6 +38,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `createUploader({ complete: true })` — PUT(멀티파트면 조각 합치기) 뒤에 완료를 부르고 `UploadResult.inspection`(`contentType` · `sizeBytes` · `image`)을 싣는다. **기본 `false`** — 옛 서버와 짝일 때 그대로다. 서버가 거절하면(400 `STORAGE.FILE_REJECTED`) 새 `UploadRejectedError`(`errors` 코드 목록 — `StorageValidationError` 와 같은 모양, 객체는 서버가 이미 지웠다).
 - `useFilePreview(file)`(고른 즉시 로컬 미리보기, 바뀌거나 사라지면 `revoke`) · `ImageUploadField`(`FilePicker` 위: 여러 장 · 진행률 · 거절 문구 · 「처리 중」 · 지우기, 이미 붙은 키는 `api.images` 의 썸네일) · `StoredImage`(`srcset` · `width` · `height` · `loading="lazy"`) · `koImageUploadLabels`.
 - `validateFile` 코드 목록에 서버 쪽 `CONTENT_MISMATCH` · `UNRECOGNIZED_CONTENT` · `IMAGE_TOO_LARGE` · `INSPECTION_REJECTED`(완료 단계에서 오는 코드)를 문서로 더했다.
+- `StoredImage` 는 `alternates`(WebP 등)가 있으면 `<picture><source type srcset sizes>` + `<img>` 폴백. `@skeleton/board` 의 `PostDetail` · `Comment` 타입에 `attachmentImages`(`AttachmentImage`) · `attachmentsPending` 을 더했다(서버가 이미지 모듈을 켠 경우에만 온다).
+- 견본 앱: 업로더 `complete: true`(회원 · 비회원 경로), `PicturePicker` 가 `ImageUploadField`, 게시판 사진이 `StoredImage`(`attachmentImages` · 변환 중이면 「처리 중」 뒤 다시 읽기), 리뷰 사진은 목록 `?variant=thumb` · 눌러서 크게 볼 때 `display`. 새 e2e `files.e2e.ts`.
 - **의존 변화**: `@skeleton/ui` 가 devDependency 에서 dependency 로(새 부품이 `FilePicker` · `Progress` · `Button` 을 쓴다).
 
 ### Added — API 키 화면 R-B1/R-B2 (2026-10-31)

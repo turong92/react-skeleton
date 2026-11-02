@@ -1,6 +1,17 @@
+.open {
+  cursor: zoom-in;
+}
+
 .photo {
   display: block;
   max-width: 12rem;
   max-height: 12rem;
   border-radius: var(--radius-sm);
+}
+
+.large {
+  display: block;
+  max-width: 100%;
+  max-height: 70vh;
+  margin: 0 auto;
 }

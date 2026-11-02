@@ -106,6 +106,8 @@ function PostView({
         renderAttachment={(key) => (
           <BoardPicture
             url={post.attachmentUrls?.[key]}
+            image={post.attachmentImages?.[key]}
+            pending={post.attachmentsPending?.includes(key)}
             access={() => {
               const at = locate(post.attachments, post.pendingRevision?.attachments, key)
               // 로그인하지 않았으면 이 브라우저가 쓴 글일 때만 비밀을 보낸다 (남의 글에 요청하지 않는다)
@@ -157,6 +159,8 @@ function PostView({
         renderAttachment={(key, comment) => (
           <BoardPicture
             url={comment.attachmentUrls?.[key]}
+            image={comment.attachmentImages?.[key]}
+            pending={comment.attachmentsPending?.includes(key)}
             access={() => {
               const at = locate(comment.attachments, comment.pendingRevision?.attachments, key)
               if (!at) return Promise.reject(new Error('no access'))

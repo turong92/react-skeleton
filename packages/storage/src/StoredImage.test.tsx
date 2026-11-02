@@ -47,4 +47,28 @@ describe('StoredImage', () => {
     })
     expect(out).toContain('srcSet="https://cdn.test/t.jpg 400w, https://cdn.test/d.jpg 1600w"')
   })
+
+  it('with alternates it is a <picture>: a typed <source> per format and the <img> as fallback', () => {
+    const out = html({
+      image: {
+        width: 3000,
+        height: 2000,
+        thumb,
+        display,
+        alternates: {
+          'image/webp': {
+            thumb: { url: 'https://cdn.test/t.webp', width: 400 },
+            display: { url: 'https://cdn.test/d.webp', width: 1600 },
+          },
+        },
+      },
+      alt: 'cat',
+      sizes: '50vw',
+    })
+    expect(out).toMatch(/^<picture><source type="image\/webp"[^>]*\/><img /)
+    expect(out).toContain('srcSet="https://cdn.test/t.webp 400w, https://cdn.test/d.webp 1600w"')
+    expect(out).toContain('sizes="50vw"')
+    expect(out).toContain('src="https://cdn.test/d.jpg"')
+    expect(html({ image: { thumb, display, alternates: {} }, alt: 'x' })).not.toContain('<picture')
+  })
 })

@@ -400,6 +400,7 @@
       },
       "summary": "알림 받은편지함 — 목록 · 안 읽은 수(전용 엔드포인트) · 읽음/모두 읽음 · 묶인 줄의 수 · 링크로 이동 · 종류별 끄기(NotificationPreferences) · 실시간 이벤트로 캐시 갱신, NotificationBell/List 부품과 TanStack Query 훅.",
       "notFor": [
+        "공지 보내기 · 예약 · 통계 운영 — 운영 화면은 선택 하위 경로 @skeleton/notifications/admin(항목 notifications-broadcast-admin)에 있다",
         "알림을 보내는 쪽(발행)은 백엔드 코드(NotificationPublisher) — 이 패키지는 받는 화면만",
         "이메일 · Slack 알림 → 백엔드 notification-mail · notification-slack (프런트 짝 없음)",
         "실시간으로 즉시 뜨게 하려면 realtime 을 더한다(live-notifications)"
@@ -423,6 +424,68 @@
           "mark as read",
           "mute notifications",
           "notification link"
+        ]
+      }
+    },
+    {
+      "patterns": [
+        "packages/notifications/src/admin/AdminBroadcasts.stories.tsx",
+        "packages/notifications/src/admin/AdminBroadcastEditor.stories.tsx",
+        "packages/notifications/src/admin/AdminBroadcastDetail.stories.tsx"
+      ],
+      "stories": [],
+      "docs": ["packages/notifications/README.md"],
+      "entryPoints": [
+        "@skeleton/notifications/admin#createBroadcastAdminApi",
+        "@skeleton/notifications/admin#AdminBroadcasts",
+        "@skeleton/notifications/admin#AdminBroadcastEditor",
+        "@skeleton/notifications/admin#AdminBroadcastDetail",
+        "@skeleton/notifications/admin#koBroadcastAdminLabels"
+      ],
+      "needs": ["notifications"],
+      "backend": {
+        "modules": [],
+        "oneOfModules": [],
+        "optionalModules": ["notification-broadcast", "notification-broadcast-jdbc"],
+        "basePaths": [],
+        "docs": []
+      },
+      "status": "experimental",
+      "id": "notifications-broadcast-admin",
+      "kind": "pattern",
+      "package": "@skeleton/notifications",
+      "stampFlag": {
+        "flag": "--packages notifications",
+        "included": "flag",
+        "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
+        "alsoVia": ["--with-sample", "--with-workbench"],
+        "optOut": null
+      },
+      "summary": "운영자 공지 화면(선택 내보내기 @skeleton/notifications/admin) — 공지 목록(상태 칩 · 진행 막대) · 쓰기(종류 · 제목 · 본문 · 링크 · 대상 + 대상 수 · 채널 - 푸시 불가 종류는 푸시 칸 잠김 · 즉시 / 예약 · 나에게 테스트) · 보내기는 대상 수 · 채널 · 시각을 다시 보여 주는 확인 창을 거친다 · 상세(예상 대상 · 알림함 저장 / 읽음 · 푸시 넣음 / 성공 / 실패 / 보내지 않음 / 클릭 · 예약 풀기 · 취소 · 이어 보내기 · 누가 언제). 단추는 can(key) 로 숨긴다. 푸시 클릭 열람은 @skeleton/push 의 서비스 워커가 보고한다.",
+      "path": "packages/notifications/src/admin/index.ts",
+      "notFor": [
+        "백엔드 notification-broadcast(+ -jdbc)의 skeleton.notification.broadcast.admin.enabled=true 와 notification-broadcast.read · notification-broadcast.send 권한이 있어야 열린다(검사는 서버, RequirePermission 과 can 은 화면용). 기본 역할이 없어 전권이거나 역할 화면에서 권한을 준 계정만",
+        "공지를 받는 화면은 바뀌지 않는다 — 기존 NotificationBell · NotificationList 에 그대로 나온다",
+        "로그인 없이 보는 공개 공지 게시판 — board 가 맡는다",
+        "워크스페이스 관리자의 자기 팀 공지 — 1차는 서비스 운영자만"
+      ],
+      "keywords": {
+        "ko": [
+          "공지 보내기",
+          "공지 관리",
+          "전체 공지",
+          "푸시 공지",
+          "예약 발송",
+          "공지 통계",
+          "푸시 클릭률"
+        ],
+        "en": [
+          "broadcast",
+          "announcement",
+          "admin announcements",
+          "scheduled announcement",
+          "push click rate",
+          "mass notification"
         ]
       }
     },

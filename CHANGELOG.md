@@ -14,6 +14,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `AuthStatus` 에 `reconnecting` - 쓸 수 있는 갱신 자격이 있을 때만. `restore()` 는 첫 시도가 일시 오류이거나 3초 넘게 걸리면 바로 돌아오고 같은 시도가 뒤에서 이어진다(성공 → 로그인, 확정 로그아웃 → 비로그인). 일시 오류 · 회전 한도일 때만 15초에서 두 배씩(최대 30초) 스스로 다시 시도하고, 그 밖의 실패(400 · 403 · 404 등)는 예전처럼 비로그인.
 - `RequireAuth` · `RequireRole` · `RequirePermission` 은 `reconnecting` 이면 로그인으로 보내지 않고 `reconnecting` prop(기본 영어 「Reconnecting…」)을 그린다.
 
+### Added — `@skeleton/notifications/admin` 공지 운영 화면 + 푸시 클릭 열람 보고 R1 (2026-11-02)
+
+`@skeleton/notifications` 1.3.0. 새 하위 경로 `@skeleton/notifications/admin`. 백엔드 짝: kotlin-skeleton `notification-broadcast`(+ `-jdbc`, `/api/v1/admin/broadcasts`, 권한 `notification-broadcast.read` · `.send`). 견본 앱 라우트 · 메뉴 · e2e 는 다음 조각. 받는 사람 화면은 바뀌지 않는다.
+
+- `createBroadcastAdminApi` · 훅(`useBroadcasts` · `useBroadcast`(보내는 중이면 10초마다 다시 읽음) · `useBroadcastMutations` · `useBroadcastOptions` · `useAudienceCount`) · `AdminBroadcasts`(목록) · `AdminBroadcastEditor`(쓰기 — 푸시 불가 종류는 푸시 칸 잠김, 광고 종류 안내, 예약 야간 경고, 나에게 테스트, **보내기는 대상 수 · 채널 · 시각을 다시 보여 주는 확인 창을 거친다**) · `AdminBroadcastDetail`(통계 — 알림함 읽음 · 푸시 넣음/성공/실패/보내지 않음/클릭, 예약 풀기 · 취소 · 이어 보내기 · 지우기, 확인 창) · ko/en 문구(`koBroadcastAdminLabels`). 단추는 `can(key)` 로 숨긴다. 스토리 + `play`.
+- `@skeleton/api-client` 오류 코드: `BROADCAST_*` 아홉 개 · `PUSH_INVALID_OPEN_TOKEN`.
+- `@skeleton/push` 서비스 워커: 푸시 페이로드에 `open` 토큰이 있으면 알림 `data` 에 `id` · `open` 을 두었다가 `notificationclick` 에서 창 열기와 나란히 `POST /api/v1/push/opened { id, open }`(`keepalive`, 인증 없음 — 토큰이 인증)을 보낸다. 토큰이 없으면 아무것도 보내지 않고, 보고가 실패해도 창은 열린다.
+
 ### Fixed — 광고 동의 · 공용 브라우저 리뷰 지적 (2026-10-31)
 
 - `@skeleton/legal`: `SignUpConsents` · `ConsentSettings` 에 `excludeTypes`(기본 없음 = 지금 동작 그대로) — 다른 화면이 동의문을 보여 주고 따로 받는 문서(견본의 `marketing-night`)가 가입 「전체 동의」 · 설정 스위치로 바로 기록되지 않게. 견본은 `marketing-night` 만 뺀다.

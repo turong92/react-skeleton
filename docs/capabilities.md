@@ -104,6 +104,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 
 | id | 무엇을 주는가 | 켜는 법 | 백엔드 | 상태 | 키워드 (ko / en) |
 |---|---|---|---|---|---|
+| `notifications-broadcast-admin` | 운영자 공지 화면(선택 내보내기 @skeleton/notifications/admin) — 공지 목록(상태 칩 · 진행 막대) · 쓰기(종류 · 제목 · 본문 · 링크 · 대상 + 대상 수 · 채널 - 푸시 불가 종류는 푸시 칸 잠김 · 즉시 / 예약 · 나에게 테스트) · 보내기는 대상 수 · 채널 · 시각을 다시 보여 주는 확인 창을 거친다 · 상세(예상 대상 · 알림함 저장 / 읽음 · 푸시 넣음 / 성공 / 실패 / 보내지 않음 / 클릭 · 예약 풀기 · 취소 · 이어 보내기 · 누가 언제). 단추는 can(key) 로 숨긴다. 푸시 클릭 열람은 @skeleton/push 의 서비스 워커가 보고한다. | --packages notifications | (경로만) | experimental | 공지 보내기, 공지 관리, 전체 공지, 푸시 공지, 예약 발송, 공지 통계 / broadcast, announcement, admin announcements, scheduled announcement, push click rate, mass notification |
 | `rewards-admin` | 운영자 보상 화면(선택 내보내기 @skeleton/rewards/admin) — 이벤트(켜고 끄기 · 출석 / 초대 / 업적 설정 · 보상 목록 - 쿠폰 · 포인트 · 배지) · 배지(정의 · 보관 · 수동 수여 · 수여 내역과 회수) · 쿠폰 정의(단계 편집기 · 계정에 주기 · 공용 코드 · 회수) · 포인트 조정 · 지급 건(다시 지급 · 멈추기). 단추는 can(key) 로 숨긴다. 샘플 화면: /admin/campaigns · /admin/referrals · /admin/coupons · /admin/points · /admin/reward-grants · /admin/badges · /admin/badge-awards. | --packages rewards | (경로만) | experimental | 이벤트 관리, 쿠폰 관리, 포인트 조정, 지급 건, 다시 지급, 쿠폰 단계 편집 / admin campaigns, coupon definitions, point adjustment, reward grants, stage editor, badge admin |
 | `reviews-admin` | 운영자 리뷰 화면(선택 내보내기 @skeleton/reviews/admin) — 신고 큐 · 숨김 · 전체 표(사유 칩 · 신고 수 · 최근 신고) · 숨기기(사유 필수 대화상자) · 문제없음 · 되살리기 · 운영자 답글(리뷰당 하나, 쓰기 · 고치기 · 지우기). 단추는 can(key) 로 숨긴다. 샘플 화면: /admin/reviews. | --packages reviews | (경로만) | experimental | 리뷰 관리, 리뷰 신고 큐, 리뷰 숨기기, 리뷰 답글, 문제없음, 운영자 답글 / review moderation, report queue, hide review, reply to review, operator reply |
 | `workspace-admin` | 운영자의 워크스페이스 목록(선택 내보내기 @skeleton/workspace/admin) — 이름 · 주소 이름 검색 · 커서 「더 보기」 · 한 건의 상세(멤버 표 · 기다리는 초대 수). 읽기만 한다 — 만들기 · 고치기 · 닫기는 없다. can('workspace.read') 로 가린다. | --packages workspace | (경로만) | experimental | 워크스페이스 운영, 팀 목록 관리, 운영자 팀 조회 / admin workspaces, workspace admin, list all workspaces, operator team list |
@@ -193,7 +194,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 - 주요 진입점: `createNotificationsApi` · `useNotifications` · `useUnreadCount` · `useMarkRead` · `useMarkAllRead` · `useNotificationIngest` · `usePreferences` · `useSetPreference` · `NotificationBell` · `NotificationList` · `NotificationPreferences`
 - 보고 따라 할 스토리: `packages/notifications/src/NotificationBell.stories.tsx` · `packages/notifications/src/NotificationList.stories.tsx` · `packages/notifications/src/NotificationPreferences.stories.tsx`
 - 문서: `packages/notifications/README.md`
-- 쓰지 않는 경우: 알림을 보내는 쪽(발행)은 백엔드 코드(NotificationPublisher) — 이 패키지는 받는 화면만 / 이메일 · Slack 알림 → 백엔드 notification-mail · notification-slack (프런트 짝 없음) / 실시간으로 즉시 뜨게 하려면 realtime 을 더한다(live-notifications)
+- 쓰지 않는 경우: 공지 보내기 · 예약 · 통계 운영 — 운영 화면은 선택 하위 경로 @skeleton/notifications/admin(항목 notifications-broadcast-admin)에 있다 / 알림을 보내는 쪽(발행)은 백엔드 코드(NotificationPublisher) — 이 패키지는 받는 화면만 / 이메일 · Slack 알림 → 백엔드 notification-mail · notification-slack (프런트 짝 없음) / 실시간으로 즉시 뜨게 하려면 realtime 을 더한다(live-notifications)
 - 키워드: 알림, 알림 목록, 알림 종, 안 읽은 알림, 읽음 처리, 받은편지함, 알림 끄기, 알림 링크 / notifications, inbox, notification bell, unread count, mark as read, mute notifications, notification link
 
 ### `push` — 웹 푸시 — 앱 안 띠(PushPrompt, 「나중에」 14일) 뒤 클릭 안에서만 권한을 묻고 구독 · 서버 등록(usePush), 로그인 뒤 · 창이 보일 때 구독 다시 맞추기(usePushSync, 키가 바뀌면 재구독 · 권한이 거절로 바뀌면 기기 삭제), 로그아웃 직전 해지(unregisterPush), 설정 칸(PushSettings — 이 기기 스위치 · 거절됨 · 홈 화면 추가 필요 · 미지원 안내 · 시험 알림 · 내 다른 기기 표 · 종류별 푸시 스위치). 서비스 워커는 Vite 플러그인 pushServiceWorker(@skeleton/push/vite)가 낸다. 광고성 푸시를 보내는 앱은 광고 수신 동의 칸(@skeleton/push/advertising 의 AdvertisingSettings — 광고 · 야간(21~08시) 따로, 미리 체크 없음, 야간은 광고 동의 없이는 잠김, 2년 재확인 띠, 철회 확인; @skeleton/legal 의존)을 PushSettings 아래에 둔다.
@@ -503,6 +504,19 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 - 주요 진입점: `apps/workbench/src/main.tsx` · `apps/workbench/src/routes/index.tsx`
 - 쓰지 않는 경우: 복사 대상이 아니다 — 스타터가 워크벤치를 모른다(날 요소 · 인라인 스타일 예외 앱) / 제품 화면의 모범은 app-sample 과 Patterns
 - 키워드: 워크벤치, 백엔드 확인, 시각적 테스트, 모듈 데모 / workbench, backend smoke test, visual test bench, module demo
+
+### `notifications-broadcast-admin` — 운영자 공지 화면(선택 내보내기 @skeleton/notifications/admin) — 공지 목록(상태 칩 · 진행 막대) · 쓰기(종류 · 제목 · 본문 · 링크 · 대상 + 대상 수 · 채널 - 푸시 불가 종류는 푸시 칸 잠김 · 즉시 / 예약 · 나에게 테스트) · 보내기는 대상 수 · 채널 · 시각을 다시 보여 주는 확인 창을 거친다 · 상세(예상 대상 · 알림함 저장 / 읽음 · 푸시 넣음 / 성공 / 실패 / 보내지 않음 / 클릭 · 예약 풀기 · 취소 · 이어 보내기 · 누가 언제). 단추는 can(key) 로 숨긴다. 푸시 클릭 열람은 @skeleton/push 의 서비스 워커가 보고한다.
+
+- 종류 · 상태: pattern · experimental
+- 위치: `@skeleton/notifications` (`packages/notifications/src/admin/index.ts`)
+- 켜는 법: `--packages notifications` — 함께 따라오는 패키지 `api-client` · `auth` · `legal` · `theme` · `time` · `tokens` · `ui` — `--with-sample` · `--with-workbench` 로도 따라온다
+- 필요한 것: `notifications`
+- 백엔드: 있으면 더 켜지는 `notification-broadcast` · `notification-broadcast-jdbc` · HTTP 를 열지 않는다(앱이 컨트롤러를 둔다)
+- 주요 진입점: `@skeleton/notifications/admin#createBroadcastAdminApi` · `@skeleton/notifications/admin#AdminBroadcasts` · `@skeleton/notifications/admin#AdminBroadcastEditor` · `@skeleton/notifications/admin#AdminBroadcastDetail` · `@skeleton/notifications/admin#koBroadcastAdminLabels`
+- 복사해 시작할 Patterns: `packages/notifications/src/admin/AdminBroadcasts.stories.tsx` · `packages/notifications/src/admin/AdminBroadcastEditor.stories.tsx` · `packages/notifications/src/admin/AdminBroadcastDetail.stories.tsx`
+- 문서: `packages/notifications/README.md`
+- 쓰지 않는 경우: 백엔드 notification-broadcast(+ -jdbc)의 skeleton.notification.broadcast.admin.enabled=true 와 notification-broadcast.read · notification-broadcast.send 권한이 있어야 열린다(검사는 서버, RequirePermission 과 can 은 화면용). 기본 역할이 없어 전권이거나 역할 화면에서 권한을 준 계정만 / 공지를 받는 화면은 바뀌지 않는다 — 기존 NotificationBell · NotificationList 에 그대로 나온다 / 로그인 없이 보는 공개 공지 게시판 — board 가 맡는다 / 워크스페이스 관리자의 자기 팀 공지 — 1차는 서비스 운영자만
+- 키워드: 공지 보내기, 공지 관리, 전체 공지, 푸시 공지, 예약 발송, 공지 통계, 푸시 클릭률 / broadcast, announcement, admin announcements, scheduled announcement, push click rate, mass notification
 
 ### `rewards-admin` — 운영자 보상 화면(선택 내보내기 @skeleton/rewards/admin) — 이벤트(켜고 끄기 · 출석 / 초대 / 업적 설정 · 보상 목록 - 쿠폰 · 포인트 · 배지) · 배지(정의 · 보관 · 수동 수여 · 수여 내역과 회수) · 쿠폰 정의(단계 편집기 · 계정에 주기 · 공용 코드 · 회수) · 포인트 조정 · 지급 건(다시 지급 · 멈추기). 단추는 can(key) 로 숨긴다. 샘플 화면: /admin/campaigns · /admin/referrals · /admin/coupons · /admin/points · /admin/reward-grants · /admin/badges · /admin/badge-awards.
 

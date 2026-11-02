@@ -75,7 +75,7 @@ result.inspection // { key, contentType(서버가 판정), sizeBytes, image: { s
 ```
 
 - `ImageUploadField` — `FilePicker` 위: 여러 장 · 고른 즉시 로컬 미리보기(`useFilePreview`) · 장마다 진행률 · 거절 문구(코드 → `labels.reasons`) · 「처리 중」 · 지우기 버튼. `value` 는 올라간 키 목록(순서 = 목록 순서, 순서 바꾸기 · 자르기는 다음). 처리 중 표시는 한 번 읽을 뿐 계속 확인하지 않는다 — 다시 그리면(화면 재진입) 새로 읽는다.
-- `StoredImage` — 서버 모양 `{ width, height, thumb?, display? }`(변환본은 `{ url, width?, height? }` 또는 주소 글자 — 게시판 `attachmentImages` 모양)로 `<img src=display srcSet="thumb 400w, display 1600w" width height loading="lazy" decoding="async">`. 한쪽만 있으면 `srcset` 없이 그 하나. `alternates`(`{ 'image/webp': { thumb, display } }` — 서버 엔진이 WebP 도 만들 때)가 있으면 `<picture><source type="image/webp" srcset sizes>` 뒤에 `<img>` 폴백으로 그린다. 폭 · 높이는 자리를 미리 잡아 화면이 밀리지 않게 한다(없으면 뺀다). 주소 글자일 때 폭은 모듈 기본 `thumb` 400 · `display` 1600 으로 본다.
+- `StoredImage` — 서버 모양 `{ width, height, thumb?, display? }`(변환본은 `{ url, width?, height? }` 또는 주소 글자 — 게시판 `attachmentImages` 모양)로 `<img src=display srcSet="thumb 400w, display 1600w" width height loading="lazy" decoding="async">`. 한쪽만 있으면 `srcset` 없이 그 하나. `alternates`(`{ 'image/webp': { thumb, display } }` — 서버 엔진이 WebP 도 만들 때)가 있으면 `<picture><source type="image/webp" srcset sizes>` 뒤에 `<img>` 폴백으로 그린다. 폭 · 높이는 자리를 미리 잡아 화면이 밀리지 않게 한다(없으면 뺀다). 주소 글자일 때 폭은 변환본이 긴 변을 `thumb` 400 · `display` 1600 상자에 맞춘다고 보고(키우지 않음) 원본 폭 · 높이로 계산한다 — 폭 · 높이를 모르면 상자 값.
 - `useFilePreview(file)` — 이미지면 `URL.createObjectURL` 주소, 파일이 바뀌거나 사라지면 `revoke`. 이미지가 아니면 `null`.
 - 문구는 `labels`(기본 영어, `koImageUploadLabels`) — 코드별 거절 문구는 `labels.reasons[code]`.
 

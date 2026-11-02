@@ -206,7 +206,10 @@ function Tile({ name, file, stored, status, fraction, problem, labels, onRemove 
           ? labels.unavailable
           : null
   return (
-    <li className={styles.tile}>
+    <li
+      className={styles.tile}
+      data-state={fraction !== undefined ? 'uploading' : problem ? 'failed' : 'done'}
+    >
       <div className={styles.preview}>
         {preview ? (
           <img src={preview} alt={name} />

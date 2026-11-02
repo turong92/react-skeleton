@@ -42,8 +42,13 @@ export function StoredImage({ image, alt, sizes, className }: StoredImageProps) 
   const srcSetOf = (source: Pick<StoredImageSource, 'thumb' | 'display'>) => {
     const thumb = parts(source.thumb)
     const display = parts(source.display)
-    const width = (variant: ImageVariant | undefined, name: keyof typeof DEFAULT_WIDTH) =>
-      variant?.width ?? Math.min(image.width ?? Infinity, DEFAULT_WIDTH[name])
+    // 변환본은 긴 변을 상자(400 · 1600)에 맞추고 키우지 않는다 - 세로 사진의 폭은 상자보다 작다
+    const width = (variant: ImageVariant | undefined, name: keyof typeof DEFAULT_WIDTH) => {
+      if (variant?.width) return variant.width
+      const box = DEFAULT_WIDTH[name]
+      if (!image.width || !image.height) return box
+      return Math.round(image.width * Math.min(1, box / Math.max(image.width, image.height)))
+    }
     return thumb && display
       ? `${thumb.url} ${width(thumb, 'thumb')}w, ${display.url} ${width(display, 'display')}w`
       : undefined

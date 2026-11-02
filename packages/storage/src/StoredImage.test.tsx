@@ -40,6 +40,19 @@ describe('StoredImage', () => {
     expect(html({ image: { width: 1, height: 1 }, alt: 'x' })).toBe('')
   })
 
+  it('string variants of a portrait photo get the real widths (long side fitted to the box), not the box', () => {
+    const out = html({
+      image: {
+        width: 600,
+        height: 800,
+        thumb: 'https://cdn.test/t.jpg',
+        display: 'https://cdn.test/d.jpg',
+      },
+      alt: 'x',
+    })
+    expect(out).toContain('srcSet="https://cdn.test/t.jpg 300w, https://cdn.test/d.jpg 600w"')
+  })
+
   it('string variants get the module default widths (thumb 400, display 1600)', () => {
     const out = html({
       image: { thumb: 'https://cdn.test/t.jpg', display: 'https://cdn.test/d.jpg' },

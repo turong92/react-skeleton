@@ -375,6 +375,18 @@ describe('createUploader — complete call (upload inspection)', () => {
     expect(calls).not.toContain('abort')
   })
 
+  it('an abort that arrives while the complete call is in flight ends in UploadAbortedError (a removed photo is not attached afterwards)', async () => {
+    const controller = new AbortController()
+    const { api, transport } = withComplete({}, async () => {
+      controller.abort()
+      return inspection
+    })
+    const failure = await createUploader({ api, transport, complete: true })
+      .upload(file(100), { signal: controller.signal })
+      .catch((e: unknown) => e)
+    expect(failure).toBeInstanceOf(UploadAbortedError)
+  })
+
   it('complete: true on an api without a complete endpoint fails at creation, not silently', () => {
     const { api, transport } = fakes()
     expect(() => createUploader({ api, transport, complete: true })).toThrow(/complete/)

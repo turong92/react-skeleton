@@ -6,6 +6,8 @@ import styles from './Pictures.module.css'
 
 /** 변환 중인 사진을 다시 읽기까지 기다리는 시간 */
 const RECHECK_MS = 4000
+/** 되풀이 상한(4초 × 60 = 4분) - 그 뒤에는 화면을 다시 열어야 갱신된다 */
+const MAX_RECHECKS = 60
 
 /**
  * 게시판에 붙은 사진 한 장. 공개된 항목의 사진은 서버가 준 변환본(`image` = `attachmentImages[key]`: 썸네일 · 표시본 · 폭 · 높이 · WebP 대안)을
@@ -33,11 +35,14 @@ export function BoardPicture({
   const [signed, setSigned] = useState<string>()
   useEffect(() => {
     if (!pending) return
-    const timer = setTimeout(
-      () => void queryClient.invalidateQueries({ queryKey: ['board'] }),
-      RECHECK_MS,
-    )
-    return () => clearTimeout(timer)
+    // 공개 복사는 서버 큐가 분 단위로 다시 하므로 한 번이 아니라 끝날 때까지(상한까지) 되풀이해 읽는다
+    let checks = 0
+    const timer = setInterval(() => {
+      checks += 1
+      void queryClient.invalidateQueries({ queryKey: ['board'] })
+      if (checks >= MAX_RECHECKS) clearInterval(timer)
+    }, RECHECK_MS)
+    return () => clearInterval(timer)
   }, [pending, queryClient])
   useEffect(() => {
     if (url || image || pending || !access) return

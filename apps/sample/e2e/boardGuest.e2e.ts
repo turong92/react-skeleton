@@ -177,9 +177,8 @@ describe('Board — guests, approval and edited versions against the real backen
           'base64',
         ),
       })
-    await pwExpect(page.getByRole('button', { name: ko('board.pictures.remove') })).toBeVisible({
-      timeout: 30_000,
-    })
+    // 올리기가 끝난 칸에만 data-state="done" 이 있다(올리는 중에도 지우기 버튼은 있다)
+    await pwExpect(page.locator('li[data-state="done"]')).toBeVisible({ timeout: 30_000 })
     await fillGuest(commentForm(page), '지나가는손님')
     await page.getByRole('button', { name: ko('board.comments.postComment') }).click()
     await pwExpect(page.getByText(ko('board.guest.pending'))).toBeVisible()
@@ -220,9 +219,8 @@ describe('Board — guests, approval and edited versions against the real backen
       .locator('input[type=file]')
       .first()
       .setInputFiles({ name: 'dot.png', mimeType: 'image/png', buffer: png })
-    await pwExpect(page.getByRole('button', { name: ko('board.pictures.remove') })).toBeVisible({
-      timeout: 30_000,
-    })
+    // 올리기가 끝난 칸에만 data-state="done" 이 있다(올리는 중에도 지우기 버튼은 있다)
+    await pwExpect(page.locator('li[data-state="done"]')).toBeVisible({ timeout: 30_000 })
     await fillGuest(page, NAME)
     const written = page.waitForResponse(
       (r) => r.request().method() === 'POST' && /\/posts\/\d+\/comments$/.test(r.url()),
@@ -287,9 +285,8 @@ describe('Board — guests, approval and edited versions against the real backen
       .locator('input[type=file]')
       .first()
       .setInputFiles({ name: 'dot.png', mimeType: 'image/png', buffer: png })
-    await pwExpect(page.getByRole('button', { name: ko('board.pictures.remove') })).toBeVisible({
-      timeout: 30_000,
-    })
+    // 올리기가 끝난 칸에만 data-state="done" 이 있다(올리는 중에도 지우기 버튼은 있다)
+    await pwExpect(page.locator('li[data-state="done"]')).toBeVisible({ timeout: 30_000 })
     await page.getByRole('button', { name: ko('board.comments.postComment') }).click()
     await pwExpect(
       page.getByRole('list', { name: ko('board.comments.attachments') }).getByRole('img'),

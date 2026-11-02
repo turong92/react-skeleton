@@ -540,6 +540,8 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
   'ui#PageHeader': () => ({ title: 'Notes', description: 'All of them', actions: 'actions' }),
   'ui#Badge': () => ({ children: 'Draft' }),
   'ui#Progress': () => ({ label: 'Uploading', value: 0.5, valueText: '50%' }),
+  'storage#StoredImage': () => ({ image: { thumb: 'x' }, alt: '' }),
+  'storage#ImageUploadField': () => ({ uploader: fakeUploader(), value: [], onChange: noop }),
   'ui#FilePicker': () => ({ title: 'Attach a file', buttonLabel: 'Choose file', onFiles: noop }),
   'ui#Stat': () => ({ label: 'Notes', value: 3, hint: 'so far' }),
   'ui#SwitchRow': () => ({
@@ -1432,6 +1434,7 @@ export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
     { url: 'ws://localhost/ws', topic: 'demo', getAccessToken: () => null },
   ],
   'storage#useUpload': () => [fakeUploader()],
+  'storage#useFilePreview': () => [null],
 }
 
 /**

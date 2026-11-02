@@ -136,9 +136,11 @@ describe('Files — drop a photo, server check, public thumbnail without locatio
     await dropFile(page, pickerOf(page), { name: 'trip.jpg', type: 'image/jpeg', body: photo })
     await pwExpect(commentForm(page).getByRole('img', { name: 'trip.jpg' })).toBeVisible() // 로컬 미리보기
     await pwExpect(commentForm(page).getByRole('progressbar')).toBeVisible()
-    await pwExpect(
-      commentForm(page).getByRole('button', { name: `trip.jpg ${ko('board.pictures.remove')}` }),
-    ).toBeVisible({ timeout: 30_000 })
+    // 올리기가 끝난 칸에만 data-state="done" 이 있다 - 진행률 막대는 실패해도 사라지므로 이것으로 성공을 가린다
+    await pwExpect(commentForm(page).locator('li[data-state="done"]')).toBeVisible({
+      timeout: 30_000,
+    })
+    await pwExpect(commentForm(page).getByRole('alert')).toHaveCount(0)
     await pwExpect(commentForm(page).getByRole('progressbar')).toHaveCount(0)
   })
 
@@ -168,7 +170,7 @@ describe('Files — drop a photo, server check, public thumbnail without locatio
       // 변환 중이면 「처리 중」, 끝나면 공개 사본 - 이 화면이 스스로 다시 읽는다. 공개 복사는 게시판 맞추기 큐가 다시 시도하므로 분 단위로 기다린다
       const picture = commentOf(visitor, COMMENT).getByRole('img')
       await pwExpect(picture).toBeVisible({ timeout: 240_000 })
-      pwExpect(await picture.getAttribute('srcset')).toMatch(/ 400w, \S+ \d+w$/)
+      pwExpect(await picture.getAttribute('srcset')).toMatch(/ 300w, \S+ 600w$/)
       // 방향 6(회전)이 픽셀에 반영돼 폭 600 · 높이 800 으로 자리가 잡힌다
       await pwExpect(picture).toHaveAttribute('width', '600')
       await pwExpect(picture).toHaveAttribute('height', '800')

@@ -256,7 +256,10 @@ export function createUploader({
         parts && file.size > thresholdBytes
           ? await multipartUpload(file, candidate, options, parts)
           : await single(file, candidate, options)
-      return finish(stored)
+      throwIfAborted(options.signal) // 지우기(취소)가 PUT 이 끝난 뒤에 와도 결과를 돌려주지 않는다
+      const result = await finish(stored)
+      throwIfAborted(options.signal) // 완료 응답을 기다리는 동안 온 취소도 같다 - 부모가 칸이 닫힌 뒤 키를 받지 않게
+      return result
     },
   }
 }

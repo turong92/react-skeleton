@@ -112,4 +112,24 @@ describe('M4 — restore() shares the single-flight and drops dead credentials',
       vi.useRealTimers()
     }
   })
+
+  it('a first attempt still pending after 3 s returns restore() as "reconnecting" and is not sent twice; its answer then signs in', async () => {
+    vi.useFakeTimers()
+    try {
+      const refresh = vi.fn<AuthApi['refresh']>(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 21_000))
+        return fresh()
+      })
+      const { session } = setup(refresh)
+      const restoring = session.restore()
+      await vi.advanceTimersByTimeAsync(3_100)
+      await expect(restoring).resolves.toBeUndefined()
+      expect(session.getState().status).toBe('reconnecting')
+      await vi.advanceTimersByTimeAsync(20_000)
+      expect(session.getState().status).toBe('authenticated')
+      expect(refresh).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })

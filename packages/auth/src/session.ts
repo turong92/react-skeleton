@@ -139,6 +139,7 @@ export function createAuthSession({
   }
 
   const RECONNECT_DELAY_MS = 15_000
+  const FIRST_ATTEMPT_WAIT_MS = 3_000
   const RETRY_ATTEMPTS = 3
   const RETRY_DELAY_MS = 2000
 
@@ -233,14 +234,19 @@ export function createAuthSession({
         let early = false
         let resolveEarly: () => void = () => undefined
         const gate = new Promise<void>((resolve) => (resolveEarly = resolve))
-        const flight = refresher.refresh(undefined, {
-          onTransient: () => {
-            early = true
-            setReconnecting(true)
-            resolveEarly()
-          },
-        })
-        await Promise.race([flight.then(() => undefined), gate])
+        const goEarly = () => {
+          early = true
+          setReconnecting(true)
+          resolveEarly()
+        }
+        const flight = refresher.refresh(undefined, { onTransient: goEarly })
+        // 첫 시도가 오래 걸려도(콜드 스타트) 화면을 비워 두지 않는다 - 그 시도는 단일 비행 그대로 뒤에서 이어진다
+        const slow = setTimeout(goEarly, FIRST_ATTEMPT_WAIT_MS)
+        try {
+          await Promise.race([flight.then(() => undefined), gate])
+        } finally {
+          clearTimeout(slow)
+        }
         if (early) {
           flight.then(
             () => setReconnecting(false),

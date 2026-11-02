@@ -18,6 +18,8 @@ export type RequirePermissionProps = {
   forbidden?: ReactNode
   /** 권한을 아직 받는 중일 때(저장된 토큰으로 막 열었을 때) 그릴 것 - 기본은 아무것도 안 그린다. 「권한 없음」 안내를 먼저 보이지 않기 위해서다 */
   pending?: ReactNode
+  /** 새로고침 뒤 서버에 닿지 못해 로그인 여부를 아직 모를 때(`reconnecting`) 보일 것(기본: 영어 한 줄) */
+  reconnecting?: ReactNode
   /** 권한을 받으려다 포기했을 때 그릴 것 - 기본은 「권한을 불러오지 못했어요」 + 눌리는 「다시 시도」 단추 */
   failed?: ReactNode
   /** 기본 안내(`failed`)의 문구 */
@@ -32,13 +34,14 @@ export function RequirePermission({
   redirectTo = '/login',
   forbidden,
   pending = null,
+  reconnecting = RECONNECTING_NOTICE,
   failed,
   labels,
   children,
 }: RequirePermissionProps) {
   const { status, principal, permissionsFailed, retryPermissions } = useAuth()
   const location = useLocation()
-  if (status === 'reconnecting') return RECONNECTING_NOTICE
+  if (status === 'reconnecting') return reconnecting
   if (status !== 'authenticated')
     return <Navigate to={redirectTo} replace state={{ from: location }} />
   if (!principal || principal.permissions === null) {

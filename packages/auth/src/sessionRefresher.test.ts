@@ -165,14 +165,32 @@ describe('session refresher', () => {
     expect(refresh.get()?.refreshToken).toBe('r1.1')
   })
 
-  it('a 401 on /auth/refresh that the backend did not produce (proxy, no AUTH.* code) is not a sign-out', async () => {
-    const { client, call, ended, refresh } = setup()
-    call.mockRejectedValue(failure(401, 'CLIENT.HTTP_ERROR'))
-    const request = client.value('/a').catch((error: unknown) => error)
-    await vi.advanceTimersByTimeAsync(70_000)
-    await expect(request).resolves.toMatchObject({ apiError: { status: 401 } })
+  it('a 401 without an AUTH.* code (a proxy) is retried, and kept as a session if a retry succeeds', async () => {
+    const { client, call, ended } = setup()
+    call.mockRejectedValueOnce(failure(401, 'CLIENT.HTTP_ERROR'))
+    const request = client.value('/a')
+    await vi.advanceTimersByTimeAsync(5_000)
+    await expect(request).resolves.toBe('/a')
     expect(ended).not.toHaveBeenCalled()
-    expect(refresh.get()?.refreshToken).toBe('r1.1')
+  })
+
+  it('a retry cycle that ends in a code-less 401 signs out; a 5xx-ended cycle does not and rests before the next call', async () => {
+    const a = setup()
+    a.call.mockRejectedValue(failure(401, 'COMMON.UNAUTHORIZED'))
+    const lost = a.client.value('/a').catch((error: unknown) => error)
+    await vi.advanceTimersByTimeAsync(70_000)
+    await lost
+    expect(a.ended).toHaveBeenCalledWith('expired')
+
+    const b = setup()
+    b.call.mockRejectedValue(failure(503, 'CLIENT.HTTP_ERROR'))
+    const down = b.client.value('/a').catch((error: unknown) => error)
+    await vi.advanceTimersByTimeAsync(31_000) // the last retry went out at 30 s; the 15 s rest has just begun
+    await down
+    const calls = b.call.mock.calls.length
+    await expect(b.client.value('/a')).rejects.toMatchObject({ apiError: { status: 503 } })
+    expect(b.call.mock.calls.length).toBe(calls) // resting: no new server call yet
+    expect(b.ended).not.toHaveBeenCalled()
   })
 
   it('without any refresh credential the 401 simply ends the session', async () => {

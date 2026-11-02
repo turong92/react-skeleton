@@ -2,7 +2,7 @@ import { ApiRequestError } from '@skeleton/api-client'
 import type { AuthApi, RefreshDelivery } from './authApi'
 import { decodeTokenPrincipal } from './principal'
 import type { RefreshStore } from './refreshStore'
-import type { SessionRefresher } from './sessionRefresher'
+import { isRetryableRefreshError, type SessionRefresher } from './sessionRefresher'
 import type { TokenStore } from './tokenStore'
 import type {
   AuthPrincipal,
@@ -82,12 +82,19 @@ export function createAuthSession({
   /** `restore()` 가 갱신 자격은 있는데 일시 오류로 결과를 못 얻었다 - 상태는 `reconnecting`, 잠시 뒤 스스로 다시 시도한다 */
   let reconnecting = false
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null
+  function hasUsableCredentials(): boolean {
+    const credentials = refreshStore?.get()
+    return delivery === 'cookie' ? credentials != null : !!credentials?.refreshToken
+  }
+  let reconnectAttempts = 0
   let state = compute()
 
   function compute(): AuthState {
     const token = store.get()
     if (!token) {
-      return { status: reconnecting ? 'reconnecting' : 'anonymous', token: null, principal: null }
+      // 「연결 중」은 쓸 수 있는 갱신 자격이 있을 때만 - 자격이 사라졌으면(다른 탭의 로그아웃 · 확정 로그아웃) 비로그인이다
+      const waiting = reconnecting && hasUsableCredentials()
+      return { status: waiting ? 'reconnecting' : 'anonymous', token: null, principal: null }
     }
     const failed = permissionsFailedFor === token ? { permissionsFailed: true as const } : {}
     if (known?.token === token)
@@ -107,8 +114,9 @@ export function createAuthSession({
   let batching = false
   function setReconnecting(value: boolean) {
     reconnecting = value
-    if (!value && reconnectTimer) {
-      clearTimeout(reconnectTimer)
+    if (!value) {
+      reconnectAttempts = 0
+      if (reconnectTimer) clearTimeout(reconnectTimer)
       reconnectTimer = null
     }
     refreshState()
@@ -140,6 +148,7 @@ export function createAuthSession({
 
   const RECONNECT_DELAY_MS = 15_000
   const FIRST_ATTEMPT_WAIT_MS = 3_000
+  const MAX_RECONNECT_DELAY_MS = 300_000
   const RETRY_ATTEMPTS = 3
   const RETRY_DELAY_MS = 2000
 
@@ -210,13 +219,16 @@ export function createAuthSession({
     return response
   }
 
-  function scheduleReconnect() {
-    if (refreshStore?.get() == null) return setReconnecting(false)
+  /** 일시 오류(또는 회전 한도)면 「연결 중」으로 두고 점점 뜸하게 다시 시도한다 - 그 밖의 실패(설정 오류 등)는 예전처럼 비로그인 */
+  function scheduleReconnect(error: unknown) {
+    if (!isRetryableRefreshError(error) || !hasUsableCredentials()) return setReconnecting(false)
     setReconnecting(true)
+    const delay = Math.min(MAX_RECONNECT_DELAY_MS, RECONNECT_DELAY_MS * 2 ** reconnectAttempts)
+    reconnectAttempts += 1
     reconnectTimer ??= setTimeout(() => {
       reconnectTimer = null
       void restore().catch(() => undefined)
-    }, RECONNECT_DELAY_MS)
+    }, delay)
   }
 
   async function restore(): Promise<void> {
@@ -225,8 +237,7 @@ export function createAuthSession({
       return
     }
     const credentials = refreshStore?.get()
-    const usable = delivery === 'cookie' ? credentials != null : !!credentials?.refreshToken
-    if (!usable) return
+    if (!hasUsableCredentials()) return setReconnecting(false)
     try {
       if (refresher) {
         // 락 · single-flight 안에서 한 번만 — 죽은 자격이면 갱신기가 두 저장소를 비운다.
@@ -248,10 +259,7 @@ export function createAuthSession({
           clearTimeout(slow)
         }
         if (early) {
-          flight.then(
-            () => setReconnecting(false),
-            () => scheduleReconnect(),
-          )
+          flight.then(() => setReconnecting(false), scheduleReconnect)
           return
         }
       } else {
@@ -260,7 +268,7 @@ export function createAuthSession({
         } catch (error) {
           if (error instanceof ApiRequestError && error.apiError.status === 401) {
             refreshStore?.clear() // 죽은 자격을 매 로드마다 내밀지 않는다
-            return
+            return setReconnecting(false)
           }
           throw error
         }
@@ -268,7 +276,7 @@ export function createAuthSession({
       setReconnecting(false)
     } catch (error) {
       // 일시 오류: 자격은 그대로 - 로그인 화면으로 보내지 않고 잠시 뒤 다시 시도한다
-      scheduleReconnect()
+      scheduleReconnect(error)
       throw error
     }
   }

@@ -11,6 +11,8 @@ export type RequireRoleProps = {
   redirectTo?: string
   /** 로그인은 했지만 역할이 없을 때 — 로그아웃시키지 않고 이것을 보인다(기본: 「접근 차단」 안내) */
   forbidden?: ReactNode
+  /** 새로고침 뒤 서버에 닿지 못해 로그인 여부를 아직 모를 때(`reconnecting`) 보일 것(기본: 영어 한 줄) */
+  reconnecting?: ReactNode
   children?: ReactNode
 }
 
@@ -19,11 +21,12 @@ export function RequireRole({
   roles,
   redirectTo = '/login',
   forbidden,
+  reconnecting = RECONNECTING_NOTICE,
   children,
 }: RequireRoleProps) {
   const { status, principal } = useAuth()
   const location = useLocation()
-  if (status === 'reconnecting') return RECONNECTING_NOTICE
+  if (status === 'reconnecting') return reconnecting
   if (status !== 'authenticated')
     return <Navigate to={redirectTo} replace state={{ from: location }} />
   const allowed = roles.some((role) => principal?.roles.includes(role))

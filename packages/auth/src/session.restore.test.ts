@@ -132,4 +132,48 @@ describe('M4 — restore() shares the single-flight and drops dead credentials',
       vi.useRealTimers()
     }
   })
+
+  it('credentials that vanish while reconnecting (another tab signs out) make the status anonymous, not stuck on "reconnecting"', async () => {
+    vi.useFakeTimers()
+    try {
+      const net = new ApiRequestError(
+        { code: 'CLIENT.NETWORK_ERROR', title: 'n', status: 0, timestamp: 't' },
+        't',
+        's',
+        'p',
+      )
+      const { session, refreshStore } = setup(async () => {
+        throw net
+      })
+      await session.restore()
+      await vi.advanceTimersByTimeAsync(3_100)
+      expect(session.getState().status).toBe('reconnecting')
+      refreshStore.clear()
+      expect(session.getState().status).toBe('anonymous')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('a non-transient failure (403 CSRF header) is signed-out as before: no "reconnecting", no retry loop', async () => {
+    vi.useFakeTimers()
+    try {
+      const csrf = new ApiRequestError(
+        { code: ErrorCodes.AUTH_CSRF_HEADER_REQUIRED, title: 'c', status: 403, timestamp: 't' },
+        't',
+        's',
+        'p',
+      )
+      const refresh = vi.fn<AuthApi['refresh']>(async () => {
+        throw csrf
+      })
+      const { session } = setup(refresh)
+      await expect(session.restore()).rejects.toBe(csrf)
+      expect(session.getState().status).toBe('anonymous')
+      await vi.advanceTimersByTimeAsync(60_000)
+      expect(refresh).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })

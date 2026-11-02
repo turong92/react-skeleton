@@ -9,9 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 콜드스타트로 로그인이 풀리는 문제 (2026-11-02)
 
-- `createSessionRefresher`: 일시 오류(네트워크 · 타임아웃 · 5xx · 백엔드 `AUTH.*` 코드가 없는 401)는 로그아웃하지 않고 **같은 토큰으로** 2·4·8·16·30초 백오프(합쳐 약 60초) 재시도; `AUTH.REFRESH_INVALID` 만 「expired」(예전엔 모든 401). `createAuthApi.refresh` 는 요청 제한 45초.
-- `createApiClient` 의 `onError(error, { authVerdict })` — 갱신 호출 자신 · 복구 중 실패는 `false`; `createUnauthorizedHandler` 는 `false` 면 자격을 지우지 않는다.
-- `AuthStatus` 에 `reconnecting` — `restore()` 가 일시 오류로 막히면(자격은 그대로) 15초마다 스스로 다시 시도; `<RequireAuth reconnecting>` 가 로그인으로 보내지 않고 「Reconnecting…」을 보인다. 다른 가드(`RequireRole` · `RequirePermission`)는 그대로.
+- `createSessionRefresher`: 일시 오류(네트워크 · 타임아웃 · 408 · 429 · 5xx · `AUTH.*` 코드가 없는 401)는 로그아웃하지 않고 **같은 토큰으로** 2·4·8·16·30초 백오프로, 첫 시도부터 **50초 안**에만 재시도한다(백엔드 `reuse-grace` 권장 60초 안). 대기는 탭 락 밖에서 하고 시도마다 락을 다시 잡는다. 바퀴가 5xx · 네트워크로 끝나면 오류만 내보내고 세션은 그대로(15초에서 두 배씩 최대 5분 쉰다), **코드 없는 401 로 끝나면 로그아웃**(앞단이 백엔드 오류 본문을 그대로 넘겨야 한다). `AUTH.*` 의 401 은 확정(`REFRESH_INVALID` 는 `expired`). `createAuthApi.refresh` 는 요청 제한 45초.
+- `createApiClient` 의 `onError(error, { authVerdict })` - 갱신 호출 자신 · 복구 중 실패는 `false`; `createUnauthorizedHandler` 는 `false` 면 자격을 지우지 않는다.
+- `AuthStatus` 에 `reconnecting` - 쓸 수 있는 갱신 자격이 있을 때만. `restore()` 는 첫 시도가 일시 오류이거나 3초 넘게 걸리면 바로 돌아오고 같은 시도가 뒤에서 이어진다(성공 → 로그인, 확정 로그아웃 → 비로그인). 일시 오류 · 회전 한도일 때만 15초에서 두 배씩(최대 5분) 스스로 다시 시도하고, 그 밖의 실패(400 · 403 · 404 등)는 예전처럼 비로그인.
+- `RequireAuth` · `RequireRole` · `RequirePermission` 은 `reconnecting` 이면 로그인으로 보내지 않고 `reconnecting` prop(기본 영어 「Reconnecting…」)을 그린다.
 
 ### Fixed — 광고 동의 · 공용 브라우저 리뷰 지적 (2026-10-31)
 

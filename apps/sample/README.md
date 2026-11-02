@@ -63,6 +63,13 @@ pnpm --filter sample dev --port 5175     # http://b.localhost:5175
 
 `VITE_GA_MEASUREMENT_ID` 를 넣는다면 GA 데이터 스트림의 향상된 측정에서 「브라우저 기록 이벤트를 기준으로 페이지 변경 측정」을 **꺼 둔다** - 이 앱의 분석 로더(`@skeleton/marketing` `createAnalyticsLoader`)가 인증 값을 뗀 주소로 `page_view` 를 직접 보내는데, 켜 두면 gtag 가 스스로도 보내 메일 링크의 `?token=` 이 실린 주소가 GA 로 간다.
 
+### 2단계 인증 e2e 가 백엔드에 기대하는 것
+
+백엔드 `auth-mfa`(`required-for: OPERATORS`, `admin.enabled: true`)와 `SKELETON_CRYPTO_KEYS_MAIN`. 운영 권한이 있는 시드 계정(admin · moderator)은 등록 전엔 `/api/v1/auth` · `GET /account/me` 말고는 403 `MFA.ENROLLMENT_REQUIRED` 다.
+`e2e/globalSetup.ts` 가 서버를 올린 뒤 그 계정들을 **한 번 등록**한다(로그인 15분 안의 면제로 증거 없이) - `e2e/adminMfa.ts`. 비밀과 「마지막으로 쓴 걸음」은 임시 파일에 보관하고(시험 파일마다 다른 프로세스라 파일로 나눈다) 실행이 끝나면 지운다. **비밀을 잃으면 그 계정은 다시 못 푼다**(운영자는 자기 자신을 해제할 수 없다) - 그래서 실행 도중에는 파일을 지우지 않는다.
+로그인 도우미(`helpers.ts` 의 `passwordLogin` · `accessTokenFor` · `fillSignIn`/`passSecondStep`)가 운영 계정이면 두 번째 단계까지 하고, 같은 걸음의 코드는 두 번 못 쓰므로 걸음을 앞으로만 보낸다(`nextOperatorCode` - 한 걸음 앞까지는 서버가 받는다; 그 이상이면 다음 걸음 직전까지 기다린다). 운영 토큰은 4분 다시 쓴다. 2단계를 요구하지 않는 백엔드에서는 파일이 비어 이 모든 것이 예전과 같다.
+이미 켜진 백엔드(`E2E_API_URL` 로 다시 쓰는 서버)는 `E2E_ADMIN_TOTP_SECRET` 으로 admin 의 비밀을 받아야 한다 - 없으면 시작을 거부한다. `e2e/mfa.e2e.ts` 는 사용자(DEMO)로 흐름 ① ~ ④ 를 돌고, 끝나면(실패해도) 운영자 해제로 DEMO 의 2단계를 끈다.
+
 ### 대시보드 e2e 가 백엔드에 기대하는 것
 
 `e2e/dashboard.e2e.ts`(한 여정: 운영자 → 「대시보드」 → 가입 · Cloudflare · GA · 「지금 7명」 · 순매출 그래프 → 응원 결제 한 건 → 결제 건수 +1)는 `e2e/globalSetup.ts` 가 가짜 Cloudflare(`fakeCloudflare.ts`) · 가짜 GA(`fakeGa.ts`, 시험용 RSA 키로 서비스 계정 JSON 을 만든다)를 띄우고 백엔드에 준다(`E2E_FAKE_ANALYTICS=0` 이면 끄고 그 걸음은 건너뛴다). 대시보드 경로가 없는 백엔드(`GET /admin/dashboard` 가 404)에서는 통째로 건너뛴다. 가짜의 모양은 계획 계약 C4(추측 - 실제 계정으로 재면 두 파일과 백엔드의 가짜를 같이 고친다)이고 값은 두 파일의 상수다.

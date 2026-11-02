@@ -13,6 +13,7 @@ import { toast } from 'sonner'
 import { onSessionEnded } from './auth/refresher'
 import { authSession } from './auth/session'
 import { EmailGate } from './auth/EmailGate'
+import { MfaGate } from './auth/MfaGate'
 import { LoginIdGate } from './auth/LoginIdGate'
 import { LegalGate } from './legal/LegalGate'
 import { getDevCountry } from './api/devCountry'
@@ -51,13 +52,15 @@ function render() {
             {/* 초대 링크의 ?ref= 를 보관했다가 로그인 뒤 한 번 claim - 화면은 없다 */}
             <ReferralCapture />
             {/* 한 번에 하나, 순서는 서버 인터셉터와 같다 — 아이디 정하기 → 이메일 등록(쓰기 때: 막지 않고 쓰려 할 때 연다) → 약관 동의 → (닉네임: 막지 않는 띠 + 글쓰기 전 확인) */}
-            <LoginIdGate>
-              <EmailGate>
-                <LegalGate>
-                  <RouterProvider router={router} />
-                </LegalGate>
-              </EmailGate>
-            </LoginIdGate>
+            <MfaGate>
+              <LoginIdGate>
+                <EmailGate>
+                  <LegalGate>
+                    <RouterProvider router={router} />
+                  </LegalGate>
+                </EmailGate>
+              </LoginIdGate>
+            </MfaGate>
           </AuthProvider>
           {/* 헤더의 종 · 메뉴를 덮지 않게 아래쪽에 */}
           <ThemedToaster position="bottom-right" />

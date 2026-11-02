@@ -7,7 +7,7 @@ import { api, operatorPage, tokenOf } from './paymentSteps'
 
 /*
  * API 키 (스펙 §6 흐름 ⑤ ⑥) - 진짜 백엔드(`api-key` 모듈, `skeleton.api-key.http.enabled` · `admin.enabled`) · 브라우저.
- *  ⑤ 사용자가 설정에서 키를 만든다(`notes.read`, 비밀번호로 다시 인증) → **브라우저 밖** `fetch` 로 키를 쓴다: `GET /notes` 200 · `POST /notes` 403(범위 없음) · `/account/me` 403(키로는 계정 경로에 못 들어간다)
+ *  ⑤ 사용자가 계정 설정(`/account`, 소셜 전용 계정의 제공자 왕복을 잇는 자리)에서 키를 만든다(`notes.read`, 비밀번호로 다시 인증) → **브라우저 밖** `fetch` 로 키를 쓴다: `GET /notes` 200 · `POST /notes` 403(범위 없음) · `/account/me` 403(키로는 계정 경로에 못 들어간다)
  *     → 화면에서 회수하면 같은 키가 401.
  *  ⑥ 운영자가 사용자의 다른 키를 사유와 함께 회수한다 → 운영 표에 사유, 사용자 설정에는 「운영자가 회수」, 그 키는 401.
  * 키 기능이 없는 백엔드(`GET /api-keys` 가 404)에서는 건너뛴다.
@@ -47,12 +47,12 @@ const withKey = (token: string, method: string, path: string) =>
     ...(method === 'POST' ? { 'Idempotency-Key': `e2e-key-${stamp}` } : {}),
   })
 
-describe('API keys: the owner makes one on the settings screen and uses it outside the browser', () => {
+describe('API keys: the owner makes one in the account settings and uses it outside the browser', () => {
   let token: string
 
   run('creates a notes.read key on the screen, shown once', async () => {
     await signIn(page, baseUrl)
-    await page.goto(`${baseUrl}/settings`)
+    await page.goto(`${baseUrl}/account`)
     await page.getByRole('button', { name: mine.create, exact: true }).click()
     const dialog = page.getByRole('dialog', { name: mine.createTitle })
     await dialog.getByLabel(mine.nameLabel).fill(screenKey)
@@ -118,7 +118,7 @@ describe('API keys: an operator revokes another key with a reason', () => {
         await op.close()
       }
 
-      await page.goto(`${baseUrl}/settings`)
+      await page.goto(`${baseUrl}/account`)
       await pwExpect(page.getByText(operatorKey)).toBeVisible()
       await pwExpect(page.getByText(mine.revokedByOperator)).toBeVisible()
       baseExpect((await withKey(operatorToken, 'GET', '/notes')).status).toBe(401)

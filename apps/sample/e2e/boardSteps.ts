@@ -1,5 +1,12 @@
 import { expect as pwExpect, type Locator, type Page } from 'playwright/test'
-import { consentViaApi, dismissConsent, ensureProfile, ko } from './helpers'
+import {
+  accessTokenFor,
+  consentViaApi,
+  dismissConsent,
+  ensureProfile,
+  ko,
+  passSecondStep,
+} from './helpers'
 
 /*
  * 게시판 여정(board.e2e.ts)과 증거 스크립트(walkthrough.board.shots.ts)가 같이 쓰는 단계 — 화면에서 사람이 하는 일 그대로.
@@ -15,14 +22,9 @@ type Account = { email: string; password: string }
 
 /** 서버 설정(`GET /boards/config`) — 반응 종류 · 모드 · 이 계정이 운영자인가. 샘플 백엔드가 `EMPATHY` 를 켜 두었는지 확인하는 데도 쓴다 */
 export async function boardConfig(apiUrl: string, account: Account) {
-  const login = await fetch(`${apiUrl}/api/v1/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(account),
-  })
-  const { value } = (await login.json()) as { value: { accessToken: string } }
+  const token = await accessTokenFor(apiUrl, account)
   const response = await fetch(`${apiUrl}/api/v1/boards/config`, {
-    headers: { Authorization: `Bearer ${value.accessToken}` },
+    headers: { Authorization: `Bearer ${token}` },
   })
   if (response.status !== 200) throw new Error(`GET /boards/config → ${response.status}`)
   return ((await response.json()) as { value: BoardConfigJson }).value
@@ -38,16 +40,11 @@ type BoardConfigJson = {
  * 「안 읽은 알림이 없는 첫 화면」 가정(journey.e2e.ts)을 깬다. 알림을 만드는 시나리오가 끝나면 부른다
  */
 export async function readAllNotifications(apiUrl: string, account: Account) {
-  const login = await fetch(`${apiUrl}/api/v1/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(account),
-  })
-  if (!login.ok) throw new Error(`login ${account.email} → ${login.status}`)
-  const { value } = (await login.json()) as { value: { accessToken: string } }
+  const token = await accessTokenFor(apiUrl, account)
+  if (!token) throw new Error(`login ${account.email} failed`)
   const read = await fetch(`${apiUrl}/api/v1/notifications/read-all`, {
     method: 'PATCH',
-    headers: { Authorization: `Bearer ${value.accessToken}` },
+    headers: { Authorization: `Bearer ${token}` },
   })
   if (!read.ok) throw new Error(`PATCH /notifications/read-all → ${read.status}`)
 }
@@ -61,6 +58,7 @@ export async function signInAs(page: Page, baseUrl: string, account: Account) {
   await page.getByLabel(ko('login.email')).fill(account.email)
   await page.getByLabel(ko('login.password')).fill(account.password)
   await page.getByRole('button', { name: ko('login.submit'), exact: true }).click()
+  await passSecondStep(page, account) // 운영자(admin)만 - 2단계 코드
   await page.getByRole('heading', { level: 1 }).first().waitFor()
 }
 
@@ -195,15 +193,10 @@ export async function seedPosts(
   account: Account,
   posts: Array<{ title: string; body: string }>,
 ) {
-  const login = await fetch(`${apiUrl}/api/v1/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(account),
-  })
-  const { value } = (await login.json()) as { value: { accessToken: string } }
+  const token = await accessTokenFor(apiUrl, account)
   const headers = {
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${value.accessToken}`,
+    Authorization: `Bearer ${token}`,
   }
   const boards = (await (await fetch(`${apiUrl}/api/v1/boards`, { headers })).json()) as {
     values: Array<{ code: string }>

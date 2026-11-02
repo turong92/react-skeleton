@@ -1,6 +1,6 @@
 import { expect as baseExpect, type Browser, type Page } from 'playwright/test'
 import { koPaymentLabels } from '@skeleton/payment'
-import { consentViaApi, DEMO, ko, signIn } from './helpers'
+import { accessTokenFor, consentViaApi, DEMO, ko, signIn } from './helpers'
 
 /*
  * 결제 여정(payment.e2e.ts · paymentAdmin.e2e.ts)이 쓰는 단계 — 화면에서 사람이 하는 일(사용자의 응원 · 환불 요청, 운영자의 환불 · 거절 · 맞추기)은 화면으로, 사람이 아닌 일(시드 · 서버 상태 확인)은 API 로.
@@ -20,13 +20,7 @@ export type ApiAnswer = { status: number; json: any } // eslint-disable-line @ty
 
 export async function tokenOf(apiUrl: string, account: Account = DEMO): Promise<string> {
   await consentViaApi(account)
-  const login = await fetch(`${apiUrl}/api/v1/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(account),
-  })
-  if (!login.ok) throw new Error(`login ${account.email} → ${login.status}`)
-  return ((await login.json()) as { value: { accessToken: string } }).value.accessToken
+  return (await accessTokenFor(apiUrl, account, { strict: true }))!
 }
 
 /** `/api/v1` 아래 한 번 부른다. 본문이 JSON 이 아니면(204) `json` 은 `null` */

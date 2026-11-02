@@ -11,6 +11,7 @@ import {
   agreeToLegal,
   auth,
   dismissConsent,
+  accessTokenFor,
   fillSignIn,
   ko,
   launch,
@@ -680,15 +681,13 @@ describe('operator tools (opt-in @skeleton/auth/admin)', () => {
   })
 
   it('the list endpoint refuses a page size over 100 (400); the client never asks for one', async () => {
-    const admin = await fetch(`${apiUrl}/api/v1/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'admin@example.com', password: 'password' }),
+    const adminToken = await accessTokenFor(apiUrl, {
+      email: 'admin@example.com',
+      password: 'password',
     })
-    const { value } = (await admin.json()) as { value: { accessToken: string } }
     const call = (query: string) =>
       fetch(`${apiUrl}/api/v1/admin/accounts?${query}`, {
-        headers: { Authorization: `Bearer ${value.accessToken}` },
+        headers: { Authorization: `Bearer ${adminToken}` },
       })
     pwExpect((await call('size=101')).status).toBe(400)
     pwExpect((await call('page=-1')).status).toBe(400)

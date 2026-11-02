@@ -3,6 +3,7 @@ import { chromium, type Browser, type BrowserContext, type Page } from 'playwrig
 import { koAuthLabels } from '@skeleton/auth'
 import { koLegalLabels } from '@skeleton/legal'
 import { i18n, type MessageKey } from '../src/i18n'
+import { hasOperatorSecret, nextOperatorCode } from './adminMfa'
 
 /** 인증 화면 문구(한국어) — 패키지의 사전이라 앱 사전이 아니다 */
 export const auth = koAuthLabels
@@ -15,6 +16,68 @@ export const ko = (key: MessageKey, values?: Record<string, string | number>) =>
   i18n.tIn('ko', key, values)
 
 export const DEMO = { email: 'user@example.com', password: 'password' }
+
+/** 운영 계정(admin · moderator)의 2단계 비밀 파일 - 백엔드가 운영자에게 2단계를 걸지 않으면 빈 문자열(예전과 같다) */
+function operatorMfaFile(): string {
+  try {
+    return inject('adminMfaFile') ?? ''
+  } catch {
+    return ''
+  }
+}
+/** 이 계정은 로그인 때 2단계 코드를 내야 하는 운영자인가 */
+export const needsOperatorCode = (account: { email: string }) =>
+  hasOperatorSecret(operatorMfaFile(), account.email)
+
+/**
+ * 비밀번호 로그인 한 번 - 운영자는 두 번째 단계(`/auth/mfa/verify`)까지 마친 응답을 돌려준다(같은 걸음의 코드는 두 번 못 쓰므로 `nextOperatorCode` 가 걸음을 앞으로만 보낸다).
+ * 그 밖의 계정 · 2단계가 없는 백엔드는 로그인 응답 그대로다
+ */
+export async function passwordLogin(
+  apiUrl: string,
+  account: { email: string; password: string },
+  headers: Record<string, string> = {},
+): Promise<Response> {
+  const first = await fetch(`${apiUrl}/api/v1/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...headers },
+    body: JSON.stringify(account),
+  })
+  if (first.status !== 403 || !needsOperatorCode(account)) return first
+  const body = (await first.clone().json()) as { code?: string; data?: { mfaToken?: string } }
+  if (body.code !== 'AUTH.MFA_REQUIRED') return first
+  return fetch(`${apiUrl}/api/v1/auth/mfa/verify`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      mfaToken: body.data?.mfaToken,
+      code: await nextOperatorCode(operatorMfaFile(), account.email),
+    }),
+  })
+}
+
+/** 운영자의 액세스 토큰 - 로그인마다 인증 앱 코드 한 개(30초 걸음)가 들므로 몇 분은 다시 쓴다(토큰 수명보다 훨씬 짧게). 다른 계정은 매번 로그인한다 */
+const operatorTokens = new Map<string, { token: string; at: number }>()
+const OPERATOR_TOKEN_REUSE_MS = 4 * 60_000
+
+/** API 로 로그인해 액세스 토큰만 받는다(비밀번호가 있는 계정). 로그인이 안 되면 `undefined` */
+export async function accessTokenFor(
+  apiUrl: string,
+  account: { email: string; password: string },
+  { strict = false }: { strict?: boolean } = {},
+): Promise<string | undefined> {
+  const reuse = needsOperatorCode(account)
+  const kept = operatorTokens.get(account.email)
+  if (reuse && kept && Date.now() - kept.at < OPERATOR_TOKEN_REUSE_MS) return kept.token
+  const login = await passwordLogin(apiUrl, account)
+  if (!login.ok) {
+    if (strict) throw new Error(`login ${account.email} → ${login.status}`)
+    return undefined
+  }
+  const token = ((await login.json()) as { value: { accessToken: string } }).value.accessToken
+  if (reuse) operatorTokens.set(account.email, { token, at: Date.now() })
+  return token
+}
 
 export async function launch(
   options: {
@@ -63,13 +126,8 @@ export async function signIn(page: Page, baseUrl: string, account = DEMO) {
 export async function consentViaApi(account: { email: string; password: string }) {
   const apiUrl = inject('apiUrl')
   if (!(await legalOn(apiUrl))) return
-  const login = await fetch(`${apiUrl}/api/v1/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(account),
-  })
-  if (!login.ok) return // 틀린 비밀번호를 시험하는 곳
-  const token = (await login.json()).value.accessToken as string
+  const token = await accessTokenFor(apiUrl, account)
+  if (!token) return // 틀린 비밀번호를 시험하는 곳
   const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
   const mine = (await (await fetch(`${apiUrl}/api/v1/legal/consents/me`, { headers })).json()).value
   if (!mine.blocked) return
@@ -91,6 +149,16 @@ export async function fillSignIn(page: Page, account: { email: string; password:
   await page.getByLabel(auth.email).fill(account.email)
   await page.getByLabel(auth.password, { exact: false }).first().fill(account.password)
   await page.getByRole('button', { name: auth.signInSubmit, exact: true }).click()
+  await passSecondStep(page, account)
+}
+
+/** 운영자는 비밀번호 다음에 2단계 화면이 뜬다 - 인증 앱 코드를 치고 로그인 화면을 떠날 때까지 기다린다(그 전에 다음 이동이 확인 요청을 끊지 않게). 운영자가 아니면 아무 일도 하지 않는다 */
+export async function passSecondStep(page: Page, account: { email: string }) {
+  if (!needsOperatorCode(account)) return
+  await page.waitForURL((url) => url.pathname === '/login/two-factor')
+  await page.getByLabel(auth.codeDigit(1, 6)).click()
+  await page.keyboard.type(await nextOperatorCode(operatorMfaFile(), account.email))
+  await page.waitForURL((url) => !url.pathname.startsWith('/login'))
 }
 
 type SeedNote = {
@@ -304,19 +372,8 @@ export async function signUpConsents(apiUrl: string) {
 /** 작성자 프로필(`GET /author-profiles` 의 한 항목) */
 export type E2eProfile = { id: string; name: string | null; tag: string | null }
 
-/** API 로 로그인해 액세스 토큰만 받는다(비밀번호가 있는 계정) */
-async function accessTokenOf(apiUrl: string, account: { email: string; password: string }) {
-  const login = await fetch(`${apiUrl}/api/v1/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(account),
-  })
-  if (!login.ok) return undefined
-  return ((await login.json()) as { value: { accessToken: string } }).value.accessToken
-}
-
 async function profileHeaders(account: { email: string; password: string }) {
-  const token = await accessTokenOf(inject('apiUrl'), account)
+  const token = await accessTokenFor(inject('apiUrl'), account)
   if (!token) return undefined
   return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
 }

@@ -9,7 +9,8 @@ import type { SeoHandle } from '../seo/routeSeo'
 import { serverClock } from '../api/serverClock'
 import { emailRequired } from '../api/emailRequired'
 import { loginIdRequired } from '../api/loginIdRequired'
-import { accountApi, authApi, authSession } from './session'
+import { mfaEnrollmentRequired } from '../api/mfaEnrollmentRequired'
+import { accountApi, authApi, authSession, mfaApi } from './session'
 import {
   authKeys,
   AUTH_NAMESPACE,
@@ -23,6 +24,7 @@ import { refreshAfterProfileChange } from './profileCache'
 import { ConsentSettingsSection } from '../legal/ConsentSettingsSection'
 import { SignUpConsentsSlot } from '../legal/SignUpConsentsSlot'
 import { useAuthLabels } from './useAuthLabels'
+import { AccountApiKeys } from './AccountApiKeys'
 
 const browserStorage = () => (typeof window === 'undefined' ? undefined : window.sessionStorage)
 const origin = typeof window === 'undefined' ? '' : window.location.origin
@@ -74,6 +76,8 @@ export const accountRoutes = createAuthRoutes({
   emailRequired,
   // 아이디를 정해야 하는 앱 - 계정 설정에서 아이디를 정하면 앱을 덮은 「아이디를 정해 주세요」 막(`LoginIdGate`)을 걷는다. 길이 규칙은 발견(`GET /auth/methods`)이 알려 준다
   loginIdRequired,
+  // 2단계 인증이 필수인 대상(이 견본은 운영자) - 계정 설정에서 켜면 앱을 덮은 「2단계 인증을 켜 주세요」 막(`MfaGate`)을 걷는다
+  mfaEnrollmentRequired,
   confirmPassword: true, // 새 비밀번호를 한 번 더(모듈 기본은 꺼짐) — 가입 · 재설정 · 변경
   methods: authMethodsOverride && {
     ...authMethodsOverride,
@@ -111,7 +115,15 @@ export const accountRoutes = createAuthRoutes({
       { value: 'ko', label: '한국어' },
       { value: 'en', label: 'English' },
     ],
-    preferenceRows: <ConsentSettingsSection />,
+    // 2단계 인증 줄(켜기 마법사 · 복구 코드 · 끄기) - 백엔드가 `auth-mfa` 를 켜지 않았으면(404) 줄이 스스로 안내만 그린다
+    twoFactor: mfaApi,
+    // 「환경」 카드의 줄: 약관 동의 · API 키(소셜 전용 계정의 본인 확인이 제공자 동의 왕복을 쓰므로 함수로 받는다)
+    preferenceRows: (trip) => (
+      <>
+        <ConsentSettingsSection />
+        <AccountApiKeys trip={trip} />
+      </>
+    ),
   },
   handle: hidden,
 })

@@ -1,6 +1,8 @@
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process'
+import { mkdtempSync, rmSync } from 'node:fs'
 import { createServer } from 'node:net'
-import { dirname, resolve } from 'node:path'
+import { tmpdir } from 'node:os'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { TestProject } from 'vitest/node'
 import { FAKE_LINE, FAKE_X, startFakeProviders, type FakeProviders } from './fakeProviders'
@@ -11,6 +13,7 @@ import { FAKE_GA, startFakeGa, type FakeGa } from './fakeGa'
 import { FAKE_PADDLE, startFakePaddle, type FakePaddle } from './fakePaddle'
 import { FAKE_TOSS, startFakeToss, type FakeToss } from './fakeToss'
 import { PAYMENT_E2E_SKELETON } from './paymentE2eConfig'
+import { enrollOperators } from './adminMfa'
 
 /*
  * e2e 준비 — 1) 백엔드(kotlin-skeleton 의 `scripts/sample-e2e-backend.sh start`: 새 DB · 로컬 S3 · apps/sample 기동, 준비되면 `READY <주소>` 한 줄을 찍는다)
@@ -66,6 +69,8 @@ declare module 'vitest' {
     fakeGaUrl: string
     /** 푸시 여정(push.e2e.ts)의 가짜 푸시 서비스가 받을 포트 — 서버가 그 끝점(`http://127.0.0.1:<포트>`)으로 보내도록 허용 목록에 올려 두었다. 이 준비 단계는 포트만 정하고, 서버는 시험 파일이 띄운다 */
     fakePushPort: number
+    /** 운영 계정(admin · moderator)의 2단계 인증 비밀 · 마지막으로 쓴 걸음을 적은 파일(`adminMfa.ts`) - 이 백엔드가 운영자에게 2단계를 요구하지 않으면 빈 문자열 */
+    adminMfaFile: string
   }
 }
 
@@ -430,6 +435,23 @@ export default async function setup(project: TestProject) {
     throw error
   }
 
+  // 운영자에게 2단계가 필수인 백엔드(견본 `required-for: OPERATORS`)면 운영 계정(admin · moderator)을 한 번 등록해 비밀을 파일로 쥔다 - 시험 파일마다 다른 프로세스라 파일로 나눈다.
+  // 비밀을 잃으면 그 계정은 다시 못 푼다(자기 해제 409): 파일은 실행 내내 두고 정리 때만 지운다
+  const mfaDir = mkdtempSync(join(tmpdir(), 'e2e-admin-mfa-'))
+  const adminMfaFile = join(mfaDir, 'secret.json')
+  let operatorMfa = false
+  try {
+    operatorMfa = await enrollOperators(apiUrl, adminMfaFile)
+  } catch (error) {
+    await stopAll()
+    rmSync(mfaDir, { recursive: true, force: true })
+    throw error
+  }
+  const stopWithMfa = async () => {
+    await stopAll()
+    rmSync(mfaDir, { recursive: true, force: true })
+  }
+
   project.provide('baseUrl', baseUrl)
   project.provide('apiUrl', apiUrl)
   project.provide('mailUrl', mailUrl)
@@ -441,5 +463,6 @@ export default async function setup(project: TestProject) {
   project.provide('fakeCloudflareUrl', fakeCloudflare?.url ?? '')
   project.provide('fakeGaUrl', fakeGa?.url ?? '')
   project.provide('fakePushPort', fakePushPort)
-  return stopAll
+  project.provide('adminMfaFile', operatorMfa ? adminMfaFile : '')
+  return stopWithMfa
 }

@@ -191,13 +191,15 @@ describe('SettingsPage — nicknames section', () => {
 })
 
 describe('SettingsPage — API keys', () => {
-  it('has the API keys section once the profile is known, in Korean and English', async () => {
+  // 키는 계정 설정(`/account#api-keys`)에서 만든다 - 소셜 전용 계정의 본인 확인(제공자 왕복)이 거기서만 이어진다
+  it('links to the API keys on the account page, in Korean and English', async () => {
+    expect(render(me({}))).toContain('href="/account#api-keys"')
     expect(render(me({}))).toContain('API 키')
     await i18n.setLocale('en', { remember: false })
     expect(render(me({}))).toContain('API keys')
   })
 
-  it('has no API keys section before the profile is known (the re-auth kind comes from it)', () => {
-    expect(render(undefined)).not.toContain('API 키')
+  it('does not draw the keys section itself (no create button here)', () => {
+    expect(render(me({}))).not.toContain('키 만들기')
   })
 })

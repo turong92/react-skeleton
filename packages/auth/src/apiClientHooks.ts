@@ -1,4 +1,9 @@
-import { ApiRequestError, ErrorCodes, type HeaderRecord } from '@skeleton/api-client'
+import {
+  ApiRequestError,
+  ErrorCodes,
+  type ErrorContext,
+  type HeaderRecord,
+} from '@skeleton/api-client'
 import { bearerAuthorization } from './headers'
 import type { RefreshStore } from './refreshStore'
 import type { TokenStore } from './tokenStore'

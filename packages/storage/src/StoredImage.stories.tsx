@@ -36,14 +36,20 @@ export const OnlyThumb: Story = {
   },
 }
 
-/** 움직이는 이미지의 변환 결과(`display.contentType === 'video/mp4'`) - 소리 없는 반복 영상으로 GIF 처럼 보인다 */
+/** 움직이는 이미지의 변환 결과(`display.alternates` 의 `video/mp4`) - 소리 없는 반복 영상으로 GIF 처럼 보인다 */
 export const AnimatedAsVideo: Story = {
   args: {
     image: {
       width: 480,
       height: 270,
       thumb: both.thumb,
-      display: { url: 'data:video/mp4;base64,', width: 480, height: 270, contentType: 'video/mp4' },
+      display: {
+        url: 'data:image/gif;base64,R0lGODlhAQABAAAAACw=',
+        width: 480,
+        height: 270,
+        contentType: 'image/gif',
+        alternates: [{ url: 'data:video/mp4;base64,', contentType: 'video/mp4' }],
+      },
     },
     alt: 'A dancing cat',
   },

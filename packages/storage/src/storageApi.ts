@@ -64,8 +64,10 @@ export type ImageVariant = {
   url: string
   width?: number
   height?: number
-  /** 변환본의 형식 — 움직이는 이미지의 `display` 는 `video/mp4` 일 수 있다(변환은 비동기라 같은 키를 다시 물으면 바뀐다). `StoredImage` 가 보고 `<video>` 로 그린다 */
+  /** `url` 의 형식 — `display` 는 늘 이미지(`image/gif` 등)다 */
   contentType?: string
+  /** 같은 그림의 다른 형식 — 변환 끝난 움직이는 이미지의 `display` 는 `video/mp4`(투명이면 `image/webp`)를 싣는다. 변환은 비동기라 같은 키를 다시 물으면 채워진다. `StoredImage` 가 `video/mp4` 를 보고 `<video>` 로 그린다 */
+  alternates?: { url: string; contentType: string }[]
 }
 
 /** `images` 의 한 줄 — 서버의 `variants: { thumb?, display? }` 를 펼친 모양(`StoredImage` 가 바로 받는다) */
@@ -223,6 +225,9 @@ function variantOf(raw: unknown): ImageVariant | undefined {
         url: variant.url,
         ...sized(variant),
         ...(typeof variant.contentType === 'string' && { contentType: variant.contentType }),
+        ...(Array.isArray(variant.alternates) && {
+          alternates: variant.alternates as ImageVariant['alternates'],
+        }),
       }
     : undefined
 }

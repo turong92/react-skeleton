@@ -19,7 +19,7 @@ export function fakeStatus(over: Partial<WaitingRoomStatus> = {}): WaitingRoomSt
 export function createFakeWaitingRoom(script: WaitingRoomStatus[]) {
   let next = 0
   const api: WaitingRoomApi = {
-    takeTicket: async () => ({ ticketToken: 'ticket-1' }),
+    takeTicket: async () => ({ ...script[next++], ticket: 'ticket-1' }),
     status: async () => script[Math.min(next++, script.length - 1)],
   }
   return { api }

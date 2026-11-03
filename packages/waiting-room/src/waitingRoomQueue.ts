@@ -45,8 +45,23 @@ export type WaitingRoomQueue = {
 const RETRY_MS = 10_000
 /** 서버 값이 이상해도(0 · NaN) 서버를 몰아치지 않게 하는 아래 한계(초) */
 const MIN_POLL_SECONDS = 1
-/** 서버가 이 순번표를 받아들이지 않는다(위조 · 다른 계정 · 없는 방) - 버리고 새로 받는다 */
-const REFUSED = [400, 403, 404, 410]
+/** 서버가 이 순번표를 받아들이지 않는다(없는 · 위조 · 남의 순번표, 돌리기 전 키) - 버리고 새로 받는다(같은 번호로 돌아온다) */
+const TICKET_INVALID = 'WAITING_ROOM.TICKET_INVALID'
+/** 순번표 받기가 거절됐다 - 줄이 아직 안 열렸다(`data.opensAt`) · 닫혔다 */
+const NOT_OPEN = 'WAITING_ROOM.NOT_OPEN'
+const CLOSED = 'WAITING_ROOM.CLOSED'
+/** 아직 줄이 안 열렸을 때 다시 받아 보는 간격(초) */
+const NOT_OPEN_RETRY_SECONDS = 30
+
+/** 줄이 열리기 전 / 닫힌 뒤에 서버가 상태 대신 거절만 줄 때 화면에 보일 상태 */
+const BEFORE_PREQUEUE: WaitingRoomStatus = {
+  state: 'PREQUEUE',
+  position: null,
+  ahead: null,
+  estimatedWaitSeconds: null,
+  opensAt: '',
+  pollAfterSeconds: NOT_OPEN_RETRY_SECONDS,
+}
 
 const INITIAL: WaitingRoomSnapshot = { started: false, status: null, error: null }
 
@@ -115,13 +130,14 @@ export function createWaitingRoomQueue({
 
   async function step(run: number, ticket: string | null, retaken: boolean): Promise<void> {
     try {
-      if (ticket === null) {
-        ticket = (await api.takeTicket(roomId)).ticketToken
-        if (run !== generation) return
-        write(ticket)
-      }
-      const status = await api.status(roomId, ticket)
+      const answer =
+        ticket === null ? await api.takeTicket(roomId) : await api.status(roomId, ticket)
       if (run !== generation) return
+      const { ticket: given, ...status } = answer
+      if (given) {
+        ticket = given
+        write(given)
+      }
       set({ started: true, status, error: null })
       if (status.state === 'CLOSED' || status.state === 'EXPIRED') return
       const seconds = Math.max(MIN_POLL_SECONDS, status.pollAfterSeconds || 0)
@@ -129,14 +145,20 @@ export function createWaitingRoomQueue({
       later(() => void step(run, known, false), seconds * 1000)
     } catch (error) {
       if (run !== generation) return
-      if (
-        ticket !== null &&
-        !retaken &&
-        error instanceof ApiRequestError &&
-        REFUSED.includes(error.apiError.status)
-      ) {
+      const refusal = error instanceof ApiRequestError ? error.apiError : undefined
+      if (ticket !== null && !retaken && refusal?.code === TICKET_INVALID) {
         write(null)
         return step(run, null, true)
+      }
+      const opensAt = (refusal?.data as { opensAt?: unknown } | undefined)?.opensAt
+      if (ticket === null && refusal?.code === NOT_OPEN && typeof opensAt === 'string') {
+        set({ started: true, status: { ...BEFORE_PREQUEUE, opensAt }, error: null })
+        later(() => void step(run, null, false), NOT_OPEN_RETRY_SECONDS * 1000)
+        return
+      }
+      if (refusal?.code === CLOSED) {
+        set({ started: true, status: { ...BEFORE_PREQUEUE, state: 'CLOSED' }, error: null })
+        return
       }
       set({ ...snapshot, error })
       const known = ticket

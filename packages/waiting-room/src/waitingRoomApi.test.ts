@@ -5,9 +5,9 @@ import { recordingClient } from './test/recordingClient'
 
 describe('createWaitingRoomApi', () => {
   it('takes a ticket with POST /waiting-rooms/{id}/tickets', async () => {
-    const { client, calls } = recordingClient({ ticketToken: 'tk' })
+    const { client, calls } = recordingClient({ state: 'WAITING', ticket: 'tk' })
     const ticket = await createWaitingRoomApi(client).takeTicket('wr_1')
-    expect(ticket).toEqual({ ticketToken: 'tk' })
+    expect(ticket).toEqual({ state: 'WAITING', ticket: 'tk' })
     expect(calls).toEqual([
       { kind: 'value', path: '/waiting-rooms/wr_1/tickets', request: { method: 'POST' } },
     ])

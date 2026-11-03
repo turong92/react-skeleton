@@ -1,12 +1,12 @@
 import type { ApiClient } from '@skeleton/api-client'
-import type { WaitingRoomStatus, WaitingRoomTicket } from './types'
+import type { WaitingRoomStatus } from './types'
 
 type WaitingRoomClient = Pick<ApiClient, 'value'>
 
 export type WaitingRoomApi = {
-  /** `POST {base}/{id}/tickets` - 로그인한 계정의 순번표. 같은 계정이 또 받으면 같은 순번표, 입장 시간이 끝났으면 맨 뒤의 새것 */
-  takeTicket(roomId: string): Promise<WaitingRoomTicket>
-  /** `GET {base}/{id}/status` (헤더 `X-Ticket`) - 순번표가 위조 · 남의 것이면 거절된다 */
+  /** `POST {base}/{id}/tickets` - 로그인한 계정의 순번표(답의 `ticket`). 같은 계정이 또 받으면 같은 순번표, 입장 시간이 끝났으면 맨 뒤의 새것. 409 `WAITING_ROOM.NOT_OPEN` · `CLOSED` */
+  takeTicket(roomId: string): Promise<WaitingRoomStatus>
+  /** `GET {base}/{id}/status` (헤더 `X-Ticket`) - 순번표가 위조 · 남의 것이면 403 `WAITING_ROOM.TICKET_INVALID` */
   status(roomId: string, ticketToken: string): Promise<WaitingRoomStatus>
 }
 
@@ -24,7 +24,7 @@ export function createWaitingRoomApi(
   const room = (roomId: string) => `${base}/${encodeURIComponent(roomId)}`
   return {
     takeTicket: (roomId) =>
-      client.value<WaitingRoomTicket>(`${room(roomId)}/tickets`, { method: 'POST' }),
+      client.value<WaitingRoomStatus>(`${room(roomId)}/tickets`, { method: 'POST' }),
     status: (roomId, ticketToken) =>
       client.value<WaitingRoomStatus>(`${room(roomId)}/status`, {
         headers: { 'X-Ticket': ticketToken },

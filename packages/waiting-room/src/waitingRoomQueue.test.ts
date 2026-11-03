@@ -33,7 +33,7 @@ function fakeApi(replies: WaitingRoomStatus[]) {
   const api: WaitingRoomApi = {
     takeTicket: async () => {
       taken.push('POST')
-      return { ticketToken: `tk${taken.length}` }
+      return waiting({ ticket: `tk${taken.length}` })
     },
     status: async (_room, token) => {
       asked.push(token)
@@ -61,7 +61,8 @@ describe('waiting room queue', () => {
       waiting({ pollAfterSeconds: 20 }),
       waiting({ pollAfterSeconds: 5 }),
     ])
-    const queue = createWaitingRoomQueue({ api, roomId: 'wr_1', storage: memoryStorage() })
+    const storage = memoryStorage({ 'waiting-room:wr_1': 'tk' })
+    const queue = createWaitingRoomQueue({ api, roomId: 'wr_1', storage })
     queue.start()
     await vi.advanceTimersByTimeAsync(0)
     expect(asked).toHaveLength(1)
@@ -78,7 +79,8 @@ describe('waiting room queue', () => {
 
   it('stops asking once the room is closed or the entry has expired', async () => {
     const { api, asked } = fakeApi([waiting({ state: 'CLOSED', pollAfterSeconds: 5 })])
-    const queue = createWaitingRoomQueue({ api, roomId: 'wr_1', storage: memoryStorage() })
+    const storage = memoryStorage({ 'waiting-room:wr_1': 'tk' })
+    const queue = createWaitingRoomQueue({ api, roomId: 'wr_1', storage })
     queue.start()
     await vi.advanceTimersByTimeAsync(60_000)
     expect(asked).toHaveLength(1)
@@ -109,7 +111,7 @@ describe('waiting room queue', () => {
     const api: WaitingRoomApi = {
       takeTicket: async () => {
         taken.push('POST')
-        return { ticketToken: 'mine' }
+        return waiting({ ticket: 'mine' })
       },
       status: async (_room, token) => {
         if (token !== 'mine') throw rejected(403)

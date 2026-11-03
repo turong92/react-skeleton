@@ -1,5 +1,5 @@
 export { WAITING_ROOM_STATES } from './types'
-export type { WaitingRoomState, WaitingRoomStatus, WaitingRoomTicket } from './types'
+export type { WaitingRoomState, WaitingRoomStatus } from './types'
 export { createWaitingRoomApi } from './waitingRoomApi'
 export type { WaitingRoomApi, WaitingRoomApiOptions } from './waitingRoomApi'
 export { createEntryHeaders } from './entryHeaders'

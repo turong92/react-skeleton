@@ -147,17 +147,17 @@ const reviewsReview = {
   updatedAt: '2026-01-01T00:00:00Z',
 }
 const fakeInquiryApi = () => ({ send: async () => ({ status: 'RECEIVED' }) })
-const fakeWaitingRoomApi = () => ({
-  takeTicket: async () => ({ ticketToken: 'tk' }),
-  status: async () => ({
+const fakeWaitingRoomApi = () => {
+  const status = {
     state: 'WAITING',
     position: 2,
     ahead: 1,
     estimatedWaitSeconds: 60,
     opensAt: '2026-11-03T00:00:00Z',
     pollAfterSeconds: 5,
-  }),
-})
+  }
+  return { takeTicket: async () => ({ ...status, ticket: 'tk' }), status: async () => status }
+}
 const fakeSearchApi = () => ({ search: async () => pageOf([]) })
 const searchLabels = (ctx: FixtureContext) => ctx.mod('search').defaultSearchLabels
 const searchDescribe = (type: string) => ({ label: type, href: (id: string) => `/${type}/${id}` })

@@ -30,8 +30,9 @@ const token = await room.enter() // 입장하면 돌려준다
 {room.started && room.status?.state !== 'ADMITTED' && <WaitingScreen status={room.status} failed={room.error !== null} onRejoin={room.rejoin} />}
 ```
 
-- 순번표는 방별로 `sessionStorage` 에 둔다(새로고침해도 순서 그대로). 저장소를 못 쓰거나 서버가 거절한 순번표(다른 계정이 쓰던 것 …)는 버리고 새로 받는다 — 지워져도 다시 받으면 같은 순번표다. **입장권은 저장하지 않는다**(메모리에만).
+- 순번표는 방별로 `sessionStorage` 에 둔다(새로고침해도 순서 그대로). 저장소를 못 쓰거나 서버가 `403 WAITING_ROOM.TICKET_INVALID` 로 거절한 순번표(다른 계정이 쓰던 것 …)는 버리고 새로 받는다 — 지워져도 다시 받으면 같은 순번표다. **입장권은 저장하지 않는다**(메모리에만).
 - 묻는 간격은 서버 값 그대로(1초 미만이면 1초) — 앞 사람 수로 5 ~ 30초. 입장해도 계속 물어 입장 시간이 끝나는 것을 안다. `CLOSED` · `EXPIRED` 가 되면 더 묻지 않는다. 네트워크 오류 · 5xx 는 10초 뒤 다시(화면에는 「다시 시도하는 중」 띠).
+- 순번표는 `POST …/tickets` 의 답(상태와 같은 모양)의 `ticket` 으로 오고, 상태 답에 `ticket` 이 있으면 저장한 것을 바꾼다. 줄이 아직 안 열렸으면(`409 NOT_OPEN`) 오픈 전 화면을 보이고 30초마다 다시 받아 보며, 닫혔으면(`409 CLOSED`) 닫힘 화면이다.
 - 오픈 카운트다운은 브라우저 시계로 센다. 상태는 서버가 말한다(시계가 틀려도 입장은 서버가 정한다).
 - 운영 화면은 서버의 `skeleton.waiting-room.admin.enabled` 와 `waiting-room.manage` 권한이 있어야 열린다. 대기실 만들기(`POST /admin/waiting-rooms`)는 이 패키지에 화면이 없다.
 - 스토리: `Packages/waiting-room/WaitingScreen` · `Packages/waiting-room/WaitingRoomGate` · `Packages/waiting-room/admin/AdminWaitingRoom`.

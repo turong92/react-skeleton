@@ -3,6 +3,7 @@ import {
   Alert,
   Button,
   Checkbox,
+  ConfirmDialog,
   Field,
   Input,
   PageHeader,
@@ -13,9 +14,14 @@ import {
 import { useState } from 'react'
 import type { BroadcastAdminApi } from './adminApi'
 import { broadcastErrorMessage, isToolOff, mergeBroadcastLabels } from './adminErrors'
-import { ConfirmDialog } from './ConfirmDialog'
 import { fromLocalInput, isAppPath, isNightHour, toLocalInput } from './format'
-import { useAudienceCount, useBroadcast, useBroadcastMutations, useBroadcastOptions } from './hooks'
+import {
+  useAudienceCount,
+  useBroadcast,
+  useBroadcastMutations,
+  useBroadcastOptions,
+  useSettled,
+} from './hooks'
 import type { BroadcastAdminLabels } from './labels'
 import { allowAll, BROADCAST_PERMISSIONS, type CanFn } from './permissions'
 import type { Broadcast, BroadcastInput, BroadcastOptions } from './types'
@@ -43,7 +49,7 @@ export type AdminBroadcastEditorProps = {
   >
   /** 고칠 임시 저장의 id - 없으면 새 공지 */
   id?: string
-  /** 대상 「역할」 에서 고를 역할(예: `GET /admin/roles`) - 없으면 이름을 직접 적는다 */
+  /** 대상 「역할」 에서 고를 역할(예: `GET /admin/accounts/assignable-roles`) - 없으면 이름을 직접 적는다 */
   roleChoices?: readonly Choice[]
   /** 대상 「워크스페이스」 에서 고를 워크스페이스 - 없으면 id 를 직접 적는다 */
   workspaceChoices?: readonly Choice[]
@@ -172,7 +178,20 @@ function EditorForm({
     param: paramKind === 'NONE' ? null : draft.audienceParam.trim(),
   }
   const audienceReady = audience.kind !== '' && (paramKind === 'NONE' || !!audience.param)
-  const count = useAudienceCount(api, audience, audienceReady)
+  // 값을 치는 동안은 묻지 않는다 - 멈춘 뒤 한 번(확인 창은 그 답이 지금 값의 것일 때만 열린다)
+  const audienceKey = JSON.stringify(audience)
+  const settledKey = useSettled(audienceKey, 300)
+  const settledAudience: typeof audience = JSON.parse(settledKey)
+  const countCurrent = settledKey === audienceKey
+  const count = useAudienceCount(
+    api,
+    settledAudience,
+    audienceReady &&
+      settledAudience.kind !== '' &&
+      (paramKind === 'NONE' || !!settledAudience.param),
+  )
+  const total = countCurrent ? count.data?.count : undefined
+  const countedNow = total !== undefined
   const scheduledIso = draft.scheduled ? fromLocalInput(draft.scheduledAt) : null
 
   const problems = [
@@ -324,7 +343,7 @@ function EditorForm({
           <p className={styles.count} role="status">
             {!audienceReady
               ? ''
-              : count.isPending
+              : !countCurrent || count.isPending
                 ? t.audienceCountLoading
                 : count.isError
                   ? t.audienceCountFailed
@@ -416,48 +435,53 @@ function EditorForm({
           </Button>
         </div>
       </form>
-      {confirming && (
-        <ConfirmDialog
-          title={draft.scheduled ? labels.confirm.scheduleTitle : labels.confirm.sendTitle}
-          confirmLabel={
-            count.data
-              ? (draft.scheduled ? labels.confirm.scheduleConfirm : labels.confirm.sendConfirm)(
-                  count.data.count,
-                )
-              : t.audienceCountLoading
-          }
-          cancelLabel={labels.cancel}
-          closeLabel={labels.close}
-          loadingLabel={labels.loading}
-          confirmDisabled={!count.data}
-          busy={busy}
-          error={error}
-          onClose={() => setConfirming(false)}
-          onConfirm={() =>
-            void run(async () => {
-              const saved = await save()
-              await mutations.send.mutateAsync({ id: saved, scheduledAt: scheduledIso })
-              setConfirming(false)
-              onSent(saved)
-            })
-          }
-        >
-          <dl className={styles.facts}>
-            <dt>{labels.confirm.audience}</dt>
-            <dd>
-              {[labels.audienceKinds[audience.kind] ?? audience.kind, audience.param]
-                .filter(Boolean)
-                .join(' · ')}
-              {' — '}
-              {count.data ? t.audienceCount(count.data.count) : t.audienceCountLoading}
-            </dd>
-            <dt>{labels.confirm.channels}</dt>
-            <dd>{[t.inboxAlways, ...channels.map(channelName)].join(', ')}</dd>
-            <dt>{labels.confirm.when}</dt>
-            <dd>{scheduledIso ? formatTime(scheduledIso) : t.now}</dd>
-          </dl>
-        </ConfirmDialog>
-      )}
+      <ConfirmDialog
+        open={confirming}
+        title={draft.scheduled ? labels.confirm.scheduleTitle : labels.confirm.sendTitle}
+        confirmLabel={
+          countedNow
+            ? (draft.scheduled ? labels.confirm.scheduleConfirm : labels.confirm.sendConfirm)(total)
+            : t.audienceCountLoading
+        }
+        cancelLabel={labels.cancel}
+        closeLabel={labels.close}
+        loadingLabel={labels.loading}
+        tone="primary"
+        busy={busy}
+        confirmBlockedBy={countedNow ? undefined : 'broadcast-confirm-count'}
+        onClose={() => setConfirming(false)}
+        onConfirm={() =>
+          void run(async () => {
+            const saved = await save()
+            await mutations.send.mutateAsync({ id: saved, scheduledAt: scheduledIso })
+            setConfirming(false)
+            onSent(saved)
+          })
+        }
+        description={
+          <>
+            {error && <Alert tone="danger">{error}</Alert>}
+            <dl className={styles.facts}>
+              <dt>{labels.confirm.audience}</dt>
+              <dd id={countedNow ? undefined : 'broadcast-confirm-count'}>
+                {[labels.audienceKinds[audience.kind] ?? audience.kind, audience.param]
+                  .filter(Boolean)
+                  .join(' · ')}
+                {' — '}
+                {countedNow
+                  ? t.audienceCount(total)
+                  : count.isError && countCurrent
+                    ? t.audienceCountFailed
+                    : t.audienceCountLoading}
+              </dd>
+              <dt>{labels.confirm.channels}</dt>
+              <dd>{[t.inboxAlways, ...channels.map(channelName)].join(', ')}</dd>
+              <dt>{labels.confirm.when}</dt>
+              <dd>{scheduledIso ? formatTime(scheduledIso) : t.now}</dd>
+            </dl>
+          </>
+        }
+      />
     </div>
   )
 }

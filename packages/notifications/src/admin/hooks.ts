@@ -1,4 +1,5 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
 import type { BroadcastAdminApi } from './adminApi'
 import type { BroadcastAudience, BroadcastInput, BroadcastStatus } from './types'
 
@@ -26,7 +27,17 @@ const QUIET = { retry: false, meta: { quietStatuses: [404] } } as const
 export const useBroadcastOptions = (api: Pick<BroadcastAdminApi, 'options'>) =>
   useQuery({ queryKey: broadcastKeys.options(), queryFn: () => api.options(), ...QUIET })
 
-/** 대상 수 미리보기 - `enabled` 가 거짓(값을 아직 안 골랐다)이면 묻지 않는다 */
+/** 값이 멈춘 지 `delayMs` 뒤에 따라온다 - 처음 값은 바로(`@skeleton/search` 의 `useDebouncedValue` 와 같은 일이나, 이 패키지는 검색에 기대지 않는다) */
+export function useSettled<T>(value: T, delayMs: number): T {
+  const [settled, setSettled] = useState(value)
+  useEffect(() => {
+    const timer = setTimeout(() => setSettled(value), delayMs)
+    return () => clearTimeout(timer)
+  }, [value, delayMs])
+  return settled
+}
+
+/** 대상 수 미리보기 - 값을 치는 중의 400(`INVALID_AUDIENCE`)은 토스트 없이 화면 안 「세지 못했어요」 로 말한다. `enabled` 가 거짓(값을 아직 안 골랐다)이면 묻지 않는다 */
 export const useAudienceCount = (
   api: Pick<BroadcastAdminApi, 'audienceCount'>,
   audience: BroadcastAudience,
@@ -37,6 +48,7 @@ export const useAudienceCount = (
     queryFn: () => api.audienceCount(audience),
     enabled,
     ...QUIET,
+    meta: { quietStatuses: [400, 404] },
   })
 
 export const useBroadcasts = (

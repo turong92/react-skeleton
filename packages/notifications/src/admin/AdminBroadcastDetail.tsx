@@ -1,9 +1,17 @@
 import { formatInstant } from '@skeleton/time'
-import { Alert, Badge, Button, PageHeader, SectionCard, Skeleton, Stat } from '@skeleton/ui'
+import {
+  Alert,
+  Badge,
+  Button,
+  ConfirmDialog,
+  PageHeader,
+  SectionCard,
+  Skeleton,
+  Stat,
+} from '@skeleton/ui'
 import { useState } from 'react'
 import type { BroadcastAdminApi } from './adminApi'
 import { broadcastErrorMessage, isToolOff, mergeBroadcastLabels } from './adminErrors'
-import { ConfirmDialog } from './ConfirmDialog'
 import { percent } from './format'
 import { useBroadcast, useBroadcastMutations } from './hooks'
 import type { BroadcastAdminLabels } from './labels'
@@ -246,14 +254,14 @@ export function AdminBroadcastDetail({
       </SectionCard>
       {confirm && (
         <ConfirmDialog
+          open
           title={labels.confirm[`${confirm}Title`]}
           confirmLabel={labels.confirm[`${confirm}Confirm`]}
           cancelLabel={labels.confirm.keep}
           closeLabel={labels.close}
           loadingLabel={labels.loading}
-          danger={confirm !== 'unschedule'}
+          tone={confirm === 'unschedule' ? 'primary' : 'danger'}
           busy={pending[confirm]}
-          error={failure ? broadcastErrorMessage(failure, labels) : null}
           onClose={close}
           onConfirm={() => {
             const done = { onSuccess: close }
@@ -267,9 +275,13 @@ export function AdminBroadcastDetail({
                 },
               })
           }}
-        >
-          <p>{labels.confirm[`${confirm}Body`]}</p>
-        </ConfirmDialog>
+          description={
+            <>
+              {failure && <Alert tone="danger">{broadcastErrorMessage(failure, labels)}</Alert>}
+              <p>{labels.confirm[`${confirm}Body`]}</p>
+            </>
+          }
+        />
       )}
     </div>
   )

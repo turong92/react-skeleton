@@ -27,7 +27,7 @@ const meta = {
       'promo.notes-tips': '팁 소식 (광고)',
     },
     roleChoices: [
-      { value: 'USER', label: '일반 사용자' },
+      { value: 'USER', label: 'USER' },
       { value: 'ADMIN', label: '운영자' },
     ],
   },

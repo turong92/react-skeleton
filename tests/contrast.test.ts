@@ -56,6 +56,8 @@ const PAIRS: Pair[] = [
   },
   { fg: '--inverse', bg: '--surface-muted', min: BODY, use: 'button on an inverse band, hover' },
   { fg: '--on-inverse', bg: '--red', min: BODY, use: 'notification badge' },
+  // 2단계 인증 QR - 테마와 상관없이 같은 흰 바탕 · 어두운 모듈
+  { fg: '--qr-fg', bg: '--qr-bg', min: BODY, use: 'two-factor QR code' },
   // UI 경계 · 포커스
   { fg: '--teal', bg: '--surface', min: UI, use: 'focus border' },
   { fg: '--teal', bg: '--bg', min: UI, use: 'focus border' },

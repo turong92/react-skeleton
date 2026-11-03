@@ -97,6 +97,8 @@ pnpm tokens:check   # 쓰지 않고 비교 — 생성물이 어긋났으면 종�
 | `--code-bg` | `#e7ece9` | `#212b27` | `--p-neutral-250` · dark `--p-night-600` | code · 알약 바탕 |
 | `--header-bg` | `rgba(255, 255, 255, 0.92)` | `rgba(15, 20, 18, 0.88)` | `--p-alpha-white-92` · dark `--p-alpha-night-88` | 고정 헤더 바탕(반투명) |
 | `--inverse` | `#17201c` | `#e7ece9` | `--p-neutral-850` · dark `--p-neutral-250` | 반전 면 — 눌리는 검정 버튼 · 브랜드 마크 |
+| `--qr-bg` | `#ffffff` | = | `--p-neutral-0` · dark `--p-neutral-0` | QR 코드 바탕 — 스캐너가 읽어야 하므로 테마와 상관없이 흰색 |
+| `--qr-fg` | `#111413` | = | `--p-neutral-900` · dark `--p-neutral-900` | QR 코드 모듈 — 테마와 상관없이 가장 어두운 중립색 |
 
 ### Text
 

@@ -28,8 +28,8 @@
   height: auto;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  background: #fff;
-  color: #000;
+  background: var(--qr-bg);
+  color: var(--qr-fg);
 }
 
 .secret {

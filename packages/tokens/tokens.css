@@ -83,6 +83,8 @@
   --code-bg: var(--p-neutral-250);
   --header-bg: var(--p-alpha-white-92);
   --inverse: var(--p-neutral-850);
+  --qr-bg: var(--p-neutral-0);
+  --qr-fg: var(--p-neutral-900);
 
   /* Text */
   --text: var(--p-neutral-800);
@@ -151,6 +153,8 @@
   --code-bg: var(--p-night-600);
   --header-bg: var(--p-alpha-night-88);
   --inverse: var(--p-neutral-250);
+  --qr-bg: var(--p-neutral-0);
+  --qr-fg: var(--p-neutral-900);
 
   /* Text */
   --text: var(--p-neutral-300);
@@ -190,6 +194,8 @@
     --code-bg: var(--p-night-600);
     --header-bg: var(--p-alpha-night-88);
     --inverse: var(--p-neutral-250);
+    --qr-bg: var(--p-neutral-0);
+    --qr-fg: var(--p-neutral-900);
 
     /* Text */
     --text: var(--p-neutral-300);

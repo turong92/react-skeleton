@@ -23,6 +23,7 @@ const api: AuthApi = {
   methods: unused,
   magicLinkRedeem: unused,
   cancelDeletion: unused,
+  mfaVerify: unused,
 }
 
 const render = () =>

@@ -160,6 +160,12 @@ export function createHoldController({
       await enqueue(async () => {
         try {
           const released = await api.release(hold.holdId)
+          // 이미 결제가 끝난 보류(확정)면 자리를 놓은 게 아니다 - 확정된 모습을 보인다
+          if (released.status === 'CONFIRMED') {
+            adopt(released)
+            set({ locked: true })
+            return
+          }
           for (const seat of hold.seats) feed.markOpen(seat.id)
           set({ hold: released.status === 'HELD' ? released : null, locked: false })
         } catch (error) {

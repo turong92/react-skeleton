@@ -114,6 +114,16 @@ describe('hold controller', () => {
     expect(controller.getSnapshot().locked).toBe(false)
   })
 
+  it('shows the confirmed hold, and opens no seat, when leaving answers that the payment already went through', async () => {
+    const { controller, feed } = setup({
+      release: async () => hold(['A1'], { status: 'CONFIRMED' }),
+    })
+    await controller.pick('A1')
+    await controller.release()
+    expect(controller.getSnapshot().hold?.status).toBe('CONFIRMED')
+    expect(feed.markOpen).not.toHaveBeenCalled()
+  })
+
   it('learns that the hold is locked from the server, and tells the person', async () => {
     const { controller } = setup({
       addSeats: async () => {

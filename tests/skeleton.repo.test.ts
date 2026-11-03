@@ -152,7 +152,7 @@ describe('the skeleton repo', () => {
         'packages/theme',
         'packages/notifications',
         'packages/board',
-      'packages/booking',
+        'packages/booking',
         'packages/author-profile',
         'packages/auth', // 계정 화면(로그인 · 가입 · 설정)이 CSS 모듈을 쓴다 — 스타터는 이제 그 화면을 가져다 쓸 뿐이라 자기 CSS 가 없다
       ]),

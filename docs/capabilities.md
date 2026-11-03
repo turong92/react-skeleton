@@ -259,7 +259,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 
 - 종류 · 상태: package · experimental
 - 위치: `@skeleton/waiting-room` (`packages/waiting-room`)
-- 켜는 법: `--packages waiting-room` — 함께 따라오는 패키지 `api-client` · `auth` · `legal` · `theme` · `time` · `tokens` · `ui`
+- 켜는 법: `--packages waiting-room` — 함께 따라오는 패키지 `api-client` · `auth` · `legal` · `theme` · `time` · `tokens` · `ui` — `--with-sample` 로도 따라온다
 - 필요한 것: `api-client` · `ui`
 - 백엔드: 모듈 `waiting-room` · 있으면 더 켜지는 `waiting-room-jdbc` · 경로 `/api/v1/waiting-rooms` · `/api/v1/admin/waiting-rooms`
 - 주요 진입점: `createWaitingRoomApi` · `useWaitingRoom` · `useWaitingRoomEntry` · `WaitingRoomGate` · `WaitingScreen` · `WaitingRoomEntryError` · `createEntryHeaders` · `defaultWaitingRoomLabels` · `koWaitingRoomLabels` · `@skeleton/waiting-room/admin#createWaitingRoomAdminApi` · `@skeleton/waiting-room/admin#AdminWaitingRoom` · `@skeleton/waiting-room/admin#koWaitingRoomAdminLabels`
@@ -272,7 +272,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 
 - 종류 · 상태: package · experimental
 - 위치: `@skeleton/booking` (`packages/booking`)
-- 켜는 법: `--packages booking` — 함께 따라오는 패키지 `api-client` · `auth` · `legal` · `realtime` · `theme` · `time` · `tokens` · `ui` · `waiting-room`
+- 켜는 법: `--packages booking` — 함께 따라오는 패키지 `api-client` · `auth` · `legal` · `realtime` · `theme` · `time` · `tokens` · `ui` · `waiting-room` — `--with-sample` 로도 따라온다
 - 필요한 것: `api-client` · `realtime` · `ui` · `waiting-room`
 - 백엔드: 모듈 `booking` · 있으면 더 켜지는 `booking-jdbc` · `waiting-room` · `waiting-room-jdbc` · `payment` · `redis-core` · 경로 `/api/v1/booking` · `/api/v1/admin/booking/pools`
 - 주요 진입점: `createBookingApi` · `createSeatFeed` · `createHoldController` · `createSseConnector` · `useSeatFeed` · `useSeatHold` · `useRemainingMs` · `SeatMap` · `HoldPanel` · `SeatBooking` · `MyBookings` · `bookingProblem` · `takenSeatIds` · `formatMoney` · `defaultBookingLabels` · `koBookingLabels` · `@skeleton/booking/admin#createBookingAdminApi` · `@skeleton/booking/admin#AdminBookingPools` · `@skeleton/booking/admin#expandSeatRange` · `@skeleton/booking/admin#koBookingAdminLabels`
@@ -503,7 +503,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 
 - 종류 · 상태: app · template-only
 - 위치: `sample` (`apps/sample`)
-- 켜는 법: `--with-sample` — 함께 따라오는 패키지 `author-profile` · `board` · `captcha-turnstile` · `dashboard` · `i18n` · `inquiry` · `marketing` · `notifications` · `payment` · `push` · `realtime` · `reviews` · `rewards` · `search` · `seo` · `storage` · `workspace`
+- 켜는 법: `--with-sample` — 함께 따라오는 패키지 `author-profile` · `board` · `booking` · `captcha-turnstile` · `dashboard` · `i18n` · `inquiry` · `marketing` · `notifications` · `payment` · `push` · `realtime` · `reviews` · `rewards` · `search` · `seo` · `storage` · `waiting-room` · `workspace`
 - 필요한 것: `api-client` · `auth` · `author-profile` · `board` · `i18n` · `marketing` · `notifications` · `realtime` · `seo` · `storage` · `theme` · `time` · `tokens` · `ui` · `workspace`
 - 백엔드: 모듈 `account` · `account-jdbc` · `alert` · `alert-jdbc` · `api-key` · `api-key-jdbc` · `auth` · `auth-magic-link` · `auth-mfa` · `auth-mfa-jdbc` · `auth-session` · `auth-session-jdbc` · `auth-social` · `auth-social-google` · `auth-social-kakao` · `auth-social-naver` · `auth-social-oidc` · `auth-social-x` · `author-profile` · `author-profile-jdbc` · `authz` · `authz-jdbc` · `badge` · `badge-jdbc` · `board` · `board-jdbc` · `campaign` · `campaign-jdbc` · `captcha-turnstile` · `catalog` · `catalog-jdbc` · `coupon` · `coupon-jdbc` · `crypto` · `dashboard` · `dashboard-cloudflare` · `dashboard-ga` · `dashboard-jdbc` · `db-postgresql` · `idempotency` · `inquiry` · `inquiry-jdbc` · `job-queue-jdbc` · `json` · `legal` · `legal-jdbc` · `migration` · `migration-flyway` · `notification` · `notification-broadcast` · `notification-broadcast-jdbc` · `notification-fcm` · `notification-jdbc` · `notification-legal` · `notification-mail` · `notification-push` · `notification-push-jdbc` · `notification-push-legal` · `notification-sse` · `notification-webpush` · `payment` · `payment-jdbc` · `payment-kakaopay` · `payment-naverpay` · `payment-paddle` · `payment-toss` · `persistence-jdbc` · `platform` · `point` · `point-jdbc` · `review` · `review-jdbc` · `reward` · `reward-jdbc` · `scheduler` · `search` · `search-jdbc` · `storage` · `storage-image` · `storage-image-imageio` · `storage-image-jdbc` · `storage-s3` · `time` · `workspace` · `workspace-jdbc` · 경로 `/api/v1/notes` · `/api/v1/cheers` · 짝 앱 `apps/sample`
 - 주요 진입점: `apps/sample/src/routes/routes.tsx` · `apps/sample/src/layouts/RootLayout.tsx` · `apps/sample/src/i18n/index.ts` · `apps/sample/src/board/api.ts` · `apps/sample/src/notifications/useLiveNotifications.ts` · `apps/sample/src/routes/LandingPage.tsx` · `apps/sample/src/workspace/WorkspaceLayout.tsx`

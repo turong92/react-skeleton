@@ -20,7 +20,7 @@ type Story = StoryObj<typeof meta>
 export const Joining: Story = {
   args: { status: null },
   play: async ({ canvas }) => {
-    await expect(canvas.getByRole('status', { name: '줄에 서는 중이에요…' })).toBeVisible()
+    await expect(canvas.getByRole('status')).toHaveTextContent('줄에 서는 중이에요…')
   },
 }
 

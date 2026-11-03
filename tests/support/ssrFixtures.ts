@@ -147,6 +147,17 @@ const reviewsReview = {
   updatedAt: '2026-01-01T00:00:00Z',
 }
 const fakeInquiryApi = () => ({ send: async () => ({ status: 'RECEIVED' }) })
+const fakeWaitingRoomApi = () => ({
+  takeTicket: async () => ({ ticketToken: 'tk' }),
+  status: async () => ({
+    state: 'WAITING',
+    position: 2,
+    ahead: 1,
+    estimatedWaitSeconds: 60,
+    opensAt: '2026-11-03T00:00:00Z',
+    pollAfterSeconds: 5,
+  }),
+})
 const fakeSearchApi = () => ({ search: async () => pageOf([]) })
 const searchLabels = (ctx: FixtureContext) => ctx.mod('search').defaultSearchLabels
 const searchDescribe = (type: string) => ({ label: type, href: (id: string) => `/${type}/${id}` })
@@ -1113,6 +1124,12 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
   'inquiry#FaqList': () => ({
     sections: [{ id: 's', title: 'Start', items: [{ id: 'q', question: 'Q?', answer: 'A.' }] }],
   }),
+  'waiting-room#WaitingRoomGate': () => ({
+    api: fakeWaitingRoomApi(),
+    roomId: 'wr_1',
+    children: 'inside',
+  }),
+  'waiting-room#WaitingScreen': () => ({ status: null }),
   'search#Highlight': () => ({ text: 'a <b> c', ranges: [[2, 5]] }),
   'search#SearchBox': (ctx) => ({ labels: searchLabels(ctx), onSearch: noop }),
   'search#SearchResults': (ctx) => ({
@@ -1369,6 +1386,8 @@ export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
   'reviews#useReportReview': () => [fakeReviewsApi()],
   'reviews#useReviewFilters': () => [],
   'inquiry#useInquiryForm': () => [fakeInquiryApi()],
+  'waiting-room#useWaitingRoom': () => ['wr_1', { api: fakeWaitingRoomApi() }],
+  'waiting-room#useWaitingRoomEntry': () => [],
   'search#useSearch': () => [fakeSearchApi(), { q: 'bag' }],
   'notifications#useNotifications': () => [fakeNotificationsApi()],
   'notifications#useUnreadCount': () => [fakeNotificationsApi()],

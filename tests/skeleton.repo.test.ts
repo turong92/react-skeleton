@@ -52,6 +52,7 @@ describe('the skeleton repo', () => {
       'packages/time',
       'packages/tokens',
       'packages/ui',
+      'packages/waiting-room',
       'packages/workspace',
     ])
   })
@@ -116,6 +117,7 @@ describe('the skeleton repo', () => {
       'packages/theme',
       'packages/time',
       'packages/ui',
+      'packages/waiting-room',
       'packages/workspace',
     ])
   })

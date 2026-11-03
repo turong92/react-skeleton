@@ -57,6 +57,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 견본 앱: 업로더 `complete: true`(회원 · 비회원 경로), `PicturePicker` 가 `ImageUploadField`, 게시판 사진이 `StoredImage`(`attachmentImages` · 변환 중이면 「처리 중」 뒤 다시 읽기), 리뷰 사진은 목록 `?variant=thumb` · 눌러서 크게 볼 때 `display`. 새 e2e `files.e2e.ts`.
 - **의존 변화**: `@skeleton/ui` 가 devDependency 에서 dependency 로(새 부품이 `FilePicker` · `Progress` · `Button` 을 쓴다).
 
+### Added — 대기열 `@skeleton/waiting-room` (2026-11-03)
+
+백엔드 짝: kotlin-skeleton `waiting-room` + `waiting-room-jdbc` 모듈(`POST /api/v1/waiting-rooms/{id}/tickets` · `GET …/status`, 운영 `/api/v1/admin/waiting-rooms`). 서버가 아직 없어 설계서(booking-design §5)의 API 표대로 만들었다 - 응답 모양은 서버가 나오면 맞춘다.
+
+- `@skeleton/waiting-room`(새 패키지): `createWaitingRoomApi` · `useWaitingRoom`(순번표를 방별 `sessionStorage` 에 두고, 서버가 정한 `pollAfterSeconds` 로 묻고, `enter()` 가 입장권을 기다렸다 돌려준다) · `WaitingRoomGate`(페이지 앞 문 - 입장 시간이 끝나도 children 은 그대로 두고 입장권만 거둔다) · `WaitingScreen`(오픈 카운트다운 · 내 앞에 N명 · 예상 시간 · 진행 막대) · `createEntryHeaders`(`X-Entry-Token`) · ko/en 문구 · `@skeleton/waiting-room/admin` 의 `AdminWaitingRoom`(분당 입장 수 · 멈춤 / 다시 시작 · 닫기 · 5초 갱신 현황). 로그인한 사람만 줄을 선다(익명 없음). 입장권은 저장하지 않는다.
+- `apps/sample` 조립은 아직 없다(예약 화면과 함께 다음 조각).
+
 ### Added — 문의 · 의견 받기 `@skeleton/inquiry` (2026-11-01)
 
 백엔드 짝: kotlin-skeleton `inquiry` + `inquiry-jdbc` 모듈(`POST /api/v1/inquiries` - 로그인 없이도, 운영 `GET /api/v1/admin/inquiries` · `PUT …/{id}/status`).

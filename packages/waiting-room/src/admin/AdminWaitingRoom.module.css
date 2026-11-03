@@ -1,0 +1,30 @@
+.root {
+  display: grid;
+  gap: var(--space-lg);
+  max-inline-size: 48rem;
+}
+
+.title {
+  margin: 0;
+  color: var(--text-strong);
+  font-size: var(--font-size-subheading);
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--space-md);
+}
+
+.rate {
+  display: grid;
+  gap: var(--space-md);
+  max-inline-size: 24rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  align-items: center;
+}

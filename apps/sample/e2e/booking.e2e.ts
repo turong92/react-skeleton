@@ -2,13 +2,15 @@ import { expect as baseExpect, type Browser, type Page } from 'playwright/test'
 import { koBookingLabels } from '@skeleton/booking'
 import { koWaitingRoomLabels } from '@skeleton/waiting-room'
 import { afterAll, beforeAll, describe, inject, it } from 'vitest'
-import { ko, launch } from './helpers'
+import { ko, launch, signIn } from './helpers'
 import { ADMIN, api, ensureSignedIn, tokenOf } from './paymentSteps'
 
 /*
  * 예약 여정 — 대기실 → 입장 → 자리 찍기(잡힘) → 다시 누르기(놓기) → 다시 잡기 → 결제 시작(결제 자리). 진짜 백엔드(`booking` · `waiting-room`) + 진짜 브라우저.
  * 결제는 시작에서 멈춘다 - 결제창을 열지 않고 돈이 움직이지 않는다(결제사 연동은 `payment.e2e.ts` 가 가짜 토스로 본다).
  * 준비: 운영자 경로(`/admin/waiting-rooms` · `/admin/booking/pools`, 로컬 프로필이 켠다)로 몇 초 뒤 열리는 대기실 · 풀을 새로 만든다 - 시계를 건드리지 않고 「오픈 전 줄」을 본다.
+ * 둘째 계정(운영자 시드 계정)이 같은 배치도를 다른 브라우저 문맥으로 본다: A 가 잡으면 B 의 배치도가 새로고침 없이 「선택 불가」,
+ * B 가 (흐름이 끊긴 사이라 늦게 본 화면으로) 눌러 「먼저 잡았어요」, A 가 놓으면 B 에서 다시 열린다.
  * 예약이 없는 백엔드(운영자 경로 404)에서는 통째로 건너뛴다.
  */
 const pwExpect = baseExpect.configure({ timeout: 20_000 })
@@ -108,5 +110,42 @@ describe('booking journey', () => {
     // 나가기 - 자리가 풀린다
     await page.getByRole('button', { name: koBookingLabels.hold.leave, exact: true }).click()
     await pwExpect(first).toHaveAttribute('aria-pressed', 'false')
-  }, 180_000)
+
+    // 계정 둘 - B 는 다른 브라우저 문맥(운영자 시드 계정)으로 같은 배치도에 들어온다
+    const other = await launch()
+    try {
+      const guest = other.page
+      await signIn(guest, baseUrl, ADMIN)
+      await guest.goto(`${baseUrl}/booking/${poolId}`)
+      const theirFirst = seat(guest, 1)
+      const theirSecond = seat(guest, 2)
+      await baseExpect(theirFirst).toBeVisible({ timeout: ADMISSION_WAIT_MS })
+      await pwExpect(theirFirst).toBeEnabled()
+
+      // A 가 잡으면 B 의 배치도에서 새로고침 없이 선택 불가
+      await first.click()
+      await pwExpect(first).toHaveAttribute('aria-pressed', 'true')
+      await pwExpect(theirFirst).toBeDisabled()
+
+      // 둘째 자리를 A 와 B 가 동시에 누른다 - 서버(DB)가 한쪽만 잡히게 하고, 진 쪽은 「먼저 잡았어요」를 받는다
+      const mine = seat(page, 2)
+      // 단추가 눌리는 걸 기다리지 않고 바로 보낸다(기다리는 사이 서버 사건이 먼저 닿아 단추가 잠긴다)
+      await Promise.all([mine.dispatchEvent('click'), theirSecond.dispatchEvent('click')])
+      await pwExpect(async () => {
+        const pressed = await Promise.all(
+          [mine, theirSecond].map((s) => s.getAttribute('aria-pressed')),
+        )
+        baseExpect(pressed.filter((value) => value === 'true')).toHaveLength(1)
+      }).toPass()
+      const loser = (await mine.getAttribute('aria-pressed')) === 'true' ? guest : page
+      await pwExpect(loser.getByText(koBookingLabels.problems.seatTaken)).toBeVisible()
+
+      // A 가 첫 자리를 놓으면 B 에서 다시 열린다
+      await first.click()
+      await pwExpect(first).toHaveAttribute('aria-pressed', 'false')
+      await pwExpect(theirFirst).toBeEnabled()
+    } finally {
+      await other.browser.close()
+    }
+  }, 240_000)
 })

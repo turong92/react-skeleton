@@ -1,6 +1,6 @@
 import { Alert } from '@skeleton/ui'
 import { useWaitingRoomEntry } from '@skeleton/waiting-room'
-import type { ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import type { BookingApi } from './bookingApi'
 import { HoldPanel, type HoldPaymentContext } from './HoldPanel'
 import { useRemainingMs, useSeatFeed, useSeatHold } from './hooks'
@@ -55,6 +55,11 @@ export function SeatBooking({
     map.feed.serverNow,
   )
   const expired = remainingMs !== null && remainingMs <= 0
+  // 보류 시간이 끝나면 서버에 다시 묻는다 - 풀렸으면 보류를 비워 배치도가 다시 열린다(자리 0개 보류도 막히지 않는다)
+  const { load } = hold.controller
+  useEffect(() => {
+    if (expired) void load()
+  }, [expired, load])
   const entryMissing = requiresEntry && !token
   const confirmed = hold.hold?.status === 'CONFIRMED'
   return (

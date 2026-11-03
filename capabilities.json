@@ -2369,6 +2369,8 @@
           "api-key-jdbc",
           "auth",
           "auth-magic-link",
+          "auth-mfa",
+          "auth-mfa-jdbc",
           "auth-session",
           "auth-session-jdbc",
           "auth-social",
@@ -2567,6 +2569,8 @@
           "async-notification",
           "auth",
           "auth-magic-link",
+          "auth-mfa",
+          "auth-mfa-jdbc",
           "auth-session",
           "auth-session-jdbc",
           "auth-social",
@@ -3083,7 +3087,7 @@
         "oneOfModules": [],
         "optionalModules": [],
         "basePaths": ["/api/v1/auth/mfa"],
-        "docs": ["docs/modules/auth-mfa.md"]
+        "docs": ["docs/modules/auth-mfa.md", "docs/modules/auth-mfa-jdbc.md"]
       },
       "status": "stable",
       "stampFlag": {

@@ -1187,6 +1187,89 @@
       }
     },
     {
+      "patterns": [],
+      "stories": [
+        "packages/video/src/VideoUploadField.stories.tsx",
+        "packages/video/src/VideoPlayer.stories.tsx",
+        "packages/ui/src/FilePicker/FilePicker.stories.tsx"
+      ],
+      "docs": ["packages/video/README.md"],
+      "entryPoints": [
+        "createVideoApi",
+        "uploadVideo",
+        "useVideos",
+        "videosKey",
+        "VideoUploadField",
+        "VideoPlayer",
+        "UnsupportedVideoFileError",
+        "UploadPartError",
+        "contentTypeOf",
+        "defaultVideoUploadLabels",
+        "koVideoUploadLabels",
+        "defaultVideoPlayerLabels",
+        "koVideoPlayerLabels"
+      ],
+      "needs": ["api-client", "ui"],
+      "backend": {
+        "modules": ["storage", "storage-s3", "video", "video-jdbc"],
+        "oneOfModules": [],
+        "optionalModules": ["video-cloudrun"],
+        "basePaths": ["/api/v1/videos"],
+        "docs": [
+          "docs/modules/storage.md",
+          "docs/modules/storage-s3.md",
+          "docs/modules/video.md",
+          "docs/modules/video-jdbc.md"
+        ]
+      },
+      "status": "experimental",
+      "id": "video",
+      "kind": "package",
+      "package": "@skeleton/video",
+      "path": "packages/video",
+      "stampFlag": {
+        "flag": "--packages video",
+        "included": "flag",
+        "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
+        "alsoVia": [],
+        "optOut": null
+      },
+      "summary": "영상 올리기 · 재생 — 큰 영상을 브라우저에서 저장소로 직접 올리고(조각 동시 올리기 · 실패한 조각만 다시 · 새로 고침 뒤 이어 올리기) 서버가 만드는 동안의 단계를 보인다. VideoUploadField(올리는 중 % → 준비 중 n% → 재생 가능 → 「다른 기기용 판 준비 중」 → 끝 / 실패 사유 문구 / 올리다 만 줄 안내 / 지우기) · useVideos(만드는 중이면 3초 폴링) · uploadVideo · VideoPlayer(포스터 + 재생 단추, 마스터 → 원본 단 → 호환 단 순서, 화질 칩 자동 / 720p / 원본, 네이티브 HLS 가 없으면 hls.js light 를 누를 때 지연 로드, 비공개 토큰이 끝나면 새 재생 허가로 같은 시각에서 이어 보기, 내려받기 단추 없음). 변환은 서버의 별도 일꾼이 하고 화면은 그 결과만 읽는다. hls.js 는 이 패키지의 의존이라 영상을 안 쓰는 앱은 받지 않는다.",
+      "notFor": [
+        "움직이는 이미지(GIF · 움짤) 표시 — 영상 칸이 아니다(사진 표시 부품 쪽 후속 조각)",
+        "이미지 · 일반 파일 올리기 — 사진은 @skeleton/storage 의 ImageUploadField, 그 밖의 파일은 FilePicker + useUpload",
+        "라이브 방송 · 실시간 스트리밍 · 자막 · 광고 — 올려 둔 영상을 틀 뿐이다",
+        "영상 편집 · 자르기 · 썸네일 고르기 — 포스터는 서버가 한 장 만든다",
+        "내려받기 — 의도적으로 없다(저장소에 영상 한 덩어리가 없고 재생 목록 조각만 있다)",
+        "변환 일꾼 자체 — 서버의 apps/video-worker 이고 이 패키지는 상태만 읽는다"
+      ],
+      "keywords": {
+        "ko": [
+          "영상",
+          "동영상",
+          "영상 올리기",
+          "영상 업로드",
+          "영상 재생",
+          "스트리밍",
+          "HLS",
+          "화질 선택",
+          "이어 올리기",
+          "비공개 영상"
+        ],
+        "en": [
+          "video",
+          "video upload",
+          "video player",
+          "hls",
+          "streaming",
+          "resumable upload",
+          "quality selector",
+          "private video",
+          "transcoding"
+        ]
+      }
+    },
+    {
       "patterns": ["apps/storybook/src/patterns/ListPage.stories.tsx"],
       "stories": [
         "packages/search/src/SearchBox.stories.tsx",
@@ -3946,6 +4029,11 @@
       "need": "대기열 · 가상 대기실 (오픈 때 몰리는 접속을 앞에서 줄 세우기 · 순번 · 선착순 · 티켓팅)",
       "capabilities": ["waiting-room"],
       "byHand": "백엔드 waiting-room + waiting-room-jdbc 를 붙이고(skeleton.waiting-room.http.enabled · 운영은 …admin.enabled · 토큰 키 SKELETON_WAITING_ROOM_TOKEN_KEYS_*) 프런트는 줄이 필요한 페이지를 WaitingRoomGate 로 감싸거나(페이지 앞 문) 버튼 핸들러에서 useWaitingRoom(id).enter() 를 기다린다(버튼 앞 문). 입장권은 입장권이 필요한 요청마다 createEntryHeaders 로 보낸다. 줄은 로그인한 사람만 선다."
+    },
+    {
+      "need": "영상 올리기 · 재생 (동영상 업로드 · 큰 파일 이어 올리기 · 영상 스트리밍 · 화질 선택 · 비공개 영상)",
+      "capabilities": ["video"],
+      "byHand": "백엔드 storage + storage-s3 + video + video-jdbc 를 붙이고(skeleton.video.enabled · 비공개 재생 토큰 비밀 SKELETON_VIDEO_PLAYBACK_SECRET · 저장소 CORS 에 PUT / GET / ExposeHeaders: ETag · 변환 일꾼 apps/video-worker 를 따로 띄운다) 프런트는 createVideoApi(apiClient) 로 VideoUploadField(올리기 칸, QueryClientProvider 안) 와 VideoPlayer(api.playback(id) 의 응답을 grant 로) 를 놓는다. 영상마다 공개 / 비공개는 올릴 때 앱이 정해 넘긴다. 비공개는 refreshGrant 에 api.playback(id) 를 다시 부르는 함수를 준다."
     },
     {
       "need": "좌석 지정 예약 · 공연 예매 · 자리 고르기 (배치도에서 자리 찍기 · 선착순 · 점유 후 결제)",

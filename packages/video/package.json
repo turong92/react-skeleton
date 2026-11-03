@@ -1,0 +1,32 @@
+{
+  "name": "@skeleton/video",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "영상 올리기 · 재생 - createVideoApi(`/videos`: 시작 · 조각 · 조각 목록 · 완료 · 삭제 · 목록 · 재생 요청), uploadVideo(조각 동시 올리기 · 실패한 조각만 다시 · 이어 올리기), useVideos(처리 중이면 3초 폴링), VideoUploadField(올리는 중 → 준비 중 → 재생 가능 → 다른 기기용 판 준비 중 → 끝 / 실패 사유 문구), VideoPlayer(마스터 → 원본 단 → 호환 단 재생 순서 · 화질 칩 · hls.js 지연 로드 · 토큰 만료 뒤 같은 시각에서 이어 보기). 백엔드 modules/video 짝",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "types": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run --pool forks --testTimeout 30000 --hookTimeout 60000",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@skeleton/api-client": "workspace:*",
+    "@skeleton/ui": "workspace:*",
+    "hls.js": "1.7.3"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "^5.0.0",
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@tanstack/react-query": "^5.99.2",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
+  }
+}

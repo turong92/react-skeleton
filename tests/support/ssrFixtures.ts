@@ -158,6 +158,15 @@ const fakeWaitingRoomApi = () => {
   }
   return { takeTicket: async () => ({ ...status, ticket: 'tk' }), status: async () => status }
 }
+const fakeVideoApi = () => ({
+  list: async () => [],
+  start: async () => ({ id: 'v', uploadId: 'u', partSize: 1 }),
+  presignParts: async () => [],
+  listParts: async () => [],
+  complete: async () => ({}),
+  remove: async () => {},
+  playback: async () => ({}),
+})
 const fakeBookingApi = () => {
   const hold = {
     holdId: 'h',
@@ -1150,6 +1159,18 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
     children: 'inside',
   }),
   'waiting-room#WaitingScreen': () => ({ status: null }),
+  'video#VideoPlayer': () => ({
+    grant: {
+      src: 'https://cdn.test/o/index.m3u8',
+      poster: 'https://cdn.test/p.jpg',
+      codec: 'avc1.640028',
+      w: 1080,
+      h: 1920,
+      durationMs: 42_000,
+      big: false,
+    },
+  }),
+  'video#VideoUploadField': () => ({ api: fakeVideoApi(), purpose: 'clip' }),
   'booking#SeatMap': () => ({ seats: [], onPick: noop }),
   'booking#HoldPanel': () => ({
     hold: { hold: null, pending: [], busy: false, locked: false, problem: null, error: null },
@@ -1426,6 +1447,7 @@ export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
     },
   ],
   'booking#useRemainingMs': () => [null, () => 0],
+  'video#useVideos': () => [fakeVideoApi(), 'clip'],
   'waiting-room#useWaitingRoom': () => ['wr_1', { api: fakeWaitingRoomApi() }],
   'waiting-room#useWaitingRoomEntry': () => [],
   'search#useSearch': () => [fakeSearchApi(), { q: 'bag' }],

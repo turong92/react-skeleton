@@ -1,0 +1,178 @@
+/*
+ * 눌리는 것은 눌리게 보인다: 재생 단추와 화질 칩은 쉬는 상태에서도 테두리 + 채운 바탕이 있고(글자만 있는 단추 금지),
+ * 높이 44px 이상, hover · focus-visible 이 서로 다르다. 영상 위에서도 읽히도록 바탕은 불투명한 면 색이다.
+ */
+.root {
+  display: grid;
+  gap: var(--space-sm);
+  min-inline-size: 0;
+}
+
+.stage {
+  position: relative;
+  overflow: hidden;
+  inline-size: 100%;
+  max-block-size: 80vh;
+  border-radius: var(--radius-md);
+  background: var(--inverse);
+}
+
+.poster,
+.video {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: contain;
+  background: var(--inverse);
+}
+
+.cover {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+.play {
+  display: inline-grid;
+  place-items: center;
+  box-sizing: border-box;
+  min-width: 56px;
+  min-height: 56px;
+  border: 2px solid var(--teal);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--teal);
+  cursor: pointer;
+}
+
+.play:hover:not(:disabled) {
+  background: var(--teal);
+  color: var(--surface);
+}
+
+.play:active:not(:disabled) {
+  background: var(--teal-soft);
+}
+
+.play:focus-visible {
+  outline: 3px solid var(--teal);
+  outline-offset: 2px;
+}
+
+.play:disabled {
+  border-color: var(--border-strong);
+  color: var(--text-muted);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.play svg {
+  inline-size: 24px;
+  block-size: 24px;
+  fill: currentColor;
+}
+
+.badge {
+  position: absolute;
+  inset-inline: var(--space-md);
+  inset-block-end: var(--space-md);
+  margin: 0;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-strong);
+  font-size: var(--font-size-small);
+  text-align: center;
+}
+
+.quality {
+  position: absolute;
+  inset-inline-end: var(--space-sm);
+  inset-block-start: var(--space-sm);
+  display: grid;
+  justify-items: end;
+  gap: var(--space-xs);
+}
+
+.chip {
+  box-sizing: border-box;
+  min-height: 44px;
+  min-inline-size: 44px;
+  padding: 0 var(--space-md);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-strong);
+  font-size: var(--font-size-small);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.chip:hover {
+  border-color: var(--teal);
+  background: var(--teal-wash);
+}
+
+.chip:focus-visible,
+.menuItem:focus-visible {
+  outline: 3px solid var(--teal);
+  outline-offset: 2px;
+}
+
+.menu {
+  display: grid;
+  min-inline-size: 9rem;
+  margin: 0;
+  padding: var(--space-xs);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.menuItem {
+  box-sizing: border-box;
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+  padding: 0 var(--space-md);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-strong);
+  font-size: var(--font-size-small);
+  cursor: pointer;
+}
+
+.menuItem + .menuItem {
+  margin-block-start: var(--space-xs);
+}
+
+.menuItem:hover:not([aria-disabled='true']) {
+  border-color: var(--teal);
+  background: var(--teal-wash);
+}
+
+.menuItem[aria-checked='true'] {
+  border-color: var(--teal);
+  background: var(--teal-soft);
+}
+
+.menuItem[aria-disabled='true'] {
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+}
+
+.problem {
+  margin: 0;
+  color: var(--red);
+  font-size: var(--font-size-small);
+}

@@ -42,6 +42,12 @@ const ROWS: Row[] = [
     base: '.bell',
   },
   {
+    name: 'SeatMap seat',
+    dir: 'packages/booking',
+    file: 'packages/booking/src/SeatMap.module.css',
+    base: '.seat',
+  },
+  {
     name: 'rewards admin row link',
     dir: 'packages/rewards',
     file: 'packages/rewards/src/admin/shared.module.css',

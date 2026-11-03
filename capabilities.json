@@ -1089,6 +1089,104 @@
       }
     },
     {
+      "patterns": [],
+      "stories": [
+        "packages/booking/src/SeatMap.stories.tsx",
+        "packages/booking/src/HoldPanel.stories.tsx",
+        "packages/booking/src/SeatBooking.stories.tsx",
+        "packages/booking/src/admin/AdminBookingPools.stories.tsx"
+      ],
+      "docs": ["packages/booking/README.md"],
+      "entryPoints": [
+        "createBookingApi",
+        "createSeatFeed",
+        "createHoldController",
+        "createSseConnector",
+        "useSeatFeed",
+        "useSeatHold",
+        "useRemainingMs",
+        "SeatMap",
+        "HoldPanel",
+        "SeatBooking",
+        "MyBookings",
+        "bookingProblem",
+        "takenSeatIds",
+        "formatMoney",
+        "defaultBookingLabels",
+        "koBookingLabels",
+        "@skeleton/booking/admin#createBookingAdminApi",
+        "@skeleton/booking/admin#AdminBookingPools",
+        "@skeleton/booking/admin#expandSeatRange",
+        "@skeleton/booking/admin#koBookingAdminLabels"
+      ],
+      "needs": ["api-client", "realtime", "ui", "waiting-room"],
+      "backend": {
+        "modules": ["booking"],
+        "oneOfModules": [],
+        "optionalModules": [
+          "booking-jdbc",
+          "waiting-room",
+          "waiting-room-jdbc",
+          "payment",
+          "redis-core"
+        ],
+        "basePaths": ["/api/v1/booking", "/api/v1/admin/booking/pools"],
+        "docs": ["docs/modules/booking.md", "docs/modules/booking-jdbc.md"]
+      },
+      "status": "experimental",
+      "id": "booking",
+      "kind": "package",
+      "package": "@skeleton/booking",
+      "path": "packages/booking",
+      "stampFlag": {
+        "flag": "--packages booking",
+        "included": "flag",
+        "autoIncludes": [
+          "api-client",
+          "auth",
+          "legal",
+          "realtime",
+          "theme",
+          "time",
+          "tokens",
+          "ui",
+          "waiting-room"
+        ],
+        "alsoVia": [],
+        "optOut": null
+      },
+      "summary": "좌석 지정 예약(공연 · 수업 자리 고르기) — SeatMap(구역 → 열 → 번호 배치도, 선택 가능 · 내 자리 · 선택 불가) · useSeatFeed(SSE 사건 + 스냅샷을 자리별 버전 v 로 맞춘다, 다시 붙으면 스냅샷을 다시 읽고 heldUntil 이 지나면 스스로 열림, 끊긴 동안 「다시 연결하는 중」) · 누르면 잡기 / 다시 누르면 놓기 / 남이 잡은 자리는 바로 선택 불가 · HoldPanel(남은 시간 · 금액 · 무료 확정 또는 결제하기 · 나가기) · SeatBooking(한 벌) · MyBookings. 결제를 시작하면 자리를 고정하고 결제창은 앱이 renderPayment 로 끼운다(@skeleton/payment 와 서로 import 하지 않는다). 대기실을 단 풀은 @skeleton/waiting-room 의 입장권을 헤더로 보낸다. 운영은 @skeleton/booking/admin 의 AdminBookingPools(풀 만들기 · 자리 범위로 넣기 · 막기 / 풀기 · 멈춤 · 현황).",
+      "notFor": [
+        "결제 화면 자체 — 결제 시작(checkout)까지만 한다. 주문(POST /payments/orders {itemType: \"booking\", itemRef: holdId} + Idempotency-Key)과 결제창은 앱이 @skeleton/payment 로 꽂는다",
+        "수량형(재고 N개) 예약 — 자리 하나하나를 고르는 좌석형이다",
+        "그림 편집 · 확대 축소가 있는 배치도 — 구역 → 열 → 번호 격자다",
+        "대기 화면 — 입장 줄은 @skeleton/waiting-room(WaitingRoomGate)이 맡는다. 대기실을 단 풀은 그 안에 SeatBooking 을 둔다",
+        "라우터를 모른다 — 페이지 위치는 앱이 정한다"
+      ],
+      "keywords": {
+        "ko": [
+          "좌석 예약",
+          "좌석 선택",
+          "자리 고르기",
+          "배치도",
+          "좌석 배치도",
+          "공연 예매",
+          "티켓 예매",
+          "선착순 예약",
+          "자리 잡기"
+        ],
+        "en": [
+          "seat booking",
+          "seat map",
+          "seat selection",
+          "reservation",
+          "ticket booking",
+          "hold seats",
+          "seat picker"
+        ]
+      }
+    },
+    {
       "patterns": ["apps/storybook/src/patterns/ListPage.stories.tsx"],
       "stories": [
         "packages/search/src/SearchBox.stories.tsx",
@@ -3837,6 +3935,11 @@
       "need": "대기열 · 가상 대기실 (오픈 때 몰리는 접속을 앞에서 줄 세우기 · 순번 · 선착순 · 티켓팅)",
       "capabilities": ["waiting-room"],
       "byHand": "백엔드 waiting-room + waiting-room-jdbc 를 붙이고(skeleton.waiting-room.http.enabled · 운영은 …admin.enabled · 토큰 키 SKELETON_WAITING_ROOM_TOKEN_KEYS_*) 프런트는 줄이 필요한 페이지를 WaitingRoomGate 로 감싸거나(페이지 앞 문) 버튼 핸들러에서 useWaitingRoom(id).enter() 를 기다린다(버튼 앞 문). 입장권은 입장권이 필요한 요청마다 createEntryHeaders 로 보낸다. 줄은 로그인한 사람만 선다."
+    },
+    {
+      "need": "좌석 지정 예약 · 공연 예매 · 자리 고르기 (배치도에서 자리 찍기 · 선착순 · 점유 후 결제)",
+      "capabilities": ["booking", "waiting-room"],
+      "byHand": "백엔드 booking + booking-jdbc(+ 대기실 waiting-room, 결제 payment, 여러 대면 redis-core)를 붙이고(skeleton.booking.http.enabled · 운영은 …admin.enabled) 프런트는 대기실을 단 풀이면 WaitingRoomGate 안에 SeatBooking 을 둔다. 결제는 renderPayment 에서 앱이 @skeleton/payment 결제창을 끼운다(주문 itemType \"booking\" · itemRef holdId · Idempotency-Key). 흐름의 로그인 헤더는 sse 옵션에 넘긴다."
     },
     {
       "need": "약관 · 개인정보 동의 (가입 체크박스 · 새 판 재동의 · 선택 동의 철회) — 문서와 동의 기록은 서버가 쥔다",

@@ -1,0 +1,140 @@
+/*
+ * 눌리는 것은 눌리게 보인다: 자리 단추는 쉬는 상태에서도 등급 색 테두리 + 바탕이 있고(글자만 있는 단추 금지), 높이 44px,
+ * 내 자리는 채운 색, 선택 불가는 흐린 바탕 + 줄 그어진 글자(색에만 기대지 않는다 - 단추 이름도 상태를 말한다).
+ */
+.map {
+  display: grid;
+  gap: var(--space-lg);
+  min-inline-size: 0;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--text-muted);
+  font-size: var(--font-size-caption);
+}
+
+.legendItem {
+  display: inline-flex;
+  gap: var(--space-xs);
+  align-items: center;
+}
+
+.swatch {
+  inline-size: var(--space-lg);
+  block-size: var(--space-lg);
+  border: 2px solid var(--teal);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.swatch[data-grade='1'] {
+  border-color: var(--amber);
+}
+
+.swatch[data-grade='2'] {
+  border-color: var(--red);
+}
+
+.swatch[data-grade='3'] {
+  border-color: var(--text-strong);
+}
+
+.swatch[data-state='mine'] {
+  border-color: var(--inverse);
+  background: var(--inverse);
+}
+
+.swatch[data-state='taken'] {
+  border-color: var(--border);
+  background: var(--surface-sunken);
+}
+
+.section {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.sectionTitle {
+  margin: 0;
+  color: var(--text-strong);
+  font-size: var(--font-size-body);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.rowLabel {
+  min-inline-size: 3rem;
+  color: var(--text-muted);
+  font-size: var(--font-size-caption);
+}
+
+.seat {
+  min-inline-size: 44px;
+  min-height: 44px;
+  padding: 0 var(--space-sm);
+  border: 2px solid var(--teal);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-strong);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease;
+}
+
+.seat[data-grade='1'] {
+  border-color: var(--amber);
+}
+
+.seat[data-grade='2'] {
+  border-color: var(--red);
+}
+
+.seat[data-grade='3'] {
+  border-color: var(--text-strong);
+}
+
+.seat:hover:not(:disabled) {
+  background: var(--teal-soft);
+}
+
+.seat:active:not(:disabled) {
+  background: var(--teal-wash);
+}
+
+.seat:focus-visible {
+  outline: 3px solid var(--teal);
+  outline-offset: 2px;
+}
+
+.seat[data-state='mine'] {
+  border-color: var(--inverse);
+  background: var(--inverse);
+  color: var(--on-inverse);
+}
+
+.seat[data-state='taken'] {
+  border-color: var(--border);
+  background: var(--surface-sunken);
+  color: var(--text-muted);
+  text-decoration: line-through;
+  cursor: not-allowed;
+}
+
+.seat:disabled:not([data-state='taken']) {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

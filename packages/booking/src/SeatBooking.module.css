@@ -1,0 +1,17 @@
+.layout {
+  display: grid;
+  gap: var(--space-xl);
+  align-items: start;
+}
+
+@media (min-width: 60rem) {
+  .layout {
+    grid-template-columns: minmax(0, 2fr) minmax(16rem, 1fr);
+  }
+}
+
+.map {
+  display: grid;
+  gap: var(--space-md);
+  min-inline-size: 0;
+}

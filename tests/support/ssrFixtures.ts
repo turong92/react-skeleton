@@ -158,6 +158,26 @@ const fakeWaitingRoomApi = () => {
   }
   return { takeTicket: async () => ({ ...status, ticket: 'tk' }), status: async () => status }
 }
+const fakeBookingApi = () => {
+  const hold = {
+    holdId: 'h',
+    poolId: 'p',
+    status: 'HELD',
+    seats: [],
+    expiresAt: '2026-11-03T00:10:00Z',
+  }
+  return {
+    snapshot: async () => ({ serverTime: '2026-11-03T00:00:00Z', seats: [] }),
+    streamUrl: () => 'http://localhost/stream',
+    addSeats: async () => hold,
+    removeSeat: async () => hold,
+    myHolds: async () => [],
+    checkout: async () => hold,
+    release: async () => hold,
+    confirm: async () => hold,
+    cancel: async () => hold,
+  }
+}
 const fakeSearchApi = () => ({ search: async () => pageOf([]) })
 const searchLabels = (ctx: FixtureContext) => ctx.mod('search').defaultSearchLabels
 const searchDescribe = (type: string) => ({ label: type, href: (id: string) => `/${type}/${id}` })
@@ -1130,6 +1150,16 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
     children: 'inside',
   }),
   'waiting-room#WaitingScreen': () => ({ status: null }),
+  'booking#SeatMap': () => ({ seats: [], onPick: noop }),
+  'booking#HoldPanel': () => ({
+    hold: { hold: null, pending: [], busy: false, locked: false, problem: null, error: null },
+    remainingMs: null,
+    onCheckout: noop,
+    onConfirm: noop,
+    onLeave: noop,
+  }),
+  'booking#SeatBooking': () => ({ api: fakeBookingApi(), pool: { id: 'p' } }),
+  'booking#MyBookings': () => ({ api: fakeBookingApi() }),
   'search#Highlight': () => ({ text: 'a <b> c', ranges: [[2, 5]] }),
   'search#SearchBox': (ctx) => ({ labels: searchLabels(ctx), onSearch: noop }),
   'search#SearchResults': (ctx) => ({
@@ -1386,6 +1416,16 @@ export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
   'reviews#useReportReview': () => [fakeReviewsApi()],
   'reviews#useReviewFilters': () => [],
   'inquiry#useInquiryForm': () => [fakeInquiryApi()],
+  'booking#useSeatFeed': () => ['p', { api: fakeBookingApi() }],
+  'booking#useSeatHold': () => [
+    'p',
+    {
+      api: fakeBookingApi(),
+      feed: { merge: noop, markTaken: noop, markOpen: noop },
+      requiresEntry: false,
+    },
+  ],
+  'booking#useRemainingMs': () => [null, () => 0],
   'waiting-room#useWaitingRoom': () => ['wr_1', { api: fakeWaitingRoomApi() }],
   'waiting-room#useWaitingRoomEntry': () => [],
   'search#useSearch': () => [fakeSearchApi(), { q: 'bag' }],

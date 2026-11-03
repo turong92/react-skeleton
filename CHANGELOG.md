@@ -57,6 +57,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 견본 앱: 업로더 `complete: true`(회원 · 비회원 경로), `PicturePicker` 가 `ImageUploadField`, 게시판 사진이 `StoredImage`(`attachmentImages` · 변환 중이면 「처리 중」 뒤 다시 읽기), 리뷰 사진은 목록 `?variant=thumb` · 눌러서 크게 볼 때 `display`. 새 e2e `files.e2e.ts`.
 - **의존 변화**: `@skeleton/ui` 가 devDependency 에서 dependency 로(새 부품이 `FilePicker` · `Progress` · `Button` 을 쓴다).
 
+### Added — 좌석 예약 `@skeleton/booking` (2026-11-03)
+
+백엔드 짝: kotlin-skeleton `booking` + `booking-jdbc` 모듈(`/api/v1/booking/**`, 운영 `/api/v1/admin/booking/pools`).
+
+- `@skeleton/booking`(새 패키지): `createBookingApi` · `SeatBooking`(배치도 + 내 보류 한 벌) · `SeatMap`(구역 → 열 → 번호, 세 상태) · `useSeatFeed`(`@skeleton/realtime` 의 SSE 위에서 사건 + 스냅샷을 자리별 `v` 로 맞춘다, 다시 붙으면 스냅샷, 서버 시계로 `heldUntil` 에 스스로 열림) · `useSeatHold`(잡기 / 놓기 / 결제 시작 / 나가기 - 요청은 한 줄, 같은 자리 중복 누름은 버리고, `409 SEAT_TAKEN` 자리는 바로 선택 불가) · `HoldPanel`(남은 시간 · 금액 · `renderPayment` 자리) · `MyBookings` · `@skeleton/booking/admin` 의 `AdminBookingPools`(풀 · 자리 범위로 넣기 · 배치도에서 막기 / 풀기 · 판매 멈춤 / 닫기 · 현황) · ko/en 문구.
+- 결제는 `checkout`(금액 박기 + 자리 고정, 멱등)까지만 - 주문 · 결제창은 앱이 `renderPayment` 로 꽂는다(`@skeleton/payment` 와 서로 import 하지 않는다). 새로고침 · 탭 닫기에는 자리를 놓지 않는다.
+- 의존: `@skeleton/realtime` · `@skeleton/waiting-room`(입장권 헤더).
+
 ### Added — 대기열 `@skeleton/waiting-room` (2026-11-03)
 
 백엔드 짝: kotlin-skeleton `waiting-room` + `waiting-room-jdbc` 모듈(`POST /api/v1/waiting-rooms/{id}/tickets` · `GET …/status`, 운영 `/api/v1/admin/waiting-rooms`). 서버가 아직 없어 설계서(booking-design §5)의 API 표대로 만들었다 - 응답 모양은 서버가 나오면 맞춘다.

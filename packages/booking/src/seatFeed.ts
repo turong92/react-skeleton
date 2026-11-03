@@ -34,7 +34,7 @@ export type SeatFeed = {
   merge(seats: Seat[]): void
   /** 서버가 「다른 분이 먼저 잡았다」고 한 자리 - 더 새로운 사건이 올 때까지 선택 불가 */
   markTaken(seatIds: string[]): void
-  /** 내가 놓은 자리 - 사건이 오기 전에도 바로 열린 것으로 보인다 */
+  /** 내가 놓은 자리 - 사건이 오기 전에도 바로 열린 것으로 보인다(`v` 는 그대로 - 서버 사건이 응답보다 먼저 와도 뒤의 진짜 사건이 버려지지 않는다) */
   markOpen(seatId: string): void
 }
 
@@ -197,7 +197,7 @@ export function createSeatFeed({
     },
     markOpen: (id) => {
       const seat = seats.get(id)
-      if (seat) seats.set(id, { ...seat, state: 'OPEN', heldUntil: undefined, v: seat.v + 1 })
+      if (seat) seats.set(id, { ...seat, state: 'OPEN', heldUntil: undefined })
       publish()
     },
   }

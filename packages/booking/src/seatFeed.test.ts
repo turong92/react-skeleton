@@ -153,4 +153,24 @@ describe('seat feed', () => {
     expect(states(feed)).toEqual({ A1: 'OPEN4' })
     feed.stop()
   })
+  it('keeps the seat taken by someone else when the open event beat our own release response', async () => {
+    const stream = fakeStream()
+    const server = fakeApi()
+    const feed = createSeatFeed({ poolId: 'p', api: server.api, connect: stream.connect })
+    feed.start()
+    stream.open()
+    stream.ready()
+    server.answer(0, {
+      serverTime: new Date().toISOString(),
+      seats: [seat('A1', { state: 'TAKEN', heldUntil: '2999-01-01T00:00:00Z', v: 2 })],
+    })
+    await vi.advanceTimersByTimeAsync(0)
+    // 내가 놓은 서버 사건(OPEN v3)이 HTTP 응답보다 먼저 온다
+    stream.seats({ id: 'A1', state: 'OPEN', v: 3 })
+    feed.markOpen('A1')
+    // 그 뒤 남이 잡은 진짜 사건(v4)은 버려지면 안 된다
+    stream.seats({ id: 'A1', state: 'TAKEN', heldUntil: '2999-01-01T00:00:00Z', v: 4 })
+    expect(states(feed)).toEqual({ A1: 'TAKEN4' })
+    feed.stop()
+  })
 })

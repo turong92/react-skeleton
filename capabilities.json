@@ -382,9 +382,19 @@
       "backend": {
         "modules": ["notification", "notification-jdbc"],
         "oneOfModules": [],
-        "optionalModules": ["notification-sse", "notification-websocket"],
+        "optionalModules": [
+          "notification-broadcast",
+          "notification-broadcast-jdbc",
+          "notification-sse",
+          "notification-websocket"
+        ],
         "basePaths": ["/api/v1/notifications"],
-        "docs": ["docs/modules/notification.md", "docs/modules/notification-jdbc.md"]
+        "docs": [
+          "docs/modules/notification.md",
+          "docs/modules/notification-jdbc.md",
+          "docs/modules/notification-broadcast.md",
+          "docs/modules/notification-broadcast-jdbc.md"
+        ]
       },
       "status": "stable",
       "id": "notifications",
@@ -2473,6 +2483,8 @@
           "migration",
           "migration-flyway",
           "notification",
+          "notification-broadcast",
+          "notification-broadcast-jdbc",
           "notification-fcm",
           "notification-jdbc",
           "notification-legal",
@@ -2675,6 +2687,8 @@
           "migration",
           "migration-flyway",
           "notification",
+          "notification-broadcast",
+          "notification-broadcast-jdbc",
           "notification-fcm",
           "notification-jdbc",
           "notification-legal",

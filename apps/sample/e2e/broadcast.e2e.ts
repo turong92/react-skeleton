@@ -7,7 +7,7 @@ import { operatorPage } from './paymentSteps'
 
 /*
  * 공지 발송 여정 (스펙 §9 의 e2e 한 줄) — 진짜 백엔드(`notification-broadcast` 를 켠 견본, `skeleton.notification.broadcast.admin.enabled=true`) · 브라우저.
- *   운영자: 새 공지(대상 전체, 알림함만) → 「나에게 테스트」(벨에 `[테스트]`) → 「보내기」 → 확인 창(대상 n명) → 상세가 「보냄」
+ *   운영자: 새 공지(역할 `USER`, 알림함만) → 「나에게 테스트」(벨에 `[테스트]`) → 「보내기」 → 확인 창(대상 n명) → 상세가 「보냄」
  *   사용자: 벨에 공지 → 「읽음으로 표시」 → 운영자 상세의 「알림함 읽음」 이 1
  * 푸시 경로(클릭 보고)는 kotlin 통합 시험과 push.e2e.ts 가 맡는다. 아직 실행하지 않았다면 kotlin 의 K4(견본이 공지를 켬)를 합친 백엔드(`scripts/sample-e2e-backend.sh`)가 있어야 돈다:
  * `pnpm e2e:sample e2e/broadcast.e2e.ts`.
@@ -45,11 +45,13 @@ async function bellShows(page: Page, text: string) {
   }).toPass({ timeout: 60_000 })
 }
 
-/** 새 공지 양식 - 종류는 첫 번째(서비스 공지), 대상은 전체(기본값 - 시드 사용자는 저장된 역할이 없어 역할 USER 대상에 안 든다), 알림함만(푸시 칸은 건드리지 않는다) */
+/** 새 공지 양식 - 종류는 첫 번째(서비스 공지), 대상은 역할 USER, 알림함만(푸시 칸은 건드리지 않는다) */
 async function fillForm(page: Page) {
   await page.goto(`${baseUrl}/admin/broadcasts/new`)
   await page.getByLabel(new RegExp(`^${L.editor.title}`)).fill(TITLE)
   await page.getByLabel(new RegExp(`^${L.editor.body}`)).fill('오늘 밤 점검이 있어요.')
+  await page.getByLabel(new RegExp(`^${L.editor.audienceKind}`)).selectOption('role')
+  await page.getByLabel(new RegExp(`^${L.editor.audienceParam.ROLE}`)).selectOption('USER')
   await pwExpect(page.getByRole('status').filter({ hasText: /^대상 \d+명$/ })).toBeVisible()
 }
 

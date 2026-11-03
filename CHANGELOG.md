@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — 견본 앱의 예약 화면 (2026-11-04)
+
+- 견본: `/booking`(내 예약) · `/booking/:poolId`(자리 고르기 - 풀에 대기실이 달려 있으면 `WaitingRoomGate` 안의 `SeatBooking`, 결제 시작 뒤 `BookingPayment` 가 주문 `itemType: "booking"` 으로 결제창을 연다) · `/admin/booking`(권한 `booking.read`, `AdminBookingPools`). 상단 메뉴 「예약」 · 운영 메뉴 「예약 관리」. 풀 목록을 주는 공개 API 는 없어 풀 주소는 운영자가 건넨다.
+- e2e: `e2e/booking.e2e.ts` 한 여정(대기실 → 입장 → 찍기 · 놓기 · 다시 잡기 → 결제 시작).
+
 ### 콜드스타트로 로그인이 풀리는 문제 (2026-11-02)
 
 - `createSessionRefresher`: 일시 오류(네트워크 · 타임아웃 · 408 · 429 · 5xx · `AUTH.*` 코드가 없는 401)는 로그아웃하지 않고 **같은 토큰으로** 일시 오류가 이어지는 동안 계속 재시도한다(2·4·8·16·30초, 그 뒤 30초 고정 - 불변식: 간격 ≤ 서버 `reuse-grace` ÷ 2, 권장 grace 60초 ↔ 30초라 서버 기동이 얼마나 걸려도 회전 뒤 다음 재시도는 유예 안이다; 숨은 탭은 멈췄다가 보이면 즉시 재개). 대기는 탭 락 밖에서 하고 시도마다 락을 다시 잡는다. **코드 없는 401 이 연달아 5번이면 로그아웃**(앞단이 백엔드 오류 본문을 그대로 넘겨야 한다). `AUTH.*` 의 401 은 확정(`REFRESH_INVALID` 는 `expired`). `createAuthApi.refresh` 는 요청 제한 45초.

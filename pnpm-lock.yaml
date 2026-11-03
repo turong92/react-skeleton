@@ -107,6 +107,9 @@ importers:
       '@skeleton/board':
         specifier: workspace:*
         version: link:../../packages/board
+      '@skeleton/booking':
+        specifier: workspace:*
+        version: link:../../packages/booking
       '@skeleton/captcha-turnstile':
         specifier: workspace:*
         version: link:../../packages/captcha-turnstile
@@ -164,6 +167,9 @@ importers:
       '@skeleton/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@skeleton/waiting-room':
+        specifier: workspace:*
+        version: link:../../packages/waiting-room
       '@skeleton/workspace':
         specifier: workspace:*
         version: link:../../packages/workspace

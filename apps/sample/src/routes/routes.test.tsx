@@ -232,4 +232,13 @@ describe('routes', () => {
     expect(guarded('/admin/reviews')).toBe(true)
     expect(permissionsOf('/admin/reviews')).toEqual([['review.moderate', 'review.reply']])
   })
+  it('the booking screens sit behind sign-in; the operator screen needs the booking read permission (the waiting-room gate lives inside the seat screen)', () => {
+    expect(leaf('/booking')?.path).toBe('/booking')
+    expect(leaf('/booking/bkp_1')?.path).toBe('/booking/:poolId')
+    expect(guarded('/booking')).toBe(true)
+    expect(guarded('/booking/bkp_1')).toBe(true)
+    expect(leaf('/admin/booking')?.path).toBe('/admin/booking')
+    expect(guarded('/admin/booking')).toBe(true)
+    expect(permissionsOf('/admin/booking')).toEqual([['booking.read']])
+  })
 })

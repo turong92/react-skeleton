@@ -77,6 +77,10 @@ pnpm --filter sample dev --port 5175     # http://b.localhost:5175
 - `SPRING_APPLICATION_JSON` 의 `skeleton.dashboard-cloudflare.{account-id,site-tag,base-url}`(프로젝트 모드는 `skeleton.projects.<id>.config.dashboard-cloudflare.*`) · `skeleton.dashboard-ga.{property-id,key-event,base-url,token-url}`(kotlin `docs/config/modules/dashboard-ga.yml` 와 같은 이름, 프로젝트 모드는 `skeleton.projects.<id>.config.dashboard-ga.*`), 비밀은 환경변수 `SKELETON_DASHBOARD_CLOUDFLARE_API_TOKEN` · `SKELETON_DASHBOARD_GA_CREDENTIALS`(base64 서비스 계정 JSON).
 - DB 숫자의 서버 캐시는 기본 75초라 e2e 백엔드에서만 `skeleton.dashboard.cache.db=5s` 로 내린다(결제 건수는 다시 불러오며 기다린다).
 
+### 예약 e2e 가 백엔드에 기대하는 것
+
+`e2e/booking.e2e.ts`(한 여정: 로그인 → 대기실 오픈 전 줄 → 입장 → 자리 찍기(잡힘) → 다시 누르기(놓기) → 다시 잡기 → 결제하기(결제 자리까지, 결제창은 열지 않는다) → 나가기)는 백엔드(`apps/sample`)가 `booking` · `waiting-room` 을 붙이고 **로컬 프로필**(`sample-e2e-backend.sh` 가 켠다)이면 별도 값 없이 돈다 - 운영자 경로(`skeleton.booking.admin.enabled` · `skeleton.waiting-room.admin.enabled`)와 대기실 서명 키가 로컬 프로필에 있다. 시험이 운영자(`admin@example.com`)로 **몇 초 뒤 열리는** 대기실 · 풀을 새로 만들어 쓴다(씨앗 풀은 이미 열려 있어 오픈 전 줄이 없다). 운영자 경로가 404 인 백엔드에서는 통째로 건너뛴다. Redis 는 필요 없다(없으면 중계는 프로세스 안).
+
 ### 응원하기 e2e 가 백엔드에 기대하는 것
 
 `e2e/payment.e2e.ts`(운영자 화면 시나리오는 `e2e/paymentAdmin.e2e.ts` — 같은 값을 쓰고, 운영자 경로가 닫힌 백엔드에서는 건너뛴다)는 `e2e/globalSetup.ts` 가 백엔드를 올릴 때 다음을 준다 — 백엔드(`apps/sample`)가 이것을 읽어야 한다. 응원하기(`payment-jdbc` + 샘플의 `cheer/`)가 없는 백엔드에서는 통째로 건너뛴다.

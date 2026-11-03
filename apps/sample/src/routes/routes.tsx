@@ -37,6 +37,9 @@ import { BadgesPage } from './BadgesPage'
 import { BoardFormPage } from './BoardFormPage'
 import { BoardPage } from './BoardPage'
 import { BoardPostPage } from './BoardPostPage'
+import { AdminBookingPage } from './AdminBookingPage'
+import { BookingPage } from './BookingPage'
+import { BookingSeatsPage } from './BookingSeatsPage'
 import { CheerPage } from './CheerPage'
 import { CheersPage } from './CheersPage'
 import { CouponsPage } from './CouponsPage'
@@ -176,6 +179,13 @@ export const routes: RouteObject[] = [
             element: <PaymentDetailPage />,
             handle: privateSeo('cheer.detail.title'),
           },
+          // 예약 — 내 예약 · 자리 고르기(풀에 대기실이 달려 있으면 문 안에서). 결제는 `@skeleton/payment`, 백엔드 `booking` · `waiting-room` 을 붙인 만큼 열린다
+          { path: '/booking', element: <BookingPage />, handle: privateSeo('nav.booking') },
+          {
+            path: '/booking/:poolId',
+            element: <BookingSeatsPage />,
+            handle: privateSeo('booking.seats.title'),
+          },
           // 구독 — 결제는 `@skeleton/payment`. 백엔드 `skeleton.payment.subscription.enabled=true` 가 있어야 열린다
           {
             path: '/subscribe',
@@ -314,6 +324,23 @@ export const routes: RouteObject[] = [
                 path: '/admin/payments/:id',
                 element: <AdminPaymentPage />,
                 handle: privateSeo('nav.adminPayments'),
+              },
+            ],
+          },
+          {
+            element: (
+              <RequirePermission
+                anyOf={['booking.read']}
+                forbidden={<BlockedNotice />}
+                failed={<PermissionsFailedNotice />}
+              />
+            ),
+            children: [
+              // 예약 운영 — 백엔드 `skeleton.booking.admin.enabled`
+              {
+                path: '/admin/booking',
+                element: <AdminBookingPage />,
+                handle: privateSeo('nav.adminBooking'),
               },
             ],
           },

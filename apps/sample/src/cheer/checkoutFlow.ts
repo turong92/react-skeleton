@@ -52,6 +52,8 @@ export type StartCheerDeps = {
   abandonOrder: (orderId: string) => Promise<unknown>
   /** 결제를 시작한 화면의 origin - 서버가 허용 목록에 있을 때만 쓴다(카카오페이 · 네이버페이는 돌아올 주소를 서버가 정한다). 없으면 보내지 않는다 */
   returnOrigin?: string
+  /** 주문 종류 - 없으면 응원하기(`cheer`). 같은 갈래 처리를 쓰는 다른 화면(예약)이 자기 종류를 넘긴다 */
+  itemType?: string
   /** 이 주문의 결제창이 돌려보낼 주소 */
   urlsFor: (
     orderId: string,
@@ -110,7 +112,7 @@ export async function startCheer(
     try {
       // `provider` 는 사람이 「결제 방법」을 골랐을 때만 간다(같은 나라에 결제사가 둘 이상 켜진 서버) - 없으면 서버가 정한다
       created = await deps.createOrder({
-        itemType: CHEER_ITEM_TYPE,
+        itemType: deps.itemType ?? CHEER_ITEM_TYPE,
         itemRef,
         ...(provider !== undefined ? { provider } : {}),
         ...(couponRef ? { discounts: [{ type: 'coupon' as const, ref: couponRef }] } : {}),

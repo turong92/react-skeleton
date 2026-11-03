@@ -37,7 +37,7 @@ export function BookingSeatsPage() {
       sse={bookingSse}
       locale={locale}
       labels={bookingLabelsFor(language)}
-      renderPayment={({ holdId }) => <BookingPayment holdId={holdId} />}
+      renderPayment={({ holdId, onPaid }) => <BookingPayment holdId={holdId} onPaid={onPaid} />}
     />
   )
   return (

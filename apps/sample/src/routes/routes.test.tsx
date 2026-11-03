@@ -130,6 +130,19 @@ describe('routes', () => {
     }
   })
 
+  it('has the broadcast operator screens (list, new, one) behind notification-broadcast.read - new is its own route, not an :id', () => {
+    for (const [path, route] of [
+      ['/admin/broadcasts', '/admin/broadcasts'],
+      ['/admin/broadcasts/new', '/admin/broadcasts/new'],
+      ['/admin/broadcasts/bc_1', '/admin/broadcasts/:id'],
+      ['/admin/broadcasts/bc_1/edit', '/admin/broadcasts/:id/edit'],
+    ]) {
+      expect(leaf(path)?.path, path).toBe(route)
+      expect(guarded(path), path).toBe(true)
+      expect(permissionsOf(path), path).toEqual([['notification-broadcast.read']])
+    }
+  })
+
   it('has the search screen (/search?q=) behind sign-in only - the server answers signed-in callers (and the screen is not offered to search engines)', () => {
     expect(leaf('/search')?.path).toBe('/search')
     expect(guarded('/search')).toBe(true)

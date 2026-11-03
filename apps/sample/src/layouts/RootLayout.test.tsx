@@ -216,6 +216,11 @@ describe('RootLayout (signed in): operator menu', () => {
     expect(renderAs(['campaign.manage'])).toContain('href="/admin/referrals"')
     expect(coupons).not.toContain('href="/admin/referrals"')
   })
+  it('shows the broadcasts screen only to someone holding notification-broadcast.read', () => {
+    expect(renderAs(['*'])).toContain('href="/admin/broadcasts"')
+    expect(renderAs(['notification-broadcast.read'])).toContain('href="/admin/broadcasts"')
+    expect(renderAs(['account.read'])).not.toContain('href="/admin/broadcasts"')
+  })
   it('groups the operator links under one 운영 button (the row of links covered the sign-out and language buttons) - the links stay in the document', () => {
     const all = renderAs(['*'])
     expect(all.match(/<button[^>]*aria-expanded="false"[^>]*>[^<]*운영/g)).toHaveLength(1)

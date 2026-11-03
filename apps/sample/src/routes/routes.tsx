@@ -16,6 +16,9 @@ import { AdminAccountPage } from './AdminAccountPage'
 import { AdminApiKeysPage } from './AdminApiKeysPage'
 import { AdminBadgeAwardsPage } from './AdminBadgeAwardsPage'
 import { AdminBadgesPage } from './AdminBadgesPage'
+import { AdminBroadcastDetailPage } from './AdminBroadcastDetailPage'
+import { AdminBroadcastEditorPage } from './AdminBroadcastEditorPage'
+import { AdminBroadcastsPage } from './AdminBroadcastsPage'
 import { AdminCampaignsPage } from './AdminCampaignsPage'
 import { AdminCatalogPage } from './AdminCatalogPage'
 import { AdminCatalogProductPage } from './AdminCatalogProductPage'
@@ -428,6 +431,37 @@ export const routes: RouteObject[] = [
                 path: '/admin/reward-grants',
                 element: <AdminRewardGrantsPage />,
                 handle: privateSeo('nav.adminRewardGrants'),
+              },
+            ],
+          },
+          {
+            element: (
+              <RequirePermission
+                anyOf={['notification-broadcast.read']}
+                forbidden={<BlockedNotice />}
+                failed={<PermissionsFailedNotice />}
+              />
+            ),
+            children: [
+              {
+                path: '/admin/broadcasts',
+                element: <AdminBroadcastsPage />,
+                handle: privateSeo('nav.adminBroadcasts'),
+              },
+              {
+                path: '/admin/broadcasts/new',
+                element: <AdminBroadcastEditorPage />,
+                handle: privateSeo('nav.adminBroadcasts'),
+              },
+              {
+                path: '/admin/broadcasts/:id',
+                element: <AdminBroadcastDetailPage />,
+                handle: privateSeo('nav.adminBroadcasts'),
+              },
+              {
+                path: '/admin/broadcasts/:id/edit',
+                element: <AdminBroadcastEditorPage />,
+                handle: privateSeo('nav.adminBroadcasts'),
               },
             ],
           },

@@ -77,6 +77,7 @@ export function AdminLinks() {
   const canBadges = usePermission('badge.manage')
   const canWorkspaces = usePermission('workspace.read')
   const canReviews = usePermission(['review.moderate', 'review.reply'])
+  const canBroadcasts = usePermission('notification-broadcast.read')
   // 운영 화면이 하나도 없는 사람에게는 메뉴 자체가 없다
   if (
     !(
@@ -92,7 +93,8 @@ export function AdminLinks() {
       canGrants ||
       canBadges ||
       canWorkspaces ||
-      canReviews
+      canReviews ||
+      canBroadcasts
     )
   )
     return null
@@ -113,6 +115,7 @@ export function AdminLinks() {
       {canBadges && <NavLink to="/admin/badge-awards">{t('nav.adminBadgeAwards')}</NavLink>}
       {canWorkspaces && <NavLink to="/admin/workspaces">{t('nav.adminWorkspaces')}</NavLink>}
       {canReviews && <NavLink to="/admin/reviews">{t('nav.adminReviews')}</NavLink>}
+      {canBroadcasts && <NavLink to="/admin/broadcasts">{t('nav.adminBroadcasts')}</NavLink>}
     </AdminMenu>
   )
 }

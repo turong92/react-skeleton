@@ -4,7 +4,7 @@
   padding: var(--space-md) var(--space-lg);
   border: 1px solid var(--red);
   border-inline-start-width: var(--space-xs);
-  border-radius: var(--radius-md);
+  border-radius: var(--alert-radius);
   background: var(--red-soft);
   color: var(--text);
 }

@@ -7,23 +7,25 @@
   min-width: 44px;
   min-height: 44px;
   padding: 0 var(--space-sm);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  background: var(--surface);
+  border: 1px solid var(--button-secondary-border);
+  border-radius: var(--button-radius);
+  background: var(--button-secondary-bg);
   cursor: pointer;
   color: var(--text-strong);
   font-weight: 650;
   line-height: 1;
+  backdrop-filter: var(--button-backdrop);
+  -webkit-backdrop-filter: var(--button-backdrop);
 }
 
 .button:hover {
-  border-color: var(--teal);
-  background: var(--surface-muted);
+  border-color: var(--button-hover-border);
+  background: var(--button-quiet-hover-bg);
 }
 
 .button[aria-expanded='true'] {
-  border-color: var(--border-strong);
-  background: var(--surface-muted);
+  border-color: var(--button-secondary-border);
+  background: var(--button-quiet-hover-bg);
 }
 
 .button[aria-disabled='true'] {
@@ -51,10 +53,12 @@
   /* 화면 폭에서 여백을 뺀 값이 상한 — 좁은 화면(320~414px)에서도 상자가 화면 안에 있다 */
   max-width: min(24rem, calc(100vw - var(--space-lg)));
   padding: var(--space-xs);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  box-shadow: var(--shadow);
+  border: 1px solid var(--overlay-border);
+  border-radius: var(--overlay-radius);
+  background: var(--overlay-bg);
+  box-shadow: var(--overlay-shadow);
+  backdrop-filter: var(--overlay-backdrop);
+  -webkit-backdrop-filter: var(--overlay-backdrop);
 }
 
 .menu[data-align='start'] {
@@ -85,7 +89,7 @@
   min-height: 34px;
   padding: 0 var(--space-md);
   border: 0;
-  border-radius: var(--radius-sm);
+  border-radius: var(--overlay-item-radius);
   background: transparent;
   color: var(--text);
   text-align: start;

@@ -13,12 +13,14 @@
   justify-content: space-between;
   gap: var(--space-2xl);
   padding: 0 var(--space-2xl);
-  border-bottom: 1px solid var(--border);
-  background: var(--header-bg);
+  border-bottom: 1px solid var(--shell-border);
+  background: var(--shell-bg);
   color: var(--text);
   position: sticky;
   top: 0;
   z-index: 10;
+  backdrop-filter: var(--shell-backdrop);
+  -webkit-backdrop-filter: var(--shell-backdrop);
 }
 
 .brand {
@@ -42,7 +44,7 @@
   align-items: center;
   min-height: 44px;
   padding: 0 var(--space-md);
-  border-radius: var(--radius-md);
+  border-radius: var(--shell-nav-radius);
   color: var(--text);
   font-weight: 600;
   white-space: nowrap;
@@ -61,7 +63,7 @@
 
 /* 지금 위치: 색만이 아니라 굵게 + 아래 막대 */
 .nav a[aria-current='page'] {
-  background: var(--teal-wash);
+  background: var(--shell-nav-active-bg);
   color: var(--text-strong);
   font-weight: 750;
   box-shadow: inset 0 -3px 0 var(--teal);
@@ -70,7 +72,7 @@
 .header a:focus-visible {
   outline: 3px solid var(--teal-soft);
   outline-offset: 1px;
-  border-radius: var(--radius-md);
+  border-radius: var(--shell-nav-radius);
   box-shadow: 0 0 0 1px var(--teal);
 }
 

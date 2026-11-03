@@ -1,9 +1,9 @@
 .textarea {
   width: 100%;
   min-height: 76px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface);
+  border: 1px solid var(--field-border);
+  border-radius: var(--field-radius);
+  background: var(--field-bg);
   color: var(--text-strong);
   padding: var(--space-sm) var(--space-md);
   line-height: var(--line-height-normal);
@@ -15,8 +15,8 @@
 }
 
 .textarea:focus {
-  border-color: var(--teal);
-  outline: 3px solid var(--teal-soft);
+  border-color: var(--field-focus-border);
+  outline: 3px solid var(--field-focus-ring);
 }
 
 .textarea[aria-invalid='true'] {
@@ -24,5 +24,5 @@
 }
 
 .textarea:disabled {
-  background: var(--surface-muted);
+  background: var(--field-disabled-bg);
 }

@@ -51,7 +51,7 @@ import { Button, Card, Field, Input } from '@skeleton/ui'
 | `ErrorReference` · `errorReferenceOf(error)`          | `error` 또는 `reference` · `label`(기본 `Reference`) `copyLabel`(`Copy`) `copiedLabel`(`Copied`) `copyHint` — 「참조 번호(traceId) + 복사」, 복사 결과는 `role="status"`. `ApiRequestError` 가 아니면 그리지 않는다                                                                                                                                                                                                                                                                                                                                 |
 | `showApiError(error, { messages? })`                  | API 에러 토스트(title · detail · 복사 버튼이 달린 traceId · spanId)를 띄우고 **참조 번호(traceId)를 돌려준다** — 상태에 담아 `ErrorReference` 로 그리면 토스트가 사라진 뒤에도 남는다. `messages`: `traceIdCopied` `copy` `clickToCopy`                                                                                                                                                                                                                                                                                                             |
 
-부품 모양은 CSS Modules + 의미 토큰이라 테마(라이트/다크)를 그대로 따른다. 모양을 바꾸고 싶으면 `tokens.json` 값을 바꾼다 — 내부 CSS 를 고치지 않는다.
+부품 모양은 CSS Modules + 토큰이라 테마(라이트/다크)를 그대로 따른다. 모양(모서리 · 바탕 · 테두리 · 그림자 · 흐림)을 바꾸고 싶으면 `tokens.json` 의 `component` 절(`--button-radius` · `--card-bg` · `--overlay-backdrop` …)을 바꾼다 — 내부 CSS 를 고치지 않는다. 묶음과 손잡이 목록은 `docs/design-tokens.md` 「부품(component) 층」.
 
 ## 키보드 · 포커스
 

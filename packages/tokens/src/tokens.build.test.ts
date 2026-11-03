@@ -73,6 +73,106 @@ const quiet = () => {
   return { lines, log: (l: string) => lines.push(l), error: (l: string) => lines.push(l) }
 }
 
+/** 부품 토큰은 $type 이 필요하다 — 묶음 맨 위에 color 를 두어 각 토큰이 물려받게 */
+const withComponent = (component: Record<string, unknown>) => ({
+  ...fixture(),
+  component: { $type: 'color', ...component },
+})
+
+describe('component layer', () => {
+  it('names component tokens --<part>-<name> and resolves them through semantic tokens', () => {
+    const tokens = resolveTokens(
+      withComponent({
+        card: {
+          bg: { $value: '{semantic.surface.card}' },
+          backdrop: { $value: 'none', $type: 'string' },
+        },
+      }),
+    )
+    const bg = tokens.find((t) => t.path === 'component.card.bg')!
+    expect(bg).toMatchObject({
+      layer: 'component',
+      cssName: '--card-bg',
+      value: 'var(--card)',
+      resolved: '#ffffff',
+    })
+    expect(bg.byTheme.dark.resolved).toBe('#111111')
+    expect(tokens.find((t) => t.path === 'component.card.backdrop')!.cssName).toBe(
+      '--card-backdrop',
+    )
+  })
+
+  it('takes raw values for non-colour handles — the documented glass recipe builds', () => {
+    const tokens = resolveTokens(
+      withComponent({
+        card: {
+          backdrop: { $value: 'blur(16px) saturate(1.5)', $type: 'string' },
+          radius: { $value: '9999px', $type: 'dimension' },
+        },
+      }),
+    )
+    expect(tokens.find((t) => t.cssName === '--card-backdrop')!.value).toBe(
+      'blur(16px) saturate(1.5)',
+    )
+    expect(tokens.find((t) => t.cssName === '--card-radius')!.value).toBe('9999px')
+  })
+
+  it('emits a component block on :root and every [data-theme] container, after the theme blocks', () => {
+    const dir = sandbox(withComponent({ card: { bg: { $value: '{semantic.surface.card}' } } }))
+    const { css } = build({ root: dir.root, write: false })
+    expect(css).toContain(
+      ':root,\n[data-theme] {\n  /* Component · card */\n  --card-bg: var(--card);\n}',
+    )
+    expect(css.indexOf('[data-theme] {')).toBeGreaterThan(css.lastIndexOf("[data-theme='dark']"))
+  })
+
+  it('rejects primitives, raw colours, theme values, a missing $type and a missing part name', () => {
+    const fails = (component: Record<string, unknown>, message: RegExp) =>
+      expect(() => resolveTokens(withComponent(component))).toThrow(message)
+    fails({ card: { bg: { $value: '{color.neutral.0}' } } }, /not primitives/)
+    fails({ card: { bg: { $value: 'inherit' } } }, /references a semantic token/)
+    fails({ card: { bg: { $value: '#ff0000 {semantic.surface.card}' } } }, /no raw colours/)
+    fails(
+      { card: { bg: { $value: 'color-mix(in srgb, {semantic.surface.card} 50%, white)' } } },
+      /no raw colours/,
+    )
+    fails(
+      { card: { shadow: { $value: '0 8px 24px rgba(0, 0, 0, 0.3)', $type: 'shadow' } } },
+      /no raw colours/,
+    )
+    fails({ card: { shadow: { $value: '0 1px 2px black', $type: 'shadow' } } }, /no raw colours/)
+    fails(
+      {
+        card: {
+          bg: {
+            $value: '{semantic.surface.card}',
+            $extensions: { skeleton: { dark: '{semantic.surface.bg}' } },
+          },
+        },
+      },
+      /semantic\.\* tokens only/,
+    )
+    fails({ zz: { $value: '{semantic.surface.card}' } }, /component\.<part>\.<name>/)
+    expect(() =>
+      resolveTokens({
+        ...fixture(),
+        component: { card: { bg: { $value: '{semantic.surface.card}' } } },
+      }),
+    ).toThrow(/declare \$type/)
+  })
+
+  it('two component paths that make the same css name fail', () => {
+    expect(() =>
+      resolveTokens(
+        withComponent({
+          a: { 'b-c': { $value: '{semantic.surface.card}' } },
+          'a-b': { c: { $value: '{semantic.surface.card}' } },
+        }),
+      ),
+    ).toThrow(/css name collision: --a-b-c/)
+  })
+})
+
 describe('resolveTokens', () => {
   it('names layers and css variables: primitive --p-*, semantic --<last segment>', () => {
     const tokens = resolveTokens(fixture())

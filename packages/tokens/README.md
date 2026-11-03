@@ -38,7 +38,7 @@ pnpm tokens:check   # 쓰지 않고 비교, 어긋나면 종료 코드 1 (CI). �
 
 ## 지키는 것 (테스트)
 
-- 생성물이 정본과 같다 · 정본 형식 · 층은 둘(`--p-*` 원시 → 의미) · 의미 토큰은 참조만 · 생성기 CLI(`packages/tokens/src`)
+- 생성물이 정본과 같다 · 정본 형식 · 층은 셋(`--p-*` 원시 → 의미 → 부품 `--<부품>-<이름>`, 부품은 `$type` 필수 · 의미 · 부품 토큰만 참조 · 색 날값 금지 · 테마 값 없음) · 의미 토큰은 참조만 · 생성기 CLI(`packages/tokens/src`)
 - 날 색 금지 · 간격/모서리/글자 크기 날값(px · rem · em) 금지(`findRawLayout`, 워크벤치 CSS 만 예외) · `--p-*` 직접 사용 금지 · 쓰는 `var(--x)` 는 모두 정의됨 · 글자/바탕 짝 WCAG AA — 두 앱과 모든 패키지의 CSS · TSX 를 훑는다(루트 `tests/`)
 
 규칙 · 토큰/테마 추가법 · 생성된 표: [`docs/design-tokens.md`](../../docs/design-tokens.md)

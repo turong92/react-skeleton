@@ -43,13 +43,34 @@ describe('tokens.json format (W3C Design Tokens draft)', () => {
     }
   })
 
-  it('only two layers: primitive (--p-*) and semantic (plain names); no component layer', () => {
-    expect(new Set(out.tokens.map((t) => t.layer))).toEqual(new Set(['primitive', 'semantic']))
+  it('three layers: primitive (--p-*), semantic (plain names), component (--<part>-<name>)', () => {
+    expect(new Set(out.tokens.map((t) => t.layer))).toEqual(
+      new Set(['primitive', 'semantic', 'component']),
+    )
     for (const t of out.tokens) {
       if (t.layer === 'primitive') expect(t.cssName.startsWith('--p-'), t.path).toBe(true)
       else expect(t.cssName.startsWith('--p-'), t.path).toBe(false)
+      if (t.layer === 'component')
+        expect(t.cssName, t.path).toBe(`--${t.path.split('.').slice(1).join('-')}`)
     }
-    expect(Object.keys(tokensJson)).not.toContain('component')
+    expect(Object.keys(tokensJson)).toContain('component')
+  })
+
+  it('component tokens reference semantic or component tokens only and carry no theme values', () => {
+    const byPath = new Map(out.tokens.map((t) => [t.path, t]))
+    for (const t of out.tokens.filter((t) => t.layer === 'component')) {
+      expect(t.type, t.path).toBeTruthy()
+      for (const ref of t.references) expect(byPath.get(ref)?.layer, t.path).not.toBe('primitive')
+      for (const v of Object.values(t.byTheme)) expect(v.raw, `${t.path} theme value`).toBeNull()
+      if (t.type === 'color' && !t.references.length)
+        expect(['none', 'transparent'], t.path).toContain(t.raw)
+    }
+  })
+
+  it('component tokens are re-declared on themed containers so they follow a container theme', () => {
+    expect(out.css).toMatch(
+      /\n:root,\n\[data-theme\] \{\n {2}\/\* Component · Button \*\/\n {2}--button-radius:/,
+    )
   })
 
   it('primitives hold values only — they never reference other tokens', () => {

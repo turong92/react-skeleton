@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — 부품(component) 토큰 층 (2026-11-03)
+
+부품 모양(모서리 · 바탕 · 테두리 · 그림자 · 흐림 · 채움)을 `tokens.json` 값으로 바꾸는 손잡이. 기본값은 지금 쓰던 의미 토큰을 그대로 잇는 것이라 **화면은 바뀌지 않는다**(부품 CSS 27개의 모든 값이 기본값으로 풀면 이전과 같다).
+
+- `@skeleton/tokens`: 세 번째 층 `component.<부품>.<이름>` → `--<부품>-<이름>`. `$type` 필수, 원시 참조 · 색 날값(`#…` · 색 함수 · 이름 색) 금지, 색은 의미 · 부품 토큰 참조(또는 `none` · `transparent`), 색 아닌 값(모서리 · 흐림)은 날값도 된다. 테마 값 없음. 생성물의 부품 블록은 `:root` 와 모든 `[data-theme]` 컨테이너에 선언된다. 문서 표에 「Component · …」 절이 생긴다.
+- 부품 토큰 52개, 계열 13묶음: `button` · `field` · `card` · `overlay` · `shell` · `progress` · `choice` · `switch` · `badge` · `alert` · `tooltip` · `avatar` · `skeleton`.
+- `@skeleton/ui`: 부품 CSS 27개가 부품 토큰을 읽는다. 흐림 손잡이(`--button-backdrop` · `--card-backdrop` · `--overlay-backdrop` · `--shell-backdrop`, 기본 `none`)로 `backdrop-filter` 가 생겼다. `--progress-fill` 은 그라디언트도 받는다. 글자색 손잡이 `--button-primary-fg` · `--tooltip-fg`.
+- 바뀌는 상속: 부품 토큰은 `:root` · `[data-theme]` 에서 풀린다. 화면 CSS 가 `data-theme` 없이 의미 토큰을 덮던 구역(`.promo { --surface: … }`)은 그 안의 부품에 더는 닿지 않는다 — 구역 테마는 `data-theme` 로 둔다. 부품 토큰은 `tokens.json` 에서 바꾼다.
+- 테스트: 토큰 층 셋 · 부품 토큰 규칙 · 생성기 오류 · 유리 면 값이 생성되는지(`tokens.build.test.ts`), 모든 부품 토큰이 부품 CSS 에서 쓰이는지 · 주 버튼 바탕을 칠하면 글자 손잡이도 · 보조 바탕을 칠하면 흐림도 읽는지(루트 `tests/componentTokens.test.ts`), 부품 토큰 바탕 · 글자 짝 AA(`tests/contrast.test.ts`). `tests/affordance.css.test.ts` 의 ChoiceGroup 검사는 부품 토큰 이름으로.
+
 ### 콜드스타트로 로그인이 풀리는 문제 (2026-11-02)
 
 - `createSessionRefresher`: 일시 오류(네트워크 · 타임아웃 · 408 · 429 · 5xx · `AUTH.*` 코드가 없는 401)는 로그아웃하지 않고 **같은 토큰으로** 일시 오류가 이어지는 동안 계속 재시도한다(2·4·8·16·30초, 그 뒤 30초 고정 - 불변식: 간격 ≤ 서버 `reuse-grace` ÷ 2, 권장 grace 60초 ↔ 30초라 서버 기동이 얼마나 걸려도 회전 뒤 다음 재시도는 유예 안이다; 숨은 탭은 멈췄다가 보이면 즉시 재개). 대기는 탭 락 밖에서 하고 시도마다 락을 다시 잡는다. **코드 없는 401 이 연달아 5번이면 로그아웃**(앞단이 백엔드 오류 본문을 그대로 넘겨야 한다). `AUTH.*` 의 401 은 확정(`REFRESH_INVALID` 는 `expired`). `createAuthApi.refresh` 는 요청 제한 45초.

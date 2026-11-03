@@ -465,7 +465,7 @@ ${storybook ? `\n${guide}` : ''}
 
 \`\`\`
 ${structure}
-tests/            # 워크스페이스 가로지르는 테스트: ${storybook ? 'stories(모든 부품에 스토리 + play · 카탈로그 일치) · ' : ''}eslint.uiOnly(날 요소 · 인라인 날값 금지) · usage · contrast · tokens.wiring · theme.names · workspace(의존 규칙) · eslint.boundaries
+tests/            # 워크스페이스 가로지르는 테스트: ${storybook ? 'stories(모든 부품에 스토리 + play · 카탈로그 일치) · ' : ''}eslint.uiOnly(날 요소 · 인라인 날값 금지) · usage · contrast · componentTokens(부품 토큰이 부품 CSS 에서 쓰인다) · tokens.wiring · theme.names · workspace(의존 규칙) · eslint.boundaries
 docs/design-tokens.md${storybook ? '\ndocs/ui-catalog.md   # 부품 → 스토리 → 언제 쓰는가' : ''}
 \`\`\`
 

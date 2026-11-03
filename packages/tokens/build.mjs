@@ -48,10 +48,33 @@ function readThemes(json) {
   return themes.map((t) => ({ title: t.name, ...t, system: Boolean(t.system) }))
 }
 
-const layerOf = (path) => (path[0] === 'semantic' ? 'semantic' : 'primitive')
+/*
+ * 층은 셋 — 원시(primitive) → 의미(semantic) → 부품(component).
+ * 부품 토큰 `component.<부품>.<이름>` 은 부품 CSS 가 쓰는 손잡이(`--<부품>-<이름>`)다. 테마 값을 두지 않는다 —
+ * 다크는 참조한 의미 토큰을 따라간다. 원시 토큰은 참조하지 않고, 어떤 값에도 색 날값(#… · rgb() · 이름 색)을 쓰지 않는다.
+ * 색($type color)은 의미 · 부품 토큰을 참조하거나 끄기 값(COMPONENT_KEYWORDS)이다. 색 아닌 값(모서리 · 흐림 · 그림자)은
+ * 날값도 된다 — 예: `blur(16px) saturate(1.5)` · `9999px`.
+ */
+const layerOf = (path) =>
+  path[0] === 'semantic' ? 'semantic' : path[0] === 'component' ? 'component' : 'primitive'
+const COMPONENT_KEYWORDS = new Set(['none', 'transparent'])
+const RAW_COLOR = /#[0-9a-f]{3,8}\b|\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\(/i
+/** CSS 이름 색(transparent · currentColor 는 끄기 · 물려받기라 뺀다) — 참조 `{…}` 밖의 낱말만 본다 */
+const NAMED_COLORS = new Set(
+  'aliceblue antiquewhite aqua aquamarine azure beige bisque black blanchedalmond blue blueviolet brown burlywood cadetblue chartreuse chocolate coral cornflowerblue cornsilk crimson cyan darkblue darkcyan darkgoldenrod darkgray darkgreen darkgrey darkkhaki darkmagenta darkolivegreen darkorange darkorchid darkred darksalmon darkseagreen darkslateblue darkslategray darkslategrey darkturquoise darkviolet deeppink deepskyblue dimgray dimgrey dodgerblue firebrick floralwhite forestgreen fuchsia gainsboro ghostwhite gold goldenrod gray green greenyellow grey honeydew hotpink indianred indigo ivory khaki lavender lavenderblush lawngreen lemonchiffon lightblue lightcoral lightcyan lightgoldenrodyellow lightgray lightgreen lightgrey lightpink lightsalmon lightseagreen lightskyblue lightslategray lightslategrey lightsteelblue lightyellow lime limegreen linen magenta maroon mediumaquamarine mediumblue mediumorchid mediumpurple mediumseagreen mediumslateblue mediumspringgreen mediumturquoise mediumvioletred midnightblue mintcream mistyrose moccasin navajowhite navy oldlace olive olivedrab orange orangered orchid palegoldenrod palegreen paleturquoise palevioletred papayawhip peachpuff peru pink plum powderblue purple rebeccapurple red rosybrown royalblue saddlebrown salmon sandybrown seagreen seashell sienna silver skyblue slateblue slategray slategrey snow springgreen steelblue tan teal thistle tomato turquoise violet wheat white whitesmoke yellow yellowgreen'.split(
+    ' ',
+  ),
+)
+const hasRawColor = (raw) =>
+  RAW_COLOR.test(raw) ||
+  raw
+    .replace(REF, ' ')
+    .split(/[^a-z]+/i)
+    .some((word) => NAMED_COLORS.has(word.toLowerCase()))
 
 function cssNameOf(path) {
   if (layerOf(path) === 'semantic') return `--${path[path.length - 1]}`
+  if (layerOf(path) === 'component') return `--${path.slice(1).join('-')}`
   return `--p-${(path[0] === 'color' ? path.slice(1) : path).join('-')}`
 }
 
@@ -92,10 +115,10 @@ export function resolveTokens(json) {
       })
       return
     }
-    if (path.length === 2 && path[0] === 'semantic')
+    if (path.length === 2 && (path[0] === 'semantic' || path[0] === 'component'))
       groups.push({
         path: path.join('.'),
-        title: node.$extensions?.[EXT]?.title ?? path[1],
+        title: `${path[0] === 'component' ? 'Component · ' : ''}${node.$extensions?.[EXT]?.title ?? path[1]}`,
         note: node.$description ?? '',
       })
     for (const [key, child] of Object.entries(node)) {
@@ -116,6 +139,27 @@ export function resolveTokens(json) {
     const themeRefs = Object.values(t.byTheme).flatMap((v) => v.references)
     for (const ref of [...t.references, ...themeRefs])
       if (!byPath.has(ref)) throw new Error(`${t.path}: missing reference {${ref}}`)
+    if (t.layer === 'component') {
+      if (t.path.split('.').length < 3)
+        throw new Error(`${t.path}: component tokens are component.<part>.<name>`)
+      for (const ref of t.references)
+        if (byPath.get(ref).layer === 'primitive')
+          throw new Error(
+            `${t.path}: component tokens reference semantic or component tokens, not primitives {${ref}}`,
+          )
+      if (!t.type)
+        throw new Error(
+          `${t.path}: component tokens declare $type (color · dimension · shadow · string)`,
+        )
+      if (hasRawColor(t.raw))
+        throw new Error(
+          `${t.path}: no raw colours in component tokens — reference a semantic token instead ("${t.raw}")`,
+        )
+      if (t.type === 'color' && !t.references.length && !COMPONENT_KEYWORDS.has(t.raw.trim()))
+        throw new Error(
+          `${t.path}: a component colour references a semantic token, or is one of ${[...COMPONENT_KEYWORDS].join(' | ')} — got "${t.raw}"`,
+        )
+    }
   }
 
   // 테마마다 따로 푼다 — 그 테마 값이 있는 토큰은 그 값을, 없으면 기본 값(그 참조는 그 테마로 풀린다)을 쓴다
@@ -161,9 +205,9 @@ function renderCss(tokens) {
   for (const t of tokens.filter((t) => t.layer === 'primitive'))
     lines.push(`  ${t.cssName}: ${t.value};`)
   /** 묶음마다 제목 주석 + 줄 — pick 이 null 인 토큰(그 테마 값 없음)은 건너뛴다 */
-  const groupBlock = (pick, indent) => {
+  const groupBlock = (pick, indent, layer = 'semantic') => {
     let first = true
-    for (const g of tokens.groups) {
+    for (const g of tokens.groups.filter((g) => g.path.startsWith(`${layer}.`))) {
       const rows = tokens.filter((t) => t.group === g.path && pick(t) !== null)
       if (!rows.length) continue
       if (!first) lines.push('')
@@ -210,6 +254,18 @@ function renderCss(tokens) {
     )
     themeBody(system, '    ')
     lines.push('  }', '}')
+  }
+  if (tokens.some((t) => t.layer === 'component')) {
+    // 부품 토큰은 의미 토큰을 참조한다. 사용자 지정 속성의 var() 는 선언된 요소에서 풀려 자식에게 상속되므로,
+    // 테마 속성이 달린 컨테이너마다 다시 선언해야 그 안의 부품이 그 테마의 값을 받는다
+    lines.push(
+      '',
+      '/* component — the handles component CSS uses (--<part>-<name>). They reference semantic tokens, so',
+      '   every theme follows; re-declared on [data-theme] containers so a themed container re-resolves them */',
+      ':root,\n[data-theme] {',
+    )
+    groupBlock((t) => t.value, '  ', 'component')
+    lines.push('}')
   }
   return `${lines.join('\n')}\n`
 }
@@ -385,7 +441,7 @@ export function main(argv, { root = ROOT, log = console.log, error = console.err
     )
     .join(' · ')
   log(
-    `tokens: primitive ${count('primitive')} · semantic ${count('semantic')} (${themed}) → ${outputs}`,
+    `tokens: primitive ${count('primitive')} · semantic ${count('semantic')} (${themed}) · component ${count('component')} → ${outputs}`,
   )
   return 0
 }

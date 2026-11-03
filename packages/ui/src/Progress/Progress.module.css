@@ -10,29 +10,34 @@
   height: var(--space-sm);
   appearance: none;
   border: 0;
-  border-radius: var(--radius-full);
-  background: var(--border);
+  border-radius: var(--progress-radius);
+  background: var(--progress-track);
   overflow: hidden;
-  accent-color: var(--teal);
+  accent-color: var(--progress-indeterminate);
 }
 
 .bar::-webkit-progress-bar {
-  background: var(--border);
+  background: var(--progress-track);
 }
 
 .bar::-webkit-progress-value {
-  background: var(--teal);
-  border-radius: var(--radius-full);
+  background: var(--progress-fill);
+  border-radius: var(--progress-radius);
   transition: width 0.2s ease;
 }
 
 .bar::-moz-progress-bar {
-  background: var(--teal);
-  border-radius: var(--radius-full);
+  background: var(--progress-fill);
+  border-radius: var(--progress-radius);
 }
 
 .bar:indeterminate {
-  background: linear-gradient(90deg, var(--border) 0%, var(--teal) 50%, var(--border) 100%);
+  background: linear-gradient(
+    90deg,
+    var(--progress-track) 0%,
+    var(--progress-indeterminate) 50%,
+    var(--progress-track) 100%
+  );
   background-size: 200% 100%;
   animation: slide 1.4s linear infinite;
 }
@@ -57,7 +62,7 @@
 @media (prefers-reduced-motion: reduce) {
   .bar:indeterminate {
     animation: none;
-    background: var(--teal-wash);
+    background: var(--progress-indeterminate-still);
   }
 
   .bar::-webkit-progress-value {

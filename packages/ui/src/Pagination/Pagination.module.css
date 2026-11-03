@@ -17,22 +17,24 @@
   min-height: 44px;
   cursor: pointer;
   padding: 0 var(--space-sm);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface);
+  border: 1px solid var(--button-quiet-border);
+  border-radius: var(--button-radius);
+  background: var(--button-secondary-bg);
   color: var(--text-strong);
   font-weight: 650;
+  backdrop-filter: var(--button-backdrop);
+  -webkit-backdrop-filter: var(--button-backdrop);
 }
 
 .button:hover:not(:disabled) {
-  border-color: var(--teal);
+  border-color: var(--button-hover-border);
   color: var(--teal);
 }
 
 .button[aria-current='page'] {
-  border-color: var(--inverse);
-  background: var(--inverse);
-  color: var(--on-inverse);
+  border-color: var(--button-primary-border);
+  background: var(--button-primary-bg);
+  color: var(--button-primary-fg);
 }
 
 .button:focus-visible {

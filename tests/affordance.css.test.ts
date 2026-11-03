@@ -174,8 +174,9 @@ describe.skipIf(!has('packages/ui'))('ChoiceGroup affordance', () => {
 
   it('the chosen one changes border, fill and weight — beyond colour alone', () => {
     const chosen = rule(/\.choice\[aria-checked='true'\]\s*\{([^}]*)\}/)
-    expect(chosen).toMatch(/border-color:\s*var\(--teal\)/)
-    expect(chosen).toMatch(/background:\s*var\(--teal-wash\)/)
+    // 고른 칸의 색은 부품 토큰(--choice-selected-*) — 기본값이 강조색(--teal · --teal-wash)이다
+    expect(chosen).toMatch(/border-color:\s*var\(--choice-selected-border\)/)
+    expect(chosen).toMatch(/background:\s*var\(--choice-selected-bg\)/)
     expect(chosen).toMatch(/box-shadow:\s*inset/)
   })
 
@@ -184,7 +185,7 @@ describe.skipIf(!has('packages/ui'))('ChoiceGroup affordance', () => {
       /\.choice[^{]*:hover[^{]*:not\(\[aria-checked='true'\]\)[^{]*\{([^}]*)\}|\.choice[^{]*:not\(\[aria-checked='true'\]\)[^{]*:hover[^{]*\{([^}]*)\}/,
     )
     expect(hover, 'a hover rule for the choices that are not chosen').not.toBe('')
-    expect(hover).not.toMatch(/--teal/)
+    expect(hover).not.toMatch(/--teal|--choice-selected/)
     expect(hover).not.toMatch(/box-shadow/)
     expect(hover).toMatch(/border-color:/)
   })

@@ -29,16 +29,39 @@ export type StoredImageProps = {
 /** 서버 모듈 기본 변환본 폭 — 주소 글자만 받았을 때 `srcset` 의 폭으로 본다(`thumb` 400 · `display` 1600) */
 const DEFAULT_WIDTH = { thumb: 400, display: 1600 } as const
 
+/** 변환본이 영상(`video/mp4` - 움직이는 이미지의 변환 결과)인지 - 영상 판정은 여기 한 곳이다 */
+export const isVideoVariant = (variant: StoredImageVariant | null | undefined): boolean =>
+  typeof variant === 'object' && variant?.contentType === 'video/mp4'
+
 const parts = (variant: StoredImageVariant | null | undefined) =>
   typeof variant === 'string' ? { url: variant } : variant
 
 /**
- * 저장된 이미지를 반응형으로 그린다 — `src` 는 `display`(없으면 `thumb`), 둘 다 있으면 `srcset="thumb 400w, display 1600w"`.
+ * 저장된 이미지를 반응형으로 그린다(`display.contentType` 이 `video/mp4` 면 소리 없는 반복 `<video>`) — `src` 는 `display`(없으면 `thumb`), 둘 다 있으면 `srcset="thumb 400w, display 1600w"`.
  * `alternates`(WebP 등)가 있으면 `<picture><source type srcset>` 뒤에 `<img>` 폴백. 폭 · 높이를 알면 속성으로 둬 이미지가 오기 전에 자리가 잡히고, `loading="lazy"` · `decoding="async"`.
  */
 export function StoredImage({ image, alt, sizes, className }: StoredImageProps) {
   const main = parts(image.display) ?? parts(image.thumb)
   if (!main) return null
+  const classes = [styles.image, className].filter(Boolean).join(' ')
+  if (isVideoVariant(image.display)) {
+    // 움직이는 이미지의 변환본 - 소리 없이 반복 재생해 GIF 처럼 보인다
+    return (
+      <video
+        className={classes}
+        src={main.url}
+        poster={parts(image.thumb)?.url}
+        width={image.width ?? undefined}
+        height={image.height ?? undefined}
+        aria-label={alt}
+        autoPlay
+        loop
+        muted
+        playsInline
+        preload="metadata"
+      />
+    )
+  }
   const srcSetOf = (source: Pick<StoredImageSource, 'thumb' | 'display'>) => {
     const thumb = parts(source.thumb)
     const display = parts(source.display)
@@ -56,7 +79,7 @@ export function StoredImage({ image, alt, sizes, className }: StoredImageProps) 
   const srcSet = srcSetOf(image)
   const img = (
     <img
-      className={[styles.image, className].filter(Boolean).join(' ')}
+      className={classes}
       src={main.url}
       srcSet={srcSet}
       sizes={srcSet ? sizes : undefined}

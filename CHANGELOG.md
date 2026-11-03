@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — 움짤 표시본을 영상으로 · 영상 포스터 바꿔 끼우기 (2026-11-04)
+
+- `@skeleton/storage`: 변환본(`ImageVariant`)에 `contentType` 이 더해졌고, `StoredImage` 는 `display.contentType` 이 `video/mp4` 면 소리 없는 반복 `<video>`(`autoplay loop muted playsinline`, 포스터 = `thumb`)로 그린다. 영상 판정은 `isVideoVariant` 한 곳. 스토리 `AnimatedAsVideo`.
+- `@skeleton/video`: `api.setPoster(id, key)`(`PUT /videos/{id}/poster`, 화면 부품 없음).
+
 ### Added — 영상 `@skeleton/video` 0.1.0 (2026-11-04)
 
 백엔드 짝: kotlin-skeleton `video` + `video-jdbc` 모듈(`/api/v1/videos`, 저장소는 `storage`). 서버가 아직 없어 설계서(video-design §5)의 API 표대로 만들고 가짜 API 로 시험했다 - 목록 응답 모양(`VideoItem`)은 서버가 나오면 맞춘다.

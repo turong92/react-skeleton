@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
-import { StoredImage } from './StoredImage'
+import { StoredImage, isVideoVariant } from './StoredImage'
 
 const thumb = { url: 'https://cdn.test/t.jpg', width: 400, height: 267 }
 const display = { url: 'https://cdn.test/d.jpg', width: 1600, height: 1067 }
@@ -83,5 +83,45 @@ describe('StoredImage', () => {
     expect(out).toContain('sizes="50vw"')
     expect(out).toContain('src="https://cdn.test/d.jpg"')
     expect(html({ image: { thumb, display, alternates: {} }, alt: 'x' })).not.toContain('<picture')
+  })
+
+  it('a display whose contentType is video/mp4 is drawn as a silent looping video (a GIF look), poster = thumb', () => {
+    const out = html({
+      image: {
+        width: 480,
+        height: 270,
+        thumb,
+        display: {
+          url: 'https://cdn.test/d.mp4',
+          width: 480,
+          height: 270,
+          contentType: 'video/mp4',
+        },
+      },
+      alt: 'dance',
+    })
+    expect(out).toContain('<video')
+    expect(out).toContain('src="https://cdn.test/d.mp4"')
+    expect(out).toContain('poster="https://cdn.test/t.jpg"')
+    for (const attr of ['autoPlay', 'loop', 'muted', 'playsInline']) expect(out).toContain(attr)
+    expect(out).toContain('aria-label="dance"')
+    expect(out).toContain('width="480"')
+    expect(out).not.toContain('<img')
+  })
+
+  it('image/gif and image/webp displays stay an <img> (a thumb still lives next to them)', () => {
+    const gif = { url: 'https://cdn.test/d.gif', contentType: 'image/gif' }
+    const out = html({ image: { thumb, display: gif }, alt: 'x' })
+    expect(out).toContain('<img')
+    expect(out).toContain('src="https://cdn.test/d.gif"')
+    expect(out).not.toContain('<video')
+  })
+
+  it('isVideoVariant is the one place that decides what is a video', () => {
+    expect(isVideoVariant({ url: 'u', contentType: 'video/mp4' })).toBe(true)
+    expect(isVideoVariant({ url: 'u', contentType: 'image/gif' })).toBe(false)
+    expect(isVideoVariant({ url: 'u' })).toBe(false)
+    expect(isVideoVariant('https://cdn.test/d.jpg')).toBe(false)
+    expect(isVideoVariant(null)).toBe(false)
   })
 })

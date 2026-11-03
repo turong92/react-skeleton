@@ -7,15 +7,16 @@
 
 경로는 baseUrl `/api/v1` 기준이다(`createVideoApi(apiClient, { basePath? })`, 기본 `/videos`). 응답은 envelope(`value` / `list`)다.
 
-| 경로                         | 뜻                                                                                                                            | 이 패키지                      |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
-| `POST /videos`               | `{ bytes, contentType, purpose, visibility }` → `{ id, uploadId, partSize }`. 정책 · 쿼터 · 4GB 상한을 서버가 본다            | `api.start`                    |
-| `POST /videos/{id}/parts`    | `{ numbers }` → `[{ number, method, url, headers }]` 조각마다 서명된 `PUT` 주소                                               | `api.presignParts`             |
-| `GET /videos/{id}/parts`     | → `[{ n, etag, bytes }]` 저장소에 이미 올라간 조각(이어 올리기). 모르는 올리기면 404                                          | `api.listParts`                |
-| `POST /videos/{id}/complete` | `{ parts: [{ n, etag }] }` → 목록의 한 줄(`VideoItem`). 멱등                                                                  | `api.complete`                 |
-| `DELETE /videos/{id}`        | 204. 올리는 중이면 멀티파트를 중단하고 영상 폴더를 지운다                                                                     | `api.remove`                   |
-| `GET /videos?purpose=`       | → `VideoItem[]`(올린 순서)                                                                                                    | `api.list` · `useVideos`       |
-| `POST /videos/{id}/playback` | → `{ src, compat?, hls?, poster, codec, w, h, durationMs, big, expiresAt? }`. 아직 `PLAYABLE` 이 아니면 409 `VIDEO.NOT_READY` | `api.playback` · `VideoPlayer` |
+| 경로                         | 뜻                                                                                                                                                                                   | 이 패키지                      |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------ |
+| `POST /videos`               | `{ bytes, contentType, purpose, visibility }` → `{ id, uploadId, partSize }`. 정책 · 쿼터 · 4GB 상한을 서버가 본다                                                                   | `api.start`                    |
+| `POST /videos/{id}/parts`    | `{ numbers }` → `[{ number, method, url, headers }]` 조각마다 서명된 `PUT` 주소                                                                                                      | `api.presignParts`             |
+| `GET /videos/{id}/parts`     | → `[{ n, etag, bytes }]` 저장소에 이미 올라간 조각(이어 올리기). 모르는 올리기면 404                                                                                                 | `api.listParts`                |
+| `POST /videos/{id}/complete` | `{ parts: [{ n, etag }] }` → 목록의 한 줄(`VideoItem`). 멱등                                                                                                                         | `api.complete`                 |
+| `DELETE /videos/{id}`        | 204. 올리는 중이면 멀티파트를 중단하고 영상 폴더를 지운다                                                                                                                            | `api.remove`                   |
+| `GET /videos?purpose=`       | → `VideoItem[]`(올린 순서)                                                                                                                                                           | `api.list` · `useVideos`       |
+| `PUT /videos/{id}/poster`    | `{ key }`(내가 `/storage` 로 올려 완료한 이미지 키) → 204. 409 `VIDEO.POSTER_PENDING` 이면 1~2초 뒤 같은 호출 반복, 422 `VIDEO.POSTER_REJECTED` 는 거절. 화면 부품은 없다(앱이 조립) | `api.setPoster`                |
+| `POST /videos/{id}/playback` | → `{ src, compat?, hls?, poster, codec, w, h, durationMs, big, expiresAt? }`. 아직 `PLAYABLE` 이 아니면 409 `VIDEO.NOT_READY`                                                        | `api.playback` · `VideoPlayer` |
 
 `VideoItem` = `{ id, purpose, visibility, status, bytes, compat, ladder, progress, failCode, width, height, durationMs, createdAt }`.
 `status` 는 `UPLOADING` → `UPLOADED` → `QUEUED` → `REMUXING` → `PLAYABLE` | `FAILED` | `DELETED`, `compat` · `ladder`(호환 단 · 사다리)는 `NONE` · `SKIPPED` · `QUEUED` · `RUNNING` · `READY` · `FAILED`, `progress` 는 일꾼이 보고한 0~100(모르면 `null`), `failCode` 는 `UNSUPPORTED_FORMAT` · `CORRUPT` · `LIMITS_EXCEEDED` · `TOO_BIG_FOR_WORKER` · `PROCESSING_FAILED` · `LEASE_EXPIRED` · `UPLOAD_ABANDONED`.

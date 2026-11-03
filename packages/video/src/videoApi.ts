@@ -29,6 +29,8 @@ export type VideoApi = {
   remove(id: string): Promise<void>
   /** `GET {base}?purpose=` - 내 영상들(올린 순서) */
   list(purpose: string): Promise<VideoItem[]>
+  /** `PUT {base}/{id}/poster { key }` - 포스터를 내가 올린 이미지(`/storage` 로 올려 완료한 키)로 바꿔 끼운다. 204. 409 `VIDEO.POSTER_PENDING` 이면 1~2초 뒤 같은 호출을 반복, 422 `VIDEO.POSTER_REJECTED` 는 거절 */
+  setPoster(id: string, key: string): Promise<void>
   /** `POST {base}/{id}/playback` - 재생 허가. 아직 `PLAYABLE` 이 아니면 409 `VIDEO.NOT_READY` */
   playback(id: string): Promise<VideoPlayback>
 }
@@ -54,6 +56,8 @@ export function createVideoApi(
       client.value<VideoItem>(`${video(id)}/complete`, { method: 'POST', json: { parts } }),
     remove: (id) => client.noContent(video(id), { method: 'DELETE' }),
     list: (purpose) => client.list<VideoItem>(base, { params: { purpose } }),
+    setPoster: (id, key) =>
+      client.noContent(`${video(id)}/poster`, { method: 'PUT', json: { key } }),
     playback: (id) => client.value<VideoPlayback>(`${video(id)}/playback`, { method: 'POST' }),
   }
 }

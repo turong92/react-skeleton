@@ -80,6 +80,7 @@ export function createFakeVideoBackend({
       ]
       return { id, uploadId: `u-${counter}`, partSize: MB }
     },
+    setPoster: async () => {},
     presignParts: async (_id, numbers) =>
       numbers.map((number) => ({
         number,

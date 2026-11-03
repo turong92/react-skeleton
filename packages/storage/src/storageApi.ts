@@ -60,7 +60,13 @@ export type UploadInspection = {
 }
 
 /** 변환본 하나(`thumb` · `display`) — 주소는 서명 또는 공개 주소 */
-export type ImageVariant = { url: string; width?: number; height?: number }
+export type ImageVariant = {
+  url: string
+  width?: number
+  height?: number
+  /** 변환본의 형식 — 움직이는 이미지의 `display` 는 `video/mp4` 일 수 있다(변환은 비동기라 같은 키를 다시 물으면 바뀐다). `StoredImage` 가 보고 `<video>` 로 그린다 */
+  contentType?: string
+}
 
 /** `images` 의 한 줄 — 서버의 `variants: { thumb?, display? }` 를 펼친 모양(`StoredImage` 가 바로 받는다) */
 export type StoredImageItem = {
@@ -213,7 +219,11 @@ function imageInspection(raw: Raw): ImageInspection {
 function variantOf(raw: unknown): ImageVariant | undefined {
   const variant = raw as Raw | undefined
   return variant && typeof variant.url === 'string'
-    ? { url: variant.url, ...sized(variant) }
+    ? {
+        url: variant.url,
+        ...sized(variant),
+        ...(typeof variant.contentType === 'string' && { contentType: variant.contentType }),
+      }
     : undefined
 }
 

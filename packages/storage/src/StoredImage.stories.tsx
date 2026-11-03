@@ -35,3 +35,25 @@ export const OnlyThumb: Story = {
     await expect(img).toHaveAttribute('src', both.thumb?.url ?? '')
   },
 }
+
+/** 움직이는 이미지의 변환 결과(`display.contentType === 'video/mp4'`) - 소리 없는 반복 영상으로 GIF 처럼 보인다 */
+export const AnimatedAsVideo: Story = {
+  args: {
+    image: {
+      width: 480,
+      height: 270,
+      thumb: both.thumb,
+      display: { url: 'data:video/mp4;base64,', width: 480, height: 270, contentType: 'video/mp4' },
+    },
+    alt: 'A dancing cat',
+  },
+  play: async ({ canvas }) => {
+    const video = canvas.getByLabelText('A dancing cat')
+    await expect(video.tagName).toBe('VIDEO')
+    for (const name of ['autoplay', 'loop', 'playsinline'])
+      await expect(video).toHaveAttribute(name)
+    // React 는 muted 를 속성이 아닌 프로퍼티로 둔다
+    await expect((video as HTMLVideoElement).muted).toBe(true)
+    await expect(video).toHaveAttribute('poster', both.thumb?.url ?? '')
+  },
+}

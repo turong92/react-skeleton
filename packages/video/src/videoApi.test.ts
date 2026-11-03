@@ -62,4 +62,17 @@ describe('createVideoApi', () => {
       { kind: 'value', path: '/files/videos/v1/playback', request: { method: 'POST' } },
     ])
   })
+
+  it('replaces the poster with PUT {key} → 204', async () => {
+    const { client, calls } = recordingClient()
+    const api = createVideoApi(client)
+    await api.setPoster('v1', 'uploads/u/p.png')
+    expect(calls).toEqual([
+      {
+        kind: 'noContent',
+        path: '/videos/v1/poster',
+        request: { method: 'PUT', json: { key: 'uploads/u/p.png' } },
+      },
+    ])
+  })
 })

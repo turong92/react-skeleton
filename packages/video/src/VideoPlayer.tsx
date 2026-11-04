@@ -5,6 +5,8 @@ import { loadHlsLight } from './loadHls'
 import {
   afterFailure,
   grantExpired,
+  HLS_MIME,
+  nativeHlsIsReliable,
   planPlayback,
   urlOf,
   type PlaybackEnv,
@@ -39,9 +41,15 @@ function readBrowserEnv(): PlaybackEnv {
   const probe = document.createElement('video')
   const w = window as unknown as Record<string, { isTypeSupported?: (type: string) => boolean }>
   const mse = w.MediaSource ?? w.ManagedMediaSource
+  const brands = (
+    navigator as { userAgentData?: { brands?: Array<{ brand: string }> } }
+  ).userAgentData?.brands?.map((entry) => entry.brand)
+  const hlsReliable = nativeHlsIsReliable(navigator.userAgent, brands)
   browserEnv = {
     canPlayType: (mime) =>
-      typeof probe.canPlayType === 'function' && Boolean(probe.canPlayType(mime)),
+      typeof probe.canPlayType === 'function' &&
+      (hlsReliable || mime !== HLS_MIME) &&
+      Boolean(probe.canPlayType(mime)),
     mse:
       mse && typeof mse.isTypeSupported === 'function'
         ? { isTypeSupported: (t) => mse.isTypeSupported!(t) }

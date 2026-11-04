@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { emailRequired } from '../api/emailRequired'
 import { AttachmentPanel } from '../components/AttachmentPanel'
+import { NoteVideoPanel } from '../components/NoteVideoPanel'
 import { LoadError } from '../components/LoadError'
 import { NoteStatusBadge } from '../components/NoteStatusBadge'
 import { useDeleteNote, useExportNote, useNote } from '../notes/queries'
@@ -91,7 +92,7 @@ function NoteDetail({ note }: { note: Note }) {
               </Card>
             ),
           },
-          // 첨부는 내 노트만(서버의 키 검사가 계정 기준) — 팀 노트에는 탭이 없다
+          // 첨부 · 영상은 내 노트만(서버의 키 검사가 계정 기준) — 팀 노트에는 탭이 없다
           ...(inWorkspace
             ? []
             : [
@@ -99,6 +100,11 @@ function NoteDetail({ note }: { note: Note }) {
                   id: 'attachment',
                   label: t('detail.tabAttachment'),
                   content: <AttachmentPanel note={note} />,
+                },
+                {
+                  id: 'video',
+                  label: t('detail.tabVideo'),
+                  content: <NoteVideoPanel note={note} />,
                 },
               ]),
         ]}

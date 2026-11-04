@@ -158,6 +158,8 @@ const en: Record<keyof typeof ko, string> = {
   'detail.sections': 'Note sections',
   'detail.tabContent': 'Content',
   'detail.tabAttachment': 'Attachment',
+  'detail.tabVideo': 'Video',
+  'video.title': 'Video',
   'detail.bodyEmpty': 'No content yet. Add some in Edit.',
   'detail.created': 'Created',
   'detail.updated': 'Updated',

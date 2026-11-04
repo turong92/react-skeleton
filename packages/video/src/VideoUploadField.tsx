@@ -21,6 +21,10 @@ export type VideoUploadFieldProps = {
   max?: number
   /** 이어 올리기(기본 켬) - 새로 고침한 뒤 같은 파일을 다시 고르면 빠진 조각만 올린다 */
   resume?: boolean
+  /** 이 목적의 영상 가운데 이 칸이 보이고 세는(`max`) 줄을 고른다(기본 전부) - 영상을 글마다 하나씩 붙이는 화면이 자기 것만 보이게 */
+  include?: (video: VideoItem) => boolean
+  /** 올리기를 마친 직후(목록을 다시 읽기 전) - 앱이 그 영상을 자기 데이터에 붙인다. 던지면 그 줄은 실패로 보인다 */
+  onUploaded?: (video: VideoItem) => void | Promise<void>
   labels?: VideoUploadLabels
   /** 시험 · 스토리용 - 조각 `PUT` (기본은 XHR) */
   put?: PartPut
@@ -51,6 +55,8 @@ export function VideoUploadField({
   visibility = 'PRIVATE',
   max = 1,
   resume = true,
+  include,
+  onUploaded,
   labels = defaultVideoUploadLabels,
   put,
   pollMs,
@@ -76,7 +82,9 @@ export function VideoUploadField({
   const liveIds = new Set(uploads.flatMap((u) => (u.videoId ? [u.videoId] : [])))
   const shown = (data ?? []).filter(
     (video) =>
-      video.status !== 'DELETED' && !(video.status === 'UPLOADING' && liveIds.has(video.id)),
+      video.status !== 'DELETED' &&
+      !(video.status === 'UPLOADING' && liveIds.has(video.id)) &&
+      (include?.(video) ?? true),
   )
   const full = shown.length + uploads.length >= max
 
@@ -95,7 +103,8 @@ export function VideoUploadField({
       onProgress: (sent) => patch(id, { sent }),
       onStarted: (videoId) => patch(id, { videoId }),
     })
-      .then(async () => {
+      .then(async (video) => {
+        await onUploaded?.(video)
         await refresh()
         drop(id)
       })

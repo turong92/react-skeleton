@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — 견본 앱의 노트 영상 (2026-11-04)
+
+- 견본: 노트 상세의 「영상」 탭(`NoteVideoPanel`) - `VideoUploadField`(목적 `note`, 비공개) 로 올리고 `VideoPlayer` 로 튼다. 노트를 고치는 본문은 `noteInputOf` 한 곳에서 만든다(`videoId` · 첨부를 늘 싣는다 - 빠지면 PUT 이 영상을 떼어 서버가 지운다). e2e `video.e2e.ts`(합성 HEVC 세로 영상 → 올리기 → 원본 단 재생 가능 → 호환 · 사다리 → 마스터 자동 재생 → 다른 계정 404).
+- `@skeleton/video` 고침: `VideoPlayer` 가 Chromium 계열에서 네이티브 HLS 를 믿어 재생이 `MEDIA_ERR_SRC_NOT_SUPPORTED` 로 실패하던 것 - 네이티브는 Safari 만 믿고(`nativeHlsIsReliable`) 나머지는 MSE + hls.js 로 튼다(e2e 에서 발견).
+- `@skeleton/video`: `VideoUploadField` 에 `include`(보이고 세는 줄 고르기)와 `onUploaded`(올리기 직후 앱이 영상을 자기 데이터에 붙이기) 가 더해졌다.
+
 ### Added — 움짤 표시본을 영상으로 · 영상 포스터 바꿔 끼우기 (2026-11-04)
 
 - `@skeleton/storage`: 변환본(`ImageVariant`)에 `contentType` 이 더해졌고, `StoredImage` 는 `display.contentType` 이 `video/mp4` 면 소리 없는 반복 `<video>`(`autoplay loop muted playsinline`, 포스터 = `thumb`)로 그린다. 영상 판정은 `isVideoVariant` 한 곳. 스토리 `AnimatedAsVideo`.

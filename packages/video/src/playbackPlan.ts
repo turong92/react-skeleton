@@ -14,6 +14,16 @@ export type PlaybackEnv = {
   mse: { isTypeSupported: (type: string) => boolean } | null
 }
 
+/**
+ * 이 브라우저가 `canPlayType` 으로 HLS 를 안다고 답할 때 그 말을 믿어도 되는가.
+ * Chromium 계열(Chrome · Edge …)은 HLS 를 안다고 답하지만(153 에서 실측) 내장 재생기가 이 재생 목록을 못 틀어 `MEDIA_ERR_SRC_NOT_SUPPORTED`
+ * 로 끝난다 - 거기서는 MSE + hls.js 로 튼다. Safari(iOS 의 다른 브라우저 포함, 전부 WebKit)만 네이티브를 믿는다
+ */
+export function nativeHlsIsReliable(userAgent: string, brands: readonly string[] = []): boolean {
+  if (brands.includes('Chromium')) return false
+  return !/\b(?:Chrome|Chromium)\//.test(userAgent) || /\b(?:CriOS|EdgiOS)\//.test(userAgent)
+}
+
 export type PlaybackPlan = {
   /** `native` = 브라우저가 HLS 를 튼다, `hlsjs` = MSE 위에 hls.js, 둘 다 없으면 null */
   engine: 'native' | 'hlsjs' | null
@@ -25,7 +35,7 @@ export type PlaybackPlan = {
   compatPending: boolean
 }
 
-const HLS_MIME = 'application/vnd.apple.mpegurl'
+export const HLS_MIME = 'application/vnd.apple.mpegurl'
 
 /**
  * 재생 순서(설계 0-15) - 마스터 → (이 기기가 원본 코덱을 틀면) 원본 단 → 호환 단.

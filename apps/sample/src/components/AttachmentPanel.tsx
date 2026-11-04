@@ -1,19 +1,12 @@
 import { useUpload } from '@skeleton/storage'
 import { Button, Card, FilePicker, Progress } from '@skeleton/ui'
 import { useUpdateNote } from '../notes/queries'
-import type { Note, NoteInput } from '../notes/types'
+import { noteInputOf } from '../notes/noteInput'
+import type { Note } from '../notes/types'
 import { ATTACHMENT_ACCEPT, storageApi, uploader } from '../storage/uploader'
 import { uploadErrorMessage } from '../storage/uploadMessage'
 import { useT } from '../i18n'
 import styles from './AttachmentPanel.module.css'
-
-const inputOf = (note: Note, attachment: Pick<NoteInput, 'attachmentKey' | 'attachmentName'>) => ({
-  title: note.title,
-  body: note.body,
-  status: note.status,
-  pinned: note.pinned,
-  ...attachment,
-})
 
 /**
  * 첨부 — 파일은 브라우저가 저장소로 직접 올린다(`@skeleton/storage`: 검증 → presign → PUT 진행률). 올린 키를 노트에 저장하면 끝.
@@ -33,7 +26,7 @@ export function AttachmentPanel({ note }: { note: Note }) {
       const result = await up.upload(file)
       if (!result) return // 취소
       await update.mutateAsync(
-        inputOf(note, { attachmentKey: result.key, attachmentName: file.name }),
+        noteInputOf(note, { attachmentKey: result.key, attachmentName: file.name }),
       )
       up.reset()
     } catch {
@@ -47,7 +40,7 @@ export function AttachmentPanel({ note }: { note: Note }) {
   }
 
   async function remove() {
-    await update.mutateAsync(inputOf(note, { attachmentKey: null, attachmentName: null }))
+    await update.mutateAsync(noteInputOf(note, { attachmentKey: null, attachmentName: null }))
   }
 
   return (

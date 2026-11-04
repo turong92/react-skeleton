@@ -14,6 +14,7 @@ import {
 import { useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { createKeyRing } from '../notes/idempotencyKey'
+import { noteInputOf } from '../notes/noteInput'
 import { fieldErrorsOf, isValidationFailure, type FieldErrors } from '../notes/formErrors'
 import { useCreateNote, useNote, useUpdateNote } from '../notes/queries'
 import { useNotesBase } from '../notes/useNotesBase'
@@ -150,10 +151,12 @@ function NoteForm({
   )
 }
 
-const inputOf = (values: Values, note?: Note): NoteInput => ({
+/** 만들기 본문 — 첨부 · 영상은 만든 뒤 상세에서 붙인다 */
+const newInputOf = (values: Values): NoteInput => ({
   ...values,
-  attachmentKey: note?.attachmentKey ?? null,
-  attachmentName: note?.attachmentName ?? null,
+  attachmentKey: null,
+  attachmentName: null,
+  videoId: null,
 })
 
 function CreateNote() {
@@ -171,7 +174,7 @@ function CreateNote() {
         onCancel={() => navigate(base)}
         onSubmit={async (values) => {
           const note = await create.mutateAsync({
-            input: inputOf(values),
+            input: newInputOf(values),
             idempotencyKey: keyFor.current(values),
           })
           // 처음 저장한 직후 — 상세가 푸시 띠를 띄울지 이 표시로 안다(수정 뒤에는 없다)
@@ -195,7 +198,7 @@ function EditNote({ note }: { note: Note }) {
         submitLabel={t('form.submitEdit')}
         onCancel={() => navigate(`${base}/${note.id}`)}
         onSubmit={async (values) => {
-          await update.mutateAsync(inputOf(values, note))
+          await update.mutateAsync(noteInputOf(note, values))
           navigate(`${base}/${note.id}`)
         }}
       />

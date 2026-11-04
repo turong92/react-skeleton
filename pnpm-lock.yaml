@@ -167,6 +167,9 @@ importers:
       '@skeleton/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@skeleton/video':
+        specifier: workspace:*
+        version: link:../../packages/video
       '@skeleton/waiting-room':
         specifier: workspace:*
         version: link:../../packages/waiting-room

@@ -158,6 +158,8 @@ export default {
   'detail.sections': '노트 구역',
   'detail.tabContent': '내용',
   'detail.tabAttachment': '첨부 파일',
+  'detail.tabVideo': '영상',
+  'video.title': '영상',
   'detail.bodyEmpty': '아직 내용이 없어요. 수정에서 내용을 적어 보세요.',
   'detail.created': '만든 때',
   'detail.updated': '수정한 때',

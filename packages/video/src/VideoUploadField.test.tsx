@@ -54,6 +54,16 @@ describe('VideoUploadField', () => {
     expect(html).toMatch(/<button[^>]*disabled/)
   })
 
+  it("lists only the videos the page asks for, so another note's video neither shows nor fills the maximum", () => {
+    const html = render([fakeItem({ id: 'mine' }), fakeItem({ id: 'theirs' })], {
+      max: 1,
+      include: (video) => video.id === 'theirs-not-here',
+    })
+    expect(html).not.toContain('<li')
+    expect(html).not.toContain('You can add up to 1.')
+    expect(html).not.toMatch(/<button[^>]*disabled/)
+  })
+
   it('writes the labels it is given', () => {
     const html = render([fakeItem({ status: 'FAILED', failCode: 'CORRUPT' })], {
       labels: koVideoUploadLabels,

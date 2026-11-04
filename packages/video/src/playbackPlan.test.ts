@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { afterFailure, grantExpired, planPlayback, type PlaybackEnv } from './playbackPlan'
+import {
+  afterFailure,
+  grantExpired,
+  nativeHlsIsReliable,
+  planPlayback,
+  type PlaybackEnv,
+} from './playbackPlan'
 import { fakeGrant } from './test/grant'
 
 const HLS = 'application/vnd.apple.mpegurl'
@@ -123,5 +129,26 @@ describe('grantExpired', () => {
     expect(grantExpired(at(100_000), 80_000)).toBe(true)
     expect(grantExpired(at(100_000), 60_000)).toBe(false)
     expect(grantExpired(fakeGrant(), 10 ** 15)).toBe(false)
+  })
+})
+
+describe('nativeHlsIsReliable', () => {
+  const SAFARI =
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15'
+  const IOS_CHROME =
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/130.0 Mobile/15E148 Safari/604.1'
+  const CHROME =
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36'
+
+  // Chromium answers canPlayType('application/vnd.apple.mpegurl') truthy but its built-in HLS fails on these playlists
+  // (MEDIA_ERR_SRC_NOT_SUPPORTED, measured on Chromium 153) - so the player must use MSE + hls.js there
+  it('does not trust the HLS answer of Chromium-based browsers', () => {
+    expect(nativeHlsIsReliable(CHROME, [])).toBe(false)
+    expect(nativeHlsIsReliable(SAFARI, ['Chromium', 'Not-A.Brand'])).toBe(false)
+  })
+
+  it('trusts Safari, including Chrome on iOS (which is WebKit)', () => {
+    expect(nativeHlsIsReliable(SAFARI, [])).toBe(true)
+    expect(nativeHlsIsReliable(IOS_CHROME, [])).toBe(true)
   })
 })

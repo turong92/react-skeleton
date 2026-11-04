@@ -37,6 +37,7 @@
     "@skeleton/time": "workspace:*",
     "@skeleton/tokens": "workspace:*",
     "@skeleton/ui": "workspace:*",
+    "@skeleton/video": "workspace:*",
     "@skeleton/waiting-room": "workspace:*",
     "@skeleton/workspace": "workspace:*",
     "@tanstack/react-query": "^5.99.2",

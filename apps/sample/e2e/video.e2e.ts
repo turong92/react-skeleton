@@ -94,7 +94,10 @@ describe('Notes — one private video, from upload to playback', () => {
 
     // 원본 단이 올라간 순간 「재생할 수 있어요」 - 호환 · 사다리 판은 아직 만드는 중일 수 있다
     await pwExpect(page.getByText('재생할 수 있어요')).toBeVisible({ timeout: 180_000 })
-    await pwExpect(page.getByRole('button', { name: /^영상 재생/ })).toBeVisible()
+    // 같은 화면에서 호환판이 준비되면 막혀 있던 재생 단추가 풀린다(HEVC 원본은 이 브라우저가 못 튼다) - 새로 열지 않는다
+    await pwExpect(page.getByRole('button', { name: /^영상 재생/ })).toBeEnabled({
+      timeout: 180_000,
+    })
 
     // 노트에 붙었다 - 새로 고쳐도 남는다
     const token = await accessTokenFor(apiUrl, DEMO, { strict: true })

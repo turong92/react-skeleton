@@ -189,7 +189,7 @@ function EditNote({ note }: { note: Note }) {
   const { t } = useT()
   const navigate = useNavigate()
   const base = useNotesBase()
-  const update = useUpdateNote(note.id)
+  const update = useUpdateNote(note)
   return (
     <>
       <PageHeader title={t('form.editTitle')} description={t('form.editSubtitle')} />
@@ -198,7 +198,7 @@ function EditNote({ note }: { note: Note }) {
         submitLabel={t('form.submitEdit')}
         onCancel={() => navigate(`${base}/${note.id}`)}
         onSubmit={async (values) => {
-          await update.mutateAsync(noteInputOf(note, values))
+          await update.mutateAsync((latest) => noteInputOf(latest, values))
           navigate(`${base}/${note.id}`)
         }}
       />

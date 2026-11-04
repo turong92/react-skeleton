@@ -238,6 +238,33 @@ describe('uploadVideo resume', () => {
     expect(f.calls.filter((c) => c.startsWith('put'))).toHaveLength(3)
   })
 
+  // resuming a PRIVATE upload as a PUBLIC one (or the reverse) would publish a video the person chose to keep private
+  it('does not continue an upload that was started with another visibility', async () => {
+    const storage = memoryStorage()
+    const first = fakes()
+    await uploadVideo(first.api, file(MB), {
+      ...base,
+      resume: true,
+      storage,
+      put: vi.fn(async () => {
+        throw new DOMException('aborted', 'AbortError')
+      }),
+      sleep: first.sleep,
+    }).catch(() => {})
+
+    const second = fakes()
+    await uploadVideo(second.api, file(MB), {
+      purpose: 'clip',
+      visibility: 'PUBLIC',
+      resume: true,
+      storage,
+      put: second.put,
+      sleep: second.sleep,
+    })
+    expect(second.api.listParts).not.toHaveBeenCalled()
+    expect(second.api.start).toHaveBeenCalledWith(expect.objectContaining({ visibility: 'PUBLIC' }))
+  })
+
   it('starts from the beginning when the saved record has no uploadId', async () => {
     const storage = memoryStorage()
     const f = fakes()

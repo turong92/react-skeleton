@@ -32,7 +32,19 @@ export type VideoUploadFieldProps = {
   pollMs?: number
 }
 
-type Upload = { id: number; file: File; sent: number; videoId?: string; problem?: string }
+/** `problem` 이 있으면 실패한 줄. `completed` 가 있으면 올리기는 끝났고 앱의 `onUploaded` 만 실패한 줄(영상이 서버에 완성돼 있다) */
+type Upload = {
+  id: number
+  file: File
+  sent: number
+  videoId?: string
+  problem?: string
+  network?: boolean
+  completed?: VideoItem
+}
+
+const sameFile = (a: File, b: File) =>
+  a.name === b.name && a.size === b.size && a.lastModified === b.lastModified
 
 /** 올리기 오류 → 문구. 서버 코드는 원 서비스의 `VIDEO.*` 를 따른다 */
 function problemOf(error: unknown, labels: VideoUploadLabels): string {
@@ -81,19 +93,24 @@ export function VideoUploadField({
 
   const liveIds = new Set(uploads.flatMap((u) => (u.videoId ? [u.videoId] : [])))
   const shown = (data ?? []).filter(
-    (video) =>
-      video.status !== 'DELETED' &&
-      !(video.status === 'UPLOADING' && liveIds.has(video.id)) &&
-      (include?.(video) ?? true),
+    (video) => video.status !== 'DELETED' && !liveIds.has(video.id) && (include?.(video) ?? true),
   )
-  const full = shown.length + uploads.length >= max
+  // 올리다 만 줄 · 멈춘 줄은 자리를 차지하지 않는다 - 같은 파일을 다시 골라 이어 올릴 수 있어야 한다
+  const taken =
+    shown.filter((video) => phaseOf(video, false).phase !== 'abandoned').length +
+    uploads.filter((u) => !u.problem || u.completed).length
+  const full = taken >= max
 
   const start = (file: File) => {
     const id = nextId.current++
     const controller = new AbortController()
     controllers.current.set(id, controller)
     setNotice(null)
-    setUploads((list) => [...list, { id, file, sent: 0 }])
+    // 같은 파일을 다시 고르거나 「다시 시도」 하면 멈춰 있던 그 줄을 대신한다
+    setUploads((list) => [
+      ...list.filter((u) => !(u.problem && !u.completed && sameFile(u.file, file))),
+      { id, file, sent: 0 },
+    ])
     uploadVideo(api, file, {
       purpose,
       visibility,
@@ -103,26 +120,40 @@ export function VideoUploadField({
       onProgress: (sent) => patch(id, { sent }),
       onStarted: (videoId) => patch(id, { videoId }),
     })
-      .then(async (video) => {
-        await onUploaded?.(video)
-        await refresh()
-        drop(id)
-      })
+      .then((video) => settle(id, video))
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === 'AbortError') return drop(id)
-        patch(id, { problem: problemOf(error, labels) })
+        patch(id, { problem: problemOf(error, labels), network: error instanceof UploadPartError })
       })
       .finally(() => controllers.current.delete(id))
   }
 
+  // 올리기가 끝난 영상을 앱에 맡긴다. 앱이 못 받으면 영상은 서버에 완성돼 있으니 그 줄에 「다시 붙이기」 · 「지우기」 를 남긴다
+  const settle = async (id: number, video: VideoItem) => {
+    try {
+      await onUploaded?.(video)
+      await refresh()
+      drop(id)
+    } catch {
+      patch(id, { completed: video, videoId: video.id, problem: labels.errors.attachFailed })
+    }
+  }
+
   const onFiles = (files: File[]) => {
-    files.slice(0, Math.max(0, max - shown.length - uploads.length)).forEach(start)
+    files.slice(0, Math.max(0, max - taken)).forEach(start)
   }
 
   const cancel = (upload: Upload) => {
     controllers.current.get(upload.id)?.abort()
     drop(upload.id)
     if (upload.videoId) api.remove(upload.videoId).then(refresh, () => {})
+  }
+
+  // 멈춘 줄 지우기 - 서버에 영상이 있으면 함께 지운다(다시 시도는 서버를 지우지 않는다)
+  const discard = (upload: Upload) => {
+    drop(upload.id)
+    if (upload.videoId)
+      api.remove(upload.videoId).then(refresh, () => setNotice(labels.errors.removeFailed))
   }
 
   const remove = (video: VideoItem) => {
@@ -175,14 +206,45 @@ export function VideoUploadField({
                     {upload.problem}
                   </p>
                 )}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  aria-label={labels.cancelNamed(upload.file.name)}
-                  onClick={() => cancel(upload)}
-                >
-                  {labels.cancel}
-                </Button>
+                {upload.problem ? (
+                  <div className={styles.actions}>
+                    {(upload.network || upload.completed) && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        aria-label={
+                          upload.completed
+                            ? labels.reattachNamed(upload.file.name)
+                            : labels.retryNamed(upload.file.name)
+                        }
+                        onClick={() =>
+                          upload.completed
+                            ? void settle(upload.id, upload.completed)
+                            : start(upload.file)
+                        }
+                      >
+                        {upload.completed ? labels.reattach : labels.retry}
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      aria-label={labels.removeNamed(upload.file.name)}
+                      onClick={() => discard(upload)}
+                    >
+                      {labels.remove}
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    aria-label={labels.cancelNamed(upload.file.name)}
+                    onClick={() => cancel(upload)}
+                  >
+                    {labels.cancel}
+                  </Button>
+                )}
               </li>
             )
           })}

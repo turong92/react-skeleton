@@ -37,7 +37,7 @@ export type UploadVideoOptions = {
   /** 올리기가 열린 직후(이어 올리기면 이어 받은 직후) - 취소하면 서버에서 지울 영상 번호 */
   onStarted?: (id: string) => void
   /**
-   * 이어 올리기 - `{영상 번호, uploadId, 조각 크기}` 를 파일 지문(이름 · 크기 · 수정 시각)으로 `localStorage` 에 두고,
+   * 이어 올리기 - `{영상 번호, uploadId, 조각 크기}` 를 파일 지문(목적 · 공개 여부 · 이름 · 크기 · 수정 시각)으로 `localStorage` 에 두고,
    * 같은 파일을 다시 고르면 `GET parts` 로 이미 올라간 조각을 알아내 빠진 조각만 보낸다. 끝나면 기록을 비운다
    */
   resume?: boolean
@@ -93,8 +93,9 @@ function writeRecord(storage: ResumeStorage | undefined, key: string, record: Re
   }
 }
 
-const fingerprint = (file: File, purpose: string) =>
-  `skeleton.video.upload:${purpose}:${file.name}:${file.size}:${file.lastModified}`
+/** 공개 여부도 지문에 든다 - 비공개로 시작한 올리기가 공개 영상으로 이어지지 않게 */
+const fingerprint = (file: File, purpose: string, visibility: VideoVisibility) =>
+  `skeleton.video.upload:${purpose}:${visibility}:${file.name}:${file.size}:${file.lastModified}`
 
 /**
  * 영상 한 편을 멀티파트로 직접 올린다. 시작 → 조각을 잘라 3개씩 병렬 `PUT`(조각마다 4번까지, 다시 보낼 땐 새 서명 주소) → 마치기.
@@ -116,7 +117,7 @@ export async function uploadVideo(
   if (signal?.aborted) throw aborted()
 
   const storage = options.resume ? (options.storage ?? defaultStorage()) : undefined
-  const key = fingerprint(file, options.purpose)
+  const key = fingerprint(file, options.purpose, options.visibility)
   const total = file.size
   const sizeOf = (partSize: number, n: number) => Math.min(partSize, total - (n - 1) * partSize)
 

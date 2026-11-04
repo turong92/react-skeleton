@@ -9,7 +9,7 @@ import {
   type VideoApi,
 } from '@skeleton/video'
 import { Card, Spinner } from '@skeleton/ui'
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { languageOf, useT } from '../i18n'
 import { noteInputOf } from '../notes/noteInput'
@@ -21,15 +21,19 @@ import styles from './NoteVideoPanel.module.css'
 /** 재생 허가를 받아 틀어 준다. 비공개 토큰이 끝나면 `VideoPlayer` 가 `refreshGrant` 로 새 허가를 받아 같은 시각에서 잇는다 */
 function NoteVideoPlayer({
   videoId,
+  tracks,
   labels,
 }: {
   videoId: string
+  /** 호환 · 사다리 판 상태 - 바뀌면(준비가 끝나면) 허가를 새로 받는다. 허가의 `compat` · `hls` · `poster` 는 그 시점의 판으로 정해진다 */
+  tracks: string
   labels: typeof koVideoPlayerLabels
 }) {
   const grant = useQuery({
-    queryKey: ['note-video-grant', videoId],
+    queryKey: ['note-video-grant', videoId, tracks],
     queryFn: () => videoApi.playback(videoId),
-    staleTime: Infinity, // 허가를 마음대로 다시 받지 않는다 - 만료는 플레이어가 다룬다
+    staleTime: Infinity, // 같은 판이면 허가를 마음대로 다시 받지 않는다 - 만료는 플레이어가 다룬다
+    placeholderData: keepPreviousData, // 새 허가가 올 때까지 플레이어를 그대로 둔다
     retry: false,
   })
   if (grant.isPending) return <Spinner />
@@ -52,7 +56,7 @@ function NoteVideoPlayer({
 export function NoteVideoPanel({ note }: { note: Note }) {
   const { t, locale } = useT()
   const korean = languageOf(locale) === 'ko'
-  const update = useUpdateNote(note.id)
+  const update = useUpdateNote(note)
   const videos = useVideos(videoApi, NOTE_VIDEO_PURPOSE)
   const mine = videos.data?.find((video) => video.id === note.videoId)
 
@@ -62,7 +66,9 @@ export function NoteVideoPanel({ note }: { note: Note }) {
       ...videoApi,
       remove: (id: string) =>
         id === note.videoId
-          ? update.mutateAsync(noteInputOf(note, { videoId: null })).then(() => undefined)
+          ? update
+              .mutateAsync((latest) => noteInputOf(latest, { videoId: null }))
+              .then(() => undefined)
           : videoApi.remove(id),
     }),
     [note, update],
@@ -77,13 +83,14 @@ export function NoteVideoPanel({ note }: { note: Note }) {
           visibility="PRIVATE"
           include={(video) => video.id === note.videoId}
           onUploaded={async (video) => {
-            await update.mutateAsync(noteInputOf(note, { videoId: video.id }))
+            await update.mutateAsync((latest) => noteInputOf(latest, { videoId: video.id }))
           }}
           labels={korean ? koVideoUploadLabels : defaultVideoUploadLabels}
         />
         {mine?.status === 'PLAYABLE' && (
           <NoteVideoPlayer
             videoId={mine.id}
+            tracks={`${mine.compat}/${mine.ladder}`}
             labels={korean ? koVideoPlayerLabels : defaultVideoPlayerLabels}
           />
         )}

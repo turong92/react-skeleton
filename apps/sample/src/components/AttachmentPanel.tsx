@@ -14,7 +14,7 @@ import styles from './AttachmentPanel.module.css'
  */
 export function AttachmentPanel({ note }: { note: Note }) {
   const { t } = useT()
-  const update = useUpdateNote(note.id)
+  const update = useUpdateNote(note)
   const up = useUpload(uploader)
   const uploading = up.status === 'uploading'
   const errorMessage = up.status === 'error' ? uploadErrorMessage(up.error) : undefined
@@ -25,8 +25,8 @@ export function AttachmentPanel({ note }: { note: Note }) {
     try {
       const result = await up.upload(file)
       if (!result) return // 취소
-      await update.mutateAsync(
-        noteInputOf(note, { attachmentKey: result.key, attachmentName: file.name }),
+      await update.mutateAsync((latest) =>
+        noteInputOf(latest, { attachmentKey: result.key, attachmentName: file.name }),
       )
       up.reset()
     } catch {
@@ -40,7 +40,9 @@ export function AttachmentPanel({ note }: { note: Note }) {
   }
 
   async function remove() {
-    await update.mutateAsync(noteInputOf(note, { attachmentKey: null, attachmentName: null }))
+    await update.mutateAsync((latest) =>
+      noteInputOf(latest, { attachmentKey: null, attachmentName: null }),
+    )
   }
 
   return (

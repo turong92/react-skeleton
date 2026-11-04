@@ -44,6 +44,12 @@ export type VideoUploadLabels = {
   /** 올리는 중인 줄의 지우기 */
   cancel: string
   cancelNamed: (name: string) => string
+  /** 네트워크로 멈춘 줄 - 서버 영상을 지우지 않고 같은 파일을 이어 올린다 */
+  retry: string
+  retryNamed: (name: string) => string
+  /** 올리기는 끝났는데 앱이 영상을 저장하지 못한 줄 - 다시 저장해 본다 */
+  reattach: string
+  reattachNamed: (name: string) => string
   /** 서버가 붙인 실패 사유별 문구 */
   failReasons: Record<FailReason, string>
   errors: {
@@ -53,6 +59,8 @@ export type VideoUploadLabels = {
     network: string
     failed: string
     removeFailed: string
+    /** 올리기는 끝났지만 앱의 `onUploaded` 가 실패했다 */
+    attachFailed: string
   }
   limitReached: (max: number) => string
 }
@@ -92,11 +100,15 @@ export const defaultVideoUploadLabels: VideoUploadLabels = {
   processingBar: (name) => `Preparing ${name}`,
   ready: 'Ready to play',
   extras: 'Preparing a version for other devices',
-  abandoned: 'This upload was interrupted. Remove it and choose the file again.',
+  abandoned: 'This upload was interrupted. Choose the same file again to continue.',
   remove: 'Remove',
   removeNamed: (name) => `Remove ${name}`,
   cancel: 'Cancel',
   cancelNamed: (name) => `Cancel uploading ${name}`,
+  retry: 'Try again',
+  retryNamed: (name) => `Try uploading ${name} again`,
+  reattach: 'Attach again',
+  reattachNamed: (name) => `Attach ${name} again`,
   failReasons: {
     UNSUPPORTED_FORMAT: 'This video format is not supported.',
     CORRUPT: 'The file is damaged and could not be processed.',
@@ -113,6 +125,7 @@ export const defaultVideoUploadLabels: VideoUploadLabels = {
     network: 'Upload failed. Check your connection and try again.',
     failed: 'Could not upload the video. Please try again.',
     removeFailed: 'Could not remove the video. Please try again.',
+    attachFailed: 'The video was uploaded but could not be saved. Attach it again or remove it.',
   },
   limitReached: (max) => `You can add up to ${max}.`,
 }
@@ -128,11 +141,15 @@ export const koVideoUploadLabels: VideoUploadLabels = {
   processingBar: (name) => `${name} 준비 중`,
   ready: '재생할 수 있어요',
   extras: '다른 기기용 판 준비 중',
-  abandoned: '올리다 만 영상이에요. 지우고 파일을 다시 골라 주세요.',
+  abandoned: '올리다 만 영상이에요. 같은 파일을 다시 고르면 이어 올려요.',
   remove: '지우기',
   removeNamed: (name) => `${name} 지우기`,
   cancel: '취소',
   cancelNamed: (name) => `${name} 올리기 취소`,
+  retry: '다시 시도',
+  retryNamed: (name) => `${name} 다시 올리기`,
+  reattach: '다시 붙이기',
+  reattachNamed: (name) => `${name} 다시 붙이기`,
   failReasons: {
     UNSUPPORTED_FORMAT: '지원하지 않는 영상 형식이에요.',
     CORRUPT: '파일이 손상되어 처리할 수 없었어요.',
@@ -149,6 +166,7 @@ export const koVideoUploadLabels: VideoUploadLabels = {
     network: '올리지 못했어요. 연결을 확인하고 다시 시도해 주세요.',
     failed: '영상을 올리지 못했어요. 다시 시도해 주세요.',
     removeFailed: '영상을 지우지 못했어요. 다시 시도해 주세요.',
+    attachFailed: '영상은 올렸지만 저장하지 못했어요. 다시 붙이거나 지워 주세요.',
   },
   limitReached: (max) => `최대 ${max}개까지 올릴 수 있어요.`,
 }

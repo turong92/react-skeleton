@@ -55,3 +55,9 @@
   color: var(--text-muted);
   font-size: var(--font-size-small);
 }
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}

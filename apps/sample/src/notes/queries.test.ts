@@ -7,8 +7,11 @@ import {
   notesKeys,
   notesQuery,
   noteSummaryQuery,
+  saveFromLatest,
 } from './queries'
+import { noteInputOf } from './noteInput'
 import type { NotesApi } from './notesApi'
+import type { Note } from './types'
 
 const api = {
   list: async (query: unknown) => ({ called: 'list', query }),
@@ -74,5 +77,45 @@ describe('notes queries', () => {
     expect(client.getQueryData(notesKeys.list({}, 'ws_1'))).toBeUndefined()
     expect(client.getQueryData(notesKeys.detail('n1', 'ws_1'))).toBeUndefined()
     expect(client.getQueryData(notesKeys.summary('ws_2'))).toBeUndefined()
+  })
+
+  // PUT replaces the whole note: a body built from the note the screen was opened with would drop a file attached since (and the server deletes it)
+  it('saveFromLatest builds the body from the newest cached note, not the one the caller holds, and caches the answer', async () => {
+    const base: Note = {
+      id: 'n1',
+      title: 't',
+      body: 'b',
+      status: 'ACTIVE',
+      pinned: false,
+      attachmentKey: null,
+      attachmentName: null,
+      videoId: null,
+      createdAt: '',
+      updatedAt: '',
+    }
+    const client = new QueryClient()
+    client.setQueryData(notesKeys.detail('n1'), {
+      ...base,
+      attachmentKey: 'k/new.pdf',
+      attachmentName: 'new.pdf',
+    })
+    let sent: unknown
+    const put = {
+      update: async (_id: string, input: unknown) => {
+        sent = input
+        return { ...base, ...(input as object), updatedAt: 'saved' }
+      },
+    } as unknown as NotesApi
+
+    await saveFromLatest(client, put, base, undefined, (latest) =>
+      noteInputOf(latest, { videoId: 'v1' }),
+    )
+
+    expect(sent).toMatchObject({ attachmentKey: 'k/new.pdf', videoId: 'v1' })
+    expect(client.getQueryData<Note>(notesKeys.detail('n1'))).toMatchObject({
+      attachmentKey: 'k/new.pdf',
+      videoId: 'v1',
+      updatedAt: 'saved',
+    })
   })
 })

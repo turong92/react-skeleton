@@ -22,7 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 백엔드 짝: kotlin-skeleton `video` + `video-jdbc` 모듈(`/api/v1/videos`, 저장소는 `storage`). 서버가 아직 없어 설계서(video-design §5)의 API 표대로 만들고 가짜 API 로 시험했다 - 목록 응답 모양(`VideoItem`)은 서버가 나오면 맞춘다.
 
-- `@skeleton/video`(새 패키지): `createVideoApi`(시작 · 조각 주소 · 조각 목록 · 완료 · 삭제 · 목록 · 재생 요청) · `uploadVideo`(mp4 · mov 만, 조각을 3개씩 병렬로 직접 올리고 실패한 조각만 새 주소로 다시, `resume` 이면 `{영상 번호, uploadId, 조각 크기}` 를 파일 지문으로 `localStorage` 에 두고 같은 파일을 다시 고르면 빠진 조각만) · `useVideos`(만드는 중이면 3초 폴링) · `VideoUploadField`(올리는 중 % → 준비 중 n% → 재생 가능 → 「다른 기기용 판 준비 중」 → 끝, 실패 사유 코드 → 문구, 올리다 만 줄 안내, 지우기 · 취소) · `VideoPlayer`(포스터 + 재생 단추, 마스터 → 원본 단 → 호환 단, 틀지 못하면 같은 시각에서 다음 걸음, 화질 칩 자동 / 720p / 원본, 네이티브 HLS 가 없으면 hls.js light 를 누를 때 지연 로드, 비공개 토큰이 끝나면 새 재생 허가로 같은 시각에서 이어 보기, 내려받기 없음) · ko/en 문구 · 스토리(`play`).
+- `@skeleton/video`(새 패키지): `createVideoApi`(시작 · 조각 주소 · 조각 목록 · 완료 · 삭제 · 목록 · 재생 요청) · `uploadVideo`(mp4 · mov 만, 조각을 3개씩 병렬로 직접 올리고 실패한 조각만 새 주소로 다시, `resume` 이면 `{영상 번호, uploadId, 조각 크기}` 를 파일 지문으로 `localStorage` 에 두고 같은 파일을 다시 고르면 빠진 조각만) · `useVideos`(만드는 중이면 3초 폴링) · `VideoUploadField`(올리는 중 % → 준비 중 n% → 재생 가능 → 「다른 기기용 판 준비 중」 → 끝, 실패 사유 코드 → 문구, 올리다 만 줄 안내(자리를 막지 않고 이어 올림), 네트워크로 멈춘 줄의 다시 시도 · 지우기, 앱 저장이 실패한 영상의 다시 붙이기 · 지우기, 지우기 · 취소; 이어 올리기 지문에 공개 여부 포함) · `VideoPlayer`(포스터 + 재생 단추, 마스터 → 원본 단 → 호환 단, 틀지 못하면 같은 시각에서 다음 걸음, 화질 칩 자동 / 720p / 원본, 네이티브 HLS 가 없으면 hls.js light 를 누를 때 지연 로드, 비공개 토큰이 끝나면 새 재생 허가로 같은 시각에서 이어 보기, 내려받기 없음) · ko/en 문구 · 스토리(`play`).
 - **새 의존**: `hls.js` 1.7.3 고정(이 패키지의 dependency - 영상을 안 쓰는 앱은 받지 않는다).
 - 움짤(GIF) 표시와 견본 앱 조립 · e2e 는 다음 조각이다.
 

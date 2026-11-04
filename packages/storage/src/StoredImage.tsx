@@ -1,5 +1,6 @@
 import type { ImageVariant } from './storageApi'
 import styles from './StoredImage.module.css'
+import { videoUrlOf } from './videoUrlOf'
 
 /** 변환본 하나 — 주소 글자(게시판 `attachmentImages`) 또는 `{ url, width?, height? }`(`api.images`) */
 export type StoredImageVariant = string | ImageVariant
@@ -28,12 +29,6 @@ export type StoredImageProps = {
 
 /** 서버 모듈 기본 변환본 폭 — 주소 글자만 받았을 때 `srcset` 의 폭으로 본다(`thumb` 400 · `display` 1600) */
 const DEFAULT_WIDTH = { thumb: 400, display: 1600 } as const
-
-/** 변환본에 실린 영상(`alternates` 의 `video/mp4` - 움직이는 이미지의 변환 결과) 주소, 없으면 undefined - 영상 판정은 여기 한 곳이다 */
-export const videoUrlOf = (variant: StoredImageVariant | null | undefined): string | undefined =>
-  typeof variant === 'object'
-    ? variant?.alternates?.find((a) => a.contentType === 'video/mp4')?.url
-    : undefined
 
 const parts = (variant: StoredImageVariant | null | undefined) =>
   typeof variant === 'string' ? { url: variant } : variant

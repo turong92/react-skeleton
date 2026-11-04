@@ -1231,7 +1231,7 @@
         "flag": "--packages video",
         "included": "flag",
         "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
-        "alsoVia": [],
+        "alsoVia": ["--with-sample"],
         "optOut": null
       },
       "summary": "영상 올리기 · 재생 — 큰 영상을 브라우저에서 저장소로 직접 올리고(조각 동시 올리기 · 실패한 조각만 다시 · 새로 고침 뒤 이어 올리기) 서버가 만드는 동안의 단계를 보인다. VideoUploadField(올리는 중 % → 준비 중 n% → 재생 가능 → 「다른 기기용 판 준비 중」 → 끝 / 실패 사유 문구 / 올리다 만 줄 안내 / 지우기) · useVideos(만드는 중이면 3초 폴링) · uploadVideo · VideoPlayer(포스터 + 재생 단추, 마스터 → 원본 단 → 호환 단 순서, 화질 칩 자동 / 720p / 원본, 네이티브 HLS 가 없으면 hls.js light 를 누를 때 지연 로드, 비공개 토큰이 끝나면 새 재생 허가로 같은 시각에서 이어 보기, 내려받기 단추 없음). 변환은 서버의 별도 일꾼이 하고 화면은 그 결과만 읽는다. hls.js 는 이 패키지의 의존이라 영상을 안 쓰는 앱은 받지 않는다.",
@@ -2812,6 +2812,7 @@
           "search",
           "seo",
           "storage",
+          "video",
           "waiting-room",
           "workspace"
         ],

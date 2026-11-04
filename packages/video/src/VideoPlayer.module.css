@@ -48,7 +48,7 @@
 
 .play:hover:not(:disabled) {
   background: var(--teal);
-  color: var(--surface);
+  color: var(--on-inverse);
 }
 
 .play:active:not(:disabled) {

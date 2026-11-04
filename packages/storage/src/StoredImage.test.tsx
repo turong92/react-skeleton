@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
-import { StoredImage, videoUrlOf } from './StoredImage'
+import { StoredImage } from './StoredImage'
+import { videoUrlOf } from './videoUrlOf'
 
 const thumb = { url: 'https://cdn.test/t.jpg', width: 400, height: 267 }
 const display = { url: 'https://cdn.test/d.jpg', width: 1600, height: 1067 }

@@ -164,5 +164,6 @@ export function NoteDetailPage() {
       )
     return <LoadError error={note.error} onRetry={() => void note.refetch()} />
   }
-  return <NoteDetail note={note.data} />
+  // 노트가 바뀌면 칸을 새로 세운다 - 앞 노트의 올리기 줄 · 확인 창 상태가 다음 노트로 새면 영상이 엉뚱한 노트에 붙는다
+  return <NoteDetail key={note.data.id} note={note.data} />
 }

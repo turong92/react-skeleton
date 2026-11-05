@@ -19,7 +19,7 @@ apps/
 │   ├── src/auth/             # createDeferredTokens(저장소 읽기를 하이드레이션 뒤로) · ClientRequireAuth(서버는 중립 자리 표시)
 │   └── src/routes/routes.tsx # 라우트마다 handle { title, description, robots, prefetch } ; Dockerfile(런타임에 node_modules 없음)
 ├── sample/                   # 참조 앱 Notes(`new-project.sh --with-sample` 일 때만 따라간다): 랜딩(로그아웃 상태의 `/` — 요금제 · FAQ · 동의 배너 · 푸터) → 약관 · 방침(템플릿) → 로그인 → 대시보드 → 목록 → 상세 → 폼 → 첨부 업로드 → 알림 → 게시판(글 · 대댓글 · 공감 같은 반응) → 웹 푸시(노트 첫 저장 뒤 띠 · 설정의 푸시 · 광고 수신 동의) → 설정 · 404, Patterns 를 조립한 실제 제품 모양(화면마다 `handle.seo`). 백엔드 짝은 kotlin-skeleton `apps/sample`
-├── storybook/                # 스토리집(Storybook 10 · Vite): .storybook/(설정 · 라이트/다크 스위치 · a11y 실패 규칙) · src/patterns/(복사해서 시작하는 화면 틀 6개) · src/tokens/(토큰 문서). 부품 스토리는 부품 옆(packages/*/src/**/*.stories.tsx)
+├── storybook/                # 스토리집(Storybook 10 · Vite): .storybook/(설정 · 라이트/다크 스위치 · a11y 실패 규칙) · src/patterns/(복사해서 시작하는 화면 틀 7개) · src/tokens/(토큰 문서). 부품 스토리는 부품 옆(packages/*/src/**/*.stories.tsx)
 └── workbench/                # 백엔드 확인용 시각적 테스트 벤치(HomePage · modules/workbench · workbench.css) + modules/demos(`/packages` 예제 화면: 새 패키지를 눌러 본다)
 packages/                     # 서로를 이름으로만 부른다. 각자 package.json(exports=src/index.ts) · 테스트 · README
 ├── api-client/               # createApiClient(config) · ApiRequestError · ErrorCodes/isErrorCode · createTraceContext · newIdempotencyKey · apiConfigFromEnv

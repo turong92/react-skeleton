@@ -232,9 +232,9 @@ describe('generated docs: docs/capabilities.md and llms.txt are rendered from th
     ])
       expect(md).toContain(text)
   })
-  it('llms.txt points at the catalog, the docs and CLAUDE.md', () => {
+  it('llms.txt points at the catalog, the docs and AGENTS.md', () => {
     const txt = renderLlmsTxt(fixtureCatalog())
-    for (const text of ['capabilities.json', 'docs/capabilities.md', 'CLAUDE.md'])
+    for (const text of ['capabilities.json', 'docs/capabilities.md', 'AGENTS.md'])
       expect(txt).toContain(text)
   })
 })

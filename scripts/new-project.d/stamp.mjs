@@ -267,6 +267,8 @@ function apply(
     'scripts/new-project.sh',
     'scripts/test-new-project.sh',
     'scripts/new-project.d',
+    'scripts/AGENTS.md', // 새 프로젝트 찍기 규칙 — 찍는 도구가 없는 프로젝트에는 맞지 않는다
+    'docs/repo-map.md', // 스켈레톤 전체의 폴더 지도 — 찍힌 프로젝트는 AGENTS.md 가 자기 구조를 가진다
     '.github/workflows/new-project.yml',
     '.github/workflows/nightly.yml', // 스켈레톤의 하루 한 번 전체 검사(e2e 전부 · 조합 열 개) — 찍힌 프로젝트에는 맞지 않는다
     'tests/skeleton.repo.test.ts',
@@ -419,19 +421,19 @@ kotlin-skeleton 계열 REST 백엔드(\`/api/v1\`)와 통신한다. 개발에서
 ${ssr ? `\n## 서버 렌더\n\n\`apps/${name}\` 는 서버가 첫 응답을 그리고 브라우저가 이어받는다(plain Vite SSR — \`server/\` 의 Node 서버 · \`src/entry-server.tsx\` · \`src/entry-client.tsx\`). 자세한 규칙(데이터 · 인증 · 시간 · 배포)은 \`apps/${name}/README.md\`.\n` : ''}`,
   )
 
-  const sourceClaude = existsSync(join(target, 'CLAUDE.md')) ? read(join(target, 'CLAUDE.md')) : ''
-  // 에이전트 안내(스토리 먼저 · Patterns 표)는 스켈레톤 CLAUDE.md 의 표식 사이에서 그대로 옮긴다 — 스토리집을 뗀 프로젝트에는 없다
+  const sourceClaude = existsSync(join(target, 'AGENTS.md')) ? read(join(target, 'AGENTS.md')) : ''
+  // 에이전트 안내(스토리 먼저 · Patterns 표)는 스켈레톤 AGENTS.md 의 표식 사이에서 그대로 옮긴다 — 스토리집을 뗀 프로젝트에는 없다
   const guide = sourceClaude.match(
     /<!-- storybook-guide:start -->\n([\s\S]*?)<!-- storybook-guide:end -->/,
   )?.[1]
-  if (storybook && !guide) fail('CLAUDE.md has no storybook-guide block — update stamp.mjs')
+  if (storybook && !guide) fail('AGENTS.md has no storybook-guide block — update stamp.mjs')
   const original = markerBlocks(
     markerBlocks(sourceClaude, storybook, 'storybook'),
     sample,
     'sample',
   ).replace(/<!-- skeleton-only:start -->\n[\s\S]*?<!-- skeleton-only:end -->\n*/g, '') // 스켈레톤 레포 자체를 고칠 때의 지침 — 찍은 프로젝트는 뼈대가 아니다
   const at = original.indexOf('## 핵심 컨벤션')
-  if (at < 0) fail('CLAUDE.md has no "## 핵심 컨벤션" section — update stamp.mjs')
+  if (at < 0) fail('AGENTS.md has no "## 핵심 컨벤션" section — update stamp.mjs')
   const structure = [
     `apps/`,
     ssr
@@ -451,8 +453,9 @@ ${ssr ? `\n## 서버 렌더\n\n\`apps/${name}\` 는 서버가 첫 응답을 그�
     `packages/`,
     ...pkgs.map((p) => `├── ${p.dir.padEnd(18)}# ${p.description ?? ''}`),
   ].join('\n')
+  writeFileSync(join(target, 'CLAUDE.md'), '@AGENTS.md\n') // Claude Code 는 AGENTS.md 를 직접 읽지 않는다 — 껍데기
   writeFileSync(
-    join(target, 'CLAUDE.md'),
+    join(target, 'AGENTS.md'),
     `# ${name} — Claude Code 컨텍스트
 
 react-skeleton 에서 찍어 낸 pnpm 워크스페이스(React + TypeScript + Vite). 앱 \`apps/${name}\`, 패키지 ${pkgs.length}개(스코프 \`${scope}\`).
@@ -507,7 +510,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   void source
 }
 
-/** 서버 렌더 앱을 고른 프로젝트의 CLAUDE.md 에 들어가는 규칙 — 스켈레톤의 CLAUDE.md 는 이 절을 앱 이름과 함께 따로 가진다 */
+/** 서버 렌더 앱을 고른 프로젝트의 AGENTS.md 에 들어가는 규칙 — 스켈레톤의 AGENTS.md 는 이 절을 앱 이름과 함께 따로 가진다 */
 function ssrRules(name) {
   return `## 서버 렌더 앱 규칙 (apps/${name})
 

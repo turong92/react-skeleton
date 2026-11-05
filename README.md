@@ -119,11 +119,11 @@ scripts/new-project.sh ~/work/acme acme --with-sample                         # 
 
 - 이 레포를 복사해(`node_modules` · `dist` · `.git` 제외) `apps/starter` 를 `apps/<name>` 으로 바꾼다(package.json 이름 · `index.html` 제목 · 헤더 브랜드 · `.env.example`). `apps/workbench` 는 `--with-workbench` 일 때만(그러면 모든 패키지가 따라온다).
 - 패키지 = 스타터가 쓰는 것 + 루트 도구(`theme` · `tokens`) + `--packages`, 패키지끼리의 의존으로 **닫은** 집합. 나머지 `packages/<p>` 와 그것을 보던 루트 테스트 항목은 지운다. 모르는 패키지 이름이면 유효한 목록과 함께 exit 2, 대상이 이미 있어도 exit 2(아무것도 만들지 않는다).
-- 루트 `package.json`(이름 · `dev`) · eslint 의 앱 이름 막기 · 문서(README · CLAUDE · CHANGELOG)를 새 프로젝트용으로 다시 쓰고, `--scope` 가 있으면 모든 `@skeleton/` 을 바꾼다. `pnpm-workspace.yaml` 은 `apps/*` · `packages/*` 글롭이라 그대로.
+- 루트 `package.json`(이름 · `dev`) · eslint 의 앱 이름 막기 · 문서(README · AGENTS · CHANGELOG)를 새 프로젝트용으로 다시 쓰고, `--scope` 가 있으면 모든 `@skeleton/` 을 바꾼다. `pnpm-workspace.yaml` 은 `apps/*` · `packages/*` 글롭이라 그대로.
 - 끝나면 다음 단계를 출력한다: `pnpm install --no-frozen-lockfile`(잠금 파일은 스켈레톤의 것 — 맞춰서 고친다) → `pnpm format`(스코프 · 이름으로 줄바꿈이 달라질 수 있다) → `pnpm dev`.
 - 고른 패키지는 **폴더만** 복사된다. 쓰기 시작할 때 앱 `package.json` 에 한 줄(`"@skeleton/<이름>": "workspace:*"`)을 더한다 — 안 쓰는 의존을 선언하면 루트 `pnpm test` 가 막는다(선언한 의존 = 실제 import).
 - `--with-sample`: 참조 앱 `apps/sample`(Notes — 백엔드 kotlin-skeleton 의 `apps/sample` 과 짝)을 이름 그대로 `apps/<name>` 옆에 남긴다. 기본은 떼고 찍는다(그 앱이 쓰는 패키지 · 샘플 전용 루트 스크립트 · CI e2e 잡도 함께 빠진다). `--ssr` · `--without-storybook` · `--scope` 와 함께 쓸 수 있다. 이름 `sample` 은 예약.
-- `--ssr`: `apps/starter` 대신 `apps/starter-ssr` 가 `apps/<name>` 이 된다(이름은 `src/appName.ts` 한 줄). 스토리집은 기본으로 따라온다 — `apps/storybook` · 남는 패키지의 스토리 · Patterns · `docs/ui-catalog.md` · CLAUDE.md 의 에이전트 안내 · 스토리 테스트 · CI `stories` 잡(**참조가 프로젝트와 함께 간다**). `--without-storybook` 이면 이 전부를 깨끗이 뗀다.
+- `--ssr`: `apps/starter` 대신 `apps/starter-ssr` 가 `apps/<name>` 이 된다(이름은 `src/appName.ts` 한 줄). 스토리집은 기본으로 따라온다 — `apps/storybook` · 남는 패키지의 스토리 · Patterns · `docs/ui-catalog.md` · AGENTS.md 의 에이전트 안내 · 스토리 테스트 · CI `stories` 잡(**참조가 프로젝트와 함께 간다**). `--without-storybook` 이면 이 전부를 깨끗이 뗀다.
 - 검증: `scripts/test-new-project.sh --quick`(인자 검증 · 닫힘 · 구조 · 이름/스코프 · 남는 흔적, 수 초 — `pnpm test` 가 부른다), `--full`(여섯 조합 `기본값` · `--packages realtime,notifications,storage` · `--packages board` · `--scope @acme --packages payment` · `--ssr --without-storybook`(서버를 띄우는 통합 테스트 포함) · `--with-sample` 을 찍어 각각 install · lint · typecheck · test · build — 조합 2 는 `storybook:build` · `test:stories` 도, CI 의 `new-project` 워크플로).
 
 폴더 복사로 직접 가져가도 된다: 패키지는 각자 `package.json` · 테스트 · README 를 가진 자족 단위이고 서로는 이름으로만 이어져 있다. 이때 `pnpm-workspace.yaml` · 루트 `tsconfig.base.json` · `eslint.config.js` 도 가져온다.
@@ -194,8 +194,8 @@ pnpm storybook:build  # 정적 빌드(apps/storybook/storybook-static)
 
 - **어디에 있나**: 부품 스토리는 부품 옆 — `packages/ui/src/Button/Button.stories.tsx`(CSF3, `satisfies Meta`). 다른 패키지의 컴포넌트(`ThemeToggle` · `NotificationBell` · `Turnstile` · `RequireAuth` · 업로드 …)도 그 패키지 안에, 그 스토리가 쓰는 가짜(받은편지함 · 전송 · 위젯)는 그 패키지의 `src/stories/`. `apps/storybook` 에는 설정(`.storybook/`) · **Patterns**(`@skeleton/ui` 만으로 짠 화면 틀 6개: 목록 · 폼 · 상세 · 로그인 · 403 · 설정 — 에이전트와 사람이 복사해 시작하는 템플릿) · 토큰 문서가 있다. 전체 색인: [`docs/ui-catalog.md`](docs/ui-catalog.md).
 - **스토리 = 테스트**: `play` 가 클릭 · 키보드(Tab 순서 · Enter/Space · 탭 화살표) · 포커스 링 · 라벨 연결 · 쪽 이동의 끝 같은 동작을 실제로 실행한다. 접근성(axe) 위반은 `pnpm test:stories` 를 실패시킨다(`.storybook/preview.tsx` 의 `a11y: { test: 'error' }` — 끄는 규칙은 스토리 옆에 이유와 함께). 합성 키 입력이 못 하는 브라우저 몫(`<dialog>` 의 Esc)은 `requestClose()` 로 같은 경로를 탄다.
-- **에이전트는 이렇게 쓴다**: 부품을 쓰기 전에 카탈로그에서 스토리를 열어 사용법을 그대로 따르고, 새 화면은 Patterns 에서 가장 가까운 것을 복사해 시작하고, 날 `<button>` · `<input>` · 인라인 색/간격 날값은 쓰지 않는다(`apps/**` 의 ESLint 규칙이 대신할 부품 이름과 함께 막는다 — 워크벤치만 예외). 부품을 더하거나 바꾸면 스토리와 `play` 를 더하거나 고친다. 규칙은 [`CLAUDE.md`](CLAUDE.md) 의 「UI 를 만들기 전에」.
-- **지키는 테스트**(`pnpm test`, 브라우저 불필요): 모든 `@skeleton/ui` export 에 스토리 + `play` 가 있고, 모든 Patterns 가 CLAUDE.md 안내에 적혀 있고 도우미 파일 없이 `@skeleton/ui` 만 import 하며, `docs/ui-catalog.md` 가 디스크의 스토리와 일치한다(`tests/stories.test.ts`).
+- **에이전트는 이렇게 쓴다**: 부품을 쓰기 전에 카탈로그에서 스토리를 열어 사용법을 그대로 따르고, 새 화면은 Patterns 에서 가장 가까운 것을 복사해 시작하고, 날 `<button>` · `<input>` · 인라인 색/간격 날값은 쓰지 않는다(`apps/**` 의 ESLint 규칙이 대신할 부품 이름과 함께 막는다 — 워크벤치만 예외). 부품을 더하거나 바꾸면 스토리와 `play` 를 더하거나 고친다. 규칙은 [`AGENTS.md`](AGENTS.md) 의 「UI 를 만들기 전에」.
+- **지키는 테스트**(`pnpm test`, 브라우저 불필요): 모든 `@skeleton/ui` export 에 스토리 + `play` 가 있고, 모든 Patterns 가 AGENTS.md 안내에 적혀 있고 도우미 파일 없이 `@skeleton/ui` 만 import 하며, `docs/ui-catalog.md` 가 디스크의 스토리와 일치한다(`tests/stories.test.ts`).
 - **시각 스냅샷은 넣지 않았다**: 글꼴이 시스템 글꼴이라 macOS 와 Linux CI 에서 픽셀이 달라 기준 이미지가 흔들린다 — 같은 CI 이미지에서 만든 기준으로 따로 도입한다.
 - 스토리집은 `--without-storybook` 이 아니면 새 프로젝트에 그대로 따라간다.
 

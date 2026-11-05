@@ -2527,7 +2527,7 @@
     {
       "patterns": [],
       "stories": [],
-      "docs": ["CLAUDE.md"],
+      "docs": ["AGENTS.md"],
       "entryPoints": [
         "apps/starter/src/main.tsx",
         "apps/starter/src/routes/routes.tsx",
@@ -2589,7 +2589,7 @@
     {
       "patterns": [],
       "stories": [],
-      "docs": ["apps/starter-ssr/README.md", "CLAUDE.md"],
+      "docs": ["apps/starter-ssr/README.md", "AGENTS.md"],
       "entryPoints": [
         "apps/starter-ssr/server/main.ts",
         "apps/starter-ssr/src/entry-server.tsx",
@@ -3697,7 +3697,7 @@
         "apps/storybook/src/patterns/SettingsPage.stories.tsx"
       ],
       "stories": [],
-      "docs": ["docs/ui-catalog.md", "CLAUDE.md"],
+      "docs": ["docs/ui-catalog.md", "AGENTS.md"],
       "entryPoints": [
         "PageHeader",
         "Table",
@@ -3753,7 +3753,7 @@
     {
       "patterns": [],
       "stories": [],
-      "docs": ["docs/new-project-recipe.md", "CLAUDE.md"],
+      "docs": ["docs/new-project-recipe.md", "AGENTS.md"],
       "entryPoints": ["scripts/new-project.sh", "scripts/new-project.d/stamp.mjs"],
       "needs": [],
       "backend": null,
@@ -3782,7 +3782,7 @@
     {
       "patterns": [],
       "stories": [],
-      "docs": ["CLAUDE.md"],
+      "docs": ["AGENTS.md"],
       "entryPoints": ["scripts/test-new-project.sh"],
       "needs": [],
       "backend": null,

@@ -498,7 +498,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 - 필요한 것: `api-client` · `auth` · `theme` · `time` · `tokens` · `ui`
 - 백엔드: 모듈 `account` · `account-jdbc` · `alert` · `auth` · `auth-session` · `auth-session-jdbc` · `auth-social` · `captcha-turnstile` · `db-postgresql` · `idempotency` · `job-queue-jdbc` · `legal` · `legal-jdbc` · `migration` · `migration-flyway` · `notification-mail` · `persistence-jdbc` · `platform` · `time` · 경로 `/api/v1` · `/api/v1/project-hello` · 짝 앱 `apps/api`
 - 주요 진입점: `apps/starter/src/main.tsx` · `apps/starter/src/routes/routes.tsx` · `apps/starter/src/api/client.ts` · `apps/starter/src/auth/session.ts` · `apps/starter/src/layouts/RootLayout.tsx`
-- 문서: `CLAUDE.md`
+- 문서: `AGENTS.md`
 - 쓰지 않는 경우: 서버가 첫 HTML 을 그려야 하면(검색 노출 · 링크 미리보기) → app-starter-ssr / 복사 후 안 쓰는 것은 지운다 — 스타터는 최소다
 - 키워드: 스타터, SPA, 시작 템플릿, 새 앱, 프런트 시작 / starter, spa, boilerplate, vite react, frontend start
 
@@ -510,7 +510,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 - 필요한 것: `api-client` · `auth` · `seo` · `theme` · `time` · `tokens` · `ui`
 - 백엔드: 모듈 `account` · `account-jdbc` · `alert` · `auth` · `auth-session` · `auth-session-jdbc` · `auth-social` · `captcha-turnstile` · `db-postgresql` · `idempotency` · `job-queue-jdbc` · `legal` · `legal-jdbc` · `migration` · `migration-flyway` · `notification-mail` · `persistence-jdbc` · `platform` · `time` · 경로 `/api/v1` · `/api/v1/project-hello` · 짝 앱 `apps/api`
 - 주요 진입점: `apps/starter-ssr/server/main.ts` · `apps/starter-ssr/src/entry-server.tsx` · `apps/starter-ssr/src/entry-client.tsx` · `apps/starter-ssr/src/routes/routes.tsx` · `apps/starter-ssr/Dockerfile`
-- 문서: `apps/starter-ssr/README.md` · `CLAUDE.md`
+- 문서: `apps/starter-ssr/README.md` · `AGENTS.md`
 - 쓰지 않는 경우: 로그인 뒤 앱(대시보드)은 SPA 로 충분하다 → app-starter / 렌더 중 window · localStorage · 난수 · 시각을 읽지 않는다(하이드레이션 어긋남) / --ssr 은 SPA 스타터를 대신한다(둘 다 찍을 수 없다)
 - 키워드: 서버 렌더링, SSR, 검색 노출, 첫 화면 빠르게, 콘텐츠 사이트, 링크 미리보기 / ssr, server-side rendering, seo, node server, hydration, content site
 
@@ -795,7 +795,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 - 백엔드: 없음(프런트만)
 - 주요 진입점: `PageHeader` · `Table` · `Pagination` · `EmptyState` · `Field` · `Input` · `Tabs` · `ConfirmDialog` · `Stat`
 - 복사해 시작할 Patterns: `apps/storybook/src/patterns/DashboardPage.stories.tsx` · `apps/storybook/src/patterns/ListPage.stories.tsx` · `apps/storybook/src/patterns/FormPage.stories.tsx` · `apps/storybook/src/patterns/DetailPage.stories.tsx` · `apps/storybook/src/patterns/LoginPage.stories.tsx` · `apps/storybook/src/patterns/ForbiddenPage.stories.tsx` · `apps/storybook/src/patterns/SettingsPage.stories.tsx`
-- 문서: `docs/ui-catalog.md` · `CLAUDE.md`
+- 문서: `docs/ui-catalog.md` · `AGENTS.md`
 - 쓰지 않는 경우: 처음부터 짜지 않는다 — 가장 가까운 Pattern 을 복사한다 / 숨은 도우미 파일이 없다 — 한 파일짜리라 복사한 뒤 데이터 훅(TanStack Query)을 잇는 일은 손으로
 - 키워드: 대시보드, 목록 화면, 폼 화면, 상세 화면, 설정 화면, 관리자 화면, 화면 틀, 어드민 / dashboard, list page, form page, detail page, settings page, admin screen, screen template
 
@@ -806,7 +806,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 - 켜는 법: 찍은 프로젝트에는 따라가지 않는다(스켈레톤 도구)
 - 백엔드: 없음(프런트만)
 - 주요 진입점: `scripts/new-project.sh` · `scripts/new-project.d/stamp.mjs`
-- 문서: `docs/new-project-recipe.md` · `CLAUDE.md`
+- 문서: `docs/new-project-recipe.md` · `AGENTS.md`
 - 쓰지 않는 경우: 찍은 프로젝트에는 따라가지 않는다(스켈레톤 도구) / 기존 프로젝트에 패키지를 더하는 도구가 아니다 — packages/<이름> 폴더를 복사하고 앱 package.json 에 한 줄
 - 키워드: 새 프로젝트, 프로젝트 만들기, 찍어내기, 스캐폴딩, 프로젝트 시작 / new project, scaffold, stamp, template, project generator
 
@@ -817,7 +817,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 - 켜는 법: 찍은 프로젝트에는 따라가지 않는다(스켈레톤 도구)
 - 백엔드: 없음(프런트만)
 - 주요 진입점: `scripts/test-new-project.sh`
-- 문서: `CLAUDE.md`
+- 문서: `AGENTS.md`
 - 쓰지 않는 경우: 찍은 프로젝트에는 따라가지 않는다 · --full 은 네트워크와 수 분이 든다
 - 키워드: 찍기 테스트, 조합 검증, 스캐폴딩 테스트 / stamp test, combination test, scaffold test
 

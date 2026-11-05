@@ -1,7 +1,7 @@
 # apps/sample — Notes (참조 제품)
 
 "이 스켈레톤으로 이런 제품이 나온다"를 보여 주는 **작지만 실제 같은** 앱. 로그인한 사람이 **노트와 첨부 파일**을 관리한다.
-새 부업 프로젝트를 시작하거나(`scripts/new-project.sh --with-sample`), 새 기능의 **정본 예시**(화면 조각 하나)로 따라 쓴다 — 에이전트도 같다(루트 `CLAUDE.md` 「새 기능의 정본 예시」).
+새 부업 프로젝트를 시작하거나(`scripts/new-project.sh --with-sample`), 새 기능의 **정본 예시**(화면 조각 하나)로 따라 쓴다 — 에이전트도 같다(루트 `AGENTS.md` 「새 기능의 정본 예시」).
 백엔드 짝은 kotlin-skeleton 의 `apps/sample`(`/api/v1/notes` · 받은편지함 · 업로드 · 내보내기 잡). 기본 `new-project.sh` 는 이 앱을 넣지 않는다.
 
 ## 한 줄로 돌려 보기

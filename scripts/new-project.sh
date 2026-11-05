@@ -19,13 +19,13 @@
 #      apps/sample(참조 앱 Notes: 로그인 · 대시보드 · 목록 · 상세 · 폼 · 첨부 · 알림 · 설정)은 기본으로 떼고 --with-sample 일 때만 남긴다
 #      (그 앱이 쓰는 패키지가 따라오고, 샘플 전용 루트 스크립트 dev:sample · e2e:sample · CI 의 e2e 잡도 함께 남는다).
 #      apps/storybook(스토리집: 설정 · Patterns · 토큰 문서)은 기본으로 남는다 — 남는 패키지의 스토리(*.stories.tsx · 가짜) · docs/ui-catalog.md ·
-#      CLAUDE.md 의 에이전트 안내 · 스토리 테스트(tests/stories.test.ts) · 스토리집 도구 · CI 의 stories 잡이 함께 간다(참조가 프로젝트와 함께 간다).
+#      AGENTS.md 의 에이전트 안내 · 스토리 테스트(tests/stories.test.ts) · 스토리집 도구 · CI 의 stories 잡이 함께 간다(참조가 프로젝트와 함께 간다).
 #      --without-storybook 이면 이 전부를 뗀다(날 요소를 막는 ESLint 규칙은 부품이 남아 있으니 그대로).
 #   3. 패키지 = 스타터가 쓰는 것 + 루트 도구(theme · tokens) + --packages, 패키지끼리의 @skeleton/* 의존으로 닫는다.
 #      나머지 packages/<p> 는 지운다. 이 목록을 보고 있던 루트 테스트(tests/skeleton.repo.test.ts)도 지운다.
 #      고른 패키지는 폴더만 복사된다 — 앱 package.json 에 `"@skeleton/<p>": "workspace:*"` 한 줄은 쓰기 시작할 때 더한다
 #      (안 쓰는 의존을 선언하면 루트 테스트 「선언한 의존 = 실제 import」가 막는다).
-#   4. 루트 package.json(이름 · dev 스크립트 · test 에서 이 도구 빼기) · eslint 앱 이름 막기 · 문서(README · CLAUDE · CHANGELOG)를 새 프로젝트용으로 바꾼다.
+#   4. 루트 package.json(이름 · dev 스크립트 · test 에서 이 도구 빼기) · eslint 앱 이름 막기 · 문서(README · AGENTS · CHANGELOG)를 새 프로젝트용으로 바꾼다.
 #   5. --scope 가 있으면 모든 텍스트 파일의 @skeleton/ 을 <scope>/ 로 바꾼다.
 #   6. new-project 도구(이 스크립트 · 테스트 · 워크플로)는 따라오지 않는다. pnpm-lock.yaml 은 복사본 그대로다 — `pnpm install --no-frozen-lockfile` 이 맞춘다.
 #

@@ -45,7 +45,7 @@ pnpm format                         # 이름 · 스코프를 바꾼 줄바꿈 (�
 ```
 
 고른 패키지는 **폴더만** 따라온다. 쓰기 시작할 때 앱 `package.json` 에 `"@skeleton/<이름>": "workspace:*"` 한 줄을 더하고 `pnpm install`(스코프를 바꿨으면 그 스코프) — 쓰지 않는 의존을 선언하면 루트 테스트가 막는다.
-`CLAUDE.md` · `llms.txt` · `capabilities.json` 이 이미 찍은 프로젝트에 맞게 걸러져 있다 — 새 기능을 만들기 전에 그것부터 읽는다.
+`AGENTS.md` · `llms.txt` · `capabilities.json` 이 이미 찍은 프로젝트에 맞게 걸러져 있다 — 새 기능을 만들기 전에 그것부터 읽는다.
 
 ## 5. 실행
 

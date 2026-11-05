@@ -1,4 +1,4 @@
-# react-skeleton — Claude Code 컨텍스트
+# react-skeleton — 에이전트 지침
 
 React + TypeScript + Vite 프론트엔드 스켈레톤. pnpm 워크스페이스 — 캡슐화된 패키지 27개 + 앱 5개(SPA 스타터 · SSR 스타터 · 참조 앱 샘플 · 스토리집 · 워크벤치). REST 백엔드(kotlin-skeleton)와 통신하는 SPA 출발점이고, 백엔드 `modules/` 처럼 프로젝트가 필요한 패키지만 한 줄씩 골라 쓴다.
 

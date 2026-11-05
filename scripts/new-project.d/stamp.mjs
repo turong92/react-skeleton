@@ -456,7 +456,7 @@ ${ssr ? `\n## 서버 렌더\n\n\`apps/${name}\` 는 서버가 첫 응답을 그�
   writeFileSync(join(target, 'CLAUDE.md'), '@AGENTS.md\n') // Claude Code 는 AGENTS.md 를 직접 읽지 않는다 — 껍데기
   writeFileSync(
     join(target, 'AGENTS.md'),
-    `# ${name} — Claude Code 컨텍스트
+    `# ${name} — 에이전트 지침
 
 react-skeleton 에서 찍어 낸 pnpm 워크스페이스(React + TypeScript + Vite). 앱 \`apps/${name}\`, 패키지 ${pkgs.length}개(스코프 \`${scope}\`).
 

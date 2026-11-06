@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — 포인트 이력 종류 RESTORE (2026-11-06)
+
+- `@skeleton/rewards`: `PointEntryKind` 에 `'RESTORE'`(사용 취소로 되돌린 포인트, + 금액) - 백엔드 point 의 새 이력 종류. 문구 `kinds.RESTORE`('환원' / 'Restored')를 사용자 · 관리자 라벨 양쪽에 더했다. `PointLabels`/`AdminPointsLabels` 를 직접 채운 앱은 이 키를 더해야 한다.
+
 ### Added — 프로필 사진 (2026-11-06)
 
 - `@skeleton/auth`: `AccountMe.avatarKey` · `avatar`, `ProfilePatch.avatarKey`(문자열 = 설정, `null` = 지움), `api.avatarAddress()`, `AccountSettings`/`createAuthRoutes({ settings })` 의 `profilePicture`(`ProfilePicturePicker`) - 프로필 대화상자에 사진 칸. 서버가 사진 기능을 켠 앱(`me` 에 `avatarKey` 키가 있음)에서만 나타난다. 고르는 칸은 앱이 꽂는다(이 패키지는 `@skeleton/storage` 를 모른다 - 게시판의 `attachmentPicker` 방식). 문구 `profilePicture` · `profilePicturePending`.

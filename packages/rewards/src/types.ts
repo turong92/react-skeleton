@@ -106,7 +106,7 @@ export type PointBalanceValue = {
   expiringSoon: { amount: number; before: string } | null
 }
 
-export type PointEntryKind = 'EARN' | 'SPEND' | 'EXPIRE' | 'ADJUST'
+export type PointEntryKind = 'EARN' | 'SPEND' | 'EXPIRE' | 'ADJUST' | 'RESTORE'
 
 export type PointEntry = {
   id: string

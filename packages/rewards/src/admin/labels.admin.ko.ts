@@ -325,7 +325,7 @@ export const koRewardsAdminLabels: RewardsAdminLabels = {
     balance: '잔액',
     history: '내역',
     emptyHistory: '아직 내역이 없어요.',
-    kinds: { EARN: '적립', SPEND: '사용', EXPIRE: '소멸', ADJUST: '조정' },
+    kinds: { EARN: '적립', SPEND: '사용', EXPIRE: '소멸', ADJUST: '조정', RESTORE: '환원' },
     adjust: '포인트 조정',
     delta: '변경량',
     deltaHint: '더하면 +, 빼면 −',

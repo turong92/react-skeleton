@@ -120,7 +120,7 @@ export const defaultRewardsLabels: RewardsLabels = {
     expiringSoon: (amount, date) => `${amount} expire before ${date}`,
     history: 'Point history',
     emptyHistory: 'No point history yet.',
-    kinds: { EARN: 'Earned', SPEND: 'Spent', EXPIRE: 'Expired', ADJUST: 'Adjusted' },
+    kinds: { EARN: 'Earned', SPEND: 'Spent', EXPIRE: 'Expired', ADJUST: 'Adjusted', RESTORE: 'Restored' },
     expiresAt: (date) => `Expires ${date}`,
     loadMore: 'Show more',
   },

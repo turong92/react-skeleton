@@ -30,7 +30,7 @@ export type AuthorProfileManagerProps = {
    */
   beforeRemove?: () => boolean
   /**
-   * 프로필 사진을 고르는 자리 - 앱이 `@skeleton/storage` 의 `ImageUploadField`(`max={1}`)를 꽂는다(이 패키지는 storage 를 모른다). 주면 서버가 사진 기능을 켠 앱(프로필에 `avatarKey` 키가 있음)에서만 각 줄에 「사진」 단추가 생긴다.
+   * 프로필 사진을 고르는 자리 - 앱이 storage 패키지의 `ImageUploadField`(`max={1}`)를 꽂는다(이 패키지는 storage 를 모른다). 주면 서버가 사진 기능을 켠 앱(프로필에 `avatarKey` 키가 있음)에서만 각 줄에 「사진」 단추가 생긴다.
    * 프로필마다 새로 올린 파일을 쓴다 - 계정의 사진 · 다른 프로필의 사진과 같은 키는 서버가 거절한다
    */
   picturePicker?: ProfilePicturePicker

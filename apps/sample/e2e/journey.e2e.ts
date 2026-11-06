@@ -23,6 +23,9 @@ afterAll(async () => {
   await browser?.close()
 })
 
+// 같은 화면에 영상 카드의 파일 입력도 있어 노트 첨부 카드 안으로 좁힌다
+const attachmentInput = () =>
+  page.getByRole('region', { name: ko('attachment.title') }).locator('input[type=file]')
 const bell = () => page.getByRole('button', { name: /^알림/ })
 const heading = (name: string | RegExp, level = 1) => page.getByRole('heading', { level, name })
 
@@ -148,7 +151,7 @@ describe('Notes — the main journey against the real backend', () => {
   it('uploads an attachment with progress and keeps it on the note', async () => {
     await page.getByRole('tab', { name: ko('detail.tabAttachment') }).click()
     await pwExpect(page.getByText(ko('attachment.none'))).toBeVisible()
-    await page.locator('input[type=file]').setInputFiles({
+    await attachmentInput().setInputFiles({
       name: 'agenda.txt',
       mimeType: 'text/plain',
       buffer: Buffer.from('다음 주 안건 목록\n'.repeat(50)),
@@ -171,7 +174,7 @@ describe('Notes — the main journey against the real backend', () => {
   })
 
   it('an unsupported file is refused with a sentence the user can act on', async () => {
-    await page.locator('input[type=file]').setInputFiles({
+    await attachmentInput().setInputFiles({
       name: 'setup.exe',
       mimeType: 'application/x-msdownload',
       buffer: Buffer.from('MZ'),

@@ -28,7 +28,7 @@ export type ProfileAvatar = {
 export type AvatarAddress = { url: string; expiresInSeconds: number }
 
 /**
- * 프로필 사진을 고르는 자리 - 업로드는 앱 몫이다(저장 키 문자열만 오간다. 게시판의 `attachmentPicker` 와 같은 방식이라 이 패키지는 `@skeleton/storage` 를 모른다).
+ * 프로필 사진을 고르는 자리 - 업로드는 앱 몫이다(저장 키 문자열만 오간다. 게시판의 `attachmentPicker` 와 같은 방식이라 이 패키지는 storage 패키지를 모른다).
  * 사진을 올리면 `onChange(키)`, 지우면 `onChange(null)`. 보통 `ImageUploadField` 를 `max={1}` 로 감싼다. 프로필마다 새로 올린 파일의 키여야 한다.
  */
 export type ProfilePicturePicker = (args: {

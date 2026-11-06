@@ -666,6 +666,8 @@ describe('operator tools (opt-in @skeleton/auth/admin)', () => {
       .getByRole('button', { name: ko('header.signOut') })
       .first()
       .click()
+    // 로그아웃이 끝나기 전에 /login 으로 가면 아직 로그인 상태라 다른 곳으로 돌려보내진다
+    await pwExpect(page.getByRole('button', { name: ko('header.signOut') })).toHaveCount(0)
     await page.goto(`${baseUrl}/login`)
     await fillSignIn(page, { email: 'admin@example.com', password: 'password' })
     await page.waitForURL((url) => !url.pathname.startsWith('/login'))

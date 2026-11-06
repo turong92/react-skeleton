@@ -10,6 +10,7 @@ import { serverClock } from '../api/serverClock'
 import { emailRequired } from '../api/emailRequired'
 import { loginIdRequired } from '../api/loginIdRequired'
 import { mfaEnrollmentRequired } from '../api/mfaEnrollmentRequired'
+import { profilePicturePicker } from './profilePicturePicker'
 import { accountApi, authApi, authSession, mfaApi } from './session'
 import {
   authKeys,
@@ -109,6 +110,8 @@ export const accountRoutes = createAuthRoutes({
     contactEmail: true,
     // 글 · 댓글의 이름은 작성 닉네임(`author/`)이 따로 맡는다 — 계정에 붙은 닉네임 줄은 이 앱의 계정 화면에 없다(사용자에게는 닉네임이 하나다). 언어 · 시간대만 남는다
     showDisplayName: false,
+    // 프로필 사진 - 서버가 사진 기능(storage)을 켠 앱에서만 칸이 생긴다. 이 계정 사진은 본인에게만 보인다(닉네임의 사진은 따로 고른다)
+    profilePicture: profilePicturePicker,
     // 계정 정보(언어 · 시간대)를 저장하면 내 계정 읽기와 게시판 화면을 다시 맞춘다
     onProfileChanged: () => refreshAfterProfileChange(queryClient),
     locales: [

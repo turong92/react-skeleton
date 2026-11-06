@@ -141,8 +141,10 @@ export { DEFAULT_LOGIN_ID_RULES, loginIdProblem, normalizeLoginId } from './acco
 export type { LoginIdProblem, LoginIdRules } from './account/loginIdRules'
 export { supportedTimeZones } from './account/timeZones'
 export type {
+  AccountAvatar,
   AccountMe,
   AccountSession,
+  AvatarAddress,
   AccountStatus,
   DeletionResult,
   LoginIdAvailability,
@@ -247,6 +249,7 @@ export type {
   ProviderRoundTrip,
 } from './screens/AccountSettings'
 export { ProfileSection } from './screens/ProfileSection'
+export type { ProfilePicturePicker } from './screens/profilePicture'
 export { PasswordSection } from './screens/PasswordSection'
 export { EmailSection } from './screens/EmailSection'
 export { ContactEmailSection } from './screens/ContactEmailSection'

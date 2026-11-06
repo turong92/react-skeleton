@@ -1,8 +1,14 @@
-import { Alert, Button, Field, Input } from '@skeleton/ui'
+import { Alert, Avatar, Button, Field, Input } from '@skeleton/ui'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { nameProblem, profileFormProblem } from './errors'
 import type { AuthorProfileLabels } from './labels'
-import { profileDisplay, type AuthorProfile, type AuthorProfileConfig } from './types'
+import { ProfilePictureEditor } from './ProfilePictureEditor'
+import {
+  profileDisplay,
+  type AuthorProfile,
+  type AuthorProfileConfig,
+  type ProfilePicturePicker,
+} from './types'
 import styles from './AuthorProfileManager.module.css'
 
 type RenameMutation = {
@@ -25,6 +31,7 @@ export function ProfileRow({
   onEdit,
   onClose,
   onDelete,
+  picture,
 }: {
   profile: AuthorProfile
   labels: AuthorProfileLabels
@@ -35,6 +42,11 @@ export function ProfileRow({
   onEdit: () => void
   onClose: () => void
   onDelete: (profile: AuthorProfile) => void
+  /** 사진 고르기 - 앱이 `picker` 를 꽂았을 때만. 서버가 사진 기능을 껐으면(프로필에 `avatarKey` 키 없음) 단추도 없다 */
+  picture?: {
+    picker: ProfilePicturePicker
+    avatar: Parameters<typeof ProfilePictureEditor>[0]['avatar']
+  }
 }) {
   const [name, setName] = useState(profile.name ?? '')
   const [local, setLocal] = useState<string>()
@@ -81,9 +93,29 @@ export function ProfileRow({
   return (
     <li ref={rowRef} className={styles.row} data-profile-row="">
       <span className={styles.identity}>
+        {picture &&
+          profile.avatarKey !== undefined &&
+          (profile.avatar?.image?.thumb ?? profile.avatar?.url) && (
+            <Avatar
+              name={shown}
+              src={profile.avatar?.image?.thumb ?? profile.avatar?.url}
+              alt=""
+              size="sm"
+            />
+          )}
         <span className={styles.name}>{profile.name ?? labels.unnamed}</span>
         {profile.tag && <span className={styles.tag}>{`#${profile.tag}`}</span>}
       </span>
+      {/* 이름 바꾸기를 열어도 사진 부품은 그대로 달아 둔다 - 언마운트하면 올리던 사진이 취소된다 */}
+      {picture && (
+        <ProfilePictureEditor
+          profile={profile}
+          labels={labels}
+          picker={picture.picker}
+          avatar={picture.avatar}
+          shown={shown}
+        />
+      )}
       {!editing && (
         <span className={styles.actions}>
           <Button

@@ -91,6 +91,11 @@ export type FakeAccountOptions = {
   nicknameChangeLimit?: number
   /** 서버 규칙으로 쓸 수 없는 닉네임(400, 필드 `displayName`, 코드 `Reserved`, 영어 message) */
   reservedNicknames?: string[]
+  /**
+   * 서버가 프로필 사진 기능을 켰다 - `me.avatarKey` 키가 생긴다(null = 아직 없음). 키가 `uploads/o/bad…` 로 시작하면 `PATCH` 가 400(필드 오류 없는 `COMMON.VALIDATION_FAILED` - 남의 키 · 이미지 아님),
+   * `pending` 이면 올린 사진이 변환 중으로 보인다(`me.avatar.pending`)
+   */
+  avatar?: { pending?: boolean }
   /** 코드를 보내는 요청의 응답이 `resendAvailableAt: null` — 이 시도는 더 다시 보낼 수 없다(FINAL-5 R2) */
   resendExhausted?: boolean
 }
@@ -156,6 +161,8 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
       : {
           contactEmail: options.contactEmailLegacyOff ? null : (options.contactEmail ?? null),
         }),
+    // 서버가 사진 기능(storage)을 켠 모습 - 이 옵션이 없으면 키 자체가 없다(옛 서버처럼)
+    ...(options.avatar ? { avatarKey: null } : {}),
     pendingEmail: options.pendingEmail ?? null,
     pendingEmailExpiresAt: options.pendingEmail
       ? inMinutes(options.pendingExpiresInMinutes ?? 10)
@@ -349,6 +356,8 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
     resetPassword: () => track('resetPassword', undefined),
     passwordPolicy: () => track('passwordPolicy', FAKE_POLICY),
     me: () => track('me', { ...me, methods: [...methods] }),
+    avatarAddress: () =>
+      track('avatarAddress', { url: 'https://files.example.com/me.png', expiresInSeconds: 300 }),
     updateProfile: async (patch) => {
       emailGate(true)
       if (patch.displayName && options.takenNicknames?.includes(patch.displayName.trim()))
@@ -366,6 +375,16 @@ export function createFakeAccountApi(options: FakeAccountOptions = {}): AccountA
             apiError('ACCOUNT.RATE_LIMITED', 429, { retryAfterSeconds: 3 * 3600 + 12 * 60 }),
           )
         nicknameChanges += 1
+      }
+      if (patch.avatarKey !== undefined) {
+        if (!options.avatar || patch.avatarKey?.startsWith('uploads/o/bad'))
+          return Promise.reject(apiError('COMMON.VALIDATION_FAILED', 400))
+        me.avatar =
+          patch.avatarKey === null
+            ? undefined
+            : options.avatar.pending
+              ? { pending: true }
+              : { url: `https://cdn.example.com/public/${patch.avatarKey.split('/').pop()}` }
       }
       Object.assign(me, patch)
       return track('updateProfile', { ...me })

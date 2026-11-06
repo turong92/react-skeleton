@@ -54,6 +54,46 @@ describe('methodsList', () => {
 })
 
 describe('settings sections', () => {
+  it('profile picture: the picker gets an onBusy hook so the form can hold Save while a file uploads (the key only arrives after the upload)', () => {
+    const seen: Array<{ onBusy?: unknown }> = []
+    html(
+      <ProfileSection
+        profile={{ displayName: 'Ann', locale: 'ko', timeZone: 'Asia/Seoul', avatarKey: null }}
+        locales={[{ value: 'ko', label: 'Korean' }]}
+        timeZones={['Asia/Seoul']}
+        onSave={noop}
+        picture={(args) => {
+          seen.push(args)
+          return null
+        }}
+        initiallyOpen
+      />,
+    )
+    expect(typeof seen[0]?.onBusy).toBe('function')
+  })
+
+  it('profile picture: the picker shows only when the server turned the feature on (avatarKey present)', () => {
+    const picker = ({ value }: { value: string | null }) => (
+      <b data-testid="picker">{value ?? 'none'}</b>
+    )
+    const base = { displayName: 'Ann', locale: 'ko', timeZone: 'Asia/Seoul' }
+    const open = (profile: Parameters<typeof ProfileSection>[0]['profile'], withPicker = true) =>
+      html(
+        <ProfileSection
+          profile={profile}
+          locales={[{ value: 'ko', label: 'Korean' }]}
+          timeZones={['Asia/Seoul']}
+          onSave={noop}
+          picture={withPicker ? picker : undefined}
+          initiallyOpen
+        />,
+      )
+    expect(open({ ...base, avatarKey: 'uploads/o/k/file.png' })).toContain('uploads/o/k/file.png')
+    expect(open({ ...base, avatarKey: null })).toContain('>none<')
+    expect(open(base)).not.toContain('Photo<')
+    expect(open({ ...base, avatarKey: null }, false)).not.toContain('aria-label="Photo"')
+  })
+
   it('profile: name, language and time zone', () => {
     const out = html(
       <ProfileSection

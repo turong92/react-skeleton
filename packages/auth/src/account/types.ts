@@ -77,7 +77,23 @@ export type AccountMe = {
   loginId?: string | null
   /** 확인된 연락받을 이메일 — **키가 없으면 서버가 이 기능을 껐다**(옛 서버 포함), null 은 켜져 있고 아직 등록하지 않았다는 뜻. 서비스 알림 · 공지가 간다. 로그인 · 비밀번호 찾기에는 쓰이지 않는다 */
   contactEmail?: string | null
+  /**
+   * 프로필 사진의 업로드 키 - **키가 없으면 서버가 이 기능을 껐다**(`storage` 없음), null 은 켜져 있고 아직 없다. 키는 본인에게만 나간다.
+   */
+  avatarKey?: string | null
+  /** 사진이 있고 기능이 켜졌을 때만 - 공개 주소 · 변환본 · 변환 중. 세 칸이 모두 비면 보일 공개 모습이 없다(공개 영역이 꺼짐) */
+  avatar?: AccountAvatar
 }
+
+/** `me.avatar` - 공개 영역이 켜졌을 때 `url`(원본 크기) · `image`(변환이 끝난 `thumb` · `display` 주소), 변환 중이면 `pending` */
+export type AccountAvatar = {
+  url?: string
+  image?: { width: number; height: number; thumb: string; display: string }
+  pending?: boolean
+}
+
+/** `GET /account/me/avatar` - 짧은 수명의 서명 읽기 주소(공개 영역이 켜져 있을 때만; 사진이 없거나 변환 중이면 404) */
+export type AvatarAddress = { url: string; expiresInSeconds: number }
 
 /** `POST /account/login-id/availability` 의 값 - 「쓸 수 있음」은 예약이 아니다(내는 순간 서버가 다시 판정한다). `TAKEN` 은 쓰는 · 탈퇴한 · 예약된 아이디를 구분하지 않는다 */
 export type LoginIdAvailability = {
@@ -89,7 +105,13 @@ export type LoginIdAvailability = {
   code?: 'Required' | 'Size' | 'Pattern'
 }
 
-export type ProfilePatch = { displayName?: string; locale?: string; timeZone?: string }
+export type ProfilePatch = {
+  displayName?: string
+  locale?: string
+  timeZone?: string
+  /** 프로필 사진 키: 문자열 = 설정, `null` = 지움, 키 없음 = 그대로 */
+  avatarKey?: string | null
+}
 
 export type DeletionResult = { status: 'DELETION_SCHEDULED'; purgeAfter: string }
 

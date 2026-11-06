@@ -79,6 +79,17 @@ describe('createAccountApi (mirrors kotlin-skeleton docs/account-http-contract.m
     })
   })
 
+  it('profile picture: avatarKey keeps its three states (null clears), and the signed address is GET /account/me/avatar', async () => {
+    const { client, calls } = fakeClient()
+    const api = createAccountApi(client)
+    await api.updateProfile({ avatarKey: null })
+    await api.updateProfile({ locale: 'ko' })
+    await api.avatarAddress()
+    expect(calls[0]).toMatchObject({ request: { json: { avatarKey: null } } })
+    expect(calls[1]).toMatchObject({ request: { json: { locale: 'ko' } } })
+    expect(calls[2]).toMatchObject({ path: '/account/me/avatar' })
+  })
+
   it('changePassword → POST /account/password/change (204), currentPassword optional', async () => {
     const { client, calls } = fakeClient()
     await createAccountApi(client).changePassword({ newPassword: 'n' })

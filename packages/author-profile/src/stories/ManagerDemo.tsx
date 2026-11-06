@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { AuthorProfileManager } from '../AuthorProfileManager'
 import type { AuthorProfileApi } from '../authorProfileApi'
+import type { ProfilePicturePicker } from '../types'
 import { createFakeAuthorProfiles, type FakeAuthorProfilesOptions } from './fakeAuthorProfiles'
 import { WithQuery } from './WithQuery'
 
@@ -8,12 +9,17 @@ import { WithQuery } from './WithQuery'
 export function ManagerDemo({
   api,
   beforeRemove,
+  picturePicker,
   ...options
-}: FakeAuthorProfilesOptions & { api?: AuthorProfileApi; beforeRemove?: () => boolean }) {
+}: FakeAuthorProfilesOptions & {
+  api?: AuthorProfileApi
+  beforeRemove?: () => boolean
+  picturePicker?: ProfilePicturePicker
+}) {
   const [made] = useState(() => api ?? createFakeAuthorProfiles(options).api)
   return (
     <WithQuery>
-      <AuthorProfileManager api={made} beforeRemove={beforeRemove} />
+      <AuthorProfileManager api={made} beforeRemove={beforeRemove} picturePicker={picturePicker} />
     </WithQuery>
   )
 }

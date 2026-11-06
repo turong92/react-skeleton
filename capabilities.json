@@ -1567,7 +1567,7 @@
       "notFor": [
         "게시판 화면 자체 → board (이 패키지는 board 를 모른 채 authorPicker 자리에 꽂힌다)",
         "계정의 닉네임(가입 · 설정) → auth 의 계정 화면 — 이 패키지는 글에 붙는 별도 닉네임이다(계정 닉네임 줄은 auth 의 `showDisplayName: false` 로 숨길 수 있다)",
-        "프로필 아바타 · 소개글 · 공개 프로필 페이지 → 만들지 않는다(표 구조만 막지 않는다)",
+        "소개글 · 공개 프로필 페이지 → 만들지 않는다(표 구조만 막지 않는다). 프로필 사진은 앱이 꽂는 자리(AuthorProfileManager 의 picturePicker, 보통 @skeleton/storage ImageUploadField max=1) - 서버에 storage 가 있을 때만 줄마다 「사진」 단추가 생기고, 이 패키지는 storage 를 모른다",
         "관리자가 프로필로 계정을 찾는 화면 → 없다(백엔드 admin 조회만)"
       ],
       "keywords": {

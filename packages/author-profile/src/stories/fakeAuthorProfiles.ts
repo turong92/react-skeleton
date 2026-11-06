@@ -19,6 +19,8 @@ export type FakeAuthorProfilesOptions = {
   rateLimited?: boolean
   /** 모든 호출이 이 시간만큼 걸린다(보내는 중 상태를 보이려고) */
   latencyMs?: number
+  /** 사진을 올리면 변환 중으로 보인다(`avatar.pending`). 사진 키가 `uploads/o/bad…` 이거나 계정 id 가 들었거나 다른 프로필이 쓰는 키면 `setAvatar` 가 400 */
+  pendingAvatar?: boolean
 }
 
 const RESERVED = new Set(['admin', 'administrator', 'system'])
@@ -47,6 +49,7 @@ export function createFakeAuthorProfiles({
   failNext: failNextOption = {},
   rateLimited = false,
   latencyMs = 0,
+  pendingAvatar = false,
 }: FakeAuthorProfilesOptions = {}) {
   const failNext = { ...failNextOption } // 한 번 쓰면 지운다 — 넘겨받은 객체를 고치지 않는다
   let store = [...profiles]
@@ -125,6 +128,36 @@ export function createFakeAuthorProfiles({
       }
       store = store.map((p) => (p.id === id ? renamed : p))
       return renamed
+    },
+    async setAvatar(id, avatarKey) {
+      await wait()
+      const current = find(id)
+      if (
+        avatarKey !== null &&
+        (avatarKey.includes('acc_') ||
+          avatarKey.startsWith('uploads/o/bad') ||
+          store.some((p) => p.id !== id && p.avatarKey === avatarKey))
+      )
+        throw problem(400, 'COMMON.VALIDATION_FAILED')
+      const next: AuthorProfile = {
+        ...current,
+        avatarKey,
+        avatar: !avatarKey
+          ? undefined
+          : pendingAvatar
+            ? { pending: true }
+            : {
+                url: `https://cdn.example.com/public/${avatarKey.slice(avatarKey.lastIndexOf('/') + 1)}`,
+              },
+      }
+      store = store.map((p) => (p.id === id ? next : p))
+      return next
+    },
+    async avatarAddress(id) {
+      await wait()
+      const current = find(id)
+      if (!current.avatarKey) throw problem(404, 'AUTHOR_PROFILE.NOT_FOUND')
+      return { url: `https://files.example.com/${current.avatarKey}`, expiresInSeconds: 300 }
     },
     async remove(id) {
       await wait()

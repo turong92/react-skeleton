@@ -1,15 +1,28 @@
-export type { AuthorProfile, AuthorProfileConfig, AuthorProfileInput } from './types'
+export type {
+  AuthorProfile,
+  AuthorProfileConfig,
+  AuthorProfileInput,
+  AvatarAddress,
+  ProfileAvatar,
+  ProfilePicturePicker,
+} from './types'
 export { profileDisplay } from './types'
 export { createAuthorProfileApi } from './authorProfileApi'
 export type { AuthorProfileApi, AuthorProfileApiOptions, CreateOptions } from './authorProfileApi'
 export { authorProfileKeys, configQuery, listQuery } from './queries'
-export { createProfileMutation, removeProfileMutation, renameProfileMutation } from './mutations'
+export {
+  avatarProfileMutation,
+  createProfileMutation,
+  removeProfileMutation,
+  renameProfileMutation,
+} from './mutations'
 export {
   useAuthorProfileConfig,
   useAuthorProfiles,
   useCreateAuthorProfile,
   useRemoveAuthorProfile,
   useRenameAuthorProfile,
+  useSetAuthorProfileAvatar,
 } from './hooks'
 export { browserLocalStorage, createAuthorMemory, forgetAuthorMemory } from './authorMemory'
 export type { AuthorMemory, StorageLike } from './authorMemory'

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — 프로필 사진 (2026-11-06)
+
+- `@skeleton/auth`: `AccountMe.avatarKey` · `avatar`, `ProfilePatch.avatarKey`(문자열 = 설정, `null` = 지움), `api.avatarAddress()`, `AccountSettings`/`createAuthRoutes({ settings })` 의 `profilePicture`(`ProfilePicturePicker`) - 프로필 대화상자에 사진 칸. 서버가 사진 기능을 켠 앱(`me` 에 `avatarKey` 키가 있음)에서만 나타난다. 고르는 칸은 앱이 꽂는다(이 패키지는 `@skeleton/storage` 를 모른다 - 게시판의 `attachmentPicker` 방식). 문구 `profilePicture` · `profilePicturePending`.
+- `@skeleton/author-profile`: 프로필마다 따로인 사진 - `AuthorProfile.avatarKey` · `avatar`, `api.setAvatar(id, key | null)` · `api.avatarAddress(id)`, `useSetAuthorProfileAvatar`, `AuthorProfileManager` 의 `picturePicker`(줄마다 「사진」 단추, 올리거나 지우면 바로 저장), 문구 `pictureAction` · `picture` · `pictureLabel` · `picturePending`. `AuthorProfileApi` 구현을 직접 둔 앱은 두 메서드를 더해야 한다.
+- 견본 앱: 계정 설정 · 닉네임 관리에 한 장짜리 `ImageUploadField` 를 꽂았다(백엔드 kotlin-skeleton ea54d15f 의 `avatarKey` 계약).
+
 ### Added — 견본 앱의 노트 영상 (2026-11-04)
 
 - 견본: 노트 상세의 「영상」 탭(`NoteVideoPanel`) - `VideoUploadField`(목적 `note`, 비공개) 로 올리고 `VideoPlayer` 로 튼다. 노트를 고치는 본문은 `noteInputOf` 한 곳에서 만든다(`videoId` · 첨부를 늘 싣는다 - 빠지면 PUT 이 영상을 떼어 서버가 지운다). e2e `video.e2e.ts`(합성 HEVC 세로 영상 → 올리기 → 원본 단 재생 가능 → 호환 · 사다리 → 마스터 자동 재생 → 다른 계정 404).

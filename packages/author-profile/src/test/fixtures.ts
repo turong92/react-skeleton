@@ -25,6 +25,8 @@ export function stubApi(over: Partial<AuthorProfileApi> = {}): AuthorProfileApi 
     create: unused,
     rename: unused,
     remove: unused,
+    setAvatar: unused,
+    avatarAddress: unused,
     ...over,
   }
 }

@@ -17,6 +17,7 @@ import { LoginIdSection } from './LoginIdSection'
 import { NeedsEmailCard } from './NeedsEmailCard'
 import { PasswordSection } from './PasswordSection'
 import { ProfileSection } from './ProfileSection'
+import type { ProfilePicturePicker } from './profilePicture'
 import { SessionsSection } from './SessionsSection'
 import { SignInMethodsSection } from './SignInMethodsSection'
 import styles from './auth.module.css'
@@ -60,6 +61,11 @@ export type AccountSettingsProps = {
   loginIdRules?: LoginIdRules
   /** 이 계정의 아이디가 정해졌다(여기서 정했거나, 다른 탭에서 이미 정했다고 서버가 답했다) — 앱이 `loginIdRequired.chosen()` 을 불러 붙잡힌 호출을 풀고 게이트를 접는다. `createAuthRoutes({ loginIdRequired })` 가 이 길을 잇는다 */
   onLoginIdChosen?: () => void
+  /**
+   * 프로필 사진을 고르는 자리 - 앱이 `@skeleton/storage` 의 `ImageUploadField`(`max={1}`)를 꽂는다(게시판의 `attachmentPicker` 와 같은 방식 - 이 패키지는 storage 를 모른다).
+   * 주면 서버가 사진 기능을 켠 앱(`me.avatarKey` 키가 있음)에서만 프로필 대화상자에 사진 칸이 생긴다
+   */
+  profilePicture?: ProfilePicturePicker
   /** 프로필에서 고르는 언어(앱이 지원하는 것) */
   locales: Array<{ value: string; label: string }>
   /** 기본: 브라우저가 아는 시간대 */
@@ -156,6 +162,7 @@ export function AccountSettings({
   graceDays = 30,
   selfRestore = false,
   showDisplayName,
+  profilePicture,
   onDeleted,
   onProfileChanged,
   formatDate,
@@ -577,6 +584,7 @@ export function AccountSettings({
           {on('profile') && (
             <ProfileSection
               row
+              picture={profilePicture}
               profile={account}
               locales={locales}
               timeZones={zones}

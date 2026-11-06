@@ -9,6 +9,7 @@ import { ProfileBadges } from '@skeleton/rewards/badge'
 import { Button, Card, Field, PageHeader, Select } from '@skeleton/ui'
 import { useNavigate } from 'react-router-dom'
 import { useSignOut } from '../auth/useSignOut'
+import { profilePicturePicker } from '../auth/profilePicturePicker'
 import { legalApi } from '../api/legal'
 import { emailRequired } from '../api/emailRequired'
 import { profileApi } from '../author/api'
@@ -158,6 +159,7 @@ export function SettingsPage() {
           api={profileApi}
           labels={authorProfileLabels(t)}
           alsoInvalidate={[boardKeys.all]}
+          picturePicker={profilePicturePicker}
           beforeRemove={emailBeforeWrite.ensure} // 삭제 확인 창을 열기 전에 이메일부터(창 안에서 막히면 이메일 화면이 창 밑에 깔린다)
         />
       </Card>

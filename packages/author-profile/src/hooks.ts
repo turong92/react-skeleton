@@ -1,7 +1,12 @@
 import type { QueryKey } from '@tanstack/react-query'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { AuthorProfileApi } from './authorProfileApi'
-import { createProfileMutation, removeProfileMutation, renameProfileMutation } from './mutations'
+import {
+  avatarProfileMutation,
+  createProfileMutation,
+  removeProfileMutation,
+  renameProfileMutation,
+} from './mutations'
 import { configQuery, listQuery } from './queries'
 
 const MINUTES = 60_000
@@ -28,6 +33,12 @@ export function useRenameAuthorProfile(
 ) {
   const client = useQueryClient()
   return useMutation(renameProfileMutation(client, api, alsoInvalidate))
+}
+
+/** 프로필 사진 설정 / 지움 (`avatarKey: null`) */
+export function useSetAuthorProfileAvatar(api: AuthorProfileApi) {
+  const client = useQueryClient()
+  return useMutation(avatarProfileMutation(client, api))
 }
 
 export function useRemoveAuthorProfile(

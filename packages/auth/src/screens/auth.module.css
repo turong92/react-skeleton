@@ -37,6 +37,11 @@
   gap: var(--space-sm);
 }
 
+.pictureGroup {
+  display: grid;
+  gap: var(--space-xs);
+}
+
 .passwordRow {
   display: flex;
   align-items: center;

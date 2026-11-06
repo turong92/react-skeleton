@@ -699,6 +699,7 @@ export type SettingsExtras = Partial<
     | 'contactEmail'
     | 'preferenceRows'
     | 'twoFactor'
+    | 'profilePicture'
   >
 > & {
   locales: AccountSettingsProps['locales']

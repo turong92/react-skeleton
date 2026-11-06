@@ -1491,6 +1491,7 @@ export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
   'author-profile#useCreateAuthorProfile': () => [fakeAuthorProfileApi()],
   'author-profile#useRenameAuthorProfile': () => [fakeAuthorProfileApi()],
   'author-profile#useRemoveAuthorProfile': () => [fakeAuthorProfileApi()],
+  'author-profile#useSetAuthorProfileAvatar': () => [fakeAuthorProfileApi()],
   'workspace#useWorkspace': () => [],
   'workspace#useWorkspaces': () => [fakeWorkspaceApi()],
   'workspace#useWorkspaceBySlug': () => [fakeWorkspaceApi(), 'acme'],

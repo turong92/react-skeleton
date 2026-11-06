@@ -258,6 +258,11 @@ export type AuthLabels = TwoFactorLabels & {
   profileTimeZone: string
   profileLocaleDefault: string
   profileSaved: string
+  /** 프로필 사진 칸의 이름 · 변환 중 안내 */
+  profilePicture: string
+  profilePicturePending: string
+  /** 서버가 사진을 거절했다(400) - 내 업로드가 아니거나 이미지가 아니거나 다른 곳이 쓰는 파일 */
+  profilePictureRejected: string
   profileEdit: string
   /** 설정 카드 제목 3개(목차 칩도 같다) */
   groupAccount: string
@@ -734,6 +739,9 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   profileTimeZone: 'Time zone',
   profileLocaleDefault: 'Not set',
   profileSaved: 'Profile saved.',
+  profilePicture: 'Photo',
+  profilePicturePending: 'Your picture is being prepared - it will show up in a moment.',
+  profilePictureRejected: 'This photo cannot be used. Please upload a new image file.',
   profileEdit: 'Edit profile',
   groupAccount: 'Account',
   groupSecurity: 'Sign-in & security',

@@ -9,10 +9,11 @@ import {
   useAuthorProfiles,
   useRemoveAuthorProfile,
   useRenameAuthorProfile,
+  useSetAuthorProfileAvatar,
 } from './hooks'
 import { mergeLabels, type AuthorProfileLabels } from './labels'
 import { ProfileRow } from './ProfileRow'
-import { profileDisplay, type AuthorProfile } from './types'
+import { profileDisplay, type AuthorProfile, type ProfilePicturePicker } from './types'
 import styles from './AuthorProfileManager.module.css'
 
 export type AuthorProfileManagerProps = {
@@ -28,6 +29,11 @@ export type AuthorProfileManagerProps = {
    * 창 **밑**에 깔려 눌리지 않는다 - 막힐 일은 창을 열기 전에 푼다
    */
   beforeRemove?: () => boolean
+  /**
+   * 프로필 사진을 고르는 자리 - 앱이 `@skeleton/storage` 의 `ImageUploadField`(`max={1}`)를 꽂는다(이 패키지는 storage 를 모른다). 주면 서버가 사진 기능을 켠 앱(프로필에 `avatarKey` 키가 있음)에서만 각 줄에 「사진」 단추가 생긴다.
+   * 프로필마다 새로 올린 파일을 쓴다 - 계정의 사진 · 다른 프로필의 사진과 같은 키는 서버가 거절한다
+   */
+  picturePicker?: ProfilePicturePicker
 }
 
 /**
@@ -42,12 +48,14 @@ export function AuthorProfileManager({
   labels: given,
   alsoInvalidate,
   beforeRemove,
+  picturePicker,
 }: AuthorProfileManagerProps) {
   const labels = mergeLabels(given)
   const list = useAuthorProfiles(api)
   const configQuery = useAuthorProfileConfig(api)
   const rename = useRenameAuthorProfile(api, alsoInvalidate)
   const remove = useRemoveAuthorProfile(api, alsoInvalidate)
+  const avatar = useSetAuthorProfileAvatar(api)
   // 확인 창은 한 번 열린 뒤로 계속 달아 둔다(닫을 때 포커스가 연 단추로 돌아가려면 창이 남아 있어야 한다)
   const [target, setTarget] = useState<AuthorProfile>()
   const [confirming, setConfirming] = useState(false)
@@ -121,6 +129,7 @@ export function AuthorProfileManager({
               editing={editingId === profile.id}
               onEdit={() => setEditingId(profile.id)}
               onClose={() => setEditingId(undefined)}
+              picture={picturePicker ? { picker: picturePicker, avatar } : undefined}
               onDelete={(picked) => {
                 if (beforeRemove && !beforeRemove()) return
                 remove.reset()

@@ -49,6 +49,29 @@ export async function readAllNotifications(apiUrl: string, account: Account) {
   if (!read.ok) throw new Error(`PATCH /notifications/read-all → ${read.status}`)
 }
 
+/**
+ * 이 계정의 노트를 모두 지운다 - 「노트가 하나도 없는 첫 화면」을 세우는 파일이 쓴다.
+ * 같은 체험 계정으로 노트를 만드는 다른 파일(배지 · 푸시)이 먼저 돌면 대시보드가 비어 있지 않다(파일 순서는 고정이 아니다)
+ */
+export async function deleteAllNotes(apiUrl: string, account: Account) {
+  const token = await accessTokenFor(apiUrl, account)
+  if (!token) throw new Error(`login ${account.email} failed`)
+  const headers = { Authorization: `Bearer ${token}` }
+  for (;;) {
+    const list = await fetch(`${apiUrl}/api/v1/notes?size=100`, { headers })
+    if (!list.ok) throw new Error(`GET /notes → ${list.status}`)
+    const notes = ((await list.json()) as { values: Array<{ id: string }> }).values
+    if (notes.length === 0) return
+    for (const note of notes) {
+      const removed = await fetch(`${apiUrl}/api/v1/notes/${encodeURIComponent(note.id)}`, {
+        method: 'DELETE',
+        headers,
+      })
+      if (!removed.ok) throw new Error(`DELETE /notes/${note.id} → ${removed.status}`)
+    }
+  }
+}
+
 /** 로그인 화면에서 이메일 · 비밀번호로(체험 계정 채우기 버튼이 아니라) */
 export async function signInAs(page: Page, baseUrl: string, account: Account) {
   await consentViaApi(account) // legal 모듈이 있는 백엔드: 시드 계정은 동의 기록이 없다(없으면 아무 일도 안 한다)

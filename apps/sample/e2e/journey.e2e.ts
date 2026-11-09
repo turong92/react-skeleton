@@ -1,6 +1,6 @@
 import { expect as pwExpect, type Browser, type BrowserContext, type Page } from 'playwright/test'
 import { afterAll, beforeAll, describe, inject, it } from 'vitest'
-import { readAllNotifications } from './boardSteps'
+import { deleteAllNotes, readAllNotifications } from './boardSteps'
 import { DEMO, auth, fillSignIn, ko, launch, legalOn, seedNotes, signIn } from './helpers'
 
 /*
@@ -16,6 +16,8 @@ let page: Page
 
 beforeAll(async () => {
   // 「안 읽은 알림이 없는 첫 화면」은 이 파일이 스스로 세운다 - 파일 순서는 고정이 아니고 다른 파일(boardGuest 의 손님 댓글)이 알림을 남긴다
+  // 「노트가 하나도 없는 대시보드」도 이 파일이 세운다 - 같은 체험 계정으로 노트를 만드는 다른 파일(badges · push)이 먼저 돌 수 있다
+  await deleteAllNotes(inject('apiUrl'), DEMO)
   await readAllNotifications(inject('apiUrl'), DEMO)
   ;({ browser, context, page } = await launch())
 })

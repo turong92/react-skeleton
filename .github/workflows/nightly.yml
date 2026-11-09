@@ -13,7 +13,7 @@ jobs:
   # 참조 앱(apps/sample)의 e2e 전부(파일 18개) — 진짜 백엔드(kotlin-skeleton apps/sample + PostgreSQL + 로컬 S3 컨테이너) · 진짜 브라우저
   sample-e2e:
     runs-on: ubuntu-latest
-    timeout-minutes: 50 # 전체 25분 + 재동의 재실행 15분 + 기동·설치 여유. 그레이들 첫 빌드 · 컨테이너 · rolldown(rc) 교착에 매달리지 않게 끊는다
+    timeout-minutes: 90 # 전체 55분 + 재동의 재실행 15분 + 기동·설치 여유(파일이 33개로 늘어 25분 안에 끝나지 않는다 - 끊기면 실패 원문 요약이 찍히지 않는다). 그레이들 첫 빌드 · 컨테이너 · rolldown(rc) 교착에 매달리지 않게 끊는다
     steps:
       - uses: actions/checkout@v4
         with:
@@ -46,7 +46,7 @@ jobs:
         working-directory: react-skeleton
       - run: pnpm e2e:sample
         working-directory: react-skeleton
-        timeout-minutes: 25
+        timeout-minutes: 55
         env:
           SAMPLE_API_DIR: ${{ github.workspace }}/kotlin-skeleton
           # ubuntu 26.04 의 /tmp 는 8GB 메모리 파일시스템(사용자 쿼터)이다 — 크로미엄이 요청마다 만드는 2MB 공유 메모리 파일이 vite 의 모듈 수백 개(페이지마다)로 /tmp 를 채워 「디스크 쿼터 초과」 → 요청이 ERR_INSUFFICIENT_RESOURCES 로 실패한다. 디스크의 러너 임시 폴더를 쓰게 한다

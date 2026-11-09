@@ -97,7 +97,12 @@ describe('① the whole journey: cheer, pay, see it, ask for a refund, the opera
     // 「자세히」 → 한 건: 금액 · 카드
     await row.getByRole('link', { name: new RegExp(labels.list.details) }).click()
     await page.waitForURL(new RegExp(`/payments/${orderId}$`))
-    await pwExpect(page.getByText('현대카드 ····1234')).toBeVisible()
+    // 한 건 화면이 그려졌는지(이 화면에만 있는 「환불 요청」 단추)부터 본다 - 주소가 바뀐 직후에는 앞 화면(내역: 이 카드로 낸 응원이 여럿이면 같은 글자가 줄마다 있다)이 잠깐 남아 있어
+    // 글자 하나로 찾으면 여러 개가 걸려 곧바로 실패한다(엄격 모드 위반은 다시 시도하지 않는다)
+    await pwExpect(
+      page.getByRole('button', { name: labels.summary.requestRefund, exact: true }),
+    ).toBeVisible()
+    await pwExpect(page.getByText('현대카드 ····1234').first()).toBeVisible()
 
     // 환불 요청(돈은 안 움직인다) → 「환불 요청함」, 단추는 닿는 채로 이유가 옆에
     await page.getByRole('button', { name: labels.summary.requestRefund, exact: true }).click()

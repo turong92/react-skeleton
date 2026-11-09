@@ -98,6 +98,17 @@ export async function launch(
       : {}),
   })
   context.setDefaultTimeout(15_000)
+  if (process.env.CI) {
+    // CI 에서 실패한 요청 · 화면 오류를 로그에 남긴다 - 브라우저가 서버에 아무 요청도 못 보낸 채 멈춘 실패(90초 시간 초과)는 서버 로그만으로는 원인이 안 보인다
+    context.on('requestfailed', (request) => {
+      const error = request.failure()?.errorText
+      if (error && error !== 'net::ERR_ABORTED')
+        console.log(`[browser] ${request.method()} ${request.url()} ${error}`)
+    })
+    context.on('weberror', (webError) =>
+      console.log(`[browser] page error: ${webError.error().message}`),
+    )
+  }
   const page: Page = await context.newPage()
   return { browser, context, page }
 }

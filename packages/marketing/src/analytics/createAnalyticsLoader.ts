@@ -48,7 +48,7 @@ export type AnalyticsLoader = {
   start(): () => void
 }
 
-/** 인증 값이 실린 쿼리 - GA 의 `page_location` 에서 뗀다(메일 링크 `?token=` · 소셜 콜백 `?code=&state=` …) */
+/** 인증 값이 실린 쿼리 - GA 의 `page_location` 에서 뗀다(메일 링크 `?token=` · 소셜 콜백 `?code=&state=` · 앱 → 웹 결제 `#handoff=` …) */
 export const DEFAULT_REDACTED_PARAMS = [
   'token',
   'code',
@@ -58,6 +58,7 @@ export const DEFAULT_REDACTED_PARAMS = [
   'refresh_token',
   'key',
   'password',
+  'handoff', // 앱에서 넘어온 웹 결제의 한 번 쓰는 로그인 코드(#handoff=)
 ] as const
 
 /** `href` 에서 민감한 쿼리(와 조각의 같은 이름 값)를 뗀 주소. 주소가 아니면 그대로 */

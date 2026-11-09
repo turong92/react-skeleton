@@ -809,6 +809,17 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
     onDone: noop,
     requestTo: '/login',
   }),
+  'auth#WebHandoffLanding': () => ({
+    code: 'c',
+    onRedeem: asyncNoop,
+    onDone: noop,
+    signInTo: '/login',
+  }),
+  'auth#WebHandoffGate': () => ({
+    onRedeem: asyncNoop,
+    signInTo: '/login',
+    children: 'Payment',
+  }),
   'auth#SocialLinkProofScreen': () => ({
     provider: 'Kakao',
     kind: 'password',

@@ -2905,6 +2905,7 @@
         "modules": [
           "account",
           "account-jdbc",
+          "ads-admob",
           "alert",
           "alert-jdbc",
           "api-key",
@@ -3311,6 +3312,51 @@
       "keywords": {
         "ko": ["링크 로그인", "매직링크", "비밀번호 없는 로그인", "이메일 로그인"],
         "en": ["magic link", "passwordless", "email sign in"]
+      }
+    },
+    {
+      "patterns": [
+        "packages/auth/src/WebHandoffGate.stories.tsx",
+        "packages/auth/src/patterns/MailLinkLandings.stories.tsx"
+      ],
+      "stories": [],
+      "docs": ["packages/auth/README.md"],
+      "entryPoints": ["WebHandoffGate", "WebHandoffLanding", "createWebHandoffApi"],
+      "needs": ["auth"],
+      "backend": {
+        "modules": ["auth-web-handoff"],
+        "oneOfModules": [],
+        "optionalModules": ["payment-iap"],
+        "basePaths": ["/api/v1/auth/web-handoff"],
+        "docs": ["docs/modules/auth-web-handoff.md"]
+      },
+      "status": "experimental",
+      "id": "web-handoff-landing",
+      "kind": "pattern",
+      "package": "@skeleton/auth",
+      "stampFlag": {
+        "flag": null,
+        "included": "always",
+        "autoIncludes": [],
+        "alsoVia": [],
+        "optOut": null
+      },
+      "summary": "앱에서 「웹 결제」로 넘어온 사람을 받는 문지기 — 주소의 #handoff=<코드> 를 읽어 주소창 · 히스토리에서 지우고, 한 번 바꿔 세션을 연 뒤 결제 화면을 보인다. 만료 · 이미 쓴 코드는 로그인 안내로.",
+      "path": "packages/auth/src/screens/WebHandoffGate.tsx",
+      "notFor": [
+        "코드는 몇 분 · 한 번만 — 문지기는 열자마자 한 번만 바꾼다. 코드는 조각(#)에서만 읽는다(쿼리의 ?handoff= 는 쓰지 않고 지우기만 한다)",
+        "로그인 가드(RequireAuth)보다 바깥에 둔다 — 안쪽이면 가드가 로그인 화면으로 보내 버려 코드가 쓰이지 않는다",
+        "이미 로그인한 브라우저에서는 계정을 바꾸기 전에 확인을 묻는다. 2단계 인증 계정은 twoFactorTo 를 주면 두 번째 단계를 거친다(안 주면 안내 줄)",
+        "서버 렌더(SSR) 앱은 앱 전체가 아니라 결제 라우트만 감싼다 - 마운트 뒤에 읽고 그 전에는 아무것도 그리지 않는다. restore() 가 끝난 뒤에 렌더해야 로그인 상태 확인이 맞다"
+      ],
+      "keywords": {
+        "ko": ["앱에서 웹으로", "웹 결제 이동", "자동 로그인 코드", "핸드오프"],
+        "en": [
+          "app to web handoff",
+          "web checkout handoff",
+          "one-time login code",
+          "deep link login"
+        ]
       }
     },
     {

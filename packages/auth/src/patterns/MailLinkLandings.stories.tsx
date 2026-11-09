@@ -7,6 +7,7 @@ import { ForgotLoginIdScreen } from '../screens/ForgotLoginIdScreen'
 import { ForgotPasswordScreen } from '../screens/ForgotPasswordScreen'
 import { createOnceRunner } from '../screens/runOnce'
 import { MagicLinkLanding } from '../screens/MagicLinkLanding'
+import { WebHandoffLanding } from '../screens/WebHandoffLanding'
 import { ResetPasswordScreen } from '../screens/ResetPasswordScreen'
 import { SocialCallbackScreen } from '../screens/SocialCallbackScreen'
 import { FAKE_POLICY, apiError } from '../stories/fakeAccountApi'
@@ -467,5 +468,76 @@ export const SocialLinkReconsentsForAnAddresslessAccount: Story = {
   play: async ({ canvas }) => {
     await expect(await canvas.findByRole('button', { name: 'Confirm with Naver' })).toBeVisible()
     await expect(canvas.queryByRole('button', { name: 'Link Google' })).toBeNull()
+  },
+}
+
+/** 앱의 「웹 결제」로 넘어온 사람 - 코드는 StrictMode 에서도 한 번만 바뀐다 */
+const handoffOnce = fn(async () => undefined)
+export const WebHandoffRedeemsOnce: Story = {
+  beforeEach: () => handoffOnce.mockClear(),
+  render: () => (
+    <StrictMode>
+      <WebHandoffLanding code="code-once" onRedeem={handoffOnce} onDone={fn()} signInTo="/login" />
+    </StrictMode>
+  ),
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByRole('heading', { name: 'Signing you in' })).toBeVisible()
+    await waitFor(() => expect(handoffOnce).toHaveBeenCalledTimes(1))
+    await expect(handoffOnce).toHaveBeenCalledWith('code-once')
+  },
+}
+
+/** 만료됐거나 이미 썼거나 앱 세션이 닫힌 코드 - 서버는 모두 410 이다. 막다른 길이 되지 않게 로그인 링크를 준다 */
+export const WebHandoffExpiredOrUsed: Story = {
+  render: () => (
+    <WebHandoffLanding
+      code="old"
+      signInTo="/login"
+      onDone={fn()}
+      onRedeem={async () => {
+        throw apiError('ACCOUNT.TOKEN_INVALID', 410)
+      }}
+    />
+  ),
+  play: async ({ canvas }) => {
+    await expect(
+      await canvas.findByRole('heading', { name: 'This link no longer works' }),
+    ).toBeVisible()
+    await expect(canvas.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/login')
+  },
+}
+
+/** 주소에 코드가 없는 채로 닿았다 - 서버를 부르지 않고 같은 안내 */
+export const WebHandoffWithoutCode: Story = {
+  render: () => (
+    <WebHandoffLanding
+      code={null}
+      signInTo="/login"
+      onDone={fn()}
+      onRedeem={fn(async () => undefined)}
+    />
+  ),
+  play: async ({ canvas }) => {
+    await expect(
+      await canvas.findByRole('heading', { name: 'This link no longer works' }),
+    ).toBeVisible()
+  },
+}
+
+/** 그 밖의 실패(서버 오류 · 정지된 계정)는 안내 줄 - 다시 앱에서 열면 새 코드를 받는다 */
+export const WebHandoffFailed: Story = {
+  render: () => (
+    <WebHandoffLanding
+      code="c"
+      signInTo="/login"
+      onDone={fn()}
+      onRedeem={async () => {
+        throw apiError('AUTH.ACCOUNT_SUSPENDED', 403)
+      }}
+    />
+  ),
+  play: async ({ canvas }) => {
+    await expect(await canvas.findByRole('alert')).toBeVisible()
+    await expect(canvas.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/login')
   },
 }

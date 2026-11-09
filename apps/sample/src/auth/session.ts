@@ -1,4 +1,10 @@
-import { createAccountApi, createAuthApi, createAuthSession, createMfaApi } from '@skeleton/auth'
+import {
+  createAccountApi,
+  createAuthApi,
+  createAuthSession,
+  createMfaApi,
+  createWebHandoffApi,
+} from '@skeleton/auth'
 import { apiClient } from '../api/client'
 import { refreshDelivery } from './authConfig'
 import { bindAuthApi, refresher } from './refresher'
@@ -12,6 +18,8 @@ bindAuthApi(authApi)
 export const accountApi = createAccountApi(apiClient, { deviceName })
 /** 2단계 인증 설정(`/auth/mfa`) - 계정 설정의 줄과 「2단계 인증을 켜 주세요」 화면이 같이 쓴다 */
 export const mfaApi = createMfaApi(apiClient)
+/** 앱의 「웹 결제」로 넘어온 사람의 한 번 쓰는 코드 교환(`#handoff=`) - `AppFrame` 의 문지기가 쓴다 */
+export const webHandoffApi = createWebHandoffApi(apiClient)
 
 /** 로그인 · 로그아웃 · 현재 사용자. 화면은 `useAuth()` 로 읽는다 */
 export const authSession = createAuthSession({

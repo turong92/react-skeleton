@@ -20,6 +20,8 @@ export type TokenLandingProps = {
   invalidBody: string
   /** 안 되는 링크 아래(다시 요청하는 폼 · 링크) */
   invalid?: ReactNode
+  /** 일시 오류 줄 아래(막다른 길이 되지 않게 다른 길 하나) */
+  failedExtra?: ReactNode
   onDone?: () => void
   /** 실패를 이 화면의 일반 문구 대신 **자기 화면**으로 그리고 싶을 때(예: 탈퇴 대기 중 계정의 링크 로그인) — 노드를 돌려주면 그것이 화면 전체가 된다 */
   renderFailure?: (error: unknown) => ReactNode | null
@@ -51,6 +53,7 @@ export function TokenLanding({
   invalidTitle,
   invalidBody,
   invalid,
+  failedExtra,
   onDone,
   renderFailure,
   requireConfirm = false,
@@ -139,7 +142,12 @@ export function TokenLanding({
           </div>
         )}
         {phase === 'done' && done}
-        {phase === 'failed' && <Alert tone="danger">{failure}</Alert>}
+        {phase === 'failed' && (
+          <>
+            <Alert tone="danger">{failure}</Alert>
+            {failedExtra}
+          </>
+        )}
       </div>
     </AuthLayout>
   )

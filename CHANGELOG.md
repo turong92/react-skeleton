@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — 앱에서 「웹 결제」로 넘어온 사람의 착지 (2026-11-09)
+
+- `@skeleton/marketing`: GA `page_location` 에서 떼는 이름에 `handoff` 를 더했다(앱 → 웹 결제 로그인 코드).
+- `@skeleton/auth`: `WebHandoffGate` · `WebHandoffLanding` · `createWebHandoffApi` · `readHandoffCode`. 앱이 연 웹 결제 주소의 `#handoff=<코드>` 를 **조각에서만** 읽어 주소창 · 히스토리에서 바로 지우고, 백엔드 `POST /auth/web-handoff/redeem` 으로 한 번 바꿔 세션을 연 뒤 결제 화면을 보인다(로그인 가드 바깥에 둔다). 만료 · 이미 쓴 코드(410)는 「쓸 수 없는 링크예요」 + 로그인 링크(그 링크로 나가면 문이 열린다), 그 밖의 실패는 안내 줄. 이미 로그인한 브라우저는 계정을 바꾸기 전에 확인을 묻고(`onSignOut`), 코드는 라우터로 위치에서 지우며, 2단계 계정은 `twoFactorTo` 로 보낸다. 문구 `webHandoff*`(영어 · 한국어). `AuthApi` 는 늘리지 않았다(`createWebHandoffApi` 가 따로).
+- 견본 앱: `layouts/AppFrame.tsx` 가 모든 라우트 바깥에서 문지기를 건다. 카탈로그 패턴 `web-handoff-landing`.
+
 ### Added — 포인트 이력 종류 RESTORE (2026-11-06)
 
 - `@skeleton/rewards`: `PointEntryKind` 에 `'RESTORE'`(사용 취소로 되돌린 포인트, + 금액) - 백엔드 point 의 새 이력 종류. 문구 `kinds.RESTORE`('환원' / 'Restored')를 사용자 · 관리자 라벨 양쪽에 더했다. `PointLabels`/`AdminPointsLabels` 를 직접 채운 앱은 이 키를 더해야 한다.

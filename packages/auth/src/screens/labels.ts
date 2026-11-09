@@ -204,6 +204,15 @@ export type AuthLabels = TwoFactorLabels & {
   magicLinkInvalidBody: string
   magicLinkRequestNew: string
   magicLinkSentTitle: string
+  webHandoffTitle: string
+  webHandoffChecking: string
+  webHandoffInvalidTitle: string
+  webHandoffInvalidBody: string
+  webHandoffSignIn: string
+  webHandoffSwitchTitle: string
+  webHandoffSwitchBody: string
+  webHandoffSwitchContinue: string
+  webHandoffSwitchCancel: string
   methodsLoading: string
   methodsFailed: string
   methodsRetry: string
@@ -689,6 +698,17 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   magicLinkInvalidBody: 'It may have expired or already been used. Request a new one.',
   magicLinkRequestNew: 'Request a new link',
   magicLinkSentTitle: 'Check your email',
+  webHandoffTitle: 'Signing you in',
+  webHandoffChecking: 'Signing you in from the app',
+  webHandoffInvalidTitle: 'This link no longer works',
+  webHandoffInvalidBody:
+    'It lasts only a couple of minutes and works once. Go back to the app and open the web payment again, or sign in here.',
+  webHandoffSignIn: 'Sign in',
+  webHandoffSwitchTitle: 'Continue with the account from the app?',
+  webHandoffSwitchBody:
+    'You are signed in on this device already. Continuing signs you out here and signs you in with the account that opened this page from the app.',
+  webHandoffSwitchContinue: 'Sign out and continue',
+  webHandoffSwitchCancel: 'Cancel',
   methodsLoading: 'Checking how you can sign in',
   methodsFailed:
     'We could not check which sign-in methods are available. Showing the default — try again if something is missing.',

@@ -349,6 +349,17 @@ export type SubscriptionLabels = {
     ended: Record<SubscriptionEndReason, string>
     /** 이 패키지가 모르는 끝난 이유 */
     endedUnknown: string
+    /** 앱 스토어가 과금하는 구독 - 서버가 해지 · 플랜 변경을 못 해서 단추 대신 스토어로 안내한다 */
+    storeManaged: {
+      appstore: string
+      googleplay: string
+      /** 어느 스토어인지 모를 때(서버가 거절만 알려 줄 때) */
+      unknown: string
+      /** 스토어의 구독 관리 화면으로 가는 링크 글자 */
+      manage: { appstore: string; googleplay: string }
+      /** 계정 탈퇴 화면의 경고 - 스토어 구독은 탈퇴해도 자동으로 해지되지 않는다 */
+      beforeDelete: string
+    }
   }
   cancelDialog: {
     title: string

@@ -168,6 +168,25 @@ describe('MySubscriptionCard', () => {
     expect(html).toMatch(/data-variant="primary"[^>]*>기간 끝에 해지</)
   })
 
+  it('a store subscription (App Store / Google Play) has no cancel or change button - it points to that store instead; the server refusing says the same for an unknown store', () => {
+    const apple = card({ provider: 'appstore' }, { onChangePlan: noop, onCancelNow: noop })
+    expect(apple).toContain('앱 스토어에서 해지·변경해요')
+    expect(apple).toContain('href="https://apps.apple.com/account/subscriptions"')
+    expect(apple).not.toContain('기간 끝에 해지')
+    expect(apple).not.toContain('플랜 바꾸기')
+    expect(apple).not.toContain('지금 해지하고 환불')
+    expect(card({ provider: 'googleplay' })).toContain(
+      'href="https://play.google.com/store/account/subscriptions"',
+    )
+    const rejected = card({}, { storeManaged: true })
+    expect(rejected).toContain('앱 스토어(또는 Google Play)에서 결제한 구독')
+    expect(rejected).toContain('apps.apple.com')
+    expect(rejected).toContain('play.google.com')
+    expect(rejected).not.toContain('기간 끝에 해지')
+    // 토스 구독은 그대로
+    expect(card({ provider: 'toss' })).toContain('기간 끝에 해지')
+  })
+
   it('a subscription paid through KakaoPay or NaverPay shows the app name, with the card issuer when the provider gave one - never the raw brand code', () => {
     const kakao = card({ easyPayBrand: 'KAKAOPAY', card: { issuer: 'HYUNDAI', last4: null } })
     expect(kakao).toContain('카카오페이 · 현대카드')

@@ -698,6 +698,7 @@ export type SettingsExtras = Partial<
     | 'showDisplayName'
     | 'contactEmail'
     | 'preferenceRows'
+    | 'deleteNotice'
     | 'twoFactor'
     | 'profilePicture'
   >

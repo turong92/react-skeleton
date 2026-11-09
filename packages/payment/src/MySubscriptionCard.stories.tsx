@@ -160,3 +160,29 @@ export const WithAScheduledChange: Story = {
     await expect(args.onCancelScheduledChange).toHaveBeenCalledOnce()
   },
 }
+
+/** 앱 스토어(App Store · Google Play)가 과금하는 구독 - 서버가 해지 · 변경을 못 하니 단추 대신 스토어 구독 관리 화면으로 안내한다 */
+export const BilledByAppStore: Story = {
+  args: { subscription: subscription({ provider: 'appstore', card: null }), orders: [] },
+  play: async ({ canvas }) => {
+    await expect(
+      canvas.getByText('앱 스토어에서 결제한 구독이라 앱 스토어에서 해지·변경해요.'),
+    ).toBeVisible()
+    await expect(canvas.getByRole('link', { name: '앱 스토어 구독 관리' })).toHaveAttribute(
+      'href',
+      'https://apps.apple.com/account/subscriptions',
+    )
+    await expect(canvas.queryByRole('button', { name: '기간 끝에 해지' })).toBeNull()
+  },
+}
+
+export const BilledByGooglePlay: Story = {
+  args: { subscription: subscription({ provider: 'googleplay', card: null }), orders: [] },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('link', { name: 'Google Play 구독 관리' })).toHaveAttribute(
+      'href',
+      'https://play.google.com/store/account/subscriptions',
+    )
+    await expect(canvas.queryByRole('button', { name: '기간 끝에 해지' })).toBeNull()
+  },
+}

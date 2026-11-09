@@ -217,3 +217,5 @@ export {
 } from './format'
 export type { FormatMoneyOptions } from './format'
 export { declineCategoryOf } from './failure'
+export { STORE_SUBSCRIPTIONS_URL, storeOf } from './storeBilling'
+export type { BillingStore } from './storeBilling'

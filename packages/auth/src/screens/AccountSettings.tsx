@@ -112,6 +112,8 @@ export type AccountSettingsProps = {
   twoFactor?: MfaApi
   /** 「환경」 카드에 더할 줄들(예: `@skeleton/legal` 의 `<ConsentSettings row />`) - 줄은 `SettingsRow` */
   preferenceRows?: ReactNode | ((roundTrip: ProviderRoundTrip) => ReactNode)
+  /** 「계정 삭제」 줄 · 확인 창에 붙는 경고(예: 스토어 구독은 탈퇴해도 해지되지 않는다). 기본 없음 */
+  deleteNotice?: ReactNode
 }
 
 const ALL: AccountSectionName[] = [
@@ -177,6 +179,7 @@ export function AccountSettings({
   onResumeConsumed,
   onDiscarded,
   preferenceRows,
+  deleteNotice,
   twoFactor,
 }: AccountSettingsProps) {
   const labels = mergeLabels(given)
@@ -378,6 +381,7 @@ export function AccountSettings({
       graceDays={graceDays}
       selfRestore={selfRestore}
       formatDate={formatDate}
+      notice={deleteNotice}
       labels={given}
       requestDeleteCode={requestDeleteCode}
       onDelete={(credential) => api.deleteAccount(credential)}

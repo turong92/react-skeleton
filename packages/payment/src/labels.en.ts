@@ -241,6 +241,14 @@ export const defaultPaymentLabels: PaymentLabels = {
         REFUNDED: 'The payment was refunded, so the subscription ended.',
       },
       endedUnknown: 'This subscription has ended.',
+      storeManaged: {
+        appstore: 'You subscribed through the App Store, so end or change it in the App Store.',
+        googleplay: 'You subscribed through Google Play, so end or change it in Google Play.',
+        unknown: 'You subscribed through the App Store or Google Play, so end or change it there.',
+        manage: { appstore: 'Manage in the App Store', googleplay: 'Manage in Google Play' },
+        beforeDelete:
+          'A store subscription does not end when you delete your account. End it in the App Store (or Google Play) first.',
+      },
     },
     cancelDialog: {
       title: 'End this subscription?',

@@ -99,12 +99,18 @@ export function SubscriptionPage() {
       : []
     : [...choices.now, ...choices.next]
   const cancelable = subscription.status === 'ACTIVE' || subscription.status === 'PAST_DUE'
+  // 앱이 스토어 결제사 id 를 바꿨으면(`skeleton.payment.appstore.provider-id` · `googleplay.provider-id`) `provider` 가 `appstore` · `googleplay` 가 아니라 카드가 스토어 구독을 못 알아본다 -
+  // 서버가 스토어 구독이라 거절하면 열린 확인 창을 닫고 카드가 같은 안내로 바뀐다
+  const storeRejected = [cancel.error, change.error, cancelNow.error].some((error) =>
+    isPaymentLedgerError(error, PaymentLedgerErrorCodes.SUBSCRIPTION_MANAGED_BY_STORE),
+  )
   return (
     <div className={styles.page}>
       {header}
       <MySubscriptionCard
         subscription={subscription}
         orders={orders}
+        storeManaged={storeRejected}
         {...(candidates.length > 0 && subscription.status === 'ACTIVE'
           ? {
               onChangePlan: () => {
@@ -160,7 +166,7 @@ export function SubscriptionPage() {
         </div>
       )}
       <ChangePlanDialog
-        open={changeTo !== null && subscription.status === 'ACTIVE'}
+        open={changeTo !== null && subscription.status === 'ACTIVE' && !storeRejected}
         onClose={() => setChangeTo(null)}
         onConfirm={(input) =>
           change.mutate(
@@ -206,7 +212,7 @@ export function SubscriptionPage() {
         />
       )}
       <CancelNowDialog
-        open={endingNow && inUse}
+        open={endingNow && inUse && !storeRejected}
         onClose={() => setEndingNow(false)}
         onConfirm={() =>
           cancelNow.mutate(subscription.id, {
@@ -225,7 +231,7 @@ export function SubscriptionPage() {
         labels={labels}
       />
       <CancelSubscriptionDialog
-        open={confirming && cancelable}
+        open={confirming && cancelable && !storeRejected}
         onClose={() => setConfirming(false)}
         onConfirm={() => cancel.mutate(subscription.id, { onSuccess: () => setConfirming(false) })}
         subscription={subscription}

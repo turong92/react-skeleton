@@ -1,5 +1,5 @@
 import { Alert, Button, ConfirmDialog, SettingsRow } from '@skeleton/ui'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import type { ReauthCredential, SocialReauth } from '../account/accountApi'
 import type { DeletionResult } from '../account/types'
 import { isReauthFailure, reauthKindOf, type ReauthSubject } from '../reauth/kind'
@@ -28,6 +28,8 @@ export type DeleteAccountSectionProps = {
   /** 삭제가 예약되고 안내를 읽은 뒤 사용자가 「로그아웃」을 눌렀을 때(보통 이 기기를 로그아웃한다) */
   onDeleted?: (result: DeletionResult) => void
   formatDate?: (iso: string) => string
+  /** 삭제 줄에 붙는 경고(예: 스토어 구독은 탈퇴해도 해지되지 않는다) - 앱이 안다. 줄과 확인 창 둘 다에 보인다 */
+  notice?: ReactNode
   /** 줄만 그린다(`AccountSettings` 의 카드 안) - 아니면 제목 있는 카드 한 장에 담는다 */
   row?: boolean
   labels?: Partial<AuthLabels>
@@ -47,6 +49,7 @@ export function DeleteAccountSection({
   onResumeSpent,
   onDeleted,
   formatDate = defaultFormat,
+  notice,
   row,
   labels: given,
 }: DeleteAccountSectionProps) {
@@ -133,6 +136,7 @@ export function DeleteAccountSection({
                 <div className={styles.stack}>
                   <p>{labels.deleteGraceNotice(graceDays)}</p>
                   <p>{labels.deleteDialogBody}</p>
+                  {notice}
                   {open && del.error && !isReauthFailure(del.raw) && (
                     <Alert tone="danger">{del.error.message}</Alert>
                   )}
@@ -165,6 +169,7 @@ export function DeleteAccountSection({
           </>
         }
       >
+        {notice}
         {del.error && !open && <Alert tone="danger">{del.error.message}</Alert>}
       </SettingsRow>
     </SectionShell>

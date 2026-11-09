@@ -384,6 +384,23 @@ describe('settings sections', () => {
     expect(del(noAddress)).toContain('Confirm with Naver')
   })
 
+  it('delete: a notice from the app (e.g. a store subscription outlives the account) shows on the row', () => {
+    const noticed = html(
+      <DeleteAccountSection
+        subject={withPassword}
+        graceDays={30}
+        onDelete={async () => ({
+          status: 'DELETION_SCHEDULED',
+          purgeAfter: '2026-11-05T00:00:00Z',
+        })}
+        requestDeleteCode={noop}
+        notice={<p>cancel the store subscription first</p>}
+      />,
+    )
+    expect(noticed).toContain('cancel the store subscription first')
+    expect(del(withPassword)).not.toContain('store subscription')
+  })
+
   it('delete: the button is never switched off before the proof (a disabled button cannot say why; pressing it explains — see the story), and says nothing until pressed', () => {
     const html = del(withPassword)
     expect(html).not.toMatch(/disabled=""[^>]*>[^<]*Delete my account/)

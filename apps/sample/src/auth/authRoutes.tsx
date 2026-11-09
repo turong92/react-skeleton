@@ -26,6 +26,7 @@ import { ConsentSettingsSection } from '../legal/ConsentSettingsSection'
 import { SignUpConsentsSlot } from '../legal/SignUpConsentsSlot'
 import { useAuthLabels } from './useAuthLabels'
 import { AccountApiKeys } from './AccountApiKeys'
+import { StoreSubscriptionDeleteNotice } from '../subscription/StoreSubscriptionDeleteNotice'
 
 const browserStorage = () => (typeof window === 'undefined' ? undefined : window.sessionStorage)
 const origin = typeof window === 'undefined' ? '' : window.location.origin
@@ -120,6 +121,8 @@ export const accountRoutes = createAuthRoutes({
     ],
     // 2단계 인증 줄(켜기 마법사 · 복구 코드 · 끄기) - 백엔드가 `auth-mfa` 를 켜지 않았으면(404) 줄이 스스로 안내만 그린다
     twoFactor: mfaApi,
+    // 스토어(App Store · Google Play)가 과금하는 구독은 탈퇴해도 해지되지 않는다 - 삭제 줄에 먼저 스토어에서 해지하라고 알린다
+    deleteNotice: <StoreSubscriptionDeleteNotice />,
     // 「환경」 카드의 줄: 약관 동의 · API 키(소셜 전용 계정의 본인 확인이 제공자 동의 왕복을 쓰므로 함수로 받는다)
     preferenceRows: (trip) => (
       <>

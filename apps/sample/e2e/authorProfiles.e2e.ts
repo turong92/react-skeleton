@@ -370,7 +370,8 @@ describe('author profiles — several names, none of them tied to the account', 
   it('renaming A shows the new name on its post and comment; deleting B leaves its post as 「삭제된 사용자」 — still X’s own', async () => {
     await x.getByRole('link', { name: ko('nav.settings'), exact: true }).click()
     const row = rowOf(x, nameA)
-    await row.getByRole('button', { name: ko('author.renameAction') }).click()
+    // 이름이 있는 줄에는 「사진 바꾸기」 단추도 있어 이름만으로는 둘이 걸린다 - 이름 바꾸기 단추는 `data-rename` 으로 가린다
+    await row.locator('button[data-rename]').click()
     await row.getByRole('textbox').fill(nameA2)
     await row.getByRole('button', { name: ko('author.save'), exact: true }).click()
     await pwExpect(rowOf(x, nameA2)).toBeVisible()

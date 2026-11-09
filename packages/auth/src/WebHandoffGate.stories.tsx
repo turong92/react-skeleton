@@ -33,7 +33,7 @@ function Login() {
   return (
     <>
       <h2>Login page</h2>
-      <p data-testid="from">{`came:${back?.hash}`}</p>
+      <p data-testid="came-from">{`came:${back?.hash}`}</p>
     </>
   )
 }
@@ -120,7 +120,7 @@ export const ExpiredCodeThenSignInLink: Story = {
     ).toBeVisible()
     await userEvent.click(canvas.getByRole('link', { name: 'Sign in' }))
     await expect(await canvas.findByRole('heading', { name: 'Login page' })).toBeVisible()
-    await expect(canvas.getByTestId('from')).not.toHaveTextContent('handoff')
+    await expect(canvas.getByTestId('came-from')).not.toHaveTextContent('handoff')
   },
 }
 

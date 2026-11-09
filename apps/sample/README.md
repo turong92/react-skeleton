@@ -64,6 +64,14 @@ pnpm --filter sample dev --port 5175     # http://b.localhost:5175
 
 `VITE_GA_MEASUREMENT_ID` 를 넣는다면 GA 데이터 스트림의 향상된 측정에서 「브라우저 기록 이벤트를 기준으로 페이지 변경 측정」을 **꺼 둔다** - 이 앱의 분석 로더(`@skeleton/marketing` `createAnalyticsLoader`)가 인증 값을 뗀 주소로 `page_view` 를 직접 보내는데, 켜 두면 gtag 가 스스로도 보내 메일 링크의 `?token=` 이 실린 주소가 GA 로 간다.
 
+### e2e 파일 사이의 상태 (순서 · 시드 계정)
+
+e2e 파일은 **한 백엔드 · 한 DB 를 같이 쓰고 이름 순으로** 돈다(`e2e/nameSequencer.ts` — 로컬과 CI 의 순서가 같다). 시드 계정(`user` · `moderator` · `admin`)은 열댓 파일이 나눠 쓰므로 앞 파일이 남긴 것(노트 · 구독 · 구매 · 포인트 · 알림)이 뒤 파일에 보인다. 규칙:
+
+- **깨끗한 상태를 기대하는 파일은 그 상태를 `beforeAll` 에서 스스로 세운다**(예: `journey.e2e.ts` 는 노트를 모두 지우고 알림을 읽음으로 한다). 앞 파일이 비워 주기를 기대하지 않는다.
+- **시드 계정에 되돌릴 수 없는 것을 남기는 파일은 그 계정이 다른 파일의 전제가 아닌지 먼저 본다** — 예: 구독 갱신 시험이 moderator 로 `basic` 을 사면 상품 `basic` 의 구매 신호가 남아 `reviews.e2e.ts` 의 「구매 없는 사용자」가 쓸 수 있게 된다(그래서 `standard` 를 산다).
+- 화면 문구를 단정하는 알림 · 메일은 **서버가 만든 글**이다 — 서버 언어(JVM 기본 언어)에 기대지 않는다.
+
 ### 2단계 인증 e2e 가 백엔드에 기대하는 것
 
 백엔드 `auth-mfa`(`required-for: OPERATORS`, `admin.enabled: true`)와 `SKELETON_CRYPTO_KEYS_MAIN`. 운영 권한이 있는 시드 계정(admin · moderator)은 등록 전엔 `/api/v1/auth` · `GET /account/me` 말고는 403 `MFA.ENROLLMENT_REQUIRED` 다.

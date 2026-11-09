@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitest/config'
+import NameSequencer from './e2e/nameSequencer.ts'
 
 /*
  * 브라우저 e2e — 진짜 백엔드(kotlin-skeleton apps/sample) + 진짜 Vite 서버 + Playwright chromium.
@@ -28,6 +29,7 @@ export default defineConfig({
     globalSetup: ['e2e/globalSetup.ts'],
     pool: 'forks',
     fileParallelism: false,
+    sequence: { sequencer: NameSequencer }, // 파일 순서를 이름 순으로 고정한다(캐시를 따르는 기본 순서는 로컬과 CI 가 달랐다)
     testTimeout: 90_000,
     // globalSetup 의 정리(백엔드 `stop`: JVM 종료 + 컨테이너 · 볼륨 내리기)를 기다리는 시간 - 기본 10초면 vitest 가 먼저 process.exit() 해 정리가 끊기고 컨테이너 · 볼륨 · PID 파일이 남는다
     teardownTimeout: 120_000,

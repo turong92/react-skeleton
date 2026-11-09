@@ -154,6 +154,14 @@ describe('reviews: buy, write, help, report, read signed-out, reply, hide', () =
       await pwExpect
         .poll(() => balanceOf(token), { timeout: 60_000 })
         .toBeGreaterThanOrEqual(pointsBefore + 100)
+      // 알림은 포인트보다 조금 늦게 만들어진다 - 벨은 열 때 한 번 읽으니(실시간으로 갱신하지 않는다) 알림이 생긴 뒤에 연다
+      await pwExpect
+        .poll(
+          async () =>
+            JSON.stringify((await api(apiUrl, token, 'GET', '/notifications')).json.values ?? []),
+          { timeout: 60_000 },
+        )
+        .toContain('포인트 100점')
       await page.getByRole('button', { name: /^알림/ }).click()
       await pwExpect(page.getByText(/포인트 100점/).first()).toBeVisible()
     },

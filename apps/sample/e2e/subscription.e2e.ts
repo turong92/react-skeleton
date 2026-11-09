@@ -163,7 +163,8 @@ describe('③ the renewal at the end of the period', () => {
       token,
       'POST',
       '/payments/subscriptions',
-      { planCode: 'basic' },
+      // 베이직이 아닌 플랜: 이 계정(moderator)은 reviews 파일의 「구매 없는 사용자」다 - 베이직을 사면 상품 `basic` 의 구매 신호가 남아 리뷰를 쓸 수 있게 된다
+      { planCode: 'standard' },
       { 'Idempotency-Key': `e2e-renew-${Date.now()}` },
     )
     expect(started.status).toBe(201)

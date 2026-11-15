@@ -68,7 +68,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 
 | id | 무엇을 주는가 | 켜는 법 | 백엔드 | 상태 | 키워드 (ko / en) |
 |---|---|---|---|---|---|
-| `api-client` | 백엔드 REST 호출 한 곳 — 응답 envelope 벗기기 · 표준 에러(ApiRequestError · 에러 코드) · traceparent · 멱등 키 · 서버 시각 연결점을 갖춘 클라이언트. | 항상 | platform | stable | API 호출, 백엔드 연결, 에러 처리, 에러 코드, 멱등 키, traceId / api client, rest, http client, error codes, idempotency key, trace id |
+| `api-client` | 백엔드 REST 호출 한 곳 — 응답 envelope 벗기기 · 표준 에러(ApiRequestError · 에러 코드) · traceparent · 멱등 키 · 서버 시각 연결점을 갖춘 클라이언트. 사용자 기기의 오류(ErrorBoundary · window 오류 · 처리 안 된 거절)를 마지막 요청 traceId · 화면 경로 · 앱 버전과 함께 백엔드 alert 모듈로 보내는 보고처(createErrorReporter, 기본 꺼짐, 나중에 Sentry 로 교체 가능). | 항상 | platform | stable | API 호출, 백엔드 연결, 에러 처리, 에러 코드, 멱등 키, traceId / api client, rest, http client, error codes, idempotency key, trace id |
 | `auth` | 로그인 · 계정 수명주기 — 토큰 갱신(401 → 갱신 한 번 → 재시도, 회전 안전 · 탭 락) · 가입(닉네임 칸: 끔 · 선택 · 필수) · 메일 인증 · 비밀번호 재설정 · 링크 로그인 · 소셜 · 계정 설정(비밀번호 · 계정 이메일 · 연락받을 이메일 · 로그인 수단 · 세션 · 삭제) · 이메일을 필수로 켠 앱의 「이메일을 등록해 주세요」 전면 화면(주소 없는 계정이 앱 대신 본다 — 받는 시점은 로그인 직후 또는 쓰기 때, 쓰기 때는 `useEmailBeforeWrite` 와 「나중에 하기」) · 로그인 아이디(서버가 켠 앱만 — 가입의 아이디 칸과 실시간 확인 · 「아이디 또는 이메일」 로그인 · 아이디 찾기 `/forgot-id` · 아이디 없는 계정의 「아이디를 정해 주세요」 막 · 설정의 아이디 줄 · 관리자 표의 아이디 열과 찾기, 키가 없으면 화면은 예전 그대로) · 탈퇴 유예 중 로그인의 「탈퇴를 취소할까요?」 화면과 라우트 한 벌, 방법은 설정으로 켜고 끈다. | 항상 | auth | stable | 로그인, 로그아웃, 인증, 토큰, JWT, 보호 라우트 / login, logout, auth, authentication, jwt, token |
 | `realtime` | 서버가 밀어 주는 실시간 연결 — SSE(탭 숨김 일시정지 · 유휴 감시 · 재연결)와 STOMP WebSocket 알림 클라이언트. | --packages realtime | (경로만) | stable | 실시간, 실시간 알림, SSE, 웹소켓, 푸시, 연결 유지 / realtime, sse, server-sent events, websocket, stomp, push |
 | `i18n` | 화면 문구 다국어 — ICU 메시지 · 브라우저 언어 감지/저장 · 지연 로딩 사전 · useT() · 사전 짝 맞춤 테스트 도구. | --packages i18n | — | stable | 다국어, 번역, 언어 전환, 한국어 영어, 국제화, 로케일 / i18n, internationalization, localization, translation, locale, multi-language |
@@ -142,16 +142,16 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 
 ## 항목 상세
 
-### `api-client` — 백엔드 REST 호출 한 곳 — 응답 envelope 벗기기 · 표준 에러(ApiRequestError · 에러 코드) · traceparent · 멱등 키 · 서버 시각 연결점을 갖춘 클라이언트.
+### `api-client` — 백엔드 REST 호출 한 곳 — 응답 envelope 벗기기 · 표준 에러(ApiRequestError · 에러 코드) · traceparent · 멱등 키 · 서버 시각 연결점을 갖춘 클라이언트. 사용자 기기의 오류(ErrorBoundary · window 오류 · 처리 안 된 거절)를 마지막 요청 traceId · 화면 경로 · 앱 버전과 함께 백엔드 alert 모듈로 보내는 보고처(createErrorReporter, 기본 꺼짐, 나중에 Sentry 로 교체 가능).
 
 - 종류 · 상태: package · stable
 - 위치: `@skeleton/api-client` (`packages/api-client`)
 - 켜는 법: 모든 프로젝트에 들어간다
-- 백엔드: 모듈 `platform` · 경로 `/api/v1`
-- 주요 진입점: `createApiClient` · `apiConfigFromEnv` · `ApiRequestError` · `isErrorCode` · `ErrorCodes` · `newIdempotencyKey` · `createTraceContext`
+- 백엔드: 모듈 `platform` · 있으면 더 켜지는 `alert` · 경로 `/api/v1` · `/api/v1/client-errors`
+- 주요 진입점: `createApiClient` · `apiConfigFromEnv` · `ApiRequestError` · `isErrorCode` · `ErrorCodes` · `newIdempotencyKey` · `createTraceContext` · `createErrorReporter` · `installGlobalErrorReporting`
 - 문서: `packages/api-client/README.md`
 - 쓰지 않는 경우: 실시간 스트림(SSE · WebSocket) → realtime / 페이지 · 컴포넌트에서 fetch/axios 를 직접 부르지 않는다 — 앱의 api/client.ts 인스턴스를 훅(useQuery)으로 쓴다
-- 키워드: API 호출, 백엔드 연결, 에러 처리, 에러 코드, 멱등 키, traceId, 응답 형식 / api client, rest, http client, error codes, idempotency key, trace id, axios
+- 키워드: API 호출, 백엔드 연결, 에러 처리, 에러 코드, 멱등 키, traceId, 응답 형식, 화면 오류 보고, 프론트 에러 로그 / api client, rest, http client, error codes, idempotency key, trace id, axios, error reporting, client error report, sentry alternative
 
 ### `auth` — 로그인 · 계정 수명주기 — 토큰 갱신(401 → 갱신 한 번 → 재시도, 회전 안전 · 탭 락) · 가입(닉네임 칸: 끔 · 선택 · 필수) · 메일 인증 · 비밀번호 재설정 · 링크 로그인 · 소셜 · 계정 설정(비밀번호 · 계정 이메일 · 연락받을 이메일 · 로그인 수단 · 세션 · 삭제) · 이메일을 필수로 켠 앱의 「이메일을 등록해 주세요」 전면 화면(주소 없는 계정이 앱 대신 본다 — 받는 시점은 로그인 직후 또는 쓰기 때, 쓰기 때는 `useEmailBeforeWrite` 와 「나중에 하기」) · 로그인 아이디(서버가 켠 앱만 — 가입의 아이디 칸과 실시간 확인 · 「아이디 또는 이메일」 로그인 · 아이디 찾기 `/forgot-id` · 아이디 없는 계정의 「아이디를 정해 주세요」 막 · 설정의 아이디 줄 · 관리자 표의 아이디 열과 찾기, 키가 없으면 화면은 예전 그대로) · 탈퇴 유예 중 로그인의 「탈퇴를 취소할까요?」 화면과 라우트 한 벌, 방법은 설정으로 켜고 끈다.
 

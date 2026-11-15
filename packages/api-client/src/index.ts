@@ -37,3 +37,10 @@ export type { ErrorCodeValue } from './errorCodes'
 export { createTraceContext, createTraceId } from './traceContext'
 export type { TraceContext } from './traceContext'
 export { newIdempotencyKey } from './idempotencyKey'
+export { createErrorReporter, installGlobalErrorReporting, noopErrorReporter } from './errorReport'
+export type {
+  ErrorReportContext,
+  ErrorReporter,
+  ErrorReporterOptions,
+  ErrorReportPayload,
+} from './errorReport'

@@ -1,3 +1,4 @@
+import { installGlobalErrorReporting } from '@skeleton/api-client'
 import { AuthProvider } from '@skeleton/auth'
 import { initTheme, ThemedToaster } from '@skeleton/theme'
 import { ErrorBoundary } from '@skeleton/ui'
@@ -8,6 +9,8 @@ import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router-dom'
 import '@skeleton/tokens/tokens.css'
 import '@skeleton/ui/base.css'
+import { apiClient } from './api/client'
+import { createAppErrorReporter } from './app/createAppErrorReporter'
 import { queryClient } from './app/queryClient'
 import { authSession } from './auth/session'
 import { LegalGate } from './legal/LegalGate'
@@ -19,6 +22,10 @@ const ENABLE_QUERY_DEVTOOLS =
 // 저장한 테마를 읽어 <html data-theme> 에 단다(@skeleton/theme 는 불러올 때 아무것도 하지 않는다)
 initTheme()
 
+// 사용자 기기의 오류(렌더 오류 · 잡히지 않은 오류 · 처리 안 된 거절)를 보고처로 — 켜는 법은 .env.example 의 VITE_ERROR_REPORT
+const errorReporter = createAppErrorReporter({ env: import.meta.env, client: apiClient })
+installGlobalErrorReporting(errorReporter)
+
 // 액세스 토큰은 없고 갱신 자격만 남은 탭(다른 탭이 로그인했다 · 쿠키 모드)을 되살린 뒤 그린다
 void authSession
   .restore()
@@ -28,7 +35,7 @@ void authSession
 function render() {
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
-      <ErrorBoundary>
+      <ErrorBoundary reporter={errorReporter}>
         <QueryClientProvider client={queryClient}>
           <AuthProvider session={authSession}>
             <LegalGate>

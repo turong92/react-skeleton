@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — 사용자 기기의 오류를 서버로 보내는 보고처 (2026-11-16)
+
+- `@skeleton/api-client`: `ErrorReporter` 인터페이스 + `createErrorReporter`(백엔드 `alert` 모듈의 `POST /api/v1/client-errors` 로 — 마지막 API 요청의 traceId · 화면 경로 · 앱 버전 · 접힌 횟수를 싣는다) + `installGlobalErrorReporting`(`window` 의 `error` · `unhandledrejection`, 페이지를 떠날 때 `flush`) + `noopErrorReporter`. 같은 오류는 60초 창 안에서 첫 건만 보내고 반복은 접는다(`count`), 페이지당 20건 상한, 전송 실패 · 오프라인은 삼키고 버린다(큐 없음). `ApiClient.lastTraceId()` 가 늘었다(호환: 메서드 추가). 나중에 Sentry 로 바꿀 때는 같은 인터페이스를 구현한 객체를 꽂는다.
+- `@skeleton/ui` `ErrorBoundary`: 선택 prop `reporter` — 잡은 렌더 오류를 컴포넌트 스택과 함께 보고처로(던져도 fallback 은 그대로 뜬다).
+- `apps/starter`: `createAppErrorReporter`(`VITE_ERROR_REPORT=true` 일 때만 켜짐 — 백엔드 `skeleton.alert.client-errors.enabled=true` 와 함께, 둘 다 기본 꺼짐 · `VITE_APP_RELEASE` 앱 버전)를 `main.tsx` 에서 `ErrorBoundary` 와 전역 핸들러에 연결했다.
+
 ### Added — 앱에서 「웹 결제」로 넘어온 사람의 착지 (2026-11-09)
 
 - `@skeleton/marketing`: GA `page_location` 에서 떼는 이름에 `handoff` 를 더했다(앱 → 웹 결제 로그인 코드).

@@ -78,15 +78,17 @@
         "isErrorCode",
         "ErrorCodes",
         "newIdempotencyKey",
-        "createTraceContext"
+        "createTraceContext",
+        "createErrorReporter",
+        "installGlobalErrorReporting"
       ],
       "needs": [],
       "backend": {
         "modules": ["platform"],
         "oneOfModules": [],
-        "optionalModules": [],
-        "basePaths": ["/api/v1"],
-        "docs": ["docs/modules/platform.md", "docs/errors.md"]
+        "optionalModules": ["alert"],
+        "basePaths": ["/api/v1", "/api/v1/client-errors"],
+        "docs": ["docs/modules/platform.md", "docs/errors.md", "docs/alert.md"]
       },
       "status": "stable",
       "id": "api-client",
@@ -100,7 +102,7 @@
         "alsoVia": [],
         "optOut": null
       },
-      "summary": "백엔드 REST 호출 한 곳 — 응답 envelope 벗기기 · 표준 에러(ApiRequestError · 에러 코드) · traceparent · 멱등 키 · 서버 시각 연결점을 갖춘 클라이언트.",
+      "summary": "백엔드 REST 호출 한 곳 — 응답 envelope 벗기기 · 표준 에러(ApiRequestError · 에러 코드) · traceparent · 멱등 키 · 서버 시각 연결점을 갖춘 클라이언트. 사용자 기기의 오류(ErrorBoundary · window 오류 · 처리 안 된 거절)를 마지막 요청 traceId · 화면 경로 · 앱 버전과 함께 백엔드 alert 모듈로 보내는 보고처(createErrorReporter, 기본 꺼짐, 나중에 Sentry 로 교체 가능).",
       "notFor": [
         "실시간 스트림(SSE · WebSocket) → realtime",
         "페이지 · 컴포넌트에서 fetch/axios 를 직접 부르지 않는다 — 앱의 api/client.ts 인스턴스를 훅(useQuery)으로 쓴다"
@@ -113,7 +115,9 @@
           "에러 코드",
           "멱등 키",
           "traceId",
-          "응답 형식"
+          "응답 형식",
+          "화면 오류 보고",
+          "프론트 에러 로그"
         ],
         "en": [
           "api client",
@@ -122,7 +126,10 @@
           "error codes",
           "idempotency key",
           "trace id",
-          "axios"
+          "axios",
+          "error reporting",
+          "client error report",
+          "sentry alternative"
         ]
       }
     },

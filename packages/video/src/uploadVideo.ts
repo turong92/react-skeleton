@@ -44,6 +44,8 @@ export type UploadVideoOptions = {
   /** 시험 · 스토리용 - 조각 `PUT` (기본은 XHR) */
   put?: PartPut
   sleep?: (ms: number) => Promise<void>
+  /** 시험용 - 지금 시각(ms). 서명 주소의 나이를 잰다 */
+  now?: () => number
   storage?: ResumeStorage
 }
 
@@ -51,8 +53,9 @@ export type UploadVideoOptions = {
 const ATTEMPTS = 4
 /** 한꺼번에 올리는 조각 수 */
 const CONCURRENCY = 3
-/** 서버 `parts` 호출 한 번의 번호 수 상한 */
-const PARTS_PER_CALL = 100
+/** 서명 주소는 15분 뒤 끝난다 - 몇 조각 앞까지만 받고, 10분 넘은 주소는 보내기 전에 다시 받는다 */
+const SIGN_AHEAD = 6
+const ADDRESS_LIFE_MS = 10 * 60_000
 const RETRY_BASE_MS = 500
 
 type ResumeRecord = { id: string; uploadId: string; partSize: number }
@@ -111,6 +114,7 @@ export async function uploadVideo(
     onProgress,
     put = putPartXhr,
     sleep = (ms) => new Promise((r) => setTimeout(r, ms)),
+    now = Date.now,
   } = options
   const contentType = contentTypeOf(file)
   if (!contentType) throw new UnsupportedVideoFileError()
@@ -160,16 +164,34 @@ export async function uploadVideo(
   }
   if (done.size > 0) report()
 
-  const urls = new Map<number, PartTarget>()
   const missing = numbers.filter((n) => !done.has(n))
-  for (let at = 0; at < missing.length; at += PARTS_PER_CALL)
-    for (const target of await api.presignParts(id, missing.slice(at, at + PARTS_PER_CALL)))
-      urls.set(target.number, target)
+  const queue = [...missing]
+  // 함께 받아 두므로 다른 일꾼이 기다리는 조각을 두 번 받지 않는다. 실패한 요청은 잊고 다시 한다
+  const signed = new Map<number, { target: Promise<PartTarget>; at: number }>()
+  async function targetFor(number: number): Promise<PartTarget> {
+    const held = signed.get(number)
+    if (!held || now() - held.at >= ADDRESS_LIFE_MS) {
+      const batch = [number, ...queue.slice(0, SIGN_AHEAD - 1)]
+      const at = now()
+      const call = api.presignParts(id, batch)
+      for (const n of batch) {
+        const target = call.then((all) => all.find((t) => t.number === n)!)
+        target.catch(() => undefined)
+        signed.set(n, { target, at })
+      }
+    }
+    try {
+      return await signed.get(number)!.target
+    } catch (error) {
+      signed.delete(number)
+      throw error
+    }
+  }
 
   async function sendPart(number: number): Promise<void> {
     const start = (number - 1) * partSize
     const part = file.slice(start, start + sizeOf(partSize, number))
-    let target = urls.get(number)!
+    let target = await targetFor(number)
     for (let attempt = 1; ; attempt += 1) {
       if (signal?.aborted) throw aborted()
       try {
@@ -196,7 +218,6 @@ export async function uploadVideo(
     }
   }
 
-  const queue = [...missing]
   let failure: unknown = null
   async function worker() {
     while (failure === null) {

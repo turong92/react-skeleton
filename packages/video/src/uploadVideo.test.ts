@@ -105,6 +105,40 @@ describe('uploadVideo', () => {
     for (let i = 1; i < seen.length; i += 1) expect(seen[i]).toBeGreaterThanOrEqual(seen[i - 1])
   })
 
+  it('signs a few parts ahead, not the whole file at once', async () => {
+    const f = fakes()
+    await uploadVideo(f.api, file(50 * MB), { ...base, put: f.put, sleep: f.sleep })
+    const asked = f.api.presignParts.mock.calls.map(([, numbers]) => numbers)
+    expect(asked[0].length).toBeLessThan(10)
+    expect(new Set(asked.flat())).toEqual(new Set(Array.from({ length: 10 }, (_, i) => i + 1)))
+  })
+
+  it('signs an address again once it is ten minutes old', async () => {
+    const f = fakes()
+    let now = 0
+    const signedAt: number[] = []
+    f.api.presignParts.mockImplementation(async (_id: string, numbers: number[]) => {
+      signedAt.push(now)
+      return numbers.map((n) => ({
+        ...target(n),
+        url: `https://store/part${n}?c=${signedAt.length - 1}`,
+      }))
+    })
+    const put = vi.fn(async (t: PartTarget) => {
+      // The first three go at once, before any part has finished.
+      if (t.number > 3) {
+        const c = Number(new URL(t.url).searchParams.get('c'))
+        expect(now - signedAt[c], `part ${t.number} went with an old address`).toBeLessThan(
+          10 * 60_000,
+        )
+      }
+      now = 11 * 60_000 // a part took that long
+      return `"e${t.number}"`
+    })
+    await uploadVideo(f.api, file(50 * MB), { ...base, put, sleep: f.sleep, now: () => now })
+    expect(put).toHaveBeenCalledTimes(10)
+  })
+
   it('resends only the failed part, with a fresh signed URL', async () => {
     const f = fakes()
     let failures = 0

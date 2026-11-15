@@ -4,6 +4,7 @@ export type * from './types'
 
 export { isBelow, parseVersion } from './version'
 export { appStateOf } from './gate'
+export { isMaintenanceError, MAINTENANCE_ERROR_CODE, watchMaintenance } from './maintenance'
 export type { AppStateOptions } from './gate'
 
 export { appControlKeys, appConfigQuery } from './queries'

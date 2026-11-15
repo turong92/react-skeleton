@@ -162,7 +162,8 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 - 켜는 법: `--packages app-control` — 함께 따라오는 패키지 `api-client` · `auth` · `legal` · `theme` · `time` · `tokens` · `ui`
 - 필요한 것: `api-client` · `ui`
 - 백엔드: 모듈 `app-control` · 있으면 더 켜지는 `app-control-jdbc` · 경로 `/api/v1/app/config` · `/api/v1/admin/app-control`
-- 주요 진입점: `createAppControlApi` · `useAppConfig` · `useFeature` · `appStateOf` · `AppControlGate` · `isBelow` · `parseVersion` · `defaultAppControlLabels` · `koAppControlLabels` · `mergeAppControlLabels`
+- 주요 진입점: `createAppControlApi` · `useAppConfig` · `useFeature` · `appStateOf` · `AppControlGate` · `isBelow` · `parseVersion` · `defaultAppControlLabels` · `koAppControlLabels` · `mergeAppControlLabels` · `isMaintenanceError` · `watchMaintenance`
+- 보고 따라 할 스토리: `packages/app-control/src/AppControlGate.stories.tsx`
 - 문서: `packages/app-control/README.md`
 - 쓰지 않는 경우: 운영자 화면(스위치 · 점검 · 버전 정책 바꾸기) — 서버의 /api/v1/admin/app-control 은 있지만 이 패키지에 화면은 없다(앱이 Switch · Form 으로) / 사용자 · 비율 단위 단계적 공개 — 스위치는 켜짐 / 꺼짐 둘뿐이다 / 모바일 앱의 강제 업데이트(스토어로 보내기) — 모바일은 flutter-skeleton 의 app-control 패키지다. 이쪽의 「강제」는 새로고침이다 / 서버가 낡은 클라이언트의 요청을 거절하지는 않는다 — 최소 버전은 클라이언트가 설정을 읽어 판정한다 / 라우터를 모른다 — 게이트를 어디에 두는지(보통 앱 맨 위)는 앱이 정한다
 - 키워드: 점검 모드, 점검 화면, 기능 스위치, 기능 플래그, 강제 업데이트, 최소 버전, 새 버전 안내, 재배포 없이 끄기, 킬 스위치 / maintenance mode, maintenance page, feature flag, feature toggle, kill switch, force update, minimum version, new version banner, remote config

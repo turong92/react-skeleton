@@ -135,7 +135,7 @@
     },
     {
       "patterns": [],
-      "stories": [],
+      "stories": ["packages/app-control/src/AppControlGate.stories.tsx"],
       "docs": ["packages/app-control/README.md"],
       "entryPoints": [
         "createAppControlApi",
@@ -147,7 +147,9 @@
         "parseVersion",
         "defaultAppControlLabels",
         "koAppControlLabels",
-        "mergeAppControlLabels"
+        "mergeAppControlLabels",
+        "isMaintenanceError",
+        "watchMaintenance"
       ],
       "needs": ["api-client", "ui"],
       "backend": {

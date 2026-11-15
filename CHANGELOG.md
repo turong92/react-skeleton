@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added — 재배포 없이 끄고 켜기: 점검 화면 · 스위치 읽기 · 새 버전 안내 (2026-11-16)
 
 - `@skeleton/app-control`(백엔드 `modules/app-control` 짝): `createAppControlApi`(`GET /app/config`) · `useAppConfig`(창에 돌아오면 다시 읽고 점검 중엔 주기적으로, 모듈이 없는 백엔드의 404 는 다시 묻지 않는다) · `useFeature`(클라이언트에 보이는 스위치) · `appStateOf`(점검 > 강제 > 권장) · `AppControlGate`(점검 화면 · 닫을 수 없는 새로고침 화면 · 닫을 수 있는 띠). 버전은 숫자 칸으로 비교한다(`1.10` > `1.9`).
+- `@skeleton/app-control`: 어느 호출이든 `503 APP_CONTROL.MAINTENANCE` 를 받으면 게이트가 설정을 바로 다시 읽는다(`watchMaintenance` · `isMaintenanceError`), `AppControlGate` 에 `bypass`(운영자 화면은 점검 화면 밖), 스토리(점검 · 강제 · 권장 · 닫기 · bypass) + `docs/ui-catalog.md` 줄. 배포 스크립트 예시는 `PATCH`(PUT 은 통째 덮어쓰기).
 
 ### Added — 사용자 기기의 오류를 서버로 보내는 보고처 (2026-11-16)
 

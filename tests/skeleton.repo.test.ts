@@ -100,6 +100,7 @@ describe('the skeleton repo', () => {
       .map((w) => w.dir)
       .sort()
     expect(withStories).toEqual([
+      'packages/app-control',
       'packages/auth',
       'packages/author-profile',
       'packages/board',

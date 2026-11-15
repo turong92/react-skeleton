@@ -1,13 +1,19 @@
 import { Alert, Button } from '@skeleton/ui'
-import { useState, type ReactNode } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { useEffect, useState, type ReactNode } from 'react'
 import type { AppControlApi } from './appControlApi'
 import styles from './AppControlGate.module.css'
 import { appStateOf } from './gate'
 import { useAppConfig } from './hooks'
+import { watchMaintenance } from './maintenance'
+import { appControlKeys } from './queries'
 import { mergeAppControlLabels, type AppControlLabels } from './labels'
+import type { AppState } from './types'
 
 export type AppControlGateProps = {
   api: AppControlApi
+  /** true 면 게이트를 건너뛴다 — 운영자 화면(점검을 끄는 곳)을 점검 화면이 가리지 않게 한다. 라우트 단위로 게이트 밖에 두어도 된다 */
+  bypass?: boolean
   /** 이 앱의 버전(빌드 때 넣는 상수). 없으면 버전으로 막지 않는다 */
   appVersion?: string
   /** 서버 `platforms` 의 키(기본 `web`) */
@@ -31,6 +37,7 @@ export function AppControlGate({
   api,
   appVersion,
   platform,
+  bypass = false,
   onUpdate = reload,
   formatTime = localTime,
   labels,
@@ -39,7 +46,19 @@ export function AppControlGate({
   const L = mergeAppControlLabels(labels)
   const [dismissed, setDismissed] = useState<string | null>(null)
   const { data } = useAppConfig(api)
-  const state = appStateOf(data, { appVersion, platform, dismissed })
+  const client = useQueryClient()
+  const state: AppState = bypass
+    ? { kind: 'ok' }
+    : appStateOf(data, { appVersion, platform, dismissed })
+
+  // 설정은 점검 경로가 열려 있어 읽히지만, 다른 호출이 먼저 503 점검을 받으면 설정을 바로 다시 읽는다
+  useEffect(
+    () =>
+      watchMaintenance(client, () => {
+        void client.invalidateQueries({ queryKey: appControlKeys.config() })
+      }),
+    [client],
+  )
 
   if (state.kind === 'maintenance') {
     return (

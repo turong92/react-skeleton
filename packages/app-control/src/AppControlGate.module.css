@@ -1,0 +1,29 @@
+.screen {
+  display: grid;
+  gap: var(--space-md);
+  justify-items: start;
+  max-inline-size: 36rem;
+  margin: var(--space-xl) auto;
+  padding: var(--space-xl);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.title {
+  margin: 0;
+  color: var(--text-strong);
+  font-size: var(--font-size-title);
+  font-weight: 700;
+}
+
+.body {
+  margin: 0;
+  white-space: pre-line;
+}
+
+.note {
+  margin: 0;
+  color: var(--text-muted);
+}

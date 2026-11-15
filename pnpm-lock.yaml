@@ -364,6 +364,25 @@ importers:
         specifier: ^1.17.0
         version: 1.20.0
 
+  packages/app-control:
+    dependencies:
+      '@skeleton/api-client':
+        specifier: workspace:*
+        version: link:../api-client
+      '@skeleton/ui':
+        specifier: workspace:*
+        version: link:../ui
+    devDependencies:
+      '@tanstack/react-query':
+        specifier: ^5.99.2
+        version: 5.104.1(react@19.3.0)
+      react:
+        specifier: ^19.2.5
+        version: 19.3.0
+      react-dom:
+        specifier: ^19.2.5
+        version: 19.3.0(react@19.3.0)
+
   packages/auth:
     dependencies:
       '@skeleton/api-client':

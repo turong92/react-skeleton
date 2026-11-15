@@ -30,6 +30,7 @@ describe('the skeleton repo', () => {
     ])
     expect(dirs('package')).toEqual([
       'packages/api-client',
+      'packages/app-control',
       'packages/auth',
       'packages/author-profile',
       'packages/board',

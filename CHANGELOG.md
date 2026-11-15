@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — 재배포 없이 끄고 켜기: 점검 화면 · 스위치 읽기 · 새 버전 안내 (2026-11-16)
+
+- `@skeleton/app-control`(백엔드 `modules/app-control` 짝): `createAppControlApi`(`GET /app/config`) · `useAppConfig`(창에 돌아오면 다시 읽고 점검 중엔 주기적으로, 모듈이 없는 백엔드의 404 는 다시 묻지 않는다) · `useFeature`(클라이언트에 보이는 스위치) · `appStateOf`(점검 > 강제 > 권장) · `AppControlGate`(점검 화면 · 닫을 수 없는 새로고침 화면 · 닫을 수 있는 띠). 버전은 숫자 칸으로 비교한다(`1.10` > `1.9`).
+
 ### Added — 사용자 기기의 오류를 서버로 보내는 보고처 (2026-11-16)
 
 - `@skeleton/api-client`: `ErrorReporter` 인터페이스 + `createErrorReporter`(백엔드 `alert` 모듈의 `POST /api/v1/client-errors` 로 — 마지막 API 요청의 traceId · 화면 경로 · 앱 버전 · 접힌 횟수를 싣는다) + `installGlobalErrorReporting`(`window` 의 `error` · `unhandledrejection`, 페이지를 떠날 때 `flush`) + `noopErrorReporter`. 같은 오류는 60초 창 안에서 첫 건만 보내고 반복은 접는다(`count`), 페이지당 20건 상한, 전송 실패 · 오프라인은 삼키고 버린다(큐 없음). `ApiClient.lastTraceId()` 가 늘었다(호환: 메서드 추가). 나중에 Sentry 로 바꿀 때는 같은 인터페이스를 구현한 객체를 꽂는다.

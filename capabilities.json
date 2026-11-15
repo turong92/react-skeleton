@@ -134,6 +134,79 @@
       }
     },
     {
+      "patterns": [],
+      "stories": [],
+      "docs": ["packages/app-control/README.md"],
+      "entryPoints": [
+        "createAppControlApi",
+        "useAppConfig",
+        "useFeature",
+        "appStateOf",
+        "AppControlGate",
+        "isBelow",
+        "parseVersion",
+        "defaultAppControlLabels",
+        "koAppControlLabels",
+        "mergeAppControlLabels"
+      ],
+      "needs": ["api-client", "ui"],
+      "backend": {
+        "modules": ["app-control"],
+        "oneOfModules": [],
+        "optionalModules": ["app-control-jdbc"],
+        "basePaths": ["/api/v1/app/config", "/api/v1/admin/app-control"],
+        "docs": [
+          "docs/modules/app-control.md",
+          "docs/modules/app-control-jdbc.md",
+          "docs/app-control-http-contract.md"
+        ]
+      },
+      "status": "experimental",
+      "id": "app-control",
+      "kind": "package",
+      "package": "@skeleton/app-control",
+      "path": "packages/app-control",
+      "stampFlag": {
+        "flag": "--packages app-control",
+        "included": "flag",
+        "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
+        "alsoVia": [],
+        "optOut": null
+      },
+      "summary": "재배포 없이 끄고 켜기 — 점검 모드 · 기능 스위치 · 최소 버전. 앱 맨 위의 AppControlGate 가 점검 중이면 점검 화면(안내 문구 · 끝 예정), 최소 버전 미만이면 닫을 수 없는 새로고침 화면, 권장 버전 미만이면 닫을 수 있는 띠를 보이고 아니면 그대로 children. useFeature(api, key) 로 운영자가 클라이언트에 보이기로 한 스위치를 읽는다. 창에 돌아오면 다시 읽고 점검 중엔 풀릴 때까지 주기적으로 읽는다. 버전은 숫자 칸으로 비교한다(1.10 > 1.9). 설정을 못 읽어도 막지 않는다.",
+      "notFor": [
+        "운영자 화면(스위치 · 점검 · 버전 정책 바꾸기) — 서버의 /api/v1/admin/app-control 은 있지만 이 패키지에 화면은 없다(앱이 Switch · Form 으로)",
+        "사용자 · 비율 단위 단계적 공개 — 스위치는 켜짐 / 꺼짐 둘뿐이다",
+        "모바일 앱의 강제 업데이트(스토어로 보내기) — 모바일은 flutter-skeleton 의 app-control 패키지다. 이쪽의 「강제」는 새로고침이다",
+        "서버가 낡은 클라이언트의 요청을 거절하지는 않는다 — 최소 버전은 클라이언트가 설정을 읽어 판정한다",
+        "라우터를 모른다 — 게이트를 어디에 두는지(보통 앱 맨 위)는 앱이 정한다"
+      ],
+      "keywords": {
+        "ko": [
+          "점검 모드",
+          "점검 화면",
+          "기능 스위치",
+          "기능 플래그",
+          "강제 업데이트",
+          "최소 버전",
+          "새 버전 안내",
+          "재배포 없이 끄기",
+          "킬 스위치"
+        ],
+        "en": [
+          "maintenance mode",
+          "maintenance page",
+          "feature flag",
+          "feature toggle",
+          "kill switch",
+          "force update",
+          "minimum version",
+          "new version banner",
+          "remote config"
+        ]
+      }
+    },
+    {
       "patterns": [
         "apps/storybook/src/patterns/LoginPage.stories.tsx",
         "apps/storybook/src/patterns/ForbiddenPage.stories.tsx",
@@ -4093,6 +4166,11 @@
       "need": "문의 · 의견 받기 · 도움말 (질문 · 기능 제안 · 오류 신고 · 자주 묻는 질문 · 고객센터)",
       "capabilities": ["inquiry"],
       "byHand": "백엔드 inquiry + inquiry-jdbc 를 붙이고(skeleton.inquiry.* · 운영자 목록은 skeleton.inquiry.admin.enabled) 프런트는 apps/sample 의 HelpPage(FaqList + ContactForm)를 복사한다: 문항은 앱이 sections 로 주고, 로그인하지 않은 사람에게 서버가 사람 확인을 켰다면 captcha 에 @skeleton/captcha-turnstile 의 useTurnstileToken + Turnstile 을 꽂는다. 「잘 받았어요」 화면과 개인정보 고지는 앱이 정한다."
+    },
+    {
+      "need": "재배포 없이 끄고 켜기 — 점검 모드 · 기능 스위치(킬 스위치) · 강제 업데이트 · 새 버전 안내",
+      "capabilities": ["app-control"],
+      "byHand": "백엔드 app-control + app-control-jdbc 를 붙이고(skeleton.app-control.enabled · 클라이언트 설정은 …config.enabled · 운영은 …admin.enabled) 프런트는 앱 맨 위를 AppControlGate 로 감싼다(appVersion 은 빌드 때 넣는 상수). 스위치는 useFeature(api, key) 로 읽는다 — 운영자가 클라이언트에 보이기로 한 것만 온다. 웹의 「새 버전」은 배포 스크립트가 platforms/web 의 recommendedVersion 을 한 번 올린다. 모바일은 flutter-skeleton 의 app-control."
     },
     {
       "need": "대기열 · 가상 대기실 (오픈 때 몰리는 접속을 앞에서 줄 세우기 · 순번 · 선착순 · 티켓팅)",

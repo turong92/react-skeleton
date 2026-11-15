@@ -147,6 +147,14 @@ const reviewsReview = {
   updatedAt: '2026-01-01T00:00:00Z',
 }
 const fakeInquiryApi = () => ({ send: async () => ({ status: 'RECEIVED' }) })
+const fakeAppControlApi = () => ({
+  config: async () => ({
+    serverTime: '2026-11-16T09:00:00Z',
+    maintenance: { enabled: false, message: null, endsAt: null },
+    flags: { beta: true },
+    platforms: {},
+  }),
+})
 const fakeWaitingRoomApi = () => {
   const status = {
     state: 'WAITING',
@@ -1164,6 +1172,7 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
   'inquiry#FaqList': () => ({
     sections: [{ id: 's', title: 'Start', items: [{ id: 'q', question: 'Q?', answer: 'A.' }] }],
   }),
+  'app-control#AppControlGate': () => ({ api: fakeAppControlApi(), children: 'inside' }),
   'waiting-room#WaitingRoomGate': () => ({
     api: fakeWaitingRoomApi(),
     roomId: 'wr_1',
@@ -1459,6 +1468,8 @@ export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
   ],
   'booking#useRemainingMs': () => [null, () => 0],
   'video#useVideos': () => [fakeVideoApi(), 'clip'],
+  'app-control#useAppConfig': () => [fakeAppControlApi()],
+  'app-control#useFeature': () => [fakeAppControlApi(), 'beta'],
   'waiting-room#useWaitingRoom': () => ['wr_1', { api: fakeWaitingRoomApi() }],
   'waiting-room#useWaitingRoomEntry': () => [],
   'search#useSearch': () => [fakeSearchApi(), { q: 'bag' }],

@@ -1,0 +1,31 @@
+{
+  "name": "@skeleton/app-control",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "재배포 없이 끄고 켜는 것들 — 백엔드 modules/app-control 짝: createAppControlApi(`GET /app/config`: 점검 · 클라이언트에 보이는 기능 스위치 · 플랫폼별 버전 정책), useAppConfig(창에 돌아오면 다시 읽고, 점검 중에는 풀릴 때까지 주기적으로), useFeature(스위치 읽기), useAppState / AppControlGate(점검 화면 · 강제 새로고침 화면 · 닫을 수 있는 새 버전 안내). 버전은 숫자 칸으로 비교(1.10 > 1.9). 문구는 모두 prop(ko/en 사전 포함)",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "types": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run --pool forks --testTimeout 30000 --hookTimeout 60000",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@skeleton/api-client": "workspace:*",
+    "@skeleton/ui": "workspace:*"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "^5.0.0",
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@tanstack/react-query": "^5.99.2",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
+  }
+}

@@ -148,7 +148,11 @@ function toPayload(
     platform: 'web',
     source: context?.source,
     name: isError ? error.name : undefined,
-    message: cut(isError ? error.message : describe(error), LIMITS.message) ?? '',
+    // 서버는 빈 message 를 400 으로 거절하고 그래도 한도는 닳는다
+    message:
+      cut(isError ? error.message : describe(error), LIMITS.message) ||
+      (isError ? error.name : '') ||
+      'Error',
     stack: isError ? cut(error.stack, LIMITS.stack) : undefined,
     componentStack: cut(context?.componentStack, LIMITS.componentStack),
     route: attempt(options.getRoute) ?? defaultRoute(),

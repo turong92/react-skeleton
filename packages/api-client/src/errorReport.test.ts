@@ -66,6 +66,13 @@ describe('createErrorReporter', () => {
     expect(sent.every((s) => s.payload.name === undefined)).toBe(true)
   })
 
+  it('never sends an empty message (the server would answer 400 and still count it)', () => {
+    const { reporter, sent } = setup()
+    reporter.report(new TypeError(''))
+    reporter.report('')
+    expect(sent.map((s) => s.payload.message)).toEqual(['TypeError', 'Error'])
+  })
+
   it('sends the first of a repeated error at once and folds the repeats into the next report', () => {
     const { reporter, sent, advance } = setup({ dedupeWindowMs: 60_000 })
     const boom = () => new Error('boom')

@@ -7,7 +7,7 @@ import { loadHlsLight } from './loadHls'
 import { FullscreenButton } from './FullscreenButton'
 import { elementOutput } from './mediaOutput'
 import { ModePill } from './ModePill'
-import { grantExpired, planPlayback, type QualityChoice } from './playbackPlan'
+import { firstStep, grantExpired, planPlayback, type QualityChoice } from './playbackPlan'
 import { createPlayIntent } from './playIntent'
 import { usePlayingReport, type Latest } from './playerRuntime'
 import { playbackOf, type PlayerSource } from './playerSource'
@@ -21,7 +21,7 @@ import {
 } from './playerState'
 import { QualityMenu } from './QualityMenu'
 import { heightOfSize } from './qualityLabel'
-import type { QualityOption } from './queueController'
+import type { QualityHandle, QualityOption } from './queueController'
 import type { VideoPlayback } from './types'
 import type { VideoPlayerProps } from './videoPlayerProps'
 import { useHiddenHandoff } from './useHiddenHandoff'
@@ -199,7 +199,7 @@ export function VideoPlayer({
         return
       }
     }
-    const first = planPlayback(g, env).order[0]
+    const first = firstStep(planPlayback(g, env), state.pick)
     if (first) dispatch({ type: 'press', kind: first, mode })
   }
 
@@ -245,8 +245,18 @@ export function VideoPlayer({
     // 호환 단이 아직 없다(준비 중) - 칩은 막아 두지만 앱 조작줄(`setQuality`)이 불러도 없는 주소를 틀지 않는다
     if (pick === 'compat' && plan.compatPending) return
     if (pick === state.pick && (pick !== 'auto' || state.kind === plan.order[0])) return
+    // 아직 안 틀었으면(또는 실패 뒤) 고른 값만 기억한다 - 첫 재생이 그 단으로 시작한다
+    if (state.phase !== 'playing') return dispatch({ type: 'pick', pick })
     const kind = pick === 'auto' ? plan.order[0] : pick
-    dispatch({ type: 'choose', pick, kind, at: videoRef.current?.currentTime ?? 0 })
+    const video = videoRef.current
+    // 멈춰 있으면 같은 시각에 붙이되 멈춘 채로
+    dispatch({
+      type: 'choose',
+      pick,
+      kind,
+      at: video?.currentTime ?? 0,
+      play: video ? !video.paused : true,
+    })
   }
 
   const switchMode = (next: PlayerMode) => {
@@ -321,20 +331,28 @@ export function VideoPlayer({
   useEffect(() => {
     chooseRef.current = choose
   })
-  const choosable = showVideo && qualityOptions.length > 1
+  // 영상 모드로 정해져 있으면 멈춘 채 · 시작 전에도 내준다(앱의 화질 단추 · 유튜브 뮤직처럼) - 노래 모드는 아니다
+  const choosable = mode === 'video' && preferredMode !== 'audio' && qualityOptions.length > 1
+  const qualityHandle = useRef<QualityHandle | null>(null)
   useEffect(() => {
     if (!choosable || !audioHost) return
-    return audioHost.quality.register({
+    const handle = audioHost.quality.register({
       options: qualityOptions,
       value: state.pick,
       set: (quality) => chooseRef.current(quality),
     })
+    qualityHandle.current = handle
+    handle.reportHeight(playingHeight) // 다시 등록돼도 지금 높이를 다시 알린다(같은 높이 단이면 이벤트가 안 온다)
+    return () => {
+      handle.release()
+      qualityHandle.current = null
+    }
+    // 높이는 아래 효과가 이어서 알린다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [choosable, audioHost, qualityOptions, state.pick])
   useEffect(() => {
-    audioHost?.quality.reportHeight(choosable ? playingHeight : null)
-  }, [choosable, audioHost, playingHeight])
-  // 이 재생기가 사라지면(다음 곡) 높이를 지운다 - 선택이 바뀌어 다시 등록될 때는 지우지 않는다
-  useEffect(() => () => audioHost?.quality.reportHeight(null), [audioHost])
+    qualityHandle.current?.reportHeight(playingHeight)
+  }, [playingHeight])
 
   // 전체 화면 칩 · 대기열(앱 조작줄)이 같은 `toggle` 을 쓴다
   const toggleStageFullscreen = () => {

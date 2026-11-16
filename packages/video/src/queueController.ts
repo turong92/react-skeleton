@@ -65,6 +65,9 @@ export type QualityOption = {
   pending?: boolean
 }
 
+/** 화질을 등록한 재생기가 쥐는 핸들 - 높이는 이 핸들로만 보고하고(지금 등록된 것의 보고만 받는다), `release` 로 푼다 */
+export type QualityHandle = { reportHeight: (height: number | null) => void; release: () => void }
+
 /** 그려진 `VideoPlayer` 가 등록하는 화질 선택 - 고를 수 있는 것 · 지금 고른 것 · 고르는 함수 */
 export type QualityTarget = {
   options: QualityOption[]
@@ -88,11 +91,8 @@ export type AudioHost = {
   stop: () => void
   /** 대기열이 지금 곡을 소리로 틀고 있나 - 큰 화면의 재생기가 처음부터 틀지 않고 이어받는다. 아니면 null */
   status: () => { playing: boolean; at: number } | null
-  /** 그려진 재생기의 화질 - `register` 로 선택지를 꽂고(푸는 함수는 자기 것일 때만 지운다) `reportHeight` 로 지금 나오는 높이를 알린다 */
-  quality: {
-    register: (target: QualityTarget) => () => void
-    reportHeight: (height: number | null) => void
-  }
+  /** 그려진 재생기의 화질 - `register` 로 선택지를 꽂고 돌려받은 핸들로 지금 나오는 높이를 알리고 푼다(자기 것일 때만 먹는다) */
+  quality: { register: (target: QualityTarget) => QualityHandle }
   /** 그려진 무대의 전체 화면 - `register` 로 대상을 꽂고(푸는 함수는 자기 것일 때만 지운다), `report` 로 지금 전체 화면인지 알린다 */
   fullscreen: {
     register: (target: FullscreenTarget) => () => void
@@ -147,18 +147,20 @@ export function createQueueController(deps: {
 
   let fullscreenTarget: FullscreenTarget | null = null
   let qualityTarget: QualityTarget | null = null
-  const registerQuality = (target: QualityTarget) => {
+  const registerQuality = (target: QualityTarget): QualityHandle => {
     qualityTarget = target
-    emit({ qualityOptions: target.options, quality: target.value })
-    return () => {
-      if (qualityTarget !== target) return
-      qualityTarget = null
-      // 높이는 지우지 않는다 - 선택이 바뀌어 다시 등록될 때 같은 높이 단이면 다시 보고되지 않는다(무대가 사라질 때는 무대가 null 을 보고한다)
-      emit({ qualityOptions: [], quality: 'auto' })
+    emit({ qualityOptions: target.options, quality: target.value, playingHeight: null })
+    return {
+      reportHeight: (height) => {
+        if (qualityTarget === target && height !== state.playingHeight)
+          emit({ playingHeight: height })
+      },
+      release: () => {
+        if (qualityTarget !== target) return
+        qualityTarget = null
+        emit({ qualityOptions: [], quality: 'auto', playingHeight: null })
+      },
     }
-  }
-  const reportHeight = (height: number | null) => {
-    if (height !== state.playingHeight) emit({ playingHeight: height })
   }
   /** 화면의 재생기(영상 · 유튜브)가 등록한 것 - 영상 모드에서 소리를 내는 쪽 */
   let output: MediaOutput | null = null
@@ -382,7 +384,6 @@ export function createQueueController(deps: {
     },
     registerOutput,
     registerQuality,
-    reportHeight,
     setQuality: (quality: QualityChoice) => qualityTarget?.set(quality),
     registerFullscreen,
     setFullscreen: (active: boolean) => emit({ fullscreen: active }),
@@ -484,7 +485,7 @@ export function createQueueController(deps: {
       visible: () => visible,
       emit,
       registerOutput,
-      quality: { register: registerQuality, reportHeight },
+      quality: { register: registerQuality },
       fullscreen: {
         register: registerFullscreen,
         report: (active) => emit({ fullscreen: active }),

@@ -144,6 +144,19 @@ describe("reducePlayer - joining the queue's sound", () => {
   })
 })
 
+describe('quality before and while paused', () => {
+  it('only remembers the choice before the first play, and starts the first play from it', () => {
+    const s = reducePlayer(initialPlayer, { type: 'pick', pick: 'compat' })
+    expect(s).toMatchObject({ phase: 'idle', pick: 'compat', session: initialPlayer.session })
+  })
+
+  it('switches to the chosen step at the same time but stays paused when it was paused', () => {
+    let s = reducePlayer(initialPlayer, { type: 'press', kind: 'hls' })
+    s = reducePlayer(s, { type: 'choose', pick: 'compat', kind: 'compat', at: 20, play: false })
+    expect(s).toMatchObject({ phase: 'playing', kind: 'compat', at: 20, play: false })
+  })
+})
+
 describe('followPreference', () => {
   it('moves the player to the preference when it is in the other mode - even if the preference value did not change (the signal asks again)', () => {
     expect(followPreference('audio', 'video')).toBe('audio')

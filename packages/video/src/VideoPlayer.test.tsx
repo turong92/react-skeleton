@@ -96,7 +96,7 @@ describe('VideoPlayer before the first press', () => {
       stop: () => {},
       registerOutput: () => () => {},
       fullscreen: { register: () => () => {}, report: () => {} },
-      quality: { register: () => () => {}, reportHeight: () => {} },
+      quality: { register: () => ({ reportHeight: () => {}, release: () => {} }) },
       status: () => null,
     }
     const html = renderToStaticMarkup(
@@ -118,7 +118,7 @@ describe('VideoPlayer before the first press', () => {
       stop: () => {},
       registerOutput: () => () => {},
       fullscreen: { register: () => () => {}, report: () => {} },
-      quality: { register: () => () => {}, reportHeight: () => {} },
+      quality: { register: () => ({ reportHeight: () => {}, release: () => {} }) },
       status: () => ({ playing: true, at: 42 }),
     }
     const html = renderToStaticMarkup(

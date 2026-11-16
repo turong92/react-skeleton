@@ -53,7 +53,9 @@ export function followPlayback(
 
 export type PlayerAction =
   | { type: 'press'; kind: PlaybackKind; mode?: PlayerMode }
-  | { type: 'choose'; pick: QualityChoice; kind: PlaybackKind; at: number }
+  | { type: 'choose'; pick: QualityChoice; kind: PlaybackKind; at: number; play?: boolean }
+  /** 아직 틀기 전(또는 실패 뒤)에 화질만 고른다 - 첫 재생의 첫 걸음이 이것이 된다 */
+  | { type: 'pick'; pick: QualityChoice }
   | { type: 'next'; kind: PlaybackKind; at: number }
   | { type: 'refresh'; at: number }
   | { type: 'giveUp' }
@@ -99,6 +101,8 @@ export function reducePlayer(state: PlayerState, action: PlayerAction): PlayerSt
         refreshed: false,
         session,
       }
+    case 'pick':
+      return { ...state, pick: action.pick }
     case 'choose':
       return {
         ...state,
@@ -107,7 +111,7 @@ export function reducePlayer(state: PlayerState, action: PlayerAction): PlayerSt
         kind: action.kind,
         tried: [action.kind],
         at: action.at,
-        play: true,
+        play: action.play ?? true,
         adopt: false,
         refreshed: false,
         session,

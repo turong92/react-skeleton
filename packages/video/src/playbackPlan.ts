@@ -70,6 +70,11 @@ export function planPlayback(grant: VideoPlayback, env: PlaybackEnv): PlaybackPl
   return { engine, order, options, compatPending }
 }
 
+/** 첫 재생의 첫 걸음 - 고른 화질이 이 곡에서 틀 수 있는 걸음이면 그것, 아니면(자동 · 없는 단) 기본 순서의 첫 걸음 */
+export function firstStep(plan: PlaybackPlan, pick: QualityChoice): PlaybackKind | undefined {
+  return pick !== 'auto' && plan.order.includes(pick) ? pick : plan.order[0]
+}
+
 /** 토큰이 곧(30초 안에) 끝나거나 이미 끝났나 - 공개 영상(`expiresAt` 없음)은 끝나지 않는다 */
 export function grantExpired(grant: VideoPlayback, now: number): boolean {
   if (!grant.expiresAt) return false

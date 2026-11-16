@@ -3,6 +3,7 @@ import {
   afterFailure,
   grantExpired,
   nativeHlsIsReliable,
+  firstStep,
   planPlayback,
   type PlaybackEnv,
 } from './playbackPlan'
@@ -70,6 +71,17 @@ describe('planPlayback', () => {
 
   it('has no engine without native HLS or MSE', () => {
     expect(planPlayback(fakeGrant(), none)).toMatchObject({ engine: null, order: [] })
+  })
+})
+
+describe('firstStep', () => {
+  it('starts with the chosen step when it can be played, otherwise with the default first step', () => {
+    const plan = planPlayback(fakeGrant(), native())
+    expect(firstStep(plan, 'auto')).toBe('hls')
+    expect(firstStep(plan, 'compat')).toBe('compat')
+    expect(firstStep(plan, 'orig')).toBe('orig')
+    const noCompat = planPlayback(fakeGrant({ compat: undefined }), native())
+    expect(firstStep(noCompat, 'compat')).toBe('hls')
   })
 })
 

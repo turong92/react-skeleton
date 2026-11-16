@@ -230,32 +230,34 @@ describe('queue quality', () => {
     expect(t.set).toHaveBeenCalledWith('compat')
   })
 
-  it('clears on unregister, but a late unregister of an older stage keeps the newer one', () => {
+  it('clears on release, but a late release of an older stage keeps the newer one', () => {
     const { c } = setup([clip('a')])
-    const offOld = c.registerQuality(target())
-    const offNew = c.registerQuality(target('compat'))
-    offOld()
+    const old = c.registerQuality(target())
+    const newer = c.registerQuality(target('compat'))
+    old.release()
     expect(c.getState().quality).toBe('compat')
-    c.reportHeight(720)
-    offNew()
-    expect(c.getState()).toMatchObject({ qualityOptions: [], quality: 'auto' })
+    newer.reportHeight(720)
+    newer.release()
+    expect(c.getState()).toMatchObject({ qualityOptions: [], quality: 'auto', playingHeight: null })
   })
 
-  it('keeps the playing height while the stage re-registers (a new choice, new options) and drops it only when the stage reports it is gone', () => {
+  it('takes the playing height only from the stage that is registered now (a player with no quality choice cannot clear it)', () => {
     const { c } = setup([clip('a')])
-    const off = c.registerQuality(target())
-    c.reportHeight(1080)
-    off()
-    c.registerQuality(target('compat')) // 같은 높이 단으로 바뀌면 다시 보고하지 않는다 - 지워지면 「자동 (1080p)」가 「자동」으로 떨어진다
+    const old = c.registerQuality(target())
+    const newer = c.registerQuality(target('compat'))
+    newer.reportHeight(1080)
+    old.reportHeight(null)
     expect(c.getState().playingHeight).toBe(1080)
-    c.reportHeight(null)
+    newer.release()
+    newer.reportHeight(720) // 이미 풀린 핸들
     expect(c.getState().playingHeight).toBeNull()
   })
 
-  it('keeps what the stage reports as the playing height', () => {
+  it('has no playing height when nothing is playing', () => {
     const { c } = setup([clip('a')])
-    c.registerQuality(target())
-    c.reportHeight(1080)
+    const handle = c.registerQuality(target())
+    expect(c.getState().playingHeight).toBeNull()
+    handle.reportHeight(1080)
     expect(c.getState().playingHeight).toBe(1080)
   })
 

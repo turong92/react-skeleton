@@ -194,6 +194,12 @@ describe('queue progress - reading', () => {
     c.seek(40)
     expect(engine.seek).toHaveBeenCalledWith(40)
   })
+
+  it('does not seek with an empty queue (nothing loaded is not a match for no current song)', () => {
+    const { c, engine } = setup([])
+    c.seek(10)
+    expect(engine.seek).not.toHaveBeenCalled()
+  })
 })
 
 describe('queue fullscreen', () => {

@@ -11,6 +11,15 @@ export function fullscreenKindOf(
   return null
 }
 
+/** 이 무대(또는 그 안)가 지금 전체 화면이면 나온다 - 무대가 대상에서 빠질 때(노래 모드로 자동 전환 · 사라짐) 전체 화면이 남아 상태가 틀어지지 않게 */
+export function leaveFullscreenOf(
+  stage: { contains: (node: never) => boolean } | null,
+  doc: { fullscreenElement: unknown; exitFullscreen: () => Promise<void> },
+): void {
+  if (stage && doc.fullscreenElement && stage.contains(doc.fullscreenElement as never))
+    doc.exitFullscreen().catch(() => {})
+}
+
 export function toggleFullscreen(
   kind: FullscreenKind,
   frame: { requestFullscreen: () => Promise<void> } | null,

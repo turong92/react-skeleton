@@ -122,7 +122,7 @@ export function createQueueController(deps: {
     output?.applyVolume(state.volume, state.muted)
   }
 
-  /** 화면의 `<video>` · 유튜브 플레이어를 소리 내는 쪽으로 등록한다 - 등록하자마자 지금 음량이 걸린다. 푸는 함수는 그 사이 새로 등록된 것을 지우지 않는다 */
+  /** 그려진 무대의 전체 화면 대상을 등록한다. 푸는 함수는 그 사이 새로 등록된 것을 지우지 않는다 */
   const registerFullscreen = (target: FullscreenTarget) => {
     fullscreenTarget = target
     emit({})
@@ -132,6 +132,7 @@ export function createQueueController(deps: {
       emit({ fullscreen: false })
     }
   }
+  /** 화면의 `<video>` · 유튜브 플레이어를 소리 내는 쪽으로 등록한다 - 등록하자마자 지금 음량이 걸린다. 푸는 함수는 그 사이 새로 등록된 것을 지우지 않는다 */
   const registerOutput = (next: MediaOutput) => {
     output = next
     next.applyVolume(state.volume, state.muted)
@@ -336,7 +337,8 @@ export function createQueueController(deps: {
       const t = Math.max(0, seconds)
       if (state.mode === 'audio') {
         // 읽을 때와 같은 확인 - 요소가 다른 곡(없음 포함)을 쥐고 있으면 옮기지 않는다
-        if (audio.loadedItem() === state.queue.currentId) audio.seek(t)
+        const id = state.queue.currentId
+        if (id !== null && audio.loadedItem() === id) audio.seek(t)
       } else output?.seek(t)
       refreshProgress()
     },

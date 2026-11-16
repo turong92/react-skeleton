@@ -1,7 +1,7 @@
 import { useEffect, useReducer, useRef, useState, useSyncExternalStore } from 'react'
 import { wakeAudio } from './autoAudio'
 import { readBrowserEnv } from './browserEnv'
-import { toggleFullscreen } from './fullscreen'
+import { leaveFullscreenOf, toggleFullscreen } from './fullscreen'
 import { defaultVideoPlayerLabels } from './labels'
 import { loadHlsLight } from './loadHls'
 import { FullscreenButton } from './FullscreenButton'
@@ -279,7 +279,12 @@ export function VideoPlayer({
   })
   useEffect(() => {
     if (!fullscreenKind || !audioHost) return
-    return audioHost.fullscreen.register({ toggle: () => toggleRef.current() })
+    const stage = stageRef.current
+    const off = audioHost.fullscreen.register({ toggle: () => toggleRef.current() })
+    return () => {
+      off()
+      leaveFullscreenOf(stage, document)
+    }
   }, [fullscreenKind, audioHost])
   useEffect(() => {
     if (fullscreenKind) audioHost?.fullscreen.report(isFullscreen)

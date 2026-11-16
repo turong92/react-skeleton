@@ -11,7 +11,7 @@ import { readBrowserEnv } from './browserEnv'
 import { FullscreenButton } from './FullscreenButton'
 import { defaultVideoPlayerLabels, type VideoPlayerLabels } from './labels'
 import { youtubeOutput, type MediaOutput } from './mediaOutput'
-import { toggleFullscreen } from './fullscreen'
+import { leaveFullscreenOf, toggleFullscreen } from './fullscreen'
 import type { AudioHost } from './queueController'
 import styles from './VideoPlayer.module.css'
 
@@ -38,13 +38,13 @@ export type YoutubeStageProps = {
   loadApi?: () => Promise<YouTubeApi>
 }
 
+const subscribeNothing = () => () => {}
+const serverEnv = () => null
+
 /**
  * 유튜브 영상(IFrame Player API) - **영상으로만** 튼다(노래 모드 · 전환 단추 없음). 이 컴포넌트가 처음 그려질 때 비로소 API 스크립트를 부른다.
  * 끝나면 `onEnded`, 오류는 코드를 가리지 않고 `onFailed`
  */
-const subscribeNothing = () => () => {}
-const serverEnv = () => null
-
 export function YoutubeStage({
   videoId,
   restart,
@@ -80,7 +80,12 @@ export function YoutubeStage({
   })
   useEffect(() => {
     if (!canFullscreen || !fullscreenHost) return
-    return fullscreenHost.register({ toggle: () => toggleRef.current() })
+    const stage = stageRef.current
+    const off = fullscreenHost.register({ toggle: () => toggleRef.current() })
+    return () => {
+      off()
+      leaveFullscreenOf(stage, document)
+    }
   }, [canFullscreen, fullscreenHost])
   useEffect(() => {
     if (canFullscreen) fullscreenHost?.report(isFullscreen)

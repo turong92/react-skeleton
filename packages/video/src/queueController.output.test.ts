@@ -204,6 +204,17 @@ describe('queue progress - reading', () => {
   })
 })
 
+describe('queue setPreferred', () => {
+  it('raises preferSignal on every call, even when the value is the same (the player may be in the other mode after an automatic switch)', () => {
+    const { c } = setup([song('a')])
+    const base = c.getState().preferSignal
+    c.setPreferred('video')
+    expect(c.getState().preferSignal).toBe(base + 1)
+    c.setPreferred('video')
+    expect(c.getState()).toMatchObject({ preferred: 'video', preferSignal: base + 2 })
+  })
+})
+
 describe('queue canAudio', () => {
   it('is true for a song with a sound version on a device that plays it', () => {
     expect(setup([song('a')]).c.canAudio()).toBe(true)

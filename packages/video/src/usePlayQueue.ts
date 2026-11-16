@@ -4,7 +4,7 @@ import { currentOf, upcomingOf } from './playQueue'
 import type { QueueController } from './queueController'
 
 const subscribeNothing = () => () => {}
-const serverCanSetVolume = () => false
+const serverFalse = () => false
 
 export const QueueContext = createContext<QueueController | null>(null)
 
@@ -18,9 +18,9 @@ export function usePlayQueue() {
   const state = useSyncExternalStore(controller.subscribe, controller.getState, controller.getState)
   const current = currentOf(state.queue)
   // 지금 곡이 노래 모드가 되나 - 서버 · 하이드레이션 첫 그림은 false(기기를 모른다)
-  const canAudio = useSyncExternalStore(subscribeNothing, controller.canAudio, serverCanSetVolume)
+  const canAudio = useSyncExternalStore(subscribeNothing, controller.canAudio, serverFalse)
   // 이 기기가 코드로 음량을 바꿀 수 있나 - 서버 · 하이드레이션 첫 그림은 false, 브라우저가 재서 알려 준다
-  const canSetVolume = useSyncExternalStore(subscribeNothing, readCanSetVolume, serverCanSetVolume)
+  const canSetVolume = useSyncExternalStore(subscribeNothing, readCanSetVolume, serverFalse)
   const playerProps = useMemo(
     () => ({
       audioHost: controller.host,
@@ -61,6 +61,7 @@ export function usePlayQueue() {
     setVolume: controller.setVolume,
     setMuted: controller.setMuted,
     stageStart: state.stageStart,
+    preferSignal: state.preferSignal,
     audioStart: state.audioStart,
     playerProps,
     controller,

@@ -145,16 +145,14 @@ describe("reducePlayer - joining the queue's sound", () => {
 })
 
 describe('followPreference', () => {
-  it('switches the player when the queue preference changed to something else than its mode', () => {
-    expect(followPreference('video', 'audio', 'video')).toBe('audio')
-    expect(followPreference('audio', 'video', 'audio')).toBe('video')
+  it('moves the player to the preference when it is in the other mode - even if the preference value did not change (the signal asks again)', () => {
+    expect(followPreference('audio', 'video')).toBe('audio')
+    expect(followPreference('video', 'audio')).toBe('video')
   })
 
-  it('does nothing when it already is in that mode (the player itself caused the change), nothing changed, or there is no preference', () => {
-    expect(followPreference('video', 'audio', 'audio')).toBeNull()
-    expect(followPreference('audio', 'audio', 'video')).toBeNull()
-    expect(followPreference(undefined, undefined, 'video')).toBeNull()
-    expect(followPreference('video', undefined, 'video')).toBeNull()
+  it('does nothing when it already is in that mode or there is no preference', () => {
+    expect(followPreference('video', 'video')).toBeNull()
+    expect(followPreference(undefined, 'video')).toBeNull()
   })
 })
 

@@ -57,8 +57,9 @@ export type VideoPlayerProps = Input & {
   controls?: boolean
   /** 「영상 / 노래」 알약 - 앱이 자기 조작줄에 그릴 때 끈다(기본 켬). 바꾸는 것은 대기열의 `setPreferred` 로 한다 */
   modeToggle?: boolean
-  /** 대기열의 선호(`usePlayQueue().preferred`) - 바뀌면 재생 중인 이 재생기가 같은 시각 · 같은 재생 상태로 그 모드로 옮긴다(`QueueStage` 가 잇는다) */
+  /** 대기열의 선호(`usePlayQueue().preferred`)와 그것을 (다시) 정했다는 신호(`preferSignal`) - 신호가 오르면 재생 중인 이 재생기가 선호 ≠ 지금 모드일 때 같은 시각 · 같은 재생 상태로 옮긴다(`QueueStage` 가 잇는다) */
   preferredMode?: PlayerMode
+  preferSignal?: number
   /** 시험 · 스토리용 - 이 기기가 무엇을 트는가(기본은 브라우저에서 읽는다) */
   env?: PlaybackEnv
   /** 시험 · 스토리용 - hls.js 불러오기(기본은 light 빌드 지연 import) */

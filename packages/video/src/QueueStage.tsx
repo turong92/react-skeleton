@@ -74,6 +74,7 @@ function ConnectedQueueStage({
       followPlaying={queue.mode === 'video' ? queue.playing : undefined}
       {...playerProps}
       preferredMode={queue.preferred}
+      preferSignal={queue.preferSignal}
       {...(controls === undefined ? {} : { controls })}
       {...(modeToggle === undefined ? {} : { modeToggle })}
     />

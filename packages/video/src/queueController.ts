@@ -41,6 +41,8 @@ export type ControllerState = {
   stageStart: number
   /** 대기열이 이 곡을 소리로 (다시) 틀기 시작할 때마다 오른다 - 이미 그려진 큰 화면의 재생기가 이어받는다 */
   audioStart: number
+  /** `setPreferred` 를 부를 때마다 오른다(값이 같아도) - 그려진 재생기가 「선호 ≠ 지금 모드」면 그 모드로 옮긴다 */
+  preferSignal: number
   /** 음량 0~1 - 대기열 `<audio>` · 화면 영상 · 유튜브에 같이 걸린다 */
   volume: number
   muted: boolean
@@ -92,6 +94,7 @@ export function createQueueController(deps: {
     playing: false,
     stageStart: 0,
     audioStart: 0,
+    preferSignal: 0,
     volume: 1,
     muted: false,
     fullscreen: false,
@@ -298,7 +301,8 @@ export function createQueueController(deps: {
     setRepeat: (repeat: RepeatMode) => dispatch({ type: 'repeat', repeat }),
     setShuffle: (on: boolean) => dispatch({ type: 'shuffle', on, random }),
     /** 앱이 처음 선호를 정할 때(영상 앱은 `video`) - 사용자가 전환하면 그 뒤로는 사용자의 선택이 이긴다 */
-    setPreferred: (preferred: Preference) => emit({ preferred }),
+    setPreferred: (preferred: Preference) =>
+      emit({ preferred, preferSignal: state.preferSignal + 1 }),
 
     setVolume: (volume: number) => {
       if (Number.isNaN(volume)) return

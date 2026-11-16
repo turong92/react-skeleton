@@ -63,6 +63,7 @@ export function VideoPlayer({
   controls = true,
   modeToggle = true,
   preferredMode,
+  preferSignal,
   env: envProp,
   loadHls = loadHlsLight,
 }: VideoPlayerProps) {
@@ -264,15 +265,16 @@ export function VideoPlayer({
     })
   }
 
-  // 대기열의 선호가 바뀌면(앱의 알약 → `setPreferred`) 재생 중에도 같은 시각 · 같은 재생 상태로 옮겨 간다
-  const seenPreferred = useRef(preferredMode)
+  // 앱의 알약이 `setPreferred` 를 부를 때마다(값이 같아도) 재생 중에도 같은 시각 · 같은 재생 상태로 선호 모드로 옮겨 간다
+  const preferredFor = useRef(preferSignal)
   useEffect(() => {
-    const todo = followPreference(seenPreferred.current, preferredMode, mode)
-    seenPreferred.current = preferredMode
+    if (preferSignal === undefined || preferredFor.current === preferSignal) return
+    preferredFor.current = preferSignal
+    const todo = followPreference(preferredMode, mode)
     if (todo && audioOk) switchMode(todo)
-    // 선호가 바뀔 때만 건다
+    // 신호가 바뀔 때만 건다
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [preferredMode])
+  }, [preferSignal])
 
   const noEngine = plan !== null && plan.engine === null
   const waiting = plan !== null && plan.engine !== null && plan.order.length === 0

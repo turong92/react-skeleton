@@ -40,6 +40,11 @@ describe('playbackOf', () => {
     expect(playback.hls).toBeUndefined()
   })
 
+  it('hands the size of the original on, so the player can name the quality and keep the aspect', () => {
+    expect(playbackOf({ src: '/a', w: 1920, h: 1080 })).toMatchObject({ w: 1920, h: 1080 })
+    expect(playbackOf({ src: '/a' })).toMatchObject({ w: 0, h: 0 })
+  })
+
   it('carries poster, compat and master addresses through', () => {
     expect(
       playbackOf({ src: '/o.m3u8', poster: '/p.jpg', compat: '/c.m3u8', hls: '/m.m3u8' }),

@@ -13,6 +13,7 @@ import {
   type RepeatMode,
 } from './playQueue'
 import type { MediaOutput } from './mediaOutput'
+import type { QualityChoice } from './playbackPlan'
 import {
   DEFAULT_QUEUE_KEY,
   loadQueue,
@@ -46,10 +47,24 @@ export type ControllerState = {
   /** 음량 0~1 - 대기열 `<audio>` · 화면 영상 · 유튜브에 같이 걸린다 */
   volume: number
   muted: boolean
+  /** 지금 곡에서 고를 수 있는 화질(둘 이상일 때만 · 유튜브 · 노래 모드는 빈 배열) · 지금 고른 것 · 지금 실제로 나오는 높이 */
+  qualityOptions: QualityOption[]
+  quality: QualityChoice
+  playingHeight: number | null
   /** 지금 전체 화면인가 - 그려진 무대가 알려 준다 */
   fullscreen: boolean
   /** 큰 화면을 전체 화면으로 할 수 있나 - 무대가 대상을 등록했고 영상 모드일 때(노래 모드 · 아이폰의 유튜브는 아니다) */
   canFullscreen: boolean
+}
+
+/** 화질 항목 - `height` 는 실제 높이(px), 모르면 null(자동은 늘 null) */
+export type QualityOption = { value: QualityChoice; height: number | null }
+
+/** 그려진 `VideoPlayer` 가 등록하는 화질 선택 - 고를 수 있는 것 · 지금 고른 것 · 고르는 함수 */
+export type QualityTarget = {
+  options: QualityOption[]
+  value: QualityChoice
+  set: (quality: QualityChoice) => void
 }
 
 /** 그려진 무대(우리 영상 · 유튜브)가 등록하는 전체 화면 대상 - 무대 위 칩도 같은 `toggle` 을 쓴다 */
@@ -68,6 +83,11 @@ export type AudioHost = {
   stop: () => void
   /** 대기열이 지금 곡을 소리로 틀고 있나 - 큰 화면의 재생기가 처음부터 틀지 않고 이어받는다. 아니면 null */
   status: () => { playing: boolean; at: number } | null
+  /** 그려진 재생기의 화질 - `register` 로 선택지를 꽂고(푸는 함수는 자기 것일 때만 지운다) `reportHeight` 로 지금 나오는 높이를 알린다 */
+  quality: {
+    register: (target: QualityTarget) => () => void
+    reportHeight: (height: number | null) => void
+  }
   /** 그려진 무대의 전체 화면 - `register` 로 대상을 꽂고(푸는 함수는 자기 것일 때만 지운다), `report` 로 지금 전체 화면인지 알린다 */
   fullscreen: {
     register: (target: FullscreenTarget) => () => void
@@ -99,6 +119,9 @@ export function createQueueController(deps: {
     muted: false,
     fullscreen: false,
     canFullscreen: false,
+    qualityOptions: [],
+    quality: 'auto',
+    playingHeight: null,
   }
   let stages = 0
   let visible = true
@@ -118,6 +141,19 @@ export function createQueueController(deps: {
   }
 
   let fullscreenTarget: FullscreenTarget | null = null
+  let qualityTarget: QualityTarget | null = null
+  const registerQuality = (target: QualityTarget) => {
+    qualityTarget = target
+    emit({ qualityOptions: target.options, quality: target.value })
+    return () => {
+      if (qualityTarget !== target) return
+      qualityTarget = null
+      emit({ qualityOptions: [], quality: 'auto', playingHeight: null })
+    }
+  }
+  const reportHeight = (height: number | null) => {
+    if (height !== state.playingHeight) emit({ playingHeight: height })
+  }
   /** 화면의 재생기(영상 · 유튜브)가 등록한 것 - 영상 모드에서 소리를 내는 쪽 */
   let output: MediaOutput | null = null
   const applyVolume = () => {
@@ -339,6 +375,9 @@ export function createQueueController(deps: {
       }
     },
     registerOutput,
+    registerQuality,
+    reportHeight,
+    setQuality: (quality: QualityChoice) => qualityTarget?.set(quality),
     registerFullscreen,
     setFullscreen: (active: boolean) => emit({ fullscreen: active }),
     toggleFullscreen: () => fullscreenTarget?.toggle(),
@@ -439,6 +478,7 @@ export function createQueueController(deps: {
       visible: () => visible,
       emit,
       registerOutput,
+      quality: { register: registerQuality, reportHeight },
       fullscreen: {
         register: registerFullscreen,
         report: (active) => emit({ fullscreen: active }),

@@ -163,6 +163,12 @@ describe('planPlayback - original codec not known (a bare PlayerSource)', () => 
     expect(plan.order).toEqual(['orig'])
   })
 
+  it('lists the original as a choice even when it is also what auto starts with (no master, codec unknown)', () => {
+    const plan = planPlayback(fakeGrant({ codec: '', hls: undefined }), mseOnly([]))
+    expect(plan.order[0]).toBe('orig')
+    expect(plan.options).toEqual(['auto', 'compat', 'orig'])
+  })
+
   it('still leaves out an original whose codec is known and unsupported', () => {
     const plan = planPlayback(
       fakeGrant({ codec: 'hvc1.1.6.L153.B0', hls: undefined, compat: undefined }),

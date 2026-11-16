@@ -1,5 +1,6 @@
 import { useEffect, type Dispatch } from 'react'
 import { attachSource } from './attachSource'
+import { playAfterAttach } from './playAfterAttach'
 import { watchInput } from './lastInput'
 import { OS_PAUSE_WINDOW_MS, type PlayIntent } from './playIntent'
 import { afterFailure, urlOf } from './playbackPlan'
@@ -86,13 +87,16 @@ export function usePlayerMedia({
       report(true)
     }
     const input = watchInput(document)
+    let cancelPlay = () => {}
     const onPause = () => {
       // 방금 실제 입력(화면 · 키)이 있었다면 사용자가 누른 멈춤 - OS 가 잠그며 건 것은 입력 없이 온다
       const touching = input.recent()
       intent.pause(touching)
       // 화면을 만지는 중의 멈춤은 사용자 것 - 바로 알린다. 아니면 OS 가 한 것일 수 있어 자동 전환이 이어받는지 본다
-      if (touching) report(false)
-      else pausedTimer = setTimeout(() => report(false), OS_PAUSE_WINDOW_MS)
+      if (touching) {
+        cancelPlay() // 사용자가 붙이는 사이에 멈췄다 - 메타데이터가 와도 다시 틀지 않는다
+        report(false)
+      } else pausedTimer = setTimeout(() => report(false), OS_PAUSE_WINDOW_MS)
     }
     const onEnd = () => {
       clearTimeout(pausedTimer)
@@ -118,11 +122,12 @@ export function usePlayerMedia({
       if (!s.play) report(false)
     } else {
       handle = attachSource(media, url, p.engine, { loadHls: load, onFatal: fail, startAt: s.at })
-      if (s.play) void media.play()?.catch(() => report(false))
+      if (s.play) cancelPlay = playAfterAttach(media, p.engine, () => report(false))
       else report(false)
     }
     return () => {
       clearTimeout(pausedTimer)
+      cancelPlay()
       input.stop()
       media.removeEventListener('play', onPlay)
       media.removeEventListener('pause', onPause)

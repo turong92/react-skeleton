@@ -1,23 +1,32 @@
 import { useState } from 'react'
 import type { VideoPlayerLabels } from './labels'
-import type { PlaybackPlan, QualityChoice } from './playbackPlan'
+import type { QualityChoice } from './playbackPlan'
+import { qualityLabel } from './qualityLabel'
+import type { QualityOption } from './queueController'
 import styles from './VideoPlayer.module.css'
 
-/** 화질 칩(자동 / 720p / 원본) - 칩을 누르면 목록이 열리고, 고르면 닫힌다 */
+/** 화질 칩(자동 (1080p) / 1080p / 720p …) - 칩을 누르면 목록이 열리고, 고르면 닫힌다. 이름은 실제 높이 */
 export function QualityMenu({
-  plan,
+  options,
+  compatPending,
   pick,
+  playingHeight,
   labels,
   onChoose,
 }: {
-  plan: PlaybackPlan
+  options: QualityOption[]
+  /** 큰 원본인데 호환 단이 아직 없다 - 호환 항목을 「준비 중」으로 흐리게 */
+  compatPending: boolean
   pick: QualityChoice
+  /** 지금 실제로 나오는 높이 - 자동 옆에 보인다 */
+  playingHeight: number | null
   labels: VideoPlayerLabels
   onChoose: (pick: QualityChoice) => void
 }) {
   const [open, setOpen] = useState(false)
-  const label = (choice: QualityChoice) =>
-    choice === 'compat' ? '720p' : choice === 'orig' ? labels.original : labels.auto
+  const label = (option: QualityOption) =>
+    qualityLabel(labels, option.value, option.height, playingHeight)
+  const current = options.find((option) => option.value === pick) ?? options[0]!
   return (
     <div
       className={styles.quality}
@@ -30,27 +39,27 @@ export function QualityMenu({
         className={styles.chip}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label={`${labels.quality}: ${label(pick)}`}
+        aria-label={`${labels.quality}: ${label(current)}`}
         onClick={() => setOpen((value) => !value)}
       >
-        {label(pick)}
+        {label(current)}
       </button>
       {open && (
         <div role="menu" className={styles.menu} aria-label={labels.quality}>
-          {plan.options.map((option) => {
-            const off = option === 'compat' && plan.compatPending
+          {options.map((option) => {
+            const off = option.value === 'compat' && compatPending
             return (
               <button
-                key={option}
+                key={option.value}
                 type="button"
                 role="menuitemradio"
                 className={styles.menuItem}
-                aria-checked={option === pick}
+                aria-checked={option.value === pick}
                 aria-disabled={off || undefined}
                 onClick={() => {
                   if (off) return
                   setOpen(false)
-                  onChoose(option)
+                  onChoose(option.value)
                 }}
               >
                 <span>{label(option)}</span>

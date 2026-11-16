@@ -16,6 +16,11 @@ export type PlayerSource = {
   codec?: string
   /** 마스터(자동) 재생 목록 */
   hls?: string
+  /** 원본의 크기(px) - 화질 이름(`1080p`)과 화면 비율에 쓴다. 모르면 비워 두면 「원본」 */
+  w?: number
+  h?: number
+  /** 호환 단의 높이(px) - 모르면 `720p` 로 부른다 */
+  compatHeight?: number
 }
 
 /** 서버 재생 허가를 주소 묶음으로 - 허가가 `PlayerSource` 를 받는 쪽에 붙는 유일한 길 */
@@ -38,8 +43,8 @@ export function playbackOf(source: PlayerSource): VideoPlayback {
     hls: source.hls,
     poster: source.poster ?? '',
     codec: source.codec ?? '',
-    w: 0,
-    h: 0,
+    w: source.w ?? 0,
+    h: source.h ?? 0,
     durationMs: 0,
     big: false,
   }

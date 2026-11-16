@@ -54,6 +54,11 @@ export function usePlayQueue() {
     canSetVolume,
     /** 지금 곡을 노래(소리만)로 틀 수 있나(소리 판이 있고 이 기기가 틀 수 있다 · 유튜브는 false) - 앱의 「영상 / 노래」 알약을 보일지 정한다. 바꾸는 것은 `setPreferred` */
     canAudio,
+    /** 화질 - 지금 곡에서 고를 수 있는 것(`{ value, height }`, 높이를 모르면 null · 유튜브 · 노래 모드 · 한 가지뿐이면 빈 배열) · 지금 고른 것 · 지금 실제로 나오는 높이(`videoHeight`) · 고르기 */
+    qualityOptions: state.qualityOptions,
+    quality: state.quality,
+    playingHeight: state.playingHeight,
+    setQuality: controller.setQuality,
     /** 큰 화면이 지금 전체 화면인가 · 전체 화면으로 할 수 있나(노래 모드 · 아이폰의 유튜브는 false) · 켜고 끄기 */
     fullscreen: state.fullscreen,
     canFullscreen: state.canFullscreen,

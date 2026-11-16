@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useRef, useState, useSyncExternalStore } from 'react'
+import { useEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore } from 'react'
 import { wakeAudio } from './autoAudio'
 import { readBrowserEnv } from './browserEnv'
 import { leaveFullscreenOf, toggleFullscreen } from './fullscreen'
@@ -20,6 +20,8 @@ import {
   type PlayerMode,
 } from './playerState'
 import { QualityMenu } from './QualityMenu'
+import { heightOfSize } from './qualityLabel'
+import type { QualityOption } from './queueController'
 import type { VideoPlayback } from './types'
 import type { VideoPlayerProps } from './videoPlayerProps'
 import { useHiddenHandoff } from './useHiddenHandoff'
@@ -240,6 +242,8 @@ export function VideoPlayer({
 
   const choose = (pick: QualityChoice) => {
     if (!plan) return
+    // 호환 단이 아직 없다(준비 중) - 칩은 막아 두지만 앱 조작줄(`setQuality`)이 불러도 없는 주소를 틀지 않는다
+    if (pick === 'compat' && plan.compatPending) return
     if (pick === state.pick && (pick !== 'auto' || state.kind === plan.order[0])) return
     const kind = pick === 'auto' ? plan.order[0] : pick
     dispatch({ type: 'choose', pick, kind, at: videoRef.current?.currentTime ?? 0 })
@@ -283,6 +287,51 @@ export function VideoPlayer({
   const badge = noEngine ? labels.unsupported : waiting ? labels.preparing : null
   const showVideo = playing && mode === 'video'
   const fullscreenKind = showVideo ? (env?.fullscreen ?? null) : null
+  // 화질 선택지 - 이름은 실제 높이(원본 = 원본 크기의 짧은 변, 호환 단 = `source.compatHeight` · 서버 허가는 720). 모르면 null
+  const origHeight = heightOfSize(grant.w, grant.h)
+  const compatHeight = source ? (source.compatHeight ?? null) : 720
+  // `plan` 은 렌더마다 새로 만들어진다 - 값(이름 목록)이 같으면 같은 배열을 쓴다(아래 등록 효과가 렌더마다 다시 돌아 대기열을 다시 그리게 하지 않도록)
+  const optionKey = plan?.options.join(',') ?? ''
+  const qualityOptions = useMemo<QualityOption[]>(
+    () =>
+      (optionKey ? (optionKey.split(',') as QualityChoice[]) : []).map((value) => ({
+        value,
+        height: value === 'compat' ? compatHeight : value === 'orig' ? origHeight : null,
+      })),
+    [optionKey, compatHeight, origHeight],
+  )
+  // 지금 실제로 나오는 높이 - 메타데이터 · 크기 변화(hls.js 의 단 바뀜)마다 `videoHeight` 로 읽는다
+  const [playingHeight, setPlayingHeight] = useState<number | null>(null)
+  useEffect(() => {
+    const video = videoRef.current
+    if (!showVideo || !video) return setPlayingHeight(null)
+    const read = () => setPlayingHeight(heightOfSize(video.videoWidth, video.videoHeight))
+    read()
+    video.addEventListener('loadedmetadata', read)
+    video.addEventListener('resize', read)
+    return () => {
+      video.removeEventListener('loadedmetadata', read)
+      video.removeEventListener('resize', read)
+    }
+  }, [showVideo, state.session])
+  // 대기열(앱 조작줄)에 화질을 등록한다 - 영상으로 보일 때 · 고를 것이 둘 이상일 때만
+  const chooseRef = useRef(choose)
+  useEffect(() => {
+    chooseRef.current = choose
+  })
+  const choosable = showVideo && qualityOptions.length > 1
+  useEffect(() => {
+    if (!choosable || !audioHost) return
+    return audioHost.quality.register({
+      options: qualityOptions,
+      value: state.pick,
+      set: (quality) => chooseRef.current(quality),
+    })
+  }, [choosable, audioHost, qualityOptions, state.pick])
+  useEffect(() => {
+    if (choosable) audioHost?.quality.reportHeight(playingHeight)
+  }, [choosable, audioHost, playingHeight])
+
   // 전체 화면 칩 · 대기열(앱 조작줄)이 같은 `toggle` 을 쓴다
   const toggleStageFullscreen = () => {
     if (fullscreenKind)
@@ -369,8 +418,15 @@ export function VideoPlayer({
         {fullscreenKind && controls && (
           <FullscreenButton labels={labels} active={isFullscreen} onClick={toggleStageFullscreen} />
         )}
-        {showVideo && plan && plan.options.length > 1 && (
-          <QualityMenu plan={plan} pick={state.pick} labels={labels} onChoose={choose} />
+        {showVideo && controls && plan && plan.options.length > 1 && (
+          <QualityMenu
+            options={qualityOptions}
+            compatPending={plan.compatPending}
+            pick={state.pick}
+            playingHeight={playingHeight}
+            labels={labels}
+            onChoose={choose}
+          />
         )}
       </div>
       {audioOk && modeToggle && (

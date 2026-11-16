@@ -64,7 +64,9 @@ export function planPlayback(grant: VideoPlayback, env: PlaybackEnv): PlaybackPl
   const compatPending = Boolean(grant.big && !grant.compat && origOk)
   const options: QualityChoice[] = ['auto']
   if ((order.includes('compat') && order[0] !== 'compat') || compatPending) options.push('compat')
-  if (origOk && order.includes('orig') && order[0] !== 'orig') options.push('orig')
+  // 코덱을 모르면 자동이 원본으로 시작해도 원본을 고를 수 있는 항목으로 보인다(이름 ↔ 실제 해상도)
+  if (origOk && order.includes('orig') && (order[0] !== 'orig' || !grant.codec))
+    options.push('orig')
   return { engine, order, options, compatPending }
 }
 

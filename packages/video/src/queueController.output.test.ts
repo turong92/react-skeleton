@@ -204,6 +204,56 @@ describe('queue progress - reading', () => {
   })
 })
 
+describe('queue quality', () => {
+  const target = (value: 'auto' | 'compat' | 'orig' = 'auto') => ({
+    options: [
+      { value: 'auto' as const, height: null },
+      { value: 'compat' as const, height: 720 },
+      { value: 'orig' as const, height: 1080 },
+    ],
+    value,
+    set: vi.fn(),
+  })
+
+  it('has nothing to choose until a stage registers (youtube and sound mode never do)', () => {
+    const { c } = setup([clip('a')])
+    expect(c.getState()).toMatchObject({ quality: 'auto', qualityOptions: [], playingHeight: null })
+  })
+
+  it('shows the registered options and choice, and sets through the registered stage', () => {
+    const { c } = setup([clip('a')])
+    const t = target('orig')
+    c.registerQuality(t)
+    expect(c.getState().quality).toBe('orig')
+    expect(c.getState().qualityOptions.map((o) => o.value)).toEqual(['auto', 'compat', 'orig'])
+    c.setQuality('compat')
+    expect(t.set).toHaveBeenCalledWith('compat')
+  })
+
+  it('clears on unregister, but a late unregister of an older stage keeps the newer one', () => {
+    const { c } = setup([clip('a')])
+    const offOld = c.registerQuality(target())
+    const offNew = c.registerQuality(target('compat'))
+    offOld()
+    expect(c.getState().quality).toBe('compat')
+    c.reportHeight(720)
+    offNew()
+    expect(c.getState()).toMatchObject({ qualityOptions: [], quality: 'auto', playingHeight: null })
+  })
+
+  it('keeps what the stage reports as the playing height', () => {
+    const { c } = setup([clip('a')])
+    c.registerQuality(target())
+    c.reportHeight(1080)
+    expect(c.getState().playingHeight).toBe(1080)
+  })
+
+  it('ignores setQuality when there is no stage', () => {
+    const { c } = setup([clip('a')])
+    expect(() => c.setQuality('orig')).not.toThrow()
+  })
+})
+
 describe('queue setPreferred', () => {
   it('raises preferSignal on every call, even when the value is the same (the player may be in the other mode after an automatic switch)', () => {
     const { c } = setup([song('a')])

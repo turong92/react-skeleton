@@ -18,6 +18,8 @@ export type VideoPlayerLabels = {
   original: string
   /** 칩 목록에서 아직 없는 720p 옆에 */
   qualityPreparing: string
+  /** 화질 이름 - 실제 높이(1080 → `1080p`) */
+  qualityHeight: (height: number) => string
   /** 길이를 모르는 영상(주소 묶음만 받았을 때)의 재생 단추 낭독 이름 */
   playNoLength: string
   /** 「영상 / 노래」 전환 묶음의 낭독 이름 */
@@ -88,6 +90,7 @@ export const defaultVideoPlayerLabels: VideoPlayerLabels = {
   auto: 'Auto',
   original: 'Original',
   qualityPreparing: 'Preparing',
+  qualityHeight: (height) => `${height}p`,
   playNoLength: 'Play video',
   mode: 'Play as',
   modeVideo: 'Video',
@@ -108,6 +111,7 @@ export const koVideoPlayerLabels: VideoPlayerLabels = {
   auto: '자동',
   original: '원본',
   qualityPreparing: '준비 중',
+  qualityHeight: (height) => `${height}p`,
   playNoLength: '영상 재생',
   mode: '보기 방식',
   modeVideo: '영상',

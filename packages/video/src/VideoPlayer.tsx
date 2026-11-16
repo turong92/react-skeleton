@@ -4,6 +4,7 @@ import { readBrowserEnv } from './browserEnv'
 import { toggleFullscreen } from './fullscreen'
 import { defaultVideoPlayerLabels } from './labels'
 import { loadHlsLight } from './loadHls'
+import { FullscreenButton } from './FullscreenButton'
 import { elementOutput } from './mediaOutput'
 import { ModePill } from './ModePill'
 import { grantExpired, planPlayback, type QualityChoice } from './playbackPlan'
@@ -267,6 +268,22 @@ export function VideoPlayer({
   const badge = noEngine ? labels.unsupported : waiting ? labels.preparing : null
   const showVideo = playing && mode === 'video'
   const fullscreenKind = showVideo ? (env?.fullscreen ?? null) : null
+  // 전체 화면 칩 · 대기열(앱 조작줄)이 같은 `toggle` 을 쓴다
+  const toggleStageFullscreen = () => {
+    if (fullscreenKind)
+      toggleFullscreen(fullscreenKind, stageRef.current, videoRef.current, document)
+  }
+  const toggleRef = useRef(toggleStageFullscreen)
+  useEffect(() => {
+    toggleRef.current = toggleStageFullscreen
+  })
+  useEffect(() => {
+    if (!fullscreenKind || !audioHost) return
+    return audioHost.fullscreen.register({ toggle: () => toggleRef.current() })
+  }, [fullscreenKind, audioHost])
+  useEffect(() => {
+    if (fullscreenKind) audioHost?.fullscreen.report(isFullscreen)
+  }, [isFullscreen, fullscreenKind, audioHost])
   const playLabel =
     mode === 'audio'
       ? labels.playAudio
@@ -330,18 +347,7 @@ export function VideoPlayer({
           </p>
         )}
         {fullscreenKind && (
-          <button
-            type="button"
-            className={`${styles.chip} ${styles.fullscreen}`}
-            aria-label={isFullscreen ? labels.exitFullscreen : labels.fullscreen}
-            onClick={() =>
-              toggleFullscreen(fullscreenKind, stageRef.current, videoRef.current, document)
-            }
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true" className={styles.icon}>
-              <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
-            </svg>
-          </button>
+          <FullscreenButton labels={labels} active={isFullscreen} onClick={toggleStageFullscreen} />
         )}
         {showVideo && plan && plan.options.length > 1 && (
           <QualityMenu plan={plan} pick={state.pick} labels={labels} onChoose={choose} />

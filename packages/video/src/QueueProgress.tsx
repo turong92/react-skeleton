@@ -1,4 +1,4 @@
-import { useContext, useRef, useState } from 'react'
+import { useContext, useRef, useState, type CSSProperties } from 'react'
 import { defaultPlayQueueLabels, type PlayQueueLabels } from './queueLabels'
 import { QueueContext } from './usePlayQueue'
 import { useQueueProgress } from './useQueueProgress'
@@ -45,16 +45,20 @@ export function QueueProgressView({
         disabled={duration <= 0}
         aria-label={labels.seek}
         aria-valuetext={`${clock(shown)} / ${clock(duration)}`}
-        onPointerDown={() => (dragging.current = true)}
+        onPointerDown={(event) => {
+          dragging.current = true
+          // 막대 밖에서 놓아도 끝을 받는다(취소 · 가로채기도 lostpointercapture 로 온다)
+          event.currentTarget.setPointerCapture?.(event.pointerId)
+        }}
         onPointerUp={release}
-        onPointerCancel={release}
+        onLostPointerCapture={release}
         onChange={(event) => {
           const value = Number(event.target.value)
           // 키보드 · 보조 기기는 바로 옮긴다
           if (dragging.current) setScrub(value)
           else onSeek(value)
         }}
-        style={{ '--progress': `${duration > 0 ? (shown / duration) * 100 : 0}%` } as never}
+        style={{ '--progress': `${duration > 0 ? (shown / duration) * 100 : 0}%` } as CSSProperties}
       />
       <span className={styles.time}>{clock(duration)}</span>
     </div>

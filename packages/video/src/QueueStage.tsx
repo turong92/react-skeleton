@@ -54,6 +54,8 @@ function ConnectedQueueStage({
         onPlaying={controller.youtubePlaying}
         controls={controls}
         registerOutput={controller.registerOutput}
+        fullscreenHost={controller.host.fullscreen}
+        labels={playerProps?.labels}
         loadApi={loadYouTubeApi}
       />
     )

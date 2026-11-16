@@ -50,6 +50,10 @@ export function usePlayQueue() {
     muted: state.muted,
     /** 이 기기가 코드로 음량을 바꿀 수 있나 - 아이폰은 기기 단추뿐이라 false(음량 칸을 숨긴다). 서버에서는 false */
     canSetVolume,
+    /** 큰 화면이 지금 전체 화면인가 · 전체 화면으로 할 수 있나(노래 모드 · 아이폰의 유튜브는 false) · 켜고 끄기 */
+    fullscreen: state.fullscreen,
+    canFullscreen: state.canFullscreen,
+    toggleFullscreen: controller.toggleFullscreen,
     setVolume: controller.setVolume,
     setMuted: controller.setMuted,
     stageStart: state.stageStart,

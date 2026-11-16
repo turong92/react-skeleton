@@ -17,6 +17,18 @@
   background: var(--inverse);
 }
 
+/* 유튜브 틀 - 플레이어(iframe)가 무대를 채운다(전체 화면에서도) */
+.frameHost {
+  position: absolute;
+  inset: 0;
+}
+
+.frameHost iframe {
+  inline-size: 100%;
+  block-size: 100%;
+  border: 0;
+}
+
 .poster,
 .video {
   display: block;

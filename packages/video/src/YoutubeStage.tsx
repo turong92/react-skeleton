@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import {
   loadYouTubeApi,
   watchReady,
@@ -7,7 +7,12 @@ import {
   type YouTubeApi,
   type YouTubePlayer,
 } from './youtubeApi'
+import { readBrowserEnv } from './browserEnv'
+import { FullscreenButton } from './FullscreenButton'
+import { defaultVideoPlayerLabels, type VideoPlayerLabels } from './labels'
 import { youtubeOutput, type MediaOutput } from './mediaOutput'
+import { toggleFullscreen } from './fullscreen'
+import type { AudioHost } from './queueController'
 import styles from './VideoPlayer.module.css'
 
 export type YoutubeStageProps = {
@@ -25,6 +30,10 @@ export type YoutubeStageProps = {
   controls?: boolean
   /** 준비된 플레이어를 소리 내는 쪽으로 등록한다(진행 막대 · 음량) - 돌려받은 함수로 푼다. `QueueStage` 가 대기열에 잇는다 */
   registerOutput?: (output: MediaOutput) => () => void
+  /** 전체 화면 칩 문구(`controls` 가 꺼졌을 때만 칩이 뜬다) */
+  labels?: Pick<VideoPlayerLabels, 'fullscreen' | 'exitFullscreen'>
+  /** 이 틀의 전체 화면을 대기열에 등록한다(앱 조작줄 · 칩이 같은 경로) - `QueueStage` 가 잇는다 */
+  fullscreenHost?: AudioHost['fullscreen']
   /** 시험 · 스토리용 - IFrame API 불러오기 */
   loadApi?: () => Promise<YouTubeApi>
 }
@@ -33,6 +42,9 @@ export type YoutubeStageProps = {
  * 유튜브 영상(IFrame Player API) - **영상으로만** 튼다(노래 모드 · 전환 단추 없음). 이 컴포넌트가 처음 그려질 때 비로소 API 스크립트를 부른다.
  * 끝나면 `onEnded`, 오류는 코드를 가리지 않고 `onFailed`
  */
+const subscribeNothing = () => () => {}
+const serverEnv = () => null
+
 export function YoutubeStage({
   videoId,
   restart,
@@ -43,9 +55,36 @@ export function YoutubeStage({
   className,
   controls = true,
   registerOutput,
+  labels = defaultVideoPlayerLabels,
+  fullscreenHost,
   loadApi = loadYouTubeApi,
 }: YoutubeStageProps) {
   const hostRef = useRef<HTMLDivElement>(null)
+  const stageRef = useRef<HTMLDivElement>(null)
+  // 서버(와 첫 하이드레이션)에서는 모른다. 틀(`requestFullscreen`)이 되는 기기만 - 아이폰은 iframe 을 감싼 틀을 전체 화면으로 못 한다
+  const env = useSyncExternalStore(subscribeNothing, readBrowserEnv, serverEnv)
+  const canFullscreen = env?.fullscreen === 'frame'
+  const [isFullscreen, setFullscreen] = useState(false)
+  useEffect(() => {
+    const sync = () => setFullscreen(document.fullscreenElement === stageRef.current)
+    document.addEventListener('fullscreenchange', sync)
+    return () => document.removeEventListener('fullscreenchange', sync)
+  }, [])
+  // 칩 · 대기열(앱 조작줄)이 같은 `toggle`
+  const toggleStageFullscreen = () => {
+    if (canFullscreen) toggleFullscreen('frame', stageRef.current, null, document)
+  }
+  const toggleRef = useRef(toggleStageFullscreen)
+  useEffect(() => {
+    toggleRef.current = toggleStageFullscreen
+  })
+  useEffect(() => {
+    if (!canFullscreen || !fullscreenHost) return
+    return fullscreenHost.register({ toggle: () => toggleRef.current() })
+  }, [canFullscreen, fullscreenHost])
+  useEffect(() => {
+    if (canFullscreen) fullscreenHost?.report(isFullscreen)
+  }, [isFullscreen, canFullscreen, fullscreenHost])
   const playerRef = useRef<YouTubePlayer | null>(null)
   const latest = useRef({ playing, onEnded, onFailed, onPlaying, controls, registerOutput })
   useEffect(() => {
@@ -128,7 +167,12 @@ export function YoutubeStage({
 
   return (
     <div className={[styles.root, className].filter(Boolean).join(' ')}>
-      <div ref={hostRef} className={styles.stage} style={{ aspectRatio: '16/9' }} />
+      <div ref={stageRef} className={styles.stage} style={{ aspectRatio: '16/9' }}>
+        <div ref={hostRef} className={styles.frameHost} />
+        {!controls && canFullscreen && (
+          <FullscreenButton labels={labels} active={isFullscreen} onClick={toggleStageFullscreen} />
+        )}
+      </div>
     </div>
   )
 }

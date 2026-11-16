@@ -60,6 +60,10 @@ const clip = (id: string): QueueItem => ({
   source: { src: `/${id}/o.m3u8` },
 })
 
+/** 지금 값을 새로 읽게 한다 - `progress()` 는 읽어 둔 값만 돌려주고, 새로 읽기는 구독 시작 · 타이머 · 상태 변화에서만 */
+const refresh = (c: { subscribeProgress: (l: () => void) => () => void }) =>
+  c.subscribeProgress(() => {})()
+
 function setup(items: QueueItem[], storage?: QueueStorage) {
   const engine = fakeEngine()
   const c = createQueueController({
@@ -78,6 +82,7 @@ describe('queue progress', () => {
     c.play()
     engine.time = 12
     engine.length = 225
+    refresh(c)
     expect(c.progress()).toEqual({ currentTime: 12, duration: 225 })
     c.seek(100)
     expect(engine.seek).toHaveBeenCalledWith(100)
@@ -149,6 +154,90 @@ describe('queue progress', () => {
   })
 })
 
+describe('queue progress - reading', () => {
+  it('does not notify subscribers from progress() itself (it is the render-time snapshot)', () => {
+    const { c, engine } = setup([song('a')])
+    c.play()
+    const heard = vi.fn()
+    const off = c.subscribeProgress(heard)
+    engine.time = 9
+    c.progress()
+    expect(heard).not.toHaveBeenCalled()
+    off()
+  })
+
+  it('does not poll while the screen is hidden, and reads once when it is back', () => {
+    vi.useFakeTimers()
+    try {
+      const { c, engine } = setup([song('a')])
+      c.play()
+      const heard = vi.fn()
+      const off = c.subscribeProgress(heard)
+      c.setVisible(false)
+      engine.time = 5
+      vi.advanceTimersByTime(1000)
+      expect(heard).not.toHaveBeenCalled()
+      c.setVisible(true)
+      expect(heard).toHaveBeenCalledTimes(1)
+      expect(c.progress().currentTime).toBe(5)
+      off()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('does not seek the shared <audio> when it holds another song (or none)', () => {
+    const { c, engine } = setup([song('a')])
+    c.seek(40)
+    expect(engine.seek).not.toHaveBeenCalled()
+    c.play()
+    c.seek(40)
+    expect(engine.seek).toHaveBeenCalledWith(40)
+  })
+})
+
+describe('queue fullscreen', () => {
+  const target = () => ({ toggle: vi.fn() })
+
+  it('cannot go fullscreen until a stage registers, and not in sound mode', () => {
+    const { c } = setup([clip('a')])
+    c.play()
+    expect(c.getState()).toMatchObject({ canFullscreen: false, fullscreen: false })
+    c.registerFullscreen(target())
+    expect(c.getState().canFullscreen).toBe(true)
+    const sound = setup([song('a')])
+    sound.c.registerFullscreen(target())
+    sound.c.play()
+    expect(sound.c.getState().canFullscreen).toBe(false)
+  })
+
+  it('toggles through the registered target and reflects what the stage reports', () => {
+    const { c } = setup([clip('a')])
+    c.play()
+    const t = target()
+    c.registerFullscreen(t)
+    c.toggleFullscreen()
+    expect(t.toggle).toHaveBeenCalledTimes(1)
+    c.setFullscreen(true)
+    expect(c.getState().fullscreen).toBe(true)
+  })
+
+  it('unregistering clears it, but a late unregister of an older stage keeps the newer one', () => {
+    const { c } = setup([clip('a')])
+    c.play()
+    const offOld = c.registerFullscreen(target())
+    const newer = target()
+    const offNew = c.registerFullscreen(newer)
+    offOld()
+    expect(c.getState().canFullscreen).toBe(true)
+    c.setFullscreen(true)
+    offNew()
+    expect(c.getState()).toMatchObject({ canFullscreen: false, fullscreen: false })
+    c.toggleFullscreen() // 아무 일 없다
+    expect(newer.toggle).not.toHaveBeenCalled()
+  })
+})
+
 describe('queue volume', () => {
   it('starts at full volume, unmuted', () => {
     const { c } = setup([song('a')])
@@ -194,6 +283,8 @@ describe('queue volume', () => {
     const first = setup([song('a')], storage)
     first.c.setVolume(0.3)
     first.c.setMuted(true)
+    // 저장값에는 음량 · 음소거만 든다(대기열 상태를 통째로 쓰지 않는다)
+    expect(data['q.volume']).toBe('{"volume":0.3,"muted":true}')
     const second = setup([], storage)
     second.c.restore()
     expect(second.c.getState()).toMatchObject({ volume: 0.3, muted: true })

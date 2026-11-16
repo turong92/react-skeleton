@@ -84,6 +84,7 @@ describe('VideoPlayer before the first press', () => {
       start: () => {},
       stop: () => {},
       registerOutput: () => () => {},
+      fullscreen: { register: () => () => {}, report: () => {} },
       status: () => null,
     }
     const html = renderToStaticMarkup(
@@ -104,6 +105,7 @@ describe('VideoPlayer before the first press', () => {
       start: () => {},
       stop: () => {},
       registerOutput: () => () => {},
+      fullscreen: { register: () => () => {}, report: () => {} },
       status: () => ({ playing: true, at: 42 }),
     }
     const html = renderToStaticMarkup(

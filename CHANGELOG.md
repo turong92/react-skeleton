@@ -11,6 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `@skeleton/storage`: `StoredImage` 의 움짤 영상이 실패하면(`onError`) `display` `<img>` 로 바꿔 그리고, `IntersectionObserver` 가 있으면 화면 밖에서 멈춘다.
 
+### Added — 진행 막대 · 음량 · 전체 화면 · 알약 전환 (2026-11-16)
+
+- `@skeleton/video`: `QueueProgress` · `useQueueProgress`(지금 시각 / 길이 + 끌어서 옮기기, 노래 · 영상 · 유튜브 공통) · `usePlayQueue` 에 `currentIndex` · `volume` · `muted` · `setVolume` · `setMuted` · `canSetVolume`(아이폰은 false) · `fullscreen` · `canFullscreen` · `toggleFullscreen`. 음량은 `<storageKey>.volume` 에 따로 저장된다. `QueueStage` · `VideoPlayer` 의 `controls`(기본 켬)로 영상 · 유튜브 자체 조작줄을 끄면 앱 조작줄만 쓸 수 있고, 유튜브에는 같은 모양의 전체 화면 칩이 뜬다. `PlayQueueLabels.seek` 추가.
+- `@skeleton/video` `VideoPlayer`: 「영상 / 노래」 전환이 큰 단추 둘에서 작은 알약(접근성 이름은 그대로)으로 바뀌었다. `AudioHost` 에 `registerOutput` · `fullscreen` 이 더해졌다(직접 `AudioHost` 를 만드는 앱은 채워야 한다).
+
 ### Added — 재생 대기열 · 작은 재생기 (2026-11-16)
 
 - `@skeleton/video`: `PlayQueueProvider`(앱 최상단) · `usePlayQueue` · `MiniPlayer` — 목록 · 현재 곡 · 이전/다음 · 끝나면 다음 · 반복(하나/전체) · 셔플 · 「다음 곡」 목록(추가 · 빼기 · 순서 바꾸기), 상태는 이 기기에 저장(앱이 키를 정함)하고 새로 고침 뒤 복원한다. 노래 모드는 Provider 가 쥔 `<audio>` 하나를 곡마다 다시 써서 화면이 꺼진 채로도 다음 곡으로 넘어간다. `VideoPlayer` 는 `audioHost`(`usePlayQueue().playerProps`)로 그 요소를 빌려 쓴다. 지금 틀 수 없는 곡(소리 판 없는 영상 · 화면이 꺼진 때의 유튜브)은 건너뛰고, 건너뛸 곡뿐이면 멈춘다. 문구 `defaultPlayQueueLabels` · `koPlayQueueLabels`(`VideoPlayerLabels` 는 그대로).

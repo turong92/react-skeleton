@@ -35,7 +35,7 @@
 .range::-webkit-slider-runnable-track {
   block-size: 8px;
   border: 1px solid var(--border-strong);
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: linear-gradient(
     to right,
     var(--teal) var(--progress, 0%),
@@ -46,7 +46,7 @@
 .range::-moz-range-track {
   block-size: 8px;
   border: 1px solid var(--border-strong);
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: linear-gradient(
     to right,
     var(--teal) var(--progress, 0%),

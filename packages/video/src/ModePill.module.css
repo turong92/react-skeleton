@@ -4,10 +4,10 @@
  */
 .pill {
   display: inline-flex;
-  gap: 2px;
-  padding: 2px;
+  gap: var(--space-xs);
+  padding: var(--space-xs);
   border: 1px solid var(--border-strong);
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: var(--surface-alt);
 }
 
@@ -17,7 +17,7 @@
   min-inline-size: 64px;
   padding: 0 var(--space-md);
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: var(--surface);
   color: var(--text-strong);
   font: inherit;

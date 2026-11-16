@@ -31,6 +31,8 @@ export type ControllerState = {
    * (다음 곡으로 넘어갔을 때 · 한 곡 반복 · 다시 틀기)
    */
   stageStart: number
+  /** 대기열이 이 곡을 소리로 (다시) 틀기 시작할 때마다 오른다 - 이미 그려진 큰 화면의 재생기가 이어받는다 */
+  audioStart: number
 }
 
 /** `VideoPlayer` 가 대기열의 `<audio>` 를 빌려 쓰는 길 - 요소를 새로 만들지 않아 아이폰에서도 화면이 꺼진 채 다음 곡으로 넘어간다 */
@@ -60,6 +62,7 @@ export function createQueueController(deps: {
     preferred: 'audio',
     playing: false,
     stageStart: 0,
+    audioStart: 0,
   }
   let stages = 0
   let visible = true
@@ -101,8 +104,10 @@ export function createQueueController(deps: {
     halted = false
     if (routeOf(item, routing()) === 'audio' && item.kind === 'media' && item.source.audio) {
       audio.start({ url: item.source.audio, at, play: true, adopt: false, itemId: item.id })
+      // 시작하자마자 못 틀어 멈췄거나 다른 곡으로 넘어갔으면(동기로 알림이 온다) 덮어쓰지 않는다
+      if (halted || state.queue.currentId !== item.id) return
       awake = true
-      emit({ mode: 'audio', playing: true })
+      emit({ mode: 'audio', playing: true, audioStart: state.audioStart + 1 })
     } else {
       audio.stop()
       emit({ mode: 'video', playing: true, stageStart: state.stageStart + 1 })
@@ -218,7 +223,7 @@ export function createQueueController(deps: {
       halted = false
       if (state.mode === 'audio' && audio.loadedItem() === item.id) {
         audio.resume()
-        emit({ playing: true })
+        emit({ playing: true, audioStart: state.audioStart + 1 })
       } else if (state.mode === 'video' && routeOf(item, routing()) === 'video') {
         emit({ playing: true }) // 화면의 재생기가 이어 튼다
       } else begin()

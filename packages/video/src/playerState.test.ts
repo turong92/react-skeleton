@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { initialPlayer, momentOf, reducePlayer } from './playerState'
+import { followPlayback, initialPlayer, momentOf, reducePlayer } from './playerState'
 
 describe('reducePlayer', () => {
   it('starts idle and plays the first step from the beginning when pressed', () => {
@@ -120,5 +120,33 @@ describe('momentOf', () => {
   it('keeps the known moment when the element never loaded (preload none reports 0)', () => {
     expect(momentOf({ readyState: 0, currentTime: 0 }, 42)).toBe(42)
     expect(momentOf(null, 42)).toBe(42)
+  })
+})
+
+describe("reducePlayer - joining the queue's sound", () => {
+  it("moves a mounted player into audio mode at the queue's moment, adopting what plays", () => {
+    let s = reducePlayer(initialPlayer, { type: 'press', kind: 'hls' })
+    const before = s.session
+    s = reducePlayer(s, { type: 'join', at: 61, play: true })
+    expect(s).toMatchObject({ phase: 'playing', mode: 'audio', at: 61, play: true, adopt: true })
+    expect(s.session).toBe(before + 1)
+  })
+
+  it('joins a player that was never pressed, and keeps a paused queue paused', () => {
+    const s = reducePlayer(initialPlayer, { type: 'join', at: 5, play: false })
+    expect(s).toMatchObject({ phase: 'playing', mode: 'audio', at: 5, play: false, adopt: true })
+  })
+})
+
+describe('followPlayback', () => {
+  it('pauses a playing video the queue says is paused, and plays a paused one the queue says plays', () => {
+    expect(followPlayback(false, false)).toBe('pause')
+    expect(followPlayback(true, true)).toBe('play')
+  })
+
+  it('does nothing when they already agree, or when the queue says nothing', () => {
+    expect(followPlayback(true, false)).toBeNull()
+    expect(followPlayback(false, true)).toBeNull()
+    expect(followPlayback(true, undefined)).toBeNull()
   })
 })

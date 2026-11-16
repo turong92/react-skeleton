@@ -47,6 +47,10 @@ export type VideoPlayerProps = Input & {
   /** 대기열이 이 곡을 영상으로 틀라고 한다(`autoStart`) - `startSignal` 이 바뀔 때마다(다음 곡 · 한 곡 반복 · 다시 틀기) 처음부터 튼다. 브라우저가 손짓 없는 재생을 막으면 재생 단추가 남는다 */
   autoStart?: boolean
   startSignal?: number
+  /** 대기열이 이 곡을 소리로 (다시) 틀기 시작할 때마다 바뀌는 값 - 이미 그려진 재생기가 처음부터 틀지 않고 소리 모드로 이어받는다 */
+  joinSignal?: number
+  /** 영상 모드에서 대기열의 재생 상태 - 미니 플레이어 · 잠금화면의 재생/일시정지에 영상이 따라간다 */
+  followPlaying?: boolean
   /** 대기열의 `<audio>` 를 빌린다(`usePlayQueue().playerProps` 로 펼친다) - 노래 모드 · 자동 전환이 그 요소로 가서, 이 재생기가 사라져도 소리가 이어지고 끝나면 대기열이 다음 곡을 튼다 */
   audioHost?: AudioHost
   /** 시험 · 스토리용 - 이 기기가 무엇을 트는가(기본은 브라우저에서 읽는다) */

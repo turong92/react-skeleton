@@ -174,3 +174,26 @@ describe('createAudioEngine - refused play', () => {
     expect(onPlayRejected).not.toHaveBeenCalled()
   })
 })
+
+describe('createAudioEngine - the player joining a song the queue already plays', () => {
+  it('keeps the hls.js instance that is playing it (no cut, no new attach)', async () => {
+    const { audio, el, instances } = setup('hlsjs')
+    audio.start({ url: '/a.m3u8', at: 0, play: true, adopt: false, itemId: 'a' })
+    await vi.waitFor(() => expect(instances).toHaveLength(1))
+    el.play.mockClear()
+    audio.start({ url: '/a.m3u8', at: 30, play: true, adopt: true, itemId: 'a' }) // 큰 화면이 이어받는다
+    expect(instances[0]!.destroyed).toBe(false)
+    expect(instances).toHaveLength(1)
+    expect(el.play).not.toHaveBeenCalled()
+    expect(audio.loadedItem()).toBe('a')
+  })
+
+  it("still drops the old song's hls.js when the player adopts a different, natively woken one", async () => {
+    const { audio, instances } = setup('hlsjs')
+    audio.start({ url: '/a.m3u8', at: 0, play: true, adopt: false, itemId: 'a' })
+    await vi.waitFor(() => expect(instances).toHaveLength(1))
+    audio.start({ url: '/b.m3u8', at: 0, play: true, adopt: true, itemId: 'b' })
+    expect(instances[0]!.destroyed).toBe(true)
+    expect(audio.loadedItem()).toBe('b')
+  })
+})

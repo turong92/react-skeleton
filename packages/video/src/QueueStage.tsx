@@ -49,6 +49,8 @@ export function QueueStage({ className, playerProps, loadYouTubeApi }: QueueStag
       {...queue.playerProps}
       autoStart={queue.mode === 'video' && queue.playing}
       startSignal={queue.stageStart}
+      joinSignal={queue.audioStart}
+      followPlaying={queue.mode === 'video' ? queue.playing : undefined}
       {...playerProps}
     />
   )

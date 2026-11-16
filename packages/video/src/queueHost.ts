@@ -34,7 +34,8 @@ export function createAudioHost(ctx: {
     },
     stop: () => {
       audio.stop()
-      emit({ mode: 'video', preferred: 'video', playing: false })
+      // 재생 상태는 그대로 둔다 - 영상이 곧 틀기 시작하는 순간에 「멈춤」이라고 말해 영상을 도로 멈추게 하지 않도록
+      emit({ mode: 'video', preferred: 'video' })
     },
     status: () => {
       const { mode, queue, playing } = state()

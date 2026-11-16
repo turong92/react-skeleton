@@ -60,7 +60,10 @@ export function YoutubeStage({
         try {
           const handlers = youtubeHandlers(api.PlayerState, {
             onEnded: () => latest.current.onEnded(),
-            onFailed: () => latest.current.onFailed(),
+            onFailed: () => {
+              stopWatching() // 오류가 먼저 왔다 - 멈춘 대기열이 15초 뒤 저절로 다음 곡으로 가지 않게
+              latest.current.onFailed()
+            },
             onPlaying: (value) => {
               if (value) started = true
               latest.current.onPlaying(value)

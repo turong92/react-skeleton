@@ -32,6 +32,17 @@ export function momentOf(
   return media && media.readyState > 0 ? media.currentTime : known
 }
 
+/** 영상 요소를 대기열의 재생 상태(`want`)에 맞출 때 할 일 - 이미 같으면 null */
+export function followPlayback(
+  paused: boolean,
+  want: boolean | undefined,
+): 'play' | 'pause' | null {
+  if (want === undefined) return null
+  if (want && paused) return 'play'
+  if (!want && !paused) return 'pause'
+  return null
+}
+
 export type PlayerAction =
   | { type: 'press'; kind: PlaybackKind; mode?: PlayerMode }
   | { type: 'choose'; pick: QualityChoice; kind: PlaybackKind; at: number }
@@ -46,6 +57,8 @@ export type PlayerAction =
   | { type: 'audioFailed'; kind: PlaybackKind; at: number; play: boolean }
   /** 넘긴 `<audio>` 를 폰이 틀지 못했다 - 노래 모드는 그대로 멈춘 채 */
   | { type: 'paused' }
+  /** 대기열이 이 곡을 소리로 틀기 시작했다 - 이미 그려진 재생기가 처음부터 틀지 않고 이어받는다 */
+  | { type: 'join'; at: number; play: boolean }
 
 export const initialPlayer: PlayerState = {
   phase: 'idle',
@@ -144,5 +157,17 @@ export function reducePlayer(state: PlayerState, action: PlayerAction): PlayerSt
       }
     case 'paused':
       return { ...state, play: false }
+    case 'join':
+      return {
+        ...state,
+        phase: 'playing',
+        mode: 'audio',
+        at: action.at,
+        play: action.play,
+        adopt: true,
+        notice: false,
+        refreshed: false,
+        session,
+      }
   }
 }

@@ -9,7 +9,13 @@ import { grantExpired, planPlayback, type QualityChoice } from './playbackPlan'
 import { createPlayIntent } from './playIntent'
 import { usePlayingReport, type Latest } from './playerRuntime'
 import { playbackOf, type PlayerSource } from './playerSource'
-import { initialPlayer, momentOf, reducePlayer, type PlayerMode } from './playerState'
+import {
+  followPlayback,
+  initialPlayer,
+  momentOf,
+  reducePlayer,
+  type PlayerMode,
+} from './playerState'
 import { QualityMenu } from './QualityMenu'
 import type { VideoPlayback } from './types'
 import type { VideoPlayerProps } from './videoPlayerProps'
@@ -48,6 +54,8 @@ export function VideoPlayer({
   onFailed,
   autoStart = false,
   startSignal,
+  joinSignal,
+  followPlaying,
   audioHost,
   env: envProp,
   loadHls = loadHlsLight,
@@ -192,6 +200,28 @@ export function VideoPlayer({
   useEffect(() => {
     if (state.phase === 'failed') latest.current.onFailed?.()
   }, [state.phase])
+
+  // 대기열이 소리를 시작했다(예: 복원된 대기열을 큰 화면을 연 채 미니 플레이어로 재생) - 이어받는다
+  const joinedFor = useRef(joinSignal)
+  useEffect(() => {
+    if (joinSignal === undefined || joinedFor.current === joinSignal) return
+    joinedFor.current = joinSignal
+    const joined = audioHost?.status()
+    if (joined && audioOk) dispatch({ type: 'join', at: joined.at, play: joined.playing })
+    // 신호가 바뀔 때만 건다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [joinSignal])
+
+  // 영상 모드에서는 대기열의 재생 · 멈춤을 영상이 따른다(작은 재생기 · 잠금화면)
+  useEffect(() => {
+    const video = refs.video.current
+    if (!video || state.phase !== 'playing' || mode !== 'video') return
+    const todo = followPlayback(video.paused, followPlaying)
+    if (todo === 'pause') video.pause()
+    else if (todo === 'play') void video.play()?.catch(() => report(false))
+    // 대기열의 재생 상태가 바뀔 때만 건다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [followPlaying])
 
   const choose = (pick: QualityChoice) => {
     if (!plan) return

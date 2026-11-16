@@ -82,6 +82,8 @@ export function createAudioEngine(deps: {
     start: ({ url, at, play: playNow, adopt, itemId }) => {
       const kind = deps.engine()
       if (!el || !kind) return deps.onFatal()
+      // 같은 곡을 큰 화면이 이어받는 것이면 틀고 있는 걸 건드리지 않는다(hls.js 를 걷으면 끊긴다)
+      if (adopt && itemId !== undefined && loaded === itemId) return
       handle?.destroy()
       handle = null
       if (!adopt) {

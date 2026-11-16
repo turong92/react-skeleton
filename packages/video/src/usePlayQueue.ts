@@ -37,6 +37,7 @@ export function usePlayQueue() {
     /** 사용자가 고른 영상 / 노래 - 곡이 바뀌어도 유지된다 */
     preferred: state.preferred,
     stageStart: state.stageStart,
+    audioStart: state.audioStart,
     playerProps,
     controller,
     setQueue: controller.setQueue,

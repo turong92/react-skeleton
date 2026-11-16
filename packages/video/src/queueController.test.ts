@@ -387,7 +387,7 @@ describe('queue controller - borrowed by the video player', () => {
     c.host.start({ url: '/a/a.m3u8', at: 0, play: true, adopt: false })
     c.host.stop()
     expect(engine.calls.at(-1)).toBe('stop')
-    expect(c.getState()).toMatchObject({ mode: 'video', playing: false })
+    expect(c.getState().mode).toBe('video')
   })
 
   it("wakes the shared element on the player's behalf", () => {
@@ -534,5 +534,55 @@ describe('queue controller - listening to the shared <audio>', () => {
     c.attachElement(el as never)
     c.attachElement(null)
     expect(el.handlers.size).toBe(0)
+  })
+})
+
+describe('queue controller - a start that fails on the spot', () => {
+  it('does not claim it is playing when starting the song fails at once (hls.js unsupported)', () => {
+    const engine = fakeEngine()
+    const c = createQueueController({ audio: engine as unknown as AudioEngine, random: () => 0 })
+    engine.start.mockImplementation(() => c.audioFailed()) // 시작하자마자 못 튼다고 알린다
+    c.setQueue([song('a')])
+    c.play()
+    expect(c.getState().playing).toBe(false)
+  })
+
+  it('does not overwrite the song it moved on to after the failure', () => {
+    const engine = fakeEngine()
+    const c = createQueueController({ audio: engine as unknown as AudioEngine, random: () => 0 })
+    let first = true
+    engine.start.mockImplementation(() => {
+      if (first) {
+        first = false
+        c.audioFailed()
+      }
+    })
+    c.setQueue([song('a'), song('b')])
+    c.play()
+    expect(c.getState().queue.currentId).toBe('b')
+    expect(c.getState()).toMatchObject({ mode: 'audio', playing: true })
+  })
+})
+
+describe('queue controller - telling a mounted player the queue started the sound', () => {
+  it("raises the signal whenever the queue starts or resumes the song as sound, not for the player's own start", () => {
+    const { c } = setup([song('a'), song('b')])
+    const base = c.getState().audioStart
+    c.play()
+    expect(c.getState().audioStart).toBe(base + 1)
+    c.pause()
+    c.resume()
+    expect(c.getState().audioStart).toBe(base + 2)
+    c.host.start({ url: '/a/a.m3u8', at: 0, play: true, adopt: false })
+    expect(c.getState().audioStart).toBe(base + 2)
+  })
+})
+
+describe('queue controller - the player starting video does not undo itself', () => {
+  it('leaves the playing flag alone when the player goes back to video, so the video it is starting is not told to pause', () => {
+    const { c } = setup([song('a')])
+    c.host.start({ url: '/a/a.m3u8', at: 0, play: true, adopt: false })
+    c.host.stop()
+    expect(c.getState().playing).toBe(true)
   })
 })

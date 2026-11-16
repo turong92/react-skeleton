@@ -16,6 +16,7 @@ const engine = {
   resume: () => {},
   restart: () => {},
   position: () => 0,
+  canPlay: () => true,
   duration: () => 0,
   seek: () => {},
   setVolume: () => {},

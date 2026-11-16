@@ -29,6 +29,8 @@ function fakeEngine() {
     seek: vi.fn((t: number) => {
       engine.time = t
     }),
+    canPlay: () => engine.canPlayHls,
+    canPlayHls: true,
     loadedItem: () => loaded,
   }
   return engine
@@ -199,6 +201,21 @@ describe('queue progress - reading', () => {
     const { c, engine } = setup([])
     c.seek(10)
     expect(engine.seek).not.toHaveBeenCalled()
+  })
+})
+
+describe('queue canAudio', () => {
+  it('is true for a song with a sound version on a device that plays it', () => {
+    expect(setup([song('a')]).c.canAudio()).toBe(true)
+  })
+
+  it('is false for a video without a sound version, for youtube, with nothing, and when the device cannot play it', () => {
+    expect(setup([clip('a')]).c.canAudio()).toBe(false)
+    expect(setup([{ kind: 'youtube', id: 'y', title: 'Y', videoId: 'v' }]).c.canAudio()).toBe(false)
+    expect(setup([]).c.canAudio()).toBe(false)
+    const deaf = setup([song('a')])
+    deaf.engine.canPlayHls = false
+    expect(deaf.c.canAudio()).toBe(false)
   })
 })
 

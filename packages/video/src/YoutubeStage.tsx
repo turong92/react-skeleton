@@ -8,8 +8,6 @@ import {
   type YouTubePlayer,
 } from './youtubeApi'
 import { readBrowserEnv } from './browserEnv'
-import { FullscreenButton } from './FullscreenButton'
-import { defaultVideoPlayerLabels, type VideoPlayerLabels } from './labels'
 import { youtubeOutput, type MediaOutput } from './mediaOutput'
 import { leaveFullscreenOf, toggleFullscreen } from './fullscreen'
 import type { AudioHost } from './queueController'
@@ -30,9 +28,7 @@ export type YoutubeStageProps = {
   controls?: boolean
   /** 준비된 플레이어를 소리 내는 쪽으로 등록한다(진행 막대 · 음량) - 돌려받은 함수로 푼다. `QueueStage` 가 대기열에 잇는다 */
   registerOutput?: (output: MediaOutput) => () => void
-  /** 전체 화면 칩 문구(`controls` 가 꺼졌을 때만 칩이 뜬다) */
-  labels?: Pick<VideoPlayerLabels, 'fullscreen' | 'exitFullscreen'>
-  /** 이 틀의 전체 화면을 대기열에 등록한다(앱 조작줄 · 칩이 같은 경로) - `QueueStage` 가 잇는다 */
+  /** 이 틀의 전체 화면을 대기열에 등록한다(앱 조작줄의 `toggleFullscreen`) - `QueueStage` 가 잇는다 */
   fullscreenHost?: AudioHost['fullscreen']
   /** 시험 · 스토리용 - IFrame API 불러오기 */
   loadApi?: () => Promise<YouTubeApi>
@@ -55,7 +51,6 @@ export function YoutubeStage({
   className,
   controls = true,
   registerOutput,
-  labels = defaultVideoPlayerLabels,
   fullscreenHost,
   loadApi = loadYouTubeApi,
 }: YoutubeStageProps) {
@@ -70,7 +65,7 @@ export function YoutubeStage({
     document.addEventListener('fullscreenchange', sync)
     return () => document.removeEventListener('fullscreenchange', sync)
   }, [])
-  // 칩 · 대기열(앱 조작줄)이 같은 `toggle`
+  // 대기열(앱 조작줄)의 `toggleFullscreen` 이 부르는 `toggle` - 유튜브는 무대 위 칩이 없다(`controls` 가 켜져 있으면 iframe 자체 단추)
   const toggleStageFullscreen = () => {
     if (canFullscreen) toggleFullscreen('frame', stageRef.current, null, document)
   }
@@ -174,9 +169,6 @@ export function YoutubeStage({
     <div className={[styles.root, className].filter(Boolean).join(' ')}>
       <div ref={stageRef} className={styles.stage} style={{ aspectRatio: '16/9' }}>
         <div ref={hostRef} className={styles.frameHost} />
-        {!controls && canFullscreen && (
-          <FullscreenButton labels={labels} active={isFullscreen} onClick={toggleStageFullscreen} />
-        )}
       </div>
     </div>
   )

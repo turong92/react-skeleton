@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { followPlayback, initialPlayer, momentOf, reducePlayer } from './playerState'
+import {
+  followPlayback,
+  followPreference,
+  initialPlayer,
+  momentOf,
+  reducePlayer,
+} from './playerState'
 
 describe('reducePlayer', () => {
   it('starts idle and plays the first step from the beginning when pressed', () => {
@@ -135,6 +141,20 @@ describe("reducePlayer - joining the queue's sound", () => {
   it('joins a player that was never pressed, and keeps a paused queue paused', () => {
     const s = reducePlayer(initialPlayer, { type: 'join', at: 5, play: false })
     expect(s).toMatchObject({ phase: 'playing', mode: 'audio', at: 5, play: false, adopt: true })
+  })
+})
+
+describe('followPreference', () => {
+  it('switches the player when the queue preference changed to something else than its mode', () => {
+    expect(followPreference('video', 'audio', 'video')).toBe('audio')
+    expect(followPreference('audio', 'video', 'audio')).toBe('video')
+  })
+
+  it('does nothing when it already is in that mode (the player itself caused the change), nothing changed, or there is no preference', () => {
+    expect(followPreference('video', 'audio', 'audio')).toBeNull()
+    expect(followPreference('audio', 'audio', 'video')).toBeNull()
+    expect(followPreference(undefined, undefined, 'video')).toBeNull()
+    expect(followPreference('video', undefined, 'video')).toBeNull()
   })
 })
 

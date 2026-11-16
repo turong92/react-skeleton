@@ -312,6 +312,12 @@ export function createQueueController(deps: {
       saveVolume(storage, key, { volume: state.volume, muted: state.muted })
     },
 
+    /** 지금 곡을 노래(소리만)로 틀 수 있나 - 소리 판이 있고 이 기기가 틀 수 있을 때(유튜브 · 소리 판 없는 영상은 false) */
+    canAudio: () => {
+      const item = currentOf(state.queue)
+      return item?.kind === 'media' && Boolean(item.source.audio) && audio.canPlay()
+    },
+
     /** 지금 시각 · 길이 - 같은 값이면 같은 객체를 돌려준다(`useSyncExternalStore` 용) */
     progress: () => progressNow,
     subscribeProgress: (listener: () => void) => {

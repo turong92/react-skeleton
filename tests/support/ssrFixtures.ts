@@ -1199,6 +1199,11 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
   }),
   'video#PlayQueueProvider': () => ({ children: 'inside' }),
   'video#QueueStage': () => ({}),
+  'video#ModePill': () => ({
+    labels: { mode: 'Play as', modeVideo: 'Video', modeAudio: 'Audio' },
+    mode: 'video',
+    onChange: noop,
+  }),
   'video#QueueProgress': () => ({}),
   'video#QueueProgressView': () => ({ currentTime: 12, duration: 225, onSeek: noop }),
   'video#YoutubeStage': () => ({

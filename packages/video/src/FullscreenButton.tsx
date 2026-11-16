@@ -1,7 +1,7 @@
 import type { VideoPlayerLabels } from './labels'
 import styles from './VideoPlayer.module.css'
 
-/** 무대 위 전체 화면 칩 - 우리 영상 · 유튜브가 같은 모양 · 같은 문구를 쓴다(눌림은 대기열이 등록받은 같은 `toggle`) */
+/** `VideoPlayer` 무대 위 전체 화면 칩(`controls` 가 켜져 있을 때만) - 눌림은 대기열이 등록받은 같은 `toggle` */
 export function FullscreenButton({
   labels,
   active,

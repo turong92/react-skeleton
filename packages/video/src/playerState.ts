@@ -32,6 +32,16 @@ export function momentOf(
   return media && media.readyState > 0 ? media.currentTime : known
 }
 
+/** 대기열의 선호(`preferred`)가 바뀌었을 때 재생기가 옮겨 갈 모드 - 이미 그 모드이거나 바뀐 게 없으면 null */
+export function followPreference(
+  previous: PlayerMode | undefined,
+  next: PlayerMode | undefined,
+  current: PlayerMode,
+): PlayerMode | null {
+  if (next === undefined || next === previous || next === current) return null
+  return next
+}
+
 /** 영상 요소를 대기열의 재생 상태(`want`)에 맞출 때 할 일 - 이미 같으면 null */
 export function followPlayback(
   paused: boolean,

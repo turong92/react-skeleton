@@ -17,6 +17,8 @@ export function usePlayQueue() {
   if (!controller) throw new Error('usePlayQueue 는 PlayQueueProvider 안에서 써야 한다')
   const state = useSyncExternalStore(controller.subscribe, controller.getState, controller.getState)
   const current = currentOf(state.queue)
+  // 지금 곡이 노래 모드가 되나 - 서버 · 하이드레이션 첫 그림은 false(기기를 모른다)
+  const canAudio = useSyncExternalStore(subscribeNothing, controller.canAudio, serverCanSetVolume)
   // 이 기기가 코드로 음량을 바꿀 수 있나 - 서버 · 하이드레이션 첫 그림은 false, 브라우저가 재서 알려 준다
   const canSetVolume = useSyncExternalStore(subscribeNothing, readCanSetVolume, serverCanSetVolume)
   const playerProps = useMemo(
@@ -50,6 +52,8 @@ export function usePlayQueue() {
     muted: state.muted,
     /** 이 기기가 코드로 음량을 바꿀 수 있나 - 아이폰은 기기 단추뿐이라 false(음량 칸을 숨긴다). 서버에서는 false */
     canSetVolume,
+    /** 지금 곡을 노래(소리만)로 틀 수 있나(소리 판이 있고 이 기기가 틀 수 있다 · 유튜브는 false) - 앱의 「영상 / 노래」 알약을 보일지 정한다. 바꾸는 것은 `setPreferred` */
+    canAudio,
     /** 큰 화면이 지금 전체 화면인가 · 전체 화면으로 할 수 있나(노래 모드 · 아이폰의 유튜브는 false) · 켜고 끄기 */
     fullscreen: state.fullscreen,
     canFullscreen: state.canFullscreen,

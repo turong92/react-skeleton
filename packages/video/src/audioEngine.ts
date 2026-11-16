@@ -47,6 +47,8 @@ export type AudioEngine = {
   resume: () => void
   restart: () => void
   position: () => number
+  /** 이 기기가 소리 판(HLS)을 틀 수 있나 */
+  canPlay: () => boolean
   /** 길이(초) - 모르면(NaN · 라이브) 0 */
   duration: () => number
   seek: (seconds: number) => void
@@ -147,6 +149,7 @@ export function createAudioEngine(deps: {
       play()
     },
     position: () => el?.currentTime ?? 0,
+    canPlay: () => deps.engine() !== null,
     duration: () => (el && Number.isFinite(el.duration) ? el.duration : 0),
     seek: (seconds) => {
       if (el) el.currentTime = seconds

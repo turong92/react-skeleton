@@ -32,7 +32,7 @@ describe('usePlayQueue', () => {
 
   it('gives volume, muted and setters, and does not claim to set volume on the server (unknown until the browser measures)', () => {
     const q = read([item('a')])
-    expect(q).toMatchObject({ volume: 1, muted: false, canSetVolume: false })
+    expect(q).toMatchObject({ volume: 1, muted: false, canSetVolume: false, canAudio: false })
     expect(typeof q.setVolume).toBe('function')
     expect(typeof q.setMuted).toBe('function')
   })

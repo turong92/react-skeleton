@@ -111,7 +111,13 @@ export function watchReady(onTimeout: () => void, ms = READY_TIMEOUT_MS): () => 
   return () => clearTimeout(timer)
 }
 
-/** 플레이어 만들 때의 `playerVars` - `controls` 를 끄면 앱이 자기 조작줄을 그린다 */
+/** 플레이어 만들 때의 `playerVars` - `controls` 를 끄면 앱이 자기 조작줄을 그린다. 관련 영상(`rel`) · 주석(`iv_load_policy=3`)은 항상 줄인다 */
 export function youtubePlayerVars(autoplay: boolean, controls: boolean) {
-  return { autoplay: autoplay ? 1 : 0, controls: controls ? 1 : 0, playsinline: 1, rel: 0 }
+  return {
+    autoplay: autoplay ? 1 : 0,
+    controls: controls ? 1 : 0,
+    playsinline: 1,
+    rel: 0,
+    iv_load_policy: 3,
+  }
 }

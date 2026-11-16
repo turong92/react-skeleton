@@ -14,6 +14,8 @@ export type QueueStageProps = {
    * 전체 화면 · 화질 칩은 그대로. `playerProps.controls` 보다 이것이 앞선다
    */
   controls?: boolean
+  /** 우리 영상의 「영상 / 노래」 알약 - 기본 켬. 앱이 자기 조작줄에 `ModePill` 을 그릴 때 끈다(`playerProps.modeToggle` 보다 이것이 앞선다) */
+  modeToggle?: boolean
   /** 시험 · 스토리용 */
   loadYouTubeApi?: () => Promise<YouTubeApi>
 }
@@ -31,6 +33,7 @@ function ConnectedQueueStage({
   className,
   playerProps,
   controls,
+  modeToggle,
   loadYouTubeApi,
 }: QueueStageProps) {
   const queue = usePlayQueue()
@@ -55,7 +58,6 @@ function ConnectedQueueStage({
         controls={controls}
         registerOutput={controller.registerOutput}
         fullscreenHost={controller.host.fullscreen}
-        labels={playerProps?.labels}
         loadApi={loadYouTubeApi}
       />
     )
@@ -71,7 +73,9 @@ function ConnectedQueueStage({
       joinSignal={queue.audioStart}
       followPlaying={queue.mode === 'video' ? queue.playing : undefined}
       {...playerProps}
+      preferredMode={queue.preferred}
       {...(controls === undefined ? {} : { controls })}
+      {...(modeToggle === undefined ? {} : { modeToggle })}
     />
   )
 }

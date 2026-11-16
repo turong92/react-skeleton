@@ -59,6 +59,17 @@ describe('VideoPlayer before the first press', () => {
     expect(html).not.toContain('<audio')
   })
 
+  it('leaves the video/audio switch out when the app draws its own (modeToggle off)', () => {
+    const html = renderToStaticMarkup(
+      <VideoPlayer
+        grant={fakeGrant({ audio: 'https://cdn.test/v/a/a-1/index.m3u8' })}
+        env={native}
+        modeToggle={false}
+      />,
+    )
+    expect(html).not.toContain('radiogroup')
+  })
+
   it('shows the video/audio switch when the grant has a sound-only version, without fetching it yet', () => {
     const html = renderToStaticMarkup(
       <VideoPlayer

@@ -158,11 +158,17 @@ describe('youtubePlayerVars', () => {
       controls: 1,
       playsinline: 1,
       rel: 0,
+      iv_load_policy: 3,
     })
     expect(youtubePlayerVars(false, true)).toMatchObject({ autoplay: 0, controls: 1 })
   })
 
   it("turns the frame's own controls off when the app draws its own", () => {
     expect(youtubePlayerVars(true, false)).toMatchObject({ controls: 0 })
+  })
+
+  it('always trims related videos and annotations, whatever the controls', () => {
+    for (const controls of [true, false])
+      expect(youtubePlayerVars(false, controls)).toMatchObject({ rel: 0, iv_load_policy: 3 })
   })
 })

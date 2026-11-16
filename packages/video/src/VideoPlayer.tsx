@@ -13,6 +13,7 @@ import { usePlayingReport, type Latest } from './playerRuntime'
 import { playbackOf, type PlayerSource } from './playerSource'
 import {
   followPlayback,
+  followPreference,
   initialPlayer,
   momentOf,
   reducePlayer,
@@ -60,6 +61,8 @@ export function VideoPlayer({
   followPlaying,
   audioHost,
   controls = true,
+  modeToggle = true,
+  preferredMode,
   env: envProp,
   loadHls = loadHlsLight,
 }: VideoPlayerProps) {
@@ -261,6 +264,16 @@ export function VideoPlayer({
     })
   }
 
+  // 대기열의 선호가 바뀌면(앱의 알약 → `setPreferred`) 재생 중에도 같은 시각 · 같은 재생 상태로 옮겨 간다
+  const seenPreferred = useRef(preferredMode)
+  useEffect(() => {
+    const todo = followPreference(seenPreferred.current, preferredMode, mode)
+    seenPreferred.current = preferredMode
+    if (todo && audioOk) switchMode(todo)
+    // 선호가 바뀔 때만 건다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preferredMode])
+
   const noEngine = plan !== null && plan.engine === null
   const waiting = plan !== null && plan.engine !== null && plan.order.length === 0
   const blocked = noEngine || waiting
@@ -351,14 +364,14 @@ export function VideoPlayer({
             {badge}
           </p>
         )}
-        {fullscreenKind && (
+        {fullscreenKind && controls && (
           <FullscreenButton labels={labels} active={isFullscreen} onClick={toggleStageFullscreen} />
         )}
         {showVideo && plan && plan.options.length > 1 && (
           <QualityMenu plan={plan} pick={state.pick} labels={labels} onChoose={choose} />
         )}
       </div>
-      {audioOk && (
+      {audioOk && modeToggle && (
         <div className={styles.mode}>
           <ModePill labels={labels} mode={mode} onChange={switchMode} />
         </div>

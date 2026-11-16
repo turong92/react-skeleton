@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server'
-import { describe, expect, it } from 'vitest'
-import { StoredImage } from './StoredImage'
+import { describe, expect, it, vi } from 'vitest'
+import { StoredImage, StoredImageView } from './StoredImage'
 import { videoUrlOf } from './videoUrlOf'
 
 const thumb = { url: 'https://cdn.test/t.jpg', width: 400, height: 267 }
@@ -109,6 +109,28 @@ describe('StoredImage', () => {
     expect(out).toContain('aria-label="dance"')
     expect(out).toContain('width="480"')
     expect(out).not.toContain('<img')
+  })
+
+  it('when the video fails (onError) the same image is drawn as the <img> display copy instead', () => {
+    const image = {
+      thumb,
+      display: {
+        url: 'https://cdn.test/d.gif',
+        contentType: 'image/gif',
+        alternates: [{ url: 'https://cdn.test/d.mp4', contentType: 'video/mp4' }],
+      },
+    }
+    const onVideoError = vi.fn()
+    const video = StoredImageView({ image, alt: 'dance', videoFailed: false, onVideoError })
+    expect(video?.type).toBe('video')
+    video?.props.onError()
+    expect(onVideoError).toHaveBeenCalledTimes(1)
+    const out = renderToStaticMarkup(
+      <StoredImageView image={image} alt="dance" videoFailed onVideoError={onVideoError} />,
+    )
+    expect(out).toContain('<img')
+    expect(out).toContain('src="https://cdn.test/d.gif"')
+    expect(out).not.toContain('<video')
   })
 
   it('a webp-only alternate (transparent animation) or none keeps the display an <img>', () => {

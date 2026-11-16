@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState, type Ref } from 'react'
 import type { ImageVariant } from './storageApi'
 import styles from './StoredImage.module.css'
 import { videoUrlOf } from './videoUrlOf'
@@ -36,16 +37,55 @@ const parts = (variant: StoredImageVariant | null | undefined) =>
 /**
  * 저장된 이미지를 반응형으로 그린다(`display.alternates` 에 `video/mp4` 가 있으면 그 주소로 소리 없는 반복 `<video>`) — `src` 는 `display`(없으면 `thumb`), 둘 다 있으면 `srcset="thumb 400w, display 1600w"`.
  * `alternates`(WebP 등)가 있으면 `<picture><source type srcset>` 뒤에 `<img>` 폴백. 폭 · 높이를 알면 속성으로 둬 이미지가 오기 전에 자리가 잡히고, `loading="lazy"` · `decoding="async"`.
+ * 영상이 실패(`onError`)하면 같은 자리에 `<img>` 로 바꿔 그리고, 화면 밖이면 영상을 멈췄다 다시 보이면 재생한다(`IntersectionObserver` 가 없는 환경은 그대로 둔다).
  */
-export function StoredImage({ image, alt, sizes, className }: StoredImageProps) {
+export function StoredImage(props: StoredImageProps) {
+  const [videoFailed, setVideoFailed] = useState(false)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video || typeof IntersectionObserver === 'undefined') return
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry?.isIntersecting) void video.play()?.catch(() => undefined)
+      else video.pause()
+    })
+    observer.observe(video)
+    return () => observer.disconnect()
+  }, [videoFailed])
+  return (
+    <StoredImageView
+      {...props}
+      videoFailed={videoFailed}
+      onVideoError={() => setVideoFailed(true)}
+      videoRef={videoRef}
+    />
+  )
+}
+
+/** `StoredImage` 의 그리기 - 상태 없이 props 로만(`videoFailed` 면 영상이 있어도 `<img>`) */
+export function StoredImageView({
+  image,
+  alt,
+  sizes,
+  className,
+  videoFailed,
+  onVideoError,
+  videoRef,
+}: StoredImageProps & {
+  videoFailed: boolean
+  onVideoError: () => void
+  videoRef?: Ref<HTMLVideoElement>
+}) {
   const main = parts(image.display) ?? parts(image.thumb)
   if (!main) return null
   const classes = [styles.image, className].filter(Boolean).join(' ')
-  const videoUrl = videoUrlOf(image.display)
+  const videoUrl = videoFailed ? undefined : videoUrlOf(image.display)
   if (videoUrl) {
     // 움직이는 이미지의 변환본 - 소리 없이 반복 재생해 GIF 처럼 보인다
     return (
       <video
+        ref={videoRef}
+        onError={onVideoError}
         className={classes}
         src={videoUrl}
         poster={parts(image.thumb)?.url}

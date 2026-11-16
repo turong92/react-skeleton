@@ -2,6 +2,8 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, waitFor } from 'storybook/test'
 import type { HlsCtor, LoadHls } from './attachSource'
 import { MiniPlayer } from './MiniPlayer'
+import { QueueStage } from './QueueStage'
+import type { YouTubeApi } from './youtubeApi'
 import type { PlaybackEnv } from './playbackPlan'
 import type { QueueItem } from './playQueue'
 import { PlayQueueProvider } from './PlayQueueProvider'
@@ -145,5 +147,55 @@ export const KoreanLabels: Story = {
     await userEvent.click(canvas.getByRole('button', { name: 'Load songs' }))
     await expect(await canvas.findByRole('region', { name: '지금 재생 중' })).toBeVisible()
     await expect(canvas.getByRole('button', { name: '다음 곡' })).toBeVisible()
+  },
+}
+
+const YT: QueueItem = { kind: 'youtube', id: 'y', title: 'A youtube clip', videoId: 'dQw4w9WgXcQ' }
+
+function YoutubeDemo({ failScript }: { failScript: boolean }) {
+  return (
+    <PlayQueueProvider
+      storageKey="story.queue"
+      storage={memoryStorage()}
+      env={MSE_ONLY}
+      loadHls={quietHls()}
+    >
+      <YoutubeControls />
+      <QueueStage
+        loadYouTubeApi={() =>
+          failScript ? Promise.reject(new Error('blocked')) : new Promise<YouTubeApi>(() => {})
+        }
+      />
+      <MiniPlayer />
+    </PlayQueueProvider>
+  )
+}
+
+function YoutubeControls() {
+  const queue = usePlayQueue()
+  return (
+    <button type="button" onClick={() => queue.setQueue([YT, SONGS[0]!], { play: true })}>
+      Load youtube then a song
+    </button>
+  )
+}
+
+export const YoutubeScriptFailureMovesOnToTheNextSong: StoryObj<typeof YoutubeDemo> = {
+  render: () => <YoutubeDemo failScript />,
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole('button', { name: 'Load youtube then a song' }))
+    await waitFor(() =>
+      expect(canvas.getByRole('region', { name: 'Now playing' })).toHaveTextContent('First song'),
+    )
+  },
+}
+
+export const YoutubeItemShowsItsFrameHost: StoryObj<typeof YoutubeDemo> = {
+  render: () => <YoutubeDemo failScript={false} />,
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole('button', { name: 'Load youtube then a song' }))
+    await expect(await canvas.findByRole('region', { name: 'Now playing' })).toHaveTextContent(
+      'A youtube clip',
+    )
   },
 }

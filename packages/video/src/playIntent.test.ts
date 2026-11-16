@@ -45,12 +45,12 @@ describe('createPlayIntent', () => {
 })
 
 describe('createPlayIntent - who stopped it', () => {
-  it("counts a pause 400ms before as the viewer's own (the OS pause arrives within the same moment as the lock)", () => {
+  it('counts a pause long before the lock as the viewer', () => {
     const c = clock()
     const intent = createPlayIntent(c.now)
     intent.play()
     intent.pause()
-    c.tick(400)
+    c.tick(2000)
     expect(intent.wasPlaying()).toBe(false)
   })
 
@@ -74,5 +74,25 @@ describe('createPlayIntent - who stopped it', () => {
     intent.pause() // 이번엔 OS 가 멈췄다
     c.tick(50)
     expect(intent.wasPlaying()).toBe(true)
+  })
+})
+
+describe('createPlayIntent - touch during the pause', () => {
+  it('survives the slow gap between the OS pause and the lock (measured 190-290ms)', () => {
+    const c = clock()
+    const intent = createPlayIntent(c.now)
+    intent.play()
+    intent.pause()
+    c.tick(900)
+    expect(intent.wasPlaying()).toBe(true)
+  })
+
+  it('does not hand over when the pause came while the viewer was touching the screen', () => {
+    const c = clock()
+    const intent = createPlayIntent(c.now)
+    intent.play()
+    intent.pause(true) // <video controls> 의 멈춤 단추를 눌렀다
+    c.tick(50)
+    expect(intent.wasPlaying()).toBe(false)
   })
 })

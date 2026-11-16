@@ -39,7 +39,7 @@ export type VideoPlayerProps = Input & {
   onNext?: () => void
   /** 모드가 바뀔 때(전환 · 자동 전환 · 소리 판 실패로 영상 복귀) - 같은 값은 다시 부르지 않는다 */
   onModeChange?: (mode: PlayerMode) => void
-  /** 사용자가 틀고 멈출 때(값이 바뀔 때만) - 화면을 끌 때 OS 가 영상을 멈추는 것은 세지 않는다 */
+  /** 사용자가 틀고 멈출 때(값이 바뀔 때만) - 화면을 꺼 자동 전환이 소리로 이어받으면 멈춤으로 세지 않는다 */
   onPlayingChange?: (playing: boolean) => void
   /** 시험 · 스토리용 - 이 기기가 무엇을 트는가(기본은 브라우저에서 읽는다) */
   env?: PlaybackEnv

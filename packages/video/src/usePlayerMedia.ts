@@ -55,7 +55,8 @@ export function usePlayerMedia({
         // 소리 판이 안 되면 고른 화질의 영상 걸음에서 같은 시각 · 같은 재생 상태로
         const pick = now.state.pick
         const back = pick === 'auto' || !order.includes(pick) ? order[0] : pick
-        if (audioMode && back) dispatch({ type: 'audioFailed', kind: back, at, play: s.play })
+        if (audioMode && back)
+          dispatch({ type: 'audioFailed', kind: back, at, play: intent.wasPlaying() || s.play })
         else dispatch({ type: 'giveUp' })
       } else
         now.refreshGrant!().then(
@@ -74,8 +75,13 @@ export function usePlayerMedia({
       report(true)
     }
     const onPause = () => {
-      intent.pause()
-      pausedTimer = setTimeout(() => report(false), OS_PAUSE_WINDOW_MS)
+      const touching =
+        typeof navigator !== 'undefined' &&
+        (navigator as { userActivation?: { isActive: boolean } }).userActivation?.isActive === true
+      intent.pause(touching)
+      // 화면을 만지는 중의 멈춤은 사용자 것 - 바로 알린다. 아니면 OS 가 한 것일 수 있어 자동 전환이 이어받는지 본다
+      if (touching) report(false)
+      else pausedTimer = setTimeout(() => report(false), OS_PAUSE_WINDOW_MS)
     }
     const onEnd = () => {
       clearTimeout(pausedTimer)

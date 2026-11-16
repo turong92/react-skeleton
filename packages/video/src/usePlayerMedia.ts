@@ -1,5 +1,6 @@
 import { useEffect, type Dispatch } from 'react'
 import { attachSource } from './attachSource'
+import { watchInput } from './lastInput'
 import { OS_PAUSE_WINDOW_MS, type PlayIntent } from './playIntent'
 import { afterFailure, urlOf } from './playbackPlan'
 import type { Latest, MediaRefs, Report } from './playerRuntime'
@@ -74,10 +75,10 @@ export function usePlayerMedia({
       intent.play()
       report(true)
     }
+    const input = watchInput(document)
     const onPause = () => {
-      const touching =
-        typeof navigator !== 'undefined' &&
-        (navigator as { userActivation?: { isActive: boolean } }).userActivation?.isActive === true
+      // 방금 실제 입력(화면 · 키)이 있었다면 사용자가 누른 멈춤 - OS 가 잠그며 건 것은 입력 없이 온다
+      const touching = input.recent()
       intent.pause(touching)
       // 화면을 만지는 중의 멈춤은 사용자 것 - 바로 알린다. 아니면 OS 가 한 것일 수 있어 자동 전환이 이어받는지 본다
       if (touching) report(false)
@@ -107,6 +108,7 @@ export function usePlayerMedia({
     }
     return () => {
       clearTimeout(pausedTimer)
+      input.stop()
       media.removeEventListener('play', onPlay)
       media.removeEventListener('pause', onPause)
       media.removeEventListener('ended', onEnd)

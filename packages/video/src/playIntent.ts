@@ -16,7 +16,7 @@ export function createPlayIntent(now: () => number = Date.now) {
       muted = false
       playing = true
     },
-    /** `userActive` - 이 순간 사용자가 화면을 만지는 중이다(`navigator.userActivation.isActive`) - 화면의 멈춤 단추이지 OS 가 잠그며 건 pause 가 아니다 */
+    /** `userActive` - 방금 실제 입력이 있었다(`watchInput`) - 화면의 멈춤 단추이지 OS 가 잠그며 건 pause 가 아니다 */
     pause(userActive = false) {
       if (!playing) return
       prior = !muted && !userActive

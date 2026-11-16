@@ -60,6 +60,12 @@ const ROWS: Row[] = [
     base: '.chip',
   },
   {
+    name: 'MiniPlayer button',
+    dir: 'packages/video',
+    file: 'packages/video/src/MiniPlayer.module.css',
+    base: '.button',
+  },
+  {
     name: 'VideoPlayer quality menu item',
     dir: 'packages/video',
     file: 'packages/video/src/VideoPlayer.module.css',

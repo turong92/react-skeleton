@@ -70,6 +70,17 @@ const done = await uploadVideo(videoApi, file, { purpose: 'note-clip', visibilit
 - 전체 화면 단추는 이미 전체 화면이면 「나가기」(`exitFullscreen`)가 된다.
 - 실기기(아이폰 홈 화면 앱 · 실제 폰)에서의 화면 끄기는 못 봤다 — 시뮬레이터 실측만 있다.
 
+## 재생 대기열 · 작은 재생기 (`PlayQueueProvider` · `usePlayQueue` · `MiniPlayer`)
+
+- **앱 최상단**에 `<PlayQueueProvider storageKey="my-app.queue">` 를 둔다(라우트를 옮겨도 소리가 이어진다). 안쪽 어디서든 `usePlayQueue()` 로 읽고 조작한다 - `setQueue(items, { startId, play })` · `add(item, "end" | "next")` · `remove` · `move(id, to)` · `play(id?)` · `pause` · `toggle` · `next` · `previous` · `setRepeat("off" | "one" | "all")` · `setShuffle`, 읽기는 `current` · `upcoming`(「다음 곡」) · `order` · `playing` · `mode`.
+- 항목: `{ kind: "media", id, title, artist?, thumb?, source: PlayerSource } | { kind: "youtube", id, title, artist?, thumb?, videoId }`.
+- **저장**: 목록 · 현재 곡 · 반복 · 셔플을 이 기기(`localStorage`, `storage` prop 으로 바꿈)의 `storageKey` 에 쓰고 새로 고침 뒤 복원한다(저절로 틀지는 않는다). 모양이 어긋난 값은 버리고 빈 대기열로 시작한다.
+- **노래 모드는 `<audio>` 하나를 계속 다시 쓴다**: Provider 가 쥔 요소에 곡마다 소리 판을 새로 붙인다(hls.js 도 같은 요소). 아이폰은 손짓 없는 새 요소의 `play()` 를 막으므로 요소를 새로 만들지 않아야 화면이 꺼진 채 다음 곡으로 넘어간다. 그 요소는 첫 재생 손짓(`play()`, 또는 재생기의 재생 단추)에서 깨워 둔다.
+- **`VideoPlayer` 와 잇기**: `<VideoPlayer source={...} {...usePlayQueue().playerProps} />`. 재생기는 자기 `<audio>` 를 렌더하지 않고 대기열의 요소를 빌려 쓴다 - 「노래」 전환 · 화면이 꺼질 때의 자동 전환이 그 요소로 가고(`adopt`), 재생기가 사라져도 소리가 이어지며, 영상이 끝나면 다음 곡이 소리 판이 있으면 소리로 이어진다. 잠금화면의 이전/다음은 대기열로 간다. 이때 소리 판이 틀리면 영상으로 돌아가는 대신 대기열이 다음 곡으로 넘어간다.
+- **건너뛰기**: 지금 틀 수 없는 곡 - 소리 판이 없는 영상, 화면의 재생기가 없거나 화면이 꺼져 있을 때의 유튜브 - 은 차례가 와도 건너뛰고 다음 곡으로 간다. 건너뛸 곡뿐이거나 목록 끝(반복 꺼짐)이면 멈춘다(한 바퀴를 넘어 무한히 돌지 않는다). 곡이 틀리지 못하면 묻지 않고 다음 곡, 곡 수만큼 연달아 틀리면 멈춘다. 「이전」은 3초 넘게 들었으면 처음부터.
+- **`MiniPlayer`**: 화면 아래에 붙는 작은 재생기(썸네일 · 제목 · 재생/일시정지 · 다음). 비면 안 그린다. `onOpen(item)` 을 주면 정보 칸이 단추가 되어 앱이 큰 화면으로 옮긴다. 문구 `defaultPlayQueueLabels` · `koPlayQueueLabels`.
+- 한계: 큰 화면의 재생기가 대기열의 소리를 빌린 노래 모드에서는 재생기 안에 소리 조작 단추가 없다(재생 · 다음은 `MiniPlayer` 나 잠금화면). 아이폰 실기기 · 시뮬레이터에서 대기열로 곡이 넘어가는 것은 이 변경으로는 아직 못 봤다.
+
 ## 알아 둘 것
 
 - 저장소(버킷) CORS 가 `PUT` · `GET` 을 열고 `ExposeHeaders: ETag` 여야 한다(조각 응답의 `ETag` 를 읽는다).

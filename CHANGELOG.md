@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `@skeleton/storage`: `StoredImage` 의 움짤 영상이 실패하면(`onError`) `display` `<img>` 로 바꿔 그리고, `IntersectionObserver` 가 있으면 화면 밖에서 멈춘다.
 
+### Added — 재생 대기열 · 작은 재생기 (2026-11-16)
+
+- `@skeleton/video`: `PlayQueueProvider`(앱 최상단) · `usePlayQueue` · `MiniPlayer` — 목록 · 현재 곡 · 이전/다음 · 끝나면 다음 · 반복(하나/전체) · 셔플 · 「다음 곡」 목록(추가 · 빼기 · 순서 바꾸기), 상태는 이 기기에 저장(앱이 키를 정함)하고 새로 고침 뒤 복원한다. 노래 모드는 Provider 가 쥔 `<audio>` 하나를 곡마다 다시 써서 화면이 꺼진 채로도 다음 곡으로 넘어간다. `VideoPlayer` 는 `audioHost`(`usePlayQueue().playerProps`)로 그 요소를 빌려 쓴다. 지금 틀 수 없는 곡(소리 판 없는 영상 · 화면이 꺼진 때의 유튜브)은 건너뛰고, 건너뛸 곡뿐이면 멈춘다. 문구 `defaultPlayQueueLabels` · `koPlayQueueLabels`(`VideoPlayerLabels` 는 그대로).
+
 ### Added — 영상 / 노래 전환 · 잠금화면 · 전체 화면 (2026-11-16)
 
 - `@skeleton/video` `VideoPlayer`: 재생 허가에 소리 판(`audio`)이 있으면 「영상 / 노래」 전환(같은 시각 · 같은 재생 상태로 잇고, 노래 모드는 영상 조각을 받지 않는다 · 소리 판 실패 시 안내 한 줄과 함께 영상으로), `initialMode`, `title`, `autoAudioWhenHidden`(기본 꺼짐 — 화면이 꺼지면 같은 시각의 소리 판으로, 아이폰 시뮬레이터 실측 방식), Media Session(재생 · 일시정지 · 이동, `onPrevious`/`onNext` 가 있으면 이전/다음만 · 없으면 ±10초), 전체 화면 단추(틀 `requestFullscreen` · 아이폰 `webkitEnterFullscreen`, 노래 모드에선 숨김), `onEnded` · `onModeChange` · `onPlayingChange`.

@@ -1,4 +1,5 @@
 import type { LoadHls } from './attachSource'
+import type { AudioHost } from './queueController'
 import type { VideoPlayerLabels } from './labels'
 import type { PlaybackEnv } from './playbackPlan'
 import type { PlayerSource } from './playerSource'
@@ -41,6 +42,8 @@ export type VideoPlayerProps = Input & {
   onModeChange?: (mode: PlayerMode) => void
   /** 사용자가 틀고 멈출 때(값이 바뀔 때만) - 화면을 꺼 자동 전환이 소리로 이어받으면 멈춤으로 세지 않는다 */
   onPlayingChange?: (playing: boolean) => void
+  /** 대기열의 `<audio>` 를 빌린다(`usePlayQueue().playerProps` 로 펼친다) - 노래 모드 · 자동 전환이 그 요소로 가서, 이 재생기가 사라져도 소리가 이어지고 끝나면 대기열이 다음 곡을 튼다 */
+  audioHost?: AudioHost
   /** 시험 · 스토리용 - 이 기기가 무엇을 트는가(기본은 브라우저에서 읽는다) */
   env?: PlaybackEnv
   /** 시험 · 스토리용 - hls.js 불러오기(기본은 light 빌드 지연 import) */

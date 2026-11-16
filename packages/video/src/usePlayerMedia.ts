@@ -5,6 +5,7 @@ import { OS_PAUSE_WINDOW_MS, type PlayIntent } from './playIntent'
 import { afterFailure, urlOf } from './playbackPlan'
 import type { Latest, MediaRefs, Report } from './playerRuntime'
 import { momentOf, type PlayerAction } from './playerState'
+import type { AudioHost } from './queueController'
 import type { VideoPlayback } from './types'
 
 type Args = {
@@ -15,6 +16,8 @@ type Args = {
   dispatch: Dispatch<PlayerAction>
   setFresh: (fresh: { from: VideoPlayback; value: VideoPlayback }) => void
   session: number
+  /** 대기열의 `<audio>` - 있으면 소리 모드는 거기에 붙이고(걷지 않는다) 곡이 끝나거나 틀리는 것은 대기열이 맡는다 */
+  host?: AudioHost
 }
 
 /**
@@ -29,6 +32,7 @@ export function usePlayerMedia({
   dispatch,
   setFresh,
   session,
+  host,
 }: Args) {
   useEffect(() => {
     const { grant: g, plan: p, state: s, loadHls: load } = latest.current
@@ -36,6 +40,9 @@ export function usePlayerMedia({
     const media = audioMode ? refs.audio.current : refs.video.current
     const url = audioMode ? g.audio : s.kind ? urlOf(g, s.kind) : null
     if (s.phase !== 'playing' || !media || !p?.engine || !url) return
+    const hosted = audioMode ? host : undefined
+    // 영상으로 틀기 시작하면 대기열의 소리를 멈추고 대기열을 영상 모드로
+    if (!audioMode) host?.stop()
     let settled = false
     const fail = () => {
       if (settled) return
@@ -92,15 +99,20 @@ export function usePlayerMedia({
     }
     media.addEventListener('play', onPlay)
     media.addEventListener('pause', onPause)
-    media.addEventListener('ended', onEnd)
-    media.addEventListener('error', fail)
+    if (!hosted) {
+      media.addEventListener('ended', onEnd)
+      media.addEventListener('error', fail)
+    }
     let handle: { destroy: () => void } | null = null
+    if (hosted) hosted.start({ url, at: s.at, play: s.play, adopt: s.adopt })
     if (s.adopt) {
       // 화면이 꺼지는 순간 `<audio>` 가 이미 틀기 시작했다 - 다시 붙이면 끊긴다
       if (!media.paused) {
         intent.play()
         report(true)
       }
+    } else if (hosted) {
+      if (!s.play) report(false)
     } else {
       handle = attachSource(media, url, p.engine, { loadHls: load, onFatal: fail, startAt: s.at })
       if (s.play) void media.play()?.catch(() => {})
@@ -114,6 +126,7 @@ export function usePlayerMedia({
       media.removeEventListener('ended', onEnd)
       media.removeEventListener('error', fail)
       handle?.destroy()
+      if (hosted) return // 소리는 대기열 것이다 - 이 재생기가 사라져도 이어진다
       media.pause()
       if (!audioMode) {
         // 떼어 낸 영상이 조각을 계속 받지 않게(소리 `<audio>` 는 깨워 둔 채로 남긴다)

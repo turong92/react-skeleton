@@ -54,3 +54,12 @@ export type {
 } from './playQueue'
 export { DEFAULT_QUEUE_KEY, loadQueue, saveQueue } from './queueStorage'
 export type { QueueStorage } from './queueStorage'
+
+export { PlayQueueProvider } from './PlayQueueProvider'
+export { usePlayQueue } from './usePlayQueue'
+export type { PlayQueueProviderProps } from './PlayQueueProvider'
+export { MiniPlayer, MiniPlayerView } from './MiniPlayer'
+export type { MiniPlayerProps, MiniPlayerViewProps } from './MiniPlayer'
+export { defaultPlayQueueLabels, koPlayQueueLabels } from './queueLabels'
+export type { PlayQueueLabels } from './queueLabels'
+export type { AudioHost, QueueMode } from './queueController'

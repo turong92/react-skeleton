@@ -45,6 +45,7 @@ export function VideoPlayer({
   onNext,
   onModeChange,
   onPlayingChange,
+  audioHost,
   env: envProp,
   loadHls = loadHlsLight,
 }: VideoPlayerProps) {
@@ -66,7 +67,12 @@ export function VideoPlayer({
   const videoRef = useRef<HTMLVideoElement>(null)
   const audioRef = useRef<HTMLAudioElement>(null)
   const stageRef = useRef<HTMLDivElement>(null)
-  const refs = { video: videoRef, audio: audioRef }
+  // 대기열의 `<audio>` 를 빌릴 때는 그 요소를 쓴다(요소는 앱 최상단이 쥐고 있어 이 재생기가 사라져도 소리가 이어진다)
+  const hostAudioRef = useRef<HTMLAudioElement | null>(null)
+  useEffect(() => {
+    hostAudioRef.current = audioHost?.element() ?? null
+  })
+  const refs = { video: videoRef, audio: audioHost ? hostAudioRef : audioRef }
   const latest = useRef<Latest>({ grant, plan, state, loadHls, given })
   useEffect(() => {
     latest.current = {
@@ -86,7 +92,16 @@ export function VideoPlayer({
   const [intent] = useState(createPlayIntent)
   const report = usePlayingReport(latest)
 
-  usePlayerMedia({ latest, refs, intent, report, dispatch, setFresh, session: state.session })
+  usePlayerMedia({
+    latest,
+    refs,
+    intent,
+    report,
+    dispatch,
+    setFresh,
+    session: state.session,
+    host: audioHost,
+  })
   useHiddenHandoff({
     // 소리 판 실패로 영상에 돌아온 직후(notice)에는 다시 넘기지 않는다
     watching: autoAudioWhenHidden && playing && mode === 'video' && audioOk && !state.notice,
@@ -98,7 +113,8 @@ export function VideoPlayer({
     dispatch,
   })
   useLockScreen({
-    playing,
+    // 대기열이 소리를 쥐고 있으면 잠금화면은 대기열이 묶는다
+    playing: playing && !(audioHost && mode === 'audio'),
     title,
     poster: grant.poster,
     hasPrevious: Boolean(onPrevious),
@@ -125,8 +141,14 @@ export function VideoPlayer({
   const press = async () => {
     if (!env) return
     // 첫 손짓 안(기다리기 전)에서 `<audio>` 를 깨워 둔다 - 나중에 화면이 꺼질 때 틀 수 있게
-    if (autoAudioWhenHidden && mode === 'video' && audioOk && plan?.engine === 'native') {
-      if (audioRef.current && grant.audio) wakeAudio(audioRef.current, grant.audio)
+    if (
+      (autoAudioWhenHidden || audioHost) &&
+      mode === 'video' &&
+      audioOk &&
+      plan?.engine === 'native'
+    ) {
+      if (audioHost && grant.audio) audioHost.wake(grant.audio)
+      else if (audioRef.current && grant.audio) wakeAudio(audioRef.current, grant.audio)
     }
     let g = grant
     if (refreshGrant && grantExpired(g, Date.now())) {
@@ -155,7 +177,7 @@ export function VideoPlayer({
       dispatch({ type: 'mode', mode: next, at: 0, play: false })
       return
     }
-    const current = mode === 'audio' ? audioRef.current : videoRef.current
+    const current = mode === 'audio' ? refs.audio.current : videoRef.current
     const kind =
       next === 'video' ? (state.pick === 'auto' ? plan?.order[0] : state.pick) : undefined
     if (next === 'video' && !kind) return
@@ -224,7 +246,7 @@ export function VideoPlayer({
             )}
           </>
         )}
-        {audioOk && (
+        {audioOk && !audioHost && (
           <audio
             ref={audioRef}
             className={styles.audio}

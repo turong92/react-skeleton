@@ -77,6 +77,19 @@ describe('VideoPlayer before the first press', () => {
     expect(html).not.toContain('a-1/index.m3u8') // 누르기 전에는 소리 판 주소도 안 쓴다
   })
 
+  it("renders no audio element of its own when it borrows the queue's", () => {
+    const host = { element: () => null, wake: () => {}, start: () => {}, stop: () => {} }
+    const html = renderToStaticMarkup(
+      <VideoPlayer
+        grant={fakeGrant({ audio: 'https://cdn.test/a.m3u8' })}
+        env={native}
+        audioHost={host}
+      />,
+    )
+    expect(html).not.toContain('<audio')
+    expect(html).toContain('role="radiogroup"')
+  })
+
   it('has no switch when this browser cannot play HLS at all', () => {
     const html = renderToStaticMarkup(
       <VideoPlayer grant={fakeGrant({ audio: 'https://cdn.test/a.m3u8' })} env={none} />,

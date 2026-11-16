@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `@skeleton/storage`: `StoredImage` 의 움짤 영상이 실패하면(`onError`) `display` `<img>` 로 바꿔 그리고, `IntersectionObserver` 가 있으면 화면 밖에서 멈춘다.
 
+### Added — 영상 / 노래 전환 · 잠금화면 · 전체 화면 (2026-11-16)
+
+- `@skeleton/video` `VideoPlayer`: 재생 허가에 소리 판(`audio`)이 있으면 「영상 / 노래」 전환(같은 시각 · 같은 재생 상태로 잇고, 노래 모드는 영상 조각을 받지 않는다 · 소리 판 실패 시 안내 한 줄과 함께 영상으로), `initialMode`, `title`, `autoAudioWhenHidden`(기본 꺼짐 — 화면이 꺼지면 같은 시각의 소리 판으로, 아이폰 시뮬레이터 실측 방식), Media Session(재생 · 일시정지 · 이동, `onPrevious`/`onNext` 가 있으면 이전/다음만 · 없으면 ±10초), 전체 화면 단추(틀 `requestFullscreen` · 아이폰 `webkitEnterFullscreen`, 노래 모드에선 숨김), `onEnded` · `onModeChange` · `onPlayingChange`.
+- `@skeleton/video`: 입력을 `MediaSource = { src, audio?, poster?, compat?, hls? }`(`source` prop)로도 받는다 — 서버 허가 없이 같은 출처 주소를 트는 앱용. `mediaSourceOf(grant)`. `VideoPlayback.audio?: string | null`. `attachSource` 가 `<audio>` 에도 붙는다.
+- 문구(`VideoPlayerLabels`)에 `playNoLength` · `mode` · `modeVideo` · `modeAudio` · `audioFailed` · `fullscreen` 이 늘었다(영어 · 한국어). 문구 객체를 통째로 직접 채운 앱은 이 키를 더해야 한다(`{ ...defaultVideoPlayerLabels, … }` 쓰는 앱은 그대로).
+
 ### Added — 재배포 없이 끄고 켜기: 점검 화면 · 스위치 읽기 · 새 버전 안내 (2026-11-16)
 
 - `@skeleton/app-control`(백엔드 `modules/app-control` 짝): `createAppControlApi`(`GET /app/config`) · `useAppConfig`(창에 돌아오면 다시 읽고 점검 중엔 주기적으로, 모듈이 없는 백엔드의 404 는 다시 묻지 않는다) · `useFeature`(클라이언트에 보이는 스위치) · `appStateOf`(점검 > 강제 > 권장) · `AppControlGate`(점검 화면 · 닫을 수 없는 새로고침 화면 · 닫을 수 있는 띠). 버전은 숫자 칸으로 비교한다(`1.10` > `1.9`).

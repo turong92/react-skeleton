@@ -2,7 +2,7 @@
 export type HlsLike = {
   on(event: string, handler: (event: string, data: { fatal?: boolean }) => void): void
   loadSource(url: string): void
-  attachMedia(video: HTMLVideoElement): void
+  attachMedia(media: HTMLMediaElement): void
   destroy(): void
 }
 export type HlsCtor = {
@@ -21,14 +21,14 @@ export type AttachOptions = {
   startAt?: number
 }
 
-type VideoLike = Pick<
-  HTMLVideoElement,
+type MediaLike = Pick<
+  HTMLMediaElement,
   'src' | 'currentTime' | 'addEventListener' | 'removeEventListener'
 >
 
-/** `<video>` 에 재생 목록을 붙인다. 돌려받은 `destroy` 는 엔진을 걷는다 */
+/** `<video>` · `<audio>` 에 재생 목록을 붙인다. 돌려받은 `destroy` 는 엔진을 걷는다 */
 export function attachSource(
-  video: VideoLike,
+  video: MediaLike,
   url: string,
   engine: 'native' | 'hlsjs',
   { loadHls, onFatal, startAt }: AttachOptions,
@@ -51,7 +51,7 @@ export function attachSource(
           if (data?.fatal) onFatal()
         })
         hls.loadSource(url)
-        hls.attachMedia(video as HTMLVideoElement)
+        hls.attachMedia(video as HTMLMediaElement)
       },
       () => {
         if (!destroyed) onFatal()

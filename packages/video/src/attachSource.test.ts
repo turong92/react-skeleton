@@ -42,6 +42,31 @@ function fakeHls(supported = true) {
   return { Hls: Hls as unknown as HlsCtor, instances }
 }
 
+describe('attachSource on an <audio> element', () => {
+  it('plays the sound-only playlist natively, from the moment given', () => {
+    const audio = fakeVideo() as unknown as HTMLAudioElement
+    attachSource(audio, 'https://x/a.m3u8', 'native', {
+      loadHls: vi.fn(),
+      onFatal: vi.fn(),
+      startAt: 9,
+    })
+    expect(audio.src).toBe('https://x/a.m3u8')
+    ;(audio as unknown as ReturnType<typeof fakeVideo>).fire('loadedmetadata')
+    expect(audio.currentTime).toBe(9)
+  })
+
+  it('attaches hls.js to it', async () => {
+    const audio = fakeVideo() as unknown as HTMLAudioElement
+    const { Hls, instances } = fakeHls()
+    attachSource(audio, 'https://x/a.m3u8', 'hlsjs', {
+      loadHls: async () => Hls,
+      onFatal: vi.fn(),
+    })
+    await vi.waitFor(() => expect(instances).toHaveLength(1))
+    expect(instances[0]).toMatchObject({ loaded: ['https://x/a.m3u8'], attached: audio })
+  })
+})
+
 describe('attachSource', () => {
   it('uses the native player and never loads hls.js', () => {
     const video = fakeVideo()

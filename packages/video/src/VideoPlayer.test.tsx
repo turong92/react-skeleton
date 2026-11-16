@@ -42,6 +42,74 @@ describe('VideoPlayer before the first press', () => {
     expect(html).toContain('aria-label="영상 재생, 0:42"')
   })
 
+  it('has no video/audio switch and no audio element when the grant has no sound-only version', () => {
+    const html = renderToStaticMarkup(<VideoPlayer grant={fakeGrant()} env={native} />)
+    expect(html).not.toContain('radiogroup')
+    expect(html).not.toContain('<audio')
+  })
+
+  it('shows the video/audio switch when the grant has a sound-only version, without fetching it yet', () => {
+    const html = renderToStaticMarkup(
+      <VideoPlayer
+        grant={fakeGrant({ audio: 'https://cdn.test/v/a/a-1/index.m3u8' })}
+        env={native}
+      />,
+    )
+    expect(html).toContain('role="radiogroup"')
+    expect(html).toMatch(
+      /<button[^>]*role="radio"[^>]*aria-checked="true"[^>]*>(?:<span[^>]*>[^<]*<\/span>)?Video/,
+    )
+    expect(html).toMatch(
+      /<button[^>]*role="radio"[^>]*aria-checked="false"[^>]*>(?:<span[^>]*>[^<]*<\/span>)?Audio/,
+    )
+    expect(html).toContain('<audio')
+    expect(html).not.toContain('a-1/index.m3u8') // 누르기 전에는 소리 판 주소도 안 쓴다
+  })
+
+  it('has no switch when this browser cannot play HLS at all', () => {
+    const html = renderToStaticMarkup(
+      <VideoPlayer grant={fakeGrant({ audio: 'https://cdn.test/a.m3u8' })} env={none} />,
+    )
+    expect(html).not.toContain('radiogroup')
+  })
+
+  it('starts in audio mode when the app asks for it', () => {
+    const html = renderToStaticMarkup(
+      <VideoPlayer
+        grant={fakeGrant({ audio: 'https://cdn.test/a.m3u8' })}
+        env={native}
+        initialMode="audio"
+      />,
+    )
+    expect(html).toMatch(
+      /<button[^>]*role="radio"[^>]*aria-checked="true"[^>]*>(?:<span[^>]*>[^<]*<\/span>)?Audio/,
+    )
+  })
+
+  it('plays a bare source of same-origin addresses, with the sound switch when it has audio', () => {
+    const html = renderToStaticMarkup(
+      <VideoPlayer
+        source={{
+          src: '/media/a/index.m3u8',
+          audio: '/media/a/audio.m3u8',
+          poster: '/media/a/p.jpg',
+        }}
+        env={native}
+      />,
+    )
+    expect(html).toContain('src="/media/a/p.jpg"')
+    expect(html).toMatch(/<button[^>]*aria-label="Play video"/)
+    expect(html).toContain('role="radiogroup"')
+    expect(html).not.toContain('m3u8')
+  })
+
+  it('draws no poster image when a source has none', () => {
+    const html = renderToStaticMarkup(
+      <VideoPlayer source={{ src: '/media/a/index.m3u8' }} env={native} />,
+    )
+    expect(html).not.toContain('<img')
+  })
+
   it('reserves the picture shape from the grant so nothing jumps', () => {
     const html = renderToStaticMarkup(
       <VideoPlayer grant={fakeGrant({ w: 1080, h: 1920 })} env={native} />,

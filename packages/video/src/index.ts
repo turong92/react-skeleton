@@ -25,6 +25,9 @@ export type { VideoUploadFieldProps } from './VideoUploadField'
 export { VideoPlayer } from './VideoPlayer'
 export type { VideoPlayerProps } from './VideoPlayer'
 export type { PlaybackEnv } from './playbackPlan'
+export { mediaSourceOf } from './mediaSource'
+export type { MediaSource } from './mediaSource'
+export type { PlayerMode } from './playerState'
 export type { HlsCtor, HlsLike, LoadHls } from './attachSource'
 export {
   defaultVideoPlayerLabels,

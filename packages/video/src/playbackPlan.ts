@@ -1,3 +1,4 @@
+import type { FullscreenKind } from './fullscreen'
 import type { VideoPlayback } from './types'
 
 /** 재생 한 걸음 - 마스터(자동) · 원본 단 · 호환 단 */
@@ -12,6 +13,8 @@ export type PlaybackEnv = {
   canPlayType: (mime: string) => boolean
   /** MSE(`MediaSource` · `ManagedMediaSource`) - 없으면 null */
   mse: { isTypeSupported: (type: string) => boolean } | null
+  /** 전체 화면 방식 - 안 되면 null, 모르면(시험 · 스토리) 생략하고 단추도 없다 */
+  fullscreen?: FullscreenKind | null
 }
 
 /**

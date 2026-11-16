@@ -176,3 +176,44 @@
   color: var(--red);
   font-size: var(--font-size-small);
 }
+
+.audio {
+  display: none;
+}
+
+.audio[controls] {
+  display: block;
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  inline-size: 100%;
+}
+
+.fullscreen {
+  position: absolute;
+  inset-inline-start: var(--space-sm);
+  inset-block-start: var(--space-sm);
+  display: inline-grid;
+  place-items: center;
+}
+
+.icon {
+  inline-size: 20px;
+  block-size: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+
+.mode {
+  display: flex;
+  justify-content: center;
+}
+
+/* 전체 화면 - 틀이 화면을 채우고 영상은 비율을 지킨 채 가운데에 */
+.stage:fullscreen {
+  max-inline-size: none !important;
+  max-block-size: none;
+  aspect-ratio: auto !important;
+  border-radius: 0;
+}

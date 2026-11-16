@@ -4,6 +4,7 @@ import { expect, waitFor } from 'storybook/test'
 import type { HlsCtor, LoadHls } from './attachSource'
 import { koVideoPlayerLabels } from './labels'
 import type { PlaybackEnv } from './playbackPlan'
+import type { PlayerMode } from './playerState'
 import { storyGrant } from './stories/fakeVideo'
 import type { VideoPlayback } from './types'
 import { VideoPlayer } from './VideoPlayer'
@@ -51,12 +52,14 @@ function Demo({
   failing = [],
   expiredAtFirst = false,
   ko = false,
+  initialMode,
 }: {
   grant?: VideoPlayback
   env?: PlaybackEnv
   failing?: string[]
   expiredAtFirst?: boolean
   ko?: boolean
+  initialMode?: PlayerMode
 }) {
   const [seen, setSeen] = useState({ loads: 0, sources: [] as string[] })
   const [{ loadHls }] = useState(() =>
@@ -71,6 +74,7 @@ function Demo({
       <VideoPlayer
         grant={given}
         env={env}
+        initialMode={initialMode}
         loadHls={loadHls}
         labels={ko ? koVideoPlayerLabels : undefined}
         refreshGrant={
@@ -201,5 +205,74 @@ export const UnsupportedBrowser: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByText('이 브라우저에서는 재생할 수 없어요.')).toBeVisible()
     await expect(canvas.getByRole('button', { name: '영상 재생, 0:42' })).toBeDisabled()
+  },
+}
+
+const AUDIO_URL = 'https://video.test/v/a/a-1/index.m3u8'
+
+export const NoSwitchWithoutASoundOnlyVersion: Story = {
+  play: async ({ canvas }) => {
+    await expect(canvas.queryByRole('radiogroup')).toBeNull()
+  },
+}
+
+export const AudioSwitchTakesOverWithoutVideoPieces: Story = {
+  args: { env: MSE_ONLY, grant: storyGrant({ audio: AUDIO_URL }) },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole('button', { name: 'Play video, 0:42' }))
+    await canvas.findByLabelText('Video')
+    await userEvent.click(canvas.getByRole('radio', { name: 'Audio' }))
+    await waitFor(() =>
+      expect(canvas.getByTestId('log')).toHaveTextContent(
+        `sources=https://video.test/v/a/h-1/master.m3u8,${AUDIO_URL}`,
+      ),
+    )
+    await expect(canvas.queryByLabelText('Video', { selector: 'video' })).toBeNull() // 영상 요소가 없다
+    await userEvent.click(canvas.getByRole('radio', { name: 'Video' }))
+    await expect(await canvas.findByLabelText('Video', { selector: 'video' })).toBeVisible()
+  },
+}
+
+export const StartsAsAudio: Story = {
+  args: { env: MSE_ONLY, grant: storyGrant({ audio: AUDIO_URL }), initialMode: 'audio' },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole('button', { name: 'Play video, 0:42' }))
+    await waitFor(() => expect(canvas.getByTestId('log')).toHaveTextContent(`sources=${AUDIO_URL}`))
+    await expect(canvas.queryByLabelText('Video', { selector: 'video' })).toBeNull()
+  },
+}
+
+export const SoundOnlyFailureGoesBackToVideoWithANote: Story = {
+  args: {
+    env: MSE_ONLY,
+    grant: storyGrant({ audio: AUDIO_URL }),
+    initialMode: 'audio',
+    failing: [AUDIO_URL],
+  },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole('button', { name: 'Play video, 0:42' }))
+    await expect(await canvas.findByText(/video is playing instead/)).toBeVisible()
+    await expect(await canvas.findByLabelText('Video', { selector: 'video' })).toBeVisible()
+    await expect(canvas.getByRole('radio', { name: 'Video' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    )
+  },
+}
+
+export const FullscreenButtonOnlyInVideoMode: Story = {
+  args: { env: { ...MSE_ONLY, fullscreen: 'frame' }, grant: storyGrant({ audio: AUDIO_URL }) },
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole('button', { name: 'Play video, 0:42' }))
+    await expect(await canvas.findByRole('button', { name: 'Full screen' })).toBeVisible()
+    await userEvent.click(canvas.getByRole('radio', { name: 'Audio' }))
+    await waitFor(() => expect(canvas.queryByRole('button', { name: 'Full screen' })).toBeNull())
+  },
+}
+
+export const PlaysSameOriginAddressesWithoutAGrant: Story = {
+  render: () => <VideoPlayer source={{ src: '/media/a/index.m3u8' }} env={NATIVE} />,
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('button', { name: 'Play video' })).toBeEnabled()
   },
 }

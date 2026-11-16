@@ -41,6 +41,51 @@ describe('reducePlayer', () => {
     })
   })
 
+  it('starts in video mode, and a press can start in audio mode (initialMode)', () => {
+    expect(initialPlayer.mode).toBe('video')
+    const s = reducePlayer(initialPlayer, { type: 'press', kind: 'hls', mode: 'audio' })
+    expect(s).toMatchObject({ phase: 'playing', mode: 'audio', at: 0, play: true, adopt: false })
+  })
+
+  it('remembers the mode picked before the first press without starting anything', () => {
+    const s = reducePlayer(initialPlayer, { type: 'mode', mode: 'audio', at: 0, play: false })
+    expect(s).toMatchObject({ phase: 'idle', mode: 'audio' })
+    expect(s.session).toBe(initialPlayer.session)
+  })
+
+  it('switches mode while playing from the same moment, keeping whether it was playing', () => {
+    let s = reducePlayer(initialPlayer, { type: 'press', kind: 'hls' })
+    s = reducePlayer(s, { type: 'mode', mode: 'audio', at: 33, play: false })
+    expect(s).toMatchObject({ phase: 'playing', mode: 'audio', at: 33, play: false, notice: false })
+    expect(s.session).toBe(initialPlayer.session + 2)
+    s = reducePlayer(s, { type: 'mode', mode: 'video', kind: 'orig', at: 40, play: true })
+    expect(s).toMatchObject({ mode: 'video', kind: 'orig', tried: ['orig'], at: 40, play: true })
+  })
+
+  it('hands over to audio when the screen goes off, and says the audio is already playing when native', () => {
+    let s = reducePlayer(initialPlayer, { type: 'press', kind: 'hls' })
+    s = reducePlayer(s, { type: 'handoff', at: 12, adopt: true })
+    expect(s).toMatchObject({ mode: 'audio', at: 12, play: true, adopt: true })
+    s = reducePlayer(s, { type: 'refresh', at: 20 })
+    expect(s.adopt).toBe(false) // 다시 붙일 때는 새로 붙인다
+  })
+
+  it('falls back to video with a notice, from the same moment, when the sound-only version fails', () => {
+    let s = reducePlayer(initialPlayer, { type: 'press', kind: 'hls', mode: 'audio' })
+    s = reducePlayer(s, { type: 'audioFailed', kind: 'hls', at: 21 })
+    expect(s).toMatchObject({
+      phase: 'playing',
+      mode: 'video',
+      kind: 'hls',
+      tried: ['hls'],
+      at: 21,
+      play: true,
+      notice: true,
+    })
+    s = reducePlayer(s, { type: 'mode', mode: 'audio', at: 25, play: true })
+    expect(s.notice).toBe(false)
+  })
+
   it('shows the failure when every step failed, and pressing again starts over', () => {
     let s = reducePlayer(initialPlayer, { type: 'press', kind: 'hls' })
     s = reducePlayer(s, { type: 'giveUp' })

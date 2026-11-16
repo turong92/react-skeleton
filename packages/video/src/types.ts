@@ -59,6 +59,8 @@ export type VideoPlayback = {
   compat?: string
   /** 마스터(자동) 재생 목록 - 아직 없으면 생략 */
   hls?: string
+  /** 소리 판 재생 목록 - 준비됐을 때만(없으면 「노래」 전환이 안 뜬다) */
+  audio?: string | null
   poster: string
   /** 원본 단 코덱 문자열(`hvc1.1.6.L153.B0` …) - 모르면 빈 글자 */
   codec: string

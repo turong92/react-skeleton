@@ -18,6 +18,16 @@ export type VideoPlayerLabels = {
   original: string
   /** 칩 목록에서 아직 없는 720p 옆에 */
   qualityPreparing: string
+  /** 길이를 모르는 영상(주소 묶음만 받았을 때)의 재생 단추 낭독 이름 */
+  playNoLength: string
+  /** 「영상 / 노래」 전환 묶음의 낭독 이름 */
+  mode: string
+  modeVideo: string
+  modeAudio: string
+  /** 소리 판을 틀지 못해 영상으로 되돌아왔다 */
+  audioFailed: string
+  /** 전체 화면 단추 */
+  fullscreen: string
 }
 
 /** `VideoUploadField` 의 화면 문구 */
@@ -75,6 +85,12 @@ export const defaultVideoPlayerLabels: VideoPlayerLabels = {
   auto: 'Auto',
   original: 'Original',
   qualityPreparing: 'Preparing',
+  playNoLength: 'Play video',
+  mode: 'Play as',
+  modeVideo: 'Video',
+  modeAudio: 'Audio',
+  audioFailed: 'The audio could not be played, so the video is playing instead.',
+  fullscreen: 'Full screen',
 }
 
 export const koVideoPlayerLabels: VideoPlayerLabels = {
@@ -87,6 +103,12 @@ export const koVideoPlayerLabels: VideoPlayerLabels = {
   auto: '자동',
   original: '원본',
   qualityPreparing: '준비 중',
+  playNoLength: '영상 재생',
+  mode: '보기 방식',
+  modeVideo: '영상',
+  modeAudio: '노래',
+  audioFailed: '소리만 틀지 못해서 영상으로 틀었어요.',
+  fullscreen: '전체 화면',
 }
 
 export const defaultVideoUploadLabels: VideoUploadLabels = {

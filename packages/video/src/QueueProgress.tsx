@@ -1,4 +1,4 @@
-import { useContext, useRef, useState, type CSSProperties } from 'react'
+import { useContext, useRef, useState } from 'react'
 import { defaultPlayQueueLabels, type PlayQueueLabels } from './queueLabels'
 import { QueueContext } from './usePlayQueue'
 import { useQueueProgress } from './useQueueProgress'
@@ -26,6 +26,7 @@ export function QueueProgressView({
   const [scrub, setScrub] = useState<number | null>(null)
   const dragging = useRef(false)
   const shown = scrub ?? currentTime
+  const percent = `${duration > 0 ? Math.min(100, (shown / duration) * 100) : 0}%`
   const release = () => {
     dragging.current = false
     if (scrub === null) return
@@ -35,31 +36,37 @@ export function QueueProgressView({
   return (
     <div className={[styles.root, className].filter(Boolean).join(' ')}>
       <span className={styles.time}>{clock(shown)}</span>
-      <input
-        type="range"
-        className={styles.range}
-        min={0}
-        max={duration}
-        step={1}
-        value={Math.min(Math.floor(shown), Math.floor(duration))}
-        disabled={duration <= 0}
-        aria-label={labels.seek}
-        aria-valuetext={`${clock(shown)} / ${clock(duration)}`}
-        onPointerDown={(event) => {
-          dragging.current = true
-          // 막대 밖에서 놓아도 끝을 받는다(취소 · 가로채기도 lostpointercapture 로 온다)
-          event.currentTarget.setPointerCapture?.(event.pointerId)
-        }}
-        onPointerUp={release}
-        onLostPointerCapture={release}
-        onChange={(event) => {
-          const value = Number(event.target.value)
-          // 키보드 · 보조 기기는 바로 옮긴다
-          if (dragging.current) setScrub(value)
-          else onSeek(value)
-        }}
-        style={{ '--progress': `${duration > 0 ? (shown / duration) * 100 : 0}%` } as CSSProperties}
-      />
+      {/* 그림(틀 · 채움 · 손잡이)은 요소로 그리고, 위에 투명한 range 를 덮어 끌기 · 키보드 · 보조 기기를 받는다 */}
+      <span className={styles.bar}>
+        <input
+          type="range"
+          className={styles.range}
+          min={0}
+          max={duration}
+          step={1}
+          value={Math.min(Math.floor(shown), Math.floor(duration))}
+          disabled={duration <= 0}
+          aria-label={labels.seek}
+          aria-valuetext={`${clock(shown)} / ${clock(duration)}`}
+          onPointerDown={(event) => {
+            dragging.current = true
+            // 막대 밖에서 놓아도 끝을 받는다(취소 · 가로채기도 lostpointercapture 로 온다)
+            event.currentTarget.setPointerCapture?.(event.pointerId)
+          }}
+          onPointerUp={release}
+          onLostPointerCapture={release}
+          onChange={(event) => {
+            const value = Number(event.target.value)
+            // 키보드 · 보조 기기는 바로 옮긴다
+            if (dragging.current) setScrub(value)
+            else onSeek(value)
+          }}
+        />
+        <span className={styles.track} aria-hidden="true">
+          <span className={styles.fill} style={{ inlineSize: percent }} />
+        </span>
+        <span className={styles.thumb} aria-hidden="true" style={{ insetInlineStart: percent }} />
+      </span>
       <span className={styles.time}>{clock(duration)}</span>
     </div>
   )

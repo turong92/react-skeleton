@@ -1,6 +1,7 @@
 /*
  * 진행 막대 - 누르고 끄는 것이므로 쉬는 상태에서도 틀(테두리 + 채움)과 손잡이가 보이고, hover · focus-visible 이 서로 다르다.
- * 누르는 영역은 32px 이상(손잡이 24px + 위아래 여유).
+ * 누르는 영역은 32px 이상(손잡이 20px + 위아래 여유). 그림은 요소로 그리고 투명한 range 가 위에서 입력을 받는다
+ * (브라우저마다 다른 range 의사 요소 대신 - 채운 길이는 인라인 너비로 준다).
  */
 .root {
   display: flex;
@@ -17,72 +18,70 @@
   font-variant-numeric: tabular-nums;
 }
 
-.range {
+.bar {
+  position: relative;
   flex: 1;
   min-inline-size: 0;
   block-size: 32px;
+}
+
+.range {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
   margin: 0;
-  background: transparent;
+  opacity: 0;
   cursor: pointer;
-  appearance: none;
 }
 
 .range:disabled {
-  opacity: 0.55;
   cursor: not-allowed;
 }
 
-.range::-webkit-slider-runnable-track {
-  block-size: 8px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-full);
-  background: linear-gradient(
-    to right,
-    var(--teal) var(--progress, 0%),
-    var(--surface-alt) var(--progress, 0%)
-  );
-}
-
-.range::-moz-range-track {
-  block-size: 8px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-full);
-  background: linear-gradient(
-    to right,
-    var(--teal) var(--progress, 0%),
-    var(--surface-alt) var(--progress, 0%)
-  );
-}
-
-.range::-webkit-slider-thumb {
-  inline-size: 20px;
-  block-size: 20px;
-  margin-block-start: -7px;
-  border: 2px solid var(--teal);
-  border-radius: 50%;
-  background: var(--surface);
-  appearance: none;
-}
-
-.range::-moz-range-thumb {
-  inline-size: 20px;
-  block-size: 20px;
+.track {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: 50%;
+  overflow: hidden;
   box-sizing: border-box;
+  block-size: 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-full);
+  background: var(--surface-alt);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.fill {
+  display: block;
+  block-size: 100%;
+  background: var(--teal);
+}
+
+.thumb {
+  position: absolute;
+  inset-block-start: 50%;
+  box-sizing: border-box;
+  inline-size: 20px;
+  block-size: 20px;
   border: 2px solid var(--teal);
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   background: var(--surface);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
 }
 
-.range:hover:not(:disabled)::-webkit-slider-thumb {
+.range:hover:not(:disabled) ~ .thumb {
   background: var(--teal-wash);
 }
 
-.range:hover:not(:disabled)::-moz-range-thumb {
-  background: var(--teal-wash);
-}
-
-.range:focus-visible {
+.range:focus-visible ~ .thumb {
   outline: 2px solid var(--teal);
   outline-offset: 2px;
-  border-radius: var(--radius-md);
+}
+
+.range:disabled ~ .track,
+.range:disabled ~ .thumb {
+  opacity: 0.55;
 }

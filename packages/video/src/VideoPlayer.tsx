@@ -292,13 +292,15 @@ export function VideoPlayer({
   const compatHeight = source ? (source.compatHeight ?? null) : 720
   // `plan` 은 렌더마다 새로 만들어진다 - 값(이름 목록)이 같으면 같은 배열을 쓴다(아래 등록 효과가 렌더마다 다시 돌아 대기열을 다시 그리게 하지 않도록)
   const optionKey = plan?.options.join(',') ?? ''
+  const compatPending = plan?.compatPending ?? false
   const qualityOptions = useMemo<QualityOption[]>(
     () =>
       (optionKey ? (optionKey.split(',') as QualityChoice[]) : []).map((value) => ({
         value,
         height: value === 'compat' ? compatHeight : value === 'orig' ? origHeight : null,
+        ...(value === 'compat' && compatPending ? { pending: true } : {}),
       })),
-    [optionKey, compatHeight, origHeight],
+    [optionKey, compatHeight, origHeight, compatPending],
   )
   // 지금 실제로 나오는 높이 - 메타데이터 · 크기 변화(hls.js 의 단 바뀜)마다 `videoHeight` 로 읽는다
   const [playingHeight, setPlayingHeight] = useState<number | null>(null)
@@ -329,8 +331,10 @@ export function VideoPlayer({
     })
   }, [choosable, audioHost, qualityOptions, state.pick])
   useEffect(() => {
-    if (choosable) audioHost?.quality.reportHeight(playingHeight)
+    audioHost?.quality.reportHeight(choosable ? playingHeight : null)
   }, [choosable, audioHost, playingHeight])
+  // 이 재생기가 사라지면(다음 곡) 높이를 지운다 - 선택이 바뀌어 다시 등록될 때는 지우지 않는다
+  useEffect(() => () => audioHost?.quality.reportHeight(null), [audioHost])
 
   // 전체 화면 칩 · 대기열(앱 조작줄)이 같은 `toggle` 을 쓴다
   const toggleStageFullscreen = () => {
@@ -421,7 +425,6 @@ export function VideoPlayer({
         {showVideo && controls && plan && plan.options.length > 1 && (
           <QualityMenu
             options={qualityOptions}
-            compatPending={plan.compatPending}
             pick={state.pick}
             playingHeight={playingHeight}
             labels={labels}

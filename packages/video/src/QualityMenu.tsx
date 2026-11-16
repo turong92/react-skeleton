@@ -8,15 +8,12 @@ import styles from './VideoPlayer.module.css'
 /** 화질 칩(자동 (1080p) / 1080p / 720p …) - 칩을 누르면 목록이 열리고, 고르면 닫힌다. 이름은 실제 높이 */
 export function QualityMenu({
   options,
-  compatPending,
   pick,
   playingHeight,
   labels,
   onChoose,
 }: {
   options: QualityOption[]
-  /** 큰 원본인데 호환 단이 아직 없다 - 호환 항목을 「준비 중」으로 흐리게 */
-  compatPending: boolean
   pick: QualityChoice
   /** 지금 실제로 나오는 높이 - 자동 옆에 보인다 */
   playingHeight: number | null
@@ -47,7 +44,7 @@ export function QualityMenu({
       {open && (
         <div role="menu" className={styles.menu} aria-label={labels.quality}>
           {options.map((option) => {
-            const off = option.value === 'compat' && compatPending
+            const off = option.pending === true
             return (
               <button
                 key={option.value}

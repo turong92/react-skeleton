@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — 앱 조작줄용 옵션 (2026-11-16)
 
+- `@skeleton/video`(깨지는 변경): `VideoPlayerLabels.qualityHeight` 와 `AudioHost.quality`(`register` · `reportHeight`)가 **필수 필드**로 더해졌다 - 문구 객체나 `AudioHost` 를 직접 만드는 앱은 채워야 한다(`defaultVideoPlayerLabels` · `koVideoPlayerLabels` 를 펼치면 된다). `qualityLabel` · `heightOfSize` · `QualityOption`(`pending` 포함) · `QualityChoice` 를 내보낸다.
 - `@skeleton/video`: 화질 — `usePlayQueue` 에 `qualityOptions`(`{ value, height }[]`) · `quality` · `setQuality` · `playingHeight`, 이름은 실제 높이(`자동 (1080p)` · `1080p` · `720p`, 높이를 모르면 `원본`; `labels.qualityHeight` 추가), `PlayerSource` 에 `w` · `h` · `compatHeight`, `controls={false}` 면 화질 칩도 숨는다. 코덱을 모르면 「원본」도 화질 목록에 낸다. 버그 수정: hls.js 가 스트림을 붙이며 끊은 `play()`(`AbortError`)를 「틀 수 없다」로 보고해 영상 전환 · 화질 변경 · 영상 먼저 시작이 멈춘 채 남던 것.
 - `@skeleton/video`: `controls={false}` 면 무대 위 전체 화면 칩도 빠진다(`VideoPlayer` · `YoutubeStage`; 유튜브 칩은 없어졌고 `YoutubeStage` 의 `labels` prop 도 뺐다). 대상 등록(`canFullscreen` · `toggleFullscreen`)은 그대로. `QueueStage` · `VideoPlayer` 에 `modeToggle`(기본 켬) 추가, `ModePill` 공개, `usePlayQueue().canAudio` 추가, `setPreferred` 가 재생 중인 `VideoPlayer` 를 실제로 전환한다(`preferredMode` prop). 유튜브 `playerVars` 에 `iv_load_policy=3` 추가(`rel=0` 은 이미 있다).
 

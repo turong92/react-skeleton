@@ -11,7 +11,7 @@ export type QueueStageProps = {
   playerProps?: Partial<Omit<VideoPlayerProps, 'source' | 'grant' | 'refreshGrant'>>
   /**
    * 영상 · 유튜브 자체 조작줄 - 기본 켬. 앱이 자기 조작줄(`QueueProgress` · 음량 …)을 그릴 때 끈다.
-   * 전체 화면 · 화질 칩은 그대로. `playerProps.controls` 보다 이것이 앞선다
+   * 끄면 무대 위 전체 화면 칩 · 화질 칩도 숨는다. `playerProps.controls` 보다 이것이 앞선다
    */
   controls?: boolean
   /** 우리 영상의 「영상 / 노래」 알약 - 기본 켬. 앱이 자기 조작줄에 `ModePill` 을 그릴 때 끈다(`playerProps.modeToggle` 보다 이것이 앞선다) */

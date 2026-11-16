@@ -58,7 +58,12 @@ export type ControllerState = {
 }
 
 /** 화질 항목 - `height` 는 실제 높이(px), 모르면 null(자동은 늘 null) */
-export type QualityOption = { value: QualityChoice; height: number | null }
+export type QualityOption = {
+  value: QualityChoice
+  height: number | null
+  /** 호환 단(720p)을 아직 만드는 중이다 - 고를 수 없다(`setQuality` 도 무시). 앱이 「준비 중」으로 그린다 */
+  pending?: boolean
+}
 
 /** 그려진 `VideoPlayer` 가 등록하는 화질 선택 - 고를 수 있는 것 · 지금 고른 것 · 고르는 함수 */
 export type QualityTarget = {
@@ -148,7 +153,8 @@ export function createQueueController(deps: {
     return () => {
       if (qualityTarget !== target) return
       qualityTarget = null
-      emit({ qualityOptions: [], quality: 'auto', playingHeight: null })
+      // 높이는 지우지 않는다 - 선택이 바뀌어 다시 등록될 때 같은 높이 단이면 다시 보고되지 않는다(무대가 사라질 때는 무대가 null 을 보고한다)
+      emit({ qualityOptions: [], quality: 'auto' })
     }
   }
   const reportHeight = (height: number | null) => {

@@ -53,7 +53,7 @@ export type VideoPlayerProps = Input & {
   followPlaying?: boolean
   /** 대기열의 `<audio>` 를 빌린다(`usePlayQueue().playerProps` 로 펼친다) - 노래 모드 · 자동 전환이 그 요소로 가서, 이 재생기가 사라져도 소리가 이어지고 끝나면 대기열이 다음 곡을 튼다 */
   audioHost?: AudioHost
-  /** 영상의 기본 조작줄(`<video controls>`) - 앱이 자기 조작줄을 그릴 때 끈다(기본 켬). 전체 화면 · 화질 칩은 그대로 */
+  /** 영상의 기본 조작줄(`<video controls>`) - 앱이 자기 조작줄을 그릴 때 끈다(기본 켬). 끄면 무대 위 전체 화면 칩 · 화질 칩도 숨는다(앱 조작줄의 `toggleFullscreen` · `setQuality` 를 쓴다) */
   controls?: boolean
   /** 「영상 / 노래」 알약 - 앱이 자기 조작줄에 그릴 때 끈다(기본 켬). 바꾸는 것은 대기열의 `setPreferred` 로 한다 */
   modeToggle?: boolean

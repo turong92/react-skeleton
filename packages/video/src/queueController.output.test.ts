@@ -238,7 +238,18 @@ describe('queue quality', () => {
     expect(c.getState().quality).toBe('compat')
     c.reportHeight(720)
     offNew()
-    expect(c.getState()).toMatchObject({ qualityOptions: [], quality: 'auto', playingHeight: null })
+    expect(c.getState()).toMatchObject({ qualityOptions: [], quality: 'auto' })
+  })
+
+  it('keeps the playing height while the stage re-registers (a new choice, new options) and drops it only when the stage reports it is gone', () => {
+    const { c } = setup([clip('a')])
+    const off = c.registerQuality(target())
+    c.reportHeight(1080)
+    off()
+    c.registerQuality(target('compat')) // 같은 높이 단으로 바뀌면 다시 보고하지 않는다 - 지워지면 「자동 (1080p)」가 「자동」으로 떨어진다
+    expect(c.getState().playingHeight).toBe(1080)
+    c.reportHeight(null)
+    expect(c.getState().playingHeight).toBeNull()
   })
 
   it('keeps what the stage reports as the playing height', () => {

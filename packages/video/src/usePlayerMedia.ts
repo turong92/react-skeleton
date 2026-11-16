@@ -89,14 +89,13 @@ export function usePlayerMedia({
     const input = watchInput(document)
     let cancelPlay = () => {}
     const onPause = () => {
+      cancelPlay() // 붙이는 사이에 멈췄다(사용자 · 잠금화면 · 대기열) - 메타데이터가 와도 다시 틀지 않는다
       // 방금 실제 입력(화면 · 키)이 있었다면 사용자가 누른 멈춤 - OS 가 잠그며 건 것은 입력 없이 온다
       const touching = input.recent()
       intent.pause(touching)
       // 화면을 만지는 중의 멈춤은 사용자 것 - 바로 알린다. 아니면 OS 가 한 것일 수 있어 자동 전환이 이어받는지 본다
-      if (touching) {
-        cancelPlay() // 사용자가 붙이는 사이에 멈췄다 - 메타데이터가 와도 다시 틀지 않는다
-        report(false)
-      } else pausedTimer = setTimeout(() => report(false), OS_PAUSE_WINDOW_MS)
+      if (touching) report(false)
+      else pausedTimer = setTimeout(() => report(false), OS_PAUSE_WINDOW_MS)
     }
     const onEnd = () => {
       clearTimeout(pausedTimer)

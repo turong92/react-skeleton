@@ -152,3 +152,27 @@ describe('nativeHlsIsReliable', () => {
     expect(nativeHlsIsReliable(IOS_CHROME, [])).toBe(true)
   })
 })
+
+describe('planPlayback - original codec not known (a bare PlayerSource)', () => {
+  it('tries the original tier when the codec is unknown, even where MSE would say no to a bare mp4', () => {
+    const plan = planPlayback(
+      fakeGrant({ codec: '', hls: undefined, compat: undefined }),
+      mseOnly([]),
+    )
+    expect(plan.engine).toBe('hlsjs')
+    expect(plan.order).toEqual(['orig'])
+  })
+
+  it('still leaves out an original whose codec is known and unsupported', () => {
+    const plan = planPlayback(
+      fakeGrant({ codec: 'hvc1.1.6.L153.B0', hls: undefined, compat: undefined }),
+      mseOnly(),
+    )
+    expect(plan.order).toEqual([])
+  })
+
+  it('does not try anything when the device cannot play HLS at all', () => {
+    const plan = planPlayback(fakeGrant({ codec: '', hls: undefined, compat: undefined }), none)
+    expect(plan.order).toEqual([])
+  })
+})

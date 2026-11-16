@@ -60,6 +60,9 @@ export function createAudioEngine(deps: {
   let el: AudioLike | null = null
   let handle: { destroy: () => void } | null = null
   let loaded: string | null = null
+  /** 틀기를 바란다 - 멈추기 · 정지가 지운다. hls.js 가 붙으며 지워진 `play()` 를 다시 걸 때 본다 */
+  let wantPlay = false
+  let stopWaiting: (() => void) | null = null
   const play = () =>
     void el?.play()?.catch((error: unknown) => {
       // 새 곡을 붙이느라 끊긴 것(AbortError)은 거절이 아니다
@@ -77,7 +80,9 @@ export function createAudioEngine(deps: {
     },
     element: () => el,
     wake: (url) => {
-      if (el) wakeAudio(el, url)
+      // 네이티브 HLS 가 아닌 기기(크롬 · 안드로이드 · 데스크톱)는 재생 목록 주소를 요소에 바로 못 튼다 - 실패한 로드가 첫 play() 를 막는다.
+      // 거기서는 손짓이 한 번 있었다는 것(사용자 활성)으로 충분해 깨우지 않는다
+      if (el && deps.engine() === 'native') wakeAudio(el, url)
     },
     start: ({ url, at, play: playNow, adopt, itemId }) => {
       const kind = deps.engine()
@@ -94,19 +99,43 @@ export function createAudioEngine(deps: {
         })
       }
       loaded = itemId ?? null
-      if (playNow && !adopt) play()
+      wantPlay = playNow && !adopt
+      stopWaiting?.()
+      stopWaiting = null
+      if (wantPlay) {
+        play()
+        if (kind === 'hlsjs') {
+          // hls.js 가 스트림을 붙이면 요소가 다시 불려 먼저 건 play() 가 지워진다 - 메타데이터가 오면 아직 바라고 있을 때 다시 건다
+          const element = el
+          const again = () => {
+            if (wantPlay && element.paused) play()
+          }
+          element.addEventListener('loadedmetadata', again, { once: true })
+          stopWaiting = () => element.removeEventListener('loadedmetadata', again)
+        }
+      }
     },
     stop: () => {
+      wantPlay = false
+      stopWaiting?.()
+      stopWaiting = null
       handle?.destroy()
       handle = null
       loaded = null
       el?.pause()
     },
-    pause: () => el?.pause(),
-    resume: play,
+    pause: () => {
+      wantPlay = false
+      el?.pause()
+    },
+    resume: () => {
+      wantPlay = true
+      play()
+    },
     restart: () => {
       if (!el) return
       el.currentTime = 0
+      wantPlay = true
       play()
     },
     position: () => el?.currentTime ?? 0,

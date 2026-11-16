@@ -197,3 +197,40 @@ describe('createAudioEngine - the player joining a song the queue already plays'
     expect(audio.loadedItem()).toBe('b')
   })
 })
+
+describe('createAudioEngine - hls.js devices (chrome, android, desktop)', () => {
+  it('does not wake the element with the playlist address - a non-native browser cannot play it and the failed load would sink the first play()', () => {
+    const { audio, el } = setup('hlsjs')
+    audio.wake('/a.m3u8')
+    expect(el.src).toBe('')
+    expect(el.play).not.toHaveBeenCalled()
+  })
+
+  it('plays again once hls.js has attached the stream, because attaching resets a play() made before it', async () => {
+    const { audio, el, instances } = setup('hlsjs')
+    const listeners = new Map<string, () => void>()
+    el.addEventListener.mockImplementation(
+      (type: string, fn: () => void) => void listeners.set(type, fn),
+    )
+    audio.start({ url: '/a.m3u8', at: 0, play: true, adopt: false, itemId: 'a' })
+    await vi.waitFor(() => expect(instances).toHaveLength(1))
+    el.paused = true // 붙이면서 처음의 play() 가 지워졌다
+    el.play.mockClear()
+    listeners.get('loadedmetadata')?.()
+    expect(el.play).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not play after metadata if the listener paused it meanwhile', async () => {
+    const { audio, el, instances } = setup('hlsjs')
+    const listeners = new Map<string, () => void>()
+    el.addEventListener.mockImplementation(
+      (type: string, fn: () => void) => void listeners.set(type, fn),
+    )
+    audio.start({ url: '/a.m3u8', at: 0, play: true, adopt: false, itemId: 'a' })
+    await vi.waitFor(() => expect(instances).toHaveLength(1))
+    audio.pause()
+    el.play.mockClear()
+    listeners.get('loadedmetadata')?.()
+    expect(el.play).not.toHaveBeenCalled()
+  })
+})

@@ -12,6 +12,8 @@ export type PlayerSource = {
   poster?: string
   /** 호환 단 재생 목록 */
   compat?: string
+  /** 원본 단의 코덱 문자열(`avc1.640028,mp4a.40.2` - `VideoPlayback.codec` 과 같은 모양) - 알면 이 기기가 못 트는 원본을 처음부터 건너뛴다. 모르면 비워 두면 일단 틀어 보고 실패하면 다음 걸음으로 간다 */
+  codec?: string
   /** 마스터(자동) 재생 목록 */
   hls?: string
 }
@@ -22,6 +24,7 @@ export function playerSourceOf(grant: VideoPlayback): PlayerSource {
   if (grant.audio) source.audio = grant.audio
   if (grant.poster) source.poster = grant.poster
   if (grant.compat) source.compat = grant.compat
+  if (grant.codec) source.codec = grant.codec
   if (grant.hls) source.hls = grant.hls
   return source
 }
@@ -34,7 +37,7 @@ export function playbackOf(source: PlayerSource): VideoPlayback {
     compat: source.compat,
     hls: source.hls,
     poster: source.poster ?? '',
-    codec: '',
+    codec: source.codec ?? '',
     w: 0,
     h: 0,
     durationMs: 0,

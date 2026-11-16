@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { playerSourceOf, playbackOf } from './playerSource'
+import { playbackOf, playerSourceOf } from './playerSource'
 import { fakeGrant } from './test/grant'
 
 describe('playerSourceOf', () => {
@@ -11,12 +11,17 @@ describe('playerSourceOf', () => {
       poster: grant.poster,
       compat: grant.compat,
       hls: grant.hls,
+      codec: grant.codec,
     })
   })
 
   it('leaves out what the grant does not have', () => {
     const grant = fakeGrant({ compat: undefined, hls: undefined })
-    expect(playerSourceOf(grant)).toEqual({ src: grant.src, poster: grant.poster })
+    expect(playerSourceOf(grant)).toEqual({
+      src: grant.src,
+      poster: grant.poster,
+      codec: grant.codec,
+    })
   })
 })
 
@@ -50,5 +55,19 @@ describe('playbackOf', () => {
       compat: grant.compat,
       hls: grant.hls,
     })
+  })
+})
+
+describe('PlayerSource codec', () => {
+  it('carries the codec string of the original tier into the player, and back out of a grant', () => {
+    expect(playbackOf({ src: '/o.m3u8', codec: 'avc1.640028,mp4a.40.2' }).codec).toBe(
+      'avc1.640028,mp4a.40.2',
+    )
+    expect(playerSourceOf(fakeGrant({ codec: 'avc1.640028' })).codec).toBe('avc1.640028')
+  })
+
+  it('leaves the codec empty (unknown) when nothing is given', () => {
+    expect(playbackOf({ src: '/o.m3u8' }).codec).toBe('')
+    expect(playerSourceOf(fakeGrant({ codec: '' })).codec).toBeUndefined()
   })
 })

@@ -48,8 +48,10 @@ export const HLS_MIME = 'application/vnd.apple.mpegurl'
 export function planPlayback(grant: VideoPlayback, env: PlaybackEnv): PlaybackPlan {
   const engine = env.canPlayType(HLS_MIME) ? 'native' : env.mse ? 'hlsjs' : null
   const mime = grant.codec ? `video/mp4; codecs="${grant.codec}"` : 'video/mp4'
-  const origOk =
-    engine === 'native'
+  // 코덱을 모르면(주소 묶음만 받았다) 판별하지 않고 일단 틀어 본다 - 실패하면 걸음 실패 처리가 다음 걸음으로 넘긴다
+  const origOk = !grant.codec
+    ? engine !== null
+    : engine === 'native'
       ? env.canPlayType(mime)
       : engine === 'hlsjs' && env.mse!.isTypeSupported(mime)
   const order: PlaybackKind[] = []

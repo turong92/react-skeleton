@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `@skeleton/storage`: `StoredImage` 의 움짤 영상이 실패하면(`onError`) `display` `<img>` 로 바꿔 그리고, `IntersectionObserver` 가 있으면 화면 밖에서 멈춘다.
+
 ### Added — 재배포 없이 끄고 켜기: 점검 화면 · 스위치 읽기 · 새 버전 안내 (2026-11-16)
 
 - `@skeleton/app-control`(백엔드 `modules/app-control` 짝): `createAppControlApi`(`GET /app/config`) · `useAppConfig`(창에 돌아오면 다시 읽고 점검 중엔 주기적으로, 모듈이 없는 백엔드의 404 는 다시 묻지 않는다) · `useFeature`(클라이언트에 보이는 스위치) · `appStateOf`(점검 > 강제 > 권장) · `AppControlGate`(점검 화면 · 닫을 수 없는 새로고침 화면 · 닫을 수 있는 띠). 버전은 숫자 칸으로 비교한다(`1.10` > `1.9`).
@@ -42,7 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added — 움짤 표시본을 영상으로 · 영상 포스터 바꿔 끼우기 (2026-11-04)
 
-- `@skeleton/storage`: 변환본(`ImageVariant`)에 `contentType` 이 더해졌고, `StoredImage` 는 `display.contentType` 이 `video/mp4` 면 소리 없는 반복 `<video>`(`autoplay loop muted playsinline`, 포스터 = `thumb`)로 그린다. 영상 판정은 `isVideoVariant` 한 곳. 스토리 `AnimatedAsVideo`.
+- `@skeleton/storage`: 변환본(`ImageVariant`)에 `contentType` 이 더해졌고, `StoredImage` 는 `display.alternates` 에 `video/mp4` 가 있으면 소리 없는 반복 `<video>`(`autoplay loop muted playsinline`, 포스터 = `thumb`)로 그린다. 영상 판정은 `videoUrlOf` 한 곳. 스토리 `AnimatedAsVideo`.
 - `@skeleton/video`: `api.setPoster(id, key)`(`PUT /videos/{id}/poster`, 화면 부품 없음).
 
 ### Added — 영상 `@skeleton/video` 0.1.0 (2026-11-04)

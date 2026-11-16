@@ -40,7 +40,10 @@ const parts = (variant: StoredImageVariant | null | undefined) =>
  * 영상이 실패(`onError`)하면 같은 자리에 `<img>` 로 바꿔 그리고, 화면 밖이면 영상을 멈췄다 다시 보이면 재생한다(`IntersectionObserver` 가 없는 환경은 그대로 둔다).
  */
 export function StoredImage(props: StoredImageProps) {
-  const [videoFailed, setVideoFailed] = useState(false)
+  const videoUrl = videoUrlOf(props.image.display)
+  // 실패는 그 영상 주소에 묶는다 - 다른 영상(주소)을 받으면 다시 영상으로 그린다
+  const [failedUrl, setFailedUrl] = useState<string>()
+  const videoFailed = videoUrl !== undefined && failedUrl === videoUrl
   const videoRef = useRef<HTMLVideoElement>(null)
   useEffect(() => {
     const video = videoRef.current
@@ -51,12 +54,12 @@ export function StoredImage(props: StoredImageProps) {
     })
     observer.observe(video)
     return () => observer.disconnect()
-  }, [videoFailed])
+  }, [videoUrl, videoFailed])
   return (
     <StoredImageView
       {...props}
       videoFailed={videoFailed}
-      onVideoError={() => setVideoFailed(true)}
+      onVideoError={() => setFailedUrl(videoUrl)}
       videoRef={videoRef}
     />
   )

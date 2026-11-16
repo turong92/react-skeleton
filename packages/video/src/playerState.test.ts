@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   followPlayback,
   followPreference,
+  qualityChoosable,
   initialPlayer,
   momentOf,
   reducePlayer,
@@ -154,6 +155,33 @@ describe('quality before and while paused', () => {
     let s = reducePlayer(initialPlayer, { type: 'press', kind: 'hls' })
     s = reducePlayer(s, { type: 'choose', pick: 'compat', kind: 'compat', at: 20, play: false })
     expect(s).toMatchObject({ phase: 'playing', kind: 'compat', at: 20, play: false })
+  })
+})
+
+describe('qualityChoosable', () => {
+  const base = {
+    showVideo: false,
+    mode: 'video' as const,
+    preferredMode: 'video' as const,
+    options: 3,
+  }
+
+  it('offers the choice while the video shows, wherever the player is drawn', () => {
+    expect(qualityChoosable({ ...base, showVideo: true, preferredMode: undefined })).toBe(true)
+  })
+
+  it('offers it before the start or paused only for the big-screen player (the queue passes its preference), in video mode', () => {
+    expect(qualityChoosable(base)).toBe(true)
+    expect(qualityChoosable({ ...base, preferredMode: 'audio' })).toBe(false)
+    expect(qualityChoosable({ ...base, mode: 'audio' })).toBe(false)
+  })
+
+  it('does not offer it for a player drawn outside the big screen that is not playing (it would point the app controls at the wrong video)', () => {
+    expect(qualityChoosable({ ...base, preferredMode: undefined })).toBe(false)
+  })
+
+  it('has nothing to choose with one option', () => {
+    expect(qualityChoosable({ ...base, showVideo: true, options: 1 })).toBe(false)
   })
 })
 

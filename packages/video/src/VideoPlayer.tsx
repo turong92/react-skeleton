@@ -16,6 +16,7 @@ import {
   followPreference,
   initialPlayer,
   momentOf,
+  qualityChoosable,
   reducePlayer,
   type PlayerMode,
 } from './playerState'
@@ -332,7 +333,12 @@ export function VideoPlayer({
     chooseRef.current = choose
   })
   // 영상 모드로 정해져 있으면 멈춘 채 · 시작 전에도 내준다(앱의 화질 단추 · 유튜브 뮤직처럼) - 노래 모드는 아니다
-  const choosable = mode === 'video' && preferredMode !== 'audio' && qualityOptions.length > 1
+  const choosable = qualityChoosable({
+    showVideo,
+    mode,
+    preferredMode,
+    options: qualityOptions.length,
+  })
   const qualityHandle = useRef<QualityHandle | null>(null)
   useEffect(() => {
     if (!choosable || !audioHost) return

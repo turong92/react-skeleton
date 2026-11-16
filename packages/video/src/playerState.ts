@@ -32,6 +32,21 @@ export function momentOf(
   return media && media.readyState > 0 ? media.currentTime : known
 }
 
+/**
+ * 이 재생기가 앱 조작줄에 화질을 내줄 때 - 영상이 보이는 동안은 어디에 그려졌든, 멈춘 채 · 시작 전에는 **큰 화면 재생기**(`QueueStage` 가 대기열의
+ * 선호 `preferredMode` 를 넘긴다)가 영상 모드로 정해져 있을 때만. 큰 화면 밖에 그려진 재생기가 앱 조작줄을 엉뚱한 영상에 붙이지 않게 한다
+ */
+export function qualityChoosable(input: {
+  showVideo: boolean
+  mode: PlayerMode
+  preferredMode: PlayerMode | undefined
+  options: number
+}): boolean {
+  const bigScreenIdle =
+    input.preferredMode !== undefined && input.mode === 'video' && input.preferredMode !== 'audio'
+  return (input.showVideo || bigScreenIdle) && input.options > 1
+}
+
 /** 대기열이 선호를 (다시) 정했다는 신호가 왔을 때 재생기가 옮겨 갈 모드 - 선호가 없거나 이미 그 모드면 null(값이 그대로여도 신호는 온다: 화면 꺼짐 자동 전환 뒤에는 선호 ≠ 지금 모드) */
 export function followPreference(
   preferred: PlayerMode | undefined,

@@ -36,3 +36,21 @@ export {
   koVideoUploadLabels,
 } from './labels'
 export type { VideoPlayerLabels, VideoUploadLabels } from './labels'
+export {
+  currentOf,
+  emptyQueue,
+  nextPlayableId,
+  previousPlayableId,
+  reduceQueue,
+  upcomingOf,
+} from './playQueue'
+export type {
+  MediaItem,
+  QueueAction,
+  QueueItem,
+  QueueState,
+  RepeatMode,
+  YoutubeItem,
+} from './playQueue'
+export { DEFAULT_QUEUE_KEY, loadQueue, saveQueue } from './queueStorage'
+export type { QueueStorage } from './queueStorage'

@@ -16,6 +16,8 @@ type Args = {
   dispatch: Dispatch<PlayerAction>
   setFresh: (fresh: { from: VideoPlayback; value: VideoPlayback }) => void
   session: number
+  /** 이 기기가 HLS 를 틀 수 있다는 것을 알았다(서버 렌더 뒤 하이드레이션) - 그때 다시 붙인다 */
+  ready: boolean
   /** 대기열의 `<audio>` - 있으면 소리 모드는 거기에 붙이고(걷지 않는다) 곡이 끝나거나 틀리는 것은 대기열이 맡는다 */
   host?: AudioHost
 }
@@ -32,6 +34,7 @@ export function usePlayerMedia({
   dispatch,
   setFresh,
   session,
+  ready,
   host,
 }: Args) {
   useEffect(() => {
@@ -115,7 +118,7 @@ export function usePlayerMedia({
       if (!s.play) report(false)
     } else {
       handle = attachSource(media, url, p.engine, { loadHls: load, onFatal: fail, startAt: s.at })
-      if (s.play) void media.play()?.catch(() => {})
+      if (s.play) void media.play()?.catch(() => report(false))
       else report(false)
     }
     return () => {
@@ -136,5 +139,5 @@ export function usePlayerMedia({
     }
     // `latest` · `refs` · `dispatch` 는 늘 같은 것이다 - 걸음이 바뀔 때(session)만 다시 붙인다
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, intent])
+  }, [session, intent, ready])
 }

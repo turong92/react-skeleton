@@ -23,6 +23,10 @@ export type MediaSessionInput = {
 
 const SEEK_SECONDS = 10
 
+/** 마지막으로 묶은 쪽 - 재생기와 대기열이 번갈아 묶으므로, 먼저 묶은 쪽이 늦게 정리해도 나중 쪽의 단추 · 제목을 지우지 않는다 */
+let owner: object | null = null
+let releaseOwner: (() => void) | null = null
+
 /**
  * 잠금화면 · 제어 센터 · 알림창 · 이어폰 단추. 제목 · 포스터를 띄우고 재생 · 일시정지 · 이동을 받는다.
  * 아이폰 잠금화면은 seekbackward/seekforward 핸들러가 있으면 ±10초만, 없으면 이전/다음만 보이므로(실측) 둘 중 하나만 등록한다 -
@@ -36,6 +40,9 @@ export function bindMediaSession(
     : (MediaMetadata as MetadataCtor),
 ): () => void {
   if (!session) return () => {}
+  releaseOwner?.() // 앞 주인이 남긴 단추(예: ±10초)가 새 주인 곁에 남지 않게 먼저 지운다
+  const token = {}
+  owner = token
   const registered: string[] = []
   const on = (action: string, handler: Handler) => {
     try {
@@ -81,7 +88,8 @@ export function bindMediaSession(
     on('seekforward', seekBy(SEEK_SECONDS))
   }
 
-  return () => {
+  const release = () => {
+    if (owner === token) owner = null
     for (const action of registered) {
       try {
         session.setActionHandler(action, null)
@@ -89,6 +97,11 @@ export function bindMediaSession(
         // 이미 없다
       }
     }
+    registered.length = 0
     session.metadata = null
+  }
+  releaseOwner = release
+  return () => {
+    if (owner === token) release()
   }
 }

@@ -1,5 +1,11 @@
 import { useEffect, useRef } from 'react'
-import { loadYouTubeApi, youtubeHandlers, type YouTubeApi, type YouTubePlayer } from './youtubeApi'
+import {
+  loadYouTubeApi,
+  watchReady,
+  youtubeHandlers,
+  type YouTubeApi,
+  type YouTubePlayer,
+} from './youtubeApi'
 import styles from './VideoPlayer.module.css'
 
 export type YoutubeStageProps = {
@@ -42,6 +48,10 @@ export function YoutubeStage({
     const host = hostRef.current
     if (!host) return
     let cancelled = false
+    let created: YouTubePlayer | null = null
+    let stopWatching = () => {}
+    let started = false
+    let autoplayTimer: ReturnType<typeof setTimeout> | undefined
     const target = document.createElement('div')
     host.appendChild(target)
     loadApi().then(
@@ -51,13 +61,33 @@ export function YoutubeStage({
           const handlers = youtubeHandlers(api.PlayerState, {
             onEnded: () => latest.current.onEnded(),
             onFailed: () => latest.current.onFailed(),
-            onPlaying: (value) => latest.current.onPlaying(value),
+            onPlaying: (value) => {
+              if (value) started = true
+              latest.current.onPlaying(value)
+            },
           })
-          playerRef.current = new api.Player(target, {
+          created = new api.Player(target, {
             videoId,
             playerVars: { autoplay: latest.current.playing ? 1 : 0, playsinline: 1, rel: 0 },
-            events: handlers,
+            events: {
+              ...handlers,
+              // 준비된 뒤에야 조작할 수 있다 - 그때 지금 원하는 재생 상태를 맞춘다
+              onReady: ({ target: ready }) => {
+                stopWatching()
+                if (cancelled) return
+                playerRef.current = ready
+                if (latest.current.playing) {
+                  ready.playVideo()
+                  // 손짓 없는 자동 재생을 브라우저가 막으면 틀고 있다고 하지 않는다(iframe 의 재생 단추가 남는다)
+                  autoplayTimer = setTimeout(() => {
+                    if (!started) latest.current.onPlaying(false)
+                  }, 4000)
+                } else ready.pauseVideo()
+              },
+            },
           })
+          // 만든 뒤 준비가 안 되면 틀 수 없는 것으로 보고 다음 곡으로
+          stopWatching = watchReady(() => latest.current.onFailed())
         } catch {
           latest.current.onFailed()
         }
@@ -68,7 +98,9 @@ export function YoutubeStage({
     )
     return () => {
       cancelled = true
-      playerRef.current?.destroy()
+      stopWatching()
+      clearTimeout(autoplayTimer)
+      created?.destroy()
       playerRef.current = null
       host.replaceChildren()
     }

@@ -45,6 +45,9 @@ export function VideoPlayer({
   onNext,
   onModeChange,
   onPlayingChange,
+  onFailed,
+  autoStart = false,
+  startSignal,
   audioHost,
   env: envProp,
   loadHls = loadHlsLight,
@@ -58,10 +61,19 @@ export function VideoPlayer({
   const plan = env ? planPlayback(grant, env) : null
   const audioOk = Boolean(grant.audio) && plan?.engine != null
 
-  const [state, dispatch] = useReducer(reducePlayer, initialMode, (mode) => ({
-    ...initialPlayer,
-    mode,
-  }))
+  const [state, dispatch] = useReducer(reducePlayer, null, () => {
+    // 대기열이 이 곡을 이미 소리로 틀고 있으면 처음부터 다시 틀지 않고 이어받는다(소리 모드 · 지금 위치 · 재생 상태)
+    const joined = audioHost?.status()
+    if (!joined) return { ...initialPlayer, mode: initialMode }
+    return {
+      ...initialPlayer,
+      phase: 'playing' as const,
+      mode: 'audio' as const,
+      at: joined.at,
+      play: joined.playing,
+      adopt: true,
+    }
+  })
   const mode: PlayerMode = audioOk ? state.mode : 'video'
   const playing = state.phase === 'playing'
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -87,6 +99,7 @@ export function VideoPlayer({
       onNext,
       onModeChange,
       onPlayingChange,
+      onFailed,
     }
   })
   const [intent] = useState(createPlayIntent)
@@ -100,6 +113,7 @@ export function VideoPlayer({
     dispatch,
     setFresh,
     session: state.session,
+    ready: plan?.engine != null,
     host: audioHost,
   })
   useHiddenHandoff({
@@ -163,6 +177,21 @@ export function VideoPlayer({
     const first = planPlayback(g, env).order[0]
     if (first) dispatch({ type: 'press', kind: first, mode })
   }
+
+  // 대기열이 이 곡을 영상으로 틀라고 한다(다음 곡으로 넘어옴 · 한 곡 반복 · 다시 틀기) - 신호가 바뀔 때마다 처음부터
+  const startedFor = useRef<number | null | undefined>(autoStart ? null : startSignal)
+  useEffect(() => {
+    if (!autoStart || startSignal === undefined || !env || startedFor.current === startSignal)
+      return
+    startedFor.current = startSignal
+    void press()
+    // `press` 는 이 렌더의 값을 쓴다 - 신호 · 환경이 바뀔 때만 건다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoStart, startSignal, env])
+
+  useEffect(() => {
+    if (state.phase === 'failed') latest.current.onFailed?.()
+  }, [state.phase])
 
   const choose = (pick: QualityChoice) => {
     if (!plan) return

@@ -149,3 +149,35 @@ describe('bindMediaSession', () => {
     expect(() => bindMediaSession(undefined, { media: () => null })()).not.toThrow()
   })
 })
+
+describe('bindMediaSession - two owners', () => {
+  it("an older owner tearing down does not wipe the newer owner's title and buttons", () => {
+    const session = fakeSession()
+    const stopFirst = bindMediaSession(
+      session,
+      { title: 'First', media: () => null, onNext: vi.fn() },
+      FakeMetadata,
+    )
+    const stopSecond = bindMediaSession(
+      session,
+      { title: 'Second', media: () => null, onNext: vi.fn() },
+      FakeMetadata,
+    )
+    stopFirst() // 재생기가 영상으로 바뀌며 정리되는 순간 뒤늦게 대기열이 정리해도
+    expect((session.metadata as FakeMetadata).init.title).toBe('Second')
+    expect(session.active()).toContain('nexttrack')
+    stopSecond()
+    expect(session.active()).toEqual([])
+    expect(session.metadata).toBeNull()
+  })
+})
+
+describe('bindMediaSession - handing over', () => {
+  it('the new owner starts clean: no ±10s buttons left over from the old one', () => {
+    const session = fakeSession()
+    bindMediaSession(session, { media: () => null }) // ±10초
+    bindMediaSession(session, { media: () => null, onNext: vi.fn(), onPrevious: vi.fn() })
+    expect(session.active()).not.toContain('seekbackward')
+    expect(session.active()).toContain('nexttrack')
+  })
+})

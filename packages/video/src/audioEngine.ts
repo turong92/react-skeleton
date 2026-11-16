@@ -24,6 +24,8 @@ export type AudioStart = {
   play: boolean
   /** 재생기가 화면이 꺼지는 순간 이미 틀기 시작했다 - 다시 붙이지 않고 맡기만 한다 */
   adopt: boolean
+  /** 이 소리 판이 어느 곡의 것인가 - 지워진 곡 · 이전 목록의 곡을 이어 트지 않게 엔진이 기억한다 */
+  itemId?: string
 }
 
 /**
@@ -42,8 +44,8 @@ export type AudioEngine = {
   resume: () => void
   restart: () => void
   position: () => number
-  /** 틀 수 있게 붙어 있나(새로 고침 뒤에는 없다) */
-  hasSource: () => boolean
+  /** 지금 붙어 있는 소리 판의 곡 - 아무것도 없으면(새로 고침 뒤 · 멈춘 뒤) null */
+  loadedItem: () => string | null
 }
 
 export function createAudioEngine(deps: {
@@ -52,20 +54,32 @@ export function createAudioEngine(deps: {
   loadHls: LoadHls
   /** 이 곡은 틀 수 없다(hls.js 치명 오류 · 불러오기 실패) */
   onFatal: () => void
+  /** 폰이 `play()` 를 거절했다(손짓이 없었다) - 틀고 있다고 말하지 않도록 */
+  onPlayRejected?: () => void
 }): AudioEngine {
   let el: AudioLike | null = null
   let handle: { destroy: () => void } | null = null
-  let attached = false
-  const play = () => void el?.play()?.catch(() => {})
+  let loaded: string | null = null
+  const play = () =>
+    void el?.play()?.catch((error: unknown) => {
+      // 새 곡을 붙이느라 끊긴 것(AbortError)은 거절이 아니다
+      if ((error as { name?: string } | null)?.name !== 'AbortError') deps.onPlayRejected?.()
+    })
   return {
     setElement: (element) => {
+      if (!element) {
+        // 요소가 사라진다 - hls.js 를 걷는다
+        handle?.destroy()
+        handle = null
+        loaded = null
+      }
       el = element
     },
     element: () => el,
     wake: (url) => {
       if (el) wakeAudio(el, url)
     },
-    start: ({ url, at, play: playNow, adopt }) => {
+    start: ({ url, at, play: playNow, adopt, itemId }) => {
       const kind = deps.engine()
       if (!el || !kind) return deps.onFatal()
       handle?.destroy()
@@ -77,12 +91,13 @@ export function createAudioEngine(deps: {
           startAt: at,
         })
       }
-      attached = true
+      loaded = itemId ?? null
       if (playNow && !adopt) play()
     },
     stop: () => {
       handle?.destroy()
       handle = null
+      loaded = null
       el?.pause()
     },
     pause: () => el?.pause(),
@@ -93,6 +108,6 @@ export function createAudioEngine(deps: {
       play()
     },
     position: () => el?.currentTime ?? 0,
-    hasSource: () => attached && (handle !== null || Boolean(el?.getAttribute('src'))),
+    loadedItem: () => loaded,
   }
 }

@@ -16,7 +16,7 @@ const engine = {
   resume: () => {},
   restart: () => {},
   position: () => 0,
-  hasSource: () => false,
+  loadedItem: () => null,
 } as AudioEngine
 
 function render(items: QueueItem[]) {

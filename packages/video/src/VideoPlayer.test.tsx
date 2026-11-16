@@ -78,7 +78,13 @@ describe('VideoPlayer before the first press', () => {
   })
 
   it("renders no audio element of its own when it borrows the queue's", () => {
-    const host = { element: () => null, wake: () => {}, start: () => {}, stop: () => {} }
+    const host = {
+      element: () => null,
+      wake: () => {},
+      start: () => {},
+      stop: () => {},
+      status: () => null,
+    }
     const html = renderToStaticMarkup(
       <VideoPlayer
         grant={fakeGrant({ audio: 'https://cdn.test/a.m3u8' })}
@@ -88,6 +94,27 @@ describe('VideoPlayer before the first press', () => {
     )
     expect(html).not.toContain('<audio')
     expect(html).toContain('role="radiogroup"')
+  })
+
+  it('joins a queue that is already playing this song as sound - no play button to press, Audio chosen', () => {
+    const host = {
+      element: () => null,
+      wake: () => {},
+      start: () => {},
+      stop: () => {},
+      status: () => ({ playing: true, at: 42 }),
+    }
+    const html = renderToStaticMarkup(
+      <VideoPlayer
+        grant={fakeGrant({ audio: 'https://cdn.test/a.m3u8' })}
+        env={native}
+        audioHost={host}
+      />,
+    )
+    expect(html).not.toContain('aria-label="Play video')
+    expect(html).toMatch(
+      /<button[^>]*role="radio"[^>]*aria-checked="true"[^>]*>(?:<span[^>]*>[^<]*<\/span>)?Audio/,
+    )
   })
 
   it('has no switch when this browser cannot play HLS at all', () => {

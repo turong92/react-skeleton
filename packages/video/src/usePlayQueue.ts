@@ -21,6 +21,7 @@ export function usePlayQueue() {
       onPrevious: controller.previous,
       onNext: controller.next,
       onPlayingChange: controller.setVideoPlaying,
+      onFailed: controller.videoFailed,
     }),
     [controller, current?.title],
   )
@@ -33,7 +34,9 @@ export function usePlayQueue() {
     playing: state.playing,
     /** `audio` = 대기열이 소리만 틀고 있다, `video` = 화면의 재생기가 튼다 */
     mode: state.mode,
-    youtubeRestart: state.youtubeRestart,
+    /** 사용자가 고른 영상 / 노래 - 곡이 바뀌어도 유지된다 */
+    preferred: state.preferred,
+    stageStart: state.stageStart,
     playerProps,
     controller,
     setQueue: controller.setQueue,
@@ -41,6 +44,7 @@ export function usePlayQueue() {
     remove: controller.remove,
     move: controller.move,
     clear: controller.clear,
+    setPreferred: controller.setPreferred,
     setRepeat: controller.setRepeat,
     setShuffle: controller.setShuffle,
     play: controller.play,

@@ -32,7 +32,7 @@ export function QueueStage({ className, playerProps, loadYouTubeApi }: QueueStag
       <YoutubeStage
         className={className}
         videoId={item.videoId}
-        restart={queue.youtubeRestart}
+        restart={queue.stageStart}
         playing={queue.playing && queue.mode === 'video'}
         onEnded={controller.youtubeEnded}
         onFailed={controller.youtubeFailed}
@@ -47,6 +47,8 @@ export function QueueStage({ className, playerProps, loadYouTubeApi }: QueueStag
       className={className}
       source={item.source}
       {...queue.playerProps}
+      autoStart={queue.mode === 'video' && queue.playing}
+      startSignal={queue.stageStart}
       {...playerProps}
     />
   )

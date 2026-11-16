@@ -42,6 +42,11 @@ export type VideoPlayerProps = Input & {
   onModeChange?: (mode: PlayerMode) => void
   /** 사용자가 틀고 멈출 때(값이 바뀔 때만) - 화면을 꺼 자동 전환이 소리로 이어받으면 멈춤으로 세지 않는다 */
   onPlayingChange?: (playing: boolean) => void
+  /** 영상을 틀지 못해 모든 걸음이 실패했다 - 대기열이 다음 곡으로 간다 */
+  onFailed?: () => void
+  /** 대기열이 이 곡을 영상으로 틀라고 한다(`autoStart`) - `startSignal` 이 바뀔 때마다(다음 곡 · 한 곡 반복 · 다시 틀기) 처음부터 튼다. 브라우저가 손짓 없는 재생을 막으면 재생 단추가 남는다 */
+  autoStart?: boolean
+  startSignal?: number
   /** 대기열의 `<audio>` 를 빌린다(`usePlayQueue().playerProps` 로 펼친다) - 노래 모드 · 자동 전환이 그 요소로 가서, 이 재생기가 사라져도 소리가 이어지고 끝나면 대기열이 다음 곡을 튼다 */
   audioHost?: AudioHost
   /** 시험 · 스토리용 - 이 기기가 무엇을 트는가(기본은 브라우저에서 읽는다) */

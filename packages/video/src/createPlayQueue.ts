@@ -20,6 +20,7 @@ export function createPlayQueue(options: {
     engine: () => engineOf(options.env ?? readBrowserEnv()),
     loadHls: options.loadHls,
     onFatal: () => controller.audioFailed(),
+    onPlayRejected: () => controller.audioRejected(),
   })
   const controller: QueueController = createQueueController({
     audio,

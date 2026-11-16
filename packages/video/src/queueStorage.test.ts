@@ -88,3 +88,20 @@ describe('queue storage', () => {
     expect(loadQueue(undefined, 'k')).toEqual(emptyQueue)
   })
 })
+
+describe('queue storage - hand-edited order lists', () => {
+  it('drops an id that is listed twice, so a song is never in the list twice', () => {
+    const text = JSON.stringify({
+      v: 1,
+      items: [items[0], items[1]],
+      order: ['a', 'y', 'a'],
+      original: ['y', 'y', 'a'],
+      currentId: 'a',
+      repeat: 'off',
+      shuffle: false,
+    })
+    const s = parseQueue(text)
+    expect(s.order).toEqual(['a', 'y'])
+    expect(s.original).toEqual(['y', 'a'])
+  })
+})

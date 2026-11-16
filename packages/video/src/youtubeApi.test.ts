@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createYouTubeLoader, youtubeHandlers, YT_ERROR_CODES, type YouTubeApi } from './youtubeApi'
+import {
+  createYouTubeLoader,
+  watchReady,
+  youtubeHandlers,
+  YT_ERROR_CODES,
+  type YouTubeApi,
+} from './youtubeApi'
 
 function fakeWorld(initial: { YT?: unknown; onYouTubeIframeAPIReady?: () => void } = {}) {
   const scripts: Array<{ src: string; onerror: (() => void) | null }> = []
@@ -120,5 +126,26 @@ describe('youtubeHandlers', () => {
     const { handlers, calls } = setup()
     handlers.onError({ data: 999 })
     expect(calls).toEqual(['failed'])
+  })
+})
+
+describe('watchReady', () => {
+  it('calls back when the player never gets ready in time', () => {
+    vi.useFakeTimers()
+    const onTimeout = vi.fn()
+    watchReady(onTimeout, 5000)
+    vi.advanceTimersByTime(5001)
+    expect(onTimeout).toHaveBeenCalledTimes(1)
+    vi.useRealTimers()
+  })
+
+  it('stays quiet once the player is ready (or the stage went away)', () => {
+    vi.useFakeTimers()
+    const onTimeout = vi.fn()
+    const stop = watchReady(onTimeout, 5000)
+    stop()
+    vi.advanceTimersByTime(10_000)
+    expect(onTimeout).not.toHaveBeenCalled()
+    vi.useRealTimers()
   })
 })

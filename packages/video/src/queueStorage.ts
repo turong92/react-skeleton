@@ -30,7 +30,9 @@ export function parseQueue(text: string | null): QueueState {
     const items: Record<string, QueueItem> = {}
     for (const item of raw.items) if (isItem(item)) items[item.id] ??= item
     const known = (ids: unknown) =>
-      Array.isArray(ids) ? ids.filter((id): id is string => isString(id) && id in items) : []
+      Array.isArray(ids)
+        ? [...new Set(ids.filter((id): id is string => isString(id) && id in items))]
+        : []
     const original = known(raw.original)
     const order = known(raw.order)
     // 순서 목록이 빠진 곡은 끝에 붙이고, 목록에만 있는 곡은 버린다

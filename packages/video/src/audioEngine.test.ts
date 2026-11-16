@@ -24,6 +24,7 @@ function fakeAudio() {
 function setup(engine: 'native' | 'hlsjs' | null = 'native') {
   const el = fakeAudio()
   const onFatal = vi.fn()
+  const onPlayRejected = vi.fn()
   const instances: Array<{ loaded: string[]; destroyed: boolean; attached: unknown }> = []
   class Hls {
     static Events = { ERROR: 'e' }
@@ -49,9 +50,10 @@ function setup(engine: 'native' | 'hlsjs' | null = 'native') {
     engine: () => engine,
     loadHls: async () => Hls as unknown as HlsCtor,
     onFatal,
+    onPlayRejected,
   })
   audio.setElement(el as unknown as AudioLike)
-  return { audio, el, onFatal, instances }
+  return { audio, el, onFatal, onPlayRejected, instances }
 }
 
 describe('createAudioEngine', () => {
@@ -78,10 +80,10 @@ describe('createAudioEngine', () => {
   it('does not attach again when the player already started it (adopt), and does not play twice', () => {
     const { audio, el } = setup()
     el.src = '/woken.m3u8'
-    audio.start({ url: '/a.m3u8', at: 0, play: true, adopt: true })
+    audio.start({ url: '/a.m3u8', at: 0, play: true, adopt: true, itemId: 'a' })
     expect(el.src).toBe('/woken.m3u8')
     expect(el.play).not.toHaveBeenCalled()
-    expect(audio.hasSource()).toBe(true)
+    expect(audio.loadedItem()).toBe('a')
   })
 
   it('starts paused when asked to', () => {
@@ -118,7 +120,7 @@ describe('createAudioEngine', () => {
   })
 
   it('has no source before the first start (e.g. after a reload)', () => {
-    expect(setup().audio.hasSource()).toBe(false)
+    expect(setup().audio.loadedItem()).toBeNull()
   })
 
   it('wakes the element with the sound-only address without waiting', () => {
@@ -127,5 +129,48 @@ describe('createAudioEngine', () => {
     expect(el.src).toBe('/a.m3u8')
     expect(el.play).toHaveBeenCalled()
     expect(el.pause).toHaveBeenCalled()
+  })
+})
+
+describe('createAudioEngine - which song is on the element', () => {
+  it('remembers the song of the attached sound-only address, and forgets it on stop', () => {
+    const { audio } = setup()
+    audio.start({ url: '/a.m3u8', at: 0, play: true, adopt: false, itemId: 'a' })
+    expect(audio.loadedItem()).toBe('a')
+    audio.start({ url: '/b.m3u8', at: 0, play: true, adopt: false, itemId: 'b' })
+    expect(audio.loadedItem()).toBe('b')
+    audio.stop()
+    expect(audio.loadedItem()).toBeNull()
+  })
+
+  it('cleans hls.js up when the element goes away', async () => {
+    const { audio, instances } = setup('hlsjs')
+    audio.start({ url: '/a.m3u8', at: 0, play: true, adopt: false, itemId: 'a' })
+    await vi.waitFor(() => expect(instances).toHaveLength(1))
+    audio.setElement(null)
+    expect(instances[0]!.destroyed).toBe(true)
+    expect(audio.loadedItem()).toBeNull()
+  })
+})
+
+describe('createAudioEngine - refused play', () => {
+  it('says so when the phone refuses to play (no gesture), so nobody claims it is playing', async () => {
+    const { audio, el, onPlayRejected } = setup()
+    el.play.mockReturnValue(
+      Promise.reject(Object.assign(new Error('x'), { name: 'NotAllowedError' })),
+    )
+    audio.start({ url: '/a.m3u8', at: 0, play: true, adopt: false })
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(onPlayRejected).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not count a play that a newer song interrupted', async () => {
+    const { audio, el, onPlayRejected } = setup()
+    el.play.mockReturnValue(Promise.reject(Object.assign(new Error('x'), { name: 'AbortError' })))
+    audio.start({ url: '/a.m3u8', at: 0, play: true, adopt: false })
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(onPlayRejected).not.toHaveBeenCalled()
   })
 })

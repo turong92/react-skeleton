@@ -17,6 +17,7 @@ export type Latest = {
   onNext?: () => void
   onModeChange?: (mode: PlayerMode) => void
   onPlayingChange?: (playing: boolean) => void
+  onFailed?: () => void
 }
 
 export type MediaRefs = {

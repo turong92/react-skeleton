@@ -94,3 +94,12 @@ export function youtubeHandlers(
     },
   }
 }
+
+/** 플레이어를 만든 뒤 이 시간 안에 준비되지 않으면(막힌 네트워크 · 퍼가기 거부로 조용히 멈춤) 틀 수 없는 것으로 본다 */
+export const READY_TIMEOUT_MS = 15_000
+
+/** 준비 감시 - 돌려받은 함수를 부르면(준비됐다 · 무대가 사라졌다) 감시를 그만둔다 */
+export function watchReady(onTimeout: () => void, ms = READY_TIMEOUT_MS): () => void {
+  const timer = setTimeout(onTimeout, ms)
+  return () => clearTimeout(timer)
+}

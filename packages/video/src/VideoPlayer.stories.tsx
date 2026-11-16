@@ -158,7 +158,7 @@ export const QualityChipSwitchesTheStep: Story = {
     await expect(canvas.getAllByRole('menuitemradio').map((item) => item.textContent)).toEqual([
       'Auto',
       '720p',
-      'Original',
+      '1080p',
     ])
     await userEvent.click(canvas.getByRole('menuitemradio', { name: '720p' }))
     await waitFor(() =>

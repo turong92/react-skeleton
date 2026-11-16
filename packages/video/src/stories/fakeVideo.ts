@@ -16,8 +16,9 @@ export function storyGrant(overrides: Partial<VideoPlayback> = {}): VideoPlaybac
         '<svg xmlns="http://www.w3.org/2000/svg" width="360" height="640"><rect width="100%" height="100%" fill="#2b3a4a"/></svg>',
       ),
     codec: 'avc1.640028',
-    w: 360,
-    h: 640,
+    // 원본은 세로 1080p - 호환 단(720p)보다 커야 화질 이름이 실제처럼 「1080p · 720p」 로 나온다
+    w: 1080,
+    h: 1920,
     durationMs: 42_000,
     big: false,
     ...overrides,

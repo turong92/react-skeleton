@@ -53,6 +53,8 @@ export type VideoPlayerProps = Input & {
   followPlaying?: boolean
   /** 대기열의 `<audio>` 를 빌린다(`usePlayQueue().playerProps` 로 펼친다) - 노래 모드 · 자동 전환이 그 요소로 가서, 이 재생기가 사라져도 소리가 이어지고 끝나면 대기열이 다음 곡을 튼다 */
   audioHost?: AudioHost
+  /** 영상의 기본 조작줄(`<video controls>`) - 앱이 자기 조작줄을 그릴 때 끈다(기본 켬). 전체 화면 · 화질 칩은 그대로 */
+  controls?: boolean
   /** 시험 · 스토리용 - 이 기기가 무엇을 트는가(기본은 브라우저에서 읽는다) */
   env?: PlaybackEnv
   /** 시험 · 스토리용 - hls.js 불러오기(기본은 light 빌드 지연 import) */

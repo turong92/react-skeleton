@@ -1,10 +1,11 @@
-import { ChoiceGroup } from '@skeleton/ui'
 import { useEffect, useReducer, useRef, useState, useSyncExternalStore } from 'react'
 import { wakeAudio } from './autoAudio'
 import { readBrowserEnv } from './browserEnv'
 import { toggleFullscreen } from './fullscreen'
 import { defaultVideoPlayerLabels } from './labels'
 import { loadHlsLight } from './loadHls'
+import { elementOutput } from './mediaOutput'
+import { ModePill } from './ModePill'
 import { grantExpired, planPlayback, type QualityChoice } from './playbackPlan'
 import { createPlayIntent } from './playIntent'
 import { usePlayingReport, type Latest } from './playerRuntime'
@@ -57,6 +58,7 @@ export function VideoPlayer({
   joinSignal,
   followPlaying,
   audioHost,
+  controls = true,
   env: envProp,
   loadHls = loadHlsLight,
 }: VideoPlayerProps) {
@@ -152,6 +154,14 @@ export function VideoPlayer({
     lastMode.current = state.mode
     latest.current.onModeChange?.(state.mode)
   }, [playing, state.mode])
+
+  // 화면의 <video> 를 대기열에 등록한다 - 진행 막대 · 음량이 노래 · 유튜브와 같은 손잡이로 이 요소를 다룬다(요소가 새로 생기면 지금 음량이 걸린다)
+  const showingVideo = playing && mode === 'video'
+  useEffect(() => {
+    const video = videoRef.current
+    if (!showingVideo || !video || !audioHost) return
+    return audioHost.registerOutput(elementOutput(video))
+  }, [showingVideo, audioHost])
 
   const [isFullscreen, setFullscreen] = useState(false)
   useEffect(() => {
@@ -279,7 +289,7 @@ export function VideoPlayer({
             ref={videoRef}
             className={styles.video}
             poster={grant.poster || undefined}
-            controls
+            controls={controls}
             playsInline
             preload="auto"
             controlsList="nodownload"
@@ -339,15 +349,7 @@ export function VideoPlayer({
       </div>
       {audioOk && (
         <div className={styles.mode}>
-          <ChoiceGroup
-            aria-label={labels.mode}
-            options={[
-              { value: 'video', label: labels.modeVideo },
-              { value: 'audio', label: labels.modeAudio },
-            ]}
-            value={mode}
-            onChange={(value) => switchMode(value as PlayerMode)}
-          />
+          <ModePill labels={labels} mode={mode} onChange={switchMode} />
         </div>
       )}
       {state.notice && (

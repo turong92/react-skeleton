@@ -236,7 +236,7 @@ export const AudioSwitchTakesOverWithoutVideoPieces: Story = {
 export const StartsAsAudio: Story = {
   args: { env: MSE_ONLY, grant: storyGrant({ audio: AUDIO_URL }), initialMode: 'audio' },
   play: async ({ canvas, userEvent }) => {
-    await userEvent.click(canvas.getByRole('button', { name: 'Play video, 0:42' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Play audio' }))
     await waitFor(() => expect(canvas.getByTestId('log')).toHaveTextContent(`sources=${AUDIO_URL}`))
     await expect(canvas.queryByLabelText('Video', { selector: 'video' })).toBeNull()
   },
@@ -250,7 +250,7 @@ export const SoundOnlyFailureGoesBackToVideoWithANote: Story = {
     failing: [AUDIO_URL],
   },
   play: async ({ canvas, userEvent }) => {
-    await userEvent.click(canvas.getByRole('button', { name: 'Play video, 0:42' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Play audio' }))
     await expect(await canvas.findByText(/video is playing instead/)).toBeVisible()
     await expect(await canvas.findByLabelText('Video', { selector: 'video' })).toBeVisible()
     await expect(canvas.getByRole('radio', { name: 'Video' })).toHaveAttribute(

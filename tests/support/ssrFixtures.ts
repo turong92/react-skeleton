@@ -1190,6 +1190,23 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
       big: false,
     },
   }),
+  'video#MiniPlayer': () => ({}),
+  'video#MiniPlayerView': () => ({
+    item: { kind: 'youtube', id: 'y', title: 'A song', videoId: 'abc123' },
+    playing: false,
+    onToggle: noop,
+    onNext: noop,
+  }),
+  'video#PlayQueueProvider': () => ({ children: 'inside' }),
+  'video#QueueStage': () => ({}),
+  'video#YoutubeStage': () => ({
+    videoId: 'abc123',
+    restart: 0,
+    playing: false,
+    onEnded: noop,
+    onFailed: noop,
+    onPlaying: noop,
+  }),
   'video#VideoUploadField': () => ({ api: fakeVideoApi(), purpose: 'clip' }),
   'booking#SeatMap': () => ({ seats: [], onPick: noop }),
   'booking#HoldPanel': () => ({
@@ -1575,6 +1592,8 @@ export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
  * 지금은 없다: 모든 컴포넌트 · 훅이 서버에서 그려진다(브라우저 API 는 effect · 이벤트 핸들러 안에서만).
  */
 export const BROWSER_ONLY: Record<string, string> = {
+  'video#usePlayQueue':
+    'reads the PlayQueueProvider that sits at the app root and throws outside it by design - there is no queue to read when rendered alone (the stories and the queue controller tests cover it)',
   'payment#usePaddlePrices':
     "asks Paddle.js (a browser script) for prices in the buyer's currency - there is nothing to ask on the server",
 }

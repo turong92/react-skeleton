@@ -1,4 +1,5 @@
-import { usePlayQueue } from './usePlayQueue'
+import { useContext } from 'react'
+import { QueueContext, usePlayQueue } from './usePlayQueue'
 import type { QueueItem } from './playQueue'
 import { defaultPlayQueueLabels, type PlayQueueLabels } from './queueLabels'
 import styles from './MiniPlayer.module.css'
@@ -80,6 +81,11 @@ export type MiniPlayerProps = Pick<MiniPlayerViewProps, 'labels' | 'className' |
  * `PlayQueueProvider`(앱 최상단) 안 어디에든 한 번 둔다 - 라우트를 옮겨도 남는다
  */
 export function MiniPlayer(props: MiniPlayerProps) {
+  // 대기열(Provider)이 없는 곳에서는 아무것도 그리지 않는다
+  return useContext(QueueContext) ? <MiniPlayerConnected {...props} /> : null
+}
+
+function MiniPlayerConnected(props: MiniPlayerProps) {
   const { current, playing, toggle, next } = usePlayQueue()
   if (!current) return null
   return (

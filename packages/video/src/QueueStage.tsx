@@ -1,5 +1,5 @@
-import { useEffect } from 'react'
-import { usePlayQueue } from './usePlayQueue'
+import { useContext, useEffect } from 'react'
+import { QueueContext, usePlayQueue } from './usePlayQueue'
 import { VideoPlayer } from './VideoPlayer'
 import type { VideoPlayerProps } from './videoPlayerProps'
 import { YoutubeStage } from './YoutubeStage'
@@ -17,7 +17,12 @@ export type QueueStageProps = {
  * 큰 화면 - 지금 곡이 우리 영상이면 `VideoPlayer`(대기열의 `<audio>` 를 빌린다), 유튜브면 IFrame 재생기를 그린다.
  * 이게 그려져 있고 화면이 보이는 동안에만 유튜브 · 소리 판 없는 영상이 차례에 건너뛰어지지 않는다
  */
-export function QueueStage({ className, playerProps, loadYouTubeApi }: QueueStageProps) {
+export function QueueStage(props: QueueStageProps) {
+  // 대기열(Provider)이 없는 곳에서는 아무것도 그리지 않는다
+  return useContext(QueueContext) ? <ConnectedQueueStage {...props} /> : null
+}
+
+function ConnectedQueueStage({ className, playerProps, loadYouTubeApi }: QueueStageProps) {
   const queue = usePlayQueue()
   const { controller } = queue
   useEffect(() => {

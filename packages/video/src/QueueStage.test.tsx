@@ -16,6 +16,9 @@ const engine = {
   resume: () => {},
   restart: () => {},
   position: () => 0,
+  duration: () => 0,
+  seek: () => {},
+  setVolume: () => {},
   loadedItem: () => null,
 } as AudioEngine
 

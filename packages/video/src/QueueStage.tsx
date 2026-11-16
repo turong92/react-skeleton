@@ -9,6 +9,11 @@ export type QueueStageProps = {
   className?: string
   /** 우리 영상 재생기에 더 줄 것(문구 · `autoAudioWhenHidden` …) - `source` · `grant` 는 대기열이 정한다 */
   playerProps?: Partial<Omit<VideoPlayerProps, 'source' | 'grant' | 'refreshGrant'>>
+  /**
+   * 영상 · 유튜브 자체 조작줄 - 기본 켬. 앱이 자기 조작줄(`QueueProgress` · 음량 …)을 그릴 때 끈다.
+   * 전체 화면 · 화질 칩은 그대로. `playerProps.controls` 보다 이것이 앞선다
+   */
+  controls?: boolean
   /** 시험 · 스토리용 */
   loadYouTubeApi?: () => Promise<YouTubeApi>
 }
@@ -22,7 +27,12 @@ export function QueueStage(props: QueueStageProps) {
   return useContext(QueueContext) ? <ConnectedQueueStage {...props} /> : null
 }
 
-function ConnectedQueueStage({ className, playerProps, loadYouTubeApi }: QueueStageProps) {
+function ConnectedQueueStage({
+  className,
+  playerProps,
+  controls,
+  loadYouTubeApi,
+}: QueueStageProps) {
   const queue = usePlayQueue()
   const { controller } = queue
   useEffect(() => {
@@ -42,6 +52,8 @@ function ConnectedQueueStage({ className, playerProps, loadYouTubeApi }: QueueSt
         onEnded={controller.youtubeEnded}
         onFailed={controller.youtubeFailed}
         onPlaying={controller.youtubePlaying}
+        controls={controls}
+        registerOutput={controller.registerOutput}
         loadApi={loadYouTubeApi}
       />
     )
@@ -57,6 +69,7 @@ function ConnectedQueueStage({ className, playerProps, loadYouTubeApi }: QueueSt
       joinSignal={queue.audioStart}
       followPlaying={queue.mode === 'video' ? queue.playing : undefined}
       {...playerProps}
+      {...(controls === undefined ? {} : { controls })}
     />
   )
 }

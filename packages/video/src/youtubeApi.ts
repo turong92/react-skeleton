@@ -3,6 +3,13 @@ export type YouTubePlayer = {
   destroy: () => void
   playVideo: () => void
   pauseVideo: () => void
+  getCurrentTime: () => number
+  getDuration: () => number
+  seekTo: (seconds: number, allowSeekAhead: boolean) => void
+  /** 0~100 */
+  setVolume: (volume: number) => void
+  mute: () => void
+  unMute: () => void
 }
 
 export type YouTubeStates = { ENDED: number; PLAYING: number; PAUSED: number }
@@ -102,4 +109,9 @@ export const READY_TIMEOUT_MS = 15_000
 export function watchReady(onTimeout: () => void, ms = READY_TIMEOUT_MS): () => void {
   const timer = setTimeout(onTimeout, ms)
   return () => clearTimeout(timer)
+}
+
+/** 플레이어 만들 때의 `playerVars` - `controls` 를 끄면 앱이 자기 조작줄을 그린다 */
+export function youtubePlayerVars(autoplay: boolean, controls: boolean) {
+  return { autoplay: autoplay ? 1 : 0, controls: controls ? 1 : 0, playsinline: 1, rel: 0 }
 }

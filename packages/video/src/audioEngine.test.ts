@@ -6,6 +6,9 @@ function fakeAudio() {
   const el = {
     src: '',
     currentTime: 0,
+    duration: NaN,
+    volume: 1,
+    muted: false,
     paused: true,
     play: vi.fn(() => {
       el.paused = false
@@ -232,5 +235,22 @@ describe('createAudioEngine - hls.js devices (chrome, android, desktop)', () => 
     el.play.mockClear()
     listeners.get('loadedmetadata')?.()
     expect(el.play).not.toHaveBeenCalled()
+  })
+
+  it('applies volume and muted to the element, and seeks it', () => {
+    const { audio, el } = setup()
+    audio.setVolume(0.25, true)
+    expect(el).toMatchObject({ volume: 0.25, muted: true })
+    audio.seek(30)
+    expect(el.currentTime).toBe(30)
+  })
+
+  it('reads the length as 0 until the element knows it', () => {
+    const { audio, el } = setup()
+    expect(audio.duration()).toBe(0)
+    el.duration = 200
+    expect(audio.duration()).toBe(200)
+    el.duration = Infinity
+    expect(audio.duration()).toBe(0)
   })
 })

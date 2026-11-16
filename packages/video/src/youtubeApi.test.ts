@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   createYouTubeLoader,
   watchReady,
+  youtubePlayerVars,
   youtubeHandlers,
   YT_ERROR_CODES,
   type YouTubeApi,
@@ -147,5 +148,21 @@ describe('watchReady', () => {
     vi.advanceTimersByTime(10_000)
     expect(onTimeout).not.toHaveBeenCalled()
     vi.useRealTimers()
+  })
+})
+
+describe('youtubePlayerVars', () => {
+  it('autoplays only when asked, and keeps the frame play controls by default', () => {
+    expect(youtubePlayerVars(true, true)).toEqual({
+      autoplay: 1,
+      controls: 1,
+      playsinline: 1,
+      rel: 0,
+    })
+    expect(youtubePlayerVars(false, true)).toMatchObject({ autoplay: 0, controls: 1 })
+  })
+
+  it("turns the frame's own controls off when the app draws its own", () => {
+    expect(youtubePlayerVars(true, false)).toMatchObject({ controls: 0 })
   })
 })

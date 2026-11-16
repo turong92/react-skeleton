@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { emptyQueue, reduceQueue, type QueueItem } from './playQueue'
-import { loadQueue, parseQueue, saveQueue, serializeQueue, type QueueStorage } from './queueStorage'
+import {
+  loadQueue,
+  loadVolume,
+  parseQueue,
+  saveQueue,
+  saveVolume,
+  serializeQueue,
+  type QueueStorage,
+} from './queueStorage'
 
 function memory(
   initial: Record<string, string> = {},
@@ -103,5 +111,29 @@ describe('queue storage - hand-edited order lists', () => {
     const s = parseQueue(text)
     expect(s.order).toEqual(['a', 'y'])
     expect(s.original).toEqual(['y', 'a'])
+  })
+})
+
+describe('volume storage', () => {
+  it('keeps volume and muted under their own key, so an emptied queue still remembers them', () => {
+    const storage = memory()
+    saveVolume(storage, 'q', { volume: 0.4, muted: true })
+    expect(loadVolume(storage, 'q')).toEqual({ volume: 0.4, muted: true })
+    expect(Object.keys(storage.data)).toEqual(['q.volume'])
+  })
+
+  it('reads the defaults (full volume, not muted) when nothing or something broken is stored', () => {
+    expect(loadVolume(memory(), 'q')).toEqual({ volume: 1, muted: false })
+    expect(loadVolume(memory({ 'q.volume': 'nope' }), 'q')).toEqual({ volume: 1, muted: false })
+    expect(loadVolume(memory({ 'q.volume': '{"volume":7,"muted":"x"}' }), 'q')).toEqual({
+      volume: 1,
+      muted: false,
+    })
+  })
+
+  it('leaves a queue saved before volume existed readable as it was', () => {
+    const storage = memory({ q: serializeQueue(sample()) })
+    expect(loadQueue(storage, 'q').currentId).toBe('y')
+    expect(loadVolume(storage, 'q')).toEqual({ volume: 1, muted: false })
   })
 })

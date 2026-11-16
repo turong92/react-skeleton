@@ -6,6 +6,9 @@ export type AudioLike = Pick<
   HTMLAudioElement,
   | 'src'
   | 'currentTime'
+  | 'duration'
+  | 'volume'
+  | 'muted'
   | 'paused'
   | 'addEventListener'
   | 'removeEventListener'
@@ -44,6 +47,11 @@ export type AudioEngine = {
   resume: () => void
   restart: () => void
   position: () => number
+  /** 길이(초) - 모르면(NaN · 라이브) 0 */
+  duration: () => number
+  seek: (seconds: number) => void
+  /** `volume` 0~1 - 아이폰은 `volume` 쓰기를 무시하지만 `muted` 는 먹는다 */
+  setVolume: (volume: number, muted: boolean) => void
   /** 지금 붙어 있는 소리 판의 곡 - 아무것도 없으면(새로 고침 뒤 · 멈춘 뒤) null */
   loadedItem: () => string | null
 }
@@ -139,6 +147,15 @@ export function createAudioEngine(deps: {
       play()
     },
     position: () => el?.currentTime ?? 0,
+    duration: () => (el && Number.isFinite(el.duration) ? el.duration : 0),
+    seek: (seconds) => {
+      if (el) el.currentTime = seconds
+    },
+    setVolume: (volume, muted) => {
+      if (!el) return
+      el.volume = volume
+      el.muted = muted
+    },
     loadedItem: () => loaded,
   }
 }

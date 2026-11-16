@@ -4,7 +4,7 @@ import type { QueueItem } from './playQueue'
 import { createQueueController } from './queueController'
 import type { QueueStorage } from './queueStorage'
 
-function fakeEngine(opts: { position?: number } = {}) {
+function fakeEngine(opts: { position?: number; duration?: number } = {}) {
   const calls: string[] = []
   let loaded: string | null = null
   return {
@@ -24,6 +24,9 @@ function fakeEngine(opts: { position?: number } = {}) {
     resume: vi.fn(() => void calls.push('resume')),
     restart: vi.fn(() => void calls.push('restart')),
     position: () => opts.position ?? 0,
+    duration: () => opts.duration ?? 0,
+    setVolume: vi.fn((v: number, m: boolean) => void calls.push(`volume ${v} ${m}`)),
+    seek: vi.fn((t: number) => void calls.push(`seek ${t}`)),
     loadedItem: () => loaded,
   }
 }
@@ -42,8 +45,11 @@ const videoOnly = (id: string): QueueItem => ({
 })
 const youtube = (id: string): QueueItem => ({ kind: 'youtube', id, title: `YT ${id}`, videoId: id })
 
-function setup(items: QueueItem[], opts: { storage?: QueueStorage; position?: number } = {}) {
-  const engine = fakeEngine({ position: opts.position })
+function setup(
+  items: QueueItem[],
+  opts: { storage?: QueueStorage; position?: number; duration?: number } = {},
+) {
+  const engine = fakeEngine({ position: opts.position, duration: opts.duration })
   const c = createQueueController({
     audio: engine as unknown as AudioEngine,
     storage: opts.storage,

@@ -1199,6 +1199,8 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
   }),
   'video#PlayQueueProvider': () => ({ children: 'inside' }),
   'video#QueueStage': () => ({}),
+  'video#QueueProgress': () => ({}),
+  'video#QueueProgressView': () => ({ currentTime: 12, duration: 225, onSeek: noop }),
   'video#YoutubeStage': () => ({
     videoId: 'abc123',
     restart: 0,
@@ -1592,6 +1594,8 @@ export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
  * 지금은 없다: 모든 컴포넌트 · 훅이 서버에서 그려진다(브라우저 API 는 effect · 이벤트 핸들러 안에서만).
  */
 export const BROWSER_ONLY: Record<string, string> = {
+  'video#useQueueProgress':
+    'reads the PlayQueueProvider that sits at the app root and throws outside it by design - there is no queue to read when rendered alone (the controller tests and the stories cover it)',
   'video#usePlayQueue':
     'reads the PlayQueueProvider that sits at the app root and throws outside it by design - there is no queue to read when rendered alone (the stories and the queue controller tests cover it)',
   'payment#usePaddlePrices':

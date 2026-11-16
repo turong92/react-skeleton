@@ -12,7 +12,15 @@ import {
   type Random,
   type RepeatMode,
 } from './playQueue'
-import { DEFAULT_QUEUE_KEY, loadQueue, saveQueue, type QueueStorage } from './queueStorage'
+import type { MediaOutput } from './mediaOutput'
+import {
+  DEFAULT_QUEUE_KEY,
+  loadQueue,
+  loadVolume,
+  saveQueue,
+  saveVolume,
+  type QueueStorage,
+} from './queueStorage'
 import { createAudioHost } from './queueHost'
 import { canPlayNow, firstAudioUrl, hasAudio, routeOf, type Preference } from './queueRouting'
 
@@ -33,7 +41,14 @@ export type ControllerState = {
   stageStart: number
   /** 대기열이 이 곡을 소리로 (다시) 틀기 시작할 때마다 오른다 - 이미 그려진 큰 화면의 재생기가 이어받는다 */
   audioStart: number
+  /** 음량 0~1 - 대기열 `<audio>` · 화면 영상 · 유튜브에 같이 걸린다 */
+  volume: number
+  muted: boolean
 }
+
+/** 진행 막대가 읽는 값 - 길이를 모르면 0 */
+export type QueueProgress = { currentTime: number; duration: number }
+const NO_PROGRESS: QueueProgress = { currentTime: 0, duration: 0 }
 
 /** `VideoPlayer` 가 대기열의 `<audio>` 를 빌려 쓰는 길 - 요소를 새로 만들지 않아 아이폰에서도 화면이 꺼진 채 다음 곡으로 넘어간다 */
 export type AudioHost = {
@@ -44,6 +59,8 @@ export type AudioHost = {
   stop: () => void
   /** 대기열이 지금 곡을 소리로 틀고 있나 - 큰 화면의 재생기가 처음부터 틀지 않고 이어받는다. 아니면 null */
   status: () => { playing: boolean; at: number } | null
+  /** 화면 `<video>` 를 소리 내는 쪽으로 등록한다(진행 막대 · 음량) - 돌려받은 함수가 푼다 */
+  registerOutput: (output: MediaOutput) => () => void
 }
 
 export type QueueController = ReturnType<typeof createQueueController>
@@ -63,6 +80,8 @@ export function createQueueController(deps: {
     playing: false,
     stageStart: 0,
     audioStart: 0,
+    volume: 1,
+    muted: false,
   }
   let stages = 0
   let visible = true
@@ -77,6 +96,49 @@ export function createQueueController(deps: {
   const emit = (patch: Partial<ControllerState>) => {
     state = { ...state, ...patch }
     for (const listener of listeners) listener()
+    refreshProgress()
+  }
+
+  /** 화면의 재생기(영상 · 유튜브)가 등록한 것 - 영상 모드에서 소리를 내는 쪽 */
+  let output: MediaOutput | null = null
+  const applyVolume = () => {
+    audio.setVolume(state.volume, state.muted)
+    output?.applyVolume(state.volume, state.muted)
+  }
+
+  /** 화면의 `<video>` · 유튜브 플레이어를 소리 내는 쪽으로 등록한다 - 등록하자마자 지금 음량이 걸린다. 푸는 함수는 그 사이 새로 등록된 것을 지우지 않는다 */
+  const registerOutput = (next: MediaOutput) => {
+    output = next
+    next.applyVolume(state.volume, state.muted)
+    refreshProgress()
+    return () => {
+      if (output !== next) return
+      output = null
+      refreshProgress()
+    }
+  }
+
+  // 진행 막대: 소리 모드는 대기열 <audio>, 영상 모드는 등록된 출력. 이벤트가 아니라 짧은 간격으로 읽는다(유튜브는 이벤트가 없다) -
+  // 상태(usePlayQueue)에 넣지 않는 것은 초당 몇 번 바뀌는 값이 대기열을 쓰는 모든 화면을 다시 그리게 하지 않으려는 것
+  let progressNow: QueueProgress = NO_PROGRESS
+  const progressListeners = new Set<() => void>()
+  let progressTimer: ReturnType<typeof setInterval> | undefined
+  const readProgress = (): QueueProgress => {
+    const item = currentOf(state.queue)
+    if (!item) return NO_PROGRESS
+    if (state.mode === 'audio') {
+      return audio.loadedItem() === item.id
+        ? { currentTime: audio.position(), duration: audio.duration() }
+        : NO_PROGRESS
+    }
+    return output ? output.read() : NO_PROGRESS
+  }
+  const refreshProgress = () => {
+    const next = readProgress()
+    if (next.currentTime === progressNow.currentTime && next.duration === progressNow.duration)
+      return
+    progressNow = next
+    for (const listener of progressListeners) listener()
   }
   const dispatch = (action: QueueAction) => {
     const queue = reduceQueue(state.queue, action)
@@ -160,6 +222,7 @@ export function createQueueController(deps: {
       awake = false
       audio.setElement(element)
       if (!element) return
+      applyVolume()
       detach = listenAudio(element, {
         ended: () => controller.audioEnded(),
         error: () => controller.audioFailed(),
@@ -174,6 +237,11 @@ export function createQueueController(deps: {
     },
     /** 저장된 대기열을 불러온다 - 새로 고침 뒤 · 아직 아무것도 안 담았을 때만(자동으로 틀지는 않는다) */
     restore: () => {
+      const stored = loadVolume(storage, key)
+      if (stored.volume !== state.volume || stored.muted !== state.muted) {
+        emit(stored)
+        applyVolume()
+      }
       if (state.queue.order.length > 0) return
       const queue = loadQueue(storage, key)
       if (queue !== emptyQueue) emit({ queue })
@@ -205,6 +273,43 @@ export function createQueueController(deps: {
     setShuffle: (on: boolean) => dispatch({ type: 'shuffle', on, random }),
     /** 앱이 처음 선호를 정할 때(영상 앱은 `video`) - 사용자가 전환하면 그 뒤로는 사용자의 선택이 이긴다 */
     setPreferred: (preferred: Preference) => emit({ preferred }),
+
+    setVolume: (volume: number) => {
+      if (Number.isNaN(volume)) return
+      emit({ volume: Math.min(1, Math.max(0, volume)) })
+      applyVolume()
+      saveVolume(storage, key, state)
+    },
+    setMuted: (muted: boolean) => {
+      emit({ muted })
+      applyVolume()
+      saveVolume(storage, key, state)
+    },
+
+    /** 지금 시각 · 길이 - 같은 값이면 같은 객체를 돌려준다(`useSyncExternalStore` 용) */
+    progress: () => {
+      refreshProgress()
+      return progressNow
+    },
+    subscribeProgress: (listener: () => void) => {
+      progressListeners.add(listener)
+      progressTimer ??= setInterval(refreshProgress, 250)
+      return () => {
+        progressListeners.delete(listener)
+        if (progressListeners.size === 0) {
+          clearInterval(progressTimer)
+          progressTimer = undefined
+        }
+      }
+    },
+    registerOutput,
+    seek: (seconds: number) => {
+      if (!Number.isFinite(seconds)) return
+      const t = Math.max(0, seconds)
+      if (state.mode === 'audio') audio.seek(t)
+      else output?.seek(t)
+      refreshProgress()
+    },
 
     /** 사용자 손짓 안에서 불러야 한다(첫 `play()` 는 손짓이 필요하다) */
     play: (id?: string) => {
@@ -290,6 +395,7 @@ export function createQueueController(deps: {
       state: () => state,
       visible: () => visible,
       emit,
+      registerOutput,
       markAwake: () => {
         awake = true
       },

@@ -67,6 +67,37 @@ export function serializeQueue(state: QueueState): string {
   })
 }
 
+export type StoredVolume = { volume: number; muted: boolean }
+
+/** 음량 · 음소거는 대기열과 따로(`<키>.volume`) 둔다 - 대기열을 비워도 기억되고, 옛 대기열 저장값은 그대로 읽힌다 */
+export function loadVolume(storage: QueueStorage | undefined, key: string): StoredVolume {
+  try {
+    const raw = JSON.parse(storage?.getItem(`${key}.volume`) ?? 'null') as Record<
+      string,
+      unknown
+    > | null
+    const volume = raw?.volume
+    return {
+      volume: typeof volume === 'number' && volume >= 0 && volume <= 1 ? volume : 1,
+      muted: raw?.muted === true,
+    }
+  } catch {
+    return { volume: 1, muted: false }
+  }
+}
+
+export function saveVolume(
+  storage: QueueStorage | undefined,
+  key: string,
+  value: StoredVolume,
+): void {
+  try {
+    storage?.setItem(`${key}.volume`, JSON.stringify(value))
+  } catch {
+    // 저장 실패는 삼킨다
+  }
+}
+
 export function loadQueue(storage: QueueStorage | undefined, key: string): QueueState {
   try {
     return parseQueue(storage?.getItem(key) ?? null)

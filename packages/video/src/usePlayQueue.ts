@@ -1,6 +1,10 @@
 import { createContext, useContext, useMemo, useSyncExternalStore } from 'react'
+import { readCanSetVolume } from './mediaOutput'
 import { currentOf, upcomingOf } from './playQueue'
 import type { QueueController } from './queueController'
+
+const subscribeNothing = () => () => {}
+const serverCanSetVolume = () => false
 
 export const QueueContext = createContext<QueueController | null>(null)
 
@@ -13,6 +17,8 @@ export function usePlayQueue() {
   if (!controller) throw new Error('usePlayQueue 는 PlayQueueProvider 안에서 써야 한다')
   const state = useSyncExternalStore(controller.subscribe, controller.getState, controller.getState)
   const current = currentOf(state.queue)
+  // 이 기기가 코드로 음량을 바꿀 수 있나 - 서버 · 하이드레이션 첫 그림은 false, 브라우저가 재서 알려 준다
+  const canSetVolume = useSyncExternalStore(subscribeNothing, readCanSetVolume, serverCanSetVolume)
   const playerProps = useMemo(
     () => ({
       audioHost: controller.host,
@@ -27,6 +33,9 @@ export function usePlayQueue() {
   )
   return {
     current,
+    /** 재생 순서(`order`) 안 지금 곡의 순번 - 없으면 -1 */
+    currentIndex:
+      state.queue.currentId === null ? -1 : state.queue.order.indexOf(state.queue.currentId),
     upcoming: upcomingOf(state.queue),
     order: state.queue.order.map((id) => state.queue.items[id]!),
     repeat: state.queue.repeat,
@@ -36,6 +45,13 @@ export function usePlayQueue() {
     mode: state.mode,
     /** 사용자가 고른 영상 / 노래 - 곡이 바뀌어도 유지된다 */
     preferred: state.preferred,
+    /** 음량 0~1 · 음소거 - 대기열 `<audio>` · 화면 영상 · 유튜브에 같이 걸린다(이 기기에 저장) */
+    volume: state.volume,
+    muted: state.muted,
+    /** 이 기기가 코드로 음량을 바꿀 수 있나 - 아이폰은 기기 단추뿐이라 false(음량 칸을 숨긴다). 서버에서는 false */
+    canSetVolume,
+    setVolume: controller.setVolume,
+    setMuted: controller.setMuted,
     stageStart: state.stageStart,
     audioStart: state.audioStart,
     playerProps,

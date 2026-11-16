@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, waitFor } from 'storybook/test'
 import type { HlsCtor, LoadHls } from './attachSource'
 import { MiniPlayer } from './MiniPlayer'
+import { QueueProgress } from './QueueProgress'
 import { QueueStage } from './QueueStage'
 import type { YouTubeApi } from './youtubeApi'
 import type { PlaybackEnv } from './playbackPlan'
@@ -63,6 +64,21 @@ function Controls() {
       <button type="button" onClick={() => queue.setShuffle(true)}>
         Shuffle
       </button>
+      <p data-testid="position">
+        {queue.currentIndex + 1} / {queue.order.length}
+      </p>
+      <QueueProgress />
+      {queue.canSetVolume && (
+        <input
+          type="range"
+          aria-label="Volume"
+          min={0}
+          max={1}
+          step={0.05}
+          value={queue.volume}
+          onChange={(event) => queue.setVolume(Number(event.target.value))}
+        />
+      )}
       <ol data-testid="upcoming">
         {queue.upcoming.map((item) => (
           <li key={item.id}>{item.title}</li>
@@ -108,6 +124,16 @@ export const LoadingSongsShowsTheMiniPlayerAndTheUpNextList: Story = {
     await expect(
       Array.from(canvas.getByTestId('upcoming').querySelectorAll('li')).map((li) => li.textContent),
     ).toEqual(['Second song', 'Third song'])
+  },
+}
+
+export const ProgressBarIsThereAndWaitsForALength: Story = {
+  play: async ({ canvas, userEvent }) => {
+    await userEvent.click(canvas.getByRole('button', { name: 'Load songs' }))
+    await expect(canvas.getByTestId('position')).toHaveTextContent('1 / 3')
+    // 가짜 hls.js 는 아무것도 못 받아 길이를 모른다 - 막대는 있되 옮길 수 없다
+    const bar = canvas.getByRole('slider', { name: 'Seek' })
+    await expect(bar).toBeDisabled()
   },
 }
 

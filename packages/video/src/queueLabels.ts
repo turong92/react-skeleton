@@ -5,6 +5,8 @@ export type PlayQueueLabels = {
   play: string
   pause: string
   next: string
+  /** 진행 막대(끌어서 옮기는 칸)의 이름 */
+  seek: string
   /** 눌러 큰 화면으로 - `title` 은 지금 곡 */
   open: (title: string) => string
 }
@@ -14,6 +16,7 @@ export const defaultPlayQueueLabels: PlayQueueLabels = {
   play: 'Play',
   pause: 'Pause',
   next: 'Next song',
+  seek: 'Seek',
   open: (title) => `Open ${title}`,
 }
 
@@ -22,5 +25,6 @@ export const koPlayQueueLabels: PlayQueueLabels = {
   play: '재생',
   pause: '일시정지',
   next: '다음 곡',
+  seek: '재생 위치',
   open: (title) => `${title} 크게 보기`,
 }

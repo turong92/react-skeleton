@@ -10,6 +10,7 @@ export function createAudioHost(ctx: {
   state: () => ControllerState
   visible: () => boolean
   emit: (patch: Partial<ControllerState>) => void
+  registerOutput: AudioHost['registerOutput']
   /** 요소를 깨웠다 / 틀기 시작했다 - 다시 깨우지 않아도 된다 */
   markAwake: () => void
   /** 멈춤 표시를 푼다 */
@@ -17,6 +18,7 @@ export function createAudioHost(ctx: {
 }): AudioHost {
   const { audio, state, emit } = ctx
   return {
+    registerOutput: ctx.registerOutput,
     element: () => audio.element() as HTMLAudioElement | null,
     wake: (url) => {
       audio.wake(url)

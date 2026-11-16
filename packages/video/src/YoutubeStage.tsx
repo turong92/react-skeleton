@@ -3,9 +3,11 @@ import {
   loadYouTubeApi,
   watchReady,
   youtubeHandlers,
+  youtubePlayerVars,
   type YouTubeApi,
   type YouTubePlayer,
 } from './youtubeApi'
+import { youtubeOutput, type MediaOutput } from './mediaOutput'
 import styles from './VideoPlayer.module.css'
 
 export type YoutubeStageProps = {
@@ -19,6 +21,10 @@ export type YoutubeStageProps = {
   onFailed: () => void
   onPlaying: (playing: boolean) => void
   className?: string
+  /** 유튜브 자체 조작줄(`controls`) - 앱이 자기 조작줄을 그릴 때 끈다(기본 켬) */
+  controls?: boolean
+  /** 준비된 플레이어를 소리 내는 쪽으로 등록한다(진행 막대 · 음량) - 돌려받은 함수로 푼다. `QueueStage` 가 대기열에 잇는다 */
+  registerOutput?: (output: MediaOutput) => () => void
   /** 시험 · 스토리용 - IFrame API 불러오기 */
   loadApi?: () => Promise<YouTubeApi>
 }
@@ -35,13 +41,15 @@ export function YoutubeStage({
   onFailed,
   onPlaying,
   className,
+  controls = true,
+  registerOutput,
   loadApi = loadYouTubeApi,
 }: YoutubeStageProps) {
   const hostRef = useRef<HTMLDivElement>(null)
   const playerRef = useRef<YouTubePlayer | null>(null)
-  const latest = useRef({ playing, onEnded, onFailed, onPlaying })
+  const latest = useRef({ playing, onEnded, onFailed, onPlaying, controls, registerOutput })
   useEffect(() => {
-    latest.current = { playing, onEnded, onFailed, onPlaying }
+    latest.current = { playing, onEnded, onFailed, onPlaying, controls, registerOutput }
   })
 
   useEffect(() => {
@@ -52,6 +60,7 @@ export function YoutubeStage({
     let stopWatching = () => {}
     let started = false
     let autoplayTimer: ReturnType<typeof setTimeout> | undefined
+    let unregister = () => {}
     const target = document.createElement('div')
     host.appendChild(target)
     loadApi().then(
@@ -71,7 +80,7 @@ export function YoutubeStage({
           })
           created = new api.Player(target, {
             videoId,
-            playerVars: { autoplay: latest.current.playing ? 1 : 0, playsinline: 1, rel: 0 },
+            playerVars: youtubePlayerVars(latest.current.playing, latest.current.controls),
             events: {
               ...handlers,
               // 준비된 뒤에야 조작할 수 있다 - 그때 지금 원하는 재생 상태를 맞춘다
@@ -79,6 +88,7 @@ export function YoutubeStage({
                 stopWatching()
                 if (cancelled) return
                 playerRef.current = ready
+                unregister = latest.current.registerOutput?.(youtubeOutput(ready)) ?? unregister
                 if (latest.current.playing) {
                   ready.playVideo()
                   // 손짓 없는 자동 재생을 브라우저가 막으면 틀고 있다고 하지 않는다(iframe 의 재생 단추가 남는다)
@@ -103,6 +113,7 @@ export function YoutubeStage({
       cancelled = true
       stopWatching()
       clearTimeout(autoplayTimer)
+      unregister()
       created?.destroy()
       playerRef.current = null
       host.replaceChildren()

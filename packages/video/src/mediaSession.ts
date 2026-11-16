@@ -17,6 +17,8 @@ export type MediaSessionInput = {
   media: () => Playable | null
   onPrevious?: () => void
   onNext?: () => void
+  /** 잠금화면 · 이어폰의 멈춤 단추를 눌렀다 - 사용자가 멈춘 것이다(OS 가 화면을 끄며 멈춘 것과 구분) */
+  onUserPause?: () => void
 }
 
 const SEEK_SECONDS = 10
@@ -28,7 +30,7 @@ const SEEK_SECONDS = 10
  */
 export function bindMediaSession(
   session: MediaSessionLike | undefined,
-  { title, poster, media, onPrevious, onNext }: MediaSessionInput,
+  { title, poster, media, onPrevious, onNext, onUserPause }: MediaSessionInput,
   Metadata: MetadataCtor | undefined = typeof MediaMetadata === 'undefined'
     ? undefined
     : (MediaMetadata as MetadataCtor),
@@ -63,7 +65,10 @@ export function bindMediaSession(
         ?.play()
         ?.catch(() => {}),
   )
-  on('pause', () => media()?.pause())
+  on('pause', () => {
+    onUserPause?.()
+    media()?.pause()
+  })
   on('seekto', ({ seekTime }) => {
     const m = media()
     if (m && typeof seekTime === 'number') m.currentTime = seekTime

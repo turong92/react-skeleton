@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { initialPlayer, reducePlayer } from './playerState'
+import { initialPlayer, momentOf, reducePlayer } from './playerState'
 
 describe('reducePlayer', () => {
   it('starts idle and plays the first step from the beginning when pressed', () => {
@@ -72,7 +72,7 @@ describe('reducePlayer', () => {
 
   it('falls back to video with a notice, from the same moment, when the sound-only version fails', () => {
     let s = reducePlayer(initialPlayer, { type: 'press', kind: 'hls', mode: 'audio' })
-    s = reducePlayer(s, { type: 'audioFailed', kind: 'hls', at: 21 })
+    s = reducePlayer(s, { type: 'audioFailed', kind: 'hls', at: 21, play: true })
     expect(s).toMatchObject({
       phase: 'playing',
       mode: 'video',
@@ -92,5 +92,33 @@ describe('reducePlayer', () => {
     expect(s).toMatchObject({ phase: 'failed', kind: null, tried: [] })
     s = reducePlayer(s, { type: 'press', kind: 'hls' })
     expect(s.phase).toBe('playing')
+  })
+})
+
+describe('reducePlayer - paused hand-over and failure', () => {
+  it('marks a hand-over that could not play as paused without leaving audio mode', () => {
+    let s = reducePlayer(initialPlayer, { type: 'press', kind: 'hls' })
+    s = reducePlayer(s, { type: 'handoff', at: 12, adopt: true })
+    const before = s.session
+    s = reducePlayer(s, { type: 'paused' })
+    expect(s).toMatchObject({ mode: 'audio', play: false })
+    expect(s.session).toBe(before) // 다시 붙이지 않는다
+  })
+
+  it('goes back to video paused when it was paused, from the quality that was chosen', () => {
+    let s = reducePlayer(initialPlayer, { type: 'press', kind: 'hls', mode: 'audio' })
+    s = reducePlayer(s, { type: 'audioFailed', kind: 'compat', at: 9, play: false })
+    expect(s).toMatchObject({ mode: 'video', kind: 'compat', at: 9, play: false, notice: true })
+  })
+})
+
+describe('momentOf', () => {
+  it('uses the element time once it has loaded', () => {
+    expect(momentOf({ readyState: 4, currentTime: 31 }, 5)).toBe(31)
+  })
+
+  it('keeps the known moment when the element never loaded (preload none reports 0)', () => {
+    expect(momentOf({ readyState: 0, currentTime: 0 }, 42)).toBe(42)
+    expect(momentOf(null, 42)).toBe(42)
   })
 })

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { enterFullscreen, fullscreenKindOf } from './fullscreen'
+import { toggleFullscreen, fullscreenKindOf } from './fullscreen'
 
 describe('fullscreenKindOf', () => {
   it('uses the player frame where the Fullscreen API is available (desktop, Android)', () => {
@@ -25,20 +25,32 @@ describe('fullscreenKindOf', () => {
   })
 })
 
-describe('enterFullscreen', () => {
+const plainDoc = { fullscreenElement: null, exitFullscreen: () => Promise.resolve() }
+
+describe('toggleFullscreen', () => {
   it('asks the frame for frame, the video for video', () => {
     const frame = { requestFullscreen: vi.fn(() => Promise.resolve()) }
     const video = { webkitEnterFullscreen: vi.fn() }
-    enterFullscreen('frame', frame, video)
+    toggleFullscreen('frame', frame, video, plainDoc)
     expect(frame.requestFullscreen).toHaveBeenCalled()
     expect(video.webkitEnterFullscreen).not.toHaveBeenCalled()
-    enterFullscreen('video', frame, video)
+    toggleFullscreen('video', frame, video, plainDoc)
     expect(video.webkitEnterFullscreen).toHaveBeenCalled()
   })
 
   it('swallows a refusal', async () => {
     const frame = { requestFullscreen: vi.fn(() => Promise.reject(new Error('denied'))) }
-    expect(() => enterFullscreen('frame', frame, null)).not.toThrow()
+    expect(() => toggleFullscreen('frame', frame, null, plainDoc)).not.toThrow()
     await Promise.resolve()
+  })
+})
+
+describe('toggleFullscreen - leaving', () => {
+  it('leaves the full screen when the frame already is in it', () => {
+    const frame = { requestFullscreen: vi.fn(() => Promise.resolve()) }
+    const doc = { fullscreenElement: {}, exitFullscreen: vi.fn(() => Promise.resolve()) }
+    toggleFullscreen('frame', frame, null, doc)
+    expect(doc.exitFullscreen).toHaveBeenCalled()
+    expect(frame.requestFullscreen).not.toHaveBeenCalled()
   })
 })

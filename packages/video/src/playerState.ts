@@ -25,6 +25,13 @@ export type PlayerState = {
   session: number
 }
 
+export function momentOf(
+  media: { readyState: number; currentTime: number } | null,
+  known: number,
+): number {
+  return media && media.readyState > 0 ? media.currentTime : known
+}
+
 export type PlayerAction =
   | { type: 'press'; kind: PlaybackKind; mode?: PlayerMode }
   | { type: 'choose'; pick: QualityChoice; kind: PlaybackKind; at: number }
@@ -36,7 +43,9 @@ export type PlayerAction =
   /** 화면이 꺼져 같은 시각의 소리 판으로 넘겼다 */
   | { type: 'handoff'; at: number; adopt: boolean }
   /** 소리 판이 틀지 못해 같은 시각에서 영상으로 */
-  | { type: 'audioFailed'; kind: PlaybackKind; at: number }
+  | { type: 'audioFailed'; kind: PlaybackKind; at: number; play: boolean }
+  /** 넘긴 `<audio>` 를 폰이 틀지 못했다 - 노래 모드는 그대로 멈춘 채 */
+  | { type: 'paused' }
 
 export const initialPlayer: PlayerState = {
   phase: 'idle',
@@ -127,11 +136,13 @@ export function reducePlayer(state: PlayerState, action: PlayerAction): PlayerSt
         kind: action.kind,
         tried: [action.kind],
         at: action.at,
-        play: true,
+        play: action.play,
         adopt: false,
         notice: true,
         refreshed: false,
         session,
       }
+    case 'paused':
+      return { ...state, play: false }
   }
 }

@@ -26,8 +26,11 @@ export type VideoPlayerLabels = {
   modeAudio: string
   /** 소리 판을 틀지 못해 영상으로 되돌아왔다 */
   audioFailed: string
-  /** 전체 화면 단추 */
+  /** 노래 모드의 재생 단추 낭독 이름 */
+  playAudio: string
+  /** 전체 화면 단추 - 들어가기 / 나가기 */
   fullscreen: string
+  exitFullscreen: string
 }
 
 /** `VideoUploadField` 의 화면 문구 */
@@ -90,7 +93,9 @@ export const defaultVideoPlayerLabels: VideoPlayerLabels = {
   modeVideo: 'Video',
   modeAudio: 'Audio',
   audioFailed: 'The audio could not be played, so the video is playing instead.',
+  playAudio: 'Play audio',
   fullscreen: 'Full screen',
+  exitFullscreen: 'Exit full screen',
 }
 
 export const koVideoPlayerLabels: VideoPlayerLabels = {
@@ -108,7 +113,9 @@ export const koVideoPlayerLabels: VideoPlayerLabels = {
   modeVideo: '영상',
   modeAudio: '노래',
   audioFailed: '소리만 틀지 못해서 영상으로 틀었어요.',
+  playAudio: '소리 재생',
   fullscreen: '전체 화면',
+  exitFullscreen: '전체 화면 나가기',
 }
 
 export const defaultVideoUploadLabels: VideoUploadLabels = {

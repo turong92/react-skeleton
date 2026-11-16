@@ -11,11 +11,14 @@ export function fullscreenKindOf(
   return null
 }
 
-export function enterFullscreen(
+export function toggleFullscreen(
   kind: FullscreenKind,
   frame: { requestFullscreen: () => Promise<void> } | null,
   video: object | null,
+  doc: { fullscreenElement: unknown; exitFullscreen: () => Promise<void> },
 ): void {
-  if (kind === 'frame') frame?.requestFullscreen().catch(() => {})
-  else (video as { webkitEnterFullscreen?: () => void } | null)?.webkitEnterFullscreen?.()
+  if (kind === 'frame') {
+    const request = doc.fullscreenElement ? doc.exitFullscreen() : frame?.requestFullscreen()
+    request?.catch(() => {})
+  } else (video as { webkitEnterFullscreen?: () => void } | null)?.webkitEnterFullscreen?.()
 }

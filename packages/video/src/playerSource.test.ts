@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { mediaSourceOf, playbackOf } from './mediaSource'
+import { playerSourceOf, playbackOf } from './playerSource'
 import { fakeGrant } from './test/grant'
 
-describe('mediaSourceOf', () => {
+describe('playerSourceOf', () => {
   it('keeps only the addresses of a server grant, so the player can take either', () => {
     const grant = fakeGrant({ audio: 'https://cdn.test/v/a/a-1/index.m3u8' })
-    expect(mediaSourceOf(grant)).toEqual({
+    expect(playerSourceOf(grant)).toEqual({
       src: grant.src,
       audio: 'https://cdn.test/v/a/a-1/index.m3u8',
       poster: grant.poster,
@@ -16,7 +16,7 @@ describe('mediaSourceOf', () => {
 
   it('leaves out what the grant does not have', () => {
     const grant = fakeGrant({ compat: undefined, hls: undefined })
-    expect(mediaSourceOf(grant)).toEqual({ src: grant.src, poster: grant.poster })
+    expect(playerSourceOf(grant)).toEqual({ src: grant.src, poster: grant.poster })
   })
 })
 
@@ -43,7 +43,7 @@ describe('playbackOf', () => {
 
   it('round-trips a grant through a source without losing the addresses', () => {
     const grant = fakeGrant({ audio: 'https://cdn.test/a.m3u8' })
-    expect(playbackOf(mediaSourceOf(grant))).toMatchObject({
+    expect(playbackOf(playerSourceOf(grant))).toMatchObject({
       src: grant.src,
       audio: grant.audio,
       poster: grant.poster,

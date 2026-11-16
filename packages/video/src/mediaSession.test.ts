@@ -66,6 +66,16 @@ describe('bindMediaSession', () => {
     expect(media.pause).toHaveBeenCalled()
   })
 
+  it('tells the owner the pause was the viewer own, before pausing', () => {
+    const session = fakeSession()
+    const media = fakeMedia()
+    const order: string[] = []
+    media.pause.mockImplementation(() => void order.push('pause'))
+    bindMediaSession(session, { media: () => media, onUserPause: () => order.push('user') })
+    session.handlers.get('pause')!({})
+    expect(order).toEqual(['user', 'pause'])
+  })
+
   it('does not go below zero or past the end', () => {
     const session = fakeSession()
     const media = fakeMedia()

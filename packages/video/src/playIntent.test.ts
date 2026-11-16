@@ -43,3 +43,36 @@ describe('createPlayIntent', () => {
     expect(intent.wasPlaying()).toBe(false)
   })
 })
+
+describe('createPlayIntent - who stopped it', () => {
+  it("counts a pause 400ms before as the viewer's own (the OS pause arrives within the same moment as the lock)", () => {
+    const c = clock()
+    const intent = createPlayIntent(c.now)
+    intent.play()
+    intent.pause()
+    c.tick(400)
+    expect(intent.wasPlaying()).toBe(false)
+  })
+
+  it('does not hand over to sound when the viewer paused from the lock screen or earphones and locked right away', () => {
+    const c = clock()
+    const intent = createPlayIntent(c.now)
+    intent.play()
+    intent.userPause() // Media Session 의 pause 단추 - 곧 pause 이벤트가 온다
+    intent.pause()
+    c.tick(50)
+    expect(intent.wasPlaying()).toBe(false)
+  })
+
+  it('forgets the mark when it plays again', () => {
+    const c = clock()
+    const intent = createPlayIntent(c.now)
+    intent.play()
+    intent.userPause()
+    intent.pause()
+    intent.play()
+    intent.pause() // 이번엔 OS 가 멈췄다
+    c.tick(50)
+    expect(intent.wasPlaying()).toBe(true)
+  })
+})

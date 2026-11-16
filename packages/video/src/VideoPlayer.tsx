@@ -1,99 +1,25 @@
 import { ChoiceGroup } from '@skeleton/ui'
 import { useEffect, useReducer, useRef, useState, useSyncExternalStore } from 'react'
-import { attachSource, type LoadHls } from './attachSource'
-import { wakeAudio, watchHidden } from './autoAudio'
-import { enterFullscreen, fullscreenKindOf } from './fullscreen'
-import { defaultVideoPlayerLabels, type VideoPlayerLabels } from './labels'
+import { wakeAudio } from './autoAudio'
+import { readBrowserEnv } from './browserEnv'
+import { toggleFullscreen } from './fullscreen'
+import { defaultVideoPlayerLabels } from './labels'
 import { loadHlsLight } from './loadHls'
-import { bindMediaSession } from './mediaSession'
-import { playbackOf, type MediaSource } from './mediaSource'
+import { grantExpired, planPlayback, type QualityChoice } from './playbackPlan'
 import { createPlayIntent } from './playIntent'
-import {
-  afterFailure,
-  grantExpired,
-  HLS_MIME,
-  nativeHlsIsReliable,
-  planPlayback,
-  urlOf,
-  type PlaybackEnv,
-  type QualityChoice,
-} from './playbackPlan'
-import { initialPlayer, reducePlayer, type PlayerMode } from './playerState'
+import { usePlayingReport, type Latest } from './playerRuntime'
+import { playbackOf, type PlayerSource } from './playerSource'
+import { initialPlayer, momentOf, reducePlayer, type PlayerMode } from './playerState'
+import { QualityMenu } from './QualityMenu'
 import type { VideoPlayback } from './types'
+import type { VideoPlayerProps } from './videoPlayerProps'
+import { useHiddenHandoff } from './useHiddenHandoff'
+import { useLockScreen } from './useLockScreen'
+import { usePlayerMedia } from './usePlayerMedia'
 import styles from './VideoPlayer.module.css'
 import { formatDuration } from './videoView'
 
-type Input =
-  | {
-      /** `api.playback(id)` 의 응답 */
-      grant: VideoPlayback
-      source?: undefined
-      /**
-       * 비공개 영상은 토큰이 끝나면 조각을 못 받는다 - 새 재생 허가(`api.playback(id)`)를 받아 오는 함수를 주면
-       * 끝난 것을 알아챈 순간 새 허가로 **같은 시각에서** 이어 보인다. 공개 영상은 필요 없다
-       */
-      refreshGrant?: () => Promise<VideoPlayback>
-    }
-  | {
-      grant?: undefined
-      /** 서버 재생 허가 없이 같은 출처 주소를 그대로 튼다(쿠키 인증) - 만료 · 새 허가는 없다 */
-      source: MediaSource
-      refreshGrant?: undefined
-    }
-
-export type VideoPlayerProps = Input & {
-  labels?: VideoPlayerLabels
-  className?: string
-  /** 잠금화면 · 알림에 뜨는 제목 - 모듈은 영상 제목을 모르니 앱이 준다 */
-  title?: string
-  /** 처음 모드 - 소리 판이 있을 때만 `audio`(노래)로 시작한다 */
-  initialMode?: PlayerMode
-  /** 영상으로 재생 중 화면이 꺼지거나 앱을 나가면 같은 시각의 소리 판으로 넘긴다(기본 꺼짐) */
-  autoAudioWhenHidden?: boolean
-  /** 끝까지 틀었다 - 재생 대기열이 다음 곡으로 엮는다 */
-  onEnded?: () => void
-  /** 주면 잠금화면에 이전/다음 곡 단추가 뜬다(그러면 ±10초 단추는 안 뜬다) */
-  onPrevious?: () => void
-  onNext?: () => void
-  /** 모드가 바뀔 때(전환 · 자동 전환 · 소리 판 실패로 영상 복귀) */
-  onModeChange?: (mode: PlayerMode) => void
-  /** 사용자가 틀고 멈출 때 - 화면 끌 때 OS 가 멈추는 것은 세지 않는다 */
-  onPlayingChange?: (playing: boolean) => void
-  /** 시험 · 스토리용 - 이 기기가 무엇을 트는가(기본은 브라우저에서 읽는다) */
-  env?: PlaybackEnv
-  /** 시험 · 스토리용 - hls.js 불러오기(기본은 light 빌드 지연 import) */
-  loadHls?: LoadHls
-}
-
-let browserEnv: PlaybackEnv | undefined
-
-/** 이 기기가 무엇을 트는가 - 브라우저에서 한 번만 읽는다(서버에서는 모른다) */
-function readBrowserEnv(): PlaybackEnv {
-  if (browserEnv) return browserEnv
-  const probe = document.createElement('video')
-  const w = window as unknown as Record<string, { isTypeSupported?: (type: string) => boolean }>
-  const mse = w.MediaSource ?? w.ManagedMediaSource
-  const brands = (
-    navigator as { userAgentData?: { brands?: Array<{ brand: string }> } }
-  ).userAgentData?.brands?.map((entry) => entry.brand)
-  const hlsReliable = nativeHlsIsReliable(navigator.userAgent, brands)
-  browserEnv = {
-    canPlayType: (mime) =>
-      typeof probe.canPlayType === 'function' &&
-      (hlsReliable || mime !== HLS_MIME) &&
-      Boolean(probe.canPlayType(mime)),
-    mse:
-      mse && typeof mse.isTypeSupported === 'function'
-        ? { isTypeSupported: (t) => mse.isTypeSupported!(t) }
-        : null,
-    fullscreen: fullscreenKindOf(
-      document,
-      (window as unknown as { HTMLVideoElement?: { prototype: object } }).HTMLVideoElement
-        ?.prototype,
-    ),
-  }
-  return browserEnv
-}
+export type { VideoPlayerProps }
 
 const subscribeNothing = () => () => {}
 const serverEnv = () => null
@@ -122,7 +48,7 @@ export function VideoPlayer({
   env: envProp,
   loadHls = loadHlsLight,
 }: VideoPlayerProps) {
-  const given = givenGrant ?? playbackOf(source as MediaSource)
+  const given = givenGrant ?? playbackOf(source as PlayerSource)
   const [fresh, setFresh] = useState<{ from: VideoPlayback; value: VideoPlayback } | null>(null)
   const grant = fresh && fresh.from.src === given.src ? fresh.value : given
   // 서버(와 첫 하이드레이션)에서는 모른다 - 아는 순간 한 번 다시 그린다
@@ -136,23 +62,12 @@ export function VideoPlayer({
     mode,
   }))
   const mode: PlayerMode = audioOk ? state.mode : 'video'
-  const [menuOpen, setMenuOpen] = useState(false)
+  const playing = state.phase === 'playing'
   const videoRef = useRef<HTMLVideoElement>(null)
   const audioRef = useRef<HTMLAudioElement>(null)
   const stageRef = useRef<HTMLDivElement>(null)
-  const latest = useRef({
-    grant,
-    plan,
-    state,
-    refreshGrant,
-    loadHls,
-    given,
-    onEnded,
-    onPrevious,
-    onNext,
-    onModeChange,
-    onPlayingChange,
-  })
+  const refs = { video: videoRef, audio: audioRef }
+  const latest = useRef<Latest>({ grant, plan, state, loadHls, given })
   useEffect(() => {
     latest.current = {
       grant,
@@ -169,116 +84,43 @@ export function VideoPlayer({
     }
   })
   const [intent] = useState(createPlayIntent)
+  const report = usePlayingReport(latest)
 
-  // 걸음 · 모드 · 허가가 바뀔 때마다 요소(영상 또는 소리)에 다시 붙인다
-  useEffect(() => {
-    const { grant: g, plan: p, state: s, loadHls: load } = latest.current
-    const audioMode = s.mode === 'audio'
-    const media = audioMode ? audioRef.current : videoRef.current
-    const url = audioMode ? g.audio : s.kind ? urlOf(g, s.kind) : null
-    if (s.phase !== 'playing' || !media || !p?.engine || !url) return
-    let settled = false
-    const fail = () => {
-      if (settled) return
-      settled = true
-      const now = latest.current
-      const at = media.currentTime || s.at
-      const decision = afterFailure({
-        grant: now.grant,
-        order: audioMode ? [] : (now.plan?.order ?? []),
-        tried: audioMode ? [] : now.state.tried,
-        now: Date.now(),
-        canRefresh: Boolean(now.refreshGrant),
-        refreshed: now.state.refreshed,
-      })
-      if (decision.action === 'next') dispatch({ type: 'next', kind: decision.kind, at })
-      else if (decision.action === 'give-up') {
-        // 소리 판이 안 되면 영상 걸음 순서로 같은 시각에서
-        const back = now.plan?.order[0]
-        if (audioMode && back) dispatch({ type: 'audioFailed', kind: back, at })
-        else dispatch({ type: 'giveUp' })
-      } else
-        now.refreshGrant!().then(
-          (value) => {
-            setFresh({ from: now.given, value })
-            dispatch({ type: 'refresh', at })
-          },
-          () => dispatch({ type: 'giveUp' }),
-        )
-    }
-    const onPlay = () => {
-      intent.play()
-      latest.current.onPlayingChange?.(true)
-    }
-    const onPause = () => {
-      intent.pause()
-      latest.current.onPlayingChange?.(false)
-    }
-    const onEnd = () => {
-      intent.ended()
-      latest.current.onPlayingChange?.(false)
-      latest.current.onEnded?.()
-    }
-    media.addEventListener('play', onPlay)
-    media.addEventListener('pause', onPause)
-    media.addEventListener('ended', onEnd)
-    media.addEventListener('error', fail)
-    let handle: { destroy: () => void } | null = null
-    if (s.adopt) {
-      // 화면이 꺼지는 순간 `<audio>` 가 이미 틀기 시작했다 - 다시 붙이면 끊긴다
-      if (!media.paused) intent.play()
-    } else {
-      handle = attachSource(media, url, p.engine, { loadHls: load, onFatal: fail, startAt: s.at })
-      if (s.play) void media.play()?.catch(() => {})
-    }
-    return () => {
-      media.removeEventListener('play', onPlay)
-      media.removeEventListener('pause', onPause)
-      media.removeEventListener('ended', onEnd)
-      media.removeEventListener('error', fail)
-      handle?.destroy()
-      media.pause()
-      if (!audioMode) {
-        // 떼어 낸 영상이 조각을 계속 받지 않게(소리 `<audio>` 는 깨워 둔 채로 남긴다)
-        media.removeAttribute('src')
-        media.load()
-      }
-    }
-  }, [state.session, intent])
+  usePlayerMedia({ latest, refs, intent, report, dispatch, setFresh, session: state.session })
+  useHiddenHandoff({
+    // 소리 판 실패로 영상에 돌아온 직후(notice)에는 다시 넘기지 않는다
+    watching: autoAudioWhenHidden && playing && mode === 'video' && audioOk && !state.notice,
+    engine: plan?.engine,
+    latest,
+    refs,
+    intent,
+    report,
+    dispatch,
+  })
+  useLockScreen({
+    playing,
+    title,
+    poster: grant.poster,
+    hasPrevious: Boolean(onPrevious),
+    hasNext: Boolean(onNext),
+    latest,
+    refs,
+    intent,
+  })
 
-  // 영상으로 재생 중 화면이 꺼지면 같은 시각의 소리 판으로
-  const handoffEngine = plan?.engine
-  const watching = autoAudioWhenHidden && state.phase === 'playing' && mode === 'video' && audioOk
+  const lastMode = useRef<PlayerMode | null>(null)
   useEffect(() => {
-    if (!watching || !handoffEngine) return
-    return watchHidden({
-      doc: document,
-      intent,
-      video: () => videoRef.current,
-      audio: () => (audioRef.current?.getAttribute('src') ? audioRef.current : null),
-      native: handoffEngine === 'native',
-      onHandoff: ({ at, adopt }) => dispatch({ type: 'handoff', at, adopt }),
-    })
-  }, [watching, handoffEngine, intent])
+    if (!playing || lastMode.current === state.mode) return
+    lastMode.current = state.mode
+    latest.current.onModeChange?.(state.mode)
+  }, [playing, state.mode])
 
-  // 잠금화면 · 알림 · 이어폰 단추
-  const hasPrevious = Boolean(onPrevious)
-  const hasNext = Boolean(onNext)
-  const poster = grant.poster
+  const [isFullscreen, setFullscreen] = useState(false)
   useEffect(() => {
-    if (state.phase !== 'playing') return
-    return bindMediaSession(typeof navigator === 'undefined' ? undefined : navigator.mediaSession, {
-      title,
-      poster: poster || undefined,
-      media: () => (latest.current.state.mode === 'audio' ? audioRef.current : videoRef.current),
-      onPrevious: hasPrevious ? () => latest.current.onPrevious?.() : undefined,
-      onNext: hasNext ? () => latest.current.onNext?.() : undefined,
-    })
-  }, [state.phase, title, poster, hasPrevious, hasNext])
-
-  useEffect(() => {
-    if (state.phase === 'playing') latest.current.onModeChange?.(state.mode)
-  }, [state.phase, state.mode])
+    const sync = () => setFullscreen(document.fullscreenElement === stageRef.current)
+    document.addEventListener('fullscreenchange', sync)
+    return () => document.removeEventListener('fullscreenchange', sync)
+  }, [])
 
   const press = async () => {
     if (!env) return
@@ -301,7 +143,6 @@ export function VideoPlayer({
   }
 
   const choose = (pick: QualityChoice) => {
-    setMenuOpen(false)
     if (!plan) return
     if (pick === state.pick && (pick !== 'auto' || state.kind === plan.order[0])) return
     const kind = pick === 'auto' ? plan.order[0] : pick
@@ -310,7 +151,7 @@ export function VideoPlayer({
 
   const switchMode = (next: PlayerMode) => {
     if (next === mode) return
-    if (state.phase !== 'playing') {
+    if (!playing) {
       dispatch({ type: 'mode', mode: next, at: 0, play: false })
       return
     }
@@ -322,21 +163,25 @@ export function VideoPlayer({
       type: 'mode',
       mode: next,
       kind,
-      at: current?.currentTime ?? state.at,
+      // 한 번도 안 불러온 요소(미리 받기 없음)의 0 초를 잇지 않는다
+      at: momentOf(current, state.at),
       play: current ? !current.paused : true,
     })
   }
 
-  const playing = state.phase === 'playing'
   const noEngine = plan !== null && plan.engine === null
   const waiting = plan !== null && plan.engine !== null && plan.order.length === 0
   const blocked = noEngine || waiting
   const ratio = grant.w > 0 && grant.h > 0 ? grant.w / grant.h : 16 / 9
-  const choiceLabel = (pick: QualityChoice) =>
-    pick === 'compat' ? '720p' : pick === 'orig' ? labels.original : labels.auto
   const badge = noEngine ? labels.unsupported : waiting ? labels.preparing : null
   const showVideo = playing && mode === 'video'
   const fullscreenKind = showVideo ? (env?.fullscreen ?? null) : null
+  const playLabel =
+    mode === 'audio'
+      ? labels.playAudio
+      : grant.durationMs > 0
+        ? labels.play(formatDuration(grant.durationMs))
+        : labels.playNoLength
 
   return (
     <div className={[styles.root, className].filter(Boolean).join(' ')}>
@@ -367,11 +212,7 @@ export function VideoPlayer({
                 <button
                   type="button"
                   className={styles.play}
-                  aria-label={
-                    grant.durationMs > 0
-                      ? labels.play(formatDuration(grant.durationMs))
-                      : labels.playNoLength
-                  }
+                  aria-label={playLabel}
                   disabled={blocked}
                   onClick={press}
                 >
@@ -401,8 +242,10 @@ export function VideoPlayer({
           <button
             type="button"
             className={`${styles.chip} ${styles.fullscreen}`}
-            aria-label={labels.fullscreen}
-            onClick={() => enterFullscreen(fullscreenKind, stageRef.current, videoRef.current)}
+            aria-label={isFullscreen ? labels.exitFullscreen : labels.fullscreen}
+            onClick={() =>
+              toggleFullscreen(fullscreenKind, stageRef.current, videoRef.current, document)
+            }
           >
             <svg viewBox="0 0 24 24" aria-hidden="true" className={styles.icon}>
               <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
@@ -410,44 +253,7 @@ export function VideoPlayer({
           </button>
         )}
         {showVideo && plan && plan.options.length > 1 && (
-          <div
-            className={styles.quality}
-            onKeyDown={(event) => {
-              if (event.key === 'Escape') setMenuOpen(false)
-            }}
-          >
-            <button
-              type="button"
-              className={styles.chip}
-              aria-haspopup="menu"
-              aria-expanded={menuOpen}
-              aria-label={`${labels.quality}: ${choiceLabel(state.pick)}`}
-              onClick={() => setMenuOpen((open) => !open)}
-            >
-              {choiceLabel(state.pick)}
-            </button>
-            {menuOpen && (
-              <div role="menu" className={styles.menu} aria-label={labels.quality}>
-                {plan.options.map((option) => {
-                  const off = option === 'compat' && plan.compatPending
-                  return (
-                    <button
-                      key={option}
-                      type="button"
-                      role="menuitemradio"
-                      className={styles.menuItem}
-                      aria-checked={option === state.pick}
-                      aria-disabled={off || undefined}
-                      onClick={() => !off && choose(option)}
-                    >
-                      <span>{choiceLabel(option)}</span>
-                      {off && <small>{labels.qualityPreparing}</small>}
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-          </div>
+          <QualityMenu plan={plan} pick={state.pick} labels={labels} onChoose={choose} />
         )}
       </div>
       {audioOk && (

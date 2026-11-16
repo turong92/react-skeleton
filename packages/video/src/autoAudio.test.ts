@@ -18,8 +18,15 @@ function fakeDoc(state: 'visible' | 'hidden' = 'visible') {
   }
 }
 
-function fakeAudio() {
-  return { src: '', currentTime: 0, play: vi.fn(() => Promise.resolve()), pause: vi.fn() }
+function fakeAudio(src = '') {
+  const audio = {
+    src,
+    currentTime: 0,
+    play: vi.fn(() => Promise.resolve()),
+    pause: vi.fn(),
+    getAttribute: () => (audio.src ? audio.src : null),
+  }
+  return audio
 }
 
 describe('wakeAudio', () => {
@@ -44,22 +51,25 @@ describe('wakeAudio', () => {
 })
 
 describe('watchHidden', () => {
-  function setup(opts: { native?: boolean; playing?: boolean } = {}) {
+  function setup(opts: { native?: boolean; playing?: boolean; audioSrc?: string } = {}) {
     const doc = fakeDoc()
     const intent = createPlayIntent()
     if (opts.playing ?? true) intent.play()
     const video = { currentTime: 37.5 }
-    const audio = fakeAudio()
+    const audio = fakeAudio(opts.audioSrc ?? 'https://cdn.test/a.m3u8')
     const onHandoff = vi.fn()
+    const onHandoffFailed = vi.fn()
     const stop = watchHidden({
       doc,
       intent,
       video: () => video,
       audio: () => audio,
+      audioUrl: () => 'https://cdn.test/a.m3u8',
       native: opts.native ?? true,
       onHandoff,
+      onHandoffFailed,
     })
-    return { doc, intent, video, audio, onHandoff, stop }
+    return { doc, intent, video, audio, onHandoff, onHandoffFailed, stop }
   }
 
   it('on hidden while playing, plays the audio from the same moment inside the same event (native)', () => {
@@ -90,6 +100,21 @@ describe('watchHidden', () => {
     doc.hide()
     expect(audio.play).not.toHaveBeenCalled()
     expect(onHandoff).toHaveBeenCalledWith({ at: 37.5, adopt: false })
+  })
+
+  it('puts the newest sound-only address in when the woken one is from an older grant', () => {
+    const { doc, audio } = setup({ audioSrc: 'https://cdn.test/old.m3u8' })
+    doc.hide()
+    expect(audio.src).toBe('https://cdn.test/a.m3u8')
+  })
+
+  it('corrects the state when the phone refuses to play the sound (no silent audio mode)', async () => {
+    const { doc, audio, onHandoffFailed } = setup()
+    audio.play.mockReturnValue(Promise.reject(new Error('NotAllowedError')))
+    doc.hide()
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(onHandoffFailed).toHaveBeenCalledTimes(1)
   })
 
   it('stops listening when torn down', () => {

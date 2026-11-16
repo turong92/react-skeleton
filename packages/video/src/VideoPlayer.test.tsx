@@ -9,6 +9,17 @@ const native: PlaybackEnv = { canPlayType: () => true, mse: null }
 const none: PlaybackEnv = { canPlayType: () => false, mse: null }
 
 describe('VideoPlayer before the first press', () => {
+  it('names the play button after the sound in audio mode', () => {
+    const html = renderToStaticMarkup(
+      <VideoPlayer
+        grant={fakeGrant({ audio: 'https://cdn.test/a.m3u8' })}
+        env={native}
+        initialMode="audio"
+      />,
+    )
+    expect(html).toMatch(/<button[^>]*aria-label="Play audio"/)
+  })
+
   it('shows the poster and an enabled play button that names the length, and no video file is touched', () => {
     const html = renderToStaticMarkup(<VideoPlayer grant={fakeGrant()} env={native} />)
     expect(html).toContain('src="https://cdn.test/v/a/p-1.jpg"')

@@ -91,6 +91,8 @@ export type AudioHost = {
   stop: () => void
   /** 대기열이 지금 곡을 소리로 틀고 있나 - 큰 화면의 재생기가 처음부터 틀지 않고 이어받는다. 아니면 null */
   status: () => { playing: boolean; at: number } | null
+  /** 대기열의 지금 음량 · 음소거 - 잠깐 음소거로 붙잡았던 요소에 되돌려 걸 때 */
+  levels: () => { volume: number; muted: boolean }
   /** 그려진 재생기의 화질 - `register` 로 선택지를 꽂고 돌려받은 핸들로 지금 나오는 높이를 알리고 푼다(자기 것일 때만 먹는다) */
   quality: { register: (target: QualityTarget) => QualityHandle }
   /** 그려진 무대의 전체 화면 - `register` 로 대상을 꽂고(푸는 함수는 자기 것일 때만 지운다), `report` 로 지금 전체 화면인지 알린다 */

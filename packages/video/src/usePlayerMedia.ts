@@ -24,6 +24,20 @@ type Args = {
   host?: AudioHost
   /** 노래 → 영상을 잇는 동안 영상을 음소거로 붙잡아 둔다(대기열이 거는 음량도 그동안은 음소거로) - `last` 는 그 사이 걸린 음량. 이 effect 가 `registerOutput` effect 보다 먼저 선언돼야 첫 음량이 붙잡힌다 */
   hush?: React.RefObject<Hush>
+  bridge?: React.RefObject<Bridge>
+}
+
+/** 영상 → 소리 잇기: `toAudio` 는 재생 중에 사용자가 노래로 넘겼다는 표시, `finish` 는 아직 안 끝난 잇기를 바로 끝내는 함수 */
+export type Bridge = { toAudio: boolean; finish: (() => void) | null }
+
+function takeToAudio(bridge: React.RefObject<Bridge>): boolean {
+  const was = bridge.current.toAudio
+  bridge.current.toAudio = false
+  return was
+}
+
+function setFinish(bridge: React.RefObject<Bridge>, finish: (() => void) | null) {
+  bridge.current.finish = finish
 }
 
 export type Hush = { on: boolean; last: [volume: number, muted: boolean] | null }
@@ -58,6 +72,7 @@ export function usePlayerMedia({
   ready,
   host,
   hush,
+  bridge,
 }: Args) {
   useEffect(() => {
     const { grant: g, plan: p, state: s, loadHls: load } = latest.current
@@ -67,6 +82,8 @@ export function usePlayerMedia({
     if (s.phase !== 'playing' || !media || !p?.engine || !url) return
     const hosted = audioMode ? host : undefined
     // 영상으로 틀기 시작하면 대기열의 소리를 멈추고 대기열을 영상 모드로 - 소리가 나는 중이면 영상이 그 자리를 틀 수 있을 때까지 소리를 둔다(끊김 없이)
+    // 영상을 다시 붙이기 전에 남은 잇기(옛 영상을 끌고 있는 것)를 끝낸다 - 같은 요소를 둘이 쥐지 않게
+    if (s.mode === 'video') bridge?.current.finish?.()
     const held = hush?.current
     if (hush) unhush(null, hush)
     const handing = !audioMode && s.play && hush !== undefined && host?.status()?.playing === true
@@ -203,16 +220,86 @@ export function usePlayerMedia({
       endHanding = null
       // 잇다 만 영상이 같은 요소로 다시 쓰일 수 있다(화질 · 재시도) - 붙잡은 음소거를 요소에서 푼다
       if (hush && held?.on) unhush(media as HTMLMediaElement, hush)
-      handle?.destroy()
-      if (hosted) return // 소리는 대기열 것이다 - 이 재생기가 사라져도 이어진다
-      media.pause()
-      if (!audioMode) {
-        // 떼어 낸 영상이 조각을 계속 받지 않게(소리 `<audio>` 는 깨워 둔 채로 남긴다)
-        media.removeAttribute('src')
-        media.load()
+      const toAudio = bridge ? takeToAudio(bridge) : false
+      if (hosted) {
+        handle?.destroy()
+        return // 소리는 대기열 것이다 - 이 재생기가 사라져도 이어진다
       }
+      const release = () => {
+        handle?.destroy()
+        media.pause()
+        if (!audioMode) {
+          // 떼어 낸 영상이 조각을 계속 받지 않게(소리 `<audio>` 는 깨워 둔 채로 남긴다)
+          media.removeAttribute('src')
+          media.load()
+        }
+      }
+      const sound = host?.element()
+      if (audioMode || !toAudio || !bridge || !sound || media.paused) return release()
+      // 영상 → 노래: 숨긴 영상이 계속 소리를 내는 동안 대기열 소리를 음소거로 붙여, 영상 자리까지 받으면 그 자리로 옮겨 소리를 켜고 영상을 멈춘다
+      sound.muted = true
+      let seekLimit: ReturnType<typeof setTimeout> | undefined
+      const finish = () => {
+        setFinish(bridge, null)
+        stopWait()
+        clearTimeout(seekLimit)
+        sound.removeEventListener('seeked', finish)
+        sound.removeEventListener('emptied', reloaded)
+        sound.removeEventListener('loadeddata', loaded)
+        sound.removeEventListener('pause', userPaused)
+        sound.removeEventListener('seeking', userSeeked)
+        sound.removeEventListener('volumechange', userVolume)
+        document.removeEventListener('visibilitychange', hidden)
+        // 그 사이 사용자가 바꾼 것까지 대기열의 지금 음량 · 음소거로 되돌린다
+        const { volume, muted } = host!.levels()
+        sound.volume = volume
+        sound.muted = muted
+        release()
+      }
+      // 잇는 사이 사용자 조작은 대기열 <audio> 에만 걸린다 - 걸리는 즉시 잇기를 끝내 실제 소리가 그 조작을 따르게 한다
+      const userPaused = () => {
+        if (sound.readyState >= 2) finish() // 붙이며 나는 멈춤(readyState 0)은 빼고
+      }
+      const userSeeked = () => {
+        if (Math.abs(sound.currentTime - media.currentTime) > 3) finish() // 우리가 영상 근처로 옮기는 것(붙일 때 · 맞출 때)은 빼고
+      }
+      const userVolume = () => {
+        if (!sound.muted) finish() // 음량을 만지면 대기열이 음소거를 푼다
+      }
+      // 화면이 꺼지면 아이폰이 숨긴 영상을 멈춘다 - 그 순간(이벤트 안에서) 노래로 넘긴다
+      const hidden = () => {
+        if (document.visibilityState === 'hidden') finish()
+      }
+      sound.addEventListener('pause', userPaused)
+      sound.addEventListener('seeking', userSeeked)
+      sound.addEventListener('volumechange', userVolume)
+      // 곡이 바뀌어 다시 붙였다 - 이 잇기가 붙이며 나는 비움(아직 못 불러옴)은 빼고
+      let ready = false
+      const loaded = () => {
+        ready = true
+      }
+      const reloaded = () => {
+        if (ready) finish()
+      }
+      sound.addEventListener('loadeddata', loaded)
+      sound.addEventListener('emptied', reloaded)
+      document.addEventListener('visibilitychange', hidden)
+      const stopWait = handOverWhenReady(
+        sound,
+        () => (media.paused ? null : media.currentTime),
+        () => {
+          // 옮긴 자리를 틀 준비가 되면 바꾼다(옮기는 중이면 끝날 때, 길어도 1 초)
+          if (!sound.seeking) return finish()
+          sound.addEventListener('seeked', finish, { once: true })
+          seekLimit = setTimeout(finish, 1000)
+        },
+        { timeoutMs: 4000 },
+      )
+      setFinish(bridge, finish)
     }
     // `latest` · `refs` · `dispatch` 는 늘 같은 것이다 - 걸음이 바뀔 때(session)만 다시 붙인다
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, intent, ready])
+  // 재생기가 사라질 때(곡 넘김 · 큰 화면 닫기) 남은 잇기를 끝낸다
+  useEffect(() => () => bridge?.current.finish?.(), [bridge])
 }

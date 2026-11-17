@@ -27,7 +27,7 @@ import type { VideoPlayback } from './types'
 import type { VideoPlayerProps } from './videoPlayerProps'
 import { useHiddenHandoff } from './useHiddenHandoff'
 import { useLockScreen } from './useLockScreen'
-import { usePlayerMedia, type Hush } from './usePlayerMedia'
+import { usePlayerMedia, type Bridge, type Hush } from './usePlayerMedia'
 import styles from './VideoPlayer.module.css'
 import { formatDuration } from './videoView'
 
@@ -122,6 +122,7 @@ export function VideoPlayer({
   })
   const [intent] = useState(createPlayIntent)
   const hush = useRef<Hush>({ on: false, last: null })
+  const bridge = useRef<Bridge>({ toAudio: false, finish: null })
 
   // 「영상」을 누르는 손짓 안에서 대기열이 부른다 - 아이폰(네이티브)은 손짓 안에서 한 번 틀어 본 요소만 나중에 소리 내며 틀게 둔다
   useEffect(() => {
@@ -147,6 +148,7 @@ export function VideoPlayer({
     ready: plan?.engine != null,
     host: audioHost,
     hush,
+    bridge,
   })
   useHiddenHandoff({
     // 소리 판 실패로 영상에 돌아온 직후(notice)에는 다시 넘기지 않는다
@@ -305,6 +307,8 @@ export function VideoPlayer({
       dispatch({ type: 'join', at: sounding.at, play: true })
       return
     }
+    // 영상 → 노래: 영상 소리를 노래가 그 자리를 이어받을 때까지 둔다(usePlayerMedia 의 정리)
+    bridge.current.toAudio = next === 'audio'
     dispatch({
       type: 'mode',
       mode: next,

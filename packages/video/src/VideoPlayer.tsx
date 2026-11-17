@@ -136,7 +136,8 @@ export function VideoPlayer({
   })
   useHiddenHandoff({
     // 소리 판 실패로 영상에 돌아온 직후(notice)에는 다시 넘기지 않는다
-    watching: autoAudioWhenHidden && playing && mode === 'video' && audioOk && !state.notice,
+    // 노래 → 영상을 기다리는 중(대기열 소리가 아직 나는 중)에는 넘길 것이 없다 - 영상 시각이 아직 옛 자리다
+    watching: autoAudioWhenHidden && playing && mode === 'video' && audioOk && !state.notice && !audioHost?.status()?.playing,
     engine: plan?.engine,
     latest,
     refs,
@@ -270,6 +271,12 @@ export function VideoPlayer({
     const kind =
       next === 'video' ? (state.pick === 'auto' ? plan?.order[0] : state.pick) : undefined
     if (next === 'video' && !kind) return
+    // 노래 → 영상을 기다리는 중(영상은 아직 안 틀고 대기열 소리가 나는 중)에 노래로 돌아가면 나던 소리를 그대로 잇는다
+    const sounding = next === 'audio' ? audioHost?.status() : null
+    if (sounding?.playing) {
+      dispatch({ type: 'join', at: sounding.at, play: true })
+      return
+    }
     dispatch({
       type: 'mode',
       mode: next,

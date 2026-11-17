@@ -1,5 +1,6 @@
 import { useEffect, type Dispatch } from 'react'
 import { attachSource } from './attachSource'
+import { handOverWhenReady } from './handOver'
 import { playAfterAttach } from './playAfterAttach'
 import { watchInput } from './lastInput'
 import { OS_PAUSE_WINDOW_MS, type PlayIntent } from './playIntent'
@@ -45,8 +46,10 @@ export function usePlayerMedia({
     const url = audioMode ? g.audio : s.kind ? urlOf(g, s.kind) : null
     if (s.phase !== 'playing' || !media || !p?.engine || !url) return
     const hosted = audioMode ? host : undefined
-    // 영상으로 틀기 시작하면 대기열의 소리를 멈추고 대기열을 영상 모드로
-    if (!audioMode) host?.stop()
+    // 영상으로 틀기 시작하면 대기열의 소리를 멈추고 대기열을 영상 모드로 - 소리가 나는 중이면 영상이 그 자리를 틀 수 있을 때까지 소리를 둔다(끊김 없이).
+    // hls.js 기기만: 네이티브(아이폰)는 손짓 밖의 play() 를 거절할 수 있고 play() 전에는 조각을 다 안 받아, 예전처럼 바로 넘긴다
+    const handing = !audioMode && s.play && p.engine === 'hlsjs' && host?.status()?.playing === true
+    if (!audioMode && !handing) host?.stop()
     let settled = false
     const fail = () => {
       if (settled) return
@@ -121,7 +124,23 @@ export function usePlayerMedia({
       if (!s.play) report(false)
     } else {
       handle = attachSource(media, url, p.engine, { loadHls: load, onFatal: fail, startAt: s.at })
-      if (s.play) cancelPlay = playAfterAttach(media, p.engine, () => report(false))
+      const engine = p.engine
+      const start = () => {
+        cancelPlay = playAfterAttach(media, engine, () => report(false))
+      }
+      if (handing)
+        cancelPlay = handOverWhenReady(
+          media,
+          () => host!.status()?.at ?? null,
+          () => {
+            // 기다리는 사이 대기열을 멈췄으면 영상도 멈춘 채로 넘긴다
+            const still = host!.status()?.playing === true
+            host!.stop()
+            if (still) start()
+            else report(false)
+          },
+        )
+      else if (s.play) start()
       else report(false)
     }
     return () => {

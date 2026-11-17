@@ -235,11 +235,12 @@ describe('retitle', () => {
 
 describe('update', () => {
   it('swaps in the new content of a queued item (e.g. a sound file that arrived later), keeping order and the current item', () => {
-    const y = { kind: 'youtube' as const, id: 'y', title: 'Y', videoId: 'v' }
+    const y = { kind: 'media' as const, id: 'y', title: 'Y', source: { src: '/y.m3u8' } }
     const b = { kind: 'media' as const, id: 'b', title: 'B', source: { src: '/b.m3u8' } }
     let q = reduceQueue(emptyQueue, { type: 'set', items: [y, b], startId: 'y' })
-    q = reduceQueue(q, { type: 'update', item: { ...y, audio: '/media/y/audio.m4a' } })
-    expect(q.items.y).toEqual({ ...y, audio: '/media/y/audio.m4a' })
+    const withSound = { ...y, source: { ...y.source, audio: '/y/audio.m3u8' } }
+    q = reduceQueue(q, { type: 'update', item: withSound })
+    expect(q.items.y).toEqual(withSound)
     expect(q.order).toEqual(['y', 'b'])
     expect(q.currentId).toBe('y')
     expect(reduceQueue(q, { type: 'update', item: { ...b, id: 'zz' } })).toBe(q)

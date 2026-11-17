@@ -3,11 +3,8 @@ import type { PlayerSource } from './playerSource'
 type ItemBase = { id: string; title: string; artist?: string; thumb?: string }
 /** 우리 영상 · 소리(재생기가 트는 것) */
 export type MediaItem = ItemBase & { kind: 'media'; source: PlayerSource }
-/**
- * 유튜브 영상 - IFrame Player 로 튼다. `audio`(따로 받아 둔 소리 판)가 없으면 영상으로만(노래 모드 · 전환 단추 없음),
- * 있으면 우리 영상처럼 소리는 대기열 `<audio>` 가 내고 영상 모드에서만 음소거 유튜브가 소리를 따라간다
- */
-export type YoutubeItem = ItemBase & { kind: 'youtube'; videoId: string; audio?: string }
+/** 유튜브 영상 - IFrame Player 로 영상으로만 튼다(노래 모드 · 전환 단추 없음) */
+export type YoutubeItem = ItemBase & { kind: 'youtube'; videoId: string }
 export type QueueItem = MediaItem | YoutubeItem
 
 export type RepeatMode = 'off' | 'one' | 'all'

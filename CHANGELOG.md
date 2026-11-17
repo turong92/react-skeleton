@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `usePlayQueue()` 에서 `audioStart` · `preferSignal` 이 빠졌다.
   - `AudioHost` 에서 `wake` · `start` · `stop` 이 빠지고 **필수** `setPreferred` 가 생겼다. `status()` 는 모드와 무관하게 대기열이 이 곡의 소리를 쥐고 있으면 값을 돌려준다. `AudioHost` 를 직접 만드는 앱은 고쳐야 한다.
   - `VideoPlayerLabels` 에 **필수** `pictureFailed` · `retry` · `tapToWatch` 가 더해졌다(`defaultVideoPlayerLabels` · `koVideoPlayerLabels` 를 펼치면 된다).
-- `@skeleton/video`: `usePlayQueue()` 에 `captions` · `canCaptions` · `setCaptions`(유튜브 자막, 기본 끔) · `retitle(id, title, artist?)` · `update(item)`, `YoutubeStage` 에 `follow`(소리 시각을 따라간다, `SoundClock` 타입 공개). 영상이 끝내 붙지 못하면 안내(`pictureFailed`)와 다시 시도(`retry`), 브라우저가 음소거 영상을 막으면 `tapToWatch` 를 보인다.
+- `@skeleton/video`: `usePlayQueue()` 에 `captions` · `canCaptions` · `setCaptions`(유튜브 자막, 기본 끔) · `retitle(id, title, artist?)` · `update(item)`. 영상이 끝내 붙지 못하면 안내(`pictureFailed`)와 다시 시도(`retry`), 브라우저가 음소거 영상을 막으면 `tapToWatch` 를 보인다.
 
 ### Added — 진행 막대 · 음량 · 전체 화면 · 알약 전환 (2026-11-16)
 

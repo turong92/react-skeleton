@@ -9,9 +9,9 @@ export type Routing = {
   stageOpen: boolean
 }
 
-/** 소리 판 주소 - 우리 영상의 `source.audio`, 유튜브의 `audio`(따로 받아 둔 것). 없으면 null */
+/** 소리 판 주소 - 우리 영상의 `source.audio`. 없으면(유튜브 포함) null */
 export const audioUrlOf = (item: QueueItem): string | null =>
-  (item.kind === 'media' ? item.source.audio : item.audio) || null
+  (item.kind === 'media' ? item.source.audio : null) || null
 
 export const hasAudio = (item: QueueItem): boolean => audioUrlOf(item) !== null
 

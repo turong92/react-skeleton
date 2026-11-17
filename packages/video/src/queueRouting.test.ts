@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { QueueItem } from './playQueue'
-import { audioUrlOf, canPlayNow, firstAudioUrl, hasAudio, routeOf } from './queueRouting'
+import { canPlayNow, firstAudioUrl, hasAudio, routeOf } from './queueRouting'
 
 const song: QueueItem = {
   kind: 'media',
@@ -68,23 +68,8 @@ describe('firstAudioUrl', () => {
   })
 })
 
-describe('youtube with a sound file', () => {
-  const ytSound: QueueItem = {
-    kind: 'youtube',
-    id: 'ys',
-    title: 'YS',
-    videoId: 'abc',
-    audio: '/media/ys/audio.m4a',
-  }
-  it('counts as having sound - plays as a song, and from the queue <audio> unless the video is on screen', () => {
-    expect(audioUrlOf(ytSound)).toBe('/media/ys/audio.m4a')
-    expect(hasAudio(ytSound)).toBe(true)
-    expect(canPlayNow(ytSound, { preferred: 'audio', stageOpen: false })).toBe(true)
-    expect(routeOf(ytSound, { preferred: 'audio', stageOpen: true })).toBe('audio')
-    expect(routeOf(ytSound, { preferred: 'video', stageOpen: false })).toBe('audio')
-    expect(routeOf(ytSound, { preferred: 'video', stageOpen: true })).toBe('video')
-  })
-  it('a youtube item without a sound file stays video-only', () => {
+describe('youtube stays video-only', () => {
+  it('has no sound file and is always played by the on-screen player', () => {
     expect(hasAudio(yt)).toBe(false)
     expect(routeOf(yt, { preferred: 'audio', stageOpen: true })).toBe('video')
   })

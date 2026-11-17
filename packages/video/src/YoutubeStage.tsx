@@ -11,8 +11,6 @@ import { readBrowserEnv } from './browserEnv'
 import { youtubeOutput, type MediaOutput } from './mediaOutput'
 import { leaveFullscreenOf, toggleFullscreen } from './fullscreen'
 import type { AudioHost } from './queueController'
-import type { SoundClock } from './videoSync'
-import { followSoundWithYoutube } from './youtubeFollow'
 import styles from './VideoPlayer.module.css'
 
 export type YoutubeStageProps = {
@@ -32,11 +30,6 @@ export type YoutubeStageProps = {
   registerOutput?: (output: MediaOutput) => () => void
   /** 이 틀의 전체 화면을 대기열에 등록한다(앱 조작줄의 `toggleFullscreen`) - `QueueStage` 가 잇는다 */
   fullscreenHost?: AudioHost['fullscreen']
-  /**
-   * 소리를 대기열 `<audio>` 가 내는 곡(따로 받아 둔 소리 판이 있는 유튜브) - 주면 음소거로 붙여 이 소리 시각을 따라간다.
-   * 이때는 재생 · 멈춤 · 끝 · 진행을 대기열에 알리지 않는다(소리가 쥔다). 만들 때만 읽는다 - 바꾸려면 `key` 로 다시 만든다
-   */
-  follow?: SoundClock
   /** 시험 · 스토리용 - IFrame API 불러오기 */
   loadApi?: () => Promise<YouTubeApi>
 }
@@ -59,7 +52,6 @@ export function YoutubeStage({
   controls = true,
   registerOutput,
   fullscreenHost,
-  follow,
   loadApi = loadYouTubeApi,
 }: YoutubeStageProps) {
   const hostRef = useRef<HTMLDivElement>(null)
@@ -94,9 +86,9 @@ export function YoutubeStage({
     if (canFullscreen) fullscreenHost?.report(isFullscreen)
   }, [isFullscreen, canFullscreen, fullscreenHost])
   const playerRef = useRef<YouTubePlayer | null>(null)
-  const latest = useRef({ playing, onEnded, onFailed, onPlaying, controls, registerOutput, follow })
+  const latest = useRef({ playing, onEnded, onFailed, onPlaying, controls, registerOutput })
   useEffect(() => {
-    latest.current = { playing, onEnded, onFailed, onPlaying, controls, registerOutput, follow }
+    latest.current = { playing, onEnded, onFailed, onPlaying, controls, registerOutput }
   })
 
   useEffect(() => {
@@ -108,17 +100,7 @@ export function YoutubeStage({
     let started = false
     let autoplayTimer: ReturnType<typeof setTimeout> | undefined
     let unregister = () => {}
-    let stopFollowing = () => {}
     let out: ReturnType<typeof youtubeOutput> | null = null
-    // 소리를 따라가는 화면이면 대기열에는 아무것도 알리지 않는다(실패해도 소리는 그대로 흐른다)
-    const sound = latest.current.follow
-    const tell = sound
-      ? { onEnded: () => {}, onFailed: () => {}, onPlaying: () => {} }
-      : {
-          onEnded: () => latest.current.onEnded(),
-          onFailed: () => latest.current.onFailed(),
-          onPlaying: (v: boolean) => latest.current.onPlaying(v),
-        }
     const target = document.createElement('div')
     host.appendChild(target)
     loadApi().then(
@@ -126,28 +108,21 @@ export function YoutubeStage({
         if (cancelled) return
         try {
           const handlers = youtubeHandlers(api.PlayerState, {
-            onEnded: tell.onEnded,
+            onEnded: () => latest.current.onEnded(),
             onFailed: () => {
               stopWatching() // 오류가 먼저 왔다 - 멈춘 대기열이 15초 뒤 저절로 다음 곡으로 가지 않게
-              tell.onFailed()
+              latest.current.onFailed()
             },
             onPlaying: (value) => {
               if (value) started = true
               // 재생이 시작되면 유튜브가 자막을 제 설정대로 다시 올린다 - 고른 값으로 되돌린다
               if (value) out?.reapplyCaptions()
-              // 소리를 따라가는 화면은 자막 단추가 없다 - 유튜브가 제 설정대로 올린 자막을 내린다
-              if (value && sound) {
-                created?.unloadModule?.('captions')
-                created?.unloadModule?.('cc')
-              }
-              tell.onPlaying(value)
+              latest.current.onPlaying(value)
             },
           })
           created = new api.Player(target, {
             videoId,
-            playerVars: sound
-              ? { ...youtubePlayerVars(true, false), mute: 1, disablekb: 1 }
-              : youtubePlayerVars(latest.current.playing, latest.current.controls),
+            playerVars: youtubePlayerVars(latest.current.playing, latest.current.controls),
             events: {
               ...handlers,
               // 준비된 뒤에야 조작할 수 있다 - 그때 지금 원하는 재생 상태를 맞춘다
@@ -156,12 +131,6 @@ export function YoutubeStage({
               onReady: ({ target: ready }) => {
                 stopWatching()
                 if (cancelled) return
-                if (sound) {
-                  // 음소거로 붙여 소리 시각을 따라간다 - 진행 막대 · 음량은 대기열 <audio> 가 맡는다
-                  ready.mute()
-                  stopFollowing = followSoundWithYoutube(ready, api.PlayerState, sound)
-                  return
-                }
                 playerRef.current = ready
                 out = youtubeOutput(ready)
                 unregister = latest.current.registerOutput?.(out) ?? unregister
@@ -176,20 +145,19 @@ export function YoutubeStage({
             },
           })
           // 만든 뒤 준비가 안 되면 틀 수 없는 것으로 보고 다음 곡으로
-          stopWatching = watchReady(() => tell.onFailed())
+          stopWatching = watchReady(() => latest.current.onFailed())
         } catch {
-          tell.onFailed()
+          latest.current.onFailed()
         }
       },
       () => {
-        if (!cancelled) tell.onFailed()
+        if (!cancelled) latest.current.onFailed()
       },
     )
     return () => {
       cancelled = true
       stopWatching()
       clearTimeout(autoplayTimer)
-      stopFollowing()
       unregister()
       created?.destroy()
       playerRef.current = null
@@ -206,12 +174,7 @@ export function YoutubeStage({
   return (
     <div className={[styles.root, className].filter(Boolean).join(' ')}>
       <div ref={stageRef} className={styles.stage} style={{ aspectRatio: '16/9' }}>
-        {/* 소리를 따라가는 화면은 누를 수 없게 - 유튜브의 「음소거 해제」 · 키로 소리가 두 번 나지 않게 */}
-        <div
-          ref={hostRef}
-          className={styles.frameHost}
-          style={follow ? { pointerEvents: 'none' } : undefined}
-        />
+        <div ref={hostRef} className={styles.frameHost} />
       </div>
     </div>
   )

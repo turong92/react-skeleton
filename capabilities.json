@@ -2232,7 +2232,13 @@
         "createFakeGoogletag"
       ],
       "needs": ["api-client", "ui"],
-      "backend": null,
+      "backend": {
+        "modules": ["ads-web-rewarded", "ads-web-rewarded-jdbc"],
+        "oneOfModules": [],
+        "optionalModules": [],
+        "basePaths": ["/api/v1/ads/web-rewarded/sessions"],
+        "docs": ["docs/modules/ads-web-rewarded.md", "docs/modules/ads-web-rewarded-jdbc.md"]
+      },
       "status": "experimental",
       "id": "ads",
       "kind": "package",

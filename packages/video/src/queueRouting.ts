@@ -9,8 +9,11 @@ export type Routing = {
   stageOpen: boolean
 }
 
-export const hasAudio = (item: QueueItem): boolean =>
-  item.kind === 'media' && Boolean(item.source.audio)
+/** 소리 판 주소 - 우리 영상의 `source.audio`, 유튜브의 `audio`(따로 받아 둔 것). 없으면 null */
+export const audioUrlOf = (item: QueueItem): string | null =>
+  (item.kind === 'media' ? item.source.audio : item.audio) || null
+
+export const hasAudio = (item: QueueItem): boolean => audioUrlOf(item) !== null
 
 /**
  * 지금 틀 수 있나(건너뛸지).
@@ -24,7 +27,7 @@ export function canPlayNow(item: QueueItem, { preferred, stageOpen }: Routing): 
 
 /** 이 곡을 어디서 트나 - 유튜브 · 소리 판 없는 영상은 화면의 재생기, 소리 판이 있으면 소리(영상 선호이고 화면이 보이면 영상) */
 export function routeOf(item: QueueItem, { preferred, stageOpen }: Routing): 'audio' | 'video' {
-  if (item.kind === 'youtube') return 'video'
+  if (!hasAudio(item)) return 'video'
   if (hasAudio(item) && !(preferred === 'video' && stageOpen)) return 'audio'
   return 'video'
 }
@@ -32,8 +35,8 @@ export function routeOf(item: QueueItem, { preferred, stageOpen }: Routing): 'au
 /** 대기열에서 처음 만나는 소리 판 주소 - 손짓 안에서 `<audio>` 를 깨울 때 쓴다(없으면 null) */
 export function firstAudioUrl(queue: QueueState): string | null {
   for (const id of queue.order) {
-    const item = queue.items[id]!
-    if (item.kind === 'media' && item.source.audio) return item.source.audio
+    const url = audioUrlOf(queue.items[id]!)
+    if (url) return url
   }
   return null
 }

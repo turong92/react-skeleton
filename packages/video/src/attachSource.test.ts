@@ -65,6 +65,16 @@ describe('attachSource on an <audio> element', () => {
     await vi.waitFor(() => expect(instances).toHaveLength(1))
     expect(instances[0]).toMatchObject({ loaded: ['https://x/a.m3u8'], attached: audio })
   })
+
+  it('plays a plain file (not a playlist) directly even where hls.js is the engine', () => {
+    const audio = fakeVideo() as unknown as HTMLAudioElement
+    const loadHls = vi.fn()
+    attachSource(audio, '/media/y/audio.m4a', 'hlsjs', { loadHls, onFatal: vi.fn(), startAt: 7 })
+    expect(audio.src).toBe('/media/y/audio.m4a')
+    expect(loadHls).not.toHaveBeenCalled()
+    ;(audio as unknown as ReturnType<typeof fakeVideo>).fire('loadedmetadata')
+    expect(audio.currentTime).toBe(7)
+  })
 })
 
 describe('attachSource', () => {

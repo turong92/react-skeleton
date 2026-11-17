@@ -23,7 +23,14 @@ import {
   type QueueStorage,
 } from './queueStorage'
 import { createAudioHost } from './queueHost'
-import { canPlayNow, firstAudioUrl, hasAudio, routeOf, type Preference } from './queueRouting'
+import {
+  audioUrlOf,
+  canPlayNow,
+  firstAudioUrl,
+  hasAudio,
+  routeOf,
+  type Preference,
+} from './queueRouting'
 
 /**
  * 지금 곡을 어떻게 보이나. 소리 판이 있는 곡은 소리를 늘 대기열 `<audio>` 가 내고 이것은 화면만 가른다 - `audio` = 영상 없이(화면이 꺼져도 이어진다),
@@ -256,8 +263,9 @@ export function createQueueController(deps: {
     const item = currentOf(state.queue)
     if (!item) return
     halted = false
-    if (item.kind === 'media' && item.source.audio) {
-      audio.start({ url: item.source.audio, at, play: true, itemId: item.id })
+    const url = audioUrlOf(item)
+    if (url) {
+      audio.start({ url, at, play: true, itemId: item.id })
       // 시작하자마자 못 틀어 멈췄거나 다른 곡으로 넘어갔으면(동기로 알림이 온다) 덮어쓰지 않는다
       if (halted || state.queue.currentId !== item.id) return
       awake = true
@@ -364,7 +372,20 @@ export function createQueueController(deps: {
     },
     move: (id: string, to: number) => dispatch({ type: 'move', id, to }),
     /** 곡 이름만 바꾼다(재생 · 순서는 그대로) */
-    retitle: (id: string, title: string, artist?: string) => dispatch({ type: 'retitle', id, title, artist }),
+    retitle: (id: string, title: string, artist?: string) =>
+      dispatch({ type: 'retitle', id, title, artist }),
+    /**
+     * 같은 id 곡의 내용을 바꾼다. 지금 곡(화면 재생기로 트는 중)에 소리 판이 새로 생기면 - 틀고 있고 `<audio>` 를 깨워 둔 적이 있을 때만 그 자리에서 소리로 옮겨 탄다.
+     * 아니면(멈춰 있음 · 손짓 없이는 `<audio>` 가 못 트는 기기) 지금 곡은 그대로 두고 바꾸지 않는다 - 앱이 곡 목록과 다시 맞출 때, 곡이 바뀐 뒤에 들어간다
+     */
+    update: (item: QueueItem) => {
+      const was = state.queue.items[item.id]
+      const gains =
+        was !== undefined && state.queue.currentId === item.id && !hasAudio(was) && hasAudio(item)
+      if (gains && !(state.playing && awake)) return
+      dispatch({ type: 'update', item })
+      if (gains) begin(output?.read().currentTime ?? 0)
+    },
     clear: () => {
       dispatch({ type: 'clear' })
       audio.stop()
@@ -394,7 +415,7 @@ export function createQueueController(deps: {
     /** 지금 곡을 노래(소리만)로 틀 수 있나 - 소리 판이 있고 이 기기가 틀 수 있을 때(유튜브 · 소리 판 없는 영상은 false) */
     canAudio: () => {
       const item = currentOf(state.queue)
-      return item?.kind === 'media' && Boolean(item.source.audio) && audio.canPlay()
+      return item !== null && hasAudio(item) && audio.canPlay()
     },
 
     /** 지금 시각 · 길이 - 같은 값이면 같은 객체를 돌려준다(`useSyncExternalStore` 용) */

@@ -38,9 +38,11 @@ export function attachSource(
   const seek = () => {
     video.currentTime = startAt!
   }
+  // 재생 목록이 아닌 그냥 소리 · 영상 파일(유튜브에서 받아 둔 m4a 같은)은 어느 기기든 요소가 바로 튼다
+  const direct = engine === 'native' || /\.(m4a|mp4|mp3|aac|webm|ogg|opus)($|[?#])/i.test(url)
   // 네이티브는 메타데이터가 오면 옮긴다. hls.js 는 처음부터 그 시각을 받아야 한다 - 안 그러면 0 초 조각부터 받아 틀다가 옮긴다
-  if (startAt && engine === 'native') video.addEventListener('loadedmetadata', seek, { once: true })
-  if (engine === 'native') {
+  if (startAt && direct) video.addEventListener('loadedmetadata', seek, { once: true })
+  if (direct) {
     video.src = url
   } else {
     loadHls().then(

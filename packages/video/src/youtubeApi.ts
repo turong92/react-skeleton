@@ -13,9 +13,13 @@ export type YouTubePlayer = {
   /** 자막 모듈 켜고 끄기(문서에 없는 API 라 없을 수도 있다) */
   loadModule?: (name: string) => void
   unloadModule?: (name: string) => void
+  /** 소리를 따라갈 때만 쓴다(youtubeFollow) */
+  getPlayerState?: () => number
+  getPlaybackRate?: () => number
+  setPlaybackRate?: (rate: number) => void
 }
 
-export type YouTubeStates = { ENDED: number; PLAYING: number; PAUSED: number }
+export type YouTubeStates = { ENDED: number; PLAYING: number; PAUSED: number; BUFFERING?: number }
 
 export type YouTubeApi = {
   Player: new (

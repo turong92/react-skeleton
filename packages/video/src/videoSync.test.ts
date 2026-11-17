@@ -13,7 +13,7 @@ const input = (over: Partial<SyncInput> = {}): SyncInput => ({
 describe('planSync', () => {
   it('leaves a video that is on the sound alone: normal speed, playing', () => {
     expect(planSync(input())).toEqual({ seekTo: null, rate: 1, play: true })
-    expect(planSync(input({ video: 10.03 }))).toEqual({ seekTo: null, rate: 1, play: true })
+    expect(planSync(input({ video: 10.015 }))).toEqual({ seekTo: null, rate: 1, play: true })
   })
 
   it('waits paused when a little ahead (up to 1.3 s) and wakes when the sound gets there - no jump back', () => {
@@ -36,9 +36,12 @@ describe('planSync', () => {
     expect(planSync(input({ video: 14 }))).toMatchObject({ seekTo: 10.5, play: false })
   })
 
-  it('catches up with 5% faster playback when slightly behind, and waits with 5% slower when slightly ahead', () => {
-    expect(planSync(input({ video: 9.8 }))).toEqual({ seekTo: null, rate: 1.05, play: true })
-    expect(planSync(input({ video: 10.08 }))).toEqual({ seekTo: null, rate: 0.95, play: true })
+  it('catches up faster the further behind it is (up to 25%), and slows down as much when slightly ahead', () => {
+    expect(planSync(input({ video: 9.8 }))).toEqual({ seekTo: null, rate: 1.25, play: true })
+    expect(planSync(input({ video: 9.95 }))).toEqual({ seekTo: null, rate: 1.1, play: true })
+    expect(planSync(input({ video: 9.97 }))).toEqual({ seekTo: null, rate: 1.05, play: true })
+    expect(planSync(input({ video: 10.08 }))).toEqual({ seekTo: null, rate: 0.85, play: true })
+    expect(planSync(input({ video: 9.99 }))).toEqual({ seekTo: null, rate: 1, play: true })
     // 0.1 초보다 앞서면 멈춰 기다린다
     expect(planSync(input({ video: 10.2 }))).toEqual({
       seekTo: null,
@@ -164,7 +167,7 @@ describe('followSound', () => {
     video.currentTime = 9.8
     sound.at = 10
     vi.advanceTimersByTime(250)
-    expect(video.playbackRate).toBe(1.05)
+    expect(video.playbackRate).toBe(1.25)
     video.currentTime = 10
     vi.advanceTimersByTime(250)
     expect(video.playbackRate).toBe(1)
@@ -194,7 +197,7 @@ describe('followSound', () => {
     const { video, sound, stop } = setup({ sound: 10 })
     video.currentTime = 9.8
     vi.advanceTimersByTime(250)
-    expect(video.playbackRate).toBe(1.05)
+    expect(video.playbackRate).toBe(1.25)
     stop()
     expect(video.playbackRate).toBe(1)
     sound.at = 90
@@ -244,7 +247,7 @@ describe('followSound', () => {
     video.currentTime = 9.8
     sound.at = 10
     await vi.advanceTimersByTimeAsync(250)
-    expect(video.playbackRate).toBe(1.05) // 다시 따라간다
+    expect(video.playbackRate).toBe(1.25) // 다시 따라간다
   })
 
   it('stays blocked when the tap is refused too', async () => {

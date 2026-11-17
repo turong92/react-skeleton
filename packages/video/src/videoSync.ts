@@ -1,9 +1,11 @@
 /** 이보다 크게 어긋나면 옮긴다(초) */
 const JUMP = 0.3
 /** 이보다 작게 어긋난 것은 어긋남으로 치지 않는다(초) */
-const NEAR = 0.04
-/** 작게 어긋났을 때 따라잡는 속도 차이 */
-const NUDGE = 0.05
+const NEAR = 0.02
+/** 작게 어긋났을 때 어긋난 만큼 속도를 바꾼다 - 1초 어긋남당 이만큼(0.1초 뒤처지면 1.2배) */
+const GAIN = 2
+/** 속도를 바꾸는 상한 - 0.3초 뒤처져도 1.25배까지 */
+const NUDGE_MAX = 0.25
 /** 옮긴 뒤 이 시간 안에는 다시 옮기지 않는다 - 옮긴 자리를 받아 오는 중이다(ms) */
 const SETTLE_MS = 1000
 /** 옮길 때 소리보다 이만큼 앞을 겨눈다 - 받는 동안 소리가 흐른다(초) */
@@ -32,7 +34,7 @@ export type SyncInput = {
 export type SyncPlan = { seekTo: number | null; rate: number; play: boolean; wakeInMs?: number }
 
 /**
- * 영상(음소거)이 소리를 따라가는 법 - 소리가 기준이다. 크게 어긋나면 소리 시각으로 옮기고, 작게 어긋나면 속도를 살짝 바꿔 수렴하고, 거의 맞으면 1.
+ * 영상(음소거)이 소리를 따라가는 법 - 소리가 기준이다. 크게 어긋나면 소리 시각으로 옮기고, 작게 어긋나면 어긋난 만큼 속도를 바꿔(최대 ±25%) 1초 안쪽에 수렴하고, 거의 맞으면 1.
  * 소리가 멈추면 영상도 멈춘다(사용자가 소리를 옮겼으면 영상도 그 자리로). 소리가 영상보다 길어 영상 끝을 지나면 영상을 끝으로 옮겨 세운다
  */
 export function planSync({
@@ -56,12 +58,15 @@ export function planSync({
     return settled
       ? { seekTo: sound + AHEAD, rate: 1, play: false }
       : { seekTo: null, rate: 1, play: true }
-  if (Math.abs(drift) > NEAR)
-    return { seekTo: null, rate: drift > 0 ? 1 - NUDGE : 1 + NUDGE, play: true }
+  if (Math.abs(drift) > NEAR) {
+    // 어긋난 만큼 빠르게 · 느리게 - 0.05 단위로 끊어 매 걸음 속도를 바꾸지 않는다
+    const nudge = Math.round(Math.min(NUDGE_MAX, Math.abs(drift) * GAIN) * 20) / 20
+    return { seekTo: null, rate: drift > 0 ? 1 - nudge : 1 + nudge, play: true }
+  }
   return { seekTo: null, rate: 1, play: true }
 }
 
-type FollowVideo = Pick<
+export type FollowVideo = Pick<
   HTMLMediaElement,
   | 'currentTime'
   | 'duration'

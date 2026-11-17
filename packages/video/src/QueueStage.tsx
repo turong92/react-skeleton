@@ -1,4 +1,5 @@
-import { useContext, useEffect } from 'react'
+import { useContext, useEffect, useMemo } from 'react'
+import styles from './VideoPlayer.module.css'
 import { QueueContext, usePlayQueue } from './usePlayQueue'
 import { VideoPlayer } from './VideoPlayer'
 import type { VideoPlayerProps } from './videoPlayerProps'
@@ -43,11 +44,47 @@ function ConnectedQueueStage({
     return () => controller.setStage(false)
   }, [controller])
 
+  const host = controller.host
+  const follow = useMemo(
+    () => ({
+      position: () => host.status()?.at ?? 0,
+      playing: () => host.status()?.playing === true,
+    }),
+    [host],
+  )
   const item = queue.current
   if (!item) return null
+  if (item.kind === 'youtube' && item.audio) {
+    // 소리 판이 있는 유튜브 - 소리는 대기열 <audio>, 영상 모드에서만 음소거 유튜브가 따라간다(노래 모드면 표지만)
+    if (queue.mode !== 'video')
+      return (
+        <div className={[styles.root, className].filter(Boolean).join(' ')}>
+          <div className={styles.stage} style={{ aspectRatio: '16/9' }}>
+            {item.thumb && <img className={styles.poster} src={item.thumb} alt="" />}
+          </div>
+        </div>
+      )
+    return (
+      <YoutubeStage
+        key={item.id}
+        className={className}
+        videoId={item.videoId}
+        restart={0}
+        playing
+        onEnded={controller.youtubeEnded}
+        onFailed={controller.youtubeFailed}
+        onPlaying={controller.youtubePlaying}
+        controls={false}
+        follow={follow}
+        fullscreenHost={controller.host.fullscreen}
+        loadApi={loadYouTubeApi}
+      />
+    )
+  }
   if (item.kind === 'youtube') {
     return (
       <YoutubeStage
+        key={`${item.id}:plain`}
         className={className}
         videoId={item.videoId}
         restart={queue.stageStart}

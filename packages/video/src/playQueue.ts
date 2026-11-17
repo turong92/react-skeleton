@@ -3,8 +3,11 @@ import type { PlayerSource } from './playerSource'
 type ItemBase = { id: string; title: string; artist?: string; thumb?: string }
 /** 우리 영상 · 소리(재생기가 트는 것) */
 export type MediaItem = ItemBase & { kind: 'media'; source: PlayerSource }
-/** 유튜브 영상 - IFrame Player 로 영상으로만 튼다(노래 모드 · 전환 단추 없음) */
-export type YoutubeItem = ItemBase & { kind: 'youtube'; videoId: string }
+/**
+ * 유튜브 영상 - IFrame Player 로 튼다. `audio`(따로 받아 둔 소리 판)가 없으면 영상으로만(노래 모드 · 전환 단추 없음),
+ * 있으면 우리 영상처럼 소리는 대기열 `<audio>` 가 내고 영상 모드에서만 음소거 유튜브가 소리를 따라간다
+ */
+export type YoutubeItem = ItemBase & { kind: 'youtube'; videoId: string; audio?: string }
 export type QueueItem = MediaItem | YoutubeItem
 
 export type RepeatMode = 'off' | 'one' | 'all'
@@ -47,6 +50,8 @@ export type QueueAction =
   | { type: 'restore'; state: QueueState }
   /** 곡 이름만 바꾼다(순서 · 지금 곡 그대로) - 곡 목록에서 이름을 고쳤을 때 */
   | { type: 'retitle'; id: string; title: string; artist?: string }
+  /** 같은 id 곡의 내용을 바꾼다(이름 · 소리 판이 나중에 생긴 곡) - 순서 · 재생은 그대로 */
+  | { type: 'update'; item: QueueItem }
 
 /** 현재 곡을 맨 앞에 두고 나머지를 섞는다(Fisher-Yates) */
 export function shuffled(ids: readonly string[], firstId: string | null, random: Random): string[] {
@@ -135,10 +140,19 @@ export function reduceQueue(state: QueueState, action: QueueAction): QueueState 
     case 'retitle': {
       const item = state.items[action.id]
       if (!item) return state
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars -- artist 를 빼고 나머지만 쓴다
       const { artist: _old, ...rest } = item
-      const next = { ...rest, title: action.title, ...(action.artist ? { artist: action.artist } : {}) } as QueueItem
+      const next = {
+        ...rest,
+        title: action.title,
+        ...(action.artist ? { artist: action.artist } : {}),
+      } as QueueItem
       return { ...state, items: { ...state.items, [action.id]: next } }
     }
+    case 'update':
+      return state.items[action.item.id]
+        ? { ...state, items: { ...state.items, [action.item.id]: action.item } }
+        : state
   }
 }
 

@@ -80,6 +80,7 @@ export function usePlayQueue() {
     move: controller.move,
     clear: controller.clear,
     retitle: controller.retitle,
+    update: controller.update,
     setPreferred: controller.setPreferred,
     setRepeat: controller.setRepeat,
     setShuffle: controller.setShuffle,

@@ -34,7 +34,14 @@ export function elementOutput(
 export function youtubeOutput(
   player: Pick<
     YouTubePlayer,
-    'getCurrentTime' | 'getDuration' | 'seekTo' | 'setVolume' | 'mute' | 'unMute' | 'loadModule' | 'unloadModule'
+    | 'getCurrentTime'
+    | 'getDuration'
+    | 'seekTo'
+    | 'setVolume'
+    | 'mute'
+    | 'unMute'
+    | 'loadModule'
+    | 'unloadModule'
   >,
 ): MediaOutput & { reapplyCaptions: () => void } {
   // 유튜브는 재생이 시작될 때 자막 모듈을 (영상 · 계정 설정대로) 다시 올린다 - 원하는 값을 기억했다가 재생이 시작되면 다시 건다

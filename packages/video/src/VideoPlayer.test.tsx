@@ -25,7 +25,8 @@ describe('VideoPlayer before the first press', () => {
     expect(html).toContain('src="https://cdn.test/v/a/p-1.jpg"')
     expect(html).toMatch(/<button[^>]*aria-label="Play video, 0:42"/)
     expect(html).not.toContain('disabled')
-    expect(html).not.toContain('<video')
+    // 요소는 숨긴 채 있다(아이폰에서 손짓 안에 깨우려고) - 영상 파일은 안 건드린다
+    expect(html).toMatch(/<video[^>]*hidden/)
     expect(html).not.toContain('m3u8')
   })
 
@@ -95,6 +96,7 @@ describe('VideoPlayer before the first press', () => {
       start: () => {},
       stop: () => {},
       registerOutput: () => () => {},
+      registerVideoWaker: () => () => {},
       fullscreen: { register: () => () => {}, report: () => {} },
       quality: { register: () => ({ reportHeight: () => {}, release: () => {} }) },
       status: () => null,
@@ -117,6 +119,7 @@ describe('VideoPlayer before the first press', () => {
       start: () => {},
       stop: () => {},
       registerOutput: () => () => {},
+      registerVideoWaker: () => () => {},
       fullscreen: { register: () => () => {}, report: () => {} },
       quality: { register: () => ({ reportHeight: () => {}, release: () => {} }) },
       status: () => ({ playing: true, at: 42 }),

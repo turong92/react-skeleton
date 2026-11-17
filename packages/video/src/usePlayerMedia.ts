@@ -22,6 +22,25 @@ type Args = {
   ready: boolean
   /** 대기열의 `<audio>` - 있으면 소리 모드는 거기에 붙이고(걷지 않는다) 곡이 끝나거나 틀리는 것은 대기열이 맡는다 */
   host?: AudioHost
+  /** 노래 → 영상을 잇는 동안 영상을 음소거로 붙잡아 둔다(대기열이 거는 음량도 그동안은 음소거로) - `last` 는 그 사이 걸린 음량. 이 effect 가 `registerOutput` effect 보다 먼저 선언돼야 첫 음량이 붙잡힌다 */
+  hush?: React.RefObject<Hush>
+}
+
+export type Hush = { on: boolean; last: [volume: number, muted: boolean] | null }
+
+function holdMute(media: HTMLMediaElement, hush: React.RefObject<Hush>) {
+  hush.current.on = true
+  media.muted = true
+}
+
+/** 붙잡아 둔 음소거를 풀고 그 사이 걸린 음량을 건다 */
+function unhush(media: HTMLMediaElement | null, hush: React.RefObject<Hush>) {
+  const was = hush.current.on
+  hush.current.on = false
+  if (!was || !media) return
+  const [volume, muted] = hush.current.last ?? [media.volume, false]
+  media.volume = volume
+  media.muted = muted
 }
 
 /**
@@ -38,6 +57,7 @@ export function usePlayerMedia({
   session,
   ready,
   host,
+  hush,
 }: Args) {
   useEffect(() => {
     const { grant: g, plan: p, state: s, loadHls: load } = latest.current
@@ -46,9 +66,10 @@ export function usePlayerMedia({
     const url = audioMode ? g.audio : s.kind ? urlOf(g, s.kind) : null
     if (s.phase !== 'playing' || !media || !p?.engine || !url) return
     const hosted = audioMode ? host : undefined
-    // 영상으로 틀기 시작하면 대기열의 소리를 멈추고 대기열을 영상 모드로 - 소리가 나는 중이면 영상이 그 자리를 틀 수 있을 때까지 소리를 둔다(끊김 없이).
-    // hls.js 기기만: 네이티브(아이폰)는 손짓 밖의 play() 를 거절할 수 있고 play() 전에는 조각을 다 안 받아, 예전처럼 바로 넘긴다
-    const handing = !audioMode && s.play && p.engine === 'hlsjs' && host?.status()?.playing === true
+    // 영상으로 틀기 시작하면 대기열의 소리를 멈추고 대기열을 영상 모드로 - 소리가 나는 중이면 영상이 그 자리를 틀 수 있을 때까지 소리를 둔다(끊김 없이)
+    const held = hush?.current
+    if (hush) unhush(null, hush)
+    const handing = !audioMode && s.play && hush !== undefined && host?.status()?.playing === true
     if (!audioMode && !handing) host?.stop()
     let settled = false
     const fail = () => {
@@ -91,7 +112,11 @@ export function usePlayerMedia({
     }
     const input = watchInput(document)
     let cancelPlay = () => {}
+    /** 노래 → 영상을 잇는 중이면 그 마무리(사용자가 멈췄을 때 부른다) */
+    let endHanding: (() => void) | null = null
     const onPause = () => {
+      // 잇는 중(영상은 음소거로 미리 트는 중)에 온 멈춤 - 붙이며 나는 멈춤(readyState 0)은 빼고, 사용자 멈춤으로 마무리한다
+      if (endHanding && media.readyState >= 2) return endHanding()
       cancelPlay() // 붙이는 사이에 멈췄다(사용자 · 잠금화면 · 대기열) - 메타데이터가 와도 다시 틀지 않는다
       // 방금 실제 입력(화면 · 키)이 있었다면 사용자가 누른 멈춤 - OS 가 잠그며 건 것은 입력 없이 온다
       const touching = input.recent()
@@ -128,19 +153,43 @@ export function usePlayerMedia({
       const start = () => {
         cancelPlay = playAfterAttach(media, engine, () => report(false))
       }
-      if (handing)
-        cancelPlay = handOverWhenReady(
+      if (handing && hush) {
+        // 지금(손짓 안에서) 영상을 음소거로 틀어 둔다 - 아이폰도 허락하고, 틀어야 조각을 받는다. 그동안 소리는 대기열이 낸다
+        holdMute(media, hush)
+        const stopPlay = playAfterAttach(media, engine, () => report(false))
+        const stopWait = handOverWhenReady(
           media,
           () => host!.status()?.at ?? null,
           () => {
-            // 기다리는 사이 대기열을 멈췄으면 영상도 멈춘 채로 넘긴다
+            endHanding = null
+            // 영상이 소리 자리까지 왔다 - 영상 소리를 먼저 켜 보고(아이폰이 막으면 그 자리에서 멈춘다) 되면 대기열 소리를 끈다
             const still = host!.status()?.playing === true
+            unhush(media, hush)
+            if (still && media.paused) {
+              // 막혔다 - 영상은 접고 나던 노래를 그대로 잇는다
+              const at = host!.status()?.at ?? s.at
+              dispatch({ type: 'join', at, play: true })
+              return
+            }
             host!.stop()
-            if (still) start()
-            else report(false)
+            if (!still) {
+              media.pause()
+              report(false)
+            }
           },
         )
-      else if (s.play) start()
+        endHanding = () => {
+          endHanding = null
+          stopWait()
+          host!.stop()
+          unhush(media, hush)
+          report(false)
+        }
+        cancelPlay = () => {
+          stopPlay()
+          stopWait()
+        }
+      } else if (s.play) start()
       else report(false)
     }
     return () => {
@@ -151,6 +200,9 @@ export function usePlayerMedia({
       media.removeEventListener('pause', onPause)
       media.removeEventListener('ended', onEnd)
       media.removeEventListener('error', fail)
+      endHanding = null
+      // 잇다 만 영상이 같은 요소로 다시 쓰일 수 있다(화질 · 재시도) - 붙잡은 음소거를 요소에서 푼다
+      if (hush && held?.on) unhush(media as HTMLMediaElement, hush)
       handle?.destroy()
       if (hosted) return // 소리는 대기열 것이다 - 이 재생기가 사라져도 이어진다
       media.pause()

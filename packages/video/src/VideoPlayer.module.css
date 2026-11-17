@@ -38,6 +38,10 @@
   background: var(--inverse);
 }
 
+.video[hidden] {
+  display: none;
+}
+
 .cover {
   position: absolute;
   inset: 0;

@@ -7,7 +7,7 @@ import { loadHlsLight } from './loadHls'
 import { FullscreenButton } from './FullscreenButton'
 import { elementOutput } from './mediaOutput'
 import { ModePill } from './ModePill'
-import { firstStep, grantExpired, planPlayback, type QualityChoice } from './playbackPlan'
+import { firstStep, grantExpired, planPlayback, urlOf, type QualityChoice } from './playbackPlan'
 import { createPlayIntent } from './playIntent'
 import { usePlayingReport, type Latest } from './playerRuntime'
 import { playbackOf, type PlayerSource } from './playerSource'
@@ -27,7 +27,7 @@ import type { VideoPlayback } from './types'
 import type { VideoPlayerProps } from './videoPlayerProps'
 import { useHiddenHandoff } from './useHiddenHandoff'
 import { useLockScreen } from './useLockScreen'
-import { usePlayerMedia } from './usePlayerMedia'
+import { usePlayerMedia, type Hush } from './usePlayerMedia'
 import styles from './VideoPlayer.module.css'
 import { formatDuration } from './videoView'
 
@@ -121,6 +121,19 @@ export function VideoPlayer({
     }
   })
   const [intent] = useState(createPlayIntent)
+  const hush = useRef<Hush>({ on: false, last: null })
+
+  // 「영상」을 누르는 손짓 안에서 대기열이 부른다 - 아이폰(네이티브)은 손짓 안에서 한 번 틀어 본 요소만 나중에 소리 내며 틀게 둔다
+  useEffect(() => {
+    if (!audioHost) return
+    return audioHost.registerVideoWaker(() => {
+      const { grant: g, plan: p, state: st } = latest.current
+      const video = videoRef.current
+      const kind = st.pick === 'auto' ? p?.order[0] : st.pick
+      if (!video || p?.engine !== 'native' || !kind || !video.paused) return
+      wakeAudio(video, urlOf(g, kind))
+    })
+  }, [audioHost])
   const report = usePlayingReport(latest)
 
   usePlayerMedia({
@@ -133,11 +146,18 @@ export function VideoPlayer({
     session: state.session,
     ready: plan?.engine != null,
     host: audioHost,
+    hush,
   })
   useHiddenHandoff({
     // 소리 판 실패로 영상에 돌아온 직후(notice)에는 다시 넘기지 않는다
     // 노래 → 영상을 기다리는 중(대기열 소리가 아직 나는 중)에는 넘길 것이 없다 - 영상 시각이 아직 옛 자리다
-    watching: autoAudioWhenHidden && playing && mode === 'video' && audioOk && !state.notice && !audioHost?.status()?.playing,
+    watching:
+      autoAudioWhenHidden &&
+      playing &&
+      mode === 'video' &&
+      audioOk &&
+      !state.notice &&
+      !audioHost?.status()?.playing,
     engine: plan?.engine,
     latest,
     refs,
@@ -169,7 +189,15 @@ export function VideoPlayer({
   useEffect(() => {
     const video = videoRef.current
     if (!showingVideo || !video || !audioHost) return
-    return audioHost.registerOutput(elementOutput(video))
+    const base = elementOutput(video)
+    // 노래 → 영상을 잇는 동안은 음소거를 붙잡는다 - 걸린 음량은 기억했다가 넘길 때 건다
+    return audioHost.registerOutput({
+      ...base,
+      applyVolume: (volume, muted) => {
+        hush.current.last = [volume, muted]
+        base.applyVolume(volume, muted || hush.current.on)
+      },
+    })
   }, [showingVideo, audioHost])
 
   const [isFullscreen, setFullscreen] = useState(false)
@@ -405,18 +433,19 @@ export function VideoPlayer({
           maxInlineSize: `min(100%, calc(80vh * ${ratio}))`,
         }}
       >
-        {showVideo ? (
-          <video
-            ref={videoRef}
-            className={styles.video}
-            poster={grant.poster || undefined}
-            controls={controls}
-            playsInline
-            preload="auto"
-            controlsList="nodownload"
-            aria-label={labels.video}
-          />
-        ) : (
+        {/* 소리 모드에서도 요소는 남긴다(숨김) - 「영상」을 누르는 손짓 안에서 깨워 둘 요소가 있어야 아이폰이 나중 재생을 막지 않는다 */}
+        <video
+          ref={videoRef}
+          hidden={!showVideo}
+          className={styles.video}
+          poster={grant.poster || undefined}
+          controls={controls}
+          playsInline
+          preload="auto"
+          controlsList="nodownload"
+          aria-label={labels.video}
+        />
+        {!showVideo && (
           <>
             {grant.poster && <img className={styles.poster} src={grant.poster} alt="" />}
             {!playing && (

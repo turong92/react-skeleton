@@ -152,6 +152,19 @@ describe('queue progress', () => {
     expect(second.c.progress()).toEqual({ currentTime: 10, duration: 0 })
   })
 
+  it('wakes the drawn video inside the press when switching to video, and only then', () => {
+    const { c } = setup([song('a')])
+    const wake = vi.fn()
+    const off = c.host.registerVideoWaker(wake)
+    c.setPreferred('audio')
+    expect(wake).not.toHaveBeenCalled()
+    c.setPreferred('video')
+    expect(wake).toHaveBeenCalledTimes(1)
+    off()
+    c.setPreferred('video')
+    expect(wake).toHaveBeenCalledTimes(1)
+  })
+
   it('keeps the last time while the same song moves between video and sound (no jump to 0)', () => {
     const { c, engine } = setup([song('a')])
     c.play()

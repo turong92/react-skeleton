@@ -11,6 +11,7 @@ export function createAudioHost(ctx: {
   visible: () => boolean
   emit: (patch: Partial<ControllerState>) => void
   registerOutput: AudioHost['registerOutput']
+  registerVideoWaker: AudioHost['registerVideoWaker']
   fullscreen: AudioHost['fullscreen']
   quality: AudioHost['quality']
   /** 요소를 깨웠다 / 틀기 시작했다 - 다시 깨우지 않아도 된다 */
@@ -21,6 +22,7 @@ export function createAudioHost(ctx: {
   const { audio, state, emit } = ctx
   return {
     registerOutput: ctx.registerOutput,
+    registerVideoWaker: ctx.registerVideoWaker,
     fullscreen: ctx.fullscreen,
     quality: ctx.quality,
     element: () => audio.element() as HTMLAudioElement | null,

@@ -100,6 +100,11 @@ export type AudioHost = {
   }
   /** 화면 `<video>` 를 소리 내는 쪽으로 등록한다(진행 막대 · 음량) - 돌려받은 함수가 푼다 */
   registerOutput: (output: MediaOutput) => () => void
+  /**
+   * 「영상」을 누르는 손짓 안에서 그려진 재생기의 `<video>` 를 깨운다(`setPreferred('video')` 가 바로 부른다) - 아이폰은 손짓 밖에서 소리 있는
+   * 재생을 막는데, 전환은 effect 를 거쳐 손짓 밖에서 일어나서다. 돌려받은 함수가 푼다(자기 것일 때만)
+   */
+  registerVideoWaker: (wake: () => void) => () => void
 }
 
 export type QueueController = ReturnType<typeof createQueueController>
@@ -170,6 +175,13 @@ export function createQueueController(deps: {
   }
 
   /** 그려진 무대의 전체 화면 대상을 등록한다. 푸는 함수는 그 사이 새로 등록된 것을 지우지 않는다 */
+  let videoWaker: (() => void) | null = null
+  const registerVideoWaker = (wake: () => void) => {
+    videoWaker = wake
+    return () => {
+      if (videoWaker === wake) videoWaker = null
+    }
+  }
   const registerFullscreen = (target: FullscreenTarget) => {
     fullscreenTarget = target
     emit({})
@@ -214,7 +226,8 @@ export function createQueueController(deps: {
     // 같은 곡을 영상 <-> 소리로 넘기는 사이(새 요소가 아직 못 불러옴)에는 0 초로 튀지 않게 읽어 둔 값을 둔다
     // 멈췄으면(실패 포함) 기다릴 것이 없다 - 보류하지 않는다. 영상 출력이 풀리면 등록 해제가 보류를 푼다
     const loading = state.playing
-    const switching = loading && from.id !== null && from.id === progressFrom.id && from.mode !== progressFrom.mode
+    const switching =
+      loading && from.id !== null && from.id === progressFrom.id && from.mode !== progressFrom.mode
     if (switching && next.duration === 0 && progressNow.duration > 0) return
     progressFrom = from
     if (next.currentTime === progressNow.currentTime && next.duration === progressNow.duration)
@@ -354,8 +367,10 @@ export function createQueueController(deps: {
     setRepeat: (repeat: RepeatMode) => dispatch({ type: 'repeat', repeat }),
     setShuffle: (on: boolean) => dispatch({ type: 'shuffle', on, random }),
     /** 앱이 처음 선호를 정할 때(영상 앱은 `video`) - 사용자가 전환하면 그 뒤로는 사용자의 선택이 이긴다 */
-    setPreferred: (preferred: Preference) =>
-      emit({ preferred, preferSignal: state.preferSignal + 1 }),
+    setPreferred: (preferred: Preference) => {
+      if (preferred === 'video') videoWaker?.()
+      emit({ preferred, preferSignal: state.preferSignal + 1 })
+    },
 
     setVolume: (volume: number) => {
       if (Number.isNaN(volume)) return
@@ -496,6 +511,7 @@ export function createQueueController(deps: {
       emit,
       registerOutput,
       quality: { register: registerQuality },
+      registerVideoWaker,
       fullscreen: {
         register: registerFullscreen,
         report: (active) => emit({ fullscreen: active }),

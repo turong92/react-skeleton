@@ -22,6 +22,9 @@ export const ErrorCodes = {
   // modules/auth auth/api/AuthErrorCode.kt
   AUTH_INVALID_CREDENTIALS: 'AUTH.INVALID_CREDENTIALS',
 
+  // modules/ads-web-rewarded — 세션 열기 · 보상 요청이 하루 상한에 걸림(409). 다른 코드는 화면이 갈라 보지 않아 두지 않는다
+  ADS_WEB_REWARDED_DAILY_LIMIT: 'ADS_WEB_REWARDED.DAILY_LIMIT',
+
   // 계정 수명주기(kotlin-skeleton docs/account-http-contract.md 10절) — AUTH.* 는 modules/auth · auth-session, ACCOUNT.* 는 modules/account
   AUTH_EMAIL_NOT_VERIFIED: 'AUTH.EMAIL_NOT_VERIFIED',
   AUTH_ACCOUNT_SUSPENDED: 'AUTH.ACCOUNT_SUSPENDED',

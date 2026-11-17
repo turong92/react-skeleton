@@ -1,0 +1,28 @@
+{
+  "name": "@skeleton/ads",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "웹 보상형 광고(Google Ad Manager GPT rewarded) — createWebRewardedApi(세션 열기 · 보상 요청), loadGoogletag(스크립트 로더) · createFakeGoogletag(소리 없는 가짜), createRewardedAd(동의 → 재생 → 보상 흐름 컨트롤러). 백엔드 modules/ads-web-rewarded 짝",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "types": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run --pool forks --testTimeout 30000 --hookTimeout 60000",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@skeleton/api-client": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
+  }
+}

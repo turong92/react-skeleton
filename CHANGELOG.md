@@ -11,6 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `@skeleton/storage`: `StoredImage` 의 움짤 영상이 실패하면(`onError`) `display` `<img>` 로 바꿔 그리고, `IntersectionObserver` 가 있으면 화면 밖에서 멈춘다.
 
+### Changed — 소리는 대기열 하나로 · 영상은 음소거로 붙인다 · 자막
+
+- `@skeleton/video`(깨지는 변경): 소리 판이 있는 곡은 영상 모드에서도 소리를 대기열 `<audio>` 가 내고 `VideoPlayer` 의 `<video>` 는 음소거로 그 위에 붙는다(소리 판 없는 곡 · 유튜브는 지금처럼 화면의 재생기가 소리를 낸다). 그래서:
+  - `VideoPlayerProps` 에서 `joinSignal` · `preferredMode` · `preferSignal` 이 빠지고 `queueMode`(`playerProps` 가 채운다)가 생겼다.
+  - `usePlayQueue()` 에서 `audioStart` · `preferSignal` 이 빠졌다.
+  - `AudioHost` 에서 `wake` · `start` · `stop` 이 빠지고 **필수** `setPreferred` 가 생겼다. `status()` 는 모드와 무관하게 대기열이 이 곡의 소리를 쥐고 있으면 값을 돌려준다. `AudioHost` 를 직접 만드는 앱은 고쳐야 한다.
+  - `VideoPlayerLabels` 에 **필수** `pictureFailed` · `retry` · `tapToWatch` 가 더해졌다(`defaultVideoPlayerLabels` · `koVideoPlayerLabels` 를 펼치면 된다).
+- `@skeleton/video`: `usePlayQueue()` 에 `captions` · `canCaptions` · `setCaptions`(유튜브 자막, 기본 끔) · `retitle(id, title, artist?)` · `update(item)`, `YoutubeStage` 에 `follow`(소리 시각을 따라간다, `SoundClock` 타입 공개). 영상이 끝내 붙지 못하면 안내(`pictureFailed`)와 다시 시도(`retry`), 브라우저가 음소거 영상을 막으면 `tapToWatch` 를 보인다.
+
 ### Added — 진행 막대 · 음량 · 전체 화면 · 알약 전환 (2026-11-16)
 
 - `@skeleton/video`: `QueueProgress` · `useQueueProgress`(지금 시각 / 길이 + 끌어서 옮기기, 노래 · 영상 · 유튜브 공통) · `usePlayQueue` 에 `currentIndex` · `volume` · `muted` · `setVolume` · `setMuted` · `canSetVolume`(아이폰은 false) · `fullscreen` · `canFullscreen` · `toggleFullscreen`. 음량은 `<storageKey>.volume` 에 따로 저장된다. `QueueStage` · `VideoPlayer` 의 `controls`(기본 켬)로 영상 · 유튜브 자체 조작줄을 끄면 앱 조작줄만 쓸 수 있고, 유튜브에는 같은 모양의 전체 화면 칩이 뜬다. `PlayQueueLabels.seek` 추가.

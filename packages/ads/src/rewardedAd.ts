@@ -64,6 +64,12 @@ export function defaultIsUserActive(): boolean {
   return (typeof navigator !== 'undefined' && navigator.userActivation?.isActive) ?? true
 }
 
+/** 서버가 하루 상한(409)으로 거절했으면 `limited`, 그 밖은 `failed` — 세션 열기 · 보상 요청이 같은 규칙 */
+const failure = (error: unknown): RewardedAdState =>
+  isErrorCode(error, ErrorCodes.ADS_WEB_REWARDED_DAILY_LIMIT)
+    ? { status: 'limited' }
+    : { status: 'failed', error }
+
 /** 한 번의 `start()` 가 쥐고 있는 것 */
 type Run = {
   googletag?: GoogletagLike
@@ -136,7 +142,7 @@ export function createRewardedAd(options: RewardedAdOptions): RewardedAd {
           if (run === r) set({ status: 'rewarded', grant })
         },
         (error: unknown) => {
-          if (run === r) set({ status: 'failed', error })
+          if (run === r) set(failure(error))
         },
       )
     })
@@ -162,6 +168,7 @@ export function createRewardedAd(options: RewardedAdOptions): RewardedAd {
     },
     start() {
       if (destroyed || !RESTARTABLE.has(state.status)) return
+      if (run) destroySlot(run)
       const r: Run = { grantRequested: false, removeListeners: [] }
       run = r
       set({ status: 'opening' })
@@ -171,12 +178,7 @@ export function createRewardedAd(options: RewardedAdOptions): RewardedAd {
         try {
           sessionId = (await api.openSession(purpose)).sessionId
         } catch (error) {
-          if (!alive()) return
-          set(
-            isErrorCode(error, ErrorCodes.ADS_WEB_REWARDED_DAILY_LIMIT)
-              ? { status: 'limited' }
-              : { status: 'failed', error },
-          )
+          if (alive()) set(failure(error))
           return
         }
         if (!alive()) return

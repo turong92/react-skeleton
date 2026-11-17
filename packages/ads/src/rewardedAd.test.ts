@@ -158,6 +158,36 @@ describe('createRewardedAd', () => {
     expect(count.define).toBe(0)
   })
 
+  it('dailyLimitAtGrantIsLimitedNotFailed', async () => {
+    const limit = new ApiRequestError(
+      {
+        code: ErrorCodes.ADS_WEB_REWARDED_DAILY_LIMIT,
+        title: 'limit',
+        status: 409,
+        timestamp: '2026-11-18T03:00:00Z',
+      },
+      't',
+      's',
+      'p',
+    )
+    const api = {
+      openSession: () =>
+        Promise.resolve({
+          sessionId: 'wrs_1',
+          purpose: 'unlock',
+          expiresAt: '2026-11-18T03:15:00Z',
+        }),
+      grant: vi.fn(() => Promise.reject(limit)),
+    }
+    const { ad } = setup('granted', { api })
+    ad.start()
+    await flush()
+    ad.watch()
+    await vi.advanceTimersByTimeAsync(8000)
+    expect(api.grant).toHaveBeenCalledTimes(1)
+    expect(ad.getState().status).toBe('limited')
+  })
+
   it('noFillIsUnavailable', async () => {
     const { ad, count } = setup('no-fill')
     ad.start()

@@ -37,7 +37,7 @@ export function RewardedAdPrompt({
         </>
       }
     >
-      <p>{reward}</p>
+      <div>{reward}</div>
     </Dialog>
   )
 }

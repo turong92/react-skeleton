@@ -39,6 +39,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 | 파일 업로드 (이미지 · 첨부) | `storage` | `--packages storage` | `--modules storage,storage-s3` | 업로더 인스턴스(검증 규칙을 백엔드와 같게)와 업로드 화면 조각(FilePicker + Progress + useUpload — apps/sample 의 AttachmentPanel). |
 | 결제 (토스 · 스트라이프) | `payment` | `--packages payment` | `--modules payment,payment-jdbc,payment-toss` — `payment-toss` \| `payment-stripe` 중 고른다 | 결제 위젯(토스 SDK) · 주문/금액 검증 컨트롤러(백엔드 앱) · 성공/실패 리다이렉트 라우트(confirmRequestFromTossRedirect). 백엔드 모듈이 HTTP 를 열지 않는다. |
 | 봇 방지 (캡차) | `captcha-turnstile` | `--packages captcha-turnstile` | (모듈 없음) | 가입 · 로그인 폼에 <Turnstile> 을 놓고 attachTurnstileToken 으로 요청에 붙인다. 검증은 백엔드. |
+| 웹에서 광고를 보면 보상(포인트 · 1회 사용권)을 주는 보상형 광고 | `ads` | `--packages ads` | (모듈 없음) | 앱 버튼에서 useRewardedAd(...).start() 를 부르고 <RewardedAdPrompt ad reward="…" /> 를 한 번 둔다. 광고 단위(adUnitPath)와 목적(purpose)은 앱이 정한다. rewarded 가 되면 앱이 자기 쿼리를 무효화한다. 로컬 · 시험은 loadGoogletag 에 createFakeGoogletag().loader 를 끼운다. 보상 처리(point 적립 / 1회용 토큰)와 하루 상한은 백엔드 설정이다. |
 | 관리자 · 대시보드 · 목록 · 상세 · 폼 · 설정 화면 | `screen-patterns` | (기본 포함 — 덧붙일 것 없음) | (모듈 없음) | 기본 포함. 화면마다 가장 가까운 Pattern 을 복사하고 데이터 훅(TanStack Query)을 잇는다(apps/sample/src/notes 를 보고). |
 | 다크 모드 · 테마 | `theme` | (기본 포함 — 덧붙일 것 없음) | (모듈 없음) | 기본 포함. 색 값은 tokens.json 에서. |
 | 브랜드 색 · 간격 · 글자 크기 바꾸기 | `tokens` | (기본 포함 — 덧붙일 것 없음) | (모듈 없음) | 기본 포함. packages/tokens/tokens.json 만 고치고 pnpm tokens. |
@@ -90,6 +91,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 | `storage` | 파일 업로드 — 검증 → presign → 브라우저에서 스토리지로 직접 PUT(진행률 · 취소 · 멀티파트)과 useUpload 훅, 올린 뒤 서버 검사(완료 호출)와 사진 부품(ImageUploadField · StoredImage · useFilePreview). | --packages storage | storage, storage-s3 | stable | 파일 업로드, 이미지 업로드, 첨부파일, 프리사인, 대용량 업로드, 멀티파트 / file upload, image upload, attachment, presigned url, multipart, s3 |
 | `payment` | 결제 한 벌 — 장부 API(주문 만들기 · 승인 · 내 결제 내역 · 환불 요청/거둠) · TanStack Query 훅(CONFIRMING 동안만 되묻는 useOrder) · 토스 결제창 열기(openCheckout) · 돌아온 주소 읽기(readCheckoutReturn) · 오류 코드, 화면 부품(상태 알약 · 결제 내역 · 결과 · 한 건 + 환불 줄 · 환불 요청 창 · 테스트 결제 표시 — 문구는 labels prop, 한국어는 koPaymentLabels, 카드는 「현대카드 ····1234」), 구독(자동결제 — 플랜 카드 · 카드 등록 창 열기 openBillingAuth · 내 구독 카드 · 해지 확인 창 · 백엔드 payment.subscription.enabled 가 켜진 앱만), 그리고 장부 없이 쓰는 얇은 호출(승인/취소/환불 경로는 앱이 정한다). | --packages payment | payment, payment-jdbc | experimental | 결제, 토스, 스트라이프, 환불, 카드 결제, 결제 승인 / payment, toss, stripe, checkout, refund, billing |
 | `captcha-turnstile` | 봇 방지 — Cloudflare Turnstile 스크립트 로더 · <Turnstile> · 토큰 훅 · 요청에 토큰 붙이기. | --packages captcha-turnstile | captcha-turnstile | stable | 캡차, 봇 방지, 스팸 방지, 로봇 확인, 가입 폼 보호 / captcha, turnstile, bot protection, cloudflare, spam protection |
+| `ads` | 웹 보상형 광고(Google Ad Manager GPT rewarded) — 앱 버튼 → 세션 열기 → 광고 준비 → 보상 내용을 적은 동의 창 → [보기] 클릭 안에서만 재생 → 보상 요청(세션당 한 번) → 보상 받음 / 중간에 닫음 / 광고 없음 / 하루 상한 / 실패. useRewardedAd · RewardedAdPrompt · createRewardedAd(React 없는 흐름 컨트롤러) · createWebRewardedApi · loadGoogletag(스크립트 한 번 · 재시도) · createFakeGoogletag(로컬 · 시험용 가짜, 미디어가 없어 소리가 나지 않는다). 광고 시청을 서버가 증명하지는 못하므로 남용은 서버의 1회용 세션 · 최소 경과 시간 · 하루 상한이 막는다. | --packages ads | — | experimental | 보상형 광고, 광고 보고 보상, 리워드 광고, 광고 시청, 웹 광고, 구글 광고 / rewarded ad, rewarded web, watch ad for reward, google publisher tag, gpt, ad manager |
 | `seo` | 검색 · 공유 미리보기 — 제목 · 설명 · canonical · OG/Twitter · hreflang · JSON-LD 를 SPA(effect)와 SSR(문자열)에서 같은 규칙으로, 빌드 때 sitemap.xml · robots.txt 까지. | --packages seo | — | stable | 검색 노출, SEO, 메타 태그, OG 이미지, 링크 미리보기, 사이트맵 / seo, meta tags, open graph, twitter card, canonical, sitemap |
 | `marketing` | 공개 페이지 조립 부품 — Hero · 기능 · FAQ · 후기 · CTA · 푸터 · 요금제(월/연) · 쿠키 동의 · 약관 문서 페이지 · 404/500/점검 화면. | --packages marketing | — | stable | 랜딩, 랜딩 페이지, 홈페이지, 요금제, 가격표, FAQ / landing page, marketing site, pricing table, faq, terms of service, privacy policy |
 | `legal` | 법적 문서 · 동의 — 서버의 약관 읽기(마크다운 · 판 · 효력일) · 가입 동의 체크리스트(필수/선택 · 전체 동의 · 문서 다이얼로그) · 첫 로그인과 새 판 재동의(403 LEGAL.RECONSENT_REQUIRED 를 api-client 계층에서 받아 동의 뒤 막힌 호출을 다시 보낸다) · 동의 설정(이력 · 선택 동의 철회). | 항상 | legal, legal-jdbc | stable | 약관 동의, 가입 동의 체크박스, 재동의, 개인정보 동의, 마케팅 수신 동의, 동의 철회 / terms consent, sign-up consent checkbox, re-consent, privacy consent, marketing opt-in, withdraw consent |
@@ -416,6 +418,19 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 - 문서: `packages/captcha-turnstile/README.md`
 - 쓰지 않는 경우: 토큰 검증은 백엔드(TurnstileVerifier)가 한다 — 이 패키지는 받아서 붙이기만 / reCAPTCHA · hCaptcha 는 없다
 - 키워드: 캡차, 봇 방지, 스팸 방지, 로봇 확인, 가입 폼 보호 / captcha, turnstile, bot protection, cloudflare, spam protection
+
+### `ads` — 웹 보상형 광고(Google Ad Manager GPT rewarded) — 앱 버튼 → 세션 열기 → 광고 준비 → 보상 내용을 적은 동의 창 → [보기] 클릭 안에서만 재생 → 보상 요청(세션당 한 번) → 보상 받음 / 중간에 닫음 / 광고 없음 / 하루 상한 / 실패. useRewardedAd · RewardedAdPrompt · createRewardedAd(React 없는 흐름 컨트롤러) · createWebRewardedApi · loadGoogletag(스크립트 한 번 · 재시도) · createFakeGoogletag(로컬 · 시험용 가짜, 미디어가 없어 소리가 나지 않는다). 광고 시청을 서버가 증명하지는 못하므로 남용은 서버의 1회용 세션 · 최소 경과 시간 · 하루 상한이 막는다.
+
+- 종류 · 상태: package · experimental
+- 위치: `@skeleton/ads` (`packages/ads`)
+- 켜는 법: `--packages ads` — 함께 따라오는 패키지 `api-client` · `auth` · `legal` · `theme` · `time` · `tokens` · `ui`
+- 필요한 것: `api-client` · `ui`
+- 백엔드: 없음(프런트만)
+- 주요 진입점: `useRewardedAd` · `RewardedAdPrompt` · `createRewardedAd` · `createWebRewardedApi` · `loadGoogletag` · `createFakeGoogletag`
+- 보고 따라 할 스토리: `packages/ads/src/RewardedAdPrompt.stories.tsx`
+- 문서: `packages/ads/README.md`
+- 쓰지 않는 경우: 배너 · 전면 광고는 없다 — 보상형(rewarded) 광고 단위 하나만 다룬다 / 보상의 근거는 브라우저 신호다 — 서버 한도가 남용을 막는다(구글이 서명한 시청 증명은 아니다) / AdMob 앱 광고 · 광고 네트워크 갈아 끼우기 · 동의 관리(CMP/TCF) 배너는 없다
+- 키워드: 보상형 광고, 광고 보고 보상, 리워드 광고, 광고 시청, 웹 광고, 구글 광고 / rewarded ad, rewarded web, watch ad for reward, google publisher tag, gpt, ad manager, web ads
 
 ### `seo` — 검색 · 공유 미리보기 — 제목 · 설명 · canonical · OG/Twitter · hreflang · JSON-LD 를 SPA(effect)와 SSR(문자열)에서 같은 규칙으로, 빌드 때 sitemap.xml · robots.txt 까지.
 

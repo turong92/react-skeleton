@@ -16,7 +16,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@skeleton/api-client": "workspace:*"
+    "@skeleton/api-client": "workspace:*",
+    "@skeleton/ui": "workspace:*"
   },
   "peerDependencies": {
     "react": "^19.0.0"

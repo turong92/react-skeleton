@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — 웹 보상형 광고
+
+- `@skeleton/ads`(새 패키지, 실험적): 웹 보상형 광고(Google Ad Manager GPT rewarded)의 동의 → 재생 → 보상 흐름. `createWebRewardedApi`(`/ads/web-rewarded` 세션 열기 · 보상 요청, `basePath`) · `createRewardedAd`(React 없는 컨트롤러 — 보기는 사용자 손짓 안에서만, 보상 요청은 세션당 한 번, 끝난 뒤 저절로 다시 시작하지 않는다, 하루 상한이면 슬롯을 만들지 않는다) · `useRewardedAd` · `RewardedAdPrompt`(동의 창) · `loadGoogletag`(스크립트 한 번 · 재시도) · `createFakeGoogletag`(로컬 · 시험 · 스토리용, 미디어가 없어 소리가 나지 않는다). README 에 구글 정책 체크(패키지가 지키는 것 / 앱이 지킬 것). 백엔드 `modules/ads-web-rewarded` 짝.
+- `@skeleton/api-client`: `ErrorCodes.ADS_WEB_REWARDED_DAILY_LIMIT`(`ADS_WEB_REWARDED.DAILY_LIMIT`).
+
 ### Changed
 
 - `@skeleton/storage`: `StoredImage` 의 움짤 영상이 실패하면(`onError`) `display` `<img>` 로 바꿔 그리고, `IntersectionObserver` 가 있으면 화면 밖에서 멈춘다.

@@ -2221,6 +2221,51 @@
     },
     {
       "patterns": [],
+      "stories": ["packages/ads/src/RewardedAdPrompt.stories.tsx"],
+      "docs": ["packages/ads/README.md"],
+      "entryPoints": [
+        "useRewardedAd",
+        "RewardedAdPrompt",
+        "createRewardedAd",
+        "createWebRewardedApi",
+        "loadGoogletag",
+        "createFakeGoogletag"
+      ],
+      "needs": ["api-client", "ui"],
+      "backend": null,
+      "status": "experimental",
+      "id": "ads",
+      "kind": "package",
+      "package": "@skeleton/ads",
+      "path": "packages/ads",
+      "stampFlag": {
+        "flag": "--packages ads",
+        "included": "flag",
+        "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
+        "alsoVia": [],
+        "optOut": null
+      },
+      "summary": "웹 보상형 광고(Google Ad Manager GPT rewarded) — 앱 버튼 → 세션 열기 → 광고 준비 → 보상 내용을 적은 동의 창 → [보기] 클릭 안에서만 재생 → 보상 요청(세션당 한 번) → 보상 받음 / 중간에 닫음 / 광고 없음 / 하루 상한 / 실패. useRewardedAd · RewardedAdPrompt · createRewardedAd(React 없는 흐름 컨트롤러) · createWebRewardedApi · loadGoogletag(스크립트 한 번 · 재시도) · createFakeGoogletag(로컬 · 시험용 가짜, 미디어가 없어 소리가 나지 않는다). 광고 시청을 서버가 증명하지는 못하므로 남용은 서버의 1회용 세션 · 최소 경과 시간 · 하루 상한이 막는다.",
+      "notFor": [
+        "배너 · 전면 광고는 없다 — 보상형(rewarded) 광고 단위 하나만 다룬다",
+        "보상의 근거는 브라우저 신호다 — 서버 한도가 남용을 막는다(구글이 서명한 시청 증명은 아니다)",
+        "AdMob 앱 광고 · 광고 네트워크 갈아 끼우기 · 동의 관리(CMP/TCF) 배너는 없다"
+      ],
+      "keywords": {
+        "ko": ["보상형 광고", "광고 보고 보상", "리워드 광고", "광고 시청", "웹 광고", "구글 광고"],
+        "en": [
+          "rewarded ad",
+          "rewarded web",
+          "watch ad for reward",
+          "google publisher tag",
+          "gpt",
+          "ad manager",
+          "web ads"
+        ]
+      }
+    },
+    {
+      "patterns": [],
       "stories": ["packages/seo/src/Seo.stories.tsx"],
       "docs": ["packages/seo/README.md"],
       "entryPoints": [
@@ -4109,6 +4154,11 @@
       "need": "봇 방지 (캡차)",
       "capabilities": ["captcha-turnstile"],
       "byHand": "가입 · 로그인 폼에 <Turnstile> 을 놓고 attachTurnstileToken 으로 요청에 붙인다. 검증은 백엔드."
+    },
+    {
+      "need": "웹에서 광고를 보면 보상(포인트 · 1회 사용권)을 주는 보상형 광고",
+      "capabilities": ["ads"],
+      "byHand": "앱 버튼에서 useRewardedAd(...).start() 를 부르고 <RewardedAdPrompt ad reward=\"…\" /> 를 한 번 둔다. 광고 단위(adUnitPath)와 목적(purpose)은 앱이 정한다. rewarded 가 되면 앱이 자기 쿼리를 무효화한다. 로컬 · 시험은 loadGoogletag 에 createFakeGoogletag().loader 를 끼운다. 보상 처리(point 적립 / 1회용 토큰)와 하루 상한은 백엔드 설정이다."
     },
     {
       "need": "관리자 · 대시보드 · 목록 · 상세 · 폼 · 설정 화면",

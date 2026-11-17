@@ -1417,6 +1417,10 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
     onConfirm: noop,
   }),
   'captcha-turnstile#Turnstile': () => ({ siteKey: 'site-key', onToken: noop }),
+  'ads#RewardedAdPrompt': () => ({
+    ad: { status: 'ready', start: noop, watch: noop, cancel: noop },
+    reward: '10 points',
+  }),
 }
 
 /** 훅 — 작은 컴포넌트 안에서 이 인자로 불러 본다 */
@@ -1439,6 +1443,13 @@ export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
   'auth#useAuthMethods': () => [{ methods: () => new Promise(noop) }, true],
   'auth#useSocialLoginCallback': () => [{ complete: () => new Promise(noop) }, '?code=x'],
   'captcha-turnstile#useTurnstileToken': () => [],
+  'ads#useRewardedAd': () => [
+    {
+      api: { openSession: () => new Promise(noop), grant: () => new Promise(noop) },
+      adUnitPath: '/1/rewarded',
+      purpose: 'unlock',
+    },
+  ],
   'dashboard#useDashboard': () => [
     fakeDashboardApi(),
     { from: '2026-01-01', to: '2026-01-02' },

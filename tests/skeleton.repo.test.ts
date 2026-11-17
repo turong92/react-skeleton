@@ -29,6 +29,7 @@ describe('the skeleton repo', () => {
       'apps/workbench',
     ])
     expect(dirs('package')).toEqual([
+      'packages/ads',
       'packages/api-client',
       'packages/app-control',
       'packages/auth',
@@ -100,6 +101,7 @@ describe('the skeleton repo', () => {
       .map((w) => w.dir)
       .sort()
     expect(withStories).toEqual([
+      'packages/ads',
       'packages/app-control',
       'packages/auth',
       'packages/author-profile',

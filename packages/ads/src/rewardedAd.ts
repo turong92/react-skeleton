@@ -60,7 +60,7 @@ const RESTARTABLE: ReadonlySet<RewardedAdStatus> = new Set([
   'failed',
 ])
 
-function defaultIsUserActive(): boolean {
+export function defaultIsUserActive(): boolean {
   return (typeof navigator !== 'undefined' && navigator.userActivation?.isActive) ?? true
 }
 

@@ -120,6 +120,55 @@ describe('queue progress', () => {
     expect(c.progress()).toEqual({ currentTime: 0, duration: 0 })
   })
 
+  it('goes back to 0 when the next song has not loaded yet', () => {
+    const { c } = setup([clip('a'), clip('b')])
+    c.play()
+    const off = c.registerOutput(fakeOutput(7, 60))
+    c.next()
+    off()
+    expect(c.progress()).toEqual({ currentTime: 0, duration: 0 })
+  })
+
+  it('stops holding the old time when the switch is abandoned (stage closed) or the user seeks', () => {
+    const { c, engine } = setup([song('a')])
+    c.play()
+    engine.time = 754
+    engine.length = 5400
+    refresh(c)
+    c.host.stop()
+    const off = c.registerOutput(fakeOutput(0, 0))
+    expect(c.progress().currentTime).toBe(754)
+    off()
+    expect(c.progress()).toEqual({ currentTime: 0, duration: 0 })
+
+    const second = setup([song('a')])
+    second.c.play()
+    second.engine.time = 754
+    second.engine.length = 5400
+    refresh(second.c)
+    second.c.host.stop()
+    second.c.registerOutput(fakeOutput(0, 0))
+    second.c.seek(10)
+    expect(second.c.progress()).toEqual({ currentTime: 10, duration: 0 })
+  })
+
+  it('keeps the last time while the same song moves between video and sound (no jump to 0)', () => {
+    const { c, engine } = setup([song('a')])
+    c.play()
+    engine.time = 754
+    engine.length = 5400
+    refresh(c)
+    // 영상으로 넘김: 대기열 소리를 멈추고 화면 영상은 아직 못 불러왔다
+    c.host.stop()
+    const out = fakeOutput(0, 0)
+    c.registerOutput(out)
+    expect(c.progress()).toEqual({ currentTime: 754, duration: 5400 })
+    out.time = 755
+    out.length = 5400
+    refresh(c)
+    expect(c.progress()).toEqual({ currentTime: 755, duration: 5400 })
+  })
+
   it('keeps a newer output when an older one unregisters late', () => {
     const { c } = setup([clip('a')])
     c.play()

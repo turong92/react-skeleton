@@ -187,6 +187,7 @@ export function createQueueController(deps: {
     return () => {
       if (output !== next) return
       output = null
+      progressFrom = { id: state.queue.currentId, mode: state.mode } // 넘기다 무대가 닫혔으면 더 기다리지 않는다
       refreshProgress()
     }
   }
@@ -206,8 +207,16 @@ export function createQueueController(deps: {
     }
     return output ? output.read() : NO_PROGRESS
   }
+  let progressFrom: { id: string | null; mode: QueueMode } = { id: null, mode: 'audio' }
   const refreshProgress = () => {
     const next = readProgress()
+    const from = { id: state.queue.currentId, mode: state.mode }
+    // 같은 곡을 영상 <-> 소리로 넘기는 사이(새 요소가 아직 못 불러옴)에는 0 초로 튀지 않게 읽어 둔 값을 둔다
+    // 멈췄으면(실패 포함) 기다릴 것이 없다 - 보류하지 않는다. 영상 출력이 풀리면 등록 해제가 보류를 푼다
+    const loading = state.playing
+    const switching = loading && from.id !== null && from.id === progressFrom.id && from.mode !== progressFrom.mode
+    if (switching && next.duration === 0 && progressNow.duration > 0) return
+    progressFrom = from
     if (next.currentTime === progressNow.currentTime && next.duration === progressNow.duration)
       return
     progressNow = next
@@ -396,6 +405,7 @@ export function createQueueController(deps: {
         const id = state.queue.currentId
         if (id !== null && audio.loadedItem() === id) audio.seek(t)
       } else output?.seek(t)
+      progressFrom = { id: state.queue.currentId, mode: state.mode } // 옮긴 시각을 바로 보인다(넘기는 중 보류를 푼다)
       refreshProgress()
     },
 

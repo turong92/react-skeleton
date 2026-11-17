@@ -6,7 +6,7 @@ export type HlsLike = {
   destroy(): void
 }
 export type HlsCtor = {
-  new (): HlsLike
+  new (config?: { startPosition?: number }): HlsLike
   isSupported(): boolean
   Events: { ERROR: string }
 }
@@ -17,7 +17,7 @@ export type AttachOptions = {
   loadHls: LoadHls
   /** 이 걸음으로는 더 못 튼다(hls.js 치명 오류 · 불러오기 실패 · MSE 없음) */
   onFatal: () => void
-  /** 메타데이터가 오면 이 시각(초)으로 간다 - 화질을 바꿔도 시각을 잇는다 */
+  /** 이 시각(초)부터 튼다 - 화질 · 모드를 바꿔도 시각을 잇는다. 네이티브는 메타데이터가 오면 옮기고, hls.js 는 `startPosition` 으로 그 자리부터 받는다 */
   startAt?: number
 }
 
@@ -38,7 +38,8 @@ export function attachSource(
   const seek = () => {
     video.currentTime = startAt!
   }
-  if (startAt) video.addEventListener('loadedmetadata', seek, { once: true })
+  // 네이티브는 메타데이터가 오면 옮긴다. hls.js 는 처음부터 그 시각을 받아야 한다 - 안 그러면 0 초 조각부터 받아 틀다가 옮긴다
+  if (startAt && engine === 'native') video.addEventListener('loadedmetadata', seek, { once: true })
   if (engine === 'native') {
     video.src = url
   } else {
@@ -46,7 +47,7 @@ export function attachSource(
       (Hls) => {
         if (destroyed) return
         if (!Hls.isSupported()) return onFatal()
-        hls = new Hls()
+        hls = new Hls(startAt ? { startPosition: startAt } : undefined)
         hls.on(Hls.Events.ERROR, (_event, data) => {
           if (data?.fatal) onFatal()
         })

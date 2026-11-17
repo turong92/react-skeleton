@@ -149,4 +149,28 @@ describe('attachSource', () => {
     video.fire('loadedmetadata')
     expect(video.currentTime).toBe(12.5)
   })
+
+  it('tells hls.js where to start, so it does not load and play from 0 first', async () => {
+    const configs: unknown[] = []
+    const { Hls } = fakeHls()
+    const Spy = class extends (Hls as unknown as new () => object) {
+      constructor(config?: unknown) {
+        super()
+        configs.push(config)
+      }
+    } as unknown as HlsCtor
+    Object.assign(Spy, { Events: Hls.Events, isSupported: Hls.isSupported })
+    const video = fakeVideo()
+    attachSource(video as never, 'u', 'hlsjs', {
+      loadHls: async () => Spy,
+      onFatal: vi.fn(),
+      startAt: 754.2,
+    })
+    await vi.waitFor(() => expect(configs).toHaveLength(1))
+    expect(configs[0]).toEqual({ startPosition: 754.2 })
+    // hls.js 가 맡는다 - 메타데이터 때 다시 옮기면 그 사이 받은 조각을 버리고 또 받는다
+    video.currentTime = 754.2
+    video.fire('loadedmetadata')
+    expect(video.currentTime).toBe(754.2)
+  })
 })

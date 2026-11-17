@@ -62,9 +62,9 @@ function setup(engine: 'native' | 'hlsjs' | null = 'native') {
 describe('createAudioEngine', () => {
   it('puts the next song on the same element (never a new one) and plays it', () => {
     const { audio, el } = setup()
-    audio.start({ url: '/a.m3u8', at: 0, play: true, adopt: false })
+    audio.start({ url: '/a.m3u8', at: 0, play: true })
     expect(el.src).toBe('/a.m3u8')
-    audio.start({ url: '/b.m3u8', at: 0, play: true, adopt: false })
+    audio.start({ url: '/b.m3u8', at: 0, play: true })
     expect(el.src).toBe('/b.m3u8')
     expect(audio.element()).toBe(el)
     expect(el.play).toHaveBeenCalledTimes(2)
@@ -72,38 +72,29 @@ describe('createAudioEngine', () => {
 
   it('attaches hls.js to the same element and destroys the old one for the next song', async () => {
     const { audio, el, instances } = setup('hlsjs')
-    audio.start({ url: '/a.m3u8', at: 0, play: true, adopt: false })
+    audio.start({ url: '/a.m3u8', at: 0, play: true })
     await vi.waitFor(() => expect(instances).toHaveLength(1))
     expect(instances[0]).toMatchObject({ loaded: ['/a.m3u8'], attached: el })
-    audio.start({ url: '/b.m3u8', at: 0, play: true, adopt: false })
+    audio.start({ url: '/b.m3u8', at: 0, play: true })
     expect(instances[0]!.destroyed).toBe(true)
     await vi.waitFor(() => expect(instances).toHaveLength(2))
   })
 
-  it('does not attach again when the player already started it (adopt), and does not play twice', () => {
-    const { audio, el } = setup()
-    el.src = '/woken.m3u8'
-    audio.start({ url: '/a.m3u8', at: 0, play: true, adopt: true, itemId: 'a' })
-    expect(el.src).toBe('/woken.m3u8')
-    expect(el.play).not.toHaveBeenCalled()
-    expect(audio.loadedItem()).toBe('a')
-  })
-
   it('starts paused when asked to', () => {
     const { audio, el } = setup()
-    audio.start({ url: '/a.m3u8', at: 5, play: false, adopt: false })
+    audio.start({ url: '/a.m3u8', at: 5, play: false })
     expect(el.play).not.toHaveBeenCalled()
   })
 
   it('reports a fatal problem when this device cannot play HLS or there is no element', () => {
     const { audio, onFatal } = setup(null)
-    audio.start({ url: '/a.m3u8', at: 0, play: true, adopt: false })
+    audio.start({ url: '/a.m3u8', at: 0, play: true })
     expect(onFatal).toHaveBeenCalledTimes(1)
   })
 
   it('pauses, resumes and restarts', () => {
     const { audio, el } = setup()
-    audio.start({ url: '/a.m3u8', at: 0, play: true, adopt: false })
+    audio.start({ url: '/a.m3u8', at: 0, play: true })
     el.currentTime = 42
     expect(audio.position()).toBe(42)
     audio.pause()
@@ -116,7 +107,7 @@ describe('createAudioEngine', () => {
 
   it('stop keeps the attached address so the woken element stays usable', () => {
     const { audio, el } = setup()
-    audio.start({ url: '/a.m3u8', at: 0, play: true, adopt: false })
+    audio.start({ url: '/a.m3u8', at: 0, play: true })
     audio.stop()
     expect(el.paused).toBe(true)
     expect(el.src).toBe('/a.m3u8')
@@ -138,9 +129,9 @@ describe('createAudioEngine', () => {
 describe('createAudioEngine - which song is on the element', () => {
   it('remembers the song of the attached sound-only address, and forgets it on stop', () => {
     const { audio } = setup()
-    audio.start({ url: '/a.m3u8', at: 0, play: true, adopt: false, itemId: 'a' })
+    audio.start({ url: '/a.m3u8', at: 0, play: true, itemId: 'a' })
     expect(audio.loadedItem()).toBe('a')
-    audio.start({ url: '/b.m3u8', at: 0, play: true, adopt: false, itemId: 'b' })
+    audio.start({ url: '/b.m3u8', at: 0, play: true, itemId: 'b' })
     expect(audio.loadedItem()).toBe('b')
     audio.stop()
     expect(audio.loadedItem()).toBeNull()
@@ -148,7 +139,7 @@ describe('createAudioEngine - which song is on the element', () => {
 
   it('cleans hls.js up when the element goes away', async () => {
     const { audio, instances } = setup('hlsjs')
-    audio.start({ url: '/a.m3u8', at: 0, play: true, adopt: false, itemId: 'a' })
+    audio.start({ url: '/a.m3u8', at: 0, play: true, itemId: 'a' })
     await vi.waitFor(() => expect(instances).toHaveLength(1))
     audio.setElement(null)
     expect(instances[0]!.destroyed).toBe(true)
@@ -162,7 +153,7 @@ describe('createAudioEngine - refused play', () => {
     el.play.mockReturnValue(
       Promise.reject(Object.assign(new Error('x'), { name: 'NotAllowedError' })),
     )
-    audio.start({ url: '/a.m3u8', at: 0, play: true, adopt: false })
+    audio.start({ url: '/a.m3u8', at: 0, play: true })
     await Promise.resolve()
     await Promise.resolve()
     expect(onPlayRejected).toHaveBeenCalledTimes(1)
@@ -171,33 +162,10 @@ describe('createAudioEngine - refused play', () => {
   it('does not count a play that a newer song interrupted', async () => {
     const { audio, el, onPlayRejected } = setup()
     el.play.mockReturnValue(Promise.reject(Object.assign(new Error('x'), { name: 'AbortError' })))
-    audio.start({ url: '/a.m3u8', at: 0, play: true, adopt: false })
+    audio.start({ url: '/a.m3u8', at: 0, play: true })
     await Promise.resolve()
     await Promise.resolve()
     expect(onPlayRejected).not.toHaveBeenCalled()
-  })
-})
-
-describe('createAudioEngine - the player joining a song the queue already plays', () => {
-  it('keeps the hls.js instance that is playing it (no cut, no new attach)', async () => {
-    const { audio, el, instances } = setup('hlsjs')
-    audio.start({ url: '/a.m3u8', at: 0, play: true, adopt: false, itemId: 'a' })
-    await vi.waitFor(() => expect(instances).toHaveLength(1))
-    el.play.mockClear()
-    audio.start({ url: '/a.m3u8', at: 30, play: true, adopt: true, itemId: 'a' }) // 큰 화면이 이어받는다
-    expect(instances[0]!.destroyed).toBe(false)
-    expect(instances).toHaveLength(1)
-    expect(el.play).not.toHaveBeenCalled()
-    expect(audio.loadedItem()).toBe('a')
-  })
-
-  it("still drops the old song's hls.js when the player adopts a different, natively woken one", async () => {
-    const { audio, instances } = setup('hlsjs')
-    audio.start({ url: '/a.m3u8', at: 0, play: true, adopt: false, itemId: 'a' })
-    await vi.waitFor(() => expect(instances).toHaveLength(1))
-    audio.start({ url: '/b.m3u8', at: 0, play: true, adopt: true, itemId: 'b' })
-    expect(instances[0]!.destroyed).toBe(true)
-    expect(audio.loadedItem()).toBe('b')
   })
 })
 
@@ -215,7 +183,7 @@ describe('createAudioEngine - hls.js devices (chrome, android, desktop)', () => 
     el.addEventListener.mockImplementation(
       (type: string, fn: () => void) => void listeners.set(type, fn),
     )
-    audio.start({ url: '/a.m3u8', at: 0, play: true, adopt: false, itemId: 'a' })
+    audio.start({ url: '/a.m3u8', at: 0, play: true, itemId: 'a' })
     await vi.waitFor(() => expect(instances).toHaveLength(1))
     el.paused = true // 붙이면서 처음의 play() 가 지워졌다
     el.play.mockClear()
@@ -229,7 +197,7 @@ describe('createAudioEngine - hls.js devices (chrome, android, desktop)', () => 
     el.addEventListener.mockImplementation(
       (type: string, fn: () => void) => void listeners.set(type, fn),
     )
-    audio.start({ url: '/a.m3u8', at: 0, play: true, adopt: false, itemId: 'a' })
+    audio.start({ url: '/a.m3u8', at: 0, play: true, itemId: 'a' })
     await vi.waitFor(() => expect(instances).toHaveLength(1))
     audio.pause()
     el.play.mockClear()

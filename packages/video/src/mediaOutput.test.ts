@@ -75,3 +75,36 @@ describe('canSetVolumeOf', () => {
     expect(canSetVolumeOf(e)).toBe(false)
   })
 })
+
+describe('youtubeOutput captions', () => {
+  const player = () => ({
+    getCurrentTime: () => 0,
+    getDuration: () => 0,
+    seekTo: () => {},
+    setVolume: () => {},
+    mute: () => {},
+    unMute: () => {},
+    loadModule: vi.fn(),
+    unloadModule: vi.fn(),
+  })
+
+  it('unloads the captions module when captions are off, loads it when on', () => {
+    const p = player()
+    const out = youtubeOutput(p)
+    out.setCaptions?.(false)
+    expect(p.unloadModule).toHaveBeenCalledWith('captions')
+    out.setCaptions?.(true)
+    expect(p.loadModule).toHaveBeenCalledWith('captions')
+  })
+
+  it('applies the chosen value again when playback starts (youtube reloads captions on play)', () => {
+    const p = player()
+    const out = youtubeOutput(p)
+    out.reapplyCaptions()
+    expect(p.unloadModule).not.toHaveBeenCalled() // 아직 고른 값이 없으면 손대지 않는다
+    out.setCaptions?.(false)
+    p.unloadModule.mockClear()
+    out.reapplyCaptions()
+    expect(p.unloadModule).toHaveBeenCalledWith('captions')
+  })
+})

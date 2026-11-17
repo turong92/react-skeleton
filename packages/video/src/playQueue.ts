@@ -45,6 +45,8 @@ export type QueueAction =
   | { type: 'shuffle'; on: boolean; random?: Random }
   | { type: 'clear' }
   | { type: 'restore'; state: QueueState }
+  /** 곡 이름만 바꾼다(순서 · 지금 곡 그대로) - 곡 목록에서 이름을 고쳤을 때 */
+  | { type: 'retitle'; id: string; title: string; artist?: string }
 
 /** 현재 곡을 맨 앞에 두고 나머지를 섞는다(Fisher-Yates) */
 export function shuffled(ids: readonly string[], firstId: string | null, random: Random): string[] {
@@ -130,6 +132,13 @@ export function reduceQueue(state: QueueState, action: QueueAction): QueueState 
       return { ...emptyQueue, repeat: state.repeat, shuffle: state.shuffle }
     case 'restore':
       return action.state
+    case 'retitle': {
+      const item = state.items[action.id]
+      if (!item) return state
+      const { artist: _old, ...rest } = item
+      const next = { ...rest, title: action.title, ...(action.artist ? { artist: action.artist } : {}) } as QueueItem
+      return { ...state, items: { ...state.items, [action.id]: next } }
+    }
   }
 }
 

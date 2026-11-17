@@ -5,6 +5,7 @@ import { loadHlsLight } from './loadHls'
 import { bindMediaSession } from './mediaSession'
 import type { PlaybackEnv } from './playbackPlan'
 import { currentOf } from './playQueue'
+import { hasAudio } from './queueRouting'
 import { DEFAULT_QUEUE_KEY, type QueueStorage } from './queueStorage'
 import { QueueContext } from './usePlayQueue'
 
@@ -53,8 +54,8 @@ export function PlayQueueProvider({
     return () => document.removeEventListener('visibilitychange', onVisibility)
   }, [controller])
 
-  // 잠금화면 · 알림 · 이어폰의 이전/다음을 대기열에 연결한다(소리 모드일 때 - 영상 모드는 재생기가 자기 것을 묶는다)
-  const { queue, mode } = useSyncExternalStore(
+  // 잠금화면 · 알림 · 이어폰의 이전/다음을 대기열에 연결한다(소리 판이 있는 곡 - 소리가 대기열 `<audio>` 라 영상을 붙여도 그대로다. 소리 판 없는 영상은 재생기가 자기 것을 묶는다)
+  const { queue } = useSyncExternalStore(
     controller.subscribe,
     controller.getState,
     controller.getState,
@@ -62,7 +63,7 @@ export function PlayQueueProvider({
   const current = currentOf(queue)
   const title = current?.title
   const poster = current?.thumb
-  const bound = current !== null && mode === 'audio'
+  const bound = current !== null && hasAudio(current)
   useEffect(() => {
     if (!bound) return
     return bindMediaSession(typeof navigator === 'undefined' ? undefined : navigator.mediaSession, {

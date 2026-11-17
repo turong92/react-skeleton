@@ -1,4 +1,4 @@
-import type { AudioEngine, AudioLike, AudioStart } from './audioEngine'
+import type { AudioEngine, AudioLike } from './audioEngine'
 import { listenAudio } from './audioEvents'
 import {
   currentOf,
@@ -25,25 +25,24 @@ import {
 import { createAudioHost } from './queueHost'
 import { canPlayNow, firstAudioUrl, hasAudio, routeOf, type Preference } from './queueRouting'
 
-/** `audio` = 대기열이 쥔 `<audio>` 로 소리만(화면이 꺼져도 이어진다), `video` = 화면의 재생기(영상 · 유튜브)가 튼다 */
+/**
+ * 지금 곡을 어떻게 보이나. 소리 판이 있는 곡은 소리를 늘 대기열 `<audio>` 가 내고 이것은 화면만 가른다 - `audio` = 영상 없이(화면이 꺼져도 이어진다),
+ * `video` = 그 위에 음소거 영상을 붙여 보인다. 소리 판이 없는 곡 · 유튜브는 늘 `video` - 화면의 재생기가 소리째 튼다
+ */
 export type QueueMode = 'audio' | 'video'
 
 export type ControllerState = {
   queue: QueueState
-  /** 지금 곡이 놓인 곳 */
+  /** 지금 곡을 보이는 모드 */
   mode: QueueMode
   /** 사용자가 고른 「영상 / 노래」 - 곡이 바뀌어도 유지된다 */
   preferred: Preference
   playing: boolean
   /**
-   * 화면의 재생기(유튜브 · 영상)를 (다시) 처음부터 틀라는 신호 - 대기열이 그 곡을 틀기 시작할 때마다 오른다
+   * 화면의 재생기(유튜브 · 소리 판 없는 영상)를 (다시) 처음부터 틀라는 신호 - 대기열이 그 곡을 틀기 시작할 때마다 오른다
    * (다음 곡으로 넘어갔을 때 · 한 곡 반복 · 다시 틀기)
    */
   stageStart: number
-  /** 대기열이 이 곡을 소리로 (다시) 틀기 시작할 때마다 오른다 - 이미 그려진 큰 화면의 재생기가 이어받는다 */
-  audioStart: number
-  /** `setPreferred` 를 부를 때마다 오른다(값이 같아도) - 그려진 재생기가 「선호 ≠ 지금 모드」면 그 모드로 옮긴다 */
-  preferSignal: number
   /** 음량 0~1 - 대기열 `<audio>` · 화면 영상 · 유튜브에 같이 걸린다 */
   volume: number
   muted: boolean
@@ -55,6 +54,9 @@ export type ControllerState = {
   fullscreen: boolean
   /** 큰 화면을 전체 화면으로 할 수 있나 - 무대가 대상을 등록했고 영상 모드일 때(노래 모드 · 아이폰의 유튜브는 아니다) */
   canFullscreen: boolean
+  /** 자막을 켰나(기본 끔) · 지금 화면의 재생기가 자막을 다룰 수 있나(유튜브) */
+  captions: boolean
+  canCaptions: boolean
 }
 
 /** 화질 항목 - `height` 는 실제 높이(px), 모르면 null(자동은 늘 null) */
@@ -82,17 +84,16 @@ export type FullscreenTarget = { toggle: () => void }
 export type ProgressSnapshot = { currentTime: number; duration: number }
 const NO_PROGRESS: ProgressSnapshot = { currentTime: 0, duration: 0 }
 
-/** `VideoPlayer` 가 대기열의 `<audio>` 를 빌려 쓰는 길 - 요소를 새로 만들지 않아 아이폰에서도 화면이 꺼진 채 다음 곡으로 넘어간다 */
+/**
+ * `VideoPlayer` 가 대기열과 맺는 길. 소리 판이 있는 곡의 소리는 늘 대기열의 `<audio>` 가 내고(요소를 새로 만들지 않아 아이폰에서도 화면이 꺼진 채
+ * 다음 곡으로 넘어간다) 재생기는 그 위에 음소거 영상만 붙인다 - 소리 시각을 `status` 로 읽어 따라간다
+ */
 export type AudioHost = {
   element: () => HTMLAudioElement | null
-  wake: (url: string) => void
-  start: (request: Omit<AudioStart, 'itemId'>) => void
-  /** 영상으로 돌아간다 - 소리를 멈추고 대기열을 「영상」 모드로 */
-  stop: () => void
-  /** 대기열이 지금 곡을 소리로 틀고 있나 - 큰 화면의 재생기가 처음부터 틀지 않고 이어받는다. 아니면 null */
+  /** 대기열이 지금 곡의 소리를 `<audio>` 에 붙여 쥐고 있나 - 소리 시각 · 재생 여부. 아니면 null */
   status: () => { playing: boolean; at: number } | null
-  /** 대기열의 지금 음량 · 음소거 - 잠깐 음소거로 붙잡았던 요소에 되돌려 걸 때 */
-  levels: () => { volume: number; muted: boolean }
+  /** 선호를 정한다(사용자가 「영상 / 노래」를 눌렀다) - 소리는 건드리지 않고 영상을 붙이거나 뗀다 */
+  setPreferred: (preferred: Preference) => void
   /** 그려진 재생기의 화질 - `register` 로 선택지를 꽂고 돌려받은 핸들로 지금 나오는 높이를 알리고 푼다(자기 것일 때만 먹는다) */
   quality: { register: (target: QualityTarget) => QualityHandle }
   /** 그려진 무대의 전체 화면 - `register` 로 대상을 꽂고(푸는 함수는 자기 것일 때만 지운다), `report` 로 지금 전체 화면인지 알린다 */
@@ -100,13 +101,8 @@ export type AudioHost = {
     register: (target: FullscreenTarget) => () => void
     report: (active: boolean) => void
   }
-  /** 화면 `<video>` 를 소리 내는 쪽으로 등록한다(진행 막대 · 음량) - 돌려받은 함수가 푼다 */
+  /** 소리 판 없는 영상의 `<video>` 를 소리 내는 쪽으로 등록한다(진행 막대 · 음량) - 돌려받은 함수가 푼다 */
   registerOutput: (output: MediaOutput) => () => void
-  /**
-   * 「영상」을 누르는 손짓 안에서 그려진 재생기의 `<video>` 를 깨운다(`setPreferred('video')` 가 바로 부른다) - 아이폰은 손짓 밖에서 소리 있는
-   * 재생을 막는데, 전환은 effect 를 거쳐 손짓 밖에서 일어나서다. 돌려받은 함수가 푼다(자기 것일 때만)
-   */
-  registerVideoWaker: (wake: () => void) => () => void
 }
 
 export type QueueController = ReturnType<typeof createQueueController>
@@ -125,12 +121,12 @@ export function createQueueController(deps: {
     preferred: 'audio',
     playing: false,
     stageStart: 0,
-    audioStart: 0,
-    preferSignal: 0,
     volume: 1,
     muted: false,
     fullscreen: false,
     canFullscreen: false,
+    captions: false,
+    canCaptions: false,
     qualityOptions: [],
     quality: 'auto',
     playingHeight: null,
@@ -169,7 +165,7 @@ export function createQueueController(deps: {
       },
     }
   }
-  /** 화면의 재생기(영상 · 유튜브)가 등록한 것 - 영상 모드에서 소리를 내는 쪽 */
+  /** 화면의 재생기(소리 판 없는 영상 · 유튜브)가 등록한 것 - 그 곡에서 소리를 내는 쪽 */
   let output: MediaOutput | null = null
   const applyVolume = () => {
     audio.setVolume(state.volume, state.muted)
@@ -177,13 +173,6 @@ export function createQueueController(deps: {
   }
 
   /** 그려진 무대의 전체 화면 대상을 등록한다. 푸는 함수는 그 사이 새로 등록된 것을 지우지 않는다 */
-  let videoWaker: (() => void) | null = null
-  const registerVideoWaker = (wake: () => void) => {
-    videoWaker = wake
-    return () => {
-      if (videoWaker === wake) videoWaker = null
-    }
-  }
   const registerFullscreen = (target: FullscreenTarget) => {
     fullscreenTarget = target
     emit({})
@@ -193,20 +182,23 @@ export function createQueueController(deps: {
       emit({ fullscreen: false })
     }
   }
-  /** 화면의 `<video>` · 유튜브 플레이어를 소리 내는 쪽으로 등록한다 - 등록하자마자 지금 음량이 걸린다. 푸는 함수는 그 사이 새로 등록된 것을 지우지 않는다 */
+  /** 소리 판 없는 영상의 `<video>` · 유튜브 플레이어를 소리 내는 쪽으로 등록한다 - 등록하자마자 지금 음량이 걸린다. 푸는 함수는 그 사이 새로 등록된 것을 지우지 않는다 */
   const registerOutput = (next: MediaOutput) => {
     output = next
     next.applyVolume(state.volume, state.muted)
+    next.setCaptions?.(state.captions)
+    if (Boolean(next.setCaptions) !== state.canCaptions)
+      emit({ canCaptions: Boolean(next.setCaptions) })
     refreshProgress()
     return () => {
       if (output !== next) return
       output = null
-      progressFrom = { id: state.queue.currentId, mode: state.mode } // 넘기다 무대가 닫혔으면 더 기다리지 않는다
+      if (state.canCaptions) emit({ canCaptions: false })
       refreshProgress()
     }
   }
 
-  // 진행 막대: 소리 모드는 대기열 <audio>, 영상 모드는 등록된 출력. 이벤트가 아니라 짧은 간격으로 읽는다(유튜브는 이벤트가 없다) -
+  // 진행 막대: 소리 판이 있는 곡은 영상을 붙여도 늘 대기열 <audio>, 그 밖(소리 판 없는 영상 · 유튜브)은 등록된 출력. 이벤트가 아니라 짧은 간격으로 읽는다(유튜브는 이벤트가 없다) -
   // 상태(usePlayQueue)에 넣지 않는 것은 초당 몇 번 바뀌는 값이 대기열을 쓰는 모든 화면을 다시 그리게 하지 않으려는 것
   let progressNow: ProgressSnapshot = NO_PROGRESS
   const progressListeners = new Set<() => void>()
@@ -214,24 +206,15 @@ export function createQueueController(deps: {
   const readProgress = (): ProgressSnapshot => {
     const item = currentOf(state.queue)
     if (!item) return NO_PROGRESS
-    if (state.mode === 'audio') {
+    if (hasAudio(item)) {
       return audio.loadedItem() === item.id
         ? { currentTime: audio.position(), duration: audio.duration() }
         : NO_PROGRESS
     }
     return output ? output.read() : NO_PROGRESS
   }
-  let progressFrom: { id: string | null; mode: QueueMode } = { id: null, mode: 'audio' }
   const refreshProgress = () => {
     const next = readProgress()
-    const from = { id: state.queue.currentId, mode: state.mode }
-    // 같은 곡을 영상 <-> 소리로 넘기는 사이(새 요소가 아직 못 불러옴)에는 0 초로 튀지 않게 읽어 둔 값을 둔다
-    // 멈췄으면(실패 포함) 기다릴 것이 없다 - 보류하지 않는다. 영상 출력이 풀리면 등록 해제가 보류를 푼다
-    const loading = state.playing
-    const switching =
-      loading && from.id !== null && from.id === progressFrom.id && from.mode !== progressFrom.mode
-    if (switching && next.duration === 0 && progressNow.duration > 0) return
-    progressFrom = from
     if (next.currentTime === progressNow.currentTime && next.duration === progressNow.duration)
       return
     progressNow = next
@@ -244,6 +227,10 @@ export function createQueueController(deps: {
     emit({ queue })
   }
 
+  const currentHasAudio = () => {
+    const item = currentOf(state.queue)
+    return item !== null && hasAudio(item)
+  }
   const routing = () => ({ preferred: state.preferred, stageOpen: stages > 0 && visible })
   const canPlay = (item: QueueItem) => canPlayNow(item, routing())
 
@@ -256,17 +243,25 @@ export function createQueueController(deps: {
     awake = true
   }
 
-  /** 현재 곡을 튼다 - 어디서 틀지는 선호 · 화면 상태로 정한다(소리 `<audio>` 또는 화면의 재생기) */
+  /** 소리 판이 있는 곡이면 모드를 선호 · 화면 상태에 맞춘다 - 소리는 건드리지 않고 영상을 붙이거나 뗄 뿐이다 */
+  const syncMode = () => {
+    const item = currentOf(state.queue)
+    if (!item || !hasAudio(item)) return
+    const mode = routeOf(item, routing())
+    if (mode !== state.mode) emit({ mode })
+  }
+
+  /** 현재 곡을 튼다 - 소리 판이 있으면 소리는 늘 대기열 `<audio>`(선호 · 화면 상태는 영상을 붙일지만 가른다), 아니면 화면의 재생기 */
   const begin = (at = 0) => {
     const item = currentOf(state.queue)
     if (!item) return
     halted = false
-    if (routeOf(item, routing()) === 'audio' && item.kind === 'media' && item.source.audio) {
-      audio.start({ url: item.source.audio, at, play: true, adopt: false, itemId: item.id })
+    if (item.kind === 'media' && item.source.audio) {
+      audio.start({ url: item.source.audio, at, play: true, itemId: item.id })
       // 시작하자마자 못 틀어 멈췄거나 다른 곡으로 넘어갔으면(동기로 알림이 온다) 덮어쓰지 않는다
       if (halted || state.queue.currentId !== item.id) return
       awake = true
-      emit({ mode: 'audio', playing: true, audioStart: state.audioStart + 1 })
+      emit({ mode: routeOf(item, routing()), playing: true })
     } else {
       audio.stop()
       emit({ mode: 'video', playing: true, stageStart: state.stageStart + 1 })
@@ -307,8 +302,15 @@ export function createQueueController(deps: {
 
   const restartCurrent = () => {
     const item = currentOf(state.queue)
-    if (item && state.mode === 'audio' && audio.loadedItem() === item.id) audio.restart()
+    if (item && hasAudio(item) && audio.loadedItem() === item.id) audio.restart()
     else begin()
+  }
+
+  /** 앱이 처음 선호를 정할 때(영상 앱은 `video`) - 사용자가 전환하면 그 뒤로는 사용자의 선택이 이긴다. 소리 판이 있는 곡은 모드가 함께 옮겨 가고 소리는 그대로다 */
+  const setPreferred = (preferred: Preference) => {
+    const item = currentOf(state.queue)
+    const mode = item && hasAudio(item) ? routeOf(item, { ...routing(), preferred }) : state.mode
+    emit({ preferred, mode })
   }
 
   const controller = {
@@ -361,6 +363,8 @@ export function createQueueController(deps: {
       } else if (state.playing) begin()
     },
     move: (id: string, to: number) => dispatch({ type: 'move', id, to }),
+    /** 곡 이름만 바꾼다(재생 · 순서는 그대로) */
+    retitle: (id: string, title: string, artist?: string) => dispatch({ type: 'retitle', id, title, artist }),
     clear: () => {
       dispatch({ type: 'clear' })
       audio.stop()
@@ -368,17 +372,18 @@ export function createQueueController(deps: {
     },
     setRepeat: (repeat: RepeatMode) => dispatch({ type: 'repeat', repeat }),
     setShuffle: (on: boolean) => dispatch({ type: 'shuffle', on, random }),
-    /** 앱이 처음 선호를 정할 때(영상 앱은 `video`) - 사용자가 전환하면 그 뒤로는 사용자의 선택이 이긴다 */
-    setPreferred: (preferred: Preference) => {
-      if (preferred === 'video') videoWaker?.()
-      emit({ preferred, preferSignal: state.preferSignal + 1 })
-    },
+    setPreferred,
 
     setVolume: (volume: number) => {
       if (Number.isNaN(volume)) return
       emit({ volume: Math.min(1, Math.max(0, volume)) })
       applyVolume()
       saveVolume(storage, key, { volume: state.volume, muted: state.muted })
+    },
+    /** 자막 켜고 끄기 - 지금 재생기(유튜브)에 바로 걸고, 다음 곡에도 이어진다 */
+    setCaptions: (on: boolean) => {
+      emit({ captions: on })
+      output?.setCaptions?.(on)
     },
     setMuted: (muted: boolean) => {
       emit({ muted })
@@ -417,12 +422,11 @@ export function createQueueController(deps: {
     seek: (seconds: number) => {
       if (!Number.isFinite(seconds)) return
       const t = Math.max(0, seconds)
-      if (state.mode === 'audio') {
+      const item = currentOf(state.queue)
+      if (item && hasAudio(item)) {
         // 읽을 때와 같은 확인 - 요소가 다른 곡(없음 포함)을 쥐고 있으면 옮기지 않는다
-        const id = state.queue.currentId
-        if (id !== null && audio.loadedItem() === id) audio.seek(t)
+        if (audio.loadedItem() === item.id) audio.seek(t)
       } else output?.seek(t)
-      progressFrom = { id: state.queue.currentId, mode: state.mode } // 옮긴 시각을 바로 보인다(넘기는 중 보류를 푼다)
       refreshProgress()
     },
 
@@ -441,10 +445,12 @@ export function createQueueController(deps: {
       const item = currentOf(state.queue)
       if (!item) return
       halted = false
-      if (state.mode === 'audio' && audio.loadedItem() === item.id) {
-        audio.resume()
-        emit({ playing: true, audioStart: state.audioStart + 1 })
-      } else if (state.mode === 'video' && routeOf(item, routing()) === 'video') {
+      if (hasAudio(item)) {
+        if (audio.loadedItem() === item.id) {
+          audio.resume()
+          emit({ playing: true })
+        } else begin()
+      } else if (state.mode === 'video') {
         emit({ playing: true }) // 화면의 재생기가 이어 튼다
       } else begin()
     },
@@ -458,7 +464,7 @@ export function createQueueController(deps: {
       const prev = previousPlayableId(
         state.queue,
         canPlay,
-        state.mode === 'audio' ? audio.position() : 0,
+        currentHasAudio() ? audio.position() : 0,
       )
       if (!prev) return
       if (prev.restart) return restartCurrent()
@@ -469,10 +475,12 @@ export function createQueueController(deps: {
     /** 화면의 재생기(영상 · 유튜브)가 보이는 동안 1 이상 */
     setStage: (open: boolean) => {
       stages = Math.max(0, stages + (open ? 1 : -1))
+      syncMode()
     },
     setVisible: (value: boolean) => {
       visible = value
       if (value) refreshProgress()
+      syncMode()
     },
 
     audioEnded: () => {
@@ -487,7 +495,7 @@ export function createQueueController(deps: {
       emit({ playing: true })
     },
     audioPaused: () => {
-      if (state.mode === 'audio') emit({ playing: false })
+      if (currentHasAudio()) emit({ playing: false })
     },
     /** 폰이 `play()` 를 거절했다 - 틀고 있다고 하지 않는다 */
     audioRejected: () => emit({ playing: false }),
@@ -499,7 +507,7 @@ export function createQueueController(deps: {
       emit({ playing })
     },
 
-    /** 화면의 영상 재생기가 끝까지 틀었다 - 다음 곡은 선호(영상이면 영상, 아니면 소리 판이 있는 곡)를 따른다 */
+    /** 화면의 영상 재생기(소리 판 없는 영상)가 끝까지 틀었다 - 다음 곡은 선호(영상이면 영상, 아니면 소리 판이 있는 곡)를 따른다 */
     videoEnded: () => advance(true),
     videoFailed: failed,
     setVideoPlaying: (playing: boolean) => {
@@ -509,20 +517,12 @@ export function createQueueController(deps: {
     host: createAudioHost({
       audio,
       state: () => state,
-      visible: () => visible,
-      emit,
       registerOutput,
+      setPreferred,
       quality: { register: registerQuality },
-      registerVideoWaker,
       fullscreen: {
         register: registerFullscreen,
         report: (active) => emit({ fullscreen: active }),
-      },
-      markAwake: () => {
-        awake = true
-      },
-      clearHalt: () => {
-        halted = false
       },
     }),
   }

@@ -213,3 +213,16 @@ describe('previousPlayableId', () => {
     expect(previousPlayableId(emptyQueue, all, 0)).toBeNull()
   })
 })
+
+describe('retitle', () => {
+  it('changes only the title and artist of a queued item, keeping order and the current item', () => {
+    const a = { kind: 'media' as const, id: 'a', title: 'A', artist: 'x', source: { src: '/a.m3u8' } }
+    const b = { kind: 'media' as const, id: 'b', title: 'B', source: { src: '/b.m3u8' } }
+    let q = reduceQueue(emptyQueue, { type: 'set', items: [a, b], startId: 'b' })
+    q = reduceQueue(q, { type: 'retitle', id: 'a', title: 'New', artist: undefined })
+    expect(q.items.a).toEqual({ kind: 'media', id: 'a', title: 'New', source: { src: '/a.m3u8' } })
+    expect(q.order).toEqual(['a', 'b'])
+    expect(q.currentId).toBe('b')
+    expect(reduceQueue(q, { type: 'retitle', id: 'zz', title: 'n' })).toBe(q)
+  })
+})

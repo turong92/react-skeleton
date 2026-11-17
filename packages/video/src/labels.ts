@@ -30,6 +30,12 @@ export type VideoPlayerLabels = {
   audioFailed: string
   /** 노래 모드의 재생 단추 낭독 이름 */
   playAudio: string
+  /** 대기열 곡의 영상이 끝내 붙지 못했다 - 소리는 계속 난다는 안내 한 줄 */
+  pictureFailed: string
+  /** 안내 옆 「다시 붙여 보기」 단추 */
+  retry: string
+  /** 브라우저가 음소거 영상의 재생을 막았다(저전력 모드) - 누르면 영상을 튼다 */
+  tapToWatch: string
   /** 전체 화면 단추 - 들어가기 / 나가기 */
   fullscreen: string
   exitFullscreen: string
@@ -97,6 +103,9 @@ export const defaultVideoPlayerLabels: VideoPlayerLabels = {
   modeAudio: 'Audio',
   audioFailed: 'The audio could not be played, so the video is playing instead.',
   playAudio: 'Play audio',
+  pictureFailed: 'The video could not be loaded. The sound keeps playing.',
+  retry: 'Try again',
+  tapToWatch: 'Tap to show video',
   fullscreen: 'Full screen',
   exitFullscreen: 'Exit full screen',
 }
@@ -118,6 +127,9 @@ export const koVideoPlayerLabels: VideoPlayerLabels = {
   modeAudio: '노래',
   audioFailed: '소리만 틀지 못해서 영상으로 틀었어요.',
   playAudio: '소리 재생',
+  pictureFailed: '영상을 불러오지 못했어요. 소리는 계속 나와요.',
+  retry: '다시 시도',
+  tapToWatch: '눌러서 영상 보기',
   fullscreen: '전체 화면',
   exitFullscreen: '전체 화면 나가기',
 }

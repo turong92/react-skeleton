@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
   followPlayback,
-  followPreference,
   qualityChoosable,
   initialPlayer,
   momentOf,
@@ -130,21 +129,6 @@ describe('momentOf', () => {
   })
 })
 
-describe("reducePlayer - joining the queue's sound", () => {
-  it("moves a mounted player into audio mode at the queue's moment, adopting what plays", () => {
-    let s = reducePlayer(initialPlayer, { type: 'press', kind: 'hls' })
-    const before = s.session
-    s = reducePlayer(s, { type: 'join', at: 61, play: true })
-    expect(s).toMatchObject({ phase: 'playing', mode: 'audio', at: 61, play: true, adopt: true })
-    expect(s.session).toBe(before + 1)
-  })
-
-  it('joins a player that was never pressed, and keeps a paused queue paused', () => {
-    const s = reducePlayer(initialPlayer, { type: 'join', at: 5, play: false })
-    expect(s).toMatchObject({ phase: 'playing', mode: 'audio', at: 5, play: false, adopt: true })
-  })
-})
-
 describe('quality before and while paused', () => {
   it('only remembers the choice before the first play, and starts the first play from it', () => {
     const s = reducePlayer(initialPlayer, { type: 'pick', pick: 'compat' })
@@ -162,38 +146,26 @@ describe('qualityChoosable', () => {
   const base = {
     showVideo: false,
     mode: 'video' as const,
-    preferredMode: 'video' as const,
+    queueMode: 'video' as const,
     options: 3,
   }
 
   it('offers the choice while the video shows, wherever the player is drawn', () => {
-    expect(qualityChoosable({ ...base, showVideo: true, preferredMode: undefined })).toBe(true)
+    expect(qualityChoosable({ ...base, showVideo: true, queueMode: undefined })).toBe(true)
   })
 
-  it('offers it before the start or paused only for the big-screen player (the queue passes its preference), in video mode', () => {
+  it('offers it before the start or paused only for the big-screen player (the queue passes its mode), in video mode', () => {
     expect(qualityChoosable(base)).toBe(true)
-    expect(qualityChoosable({ ...base, preferredMode: 'audio' })).toBe(false)
+    expect(qualityChoosable({ ...base, queueMode: 'audio' })).toBe(false)
     expect(qualityChoosable({ ...base, mode: 'audio' })).toBe(false)
   })
 
   it('does not offer it for a player drawn outside the big screen that is not playing (it would point the app controls at the wrong video)', () => {
-    expect(qualityChoosable({ ...base, preferredMode: undefined })).toBe(false)
+    expect(qualityChoosable({ ...base, queueMode: undefined })).toBe(false)
   })
 
   it('has nothing to choose with one option', () => {
     expect(qualityChoosable({ ...base, showVideo: true, options: 1 })).toBe(false)
-  })
-})
-
-describe('followPreference', () => {
-  it('moves the player to the preference when it is in the other mode - even if the preference value did not change (the signal asks again)', () => {
-    expect(followPreference('audio', 'video')).toBe('audio')
-    expect(followPreference('video', 'audio')).toBe('video')
-  })
-
-  it('does nothing when it already is in that mode or there is no preference', () => {
-    expect(followPreference('video', 'video')).toBeNull()
-    expect(followPreference(undefined, 'video')).toBeNull()
   })
 })
 

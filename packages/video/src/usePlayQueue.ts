@@ -21,9 +21,11 @@ export function usePlayQueue() {
   const canAudio = useSyncExternalStore(subscribeNothing, controller.canAudio, serverFalse)
   // 이 기기가 코드로 음량을 바꿀 수 있나 - 서버 · 하이드레이션 첫 그림은 false, 브라우저가 재서 알려 준다
   const canSetVolume = useSyncExternalStore(subscribeNothing, readCanSetVolume, serverFalse)
+  const queueMode = state.mode
   const playerProps = useMemo(
     () => ({
       audioHost: controller.host,
+      queueMode,
       title: current?.title,
       onEnded: controller.videoEnded,
       onPrevious: controller.previous,
@@ -31,7 +33,7 @@ export function usePlayQueue() {
       onPlayingChange: controller.setVideoPlaying,
       onFailed: controller.videoFailed,
     }),
-    [controller, current?.title],
+    [controller, current?.title, queueMode],
   )
   return {
     current,
@@ -43,7 +45,7 @@ export function usePlayQueue() {
     repeat: state.queue.repeat,
     shuffle: state.queue.shuffle,
     playing: state.playing,
-    /** `audio` = 대기열이 소리만 틀고 있다, `video` = 화면의 재생기가 튼다 */
+    /** `audio` = 영상 없이(소리만), `video` = 영상을 보인다 - 소리 판이 있는 곡의 소리는 어느 쪽이든 대기열 `<audio>` 가 내고, 소리 판 없는 곡 · 유튜브는 늘 `video`(화면의 재생기가 튼다) */
     mode: state.mode,
     /** 사용자가 고른 영상 / 노래 - 곡이 바뀌어도 유지된다 */
     preferred: state.preferred,
@@ -64,10 +66,12 @@ export function usePlayQueue() {
     canFullscreen: state.canFullscreen,
     toggleFullscreen: controller.toggleFullscreen,
     setVolume: controller.setVolume,
+    /** 자막(기본 끔) · 지금 곡에서 자막 단추를 보일지(유튜브) · 켜고 끄기 */
+    captions: state.captions,
+    canCaptions: state.canCaptions,
+    setCaptions: controller.setCaptions,
     setMuted: controller.setMuted,
     stageStart: state.stageStart,
-    preferSignal: state.preferSignal,
-    audioStart: state.audioStart,
     playerProps,
     controller,
     setQueue: controller.setQueue,
@@ -75,6 +79,7 @@ export function usePlayQueue() {
     remove: controller.remove,
     move: controller.move,
     clear: controller.clear,
+    retitle: controller.retitle,
     setPreferred: controller.setPreferred,
     setRepeat: controller.setRepeat,
     setShuffle: controller.setShuffle,

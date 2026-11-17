@@ -100,6 +100,7 @@ export function YoutubeStage({
     let started = false
     let autoplayTimer: ReturnType<typeof setTimeout> | undefined
     let unregister = () => {}
+    let out: ReturnType<typeof youtubeOutput> | null = null
     const target = document.createElement('div')
     host.appendChild(target)
     loadApi().then(
@@ -114,6 +115,8 @@ export function YoutubeStage({
             },
             onPlaying: (value) => {
               if (value) started = true
+              // 재생이 시작되면 유튜브가 자막을 제 설정대로 다시 올린다 - 고른 값으로 되돌린다
+              if (value) out?.reapplyCaptions()
               latest.current.onPlaying(value)
             },
           })
@@ -123,11 +126,14 @@ export function YoutubeStage({
             events: {
               ...handlers,
               // 준비된 뒤에야 조작할 수 있다 - 그때 지금 원하는 재생 상태를 맞춘다
+              // 자막 모듈은 재생 뒤 늦게 올라온다 — 올라올 때 고른 값으로 되돌린다
+              onApiChange: () => out?.reapplyCaptions(),
               onReady: ({ target: ready }) => {
                 stopWatching()
                 if (cancelled) return
                 playerRef.current = ready
-                unregister = latest.current.registerOutput?.(youtubeOutput(ready)) ?? unregister
+                out = youtubeOutput(ready)
+                unregister = latest.current.registerOutput?.(out) ?? unregister
                 if (latest.current.playing) {
                   ready.playVideo()
                   // 손짓 없는 자동 재생을 브라우저가 막으면 틀고 있다고 하지 않는다(iframe 의 재생 단추가 남는다)

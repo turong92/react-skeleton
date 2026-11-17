@@ -21,7 +21,7 @@ export type QueueStageProps = {
 }
 
 /**
- * 큰 화면 - 지금 곡이 우리 영상이면 `VideoPlayer`(대기열의 `<audio>` 를 빌린다), 유튜브면 IFrame 재생기를 그린다.
+ * 큰 화면 - 지금 곡이 우리 영상이면 `VideoPlayer`(소리 판이 있으면 소리는 대기열의 `<audio>` 가 내고 이 화면은 음소거 영상만 붙인다), 유튜브면 IFrame 재생기를 그린다.
  * 이게 그려져 있고 화면이 보이는 동안에만 유튜브 · 소리 판 없는 영상이 차례에 건너뛰어지지 않는다
  */
 export function QueueStage(props: QueueStageProps) {
@@ -70,11 +70,8 @@ function ConnectedQueueStage({
       {...queue.playerProps}
       autoStart={queue.mode === 'video' && queue.playing}
       startSignal={queue.stageStart}
-      joinSignal={queue.audioStart}
       followPlaying={queue.mode === 'video' ? queue.playing : undefined}
       {...playerProps}
-      preferredMode={queue.preferred}
-      preferSignal={queue.preferSignal}
       {...(controls === undefined ? {} : { controls })}
       {...(modeToggle === undefined ? {} : { modeToggle })}
     />

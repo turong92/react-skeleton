@@ -5,15 +5,16 @@ import { leaveFullscreenOf, toggleFullscreen } from './fullscreen'
 import { defaultVideoPlayerLabels } from './labels'
 import { loadHlsLight } from './loadHls'
 import { FullscreenButton } from './FullscreenButton'
+import { pictureStep } from './followedPicture'
+import { PictureFailed, TapToWatch } from './PictureNotices'
 import { elementOutput } from './mediaOutput'
 import { ModePill } from './ModePill'
-import { firstStep, grantExpired, planPlayback, urlOf, type QualityChoice } from './playbackPlan'
+import { firstStep, grantExpired, planPlayback, type QualityChoice } from './playbackPlan'
 import { createPlayIntent } from './playIntent'
 import { usePlayingReport, type Latest } from './playerRuntime'
 import { playbackOf, type PlayerSource } from './playerSource'
 import {
   followPlayback,
-  followPreference,
   initialPlayer,
   momentOf,
   qualityChoosable,
@@ -27,7 +28,7 @@ import type { VideoPlayback } from './types'
 import type { VideoPlayerProps } from './videoPlayerProps'
 import { useHiddenHandoff } from './useHiddenHandoff'
 import { useLockScreen } from './useLockScreen'
-import { usePlayerMedia, type Bridge, type Hush } from './usePlayerMedia'
+import { usePlayerMedia } from './usePlayerMedia'
 import styles from './VideoPlayer.module.css'
 import { formatDuration } from './videoView'
 
@@ -41,7 +42,9 @@ const serverEnv = () => null
  * 틀지 못하면 다음 순서로 같은 시각에서 넘어간다. 네이티브 HLS 가 없으면 hls.js light 를 누를 때 불러온다.
  * 판이 둘 이상이면 화질 칩(자동 / 720p / 원본)이 뜨고, 바꿔도 시각을 잇는다. 내려받기 단추는 없다.
  * 소리 판(`audio`)이 있으면 「영상 / 노래」 전환이 뜨고(같은 시각 · 같은 재생 상태로 잇는다, 노래에서는 영상 조각을 받지 않는다),
- * 소리 판이 실패하면 안내 한 줄과 함께 영상으로 되돌아온다. 잠금화면 단추(Media Session) · 전체 화면 단추가 붙는다
+ * 소리 판이 실패하면 안내 한 줄과 함께 영상으로 되돌아온다. 잠금화면 단추(Media Session) · 전체 화면 단추가 붙는다.
+ * 대기열(`audioHost`)에 붙은 소리 판 있는 곡은 다르다 - 소리는 늘 대기열의 `<audio>` 가 내고, 영상 모드(`queueMode`)는 그 위에 **음소거 영상**만
+ * 붙여 소리 시각을 따라가게 한다(노래 모드는 영상을 떼기만 한다). 소리를 넘겨주는 일이 없어 모드를 바꿔도 소리가 끊기지 않는다
  */
 export function VideoPlayer({
   grant: givenGrant,
@@ -60,13 +63,11 @@ export function VideoPlayer({
   onFailed,
   autoStart = false,
   startSignal,
-  joinSignal,
   followPlaying,
   audioHost,
   controls = true,
   modeToggle = true,
-  preferredMode,
-  preferSignal,
+  queueMode,
   env: envProp,
   loadHls = loadHlsLight,
 }: VideoPlayerProps) {
@@ -78,31 +79,21 @@ export function VideoPlayer({
   const env = envProp ?? deviceEnv
   const plan = env ? planPlayback(grant, env) : null
   const audioOk = Boolean(grant.audio) && plan?.engine != null
+  // 소리는 대기열 `<audio>` 가 내고 이 재생기는 그 위에 음소거 영상을 붙일 뿐이다
+  const followed = audioHost !== undefined && audioOk
 
-  const [state, dispatch] = useReducer(reducePlayer, null, () => {
-    // 대기열이 이 곡을 이미 소리로 틀고 있으면 처음부터 다시 틀지 않고 이어받는다(소리 모드 · 지금 위치 · 재생 상태)
-    const joined = audioHost?.status()
-    if (!joined) return { ...initialPlayer, mode: initialMode }
-    return {
-      ...initialPlayer,
-      phase: 'playing' as const,
-      mode: 'audio' as const,
-      at: joined.at,
-      play: joined.playing,
-      adopt: true,
-    }
-  })
+  const [state, dispatch] = useReducer(reducePlayer, null, () => ({
+    ...initialPlayer,
+    mode: initialMode,
+  }))
   const mode: PlayerMode = audioOk ? state.mode : 'video'
+  // 알약 · 안내에 보이는 모드 - 대기열이 정한 것을 곧바로(영상은 아직 붙는 중이어도)
+  const shownMode: PlayerMode = followed ? (queueMode ?? 'audio') : mode
   const playing = state.phase === 'playing'
   const videoRef = useRef<HTMLVideoElement>(null)
   const audioRef = useRef<HTMLAudioElement>(null)
   const stageRef = useRef<HTMLDivElement>(null)
-  // 대기열의 `<audio>` 를 빌릴 때는 그 요소를 쓴다(요소는 앱 최상단이 쥐고 있어 이 재생기가 사라져도 소리가 이어진다)
-  const hostAudioRef = useRef<HTMLAudioElement | null>(null)
-  useEffect(() => {
-    hostAudioRef.current = audioHost?.element() ?? null
-  })
-  const refs = { video: videoRef, audio: audioHost ? hostAudioRef : audioRef }
+  const refs = { video: videoRef, audio: audioRef }
   const latest = useRef<Latest>({ grant, plan, state, loadHls, given })
   useEffect(() => {
     latest.current = {
@@ -121,20 +112,24 @@ export function VideoPlayer({
     }
   })
   const [intent] = useState(createPlayIntent)
-  const hush = useRef<Hush>({ on: false, last: null })
-  const bridge = useRef<Bridge>({ toAudio: false, finish: null })
-
-  // 「영상」을 누르는 손짓 안에서 대기열이 부른다 - 아이폰(네이티브)은 손짓 안에서 한 번 틀어 본 요소만 나중에 소리 내며 틀게 둔다
-  useEffect(() => {
-    if (!audioHost) return
-    return audioHost.registerVideoWaker(() => {
-      const { grant: g, plan: p, state: st } = latest.current
-      const video = videoRef.current
-      const kind = st.pick === 'auto' ? p?.order[0] : st.pick
-      if (!video || p?.engine !== 'native' || !kind || !video.paused) return
-      wakeAudio(video, urlOf(g, kind))
-    })
-  }, [audioHost])
+  // 음소거 영상이 소리 자리의 프레임을 가질 때까지는 멈춘 첫 화면 대신 포스터를 보인다
+  const [synced, setSynced] = useState(false)
+  // 브라우저가 음소거 영상의 재생을 막았다(저전력 모드) - 누르면 영상을 튼다
+  const [tap, setTap] = useState<{ resume: () => void } | null>(null)
+  const follow = useMemo(
+    () =>
+      followed && audioHost
+        ? {
+            sound: {
+              position: () => audioHost.status()?.at ?? 0,
+              playing: () => audioHost.status()?.playing === true,
+            },
+            onSynced: setSynced,
+            onBlocked: (resume: (() => void) | null) => setTap(resume ? { resume } : null),
+          }
+        : undefined,
+    [followed, audioHost],
+  )
   const report = usePlayingReport(latest)
 
   usePlayerMedia({
@@ -146,20 +141,13 @@ export function VideoPlayer({
     setFresh,
     session: state.session,
     ready: plan?.engine != null,
-    host: audioHost,
-    hush,
-    bridge,
+    follow,
   })
   useHiddenHandoff({
-    // 소리 판 실패로 영상에 돌아온 직후(notice)에는 다시 넘기지 않는다
-    // 노래 → 영상을 기다리는 중(대기열 소리가 아직 나는 중)에는 넘길 것이 없다 - 영상 시각이 아직 옛 자리다
+    // 소리 판 실패로 영상에 돌아온 직후(notice)에는 다시 넘기지 않는다. 대기열에 붙은 곡은 소리가 이미 대기열이라 넘길 것이 없다
+    // (화면이 꺼지면 대기열이 모드를 노래로 바꿔 영상을 뗀다)
     watching:
-      autoAudioWhenHidden &&
-      playing &&
-      mode === 'video' &&
-      audioOk &&
-      !state.notice &&
-      !audioHost?.status()?.playing,
+      autoAudioWhenHidden && playing && mode === 'video' && audioOk && !state.notice && !audioHost,
     engine: plan?.engine,
     latest,
     refs,
@@ -169,7 +157,7 @@ export function VideoPlayer({
   })
   useLockScreen({
     // 대기열이 소리를 쥐고 있으면 잠금화면은 대기열이 묶는다
-    playing: playing && !(audioHost && mode === 'audio'),
+    playing: playing && !followed,
     title,
     poster: grant.poster,
     hasPrevious: Boolean(onPrevious),
@@ -186,20 +174,13 @@ export function VideoPlayer({
     latest.current.onModeChange?.(state.mode)
   }, [playing, state.mode])
 
-  // 화면의 <video> 를 대기열에 등록한다 - 진행 막대 · 음량이 노래 · 유튜브와 같은 손잡이로 이 요소를 다룬다(요소가 새로 생기면 지금 음량이 걸린다)
-  const showingVideo = playing && mode === 'video'
+  // 소리 판 없는 영상의 <video> 를 대기열에 등록한다 - 진행 막대 · 음량이 노래 · 유튜브와 같은 손잡이로 이 요소를 다룬다(요소가 새로 생기면 지금 음량이 걸린다).
+  // 소리 판이 있는 곡은 아니다 - 진행 막대 · 음량은 대기열 `<audio>` 것이고 영상은 늘 음소거다
+  const showingVideo = playing && mode === 'video' && !followed
   useEffect(() => {
     const video = videoRef.current
     if (!showingVideo || !video || !audioHost) return
-    const base = elementOutput(video)
-    // 노래 → 영상을 잇는 동안은 음소거를 붙잡는다 - 걸린 음량은 기억했다가 넘길 때 건다
-    return audioHost.registerOutput({
-      ...base,
-      applyVolume: (volume, muted) => {
-        hush.current.last = [volume, muted]
-        base.applyVolume(volume, muted || hush.current.on)
-      },
-    })
+    return audioHost.registerOutput(elementOutput(video))
   }, [showingVideo, audioHost])
 
   const [isFullscreen, setFullscreen] = useState(false)
@@ -211,16 +192,17 @@ export function VideoPlayer({
 
   const press = async () => {
     if (!env) return
-    // 첫 손짓 안(기다리기 전)에서 `<audio>` 를 깨워 둔다 - 나중에 화면이 꺼질 때 틀 수 있게
+    // 첫 손짓 안(기다리기 전)에서 `<audio>` 를 깨워 둔다 - 나중에 화면이 꺼질 때 틀 수 있게(대기열에 붙은 곡은 대기열이 깨운다)
     if (
-      (autoAudioWhenHidden || audioHost) &&
+      autoAudioWhenHidden &&
+      !audioHost &&
       mode === 'video' &&
       audioOk &&
-      plan?.engine === 'native'
-    ) {
-      if (audioHost && grant.audio) audioHost.wake(grant.audio)
-      else if (audioRef.current && grant.audio) wakeAudio(audioRef.current, grant.audio)
-    }
+      plan?.engine === 'native' &&
+      audioRef.current &&
+      grant.audio
+    )
+      wakeAudio(audioRef.current, grant.audio)
     let g = grant
     if (refreshGrant && grantExpired(g, Date.now())) {
       try {
@@ -232,13 +214,20 @@ export function VideoPlayer({
       }
     }
     const first = firstStep(planPlayback(g, env), state.pick)
-    if (first) dispatch({ type: 'press', kind: first, mode })
+    if (first) dispatch({ type: 'press', kind: first, mode: followed ? 'video' : mode })
   }
 
   // 대기열이 이 곡을 영상으로 틀라고 한다(다음 곡으로 넘어옴 · 한 곡 반복 · 다시 틀기) - 신호가 바뀔 때마다 처음부터
   const startedFor = useRef<number | null | undefined>(autoStart ? null : startSignal)
   useEffect(() => {
-    if (!autoStart || startSignal === undefined || !env || startedFor.current === startSignal)
+    // 소리 판이 있는 곡은 시작 신호가 아니라 대기열의 모드를 따라 영상을 붙인다(아래)
+    if (
+      followed ||
+      !autoStart ||
+      startSignal === undefined ||
+      !env ||
+      startedFor.current === startSignal
+    )
       return
     startedFor.current = startSignal
     void press()
@@ -246,25 +235,30 @@ export function VideoPlayer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoStart, startSignal, env])
 
+  // 영상을 못 틀어도 대기열은 다음 곡으로 가지 않는다 - 소리 판이 있는 곡은 소리가 멀쩡하다
   useEffect(() => {
-    if (state.phase === 'failed') latest.current.onFailed?.()
-  }, [state.phase])
+    if (state.phase === 'failed' && !followed) latest.current.onFailed?.()
+  }, [state.phase, followed])
 
-  // 대기열이 소리를 시작했다(예: 복원된 대기열을 큰 화면을 연 채 미니 플레이어로 재생) - 이어받는다
-  const joinedFor = useRef(joinSignal)
+  // 대기열이 영상 모드면 음소거 영상을 붙이고, 노래 모드면 뗀다(소리는 그대로) - 화면이 꺼지거나 큰 화면이 닫혀도 대기열이 모드를 노래로 바꾼다
+  const pictureWanted = followed && queueMode === 'video'
   useEffect(() => {
-    if (joinSignal === undefined || joinedFor.current === joinSignal) return
-    joinedFor.current = joinSignal
-    const joined = audioHost?.status()
-    if (joined && audioOk) dispatch({ type: 'join', at: joined.at, play: joined.playing })
-    // 신호가 바뀔 때만 건다
+    if (!followed) return
+    const step = pictureStep({
+      pictureWanted,
+      phase: latest.current.state.phase,
+      mode: latest.current.state.mode,
+    })
+    if (step === 'attach') void press()
+    else if (step === 'detach') dispatch({ type: 'mode', mode: 'audio', at: 0, play: false })
+    // `press` 는 이 렌더의 값을 쓴다 - 모드 · 환경이 바뀔 때만 건다
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [joinSignal])
+  }, [followed, pictureWanted, env])
 
-  // 영상 모드에서는 대기열의 재생 · 멈춤을 영상이 따른다(작은 재생기 · 잠금화면)
+  // 소리 판 없는 영상은 대기열의 재생 · 멈춤을 영상이 따른다(작은 재생기 · 잠금화면). 소리 판이 있는 곡은 영상이 소리를 따라간다(usePlayerMedia)
   useEffect(() => {
     const video = refs.video.current
-    if (!video || state.phase !== 'playing' || mode !== 'video') return
+    if (!video || followed || state.phase !== 'playing' || mode !== 'video') return
     const todo = followPlayback(video.paused, followPlaying)
     if (todo === 'pause') video.pause()
     else if (todo === 'play') void video.play()?.catch(() => report(false))
@@ -292,6 +286,8 @@ export function VideoPlayer({
   }
 
   const switchMode = (next: PlayerMode) => {
+    // 대기열에 붙은 곡 - 선호만 정한다(소리는 건드리지 않고, 영상은 대기열이 모드를 바꾸면 붙거나 떨어진다)
+    if (followed && audioHost) return audioHost.setPreferred(next)
     if (next === mode) return
     if (!playing) {
       dispatch({ type: 'mode', mode: next, at: 0, play: false })
@@ -301,14 +297,6 @@ export function VideoPlayer({
     const kind =
       next === 'video' ? (state.pick === 'auto' ? plan?.order[0] : state.pick) : undefined
     if (next === 'video' && !kind) return
-    // 노래 → 영상을 기다리는 중(영상은 아직 안 틀고 대기열 소리가 나는 중)에 노래로 돌아가면 나던 소리를 그대로 잇는다
-    const sounding = next === 'audio' ? audioHost?.status() : null
-    if (sounding?.playing) {
-      dispatch({ type: 'join', at: sounding.at, play: true })
-      return
-    }
-    // 영상 → 노래: 영상 소리를 노래가 그 자리를 이어받을 때까지 둔다(usePlayerMedia 의 정리)
-    bridge.current.toAudio = next === 'audio'
     dispatch({
       type: 'mode',
       mode: next,
@@ -318,17 +306,6 @@ export function VideoPlayer({
       play: current ? !current.paused : true,
     })
   }
-
-  // 앱의 알약이 `setPreferred` 를 부를 때마다(값이 같아도) 재생 중에도 같은 시각 · 같은 재생 상태로 선호 모드로 옮겨 간다
-  const preferredFor = useRef(preferSignal)
-  useEffect(() => {
-    if (preferSignal === undefined || preferredFor.current === preferSignal) return
-    preferredFor.current = preferSignal
-    const todo = followPreference(preferredMode, mode)
-    if (todo && audioOk) switchMode(todo)
-    // 신호가 바뀔 때만 건다
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [preferSignal])
 
   const noEngine = plan !== null && plan.engine === null
   const waiting = plan !== null && plan.engine !== null && plan.order.length === 0
@@ -375,7 +352,7 @@ export function VideoPlayer({
   const choosable = qualityChoosable({
     showVideo,
     mode,
-    preferredMode,
+    queueMode,
     options: qualityOptions.length,
   })
   const qualityHandle = useRef<QualityHandle | null>(null)
@@ -421,7 +398,7 @@ export function VideoPlayer({
     if (fullscreenKind) audioHost?.fullscreen.report(isFullscreen)
   }, [isFullscreen, fullscreenKind, audioHost])
   const playLabel =
-    mode === 'audio'
+    shownMode === 'audio'
       ? labels.playAudio
       : grant.durationMs > 0
         ? labels.play(formatDuration(grant.durationMs))
@@ -443,16 +420,22 @@ export function VideoPlayer({
           hidden={!showVideo}
           className={styles.video}
           poster={grant.poster || undefined}
-          controls={controls}
+          controls={controls && !followed}
           playsInline
           preload="auto"
           controlsList="nodownload"
           aria-label={labels.video}
         />
+        {/* 음소거 영상이 소리 자리의 프레임을 갖기 전까지는 포스터로 덮는다(아이폰은 숨긴 영상을 돌리지 않아 숨기지 않고 덮는다) */}
+        {showVideo && followed && !synced && grant.poster && (
+          <img className={[styles.poster, styles.hushCover].join(' ')} src={grant.poster} alt="" />
+        )}
+        {showVideo && followed && tap && <TapToWatch labels={labels} onClick={tap.resume} />}
         {!showVideo && (
           <>
             {grant.poster && <img className={styles.poster} src={grant.poster} alt="" />}
-            {!playing && (
+            {/* 대기열에 붙은 곡은 재생 단추가 없다 - 틀고 멈추는 것은 대기열(앱 조작줄)이 한다 */}
+            {!playing && !followed && (
               <div className={styles.cover}>
                 <button
                   type="button"
@@ -498,7 +481,7 @@ export function VideoPlayer({
       </div>
       {audioOk && modeToggle && (
         <div className={styles.mode}>
-          <ModePill labels={labels} mode={mode} onChange={switchMode} />
+          <ModePill labels={labels} mode={shownMode} onChange={switchMode} />
         </div>
       )}
       {state.notice && (
@@ -506,10 +489,13 @@ export function VideoPlayer({
           {labels.audioFailed}
         </p>
       )}
-      {state.phase === 'failed' && (
+      {state.phase === 'failed' && !followed && (
         <p role="alert" className={styles.problem}>
           {labels.failed}
         </p>
+      )}
+      {state.phase === 'failed' && followed && pictureWanted && (
+        <PictureFailed labels={labels} onRetry={() => void press()} />
       )}
     </div>
   )

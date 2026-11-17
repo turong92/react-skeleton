@@ -25,8 +25,6 @@ export type AudioStart = {
   at: number
   /** 붙인 뒤 바로 트나 */
   play: boolean
-  /** 재생기가 화면이 꺼지는 순간 이미 틀기 시작했다 - 다시 붙이지 않고 맡기만 한다 */
-  adopt: boolean
   /** 이 소리 판이 어느 곡의 것인가 - 지워진 곡 · 이전 목록의 곡을 이어 트지 않게 엔진이 기억한다 */
   itemId?: string
 }
@@ -94,22 +92,18 @@ export function createAudioEngine(deps: {
       // 거기서는 손짓이 한 번 있었다는 것(사용자 활성)으로 충분해 깨우지 않는다
       if (el && deps.engine() === 'native') wakeAudio(el, url)
     },
-    start: ({ url, at, play: playNow, adopt, itemId }) => {
+    start: ({ url, at, play: playNow, itemId }) => {
       const kind = deps.engine()
       if (!el || !kind) return deps.onFatal()
-      // 같은 곡을 큰 화면이 이어받는 것이면 틀고 있는 걸 건드리지 않는다(hls.js 를 걷으면 끊긴다)
-      if (adopt && itemId !== undefined && loaded === itemId) return
       handle?.destroy()
       handle = null
-      if (!adopt) {
-        handle = attachSource(el, url, kind, {
-          loadHls: deps.loadHls,
-          onFatal: deps.onFatal,
-          startAt: at,
-        })
-      }
+      handle = attachSource(el, url, kind, {
+        loadHls: deps.loadHls,
+        onFatal: deps.onFatal,
+        startAt: at,
+      })
       loaded = itemId ?? null
-      wantPlay = playNow && !adopt
+      wantPlay = playNow
       stopWaiting?.()
       stopWaiting = null
       if (wantPlay) {

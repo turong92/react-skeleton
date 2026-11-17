@@ -12,9 +12,9 @@ function fakeEngine(opts: { position?: number; duration?: number } = {}) {
     setElement: () => {},
     element: () => null,
     wake: vi.fn((url: string) => void calls.push(`wake ${url}`)),
-    start: vi.fn((r: { url: string; adopt: boolean; itemId?: string }) => {
+    start: vi.fn((r: { url: string; itemId?: string }) => {
       loaded = r.itemId ?? null
-      calls.push(`start ${r.url}${r.adopt ? ' adopt' : ''}`)
+      calls.push(`start ${r.url}`)
     }),
     stop: vi.fn(() => {
       loaded = null
@@ -158,7 +158,7 @@ describe('queue controller - resume only the song that is on the element', () =>
   it('does not restart a song that is no longer on the element - it starts it', () => {
     const { c, engine } = setup([song('a'), song('b')])
     c.play('a')
-    c.host.stop()
+    engine.stop()
     c.previous()
     expect(engine.calls.at(-1)).toBe('start /a/a.m3u8')
   })
@@ -226,7 +226,7 @@ describe('queue controller - the video / song choice stays across songs', () => 
     c.youtubeEnded()
     expect(id(c)).toBe('a')
     expect(c.getState()).toMatchObject({ mode: 'video', playing: true }) // 영상 선호 - 다음 곡도 영상으로
-    expect(engine.calls.at(-1)).toBe('stop')
+    expect(engine.calls.at(-1)).toBe('start /a/a.m3u8') // 소리는 그래도 대기열 요소
   })
 
   it('with the video preference and the screen off, the next song plays as sound but the preference stays', () => {
@@ -236,22 +236,6 @@ describe('queue controller - the video / song choice stays across songs', () => 
     c.setVisible(false)
     c.youtubeEnded()
     expect(engine.calls.at(-1)).toBe('start /a/a.m3u8')
-    expect(c.getState()).toMatchObject({ mode: 'audio', preferred: 'video' })
-  })
-
-  it('the player choosing sound sets the preference to sound, and choosing video to video', () => {
-    const { c } = setup([song('a')])
-    c.host.stop()
-    expect(c.getState().preferred).toBe('video')
-    c.host.start({ url: '/a/a.m3u8', at: 0, play: true, adopt: false })
-    expect(c.getState().preferred).toBe('audio')
-  })
-
-  it('an automatic switch when the screen goes off does not change the preference', () => {
-    const { c } = setup([song('a')])
-    c.host.stop()
-    c.setVisible(false)
-    c.host.start({ url: '/a/a.m3u8', at: 12, play: true, adopt: true })
     expect(c.getState()).toMatchObject({ mode: 'audio', preferred: 'video' })
   })
 
@@ -349,60 +333,18 @@ describe('queue controller - what cannot play now is skipped', () => {
   })
 })
 
-describe('queue controller - borrowed by the video player', () => {
-  it('when the video ends the next song continues as sound with the song preference', () => {
+describe('queue controller - the video player next to the queue', () => {
+  it('when a clip ends the next song gets its sound on the element, with the picture since choosing the clip made the preference video', () => {
     const { c, engine } = setup([videoOnly('v'), song('b')])
     c.setStage(true)
     c.play()
-    c.host.start({ url: '/x', at: 0, play: true, adopt: false }) // 재생기가 소리로 갔다
     c.videoEnded()
     expect(id(c)).toBe('b')
-    expect(c.getState().mode).toBe('audio')
+    expect(c.getState().mode).toBe('video')
     expect(engine.calls.at(-1)).toBe('start /b/a.m3u8')
   })
 
-  it('the player hands the sound over on the same element (adopt) and the queue knows which song it is', () => {
-    const { c, engine } = setup([song('a')])
-    c.host.start({ url: '/a/a.m3u8', at: 12, play: true, adopt: true })
-    expect(engine.calls).toEqual(['start /a/a.m3u8 adopt'])
-    expect(engine.loadedItem()).toBe('a')
-    expect(c.getState()).toMatchObject({ mode: 'audio', playing: true })
-  })
-
-  it('tells a freshly mounted player that the queue is already playing this song as sound', () => {
-    const { c } = setup([song('a')])
-    c.play()
-    expect(c.host.status()).toEqual({ playing: true, at: 0 })
-    c.pause()
-    expect(c.host.status()).toEqual({ playing: false, at: 0 })
-  })
-
-  it('says nothing when the queue is not playing the current song as sound', () => {
-    const { c } = setup([song('a'), song('b')])
-    expect(c.host.status()).toBeNull()
-    c.play('a')
-    c.next() // 곡 b 가 요소에 붙었다
-    c.play('a')
-    expect(c.host.status()).toMatchObject({ playing: true })
-    c.host.stop()
-    expect(c.host.status()).toBeNull()
-  })
-
-  it('going back to video stops the sound and the queue leaves audio mode', () => {
-    const { c, engine } = setup([song('a')])
-    c.host.start({ url: '/a/a.m3u8', at: 0, play: true, adopt: false })
-    c.host.stop()
-    expect(engine.calls.at(-1)).toBe('stop')
-    expect(c.getState().mode).toBe('video')
-  })
-
-  it("wakes the shared element on the player's behalf", () => {
-    const { c, engine } = setup([song('a')])
-    c.host.wake('/a/a.m3u8')
-    expect(engine.calls).toEqual(['wake /a/a.m3u8'])
-  })
-
-  it('follows the video player playing and pausing only in video mode', () => {
+  it('follows the video player playing and pausing for a clip', () => {
     const { c } = setup([videoOnly('v')])
     c.setStage(true)
     c.play()
@@ -570,25 +512,90 @@ describe('queue controller - a start that fails on the spot', () => {
   })
 })
 
-describe('queue controller - telling a mounted player the queue started the sound', () => {
-  it("raises the signal whenever the queue starts or resumes the song as sound, not for the player's own start", () => {
-    const { c } = setup([song('a'), song('b')])
-    const base = c.getState().audioStart
+describe('queue controller - the sound of a song is always the queue element', () => {
+  it('starts the sound on the element even with the video preference and a player on screen - the player only shows the picture', () => {
+    const { c, engine } = setup([song('a')])
+    c.setPreferred('video')
+    c.setStage(true)
     c.play()
-    expect(c.getState().audioStart).toBe(base + 1)
-    c.pause()
-    c.resume()
-    expect(c.getState().audioStart).toBe(base + 2)
-    c.host.start({ url: '/a/a.m3u8', at: 0, play: true, adopt: false })
-    expect(c.getState().audioStart).toBe(base + 2)
+    expect(engine.calls).toEqual(['wake /a/a.m3u8', 'start /a/a.m3u8'])
+    expect(c.getState()).toMatchObject({ mode: 'video', playing: true })
   })
-})
 
-describe('queue controller - the player starting video does not undo itself', () => {
-  it('leaves the playing flag alone when the player goes back to video, so the video it is starting is not told to pause', () => {
+  it('does not touch the sound element when the mode goes between video and sound', () => {
+    const { c, engine } = setup([song('a')])
+    c.setStage(true)
+    c.play()
+    const calls = [...engine.calls]
+    c.setPreferred('video')
+    expect(c.getState()).toMatchObject({ mode: 'video', playing: true })
+    c.setPreferred('audio')
+    expect(c.getState()).toMatchObject({ mode: 'audio', playing: true })
+    expect(engine.calls).toEqual(calls)
+  })
+
+  it('shows the picture only while the player is on screen and the screen is on - the preference stays', () => {
+    const { c, engine } = setup([song('a')])
+    c.setPreferred('video')
+    c.play()
+    expect(c.getState().mode).toBe('audio') // 화면의 재생기가 없다
+    c.setStage(true)
+    expect(c.getState().mode).toBe('video')
+    c.setVisible(false)
+    expect(c.getState()).toMatchObject({ mode: 'audio', preferred: 'video' })
+    c.setVisible(true)
+    expect(c.getState().mode).toBe('video')
+    c.setStage(false)
+    expect(c.getState().mode).toBe('audio')
+    expect(engine.calls).toEqual(['wake /a/a.m3u8', 'start /a/a.m3u8'])
+  })
+
+  it('pauses and resumes the sound element, not a video, while the picture is shown', () => {
+    const { c, engine } = setup([song('a')])
+    c.setPreferred('video')
+    c.setStage(true)
+    c.play()
+    c.toggle()
+    expect(engine.calls.at(-1)).toBe('pause')
+    c.toggle()
+    expect(engine.calls.at(-1)).toBe('resume')
+  })
+
+  it('takes the sound element pausing as a pause while the picture is shown', () => {
     const { c } = setup([song('a')])
-    c.host.start({ url: '/a/a.m3u8', at: 0, play: true, adopt: false })
-    c.host.stop()
+    const el = {
+      ended: false,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }
+    c.attachElement(el as never)
+    c.setPreferred('video')
+    c.setStage(true)
+    c.play()
+    c.audioPaused()
+    expect(c.getState().playing).toBe(false)
+  })
+
+  it('keeps the old way for a clip with no sound-only version: no element, the player makes the sound, the mode never moves', () => {
+    const { c, engine } = setup([videoOnly('v')])
+    c.setStage(true)
+    c.play()
+    expect(engine.calls.at(-1)).toBe('stop')
+    expect(c.getState().mode).toBe('video')
+    c.setPreferred('audio')
+    expect(c.getState().mode).toBe('video')
+    c.audioPaused() // 요소의 멈춤 소식은 이 곡과 상관없다
     expect(c.getState().playing).toBe(true)
+  })
+
+  it('tells the player where the sound is - while the element holds this song, in either mode', () => {
+    const { c } = setup([song('a')])
+    c.setStage(true)
+    c.setPreferred('video')
+    expect(c.host.status()).toBeNull()
+    c.play()
+    expect(c.host.status()).toEqual({ playing: true, at: 0 })
+    c.pause()
+    expect(c.host.status()).toEqual({ playing: false, at: 0 })
   })
 })

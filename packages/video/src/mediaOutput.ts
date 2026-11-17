@@ -10,6 +10,8 @@ export type MediaOutput = {
   seek: (seconds: number) => void
   /** `volume` 0~1 */
   applyVolume: (volume: number, muted: boolean) => void
+  /** 자막 켜고 끄기 - 자막을 다룰 수 있는 출력(유튜브)만 */
+  setCaptions?: (on: boolean) => void
 }
 
 const finite = (n: number) => (Number.isFinite(n) && n >= 0 ? n : 0)
@@ -32,10 +34,26 @@ export function elementOutput(
 export function youtubeOutput(
   player: Pick<
     YouTubePlayer,
-    'getCurrentTime' | 'getDuration' | 'seekTo' | 'setVolume' | 'mute' | 'unMute'
+    'getCurrentTime' | 'getDuration' | 'seekTo' | 'setVolume' | 'mute' | 'unMute' | 'loadModule' | 'unloadModule'
   >,
-): MediaOutput {
+): MediaOutput & { reapplyCaptions: () => void } {
+  // 유튜브는 재생이 시작될 때 자막 모듈을 (영상 · 계정 설정대로) 다시 올린다 - 원하는 값을 기억했다가 재생이 시작되면 다시 건다
+  let captions: boolean | null = null
+  const applyCaptions = () => {
+    if (captions === null) return
+    if (captions) player.loadModule?.('captions')
+    else {
+      // 옛 이름(cc)으로 올라오는 경우도 같이 내린다
+      player.unloadModule?.('captions')
+      player.unloadModule?.('cc')
+    }
+  }
   return {
+    setCaptions: (on) => {
+      captions = on
+      applyCaptions()
+    },
+    reapplyCaptions: applyCaptions,
     read: () => ({
       currentTime: finite(player.getCurrentTime()),
       duration: finite(player.getDuration()),

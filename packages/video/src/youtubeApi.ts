@@ -10,6 +10,9 @@ export type YouTubePlayer = {
   setVolume: (volume: number) => void
   mute: () => void
   unMute: () => void
+  /** 자막 모듈 켜고 끄기(문서에 없는 API 라 없을 수도 있다) */
+  loadModule?: (name: string) => void
+  unloadModule?: (name: string) => void
 }
 
 export type YouTubeStates = { ENDED: number; PLAYING: number; PAUSED: number }
@@ -24,6 +27,8 @@ export type YouTubeApi = {
         onReady?: (event: { target: YouTubePlayer }) => void
         onStateChange?: (event: { data: number }) => void
         onError?: (event: { data: number }) => void
+        /** 자막 같은 모듈이 올라오거나 바뀔 때 */
+        onApiChange?: () => void
       }
     },
   ) => YouTubePlayer

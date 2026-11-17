@@ -89,54 +89,54 @@ describe('VideoPlayer before the first press', () => {
     expect(html).not.toContain('a-1/index.m3u8') // 누르기 전에는 소리 판 주소도 안 쓴다
   })
 
-  it("renders no audio element of its own when it borrows the queue's", () => {
-    const host = {
-      element: () => null,
-      wake: () => {},
-      start: () => {},
-      stop: () => {},
-      registerOutput: () => () => {},
-      registerVideoWaker: () => () => {},
-      levels: () => ({ volume: 1, muted: false }),
-      fullscreen: { register: () => () => {}, report: () => {} },
-      quality: { register: () => ({ reportHeight: () => {}, release: () => {} }) },
-      status: () => null,
-    }
+  const hostOf = (status: () => { playing: boolean; at: number } | null = () => null) => ({
+    element: () => null,
+    status,
+    setPreferred: () => {},
+    registerOutput: () => () => {},
+    fullscreen: { register: () => () => {}, report: () => {} },
+    quality: { register: () => ({ reportHeight: () => {}, release: () => {} }) },
+  })
+  const withSound = fakeGrant({ audio: 'https://cdn.test/a.m3u8' })
+  const chosen = (label: string) =>
+    new RegExp(
+      `<button[^>]*role="radio"[^>]*aria-checked="true"[^>]*>(?:<span[^>]*>[^<]*</span>)?${label}`,
+    )
+
+  it("renders no audio element of its own when it hangs on the queue's", () => {
     const html = renderToStaticMarkup(
-      <VideoPlayer
-        grant={fakeGrant({ audio: 'https://cdn.test/a.m3u8' })}
-        env={native}
-        audioHost={host}
-      />,
+      <VideoPlayer grant={withSound} env={native} audioHost={hostOf()} />,
     )
     expect(html).not.toContain('<audio')
     expect(html).toContain('role="radiogroup"')
   })
 
-  it('joins a queue that is already playing this song as sound - no play button to press, Audio chosen', () => {
-    const host = {
-      element: () => null,
-      wake: () => {},
-      start: () => {},
-      stop: () => {},
-      registerOutput: () => () => {},
-      registerVideoWaker: () => () => {},
-      levels: () => ({ volume: 1, muted: false }),
-      fullscreen: { register: () => () => {}, report: () => {} },
-      quality: { register: () => ({ reportHeight: () => {}, release: () => {} }) },
-      status: () => ({ playing: true, at: 42 }),
+  it('has no play button of its own for a song on the queue - the queue plays, whatever mode it is in - and shows the mode the queue chose', () => {
+    for (const [queueMode, label] of [
+      ['audio', 'Audio'],
+      ['video', 'Video'],
+    ] as const) {
+      const html = renderToStaticMarkup(
+        <VideoPlayer
+          grant={withSound}
+          env={native}
+          audioHost={hostOf(() => ({ playing: true, at: 42 }))}
+          queueMode={queueMode}
+        />,
+      )
+      expect(html).not.toContain('aria-label="Play video')
+      expect(html).not.toContain('aria-label="Play audio')
+      expect(html).toContain('src="https://cdn.test/v/a/p-1.jpg"')
+      expect(html).toMatch(chosen(label))
+      expect(html).not.toContain('m3u8') // 영상 주소는 붙을 때까지 안 쓴다
     }
+  })
+
+  it('keeps the play button for a clip with no sound version, even on the queue', () => {
     const html = renderToStaticMarkup(
-      <VideoPlayer
-        grant={fakeGrant({ audio: 'https://cdn.test/a.m3u8' })}
-        env={native}
-        audioHost={host}
-      />,
+      <VideoPlayer grant={fakeGrant()} env={native} audioHost={hostOf()} queueMode="video" />,
     )
-    expect(html).not.toContain('aria-label="Play video')
-    expect(html).toMatch(
-      /<button[^>]*role="radio"[^>]*aria-checked="true"[^>]*>(?:<span[^>]*>[^<]*<\/span>)?Audio/,
-    )
+    expect(html).toMatch(/<button[^>]*aria-label="Play video, 0:42"/)
   })
 
   it('has no switch when this browser cannot play HLS at all', () => {

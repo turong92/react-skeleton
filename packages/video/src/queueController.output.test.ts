@@ -129,57 +129,28 @@ describe('queue progress', () => {
     expect(c.progress()).toEqual({ currentTime: 0, duration: 0 })
   })
 
-  it('stops holding the old time when the switch is abandoned (stage closed) or the user seeks', () => {
+  it('keeps reading and seeking the sound element while the picture is shown - the video follows it, it is no output', () => {
     const { c, engine } = setup([song('a')])
+    c.setPreferred('video')
+    c.setStage(true)
     c.play()
+    expect(c.getState().mode).toBe('video')
     engine.time = 754
     engine.length = 5400
     refresh(c)
-    c.host.stop()
-    const off = c.registerOutput(fakeOutput(0, 0))
-    expect(c.progress().currentTime).toBe(754)
-    off()
-    expect(c.progress()).toEqual({ currentTime: 0, duration: 0 })
-
-    const second = setup([song('a')])
-    second.c.play()
-    second.engine.time = 754
-    second.engine.length = 5400
-    refresh(second.c)
-    second.c.host.stop()
-    second.c.registerOutput(fakeOutput(0, 0))
-    second.c.seek(10)
-    expect(second.c.progress()).toEqual({ currentTime: 10, duration: 0 })
-  })
-
-  it('wakes the drawn video inside the press when switching to video, and only then', () => {
-    const { c } = setup([song('a')])
-    const wake = vi.fn()
-    const off = c.host.registerVideoWaker(wake)
-    c.setPreferred('audio')
-    expect(wake).not.toHaveBeenCalled()
-    c.setPreferred('video')
-    expect(wake).toHaveBeenCalledTimes(1)
-    off()
-    c.setPreferred('video')
-    expect(wake).toHaveBeenCalledTimes(1)
-  })
-
-  it('keeps the last time while the same song moves between video and sound (no jump to 0)', () => {
-    const { c, engine } = setup([song('a')])
-    c.play()
-    engine.time = 754
-    engine.length = 5400
-    refresh(c)
-    // 영상으로 넘김: 대기열 소리를 멈추고 화면 영상은 아직 못 불러왔다
-    c.host.stop()
-    const out = fakeOutput(0, 0)
-    c.registerOutput(out)
     expect(c.progress()).toEqual({ currentTime: 754, duration: 5400 })
-    out.time = 755
-    out.length = 5400
-    refresh(c)
-    expect(c.progress()).toEqual({ currentTime: 755, duration: 5400 })
+    c.seek(100)
+    expect(engine.seek).toHaveBeenCalledWith(100)
+    expect(c.progress().currentTime).toBe(100)
+  })
+
+  it('does not let a registered output take over the progress of a song with a sound version', () => {
+    const { c, engine } = setup([song('a')])
+    c.play()
+    engine.time = 5
+    engine.length = 200
+    c.registerOutput(fakeOutput(99, 300))
+    expect(c.progress()).toEqual({ currentTime: 5, duration: 200 })
   })
 
   it('keeps a newer output when an older one unregisters late', () => {
@@ -329,17 +300,6 @@ describe('queue quality', () => {
   })
 })
 
-describe('queue setPreferred', () => {
-  it('raises preferSignal on every call, even when the value is the same (the player may be in the other mode after an automatic switch)', () => {
-    const { c } = setup([song('a')])
-    const base = c.getState().preferSignal
-    c.setPreferred('video')
-    expect(c.getState().preferSignal).toBe(base + 1)
-    c.setPreferred('video')
-    expect(c.getState()).toMatchObject({ preferred: 'video', preferSignal: base + 2 })
-  })
-})
-
 describe('queue canAudio', () => {
   it('is true for a song with a sound version on a device that plays it', () => {
     expect(setup([song('a')]).c.canAudio()).toBe(true)
@@ -456,5 +416,29 @@ describe('queue volume', () => {
     engine.setVolume.mockClear()
     c.attachElement({ addEventListener: () => {}, removeEventListener: () => {} } as never)
     expect(engine.setVolume).toHaveBeenCalledWith(0.6, false)
+  })
+})
+
+describe('captions', () => {
+  it('are off by default, applied to an output that handles them, and offered only while it is registered', () => {
+    const { c } = setup([clip('a')])
+    c.play()
+    expect(c.getState().captions).toBe(false)
+    const setCaptions = vi.fn()
+    const off = c.registerOutput({ ...fakeOutput(), setCaptions })
+    expect(setCaptions).toHaveBeenCalledWith(false)
+    expect(c.getState().canCaptions).toBe(true)
+    c.setCaptions(true)
+    expect(setCaptions).toHaveBeenLastCalledWith(true)
+    expect(c.getState().captions).toBe(true)
+    off()
+    expect(c.getState().canCaptions).toBe(false)
+  })
+
+  it('are not offered for our own video (no captions handler)', () => {
+    const { c } = setup([clip('a')])
+    c.play()
+    c.registerOutput(fakeOutput())
+    expect(c.getState().canCaptions).toBe(false)
   })
 })

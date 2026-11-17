@@ -101,7 +101,7 @@ type Story = StoryObj<typeof meta>
 
 export const NativeHlsPlaysTheMaster: Story = {
   play: async ({ canvas, userEvent }) => {
-    await expect(canvas.queryByLabelText('Video')).toBeNull() // 누르기 전에는 영상 요소도 없다
+    await expect(canvas.getByLabelText('Video')).not.toBeVisible() // 누르기 전에는 영상이 숨겨져 있다(요소는 아이폰이 나중 재생을 막지 않게 남긴다)
     await userEvent.click(canvas.getByRole('button', { name: 'Play video, 0:42' }))
     const video = (await canvas.findByLabelText('Video')) as HTMLVideoElement
     await expect(video).toHaveAttribute('controlsList', 'nodownload')
@@ -227,7 +227,7 @@ export const AudioSwitchTakesOverWithoutVideoPieces: Story = {
         `sources=https://video.test/v/a/h-1/master.m3u8,${AUDIO_URL}`,
       ),
     )
-    await expect(canvas.queryByLabelText('Video', { selector: 'video' })).toBeNull() // 영상 요소가 없다
+    await expect(canvas.getByLabelText('Video', { selector: 'video' })).not.toBeVisible() // 영상은 숨겨져 있다(소리 모드)
     await userEvent.click(canvas.getByRole('radio', { name: 'Video' }))
     await expect(await canvas.findByLabelText('Video', { selector: 'video' })).toBeVisible()
   },
@@ -238,7 +238,7 @@ export const StartsAsAudio: Story = {
   play: async ({ canvas, userEvent }) => {
     await userEvent.click(canvas.getByRole('button', { name: 'Play audio' }))
     await waitFor(() => expect(canvas.getByTestId('log')).toHaveTextContent(`sources=${AUDIO_URL}`))
-    await expect(canvas.queryByLabelText('Video', { selector: 'video' })).toBeNull()
+    await expect(canvas.getByLabelText('Video', { selector: 'video' })).not.toBeVisible()
   },
 }
 

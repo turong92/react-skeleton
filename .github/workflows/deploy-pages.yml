@@ -1,0 +1,40 @@
+name: Deploy Pages
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '배포할 태그 (예: v1.0.0)'
+        required: true
+
+# 변수 PAGES_PROJECT 가 없으면(템플릿 · 아직 배포 설정 전) 잡이 건너뛰어진다.
+# 변수: PAGES_PROJECT(terraform 출력 web_github_variables) · WEB_APP(pnpm 필터 이름 — 찍은 앱 이름, 사람이 넣는다)
+# 비밀: CLOUDFLARE_API_TOKEN(Pages 편집 권한만) · CLOUDFLARE_ACCOUNT_ID
+jobs:
+  deploy:
+    if: ${{ github.event.repository.is_template != true && vars.PAGES_PROJECT != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      WEB_APP: ${{ vars.WEB_APP }}
+      PAGES_PROJECT: ${{ vars.PAGES_PROJECT }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      # VITE_API_BASE_URL 은 주지 않는다 — 같은 도메인의 상대 주소 /api/v1 (Worker 가 백엔드로 보낸다)
+      - run: pnpm --filter "$WEB_APP" build
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy apps/${{ env.WEB_APP }}/dist --project-name ${{ env.PAGES_PROJECT }} --branch main

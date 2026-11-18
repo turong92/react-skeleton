@@ -578,6 +578,10 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
   'ui#EmptyState': () => ({ title: 'Nothing here', description: 'Add one' }),
   'ui#Card': () => ({ title: 'Card', children: 'body' }),
   'ui#Dialog': () => ({ open: true, onClose: noop, title: 'Dialog', children: 'body' }),
+  'preview#PreviewStage': () => ({
+    source: { kind: 'render', content: 'Hello' },
+    device: 'phone',
+  }),
   'ui#Spinner': () => ({}),
   'ui#AppShell': () => ({
     brand: 'brand',

@@ -1384,14 +1384,18 @@
     },
     {
       "patterns": [],
-      "stories": [],
+      "stories": ["packages/preview/src/PreviewStage.stories.tsx"],
       "docs": ["packages/preview/README.md"],
       "entryPoints": [
         "PREVIEW_DEVICES",
         "PC_WIDTHS",
         "DEFAULT_PC_WIDTH",
         "deviceViewport",
-        "outerSize"
+        "outerSize",
+        "PreviewStage",
+        "PREVIEW_SANDBOX",
+        "defaultPreviewLabels",
+        "koPreviewLabels"
       ],
       "needs": [],
       "backend": null,
@@ -1407,7 +1411,7 @@
         "alsoVia": [],
         "optOut": null
       },
-      "summary": "기기 틀(폰 · 태블릿 세로/가로 · PC) 안 미리보기 — 기기 치수와 틀 · 배율 계산. 무대와 크게 보기는 이어지는 작업에서 더해진다.",
+      "summary": "기기 틀(폰 · 태블릿 세로/가로 · PC) 안 미리보기 무대 PreviewStage — 화면은 iframe 다리(PreviewFrameBridge)나 직접 렌더(content)로 · 맞추기 · PC 실제 크기 가로 밀기 · 펴기. 기기 치수 · 틀 크기 계산과 ko/en 문구. 크게 보기는 이어지는 작업에서 더해진다.",
       "notFor": ["한 화면을 기기 틀 없이 반응형으로만 보이면 쓰지 않는다 — 앱 CSS 로"],
       "keywords": {
         "ko": ["미리보기", "기기 틀", "폰 미리보기", "크게 보기", "방문자처럼 보기"],

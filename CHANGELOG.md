@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — 미리보기
+
+- `@skeleton/preview`(새 패키지, 실험적): 기기 틀(폰 · 태블릿 세로/가로 · PC) 안 미리보기. `PreviewStage`(무대 — 맞추기 · PC 실제 크기 가로 밀기 · 펴기 · 큰 견본 `maxScale`) · `PreviewViewer`(방문자처럼 크게 보기 — 넓은 결 막대 · 좁은 결 알약/판 · 배율 패드 · 만지기 · 다시 재생 · 새 창, 앱 보기 조건은 `extra`) · `DevicePicker` · `deviceViewport` · `outerSize` · ko/en 문구. 화면은 두 갈래 — iframe 다리(`PreviewFrameBridge`, 앱이 자기 메시지 규약으로 구현)와 같은 번들의 컴포넌트를 바로 그리는 `content`.
+- `@skeleton/ui`: `Dialog` 에 `fullScreen`(화면 전체를 덮고 제목 줄 · × 가 없다 — 이름은 보이지 않는 제목).
+- `@skeleton/tokens`: 기기 틀 토큰 `--device-bezel` · `--device-base`(색, 라이트/다크)와 `--device-{phone,tablet,desktop}-radius` · `--device-*-screen-radius`(모서리).
+
 ### Added — 웹 보상형 광고
 
 - `@skeleton/ads`(새 패키지, 실험적): 웹 보상형 광고(Google Ad Manager GPT rewarded)의 동의 → 재생 → 보상 흐름. `createWebRewardedApi`(`/ads/web-rewarded` 세션 열기 · 보상 요청, `basePath`) · `createRewardedAd`(React 없는 컨트롤러 — 보기는 사용자 손짓 안에서만, 보상 요청은 세션당 한 번, 끝난 뒤 저절로 다시 시작하지 않는다, 하루 상한이면 슬롯을 만들지 않는다) · `useRewardedAd` · `RewardedAdPrompt`(동의 창) · `loadGoogletag`(스크립트 한 번 · 재시도) · `createFakeGoogletag`(로컬 · 시험 · 스토리용, 미디어가 없어 소리가 나지 않는다). README 에 구글 정책 체크(패키지가 지키는 것 / 앱이 지킬 것). 백엔드 `modules/ads-web-rewarded` 짝.

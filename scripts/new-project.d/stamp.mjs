@@ -83,6 +83,8 @@ const SKIP_NAMES = new Set([
   '.git',
   '.claude',
   '.superpowers',
+  // docs/superpowers — 이 레포의 작업 계획 · 스펙(찍어 낸 프로젝트의 것이 아니다)
+  'superpowers',
   '.tmp',
   '.idea',
   '.vscode',

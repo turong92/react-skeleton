@@ -11,7 +11,7 @@
 #       scripts/new-project.sh ~/work/acme acme --without-storybook      # 스토리집 · 스토리 · 에이전트 안내 없이
 #
 # 하는 일
-#   1. 이 레포를 <target-dir> 로 복사한다 (node_modules · dist · .git · .claude · .superpowers · .env · *.local 제외).
+#   1. 이 레포를 <target-dir> 로 복사한다 (node_modules · dist · .git · .claude · .superpowers · docs/superpowers · .env · *.local 제외).
 #   2. apps/starter 를 apps/<name> 으로 바꾼다 (package.json 이름 · index.html 제목 · 헤더 브랜드 · .env.example 첫 줄).
 #      --ssr 이면 apps/starter-ssr(서버가 첫 응답을 그리는 스타터)가 대신 apps/<name> 이 되고 apps/starter 는 지운다
 #      (이름은 src/appName.ts 한 줄 · Dockerfile 의 ARG APP).

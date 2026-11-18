@@ -6,25 +6,28 @@
 
 ## API
 
-| export                                               | 뜻                                                                                                                                                                                                                                                       |
-| ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PreviewStage`                                       | 기기 하나를 틀에 담아 칸에 맞춘다 — `source` · `device` · `pcWidth` · `pcZoom` · `phone` · `bare` · `fitHeight` · `fluid` · `scrollBox` · `maxScale` · `focusable` · `labels` …                                                                          |
-| `PreviewViewer`                                      | 방문자처럼 크게 보기 — `as="dialog"`(전체 화면 모달) 또는 `"page"`(새 창 화면). 넓은 결 막대 · 좁은 결 알약 → 판 · 배율 패드 · 꽉 찬 폰                                                                                                                  |
-| `DevicePicker`                                       | 기기 넷 고르기 단추 묶음(`value` · `onChange`) — 큰 견본에서 「그 기기의 크게 보기 열기」에 쓴다                                                                                                                                                         |
-| `PREVIEW_SANDBOX`                                    | iframe 기본 `sandbox` 값(`allow-scripts` — 안쪽 문서가 바깥 주소 · 저장소 · 쿠키를 못 읽는다)                                                                                                                                                            |
-| `defaultPreviewLabels` · `koPreviewLabels`           | 화면 문구(기본 영어 · 한국어). 타입 `PreviewLabels`                                                                                                                                                                                                      |
-| `PREVIEW_DEVICES` · `PC_WIDTHS` · `DEFAULT_PC_WIDTH` | 기기 넷 `phone` · `tabletPortrait` · `tabletLandscape` · `pc`(고르는 순서) / PC 폭 1280 · 1440 · 1920(높이 800 · 900 · 1080), 기본 1280                                                                                                                  |
-| `deviceViewport(device, pcWidth?)`                   | 기기의 CSS 뷰포트 `{ width, height, frame }`                                                                                                                                                                                                             |
-| `outerSize(device, pcWidth?, kind?)`                 | 틀까지 넣은 바깥 크기(PC 폭은 받침까지) — 칸 폭을 잡을 때                                                                                                                                                                                                |
-| 타입                                                 | `PreviewDevice` · `PcWidth` · `FrameKind` · `PcZoom` · `PreviewSource` · `PreviewFrameSource` · `PreviewRenderSource` · `PreviewFrameBridge` · `PreviewStageProps` · `PreviewViewerProps` · `PreviewViewerExtra` · `DevicePickerProps` · `PreviewLabels` |
+| export                                               | 뜻                                                                                                                                                                                                                                                                                                                                                            |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PreviewStage`                                       | 기기 하나를 틀에 담아 칸에 맞춘다 — `source` · `device` · `pcWidth` · `pcZoom` · `phone` · `bare` · `fitHeight` · `fluid` · `scrollBox` · `maxScale` · `focusable` · `labels` …                                                                                                                                                                               |
+| `PreviewViewer`                                      | 방문자처럼 크게 보기 — `as="dialog"`(전체 화면 모달) 또는 `"page"`(새 창 화면). 넓은 결 막대 · 좁은 결 알약 → 판 · 배율 패드 · 꽉 찬 폰                                                                                                                                                                                                                       |
+| `PreviewScreen` · `DeviceFrame`                      | 낮은 층 부품 — 무대 · 배율 없이 화면 하나를 틀에 담는다. `PreviewScreen`(`source` · `width` · `height` · `scale` · `kind` · `title` · `view` · `reserveBase` · `focusable`)과 틀만 그리는 `DeviceFrame`(`kind` · `screen` · `style.transform`). 갤러리처럼 임의 폭 · 배율 · 칸마다 다른 `title` 의 여러 장을 그릴 때 — 틀 복사본을 앱에 두지 않는다           |
+| `DevicePicker`                                       | 기기 넷 고르기 단추 묶음(`value` · `onChange`) — 큰 견본에서 「그 기기의 크게 보기 열기」에 쓴다                                                                                                                                                                                                                                                              |
+| `PreviewScreen` · `DeviceFrame`                      | 낮은 층 부품 — 무대 · 배율 계산 없이 화면 하나를 틀에 담는다. `PreviewScreen`(`source` · `width` · `height` · `scale` · `kind` · `title` · `view` · `reserveBase` · `focusable`)과 틀만 그리는 `DeviceFrame`(`kind` · `screen` · `style.transform`). 갤러리처럼 임의 폭 · 배율 · 칸마다 다른 `title` 의 여러 장을 그릴 때 쓴다 — 틀 복사본을 앱에 두지 않는다 |
+| `PREVIEW_SANDBOX`                                    | iframe 기본 `sandbox` 값(`allow-scripts` — 안쪽 문서가 바깥 주소 · 저장소 · 쿠키를 못 읽는다)                                                                                                                                                                                                                                                                 |
+| `defaultPreviewLabels` · `koPreviewLabels`           | 화면 문구(기본 영어 · 한국어). 타입 `PreviewLabels`                                                                                                                                                                                                                                                                                                           |
+| `PREVIEW_DEVICES` · `PC_WIDTHS` · `DEFAULT_PC_WIDTH` | 기기 넷 `phone` · `tabletPortrait` · `tabletLandscape` · `pc`(고르는 순서) / PC 폭 1280 · 1440 · 1920(높이 800 · 900 · 1080), 기본 1280                                                                                                                                                                                                                       |
+| `deviceViewport(device, pcWidth?)`                   | 기기의 CSS 뷰포트 `{ width, height, frame }`                                                                                                                                                                                                                                                                                                                  |
+| `outerSize(device, pcWidth?, kind?)`                 | 틀까지 넣은 바깥 크기(PC 폭은 받침까지) — 칸 폭을 잡을 때                                                                                                                                                                                                                                                                                                     |
+| 타입                                                 | `PreviewDevice` · `PcWidth` · `FrameKind` · `PcZoom` · `PreviewSource` · `PreviewFrameSource` · `PreviewRenderSource` · `PreviewFrameBridge` · `PreviewStageProps` · `PreviewViewerProps` · `PreviewViewerExtra` · `DevicePickerProps` · `PreviewLabels`                                                                                                      |
 
 앱에 요구하는 것: `@skeleton/ui`(Button · Select · SwitchRow · Dialog) 와 `@skeleton/tokens` 의 토큰(`--device-*` 는 기기 틀 색 · 모서리 — 값을 바꾸려면 `tokens.json` 으로 덮는다), 피어 `lucide-react`(아이콘) · `react`. `as="dialog"` 는 `onClose` 안에서 뷰어를 내려야 한다(Esc · 닫기 단추 모두 `onClose` 만 부른다 — 열림 상태는 부모가 쥔다).
 
 ## iframe 으로 그릴 때
 
-앱의 제어기(메시지를 보내고 받는 객체)를 `PreviewFrameBridge` 로 감싼다. `attach` 만 필수고, 나머지(높이 · 모달 · 스크롤 · 두 겹)는 있으면 그 기능이 켜지고 없으면 꺼질 뿐 무대는 그대로 그려진다. 이름이 다른 메서드를 잇는 게터 객체로 만들고, 다리는 `useState(() => …)` 로 한 번만 만든다(무대는 바뀐 다리를 받으면 떼고 다시 붙인다).
+앱의 제어기(메시지를 보내고 받는 객체)를 `PreviewFrameBridge` 로 감싼다. `attach` 만 필수고, 나머지(높이 · 모달 · 스크롤 · 두 겹)는 있으면 그 기능이 켜지고 없으면 꺼질 뿐 무대는 그대로 그려진다. 이름이 다른 메서드를 잇는 게터 객체로 만들고, 다리는 `useState(() => …)` 로 한 번만 만든다(무대는 바뀐 다리를 받으면 떼고 다시 붙인다). 이미 그려진 문서를 다시 실어야 하고 흰 화면이 번쩍이면 안 될 때는 `source` 에 `layered: true` — 뒤 층 iframe 을 하나 더 그려 `attach(frame, spare)` 의 `spare` 로 넘기고, 다 그려지면 `front` / `onSwap` 으로 바꿔 끼운다. `sandbox` 도 `source` 에서 바꿀 수 있다(기본 `PREVIEW_SANDBOX`).
 
 ```tsx
+import { useState } from 'react'
 import { PreviewStage, type PreviewFrameBridge } from '@skeleton/preview'
 
 function createBridge(controller: MyController): PreviewFrameBridge {
@@ -60,8 +63,9 @@ function Editor() {
 ## 편집기 칸 · 큰 견본
 
 - 편집기 칸: 칸 폭 = `outerSize(device, pcWidth).width`(+ 세로 막대) 로 잡고 무대를 그 안에 둔다. 폰 배치는 `phone` + `headOffset`(문서 위 고정 머리 줄 높이).
+- 높이 맞춤: 무대는 `fitHeight`(또는 `phone`)일 때만 칸 높이를 재서 맞춘다. 넓은 화면에서 높이 맞춤이 필요하면 앱이 미디어 질의로 `fitHeight` 를 준다.
 - 큰 견본: `<PreviewStage maxScale={1.5} focusable={false} fitHeight … />` + `<DevicePicker onChange={(d) => 그 기기로 크게 보기 열기} />`.
-- 크게 보기에 앱 보기 조건(단계 · 언어 · 보는 사람 같은)을 꽂으려면 `extra={{ bar, panel, summary }}` — 막대 · 판 · 알약 요약에 앱의 `Select` · 칩 · 글 조각을 넣는다.
+- 크게 보기에 앱 보기 조건(밤낮 · 글자 크기 같은)을 꽂으려면 `extra={{ bar, panel, summary }}` — 막대 · 판 · 알약 요약에 앱의 `Select` · 칩 · 글 조각을 넣는다.
 
 ## 문구
 
@@ -76,7 +80,7 @@ import { koPreviewLabels, defaultPreviewLabels } from '@skeleton/preview'
 
 - 두 앱 쪽 교체(import 바꾸기 · 옛 파일 지우기) — 이 패키지 밖.
 - 메시지 규약 · iframe 제어기 구현 — 앱이 `PreviewFrameBridge` 를 구현한다. 패키지는 규약을 모른다.
-- 보기 조건(단계 · 언어 · 보는 사람) 고르기 — 앱이 `extra.bar` · `extra.panel` · `extra.summary` 로 꽂는다.
+- 보기 조건(밤낮 · 글자 크기 같은 앱 고유 선택) 고르기 — 앱이 `extra.bar` · `extra.panel` · `extra.summary` 로 꽂는다.
 - 뒤로 가기(history)로 판 · 뷰어 닫기 — 겹 스택이 모듈 전역이라 패키지 규칙에 걸린다. Esc · 단추로만 닫는다.
 - 직접 렌더 갈래의 펴기(문서 높이로 늘리기) · 모달 창 맞추기 · 구역 스크롤 — 쓰는 곳이 iframe 앱뿐이다.
 - 새 창 미리보기 라우트 — `as="page"` 화면 부품만 준다. 라우트 · 창 열기는 앱.

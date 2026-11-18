@@ -16,7 +16,7 @@ export type DialogProps = {
   dismissible?: boolean
   /**
    * 화면 전체를 덮는 창. 제목 줄 · × 를 그리지 않는다 — 제목은 보이지 않는 `h2` 로 창 이름만 되고 닫기는 내용이 둔다.
-   * Esc → `onClose` 는 그대로(`dismissible` 규칙도 그대로)
+   * Esc → `onClose` 는 그대로(`dismissible` 규칙도 그대로). `footer` 는 쓰지 않는다 — 아래 줄도 내용이 둔다
    */
   fullScreen?: boolean
   children: ReactNode

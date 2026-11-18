@@ -588,6 +588,19 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
     title: 'Preview',
     onClose: noop,
   }),
+  'preview#PreviewScreen': () => ({
+    source: { kind: 'render', content: 'Hello' },
+    width: 390,
+    height: 844,
+    scale: 1,
+    kind: 'phone',
+    title: 'Preview',
+  }),
+  'preview#DeviceFrame': () => ({
+    kind: 'phone',
+    screen: { width: 390, height: 844 },
+    children: 'Hello',
+  }),
   'preview#DevicePicker': () => ({ value: 'phone', onChange: noop }),
   'ui#Spinner': () => ({}),
   'ui#AppShell': () => ({

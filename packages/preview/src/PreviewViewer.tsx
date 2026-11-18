@@ -109,6 +109,8 @@ export function PreviewViewer({
     panelReserve: reserveFor(false, noticeStack.height, true),
     shrunkWidth,
     fluid,
+    // 직접 렌더 + 만지기: 화면 안 스크롤 · 입력칸이 무대에 가로채이지 않게
+    passThrough: touch && source.kind === 'render',
   })
 
   const touchChangeRef = useRef(onTouchChange)
@@ -122,6 +124,7 @@ export function PreviewViewer({
   useScrollLock(as === 'dialog')
 
   // 모달이 열리면 무대로 포커스, 내려가면 연 단추로 돌려준다 — 포커스가 문서 맨 위로 떨어지지 않게
+  // 렌더 중에 활성 요소를 읽는 이유: 효과 시점에는 하위 Dialog 가 이미 showModal 로 포커스를 안으로 옮겨 연 단추를 알 수 없다. 서버에는 document 가 없어 null
   const [opener] = useState(() =>
     typeof document === 'undefined' ? null : (document.activeElement as HTMLElement | null),
   )

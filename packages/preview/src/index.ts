@@ -17,3 +17,7 @@ export type {
 } from './source'
 export { PreviewViewer } from './PreviewViewer'
 export type { PreviewViewerExtra, PreviewViewerProps } from './PreviewViewer'
+export { PreviewScreen } from './PreviewScreen'
+export type { PreviewScreenProps } from './PreviewScreen'
+export { DeviceFrame } from './DeviceFrame'
+export type { DeviceFrameProps } from './DeviceFrame'

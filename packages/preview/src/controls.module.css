@@ -40,3 +40,9 @@
   backdrop-filter: blur(12px);
   box-shadow: var(--shadow);
 }
+
+@media (forced-colors: active) {
+  .pad {
+    border: 1px solid CanvasText;
+  }
+}

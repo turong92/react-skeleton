@@ -10,10 +10,10 @@ describe('viewerSummary', () => {
     }))
 
   it('extra shows only while fit', () => {
-    expect(viewerSummary({ device: 'pc', fit: true, percent: 50, extra: ['Open', 'Fan'] })).toEqual(
-      { device: 'pc', percent: null, extra: ['Open', 'Fan'] },
-    )
-    expect(viewerSummary({ device: 'pc', fit: false, percent: 50, extra: ['Open'] })).toEqual({
+    expect(
+      viewerSummary({ device: 'pc', fit: true, percent: 50, extra: ['Daytime', 'Large text'] }),
+    ).toEqual({ device: 'pc', percent: null, extra: ['Daytime', 'Large text'] })
+    expect(viewerSummary({ device: 'pc', fit: false, percent: 50, extra: ['Daytime'] })).toEqual({
       device: 'pc',
       percent: 50,
       extra: [],

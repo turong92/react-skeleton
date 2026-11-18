@@ -71,6 +71,7 @@ export function useViewerZoom({
   panel = 0,
   panelReserve = reserve,
   shrunkWidth = 0,
+  passThrough = false,
 }: {
   device: PreviewDevice
   pcWidth: PcWidth
@@ -82,6 +83,8 @@ export function useViewerZoom({
   /** 축소 알약의 글 전체 폭(px, 잰 값) — 기기 옆 칸이 이보다 넓어야 옆에 둔다. 0 이면 아직 못 쟀다 */
   shrunkWidth?: number
   fluid?: boolean
+  /** `usePanZoom` 의 `passThrough` — 만지기를 켠 직접 렌더 */
+  passThrough?: boolean
 }): {
   /** 무대 크기(px) */
   stage: { width: number; height: number }
@@ -134,6 +137,7 @@ export function useViewerZoom({
     },
     initial: 'fit',
     inset: { x: gutter, top: room.top },
+    passThrough,
   })
 
   useEffect(() => {

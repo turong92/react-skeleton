@@ -10,7 +10,7 @@
 
 /* 화면 전체 — 몸 여백 없이 창을 다 덮는다. 안쪽 배치는 내용이 한다 */
 .dialog[data-fullscreen] {
-  width: 100vw;
+  width: 100%;
   max-width: none;
   height: 100dvh;
   max-height: none;

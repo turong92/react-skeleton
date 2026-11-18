@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, waitFor, within } from 'storybook/test'
-import { page } from 'vitest/browser'
 import { defaultPreviewLabels } from './labels.en'
 import { koPreviewLabels } from './labels.ko'
 import { ViewerStoryHost as Host } from './stories/ViewerStoryHost'
+import { PREVIEW_VIEWPORTS } from './stories/viewports'
 
 /**
  * 크게 보기 — 좁은 결(<1024): 무대가 화면 전부, 위 가운데 유리 알약(닫기 · 요약 · 펴기)과 그 아래 쌓인 안내, 오른쪽 아래 배율 패드.
@@ -12,7 +12,7 @@ import { ViewerStoryHost as Host } from './stories/ViewerStoryHost'
 const meta = {
   title: 'Packages/preview/PreviewViewerNarrow',
   component: Host,
-  parameters: { layout: 'fullscreen' },
+  parameters: { layout: 'fullscreen', viewport: PREVIEW_VIEWPORTS },
   args: {
     as: 'dialog',
     title: 'Large preview',
@@ -57,6 +57,8 @@ async function assertPill(canvas: Canvas, labels = L) {
 
 /** 화면 크기를 바꿔 돌리고 끝에 되돌린다 */
 async function withViewport(width: number, height: number, run: () => Promise<void>) {
+  // vitest 밖(스토리집 화면)에서는 이 모듈이 없다 — play 안에서만 불러온다
+  const { page } = await import('vitest/browser')
   const before = { width: window.innerWidth, height: window.innerHeight }
   await page.viewport(width, height)
   try {
@@ -114,7 +116,9 @@ export const PhoneEscFoldsPanel: Story = {
     await waitFor(() =>
       expect(within(panel).getByRole('button', { name: L.collapse })).toHaveFocus(),
     )
-    await userEvent.keyboard('{Escape}')
+    // 진짜 키 입력(브라우저가 dialog 의 Esc 로 받는다) — 판만 접히고 대화상자는 남아야 한다
+    const { userEvent: realKeys } = await import('vitest/browser')
+    await realKeys.keyboard('{Escape}')
     await waitFor(() => expect(canvas.queryByRole('region', { name: L.panelTitle })).toBeNull())
     await expect(screen.getByRole('dialog', { name: 'Large preview' })).toBeVisible()
     await expect(args.onClose).not.toHaveBeenCalled()

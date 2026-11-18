@@ -37,19 +37,6 @@ const preview: Preview = {
   parameters: {
     layout: 'padded',
     a11y: { test: 'error' },
-    // 미리보기 기기 넷(@skeleton/preview)과 같은 치수
-    viewport: {
-      options: {
-        phone: { name: 'Phone', styles: { width: '390px', height: '800px' }, type: 'mobile' },
-        tablet: { name: 'Tablet', styles: { width: '820px', height: '1180px' }, type: 'tablet' },
-        tabletLandscape: {
-          name: 'Tablet landscape',
-          styles: { width: '1180px', height: '820px' },
-          type: 'tablet',
-        },
-        desktop: { name: 'Desktop', styles: { width: '1440px', height: '900px' }, type: 'desktop' },
-      },
-    },
     controls: { matchers: { color: /(background|color)$/i, date: /Date$/i } },
   },
 }

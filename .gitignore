@@ -27,3 +27,6 @@ dist-ssr
 .env
 
 storybook-static
+
+# 작업 계획 · 스펙(공개 레포에 올리지 않는다)
+docs/superpowers/

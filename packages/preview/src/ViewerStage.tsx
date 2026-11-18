@@ -58,6 +58,7 @@ export function ViewerStage({
     >
       <div
         className={styles.canvas}
+        data-canvas
         style={{
           transform: fluid
             ? 'translate(0px, 0px)'

@@ -13,7 +13,7 @@ import {
   statSync,
   writeFileSync,
 } from 'node:fs'
-import { basename, join } from 'node:path'
+import { basename, join, relative } from 'node:path'
 import { projectCatalog } from '../capabilities.d/project.mjs'
 import { renderCapabilitiesMd, renderLlmsTxt } from '../capabilities.d/render.mjs'
 
@@ -83,8 +83,6 @@ const SKIP_NAMES = new Set([
   '.git',
   '.claude',
   '.superpowers',
-  // docs/superpowers — 이 레포의 작업 계획 · 스펙(찍어 낸 프로젝트의 것이 아니다)
-  'superpowers',
   '.tmp',
   '.idea',
   '.vscode',
@@ -98,6 +96,8 @@ function copy(root, target) {
     recursive: true,
     filter: (path) => {
       const name = basename(path)
+      // docs/superpowers — 이 레포의 작업 계획 · 스펙(찍어 낸 프로젝트의 것이 아니다). 이름이 아니라 루트 기준 경로로 거른다
+      if (relative(root, path).split('\\').join('/') === 'docs/superpowers') return false
       return !SKIP_NAMES.has(name) && !name.endsWith('.local') && !name.endsWith('.tsbuildinfo')
     },
   })

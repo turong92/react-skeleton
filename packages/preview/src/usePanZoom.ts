@@ -113,6 +113,7 @@ export function usePanZoom({
   viewport,
   initial,
   inset = 0,
+  passThrough = false,
 }: {
   content: Size
   viewport: Size
@@ -123,6 +124,11 @@ export function usePanZoom({
    * `pan` 은 늘 [viewport] 칸 기준 — `translate` 에는 부르는 쪽이 x · top(숫자면 그 값)을 더한다
    */
   inset?: number | { x: number; top: number }
+  /**
+   * 무대 바탕(이벤트 대상이 무대 자신)에서 난 입력만 처리하고, 화면 안 요소에서 올라온 포인터 · 키 · 휠은 건드리지 않는다 —
+   * 직접 렌더한 내용이 자기 스크롤 · 입력칸을 쓰게(iframe 은 이벤트가 안쪽 문서에 머물러 필요 없다)
+   */
+  passThrough?: boolean
 }): PanZoom {
   const insetX = typeof inset === 'number' ? inset : inset.x
   const insetTop = typeof inset === 'number' ? inset : inset.top
@@ -205,6 +211,7 @@ export function usePanZoom({
   useEffect(() => {
     if (!element) return
     function onWheel(event: WheelEvent) {
+      if (passThrough && event.target !== element) return
       event.preventDefault()
       const unit =
         event.deltaMode === 1 ? LINE_PX : event.deltaMode === 2 ? sizes.current.viewport.height : 1
@@ -220,9 +227,10 @@ export function usePanZoom({
     }
     element.addEventListener('wheel', onWheel, { passive: false })
     return () => element.removeEventListener('wheel', onWheel)
-  }, [element, current, zoomTo, panBy, originOf])
+  }, [element, current, zoomTo, panBy, originOf, passThrough])
 
   function onPointerDown(event: PointerEvent<HTMLElement>) {
+    if (passThrough && event.target !== event.currentTarget) return
     if (event.pointerType === 'mouse' && event.button !== 0) return
     pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY })
     try {
@@ -263,6 +271,7 @@ export function usePanZoom({
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLElement>) {
+    if (passThrough && event.target !== event.currentTarget) return
     const key = panZoomKey(event)
     if (!key) return
     if ('pan' in key) panBy(key.pan.x, key.pan.y)

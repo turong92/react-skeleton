@@ -323,7 +323,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 - 켜는 법: `--packages preview` — 함께 따라오는 패키지 `api-client` · `auth` · `legal` · `theme` · `time` · `tokens` · `ui`
 - 필요한 것: `ui`
 - 백엔드: 없음(프런트만)
-- 주요 진입점: `PREVIEW_DEVICES` · `PC_WIDTHS` · `DEFAULT_PC_WIDTH` · `deviceViewport` · `outerSize` · `PreviewStage` · `PREVIEW_SANDBOX` · `defaultPreviewLabels` · `koPreviewLabels` · `DevicePicker` · `PreviewViewer`
+- 주요 진입점: `PREVIEW_DEVICES` · `PC_WIDTHS` · `DEFAULT_PC_WIDTH` · `deviceViewport` · `outerSize` · `PreviewStage` · `PREVIEW_SANDBOX` · `defaultPreviewLabels` · `koPreviewLabels` · `DevicePicker` · `PreviewViewer` · `PreviewScreen` · `DeviceFrame`
 - 보고 따라 할 스토리: `packages/preview/src/PreviewStage.stories.tsx` · `packages/preview/src/PreviewViewer.stories.tsx` · `packages/preview/src/PreviewViewer.narrow.stories.tsx`
 - 문서: `packages/preview/README.md`
 - 쓰지 않는 경우: 한 화면을 기기 틀 없이 반응형으로만 보이면 쓰지 않는다 — 앱 CSS 로 / 메시지 규약 · 편집 표시(구역 테두리 등)는 없다 — 앱의 다리가 한다 / 뒤로 가기로 닫기는 없다

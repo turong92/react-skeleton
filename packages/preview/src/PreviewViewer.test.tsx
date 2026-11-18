@@ -35,9 +35,9 @@ describe('PreviewViewer', () => {
     expect(render({ initialDevice: 'pc' })).toContain('data-zoom-shield'))
 
   it('the pill names the device and the extra summary while fit', () =>
-    expect(render({ initialDevice: 'pc', extra: { summary: ['Open', 'Fan'] } })).toContain(
-      'PC · Open · Fan',
-    ))
+    expect(
+      render({ initialDevice: 'pc', extra: { summary: ['Daytime', 'Large text'] } }),
+    ).toContain('PC · Daytime · Large text'))
 
   it('stacks the hint, then the error, then the warning', () => {
     const html = render({ initialDevice: 'pc', error: 'err-marker', warning: 'warn-marker' })

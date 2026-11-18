@@ -1401,7 +1401,9 @@
         "defaultPreviewLabels",
         "koPreviewLabels",
         "DevicePicker",
-        "PreviewViewer"
+        "PreviewViewer",
+        "PreviewScreen",
+        "DeviceFrame"
       ],
       "needs": ["ui"],
       "backend": null,

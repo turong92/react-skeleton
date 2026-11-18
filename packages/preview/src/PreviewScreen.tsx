@@ -5,7 +5,7 @@ import { frameInsets, paintedBox, type FrameKind } from './frame'
 import { PREVIEW_SANDBOX, type PreviewSource } from './source'
 import styles from './PreviewScreen.module.css'
 
-type Props = {
+export type PreviewScreenProps = {
   source: PreviewSource
   /** 화면(기기 뷰포트) 크기 */
   width: number
@@ -43,7 +43,7 @@ export function PreviewScreen({
   title,
   view = null,
   reserveBase = false,
-}: Props) {
+}: PreviewScreenProps) {
   const bridge = source.kind === 'frame' ? source.bridge : null
   const layered = source.kind === 'frame' && (source.layered ?? false)
   const sandbox = source.kind === 'frame' ? (source.sandbox ?? PREVIEW_SANDBOX) : PREVIEW_SANDBOX

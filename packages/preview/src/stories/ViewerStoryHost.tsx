@@ -5,13 +5,20 @@ import type { PreviewSource } from '../source'
 import { createFakeFrameBridge } from '../test/fakeFrameBridge'
 import { sampleHtml } from './sampleHtml'
 
-/** 직접 렌더 갈래의 상태 확인용 — 누른 횟수가 기기를 바꿔도 남아야 한다 */
+/** 직접 렌더 갈래의 확인용 — 누른 횟수가 기기를 바꿔도 남고, 안쪽 입력칸 · 스크롤 상자가 무대에 가로채이지 않아야 한다 */
 function CounterScreen() {
   const [count, setCount] = useState(0)
   return (
     <div style={{ padding: 'var(--space-lg)', background: 'var(--surface)', color: 'var(--text)' }}>
       <h1 style={{ margin: 0 }}>Corner Cafe</h1>
       <Button onClick={() => setCount((n) => n + 1)}>Count: {count}</Button>
+      <input aria-label="Note" style={{ display: 'block', marginTop: 'var(--space-md)' }} />
+      {/* 화면 안 자기 스크롤 상자 — 크게 보기에서 읽을 수 있어야 한다 */}
+      <div data-testid="inner-scroll" style={{ height: 120, overflow: 'auto' }}>
+        {Array.from({ length: 30 }, (_, i) => (
+          <p key={i}>Line {i + 1}</p>
+        ))}
+      </div>
     </div>
   )
 }

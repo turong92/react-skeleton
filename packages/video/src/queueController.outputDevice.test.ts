@@ -86,6 +86,14 @@ const output = () =>
     setSink: vi.fn(),
   }) satisfies MediaOutput
 
+function defer<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((r) => {
+    resolve = r
+  })
+  return { promise, resolve }
+}
+
 const flush = () => new Promise((r) => setTimeout(r, 0))
 
 describe('choosing the output device', () => {
@@ -140,6 +148,41 @@ describe('choosing the output device', () => {
   })
 })
 
+describe('a device the browser refuses', () => {
+  it('falls back to the default and forgets the saved choice', async () => {
+    const { c, audio, storage } = setup({ outputDeviceKey: 'app.sink' })
+    audio.setSink.mockResolvedValueOnce(false)
+    c.setOutputDevice('bt')
+    expect(storage.data.get('app.sink')).toBe('bt')
+    await flush()
+    expect(c.getState().outputDevice).toBe('')
+    expect(storage.data.has('app.sink')).toBe(false)
+    expect(audio.setSink).toHaveBeenLastCalledWith('')
+  })
+
+  it('leaves a newer choice alone when the older one is refused late', async () => {
+    const { c, audio, storage } = setup({ outputDeviceKey: 'app.sink' })
+    const late = defer<boolean>()
+    audio.setSink.mockReturnValueOnce(late.promise)
+    c.setOutputDevice('bt')
+    c.setOutputDevice('speaker')
+    late.resolve(false)
+    await flush()
+    expect(c.getState().outputDevice).toBe('speaker')
+    expect(storage.data.get('app.sink')).toBe('speaker')
+  })
+
+  it('does not forget a saved device that is only switched off right now (restore)', async () => {
+    const { c, audio, storage } = setup({ outputDeviceKey: 'app.sink' })
+    storage.data.set('app.sink', 'bt')
+    audio.setSink.mockResolvedValueOnce(false)
+    c.restore()
+    await flush()
+    expect(c.getState().outputDevice).toBe('')
+    expect(storage.data.get('app.sink')).toBe('bt')
+  })
+})
+
 describe('the device list', () => {
   it('lists audio outputs without the browser-made duplicates, and watches device changes', async () => {
     const media = fakeMedia([device('default', 'Default'), device('a', 'A'), device('b', 'B')])
@@ -155,15 +198,46 @@ describe('the device list', () => {
     expect(media.listening()).toBe(0)
   })
 
-  it('goes back to the default when the chosen device disappears', async () => {
+  it('plays on the default while the chosen device is gone, keeps the saved choice, and puts it back when it returns', async () => {
     const media = fakeMedia([device('a', 'A'), device('bt', 'BT')])
-    const { c, audio } = setup({ media, outputDeviceKey: 'app.sink' })
+    const { c, audio, storage } = setup({ media, outputDeviceKey: 'app.sink' })
     c.watchOutputDevices()
     c.setOutputDevice('bt')
     media.change([device('a', 'A')])
     await flush()
     expect(c.getState().outputDevice).toBe('')
     expect(audio.setSink).toHaveBeenLastCalledWith('')
+    expect(storage.data.get('app.sink')).toBe('bt')
+    media.change([device('a', 'A'), device('bt', 'BT')])
+    await flush()
+    expect(c.getState().outputDevice).toBe('bt')
+    expect(audio.setSink).toHaveBeenLastCalledWith('bt')
+  })
+
+  it('hides the entries whose id the browser blanks, so the default is never listed twice', async () => {
+    const media = fakeMedia([device('', ''), device('', ''), device('a', 'A')])
+    const { c } = setup({ media })
+    c.watchOutputDevices()
+    await flush()
+    expect(c.getState().outputDevices.map((d) => d.deviceId)).toEqual(['a'])
+  })
+
+  it('keeps only the answer of the latest read when reads overlap', async () => {
+    const media = fakeMedia([])
+    const slow = defer<ReturnType<typeof device>[]>()
+    const fast = defer<ReturnType<typeof device>[]>()
+    ;(media as { enumerateDevices: unknown }).enumerateDevices = vi
+      .fn()
+      .mockReturnValueOnce(slow.promise)
+      .mockReturnValueOnce(fast.promise)
+    const { c } = setup({ media })
+    c.watchOutputDevices()
+    media.change([])
+    fast.resolve([device('new', 'New')])
+    await flush()
+    slow.resolve([device('old', 'Old')])
+    await flush()
+    expect(c.getState().outputDevices.map((d) => d.deviceId)).toEqual(['new'])
   })
 
   it('does not drop the choice while the browser hides device ids', async () => {
@@ -183,6 +257,15 @@ describe('the device list', () => {
     expect(c.getState().outputDevices.map((d) => d.label)).toEqual(['name-a', 'name-b'])
     await c.loadOutputDevices()
     expect(media.getUserMedia).toHaveBeenCalledTimes(1)
+  })
+
+  it('asks even when the list is empty or every id is blank - otherwise nothing could ever be chosen', async () => {
+    const empty = fakeMedia([])
+    await setup({ media: empty }).c.loadOutputDevices()
+    expect(empty.getUserMedia).toHaveBeenCalledTimes(1)
+    const blank = fakeMedia([device('', 'A')])
+    await setup({ media: blank }).c.loadOutputDevices()
+    expect(blank.getUserMedia).toHaveBeenCalledTimes(1)
   })
 
   it('does not ask when the names are already readable', async () => {

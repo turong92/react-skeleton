@@ -42,5 +42,5 @@ export const koPlayQueueLabels: PlayQueueLabels = {
   outputDevice: '출력 장치',
   outputDefault: '기본 장치',
   outputUnnamed: (n) => `스피커 ${n}`,
-  outputOnFrame: '이 곡은 기본 스피커로 나와',
+  outputOnFrame: '기본 스피커로만 재생',
 }

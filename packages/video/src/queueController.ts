@@ -38,6 +38,7 @@ import {
   firstAudioUrl,
   hasAudio,
   routeOf,
+  soundOnFrame,
   type Preference,
 } from './queueRouting'
 
@@ -213,7 +214,7 @@ export function createQueueController(deps: {
     output = next
     next.applyVolume(state.volume, state.muted)
     next.setCaptions?.(state.captions)
-    if (state.outputDevice) next.setSink?.(state.outputDevice)
+    if (state.outputDevice) routeSink(state.outputDevice, true)
     if (Boolean(next.setCaptions) !== state.canCaptions)
       emit({ canCaptions: Boolean(next.setCaptions) })
     refreshProgress()
@@ -225,26 +226,53 @@ export function createQueueController(deps: {
     }
   }
 
+  /** 사용자가 고른(저장된) 장치 - `state.outputDevice` 는 지금 실제로 거는 장치다(고른 장치가 빠져 있으면 기본 = 빈 값) */
+  let wanted = ''
+  /** 대기열 `<audio>` 와 화면 영상에 장치를 건다. 거절되면(그 사이 다른 걸 고르지 않았을 때만) 기본으로 돌아가고, `forget` 이면 저장값도 지운다 */
+  function routeSink(id: string, forget: boolean) {
+    void Promise.all([audio.setSink(id), output?.setSink?.(id)]).then((done) => {
+      if (done.every((ok) => ok !== false) || wanted !== id) return
+      if (forget) {
+        wanted = ''
+        saveOutputDevice(storage, deps.outputDeviceKey, '')
+      }
+      emit({ outputDevice: '' })
+      void audio.setSink('')
+      void output?.setSink?.('')
+    })
+  }
   const setOutputDevice = (id: string) => {
-    if (id === state.outputDevice) return
+    if (id === wanted && id === state.outputDevice) return
+    wanted = id
     emit({ outputDevice: id })
-    audio.setSink(id)
-    output?.setSink?.(id)
+    routeSink(id, true)
     saveOutputDevice(storage, deps.outputDeviceKey, id)
   }
   const mediaDevices = () =>
     deps.mediaDevices ?? (typeof navigator === 'undefined' ? undefined : navigator.mediaDevices)
-  /** 장치 목록을 다시 읽는다. 고른 장치가 목록에서 사라졌으면 기본으로 돌아간다 */
+  let readSeq = 0
+  /**
+   * 장치 목록을 다시 읽는다(겹치면 마지막 읽기만 반영). 고른 장치가 목록에서 빠지면 소리만 기본으로 돌리고 저장값은 둔다 -
+   * 다시 나타나면(블루투스를 나중에 켬) 그 장치로 다시 건다. 거르지 않은 전체 목록을 돌려준다
+   */
   const refreshOutputDevices = async () => {
+    const seq = ++readSeq
     const all = await listOutputDevices(mediaDevices())
+    if (seq !== readSeq) return all
     emit({ outputDevices: all.filter(isRealOutput) })
-    // 브라우저가 권한 전에 장치 id 를 숨기면(빈 값) 사라졌는지 알 수 없다 - 그때는 두고 본다
-    if (
-      state.outputDevice &&
-      all.some((d) => d.deviceId) &&
-      !all.some((d) => d.deviceId === state.outputDevice)
-    )
-      setOutputDevice('')
+    // 브라우저가 권한 전에 장치 id 를 숨기면(빈 값) 있는지 없는지 알 수 없다 - 그때는 두고 본다
+    if (wanted && all.some((d) => d.deviceId)) {
+      const here = all.some((d) => d.deviceId === wanted)
+      if (here && state.outputDevice !== wanted) {
+        emit({ outputDevice: wanted })
+        routeSink(wanted, false)
+      } else if (!here && state.outputDevice === wanted) {
+        emit({ outputDevice: '' })
+        void audio.setSink('')
+        void output?.setSink?.('')
+      }
+    }
+    return all
   }
   let askedLabels = false
 
@@ -388,7 +416,12 @@ export function createQueueController(deps: {
     /** 저장된 대기열을 불러온다 - 새로 고침 뒤 · 아직 아무것도 안 담았을 때만(자동으로 틀지는 않는다) */
     restore: () => {
       const device = loadOutputDevice(storage, deps.outputDeviceKey)
-      if (device) setOutputDevice(device)
+      if (device && !wanted) {
+        // 저장된 장치가 지금 꺼져 있을 수 있다 - 거절돼도 저장값은 지우지 않는다(켜지면 다시 건다)
+        wanted = device
+        emit({ outputDevice: device })
+        routeSink(device, false)
+      }
       const stored = loadVolume(storage, key)
       if (stored.volume !== state.volume || stored.muted !== state.muted) {
         emit(stored)
@@ -452,7 +485,7 @@ export function createQueueController(deps: {
       output?.setCaptions?.(on)
     },
     setOutputDevice,
-    /** 앱이 떠 있는 동안 장치 변화를 듣는다(고른 장치가 빠지면 기본으로) - 푸는 함수를 돌려준다 */
+    /** 앱이 떠 있는 동안 장치 변화를 듣는다(고른 장치가 빠지면 소리만 기본으로, 다시 나타나면 다시 건다) - 푸는 함수를 돌려준다 */
     watchOutputDevices: () => {
       const media = mediaDevices()
       void refreshOutputDevices()
@@ -461,21 +494,18 @@ export function createQueueController(deps: {
       return () => media?.removeEventListener?.('devicechange', onChange)
     },
     /**
-     * 장치 메뉴를 열 때(사용자 손짓 안에서) 부른다 - 이름이 비어 있으면 마이크 권한을 한 번만 받아(바로 멈춘다) 다시 읽는다
+     * 장치 메뉴를 열 때 부른다 - 목록이 비었거나 이름 · id 를 읽을 수 없으면(권한 전) 마이크 권한을 한 번만 받아(바로 멈춘다) 다시 읽는다
      */
     loadOutputDevices: async () => {
-      await refreshOutputDevices()
-      const nameless = state.outputDevices.length > 0 && state.outputDevices.every((d) => !d.label)
-      if (!nameless || askedLabels) return
+      const all = await refreshOutputDevices()
+      const blind = all.length === 0 || all.every((d) => !d.label) || all.every((d) => !d.deviceId)
+      if (!blind || askedLabels) return
       askedLabels = true
       await grantOutputLabels(mediaDevices())
       await refreshOutputDevices()
     },
     /** 지금 곡의 소리가 유튜브 틀에서 난다 - 틀 안의 소리는 장치를 못 바꾼다(소리 판이 있는 곡은 대기열 `<audio>` 가 내서 바뀐다) */
-    soundOnFrame: () => {
-      const item = currentOf(state.queue)
-      return item !== null && item.kind === 'youtube' && !hasAudio(item)
-    },
+    soundOnFrame: () => soundOnFrame(currentOf(state.queue)),
     setMuted: (muted: boolean) => {
       emit({ muted })
       applyVolume()

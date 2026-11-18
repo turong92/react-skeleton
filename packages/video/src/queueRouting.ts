@@ -15,6 +15,10 @@ export const audioUrlOf = (item: QueueItem): string | null =>
 
 export const hasAudio = (item: QueueItem): boolean => audioUrlOf(item) !== null
 
+/** 지금 곡의 소리가 유튜브 틀에서 난다(소리 판 없는 유튜브) - 틀 안의 소리는 고른 출력 장치를 따르지 못한다 */
+export const soundOnFrame = (item: QueueItem | null | undefined): boolean =>
+  item != null && item.kind === 'youtube' && !hasAudio(item)
+
 /**
  * 지금 틀 수 있나(건너뛸지).
  * 노래 선호면 소리 판이 있는 곡만 - 유튜브 · 소리 판 없는 영상은 건너뛴다.

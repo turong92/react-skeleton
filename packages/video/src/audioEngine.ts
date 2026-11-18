@@ -56,8 +56,8 @@ export type AudioEngine = {
   setVolume: (volume: number, muted: boolean) => void
   /** 지금 붙어 있는 소리 판의 곡 - 아무것도 없으면(새로 고침 뒤 · 멈춘 뒤) null */
   loadedItem: () => string | null
-  /** 소리 나올 장치(빈 값 = 기본) - 지금 요소와, 나중에 꽂히는 요소에 건다 */
-  setSink: (id: string) => void
+  /** 소리 나올 장치(빈 값 = 기본) - 지금 요소와, 나중에 꽂히는 요소에 건다. 장치가 받아들였는지(false = 거절)를 돌려준다 */
+  setSink: (id: string) => Promise<boolean>
 }
 
 export function createAudioEngine(deps: {
@@ -90,11 +90,11 @@ export function createAudioEngine(deps: {
         loaded = null
       }
       el = element
-      if (sink) applySink(el, sink)
+      if (sink) void applySink(el, sink)
     },
     setSink: (id) => {
       sink = id
-      applySink(el, id)
+      return applySink(el, id)
     },
     element: () => el,
     wake: (url) => {

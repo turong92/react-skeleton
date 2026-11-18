@@ -4,16 +4,26 @@ import { applySink, canChooseOutput, grantOutputLabels, listOutputDevices } from
 describe('applySink', () => {
   it('asks the element to use the device', () => {
     const setSinkId = vi.fn(() => Promise.resolve())
-    applySink({ setSinkId }, 'speaker')
+    void applySink({ setSinkId }, 'speaker')
     expect(setSinkId).toHaveBeenCalledWith('speaker')
   })
 
-  it('swallows a refused device and an element without setSinkId', async () => {
+  it('says whether the device took: true when accepted, false when refused', async () => {
+    const ok = { setSinkId: vi.fn(() => Promise.resolve()) }
     const refused = { setSinkId: vi.fn(() => Promise.reject(new Error('NotFoundError'))) }
-    expect(() => applySink(refused, 'gone')).not.toThrow()
-    await Promise.resolve()
-    expect(() => applySink({}, 'x')).not.toThrow()
-    expect(() => applySink(null, 'x')).not.toThrow()
+    const throws = {
+      setSinkId: () => {
+        throw new Error('x')
+      },
+    }
+    expect(await applySink(ok, 'a')).toBe(true)
+    expect(await applySink(refused, 'gone')).toBe(false)
+    expect(await applySink(throws, 'gone')).toBe(false)
+  })
+
+  it('has nothing to refuse on an element without setSinkId', async () => {
+    expect(await applySink({}, 'x')).toBe(true)
+    expect(await applySink(null, 'x')).toBe(true)
   })
 })
 
@@ -57,9 +67,9 @@ describe('listOutputDevices', () => {
 
   it('is empty when the browser cannot list devices', async () => {
     expect(await listOutputDevices(undefined)).toEqual([])
-    expect(await listOutputDevices({ enumerateDevices: () => Promise.reject(new Error('x')) })).toEqual(
-      [],
-    )
+    expect(
+      await listOutputDevices({ enumerateDevices: () => Promise.reject(new Error('x')) }),
+    ).toEqual([])
   })
 })
 

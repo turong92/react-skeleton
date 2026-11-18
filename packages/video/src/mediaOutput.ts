@@ -13,8 +13,8 @@ export type MediaOutput = {
   applyVolume: (volume: number, muted: boolean) => void
   /** 자막 켜고 끄기 - 자막을 다룰 수 있는 출력(유튜브)만 */
   setCaptions?: (on: boolean) => void
-  /** 소리 나올 장치 고르기(빈 값 = 기본) - 장치를 고를 수 있는 출력(`<video>`)만. 유튜브 틀은 못 한다 */
-  setSink?: (id: string) => void
+  /** 소리 나올 장치 고르기(빈 값 = 기본) - 장치를 고를 수 있는 출력(`<video>`)만. 유튜브 틀은 못 한다. 장치가 받아들였는지(false = 거절)를 돌려준다 */
+  setSink?: (id: string) => Promise<boolean>
 }
 
 const finite = (n: number) => (Number.isFinite(n) && n >= 0 ? n : 0)

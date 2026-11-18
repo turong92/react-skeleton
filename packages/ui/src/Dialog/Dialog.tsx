@@ -14,6 +14,11 @@ export type DialogProps = {
    * 다 읽기 전에 닫히면 안 되는 창(한 번만 보이는 복구 코드)에만 쓴다
    */
   dismissible?: boolean
+  /**
+   * 화면 전체를 덮는 창. 제목 줄 · × 를 그리지 않는다 — 제목은 보이지 않는 `h2` 로 창 이름만 되고 닫기는 내용이 둔다.
+   * Esc → `onClose` 는 그대로(`dismissible` 규칙도 그대로)
+   */
+  fullScreen?: boolean
   children: ReactNode
 }
 
@@ -25,6 +30,7 @@ export function Dialog({
   closeLabel = 'Close',
   footer,
   dismissible = true,
+  fullScreen = false,
   children,
 }: DialogProps) {
   const ref = useRef<HTMLDialogElement>(null)
@@ -71,6 +77,7 @@ export function Dialog({
       ref={ref}
       className={styles.dialog}
       aria-labelledby={titleId}
+      data-fullscreen={fullScreen || undefined}
       onCancel={(event) => {
         if (!dismissible) event.preventDefault() // Esc
       }}
@@ -88,22 +95,28 @@ export function Dialog({
         }
       }}
     >
-      <div className={styles.header}>
-        <h2 id={titleId}>{title}</h2>
-        {dismissible && (
-          <button
-            type="button"
-            className={styles.close}
-            aria-label={closeLabel}
-            onClick={() => {
-              notifiedByButton.current = true
-              onClose()
-            }}
-          >
-            ×
-          </button>
-        )}
-      </div>
+      {fullScreen ? (
+        <h2 id={titleId} className={styles.nameOnly}>
+          {title}
+        </h2>
+      ) : (
+        <div className={styles.header}>
+          <h2 id={titleId}>{title}</h2>
+          {dismissible && (
+            <button
+              type="button"
+              className={styles.close}
+              aria-label={closeLabel}
+              onClick={() => {
+                notifiedByButton.current = true
+                onClose()
+              }}
+            >
+              ×
+            </button>
+          )}
+        </div>
+      )}
       <div className={styles.body}>{children}</div>
       {footer && <div className={styles.footer}>{footer}</div>}
     </dialog>

@@ -236,3 +236,47 @@ export const NotDismissibleStaysOpenUntilTheParentCloses: Story = {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
   },
 }
+
+function FullScreenDemo({ onClosed }: { onClosed: () => void }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <Button onClick={() => setOpen(true)}>Open dialog</Button>
+      <Dialog
+        open={open}
+        fullScreen
+        onClose={() => {
+          onClosed()
+          setOpen(false)
+        }}
+        title="Large preview"
+      >
+        <p>Full screen body</p>
+      </Dialog>
+    </>
+  )
+}
+
+/** `fullScreen` — 창이 화면을 다 덮고 제목 줄 · × 가 없다(이름은 보이지 않는 제목). Esc 는 그대로 `onClose` 를 한 번 부르고 포커스가 연 단추로 돌아온다 */
+export const FullScreen: Story = {
+  render: (args) => <FullScreenDemo onClosed={args.onClose} />,
+  play: async ({ canvas, userEvent, args }) => {
+    const trigger = canvas.getByRole('button', { name: 'Open dialog' })
+    await userEvent.click(trigger)
+    const dialog = (await screen.findByRole('dialog', {
+      name: 'Large preview',
+    })) as HTMLDialogElement
+    await waitFor(() => {
+      const rect = dialog.getBoundingClientRect()
+      expect(Math.abs(rect.width - window.innerWidth)).toBeLessThanOrEqual(1)
+      expect(Math.abs(rect.height - window.innerHeight)).toBeLessThanOrEqual(1)
+    })
+    await expect(within(dialog).queryByRole('button', { name: 'Close' })).toBeNull()
+    const closed = closeEventOf(dialog)
+    dialog.requestClose() // Esc
+    await closed
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    await expect(args.onClose).toHaveBeenCalledTimes(1)
+    await expect(trigger).toHaveFocus()
+  },
+}

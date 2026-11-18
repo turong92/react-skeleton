@@ -1,0 +1,42 @@
+.group {
+  display: flex;
+  flex: none;
+  gap: var(--space-xs);
+  align-items: center;
+}
+
+/* 고르기 칸 — 막대가 좁으면 이 칸의 글이 말줄임으로 줄어든다(아이콘 단추는 그대로) */
+.pick {
+  min-width: 0;
+  max-width: 180px;
+}
+
+/* 펴기 판의 배율 — 고르기가 − · + 사이를 채운다 */
+.group[data-layout='panel'] {
+  width: 100%;
+}
+
+.group[data-layout='panel'] .pick {
+  flex: 1;
+  max-width: none;
+}
+
+/* 태블릿 가로 — 세로 아이콘을 눕힌다 */
+.turned {
+  transform: rotate(90deg);
+}
+
+/* 좁은 결 오른쪽 아래 유리 패드(높이 48) — 자리는 ViewerNarrow 가 정한다 */
+.pad {
+  display: flex;
+  gap: var(--space-xs);
+  align-items: center;
+  box-sizing: border-box;
+  height: 48px;
+  padding: 0 var(--space-xs);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow);
+}

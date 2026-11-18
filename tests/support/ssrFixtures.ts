@@ -582,6 +582,7 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
     source: { kind: 'render', content: 'Hello' },
     device: 'phone',
   }),
+  'preview#DevicePicker': () => ({ value: 'phone', onChange: noop }),
   'ui#Spinner': () => ({}),
   'ui#AppShell': () => ({
     brand: 'brand',

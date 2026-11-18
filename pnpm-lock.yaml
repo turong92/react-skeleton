@@ -645,10 +645,11 @@ importers:
         version: 19.3.0(react@19.3.0)
 
   packages/preview:
-    devDependencies:
+    dependencies:
       '@skeleton/ui':
         specifier: workspace:*
         version: link:../ui
+    devDependencies:
       lucide-react:
         specifier: ^1.17.0
         version: 1.52.0(@types/react@19.2.14)(react@19.3.0)

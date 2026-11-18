@@ -321,8 +321,9 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 - 종류 · 상태: package · experimental
 - 위치: `@skeleton/preview` (`packages/preview`)
 - 켜는 법: `--packages preview` — 함께 따라오는 패키지 `api-client` · `auth` · `legal` · `theme` · `time` · `tokens` · `ui`
+- 필요한 것: `ui`
 - 백엔드: 없음(프런트만)
-- 주요 진입점: `PREVIEW_DEVICES` · `PC_WIDTHS` · `DEFAULT_PC_WIDTH` · `deviceViewport` · `outerSize` · `PreviewStage` · `PREVIEW_SANDBOX` · `defaultPreviewLabels` · `koPreviewLabels`
+- 주요 진입점: `PREVIEW_DEVICES` · `PC_WIDTHS` · `DEFAULT_PC_WIDTH` · `deviceViewport` · `outerSize` · `PreviewStage` · `PREVIEW_SANDBOX` · `defaultPreviewLabels` · `koPreviewLabels` · `DevicePicker`
 - 보고 따라 할 스토리: `packages/preview/src/PreviewStage.stories.tsx`
 - 문서: `packages/preview/README.md`
 - 쓰지 않는 경우: 한 화면을 기기 틀 없이 반응형으로만 보이면 쓰지 않는다 — 앱 CSS 로

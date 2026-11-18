@@ -1395,9 +1395,10 @@
         "PreviewStage",
         "PREVIEW_SANDBOX",
         "defaultPreviewLabels",
-        "koPreviewLabels"
+        "koPreviewLabels",
+        "DevicePicker"
       ],
-      "needs": [],
+      "needs": ["ui"],
       "backend": null,
       "status": "experimental",
       "id": "preview",

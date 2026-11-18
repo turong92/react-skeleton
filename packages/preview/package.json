@@ -15,12 +15,14 @@
     "test": "vitest run --pool forks --testTimeout 30000 --hookTimeout 60000",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
+  "dependencies": {
+    "@skeleton/ui": "workspace:*"
+  },
   "peerDependencies": {
     "lucide-react": "^1.0.0",
     "react": "^19.0.0"
   },
   "devDependencies": {
-    "@skeleton/ui": "workspace:*",
     "lucide-react": "^1.17.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5"

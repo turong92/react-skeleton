@@ -214,7 +214,7 @@ export function createQueueController(deps: {
     output = next
     next.applyVolume(state.volume, state.muted)
     next.setCaptions?.(state.captions)
-    if (state.outputDevice) routeSink(state.outputDevice, true)
+    if (state.outputDevice) routeSink(state.outputDevice, false)
     if (Boolean(next.setCaptions) !== state.canCaptions)
       emit({ canCaptions: Boolean(next.setCaptions) })
     refreshProgress()

@@ -1,0 +1,62 @@
+/* 기기 틀 — 두께는 frame.ts 의 frameInsets 가 padding 으로 준다 */
+.device {
+  position: relative;
+  box-sizing: border-box;
+  transform-origin: 0 0;
+}
+
+/* contain — 직접 렌더한 내용의 position: fixed 가 이 화면 상자 안에 머문다 */
+.screen {
+  position: relative;
+  overflow: hidden;
+  contain: layout paint;
+  background: var(--bg);
+}
+
+/* 베젤 = 바깥 상자 면 + 그림자. PC 는 아래 받침 자리를 빼고 가상 요소가 그린다 */
+.device[data-kind='phone'],
+.device[data-kind='tablet'] {
+  background: var(--device-bezel);
+  box-shadow: var(--shadow);
+}
+
+.device[data-kind='phone'] {
+  border-radius: var(--device-phone-radius);
+}
+
+.device[data-kind='phone'] .screen {
+  border-radius: var(--device-phone-screen-radius);
+}
+
+.device[data-kind='tablet'] {
+  border-radius: var(--device-tablet-radius);
+}
+
+.device[data-kind='tablet'] .screen {
+  border-radius: var(--device-tablet-screen-radius);
+}
+
+.device[data-kind='desktop']::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 12px;
+  border-radius: var(--device-desktop-radius);
+  background: var(--device-bezel);
+  box-shadow: var(--shadow);
+}
+
+/* 받침 — 베젤보다 양옆 3% 넓다 */
+.device[data-kind='desktop']::after {
+  content: '';
+  position: absolute;
+  left: -3%;
+  right: -3%;
+  bottom: 0;
+  height: 12px;
+  border-radius: 0 0 var(--device-desktop-radius) var(--device-desktop-radius);
+  background: var(--device-base);
+}
+
+.device[data-kind='desktop'] .screen {
+  border-radius: var(--device-desktop-screen-radius);
+}

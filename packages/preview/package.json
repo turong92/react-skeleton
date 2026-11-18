@@ -1,0 +1,27 @@
+{
+  "name": "@skeleton/preview",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "기기 틀 안 미리보기 — PreviewStage(폰 · 태블릿 세로/가로 · PC 틀 안에 iframe 다리 또는 직접 렌더 · 맞추기 · PC 실제 크기 가로 밀기 · 펴기), PreviewViewer(방문자처럼 크게 보기 — 기기 넷 · 배율 · 끌기 · 만지기 · 다시 재생 · 새 창), DevicePicker, 기기 치수 · 배율 계산, ko/en 문구",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "types": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run --pool forks --testTimeout 30000 --hookTimeout 60000",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "peerDependencies": {
+    "lucide-react": "^1.0.0",
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "lucide-react": "^1.17.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
+  }
+}

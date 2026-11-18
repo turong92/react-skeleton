@@ -99,6 +99,8 @@ pnpm tokens:check   # 쓰지 않고 비교 — 생성물이 어긋났으면 종�
 | `--inverse` | `#17201c` | `#e7ece9` | `--p-neutral-850` · dark `--p-neutral-250` | 반전 면 — 눌리는 검정 버튼 · 브랜드 마크 |
 | `--qr-bg` | `#ffffff` | = | `--p-neutral-0` · dark `--p-neutral-0` | QR 코드 바탕 — 스캐너가 읽어야 하므로 테마와 상관없이 흰색 |
 | `--qr-fg` | `#111413` | = | `--p-neutral-900` · dark `--p-neutral-900` | QR 코드 모듈 — 테마와 상관없이 가장 어두운 중립색 |
+| `--device-bezel` | `#17201c` | `#212b27` | `--p-neutral-850` · dark `--p-night-600` | 기기 틀 베젤 — 미리보기 폰 · 태블릿 · PC 테두리 |
+| `--device-base` | `#b9c4bd` | `#3d4a44` | `--p-neutral-400` · dark `--p-night-400` | 기기 틀 PC 받침 |
 
 ### Text
 
@@ -168,6 +170,19 @@ pnpm tokens:check   # 쓰지 않고 비교 — 생성물이 어긋났으면 종�
 | `--radius-full` | `9999px` | = | `--p-radius-full` | 알약 · 스피너 · 스위치 |
 
 모서리 둥글기.
+
+### Device frame
+
+| token | light | dark | reference | purpose |
+|---|---|---|---|---|
+| `--device-phone-radius` | `30px` | = | `--p-radius-8` | 폰 베젤 바깥 모서리 |
+| `--device-phone-screen-radius` | `22px` | = | `--p-radius-6` | 폰 화면 모서리 |
+| `--device-tablet-radius` | `28px` | = | `--p-radius-7` | 태블릿 베젤 바깥 모서리 |
+| `--device-tablet-screen-radius` | `14px` | = | `--p-radius-5` | 태블릿 화면 모서리 |
+| `--device-desktop-radius` | `12px` | = | `--p-radius-4` | PC 베젤 바깥 모서리 |
+| `--device-desktop-screen-radius` | `6px` | = | `--p-radius-2` | PC 화면 모서리 |
+
+기기 틀(미리보기) 모서리 — 폰 · 태블릿 · PC 의 바깥(베젤)과 안쪽(화면).
 
 ### Type scale
 
@@ -244,6 +259,11 @@ Values the semantic tokens reference. Never use these directly in screen CSS or 
 | `--p-radius-1` | `4px` | 작은 조각(code · 오류 상자) |
 | `--p-radius-2` | `6px` | 입력 · 버튼 · 카드 |
 | `--p-radius-3` | `8px` | 큰 면 · 팝오버 |
+| `--p-radius-4` | `12px` | 기기 틀 — PC 베젤 |
+| `--p-radius-5` | `14px` | 기기 틀 — 태블릿 화면 |
+| `--p-radius-6` | `22px` | 기기 틀 — 폰 화면 |
+| `--p-radius-7` | `28px` | 기기 틀 — 태블릿 베젤 |
+| `--p-radius-8` | `30px` | 기기 틀 — 폰 베젤 |
 | `--p-radius-full` | `9999px` | 알약 · 원 — 어떤 크기에서도 끝이 둥글다 |
 | `--p-font-size-1` | `12px` | 캡션 · 도움말 |
 | `--p-font-size-2` | `13px` | 작은 글자 |

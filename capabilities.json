@@ -1383,6 +1383,38 @@
       }
     },
     {
+      "patterns": [],
+      "stories": [],
+      "docs": ["packages/preview/README.md"],
+      "entryPoints": [
+        "PREVIEW_DEVICES",
+        "PC_WIDTHS",
+        "DEFAULT_PC_WIDTH",
+        "deviceViewport",
+        "outerSize"
+      ],
+      "needs": [],
+      "backend": null,
+      "status": "experimental",
+      "id": "preview",
+      "kind": "package",
+      "package": "@skeleton/preview",
+      "path": "packages/preview",
+      "stampFlag": {
+        "flag": "--packages preview",
+        "included": "flag",
+        "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
+        "alsoVia": [],
+        "optOut": null
+      },
+      "summary": "기기 틀(폰 · 태블릿 세로/가로 · PC) 안 미리보기 — 기기 치수와 틀 · 배율 계산. 무대와 크게 보기는 이어지는 작업에서 더해진다.",
+      "notFor": ["한 화면을 기기 틀 없이 반응형으로만 보이면 쓰지 않는다 — 앱 CSS 로"],
+      "keywords": {
+        "ko": ["미리보기", "기기 틀", "폰 미리보기", "크게 보기", "방문자처럼 보기"],
+        "en": ["preview", "device frame", "phone preview", "zoom preview", "responsive preview"]
+      }
+    },
+    {
       "patterns": ["apps/storybook/src/patterns/ListPage.stories.tsx"],
       "stories": [
         "packages/search/src/SearchBox.stories.tsx",
@@ -4095,6 +4127,11 @@
       "need": "사용자가 팀(워크스페이스)을 만들고 멤버를 두고 역할(소유자 · 관리자 · 멤버)로 나눠 쓰며, 앱 데이터가 그 팀 안에 묶인다 (팀 전환 · 소유권 이전 · 탈퇴)",
       "capabilities": ["workspace"],
       "byHand": "백엔드에 workspace 모듈을 끼운다. 라우트 /w/:slug/* 를 <WorkspaceProvider api slug current onCanonicalSlug> 로 감싸 팀을 주소에서 읽고(탭마다 독립), 앱의 getAuthHeaders 에 createWorkspaceHeaders(current)() 를 합쳐 앱 데이터 요청에 X-Workspace-Id 를 싣는다. 머리줄에 WorkspaceSwitcher, 첫 화면은 pickLandingSlug 로 보내고, 설정에 WorkspaceSettings. 앱 데이터의 캐시 키에는 팀 id 를 넣는다. 문구(ko/en)는 labels prop 으로 앱이 공급."
+    },
+    {
+      "need": "편집 화면 옆 미리보기 · 폰/태블릿/PC 로 크게 보기",
+      "capabilities": ["preview"],
+      "byHand": "기기 치수와 틀 크기는 deviceViewport · outerSize. 무대(PreviewStage)와 크게 보기(PreviewViewer)는 이어지는 작업에서 더해진다."
     },
     {
       "need": "알림 (종 · 목록 · 안 읽은 수)",

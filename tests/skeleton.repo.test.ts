@@ -44,6 +44,7 @@ describe('the skeleton repo', () => {
       'packages/marketing',
       'packages/notifications',
       'packages/payment',
+      'packages/preview',
       'packages/push',
       'packages/realtime',
       'packages/reviews',

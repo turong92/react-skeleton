@@ -13,7 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `@skeleton/ui`: `Dialog` 에 `fullScreen`(화면 전체를 덮고 제목 줄 · × 가 없다 — 이름은 보이지 않는 제목).
 - `@skeleton/tokens`: 기기 틀 토큰 `--device-bezel` · `--device-base`(색, 라이트/다크)와 `--device-{phone,tablet,desktop}-radius` · `--device-*-screen-radius`(모서리).
 
-### Added — 웹 보상형 광고
+### Added — 소리 출력 장치 고르기
+
+- `@skeleton/video`: `usePlayQueue()` 에 `canChooseOutput`(`setSinkId` 지원 여부 - 없으면 메뉴를 숨긴다) · `outputDevice` · `outputDevices` · `setOutputDevice` · `loadOutputDevices`(메뉴 열 때, 이름이 비면 마이크 권한 한 번) · `soundOnFrame`(유튜브 틀 소리는 못 바꾼다). 대기열 `<audio>` · 화면 `<video>` 가 같은 장치로 나오고 새로 붙는 요소에도 다시 걸린다. 고른 장치는 `PlayQueueProvider` 의 `outputDeviceKey` 를 줄 때만 기억·감시한다(안 주면 지금과 같다).
 
 - `@skeleton/ads`(새 패키지, 실험적): 웹 보상형 광고(Google Ad Manager GPT rewarded)의 동의 → 재생 → 보상 흐름. `createWebRewardedApi`(`/ads/web-rewarded` 세션 열기 · 보상 요청, `basePath`) · `createRewardedAd`(React 없는 컨트롤러 — 보기는 사용자 손짓 안에서만, 보상 요청은 세션당 한 번, 끝난 뒤 저절로 다시 시작하지 않는다, 하루 상한이면 슬롯을 만들지 않는다) · `useRewardedAd` · `RewardedAdPrompt`(동의 창) · `loadGoogletag`(스크립트 한 번 · 재시도) · `createFakeGoogletag`(로컬 · 시험 · 스토리용, 미디어가 없어 소리가 나지 않는다). README 에 구글 정책 체크(패키지가 지키는 것 / 앱이 지킬 것). 백엔드 `modules/ads-web-rewarded` 짝.
 - `@skeleton/api-client`: `ErrorCodes.ADS_WEB_REWARDED_DAILY_LIMIT`(`ADS_WEB_REWARDED.DAILY_LIMIT`).

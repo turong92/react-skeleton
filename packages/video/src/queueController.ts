@@ -13,6 +13,15 @@ import {
   type RepeatMode,
 } from './playQueue'
 import type { MediaOutput } from './mediaOutput'
+import {
+  grantOutputLabels,
+  isRealOutput,
+  listOutputDevices,
+  loadOutputDevice,
+  saveOutputDevice,
+  type MediaDevicesLike,
+  type OutputDeviceOption,
+} from './outputDevice'
 import type { QualityChoice } from './playbackPlan'
 import {
   DEFAULT_QUEUE_KEY,
@@ -64,6 +73,10 @@ export type ControllerState = {
   /** 자막을 켰나(기본 끔) · 지금 화면의 재생기가 자막을 다룰 수 있나(유튜브) */
   captions: boolean
   canCaptions: boolean
+  /** 소리 나올 장치 - 빈 값은 기본. 대기열 `<audio>` · 화면 영상에 같이 걸린다(유튜브 틀은 못 바꾼다) */
+  outputDevice: string
+  /** 고를 수 있는 장치(이름은 마이크 권한 전에는 비어 있다) - `loadOutputDevices` · `watchOutputDevices` 가 채운다 */
+  outputDevices: OutputDeviceOption[]
 }
 
 /** 화질 항목 - `height` 는 실제 높이(px), 모르면 null(자동은 늘 null) */
@@ -119,6 +132,10 @@ export function createQueueController(deps: {
   storage?: QueueStorage
   storageKey?: string
   random?: Random
+  /** 고른 소리 장치를 이 기기에 기억할 키 - 없으면 기억하지 않는다(늘 기본 장치로 시작) */
+  outputDeviceKey?: string
+  /** 시험용 - 기본은 `navigator.mediaDevices` */
+  mediaDevices?: MediaDevicesLike
 }) {
   const { audio, storage, random = Math.random } = deps
   const key = deps.storageKey ?? DEFAULT_QUEUE_KEY
@@ -134,6 +151,8 @@ export function createQueueController(deps: {
     canFullscreen: false,
     captions: false,
     canCaptions: false,
+    outputDevice: '',
+    outputDevices: [],
     qualityOptions: [],
     quality: 'auto',
     playingHeight: null,
@@ -194,6 +213,7 @@ export function createQueueController(deps: {
     output = next
     next.applyVolume(state.volume, state.muted)
     next.setCaptions?.(state.captions)
+    if (state.outputDevice) next.setSink?.(state.outputDevice)
     if (Boolean(next.setCaptions) !== state.canCaptions)
       emit({ canCaptions: Boolean(next.setCaptions) })
     refreshProgress()
@@ -204,6 +224,29 @@ export function createQueueController(deps: {
       refreshProgress()
     }
   }
+
+  const setOutputDevice = (id: string) => {
+    if (id === state.outputDevice) return
+    emit({ outputDevice: id })
+    audio.setSink(id)
+    output?.setSink?.(id)
+    saveOutputDevice(storage, deps.outputDeviceKey, id)
+  }
+  const mediaDevices = () =>
+    deps.mediaDevices ?? (typeof navigator === 'undefined' ? undefined : navigator.mediaDevices)
+  /** 장치 목록을 다시 읽는다. 고른 장치가 목록에서 사라졌으면 기본으로 돌아간다 */
+  const refreshOutputDevices = async () => {
+    const all = await listOutputDevices(mediaDevices())
+    emit({ outputDevices: all.filter(isRealOutput) })
+    // 브라우저가 권한 전에 장치 id 를 숨기면(빈 값) 사라졌는지 알 수 없다 - 그때는 두고 본다
+    if (
+      state.outputDevice &&
+      all.some((d) => d.deviceId) &&
+      !all.some((d) => d.deviceId === state.outputDevice)
+    )
+      setOutputDevice('')
+  }
+  let askedLabels = false
 
   // 진행 막대: 소리 판이 있는 곡은 영상을 붙여도 늘 대기열 <audio>, 그 밖(소리 판 없는 영상 · 유튜브)은 등록된 출력. 이벤트가 아니라 짧은 간격으로 읽는다(유튜브는 이벤트가 없다) -
   // 상태(usePlayQueue)에 넣지 않는 것은 초당 몇 번 바뀌는 값이 대기열을 쓰는 모든 화면을 다시 그리게 하지 않으려는 것
@@ -344,6 +387,8 @@ export function createQueueController(deps: {
     },
     /** 저장된 대기열을 불러온다 - 새로 고침 뒤 · 아직 아무것도 안 담았을 때만(자동으로 틀지는 않는다) */
     restore: () => {
+      const device = loadOutputDevice(storage, deps.outputDeviceKey)
+      if (device) setOutputDevice(device)
       const stored = loadVolume(storage, key)
       if (stored.volume !== state.volume || stored.muted !== state.muted) {
         emit(stored)
@@ -405,6 +450,31 @@ export function createQueueController(deps: {
     setCaptions: (on: boolean) => {
       emit({ captions: on })
       output?.setCaptions?.(on)
+    },
+    setOutputDevice,
+    /** 앱이 떠 있는 동안 장치 변화를 듣는다(고른 장치가 빠지면 기본으로) - 푸는 함수를 돌려준다 */
+    watchOutputDevices: () => {
+      const media = mediaDevices()
+      void refreshOutputDevices()
+      const onChange = () => void refreshOutputDevices()
+      media?.addEventListener?.('devicechange', onChange)
+      return () => media?.removeEventListener?.('devicechange', onChange)
+    },
+    /**
+     * 장치 메뉴를 열 때(사용자 손짓 안에서) 부른다 - 이름이 비어 있으면 마이크 권한을 한 번만 받아(바로 멈춘다) 다시 읽는다
+     */
+    loadOutputDevices: async () => {
+      await refreshOutputDevices()
+      const nameless = state.outputDevices.length > 0 && state.outputDevices.every((d) => !d.label)
+      if (!nameless || askedLabels) return
+      askedLabels = true
+      await grantOutputLabels(mediaDevices())
+      await refreshOutputDevices()
+    },
+    /** 지금 곡의 소리가 유튜브 틀에서 난다 - 틀 안의 소리는 장치를 못 바꾼다(소리 판이 있는 곡은 대기열 `<audio>` 가 내서 바뀐다) */
+    soundOnFrame: () => {
+      const item = currentOf(state.queue)
+      return item !== null && item.kind === 'youtube' && !hasAudio(item)
     },
     setMuted: (muted: boolean) => {
       emit({ muted })

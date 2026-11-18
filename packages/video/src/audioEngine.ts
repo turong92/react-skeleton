@@ -1,5 +1,6 @@
 import { attachSource, type LoadHls } from './attachSource'
 import { wakeAudio } from './autoAudio'
+import { applySink } from './outputDevice'
 
 /** `<audio>` 가 이 모듈에서 쓰이는 만큼 - 시험에서는 가짜로 바꿔 끼운다 */
 export type AudioLike = Pick<
@@ -16,7 +17,8 @@ export type AudioLike = Pick<
   | 'pause'
   | 'getAttribute'
   | 'ended'
->
+> &
+  Partial<Pick<HTMLAudioElement, 'setSinkId'>>
 
 export type AudioStart = {
   /** 소리 판 재생 목록 */
@@ -54,6 +56,8 @@ export type AudioEngine = {
   setVolume: (volume: number, muted: boolean) => void
   /** 지금 붙어 있는 소리 판의 곡 - 아무것도 없으면(새로 고침 뒤 · 멈춘 뒤) null */
   loadedItem: () => string | null
+  /** 소리 나올 장치(빈 값 = 기본) - 지금 요소와, 나중에 꽂히는 요소에 건다 */
+  setSink: (id: string) => void
 }
 
 export function createAudioEngine(deps: {
@@ -71,6 +75,7 @@ export function createAudioEngine(deps: {
   /** 틀기를 바란다 - 멈추기 · 정지가 지운다. hls.js 가 붙으며 지워진 `play()` 를 다시 걸 때 본다 */
   let wantPlay = false
   let stopWaiting: (() => void) | null = null
+  let sink = ''
   const play = () =>
     void el?.play()?.catch((error: unknown) => {
       // 새 곡을 붙이느라 끊긴 것(AbortError)은 거절이 아니다
@@ -85,6 +90,11 @@ export function createAudioEngine(deps: {
         loaded = null
       }
       el = element
+      if (sink) applySink(el, sink)
+    },
+    setSink: (id) => {
+      sink = id
+      applySink(el, id)
     },
     element: () => el,
     wake: (url) => {

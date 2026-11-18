@@ -1,6 +1,8 @@
 import { createContext, useContext, useMemo, useSyncExternalStore } from 'react'
 import { readCanSetVolume } from './mediaOutput'
+import { canChooseOutput } from './outputDevice'
 import { currentOf, upcomingOf } from './playQueue'
+import { hasAudio } from './queueRouting'
 import type { QueueController } from './queueController'
 
 const subscribeNothing = () => () => {}
@@ -21,6 +23,8 @@ export function usePlayQueue() {
   const canAudio = useSyncExternalStore(subscribeNothing, controller.canAudio, serverFalse)
   // 이 기기가 코드로 음량을 바꿀 수 있나 - 서버 · 하이드레이션 첫 그림은 false, 브라우저가 재서 알려 준다
   const canSetVolume = useSyncExternalStore(subscribeNothing, readCanSetVolume, serverFalse)
+  // 이 브라우저가 소리 장치를 고르게 해 주나(사파리 등은 false - 메뉴를 숨긴다) - 서버 · 하이드레이션 첫 그림은 false
+  const canChooseOutputDevice = useSyncExternalStore(subscribeNothing, canChooseOutput, serverFalse)
   const queueMode = state.mode
   const playerProps = useMemo(
     () => ({
@@ -66,6 +70,14 @@ export function usePlayQueue() {
     canFullscreen: state.canFullscreen,
     toggleFullscreen: controller.toggleFullscreen,
     setVolume: controller.setVolume,
+    /** 소리 나올 장치 고르기 - 지원 여부 · 지금 고른 것(빈 값 = 기본) · 고를 수 있는 것(이름은 권한 전에는 빈 문자열) · 고르기 · 메뉴를 열 때(손짓 안에서) 부르는 목록 읽기 */
+    canChooseOutput: canChooseOutputDevice,
+    outputDevice: state.outputDevice,
+    outputDevices: state.outputDevices,
+    setOutputDevice: controller.setOutputDevice,
+    loadOutputDevices: controller.loadOutputDevices,
+    /** 지금 곡의 소리가 유튜브 틀에서 난다 - 틀 안의 소리는 고른 장치를 따르지 못한다(앱이 「기본 스피커로 나와」 같은 안내를 보인다) */
+    soundOnFrame: current?.kind === 'youtube' && !hasAudio(current),
     /** 자막(기본 끔) · 지금 곡에서 자막 단추를 보일지(유튜브) · 켜고 끄기 */
     captions: state.captions,
     canCaptions: state.canCaptions,

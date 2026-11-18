@@ -126,6 +126,27 @@ describe('createAudioEngine', () => {
   })
 })
 
+describe('createAudioEngine - output device', () => {
+  it('sends the sound to the chosen device, now and for an element that comes later', () => {
+    const { audio, el } = setup()
+    const sink = vi.fn(() => Promise.resolve())
+    Object.assign(el, { setSinkId: sink })
+    audio.setSink('speaker')
+    expect(sink).toHaveBeenLastCalledWith('speaker')
+    const next = Object.assign(fakeAudio(), { setSinkId: vi.fn(() => Promise.resolve()) })
+    audio.setElement(next as unknown as AudioLike)
+    expect(next.setSinkId).toHaveBeenCalledWith('speaker')
+  })
+
+  it('leaves a new element alone while the default device is chosen', () => {
+    const { audio } = setup()
+    audio.setSink('')
+    const next = Object.assign(fakeAudio(), { setSinkId: vi.fn(() => Promise.resolve()) })
+    audio.setElement(next as unknown as AudioLike)
+    expect(next.setSinkId).not.toHaveBeenCalled()
+  })
+})
+
 describe('createAudioEngine - which song is on the element', () => {
   it('remembers the song of the attached sound-only address, and forgets it on stop', () => {
     const { audio } = setup()

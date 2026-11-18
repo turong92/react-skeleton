@@ -13,6 +13,8 @@ function engineOf(env: PlaybackEnv): 'native' | 'hlsjs' | null {
 export function createPlayQueue(options: {
   storage?: QueueStorage
   storageKey?: string
+  /** 고른 소리 장치를 이 기기에 기억할 키 - 없으면 기억하지 않는다 */
+  outputDeviceKey?: string
   env?: PlaybackEnv
   loadHls: LoadHls
 }): QueueController {
@@ -26,6 +28,7 @@ export function createPlayQueue(options: {
     audio,
     storage: options.storage,
     storageKey: options.storageKey,
+    outputDeviceKey: options.outputDeviceKey,
   })
   return controller
 }

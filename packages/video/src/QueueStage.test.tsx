@@ -21,6 +21,7 @@ const engine = {
   seek: () => {},
   setVolume: () => {},
   loadedItem: () => null,
+  setSink: () => {},
 } as AudioEngine
 
 function render(items: QueueItem[]) {

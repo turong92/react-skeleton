@@ -15,6 +15,11 @@ export type PlayQueueProviderProps = {
   storageKey?: string
   /** 기본은 `localStorage`(없거나 막혀 있으면 저장 없이 돈다) */
   storage?: QueueStorage
+  /**
+   * 고른 소리 장치를 이 기기(`storage`)에 기억할 키. 안 주면 기억하지 않고 늘 기본 장치로 시작한다
+   * (장치 고르기를 안 쓰는 앱은 지금과 똑같다)
+   */
+  outputDeviceKey?: string
   /** 시험 · 스토리용 */
   env?: PlaybackEnv
   loadHls?: LoadHls
@@ -36,15 +41,28 @@ export function PlayQueueProvider({
   children,
   storageKey = DEFAULT_QUEUE_KEY,
   storage,
+  outputDeviceKey,
   env,
   loadHls = loadHlsLight,
 }: PlayQueueProviderProps) {
   const [controller] = useState(() =>
-    createPlayQueue({ storage: storage ?? defaultStorage(), storageKey, env, loadHls }),
+    createPlayQueue({
+      storage: storage ?? defaultStorage(),
+      storageKey,
+      outputDeviceKey,
+      env,
+      loadHls,
+    }),
   )
 
   // 저장된 대기열은 하이드레이션 뒤에 불러온다(서버 · 첫 그림과 어긋나지 않게)
   useEffect(() => controller.restore(), [controller])
+
+  // 소리 장치가 빠지면(블루투스가 꺼짐) 기본으로 돌아간다 - 장치를 고르게 하는 앱(`outputDeviceKey`)만 듣는다
+  useEffect(
+    () => (outputDeviceKey ? controller.watchOutputDevices() : undefined),
+    [controller, outputDeviceKey],
+  )
 
   // 화면이 꺼지면(`hidden`) 화면의 재생기가 필요한 곡(유튜브)은 차례가 와도 건너뛴다
   useEffect(() => {

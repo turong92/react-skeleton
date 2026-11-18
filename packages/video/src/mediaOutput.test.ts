@@ -24,6 +24,25 @@ describe('elementOutput', () => {
   })
 })
 
+describe('elementOutput - output device', () => {
+  it('sends the element to the device; youtube has no such hand', () => {
+    const setSinkId = vi.fn(() => Promise.resolve())
+    const out = elementOutput({ currentTime: 0, duration: 0, volume: 1, muted: false, setSinkId })
+    out.setSink?.('speaker')
+    expect(setSinkId).toHaveBeenCalledWith('speaker')
+    expect(
+      youtubeOutput({
+        getCurrentTime: () => 0,
+        getDuration: () => 0,
+        seekTo: vi.fn(),
+        setVolume: vi.fn(),
+        mute: vi.fn(),
+        unMute: vi.fn(),
+      }).setSink,
+    ).toBeUndefined()
+  })
+})
+
 describe('youtubeOutput', () => {
   const player = () => ({
     getCurrentTime: vi.fn(() => 5.5),

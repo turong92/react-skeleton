@@ -1384,7 +1384,11 @@
     },
     {
       "patterns": [],
-      "stories": ["packages/preview/src/PreviewStage.stories.tsx"],
+      "stories": [
+        "packages/preview/src/PreviewStage.stories.tsx",
+        "packages/preview/src/PreviewViewer.stories.tsx",
+        "packages/preview/src/PreviewViewer.narrow.stories.tsx"
+      ],
       "docs": ["packages/preview/README.md"],
       "entryPoints": [
         "PREVIEW_DEVICES",
@@ -1396,7 +1400,8 @@
         "PREVIEW_SANDBOX",
         "defaultPreviewLabels",
         "koPreviewLabels",
-        "DevicePicker"
+        "DevicePicker",
+        "PreviewViewer"
       ],
       "needs": ["ui"],
       "backend": null,
@@ -1412,7 +1417,7 @@
         "alsoVia": [],
         "optOut": null
       },
-      "summary": "기기 틀(폰 · 태블릿 세로/가로 · PC) 안 미리보기 무대 PreviewStage — 화면은 iframe 다리(PreviewFrameBridge)나 직접 렌더(content)로 · 맞추기 · PC 실제 크기 가로 밀기 · 펴기. 기기 치수 · 틀 크기 계산과 ko/en 문구. 크게 보기는 이어지는 작업에서 더해진다.",
+      "summary": "기기 틀(폰 · 태블릿 세로/가로 · PC) 안 미리보기 무대 PreviewStage — 화면은 iframe 다리(PreviewFrameBridge)나 직접 렌더(content)로 · 맞추기 · PC 실제 크기 가로 밀기 · 펴기. 기기 치수 · 틀 크기 계산과 ko/en 문구. 크게 보기 PreviewViewer(넓은 결 막대 · 좁은 결 알약/판 · 배율 · 만지기 · 다시 재생 · 새 창 · 앱 보기 조건 칸).",
       "notFor": ["한 화면을 기기 틀 없이 반응형으로만 보이면 쓰지 않는다 — 앱 CSS 로"],
       "keywords": {
         "ko": ["미리보기", "기기 틀", "폰 미리보기", "크게 보기", "방문자처럼 보기"],
@@ -4136,7 +4141,7 @@
     {
       "need": "편집 화면 옆 미리보기 · 폰/태블릿/PC 로 크게 보기",
       "capabilities": ["preview"],
-      "byHand": "기기 치수와 틀 크기는 deviceViewport · outerSize. 무대(PreviewStage)와 크게 보기(PreviewViewer)는 이어지는 작업에서 더해진다."
+      "byHand": "기기 치수와 틀 크기는 deviceViewport · outerSize. 무대는 PreviewStage, 크게 보기는 PreviewViewer(as='dialog'), 보기 조건은 extra 로."
     },
     {
       "need": "알림 (종 · 목록 · 안 읽은 수)",

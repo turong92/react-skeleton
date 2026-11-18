@@ -1,0 +1,94 @@
+/* 크게 보기 — 무대가 화면 전부, 아래 가운데 떠 있는 막대 + 위 안내 알약. 기기 틀 모양은 DeviceFrame */
+
+.page {
+  position: fixed;
+  inset: 0;
+  color: var(--text);
+  background: var(--bg);
+}
+
+.root {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  color: var(--text);
+  background: var(--bg);
+}
+
+/* 무대 — 넘치는 부분은 잘라 두고 끌기 · 휠 · 화살표로 옮긴다. 터치 기본 동작(스크롤 · 핀치 확대)은 끄고 손가락은 크게 보기가 받는다 */
+.stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  background-color: var(--surface-sunken);
+}
+
+/* 만지기 중엔 손가락 스크롤이 화면 안으로 가야 한다 */
+.stage[data-scroll='true'] {
+  touch-action: pan-x pan-y;
+}
+
+.stage[data-pannable='true'] {
+  cursor: grab;
+}
+
+.stage[data-pannable='true']:active {
+  cursor: grabbing;
+}
+
+.stage:focus-visible {
+  outline: 3px solid var(--teal);
+  outline-offset: -3px;
+}
+
+/* 이동 위치만 translate — 배율은 PreviewScreen 의 감싸개가 준다 */
+.canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+/* 화면 위 투명 막 — 끌기가 iframe 에 먹히지 않게 */
+.shield {
+  position: absolute;
+  inset: 0;
+}
+
+/* 아래 가운데 막대 — 유리 + 뒤 흐림 + 떠 있는 그림자 */
+.bar {
+  position: absolute;
+  bottom: var(--space-2xl);
+  left: 50%;
+  display: flex;
+  gap: var(--space-xs);
+  align-items: center;
+  box-sizing: border-box;
+  max-width: calc(100% - 2 * var(--space-lg));
+  height: 60px;
+  padding: 0 var(--space-md);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow);
+  transform: translateX(-50%);
+}
+
+.divider {
+  flex: none;
+  width: 1px;
+  height: 24px;
+  margin-inline: var(--space-xs);
+  background: var(--border-strong);
+}
+
+@media (forced-colors: active) {
+  .bar {
+    border: 1px solid CanvasText;
+  }
+}

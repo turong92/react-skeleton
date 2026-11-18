@@ -1,11 +1,9 @@
 import { Button } from '@skeleton/ui'
-import { Monitor, Smartphone, Tablet } from 'lucide-react'
+import { DEVICE_ICON } from './deviceIcons'
 import { PREVIEW_DEVICES, type PreviewDevice } from './devices'
 import type { PreviewLabels } from './labels'
 import { defaultPreviewLabels } from './labels.en'
 import styles from './controls.module.css'
-
-const ICON = { phone: Smartphone, tabletPortrait: Tablet, tabletLandscape: Tablet, pc: Monitor }
 
 export type DevicePickerProps = {
   value: PreviewDevice
@@ -22,7 +20,7 @@ export function DevicePicker({
   return (
     <div role="group" aria-label={labels.device} className={styles.group}>
       {PREVIEW_DEVICES.map((device) => {
-        const Icon = ICON[device]
+        const Icon = DEVICE_ICON[device]
         const label = labels.devices[device]
         const pressed = device === value
         return (

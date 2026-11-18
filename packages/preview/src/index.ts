@@ -15,3 +15,5 @@ export type {
   PreviewRenderSource,
   PreviewSource,
 } from './source'
+export { PreviewViewer } from './PreviewViewer'
+export type { PreviewViewerExtra, PreviewViewerProps } from './PreviewViewer'

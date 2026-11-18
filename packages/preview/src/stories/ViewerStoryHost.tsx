@@ -14,7 +14,13 @@ function CounterScreen() {
       <Button onClick={() => setCount((n) => n + 1)}>Count: {count}</Button>
       <input aria-label="Note" style={{ display: 'block', marginTop: 'var(--space-md)' }} />
       {/* 화면 안 자기 스크롤 상자 — 크게 보기에서 읽을 수 있어야 한다 */}
-      <div data-testid="inner-scroll" style={{ height: 120, overflow: 'auto' }}>
+      <div
+        data-testid="inner-scroll"
+        tabIndex={0}
+        role="region"
+        aria-label="Lines"
+        style={{ height: 120, overflow: 'auto' }}
+      >
         {Array.from({ length: 30 }, (_, i) => (
           <p key={i}>Line {i + 1}</p>
         ))}

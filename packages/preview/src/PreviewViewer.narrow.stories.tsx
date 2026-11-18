@@ -57,8 +57,10 @@ async function assertPill(canvas: Canvas, labels = L) {
 
 /** 화면 크기를 바꿔 돌리고 끝에 되돌린다 */
 async function withViewport(width: number, height: number, run: () => Promise<void>) {
-  // vitest 밖(스토리집 화면)에서는 이 모듈이 없다 — play 안에서만 불러온다
-  const { page } = await import('vitest/browser')
+  // vitest 밖(스토리집 화면)에서는 이 모듈이 없다 — play 안에서만 불러오고, 없으면 이 단계를 건너뛴다
+  const vitest = await import('vitest/browser').catch(() => null)
+  if (!vitest) return
+  const { page } = vitest
   const before = { width: window.innerWidth, height: window.innerHeight }
   await page.viewport(width, height)
   try {
@@ -117,8 +119,10 @@ export const PhoneEscFoldsPanel: Story = {
       expect(within(panel).getByRole('button', { name: L.collapse })).toHaveFocus(),
     )
     // 진짜 키 입력(브라우저가 dialog 의 Esc 로 받는다) — 판만 접히고 대화상자는 남아야 한다
-    const { userEvent: realKeys } = await import('vitest/browser')
-    await realKeys.keyboard('{Escape}')
+    // vitest 밖(스토리집 화면)에서는 진짜 키 입력이 없다 — 그때는 이 단계를 건너뛴다
+    const vitest = await import('vitest/browser').catch(() => null)
+    if (!vitest) return
+    await vitest.userEvent.keyboard('{Escape}')
     await waitFor(() => expect(canvas.queryByRole('region', { name: L.panelTitle })).toBeNull())
     await expect(screen.getByRole('dialog', { name: 'Large preview' })).toBeVisible()
     await expect(args.onClose).not.toHaveBeenCalled()

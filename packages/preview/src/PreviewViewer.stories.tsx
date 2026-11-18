@@ -251,3 +251,147 @@ export const TouchOffFocusesStage: Story = {
     await waitFor(() => expect(canvas.getByRole('group', { name: L.stage })).toHaveFocus())
   },
 }
+
+/*
+ * 무대 조작(끌기 · 휠 · Ctrl+휠 · 핀치 · 끝에서 멈춤) — 값은 계산에서 나온다.
+ * 기준 화면 1440x900(PREVIEW_VIEWPORTS.desktop), PC 1440 · 기본 막대 · 실제 크기(배율 1)로 연 상태:
+ *  - 기기 바깥 폭 1440 + 틀 12 = 1452, 받침까지 칠한 폭 1452 x 1.06 = 1539 > 칸 폭 1440 - 32 = 1408 → 가로 이동 폭 131(시작은 가운데 -65.5)
+ *  - 칸 높이 = 900 - 위 안내(24 + max(안내, 44)) - 아래 108 이하, 콘텐츠 높이 900 + 24 = 924 → 세로 이동 폭 200 이상(시작은 위 끝 0)
+ * 그래서 끌기 -10/-20 · 휠 +10/+30 은 끝에 걸리지 않고 그대로 옮겨진다(`usePanZoom.test.ts` 의 clampPan 계산과 같은 식).
+ * 배율은 iframe 의 화면 폭(= 1440 x 배율)으로 잰다 — 첫 실제 크기 폭을 기준으로 비율만 단정한다.
+ */
+const translateOf = (el: HTMLElement) => {
+  const m = /translate\(\s*([^,]+?)px\s*,\s*([^)]+?)px\s*\)/.exec(el.style.transform)
+  if (!m) throw new Error(`no translate in "${el.style.transform}"`)
+  return { x: parseFloat(m[1]!), y: parseFloat(m[2]!) }
+}
+
+const pointerEvent = (type: string, pointerId: number, x: number, y: number) =>
+  new PointerEvent(type, {
+    pointerId,
+    pointerType: 'mouse',
+    button: 0,
+    clientX: x,
+    clientY: y,
+    bubbles: true,
+    cancelable: true,
+  })
+
+/** 줄어든 알약을 눌러 실제 크기(배율 1)로 키우고, 무대 · 옮겨지는 상자 · 그 폭을 돌려준다 */
+async function openAtActualSize(
+  canvas: Canvas,
+  canvasElement: HTMLElement,
+  userEvent: { click: (el: Element) => Promise<void> },
+) {
+  await userEvent.click(await canvas.findByRole('button', { name: numbered(L.shrunk) }))
+  const iframe = await canvas.findByTitle(L.frameTitle)
+  await waitFor(() => expect(Math.abs(iframe.getBoundingClientRect().width - 1440)).toBeLessThan(2))
+  const stage = canvas.getByRole('group', { name: L.stage })
+  const box = canvasElement.querySelector<HTMLElement>('[data-canvas]')!
+  const width = () => iframe.getBoundingClientRect().width
+  return { stage, box, width, base: width() }
+}
+
+/** 끌기 — 누르고 (-10, -20) 움직이면 상자가 그만큼 옮겨지고, 뗀 뒤 움직임은 무시된다 */
+export const DragPans: Story = {
+  args: { initialDevice: 'pc' },
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    const { stage, box } = await openAtActualSize(canvas, canvasElement, userEvent)
+    const before = translateOf(box)
+    stage.dispatchEvent(pointerEvent('pointerdown', 1, 500, 400))
+    stage.dispatchEvent(pointerEvent('pointermove', 1, 490, 380))
+    await waitFor(() => expect(translateOf(box).x).toBeCloseTo(before.x - 10, 1))
+    await expect(translateOf(box).y).toBeCloseTo(before.y - 20, 1)
+    stage.dispatchEvent(pointerEvent('pointerup', 1, 490, 380))
+    const released = box.style.transform
+    stage.dispatchEvent(pointerEvent('pointermove', 1, 400, 300))
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    await expect(box.style.transform).toBe(released)
+  },
+}
+
+/** 휠 — deltaX +10 · deltaY +30 이면 화면이 (-10, -30) 옮겨진다(휠 아래로 = 내용이 위로) */
+export const WheelPans: Story = {
+  args: { initialDevice: 'pc' },
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    const { stage, box } = await openAtActualSize(canvas, canvasElement, userEvent)
+    const before = translateOf(box)
+    const wheel = new WheelEvent('wheel', {
+      deltaX: 10,
+      deltaY: 30,
+      bubbles: true,
+      cancelable: true,
+    })
+    stage.dispatchEvent(wheel)
+    await expect(wheel.defaultPrevented).toBe(true)
+    await waitFor(() => expect(translateOf(box).y).toBeCloseTo(before.y - 30, 1))
+    await expect(translateOf(box).x).toBeCloseTo(before.x - 10, 1)
+  },
+}
+
+/** 끝까지 옮기면 더 안 간다 — 아래 · 오른쪽 끝, 위 · 왼쪽 끝 모두 같은 휠을 한 번 더 줘도 그대로 */
+export const WheelStopsAtTheEdges: Story = {
+  args: { initialDevice: 'pc' },
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    const { stage, box } = await openAtActualSize(canvas, canvasElement, userEvent)
+    const wheel = (deltaX: number, deltaY: number) =>
+      stage.dispatchEvent(
+        new WheelEvent('wheel', { deltaX, deltaY, bubbles: true, cancelable: true }),
+      )
+    for (const [dx, dy] of [
+      [100000, 100000],
+      [-100000, -100000],
+    ] as const) {
+      const start = box.style.transform
+      wheel(dx, dy)
+      await waitFor(() => expect(box.style.transform).not.toBe(start))
+      const edge = box.style.transform
+      wheel(dx, dy)
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      await expect(box.style.transform).toBe(edge)
+    }
+    // 위 · 왼쪽 끝: 세로는 칸 위 끝(위 안내 자리)에 정확히 붙는다 — translate y = 칸 위 틈 = 24 + max(안내, 44) 이상, 아래로 더 안 내려간다
+    await expect(translateOf(box).y).toBeGreaterThanOrEqual(24 + 44)
+  },
+}
+
+/** Ctrl+휠 — deltaY -100 이면 배율 x exp(0.2)(WHEEL_ZOOM 0.002 x 100), 아주 크면 위 2 · 아래 0.5(맞추기 0.5 보다 커서)에서 멈춘다 */
+export const CtrlWheelZooms: Story = {
+  args: { initialDevice: 'pc' },
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    const { stage, width, base } = await openAtActualSize(canvas, canvasElement, userEvent)
+    const ctrlWheel = (deltaY: number) =>
+      stage.dispatchEvent(
+        new WheelEvent('wheel', {
+          deltaY,
+          ctrlKey: true,
+          clientX: 700,
+          clientY: 400,
+          bubbles: true,
+          cancelable: true,
+        }),
+      )
+    ctrlWheel(-100)
+    await waitFor(() => expect(width() / base).toBeCloseTo(Math.exp(0.2), 2))
+    ctrlWheel(-100000)
+    await waitFor(() => expect(width() / base).toBeCloseTo(2, 2))
+    ctrlWheel(100000)
+    await waitFor(() => expect(width() / base).toBeCloseTo(0.5, 2))
+  },
+}
+
+/** 핀치 — 두 포인터 사이 거리 200 → 300 이면 배율 x1.5, 더 벌려 x2.5 가 되려 해도 2 에서 멈춘다 */
+export const PinchZooms: Story = {
+  args: { initialDevice: 'pc' },
+  play: async ({ canvas, canvasElement, userEvent }) => {
+    const { stage, width, base } = await openAtActualSize(canvas, canvasElement, userEvent)
+    stage.dispatchEvent(pointerEvent('pointerdown', 1, 600, 400))
+    stage.dispatchEvent(pointerEvent('pointerdown', 2, 800, 400))
+    stage.dispatchEvent(pointerEvent('pointermove', 1, 500, 400)) // 거리 200 → 300
+    await waitFor(() => expect(width() / base).toBeCloseTo(1.5, 2))
+    stage.dispatchEvent(pointerEvent('pointermove', 1, 300, 400)) // 300 → 500 = x1.667, 1.5 x 1.667 = 2.5 → 2
+    await waitFor(() => expect(width() / base).toBeCloseTo(2, 2))
+    stage.dispatchEvent(pointerEvent('pointerup', 1, 300, 400))
+    stage.dispatchEvent(pointerEvent('pointerup', 2, 800, 400))
+  },
+}

@@ -66,6 +66,7 @@ scripts/           # new-project.sh(새 프로젝트 찍기) · test-new-project
 tests/             # 워크스페이스를 가로지르는 테스트(토큰 층 · 의존 규칙 · ESLint 경계)
 docs/design-tokens.md
 docs/ui-catalog.md  # 부품 → 스토리 파일 → 언제 쓰는가(스토리와 어긋나면 루트 테스트가 실패)
+docs/ui-motion-terms.md  # UI · 움직임 용어와 시키는 공식(무엇이 + 언제 + 어떻게 + 얼마나) — 팁
 ```
 
 **스켈레톤은 메커니즘을 주고 취향은 주지 않는다.** 색 값 · 문구 · 레이아웃 취향은 프로젝트가 정한다(부품의 문구는 prop, 색은 `tokens.json`).

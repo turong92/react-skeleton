@@ -78,15 +78,17 @@
         "isErrorCode",
         "ErrorCodes",
         "newIdempotencyKey",
-        "createTraceContext"
+        "createTraceContext",
+        "createErrorReporter",
+        "installGlobalErrorReporting"
       ],
       "needs": [],
       "backend": {
         "modules": ["platform"],
         "oneOfModules": [],
-        "optionalModules": [],
-        "basePaths": ["/api/v1"],
-        "docs": ["docs/modules/platform.md", "docs/errors.md"]
+        "optionalModules": ["alert"],
+        "basePaths": ["/api/v1", "/api/v1/client-errors"],
+        "docs": ["docs/modules/platform.md", "docs/errors.md", "docs/alert.md"]
       },
       "status": "stable",
       "id": "api-client",
@@ -100,7 +102,7 @@
         "alsoVia": [],
         "optOut": null
       },
-      "summary": "백엔드 REST 호출 한 곳 — 응답 envelope 벗기기 · 표준 에러(ApiRequestError · 에러 코드) · traceparent · 멱등 키 · 서버 시각 연결점을 갖춘 클라이언트.",
+      "summary": "백엔드 REST 호출 한 곳 — 응답 envelope 벗기기 · 표준 에러(ApiRequestError · 에러 코드) · traceparent · 멱등 키 · 서버 시각 연결점을 갖춘 클라이언트. 사용자 기기의 오류(ErrorBoundary · window 오류 · 처리 안 된 거절)를 마지막 요청 traceId · 화면 경로 · 앱 버전과 함께 백엔드 alert 모듈로 보내는 보고처(createErrorReporter, 기본 꺼짐, 나중에 Sentry 로 교체 가능).",
       "notFor": [
         "실시간 스트림(SSE · WebSocket) → realtime",
         "페이지 · 컴포넌트에서 fetch/axios 를 직접 부르지 않는다 — 앱의 api/client.ts 인스턴스를 훅(useQuery)으로 쓴다"
@@ -113,7 +115,9 @@
           "에러 코드",
           "멱등 키",
           "traceId",
-          "응답 형식"
+          "응답 형식",
+          "화면 오류 보고",
+          "프론트 에러 로그"
         ],
         "en": [
           "api client",
@@ -122,7 +126,85 @@
           "error codes",
           "idempotency key",
           "trace id",
-          "axios"
+          "axios",
+          "error reporting",
+          "client error report",
+          "sentry alternative"
+        ]
+      }
+    },
+    {
+      "patterns": [],
+      "stories": ["packages/app-control/src/AppControlGate.stories.tsx"],
+      "docs": ["packages/app-control/README.md"],
+      "entryPoints": [
+        "createAppControlApi",
+        "useAppConfig",
+        "useFeature",
+        "appStateOf",
+        "AppControlGate",
+        "isBelow",
+        "parseVersion",
+        "defaultAppControlLabels",
+        "koAppControlLabels",
+        "mergeAppControlLabels",
+        "isMaintenanceError",
+        "watchMaintenance"
+      ],
+      "needs": ["api-client", "ui"],
+      "backend": {
+        "modules": ["app-control"],
+        "oneOfModules": [],
+        "optionalModules": ["app-control-jdbc"],
+        "basePaths": ["/api/v1/app/config", "/api/v1/admin/app-control"],
+        "docs": [
+          "docs/modules/app-control.md",
+          "docs/modules/app-control-jdbc.md",
+          "docs/app-control-http-contract.md"
+        ]
+      },
+      "status": "experimental",
+      "id": "app-control",
+      "kind": "package",
+      "package": "@skeleton/app-control",
+      "path": "packages/app-control",
+      "stampFlag": {
+        "flag": "--packages app-control",
+        "included": "flag",
+        "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
+        "alsoVia": [],
+        "optOut": null
+      },
+      "summary": "재배포 없이 끄고 켜기 — 점검 모드 · 기능 스위치 · 최소 버전. 앱 맨 위의 AppControlGate 가 점검 중이면 점검 화면(안내 문구 · 끝 예정), 최소 버전 미만이면 닫을 수 없는 새로고침 화면, 권장 버전 미만이면 닫을 수 있는 띠를 보이고 아니면 그대로 children. useFeature(api, key) 로 운영자가 클라이언트에 보이기로 한 스위치를 읽는다. 창에 돌아오면 다시 읽고 점검 중엔 풀릴 때까지 주기적으로 읽는다. 버전은 숫자 칸으로 비교한다(1.10 > 1.9). 설정을 못 읽어도 막지 않는다.",
+      "notFor": [
+        "운영자 화면(스위치 · 점검 · 버전 정책 바꾸기) — 서버의 /api/v1/admin/app-control 은 있지만 이 패키지에 화면은 없다(앱이 Switch · Form 으로)",
+        "사용자 · 비율 단위 단계적 공개 — 스위치는 켜짐 / 꺼짐 둘뿐이다",
+        "모바일 앱의 강제 업데이트(스토어로 보내기) — 모바일은 flutter-skeleton 의 app-control 패키지다. 이쪽의 「강제」는 새로고침이다",
+        "서버가 낡은 클라이언트의 요청을 거절하지는 않는다 — 최소 버전은 클라이언트가 설정을 읽어 판정한다",
+        "라우터를 모른다 — 게이트를 어디에 두는지(보통 앱 맨 위)는 앱이 정한다"
+      ],
+      "keywords": {
+        "ko": [
+          "점검 모드",
+          "점검 화면",
+          "기능 스위치",
+          "기능 플래그",
+          "강제 업데이트",
+          "최소 버전",
+          "새 버전 안내",
+          "재배포 없이 끄기",
+          "킬 스위치"
+        ],
+        "en": [
+          "maintenance mode",
+          "maintenance page",
+          "feature flag",
+          "feature toggle",
+          "kill switch",
+          "force update",
+          "minimum version",
+          "new version banner",
+          "remote config"
         ]
       }
     },
@@ -382,9 +464,19 @@
       "backend": {
         "modules": ["notification", "notification-jdbc"],
         "oneOfModules": [],
-        "optionalModules": ["notification-sse", "notification-websocket"],
+        "optionalModules": [
+          "notification-broadcast",
+          "notification-broadcast-jdbc",
+          "notification-sse",
+          "notification-websocket"
+        ],
         "basePaths": ["/api/v1/notifications"],
-        "docs": ["docs/modules/notification.md", "docs/modules/notification-jdbc.md"]
+        "docs": [
+          "docs/modules/notification.md",
+          "docs/modules/notification-jdbc.md",
+          "docs/modules/notification-broadcast.md",
+          "docs/modules/notification-broadcast-jdbc.md"
+        ]
       },
       "status": "stable",
       "id": "notifications",
@@ -400,6 +492,7 @@
       },
       "summary": "알림 받은편지함 — 목록 · 안 읽은 수(전용 엔드포인트) · 읽음/모두 읽음 · 묶인 줄의 수 · 링크로 이동 · 종류별 끄기(NotificationPreferences) · 실시간 이벤트로 캐시 갱신, NotificationBell/List 부품과 TanStack Query 훅.",
       "notFor": [
+        "공지 보내기 · 예약 · 통계 운영 — 운영 화면은 선택 하위 경로 @skeleton/notifications/admin(항목 notifications-broadcast-admin)에 있다",
         "알림을 보내는 쪽(발행)은 백엔드 코드(NotificationPublisher) — 이 패키지는 받는 화면만",
         "이메일 · Slack 알림 → 백엔드 notification-mail · notification-slack (프런트 짝 없음)",
         "실시간으로 즉시 뜨게 하려면 realtime 을 더한다(live-notifications)"
@@ -423,6 +516,68 @@
           "mark as read",
           "mute notifications",
           "notification link"
+        ]
+      }
+    },
+    {
+      "patterns": [
+        "packages/notifications/src/admin/AdminBroadcasts.stories.tsx",
+        "packages/notifications/src/admin/AdminBroadcastEditor.stories.tsx",
+        "packages/notifications/src/admin/AdminBroadcastDetail.stories.tsx"
+      ],
+      "stories": [],
+      "docs": ["packages/notifications/README.md"],
+      "entryPoints": [
+        "@skeleton/notifications/admin#createBroadcastAdminApi",
+        "@skeleton/notifications/admin#AdminBroadcasts",
+        "@skeleton/notifications/admin#AdminBroadcastEditor",
+        "@skeleton/notifications/admin#AdminBroadcastDetail",
+        "@skeleton/notifications/admin#koBroadcastAdminLabels"
+      ],
+      "needs": ["notifications"],
+      "backend": {
+        "modules": [],
+        "oneOfModules": [],
+        "optionalModules": ["notification-broadcast", "notification-broadcast-jdbc"],
+        "basePaths": [],
+        "docs": []
+      },
+      "status": "experimental",
+      "id": "notifications-broadcast-admin",
+      "kind": "pattern",
+      "package": "@skeleton/notifications",
+      "stampFlag": {
+        "flag": "--packages notifications",
+        "included": "flag",
+        "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
+        "alsoVia": ["--with-sample", "--with-workbench"],
+        "optOut": null
+      },
+      "summary": "운영자 공지 화면(선택 내보내기 @skeleton/notifications/admin) — 공지 목록(상태 칩 · 진행 막대) · 쓰기(종류 · 제목 · 본문 · 링크 · 대상 + 대상 수 · 채널 - 푸시 불가 종류는 푸시 칸 잠김 · 즉시 / 예약 · 나에게 테스트) · 보내기는 대상 수 · 채널 · 시각을 다시 보여 주는 확인 창을 거친다 · 상세(예상 대상 · 알림함 저장 / 읽음 · 푸시 넣음 / 성공 / 실패 / 보내지 않음 / 클릭 · 예약 풀기 · 취소 · 이어 보내기 · 누가 언제). 단추는 can(key) 로 숨긴다. 푸시 클릭 열람은 @skeleton/push 의 서비스 워커가 보고한다.",
+      "path": "packages/notifications/src/admin/index.ts",
+      "notFor": [
+        "백엔드 notification-broadcast(+ -jdbc)의 skeleton.notification.broadcast.admin.enabled=true 와 notification-broadcast.read · notification-broadcast.send 권한이 있어야 열린다(검사는 서버, RequirePermission 과 can 은 화면용). 기본 역할이 없어 전권이거나 역할 화면에서 권한을 준 계정만",
+        "공지를 받는 화면은 바뀌지 않는다 — 기존 NotificationBell · NotificationList 에 그대로 나온다",
+        "로그인 없이 보는 공개 공지 게시판 — board 가 맡는다",
+        "워크스페이스 관리자의 자기 팀 공지 — 1차는 서비스 운영자만"
+      ],
+      "keywords": {
+        "ko": [
+          "공지 보내기",
+          "공지 관리",
+          "전체 공지",
+          "푸시 공지",
+          "예약 발송",
+          "공지 통계",
+          "푸시 클릭률"
+        ],
+        "en": [
+          "broadcast",
+          "announcement",
+          "admin announcements",
+          "scheduled announcement",
+          "push click rate",
+          "mass notification"
         ]
       }
     },
@@ -876,6 +1031,406 @@
       }
     },
     {
+      "patterns": ["apps/storybook/src/patterns/FormPage.stories.tsx"],
+      "stories": [
+        "packages/inquiry/src/ContactForm.stories.tsx",
+        "packages/inquiry/src/FaqList.stories.tsx"
+      ],
+      "docs": ["packages/inquiry/README.md", "apps/sample/src/routes/HelpPage.tsx"],
+      "entryPoints": [
+        "createInquiryApi",
+        "useInquiryForm",
+        "ContactForm",
+        "FaqList",
+        "inquiryProblem",
+        "inquiryFieldProblems",
+        "defaultInquiryLabels",
+        "koInquiryLabels"
+      ],
+      "needs": ["api-client", "ui"],
+      "backend": {
+        "modules": ["inquiry"],
+        "oneOfModules": [],
+        "optionalModules": ["inquiry-jdbc", "captcha-turnstile", "alert"],
+        "basePaths": ["/api/v1/inquiries"],
+        "docs": ["docs/modules/inquiry.md", "docs/modules/inquiry-jdbc.md"]
+      },
+      "status": "experimental",
+      "id": "inquiry",
+      "kind": "package",
+      "package": "@skeleton/inquiry",
+      "path": "packages/inquiry",
+      "stampFlag": {
+        "flag": "--packages inquiry",
+        "included": "flag",
+        "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
+        "alsoVia": ["--with-sample"],
+        "optOut": null
+      },
+      "summary": "문의 · 의견 받기 — 한 줄 폼 ContactForm(종류 하나 고르기 · 내용 10~2000자 · 답장 받을 이메일(선택) · 앱이 꽂는 사람 확인 위젯 · 고지 자리) · useInquiryForm(상태 · 검증 · 전송, 문구를 모른다) · FaqList(자주 묻는 질문 접기 목록, 질문 · 답은 앱이 준다). 로그인 없이도 보내고 로그인했으면 계정이 붙는다. 「잘 받았어요」 화면 · 문항 · 개인정보 고지는 앱의 몫.",
+      "notFor": [
+        "운영자 화면(목록 · 처리 표시) — 서버의 GET /api/v1/admin/inquiries · PUT …/{id}/status 는 있지만 이 패키지에 화면은 없다(앱이 Table 로)",
+        "티켓 · 대화 · 첨부가 있는 고객 지원 도구가 아니다 — 한 번 보내는 한 줄 폼이다",
+        "사람 확인 위젯을 포함하지 않는다 — 서버에 Turnstile 을 켰다면 앱이 @skeleton/captcha-turnstile 로 captcha 를 꽂는다(서버 기본은 통과)",
+        "라우터를 모른다 — 폼 위치와 보낸 뒤 화면은 앱이 정한다"
+      ],
+      "keywords": {
+        "ko": [
+          "문의",
+          "문의하기",
+          "의견 보내기",
+          "피드백",
+          "기능 제안",
+          "오류 신고",
+          "자주 묻는 질문",
+          "도움말",
+          "고객센터"
+        ],
+        "en": [
+          "inquiry",
+          "contact form",
+          "feedback",
+          "feature request",
+          "bug report",
+          "faq",
+          "help center"
+        ]
+      }
+    },
+    {
+      "patterns": [],
+      "stories": [
+        "packages/waiting-room/src/WaitingScreen.stories.tsx",
+        "packages/waiting-room/src/WaitingRoomGate.stories.tsx",
+        "packages/waiting-room/src/admin/AdminWaitingRoom.stories.tsx"
+      ],
+      "docs": ["packages/waiting-room/README.md"],
+      "entryPoints": [
+        "createWaitingRoomApi",
+        "useWaitingRoom",
+        "useWaitingRoomEntry",
+        "WaitingRoomGate",
+        "WaitingScreen",
+        "WaitingRoomEntryError",
+        "createEntryHeaders",
+        "defaultWaitingRoomLabels",
+        "koWaitingRoomLabels",
+        "@skeleton/waiting-room/admin#createWaitingRoomAdminApi",
+        "@skeleton/waiting-room/admin#AdminWaitingRoom",
+        "@skeleton/waiting-room/admin#koWaitingRoomAdminLabels"
+      ],
+      "needs": ["api-client", "ui"],
+      "backend": {
+        "modules": ["waiting-room"],
+        "oneOfModules": [],
+        "optionalModules": ["waiting-room-jdbc"],
+        "basePaths": ["/api/v1/waiting-rooms", "/api/v1/admin/waiting-rooms"],
+        "docs": ["docs/modules/waiting-room.md", "docs/modules/waiting-room-jdbc.md"]
+      },
+      "status": "experimental",
+      "id": "waiting-room",
+      "kind": "package",
+      "package": "@skeleton/waiting-room",
+      "path": "packages/waiting-room",
+      "stampFlag": {
+        "flag": "--packages waiting-room",
+        "included": "flag",
+        "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
+        "alsoVia": ["--with-sample"],
+        "optOut": null
+      },
+      "summary": "대기열(가상 대기실) — 오픈 전 줄 · 오픈 순간 무작위 섞기 · 그 뒤 온 순서로 줄을 세워 입장권을 받은 사람만 들여보내는 화면. WaitingRoomGate(페이지 앞 문: 입장하기 전엔 대기 화면, 입장하면 children) · useWaitingRoom(id).enter()(버튼 앞 문: 입장권을 기다렸다 돌려준다) · WaitingScreen(오픈 카운트다운 · 「내 앞에 N명」 · 예상 시간 · 진행 막대 · 「새로고침해도 순서는 그대로예요」) · createEntryHeaders(입장권을 X-Entry-Token 으로). 서버가 정한 간격으로 묻고 순번표는 새로고침해도 유지된다. 운영은 @skeleton/waiting-room/admin 의 AdminWaitingRoom(분당 입장 수 · 멈춤 / 다시 시작 · 닫기 · 5초 갱신 현황). 로그인한 사람만 줄을 선다.",
+      "notFor": [
+        "익명 대기열 — 줄은 계정 하나에 순번표 하나다(로그인한 사람만). 계정 없는 앱이 줄이 필요하면 그 앱이 자체로 만든다",
+        "예약 · 결제 자체 — 입장권만 준다. 입장권을 쓰는 쪽(자리 잡기 …)이 createEntryHeaders 로 헤더를 붙인다",
+        "대기실 만들기 화면 — 서버의 POST /api/v1/admin/waiting-rooms 는 있지만 이 패키지에 화면은 없다(AdminWaitingRoom 은 있는 방의 속도 · 멈춤 · 닫기 · 현황)",
+        "라우터를 모른다 — 문을 어느 페이지에 두는지는 앱이 정한다"
+      ],
+      "keywords": {
+        "ko": [
+          "대기열",
+          "대기실",
+          "가상 대기실",
+          "줄 서기",
+          "오픈 전 줄",
+          "순번",
+          "입장권",
+          "선착순",
+          "티켓팅"
+        ],
+        "en": [
+          "waiting room",
+          "queue",
+          "virtual queue",
+          "line",
+          "pre-queue",
+          "queue position",
+          "entry token",
+          "ticketing"
+        ]
+      }
+    },
+    {
+      "patterns": [],
+      "stories": [
+        "packages/booking/src/SeatMap.stories.tsx",
+        "packages/booking/src/HoldPanel.stories.tsx",
+        "packages/booking/src/SeatBooking.stories.tsx",
+        "packages/booking/src/admin/AdminBookingPools.stories.tsx"
+      ],
+      "docs": ["packages/booking/README.md"],
+      "entryPoints": [
+        "createBookingApi",
+        "createSeatFeed",
+        "createHoldController",
+        "createSseConnector",
+        "useSeatFeed",
+        "useSeatHold",
+        "useRemainingMs",
+        "SeatMap",
+        "HoldPanel",
+        "SeatBooking",
+        "MyBookings",
+        "bookingProblem",
+        "takenSeatIds",
+        "formatMoney",
+        "defaultBookingLabels",
+        "koBookingLabels",
+        "@skeleton/booking/admin#createBookingAdminApi",
+        "@skeleton/booking/admin#AdminBookingPools",
+        "@skeleton/booking/admin#expandSeatRange",
+        "@skeleton/booking/admin#koBookingAdminLabels"
+      ],
+      "needs": ["api-client", "realtime", "ui", "waiting-room"],
+      "backend": {
+        "modules": ["booking"],
+        "oneOfModules": [],
+        "optionalModules": [
+          "booking-jdbc",
+          "waiting-room",
+          "waiting-room-jdbc",
+          "payment",
+          "redis-core"
+        ],
+        "basePaths": ["/api/v1/booking", "/api/v1/admin/booking/pools"],
+        "docs": ["docs/modules/booking.md", "docs/modules/booking-jdbc.md"]
+      },
+      "status": "experimental",
+      "id": "booking",
+      "kind": "package",
+      "package": "@skeleton/booking",
+      "path": "packages/booking",
+      "stampFlag": {
+        "flag": "--packages booking",
+        "included": "flag",
+        "autoIncludes": [
+          "api-client",
+          "auth",
+          "legal",
+          "realtime",
+          "theme",
+          "time",
+          "tokens",
+          "ui",
+          "waiting-room"
+        ],
+        "alsoVia": ["--with-sample"],
+        "optOut": null
+      },
+      "summary": "좌석 지정 예약(공연 · 수업 자리 고르기) — SeatMap(구역 → 열 → 번호 배치도, 선택 가능 · 내 자리 · 선택 불가) · useSeatFeed(SSE 사건 + 스냅샷을 자리별 버전 v 로 맞춘다, 다시 붙으면 스냅샷을 다시 읽고 heldUntil 이 지나면 스스로 열림, 끊긴 동안 「다시 연결하는 중」) · 누르면 잡기 / 다시 누르면 놓기 / 남이 잡은 자리는 바로 선택 불가 · HoldPanel(남은 시간 · 금액 · 무료 확정 또는 결제하기 · 나가기) · SeatBooking(한 벌) · MyBookings. 결제를 시작하면 자리를 고정하고 결제창은 앱이 renderPayment 로 끼운다(@skeleton/payment 와 서로 import 하지 않는다). 대기실을 단 풀은 @skeleton/waiting-room 의 입장권을 헤더로 보낸다. 운영은 @skeleton/booking/admin 의 AdminBookingPools(풀 만들기 · 자리 범위로 넣기 · 막기 / 풀기 · 멈춤 · 현황).",
+      "notFor": [
+        "결제 화면 자체 — 결제 시작(checkout)까지만 한다. 주문(POST /payments/orders {itemType: \"booking\", itemRef: holdId} + Idempotency-Key)과 결제창은 앱이 @skeleton/payment 로 꽂는다",
+        "수량형(재고 N개) 예약 — 자리 하나하나를 고르는 좌석형이다",
+        "그림 편집 · 확대 축소가 있는 배치도 — 구역 → 열 → 번호 격자다",
+        "대기 화면 — 입장 줄은 @skeleton/waiting-room(WaitingRoomGate)이 맡는다. 대기실을 단 풀은 그 안에 SeatBooking 을 둔다",
+        "라우터를 모른다 — 페이지 위치는 앱이 정한다"
+      ],
+      "keywords": {
+        "ko": [
+          "좌석 예약",
+          "좌석 선택",
+          "자리 고르기",
+          "배치도",
+          "좌석 배치도",
+          "공연 예매",
+          "티켓 예매",
+          "선착순 예약",
+          "자리 잡기"
+        ],
+        "en": [
+          "seat booking",
+          "seat map",
+          "seat selection",
+          "reservation",
+          "ticket booking",
+          "hold seats",
+          "seat picker"
+        ]
+      }
+    },
+    {
+      "patterns": [],
+      "stories": [
+        "packages/video/src/VideoUploadField.stories.tsx",
+        "packages/video/src/VideoPlayer.stories.tsx",
+        "packages/ui/src/FilePicker/FilePicker.stories.tsx"
+      ],
+      "docs": ["packages/video/README.md"],
+      "entryPoints": [
+        "createVideoApi",
+        "uploadVideo",
+        "useVideos",
+        "videosKey",
+        "VideoUploadField",
+        "VideoPlayer",
+        "playerSourceOf",
+        "PlayQueueProvider",
+        "usePlayQueue",
+        "MiniPlayer",
+        "QueueStage",
+        "QueueProgress",
+        "useQueueProgress",
+        "YoutubeStage",
+        "UnsupportedVideoFileError",
+        "UploadPartError",
+        "contentTypeOf",
+        "defaultVideoUploadLabels",
+        "koVideoUploadLabels",
+        "defaultVideoPlayerLabels",
+        "koVideoPlayerLabels"
+      ],
+      "needs": ["api-client", "ui"],
+      "backend": {
+        "modules": ["storage", "storage-s3", "video", "video-jdbc"],
+        "oneOfModules": [],
+        "optionalModules": ["video-cloudrun"],
+        "basePaths": ["/api/v1/videos"],
+        "docs": [
+          "docs/modules/storage.md",
+          "docs/modules/storage-s3.md",
+          "docs/modules/video.md",
+          "docs/modules/video-jdbc.md"
+        ]
+      },
+      "status": "experimental",
+      "id": "video",
+      "kind": "package",
+      "package": "@skeleton/video",
+      "path": "packages/video",
+      "stampFlag": {
+        "flag": "--packages video",
+        "included": "flag",
+        "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
+        "alsoVia": ["--with-sample"],
+        "optOut": null
+      },
+      "summary": "영상 올리기 · 재생 — 큰 영상을 브라우저에서 저장소로 직접 올리고(조각 동시 올리기 · 실패한 조각만 다시 · 새로 고침 뒤 이어 올리기) 서버가 만드는 동안의 단계를 보인다. VideoUploadField(올리는 중 % → 준비 중 n% → 재생 가능 → 「다른 기기용 판 준비 중」 → 끝 / 실패 사유 문구 / 올리다 만 줄 안내 / 지우기) · useVideos(만드는 중이면 3초 폴링) · uploadVideo · VideoPlayer(포스터 + 재생 단추, 마스터 → 원본 단 → 호환 단 순서, 화질 칩 자동 / 720p / 원본, 네이티브 HLS 가 없으면 hls.js light 를 누를 때 지연 로드, 비공개 토큰이 끝나면 새 재생 허가로 같은 시각에서 이어 보기, 내려받기 단추 없음, 소리 판이 있으면 「영상 / 노래」 전환(노래 모드는 영상 조각을 받지 않고 같은 시각으로 잇는다 · 소리 판 실패 시 영상으로 복귀) · 화면이 꺼지면 자동으로 소리만(autoAudioWhenHidden) · 잠금화면 / 알림 / 이어폰 단추(Media Session, 이전 · 다음 또는 ±10초) · 전체 화면, 서버 허가 없이 같은 출처 주소 묶음(PlayerSource)으로도 재생, 재생 대기열이 엮는 onEnded · onPrevious · onNext). 재생 대기열 · 작은 재생기(PlayQueueProvider · usePlayQueue(currentIndex · 음량 volume / muted / canSetVolume) · MiniPlayer · QueueProgress / useQueueProgress 진행 막대 · QueueStage controls — 반복 · 셔플 · 다음 곡 목록 · 이 기기 저장 · 곡마다 같은 audio 요소를 다시 써서 화면이 꺼진 채 다음 곡으로 · 잠금화면 이전/다음)와 유튜브 항목(QueueStage · YoutubeStage, 영상으로만 · 오류는 자동으로 다음 곡 · 유튜브 자막 captions)과 곡 이름 바꾸기 retitle · 내용 바꾸기 update. 변환은 서버의 별도 일꾼이 하고 화면은 그 결과만 읽는다. hls.js 는 이 패키지의 의존이라 영상을 안 쓰는 앱은 받지 않는다.",
+      "notFor": [
+        "움직이는 이미지(GIF · 움짤) 표시 — 영상 칸이 아니다(사진 표시 부품 쪽 후속 조각)",
+        "이미지 · 일반 파일 올리기 — 사진은 @skeleton/storage 의 ImageUploadField, 그 밖의 파일은 FilePicker + useUpload",
+        "라이브 방송 · 실시간 스트리밍 · 자막 · 광고 — 올려 둔 영상을 틀 뿐이다",
+        "영상 편집 · 자르기 · 썸네일 고르기 — 포스터는 서버가 한 장 만든다",
+        "내려받기 — 의도적으로 없다(저장소에 영상 한 덩어리가 없고 재생 목록 조각만 있다)",
+        "변환 일꾼 자체 — 서버의 apps/video-worker 이고 이 패키지는 상태만 읽는다"
+      ],
+      "keywords": {
+        "ko": [
+          "영상",
+          "동영상",
+          "영상 올리기",
+          "영상 업로드",
+          "영상 재생",
+          "스트리밍",
+          "HLS",
+          "노래",
+          "재생 대기열",
+          "재생목록",
+          "미니 플레이어",
+          "유튜브 영상",
+          "셔플",
+          "소리만 재생",
+          "음악 재생",
+          "백그라운드 재생",
+          "잠금화면",
+          "전체 화면",
+          "화질 선택",
+          "이어 올리기",
+          "비공개 영상"
+        ],
+        "en": [
+          "video",
+          "video upload",
+          "video player",
+          "hls",
+          "audio only",
+          "play queue",
+          "playlist",
+          "mini player",
+          "youtube embed",
+          "shuffle",
+          "audio mode",
+          "music player",
+          "background playback",
+          "media session",
+          "lock screen",
+          "fullscreen",
+          "streaming",
+          "resumable upload",
+          "quality selector",
+          "private video",
+          "transcoding"
+        ]
+      }
+    },
+    {
+      "patterns": [],
+      "stories": [
+        "packages/preview/src/PreviewStage.stories.tsx",
+        "packages/preview/src/PreviewViewer.stories.tsx",
+        "packages/preview/src/PreviewViewer.narrow.stories.tsx"
+      ],
+      "docs": ["packages/preview/README.md"],
+      "entryPoints": [
+        "PREVIEW_DEVICES",
+        "PC_WIDTHS",
+        "DEFAULT_PC_WIDTH",
+        "deviceViewport",
+        "outerSize",
+        "PreviewStage",
+        "PREVIEW_SANDBOX",
+        "defaultPreviewLabels",
+        "koPreviewLabels",
+        "DevicePicker",
+        "PreviewViewer",
+        "PreviewScreen",
+        "DeviceFrame"
+      ],
+      "needs": ["ui"],
+      "backend": null,
+      "status": "experimental",
+      "id": "preview",
+      "kind": "package",
+      "package": "@skeleton/preview",
+      "path": "packages/preview",
+      "stampFlag": {
+        "flag": "--packages preview",
+        "included": "flag",
+        "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
+        "alsoVia": [],
+        "optOut": null
+      },
+      "summary": "기기 틀(폰 · 태블릿 세로/가로 · PC) 안 미리보기 무대 PreviewStage — 화면은 iframe 다리(PreviewFrameBridge)나 직접 렌더(content)로 · 맞추기 · PC 실제 크기 가로 밀기 · 펴기. 기기 치수 · 틀 크기 계산과 ko/en 문구. 크게 보기 PreviewViewer(넓은 결 막대 · 좁은 결 알약/판 · 배율 · 만지기 · 다시 재생 · 새 창 · 앱 보기 조건 칸).",
+      "notFor": [
+        "한 화면을 기기 틀 없이 반응형으로만 보이면 쓰지 않는다 — 앱 CSS 로",
+        "메시지 규약 · 편집 표시(구역 테두리 등)는 없다 — 앱의 다리가 한다",
+        "뒤로 가기로 닫기는 없다"
+      ],
+      "keywords": {
+        "ko": ["미리보기", "기기 틀", "폰 미리보기", "크게 보기", "방문자처럼 보기"],
+        "en": ["preview", "device frame", "phone preview", "zoom preview", "responsive preview"]
+      }
+    },
+    {
       "patterns": ["apps/storybook/src/patterns/ListPage.stories.tsx"],
       "stories": [
         "packages/search/src/SearchBox.stories.tsx",
@@ -1173,7 +1728,7 @@
       "notFor": [
         "게시판 화면 자체 → board (이 패키지는 board 를 모른 채 authorPicker 자리에 꽂힌다)",
         "계정의 닉네임(가입 · 설정) → auth 의 계정 화면 — 이 패키지는 글에 붙는 별도 닉네임이다(계정 닉네임 줄은 auth 의 `showDisplayName: false` 로 숨길 수 있다)",
-        "프로필 아바타 · 소개글 · 공개 프로필 페이지 → 만들지 않는다(표 구조만 막지 않는다)",
+        "소개글 · 공개 프로필 페이지 → 만들지 않는다(표 구조만 막지 않는다). 프로필 사진은 앱이 꽂는 자리(AuthorProfileManager 의 picturePicker, 보통 @skeleton/storage ImageUploadField max=1) - 서버에 storage 가 있을 때만 줄마다 「사진」 단추가 생기고, 이 패키지는 storage 를 모른다",
         "관리자가 프로필로 계정을 찾는 화면 → 없다(백엔드 admin 조회만)"
       ],
       "keywords": {
@@ -1699,7 +2254,7 @@
         "flag": "--packages captcha-turnstile",
         "included": "flag",
         "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
-        "alsoVia": ["--with-workbench"],
+        "alsoVia": ["--with-sample", "--with-workbench"],
         "optOut": null
       },
       "summary": "봇 방지 — Cloudflare Turnstile 스크립트 로더 · <Turnstile> · 토큰 훅 · 요청에 토큰 붙이기.",
@@ -1710,6 +2265,57 @@
       "keywords": {
         "ko": ["캡차", "봇 방지", "스팸 방지", "로봇 확인", "가입 폼 보호"],
         "en": ["captcha", "turnstile", "bot protection", "cloudflare", "spam protection"]
+      }
+    },
+    {
+      "patterns": [],
+      "stories": ["packages/ads/src/RewardedAdPrompt.stories.tsx"],
+      "docs": ["packages/ads/README.md"],
+      "entryPoints": [
+        "useRewardedAd",
+        "RewardedAdPrompt",
+        "createRewardedAd",
+        "createWebRewardedApi",
+        "loadGoogletag",
+        "createFakeGoogletag"
+      ],
+      "needs": ["api-client", "ui"],
+      "backend": {
+        "modules": ["ads-web-rewarded", "ads-web-rewarded-jdbc"],
+        "oneOfModules": [],
+        "optionalModules": [],
+        "basePaths": ["/api/v1/ads/web-rewarded/sessions"],
+        "docs": ["docs/modules/ads-web-rewarded.md", "docs/modules/ads-web-rewarded-jdbc.md"]
+      },
+      "status": "experimental",
+      "id": "ads",
+      "kind": "package",
+      "package": "@skeleton/ads",
+      "path": "packages/ads",
+      "stampFlag": {
+        "flag": "--packages ads",
+        "included": "flag",
+        "autoIncludes": ["api-client", "auth", "legal", "theme", "time", "tokens", "ui"],
+        "alsoVia": [],
+        "optOut": null
+      },
+      "summary": "웹 보상형 광고(Google Ad Manager GPT rewarded) — 앱 버튼 → 세션 열기 → 광고 준비 → 보상 내용을 적은 동의 창 → [보기] 클릭 안에서만 재생 → 보상 요청(세션당 한 번) → 보상 받음 / 중간에 닫음 / 광고 없음 / 하루 상한 / 실패. useRewardedAd · RewardedAdPrompt · createRewardedAd(React 없는 흐름 컨트롤러) · createWebRewardedApi · loadGoogletag(스크립트 한 번 · 재시도) · createFakeGoogletag(로컬 · 시험용 가짜, 미디어가 없어 소리가 나지 않는다). 광고 시청을 서버가 증명하지는 못하므로 남용은 서버의 1회용 세션 · 최소 경과 시간 · 하루 상한이 막는다.",
+      "notFor": [
+        "배너 · 전면 광고는 없다 — 보상형(rewarded) 광고 단위 하나만 다룬다",
+        "보상의 근거는 브라우저 신호다 — 서버 한도가 남용을 막는다(구글이 서명한 시청 증명은 아니다)",
+        "AdMob 앱 광고 · 광고 네트워크 갈아 끼우기 · 동의 관리(CMP/TCF) 배너는 없다"
+      ],
+      "keywords": {
+        "ko": ["보상형 광고", "광고 보고 보상", "리워드 광고", "광고 시청", "웹 광고", "구글 광고"],
+        "en": [
+          "rewarded ad",
+          "rewarded web",
+          "watch ad for reward",
+          "google publisher tag",
+          "gpt",
+          "ad manager",
+          "web ads"
+        ]
       }
     },
     {
@@ -2133,7 +2739,7 @@
     {
       "patterns": [],
       "stories": [],
-      "docs": ["CLAUDE.md"],
+      "docs": ["AGENTS.md"],
       "entryPoints": [
         "apps/starter/src/main.tsx",
         "apps/starter/src/routes/routes.tsx",
@@ -2195,7 +2801,7 @@
     {
       "patterns": [],
       "stories": [],
-      "docs": ["apps/starter-ssr/README.md", "CLAUDE.md"],
+      "docs": ["apps/starter-ssr/README.md", "AGENTS.md"],
       "entryPoints": [
         "apps/starter-ssr/server/main.ts",
         "apps/starter-ssr/src/entry-server.tsx",
@@ -2302,14 +2908,18 @@
           "api-key-jdbc",
           "auth",
           "auth-magic-link",
+          "auth-mfa",
+          "auth-mfa-jdbc",
           "auth-session",
           "auth-session-jdbc",
           "auth-social",
+          "auth-social-apple",
           "auth-social-google",
           "auth-social-kakao",
           "auth-social-naver",
           "auth-social-oidc",
           "auth-social-x",
+          "auth-web-handoff",
           "author-profile",
           "author-profile-jdbc",
           "authz",
@@ -2318,6 +2928,8 @@
           "badge-jdbc",
           "board",
           "board-jdbc",
+          "booking",
+          "booking-jdbc",
           "campaign",
           "campaign-jdbc",
           "captcha-turnstile",
@@ -2332,6 +2944,8 @@
           "dashboard-jdbc",
           "db-postgresql",
           "idempotency",
+          "inquiry",
+          "inquiry-jdbc",
           "job-queue-jdbc",
           "json",
           "legal",
@@ -2339,6 +2953,8 @@
           "migration",
           "migration-flyway",
           "notification",
+          "notification-broadcast",
+          "notification-broadcast-jdbc",
           "notification-fcm",
           "notification-jdbc",
           "notification-legal",
@@ -2349,6 +2965,9 @@
           "notification-sse",
           "notification-webpush",
           "payment",
+          "payment-appstore",
+          "payment-googleplay",
+          "payment-iap",
           "payment-jdbc",
           "payment-kakaopay",
           "payment-naverpay",
@@ -2358,6 +2977,7 @@
           "platform",
           "point",
           "point-jdbc",
+          "redis-core",
           "review",
           "review-jdbc",
           "reward",
@@ -2371,6 +2991,10 @@
           "storage-image-jdbc",
           "storage-s3",
           "time",
+          "video",
+          "video-jdbc",
+          "waiting-room",
+          "waiting-room-jdbc",
           "workspace",
           "workspace-jdbc"
         ],
@@ -2392,8 +3016,11 @@
         "autoIncludes": [
           "author-profile",
           "board",
+          "booking",
+          "captcha-turnstile",
           "dashboard",
           "i18n",
+          "inquiry",
           "marketing",
           "notifications",
           "payment",
@@ -2404,6 +3031,8 @@
           "search",
           "seo",
           "storage",
+          "video",
+          "waiting-room",
           "workspace"
         ],
         "alsoVia": [],
@@ -2488,6 +3117,7 @@
         "modules": [
           "account",
           "account-jdbc",
+          "ads-admob",
           "alert",
           "alert-jdbc",
           "api-key",
@@ -2496,14 +3126,18 @@
           "async-notification",
           "auth",
           "auth-magic-link",
+          "auth-mfa",
+          "auth-mfa-jdbc",
           "auth-session",
           "auth-session-jdbc",
           "auth-social",
+          "auth-social-apple",
           "auth-social-google",
           "auth-social-kakao",
           "auth-social-naver",
           "auth-social-oidc",
           "auth-social-x",
+          "auth-web-handoff",
           "author-profile",
           "author-profile-jdbc",
           "authz",
@@ -2512,6 +3146,8 @@
           "badge-jdbc",
           "board",
           "board-jdbc",
+          "booking",
+          "booking-jdbc",
           "campaign",
           "campaign-jdbc",
           "captcha-turnstile",
@@ -2528,6 +3164,8 @@
           "db-postgresql",
           "event-kafka",
           "idempotency",
+          "inquiry",
+          "inquiry-jdbc",
           "job-queue-jdbc",
           "json",
           "legal",
@@ -2535,6 +3173,8 @@
           "migration",
           "migration-flyway",
           "notification",
+          "notification-broadcast",
+          "notification-broadcast-jdbc",
           "notification-fcm",
           "notification-jdbc",
           "notification-legal",
@@ -2547,6 +3187,9 @@
           "notification-webpush",
           "notification-websocket",
           "payment",
+          "payment-appstore",
+          "payment-googleplay",
+          "payment-iap",
           "payment-jdbc",
           "payment-kakaopay",
           "payment-naverpay",
@@ -2577,6 +3220,11 @@
           "storage-image-pdfbox",
           "storage-s3",
           "time",
+          "video",
+          "video-cloudrun",
+          "video-jdbc",
+          "waiting-room",
+          "waiting-room-jdbc",
           "workspace",
           "workspace-jdbc"
         ],
@@ -2880,6 +3528,51 @@
     },
     {
       "patterns": [
+        "packages/auth/src/WebHandoffGate.stories.tsx",
+        "packages/auth/src/patterns/MailLinkLandings.stories.tsx"
+      ],
+      "stories": [],
+      "docs": ["packages/auth/README.md"],
+      "entryPoints": ["WebHandoffGate", "WebHandoffLanding", "createWebHandoffApi"],
+      "needs": ["auth"],
+      "backend": {
+        "modules": ["auth-web-handoff"],
+        "oneOfModules": [],
+        "optionalModules": ["payment-iap"],
+        "basePaths": ["/api/v1/auth/web-handoff"],
+        "docs": ["docs/modules/auth-web-handoff.md"]
+      },
+      "status": "experimental",
+      "id": "web-handoff-landing",
+      "kind": "pattern",
+      "package": "@skeleton/auth",
+      "stampFlag": {
+        "flag": null,
+        "included": "always",
+        "autoIncludes": [],
+        "alsoVia": [],
+        "optOut": null
+      },
+      "summary": "앱에서 「웹 결제」로 넘어온 사람을 받는 문지기 — 주소의 #handoff=<코드> 를 읽어 주소창 · 히스토리에서 지우고, 한 번 바꿔 세션을 연 뒤 결제 화면을 보인다. 만료 · 이미 쓴 코드는 로그인 안내로.",
+      "path": "packages/auth/src/screens/WebHandoffGate.tsx",
+      "notFor": [
+        "코드는 몇 분 · 한 번만 — 문지기는 열자마자 한 번만 바꾼다. 코드는 조각(#)에서만 읽는다(쿼리의 ?handoff= 는 쓰지 않고 지우기만 한다)",
+        "로그인 가드(RequireAuth)보다 바깥에 둔다 — 안쪽이면 가드가 로그인 화면으로 보내 버려 코드가 쓰이지 않는다",
+        "이미 로그인한 브라우저에서는 계정을 바꾸기 전에 확인을 묻는다. 2단계 인증 계정은 twoFactorTo 를 주면 두 번째 단계를 거친다(안 주면 안내 줄)",
+        "서버 렌더(SSR) 앱은 앱 전체가 아니라 결제 라우트만 감싼다 - 마운트 뒤에 읽고 그 전에는 아무것도 그리지 않는다. restore() 가 끝난 뒤에 렌더해야 로그인 상태 확인이 맞다"
+      ],
+      "keywords": {
+        "ko": ["앱에서 웹으로", "웹 결제 이동", "자동 로그인 코드", "핸드오프"],
+        "en": [
+          "app to web handoff",
+          "web checkout handoff",
+          "one-time login code",
+          "deep link login"
+        ]
+      }
+    },
+    {
+      "patterns": [
         "packages/auth/src/admin/AdminAccounts.stories.tsx",
         "packages/auth/src/admin/AdminRoles.stories.tsx"
       ],
@@ -2979,6 +3672,73 @@
           "revoke key",
           "key scopes",
           "developer settings"
+        ]
+      }
+    },
+    {
+      "id": "two-factor",
+      "kind": "pattern",
+      "package": "@skeleton/auth",
+      "path": "packages/auth/src/mfa/TwoFactorSection.tsx",
+      "summary": "2단계 인증(TOTP) 화면 — 로그인의 두 번째 단계 TwoFactorChallengeScreen(6자리 인증 앱 코드 · 「복구 코드로 들어가기」 · 남은 시도 · 만료 · 한도 안내; 비밀번호 · 링크 · 소셜 · 탈퇴 취소 네 길이 모두 /login/two-factor 로 — mfaToken 은 라우터 state 에만) · 설정의 TwoFactorSection(켜기 마법사: 본인 확인 → 서버가 만든 QR 경로를 <svg><path> 로 + 비밀 문자열 + 앱에서 열기 → 6자리 확인 → 복구 코드 복사/내려받기, 「저장했어요」 전에는 안 닫힘 · 복구 코드 다시 만들기 · 인증 앱 바꾸기 · 끄기). createAuthRoutes 가 라우트를 두고 AccountSettings 의 twoFactor 가 줄을 연다. 2단계가 필수인 계정(운영자 등)이 등록 전이면 서버가 403 MFA.ENROLLMENT_REQUIRED 로 막고 MfaEnrollmentRequiredGate 가 「2단계 인증을 켜 주세요」 전면 화면으로 앱을 덮는다(이메일 필수 막과 같은 자리 · 같은 상태 기계 — 방금 로그인했으면 본인 확인 없이 바로 QR, 켜고 복구 코드를 저장하면 막혔던 호출이 이어진다). 운영자 해제는 @skeleton/auth/admin AdminAccounts 의 mfaReset(줄 메뉴 「2단계 해제」, 사유 필수 · 자기 자신/권한 상승/꺼짐 안내).",
+      "patterns": [
+        "packages/auth/src/mfa/TwoFactorChallengeScreen.stories.tsx",
+        "packages/auth/src/mfa/TwoFactorSection.stories.tsx",
+        "packages/auth/src/mfa/MfaEnrollmentRequiredScreen.stories.tsx"
+      ],
+      "stories": [],
+      "docs": ["packages/auth/README.md"],
+      "entryPoints": [
+        "mfaRequiredOf",
+        "TwoFactorChallengeScreen",
+        "TwoFactorSection",
+        "createMfaApi",
+        "MfaEnrollmentRequiredGate",
+        "MfaEnrollmentRequiredScreen",
+        "createMfaEnrollmentRequiredController"
+      ],
+      "needs": ["auth"],
+      "backend": {
+        "modules": ["auth-mfa", "auth-mfa-jdbc"],
+        "oneOfModules": [],
+        "optionalModules": [],
+        "basePaths": ["/api/v1/auth/mfa"],
+        "docs": ["docs/modules/auth-mfa.md", "docs/modules/auth-mfa-jdbc.md"]
+      },
+      "status": "stable",
+      "stampFlag": {
+        "flag": null,
+        "included": "always",
+        "autoIncludes": [],
+        "alsoVia": [],
+        "optOut": null
+      },
+      "notFor": [
+        "인증 앱(TOTP) 코드와 복구 코드만 — SMS · 이메일 코드 · 패스키는 없다",
+        "백엔드 auth-mfa 모듈(skeleton.auth-mfa)이 켜져 있어야 한다 - 꺼진 서버(404)에서는 설정 줄이 안내만 보인다",
+        "QR 은 서버가 만든다 - 프런트에 QR 라이브러리가 없고 otpauth:// 를 바깥 서비스로 보내지 않는다",
+        "등록 필수 문(MfaEnrollmentRequiredGate)은 서버가 필수로 건 계정에만 뜬다 - 서버 required-for 가 NONE 이면 403 이 오지 않아 아무 일도 없다"
+      ],
+      "keywords": {
+        "ko": [
+          "2단계 인증",
+          "이중 인증",
+          "OTP",
+          "TOTP",
+          "인증 앱",
+          "복구 코드",
+          "QR 코드 등록",
+          "MFA"
+        ],
+        "en": [
+          "two-factor",
+          "2fa",
+          "mfa",
+          "totp",
+          "authenticator app",
+          "recovery codes",
+          "second factor",
+          "one-time password"
         ]
       }
     },
@@ -3195,7 +3955,7 @@
         "apps/storybook/src/patterns/SettingsPage.stories.tsx"
       ],
       "stories": [],
-      "docs": ["docs/ui-catalog.md", "CLAUDE.md"],
+      "docs": ["docs/ui-catalog.md", "AGENTS.md"],
       "entryPoints": [
         "PageHeader",
         "Table",
@@ -3251,7 +4011,7 @@
     {
       "patterns": [],
       "stories": [],
-      "docs": ["docs/new-project-recipe.md", "CLAUDE.md"],
+      "docs": ["docs/new-project-recipe.md", "AGENTS.md"],
       "entryPoints": ["scripts/new-project.sh", "scripts/new-project.d/stamp.mjs"],
       "needs": [],
       "backend": null,
@@ -3280,7 +4040,7 @@
     {
       "patterns": [],
       "stories": [],
-      "docs": ["CLAUDE.md"],
+      "docs": ["AGENTS.md"],
       "entryPoints": ["scripts/test-new-project.sh"],
       "needs": [],
       "backend": null,
@@ -3385,6 +4145,11 @@
       "byHand": "백엔드에 workspace 모듈을 끼운다. 라우트 /w/:slug/* 를 <WorkspaceProvider api slug current onCanonicalSlug> 로 감싸 팀을 주소에서 읽고(탭마다 독립), 앱의 getAuthHeaders 에 createWorkspaceHeaders(current)() 를 합쳐 앱 데이터 요청에 X-Workspace-Id 를 싣는다. 머리줄에 WorkspaceSwitcher, 첫 화면은 pickLandingSlug 로 보내고, 설정에 WorkspaceSettings. 앱 데이터의 캐시 키에는 팀 id 를 넣는다. 문구(ko/en)는 labels prop 으로 앱이 공급."
     },
     {
+      "need": "편집 화면 옆 미리보기 · 폰/태블릿/PC 로 크게 보기",
+      "capabilities": ["preview"],
+      "byHand": "iframe 이면 앱 제어기를 PreviewFrameBridge 로 감싸 source={{ kind: 'frame', bridge }}, 같은 번들 화면이면 source={{ kind: 'render', content }}. 무대는 PreviewStage, 크게 보기는 PreviewViewer(as='dialog'), 보기 조건은 extra 로."
+    },
+    {
       "need": "알림 (종 · 목록 · 안 읽은 수)",
       "capabilities": ["notifications"],
       "byHand": "헤더에 NotificationBell 배치와 알림 API 인스턴스(앱이 한 번 만든다). 알림을 만드는 쪽은 백엔드 코드(NotificationPublisher.publish)."
@@ -3448,6 +4213,11 @@
       "need": "봇 방지 (캡차)",
       "capabilities": ["captcha-turnstile"],
       "byHand": "가입 · 로그인 폼에 <Turnstile> 을 놓고 attachTurnstileToken 으로 요청에 붙인다. 검증은 백엔드."
+    },
+    {
+      "need": "웹에서 광고를 보면 보상(포인트 · 1회 사용권)을 주는 보상형 광고",
+      "capabilities": ["ads"],
+      "byHand": "앱 버튼에서 useRewardedAd(...).start() 를 부르고 <RewardedAdPrompt ad reward=\"…\" /> 를 한 번 둔다. 광고 단위(adUnitPath)와 목적(purpose)은 앱이 정한다. rewarded 가 되면 앱이 자기 쿼리를 무효화한다. 로컬 · 시험은 loadGoogletag 에 createFakeGoogletag().loader 를 끼운다. 보상 처리(point 적립 / 1회용 토큰)와 하루 상한은 백엔드 설정이다."
     },
     {
       "need": "관리자 · 대시보드 · 목록 · 상세 · 폼 · 설정 화면",
@@ -3533,6 +4303,31 @@
       "need": "전문 검색 (머리말 검색창 · 결과 화면 · 일치한 글자 강조 · 종류별 거르기)",
       "capabilities": ["search"],
       "byHand": "백엔드 search + search-jdbc 를 붙이고(skeleton.search.http.* · 문서는 catalog 나 앱이 SearchIndexer 로 밀어 넣는다) 프런트는 apps/sample 의 HeaderSearch(SearchBox → /search?q=)와 SearchPage(SearchResults + describe: 종류 → {label, href(id)} + renderLink 로 라우터 링크)를 복사한다. 검색은 로그인한 사람만(서버 기본)."
+    },
+    {
+      "need": "문의 · 의견 받기 · 도움말 (질문 · 기능 제안 · 오류 신고 · 자주 묻는 질문 · 고객센터)",
+      "capabilities": ["inquiry"],
+      "byHand": "백엔드 inquiry + inquiry-jdbc 를 붙이고(skeleton.inquiry.* · 운영자 목록은 skeleton.inquiry.admin.enabled) 프런트는 apps/sample 의 HelpPage(FaqList + ContactForm)를 복사한다: 문항은 앱이 sections 로 주고, 로그인하지 않은 사람에게 서버가 사람 확인을 켰다면 captcha 에 @skeleton/captcha-turnstile 의 useTurnstileToken + Turnstile 을 꽂는다. 「잘 받았어요」 화면과 개인정보 고지는 앱이 정한다."
+    },
+    {
+      "need": "재배포 없이 끄고 켜기 — 점검 모드 · 기능 스위치(킬 스위치) · 강제 업데이트 · 새 버전 안내",
+      "capabilities": ["app-control"],
+      "byHand": "백엔드 app-control + app-control-jdbc 를 붙이고(skeleton.app-control.enabled · 클라이언트 설정은 …config.enabled · 운영은 …admin.enabled) 프런트는 앱 맨 위를 AppControlGate 로 감싼다(appVersion 은 빌드 때 넣는 상수). 스위치는 useFeature(api, key) 로 읽는다 — 운영자가 클라이언트에 보이기로 한 것만 온다. 웹의 「새 버전」은 배포 스크립트가 platforms/web 의 recommendedVersion 을 한 번 올린다. 모바일은 flutter-skeleton 의 app-control."
+    },
+    {
+      "need": "대기열 · 가상 대기실 (오픈 때 몰리는 접속을 앞에서 줄 세우기 · 순번 · 선착순 · 티켓팅)",
+      "capabilities": ["waiting-room"],
+      "byHand": "백엔드 waiting-room + waiting-room-jdbc 를 붙이고(skeleton.waiting-room.http.enabled · 운영은 …admin.enabled · 토큰 키 SKELETON_WAITING_ROOM_TOKEN_KEYS_*) 프런트는 줄이 필요한 페이지를 WaitingRoomGate 로 감싸거나(페이지 앞 문) 버튼 핸들러에서 useWaitingRoom(id).enter() 를 기다린다(버튼 앞 문). 입장권은 입장권이 필요한 요청마다 createEntryHeaders 로 보낸다. 줄은 로그인한 사람만 선다."
+    },
+    {
+      "need": "영상 올리기 · 재생 (동영상 업로드 · 큰 파일 이어 올리기 · 영상 스트리밍 · 화질 선택 · 비공개 영상)",
+      "capabilities": ["video"],
+      "byHand": "백엔드 storage + storage-s3 + video + video-jdbc 를 붙이고(skeleton.video.enabled · 비공개 재생 토큰 비밀 SKELETON_VIDEO_PLAYBACK_SECRET · 저장소 CORS 에 PUT / GET / ExposeHeaders: ETag · 변환 일꾼 apps/video-worker 를 따로 띄운다) 프런트는 createVideoApi(apiClient) 로 VideoUploadField(올리기 칸, QueryClientProvider 안) 와 VideoPlayer(api.playback(id) 의 응답을 grant 로) 를 놓는다. 영상마다 공개 / 비공개는 올릴 때 앱이 정해 넘긴다. 비공개는 refreshGrant 에 api.playback(id) 를 다시 부르는 함수를 준다."
+    },
+    {
+      "need": "좌석 지정 예약 · 공연 예매 · 자리 고르기 (배치도에서 자리 찍기 · 선착순 · 점유 후 결제)",
+      "capabilities": ["booking", "waiting-room"],
+      "byHand": "백엔드 booking + booking-jdbc(+ 대기실 waiting-room, 결제 payment, 여러 대면 redis-core)를 붙이고(skeleton.booking.http.enabled · 운영은 …admin.enabled) 프런트는 대기실을 단 풀이면 WaitingRoomGate 안에 SeatBooking 을 둔다. 결제는 renderPayment 에서 앱이 @skeleton/payment 결제창을 끼운다(주문 itemType \"booking\" · itemRef holdId · Idempotency-Key). 흐름의 로그인 헤더는 sse 옵션에 넘긴다."
     },
     {
       "need": "약관 · 개인정보 동의 (가입 체크박스 · 새 판 재동의 · 선택 동의 철회) — 문서와 동의 기록은 서버가 쥔다",

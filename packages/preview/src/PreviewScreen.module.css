@@ -1,0 +1,17 @@
+/* 줄인 기기가 차지하는 자리 — 크기는 PreviewScreen 이 「기기 × 배율」로 준다. 안의 기기 상자는 기기 크기 그대로 transform 으로만 줄어든다 */
+.slot {
+  flex: none;
+}
+
+.frame {
+  display: block;
+  border: 0;
+  background: var(--bg);
+}
+
+/* 직접 렌더한 내용의 화면 상자 — 기기 뷰포트 크기, 넘치면 안에서 스크롤(iframe 과 같다) */
+.render {
+  position: relative;
+  overflow: auto;
+  overscroll-behavior: contain;
+}

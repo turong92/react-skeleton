@@ -27,6 +27,7 @@ const api: AuthApi = {
   },
   magicLinkRedeem: unused,
   cancelDeletion: unused,
+  mfaVerify: unused,
 }
 
 describe('RootLayout (signed out)', () => {
@@ -214,6 +215,11 @@ describe('RootLayout (signed in): operator menu', () => {
     expect(all).toContain('href="/admin/referrals"')
     expect(renderAs(['campaign.manage'])).toContain('href="/admin/referrals"')
     expect(coupons).not.toContain('href="/admin/referrals"')
+  })
+  it('shows the broadcasts screen only to someone holding notification-broadcast.read', () => {
+    expect(renderAs(['*'])).toContain('href="/admin/broadcasts"')
+    expect(renderAs(['notification-broadcast.read'])).toContain('href="/admin/broadcasts"')
+    expect(renderAs(['account.read'])).not.toContain('href="/admin/broadcasts"')
   })
   it('groups the operator links under one 운영 button (the row of links covered the sign-out and language buttons) - the links stay in the document', () => {
     const all = renderAs(['*'])

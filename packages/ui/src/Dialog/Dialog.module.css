@@ -10,6 +10,33 @@
   -webkit-backdrop-filter: var(--overlay-backdrop);
 }
 
+/* 화면 전체 — 몸 여백 없이 창을 다 덮는다. 안쪽 배치는 내용이 한다 */
+.dialog[data-fullscreen] {
+  width: 100%;
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+}
+
+.dialog[data-fullscreen] .body {
+  height: 100%;
+  padding: 0;
+}
+
+/* 제목은 창 이름으로만 — 눈에는 보이지 않고 낭독만 된다 */
+.nameOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .dialog::backdrop {
   background: var(--overlay-scrim);
 }

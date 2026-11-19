@@ -1,0 +1,48 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200; /* 이메일 막(1100)·약관 막(1000)보다 위 - 서버 문도 가장 먼저 막는다 */
+  display: grid;
+  align-items: start;
+  justify-items: center;
+  padding: clamp(var(--space-sm), 4vw, var(--space-lg));
+  background: var(--bg);
+  overflow-y: auto;
+}
+
+.card {
+  display: grid;
+  gap: var(--space-lg);
+  inline-size: min(100%, 30rem);
+  margin-block: auto;
+  padding: clamp(var(--space-md), 6vw, var(--space-xl));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.card h1 {
+  margin: 0;
+  font-size: var(--font-size-heading);
+}
+
+.card h1:focus {
+  outline: none;
+}
+
+.lead {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.actions > * {
+  flex: 1 1 8rem;
+}

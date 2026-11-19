@@ -16,6 +16,10 @@ export type AdminAccountsProps = {
   callerPermissions?: readonly string[]
   /** 호출자의 권한 질문(`useCan()`) - 표의 명령을 권한으로 가린다. 기본 모두 허용 */
   can?: (key: string) => boolean
+  /**
+   * 줄 메뉴에 「2단계 해제」를 둔다(기본 꺼짐 - 백엔드 `auth-mfa` 의 `admin.enabled` 와 `mfa.reset` 권한을 켠 앱만). 메뉴는 `can('mfa.reset')` 일 때만 보인다
+   */
+  mfaReset?: boolean
   pageSize?: number
   formatDate?: (iso: string) => string
   /** 차단 안내의 「문의」 링크 */
@@ -29,6 +33,7 @@ export function AdminAccounts({
   assignableRoles,
   callerPermissions,
   can,
+  mfaReset = false,
   pageSize = 20,
   formatDate,
   supportHref,
@@ -85,6 +90,7 @@ export function AdminAccounts({
           onRestore={(id) => after(() => api.restore(id))()}
           onGrantRole={(id, role) => after(() => api.grantRole(id, role))()}
           onRevokeRole={(id, role) => after(() => api.revokeRole(id, role))()}
+          onResetMfa={mfaReset ? (id, reason) => api.resetMfa(id, reason) : undefined}
           formatDate={formatDate}
           showLoginId={loginIdOn}
           labels={given}

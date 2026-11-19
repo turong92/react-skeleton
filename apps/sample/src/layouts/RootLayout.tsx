@@ -77,6 +77,8 @@ export function AdminLinks() {
   const canBadges = usePermission('badge.manage')
   const canWorkspaces = usePermission('workspace.read')
   const canReviews = usePermission(['review.moderate', 'review.reply'])
+  const canBroadcasts = usePermission('notification-broadcast.read')
+  const canBooking = usePermission('booking.read')
   // 운영 화면이 하나도 없는 사람에게는 메뉴 자체가 없다
   if (
     !(
@@ -92,7 +94,9 @@ export function AdminLinks() {
       canGrants ||
       canBadges ||
       canWorkspaces ||
-      canReviews
+      canReviews ||
+      canBroadcasts ||
+      canBooking
     )
   )
     return null
@@ -113,6 +117,8 @@ export function AdminLinks() {
       {canBadges && <NavLink to="/admin/badge-awards">{t('nav.adminBadgeAwards')}</NavLink>}
       {canWorkspaces && <NavLink to="/admin/workspaces">{t('nav.adminWorkspaces')}</NavLink>}
       {canReviews && <NavLink to="/admin/reviews">{t('nav.adminReviews')}</NavLink>}
+      {canBroadcasts && <NavLink to="/admin/broadcasts">{t('nav.adminBroadcasts')}</NavLink>}
+      {canBooking && <NavLink to="/admin/booking">{t('nav.adminBooking')}</NavLink>}
     </AdminMenu>
   )
 }
@@ -156,8 +162,8 @@ export function RootLayout() {
           <SiteFooter
             brand={t('appName')}
             tagline={t('footer.tagline')}
-            columns={
-              signedIn
+            columns={[
+              ...(signedIn
                 ? []
                 : [
                     {
@@ -167,8 +173,9 @@ export function RootLayout() {
                         { label: t('footer.faq'), href: '/#faq' },
                       ],
                     },
-                  ]
-            }
+                  ]),
+              { title: t('footer.support'), links: [{ label: t('footer.help'), href: '/help' }] },
+            ]}
             legalLabel={t('footer.legalLabel')}
             legalLinks={[
               { label: t('footer.terms'), href: '/terms' },
@@ -201,6 +208,7 @@ export function RootLayout() {
               <NavLink to="/notes">{t('nav.notes')}</NavLink>
               <NavLink to="/board">{t('nav.board')}</NavLink>
               <NavLink to="/cheer">{t('nav.cheer')}</NavLink>
+              <NavLink to="/booking">{t('nav.booking')}</NavLink>
               <NavLink to="/rewards">{t('nav.rewards')}</NavLink>
               <NavLink to="/subscription">{t('nav.subscription')}</NavLink>
               <NavLink to="/settings">{t('nav.settings')}</NavLink>

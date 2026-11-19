@@ -7,6 +7,8 @@ import { ForgotPasswordScreen } from './ForgotPasswordScreen'
 import { ResetPasswordScreen } from './ResetPasswordScreen'
 import { SocialCallbackScreen } from './SocialCallbackScreen'
 import { MagicLinkLanding } from './MagicLinkLanding'
+import { WebHandoffLanding } from './WebHandoffLanding'
+import { WebHandoffSwitchConfirm } from './WebHandoffSwitchConfirm'
 import { LegacyLinkNotice } from './LegacyLinkNotice'
 import { SocialLinkProofScreen } from './SocialLinkProofScreen'
 import { readLinkToken } from './linkToken'
@@ -254,5 +256,48 @@ describe('deletion pending — a correct sign-in during the grace never opens a 
     )
     expect(out).toContain('Cancel the deletion?')
     expect(out).not.toContain('Sign-in did not finish')
+  })
+})
+
+describe('web handoff landing (the app opened the web payment)', () => {
+  it('starts by signing the person in; without a code it says the link does not work and offers sign-in', () => {
+    expect(
+      html(
+        <WebHandoffLanding code="c" onRedeem={noop} onDone={() => undefined} signInTo="/login" />,
+      ),
+    ).toContain('Signing you in from the app')
+    const none = html(
+      <WebHandoffLanding code={null} onRedeem={noop} onDone={() => undefined} signInTo="/login" />,
+    )
+    expect(none).toContain('This link no longer works')
+    expect(none).toContain('href="/login"')
+    const ko = renderToStaticMarkup(
+      <MemoryRouter>
+        <WebHandoffLanding
+          code={null}
+          onRedeem={noop}
+          onDone={() => undefined}
+          signInTo="/login"
+          labels={koAuthLabels}
+        />
+      </MemoryRouter>,
+    )
+    expect(ko).toContain('쓸 수 없는 링크예요')
+  })
+
+  it('asks before replacing the signed-in account, with a continue and a cancel button', () => {
+    const out = html(<WebHandoffSwitchConfirm onContinue={noop} onCancel={() => undefined} />)
+    expect(out).toContain('Continue with the account from the app?')
+    expect(out).toContain('Sign out and continue')
+    expect(out).toContain('Cancel')
+    expect(
+      html(
+        <WebHandoffSwitchConfirm
+          onContinue={noop}
+          onCancel={() => undefined}
+          labels={koAuthLabels}
+        />,
+      ),
+    ).toContain('앱의 계정으로 계속할까요?')
   })
 })

@@ -1,10 +1,11 @@
 import type { PasswordViolation } from '../account/types'
+import { defaultTwoFactorLabels, type TwoFactorLabels } from '../mfa/labels'
 
 /**
  * 화면 문구. `@skeleton/auth` 는 번역을 모른다 — 모든 화면이 `labels?: Partial<AuthLabels>` 를 받고, 기본은 영어다.
  * 앱이 자기 i18n 으로 채워 넘긴다(`createAuthRoutes` 의 `useLabels` 훅). 값이 함수인 항목은 자리값이 낀 문장이다.
  */
-export type AuthLabels = {
+export type AuthLabels = TwoFactorLabels & {
   // 공통
   email: string
   password: string
@@ -203,6 +204,15 @@ export type AuthLabels = {
   magicLinkInvalidBody: string
   magicLinkRequestNew: string
   magicLinkSentTitle: string
+  webHandoffTitle: string
+  webHandoffChecking: string
+  webHandoffInvalidTitle: string
+  webHandoffInvalidBody: string
+  webHandoffSignIn: string
+  webHandoffSwitchTitle: string
+  webHandoffSwitchBody: string
+  webHandoffSwitchContinue: string
+  webHandoffSwitchCancel: string
   methodsLoading: string
   methodsFailed: string
   methodsRetry: string
@@ -257,6 +267,11 @@ export type AuthLabels = {
   profileTimeZone: string
   profileLocaleDefault: string
   profileSaved: string
+  /** 프로필 사진 칸의 이름 · 변환 중 안내 */
+  profilePicture: string
+  profilePicturePending: string
+  /** 서버가 사진을 거절했다(400) - 내 업로드가 아니거나 이미지가 아니거나 다른 곳이 쓰는 파일 */
+  profilePictureRejected: string
   profileEdit: string
   /** 설정 카드 제목 3개(목차 칩도 같다) */
   groupAccount: string
@@ -683,6 +698,17 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   magicLinkInvalidBody: 'It may have expired or already been used. Request a new one.',
   magicLinkRequestNew: 'Request a new link',
   magicLinkSentTitle: 'Check your email',
+  webHandoffTitle: 'Signing you in',
+  webHandoffChecking: 'Signing you in from the app',
+  webHandoffInvalidTitle: 'This link no longer works',
+  webHandoffInvalidBody:
+    'It lasts only a couple of minutes and works once. Go back to the app and open the web payment again, or sign in here.',
+  webHandoffSignIn: 'Sign in',
+  webHandoffSwitchTitle: 'Continue with the account from the app?',
+  webHandoffSwitchBody:
+    'You are signed in on this device already. Continuing signs you out here and signs you in with the account that opened this page from the app.',
+  webHandoffSwitchContinue: 'Sign out and continue',
+  webHandoffSwitchCancel: 'Cancel',
   methodsLoading: 'Checking how you can sign in',
   methodsFailed:
     'We could not check which sign-in methods are available. Showing the default — try again if something is missing.',
@@ -733,6 +759,9 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   profileTimeZone: 'Time zone',
   profileLocaleDefault: 'Not set',
   profileSaved: 'Profile saved.',
+  profilePicture: 'Photo',
+  profilePicturePending: 'Your picture is being prepared - it will show up in a moment.',
+  profilePictureRejected: 'This photo cannot be used. Please upload a new image file.',
   profileEdit: 'Edit profile',
   groupAccount: 'Account',
   groupSecurity: 'Sign-in & security',
@@ -957,6 +986,7 @@ export const defaultAuthLabels: AuthLabels = asDefault({
   adminPrevious: 'Previous',
   adminNext: 'Next',
   adminPurgeAfter: (date) => `Erased on ${date}`,
+  ...defaultTwoFactorLabels,
 })
 
 /** 기본 영어 위에 앱이 준 문구를 덮는다 */

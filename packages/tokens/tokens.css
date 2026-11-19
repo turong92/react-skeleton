@@ -55,6 +55,11 @@
   --p-radius-1: 4px;
   --p-radius-2: 6px;
   --p-radius-3: 8px;
+  --p-radius-4: 12px;
+  --p-radius-5: 14px;
+  --p-radius-6: 22px;
+  --p-radius-7: 28px;
+  --p-radius-8: 30px;
   --p-radius-full: 9999px;
   --p-font-size-1: 12px;
   --p-font-size-2: 13px;
@@ -83,6 +88,10 @@
   --code-bg: var(--p-neutral-250);
   --header-bg: var(--p-alpha-white-92);
   --inverse: var(--p-neutral-850);
+  --qr-bg: var(--p-neutral-0);
+  --qr-fg: var(--p-neutral-900);
+  --device-bezel: var(--p-neutral-850);
+  --device-base: var(--p-neutral-400);
 
   /* Text */
   --text: var(--p-neutral-800);
@@ -126,6 +135,14 @@
   --radius-lg: var(--p-radius-3);
   --radius-full: var(--p-radius-full);
 
+  /* Device frame */
+  --device-phone-radius: var(--p-radius-8);
+  --device-phone-screen-radius: var(--p-radius-6);
+  --device-tablet-radius: var(--p-radius-7);
+  --device-tablet-screen-radius: var(--p-radius-5);
+  --device-desktop-radius: var(--p-radius-4);
+  --device-desktop-screen-radius: var(--p-radius-2);
+
   /* Type scale */
   --font-size-caption: var(--p-font-size-1);
   --font-size-small: var(--p-font-size-2);
@@ -151,6 +168,10 @@
   --code-bg: var(--p-night-600);
   --header-bg: var(--p-alpha-night-88);
   --inverse: var(--p-neutral-250);
+  --qr-bg: var(--p-neutral-0);
+  --qr-fg: var(--p-neutral-900);
+  --device-bezel: var(--p-night-600);
+  --device-base: var(--p-night-400);
 
   /* Text */
   --text: var(--p-neutral-300);
@@ -190,6 +211,10 @@
     --code-bg: var(--p-night-600);
     --header-bg: var(--p-alpha-night-88);
     --inverse: var(--p-neutral-250);
+    --qr-bg: var(--p-neutral-0);
+    --qr-fg: var(--p-neutral-900);
+    --device-bezel: var(--p-night-600);
+    --device-base: var(--p-night-400);
 
     /* Text */
     --text: var(--p-neutral-300);

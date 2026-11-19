@@ -40,6 +40,9 @@ const api: AuthApi = {
   cancelDeletion: async () => {
     throw new Error('unused')
   },
+  mfaVerify: async () => {
+    throw new Error('unused')
+  },
 }
 
 const build = (storage?: TokenStorage) => {

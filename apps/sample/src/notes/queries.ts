@@ -9,7 +9,7 @@ import {
 import { useWorkspace } from '@skeleton/workspace'
 import { notesApi } from './api'
 import type { NotesApi } from './notesApi'
-import type { NoteInput, NotesQuery } from './types'
+import type { Note, NoteInput, NotesQuery } from './types'
 
 /** 키는 `notes` 한 뿌리 아래(팀 노트는 `useWorkspace()` 의 id 로 칸이 갈린다) — 어느 변경이든 `invalidateNotes` 한 번이면 목록 · 상세 · 현황이 모두 다시 가져온다 */
 export const notesKeys = {
@@ -77,10 +77,32 @@ export function useCreateNote() {
   })
 }
 
-export function useUpdateNote(id: string) {
+/**
+ * 노트 고치기(PUT)는 노트를 통째로 바꾼다 - 본문을 보내는 순간의 최신 노트(쿼리 캐시)로 짓는다.
+ * 화면이 열릴 때 쥔 노트로 지으면, 그 사이 다른 탭 · 다른 칸이 붙인 첨부 · 영상이 떨어지고 서버가 지운다.
+ * 성공하면 응답 노트로 캐시를 갱신해 다음 PUT 이 그 위에서 출발하게 한다
+ */
+export async function saveFromLatest(
+  client: QueryClient,
+  api: NotesApi,
+  note: Note,
+  workspaceId: string | undefined,
+  build: (latest: Note) => NoteInput,
+): Promise<Note> {
+  const key = notesKeys.detail(note.id, workspaceId)
+  const saved = await api.update(note.id, build(client.getQueryData<Note>(key) ?? note))
+  client.setQueryData(key, saved)
+  return saved
+}
+
+/** `mutateAsync((latest) => noteInputOf(latest, 바뀐 칸))` - 본문은 보내는 순간의 최신 노트로 지어진다 */
+export function useUpdateNote(note: Note) {
   const afterChange = useAfterChange()
+  const client = useQueryClient()
+  const workspaceId = useWorkspace()?.id
   return useMutation({
-    mutationFn: (input: NoteInput) => notesApi.update(id, input),
+    mutationFn: (build: (latest: Note) => NoteInput) =>
+      saveFromLatest(client, notesApi, note, workspaceId, build),
     onSuccess: afterChange,
   })
 }

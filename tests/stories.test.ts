@@ -8,7 +8,7 @@ import { REPO, walk } from './support/loadWorkspaces'
  * 스토리는 부품의 「보이는 모양 · 정본 사용법 · 실행되는 테스트」 한 곳이다 — 썩지 않게 여기서 묶는다.
  *  1. @skeleton/ui 가 export 하는 것마다 스토리 파일이 있고, play(상호작용 테스트)가 하나 이상 있다.
  *  2. 모든 스토리는 CSF3 + `satisfies Meta` + 제목 규칙(UI/ · Packages/ · Patterns/ · Design tokens/).
- *  3. Patterns 는 @skeleton/ui(와 react · storybook)만 import 하고 숨은 도우미 파일이 없다. 모두 에이전트 안내(CLAUDE.md)에 적혀 있다.
+ *  3. Patterns 는 @skeleton/ui(와 react · storybook)만 import 하고 숨은 도우미 파일이 없다. 모두 에이전트 안내(AGENTS.md)에 적혀 있다.
  *  4. docs/ui-catalog.md 의 표가 디스크의 스토리 파일과 어긋나지 않는다.
  */
 const read = (path: string) => readFileSync(join(REPO, path), 'utf8')
@@ -81,13 +81,13 @@ describe('every stories file', () => {
 
 describe('Patterns', () => {
   const patterns = allStories.filter((file) => file.startsWith('apps/storybook/src/patterns/'))
-  const guide = read('CLAUDE.md')
+  const guide = read('AGENTS.md')
 
   it('exist (list, form, detail, auth, settings)', () => {
     expect(patterns.length).toBeGreaterThanOrEqual(5)
   })
 
-  it.each(patterns.map((file) => [file]))('%s is listed in the agent guide (CLAUDE.md)', (file) => {
+  it.each(patterns.map((file) => [file]))('%s is listed in the agent guide (AGENTS.md)', (file) => {
     expect(guide).toContain(file)
   })
 

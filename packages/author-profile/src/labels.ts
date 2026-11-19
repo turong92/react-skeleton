@@ -44,6 +44,13 @@ export type AuthorProfileLabels = {
   /** 각 줄의 단추에 보이는 글자 */
   renameAction: string
   removeAction: string
+  /** 사진 단추의 글자 / 낭독 이름 / 사진 칸의 이름 / 변환 중 안내 - 사진 기능이 켜진 서버에서만 보인다 */
+  pictureAction: string
+  picture: (name: string) => string
+  pictureLabel: (name: string) => string
+  picturePending: string
+  /** 서버가 사진을 거절했다(400) - 내 파일이 아니거나 · 이미지가 아니거나 · 계정/다른 닉네임이 쓰는 파일이다 */
+  pictureRejected: string
   /** 각 줄의 단추의 낭독 이름 — 이름을 넣어 줄을 가리킨다(보이는 글자를 포함하게) */
   rename: (name: string) => string
   renameLabel: (name: string) => string
@@ -95,6 +102,11 @@ export const defaultAuthorProfileLabels: AuthorProfileLabels = {
   adding: 'Adding',
   renameAction: 'Change',
   removeAction: 'Delete',
+  pictureAction: 'Picture',
+  picture: (name) => `Change picture of ${name}`,
+  pictureLabel: (name) => `Picture of ${name}`,
+  picturePending: 'Your picture is being prepared - it will show up in a moment.',
+  pictureRejected: 'This photo cannot be used. Upload a new image file for this nickname.',
   rename: (name) => `Change ${name}`,
   renameLabel: (name) => `New nickname for ${name}`,
   save: 'Save',

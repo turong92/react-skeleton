@@ -63,6 +63,26 @@ SSE 심장박동(백엔드 `notification-sse` 의 `heartbeat`)을 켰다면 `use
 | `<NotificationPreferences api labels descriptions title loadingLabel emptyTitle errorMessage retryLabel saveErrorMessage />` | 종류별 수신 설정 — `SwitchRow` 목록(즉시 저장). 로딩 `Spinner`, 종류가 없으면 `EmptyState`, 불러오기 실패는 오류 띠 + `retryLabel` 단추, 저장 실패는 목록 위 `saveErrorMessage` 한 줄, 저장 중인 줄마다 `busy`               |
 | 타입                                                                                                                         | `NotificationItem`(= `NotificationInboxItemResponse`, `link` · `collapsedCount` 포함) · `NotificationEvent`(= Kotlin `NotificationEvent`, `link` · `collapseKey` 포함) · `NotificationPreference` · `NotificationSeverity` … |
 
+## 공지 운영 화면 — `@skeleton/notifications/admin`
+
+서비스 운영자가 전체 · 역할 · 워크스페이스 · 앱 세그먼트에게 공지를 보내는 선택 화면(1.3.0). 백엔드 `notification-broadcast`(+ `-jdbc`)의 `skeleton.notification.broadcast.admin.enabled=true`(기본 꺼짐 → 404)와 권한 `notification-broadcast.read`(보기) · `notification-broadcast.send`(쓰기 · 보내기)가 있어야 열린다 — 기본 역할 없음, 전권이거나 역할 화면에서 준 계정만. 단추는 `can(key)` prop 으로 숨긴다(검사는 서버). 받는 사람 화면(`NotificationBell` · `NotificationList`)은 바뀌지 않는다 — 공지는 거기 그대로 나온다. 패키지는 라우터를 모른다: 이동은 `onCreate` · `onOpen` · `onEdit` · `onSent` · `onDeleted` · `onCancel` 콜백으로 앱이 잇는다.
+
+| export                                                                   | 뜻                                                                                                                                                                                                                                                                            |
+| ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `createBroadcastAdminApi(client, { basePath? })`                         | 기본 `/admin/broadcasts`: `options` · `audienceCount` · `list` · `get` · `create` · `update` · `remove` · `sendTest` · `send(id, scheduledAt?)` · `unschedule` · `cancel` · `resume`                                                                                          |
+| `useBroadcastOptions` · `useAudienceCount` · `useBroadcasts`             | 종류 · 채널 · 대상 종류 / 대상 수 미리보기 / 목록(키셋 「더 보기」). 404(모듈 꺼짐)는 오류 토스트 없이 화면이 안내한다                                                                                                                                                        |
+| `useBroadcast(api, id)` · `useBroadcastMutations(api)`                   | 상세 + 통계(보내는 중이면 10초마다 다시 읽음) / 만들기 · 고치기 · 지우기 · 시험 · 보내기 · 예약 풀기 · 취소 · 이어 보내기(성공하면 공지 조회를 다시 읽음)                                                                                                                     |
+| `<AdminBroadcasts api onCreate onOpen typeLabels can … />`               | 목록 — 상태 칩 · 종류 · 대상 · 시각 · 진행 막대, 상태로 거르기                                                                                                                                                                                                                |
+| `<AdminBroadcastEditor api id? roleChoices workspaceChoices onSent … />` | 쓰기 — 종류(광고면 안내) · 제목 · 본문 · 링크 · 대상 + 「대상 n명」 · 채널(알림함은 항상, **푸시 불가 종류면 푸시 칸 잠김**) · 즉시 / 예약(광고 + 21~08시면 경고) · 「나에게 테스트」 · 「보내기」 → **대상 수 · 채널 · 시각을 다시 보여 주는 확인 창에서 확인해야만 나간다** |
+| `<AdminBroadcastDetail api id onEdit onDeleted … />`                     | 상세 — 상태 · 통계(예상 대상 · 넘긴 사람 · 알림함 저장 / 읽음 · 푸시 넣음 / 성공 / 실패 / 보내지 않음 / **클릭**) · 상태별 단추(예약 풀기 · 취소 · 이어 보내기 · 지우기, 확인 창) · 만든 · 보낸 · 취소한 사람과 시각                                                          |
+| `koBroadcastAdminLabels` · `defaultBroadcastAdminLabels`                 | 문구 전부는 `labels` prop(기본 영어). 종류 이름은 앱이 `typeLabels` 로 준다(서버는 코드만 안다)                                                                                                                                                                               |
+
+- **푸시 클릭은 알림함 읽음과 따로 센다.** 클릭 칸은 `@skeleton/push` 의 서비스 워커가 보고한 열람(`channels.push.opened`)이고 「성공 대비 %」를 힌트로 보인다. 알림함 읽음은 저장 대비 %.
+- **임시 저장은 한 번만 만든다.** 「나에게 테스트」 → 「보내기」처럼 이어 눌러도 초안은 하나(이미 만든 id 로 고친다).
+- 상태를 바꾸는 호출(`send` · `unschedule` · `cancel` · `resume`)은 본문을 읽지 않는다(성공이면 상세를 다시 읽는다).
+- 서버 계약은 가정이 있다(스펙 `2026-11-02-broadcast-design.md` §5): 목록은 `values` 배열 envelope, 상세는 공지 줄 + `stats: { inbox: { stored, read } | null, channels: { push?: { queued, delivered, failed, dropped, opened } } }`, 대상 종류의 `param` 은 `NONE | ROLE | WORKSPACE | TEXT`. 서버가 다르면 `admin/types.ts` 와 `adminApi.ts` 만 고친다.
+- 스토리: `src/admin/*.stories.tsx`(가짜 운영 API 는 `src/admin/stories/fakeBroadcastAdmin.ts`).
+
 ## 테스트가 재지 않는 것
 
 TanStack Query 의 캐시 규칙(`applyRead` · `ingest` — 실제 `QueryClient`), API 경로 · 파라미터, 목록/종 마크업(`renderToStaticMarkup`)은 잰다. **재지 않는다**: 종을 눌러 대화상자가 열리고 첫 쪽을 가져오는 흐름, 읽음 버튼 클릭 → 캐시 반영의 React 배선(훅 안의 `useMutation`), 실제 SSE/STOMP 연결. 앱에서 한 번 눌러 확인한다(workbench `/packages` 화면이 같은 컴포넌트를 쓴다).

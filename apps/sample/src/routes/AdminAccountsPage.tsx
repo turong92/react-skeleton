@@ -13,6 +13,7 @@ export function AdminAccountsPage() {
     <AdminAccounts
       api={adminAccountsApi}
       can={useCan()}
+      mfaReset // 백엔드 `skeleton.auth-mfa.admin.enabled`(이 앱은 켬) - 사유를 적고 2단계 인증을 해제한다(`mfa.reset`)
       assignableRoles={useAssignableRoles()}
       callerPermissions={useAuth().principal?.permissions ?? []}
       labels={useAuthLabels()}

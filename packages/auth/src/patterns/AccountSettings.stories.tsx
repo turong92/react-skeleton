@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { Button } from '@skeleton/ui'
 import { StrictMode, useMemo } from 'react'
 import { expect, fn, waitFor, within } from 'storybook/test'
 import { AccountStateNotice } from '../screens/AccountStateNotice'
@@ -11,6 +12,7 @@ import {
   type FakeAccountOptions,
 } from '../stories/fakeAccountApi'
 import { koAuthLabels } from '../screens/labels.ko'
+import type { ProfilePicturePicker } from '../screens/profilePicture'
 import { withRouter } from '../stories/withRouter'
 
 /**
@@ -979,6 +981,94 @@ export const ProfileSaveNotifiesTheApp: Story = {
     await expect(args.onProfileChanged).toHaveBeenCalledWith(
       expect.objectContaining({ displayName: 'Annie' }),
     )
+  },
+}
+
+/* ───────── 프로필 사진: 고르는 칸은 앱이 꽂는다(`profilePicture`) - 여기서는 단추로 업로드 단계를 흉내 내는 가짜 칸 ───────── */
+
+/** 키는 올리기가 끝난 뒤에야 `onChange` 로 온다 - 「올리기 시작」은 `onBusy(true)`, 「올리기 끝」은 `onBusy(false)` + 키 */
+const fakePicture: ProfilePicturePicker = ({ value, onChange, onBusy }) => (
+  <div>
+    <p>{`picked: ${value ?? 'none'}`}</p>
+    <Button variant="secondary" size="sm" onClick={() => onChange('uploads/o/new/file.png')}>
+      Pick photo
+    </Button>
+    <Button variant="secondary" size="sm" onClick={() => onChange('uploads/o/bad/file.png')}>
+      Pick unusable photo
+    </Button>
+    <Button variant="secondary" size="sm" onClick={() => onBusy?.(true)}>
+      Start upload
+    </Button>
+    <Button
+      variant="secondary"
+      size="sm"
+      onClick={() => {
+        onBusy?.(false)
+        onChange('uploads/o/late/file.png')
+      }}
+    >
+      Finish upload
+    </Button>
+    <Button variant="secondary" size="sm" onClick={() => onChange(null)}>
+      Remove photo
+    </Button>
+  </div>
+)
+
+/** 서버에 사진 기능이 없으면(`me.avatarKey` 키 없음) 앱이 고르는 칸을 꽂아도 사진 칸이 없다 */
+export const ProfilePictureHiddenWithoutServerSupport: Story = {
+  args: { profilePicture: fakePicture },
+  play: async ({ canvas, userEvent }) => {
+    const section = within(await canvas.findByRole('group', { name: 'Profile' }))
+    const dialog = await openDialog(canvas, userEvent, section, 'Profile Change')
+    await expect(dialog.queryByRole('group', { name: 'Photo' })).toBeNull()
+  },
+}
+
+/** 올리는 중에는 저장이 막힌다 - 키는 올리기가 끝난 뒤에야 오므로, 그 전에 저장하면 대화상자가 닫히며 사진이 버려진다(회귀). 끝나면 그 키가 저장된다 */
+export const ProfilePictureSaveWaitsForUpload: Story = {
+  args: { fake: { avatar: {} }, profilePicture: fakePicture, onProfileChanged: fn() },
+  play: async ({ canvas, args, userEvent }) => {
+    const section = within(await canvas.findByRole('group', { name: 'Profile' }))
+    const dialog = await openDialog(canvas, userEvent, section, 'Profile Change')
+    await expect(dialog.getByText('picked: none')).toBeVisible()
+    await userEvent.click(dialog.getByRole('button', { name: 'Start upload' }))
+    await expect(dialog.getByRole('button', { name: 'Save' })).toBeDisabled()
+    await userEvent.click(dialog.getByRole('button', { name: 'Finish upload' }))
+    await expect(dialog.getByRole('button', { name: 'Save' })).toBeEnabled()
+    await userEvent.click(dialog.getByRole('button', { name: 'Save' }))
+    await expect(await section.findByText('Profile saved.')).toBeVisible()
+    await expect(args.onProfileChanged).toHaveBeenCalledWith(
+      expect.objectContaining({ avatarKey: 'uploads/o/late/file.png' }),
+    )
+  },
+}
+
+/** 서버가 사진을 거절하면(필드 없는 400) 우리 문구로 말한다 - 서버의 영어 문장이 아니라 */
+export const ProfilePictureRejected: Story = {
+  args: { fake: { avatar: {} }, profilePicture: fakePicture },
+  play: async ({ canvas, userEvent }) => {
+    const section = within(await canvas.findByRole('group', { name: 'Profile' }))
+    const dialog = await openDialog(canvas, userEvent, section, 'Profile Change')
+    await userEvent.click(dialog.getByRole('button', { name: 'Pick unusable photo' }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Save' }))
+    await expect(
+      await dialog.findByText('This photo cannot be used. Please upload a new image file.'),
+    ).toBeVisible()
+  },
+}
+
+/** 올린 사진이 변환 중이면(`me.avatar.pending`) 다시 열었을 때 「준비하고 있어요」 */
+export const ProfilePicturePending: Story = {
+  args: { fake: { avatar: { pending: true } }, profilePicture: fakePicture },
+  play: async ({ canvas, userEvent }) => {
+    const section = within(await canvas.findByRole('group', { name: 'Profile' }))
+    let dialog = await openDialog(canvas, userEvent, section, 'Profile Change')
+    await userEvent.click(dialog.getByRole('button', { name: 'Pick photo' }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Save' }))
+    await expect(await section.findByText('Profile saved.')).toBeVisible()
+    dialog = await openDialog(canvas, userEvent, section, 'Profile Change')
+    await expect(await dialog.findByText(/Your picture is being prepared/)).toBeVisible()
   },
 }
 

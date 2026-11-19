@@ -41,3 +41,43 @@
   flex-wrap: wrap;
   gap: var(--space-md);
 }
+
+/* 스토어 구독 관리 화면으로 가는 링크 - 날 <a> 는 본문 글자로 그려져 눌리는 것처럼 안 보이니 테두리 단추 모양을 준다 */
+.storeLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0 var(--space-md);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-strong);
+  font-size: var(--font-size-small);
+  font-weight: 650;
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+@media (pointer: coarse) {
+  .storeLink {
+    min-height: 44px;
+  }
+}
+
+.storeLink:hover {
+  border-color: var(--teal);
+  background: var(--teal-wash);
+}
+
+.storeLink:active {
+  border-color: var(--teal);
+  background: var(--teal-soft);
+}
+
+.storeLink:focus-visible {
+  outline: 3px solid var(--teal);
+  outline-offset: 2px;
+}

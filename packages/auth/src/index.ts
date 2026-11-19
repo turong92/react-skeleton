@@ -141,8 +141,10 @@ export { DEFAULT_LOGIN_ID_RULES, loginIdProblem, normalizeLoginId } from './acco
 export type { LoginIdProblem, LoginIdRules } from './account/loginIdRules'
 export { supportedTimeZones } from './account/timeZones'
 export type {
+  AccountAvatar,
   AccountMe,
   AccountSession,
+  AvatarAddress,
   AccountStatus,
   DeletionResult,
   LoginIdAvailability,
@@ -199,6 +201,13 @@ export { PasswordField } from './screens/PasswordField'
 export { SocialButtons } from './screens/SocialButtons'
 export { TokenLanding } from './screens/TokenLanding'
 export { MagicLinkLanding } from './screens/MagicLinkLanding'
+export { WebHandoffLanding } from './screens/WebHandoffLanding'
+export type { WebHandoffLandingProps } from './screens/WebHandoffLanding'
+export { WebHandoffGate } from './screens/WebHandoffGate'
+export type { WebHandoffGateProps } from './screens/WebHandoffGate'
+export { readHandoffCode } from './screens/handoffCode'
+export { createWebHandoffApi } from './webHandoffApi'
+export type { WebHandoffApi } from './webHandoffApi'
 export { LegacyLinkNotice } from './screens/LegacyLinkNotice'
 export type { LegacyLinkNoticeProps } from './screens/LegacyLinkNotice'
 export { ReauthProof } from './screens/ReauthProof'
@@ -218,10 +227,36 @@ export { DeletionPendingScreen } from './screens/DeletionPendingScreen'
 export type { DeletionPendingScreenProps } from './screens/DeletionPendingScreen'
 export { deletionPendingOf } from './pendingDeletion'
 export type { DeletionPending } from './pendingDeletion'
+// 2단계 인증(TOTP) - 로그인의 두 번째 단계 화면 · 설정의 줄 · API (백엔드 `auth-mfa`)
+export { mfaRequiredOf } from './mfa/mfaRequired'
+export { MFA_CODES } from './mfa/codes'
+export { TwoFactorChallengeScreen } from './mfa/TwoFactorChallengeScreen'
+export type { TwoFactorChallengeScreenProps } from './mfa/TwoFactorChallengeScreen'
+export { TwoFactorSection } from './mfa/TwoFactorSection'
+export type { TwoFactorSectionProps } from './mfa/TwoFactorSection'
+export { MfaEnrollmentRequiredGate } from './mfa/MfaEnrollmentRequiredGate'
+export type { MfaEnrollmentRequiredGateProps } from './mfa/MfaEnrollmentRequiredGate'
+export { MfaEnrollmentRequiredScreen } from './mfa/MfaEnrollmentRequiredScreen'
+export type { MfaEnrollmentRequiredScreenProps } from './mfa/MfaEnrollmentRequiredScreen'
+export {
+  createMfaEnrollmentRequiredController,
+  isMfaEnrollmentRequiredError,
+} from './mfa/mfaEnrollmentRequired'
+export type { MfaEnrollmentRequiredController } from './mfa/mfaEnrollmentRequired'
+export { createMfaApi } from './mfa/mfaApi'
+export type { MfaApi } from './mfa/mfaApi'
+export { defaultTwoFactorLabels, koTwoFactorLabels } from './mfa/labels'
+export type { TwoFactorLabels } from './mfa/labels'
+export type { MfaMethod, MfaRequired, MfaStatus, MfaVerifyInput, TotpEnrollment } from './mfa/types'
 export { AccountStateNotice } from './screens/AccountStateNotice'
 export { AccountSettings } from './screens/AccountSettings'
-export type { AccountSectionName, AccountSettingsProps } from './screens/AccountSettings'
+export type {
+  AccountSectionName,
+  AccountSettingsProps,
+  ProviderRoundTrip,
+} from './screens/AccountSettings'
 export { ProfileSection } from './screens/ProfileSection'
+export type { ProfilePicturePicker } from './screens/profilePicture'
 export { PasswordSection } from './screens/PasswordSection'
 export { EmailSection } from './screens/EmailSection'
 export { ContactEmailSection } from './screens/ContactEmailSection'

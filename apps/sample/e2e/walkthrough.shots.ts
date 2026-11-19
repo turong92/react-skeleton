@@ -117,11 +117,14 @@ describe('walkthrough', () => {
         downloadThroughput: -1,
         uploadThroughput: 400 * 1024,
       })
-      await page.locator('input[type=file]').setInputFiles({
-        name: 'floorplan.png',
-        mimeType: 'image/png',
-        buffer: Buffer.alloc(2 * 1024 * 1024, 7),
-      })
+      await page
+        .getByRole('region', { name: ko('attachment.title') })
+        .locator('input[type=file]')
+        .setInputFiles({
+          name: 'floorplan.png',
+          mimeType: 'image/png',
+          buffer: Buffer.alloc(2 * 1024 * 1024, 7),
+        })
       await page.getByRole('progressbar').waitFor()
       await page.waitForTimeout(2200)
       await shot(

@@ -50,4 +50,26 @@ describe('Dialog', () => {
     expect(html).toContain('<h2')
     expect(html).toContain('OK')
   })
+
+  it('fullScreen keeps the name but draws no title row and no × button', () => {
+    const html = renderToStaticMarkup(
+      <Dialog open fullScreen onClose={() => {}} title="Large preview">
+        x
+      </Dialog>,
+    )
+    expect(html).toContain('data-fullscreen')
+    expect(html).not.toContain('aria-label="Close"')
+    const id = /<h2[^>]* id="([^"]+)"[^>]*>Large preview<\/h2>/.exec(html)?.[1]
+    expect(id).toBeTruthy()
+    expect(html).toContain(`aria-labelledby="${id}"`)
+  })
+
+  it('is not full screen by default', () => {
+    const html = renderToStaticMarkup(
+      <Dialog open onClose={() => {}} title="t">
+        x
+      </Dialog>,
+    )
+    expect(html).not.toContain('data-fullscreen')
+  })
 })

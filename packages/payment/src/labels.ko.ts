@@ -239,6 +239,14 @@ export const koPaymentLabels: PaymentLabels = {
         REFUNDED: '결제가 환불되어 구독이 끝났어요.',
       },
       endedUnknown: '구독이 끝났어요.',
+      storeManaged: {
+        appstore: '앱 스토어에서 결제한 구독이라 앱 스토어에서 해지·변경해요.',
+        googleplay: 'Google Play에서 결제한 구독이라 Google Play에서 해지·변경해요.',
+        unknown: '앱 스토어(또는 Google Play)에서 결제한 구독이라 그 스토어에서 해지·변경해요.',
+        manage: { appstore: '앱 스토어 구독 관리', googleplay: 'Google Play 구독 관리' },
+        beforeDelete:
+          '스토어 구독은 탈퇴해도 자동으로 해지되지 않아요. 먼저 앱 스토어(또는 Google Play)에서 해지하세요.',
+      },
     },
     cancelDialog: {
       title: '해지를 예약할까요?',

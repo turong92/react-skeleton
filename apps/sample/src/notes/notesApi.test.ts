@@ -31,6 +31,7 @@ const input: NoteInput = {
   pinned: false,
   attachmentKey: null,
   attachmentName: null,
+  videoId: null,
 }
 
 describe('createNotesApi', () => {

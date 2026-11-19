@@ -30,6 +30,9 @@ const auth = createAuth({
     cancelDeletion: async () => {
       throw new Error('unused')
     },
+    mfaVerify: async () => {
+      throw new Error('unused')
+    },
   },
   tokens: createDeferredTokens({
     storage: {

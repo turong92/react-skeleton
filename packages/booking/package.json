@@ -1,0 +1,37 @@
+{
+  "name": "@skeleton/booking",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "좌석 지정 예약 사용자 화면 - createBookingApi(`/booking`), SeatMap(구역 → 열 → 번호 격자, 선택 가능 · 내 자리 · 선택 불가), useSeatFeed(SSE 사건 + 스냅샷을 자리별 버전 `v` 로 맞춘다, 다시 붙으면 스냅샷, `heldUntil` 에 스스로 열림), 자리 잡기 · 놓기 · 결제 시작 · 나가기를 맡는 보류 컨트롤러, HoldPanel(남은 시간 · 금액 · 확정 / 결제 자리 · 나가기), SeatBooking(한 벌), MyBookings, `@skeleton/booking/admin` 의 AdminBookingPools(풀 · 자리 범위 넣기 · 막기 / 풀기 · 멈춤 · 현황). 대기실을 단 풀은 `@skeleton/waiting-room` 의 입장권을 헤더로 보낸다. 백엔드 modules/booking 짝",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./admin": {
+      "types": "./src/admin/index.ts",
+      "default": "./src/admin/index.ts"
+    }
+  },
+  "types": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run --pool forks --testTimeout 30000 --hookTimeout 60000",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@skeleton/api-client": "workspace:*",
+    "@skeleton/realtime": "workspace:*",
+    "@skeleton/ui": "workspace:*",
+    "@skeleton/waiting-room": "workspace:*"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "^5.0.0",
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@tanstack/react-query": "^5.99.2",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
+  }
+}

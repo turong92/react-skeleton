@@ -33,6 +33,16 @@ export function renameProfileMutation(
   }
 }
 
+export function avatarProfileMutation(
+  client: QueryClient,
+  api: AuthorProfileApi,
+): MutationOptions<AuthorProfile, Error, { id: string; avatarKey: string | null }> {
+  return {
+    mutationFn: ({ id, avatarKey }) => api.setAvatar(id, avatarKey),
+    onSettled: refresh(client, []), // 사진은 글 / 댓글에 실리지 않는다 - 이 패키지의 목록만 갱신한다
+  }
+}
+
 export function removeProfileMutation(
   client: QueryClient,
   api: AuthorProfileApi,

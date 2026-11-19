@@ -21,6 +21,11 @@ export type ImageUploadFieldProps = {
   /** `<input accept>`(기본 `image/*`) */
   accept?: string
   labels?: ImageUploadLabels
+  /**
+   * 올리는 중인 파일이 있는가 - 시작하면 `true`, 모두 끝나거나 실패하거나 지워지면 `false`. `onChange` 는 올리기가 **끝난 뒤에야** 불리므로(언마운트하면 올리기는 취소된다)
+   * 부모가 저장 단추를 막거나 대화상자를 닫지 않으려고 쓴다 - 안 그러면 올리는 도중 저장한 사진이 말없이 버려진다
+   */
+  onBusyChange?: (busy: boolean) => void
 }
 
 type Upload = { id: number; file: File; fraction: number; problem?: string }
@@ -42,6 +47,7 @@ export function ImageUploadField({
   max = 10,
   accept = 'image/*',
   labels = defaultImageUploadLabels,
+  onBusyChange,
 }: ImageUploadFieldProps) {
   const [uploads, setUploads] = useState<Upload[]>([])
   const [finished, setFinished] = useState<Record<string, Finished>>({})
@@ -77,6 +83,15 @@ export function ImageUploadField({
   }, [api, value, finished])
 
   const uploading = uploads.filter((upload) => !upload.problem).length
+  const busyCallback = useRef(onBusyChange)
+  useEffect(() => {
+    busyCallback.current = onBusyChange
+  })
+  const isBusy = uploading > 0
+  useEffect(() => {
+    busyCallback.current?.(isBusy)
+  }, [isBusy])
+  useEffect(() => () => busyCallback.current?.(false), [])
   const full = value.length + uploading >= max
 
   const problemOf = (error: unknown): string => {

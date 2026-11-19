@@ -60,6 +60,7 @@ describe('ledger error codes (HTTP contract, the list of user and operator error
         'PLAN_CHANGE_DOWNGRADE_UNSUPPORTED',
         'SUBSCRIPTION_CANCEL_NOT_ALLOWED',
         'SUBSCRIPTION_CHARGE_IN_PROGRESS',
+        'SUBSCRIPTION_MANAGED_BY_STORE',
         'ORDER_NOT_CLOSABLE',
         'ORDER_CLOSE_NEEDS_CONFIRMATION',
       ]

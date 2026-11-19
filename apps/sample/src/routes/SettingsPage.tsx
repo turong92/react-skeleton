@@ -1,5 +1,4 @@
-import { koAuthLabels, reauthSubjectOf, useAuth, useEmailBeforeWrite } from '@skeleton/auth'
-import { ApiKeysSection, koApiKeysLabels } from '@skeleton/auth/api-keys'
+import { useAuth, useEmailBeforeWrite } from '@skeleton/auth'
 import { AuthorProfileManager } from '@skeleton/author-profile'
 import { boardKeys } from '@skeleton/board'
 import { NotificationPreferences } from '@skeleton/notifications'
@@ -9,10 +8,8 @@ import { setTheme, THEMES, useTheme, type Theme } from '@skeleton/theme'
 import { ProfileBadges } from '@skeleton/rewards/badge'
 import { Button, Card, Field, PageHeader, Select } from '@skeleton/ui'
 import { useNavigate } from 'react-router-dom'
-import { apiKeysApi } from '../apiKeys/api'
-import { API_KEY_MAX_LIFETIME_DAYS, noteScopeLabels } from '../apiKeys/scopeLabels'
-import { accountApi } from '../auth/session'
 import { useSignOut } from '../auth/useSignOut'
+import { profilePicturePicker } from '../auth/profilePicturePicker'
 import { legalApi } from '../api/legal'
 import { emailRequired } from '../api/emailRequired'
 import { profileApi } from '../author/api'
@@ -151,24 +148,18 @@ export function SettingsPage() {
           {t('settings.cheersLink')}
         </LinkCard>
       </Card>
-      {profile && (
-        // 키를 만들 때 다시 인증하는 방법(비밀번호 · 메일 코드 · 제공자)을 내 계정 정보로 고른다 - 프로필을 읽은 뒤에 그린다
-        <ApiKeysSection
-          api={apiKeysApi}
-          subject={reauthSubjectOf(profile)}
-          requestReauthCode={accountApi.requestReauthConfirmation}
-          scopeLabels={noteScopeLabels(t)}
-          maxLifetimeDays={API_KEY_MAX_LIFETIME_DAYS}
-          labels={locale === 'ko' ? koApiKeysLabels : undefined}
-          authLabels={locale === 'ko' ? koAuthLabels : undefined}
-        />
-      )}
+      <Card title={t('settings.apiKeys')}>
+        <LinkCard to="/account#api-keys" description={t('settings.apiKeysHint')}>
+          {t('settings.apiKeysLink')}
+        </LinkCard>
+      </Card>
       <Card id="nicknames" title={t('settings.nicknames')}>
         <p>{t('settings.nicknamesHint')}</p>
         <AuthorProfileManager
           api={profileApi}
           labels={authorProfileLabels(t)}
           alsoInvalidate={[boardKeys.all]}
+          picturePicker={profilePicturePicker}
           beforeRemove={emailBeforeWrite.ensure} // 삭제 확인 창을 열기 전에 이메일부터(창 안에서 막히면 이메일 화면이 창 밑에 깔린다)
         />
       </Card>

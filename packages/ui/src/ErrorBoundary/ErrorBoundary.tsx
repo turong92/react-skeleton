@@ -1,3 +1,4 @@
+import type { ErrorReporter } from '@skeleton/api-client'
 import { Component, type ErrorInfo, type ReactNode } from 'react'
 import styles from './ErrorBoundary.module.css'
 
@@ -8,6 +9,8 @@ type Props = {
   title?: string
   /** 기본 fallback 의 다시 시도 버튼(기본 `Try again`) */
   retryLabel?: string
+  /** 잡은 오류를 보낼 곳(`@skeleton/api-client` 의 `createErrorReporter`). 없으면 콘솔에만 남긴다 */
+  reporter?: ErrorReporter
 }
 
 type State = {
@@ -30,6 +33,14 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error('[ErrorBoundary]', error, info)
+    try {
+      this.props.reporter?.report(error, {
+        source: 'boundary',
+        componentStack: info.componentStack ?? undefined,
+      })
+    } catch {
+      // 보고처가 던져도 fallback 화면은 그대로 뜬다
+    }
   }
 
   reset = () => this.setState({ error: null })

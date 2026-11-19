@@ -69,4 +69,23 @@ describe('createAuthorProfileApi (kotlin-skeleton modules/author-profile — see
     await createAuthorProfileApi(client, { basePath: '/me/profiles/' }).list()
     expect(calls[0].path).toBe('/me/profiles')
   })
+
+  it('setAvatar PATCHes only avatarKey (null clears) and avatarAddress GETs /{id}/avatar', async () => {
+    const calls: Array<{ path: string; request?: unknown }> = []
+    const client = {
+      value: async (path: string, request?: unknown) => (calls.push({ path, request }), {}),
+      list: async () => [],
+      noContent: async () => undefined,
+    } as never
+    const api = createAuthorProfileApi(client)
+    await api.setAvatar('prf_a', null)
+    await api.setAvatar('prf_a', 'uploads/o/k/file.png')
+    await api.avatarAddress('prf_a')
+    expect(calls[0]).toMatchObject({
+      path: '/prf_a'.replace('/', '/author-profiles/'),
+      request: { method: 'PATCH', json: { avatarKey: null } },
+    })
+    expect(calls[1]).toMatchObject({ request: { json: { avatarKey: 'uploads/o/k/file.png' } } })
+    expect(calls[2]).toMatchObject({ path: '/author-profiles/prf_a/avatar' })
+  })
 })

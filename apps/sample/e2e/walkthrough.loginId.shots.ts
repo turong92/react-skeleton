@@ -11,6 +11,7 @@ import {
   consentViaApi,
   dismissConsent,
   launch,
+  passSecondStep,
   signUpConsents,
   startLineSignIn,
   uniqueLoginId,
@@ -194,6 +195,7 @@ describe.each(['ko', 'en'] as const)('login id walkthrough (%s)', (locale: Local
       await page.getByLabel(A.signInIdentifier).fill('admin@example.com')
       await page.getByLabel(A.password, { exact: false }).first().fill('password')
       await page.getByRole('button', { name: A.signInSubmit, exact: true }).click()
+      await passSecondStep(page, { email: 'admin@example.com' }) // 운영 계정은 2단계 코드(필수) - 2단계가 없는 백엔드에서는 아무 일도 안 한다
       await home()
       await page.goto(`${baseUrl}/admin/accounts`)
       await page.getByRole('columnheader', { name: A.loginId }).first().waitFor()

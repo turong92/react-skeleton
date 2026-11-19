@@ -24,6 +24,7 @@ const api = {
   },
   magicLinkRedeem: unused,
   cancelDeletion: unused,
+  mfaVerify: unused,
 } as AuthApi
 const session = createAuthSession({ api, store: createTokenStore() })
 const accountApi = {} as AccountApi
@@ -41,6 +42,20 @@ describe('createAuthRoutes — account deleted', () => {
     expect(routes.find((r) => r.children)?.children?.map((c) => c.path)).not.toContain(
       '/account-deleted',
     )
+  })
+})
+
+describe('createAuthRoutes - second step of the sign-in', () => {
+  it('has an open (unguarded) /login/two-factor - the person has no session yet', () => {
+    expect(DEFAULT_AUTH_PATHS.twoFactor).toBe('/login/two-factor')
+    const routes = createAuthRoutes({ ...base })
+    expect(routes.filter((r) => r.path).map((r) => r.path)).toContain('/login/two-factor')
+    expect(routes.find((r) => r.children)?.children?.map((c) => c.path)).not.toContain(
+      '/login/two-factor',
+    )
+  })
+  it('follows a path the app moves it to', () => {
+    expect(paths({ ...base, paths: { twoFactor: '/mfa' } })).toContain('/mfa')
   })
 })
 

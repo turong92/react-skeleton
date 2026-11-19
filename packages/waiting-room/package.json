@@ -1,0 +1,35 @@
+{
+  "name": "@skeleton/waiting-room",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "대기열(가상 대기실) 사용자 화면 - createWaitingRoomApi(`/waiting-rooms`: 순번표 받기 · 상태 묻기), useWaitingRoom(순번표 저장 · 서버가 정한 간격으로 묻기 · `enter()` 가 입장권을 기다렸다 돌려준다), WaitingRoomGate(페이지 앞 / 버튼 앞 두 모양), WaitingScreen(오픈 카운트다운 · 내 앞에 N명 · 예상 시간 · 진행 막대), createEntryHeaders(`X-Entry-Token`), `@skeleton/waiting-room/admin` 의 AdminWaitingRoom(속도 · 멈춤 · 닫기 · 5초 갱신 현황). 로그인한 사람만 줄을 선다. 백엔드 modules/waiting-room 짝",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./admin": {
+      "types": "./src/admin/index.ts",
+      "default": "./src/admin/index.ts"
+    }
+  },
+  "types": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run --pool forks --testTimeout 30000 --hookTimeout 60000",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@skeleton/api-client": "workspace:*",
+    "@skeleton/ui": "workspace:*"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "^5.0.0",
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@tanstack/react-query": "^5.99.2",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
+  }
+}

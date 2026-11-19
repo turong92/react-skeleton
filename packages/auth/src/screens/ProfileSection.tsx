@@ -1,9 +1,10 @@
-import { ErrorCodes } from '@skeleton/api-client'
-import { Alert, Button, CopyButton, Field, Input, Select, SettingsRow } from '@skeleton/ui'
+import { ApiRequestError, ErrorCodes } from '@skeleton/api-client'
+import { Alert, Avatar, Button, CopyButton, Field, Input, Select, SettingsRow } from '@skeleton/ui'
 import { useState, type FormEvent } from 'react'
 import { SectionShell } from './SectionShell'
 import { SettingsDialog } from './SettingsDialog'
-import type { ProfilePatch } from '../account/types'
+import type { AccountAvatar, ProfilePatch } from '../account/types'
+import type { ProfilePicturePicker } from './profilePicture'
 import styles from './auth.module.css'
 import { displayNameFieldError, displayNameProblem } from './displayName'
 import { displayNameRateLimited } from './errors'
@@ -17,6 +18,9 @@ export type ProfileSectionProps = {
     displayTag?: string | null
     locale: string | null
     timeZone: string | null
+    /** 사진 키 - 키가 없으면 서버가 사진 기능을 껐다(칸을 그리지 않는다) */
+    avatarKey?: string | null
+    avatar?: AccountAvatar
   }
   /** 고를 수 있는 언어(백엔드가 허용하는 BCP47 목록과 맞춘다) */
   locales: Array<{ value: string; label: string }>
@@ -29,6 +33,8 @@ export type ProfileSectionProps = {
    * 계정 이름이 화면에 둘이 되지 않게. 끄면 언어 · 시간대만 남고 닉네임은 저장 요청에도 실리지 않는다
    */
   showDisplayName?: boolean
+  /** 사진을 고르는 자리(앱이 `ImageUploadField` 를 꽂는다) - 없거나 서버가 사진 기능을 껐으면 사진 칸이 없다 */
+  picture?: ProfilePicturePicker
   /** 줄만 그린다(`AccountSettings` 의 카드 안) - 아니면 제목 있는 카드 한 장에 담는다 */
   row?: boolean
   /** 첫 렌더부터 대화상자가 열려 있다 - 서버 렌더 시험 · 스토리용 */
@@ -44,6 +50,7 @@ export function ProfileSection({
   labels: given,
   showDisplayName = true,
   row,
+  picture,
   initiallyOpen = false,
 }: ProfileSectionProps) {
   const labels = mergeLabels(given)
@@ -67,6 +74,16 @@ export function ProfileSection({
         label={labels.sectionProfile}
         value={
           <>
+            {picture &&
+              profile.avatarKey !== undefined &&
+              (profile.avatar?.image?.thumb ?? profile.avatar?.url) && (
+                <Avatar
+                  name={profile.displayName ?? labels.profilePicture}
+                  src={profile.avatar?.image?.thumb ?? profile.avatar?.url}
+                  alt={labels.profilePicture}
+                  size="sm"
+                />
+              )}
             <strong>{summary || labels.profileLocaleDefault}</strong>
             {showDisplayName && fullName && <CopyButton value={fullName} label={labels.copyHint} />}
           </>
@@ -99,6 +116,7 @@ export function ProfileSection({
                 onSave={onSave}
                 labels={given}
                 showDisplayName={showDisplayName}
+                picture={picture}
                 onSaved={() => {
                   setSaved(true)
                   setOpen(false)
@@ -122,6 +140,7 @@ function ProfileForm({
   onSave,
   labels: given,
   showDisplayName,
+  picture,
   onSaved,
   onCancel,
 }: ProfileSectionProps & { showDisplayName: boolean; onSaved: () => void; onCancel: () => void }) {
@@ -129,6 +148,11 @@ function ProfileForm({
   const [displayName, setDisplayName] = useState(profile.displayName ?? '')
   const [locale, setLocale] = useState(profile.locale ?? '')
   const [timeZone, setTimeZone] = useState(profile.timeZone ?? '')
+  const pictureOn = picture !== undefined && profile.avatarKey !== undefined
+  const [avatarKey, setAvatarKey] = useState<string | null>(profile.avatarKey ?? null)
+  // 사진을 올리는 중이면 저장을 막는다 - 키는 올리기가 끝난 뒤에야 오므로, 그 전에 저장하면 patch 가 비어 대화상자가 닫히며 올리던 사진이 버려진다
+  const [uploading, setUploading] = useState(false)
+  const [sentPicture, setSentPicture] = useState(false)
   const action = useAction(labels)
   const [localProblem, setLocalProblem] = useState<string>()
   // 닉네임 칸 아래에 말하는 서버 답: 겹침(409) · 변경 한도(429) · 규칙 위반(400 필드 오류) — 서버의 영어 문장은 보이지 않는다. 전역 토스트는 앱이 이 코드들을 뺀다
@@ -138,6 +162,12 @@ function ProfileForm({
       : (displayNameRateLimited(action.raw, labels) ?? displayNameFieldError(action.raw, labels))
     : undefined
   const nameTaken = nameMessage !== undefined
+  // 사진을 보낸 요청이 필드 오류 없는 400 으로 거절됐다 - 내 업로드가 아니거나(남의 키) 이미지가 아니거나 다른 곳이 쓰는 파일이다. 서버의 영어 문장 대신 우리 문구로
+  const pictureRejected =
+    sentPicture &&
+    action.raw instanceof ApiRequestError &&
+    action.raw.apiError.status === 400 &&
+    !action.raw.apiError.errors?.length
   const fullName =
     profile.displayName && profile.displayTag
       ? `${profile.displayName}#${profile.displayTag}`
@@ -155,6 +185,8 @@ function ProfileForm({
       patch.displayName = displayName.trim()
     if (locale && locale !== (profile.locale ?? '')) patch.locale = locale
     if (timeZone && timeZone !== (profile.timeZone ?? '')) patch.timeZone = timeZone
+    if (pictureOn && avatarKey !== (profile.avatarKey ?? null)) patch.avatarKey = avatarKey
+    setSentPicture(patch.avatarKey !== undefined)
     if (Object.keys(patch).length === 0) return onSaved()
     if (await action.run(() => onSave(patch))) onSaved()
   }
@@ -162,7 +194,11 @@ function ProfileForm({
   return (
     <>
       <form className={styles.form} onSubmit={submit} aria-label={labels.sectionProfile}>
-        {action.error && !nameTaken && <Alert tone="danger">{action.error.message}</Alert>}
+        {action.error && !nameTaken && (
+          <Alert tone="danger">
+            {pictureRejected ? labels.profilePictureRejected : action.error.message}
+          </Alert>
+        )}
         {showDisplayName && (
           <Field
             label={labels.displayName}
@@ -189,6 +225,22 @@ function ProfileForm({
             <CopyButton value={fullName} label={labels.copyHint} />
           </p>
         )}
+        {picture && pictureOn && (
+          <div role="group" aria-label={labels.profilePicture} className={styles.pictureGroup}>
+            <span>{labels.profilePicture}</span>
+            {picture({
+              value: avatarKey,
+              onChange: (key) => {
+                setAvatarKey(key)
+                if (pictureRejected) action.clear()
+              },
+              onBusy: setUploading,
+            })}
+          </div>
+        )}
+        {pictureOn && profile.avatar?.pending && avatarKey === profile.avatarKey && (
+          <Alert tone="info">{labels.profilePicturePending}</Alert>
+        )}
         <Field label={labels.profileLocale}>
           {(control) => (
             <Select {...control} value={locale} onChange={(e) => setLocale(e.target.value)}>
@@ -214,7 +266,12 @@ function ProfileForm({
           )}
         </Field>
         <div className={styles.row}>
-          <Button type="submit" loading={action.busy} loadingLabel={labels.submitting}>
+          <Button
+            type="submit"
+            disabled={uploading}
+            loading={action.busy}
+            loadingLabel={labels.submitting}
+          >
             {labels.save}
           </Button>
           <Button variant="secondary" onClick={onCancel}>

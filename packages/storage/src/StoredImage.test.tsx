@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
-import { describe, expect, it } from 'vitest'
-import { StoredImage } from './StoredImage'
+import { describe, expect, it, vi } from 'vitest'
+import { StoredImage, StoredImageView } from './StoredImage'
+import { videoUrlOf } from './videoUrlOf'
 
 const thumb = { url: 'https://cdn.test/t.jpg', width: 400, height: 267 }
 const display = { url: 'https://cdn.test/d.jpg', width: 1600, height: 1067 }
@@ -83,5 +84,83 @@ describe('StoredImage', () => {
     expect(out).toContain('sizes="50vw"')
     expect(out).toContain('src="https://cdn.test/d.jpg"')
     expect(html({ image: { thumb, display, alternates: {} }, alt: 'x' })).not.toContain('<picture')
+  })
+
+  it('a display with a video/mp4 alternate is drawn as a silent looping video (a GIF look), poster = thumb', () => {
+    const out = html({
+      image: {
+        width: 480,
+        height: 270,
+        thumb,
+        display: {
+          url: 'https://cdn.test/d.gif',
+          width: 480,
+          height: 270,
+          contentType: 'image/gif',
+          alternates: [{ url: 'https://cdn.test/d.mp4', contentType: 'video/mp4' }],
+        },
+      },
+      alt: 'dance',
+    })
+    expect(out).toContain('<video')
+    expect(out).toContain('src="https://cdn.test/d.mp4"')
+    expect(out).toContain('poster="https://cdn.test/t.jpg"')
+    for (const attr of ['autoPlay', 'loop', 'muted', 'playsInline']) expect(out).toContain(attr)
+    expect(out).toContain('aria-label="dance"')
+    expect(out).toContain('width="480"')
+    expect(out).not.toContain('<img')
+  })
+
+  it('when the video fails (onError) the same image is drawn as the <img> display copy instead', () => {
+    const image = {
+      thumb,
+      display: {
+        url: 'https://cdn.test/d.gif',
+        contentType: 'image/gif',
+        alternates: [{ url: 'https://cdn.test/d.mp4', contentType: 'video/mp4' }],
+      },
+    }
+    const onVideoError = vi.fn()
+    const video = StoredImageView({ image, alt: 'dance', videoFailed: false, onVideoError })
+    expect(video?.type).toBe('video')
+    video?.props.onError()
+    expect(onVideoError).toHaveBeenCalledTimes(1)
+    const out = renderToStaticMarkup(
+      <StoredImageView image={image} alt="dance" videoFailed onVideoError={onVideoError} />,
+    )
+    expect(out).toContain('<img')
+    expect(out).toContain('src="https://cdn.test/d.gif"')
+    expect(out).not.toContain('<video')
+  })
+
+  it('a webp-only alternate (transparent animation) or none keeps the display an <img>', () => {
+    const display = {
+      url: 'https://cdn.test/d.gif',
+      contentType: 'image/gif',
+      alternates: [{ url: 'https://cdn.test/d.webp', contentType: 'image/webp' }],
+    }
+    const out = html({ image: { thumb, display }, alt: 'x' })
+    expect(out).toContain('<img')
+    expect(out).not.toContain('<video')
+  })
+
+  it('image/gif and image/webp displays stay an <img> (a thumb still lives next to them)', () => {
+    const gif = { url: 'https://cdn.test/d.gif', contentType: 'image/gif' }
+    const out = html({ image: { thumb, display: gif }, alt: 'x' })
+    expect(out).toContain('<img')
+    expect(out).toContain('src="https://cdn.test/d.gif"')
+    expect(out).not.toContain('<video')
+  })
+
+  it('videoUrlOf is the one place that decides what is a video: the display video/mp4 alternate url', () => {
+    const mp4 = { url: 'm', contentType: 'video/mp4' }
+    expect(
+      videoUrlOf({ url: 'u', alternates: [{ url: 'w', contentType: 'image/webp' }, mp4] }),
+    ).toBe('m')
+    expect(videoUrlOf({ url: 'u', contentType: 'video/mp4' })).toBeUndefined()
+    expect(videoUrlOf({ url: 'u', alternates: [] })).toBeUndefined()
+    expect(videoUrlOf({ url: 'u' })).toBeUndefined()
+    expect(videoUrlOf('https://cdn.test/d.jpg')).toBeUndefined()
+    expect(videoUrlOf(null)).toBeUndefined()
   })
 })

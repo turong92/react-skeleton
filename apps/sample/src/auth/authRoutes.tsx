@@ -9,7 +9,9 @@ import type { SeoHandle } from '../seo/routeSeo'
 import { serverClock } from '../api/serverClock'
 import { emailRequired } from '../api/emailRequired'
 import { loginIdRequired } from '../api/loginIdRequired'
-import { accountApi, authApi, authSession } from './session'
+import { mfaEnrollmentRequired } from '../api/mfaEnrollmentRequired'
+import { profilePicturePicker } from './profilePicturePicker'
+import { accountApi, authApi, authSession, mfaApi } from './session'
 import {
   authKeys,
   AUTH_NAMESPACE,
@@ -23,6 +25,8 @@ import { refreshAfterProfileChange } from './profileCache'
 import { ConsentSettingsSection } from '../legal/ConsentSettingsSection'
 import { SignUpConsentsSlot } from '../legal/SignUpConsentsSlot'
 import { useAuthLabels } from './useAuthLabels'
+import { AccountApiKeys } from './AccountApiKeys'
+import { StoreSubscriptionDeleteNotice } from '../subscription/StoreSubscriptionDeleteNotice'
 
 const browserStorage = () => (typeof window === 'undefined' ? undefined : window.sessionStorage)
 const origin = typeof window === 'undefined' ? '' : window.location.origin
@@ -74,6 +78,8 @@ export const accountRoutes = createAuthRoutes({
   emailRequired,
   // 아이디를 정해야 하는 앱 - 계정 설정에서 아이디를 정하면 앱을 덮은 「아이디를 정해 주세요」 막(`LoginIdGate`)을 걷는다. 길이 규칙은 발견(`GET /auth/methods`)이 알려 준다
   loginIdRequired,
+  // 2단계 인증이 필수인 대상(이 견본은 운영자) - 계정 설정에서 켜면 앱을 덮은 「2단계 인증을 켜 주세요」 막(`MfaGate`)을 걷는다
+  mfaEnrollmentRequired,
   confirmPassword: true, // 새 비밀번호를 한 번 더(모듈 기본은 꺼짐) — 가입 · 재설정 · 변경
   methods: authMethodsOverride && {
     ...authMethodsOverride,
@@ -105,13 +111,25 @@ export const accountRoutes = createAuthRoutes({
     contactEmail: true,
     // 글 · 댓글의 이름은 작성 닉네임(`author/`)이 따로 맡는다 — 계정에 붙은 닉네임 줄은 이 앱의 계정 화면에 없다(사용자에게는 닉네임이 하나다). 언어 · 시간대만 남는다
     showDisplayName: false,
+    // 프로필 사진 - 서버가 사진 기능(storage)을 켠 앱에서만 칸이 생긴다. 이 계정 사진은 본인에게만 보인다(닉네임의 사진은 따로 고른다)
+    profilePicture: profilePicturePicker,
     // 계정 정보(언어 · 시간대)를 저장하면 내 계정 읽기와 게시판 화면을 다시 맞춘다
     onProfileChanged: () => refreshAfterProfileChange(queryClient),
     locales: [
       { value: 'ko', label: '한국어' },
       { value: 'en', label: 'English' },
     ],
-    preferenceRows: <ConsentSettingsSection />,
+    // 2단계 인증 줄(켜기 마법사 · 복구 코드 · 끄기) - 백엔드가 `auth-mfa` 를 켜지 않았으면(404) 줄이 스스로 안내만 그린다
+    twoFactor: mfaApi,
+    // 스토어(App Store · Google Play)가 과금하는 구독은 탈퇴해도 해지되지 않는다 - 삭제 줄에 먼저 스토어에서 해지하라고 알린다
+    deleteNotice: <StoreSubscriptionDeleteNotice />,
+    // 「환경」 카드의 줄: 약관 동의 · API 키(소셜 전용 계정의 본인 확인이 제공자 동의 왕복을 쓰므로 함수로 받는다)
+    preferenceRows: (trip) => (
+      <>
+        <ConsentSettingsSection />
+        <AccountApiKeys trip={trip} />
+      </>
+    ),
   },
   handle: hidden,
 })

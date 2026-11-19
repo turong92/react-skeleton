@@ -168,7 +168,7 @@ export function renderLlmsTxt(catalog) {
     '- [capabilities.json](capabilities.json): 기능 카탈로그 정본(id · 요약 · 켜는 법 · 짝 백엔드 · 진입점 · 쓰지 않는 경우 · 한국어/영어 키워드)',
     `- [docs/capabilities.md](docs/capabilities.md): ${project ? '이 프로젝트에 있는 것의 표와 상세, 없는 것의 목록' : '「필요한 것 → 고를 것」 결정표(명령 조각 포함)와 전체 목록'}`,
     ...(catalog.guides ?? []).map((g) => `- [${g.path}](${g.path}): ${g.summary}`),
-    '- [CLAUDE.md](CLAUDE.md): 에이전트 규칙(스토리가 정본 · 날 요소 금지 · 토큰 · 경계)',
+    '- [AGENTS.md](AGENTS.md): 에이전트 규칙(스토리가 정본 · 날 요소 금지 · 토큰 · 경계)',
     '',
   )
   if (project && catalog.skeleton)

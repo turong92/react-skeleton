@@ -10,11 +10,13 @@ export type Note = {
   pinned: boolean
   attachmentKey: string | null
   attachmentName: string | null
+  /** 붙은 영상(`@skeleton/video`, 목적 `note` · 비공개) - 없으면 null */
+  videoId: string | null
   createdAt: string
   updatedAt: string
 }
 
-/** 만들기 · 고치기 본문 — 만들 때는 첨부 두 칸을 보내지 않는다(첨부는 상세 화면에서 올린 뒤 고친다) */
+/** 만들기 · 고치기 본문 — 만들 때는 첨부 · 영상 칸을 보내지 않는다(상세 화면에서 올린 뒤 고친다). **고치기(PUT)는 노트를 통째로 바꾼다**: 칸을 빼면 첨부 · 영상이 떨어진다 — 늘 `noteInputOf` 로 만든다 */
 export type NoteInput = {
   title: string
   body: string
@@ -22,6 +24,7 @@ export type NoteInput = {
   pinned: boolean
   attachmentKey: string | null
   attachmentName: string | null
+  videoId: string | null
 }
 
 /** `GET /notes/summary` */

@@ -42,10 +42,46 @@ const ROWS: Row[] = [
     base: '.bell',
   },
   {
+    name: 'SeatMap seat',
+    dir: 'packages/booking',
+    file: 'packages/booking/src/SeatMap.module.css',
+    base: '.seat',
+  },
+  {
+    name: 'VideoPlayer play button',
+    dir: 'packages/video',
+    file: 'packages/video/src/VideoPlayer.module.css',
+    base: '.play',
+  },
+  {
+    name: 'VideoPlayer quality chip',
+    dir: 'packages/video',
+    file: 'packages/video/src/VideoPlayer.module.css',
+    base: '.chip',
+  },
+  {
+    name: 'MiniPlayer button',
+    dir: 'packages/video',
+    file: 'packages/video/src/MiniPlayer.module.css',
+    base: '.button',
+  },
+  {
+    name: 'VideoPlayer quality menu item',
+    dir: 'packages/video',
+    file: 'packages/video/src/VideoPlayer.module.css',
+    base: '.menuItem',
+  },
+  {
     name: 'rewards admin row link',
     dir: 'packages/rewards',
     file: 'packages/rewards/src/admin/shared.module.css',
     base: '.actionLink',
+  },
+  {
+    name: 'two-factor "open in the app" link',
+    dir: 'packages/auth',
+    file: 'packages/auth/src/mfa/TwoFactorSection.module.css',
+    base: '.openInApp',
   },
   {
     name: 'ThemeToggle',

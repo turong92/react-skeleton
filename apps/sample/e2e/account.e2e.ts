@@ -11,6 +11,7 @@ import {
   agreeToLegal,
   auth,
   dismissConsent,
+  accessTokenFor,
   fillSignIn,
   ko,
   launch,
@@ -665,6 +666,8 @@ describe('operator tools (opt-in @skeleton/auth/admin)', () => {
       .getByRole('button', { name: ko('header.signOut') })
       .first()
       .click()
+    // 로그아웃이 끝나기 전에 /login 으로 가면 아직 로그인 상태라 다른 곳으로 돌려보내진다
+    await pwExpect(page.getByRole('button', { name: ko('header.signOut') })).toHaveCount(0)
     await page.goto(`${baseUrl}/login`)
     await fillSignIn(page, { email: 'admin@example.com', password: 'password' })
     await page.waitForURL((url) => !url.pathname.startsWith('/login'))
@@ -680,15 +683,13 @@ describe('operator tools (opt-in @skeleton/auth/admin)', () => {
   })
 
   it('the list endpoint refuses a page size over 100 (400); the client never asks for one', async () => {
-    const admin = await fetch(`${apiUrl}/api/v1/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'admin@example.com', password: 'password' }),
+    const adminToken = await accessTokenFor(apiUrl, {
+      email: 'admin@example.com',
+      password: 'password',
     })
-    const { value } = (await admin.json()) as { value: { accessToken: string } }
     const call = (query: string) =>
       fetch(`${apiUrl}/api/v1/admin/accounts?${query}`, {
-        headers: { Authorization: `Bearer ${value.accessToken}` },
+        headers: { Authorization: `Bearer ${adminToken}` },
       })
     pwExpect((await call('size=101')).status).toBe(400)
     pwExpect((await call('page=-1')).status).toBe(400)

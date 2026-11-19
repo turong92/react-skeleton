@@ -57,6 +57,8 @@ export const PaymentLedgerErrorCodes = {
   SUBSCRIPTION_CANCEL_NOT_ALLOWED: 'PAYMENT.SUBSCRIPTION_CANCEL_NOT_ALLOWED',
   /** 갱신 · 변경 결제가 오가는 중이라 지금은 해지할 수 없다 → 409. 끝난 뒤 다시 */
   SUBSCRIPTION_CHARGE_IN_PROGRESS: 'PAYMENT.SUBSCRIPTION_CHARGE_IN_PROGRESS',
+  /** 앱 스토어(App Store · Google Play)가 과금하는 구독이라 서버가 해지 · 중도 해지 · 플랜 변경을 하지 못한다 → 409. 스토어의 구독 관리 화면을 안내한다 */
+  SUBSCRIPTION_MANAGED_BY_STORE: 'PAYMENT.SUBSCRIPTION_MANAGED_BY_STORE',
   /** 운영자 경로: 닫을 수 없는 구독 결제(구독 결제가 아니다 · 확인 중이 아니다 · 결제사가 아직 처리 중이다) → 409 */
   ORDER_NOT_CLOSABLE: 'PAYMENT.ORDER_NOT_CLOSABLE',
   /** 운영자 경로: 주문 번호로 결제를 물을 수 없는 결제사(카카오페이)의 결제 키 없는 주문은 결제사 화면에서 직접 확인했다는 표시 없이는 닫지 않는다 → 409. 확인 칸을 받아 다시 보낸다 */

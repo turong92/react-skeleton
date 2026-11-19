@@ -1,6 +1,6 @@
 import { expect as pwExpect, type Browser, type BrowserContext, type Page } from 'playwright/test'
 import { afterAll, beforeAll, describe, inject, it } from 'vitest'
-import { readAllNotifications } from './boardSteps'
+import { deleteAllNotes, readAllNotifications } from './boardSteps'
 import { DEMO, auth, fillSignIn, ko, launch, legalOn, seedNotes, signIn } from './helpers'
 
 /*
@@ -16,6 +16,8 @@ let page: Page
 
 beforeAll(async () => {
   // 「안 읽은 알림이 없는 첫 화면」은 이 파일이 스스로 세운다 - 파일 순서는 고정이 아니고 다른 파일(boardGuest 의 손님 댓글)이 알림을 남긴다
+  // 「노트가 하나도 없는 대시보드」도 이 파일이 세운다 - 같은 체험 계정으로 노트를 만드는 다른 파일(badges · push)이 먼저 돌 수 있다
+  await deleteAllNotes(inject('apiUrl'), DEMO)
   await readAllNotifications(inject('apiUrl'), DEMO)
   ;({ browser, context, page } = await launch())
 })
@@ -23,6 +25,9 @@ afterAll(async () => {
   await browser?.close()
 })
 
+// 같은 화면에 영상 카드의 파일 입력도 있어 노트 첨부 카드 안으로 좁힌다
+const attachmentInput = () =>
+  page.getByRole('region', { name: ko('attachment.title') }).locator('input[type=file]')
 const bell = () => page.getByRole('button', { name: /^알림/ })
 const heading = (name: string | RegExp, level = 1) => page.getByRole('heading', { level, name })
 
@@ -148,7 +153,7 @@ describe('Notes — the main journey against the real backend', () => {
   it('uploads an attachment with progress and keeps it on the note', async () => {
     await page.getByRole('tab', { name: ko('detail.tabAttachment') }).click()
     await pwExpect(page.getByText(ko('attachment.none'))).toBeVisible()
-    await page.locator('input[type=file]').setInputFiles({
+    await attachmentInput().setInputFiles({
       name: 'agenda.txt',
       mimeType: 'text/plain',
       buffer: Buffer.from('다음 주 안건 목록\n'.repeat(50)),
@@ -171,7 +176,7 @@ describe('Notes — the main journey against the real backend', () => {
   })
 
   it('an unsupported file is refused with a sentence the user can act on', async () => {
-    await page.locator('input[type=file]').setInputFiles({
+    await attachmentInput().setInputFiles({
       name: 'setup.exe',
       mimeType: 'application/x-msdownload',
       buffer: Buffer.from('MZ'),

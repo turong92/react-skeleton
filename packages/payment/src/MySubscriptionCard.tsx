@@ -6,6 +6,7 @@ import type { Order } from './ledgerTypes'
 import { OrderList, type OrderListProps } from './OrderList'
 import { SubscriptionStatusBadge } from './SubscriptionStatusBadge'
 import type { Subscription } from './subscriptionTypes'
+import { storeOf, STORE_SUBSCRIPTIONS_URL } from './storeBilling'
 import { TestModeNotice } from './TestModeNotice'
 import styles from './MySubscriptionCard.module.css'
 
@@ -24,6 +25,11 @@ export type MySubscriptionCardProps = {
   onChangePlan?: () => void
   /** 주면 예약된 플랜 변경(`scheduledChange`)이 있을 때 테두리 「예약 거두기」 단추가 생긴다. 확인 창을 여는 것은 부모(`CancelScheduledChangeDialog`) */
   onCancelScheduledChange?: () => void
+  /**
+   * 서버가 이 구독의 해지 · 플랜 변경을 `SUBSCRIPTION_MANAGED_BY_STORE`(409)로 거절했다 - `subscription.provider` 로 스토어를 알 수 없는 구버전 서버에서도
+   * 같은 안내(해지 · 변경 단추 없이 스토어로)를 보인다
+   */
+  storeManaged?: boolean
   /** 최근 결제 줄 끝의 「자세히」 링크(라우터 `<Link>`) — `OrderList` 의 `renderAction` 과 같다 */
   renderOrderAction?: OrderListProps['renderAction']
   locale?: string
@@ -42,6 +48,7 @@ export function MySubscriptionCard({
   onCancelNow,
   onChangePlan,
   onCancelScheduledChange,
+  storeManaged,
   renderOrderAction,
   locale,
   formatTime = (iso) => formatInstant(iso, { locale }),
@@ -50,6 +57,9 @@ export function MySubscriptionCard({
   const labels = resolvePaymentLabels(input)
   const mine = labels.subscription.mine
   const { status } = subscription
+  // 스토어가 과금하는 구독은 서버가 해지 · 변경을 못 한다 - 단추 대신 스토어의 구독 관리 화면으로 안내한다(끝난 구독에는 필요 없다)
+  const store = storeOf(subscription.provider)
+  const byStore = (store !== null || storeManaged === true) && status !== 'ENDED'
   // 결제사가 직접 받은 간편결제(카카오페이 · 네이버페이)면 앱 이름이 앞에 붙는다
   const card = cardDisplay(
     {
@@ -86,6 +96,11 @@ export function MySubscriptionCard({
         {status === 'PAST_DUE' && (
           <Alert tone="warning" toneLabel={labels.noticeLabel}>
             {mine.pastDue}
+          </Alert>
+        )}
+        {byStore && (
+          <Alert tone="info" toneLabel={labels.noticeLabel}>
+            {mine.storeManaged[store ?? 'unknown']}
           </Alert>
         )}
         {status === 'ENDED' && (
@@ -143,33 +158,49 @@ export function MySubscriptionCard({
             />
           </section>
         )}
-        {(onCancel || canChange || canCancelNow || (schedule && onCancelScheduledChange)) && (
+        {byStore && (
           <div className={styles.action}>
-            {canChange && (
-              <Button variant="primary" onClick={onChangePlan}>
-                {mine.changePlan}
-              </Button>
-            )}
-            {schedule && onCancelScheduledChange && (
-              <Button variant="secondary" onClick={onCancelScheduledChange}>
-                {mine.withdrawSchedule}
-              </Button>
-            )}
-            {onCancel && (status === 'ACTIVE' || status === 'PAST_DUE') && (
-              <Button
-                variant={canChange || canCancelNow ? 'secondary' : 'primary'}
-                onClick={onCancel}
+            {(store ? [store] : (['appstore', 'googleplay'] as const)).map((each) => (
+              <a
+                key={each}
+                className={styles.storeLink}
+                href={STORE_SUBSCRIPTIONS_URL[each]}
+                target="_blank"
+                rel="noopener noreferrer"
               >
-                {mine.cancel}
-              </Button>
-            )}
-            {canCancelNow && (
-              <Button variant="secondary" onClick={onCancelNow}>
-                {mine.cancelNow}
-              </Button>
-            )}
+                {mine.storeManaged.manage[each]}
+              </a>
+            ))}
           </div>
         )}
+        {!byStore &&
+          (onCancel || canChange || canCancelNow || (schedule && onCancelScheduledChange)) && (
+            <div className={styles.action}>
+              {canChange && (
+                <Button variant="primary" onClick={onChangePlan}>
+                  {mine.changePlan}
+                </Button>
+              )}
+              {schedule && onCancelScheduledChange && (
+                <Button variant="secondary" onClick={onCancelScheduledChange}>
+                  {mine.withdrawSchedule}
+                </Button>
+              )}
+              {onCancel && (status === 'ACTIVE' || status === 'PAST_DUE') && (
+                <Button
+                  variant={canChange || canCancelNow ? 'secondary' : 'primary'}
+                  onClick={onCancel}
+                >
+                  {mine.cancel}
+                </Button>
+              )}
+              {canCancelNow && (
+                <Button variant="secondary" onClick={onCancelNow}>
+                  {mine.cancelNow}
+                </Button>
+              )}
+            </div>
+          )}
       </div>
     </Card>
   )

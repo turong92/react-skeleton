@@ -202,3 +202,81 @@ export const TheCloseButtonNotifiesOnce: Story = {
     await expect(args.onClose).toHaveBeenCalledTimes(1)
   },
 }
+
+/** `dismissible={false}` - 다 읽기 전에 닫히면 안 되는 창(한 번만 보이는 복구 코드). × 가 없고, Esc(cancel)도 · 브라우저가 cancel 을 건너뛰고 닫아도 열려 있다. 닫기는 부모가 `open` 을 끄는 것뿐 */
+function Sticky() {
+  const [open, setOpen] = useState(true)
+  return (
+    <Dialog
+      open={open}
+      onClose={() => setOpen(false)}
+      title="Save your codes"
+      dismissible={false}
+      footer={<Button onClick={() => setOpen(false)}>I saved them</Button>}
+    >
+      <p>Shown once.</p>
+    </Dialog>
+  )
+}
+
+export const NotDismissibleStaysOpenUntilTheParentCloses: Story = {
+  render: () => <Sticky />,
+  play: async ({ userEvent }) => {
+    const dialog = (await screen.findByRole('dialog', {
+      name: 'Save your codes',
+    })) as HTMLDialogElement
+    await expect(within(dialog).queryByRole('button', { name: 'Close' })).toBeNull()
+    dialog.requestClose() // Esc
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    await expect(screen.getByRole('dialog', { name: 'Save your codes' })).toBeVisible()
+    // 브라우저가 cancel 을 건너뛰고 닫았다(Esc 를 연달아 눌렀을 때) - 다시 모달로 연다
+    dialog.close()
+    await waitFor(() => expect(dialog.open).toBe(true))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'I saved them' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  },
+}
+
+function FullScreenDemo({ onClosed }: { onClosed: () => void }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <Button onClick={() => setOpen(true)}>Open dialog</Button>
+      <Dialog
+        open={open}
+        fullScreen
+        onClose={() => {
+          onClosed()
+          setOpen(false)
+        }}
+        title="Large preview"
+      >
+        <p>Full screen body</p>
+      </Dialog>
+    </>
+  )
+}
+
+/** `fullScreen` — 창이 화면을 다 덮고 제목 줄 · × 가 없다(이름은 보이지 않는 제목). Esc 는 그대로 `onClose` 를 한 번 부르고 포커스가 연 단추로 돌아온다 */
+export const FullScreen: Story = {
+  render: (args) => <FullScreenDemo onClosed={args.onClose} />,
+  play: async ({ canvas, userEvent, args }) => {
+    const trigger = canvas.getByRole('button', { name: 'Open dialog' })
+    await userEvent.click(trigger)
+    const dialog = (await screen.findByRole('dialog', {
+      name: 'Large preview',
+    })) as HTMLDialogElement
+    await waitFor(() => {
+      const rect = dialog.getBoundingClientRect()
+      expect(Math.abs(rect.width - window.innerWidth)).toBeLessThanOrEqual(1)
+      expect(Math.abs(rect.height - window.innerHeight)).toBeLessThanOrEqual(1)
+    })
+    await expect(within(dialog).queryByRole('button', { name: 'Close' })).toBeNull()
+    const closed = closeEventOf(dialog)
+    dialog.requestClose() // Esc
+    await closed
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    await expect(args.onClose).toHaveBeenCalledTimes(1)
+    await expect(trigger).toHaveFocus()
+  },
+}

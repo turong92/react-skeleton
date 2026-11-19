@@ -1,0 +1,25 @@
+.form {
+  display: grid;
+  gap: var(--space-md);
+  /* 사람 확인 위젯(iframe 300px)이 카드 안에서 줄지 않게 */
+  min-inline-size: 0;
+  max-inline-size: 36rem;
+}
+
+.kind {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.kindLabel {
+  color: var(--text-muted);
+  font-size: var(--font-size-caption);
+  font-weight: 700;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  align-items: center;
+}

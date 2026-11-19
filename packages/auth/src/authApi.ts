@@ -1,4 +1,5 @@
 import type { ApiClient } from '@skeleton/api-client'
+import type { MfaVerifyInput } from './mfa/types'
 import type {
   AuthMethodsWire,
   WirePrincipal,
@@ -42,6 +43,14 @@ export type AuthApi = {
    */
   cancelDeletion(
     restoreToken: string,
+    options?: { deviceName?: string },
+  ): Promise<AuthTokenResponse>
+  /**
+   * `POST /auth/mfa/verify {mfaToken, code | recoveryCode}` (공개, auth-mfa) - 로그인의 두 번째 단계: 1단계가 준 `403 AUTH.MFA_REQUIRED` 의 `mfaToken` 과 증거 하나.
+   * 일반 로그인 응답(토큰)이다. 틀리면 400, 대기 만료 · 시도 소진은 410 `MFA.CHALLENGE_EXPIRED`, 계정 한도는 429 `MFA.TOO_MANY_ATTEMPTS`
+   */
+  mfaVerify(
+    input: { mfaToken: string } & MfaVerifyInput,
     options?: { deviceName?: string },
   ): Promise<AuthTokenResponse>
 }
@@ -113,6 +122,13 @@ export function createAuthApi(
       client.value<AuthTokenResponse>('/account/delete/cancel', {
         method: 'POST',
         json: { restoreToken },
+        skipAuth: true,
+        ...(options?.deviceName ? { headers: { 'X-Device-Name': options.deviceName } } : {}),
+      }),
+    mfaVerify: (input, options) =>
+      client.value<AuthTokenResponse>('/auth/mfa/verify', {
+        method: 'POST',
+        json: input,
         skipAuth: true,
         ...(options?.deviceName ? { headers: { 'X-Device-Name': options.deviceName } } : {}),
       }),

@@ -4,7 +4,8 @@ import { koAdminRolesLabels } from '@skeleton/auth/admin'
 import { expect as baseExpect, type Browser, type BrowserContext, type Page } from 'playwright/test'
 import { afterAll, beforeAll, describe, inject, it } from 'vitest'
 import { routeTossSdk, tossControl } from './fakeToss'
-import { auth, ko, launch } from './helpers'
+import { auth, DEMO, ko, launch } from './helpers'
+import { enrollUserViaApi, resetUserMfa, signInWithCode } from './userMfa'
 import {
   ADMIN,
   api,
@@ -299,10 +300,11 @@ describe('rewards: attendance, coupons on a cheer, a free voucher, switching an 
           .check()
         await dialog.getByRole('button', { name: koAdminRolesLabels.save!, exact: true }).click()
         await pwExpect(dialog).toBeHidden()
+        // 결제 면제도 선언된 권한이라 서버가 이 계정에 2단계를 필수로 건다(OPERATORS) - 역할을 주기 전에 켜 두고, 켤 때 닫힌 화면은 코드로 다시 로그인한다
+        await signInWithCode(page, baseUrl, DEMO, await enrollUserViaApi(apiUrl, DEMO))
         await accountMenu(op, auth.adminGrantRole('WAIVED'))
 
         // 면제 계정의 응원: 결제창 없이 끝나고 가짜 토스 호출이 없다
-        await ensureSignedIn(page, baseUrl)
         await page.goto(`${baseUrl}/cheer`)
         await page.getByRole('radio', { name: won(3000) }).click()
         await submitCheer(page)
@@ -329,6 +331,7 @@ describe('rewards: attendance, coupons on a cheer, a free voucher, switching an 
       } finally {
         // 시나리오가 어디서 멈췄든 역할을 회수하고 지운다(사용자 계정은 다른 파일도 쓴다)
         await dropWaivedRole(adminToken, userId)
+        await resetUserMfa(apiUrl, DEMO.email) // 사용자는 다른 파일도 코드 없이 로그인한다
         await operator.close()
       }
     },

@@ -2,7 +2,8 @@ import { expect as baseExpect, type Browser, type BrowserContext, type Page } fr
 import { koAdminRolesLabels } from '@skeleton/auth/admin'
 import { afterAll, beforeAll, describe, inject, it } from 'vitest'
 import { routeTossSdk, tossControl } from './fakeToss'
-import { auth, ko, launch } from './helpers'
+import { auth, DEMO, ko, launch } from './helpers'
+import { enrollUserViaApi, resetUserMfa, signInWithCode } from './userMfa'
 import {
   ADMIN,
   adminPaymentsOn,
@@ -79,7 +80,7 @@ describe('authz: a CS role made on the screen, given to a user and taken back', 
       )
         return ctx.skip()
       await toss.set({ reset: true })
-      const userToken = await tokenOf(apiUrl)
+      let userToken = await tokenOf(apiUrl)
 
       // 사용자: 응원하고 환불을 요청해 둔다(열린 환불 요청)
       await ensureSignedIn(page, baseUrl)
@@ -120,6 +121,11 @@ describe('authz: a CS role made on the screen, given to a user and taken back', 
           .getByRole('button', { name: koAdminRolesLabels.save!, exact: true })
           .click()
         await pwExpect(staffDialog).toBeHidden()
+        // 운영 권한이 붙으면 서버가 2단계를 필수로 건다(OPERATORS) - 역할을 주기 전에 사용자의 2단계를 켜 둔다.
+        // 켤 때 이 세션 말고 모두 닫히므로 토큰은 켠 세션의 것으로, 화면은 코드로 다시 로그인한다
+        const mfa = await enrollUserViaApi(apiUrl, DEMO)
+        userToken = mfa.token
+        await signInWithCode(page, baseUrl, DEMO, mfa)
         await accountMenu(op, auth.adminGrantRole('STAFF'))
 
         // ③ 포함된 역할 · 가진 계정이 있는 역할은 지울 수 없다
@@ -175,6 +181,7 @@ describe('authz: a CS role made on the screen, given to a user and taken back', 
           await pwExpect(op.getByRole('row').filter({ hasText: name })).toHaveCount(0)
         }
       } finally {
+        await resetUserMfa(apiUrl, USER_EMAIL) // 사용자(DEMO)는 다른 파일도 코드 없이 로그인한다
         await operator.close()
       }
     },

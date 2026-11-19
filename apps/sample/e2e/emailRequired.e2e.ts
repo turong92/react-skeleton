@@ -64,6 +64,11 @@ afterAll(async () => {
   await browser?.close()
 })
 
+/** CI 에서만: 어느 걸음에서 멈추는지 보이게 걸음마다 시각 · 주소를 남긴다(이 파일의 90초 시간 초과는 서버 로그로는 자리가 안 보인다) */
+const step = (label: string) => {
+  if (process.env.CI) console.log(`[step] ${new Date().toISOString()} ${page.url()} ${label}`)
+}
+
 const run = (name: string, fn: () => Promise<void>) =>
   it(name, async (ctx) => {
     if (!fakeUrl) return ctx.skip()
@@ -588,19 +593,29 @@ describe('already have an account: the account without an email is discarded and
   run(
     'LINE without an address makes an account without an email; it chooses an ID, tries to write, and its address is the real one: no code comes',
     async () => {
+      step('LINE sign-in: start')
       await startLineSignIn(page, fakeUrl, { sub, name: '빈 계정' })
+      step('LINE sign-in: started, choosing the ID')
       await chooseLoginIdViaGate(page, apiUrl, discardedLoginId, true)
+      step('ID chosen, terms')
       await acceptLegalGate(page, apiUrl, true)
+      step('terms accepted, opening the board')
       await openBoard(page)
+      step('board open, pressing write')
       await page
         .getByRole('button', { name: ko('board.write'), exact: true })
         .first()
         .click()
+      step('write pressed, waiting for the email screen')
       await pwExpect(gate()).toBeVisible()
+      step('email screen up, sending the owner address')
       await field().fill(mail)
       await gate().getByRole('button', { name: auth.emailRequiredSend }).click()
+      step('sent, waiting for the code screen')
       await pwExpect(gate().getByText(auth.emailRequiredCodeTitle)).toBeVisible()
+      step('code screen up, waiting for the attempt mail')
       await waitForSubject(mailUrl, mail, REGISTRATION_ATTEMPT_SUBJECT) // 주인에게는 「등록 시도」 메일만
+      step('attempt mail arrived')
       pwExpect(
         (await subjectsFor(mailUrl, mail)).some((s) => CODE_SUBJECT['email-change'].test(s)),
       ).toBe(false)

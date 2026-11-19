@@ -133,6 +133,8 @@ export type ApiClient = {
   page<T>(path: string, request?: ApiRequest): Promise<ApiPageResponse<T>>
   cursor<T>(path: string, request?: ApiRequest): Promise<ApiCursorResponse<T>>
   endpoint(path: string): string
+  /** 마지막으로 보낸 요청의 traceId(성공 · 실패 모두) — 오류 보고에 실어 서버 로그와 잇는다. 요청 전에는 undefined */
+  lastTraceId(): string | undefined
   axios: AxiosInstance
 }
 
@@ -146,6 +148,7 @@ const DEFAULT_RETRY: ApiRetryOptions = {
 
 export function createApiClient(config: ApiClientConfig): ApiClient {
   const baseURL = normalizeBaseUrl(config.baseUrl)
+  let lastTraceId: string | undefined
   const retry = normalizeRetry(config.retry)
   const instance = axios.create({
     adapter: config.adapter,
@@ -181,6 +184,7 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
     recoveredForbidden: string[],
   ): Promise<ApiHttpResponse<TEnvelope>> {
     const traceContext = createTraceContext(request.traceId)
+    lastTraceId = traceContext.traceId
     const method = request.method ?? 'GET'
     const providedHeaders = await providerHeaders(config, request)
     const axiosRequest = buildAxiosRequest(
@@ -302,6 +306,7 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
       return result
     },
     endpoint: (path) => `${baseURL}/${path.replace(/^\/+/, '')}`,
+    lastTraceId: () => lastTraceId,
     axios: instance,
   }
 }

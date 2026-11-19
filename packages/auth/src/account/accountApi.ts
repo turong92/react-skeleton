@@ -2,6 +2,7 @@ import { newIdempotencyKey, type ApiClient } from '@skeleton/api-client'
 import type { AuthTokenResponse, SocialProof } from '../types'
 import type {
   AccountMe,
+  AvatarAddress,
   AccountSession,
   DeletionResult,
   LoginIdAvailability,
@@ -73,6 +74,8 @@ export type AccountApi = {
 
   me(): Promise<AccountMe>
   updateProfile(patch: ProfilePatch): Promise<AccountMe>
+  /** `GET /account/me/avatar` - 내 사진을 볼 서명 주소. 사진이 없거나 서명 읽기가 꺼졌으면 404 */
+  avatarAddress(): Promise<AvatarAddress>
   /**
    * 비밀번호가 있으면 `currentPassword`. 소셜 · 매직링크만 쓰던 계정이 첫 비밀번호를 정할 때는 `confirmationCode`
    * (`requestReauthConfirmation` 의 6자리) — 없으면 403 `REAUTH_REQUIRED`, 틀리면 400 `CODE_INVALID`, 만료 · 소진 · 다른 세션이면 410 `CODE_EXPIRED`
@@ -188,6 +191,7 @@ export function createAccountApi(
     me: () => client.value('/account/me'),
     updateProfile: (patch) =>
       client.value('/account/me', { method: 'PATCH', json: compact(patch) }),
+    avatarAddress: () => client.value<AvatarAddress>('/account/me/avatar'),
     changePassword: (request) =>
       client.noContent('/account/password/change', { method: 'POST', json: compact(request) }),
     changeEmail: (request, idempotencyKey) =>

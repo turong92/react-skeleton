@@ -117,6 +117,22 @@ describe('author-profile codes (kotlin-skeleton modules/author-profile)', () => 
   })
 })
 
+describe('inquiry codes (kotlin-skeleton modules/inquiry)', () => {
+  it('carries the codes the contact form branches on', () => {
+    expect([
+      ErrorCodes.INQUIRY_INVALID,
+      ErrorCodes.INQUIRY_CAPTCHA_FAILED,
+      ErrorCodes.INQUIRY_TOO_MANY,
+      ErrorCodes.INQUIRY_NOT_FOUND,
+    ]).toEqual([
+      'INQUIRY.INVALID',
+      'INQUIRY.CAPTCHA_FAILED',
+      'INQUIRY.TOO_MANY',
+      'INQUIRY.NOT_FOUND',
+    ])
+  })
+})
+
 describe('workspace codes (kotlin-skeleton modules/workspace)', () => {
   it('carries the codes the workspace screens branch on', () => {
     expect([

@@ -107,12 +107,21 @@ importers:
       '@skeleton/board':
         specifier: workspace:*
         version: link:../../packages/board
+      '@skeleton/booking':
+        specifier: workspace:*
+        version: link:../../packages/booking
+      '@skeleton/captcha-turnstile':
+        specifier: workspace:*
+        version: link:../../packages/captcha-turnstile
       '@skeleton/dashboard':
         specifier: workspace:*
         version: link:../../packages/dashboard
       '@skeleton/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
+      '@skeleton/inquiry':
+        specifier: workspace:*
+        version: link:../../packages/inquiry
       '@skeleton/legal':
         specifier: workspace:*
         version: link:../../packages/legal
@@ -158,6 +167,12 @@ importers:
       '@skeleton/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@skeleton/video':
+        specifier: workspace:*
+        version: link:../../packages/video
+      '@skeleton/waiting-room':
+        specifier: workspace:*
+        version: link:../../packages/waiting-room
       '@skeleton/workspace':
         specifier: workspace:*
         version: link:../../packages/workspace
@@ -343,11 +358,46 @@ importers:
         specifier: ^2.0.7
         version: 2.0.8(@types/react@19.2.14)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
 
+  packages/ads:
+    dependencies:
+      '@skeleton/api-client':
+        specifier: workspace:*
+        version: link:../api-client
+      '@skeleton/ui':
+        specifier: workspace:*
+        version: link:../ui
+    devDependencies:
+      react:
+        specifier: ^19.2.5
+        version: 19.3.0
+      react-dom:
+        specifier: ^19.2.5
+        version: 19.3.0(react@19.3.0)
+
   packages/api-client:
     dependencies:
       axios:
         specifier: ^1.17.0
         version: 1.20.0
+
+  packages/app-control:
+    dependencies:
+      '@skeleton/api-client':
+        specifier: workspace:*
+        version: link:../api-client
+      '@skeleton/ui':
+        specifier: workspace:*
+        version: link:../ui
+    devDependencies:
+      '@tanstack/react-query':
+        specifier: ^5.99.2
+        version: 5.104.1(react@19.3.0)
+      react:
+        specifier: ^19.2.5
+        version: 19.3.0
+      react-dom:
+        specifier: ^19.2.5
+        version: 19.3.0(react@19.3.0)
 
   packages/auth:
     dependencies:
@@ -415,6 +465,31 @@ importers:
         specifier: ^2.0.7
         version: 2.0.8(@types/react@19.2.14)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
 
+  packages/booking:
+    dependencies:
+      '@skeleton/api-client':
+        specifier: workspace:*
+        version: link:../api-client
+      '@skeleton/realtime':
+        specifier: workspace:*
+        version: link:../realtime
+      '@skeleton/ui':
+        specifier: workspace:*
+        version: link:../ui
+      '@skeleton/waiting-room':
+        specifier: workspace:*
+        version: link:../waiting-room
+    devDependencies:
+      '@tanstack/react-query':
+        specifier: ^5.99.2
+        version: 5.104.1(react@19.3.0)
+      react:
+        specifier: ^19.2.5
+        version: 19.3.0
+      react-dom:
+        specifier: ^19.2.5
+        version: 19.3.0(react@19.3.0)
+
   packages/captcha-turnstile:
     devDependencies:
       '@skeleton/ui':
@@ -461,6 +536,25 @@ importers:
       '@skeleton/ui':
         specifier: workspace:*
         version: link:../ui
+      react:
+        specifier: ^19.2.5
+        version: 19.3.0
+      react-dom:
+        specifier: ^19.2.5
+        version: 19.3.0(react@19.3.0)
+
+  packages/inquiry:
+    dependencies:
+      '@skeleton/api-client':
+        specifier: workspace:*
+        version: link:../api-client
+      '@skeleton/ui':
+        specifier: workspace:*
+        version: link:../ui
+    devDependencies:
+      '@tanstack/react-query':
+        specifier: ^5.99.2
+        version: 5.104.1(react@19.3.0)
       react:
         specifier: ^19.2.5
         version: 19.3.0
@@ -543,6 +637,22 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.99.2
         version: 5.104.1(react@19.3.0)
+      react:
+        specifier: ^19.2.5
+        version: 19.3.0
+      react-dom:
+        specifier: ^19.2.5
+        version: 19.3.0(react@19.3.0)
+
+  packages/preview:
+    dependencies:
+      '@skeleton/ui':
+        specifier: workspace:*
+        version: link:../ui
+    devDependencies:
+      lucide-react:
+        specifier: ^1.17.0
+        version: 1.52.0(@types/react@19.2.14)(react@19.3.0)
       react:
         specifier: ^19.2.5
         version: 19.3.0
@@ -720,6 +830,47 @@ importers:
       sonner:
         specifier: ^2.0.7
         version: 2.0.8(@types/react@19.2.14)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+
+  packages/video:
+    dependencies:
+      '@skeleton/api-client':
+        specifier: workspace:*
+        version: link:../api-client
+      '@skeleton/ui':
+        specifier: workspace:*
+        version: link:../ui
+      hls.js:
+        specifier: 1.7.3
+        version: 1.7.3
+    devDependencies:
+      '@tanstack/react-query':
+        specifier: ^5.99.2
+        version: 5.104.1(react@19.3.0)
+      react:
+        specifier: ^19.2.5
+        version: 19.3.0
+      react-dom:
+        specifier: ^19.2.5
+        version: 19.3.0(react@19.3.0)
+
+  packages/waiting-room:
+    dependencies:
+      '@skeleton/api-client':
+        specifier: workspace:*
+        version: link:../api-client
+      '@skeleton/ui':
+        specifier: workspace:*
+        version: link:../ui
+    devDependencies:
+      '@tanstack/react-query':
+        specifier: ^5.99.2
+        version: 5.104.1(react@19.3.0)
+      react:
+        specifier: ^19.2.5
+        version: 19.3.0
+      react-dom:
+        specifier: ^19.2.5
+        version: 19.3.0(react@19.3.0)
 
   packages/workspace:
     dependencies:
@@ -2276,6 +2427,9 @@ packages:
 
   hermes-parser@0.25.1:
     resolution: {integrity: sha512-6pEjquH3rqaI6cYAXYPcz9MS4rY6R4ngRgrgfDshRptUZIc3lw0MCIJIGDj9++mfySOuPTHB4nrSW99BCvOPIA==}
+
+  hls.js@1.7.3:
+    resolution: {integrity: sha512-MsPlx6yVW4Qv4C7mEVou4/gk/5cN2dVxOTnrNjPSmyH2f0Ln+/UkG10Ax1PE6OvrmTVPKgQYozTtBaPOuCzq7A==}
 
   https-proxy-agent@5.0.1:
     resolution: {integrity: sha512-dFcAjpTQFgoLMzC2VwU+C/CbS7uRL0lWmxDITmqm7C+7F0Odmj6s9l6alZc6AELXhrnggM2CeWSXHGOdX2YtwA==}
@@ -4512,6 +4666,8 @@ snapshots:
   hermes-parser@0.25.1:
     dependencies:
       hermes-estree: 0.25.1
+
+  hls.js@1.7.3: {}
 
   https-proxy-agent@5.0.1:
     dependencies:

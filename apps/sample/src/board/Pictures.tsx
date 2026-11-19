@@ -12,11 +12,14 @@ export function PicturePicker({
   onChange,
   max,
   guest = false,
+  onBusyChange,
 }: {
   value: string[]
   onChange: (keys: string[]) => void
   max: number
   guest?: boolean
+  /** 올리는 중인지 - 부모가 저장 단추를 막는다 */
+  onBusyChange?: (busy: boolean) => void
 }) {
   const { t, locale } = useT()
   const base = languageOf(locale) === 'ko' ? koImageUploadLabels : defaultImageUploadLabels
@@ -27,6 +30,7 @@ export function PicturePicker({
       api={guest ? undefined : storageApi}
       value={value}
       onChange={onChange}
+      onBusyChange={onBusyChange}
       max={max}
       accept={guest ? 'image/png,image/jpeg,image/gif,image/webp' : undefined}
       labels={{

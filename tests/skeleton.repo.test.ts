@@ -29,17 +29,22 @@ describe('the skeleton repo', () => {
       'apps/workbench',
     ])
     expect(dirs('package')).toEqual([
+      'packages/ads',
       'packages/api-client',
+      'packages/app-control',
       'packages/auth',
       'packages/author-profile',
       'packages/board',
+      'packages/booking',
       'packages/captcha-turnstile',
       'packages/dashboard',
       'packages/i18n',
+      'packages/inquiry',
       'packages/legal',
       'packages/marketing',
       'packages/notifications',
       'packages/payment',
+      'packages/preview',
       'packages/push',
       'packages/realtime',
       'packages/reviews',
@@ -51,6 +56,8 @@ describe('the skeleton repo', () => {
       'packages/time',
       'packages/tokens',
       'packages/ui',
+      'packages/video',
+      'packages/waiting-room',
       'packages/workspace',
     ])
   })
@@ -95,16 +102,21 @@ describe('the skeleton repo', () => {
       .map((w) => w.dir)
       .sort()
     expect(withStories).toEqual([
+      'packages/ads',
+      'packages/app-control',
       'packages/auth',
       'packages/author-profile',
       'packages/board',
+      'packages/booking',
       'packages/captcha-turnstile',
       'packages/dashboard',
       'packages/i18n',
+      'packages/inquiry',
       'packages/legal',
       'packages/marketing',
       'packages/notifications',
       'packages/payment',
+      'packages/preview',
       'packages/push',
       'packages/reviews',
       'packages/rewards',
@@ -114,6 +126,8 @@ describe('the skeleton repo', () => {
       'packages/theme',
       'packages/time',
       'packages/ui',
+      'packages/video',
+      'packages/waiting-room',
       'packages/workspace',
     ])
   })
@@ -146,6 +160,7 @@ describe('the skeleton repo', () => {
         'packages/theme',
         'packages/notifications',
         'packages/board',
+        'packages/booking',
         'packages/author-profile',
         'packages/auth', // 계정 화면(로그인 · 가입 · 설정)이 CSS 모듈을 쓴다 — 스타터는 이제 그 화면을 가져다 쓸 뿐이라 자기 CSS 가 없다
       ]),

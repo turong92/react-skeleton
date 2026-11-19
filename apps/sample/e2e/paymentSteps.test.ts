@@ -12,6 +12,15 @@ vi.mock('./helpers', () => ({
   DEMO: { email: 'user@example.com', password: 'password' },
   ko: (key: string) => key,
   consentViaApi: async () => undefined,
+  // 진짜 도우미는 운영 계정의 2단계 코드까지 한다 - 여기서는 로그인 한 번(가짜 fetch)만
+  accessTokenFor: async (apiUrl: string, account: { email: string }) => {
+    const login = await fetch(`${apiUrl}/api/v1/auth/login`, {
+      method: 'POST',
+      body: JSON.stringify(account),
+    })
+    if (!login.ok) throw new Error(`login ${account.email} → ${login.status}`)
+    return ((await login.json()) as { value: { accessToken: string } }).value.accessToken
+  },
   signIn: (...args: unknown[]) => (signIn as (...a: unknown[]) => Promise<void>)(...args),
 }))
 

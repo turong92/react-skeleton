@@ -17,6 +17,7 @@ import type { AccountStatus, AdminAccount } from '../account/types'
 import styles from '../screens/auth.module.css'
 import { mergeLabels, type AuthLabels } from '../screens/labels'
 import { useAction } from '../screens/useAction'
+import { MfaResetDialog } from './MfaResetDialog'
 import { rowActions, type RoleChoice } from './rowActions'
 
 /** 표 위 검색 · 필터의 값. `loginId` 는 아이디를 켠 서버에서만 쓴다(비어 있으면 거르지 않는다) */
@@ -43,6 +44,8 @@ export type AdminAccountsTableProps = {
   onRestore: (id: string) => Promise<unknown>
   onGrantRole: (id: string, role: string) => Promise<unknown>
   onRevokeRole: (id: string, role: string) => Promise<unknown>
+  /** 2단계 인증 해제(사유 필수) - 주면 계정 줄 메뉴에 「2단계 해제」가 생기고(`can('mfa.reset')`), 서버가 거절하면(자기 자신 · 권한 상승 · 이미 꺼짐) 창 안에서 이유를 말한다 */
+  onResetMfa?: (id: string, reason: string) => Promise<unknown>
   formatDate?: (iso: string) => string
   /**
    * 「아이디」 열과 「아이디로 찾기」 칸을 그린다. 기본은 목록에 `loginId` 키가 하나라도 있는지(= 서버가 아이디를 켰는지) —
@@ -71,6 +74,7 @@ export function AdminAccountsTable({
   onRestore,
   onGrantRole,
   onRevokeRole,
+  onResetMfa,
   formatDate = defaultFormat,
   showLoginId: showLoginIdProp,
   labels: given,
@@ -88,9 +92,12 @@ export function AdminAccountsTable({
     setIdDraft(query.loginId ?? '')
   }
   const action = useAction(labels)
+  const [resettingMfa, setResettingMfa] = useState<AdminAccount | null>(null)
+  const [mfaNotice, setMfaNotice] = useState<string | null>(null)
+  const nameOf = (account: AdminAccount) => account.email ?? account.loginId ?? account.id
 
   function items(account: AdminAccount) {
-    return rowActions(account, assignableRoles, can, callerPermissions).map((a) => ({
+    const base = rowActions(account, assignableRoles, can, callerPermissions).map((a) => ({
       key: a.kind,
       label:
         a.kind === 'suspend'
@@ -112,6 +119,22 @@ export function AdminAccountsTable({
         if (a.role) return void action.run(() => onRevokeRole(account.id, a.role!))
       },
     }))
+    // 2단계 해제는 상태와 상관없이 낸다(꺼져 있으면 서버가 이유를 말한다 - 줄마다 상태를 묻지 않는다)
+    const resettable = onResetMfa && account.status !== 'DELETED' && (can?.('mfa.reset') ?? true)
+    return resettable
+      ? [
+          ...base,
+          {
+            key: 'mfa-reset',
+            label: labels.adminMfaReset,
+            danger: true,
+            onSelect: () => {
+              setMfaNotice(null)
+              setResettingMfa(account)
+            },
+          },
+        ]
+      : base
   }
 
   async function confirmSuspend() {
@@ -186,6 +209,7 @@ export function AdminAccountsTable({
         </Field>
       </div>
       {action.error && <Alert tone="danger">{action.error.message}</Alert>}
+      {mfaNotice && <Alert tone="success">{mfaNotice}</Alert>}
       <Table
         caption={labels.adminCaption}
         rows={accounts}
@@ -250,6 +274,18 @@ export function AdminAccountsTable({
         previousLabel={labels.adminPrevious}
         nextLabel={labels.adminNext}
       />
+      {resettingMfa && onResetMfa && (
+        <MfaResetDialog
+          email={nameOf(resettingMfa)}
+          labels={labels}
+          onClose={() => setResettingMfa(null)}
+          onReset={async (reason) => {
+            await onResetMfa(resettingMfa.id, reason)
+            setMfaNotice(labels.adminMfaResetDone(nameOf(resettingMfa)))
+            setResettingMfa(null)
+          }}
+        />
+      )}
       <ConfirmDialog
         open={suspending !== null}
         onClose={() => {

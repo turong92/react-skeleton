@@ -1,5 +1,9 @@
 import { isErrorCode, ErrorCodes } from '@skeleton/api-client'
-import { isEmailRequiredError, isLoginIdRequiredError } from '@skeleton/auth'
+import {
+  isEmailRequiredError,
+  isLoginIdRequiredError,
+  isMfaEnrollmentRequiredError,
+} from '@skeleton/auth'
 import { isAuthorProfileFormError } from '@skeleton/author-profile'
 import { isPaymentError, isPaymentLedgerError } from '@skeleton/payment'
 
@@ -33,6 +37,8 @@ export function toastUnlessValidation(show: (error: unknown) => void) {
     if (isAuthorProfileFormError(error)) return
     // 주소 없는 계정의 403 — 앱을 덮은 「이메일을 등록해 주세요」 화면이 말한다(쿼리도 뮤테이션도 같다)
     if (isEmailRequiredError(error)) return
+    // 등록 전 운영자의 403 - 「2단계 인증을 켜 주세요」 화면이 말한다
+    if (isMfaEnrollmentRequiredError(error)) return
     if (isErrorCode(error, REWARDS_SPOKEN)) return
     if (isPaymentLedgerError(error) || isPaymentError(error)) return
     // 운영자 환불이 200 인데 줄이 환불 없이 닫혀 있다 - 로그용 영어 문장(`refund rfd_… is FAILED`)이다. 환불 창이 제자리에서 우리 낱말로 말한다

@@ -79,6 +79,8 @@ const PAIRS: Pair[] = [
     (bg): Pair => ({ fg: '--text', bg, min: BODY, use: 'text on a component surface' }),
   ),
   { fg: '--text', bg: '--shell-bg', min: BODY, use: 'header links' },
+  // 2단계 인증 QR - 테마와 상관없이 같은 흰 바탕 · 어두운 모듈
+  { fg: '--qr-fg', bg: '--qr-bg', min: BODY, use: 'two-factor QR code' },
   // UI 경계 · 포커스
   { fg: '--teal', bg: '--surface', min: UI, use: 'focus border' },
   { fg: '--teal', bg: '--bg', min: UI, use: 'focus border' },

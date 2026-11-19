@@ -162,10 +162,15 @@ describe('createAnalyticsLoader: nothing is sent before consent', () => {
     loader.trackPageView() // 같은 주소
     page.win.location = { href: 'https://example.test/cb?code=abc&state=xyz#id_token=zzz&ok=1' }
     loader.trackPageView()
+    loader.trackPageView()
+    page.win.location = { href: 'https://example.test/pricing#handoff=APPCODE&plan=a' } // 앱에서 넘어온 웹 결제 로그인 코드
+    loader.trackPageView()
     expect(sent().map((c) => (c[2] as { page_location: string }).page_location)).toEqual([
       'https://example.test/reset?x=1',
       'https://example.test/cb#ok=1',
+      'https://example.test/pricing#plan=a',
     ])
+    expect(JSON.stringify(page.win.dataLayer)).not.toContain('APPCODE')
   })
 
   it('tells gtag the storage is denied when analytics is switched off afterwards, and granted again when back on', () => {

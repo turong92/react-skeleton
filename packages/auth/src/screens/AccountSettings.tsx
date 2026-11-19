@@ -5,6 +5,8 @@ import type { AccountApi, SocialReauth } from '../account/accountApi'
 import { DEFAULT_LOGIN_ID_RULES, type LoginIdRules } from '../account/loginIdRules'
 import { supportedTimeZones, withCurrent } from '../account/timeZones'
 import type { AccountMe, DeletionResult, PasswordPolicy } from '../account/types'
+import type { MfaApi } from '../mfa/mfaApi'
+import { TwoFactorSection } from '../mfa/TwoFactorSection'
 import { reauthSubjectOf } from '../reauth/kind'
 import type { ProviderAction } from '../socialLink'
 import { AccountStateNotice } from './AccountStateNotice'
@@ -15,6 +17,7 @@ import { LoginIdSection } from './LoginIdSection'
 import { NeedsEmailCard } from './NeedsEmailCard'
 import { PasswordSection } from './PasswordSection'
 import { ProfileSection } from './ProfileSection'
+import type { ProfilePicturePicker } from './profilePicture'
 import { SessionsSection } from './SessionsSection'
 import { SignInMethodsSection } from './SignInMethodsSection'
 import styles from './auth.module.css'
@@ -31,8 +34,18 @@ export type AccountSectionName =
   | 'email'
   | 'contact'
   | 'methods'
+  | 'twoFactor'
   | 'sessions'
   | 'delete'
+
+/** 「환경」 카드의 줄(예: API 키 구역)이 제공자 동의 왕복을 쓸 때 받는 것 - `preferenceRows` 를 함수로 주면 인자로 온다 */
+export type ProviderRoundTrip = {
+  /** 이 제공자의 동의 화면으로 보낸다(하려던 작업은 `action` 에 묶여 돌아온다). 앱이 제공자 흐름을 안 꽂았으면 없다 */
+  onProviderReauth?: (provider: string, action: ProviderAction) => void
+  /** 동의를 마치고 돌아왔고 하려던 작업이 이 줄의 것이다(`api-key-create`) - 한 번 쓰면 `onResumeSpent` */
+  resume: { action: ProviderAction; socialReauth: SocialReauth } | null
+  onResumeSpent: () => void
+}
 
 export type AccountSettingsProps = {
   api: AccountApi
@@ -48,6 +61,11 @@ export type AccountSettingsProps = {
   loginIdRules?: LoginIdRules
   /** 이 계정의 아이디가 정해졌다(여기서 정했거나, 다른 탭에서 이미 정했다고 서버가 답했다) — 앱이 `loginIdRequired.chosen()` 을 불러 붙잡힌 호출을 풀고 게이트를 접는다. `createAuthRoutes({ loginIdRequired })` 가 이 길을 잇는다 */
   onLoginIdChosen?: () => void
+  /**
+   * 프로필 사진을 고르는 자리 - 앱이 storage 패키지의 `ImageUploadField`(`max={1}`)를 꽂는다(게시판의 `attachmentPicker` 와 같은 방식 - 이 패키지는 storage 를 모른다).
+   * 주면 서버가 사진 기능을 켠 앱(`me.avatarKey` 키가 있음)에서만 프로필 대화상자에 사진 칸이 생긴다
+   */
+  profilePicture?: ProfilePicturePicker
   /** 프로필에서 고르는 언어(앱이 지원하는 것) */
   locales: Array<{ value: string; label: string }>
   /** 기본: 브라우저가 아는 시간대 */
@@ -68,6 +86,8 @@ export type AccountSettingsProps = {
   contactEmail?: boolean
   /** 주소가 없던 계정의 첫 이메일이 확인됐다(이메일 필수 앱의 막을 걷는다 — 보통 `emailRequired.registered()`) */
   onEmailRegistered?: () => void
+  /** 2단계 인증을 켜기 · 끄기 · 복구 코드 재발급이 끝났다(2단계 필수 앱의 막을 걷는다 - 보통 `mfaEnrollmentRequired.enrolled()`) */
+  onTwoFactorChanged?: () => void
   /** 접근 불가 · 정지일 때 「문의」 링크 */
   supportHref?: string
   /** 방금 연결한 소셜 제공자(연결 콜백이 돌아온 직후) — 서버가 계정 주소로 알림 메일을 보냈다는 안내를 보인다 */
@@ -85,8 +105,15 @@ export type AccountSettingsProps = {
   onDiscarded?: (provider: string) => void
   /** `resume` 을 읽었다(앱이 돌아온 주소의 state 를 비운다) */
   onResumeConsumed?: () => void
+  /**
+   * 2단계 인증 줄(`createMfaApi(client)`) - 주면 보안 카드에 「2단계 인증」이 생긴다(서버가 `auth-mfa` 를 켠 앱만; 꺼진 서버면 줄이 안내만 한다).
+   * 기본 꺼짐 = 예전 화면 그대로. 줄만 감추려면 `sections.twoFactor: false`
+   */
+  twoFactor?: MfaApi
   /** 「환경」 카드에 더할 줄들(예: `@skeleton/legal` 의 `<ConsentSettings row />`) - 줄은 `SettingsRow` */
-  preferenceRows?: ReactNode
+  preferenceRows?: ReactNode | ((roundTrip: ProviderRoundTrip) => ReactNode)
+  /** 「계정 삭제」 줄 · 확인 창에 붙는 경고(예: 스토어 구독은 탈퇴해도 해지되지 않는다). 기본 없음 */
+  deleteNotice?: ReactNode
 }
 
 const ALL: AccountSectionName[] = [
@@ -96,12 +123,14 @@ const ALL: AccountSectionName[] = [
   'email',
   'contact',
   'methods',
+  'twoFactor',
   'sessions',
   'delete',
 ]
 
 /** 구역의 주소 해시(`#email` …) — 나머지는 이름 그대로 */
-const hashOf = (name: AccountSectionName): string => (name === 'loginId' ? 'login-id' : name)
+const hashOf = (name: AccountSectionName): string =>
+  name === 'loginId' ? 'login-id' : name === 'twoFactor' ? 'two-factor' : name
 
 /** 카드 세 장 - 목차의 앵커이고, 해시 · 제공자 왕복 재개가 스크롤해 가는 곳이다 */
 type CardId = 'account' | 'security' | 'preferences'
@@ -113,6 +142,7 @@ const CARD_OF: Record<AccountSectionName, CardId> = {
   delete: 'account',
   password: 'security',
   methods: 'security',
+  twoFactor: 'security',
   sessions: 'security',
 }
 
@@ -134,12 +164,14 @@ export function AccountSettings({
   graceDays = 30,
   selfRestore = false,
   showDisplayName,
+  profilePicture,
   onDeleted,
   onProfileChanged,
   formatDate,
   supportHref,
   contactEmail: contactOn = false,
   onEmailRegistered,
+  onTwoFactorChanged,
   linkedProvider,
   linkIntent,
   onProviderReauth,
@@ -147,6 +179,8 @@ export function AccountSettings({
   onResumeConsumed,
   onDiscarded,
   preferenceRows,
+  deleteNotice,
+  twoFactor,
 }: AccountSettingsProps) {
   const labels = mergeLabels(given)
   const on = (name: AccountSectionName) =>
@@ -180,6 +214,13 @@ export function AccountSettings({
     resume?.action.kind === 'contact-email'
       ? { email: resume.action.email, socialReauth: resume.socialReauth }
       : null,
+  )
+  // 2단계 인증 줄 · 환경 카드의 줄(API 키)이 이어 갈 작업 - 인가 코드는 한 번 쓰면 끝이라 쓰자마자 비운다
+  const [mfaResume, setMfaResume] = useState(() =>
+    resume?.action.kind.startsWith('mfa-') ? resume : null,
+  )
+  const [rowResume, setRowResume] = useState(() =>
+    resume?.action.kind === 'api-key-create' ? resume : null,
   )
   const resumed = useRef(false)
   const sessions = useResource(
@@ -258,6 +299,11 @@ export function AccountSettings({
           discard: undefined,
           link: undefined,
           'link-reauth': undefined,
+          'mfa-enable': CARD_OF.twoFactor,
+          'mfa-change': CARD_OF.twoFactor,
+          'mfa-regenerate': CARD_OF.twoFactor,
+          'mfa-disable': CARD_OF.twoFactor,
+          'api-key-create': 'preferences' as CardId,
         }[resume.action.kind]
       : undefined,
   )
@@ -335,6 +381,7 @@ export function AccountSettings({
       graceDays={graceDays}
       selfRestore={selfRestore}
       formatDate={formatDate}
+      notice={deleteNotice}
       labels={given}
       requestDeleteCode={requestDeleteCode}
       onDelete={(credential) => api.deleteAccount(credential)}
@@ -363,7 +410,9 @@ export function AccountSettings({
   const canGo = goTarget === 'password' ? !restricted && on('password') : restricted || on('email')
   const contactShown = !restricted && on('contact') && account.contactEmail !== undefined
   const accountCard = loginIdShown || restricted || on('email') || contactShown || on('delete')
-  const securityCard = !restricted && (on('password') || on('methods') || on('sessions'))
+  const twoFactorShown = !restricted && !!twoFactor && on('twoFactor')
+  const securityCard =
+    !restricted && (on('password') || on('methods') || twoFactorShown || on('sessions'))
   const preferencesCard = !restricted && (on('profile') || !!preferenceRows)
   const items = [
     accountCard && { id: 'account', label: labels.groupAccount },
@@ -497,6 +546,23 @@ export function AccountSettings({
               }}
             />
           )}
+          {twoFactorShown && twoFactor && (
+            <TwoFactorSection
+              row
+              api={twoFactor}
+              subject={subject}
+              requestReauthCode={requestReauthCode}
+              formatDate={formatDate}
+              labels={given}
+              onProviderReauth={onProviderReauth}
+              resume={mfaResume}
+              onResumeSpent={() => setMfaResume(null)}
+              onChanged={() => {
+                sessions.reload() // 켤 때 서버가 이 세션만 남기고 다른 세션을 닫는다
+                onTwoFactorChanged?.()
+              }}
+            />
+          )}
           {on('sessions') && (
             <SessionsSection
               row
@@ -522,6 +588,7 @@ export function AccountSettings({
           {on('profile') && (
             <ProfileSection
               row
+              picture={profilePicture}
               profile={account}
               locales={locales}
               timeZones={zones}
@@ -534,7 +601,13 @@ export function AccountSettings({
               }}
             />
           )}
-          {preferenceRows}
+          {typeof preferenceRows === 'function'
+            ? preferenceRows({
+                onProviderReauth,
+                resume: rowResume,
+                onResumeSpent: () => setRowResume(null),
+              })
+            : preferenceRows}
         </SettingsGroup>
       )}
     </div>

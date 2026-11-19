@@ -69,6 +69,7 @@ import { AdvertisingSettings, koAdvertisingLabels } from '@skeleton/push/adverti
 - **권한이 `denied` 로 바뀌었으면** 서버의 이 기기를 `DELETE` 하고 켬 표시를 거둔다(푸시 서버로 계속 보내지 않는다).
 - **로그아웃이 막히지 않는다.** `unregisterPush` 는 `DELETE` 가 끝난 뒤 돌아오고, 실패해도 던지지 않는다. `DELETE` 가 실패해도 브라우저 구독은 거둔다(공용 브라우저에서 다음 사용자에게 옛 계정 알림이 뜨지 않게, 최선 노력). `usePushSync` 도 이 계정이 켠 적 없는데 구독이 남아 있으면 거둔다(서버는 세션이 끊길 때 그 세션의 기기도 정리한다).
 - **서비스 워커는 늘 알림을 띄운다**(Chrome `userVisibleOnly` — 안 띄우면 기본 문구를 대신 띄운다). 알림을 눌렀을 때 `link` 는 `/` 로 시작하고 `//` · `\` · 제어 문자가 없는 앱 안 경로일 때만 따라간다(아니면 앱 첫 화면). `pushsubscriptionchange` 는 다루지 않는다(워커에는 로그인이 없다 — 다음 `usePushSync` 가 고친다).
+- **푸시를 눌러 연 것을 서버에 알린다(선택).** 푸시 페이로드에 `open` 토큰이 있을 때만(서버의 `open-report.secret` 을 켠 경우) 알림 `data` 에 `id` · `open` 을 두었다가, 클릭하면 창 열기와 나란히 `POST /api/v1/push/opened { id, open }` 을 `keepalive` 로 보낸다 — 인증 없이 토큰이 인증이고, 실패해도 창은 열리고 기다리지 않는다. 서버가 사람 × 공지당 한 번만 센다(공지 운영 화면의 「푸시 클릭」).
 - iOS(16.4+)는 홈 화면에 추가한 앱에서만 된다(`pushSupport()` → `needs-install`). 서비스 워커 · `PushManager` · `Notification` 중 없으면 `unsupported`.
 
 ## 공개 표면

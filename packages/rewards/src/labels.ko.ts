@@ -116,7 +116,7 @@ export const koRewardsLabels: RewardsLabels = {
     expiringSoon: (amount, date) => `${date}까지 ${amount} 소멸 예정`,
     history: '포인트 내역',
     emptyHistory: '아직 포인트 내역이 없어요.',
-    kinds: { EARN: '적립', SPEND: '사용', EXPIRE: '소멸', ADJUST: '조정' },
+    kinds: { EARN: '적립', SPEND: '사용', EXPIRE: '소멸', ADJUST: '조정', RESTORE: '환원' },
     expiresAt: (date) => `${date} 소멸`,
     loadMore: '더 보기',
   },

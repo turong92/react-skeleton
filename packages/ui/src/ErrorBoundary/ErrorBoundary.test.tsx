@@ -1,5 +1,5 @@
 import { renderToStaticMarkup } from 'react-dom/server'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { ErrorBoundary } from './ErrorBoundary'
 
 /*
@@ -40,6 +40,37 @@ describe('ErrorBoundary', () => {
       fallback: (error, reset) => <button onClick={reset}>retry {error.message}</button>,
     })
     expect(renderToStaticMarkup(<>{boundary.render()}</>)).toContain('retry boom')
+  })
+
+  it('hands the caught error and the component stack to the reporter', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const reports: Array<[unknown, unknown]> = []
+    const boundary = new ErrorBoundary({
+      children: 'x',
+      reporter: { report: (error, context) => reports.push([error, context]) },
+    })
+    const error = new Error('boom')
+
+    boundary.componentDidCatch(error, { componentStack: '\n    at Orders' })
+
+    expect(reports).toEqual([[error, { source: 'boundary', componentStack: '\n    at Orders' }]])
+    spy.mockRestore()
+  })
+
+  it('a reporter that throws does not break the boundary', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const boundary = new ErrorBoundary({
+      children: 'x',
+      reporter: {
+        report: () => {
+          throw new Error('reporter down')
+        },
+      },
+    })
+    expect(() =>
+      boundary.componentDidCatch(new Error('boom'), { componentStack: '' }),
+    ).not.toThrow()
+    spy.mockRestore()
   })
 
   it('reset clears the error', () => {

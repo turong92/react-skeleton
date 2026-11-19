@@ -16,6 +16,9 @@ import { AdminAccountPage } from './AdminAccountPage'
 import { AdminApiKeysPage } from './AdminApiKeysPage'
 import { AdminBadgeAwardsPage } from './AdminBadgeAwardsPage'
 import { AdminBadgesPage } from './AdminBadgesPage'
+import { AdminBroadcastDetailPage } from './AdminBroadcastDetailPage'
+import { AdminBroadcastEditorPage } from './AdminBroadcastEditorPage'
+import { AdminBroadcastsPage } from './AdminBroadcastsPage'
 import { AdminCampaignsPage } from './AdminCampaignsPage'
 import { AdminCatalogPage } from './AdminCatalogPage'
 import { AdminCatalogProductPage } from './AdminCatalogProductPage'
@@ -34,6 +37,9 @@ import { BadgesPage } from './BadgesPage'
 import { BoardFormPage } from './BoardFormPage'
 import { BoardPage } from './BoardPage'
 import { BoardPostPage } from './BoardPostPage'
+import { AdminBookingPage } from './AdminBookingPage'
+import { BookingPage } from './BookingPage'
+import { BookingSeatsPage } from './BookingSeatsPage'
 import { CheerPage } from './CheerPage'
 import { CheersPage } from './CheersPage'
 import { CouponsPage } from './CouponsPage'
@@ -48,6 +54,7 @@ import { PaymentReturnPage } from './PaymentReturnPage'
 import { ProductPage } from './ProductPage'
 import { ProfilePage } from './ProfilePage'
 import { RewardsPage } from './RewardsPage'
+import { HelpPage } from './HelpPage'
 import { SearchPage } from './SearchPage'
 import { SettingsPage } from './SettingsPage'
 import { SubscribePage } from './SubscribePage'
@@ -99,6 +106,8 @@ export const routes: RouteObject[] = [
         element: <LegalRoute doc="refund" />,
         handle: publicSeo('seo.refund.title', 'seo.refund.description'),
       },
+      // 도움말 - 자주 묻는 질문 + 문의 폼(`@skeleton/inquiry`). 로그인 없이 열린다(서버 `POST /api/v1/inquiries` 가 공개). 검색에는 내지 않는다
+      { path: '/help', element: <HelpPage />, handle: privateSeo('help.title') },
       // 팀 초대 수락 - 메일의 링크(`/invite?token=…`)는 로그인 없이 열린다(미리보기). 로그인 · 가입은 이 화면이 보내고, 돌아와 수락한다
       { path: '/invite', element: <InvitePage />, handle: privateSeo('workspace.tabsLabel') },
       // 게시판은 로그인하지 않아도 열린다(서버 `allow-anonymous-read`) - 읽기는 누구나, 쓰기는 로그인했거나 게시판이 비회원 쓰기를 허락할 때(화면이 가린다). 검색에는 노출하지 않는다
@@ -169,6 +178,13 @@ export const routes: RouteObject[] = [
             path: '/payments/:id',
             element: <PaymentDetailPage />,
             handle: privateSeo('cheer.detail.title'),
+          },
+          // 예약 — 내 예약 · 자리 고르기(풀에 대기실이 달려 있으면 문 안에서). 결제는 `@skeleton/payment`, 백엔드 `booking` · `waiting-room` 을 붙인 만큼 열린다
+          { path: '/booking', element: <BookingPage />, handle: privateSeo('nav.booking') },
+          {
+            path: '/booking/:poolId',
+            element: <BookingSeatsPage />,
+            handle: privateSeo('booking.seats.title'),
           },
           // 구독 — 결제는 `@skeleton/payment`. 백엔드 `skeleton.payment.subscription.enabled=true` 가 있어야 열린다
           {
@@ -314,6 +330,23 @@ export const routes: RouteObject[] = [
           {
             element: (
               <RequirePermission
+                anyOf={['booking.read']}
+                forbidden={<BlockedNotice />}
+                failed={<PermissionsFailedNotice />}
+              />
+            ),
+            children: [
+              // 예약 운영 — 백엔드 `skeleton.booking.admin.enabled`
+              {
+                path: '/admin/booking',
+                element: <AdminBookingPage />,
+                handle: privateSeo('nav.adminBooking'),
+              },
+            ],
+          },
+          {
+            element: (
+              <RequirePermission
                 anyOf={['catalog.manage']}
                 forbidden={<BlockedNotice />}
                 failed={<PermissionsFailedNotice />}
@@ -425,6 +458,37 @@ export const routes: RouteObject[] = [
                 path: '/admin/reward-grants',
                 element: <AdminRewardGrantsPage />,
                 handle: privateSeo('nav.adminRewardGrants'),
+              },
+            ],
+          },
+          {
+            element: (
+              <RequirePermission
+                anyOf={['notification-broadcast.read']}
+                forbidden={<BlockedNotice />}
+                failed={<PermissionsFailedNotice />}
+              />
+            ),
+            children: [
+              {
+                path: '/admin/broadcasts',
+                element: <AdminBroadcastsPage />,
+                handle: privateSeo('nav.adminBroadcasts'),
+              },
+              {
+                path: '/admin/broadcasts/new',
+                element: <AdminBroadcastEditorPage />,
+                handle: privateSeo('nav.adminBroadcasts'),
+              },
+              {
+                path: '/admin/broadcasts/:id',
+                element: <AdminBroadcastDetailPage />,
+                handle: privateSeo('nav.adminBroadcasts'),
+              },
+              {
+                path: '/admin/broadcasts/:id/edit',
+                element: <AdminBroadcastEditorPage />,
+                handle: privateSeo('nav.adminBroadcasts'),
               },
             ],
           },

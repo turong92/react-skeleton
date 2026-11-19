@@ -1,3 +1,4 @@
+import { koTwoFactorLabels } from '../mfa/labels'
 import type { AuthLabels } from './labels'
 
 /**
@@ -204,6 +205,17 @@ export const koAuthLabels: AuthLabels = {
   magicLinkInvalidBody: '만료됐거나 이미 쓴 링크일 수 있어요. 새 링크를 요청해 주세요.',
   magicLinkRequestNew: '새 링크 요청',
   magicLinkSentTitle: '메일함을 확인해 주세요',
+  webHandoffTitle: '로그인하는 중',
+  webHandoffChecking: '앱에서 넘어오는 중',
+  webHandoffInvalidTitle: '쓸 수 없는 링크예요',
+  webHandoffInvalidBody:
+    '링크는 몇 분 안에 한 번만 쓸 수 있어요. 앱으로 돌아가 웹 결제를 다시 열거나, 여기서 로그인해 주세요.',
+  webHandoffSignIn: '로그인',
+  webHandoffSwitchTitle: '앱의 계정으로 계속할까요?',
+  webHandoffSwitchBody:
+    '이 기기에 이미 로그인되어 있어요. 계속하면 지금 계정에서 나가고, 앱에서 이 페이지를 연 계정으로 로그인해요.',
+  webHandoffSwitchContinue: '나가고 계속하기',
+  webHandoffSwitchCancel: '취소',
   methodsLoading: '로그인 방법을 확인하는 중',
   methodsFailed:
     '쓸 수 있는 로그인 방법을 확인하지 못했어요. 기본 방법을 보여 드려요 — 빠진 게 있으면 다시 시도하세요.',
@@ -254,6 +266,9 @@ export const koAuthLabels: AuthLabels = {
   profileTimeZone: '시간대',
   profileLocaleDefault: '정하지 않음',
   profileSaved: '프로필을 저장했어요.',
+  profilePicture: '사진',
+  profilePicturePending: '사진을 준비하고 있어요. 잠시 뒤에 보여요.',
+  profilePictureRejected: '이 사진은 쓸 수 없어요. 새 이미지 파일을 올려 주세요.',
   profileEdit: '프로필 수정',
   groupAccount: '계정',
   groupSecurity: '로그인 · 보안',
@@ -476,4 +491,5 @@ export const koAuthLabels: AuthLabels = {
   adminPrevious: '이전',
   adminNext: '다음',
   adminPurgeAfter: (date) => `${date} 에 지워짐`,
+  ...koTwoFactorLabels,
 }

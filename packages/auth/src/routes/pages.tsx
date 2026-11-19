@@ -7,6 +7,7 @@ import type { LoginIdRules } from '../account/loginIdRules'
 import { discardReauthOf, emailReauthOf } from '../emailReauth'
 import type { EmailRequiredController } from '../emailRequired'
 import type { LoginIdRequiredController } from '../loginIdRequired'
+import type { MfaEnrollmentRequiredController } from '../mfa/mfaEnrollmentRequired'
 import type { AuthApi } from '../authApi'
 import { linkIntentOf, linkIntentState } from '../linkIntent'
 import { postSignInTarget, rememberReturnTo, consumeReturnTo, safeReturnPath } from '../returnTo'
@@ -49,6 +50,8 @@ import type { SignUpPendingStore } from '../signUpPending'
 import type { OnceRunner } from '../screens/runOnce'
 import { useSocialLoginCallback } from '../useSocialLoginCallback'
 import { loginIdSettingsProps } from './loginIdWiring'
+import { mfaChallengeOf, mfaChallengeState } from '../mfa/challengeState'
+import { TwoFactorChallengeScreen } from '../mfa/TwoFactorChallengeScreen'
 
 export type AuthPaths = {
   signIn: string
@@ -63,6 +66,8 @@ export type AuthPaths = {
   account: string
   /** 삭제를 마친 직후의 안내(로그아웃 상태) */
   accountDeleted: string
+  /** 로그인의 두 번째 단계(2단계 인증을 켠 계정) - 1단계가 맞은 네 길(비밀번호 · 링크 · 소셜 · 탈퇴 취소)이 모두 여기로 온다 */
+  twoFactor: string
 }
 
 /** 콜백이 돌려준 그 시도의 PKCE verifier · nonce · 콜백의 state — verifier · nonce 는 제공자가 쓴 것만(없으면 undefined: 서버로 아무것도 더 보내지 않는다) */
@@ -119,6 +124,7 @@ export type PageContext = {
   emailRequired?: EmailRequiredController
   /** 아이디 막의 컨트롤러 - 설정에서 아이디를 정하면 막을 걷는다 */
   loginIdRequired?: LoginIdRequiredController
+  mfaEnrollmentRequired?: MfaEnrollmentRequiredController
   /** 진행 중인 가입 시도(코드 입력 단계가 새로고침을 견딘다) */
   signUpPending?: SignUpPendingStore
   /** 저장 키 · 락 · 채널 이름(앱 이름공간) */
@@ -179,6 +185,9 @@ export function SignInPage({
       }}
       onMagicLinkRequest={(email) => ctx.authApi.magicLinkRequest(email)}
       formatDate={ctx.formatDate}
+      onMfaRequired={(mfa) =>
+        navigate(ctx.paths.twoFactor, { state: mfaChallengeState(mfa, target, arrival) })
+      }
       onCancelDeletion={async (restoreToken) => {
         // 일반 로그인과 같은 처리 — 세션을 저장하고 가려던 곳으로(약관 재동의 등은 그 뒤 첫 호출의 가드가 이어 받는다)
         await auth.cancelDeletion(restoreToken)
@@ -338,6 +347,12 @@ export function MagicLinkPage({ ctx }: { ctx: PageContext }) {
           onRedeem={(t) => auth.magicLinkLogin(t)}
           onDone={() => navigate(ctx.afterSignIn, { replace: true })}
           formatDate={ctx.formatDate}
+          onMfaRequired={(mfa) =>
+            navigate(ctx.paths.twoFactor, {
+              replace: true, // 일회용 링크 주소로 되돌아오지 않게
+              state: mfaChallengeState(mfa, ctx.afterSignIn),
+            })
+          }
           onCancelDeletion={async (restoreToken) => {
             await auth.cancelDeletion(restoreToken)
             navigate(ctx.afterSignIn, { replace: true })
@@ -345,6 +360,48 @@ export function MagicLinkPage({ ctx }: { ctx: PageContext }) {
         />
       )}
     </TokenPage>
+  )
+}
+
+/** `/login/two-factor` - 1단계가 맞은 사람이 코드를 낸다. `mfaToken` 은 넘겨받은 라우터 state 에서 한 번 읽고 곧 주소의 state 에서 지운다(새로고침하면 처음부터 로그인) */
+export function TwoFactorPage({ ctx }: { ctx: PageContext }) {
+  const auth = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
+  const [challenge] = useState(() => mfaChallengeOf(location.state))
+  const scrubbed = useRef(false)
+  useEffect(() => {
+    if (scrubbed.current || !challenge) return // 없으면 아래 `Navigate` 가 로그인으로 보낸다 - 이 이동이 그것을 덮지 않게
+    scrubbed.current = true
+    navigate(location.pathname, { replace: true, state: null })
+  }, [navigate, location.pathname, challenge])
+  if (auth.status === 'authenticated') return <Navigate to={ctx.afterSignIn} replace />
+  if (!challenge) return <Navigate to={ctx.paths.signIn} replace />
+  // 소셜 길은 「가려던 곳」을 따로 적어 둔다(읽으면 지워진다) - 로그인이 끝난 지금 읽는다
+  const goOn = () => {
+    const target =
+      challenge.target ?? consumeReturnTo(ctx.afterSignIn, undefined, ctx.keys.returnTo)
+    navigate(target, {
+      replace: true,
+      ...(challenge.arrival ? { state: challenge.arrival } : {}),
+    })
+  }
+  return (
+    <TwoFactorChallengeScreen
+      mfa={challenge.mfa}
+      labels={ctx.labels}
+      formatDate={ctx.formatDate}
+      onRestart={() => navigate(ctx.paths.signIn, { replace: true })}
+      onVerify={async (input) => {
+        await auth.mfaLogin({ mfaToken: challenge.mfa.mfaToken, ...input })
+        goOn()
+      }}
+      onCancelDeletion={async (restoreToken) => {
+        // 탈퇴 대기 계정 - 코드를 맞춘 뒤 서버가 취소 토큰을 줬다. 취소는 일반 로그인 성공과 같은 처리(2단계는 다시 묻지 않는다)
+        await auth.cancelDeletion(restoreToken)
+        goOn()
+      }}
+    />
   )
 }
 
@@ -374,6 +431,10 @@ function SocialCallbackInner({ flow, ctx }: { flow: SocialLoginFlow; ctx: PageCo
       linkTo={{ pathname: ctx.paths.account, hash: '#methods' }}
       provider={state.status === 'error' ? flow.providerOfFailure(state.error) : undefined}
       formatDate={ctx.formatDate}
+      // 「가려던 곳」은 여기서 읽지 않는다(읽으면 지워진다) - 두 번째 단계가 끝난 뒤에 읽는다
+      onMfaRequired={(mfa) =>
+        navigate(ctx.paths.twoFactor, { replace: true, state: mfaChallengeState(mfa) })
+      }
       onCancelDeletion={async (restoreToken) => {
         // 탈퇴 대기 계정의 소셜 로그인 — 취소하면 일반 로그인 성공과 같은 이동(가려던 곳을 읽고 지운다)
         await auth.cancelDeletion(restoreToken)
@@ -527,7 +588,18 @@ function SocialLinkCallbackInner({ flow, ctx }: { flow: SocialLinkFlow; ctx: Pag
     callback &&
     !gateReturn &&
     action &&
-    ['email-change', 'unlink', 'delete', 'discard', 'contact-email'].includes(action.kind)
+    [
+      'email-change',
+      'unlink',
+      'delete',
+      'discard',
+      'contact-email',
+      'mfa-enable',
+      'mfa-change',
+      'mfa-regenerate',
+      'mfa-disable',
+      'api-key-create',
+    ].includes(action.kind)
   )
     return (
       <Navigate
@@ -626,6 +698,9 @@ export type SettingsExtras = Partial<
     | 'showDisplayName'
     | 'contactEmail'
     | 'preferenceRows'
+    | 'deleteNotice'
+    | 'twoFactor'
+    | 'profilePicture'
   >
 > & {
   locales: AccountSettingsProps['locales']
@@ -769,6 +844,9 @@ export function AccountPage({
         }
         onDeleted={() => void auth.logout()}
         onEmailRegistered={ctx.emailRequired && (() => ctx.emailRequired?.registered())}
+        onTwoFactorChanged={
+          ctx.mfaEnrollmentRequired && (() => ctx.mfaEnrollmentRequired?.enrolled())
+        }
         {...loginIdSettingsProps(ctx)}
         onDiscarded={(provider) => {
           // 서버가 모든 세션을 닫았다 - 이 기기의 세션도 지우고, 로그인한 뒤 설정에서 그 제공자 연결을 이어 가게 한다.

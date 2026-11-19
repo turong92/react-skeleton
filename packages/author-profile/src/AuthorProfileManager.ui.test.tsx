@@ -76,4 +76,22 @@ describe('AuthorProfileManager', () => {
     const html = render([profile('prf_a', 'Ann')])
     expect(html).not.toContain(L.deleteDescription('Ann#0001'))
   })
+
+  it('picture: a Picture button per row only when an app picker is given AND the server turned the feature on', () => {
+    const picker = () => <b>picker</b>
+    const make = (profiles: ReturnType<typeof profile>[], withPicker: boolean) => {
+      const client = new QueryClient()
+      client.setQueryData(authorProfileKeys.list(), profiles)
+      client.setQueryData(authorProfileKeys.config(), { maxPerAccount: 3, nameMaxLength: 60 })
+      return renderToStaticMarkup(
+        <QueryClientProvider client={client}>
+          <AuthorProfileManager api={api} picturePicker={withPicker ? picker : undefined} />
+        </QueryClientProvider>,
+      )
+    }
+    const on = { ...profile('prf_a', 'Ann'), avatarKey: null }
+    expect(make([on], true)).toContain(`aria-label="${L.picture('Ann#0001')}"`)
+    expect(make([on], false)).not.toContain(L.pictureAction)
+    expect(make([profile('prf_a', 'Ann')], true)).not.toContain(L.pictureAction) // 서버가 사진 기능을 껐다
+  })
 })

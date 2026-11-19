@@ -1,0 +1,109 @@
+/*
+ * 눌리는 것은 눌리게 보인다: 재생 · 다음 단추와 정보 칸은 쉬는 상태에서도 테두리 + 채운 바탕이 있고(글자만 있는 단추 금지),
+ * 높이 44px 이상, hover · focus-visible 이 서로 다르다.
+ */
+.root {
+  position: fixed;
+  inset-inline: 0;
+  inset-block-end: 0;
+  z-index: 40;
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+  box-sizing: border-box;
+  padding: var(--space-sm) var(--space-md);
+  padding-block-end: max(var(--space-sm), env(safe-area-inset-bottom));
+  border-block-start: 1px solid var(--border-strong);
+  background: var(--surface);
+}
+
+.info {
+  display: flex;
+  flex: 1;
+  gap: var(--space-sm);
+  align-items: center;
+  box-sizing: border-box;
+  min-inline-size: 0;
+  min-height: 44px;
+  padding: var(--space-xs);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-strong);
+  font: inherit;
+  text-align: start;
+}
+
+button.info {
+  cursor: pointer;
+}
+
+button.info:hover {
+  border-color: var(--teal);
+  background: var(--teal-wash);
+}
+
+.thumb {
+  flex: none;
+  inline-size: 40px;
+  block-size: 40px;
+  border-radius: var(--radius-md);
+  background: var(--inverse);
+  object-fit: cover;
+}
+
+.text {
+  display: grid;
+  min-inline-size: 0;
+}
+
+.title,
+.artist {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.title {
+  font-weight: 700;
+}
+
+.artist {
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+}
+
+.button {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  box-sizing: border-box;
+  min-width: 44px;
+  min-height: 44px;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--teal);
+  cursor: pointer;
+}
+
+.button:hover {
+  border-color: var(--teal);
+  background: var(--teal-wash);
+}
+
+.button:active {
+  background: var(--teal-soft);
+}
+
+.button:focus-visible,
+button.info:focus-visible {
+  outline: 3px solid var(--teal);
+  outline-offset: 2px;
+}
+
+.button svg {
+  inline-size: 22px;
+  block-size: 22px;
+  fill: currentColor;
+}

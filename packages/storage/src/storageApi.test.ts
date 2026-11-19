@@ -273,4 +273,31 @@ describe('upload completion and image lookup (kotlin-skeleton storage §5 — PO
       request: { method: 'POST', json: { keys: ['uploads/u/cat.png', 'uploads/u/new.png'] } },
     })
   })
+
+  it('images(keys) keeps each variant contentType and alternates (an animated display may carry a video/mp4 alternate)', async () => {
+    const { client } = fakeClient(() => ({
+      items: [
+        {
+          key: 'uploads/u/a.gif',
+          status: 'READY',
+          variants: {
+            thumb: { url: 'https://s3.test/t.jpg', contentType: 'image/jpeg' },
+            display: {
+              url: 'https://s3.test/d.gif',
+              contentType: 'image/gif',
+              alternates: [{ url: 'https://s3.test/d.mp4', contentType: 'video/mp4' }],
+            },
+          },
+        },
+      ],
+    }))
+    const api = createStorageApi(client, { ...endpoints, images: '/files/images' })
+    const [item] = (await api.images?.(['uploads/u/a.gif'])) ?? []
+    expect(item?.display).toEqual({
+      url: 'https://s3.test/d.gif',
+      contentType: 'image/gif',
+      alternates: [{ url: 'https://s3.test/d.mp4', contentType: 'video/mp4' }],
+    })
+    expect(item?.thumb?.contentType).toBe('image/jpeg')
+  })
 })

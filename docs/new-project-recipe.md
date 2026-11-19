@@ -45,7 +45,7 @@ pnpm format                         # 이름 · 스코프를 바꾼 줄바꿈 (�
 ```
 
 고른 패키지는 **폴더만** 따라온다. 쓰기 시작할 때 앱 `package.json` 에 `"@skeleton/<이름>": "workspace:*"` 한 줄을 더하고 `pnpm install`(스코프를 바꿨으면 그 스코프) — 쓰지 않는 의존을 선언하면 루트 테스트가 막는다.
-`CLAUDE.md` · `llms.txt` · `capabilities.json` 이 이미 찍은 프로젝트에 맞게 걸러져 있다 — 새 기능을 만들기 전에 그것부터 읽는다.
+`AGENTS.md` · `llms.txt` · `capabilities.json` 이 이미 찍은 프로젝트에 맞게 걸러져 있다 — 새 기능을 만들기 전에 그것부터 읽는다.
 
 ## 5. 실행
 
@@ -94,6 +94,7 @@ pnpm test:stories                   # 처음 한 번: pnpm exec playwright insta
 
 - 백엔드: kotlin-skeleton 레포의 docs/deploy.md(이미지 하나 + 선언 `deploy/app.yaml`, tag 를 올리는 것이 배포).
 - 프런트 SPA: `pnpm build` 의 `dist/` 를 Caddy 가 같은 origin 으로 서빙 + 백엔드 프록시(CORS 불필요). 서버 렌더 앱: `apps/starter-ssr/README.md` 와 앱 폴더의 `Dockerfile`.
+- Cloudflare Pages + 같은 도메인 `/api/v1` Worker — kotlin-skeleton 레포의 docs/deploy-cloudrun.md(`.github/workflows/deploy-pages.yml`).
 - 공개 주소는 `VITE_SITE_URL`(서버 렌더 앱은 `SITE_URL`)을 배포 환경에 준다.
 
 ## 작업 예

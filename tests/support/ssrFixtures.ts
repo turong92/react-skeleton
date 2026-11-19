@@ -146,6 +146,55 @@ const reviewsReview = {
   createdAt: '2026-01-01T00:00:00Z',
   updatedAt: '2026-01-01T00:00:00Z',
 }
+const fakeInquiryApi = () => ({ send: async () => ({ status: 'RECEIVED' }) })
+const fakeAppControlApi = () => ({
+  config: async () => ({
+    serverTime: '2026-11-16T09:00:00Z',
+    maintenance: { enabled: false, message: null, endsAt: null },
+    flags: { beta: true },
+    platforms: {},
+  }),
+})
+const fakeWaitingRoomApi = () => {
+  const status = {
+    state: 'WAITING',
+    position: 2,
+    ahead: 1,
+    estimatedWaitSeconds: 60,
+    opensAt: '2026-11-03T00:00:00Z',
+    pollAfterSeconds: 5,
+  }
+  return { takeTicket: async () => ({ ...status, ticket: 'tk' }), status: async () => status }
+}
+const fakeVideoApi = () => ({
+  list: async () => [],
+  start: async () => ({ id: 'v', uploadId: 'u', partSize: 1 }),
+  presignParts: async () => [],
+  listParts: async () => [],
+  complete: async () => ({}),
+  remove: async () => {},
+  playback: async () => ({}),
+})
+const fakeBookingApi = () => {
+  const hold = {
+    holdId: 'h',
+    poolId: 'p',
+    status: 'HELD',
+    seats: [],
+    expiresAt: '2026-11-03T00:10:00Z',
+  }
+  return {
+    snapshot: async () => ({ serverTime: '2026-11-03T00:00:00Z', seats: [] }),
+    streamUrl: () => 'http://localhost/stream',
+    addSeats: async () => hold,
+    removeSeat: async () => hold,
+    myHolds: async () => [],
+    checkout: async () => hold,
+    release: async () => hold,
+    confirm: async () => hold,
+    cancel: async () => hold,
+  }
+}
 const fakeSearchApi = () => ({ search: async () => pageOf([]) })
 const searchLabels = (ctx: FixtureContext) => ctx.mod('search').defaultSearchLabels
 const searchDescribe = (type: string) => ({ label: type, href: (id: string) => `/${type}/${id}` })
@@ -529,6 +578,30 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
   'ui#EmptyState': () => ({ title: 'Nothing here', description: 'Add one' }),
   'ui#Card': () => ({ title: 'Card', children: 'body' }),
   'ui#Dialog': () => ({ open: true, onClose: noop, title: 'Dialog', children: 'body' }),
+  'preview#PreviewStage': () => ({
+    source: { kind: 'render', content: 'Hello' },
+    device: 'phone',
+  }),
+  'preview#PreviewViewer': () => ({
+    source: { kind: 'render', content: 'Hello' },
+    as: 'page',
+    title: 'Preview',
+    onClose: noop,
+  }),
+  'preview#PreviewScreen': () => ({
+    source: { kind: 'render', content: 'Hello' },
+    width: 390,
+    height: 844,
+    scale: 1,
+    kind: 'phone',
+    title: 'Preview',
+  }),
+  'preview#DeviceFrame': () => ({
+    kind: 'phone',
+    screen: { width: 390, height: 844 },
+    children: 'Hello',
+  }),
+  'preview#DevicePicker': () => ({ value: 'phone', onChange: noop }),
   'ui#Spinner': () => ({}),
   'ui#AppShell': () => ({
     brand: 'brand',
@@ -768,6 +841,17 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
     onDone: noop,
     requestTo: '/login',
   }),
+  'auth#WebHandoffLanding': () => ({
+    code: 'c',
+    onRedeem: asyncNoop,
+    onDone: noop,
+    signInTo: '/login',
+  }),
+  'auth#WebHandoffGate': () => ({
+    onRedeem: asyncNoop,
+    signInTo: '/login',
+    children: 'Payment',
+  }),
   'auth#SocialLinkProofScreen': () => ({
     provider: 'Kakao',
     kind: 'password',
@@ -836,6 +920,29 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
     accountId: null,
     onSignOut: noop,
     onDelete: noop,
+    children: createElement('p', null, 'app'),
+  }),
+  'auth#TwoFactorChallengeScreen': () => ({
+    mfa: { mfaToken: 't', methods: ['totp', 'recovery_code'], expiresAt: null },
+    onVerify: asyncNoop,
+    onRestart: noop,
+  }),
+  'auth#TwoFactorSection': () => ({
+    api: fakeAccountApi(),
+    subject: { hasPassword: true, email: 'a@example.com', providers: [] },
+  }),
+  'auth#MfaEnrollmentRequiredScreen': () => ({
+    api: fakeAccountApi(),
+    subject: { hasPassword: true, email: 'a@example.com', providers: [] },
+    onEnrolled: noop,
+    onSignOut: noop,
+  }),
+  'auth#MfaEnrollmentRequiredGate': (ctx) => ({
+    controller: call(ctx.mod('auth').createMfaEnrollmentRequiredController),
+    api: fakeAccountApi(),
+    account: fakeAccountApi(),
+    accountId: null,
+    onSignOut: noop,
     children: createElement('p', null, 'app'),
   }),
   'auth#EmailWriteNotice': (ctx) => ({
@@ -1085,6 +1192,63 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
     labels: reviewsLabels(ctx),
     onSubmit: () => {},
   }),
+  'inquiry#ContactForm': () => ({ api: fakeInquiryApi(), onSent: noop }),
+  'inquiry#FaqList': () => ({
+    sections: [{ id: 's', title: 'Start', items: [{ id: 'q', question: 'Q?', answer: 'A.' }] }],
+  }),
+  'app-control#AppControlGate': () => ({ api: fakeAppControlApi(), children: 'inside' }),
+  'waiting-room#WaitingRoomGate': () => ({
+    api: fakeWaitingRoomApi(),
+    roomId: 'wr_1',
+    children: 'inside',
+  }),
+  'waiting-room#WaitingScreen': () => ({ status: null }),
+  'video#VideoPlayer': () => ({
+    grant: {
+      src: 'https://cdn.test/o/index.m3u8',
+      poster: 'https://cdn.test/p.jpg',
+      codec: 'avc1.640028',
+      w: 1080,
+      h: 1920,
+      durationMs: 42_000,
+      big: false,
+    },
+  }),
+  'video#MiniPlayer': () => ({}),
+  'video#MiniPlayerView': () => ({
+    item: { kind: 'youtube', id: 'y', title: 'A song', videoId: 'abc123' },
+    playing: false,
+    onToggle: noop,
+    onNext: noop,
+  }),
+  'video#PlayQueueProvider': () => ({ children: 'inside' }),
+  'video#QueueStage': () => ({}),
+  'video#ModePill': () => ({
+    labels: { mode: 'Play as', modeVideo: 'Video', modeAudio: 'Audio' },
+    mode: 'video',
+    onChange: noop,
+  }),
+  'video#QueueProgress': () => ({}),
+  'video#QueueProgressView': () => ({ currentTime: 12, duration: 225, onSeek: noop }),
+  'video#YoutubeStage': () => ({
+    videoId: 'abc123',
+    restart: 0,
+    playing: false,
+    onEnded: noop,
+    onFailed: noop,
+    onPlaying: noop,
+  }),
+  'video#VideoUploadField': () => ({ api: fakeVideoApi(), purpose: 'clip' }),
+  'booking#SeatMap': () => ({ seats: [], onPick: noop }),
+  'booking#HoldPanel': () => ({
+    hold: { hold: null, pending: [], busy: false, locked: false, problem: null, error: null },
+    remainingMs: null,
+    onCheckout: noop,
+    onConfirm: noop,
+    onLeave: noop,
+  }),
+  'booking#SeatBooking': () => ({ api: fakeBookingApi(), pool: { id: 'p' } }),
+  'booking#MyBookings': () => ({ api: fakeBookingApi() }),
   'search#Highlight': () => ({ text: 'a <b> c', ranges: [[2, 5]] }),
   'search#SearchBox': (ctx) => ({ labels: searchLabels(ctx), onSearch: noop }),
   'search#SearchResults': (ctx) => ({
@@ -1277,6 +1441,10 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
     onConfirm: noop,
   }),
   'captcha-turnstile#Turnstile': () => ({ siteKey: 'site-key', onToken: noop }),
+  'ads#RewardedAdPrompt': () => ({
+    ad: { status: 'ready', start: noop, watch: noop, cancel: noop },
+    reward: '10 points',
+  }),
 }
 
 /** 훅 — 작은 컴포넌트 안에서 이 인자로 불러 본다 */
@@ -1299,6 +1467,13 @@ export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
   'auth#useAuthMethods': () => [{ methods: () => new Promise(noop) }, true],
   'auth#useSocialLoginCallback': () => [{ complete: () => new Promise(noop) }, '?code=x'],
   'captcha-turnstile#useTurnstileToken': () => [],
+  'ads#useRewardedAd': () => [
+    {
+      api: { openSession: () => new Promise(noop), grant: () => new Promise(noop) },
+      adUnitPath: '/1/rewarded',
+      purpose: 'unlock',
+    },
+  ],
   'dashboard#useDashboard': () => [
     fakeDashboardApi(),
     { from: '2026-01-01', to: '2026-01-02' },
@@ -1340,6 +1515,22 @@ export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
   'reviews#useSetHelpful': () => [fakeReviewsApi()],
   'reviews#useReportReview': () => [fakeReviewsApi()],
   'reviews#useReviewFilters': () => [],
+  'inquiry#useInquiryForm': () => [fakeInquiryApi()],
+  'booking#useSeatFeed': () => ['p', { api: fakeBookingApi() }],
+  'booking#useSeatHold': () => [
+    'p',
+    {
+      api: fakeBookingApi(),
+      feed: { merge: noop, markTaken: noop, markOpen: noop },
+      requiresEntry: false,
+    },
+  ],
+  'booking#useRemainingMs': () => [null, () => 0],
+  'video#useVideos': () => [fakeVideoApi(), 'clip'],
+  'app-control#useAppConfig': () => [fakeAppControlApi()],
+  'app-control#useFeature': () => [fakeAppControlApi(), 'beta'],
+  'waiting-room#useWaitingRoom': () => ['wr_1', { api: fakeWaitingRoomApi() }],
+  'waiting-room#useWaitingRoomEntry': () => [],
   'search#useSearch': () => [fakeSearchApi(), { q: 'bag' }],
   'notifications#useNotifications': () => [fakeNotificationsApi()],
   'notifications#useUnreadCount': () => [fakeNotificationsApi()],
@@ -1381,6 +1572,7 @@ export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
   'author-profile#useCreateAuthorProfile': () => [fakeAuthorProfileApi()],
   'author-profile#useRenameAuthorProfile': () => [fakeAuthorProfileApi()],
   'author-profile#useRemoveAuthorProfile': () => [fakeAuthorProfileApi()],
+  'author-profile#useSetAuthorProfileAvatar': () => [fakeAuthorProfileApi()],
   'workspace#useWorkspace': () => [],
   'workspace#useWorkspaces': () => [fakeWorkspaceApi()],
   'workspace#useWorkspaceBySlug': () => [fakeWorkspaceApi(), 'acme'],
@@ -1442,6 +1634,10 @@ export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
  * 지금은 없다: 모든 컴포넌트 · 훅이 서버에서 그려진다(브라우저 API 는 effect · 이벤트 핸들러 안에서만).
  */
 export const BROWSER_ONLY: Record<string, string> = {
+  'video#useQueueProgress':
+    'reads the PlayQueueProvider that sits at the app root and throws outside it by design - there is no queue to read when rendered alone (the controller tests and the stories cover it)',
+  'video#usePlayQueue':
+    'reads the PlayQueueProvider that sits at the app root and throws outside it by design - there is no queue to read when rendered alone (the stories and the queue controller tests cover it)',
   'payment#usePaddlePrices':
     "asks Paddle.js (a browser script) for prices in the buyer's currency - there is nothing to ask on the server",
 }

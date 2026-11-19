@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added — 부품(component) 토큰 층 (2026-11-03)
+### Added — 부품(component) 토큰 층
 
 부품 모양(모서리 · 바탕 · 테두리 · 그림자 · 흐림 · 채움)을 `tokens.json` 값으로 바꾸는 손잡이. 기본값은 지금 쓰던 의미 토큰을 그대로 잇는 것이라 **화면은 바뀌지 않는다**(부품 CSS 27개의 모든 값이 기본값으로 풀면 이전과 같다).
 
@@ -17,12 +17,125 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 바뀌는 상속: 부품 토큰은 `:root` · `[data-theme]` 에서 풀린다. 화면 CSS 가 `data-theme` 없이 의미 토큰을 덮던 구역(`.promo { --surface: … }`)은 그 안의 부품에 더는 닿지 않는다 — 구역 테마는 `data-theme` 로 둔다. 부품 토큰은 `tokens.json` 에서 바꾼다.
 - 테스트: 토큰 층 셋 · 부품 토큰 규칙 · 생성기 오류 · 유리 면 값이 생성되는지(`tokens.build.test.ts`), 모든 부품 토큰이 부품 CSS 에서 쓰이는지 · 주 버튼 바탕을 칠하면 글자 손잡이도 · 보조 바탕을 칠하면 흐림도 읽는지(루트 `tests/componentTokens.test.ts`), 부품 토큰 바탕 · 글자 짝 AA(`tests/contrast.test.ts`). `tests/affordance.css.test.ts` 의 ChoiceGroup 검사는 부품 토큰 이름으로.
 
+### Added — 미리보기
+
+- `@skeleton/preview`(새 패키지, 실험적): 기기 틀(폰 · 태블릿 세로/가로 · PC) 안 미리보기. `PreviewStage`(무대 — 맞추기 · PC 실제 크기 가로 밀기 · 펴기 · 큰 견본 `maxScale`) · `PreviewViewer`(방문자처럼 크게 보기 — 넓은 결 막대 · 좁은 결 알약/판 · 배율 패드 · 만지기 · 다시 재생 · 새 창, 앱 보기 조건은 `extra`) · `DevicePicker` · `deviceViewport` · `outerSize` · ko/en 문구. 화면은 두 갈래 — iframe 다리(`PreviewFrameBridge`, 앱이 자기 메시지 규약으로 구현)와 같은 번들의 컴포넌트를 바로 그리는 `content`.
+- `@skeleton/ui`: `Dialog` 에 `fullScreen`(화면 전체를 덮고 제목 줄 · × 가 없다 — 이름은 보이지 않는 제목).
+- `@skeleton/tokens`: 기기 틀 토큰 `--device-bezel` · `--device-base`(색, 라이트/다크)와 `--device-{phone,tablet,desktop}-radius` · `--device-*-screen-radius`(모서리).
+
+### Added — 소리 출력 장치 고르기
+
+- `@skeleton/video`: `usePlayQueue()` 에 `canChooseOutput`(`setSinkId` 지원 여부 - 없으면 메뉴를 숨긴다) · `outputDevice` · `outputDevices` · `setOutputDevice` · `loadOutputDevices`(메뉴 열 때, 이름이 비면 마이크 권한 한 번) · `soundOnFrame`(유튜브 틀 소리는 못 바꾼다). 대기열 `<audio>` · 화면 `<video>` 가 같은 장치로 나오고 새로 붙는 요소에도 다시 걸린다. 고른 장치는 `PlayQueueProvider` 의 `outputDeviceKey` 를 줄 때만 기억·감시한다(안 주면 지금과 같다). 장치가 거절하면 기본으로 돌아가고, 잠깐 빠진 장치는 저장값을 둔 채 다시 나타나면 다시 건다.
+
+### Added — 웹 보상형 광고
+
+- `@skeleton/ads`(새 패키지, 실험적): 웹 보상형 광고(Google Ad Manager GPT rewarded)의 동의 → 재생 → 보상 흐름. `createWebRewardedApi`(`/ads/web-rewarded` 세션 열기 · 보상 요청, `basePath`) · `createRewardedAd`(React 없는 컨트롤러 — 보기는 사용자 손짓 안에서만, 보상 요청은 세션당 한 번, 끝난 뒤 저절로 다시 시작하지 않는다, 하루 상한이면 슬롯을 만들지 않는다) · `useRewardedAd` · `RewardedAdPrompt`(동의 창) · `loadGoogletag`(스크립트 한 번 · 재시도) · `createFakeGoogletag`(로컬 · 시험 · 스토리용, 미디어가 없어 소리가 나지 않는다). README 에 구글 정책 체크(패키지가 지키는 것 / 앱이 지킬 것). 백엔드 `modules/ads-web-rewarded` 짝.
+- `@skeleton/api-client`: `ErrorCodes.ADS_WEB_REWARDED_DAILY_LIMIT`(`ADS_WEB_REWARDED.DAILY_LIMIT`).
+
+### Changed
+
+- `@skeleton/storage`: `StoredImage` 의 움짤 영상이 실패하면(`onError`) `display` `<img>` 로 바꿔 그리고, `IntersectionObserver` 가 있으면 화면 밖에서 멈춘다.
+
+### Changed — 소리는 대기열 하나로 · 영상은 음소거로 붙인다 · 자막
+
+- `@skeleton/video`(깨지는 변경): 소리 판이 있는 곡은 영상 모드에서도 소리를 대기열 `<audio>` 가 내고 `VideoPlayer` 의 `<video>` 는 음소거로 그 위에 붙는다(소리 판 없는 곡 · 유튜브는 지금처럼 화면의 재생기가 소리를 낸다). 그래서:
+  - `VideoPlayerProps` 에서 `joinSignal` · `preferredMode` · `preferSignal` 이 빠지고 `queueMode`(`playerProps` 가 채운다)가 생겼다.
+  - `usePlayQueue()` 에서 `audioStart` · `preferSignal` 이 빠졌다.
+  - `AudioHost` 에서 `wake` · `start` · `stop` 이 빠지고 **필수** `setPreferred` 가 생겼다. `status()` 는 모드와 무관하게 대기열이 이 곡의 소리를 쥐고 있으면 값을 돌려준다. `AudioHost` 를 직접 만드는 앱은 고쳐야 한다.
+  - `VideoPlayerLabels` 에 **필수** `pictureFailed` · `retry` · `tapToWatch` 가 더해졌다(`defaultVideoPlayerLabels` · `koVideoPlayerLabels` 를 펼치면 된다).
+- `@skeleton/video`: `usePlayQueue()` 에 `captions` · `canCaptions` · `setCaptions`(유튜브 자막, 기본 끔) · `retitle(id, title, artist?)` · `update(item)`. 영상이 끝내 붙지 못하면 안내(`pictureFailed`)와 다시 시도(`retry`), 브라우저가 음소거 영상을 막으면 `tapToWatch` 를 보인다.
+
+### Added — 진행 막대 · 음량 · 전체 화면 · 알약 전환 (2026-11-16)
+
+- `@skeleton/video`: `QueueProgress` · `useQueueProgress`(지금 시각 / 길이 + 끌어서 옮기기, 노래 · 영상 · 유튜브 공통) · `usePlayQueue` 에 `currentIndex` · `volume` · `muted` · `setVolume` · `setMuted` · `canSetVolume`(아이폰은 false) · `fullscreen` · `canFullscreen` · `toggleFullscreen`. 음량은 `<storageKey>.volume` 에 따로 저장된다. `QueueStage` · `VideoPlayer` 의 `controls`(기본 켬)로 영상 · 유튜브 자체 조작줄을 끄면 앱 조작줄만 쓸 수 있고, 유튜브에는 같은 모양의 전체 화면 칩이 뜬다. `PlayQueueLabels.seek` 추가.
+- `@skeleton/video` `VideoPlayer`: 「영상 / 노래」 전환이 큰 단추 둘에서 작은 알약(접근성 이름은 그대로)으로 바뀌었다. `AudioHost` 에 `registerOutput` · `fullscreen` 이 더해졌다(직접 `AudioHost` 를 만드는 앱은 채워야 한다).
+
+### Changed — 앱 조작줄용 옵션 (2026-11-16)
+
+- `@skeleton/video`(깨지는 변경): `VideoPlayerLabels.qualityHeight` 와 `AudioHost.quality`(`register(target)` 가 `{ reportHeight, release }` 핸들을 돌려준다)가 **필수 필드**로 더해졌다 - 문구 객체나 `AudioHost` 를 직접 만드는 앱은 채워야 한다(`defaultVideoPlayerLabels` · `koVideoPlayerLabels` 를 펼치면 된다). `qualityLabel` · `heightOfSize` · `QualityOption`(`pending` 포함) · `QualityChoice` 를 내보낸다.
+- `@skeleton/video`: 화질 — `usePlayQueue` 에 `qualityOptions`(`{ value, height }[]`) · `quality` · `setQuality` · `playingHeight`, 이름은 실제 높이(`자동 (1080p)` · `1080p` · `720p`, 높이를 모르면 `원본`; `labels.qualityHeight` 추가), `PlayerSource` 에 `w` · `h` · `compatHeight`, `controls={false}` 면 화질 칩도 숨는다. 코덱을 모르면 「원본」도 화질 목록에 낸다. 버그 수정: hls.js 가 스트림을 붙이며 끊은 `play()`(`AbortError`)를 「틀 수 없다」로 보고해 영상 전환 · 화질 변경 · 영상 먼저 시작이 멈춘 채 남던 것.
+- `@skeleton/video`: `controls={false}` 면 무대 위 전체 화면 칩도 빠진다(`VideoPlayer` · `YoutubeStage`; 유튜브 칩은 없어졌고 `YoutubeStage` 의 `labels` prop 도 뺐다). 대상 등록(`canFullscreen` · `toggleFullscreen`)은 그대로. `QueueStage` · `VideoPlayer` 에 `modeToggle`(기본 켬) 추가, `ModePill` 공개, `usePlayQueue().canAudio` 추가, `setPreferred` 가 재생 중인 `VideoPlayer` 를 실제로 전환한다(`preferredMode` prop). 유튜브 `playerVars` 에 `iv_load_policy=3` 추가(`rel=0` 은 이미 있다).
+
+### Added — 재생 대기열 · 작은 재생기 (2026-11-16)
+
+- `@skeleton/video`: `PlayQueueProvider`(앱 최상단) · `usePlayQueue` · `MiniPlayer` — 목록 · 현재 곡 · 이전/다음 · 끝나면 다음 · 반복(하나/전체) · 셔플 · 「다음 곡」 목록(추가 · 빼기 · 순서 바꾸기), 상태는 이 기기에 저장(앱이 키를 정함)하고 새로 고침 뒤 복원한다. 노래 모드는 Provider 가 쥔 `<audio>` 하나를 곡마다 다시 써서 화면이 꺼진 채로도 다음 곡으로 넘어간다. `VideoPlayer` 는 `audioHost`(`usePlayQueue().playerProps`)로 그 요소를 빌려 쓴다. 지금 틀 수 없는 곡(소리 판 없는 영상 · 화면이 꺼진 때의 유튜브)은 건너뛰고, 건너뛸 곡뿐이면 멈춘다. 문구 `defaultPlayQueueLabels` · `koPlayQueueLabels`(`VideoPlayerLabels` 는 그대로).
+- `@skeleton/video`: 유튜브 항목(`kind: "youtube"`) — `QueueStage` · `YoutubeStage`(IFrame Player API, 영상으로만). API 스크립트는 유튜브 항목이 처음 나올 때만 불러오고, 노래 모드이거나 화면이 꺼진 채 차례가 오면 건너뛰며, 끝 · 오류(모든 `onError` 코드 · 스크립트 로드 실패)는 묻지 않고 다음 곡으로 간다. 건너뛸 곡뿐이면 멈춘다.
+- `@skeleton/video`(대기열 보강): 사용자의 영상/노래 선택이 대기열 선호로 남아 곡이 바뀌어도 유지된다(`preferred` · `setPreferred`). 큰 화면의 재생기가 대기열이 이미 소리로 틀고 있는 곡을 이어받고(`audioHost.status()`), 소리 판 없는 영상 차례에는 `autoStart` · `startSignal` 로 저절로 틀며 실패(`onFailed`)는 다음 곡으로 간다. 시작 손짓에서 대기열 `<audio>` 를 깨워 두고 `play()` 거절은 「틀고 있지 않음」으로 바로잡는다. 엔진이 붙은 곡 id 를 기억해 지워진 곡을 이어 틀지 않는다. 잠금화면은 재생기 · 대기열 중 나중에 묶은 쪽이 남는다. 유튜브 플레이어는 준비된 뒤에야 조작하고(준비 15초 무응답 · 손짓 없는 자동 재생 차단은 틀고 있지 않음으로 보고) 저장값의 중복 id 를 거른다. 순수 함수(`reduceQueue` 등)는 공개 export 에서 뺐다(타입 · `PlayQueueProvider` · `usePlayQueue` · `MiniPlayer` · `QueueStage` 만).
+- `@skeleton/video`(대기열 마무리): 큰 화면이 hls.js 로 틀던 소리를 이어받을 때 인스턴스를 걷지 않는다 · 이미 그려진 재생기가 대기열이 새로 시작한 소리를 이어받는다(`joinSignal`) · 영상 모드의 큰 화면이 작은 재생기 · 잠금화면의 재생/일시정지를 따른다(`followPlaying`) · 시작하자마자 못 틀어 멈춘 뒤 `playing: true` 로 덮어쓰지 않는다 · 유튜브 오류가 먼저 오면 준비 감시를 끈다.
+- `@skeleton/video`(hls.js 기기 수정): `PlayerSource.codec?`(원본 단 코덱 문자열, `VideoPlayback.codec` 과 같은 모양)를 받는다 - 모르면 이 기기가 원본을 틀 수 있는지 판별하지 않고 일단 틀어 보며(주소 묶음만 준 앱이 크롬에서 「영상 준비 중」 · 영상 전환 불가가 되던 것), 실패하면 기존대로 다음 걸음. 대기열의 `<audio>` 는 hls.js 가 스트림을 붙이면서 먼저 건 `play()` 가 지워져 멈춘 채 `playing: true` 로 남던 것을 메타데이터가 오면 다시 건다(손짓으로 곡을 골라 큰 화면으로 넘어간 크롬에서 재생이 안 되던 문제). 네이티브 HLS 가 아닌 기기에서는 요소를 재생 목록 주소로 깨우지 않는다.
+
+### Added — 영상 / 노래 전환 · 잠금화면 · 전체 화면 (2026-11-16)
+
+- `@skeleton/video` `VideoPlayer`: 재생 허가에 소리 판(`audio`)이 있으면 「영상 / 노래」 전환(같은 시각 · 같은 재생 상태로 잇고, 노래 모드는 영상 조각을 받지 않는다 · 소리 판 실패 시 안내 한 줄과 함께 영상으로), `initialMode`, `title`, `autoAudioWhenHidden`(기본 꺼짐 — 화면이 꺼지면 같은 시각의 소리 판으로, 아이폰 시뮬레이터 실측 방식), Media Session(재생 · 일시정지 · 이동, `onPrevious`/`onNext` 가 있으면 이전/다음만 · 없으면 ±10초), 전체 화면 단추(틀 `requestFullscreen` · 아이폰 `webkitEnterFullscreen`, 노래 모드에선 숨김), `onEnded` · `onModeChange` · `onPlayingChange`.
+- `@skeleton/video`: 입력을 `PlayerSource = { src, audio?, poster?, compat?, hls? }`(`source` prop)로도 받는다 — 서버 허가 없이 같은 출처 주소를 트는 앱용. `playerSourceOf(grant)`. `VideoPlayback.audio?: string | null`. `attachSource` 가 `<audio>` 에도 붙는다.
+- 공개 타입은 `PlayerSource`(DOM 의 `MediaSource` 와 이름이 겹치지 않게) · `playerSourceOf`.
+- 문구(`VideoPlayerLabels`)에 `playNoLength` · `mode` · `modeVideo` · `modeAudio` · `audioFailed` · `fullscreen` 이 늘었다 · `playAudio` · `exitFullscreen`(영어 · 한국어). 문구 객체를 통째로 직접 채운 앱은 이 키를 더해야 한다(`{ ...defaultVideoPlayerLabels, … }` 쓰는 앱은 그대로).
+
+### Added — 재배포 없이 끄고 켜기: 점검 화면 · 스위치 읽기 · 새 버전 안내 (2026-11-16)
+
+- `@skeleton/app-control`(백엔드 `modules/app-control` 짝): `createAppControlApi`(`GET /app/config`) · `useAppConfig`(창에 돌아오면 다시 읽고 점검 중엔 주기적으로, 모듈이 없는 백엔드의 404 는 다시 묻지 않는다) · `useFeature`(클라이언트에 보이는 스위치) · `appStateOf`(점검 > 강제 > 권장) · `AppControlGate`(점검 화면 · 닫을 수 없는 새로고침 화면 · 닫을 수 있는 띠). 버전은 숫자 칸으로 비교한다(`1.10` > `1.9`).
+- `@skeleton/app-control`: 어느 호출이든 `503 APP_CONTROL.MAINTENANCE` 를 받으면 게이트가 설정을 바로 다시 읽는다(`watchMaintenance` · `isMaintenanceError`), `AppControlGate` 에 `bypass`(운영자 화면은 점검 화면 밖), 스토리(점검 · 강제 · 권장 · 닫기 · bypass) + `docs/ui-catalog.md` 줄. 배포 스크립트 예시는 `PATCH`(PUT 은 통째 덮어쓰기).
+
+### Added — 사용자 기기의 오류를 서버로 보내는 보고처 (2026-11-16)
+
+- `@skeleton/api-client`: `ErrorReporter` 인터페이스 + `createErrorReporter`(백엔드 `alert` 모듈의 `POST /api/v1/client-errors` 로 — 마지막 API 요청의 traceId · 화면 경로 · 앱 버전 · 접힌 횟수를 싣는다) + `installGlobalErrorReporting`(`window` 의 `error` · `unhandledrejection`, 페이지를 떠날 때 `flush`) + `noopErrorReporter`. 같은 오류는 60초 창 안에서 첫 건만 보내고 반복은 접는다(`count`), 페이지당 20건 상한, 전송 실패 · 오프라인은 삼키고 버린다(큐 없음). `ApiClient.lastTraceId()` 가 늘었다(호환: 메서드 추가). 나중에 Sentry 로 바꿀 때는 같은 인터페이스를 구현한 객체를 꽂는다.
+- `@skeleton/ui` `ErrorBoundary`: 선택 prop `reporter` — 잡은 렌더 오류를 컴포넌트 스택과 함께 보고처로(던져도 fallback 은 그대로 뜬다).
+- `apps/starter`: `createAppErrorReporter`(`VITE_ERROR_REPORT=true` 일 때만 켜짐 — 백엔드 `skeleton.alert.client-errors.enabled=true` 와 함께, 둘 다 기본 꺼짐 · `VITE_APP_RELEASE` 앱 버전)를 `main.tsx` 에서 `ErrorBoundary` 와 전역 핸들러에 연결했다.
+
+### Added — 앱에서 「웹 결제」로 넘어온 사람의 착지 (2026-11-09)
+
+- `@skeleton/marketing`: GA `page_location` 에서 떼는 이름에 `handoff` 를 더했다(앱 → 웹 결제 로그인 코드).
+- `@skeleton/auth`: `WebHandoffGate` · `WebHandoffLanding` · `createWebHandoffApi` · `readHandoffCode`. 앱이 연 웹 결제 주소의 `#handoff=<코드>` 를 **조각에서만** 읽어 주소창 · 히스토리에서 바로 지우고, 백엔드 `POST /auth/web-handoff/redeem` 으로 한 번 바꿔 세션을 연 뒤 결제 화면을 보인다(로그인 가드 바깥에 둔다). 만료 · 이미 쓴 코드(410)는 「쓸 수 없는 링크예요」 + 로그인 링크(그 링크로 나가면 문이 열린다), 그 밖의 실패는 안내 줄. 이미 로그인한 브라우저는 계정을 바꾸기 전에 확인을 묻고(`onSignOut`), 코드는 라우터로 위치에서 지우며, 2단계 계정은 `twoFactorTo` 로 보낸다. 문구 `webHandoff*`(영어 · 한국어). `AuthApi` 는 늘리지 않았다(`createWebHandoffApi` 가 따로).
+- 견본 앱: `layouts/AppFrame.tsx` 가 모든 라우트 바깥에서 문지기를 건다. 카탈로그 패턴 `web-handoff-landing`.
+
+### Added — 포인트 이력 종류 RESTORE (2026-11-06)
+
+- `@skeleton/rewards`: `PointEntryKind` 에 `'RESTORE'`(사용 취소로 되돌린 포인트, + 금액) - 백엔드 point 의 새 이력 종류. 문구 `kinds.RESTORE`('환원' / 'Restored')를 사용자 · 관리자 라벨 양쪽에 더했다. `PointLabels`/`AdminPointsLabels` 를 직접 채운 앱은 이 키를 더해야 한다.
+
+### Added — 프로필 사진 (2026-11-06)
+
+- `@skeleton/auth`: `AccountMe.avatarKey` · `avatar`, `ProfilePatch.avatarKey`(문자열 = 설정, `null` = 지움), `api.avatarAddress()`, `AccountSettings`/`createAuthRoutes({ settings })` 의 `profilePicture`(`ProfilePicturePicker`) - 프로필 대화상자에 사진 칸. 서버가 사진 기능을 켠 앱(`me` 에 `avatarKey` 키가 있음)에서만 나타난다. 고르는 칸은 앱이 꽂는다(이 패키지는 `@skeleton/storage` 를 모른다 - 게시판의 `attachmentPicker` 방식). 문구 `profilePicture` · `profilePicturePending`.
+- `@skeleton/author-profile`: 프로필마다 따로인 사진 - `AuthorProfile.avatarKey` · `avatar`, `api.setAvatar(id, key | null)` · `api.avatarAddress(id)`, `useSetAuthorProfileAvatar`, `AuthorProfileManager` 의 `picturePicker`(줄마다 「사진」 단추, 올리거나 지우면 바로 저장), 문구 `pictureAction` · `picture` · `pictureLabel` · `picturePending`. `AuthorProfileApi` 구현을 직접 둔 앱은 두 메서드를 더해야 한다.
+- 견본 앱: 계정 설정 · 닉네임 관리에 한 장짜리 `ImageUploadField` 를 꽂았다(백엔드 kotlin-skeleton ea54d15f 의 `avatarKey` 계약).
+
+### Added — 견본 앱의 노트 영상 (2026-11-04)
+
+- 견본: 노트 상세의 「영상」 탭(`NoteVideoPanel`) - `VideoUploadField`(목적 `note`, 비공개) 로 올리고 `VideoPlayer` 로 튼다. 노트를 고치는 본문은 `noteInputOf` 한 곳에서 만든다(`videoId` · 첨부를 늘 싣는다 - 빠지면 PUT 이 영상을 떼어 서버가 지운다). e2e `video.e2e.ts`(합성 HEVC 세로 영상 → 올리기 → 원본 단 재생 가능 → 호환 · 사다리 → 마스터 자동 재생 → 다른 계정 404).
+- `@skeleton/video` 고침: `VideoPlayer` 가 Chromium 계열에서 네이티브 HLS 를 믿어 재생이 `MEDIA_ERR_SRC_NOT_SUPPORTED` 로 실패하던 것 - 네이티브는 Safari 만 믿고(`nativeHlsIsReliable`) 나머지는 MSE + hls.js 로 튼다(e2e 에서 발견).
+- `@skeleton/video`: `VideoUploadField` 에 `include`(보이고 세는 줄 고르기)와 `onUploaded`(올리기 직후 앱이 영상을 자기 데이터에 붙이기) 가 더해졌다.
+
+### Added — 움짤 표시본을 영상으로 · 영상 포스터 바꿔 끼우기 (2026-11-04)
+
+- `@skeleton/storage`: 변환본(`ImageVariant`)에 `contentType` 이 더해졌고, `StoredImage` 는 `display.alternates` 에 `video/mp4` 가 있으면 소리 없는 반복 `<video>`(`autoplay loop muted playsinline`, 포스터 = `thumb`)로 그린다. 영상 판정은 `videoUrlOf` 한 곳. 스토리 `AnimatedAsVideo`.
+- `@skeleton/video`: `api.setPoster(id, key)`(`PUT /videos/{id}/poster`, 화면 부품 없음).
+
+### Added — 영상 `@skeleton/video` 0.1.0 (2026-11-04)
+
+백엔드 짝: kotlin-skeleton `video` + `video-jdbc` 모듈(`/api/v1/videos`, 저장소는 `storage`). 서버가 아직 없어 설계서(video-design §5)의 API 표대로 만들고 가짜 API 로 시험했다 - 목록 응답 모양(`VideoItem`)은 서버가 나오면 맞춘다.
+
+- `@skeleton/video`(새 패키지): `createVideoApi`(시작 · 조각 주소 · 조각 목록 · 완료 · 삭제 · 목록 · 재생 요청) · `uploadVideo`(mp4 · mov 만, 조각을 3개씩 병렬로 직접 올리고 실패한 조각만 새 주소로 다시, `resume` 이면 `{영상 번호, uploadId, 조각 크기}` 를 파일 지문으로 `localStorage` 에 두고 같은 파일을 다시 고르면 빠진 조각만) · `useVideos`(만드는 중이면 3초 폴링) · `VideoUploadField`(올리는 중 % → 준비 중 n% → 재생 가능 → 「다른 기기용 판 준비 중」 → 끝, 실패 사유 코드 → 문구, 올리다 만 줄 안내(자리를 막지 않고 이어 올림), 네트워크로 멈춘 줄의 다시 시도 · 지우기, 앱 저장이 실패한 영상의 다시 붙이기 · 지우기, 지우기 · 취소; 이어 올리기 지문에 공개 여부 포함) · `VideoPlayer`(포스터 + 재생 단추, 마스터 → 원본 단 → 호환 단, 틀지 못하면 같은 시각에서 다음 걸음, 화질 칩 자동 / 720p / 원본, 네이티브 HLS 가 없으면 hls.js light 를 누를 때 지연 로드, 비공개 토큰이 끝나면 새 재생 허가로 같은 시각에서 이어 보기, 내려받기 없음) · ko/en 문구 · 스토리(`play`).
+- **새 의존**: `hls.js` 1.7.3 고정(이 패키지의 dependency - 영상을 안 쓰는 앱은 받지 않는다).
+- 움짤(GIF) 표시와 견본 앱 조립 · e2e 는 다음 조각이다.
+
+### Added — 견본 앱의 예약 화면 (2026-11-04)
+
+- 견본: `/booking`(내 예약) · `/booking/:poolId`(자리 고르기 - 풀에 대기실이 달려 있으면 `WaitingRoomGate` 안의 `SeatBooking`, 결제 시작 뒤 `BookingPayment` 가 주문 `itemType: "booking"` 으로 결제창을 연다) · `/admin/booking`(권한 `booking.read`, `AdminBookingPools`). 상단 메뉴 「예약」 · 운영 메뉴 「예약 관리」. 풀 목록을 주는 공개 API 는 없어 풀 주소는 운영자가 건넨다.
+- e2e: `e2e/booking.e2e.ts` 한 여정(대기실 → 입장 → 찍기 · 놓기 · 다시 잡기 → 결제 시작).
+
 ### 콜드스타트로 로그인이 풀리는 문제 (2026-11-02)
 
 - `createSessionRefresher`: 일시 오류(네트워크 · 타임아웃 · 408 · 429 · 5xx · `AUTH.*` 코드가 없는 401)는 로그아웃하지 않고 **같은 토큰으로** 일시 오류가 이어지는 동안 계속 재시도한다(2·4·8·16·30초, 그 뒤 30초 고정 - 불변식: 간격 ≤ 서버 `reuse-grace` ÷ 2, 권장 grace 60초 ↔ 30초라 서버 기동이 얼마나 걸려도 회전 뒤 다음 재시도는 유예 안이다; 숨은 탭은 멈췄다가 보이면 즉시 재개). 대기는 탭 락 밖에서 하고 시도마다 락을 다시 잡는다. **코드 없는 401 이 연달아 5번이면 로그아웃**(앞단이 백엔드 오류 본문을 그대로 넘겨야 한다). `AUTH.*` 의 401 은 확정(`REFRESH_INVALID` 는 `expired`). `createAuthApi.refresh` 는 요청 제한 45초.
 - `createApiClient` 의 `onError(error, { authVerdict })` - 갱신 호출 자신 · 복구 중 실패는 `false`; `createUnauthorizedHandler` 는 `false` 면 자격을 지우지 않는다.
 - `AuthStatus` 에 `reconnecting` - 쓸 수 있는 갱신 자격이 있을 때만. `restore()` 는 첫 시도가 일시 오류이거나 3초 넘게 걸리면 바로 돌아오고 같은 시도가 뒤에서 이어진다(성공 → 로그인, 확정 로그아웃 → 비로그인). 일시 오류 · 회전 한도일 때만 15초에서 두 배씩(최대 30초) 스스로 다시 시도하고, 그 밖의 실패(400 · 403 · 404 등)는 예전처럼 비로그인.
 - `RequireAuth` · `RequireRole` · `RequirePermission` 은 `reconnecting` 이면 로그인으로 보내지 않고 `reconnecting` prop(기본 영어 「Reconnecting…」)을 그린다.
+
+### Added — `@skeleton/notifications/admin` 공지 운영 화면 + 푸시 클릭 열람 보고 R1 (2026-11-02)
+
+`@skeleton/notifications` 1.3.0. 새 하위 경로 `@skeleton/notifications/admin`. 백엔드 짝: kotlin-skeleton `notification-broadcast`(+ `-jdbc`, `/api/v1/admin/broadcasts`, 권한 `notification-broadcast.read` · `.send`). 견본 앱 라우트 · 메뉴 · e2e 는 다음 조각. 받는 사람 화면은 바뀌지 않는다.
+
+- `createBroadcastAdminApi` · 훅(`useBroadcasts` · `useBroadcast`(보내는 중이면 10초마다 다시 읽음) · `useBroadcastMutations` · `useBroadcastOptions` · `useAudienceCount`) · `AdminBroadcasts`(목록) · `AdminBroadcastEditor`(쓰기 — 푸시 불가 종류는 푸시 칸 잠김, 광고 종류 안내, 예약 야간 경고, 나에게 테스트, **보내기는 대상 수 · 채널 · 시각을 다시 보여 주는 확인 창을 거친다**) · `AdminBroadcastDetail`(통계 — 알림함 읽음 · 푸시 넣음/성공/실패/보내지 않음/클릭, 예약 풀기 · 취소 · 이어 보내기 · 지우기, 확인 창) · ko/en 문구(`koBroadcastAdminLabels`). 단추는 `can(key)` 로 숨긴다. 스토리 + `play`.
+- `@skeleton/api-client` 오류 코드: `BROADCAST_*` 아홉 개 · `PUSH_INVALID_OPEN_TOKEN`.
+- `@skeleton/push` 서비스 워커: 푸시 페이로드에 `open` 토큰이 있으면 알림 `data` 에 `id` · `open` 을 두었다가 `notificationclick` 에서 창 열기와 나란히 `POST /api/v1/push/opened { id, open }`(`keepalive`, 인증 없음 — 토큰이 인증)을 보낸다. 토큰이 없으면 아무것도 보내지 않고, 보고가 실패해도 창은 열린다.
 
 ### Fixed — 광고 동의 · 공용 브라우저 리뷰 지적 (2026-10-31)
 
@@ -58,6 +171,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `StoredImage` 는 `alternates`(WebP 등)가 있으면 `<picture><source type srcset sizes>` + `<img>` 폴백. `@skeleton/board` 의 `PostDetail` · `Comment` 타입에 `attachmentImages`(`AttachmentImage`) · `attachmentsPending` 을 더했다(서버가 이미지 모듈을 켠 경우에만 온다).
 - 견본 앱: 업로더 `complete: true`(회원 · 비회원 경로), `PicturePicker` 가 `ImageUploadField`, 게시판 사진이 `StoredImage`(`attachmentImages` · 변환 중이면 「처리 중」 뒤 다시 읽기), 리뷰 사진은 목록 `?variant=thumb` · 눌러서 크게 볼 때 `display`. 새 e2e `files.e2e.ts`.
 - **의존 변화**: `@skeleton/ui` 가 devDependency 에서 dependency 로(새 부품이 `FilePicker` · `Progress` · `Button` 을 쓴다).
+
+### Added — 좌석 예약 `@skeleton/booking` (2026-11-03)
+
+백엔드 짝: kotlin-skeleton `booking` + `booking-jdbc` 모듈(`/api/v1/booking/**`, 운영 `/api/v1/admin/booking/pools`).
+
+- `@skeleton/booking`(새 패키지): `createBookingApi` · `SeatBooking`(배치도 + 내 보류 한 벌) · `SeatMap`(구역 → 열 → 번호, 세 상태) · `useSeatFeed`(`@skeleton/realtime` 의 SSE 위에서 사건 + 스냅샷을 자리별 `v` 로 맞춘다, 다시 붙으면 스냅샷, 서버 시계로 `heldUntil` 에 스스로 열림) · `useSeatHold`(잡기 / 놓기 / 결제 시작 / 나가기 - 요청은 한 줄, 같은 자리 중복 누름은 버리고, `409 SEAT_TAKEN` 자리는 바로 선택 불가) · `HoldPanel`(남은 시간 · 금액 · `renderPayment` 자리) · `MyBookings` · `@skeleton/booking/admin` 의 `AdminBookingPools`(풀 · 자리 범위로 넣기 · 배치도에서 막기 / 풀기 · 판매 멈춤 / 닫기 · 현황) · ko/en 문구.
+- 결제는 `checkout`(금액 박기 + 자리 고정, 멱등)까지만 - 주문 · 결제창은 앱이 `renderPayment` 로 꽂는다(`@skeleton/payment` 와 서로 import 하지 않는다). 새로고침 · 탭 닫기에는 자리를 놓지 않는다.
+- 의존: `@skeleton/realtime` · `@skeleton/waiting-room`(입장권 헤더).
+
+### Added — 대기열 `@skeleton/waiting-room` (2026-11-03)
+
+백엔드 짝: kotlin-skeleton `waiting-room` + `waiting-room-jdbc` 모듈(`POST /api/v1/waiting-rooms/{id}/tickets` · `GET …/status`, 운영 `/api/v1/admin/waiting-rooms`). 서버가 아직 없어 설계서(booking-design §5)의 API 표대로 만들었다 - 응답 모양은 서버가 나오면 맞춘다.
+
+- `@skeleton/waiting-room`(새 패키지): `createWaitingRoomApi` · `useWaitingRoom`(순번표를 방별 `sessionStorage` 에 두고, 서버가 정한 `pollAfterSeconds` 로 묻고, `enter()` 가 입장권을 기다렸다 돌려준다) · `WaitingRoomGate`(페이지 앞 문 - 입장 시간이 끝나도 children 은 그대로 두고 입장권만 거둔다) · `WaitingScreen`(오픈 카운트다운 · 내 앞에 N명 · 예상 시간 · 진행 막대) · `createEntryHeaders`(`X-Entry-Token`) · ko/en 문구 · `@skeleton/waiting-room/admin` 의 `AdminWaitingRoom`(분당 입장 수 · 멈춤 / 다시 시작 · 닫기 · 5초 갱신 현황). 로그인한 사람만 줄을 선다(익명 없음). 입장권은 저장하지 않는다.
+- `apps/sample` 조립은 아직 없다(예약 화면과 함께 다음 조각).
+
+### Added — 문의 · 의견 받기 `@skeleton/inquiry` (2026-11-01)
+
+백엔드 짝: kotlin-skeleton `inquiry` + `inquiry-jdbc` 모듈(`POST /api/v1/inquiries` - 로그인 없이도, 운영 `GET /api/v1/admin/inquiries` · `PUT …/{id}/status`).
+
+- `@skeleton/inquiry`(새 패키지): `createInquiryApi`(`/inquiries`) · `useInquiryForm`(상태 · 검증 · 전송, 문구를 모른다, 틀린 곳은 한 번 보내 보려 한 뒤부터) · `ContactForm`(종류 · 내용 10~2000자 · 답장 이메일 · 앱이 꽂는 사람 확인 `captcha` · 고지 자리 `beforeSubmit`) · `FaqList`(네이티브 `<details>` 접기 목록 - 질문 · 답은 앱이) · ko/en 문구. 사람 확인 위젯은 포함하지 않는다(board 의 `renderCaptcha` 와 같은 결 - 앱이 `@skeleton/captcha-turnstile` 을 꽂는다).
+- `@skeleton/api-client`: 오류 코드 `INQUIRY_INVALID` · `INQUIRY_CAPTCHA_FAILED` · `INQUIRY_TOO_MANY` · `INQUIRY_NOT_FOUND`.
+- `apps/sample`: 도움말 `/help`(FAQ 4문항 + 문의 폼 - 로그인하면 이메일이 채워지고 사람 확인이 없다, `VITE_TURNSTILE_SITE_KEY` 가 있고 로그인하지 않았을 때만 Turnstile) + 꼬리말 「도움말」 링크(`/help`). `captcha-turnstile` 을 `--with-sample` 에 더했다.
+
+### Added — 2단계 인증 R-A2: 등록 필수 문 · 운영자 해제 · 견본 조립 (2026-11-02)
+
+백엔드 짝: kotlin-skeleton `auth-mfa` 의 필수 문(`required-for`: 등록 전 계정의 허용 목록 밖 호출은 `403 MFA.ENROLLMENT_REQUIRED`)과 운영 해제(`GET /admin/mfa/accounts/{id}` · `POST …/{id}/reset {reason}`, 권한 `mfa.reset`).
+
+- `@skeleton/auth`: `MfaEnrollmentRequiredGate` · `MfaEnrollmentRequiredScreen` · `createMfaEnrollmentRequiredController`(403 을 붙잡았다가 켜면 같은 호출을 다시 보낸다 - 이메일 필수 막과 같은 상태 기계) · `isMfaEnrollmentRequiredError`. 켜기 마법사는 설정의 것(`EnrollDialog`)을 꺼내 재사용하고, 필수 문에서는 열자마자 **본인 확인 없이(`{}`) 시작해 본다** - 방금 로그인한 계정은 서버가 증거 없이 받는다(소셜 전용 계정도 지나간다). 서버가 증거를 요구하면(`ACCOUNT.REAUTH_REQUIRED`) 평소처럼 비밀번호 · 메일 코드를 묻고, 소셜 전용 계정은 제공자 동의 왕복이 있는 계정 설정으로 보낸다(`onProviderReauth`). `createAuthRoutes({ mfaEnrollmentRequired })` 를 주면 계정 설정에서 켠 순간 막이 걷힌다(`AccountSettings.onTwoFactorChanged`).
+- `@skeleton/auth/admin`: `AdminAccounts` 에 `mfaReset`(기본 꺼짐) - 줄 메뉴 「2단계 해제」(`can('mfa.reset')`, 사유 필수, 자기 자신 `MFA.SELF_RESET` · 권한 상승 `MFA.ESCALATION` · 꺼짐 `MFA.NOT_ENABLED` 는 창 안에서 이유를 말한다). `AdminAccountsApi.resetMfa(id, reason)`.
+- 견본(`apps/sample`): 설정 `twoFactor: createMfaApi`, 「API 키」 구역은 계정 설정의 함수형 `preferenceRows` 로 옮겨 소셜 전용 계정의 제공자 왕복을 잇는다(`/settings` 에는 링크 카드), `MfaGate`(가장 바깥 막), 운영 계정 표의 「2단계 해제」. e2e `mfa.e2e.ts`(흐름 ① ~ ④) - 인증 앱은 시험 도우미(`totp.ts`, Node `crypto`)가 계산하고, 운영 계정(admin · moderator)은 전역 준비가 한 번 등록해 비밀을 파일에 보관한다(`adminMfa.ts`).
+
+### Added — 2단계 인증(TOTP) 화면 R-A1 (2026-10-31)
+
+백엔드 짝: kotlin-skeleton `auth-mfa` 모듈(`POST /auth/mfa/verify` · `GET /auth/mfa` · `POST /auth/mfa/totp/enrollment[/confirm]` · `POST /auth/mfa/recovery-codes` · `POST /auth/mfa/disable`, 오류 `AUTH.MFA_REQUIRED` · `MFA.*`).
+
+- `@skeleton/auth`: `mfaRequiredOf(error)`(탈퇴 대기의 `deletionPendingOf` 와 같은 꼴) · `TwoFactorChallengeScreen`(6자리 `CodeEntry` + 「복구 코드로 들어가기」, 남은 시도 · 만료 · 한도 안내) · `createAuthRoutes` 의 `/login/two-factor`(`paths.twoFactor`) · `session.mfaLogin` / `authApi.mfaVerify` · 계정 설정 새 칸 `twoFactor`(`TwoFactorSection`: 상태 · 켜기 마법사 · 복구 코드 다시 만들기 · 인증 앱 바꾸기 · 끄기) · `createMfaApi`. 비밀번호 로그인 · 링크 · 소셜 콜백 · 탈퇴 취소가 모두 같은 화면으로 넘기고 `mfaToken` 은 라우터 state 에만 둔다.
+- 백엔드 계약 맞춤: 탈퇴 대기 + 2단계 켜짐은 로그인 -> `MFA_REQUIRED` -> `verify` 가 `ACCOUNT_DELETION_PENDING` -> 취소(2단계 다시 안 묻는다)이고, `TwoFactorChallengeScreen` 이 `onCancelDeletion` 으로 이어 받는다. QR `size` 는 4칸 여백 포함(viewBox `0 0 size size`). `MFA.ENROLLMENT_EXPIRED` · `MFA.NOT_ENABLED` 문구.
+- 소셜 전용 계정의 제공자 왕복 다시 인증: `ProviderAction` 에 `mfa-enable|change|regenerate|disable` · `api-key-create`, `TwoFactorSection` / `ApiKeysSection` 의 `onProviderReauth` · `resume` · `onResumeSpent`, `AccountSettings` 의 `preferenceRows` 함수형(`ProviderRoundTrip`). 모든 `AuthApi` 가짜(시험)에 `mfaVerify` 가 필요하다.
+- `@skeleton/ui` `Dialog` 에 `dismissible`(기본 true) - `false` 면 × 도 Esc 도 없다(복구 코드를 저장했다고 하기 전에는 닫히지 않는 창).
+- 문구는 `AuthLabels` 에 합쳐졌다(`TwoFactorLabels`, ko/en). 등록 필수 문 화면 · 운영자 해제 줄 메뉴 · 견본 조립은 다음 조각(R-A2).
 
 ### Added — API 키 화면 R-B1/R-B2 (2026-10-31)
 

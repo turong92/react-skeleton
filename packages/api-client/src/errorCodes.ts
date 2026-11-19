@@ -22,6 +22,10 @@ export const ErrorCodes = {
   // modules/auth auth/api/AuthErrorCode.kt
   AUTH_INVALID_CREDENTIALS: 'AUTH.INVALID_CREDENTIALS',
 
+  // modules/ads-web-rewarded — 세션 열기 · 보상 요청이 하루 상한에 걸림(409). Kotlin enum `WebRewardedErrorCode.DAILY_LIMIT`
+  // (modules/ads-web-rewarded/.../WebRewardedErrors.kt). 다른 코드는 화면이 갈라 보지 않아 두지 않는다
+  ADS_WEB_REWARDED_DAILY_LIMIT: 'ADS_WEB_REWARDED.DAILY_LIMIT',
+
   // 계정 수명주기(kotlin-skeleton docs/account-http-contract.md 10절) — AUTH.* 는 modules/auth · auth-session, ACCOUNT.* 는 modules/account
   AUTH_EMAIL_NOT_VERIFIED: 'AUTH.EMAIL_NOT_VERIFIED',
   AUTH_ACCOUNT_SUSPENDED: 'AUTH.ACCOUNT_SUSPENDED',
@@ -155,6 +159,19 @@ export const ErrorCodes = {
   // modules/notification-push (kotlin-skeleton docs/push-http-contract.md). TEST_TOO_SOON 429(시험 알림은 계정당 60초에 한 번)
   PUSH_TEST_TOO_SOON: 'PUSH.TEST_TOO_SOON',
 
+  // modules/notification-broadcast (공지 운영 /admin/broadcasts). NOT_FOUND 404 · INVALID_STATE 409(DRAFT 만 고친다 · 이미 보냈다) · UNKNOWN_TYPE / UNKNOWN_CHANNEL / UNKNOWN_AUDIENCE / INVALID_AUDIENCE(`detail.reason`) / INVALID_LINK / INVALID_SCHEDULE(지금 ~ +90일 밖) 400 · TEST_TOO_SOON 429(나에게 테스트는 운영자당 30초에 한 번)
+  BROADCAST_NOT_FOUND: 'BROADCAST.NOT_FOUND',
+  BROADCAST_INVALID_STATE: 'BROADCAST.INVALID_STATE',
+  BROADCAST_UNKNOWN_TYPE: 'BROADCAST.UNKNOWN_TYPE',
+  BROADCAST_UNKNOWN_CHANNEL: 'BROADCAST.UNKNOWN_CHANNEL',
+  BROADCAST_UNKNOWN_AUDIENCE: 'BROADCAST.UNKNOWN_AUDIENCE',
+  BROADCAST_INVALID_AUDIENCE: 'BROADCAST.INVALID_AUDIENCE',
+  BROADCAST_INVALID_LINK: 'BROADCAST.INVALID_LINK',
+  BROADCAST_INVALID_SCHEDULE: 'BROADCAST.INVALID_SCHEDULE',
+  BROADCAST_TEST_TOO_SOON: 'BROADCAST.TEST_TOO_SOON',
+  // 푸시 클릭 열람 보고(POST /push/opened, 서비스 워커가 보낸다) — INVALID_OPEN_TOKEN 400(서명 · 이벤트 id 불일치 · 주인이 바뀐 기기)
+  PUSH_INVALID_OPEN_TOKEN: 'PUSH.INVALID_OPEN_TOKEN',
+
   // modules/authz — AuthzErrors (kotlin-skeleton docs/authz-http-contract.md). ROLE_PROTECTED · ROLE_IN_USE · ROLE_EXISTS · SELF_LOCKOUT 409, ROLE_NOT_FOUND 404, PERMISSION_UNKNOWN 400, ESCALATION 403
   AUTHZ_ROLE_PROTECTED: 'AUTHZ.ROLE_PROTECTED',
   AUTHZ_ROLE_IN_USE: 'AUTHZ.ROLE_IN_USE',
@@ -211,6 +228,12 @@ export const ErrorCodes = {
   CATALOG_PRICE_OVERLAP: 'CATALOG.PRICE_OVERLAP',
   CATALOG_PRICE_INVALID: 'CATALOG.PRICE_INVALID',
   CATALOG_NOT_FOUND: 'CATALOG.NOT_FOUND',
+
+  // modules/inquiry InquiryErrorCode — 문의 보내기: 값이 틀림 400(data.violations) · 사람 확인 실패 400 · 너무 잦음 429(data.retryAfterSeconds) · 운영: 없는 문의 404
+  INQUIRY_INVALID: 'INQUIRY.INVALID',
+  INQUIRY_CAPTCHA_FAILED: 'INQUIRY.CAPTCHA_FAILED',
+  INQUIRY_TOO_MANY: 'INQUIRY.TOO_MANY',
+  INQUIRY_NOT_FOUND: 'INQUIRY.NOT_FOUND',
 } as const
 
 export type ErrorCodeValue = (typeof ErrorCodes)[keyof typeof ErrorCodes]

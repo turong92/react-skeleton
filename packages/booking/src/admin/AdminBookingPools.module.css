@@ -1,0 +1,42 @@
+.root {
+  display: grid;
+  gap: var(--space-xl);
+  max-inline-size: 60rem;
+}
+
+.title {
+  margin: 0;
+  color: var(--text-strong);
+  font-size: var(--font-size-subheading);
+}
+
+.head {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.hint {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-caption);
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: var(--space-md);
+}
+
+.form {
+  display: grid;
+  gap: var(--space-md);
+  max-inline-size: 28rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  align-items: center;
+}

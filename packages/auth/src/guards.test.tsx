@@ -30,6 +30,7 @@ const api: AuthApi = {
   me: unused,
   refresh: unused,
   logout: async () => undefined,
+  mfaVerify: unused,
   magicLinkRequest: async () => undefined,
   methods: async () => {
     throw new Error('unused')

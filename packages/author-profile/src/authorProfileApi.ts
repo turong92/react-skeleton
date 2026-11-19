@@ -1,5 +1,5 @@
 import { newIdempotencyKey, type ApiClient } from '@skeleton/api-client'
-import type { AuthorProfile, AuthorProfileConfig, AuthorProfileInput } from './types'
+import type { AuthorProfile, AuthorProfileConfig, AuthorProfileInput, AvatarAddress } from './types'
 
 type ProfileClient = Pick<ApiClient, 'value' | 'list' | 'noContent'>
 
@@ -15,6 +15,10 @@ export type AuthorProfileApi = {
   create(input: AuthorProfileInput, options?: CreateOptions): Promise<AuthorProfile>
   /** `PATCH {basePath}/{id} { name }` — 같은 오류 */
   rename(id: string, input: AuthorProfileInput): Promise<AuthorProfile>
+  /** `PATCH {basePath}/{id} { avatarKey }` - 이 프로필의 사진: 문자열 = 설정, `null` = 지움(이름은 그대로). 400 = 내 업로드가 아니거나 · 계정 id 가 든 키이거나 · 계정/다른 프로필이 쓰는 키이거나 · 서버에 사진 기능이 없다 */
+  setAvatar(id: string, avatarKey: string | null): Promise<AuthorProfile>
+  /** `GET {basePath}/{id}/avatar` - 내 사진을 볼 서명 주소. 사진이 없거나 서명 읽기가 꺼졌으면 404 */
+  avatarAddress(id: string): Promise<AvatarAddress>
   /** `DELETE {basePath}/{id}` — 204, 되돌릴 수 없다(글은 「삭제된 사용자」로 남는다) */
   remove(id: string): Promise<void>
 }
@@ -44,6 +48,9 @@ export function createAuthorProfileApi(
         idempotencyKey: options?.idempotencyKey ?? newIdempotencyKey(),
       }),
     rename: (id, input) => client.value<AuthorProfile>(one(id), { method: 'PATCH', json: input }),
+    setAvatar: (id, avatarKey) =>
+      client.value<AuthorProfile>(one(id), { method: 'PATCH', json: { avatarKey } }),
+    avatarAddress: (id) => client.value<AvatarAddress>(`${one(id)}/avatar`),
     remove: (id) => client.noContent(one(id), { method: 'DELETE' }),
   }
 }

@@ -84,6 +84,7 @@ describe('the check can fail (it is not vacuous)', () => {
     },
     magicLinkRedeem: unused,
     cancelDeletion: unused,
+    mfaVerify: unused,
   }
 
   it('reading the stored token while creating the session gives a different first render — the logout button appears', async () => {

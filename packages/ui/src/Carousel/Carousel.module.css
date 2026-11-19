@@ -1,0 +1,73 @@
+.carousel {
+  display: grid;
+  gap: var(--space-md);
+}
+
+/* 네이티브 스크롤 + 스냅 — 스와이프 · 트랙패드 · 터치는 브라우저가 한다. 단추가 있어 스크롤바는 숨긴다 */
+.track {
+  display: flex;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+.track::-webkit-scrollbar {
+  display: none;
+}
+
+.track:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}
+
+.slide {
+  flex: 0 0 100%;
+  min-width: 0;
+  scroll-snap-align: start;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-md);
+}
+
+.position {
+  min-width: 4ch;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 테두리 있는 아이콘 상자 — Dialog 닫기 · Pagination 과 같은 버튼 모양 토큰 */
+.button {
+  width: 44px;
+  height: 44px;
+  cursor: pointer;
+  border: 1px solid var(--button-secondary-border);
+  border-radius: var(--button-radius);
+  background: var(--button-secondary-bg);
+  color: var(--text-strong);
+  font-size: var(--font-size-heading);
+  line-height: 1;
+  backdrop-filter: var(--button-backdrop);
+  -webkit-backdrop-filter: var(--button-backdrop);
+}
+
+.button:hover:not([aria-disabled='true']) {
+  border-color: var(--button-hover-border);
+  color: var(--teal);
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}
+
+.button[aria-disabled='true'] {
+  opacity: 0.48;
+  cursor: not-allowed;
+}

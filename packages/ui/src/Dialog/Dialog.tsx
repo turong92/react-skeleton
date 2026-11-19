@@ -19,6 +19,10 @@ export type DialogProps = {
    * Esc → `onClose` 는 그대로(`dismissible` 규칙도 그대로). `footer` 는 쓰지 않는다 — 아래 줄도 내용이 둔다
    */
   fullScreen?: boolean
+  /**
+   * 창이 놓이는 곳 — 기본 `center`(가운데). `left` · `right` · `bottom` 은 그쪽 가장자리에 붙은 판이 transform 으로 밀려 들어오고 나간다(모션 감소면 바로). `Drawer` 가 이걸 쓴다
+   */
+  placement?: 'center' | 'left' | 'right' | 'bottom'
   children: ReactNode
 }
 
@@ -31,6 +35,7 @@ export function Dialog({
   footer,
   dismissible = true,
   fullScreen = false,
+  placement = 'center',
   children,
 }: DialogProps) {
   const ref = useRef<HTMLDialogElement>(null)
@@ -78,6 +83,14 @@ export function Dialog({
       className={styles.dialog}
       aria-labelledby={titleId}
       data-fullscreen={fullScreen || undefined}
+      data-placement={placement === 'center' ? undefined : placement}
+      onClick={(event) => {
+        // 판(Drawer)은 바깥(덮개)을 누르면 닫힌다 — 덮개를 누르면 대상이 `<dialog>` 자신이다(안쪽은 내용이 다 채운다). 가운데 창은 그대로(닫기 버튼 · Esc)
+        if (placement !== 'center' && dismissible && event.target === event.currentTarget) {
+          notifiedByButton.current = true
+          onClose()
+        }
+      }}
       onCancel={(event) => {
         if (!dismissible) event.preventDefault() // Esc
       }}

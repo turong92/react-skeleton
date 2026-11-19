@@ -41,6 +41,101 @@
   background: var(--overlay-scrim);
 }
 
+/*
+ * 가장자리에 붙은 판(Drawer) — 닫힌 자리는 화면 밖, 열리면 제자리. `display` · `overlay` 를 이산 전환으로 같이 태워서
+ * 닫을 때도 밀려 나간 뒤에 사라진다(미지원 브라우저는 그냥 바로 열고 닫힌다). 들어오기 0.25초 ease-out · 나가기는 더 짧게 ease-in
+ */
+.dialog[data-placement] {
+  max-width: none;
+  max-height: none;
+  border-radius: 0;
+  transition:
+    transform 0.2s ease-in,
+    overlay 0.2s allow-discrete,
+    display 0.2s allow-discrete;
+}
+
+.dialog[data-placement][open] {
+  transform: none;
+  transition:
+    transform 0.25s ease-out,
+    overlay 0.25s allow-discrete,
+    display 0.25s allow-discrete;
+}
+
+.dialog[data-placement]::backdrop {
+  opacity: 0;
+  transition:
+    opacity 0.2s ease-in,
+    overlay 0.2s allow-discrete,
+    display 0.2s allow-discrete;
+}
+
+.dialog[data-placement][open]::backdrop {
+  opacity: 1;
+  transition:
+    opacity 0.25s ease-out,
+    overlay 0.25s allow-discrete,
+    display 0.25s allow-discrete;
+}
+
+.dialog[data-placement='left'],
+.dialog[data-placement='right'] {
+  width: min(420px, 100vw);
+  height: 100dvh;
+  inset-block: 0;
+}
+
+.dialog[data-placement='right'] {
+  margin-inline: auto 0;
+  border-block-width: 0;
+  border-inline-end-width: 0;
+  transform: translateX(100%);
+}
+
+.dialog[data-placement='left'] {
+  margin-inline: 0 auto;
+  border-block-width: 0;
+  border-inline-start-width: 0;
+  transform: translateX(-100%);
+}
+
+.dialog[data-placement='bottom'] {
+  width: 100%;
+  max-height: 85dvh;
+  margin: auto 0 0;
+  border-inline-width: 0;
+  border-block-end-width: 0;
+  transform: translateY(100%);
+}
+
+@starting-style {
+  .dialog[data-placement][open]::backdrop {
+    opacity: 0;
+  }
+
+  .dialog[data-placement='right'][open] {
+    transform: translateX(100%);
+  }
+
+  .dialog[data-placement='left'][open] {
+    transform: translateX(-100%);
+  }
+
+  .dialog[data-placement='bottom'][open] {
+    transform: translateY(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dialog[data-placement],
+  .dialog[data-placement][open],
+  .dialog[data-placement]::backdrop,
+  .dialog[data-placement][open]::backdrop {
+    transition: none;
+  }
+}
+
 .header {
   display: flex;
   align-items: center;

@@ -100,7 +100,7 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 | `time` | 글로벌 시간 — 순간 · 달력 날짜 · 현지+내 시간대 3종 포맷, 서버 시각 보정(카운트다운), 국가→시간대, 오늘의 날짜. | 항상 | time | stable | 시간, 날짜 표시, 시간대, 타임존, 서버 시각, 카운트다운 / time, date format, timezone, server clock, countdown, relative time |
 | `theme` | 라이트/다크/시스템 테마 — 토글 · 토스트 테마 · 첫 칠 전 스크립트(깜빡임 방지) · Vite 플러그인. | 항상 | — | stable | 다크 모드, 테마, 라이트 모드, 다크 테마 / dark mode, theme, light mode, color scheme |
 | `tokens` | 디자인 토큰 — 색 · 간격 · 모서리 · 글자 크기의 단일 정본(tokens.json)과 생성기 → tokens.css(라이트/다크), 날값 검출 테스트 도구. | 항상 | — | stable | 디자인 토큰, 색상, 브랜드 색, 간격, 디자인 시스템, 색 바꾸기 / design tokens, colors, brand color, spacing, design system, css variables |
-| `ui` | 화면 부품 — Button · Input/Field · Select · Table · Pagination · Dialog · Tabs · AppShell · Combobox · DatePicker · MarkdownView 등, 모두 스토리 + play + 접근성 테스트. | 항상 | — | stable | 버튼, 입력창, 폼, 표, 테이블, 모달 / button, input, form, table, modal, dialog |
+| `ui` | 화면 부품 — Button · Input/Field · Select · Table · Pagination · Dialog · Drawer(옆 · 아래 판) · Carousel · Tabs · AppShell · Combobox · DatePicker · MarkdownView 와 움직임 기본 훅(useReveal · useCountUp · startViewTransition — 모션 감소면 바로 끝 모양) 등, 모두 스토리 + play + 접근성 테스트. | 항상 | — | stable | 버튼, 입력창, 폼, 표, 테이블, 모달 / button, input, form, table, modal, dialog |
 
 ### 앱 (`apps/*`)
 
@@ -522,19 +522,19 @@ React + TypeScript + Vite 프런트 스켈레톤(pnpm 워크스페이스) — �
 - 쓰지 않는 경우: 화면 CSS 에 색 · 간격 날값을 쓰지 않는다 — var(--…) 의미 토큰 / 생성물(tokens.css · docs/design-tokens.md 표)을 손으로 고치지 않는다 — pnpm tokens
 - 키워드: 디자인 토큰, 색상, 브랜드 색, 간격, 디자인 시스템, 색 바꾸기 / design tokens, colors, brand color, spacing, design system, css variables
 
-### `ui` — 화면 부품 — Button · Input/Field · Select · Table · Pagination · Dialog · Tabs · AppShell · Combobox · DatePicker · MarkdownView 등, 모두 스토리 + play + 접근성 테스트.
+### `ui` — 화면 부품 — Button · Input/Field · Select · Table · Pagination · Dialog · Drawer(옆 · 아래 판) · Carousel · Tabs · AppShell · Combobox · DatePicker · MarkdownView 와 움직임 기본 훅(useReveal · useCountUp · startViewTransition — 모션 감소면 바로 끝 모양) 등, 모두 스토리 + play + 접근성 테스트.
 
 - 종류 · 상태: package · stable
 - 위치: `@skeleton/ui` (`packages/ui`)
 - 켜는 법: 모든 프로젝트에 들어간다
 - 필요한 것: `api-client` · `time`
 - 백엔드: 없음(프런트만)
-- 주요 진입점: `Button` · `Input` · `Field` · `FormProblems` · `Select` · `Table` · `Pagination` · `Dialog` · `Tabs` · `AppShell` · `PageHeader` · `EmptyState` · `showApiError` · `toastPromise`
-- 보고 따라 할 스토리: `packages/ui/src/Button/Button.stories.tsx` · `packages/ui/src/Field/Field.stories.tsx` · `packages/ui/src/Table/Table.stories.tsx` · `packages/ui/src/Dialog/Dialog.stories.tsx` · `packages/ui/src/AppShell/AppShell.stories.tsx`
+- 주요 진입점: `Button` · `Input` · `Field` · `FormProblems` · `Select` · `Table` · `Pagination` · `Dialog` · `Drawer` · `Carousel` · `useReveal` · `useCountUp` · `startViewTransition` · `Tabs` · `AppShell` · `PageHeader` · `EmptyState` · `showApiError` · `toastPromise`
+- 보고 따라 할 스토리: `packages/ui/src/Button/Button.stories.tsx` · `packages/ui/src/Field/Field.stories.tsx` · `packages/ui/src/Table/Table.stories.tsx` · `packages/ui/src/Dialog/Dialog.stories.tsx` · `packages/ui/src/Drawer/Drawer.stories.tsx` · `packages/ui/src/Carousel/Carousel.stories.tsx` · `packages/ui/src/motion/Motion.stories.tsx` · `packages/ui/src/AppShell/AppShell.stories.tsx`
 - 복사해 시작할 Patterns: `apps/storybook/src/patterns/DashboardPage.stories.tsx` · `apps/storybook/src/patterns/ListPage.stories.tsx` · `apps/storybook/src/patterns/FormPage.stories.tsx` · `apps/storybook/src/patterns/DetailPage.stories.tsx` · `apps/storybook/src/patterns/LoginPage.stories.tsx` · `apps/storybook/src/patterns/SettingsPage.stories.tsx`
 - 문서: `packages/ui/README.md` · `docs/ui-catalog.md`
 - 쓰지 않는 경우: 날 <button> · <input> · <select> · <textarea> · <dialog> 를 쓰지 않는다 — ESLint 가 막는다 / 부품이 API 를 부르지 않는다(props 만) · 사용자에게 보이는 문구는 prop
-- 키워드: 버튼, 입력창, 폼, 표, 테이블, 모달, 다이얼로그, 탭, 페이지네이션, 레이아웃, 컴포넌트, 드롭다운, 토스트, 날짜 선택 / button, input, form, table, modal, dialog, tabs, pagination, layout, components, dropdown, toast, date picker
+- 키워드: 버튼, 입력창, 폼, 표, 테이블, 모달, 다이얼로그, 드로어, 캐러셀, 움직임, 탭, 페이지네이션, 레이아웃, 컴포넌트, 드롭다운, 토스트, 날짜 선택 / button, input, form, table, modal, dialog, drawer, carousel, motion, tabs, pagination, layout, components, dropdown, toast, date picker
 
 ### `app-starter` — SPA 스타터 — 라우터 · AppShell · 테마 토글 · API 클라이언트 · 로그인 · 보호 라우트가 이어진 출발점(새 프로젝트의 앱이 된다).
 

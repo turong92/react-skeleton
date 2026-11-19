@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — 드로어 · 캐러셀 · 움직임 기본 훅
+
+- `@skeleton/ui` `Drawer`: 옆(`right` 기본 · `left`)이나 아래(`bottom`)에서 밀려 나오는 판. `Dialog` 에 `placement` 를 더하고 그 위에 얇게 얹었다(포커스 가두기 · Esc · 닫기 버튼 · 스크롤 잠금은 같은 구현). 판은 덮개를 눌러도 닫힌다(가운데 창은 그대로). 모양은 `--overlay-*` 부품 토큰, 열고 닫을 때 transform 으로 밀려 들어오고 나가며(들어오기 0.25초 ease-out · 나가기 0.2초 ease-in, `@starting-style` + 이산 전환) 움직임 줄이기면 바로. 새 토큰 없음.
+- `@skeleton/ui` `Carousel`: CSS scroll-snap 기반 옆으로 넘기는 줄(스와이프는 네이티브 스크롤). 이전/다음 단추(테두리 상자, 처음 · 끝은 `aria-disabled`) · ←/→ 키 · 「n / 전체」 위치 · WAI-ARIA APG carousel(`aria-roledescription` · 슬라이드 `aria-label`). 자동 재생 없음, 한 번에 한 슬라이드 폭. 단추는 button 부품 토큰.
+- `@skeleton/ui` 움직임 훅(`motion/`): `useReveal({ index, staggerMs })`(들어올 때 한 번 나타나기 · 차례 지연 `index × staggerMs`, 모양은 `base.css` 의 `[data-reveal]` 0.3초 ease-out) · `useCountUp(target, { durationMs, from, decimals, startOnView })` · `startViewTransition(update)`(API 가 없거나 움직임 줄이기면 `update` 만) · `usePrefersReducedMotion()` · `prefersReducedMotion()`. 모두 움직임 줄이기면 바로 끝 모양이고 서버 · 자바스크립트 전에는 처음부터 보인다. `revealControl` 도 같은 `prefersReducedMotion()` 을 쓴다.
+- 새 개발 의존: 루트 devDependencies 에 `jsdom`(훅 단위 테스트 `// @vitest-environment jsdom`).
+- 문서: `docs/ui-catalog.md` · `packages/ui/README.md` · `docs/ui-motion-terms.md` 「이 레포」 칸 · `capabilities.json`.
+
 ### Added — 부품(component) 토큰 층
 
 부품 모양(모서리 · 바탕 · 테두리 · 그림자 · 흐림 · 채움)을 `tokens.json` 값으로 바꾸는 손잡이. 기본값은 지금 쓰던 의미 토큰을 그대로 잇는 것이라 **화면은 바뀌지 않는다**(부품 CSS 27개의 모든 값이 기본값으로 풀면 이전과 같다).

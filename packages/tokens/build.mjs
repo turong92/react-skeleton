@@ -140,7 +140,7 @@ export function resolveTokens(json) {
     for (const ref of [...t.references, ...themeRefs])
       if (!byPath.has(ref)) throw new Error(`${t.path}: missing reference {${ref}}`)
     if (t.layer === 'component') {
-      if (t.path.split('.').length < 3)
+      if (t.path.split('.').length !== 3)
         throw new Error(`${t.path}: component tokens are component.<part>.<name>`)
       for (const ref of t.references)
         if (byPath.get(ref).layer === 'primitive')

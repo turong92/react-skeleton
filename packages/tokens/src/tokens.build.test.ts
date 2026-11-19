@@ -153,6 +153,10 @@ describe('component layer', () => {
       /semantic\.\* tokens only/,
     )
     fails({ zz: { $value: '{semantic.surface.card}' } }, /component\.<part>\.<name>/)
+    fails(
+      { button: { primary: { bg: { $value: '{semantic.surface.card}' } } } },
+      /component\.<part>\.<name>/,
+    )
     expect(() =>
       resolveTokens({
         ...fixture(),

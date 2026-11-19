@@ -79,6 +79,24 @@ const PAIRS: Pair[] = [
     (bg): Pair => ({ fg: '--text', bg, min: BODY, use: 'text on a component surface' }),
   ),
   { fg: '--text', bg: '--shell-bg', min: BODY, use: 'header links' },
+  // 부품이 바탕을 깔고 그 위에 의미 글자색을 얹는 곳(바탕 손잡이를 바꿔도 글자가 읽혀야 한다)
+  ...[
+    '--field-bg',
+    '--field-disabled-bg',
+    '--choice-selected-bg',
+    '--shell-nav-active-bg',
+    '--button-quiet-hover-bg',
+  ].map(
+    (bg): Pair => ({
+      fg: '--text-strong',
+      bg,
+      min: BODY,
+      use: 'text on a component surface (input · selected choice · current nav link · quiet hover)',
+    }),
+  ),
+  { fg: '--text-muted', bg: '--field-bg', min: BODY, use: 'input placeholder' },
+  { fg: '--text-muted', bg: '--overlay-bg', min: BODY, use: 'combobox message · disabled option' },
+  { fg: '--teal', bg: '--choice-selected-bg', min: BODY, use: 'selected choice check mark' },
   // 2단계 인증 QR - 테마와 상관없이 같은 흰 바탕 · 어두운 모듈
   { fg: '--qr-fg', bg: '--qr-bg', min: BODY, use: 'two-factor QR code' },
   // UI 경계 · 포커스
@@ -123,6 +141,16 @@ describe('the pair list covers what the CSS actually uses', () => {
 
   it('scans some CSS (the check below is not looking at an empty list)', () => {
     expect(screenCss.length).toBeGreaterThan(0)
+  })
+
+  it('every component colour token named *-bg is the background of at least one pair', () => {
+    const NO_TEXT = new Set(['--skeleton-bg']) // 로딩 자리 막대 — 글자가 얹히지 않는다
+    const listed = new Set(PAIRS.map((p) => p.bg))
+    const unlisted = build({ write: false })
+      .tokens.filter((t) => t.layer === 'component' && t.cssName.endsWith('-bg'))
+      .map((t) => t.cssName)
+      .filter((name) => !listed.has(name) && !NO_TEXT.has(name))
+    expect(unlisted).toEqual([])
   })
 
   it('every semantic colour used as a `color:` anywhere in apps or packages appears in the pair list', () => {

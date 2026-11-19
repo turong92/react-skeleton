@@ -36,33 +36,29 @@ export function Carousel({
     const next = Math.min(total - 1, Math.max(0, target))
     if (next === index) return
     // 스냅 위치로 스크롤할 뿐 `index` 는 스크롤 이벤트가 따라 바꾼다 — 손가락 스와이프와 같은 한 길(위치 표시가 깜박이지 않는다)
-    trackRef.current?.children[next]?.scrollIntoView({
+    // (scrollIntoView 는 페이지도 같이 스크롤할 수 있어 줄만 scrollTo 한다 — 슬라이드는 줄 폭 하나씩)
+    const track = trackRef.current
+    track?.scrollTo({
+      left: next * track.clientWidth,
       behavior: prefersReducedMotion() ? 'auto' : 'smooth',
-      block: 'nearest',
-      inline: 'start',
     })
   }
 
   const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
-    // 슬라이드 안의 입력칸에서 쓰는 화살표는 뺏지 않는다 — 줄 자신이나 단추일 때만
-    const target = event.target as HTMLElement
-    if (target !== trackRef.current && target.tagName !== 'BUTTON') return
+    // 슬라이드 안(입력칸 · Tabs …)에서 쓰는 화살표는 뺏지 않는다 — 줄 자신이거나 이전/다음 단추 영역일 때만 받는다
+    if (event.currentTarget === trackRef.current && event.target !== event.currentTarget) return
     event.preventDefault()
     go(index + (event.key === 'ArrowRight' ? 1 : -1))
   }
 
   return (
-    <section
-      className={styles.carousel}
-      aria-roledescription="carousel"
-      aria-label={label}
-      onKeyDown={onKeyDown}
-    >
+    <section className={styles.carousel} aria-roledescription="carousel" aria-label={label}>
       <div
         ref={trackRef}
         className={styles.track}
         tabIndex={0}
+        onKeyDown={onKeyDown}
         onScroll={(event) => {
           const track = event.currentTarget
           if (track.clientWidth === 0) return
@@ -83,7 +79,7 @@ export function Carousel({
         ))}
       </div>
       {total > 1 && (
-        <div className={styles.controls}>
+        <div className={styles.controls} onKeyDown={onKeyDown}>
           <button
             type="button"
             className={styles.button}
@@ -93,7 +89,10 @@ export function Carousel({
           >
             ‹
           </button>
-          <span className={styles.position}>{slideLabel(index + 1, total)}</span>
+          {/* 자동 재생이 없는 캐러셀 — APG 대로 바뀌는 위치를 polite 로 알린다 */}
+          <span className={styles.position} aria-live="polite" aria-atomic="true">
+            {slideLabel(index + 1, total)}
+          </span>
           <button
             type="button"
             className={styles.button}

@@ -29,6 +29,12 @@ describe('Carousel (WAI-ARIA APG carousel)', () => {
     expect(html).not.toContain('disabled=""') // 막는 것은 네이티브 disabled 가 아니라 aria-disabled
   })
 
+  it('announces the changing position politely (no auto-rotation)', () => {
+    expect(render(3)).toMatch(
+      /<span class="[^"]*" aria-live="polite" aria-atomic="true">1 \/ 3<\/span>/,
+    )
+  })
+
   it('labels are props', () => {
     const html = render(2, {
       previousLabel: '이전',

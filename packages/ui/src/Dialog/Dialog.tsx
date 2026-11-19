@@ -26,7 +26,18 @@ export type DialogProps = {
   children: ReactNode
 }
 
-/** 네이티브 `<dialog>` 모달 — 포커스 가두기 · Esc · 배경 막기를 브라우저가 한다 */
+/** 포인터 좌표가 요소 상자 밖인가 */
+function isOutside(point: { clientX: number; clientY: number }, element: HTMLElement) {
+  const box = element.getBoundingClientRect()
+  return (
+    point.clientX < box.left ||
+    point.clientX > box.right ||
+    point.clientY < box.top ||
+    point.clientY > box.bottom
+  )
+}
+
+/** 네이티브 `<dialog>` 모달 —포커스 가두기 · Esc · 배경 막기를 브라우저가 한다 */
 export function Dialog({
   open,
   onClose,
@@ -47,6 +58,8 @@ export function Dialog({
   const closedByProp = useRef(false)
   /** 닫기 버튼이 이미 `onClose` 를 불렀다 - 뒤따르는 프로그램의 닫기가 한 번 더 부르지 않게 */
   const notifiedByButton = useRef(false)
+  /** 이번 누르기가 판 바깥에서 시작했다 */
+  const pressedOutside = useRef(false)
 
   useEffect(() => {
     onCloseRef.current = onClose
@@ -84,9 +97,24 @@ export function Dialog({
       aria-labelledby={titleId}
       data-fullscreen={fullScreen || undefined}
       data-placement={placement === 'center' ? undefined : placement}
+      onPointerDown={(event) => {
+        // 덮개를 누르면 대상이 `<dialog>` 자신이다 — 안쪽 요소를 누른 것(좌표가 없는 합성 입력 포함)은 바깥이 아니다
+        pressedOutside.current =
+          placement !== 'center' &&
+          event.target === event.currentTarget &&
+          isOutside(event, event.currentTarget)
+      }}
       onClick={(event) => {
-        // 판(Drawer)은 바깥(덮개)을 누르면 닫힌다 — 덮개를 누르면 대상이 `<dialog>` 자신이다(안쪽은 내용이 다 채운다). 가운데 창은 그대로(닫기 버튼 · Esc)
-        if (placement !== 'center' && dismissible && event.target === event.currentTarget) {
+        // 판(Drawer)은 바깥(덮개)을 누르면 닫힌다. 덮개를 누르면 대상이 `<dialog>` 자신이지만 판 안의 빈 곳도 그렇다 — 대상이 아니라 **좌표**가 판 밖이고,
+        // 누르기를 시작한 곳도 판 밖일 때만(안에서 끌다가 밖에서 뗀 것은 닫지 않는다). 가운데 창은 그대로(닫기 버튼 · Esc)
+        const closes =
+          placement !== 'center' &&
+          dismissible &&
+          pressedOutside.current &&
+          event.target === event.currentTarget &&
+          isOutside(event, event.currentTarget)
+        pressedOutside.current = false
+        if (closes) {
           notifiedByButton.current = true
           onClose()
         }

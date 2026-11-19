@@ -178,6 +178,12 @@ describe('useCountUp', () => {
     expect(frames.size).toBe(0)
   })
 
+  it('a zero (or negative) duration is the target at once, never NaN', () => {
+    mount(createElement(Count, { target: 7, durationMs: 0 }))
+    expect(text()).toBe('7')
+    expect(frames.size).toBe(0)
+  })
+
   it('startOnView holds the start value until the element enters the view', () => {
     mount(createElement(Count, { target: 10, startOnView: true }))
     expect(text()).toBe('0')

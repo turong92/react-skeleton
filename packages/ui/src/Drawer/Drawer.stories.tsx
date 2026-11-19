@@ -91,8 +91,14 @@ export const ClosesByButtonBackdropAndEscape: Story = {
 
     await userEvent.click(trigger)
     const drawer = await screen.findByRole('dialog', { name: 'Filters' })
-    // 덮개를 누르면 클릭 대상이 `<dialog>` 자신이다 — 대상이 자신인 클릭을 보낸다
-    drawer.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    // 덮개 = 판 상자 바깥 좌표(그 클릭의 대상은 `<dialog>` 자신이다)
+    await waitFor(() => expect(drawer.getBoundingClientRect().left).toBeGreaterThan(40))
+    const box = drawer.getBoundingClientRect()
+    await userEvent.pointer({
+      keys: '[MouseLeft]',
+      target: drawer,
+      coords: { clientX: box.left - 20, clientY: box.top + 50 },
+    })
     await gone()
     await expect(args.onClose).toHaveBeenCalledTimes(2)
 
@@ -109,13 +115,29 @@ export const ClosesByButtonBackdropAndEscape: Story = {
   },
 }
 
-/** 판 안의 내용을 눌러도 닫히지 않는다 — 덮개만 닫는다 */
+/**
+ * 판 안은 눌러도 닫히지 않는다 — 내용 아래 빈 곳도(그 클릭의 대상도 `<dialog>` 자신이다), 안에서 누르고 밖에서 뗀 것도. 덮개(상자 바깥 좌표)만 닫는다
+ */
 export const ClickingInsideStaysOpen: Story = {
   render: (args) => <Demo onClosed={args.onClose} />,
   play: async ({ canvas, userEvent, args }) => {
     await userEvent.click(canvas.getByRole('button', { name: 'Open drawer' }))
     await userEvent.click(await screen.findByText('Narrow the list down.'))
-    await expect(screen.getByRole('dialog', { name: 'Filters' })).toBeVisible()
+    const drawer = screen.getByRole('dialog', { name: 'Filters' })
+    await waitFor(() => expect(drawer.getBoundingClientRect().left).toBeGreaterThan(40))
+    const box = drawer.getBoundingClientRect()
+    const inside = { clientX: box.left + 20, clientY: box.bottom - 5 }
+    const outside = { clientX: box.left - 20, clientY: box.top + 50 }
+
+    // 내용 아래 빈 곳(판 높이는 화면 전체라 내용이 다 채우지 못한다)
+    await userEvent.pointer({ keys: '[MouseLeft]', target: drawer, coords: inside })
+    await expect(drawer).toBeVisible()
+    // 안에서 누르고 밖에서 뗐다
+    await userEvent.pointer([
+      { keys: '[MouseLeft>]', target: drawer, coords: inside },
+      { keys: '[/MouseLeft]', target: drawer, coords: outside },
+    ])
+    await expect(drawer).toBeVisible()
     await expect(args.onClose).not.toHaveBeenCalled()
   },
 }

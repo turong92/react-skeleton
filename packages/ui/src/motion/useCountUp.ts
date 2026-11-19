@@ -28,7 +28,7 @@ export function useCountUp<T extends HTMLElement = HTMLElement>(
   const shown = useRef<number | null>(null)
 
   useLayoutEffect(() => {
-    if (prefersReducedMotion()) {
+    if (prefersReducedMotion() || durationMs <= 0) {
       shown.current = target
       setValue(target) // eslint-disable-line react-hooks/set-state-in-effect -- 설정(외부)을 따라 값을 맞춘다
       return

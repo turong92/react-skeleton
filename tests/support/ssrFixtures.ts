@@ -578,6 +578,14 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
   'ui#EmptyState': () => ({ title: 'Nothing here', description: 'Add one' }),
   'ui#Card': () => ({ title: 'Card', children: 'body' }),
   'ui#Dialog': () => ({ open: true, onClose: noop, title: 'Dialog', children: 'body' }),
+  'ui#Drawer': () => ({
+    open: true,
+    onClose: noop,
+    title: 'Drawer',
+    side: 'left',
+    children: 'body',
+  }),
+  'ui#Carousel': () => ({ label: 'Carousel', children: ['one', 'two'] }),
   'preview#PreviewStage': () => ({
     source: { kind: 'render', content: 'Hello' },
     device: 'phone',
@@ -1451,6 +1459,9 @@ export const COMPONENT_PROPS: Record<string, (ctx: FixtureContext) => Record<str
 export const HOOK_ARGS: Record<string, (ctx: FixtureContext) => unknown[]> = {
   'theme#useTheme': () => [],
   'ui#useSubmitAttempt': () => [],
+  'ui#usePrefersReducedMotion': () => [],
+  'ui#useReveal': () => [],
+  'ui#useCountUp': () => [10],
   'auth#useAuth': () => [],
   'auth#useCan': () => [],
   'auth#usePermission': () => ['payment.read'],

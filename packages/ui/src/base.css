@@ -98,3 +98,21 @@ pre {
   font: var(--font-size-caption)/var(--line-height-snug) var(--mono);
   color: var(--text-strong);
 }
+
+/* 화면에 들어올 때 나타나기 — useReveal 이 마운트 뒤에 data-reveal 을 건다(없으면 처음부터 보인다). 0.3초 ease-out, 차례 지연은 요소의 transition-delay(useReveal) */
+[data-reveal] {
+  transition:
+    opacity 0.3s ease-out,
+    transform 0.3s ease-out;
+}
+
+[data-reveal='hidden'] {
+  opacity: 0;
+  transform: translateY(16px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal] {
+    transition: none;
+  }
+}

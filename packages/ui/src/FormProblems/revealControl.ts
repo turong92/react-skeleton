@@ -1,3 +1,5 @@
+import { prefersReducedMotion } from '../motion/prefersReducedMotion'
+
 const CONTROLS = 'input, select, textarea, button, [tabindex]'
 
 const isControl = (element: Element) => element.matches(CONTROLS)
@@ -23,9 +25,9 @@ export function revealControl(target: string | HTMLElement | null | undefined): 
   if (!found) return false
   const control = controlIn(found)
   control.focus({ preventScroll: true })
-  const reduced =
-    typeof window.matchMedia === 'function' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  control.scrollIntoView({ block: 'center', behavior: reduced ? 'auto' : 'smooth' })
+  control.scrollIntoView({
+    block: 'center',
+    behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+  })
   return true
 }
